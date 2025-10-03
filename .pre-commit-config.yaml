@@ -1,0 +1,124 @@
+# Pre-commit hooks configuration
+# Install: poetry run pre-commit install
+# Run manually: poetry run pre-commit run --all-files
+
+repos:
+  # Code formatting
+  - repo: https://github.com/psf/black
+    rev: 23.3.0
+    hooks:
+      - id: black
+        language_version: python3.11
+        args: ["--line-length=100"]
+
+  # Import sorting
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: ["--profile", "black", "--line-length", "100"]
+
+  # Linting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.0.270
+    hooks:
+      - id: ruff
+        args: ["--fix", "--exit-non-zero-on-fix"]
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^docs/
+      - id: end-of-file-fixer
+        exclude: ^docs/
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: ['--maxkb=10000']  # Max 10MB
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Security: Check for secrets
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: package.lock.json
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.35.0
+    hooks:
+      - id: markdownlint
+        args: ['--fix']
+        exclude: ^docs/(archive|sample pdf)/
+
+  # Python docstring formatting
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        args: ['--convention=google']
+        exclude: ^(tests/|scripts/|docs/)
+
+  # Type checking (optional - only for Phase 4)
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.4.0
+  #   hooks:
+  #     - id: mypy
+  #       additional_dependencies: [types-all]
+  #       args: ["--ignore-missing-imports"]
+
+  # Local hooks (require Poetry environment)
+  - repo: local
+    hooks:
+      # Run pytest before commit
+      - id: pytest
+        name: pytest
+        entry: poetry run pytest
+        language: system
+        pass_filenames: false
+        always_run: false  # Only run if Python files changed
+        files: ^raglite/.*\.py$
+        stages: [commit]
+
+      # Check coding standards compliance
+      - id: verify-bmad-files
+        name: Verify BMAD standard files
+        entry: bash -c 'test -f docs/architecture/coding-standards.md && test -f docs/architecture/tech-stack.md && test -f docs/architecture/source-tree.md'
+        language: system
+        pass_filenames: false
+        always_run: false
+        stages: [push]
+
+      # Prevent direct commits to main branch (enforce PR workflow)
+      - id: no-commit-to-branch
+        name: Prevent commits to main/master
+        entry: bash -c 'BRANCH=$(git rev-parse --abbrev-ref HEAD); if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "master" ]; then echo "Direct commits to main/master are not allowed. Use a feature branch and PR."; exit 1; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [commit]
+
+# Global settings
+default_language_version:
+  python: python3.11
+
+# Skip hooks for specific scenarios
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: [pytest]  # Skip pytest in CI (handled by GitHub Actions)
+  submodules: false

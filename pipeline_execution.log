@@ -1,0 +1,297 @@
+=========================================
+FULL PIPELINE EXECUTION
+=========================================
+
+[1/5] Chunking documents...
+Chunking document: 2025-08 Performance Review CONSO_v2.pdf
+Total pages: 160
+Chunk size: 500 words, Overlap: 50 words
+
+✓ Chunked 160 pages into 348 chunks
+
+Total chunks created: 348
+
+Sample chunks:
+
+Chunk 0:
+  Words: 299
+  Characters: 6470
+  Page: 1
+  Preview: <!-- image --> Confidentiality Note: The information contained in this document is confidential and ...
+
+Chunk 1:
+  Words: 265
+  Characters: 6467
+  Page: 2
+  Preview: ................ 4 - Angola Secil - Angola - Health &amp; Safety KPI's ................................
+
+Chunk 2:
+  Words: 268
+  Characters: 6471
+  Page: 3
+  Preview: - Lebanon - Health &amp; Safety KPI's .................................................................
+
+============================================================
+CHUNKING SUMMARY
+============================================================
+Total chunks: 348
+Average words per chunk: 360.79
+Average characters per chunk: 1,496.96
+Min/Max words: 4/500
+Output saved to: spike_chunks.json
+============================================================
+
+✓ Chunking complete: 348 chunks created
+
+[2/5] Generating embeddings...
+Loading chunks from: spike_chunks.json
+✓ Loaded 348 chunks
+
+Loading embedding model: intfloat/e5-large-v2
+This may take a few minutes on first run (model download)...
+
+✓ Model loaded in 3.03 seconds
+  Embedding dimension: 1024
+
+Generating embeddings for 348 chunks...
+Batch size: 32
+
+Processing batch 1/11 (32 chunks)...
+Processing batch 2/11 (32 chunks)...
+Processing batch 3/11 (32 chunks)...
+Processing batch 4/11 (32 chunks)...
+Processing batch 5/11 (32 chunks)...
+Processing batch 6/11 (32 chunks)...
+Processing batch 7/11 (32 chunks)...
+Processing batch 8/11 (32 chunks)...
+Processing batch 9/11 (32 chunks)...
+Processing batch 10/11 (32 chunks)...
+Processing batch 11/11 (28 chunks)...
+
+============================================================
+EMBEDDING GENERATION SUMMARY
+============================================================
+Total chunks processed: 348
+Embedding dimension: 1024
+Total generation time: 28.08 seconds
+Time per chunk: 0.081 seconds
+Throughput: 12.39 chunks/second
+============================================================
+
+Saving embeddings to: spike_embeddings.json
+✓ Embeddings saved to: spike_embeddings.json
+✓ Metadata saved to: spike_embeddings_metadata.json
+
+✓ Embedding generation complete!
+  Model: intfloat/e5-large-v2
+  Dimension: 1024
+  Total chunks: 348
+  Generation time: 28.08s
+
+[3/5] Storing vectors in Qdrant...
+/Users/ricardocarvalho/DeveloperFolder/RAGLite/spike/store_vectors.py:205: UserWarning: Qdrant client version 1.15.1 is incompatible with server version 1.11.0. Major versions should match and minor version difference must not exceed 1. Set check_compatibility=False to skip version check.
+  client = QdrantClient(url=QDRANT_URL)
+Loading embeddings from: spike_embeddings.json
+✓ Loaded 348 chunks with embeddings
+
+⚠️  Collection 'financial_docs' already exists. Deleting...
+Creating collection: financial_docs
+  Vector size: 1024
+  Distance metric: COSINE
+
+✓ Collection 'financial_docs' created successfully
+
+Preparing 348 points for upload...
+Uploading points in batches of 100...
+
+Uploading batch 1/4 (100 points)...
+Uploading batch 2/4 (100 points)...
+Uploading batch 3/4 (100 points)...
+Uploading batch 4/4 (48 points)...
+
+Verifying storage...
+
+============================================================
+QDRANT STORAGE SUMMARY
+============================================================
+Collection: financial_docs
+Total vectors stored: 348
+Vector dimension: 1024
+Distance metric: COSINE
+Upload time: 0.31 seconds
+Upload rate: 1115.64 vectors/second
+============================================================
+
+Testing Qdrant search functionality...
+
+Test query (first chunk preview):
+  <!-- image --> Confidentiality Note: The information contained in this document is confidential and ...
+
+Top 3 search results:
+
+  Result 1:
+    Score: 1.0000
+    Chunk ID: 0
+    Text preview: <!-- image --> Confidentiality Note: The information contained in this document ...
+
+  Result 2:
+    Score: 0.9191
+    Chunk ID: 0
+    Text preview: ................ 4 - Angola Secil - Angola - Health &amp; Safety KPI's ............
+
+  Result 3:
+    Score: 0.9173
+    Chunk ID: 0
+    Text preview: - Lebanon - Health &amp; Safety KPI's .............................................
+
+✓ Search test successful!
+
+✓ Qdrant storage complete!
+  Collection: financial_docs
+  Vectors: 348
+  Dimension: 1024
+  Upload time: 0.31s
+
+[4/5] Testing MCP server (3 sample queries)...
+/Users/ricardocarvalho/DeveloperFolder/RAGLite/spike/mcp_server.py:36: UserWarning: Qdrant client version 1.15.1 is incompatible with server version 1.11.0. Major versions should match and minor version difference must not exceed 1. Set check_compatibility=False to skip version check.
+  _qdrant_client = QdrantClient(url=QDRANT_URL)
+
+============================================================
+MCP SERVER FUNCTIONALITY TESTS
+============================================================
+
+============================================================
+TEST 1: Health Check
+============================================================
+✓ Health check executed successfully
+
+Status:
+  server: healthy
+  qdrant: healthy
+  embedding_model: healthy
+  collection: financial_docs
+  collection_info:
+    points_count: 348
+    vector_dimension: 1024
+    distance_metric: COSINE
+  embedding_dimension: 1024
+
+============================================================
+TEST 2: Query Tool - Sample Financial Query
+============================================================
+✓ Query executed successfully
+
+Query: What are the main health and safety metrics?
+Results returned: 3
+
+Result 1:
+  Score: 0.8059
+  Source: 2025-08 Performance Review CONSO_v2.pdf
+  Page: 3
+  Chunk: 0
+  Words: 268
+  Text preview: - Lebanon - Health &amp; Safety KPI's ...................................................................................................................
+
+Result 2:
+  Score: 0.8003
+  Source: 2025-08 Performance Review CONSO_v2.pdf
+  Page: 36
+  Chunk: 0
+  Words: 500
+  Text preview: | (2.027) | - | (334) | - | 508% | | 79 | (56) | (4) | -240% | -2195% | Earnings of Associates and Joint Controlled Entities | (8) | (448) | (160) | -...
+
+Result 3:
+  Score: 0.7951
+  Source: 2025-08 Performance Review CONSO_v2.pdf
+  Page: 4
+  Chunk: 0
+  Words: 500
+  Text preview: .........................................................................................................................................................
+
+
+============================================================
+TEST 3: Multiple Query Types
+============================================================
+✓ Query 'What is the total revenue?': 2 results
+✓ Query 'Describe the safety performance': 2 results
+✓ Query 'What are the key metrics in the document?': 2 results
+
+Success rate: 100.0% (3/3 queries)
+
+============================================================
+TEST SUMMARY
+============================================================
+Health Check: ✓ PASS
+Query Tool: ✓ PASS
+Multiple Queries: ✓ PASS
+
+✓ All tests passed! MCP server is functional.
+
+[5/5] Running accuracy validation...
+/Users/ricardocarvalho/DeveloperFolder/RAGLite/spike/mcp_server.py:36: UserWarning: Qdrant client version 1.15.1 is incompatible with server version 1.11.0. Major versions should match and minor version difference must not exceed 1. Set check_compatibility=False to skip version check.
+  _qdrant_client = QdrantClient(url=QDRANT_URL)
+================================================================================
+GROUND TRUTH TEST SET CREATION
+================================================================================
+
+Total questions: 15
+
+Validating Q1/15: What are the main health and safety KPIs tracked by Secil Gr...
+  ✓ Score: 0.8404, Match: 100%
+Validating Q2/15: What is the EBITDA IFRS for cement operations?...
+  ✓ Score: 0.8559, Match: 50%
+Validating Q3/15: How do variable costs per ton compare across periods?...
+  ✓ Score: 0.8526, Match: 50%
+Validating Q4/15: What are the fixed costs per ton for operations?...
+  ✓ Score: 0.8445, Match: 40%
+Validating Q5/15: What is the distribution cost per ton?...
+  ✓ Score: 0.8792, Match: 75%
+Validating Q6/15: How many employees are mentioned in the financial metrics?...
+  ✗ Score: 0.8081, Match: 25%
+Validating Q7/15: What are the employee costs per ton?...
+  ✓ Score: 0.8544, Match: 40%
+Validating Q8/15: What is the unit margin in EUR per ton?...
+  ✗ Score: 0.8387, Match: 20%
+Validating Q9/15: What are the renting costs mentioned in the document?...
+  ✗ Score: 0.7945, Match: 25%
+Validating Q10/15: What is the variable contribution in thousands of EUR?...
+  ✗ Score: 0.8408, Match: 0%
+Validating Q11/15: What are the net transport costs?...
+  ✗ Score: 0.8352, Match: 25%
+Validating Q12/15: What are the other variable costs per ton?...
+  ✓ Score: 0.8751, Match: 40%
+Validating Q13/15: What percentage change is shown for frequency ratios?...
+  ✗ Score: 0.8086, Match: 25%
+Validating Q14/15: What is the EBITDA IFRS margin percentage?...
+  ✓ Score: 0.8533, Match: 50%
+Validating Q15/15: What are the fuel costs mentioned in the operating expenses?...
+  ✓ Score: 0.8263, Match: 75%
+
+================================================================================
+VALIDATION SUMMARY
+================================================================================
+Success rate: 60.0% (9/15)
+Average retrieval score: 0.8405
+Average keyword match: 43%
+
+By category:
+  cost_analysis: 100% (4/4)
+  financial_performance: 50% (1/2)
+  margins: 50% (1/2)
+  operating_expenses: 33% (1/3)
+  safety_metrics: 50% (1/2)
+  workforce: 50% (1/2)
+
+✓ Ground truth set saved to: tests/ground_truth.json
+
+⚠️  REASSESS: 60.0% (50-69%) - Investigate before Phase 1
+
+=========================================
+PIPELINE COMPLETE
+=========================================
+
+Verifying page numbers in chunks...
+Total chunks: 348
+Chunks with page numbers: 348
+Page number coverage: 100.0%
+Sample chunk page: 1

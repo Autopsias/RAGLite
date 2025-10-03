@@ -49,19 +49,29 @@ def ingest_pdf(pdf_path: str = TEST_PDF_PATH) -> Dict[str, Any]:
         text_content = doc.export_to_markdown()
 
         # Extract page-level content with page numbers
+        # WORKAROUND: Docling's page attribution is complex. For this spike,
+        # we'll estimate page boundaries by dividing the full text proportionally.
+        # This provides reasonable page context for the Week 0 validation.
+
+        page_count = len(doc.pages) if hasattr(doc, 'pages') else 160
+        total_chars = len(text_content)
+        avg_chars_per_page = total_chars // page_count if page_count > 0 else total_chars
+
         pages_with_content = []
-        for page_num, page in enumerate(doc.pages, start=1):
-            page_text = page.export_to_markdown() if hasattr(page, 'export_to_markdown') else ""
-            if not page_text and hasattr(page, 'text'):
-                page_text = page.text
+
+        # Split text into estimated page chunks
+        for page_num in range(1, page_count + 1):
+            start_idx = (page_num - 1) * avg_chars_per_page
+            end_idx = page_num * avg_chars_per_page if page_num < page_count else total_chars
+
+            page_text = text_content[start_idx:end_idx]
 
             pages_with_content.append({
                 "page_number": page_num,
                 "text": page_text,
-                "char_count": len(page_text)
+                "char_count": len(page_text),
+                "note": "Estimated page boundary (spike workaround)"
             })
-
-        page_count = len(pages_with_content)
 
         # Extract tables if any
         tables = []
