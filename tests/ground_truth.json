@@ -1,0 +1,726 @@
+{
+  "metadata": {
+    "description": "Ground truth test set for RAGLite Week 0 Integration Spike",
+    "document": "2025-08 Performance Review CONSO_v2.pdf",
+    "total_questions": 15,
+    "validation_date": "2025-10-03",
+    "success_rate": "66.7%",
+    "avg_retrieval_score": "0.8288",
+    "avg_keyword_match": "48%"
+  },
+  "questions": [
+    {
+      "id": 1,
+      "question": "What are the main health and safety KPIs tracked by Secil Group?",
+      "expected_keywords": [
+        "frequency ratio",
+        "safety",
+        "health",
+        "KPI"
+      ],
+      "category": "safety_metrics",
+      "difficulty": "easy"
+    },
+    {
+      "id": 2,
+      "question": "What is the EBITDA IFRS for cement operations?",
+      "expected_keywords": [
+        "EBITDA",
+        "IFRS",
+        "cement",
+        "4017",
+        "4338",
+        "4263"
+      ],
+      "category": "financial_performance",
+      "difficulty": "medium"
+    },
+    {
+      "id": 3,
+      "question": "How do variable costs per ton compare across periods?",
+      "expected_keywords": [
+        "variable costs",
+        "EUR/ton",
+        "54.5",
+        "56.9"
+      ],
+      "category": "cost_analysis",
+      "difficulty": "medium"
+    },
+    {
+      "id": 4,
+      "question": "What are the fixed costs per ton for operations?",
+      "expected_keywords": [
+        "fixed costs",
+        "EUR/ton",
+        "26.8",
+        "22.1",
+        "20.5"
+      ],
+      "category": "cost_analysis",
+      "difficulty": "easy"
+    },
+    {
+      "id": 5,
+      "question": "What is the distribution cost per ton?",
+      "expected_keywords": [
+        "distribution costs",
+        "EUR/ton",
+        "13.3",
+        "14.3"
+      ],
+      "category": "cost_analysis",
+      "difficulty": "easy"
+    },
+    {
+      "id": 6,
+      "question": "How many employees are mentioned in the financial metrics?",
+      "expected_keywords": [
+        "employees",
+        "2992",
+        "3143",
+        "2646"
+      ],
+      "category": "workforce",
+      "difficulty": "medium"
+    },
+    {
+      "id": 7,
+      "question": "What are the employee costs per ton?",
+      "expected_keywords": [
+        "employees",
+        "EUR/ton",
+        "5.7",
+        "5.1",
+        "3.9"
+      ],
+      "category": "workforce",
+      "difficulty": "medium"
+    },
+    {
+      "id": 8,
+      "question": "What is the unit margin in EUR per ton?",
+      "expected_keywords": [
+        "unit margin",
+        "EUR/ton",
+        "56.9",
+        "54.6",
+        "53.5"
+      ],
+      "category": "margins",
+      "difficulty": "medium"
+    },
+    {
+      "id": 9,
+      "question": "What are the renting costs mentioned in the document?",
+      "expected_keywords": [
+        "renting",
+        "591",
+        "489",
+        "460"
+      ],
+      "category": "operating_expenses",
+      "difficulty": "easy"
+    },
+    {
+      "id": 10,
+      "question": "What is the variable contribution in thousands of EUR?",
+      "expected_keywords": [
+        "variable contribution",
+        "12860",
+        "12983",
+        "12001"
+      ],
+      "category": "financial_performance",
+      "difficulty": "hard"
+    },
+    {
+      "id": 11,
+      "question": "What are the net transport costs?",
+      "expected_keywords": [
+        "net transport costs",
+        "3036",
+        "2194",
+        "2182"
+      ],
+      "category": "operating_expenses",
+      "difficulty": "medium"
+    },
+    {
+      "id": 12,
+      "question": "What are the other variable costs per ton?",
+      "expected_keywords": [
+        "other variable costs",
+        "EUR/ton",
+        "10.6",
+        "9.7",
+        "7.5"
+      ],
+      "category": "cost_analysis",
+      "difficulty": "medium"
+    },
+    {
+      "id": 13,
+      "question": "What percentage change is shown for frequency ratios?",
+      "expected_keywords": [
+        "frequency ratio",
+        "7.0%",
+        "24.7%",
+        "15.1%"
+      ],
+      "category": "safety_metrics",
+      "difficulty": "hard"
+    },
+    {
+      "id": 14,
+      "question": "What is the EBITDA IFRS margin percentage?",
+      "expected_keywords": [
+        "EBITDA",
+        "IFRS",
+        "margin",
+        "38.3",
+        "35.4",
+        "40.0"
+      ],
+      "category": "margins",
+      "difficulty": "hard"
+    },
+    {
+      "id": 15,
+      "question": "What are the fuel costs mentioned in the operating expenses?",
+      "expected_keywords": [
+        "fuel",
+        "46.1",
+        "76",
+        "71"
+      ],
+      "category": "operating_expenses",
+      "difficulty": "easy"
+    }
+  ],
+  "validation_results": [
+    {
+      "question_id": 1,
+      "question": "What are the main health and safety KPIs tracked by Secil Group?",
+      "category": "safety_metrics",
+      "difficulty": "easy",
+      "results_count": 5,
+      "top_score": 0.8347017,
+      "expected_keywords": [
+        "frequency ratio",
+        "safety",
+        "health",
+        "KPI"
+      ],
+      "matched_keywords": [
+        "frequency ratio",
+        "safety",
+        "health",
+        "KPI"
+      ],
+      "match_score": 1.0,
+      "success": true,
+      "top_chunks": [
+        {
+          "score": 0.8347017,
+          "text_preview": "| | 7,0% | (1) | 1 | (2) | | 24,7% | (1) | 1 | (3) | | 15,1% | 77 | 82 | 73 | | 7,8% | 315 | 331 | 299 | <!-- image --> <!-- image --> ## Secil - Secil Group - Health &amp; Safety KPI's | | Frequency ",
+          "chunk_index": 13
+        },
+        {
+          "score": 0.830294,
+          "text_preview": "<!-- image --> Confidentiality Note: The information contained in this document is confidential and for the sole and exclusive use of authorised Secil group users. Its reproduction and/or distribution",
+          "chunk_index": 0
+        }
+      ]
+    },
+    {
+      "question_id": 2,
+      "question": "What is the EBITDA IFRS for cement operations?",
+      "category": "financial_performance",
+      "difficulty": "medium",
+      "results_count": 5,
+      "top_score": 0.8467337,
+      "expected_keywords": [
+        "EBITDA",
+        "IFRS",
+        "cement",
+        "4017",
+        "4338",
+        "4263"
+      ],
+      "matched_keywords": [
+        "EBITDA",
+        "IFRS",
+        "cement"
+      ],
+      "match_score": 0.5,
+      "success": true,
+      "top_chunks": [
+        {
+          "score": 0.8467337,
+          "text_preview": "4% | Employee | (8.535) | (8.604) | (8.600) | -1% | -1% | | (694) | (440) | (346) | 58% | 100% | Other | (3.921) | (4.221) | (3.826) | -7% | 2% | | 38 | - | 160 | - | -76% | Other Cement (1000 BRL) | ",
+          "chunk_index": 232
+        },
+        {
+          "score": 0.84444594,
+          "text_preview": "32% | | (462) | (454) | (391) | 2% | 18% | Employee | (3.493) | (3.556) | (3.301) | -2% | 6% | | (110) | (167) | (46) | -34% | 138% | Maintenance** | (1.077) | (2.211) | (730) | -51% | 48% | | (487) |",
+          "chunk_index": 207
+        }
+      ]
+    },
+    {
+      "question_id": 3,
+      "question": "How do variable costs per ton compare across periods?",
+      "category": "cost_analysis",
+      "difficulty": "medium",
+      "results_count": 5,
+      "top_score": 0.83405256,
+      "expected_keywords": [
+        "variable costs",
+        "EUR/ton",
+        "54.5",
+        "56.9"
+      ],
+      "matched_keywords": [
+        "variable costs",
+        "EUR/ton"
+      ],
+      "match_score": 0.5,
+      "success": true,
+      "top_chunks": [
+        {
+          "score": 0.83405256,
+          "text_preview": "| | | | (196) | (218) | (207) | -10% | -5% | Variable Costs | (1.775) | (1.718) | (1.883) | 3% | -6% | | 1,8 | 1,2 | 1,6 | 54% | 14% | Variable Costs - EUR/ton | 1,4 | 1,2 | 1,4 | 22% | -1% | | (102) ",
+          "chunk_index": 119
+        },
+        {
+          "score": 0.8300076,
+          "text_preview": "kton | 841 | 745 | 743 | 13% | 13% | | 8,8 | 8,9 | 8,9 | -0,3% | -0,3% | Price Aggregates - EUR/ton | 8,68 | 8,87 | 8,7 | -2,2% | -0,5% | | | | | | | Other Income | | | | | | | (10) | - | (1) | - | 82",
+          "chunk_index": 121
+        }
+      ]
+    },
+    {
+      "question_id": 4,
+      "question": "What are the fixed costs per ton for operations?",
+      "category": "cost_analysis",
+      "difficulty": "easy",
+      "results_count": 5,
+      "top_score": 0.8340771,
+      "expected_keywords": [
+        "fixed costs",
+        "EUR/ton",
+        "26.8",
+        "22.1",
+        "20.5"
+      ],
+      "matched_keywords": [
+        "fixed costs",
+        "EUR/ton"
+      ],
+      "match_score": 0.4,
+      "success": true,
+      "top_chunks": [
+        {
+          "score": 0.8340771,
+          "text_preview": "costs | (58) | - | (59) | - | -1% | | 48 | 50 | 60 | -4% | -20% | Other operating income | 432 | 398 | 434 | 9% | -0% | | (1.001) | (818) | (901) | 22% | | Operacional Costs Variable Costs Cement | (7",
+          "chunk_index": 142
+        },
+        {
+          "score": 0.829371,
+          "text_preview": "| LCU/ton | - | - | - | - | - | 152,2 | - | - | - | - | - | - | | Variable Cost | LCU/ton | -24,4 | -19,6 | -24,6 | -94,4 | -101,5 | -101,6 | -50,6 | -47,1 | -96,8 | -147,7 | -140,4 | -161,3 | | Therm",
+          "chunk_index": 31
+        }
+      ]
+    },
+    {
+      "question_id": 5,
+      "question": "What is the distribution cost per ton?",
+      "category": "cost_analysis",
+      "difficulty": "easy",
+      "results_count": 5,
+      "top_score": 0.8365239,
+      "expected_keywords": [
+        "distribution costs",
+        "EUR/ton",
+        "13.3",
+        "14.3"
+      ],
+      "matched_keywords": [
+        "distribution costs",
+        "EUR/ton",
+        "14.3"
+      ],
+      "match_score": 0.75,
+      "success": true,
+      "top_chunks": [
+        {
+          "score": 0.8365239,
+          "text_preview": "(63) | (53) | 18% | 436% | Other Raw Materials | (471) | (499) | (512) | -6% | -8% | | 0,4 | | 0,1 | - | 41% | Ashes - EUR/m3 | 0,4 | 0,0 | 0,2 | - | 65% | | 2,8 | (16) | 2,5 | 5% | 12% | Other Raw Ma",
+          "chunk_index": 96
+        },
+        {
+          "score": 0.82948583,
+          "text_preview": "| 10,9 | -1% | 2% | Aggregates - EUR/m3 | 11,3 | 11,2 | 10,7 | 0% | 5% | | (674) | (551) | (592) | 22% | 14% | Sand | (5.472) | (5.304) | (5.093) | 3% | 7% | | 13,2 | 13,2 | 12,5 | 0% | 6% | Sand - EU",
+          "chunk_index": 92
+        }
+      ]
+    },
+    {
+      "question_id": 6,
+      "question": "How many employees are mentioned in the financial metrics?",
+      "category": "workforce",
+      "difficulty": "medium",
+      "results_count": 5,
+      "top_score": 0.8044894,
+      "expected_keywords": [
+        "employees",
+        "2992",
+        "3143",
+        "2646"
+      ],
+      "matched_keywords": [
+        "employees"
+      ],
+      "match_score": 0.25,
+      "success": false,
+      "top_chunks": [
+        {
+          "score": 0.8044894,
+          "text_preview": "| | (407) | (324) | (323) | 26% | 26% | Variable Costs | (2.412) | (2.527) | (2.670) | -5% | -10% | | (141) | (169) | (175) | -17% | -19% | Fixed Costs | (1.141) | (1.282) | (1.139) | -11% | 0% | | (5",
+          "chunk_index": 144
+        },
+        {
+          "score": 0.8001621,
+          "text_preview": "| (63) | (54) | -11% | 4% | Employees | (497) | (507) | (472) | -2% | 5% | | 4,7 | 5,3 | 5,2 | -12% | -9% | Employees - EUR/m3 | 5,4 16 | 4,6 | 5,3 | 19% | 2% | | 16 | 17 | 16 | -6% | - | #FTEs | | 17",
+          "chunk_index": 108
+        }
+      ]
+    },
+    {
+      "question_id": 7,
+      "question": "What are the employee costs per ton?",
+      "category": "workforce",
+      "difficulty": "medium",
+      "results_count": 5,
+      "top_score": 0.83664954,
+      "expected_keywords": [
+        "employees",
+        "EUR/ton",
+        "5.7",
+        "5.1",
+        "3.9"
+      ],
+      "matched_keywords": [
+        "employees",
+        "EUR/ton",
+        "5.7",
+        "3.9"
+      ],
+      "match_score": 0.8,
+      "success": true,
+      "top_chunks": [
+        {
+          "score": 0.83664954,
+          "text_preview": "| LCU/ton | - | - | - | - | - | 152,2 | - | - | - | - | - | - | | Variable Cost | LCU/ton | -24,4 | -19,6 | -24,6 | -94,4 | -101,5 | -101,6 | -50,6 | -47,1 | -96,8 | -147,7 | -140,4 | -161,3 | | Therm",
+          "chunk_index": 31
+        },
+        {
+          "score": 0.8356577,
+          "text_preview": "| 0,9 | 0,7 | 0,6 | 25% | 45% | Other Variable Costs - EUR/ton | 0,9 | 0,7 | 0,7 | 26% | 16% | | (446) | (511) | (558) | -13% | -20% | Fixed Costs | (3.841) | (4.155) | (4.102) | -8% | -6% | | 3,6 | 4",
+          "chunk_index": 117
+        }
+      ]
+    },
+    {
+      "question_id": 8,
+      "question": "What is the unit margin in EUR per ton?",
+      "category": "margins",
+      "difficulty": "medium",
+      "results_count": 5,
+      "top_score": 0.8307494,
+      "expected_keywords": [
+        "unit margin",
+        "EUR/ton",
+        "56.9",
+        "54.6",
+        "53.5"
+      ],
+      "matched_keywords": [
+        "unit margin",
+        "EUR/ton"
+      ],
+      "match_score": 0.4,
+      "success": true,
+      "top_chunks": [
+        {
+          "score": 0.8307494,
+          "text_preview": "28% | 16% | | (104) | (61) | (66) | 70% | 59% | Renting | (591) | (489) | (460) | 21% | 29% | | 1,0 | 0,3 | 0,5 | 192% | 92% | Renting - EUR/ton | 0,5 | 0,3 | 0,4 | 43% | 35% | | (34) | (32) | (58) | ",
+          "chunk_index": 120
+        },
+        {
+          "score": 0.82410246,
+          "text_preview": "| Variable Costs - EUR/ton | 54,5 | 56,9 | 53,9 | -4% | 1% | | 57,9 | 54,6 | 53,4 | 6% | 8% | Unit margin - EUR/ton | 56,9 | 54,6 | 53,5 | 4% | 6% | | 1.494 | 1.584 | 1.485 | -6% | 1% | Variable contr",
+          "chunk_index": 50
+        }
+      ]
+    },
+    {
+      "question_id": 9,
+      "question": "What are the renting costs mentioned in the document?",
+      "category": "operating_expenses",
+      "difficulty": "easy",
+      "results_count": 5,
+      "top_score": 0.79663515,
+      "expected_keywords": [
+        "renting",
+        "591",
+        "489",
+        "460"
+      ],
+      "matched_keywords": [
+        "renting"
+      ],
+      "match_score": 0.25,
+      "success": false,
+      "top_chunks": [
+        {
+          "score": 0.79663515,
+          "text_preview": "- EUR/FTE | 23,5 | 22,3 | 22,5 | 6% | 5% | | 11% | 12% | 9% | -1,1 pp | 1,7 pp | Employee Costs/ Turnover -% | 10% | 11% | 10% | -0,8 pp | 0,8 pp | | 32% | 27% | 22% | 473% | 983% | Employee Costs/ EB",
+          "chunk_index": 122
+        },
+        {
+          "score": 0.7958189,
+          "text_preview": "| | (2) | (10) | (4) | -77% | -44% | Rents and Rentals | (20) | (67) | (133) | -70% | -85% | | (153) | (142) | (144) | 8% | 6% | Specialized Labour | (1.259) | (1.309) | (1.520) | -4% | -17% | | (7) |",
+          "chunk_index": 253
+        }
+      ]
+    },
+    {
+      "question_id": 10,
+      "question": "What is the variable contribution in thousands of EUR?",
+      "category": "financial_performance",
+      "difficulty": "hard",
+      "results_count": 5,
+      "top_score": 0.81962514,
+      "expected_keywords": [
+        "variable contribution",
+        "12860",
+        "12983",
+        "12001"
+      ],
+      "matched_keywords": [],
+      "match_score": 0.0,
+      "success": false,
+      "top_chunks": [
+        {
+          "score": 0.81962514,
+          "text_preview": "| 2,9 | 2,9 | 2,9 | 1% | 3% | | (79) 0,6 | (79) 0,7 | (65) 0,6 | -1% -16% | 21% 7% | Other Variable Costs Other Variable Costs - EUR/m3 | (655) | (725) 0,7 | (604) 0,6 | -10% -12% | 8% 4% | | (1.767) ",
+          "chunk_index": 87
+        },
+        {
+          "score": 0.81456524,
+          "text_preview": "| | | | (196) | (218) | (207) | -10% | -5% | Variable Costs | (1.775) | (1.718) | (1.883) | 3% | -6% | | 1,8 | 1,2 | 1,6 | 54% | 14% | Variable Costs - EUR/ton | 1,4 | 1,2 | 1,4 | 22% | -1% | | (102) ",
+          "chunk_index": 119
+        }
+      ]
+    },
+    {
+      "question_id": 11,
+      "question": "What are the net transport costs?",
+      "category": "operating_expenses",
+      "difficulty": "medium",
+      "results_count": 5,
+      "top_score": 0.8352076,
+      "expected_keywords": [
+        "net transport costs",
+        "3036",
+        "2194",
+        "2182"
+      ],
+      "matched_keywords": [
+        "net transport costs"
+      ],
+      "match_score": 0.25,
+      "success": false,
+      "top_chunks": [
+        {
+          "score": 0.8352076,
+          "text_preview": "| 2,9 | 2,9 | 2,9 | 1% | 3% | | (79) 0,6 | (79) 0,7 | (65) 0,6 | -1% -16% | 21% 7% | Other Variable Costs Other Variable Costs - EUR/m3 | (655) | (725) 0,7 | (604) 0,6 | -10% -12% | 8% 4% | | (1.767) ",
+          "chunk_index": 87
+        },
+        {
+          "score": 0.8315047,
+          "text_preview": "(63) | (53) | 18% | 436% | Other Raw Materials | (471) | (499) | (512) | -6% | -8% | | 0,4 | | 0,1 | - | 41% | Ashes - EUR/m3 | 0,4 | 0,0 | 0,2 | - | 65% | | 2,8 | (16) | 2,5 | 5% | 12% | Other Raw Ma",
+          "chunk_index": 96
+        }
+      ]
+    },
+    {
+      "question_id": 12,
+      "question": "What are the other variable costs per ton?",
+      "category": "cost_analysis",
+      "difficulty": "medium",
+      "results_count": 5,
+      "top_score": 0.85246897,
+      "expected_keywords": [
+        "other variable costs",
+        "EUR/ton",
+        "10.6",
+        "9.7",
+        "7.5"
+      ],
+      "matched_keywords": [
+        "other variable costs",
+        "EUR/ton",
+        "7.5"
+      ],
+      "match_score": 0.6,
+      "success": true,
+      "top_chunks": [
+        {
+          "score": 0.85246897,
+          "text_preview": "| | | | (196) | (218) | (207) | -10% | -5% | Variable Costs | (1.775) | (1.718) | (1.883) | 3% | -6% | | 1,8 | 1,2 | 1,6 | 54% | 14% | Variable Costs - EUR/ton | 1,4 | 1,2 | 1,4 | 22% | -1% | | (102) ",
+          "chunk_index": 119
+        },
+        {
+          "score": 0.84649277,
+          "text_preview": "kton | 841 | 745 | 743 | 13% | 13% | | 8,8 | 8,9 | 8,9 | -0,3% | -0,3% | Price Aggregates - EUR/ton | 8,68 | 8,87 | 8,7 | -2,2% | -0,5% | | | | | | | Other Income | | | | | | | (10) | - | (1) | - | 82",
+          "chunk_index": 121
+        }
+      ]
+    },
+    {
+      "question_id": 13,
+      "question": "What percentage change is shown for frequency ratios?",
+      "category": "safety_metrics",
+      "difficulty": "hard",
+      "results_count": 5,
+      "top_score": 0.816681,
+      "expected_keywords": [
+        "frequency ratio",
+        "7.0%",
+        "24.7%",
+        "15.1%"
+      ],
+      "matched_keywords": [
+        "frequency ratio"
+      ],
+      "match_score": 0.25,
+      "success": false,
+      "top_chunks": [
+        {
+          "score": 0.816681,
+          "text_preview": "| | 7,0% | (1) | 1 | (2) | | 24,7% | (1) | 1 | (3) | | 15,1% | 77 | 82 | 73 | | 7,8% | 315 | 331 | 299 | <!-- image --> <!-- image --> ## Secil - Secil Group - Health &amp; Safety KPI's | | Frequency ",
+          "chunk_index": 13
+        },
+        {
+          "score": 0.7967975,
+          "text_preview": "85.766 | (64.544) | -1% | - | | Financial net debt - Opening Balance | 573.711 | 520.949 | 435.917 | 10% | 32% | | Effects of exchange rate change on Net Debt | 63.785 | (6.246) | (80.677) | - | - | |",
+          "chunk_index": 259
+        }
+      ]
+    },
+    {
+      "question_id": 14,
+      "question": "What is the EBITDA IFRS margin percentage?",
+      "category": "margins",
+      "difficulty": "hard",
+      "results_count": 5,
+      "top_score": 0.8216413,
+      "expected_keywords": [
+        "EBITDA",
+        "IFRS",
+        "margin",
+        "38.3",
+        "35.4",
+        "40.0"
+      ],
+      "matched_keywords": [
+        "EBITDA",
+        "IFRS",
+        "margin"
+      ],
+      "match_score": 0.5,
+      "success": true,
+      "top_chunks": [
+        {
+          "score": 0.8216413,
+          "text_preview": "| 17,2% | 14,2% | -6 pp | -3 pp | EBITDA IFRS Angola Margin% | 5,0% | 7,6% | 9,3% | -3 pp | -4 pp | * - Includes Raw Materials, Subsidiary Materials, Packaging and other variable costs. ** - Includes ",
+          "chunk_index": 165
+        },
+        {
+          "score": 0.81680405,
+          "text_preview": "| 17% | - | 0,0 pp | 10,8 pp | EBITDA IFRS Margin % | 5% | 8% | 9% | -2,6 pp | -4,3 pp | | 10% | 16% | 13% | -6,4 pp | -3,5 pp | EBIT Margin % | 3% | 6% | 8% | -3,0 pp | -4,7 pp | <!-- image --> <!-- ",
+          "chunk_index": 168
+        }
+      ]
+    },
+    {
+      "question_id": 15,
+      "question": "What are the fuel costs mentioned in the operating expenses?",
+      "category": "operating_expenses",
+      "difficulty": "easy",
+      "results_count": 5,
+      "top_score": 0.8319762,
+      "expected_keywords": [
+        "fuel",
+        "46.1",
+        "76",
+        "71"
+      ],
+      "matched_keywords": [
+        "fuel",
+        "76",
+        "71"
+      ],
+      "match_score": 0.75,
+      "success": true,
+      "top_chunks": [
+        {
+          "score": 0.8319762,
+          "text_preview": "kton | 841 | 745 | 743 | 13% | 13% | | 8,8 | 8,9 | 8,9 | -0,3% | -0,3% | Price Aggregates - EUR/ton | 8,68 | 8,87 | 8,7 | -2,2% | -0,5% | | | | | | | Other Income | | | | | | | (10) | - | (1) | - | 82",
+          "chunk_index": 121
+        },
+        {
+          "score": 0.8252939,
+          "text_preview": "| 179 | 111 | -29% | 14% | | (10) | (0) | (0) | ########## | 2202% | Net transport costs - Cost | (74) | 0 | (24) | ########## | 210% | | 207 | 160 | 227 | 29% | -9% | Other operating income | 1.625 |",
+          "chunk_index": 112
+        }
+      ]
+    }
+  ],
+  "statistics": {
+    "total": 15,
+    "successful": 10,
+    "success_rate": 66.66666666666666,
+    "average_score": 0.8288141773333333,
+    "average_match": 0.48000000000000004,
+    "by_category": {
+      "safety_metrics": {
+        "total": 2,
+        "success": 1
+      },
+      "financial_performance": {
+        "total": 2,
+        "success": 1
+      },
+      "cost_analysis": {
+        "total": 4,
+        "success": 4
+      },
+      "workforce": {
+        "total": 2,
+        "success": 1
+      },
+      "margins": {
+        "total": 2,
+        "success": 2
+      },
+      "operating_expenses": {
+        "total": 3,
+        "success": 1
+      }
+    }
+  }
+}

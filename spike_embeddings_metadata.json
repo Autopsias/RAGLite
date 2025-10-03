@@ -1,0 +1,9 @@
+{
+  "model": "intfloat/e5-large-v2",
+  "embedding_dimension": 1024,
+  "total_chunks": 260,
+  "embedding_time_seconds": 20.13,
+  "time_per_chunk_seconds": 0.077,
+  "throughput_chunks_per_second": 12.91,
+  "sample_embedding_shape": 1024
+}
