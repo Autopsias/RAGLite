@@ -1,15 +1,15 @@
 """PDF ingestion using Docling for Week 0 Integration Spike."""
 
-import time
 import json
+import time
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any
 
-from docling.document_converter import DocumentConverter
 from config import TEST_PDF_PATH
+from docling.document_converter import DocumentConverter
 
 
-def ingest_pdf(pdf_path: str = TEST_PDF_PATH) -> Dict[str, Any]:
+def ingest_pdf(pdf_path: str = TEST_PDF_PATH) -> dict[str, Any]:
     """
     Ingest a financial PDF using Docling and extract text and tables.
 
@@ -53,7 +53,7 @@ def ingest_pdf(pdf_path: str = TEST_PDF_PATH) -> Dict[str, Any]:
         # we'll estimate page boundaries by dividing the full text proportionally.
         # This provides reasonable page context for the Week 0 validation.
 
-        page_count = len(doc.pages) if hasattr(doc, 'pages') else 160
+        page_count = len(doc.pages) if hasattr(doc, "pages") else 160
         total_chars = len(text_content)
         avg_chars_per_page = total_chars // page_count if page_count > 0 else total_chars
 
@@ -66,22 +66,26 @@ def ingest_pdf(pdf_path: str = TEST_PDF_PATH) -> Dict[str, Any]:
 
             page_text = text_content[start_idx:end_idx]
 
-            pages_with_content.append({
-                "page_number": page_num,
-                "text": page_text,
-                "char_count": len(page_text),
-                "note": "Estimated page boundary (spike workaround)"
-            })
+            pages_with_content.append(
+                {
+                    "page_number": page_num,
+                    "text": page_text,
+                    "char_count": len(page_text),
+                    "note": "Estimated page boundary (spike workaround)",
+                }
+            )
 
         # Extract tables if any
         tables = []
         for table in doc.tables:
-            tables.append({
-                "page": getattr(table, "page_no", None),
-                "rows": getattr(table, "num_rows", 0),
-                "cols": getattr(table, "num_cols", 0),
-                "content": str(table)
-            })
+            tables.append(
+                {
+                    "page": getattr(table, "page_no", None),
+                    "rows": getattr(table, "num_rows", 0),
+                    "cols": getattr(table, "num_cols", 0),
+                    "content": str(table),
+                }
+            )
 
         # Calculate ingestion time
         ingestion_time = time.time() - start_time
@@ -101,14 +105,14 @@ def ingest_pdf(pdf_path: str = TEST_PDF_PATH) -> Dict[str, Any]:
             "extracted_metadata": {
                 "title": getattr(doc, "title", None),
                 "author": getattr(doc, "author", None),
-            }
+            },
         }
 
         # Print summary
         print(f"\n{'='*60}")
         print("INGESTION SUMMARY")
         print(f"{'='*60}")
-        print(f"Status: SUCCESS")
+        print("Status: SUCCESS")
         print(f"Pages: {page_count}")
         print(f"Text length: {len(text_content):,} characters")
         print(f"Tables found: {len(tables)}")
@@ -123,7 +127,9 @@ def ingest_pdf(pdf_path: str = TEST_PDF_PATH) -> Dict[str, Any]:
         if tables:
             print(f"TABLES FOUND: {len(tables)}")
             for i, table in enumerate(tables[:3]):  # Show first 3 tables
-                print(f"  Table {i+1}: {table['rows']} rows x {table['cols']} cols (Page {table['page']})")
+                print(
+                    f"  Table {i+1}: {table['rows']} rows x {table['cols']} cols (Page {table['page']})"
+                )
 
         return result_data
 
@@ -136,15 +142,15 @@ def ingest_pdf(pdf_path: str = TEST_PDF_PATH) -> Dict[str, Any]:
             "status": "failed",
             "file_name": pdf_file.name,
             "error": str(e),
-            "ingestion_time_seconds": round(ingestion_time, 2)
+            "ingestion_time_seconds": round(ingestion_time, 2),
         }
 
 
-def save_ingestion_result(result: Dict[str, Any], output_path: str = "spike_ingestion_result.json"):
+def save_ingestion_result(result: dict[str, Any], output_path: str = "spike_ingestion_result.json"):
     """Save ingestion result to JSON file for later analysis."""
     output_file = Path(output_path)
 
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
 
     print(f"Ingestion result saved to: {output_file}")

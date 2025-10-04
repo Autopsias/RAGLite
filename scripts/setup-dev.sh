@@ -7,7 +7,7 @@
 #
 # This script:
 # 1. Checks prerequisites (Python 3.11+, Docker)
-# 2. Installs Poetry if not present
+# 2. Installs uv if not present
 # 3. Installs Python dependencies
 # 4. Starts Qdrant via Docker Compose
 # 5. Initializes Qdrant collection
@@ -86,23 +86,23 @@ fi
 
 print_success "Docker Compose found"
 
-# Step 2: Install Poetry
-print_header "Step 2: Installing Poetry (if needed)"
+# Step 2: Install uv
+print_header "Step 2: Installing uv (if needed)"
 
-if command -v poetry &> /dev/null; then
-    POETRY_VERSION=$(poetry --version | cut -d' ' -f3)
-    print_success "Poetry $POETRY_VERSION already installed"
+if command -v uv &> /dev/null; then
+    UV_VERSION=$(uv --version | cut -d' ' -f2)
+    print_success "uv $UV_VERSION already installed"
 else
-    print_info "Installing Poetry..."
-    curl -sSL https://install.python-poetry.org | python3 -
+    print_info "Installing uv..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
 
-    # Add Poetry to PATH for this session
+    # Add uv to PATH for this session
     export PATH="$HOME/.local/bin:$PATH"
 
-    if command -v poetry &> /dev/null; then
-        print_success "Poetry installed successfully"
+    if command -v uv &> /dev/null; then
+        print_success "uv installed successfully"
     else
-        print_error "Poetry installation failed. Please install manually: https://python-poetry.org/docs/#installation"
+        print_error "uv installation failed. Please install manually: https://docs.astral.sh/uv/getting-started/installation/"
         exit 1
     fi
 fi
@@ -110,11 +110,8 @@ fi
 # Step 3: Install Python Dependencies
 print_header "Step 3: Installing Python Dependencies"
 
-print_info "Configuring Poetry to create virtualenv in project..."
-poetry config virtualenvs.in-project true
-
-print_info "Installing dependencies (this may take a few minutes)..."
-if poetry install --no-interaction; then
+print_info "Installing dependencies with uv (this is very fast!)..."
+if uv sync --frozen; then
     print_success "Dependencies installed successfully"
 else
     print_error "Dependency installation failed"
@@ -174,7 +171,7 @@ print_header "Step 6: Initializing Qdrant Collection"
 
 if [ -f "scripts/init-qdrant.py" ]; then
     print_info "Running Qdrant initialization script..."
-    if poetry run python scripts/init-qdrant.py; then
+    if uv run python scripts/init-qdrant.py; then
         print_success "Qdrant collection initialized"
     else
         print_warning "Qdrant initialization script failed (may already be initialized)"
@@ -189,7 +186,7 @@ print_header "Step 7: Installing Pre-commit Hooks"
 
 if [ -f ".pre-commit-config.yaml" ]; then
     print_info "Installing pre-commit hooks..."
-    if poetry run pre-commit install; then
+    if uv run pre-commit install; then
         print_success "Pre-commit hooks installed"
     else
         print_warning "Pre-commit hook installation failed (non-critical)"
@@ -202,13 +199,13 @@ fi
 print_header "Step 8: Running Validation Tests"
 
 print_info "Running pytest to validate setup..."
-if poetry run pytest --version > /dev/null 2>&1; then
+if uv run pytest --version > /dev/null 2>&1; then
     print_success "pytest is working"
 
     # Run actual tests if they exist
     if [ -d "raglite/tests" ]; then
         print_info "Running test suite..."
-        if poetry run pytest -v; then
+        if uv run pytest -v; then
             print_success "All tests passed"
         else
             print_warning "Some tests failed - this may be expected if Week 0 code is incomplete"
@@ -228,15 +225,15 @@ echo -e "${GREEN}Development environment is ready.${NC}"
 echo ""
 echo -e "${BLUE}Next Steps:${NC}"
 echo "  1. Edit .env and add your ANTHROPIC_API_KEY"
-echo "  2. Start development server: poetry run python -m raglite.main"
-echo "  3. Run tests: poetry run pytest"
-echo "  4. Format code: poetry run black raglite/"
-echo "  5. Lint code: poetry run ruff check raglite/"
+echo "  2. Start development server: uv run python -m raglite.main"
+echo "  3. Run tests: uv run pytest"
+echo "  4. Format code: uv run black raglite/"
+echo "  5. Lint code: uv run ruff check raglite/"
 echo ""
 echo -e "${BLUE}Useful Commands:${NC}"
-echo "  poetry shell                  # Activate virtual environment"
-echo "  poetry run pytest             # Run tests"
-echo "  poetry run pytest --cov       # Run tests with coverage"
+echo "  uv run pytest                 # Run tests"
+echo "  uv run pytest --cov           # Run tests with coverage"
+echo "  uv sync                       # Sync dependencies from uv.lock"
 echo "  docker-compose logs qdrant    # View Qdrant logs"
 echo "  docker-compose stop           # Stop services"
 echo "  docker-compose down           # Stop and remove containers"

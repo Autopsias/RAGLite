@@ -1,13 +1,12 @@
 """Document chunking for Week 0 Integration Spike."""
 
 import json
-from typing import List, Dict, Any
-from pathlib import Path
+from typing import Any
 
-from config import CHUNK_SIZE, CHUNK_OVERLAP
+from config import CHUNK_OVERLAP, CHUNK_SIZE
 
 
-def split_into_words(text: str) -> List[str]:
+def split_into_words(text: str) -> list[str]:
     """Split text into words, preserving whitespace for reconstruction."""
     return text.split()
 
@@ -17,8 +16,8 @@ def chunk_text(
     chunk_size: int = CHUNK_SIZE,
     chunk_overlap: int = CHUNK_OVERLAP,
     source_doc: str = "",
-    page_number: int = None
-) -> List[Dict[str, Any]]:
+    page_number: int = None,
+) -> list[dict[str, Any]]:
     """
     Chunk text into overlapping segments based on word count.
 
@@ -59,8 +58,8 @@ def chunk_text(
                 "source_document": source_doc,
                 "page_number": page_number,
                 "chunk_index": chunk_id,
-                "total_chunks": None  # Will be updated after all chunks created
-            }
+                "total_chunks": None,  # Will be updated after all chunks created
+            },
         }
 
         chunks.append(chunk)
@@ -79,8 +78,8 @@ def chunk_text(
 
 def chunk_ingested_document(
     ingestion_result_path: str = "spike_ingestion_result.json",
-    output_path: str = "spike_chunks.json"
-) -> List[Dict[str, Any]]:
+    output_path: str = "spike_chunks.json",
+) -> list[dict[str, Any]]:
     """
     Chunk an ingested document from the ingestion result file.
 
@@ -92,7 +91,7 @@ def chunk_ingested_document(
         List of all chunks with metadata
     """
     # Load ingestion result
-    with open(ingestion_result_path, 'r', encoding='utf-8') as f:
+    with open(ingestion_result_path, encoding="utf-8") as f:
         ingestion_data = json.load(f)
 
     if ingestion_data.get("status") != "success":
@@ -117,30 +116,22 @@ def chunk_ingested_document(
             if not page_text.strip():
                 continue  # Skip empty pages
 
-            page_chunks = chunk_text(
-                text=page_text,
-                source_doc=source_doc,
-                page_number=page_num
-            )
+            page_chunks = chunk_text(text=page_text, source_doc=source_doc, page_number=page_num)
             all_chunks.extend(page_chunks)
 
         print(f"✓ Chunked {len(pages_data)} pages into {len(all_chunks)} chunks")
     else:
         # Fallback: Use full document text (backward compatibility)
         text_content = ingestion_data["text_content"]
-        print(f"⚠️  No page-level data found, using full document text")
+        print("⚠️  No page-level data found, using full document text")
         print(f"Total text length: {len(text_content):,} characters")
 
-        all_chunks = chunk_text(
-            text=text_content,
-            source_doc=source_doc,
-            page_number=None
-        )
+        all_chunks = chunk_text(text=text_content, source_doc=source_doc, page_number=None)
 
     chunks = all_chunks
 
     print(f"\nTotal chunks created: {len(chunks)}")
-    print(f"\nSample chunks:")
+    print("\nSample chunks:")
     for i, chunk in enumerate(chunks[:3]):
         print(f"\nChunk {i}:")
         print(f"  Words: {chunk['word_count']}")
@@ -160,16 +151,13 @@ def chunk_ingested_document(
         "avg_words_per_chunk": round(avg_words, 2),
         "avg_chars_per_chunk": round(avg_chars, 2),
         "min_words": min(c["word_count"] for c in chunks),
-        "max_words": max(c["word_count"] for c in chunks)
+        "max_words": max(c["word_count"] for c in chunks),
     }
 
     # Save chunks to file
-    output_data = {
-        "statistics": stats,
-        "chunks": chunks
-    }
+    output_data = {"statistics": stats, "chunks": chunks}
 
-    with open(output_path, 'w', encoding='utf-8') as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(output_data, f, indent=2, ensure_ascii=False)
 
     print(f"\n{'='*60}")

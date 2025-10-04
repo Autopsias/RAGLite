@@ -45,7 +45,7 @@ This document defines the **complete and definitive** technology stack for RAGLi
 
 | Category | Tool | Version | Purpose | Phase |
 |----------|------|---------|---------|-------|
-| **Package Manager** | Poetry | 1.7+ | Dependency management | Phase 1+ |
+| **Package Manager** | uv | Latest | Fast Python dependency management | Phase 1+ |
 | **Formatter** | Black | 23.3+ | Code formatting | Phase 1+ |
 | **Linter** | Ruff | 0.0.270+ | Fast Python linter | Phase 1+ |
 | **Type Checker** | mypy | 1.4+ (optional) | Static type checking | Phase 4 |
@@ -66,7 +66,7 @@ This document defines the **complete and definitive** technology stack for RAGLi
 - FastMCP (MCP server)
 - Claude 3.7 Sonnet API (synthesis)
 - pytest + pytest-asyncio (testing)
-- Poetry (dependency management)
+- uv (fast dependency management)
 - Docker + Docker Compose (local development)
 
 **NOT Used in Phase 1:**
@@ -139,49 +139,62 @@ The following technologies are **explicitly forbidden** to prevent over-engineer
 
 ## Dependency Management
 
-### Poetry (pyproject.toml)
+### uv (pyproject.toml + uv.lock)
+
+**Why uv?** 10-100× faster than Poetry, Rust-based, PEP 517 compliant, built-in caching.
 
 ```toml
-[tool.poetry]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
 name = "raglite"
 version = "1.1.0"
 description = "AI-powered financial document analysis via RAG"
-authors = ["Your Name <you@example.com>"]
+authors = [{name = "Your Name", email = "you@example.com"}]
+requires-python = ">=3.11,<4.0"
 
-[tool.poetry.dependencies]
-python = "^3.11"
-fastmcp = "^1.0"
-docling = "latest"
-qdrant-client = "^1.11"
-pydantic = "^2.0"
-pydantic-settings = "^2.0"
-anthropic = "^0.18"  # Claude API
-openpyxl = "^3.1"
-pandas = "^2.0"
+dependencies = [
+    "fastmcp==2.12.4",
+    "docling==2.55.1",
+    "qdrant-client==1.15.1",
+    "pydantic>=2.0,<3.0",
+    "pydantic-settings>=2.0,<3.0",
+    "anthropic>=0.18.0,<1.0.0",
+    "openpyxl>=3.1,<4.0",
+    "pandas>=2.0,<3.0",
+]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.4"
-pytest-asyncio = "^0.21"
-black = "^23.3"
-ruff = "^0.0.270"
-pytest-cov = "^4.1"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[dependency-groups]
+dev = [
+    "pytest==8.4.2",
+    "pytest-asyncio==1.2.0",
+    "black>=23.3,<24.0",
+    "ruff>=0.0.270,<1.0.0",
+    "pytest-cov>=4.1,<5.0",
+]
 ```
 
 ### Installation
 
 ```bash
-# Install dependencies
-poetry install
+# Install uv (one-time)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Sync dependencies from uv.lock (typical workflow)
+uv sync --frozen
 
 # Add new dependency (ONLY with user approval)
-poetry add <package-name>
+uv add <package-name>
 
 # Add dev dependency
-poetry add --group dev <package-name>
+uv add --group dev <package-name>
+
+# Run commands
+uv run pytest
+uv run black raglite/
+uv run ruff check raglite/
 ```
 
 ---

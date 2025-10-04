@@ -10,13 +10,17 @@ import asyncio
 import sys
 from pathlib import Path
 
-# Add spike directory to path
-sys.path.insert(0, str(Path(__file__).parent))
+import pytest
 
-from mcp_server import execute_query, check_health, QueryRequest
+# Add spike directory to path for importing spike modules
+spike_dir = Path(__file__).parent.parent.parent / "spike"
+sys.path.insert(0, str(spike_dir))
+
+from mcp_server import QueryRequest, check_health, execute_query  # noqa: E402
 
 
-async def test_health_check():
+@pytest.mark.asyncio
+async def test_health_check() -> bool:
     """Test the health_check tool."""
     print("=" * 60)
     print("TEST 1: Health Check")
@@ -41,7 +45,8 @@ async def test_health_check():
         return False
 
 
-async def test_query_tool():
+@pytest.mark.asyncio
+async def test_query_tool() -> bool:
     """Test the query_financial_documents tool."""
     print("\n" + "=" * 60)
     print("TEST 2: Query Tool - Sample Financial Query")
@@ -54,7 +59,7 @@ async def test_query_tool():
         request = QueryRequest(query=test_query, top_k=3)
         result = await execute_query(request)
 
-        print(f"✓ Query executed successfully\n")
+        print("✓ Query executed successfully\n")
         print(f"Query: {result.query}")
         print(f"Results returned: {result.results_count}\n")
 
@@ -73,11 +78,13 @@ async def test_query_tool():
     except Exception as e:
         print(f"✗ Query tool failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
 
-async def test_multiple_queries():
+@pytest.mark.asyncio
+async def test_multiple_queries() -> bool:
     """Test with multiple diverse queries."""
     print("\n" + "=" * 60)
     print("TEST 3: Multiple Query Types")
@@ -86,7 +93,7 @@ async def test_multiple_queries():
     test_queries = [
         "What is the total revenue?",
         "Describe the safety performance",
-        "What are the key metrics in the document?"
+        "What are the key metrics in the document?",
     ]
 
     results = []
@@ -108,7 +115,7 @@ async def test_multiple_queries():
     return all(results)
 
 
-async def main():
+async def main() -> None:
     """Run all tests."""
     print("\n" + "=" * 60)
     print("MCP SERVER FUNCTIONALITY TESTS")
