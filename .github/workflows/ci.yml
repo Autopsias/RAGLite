@@ -102,9 +102,9 @@ jobs:
           QDRANT_PORT: 6333
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          # Check if test directory exists
-          if [ ! -d "tests/${{ matrix.test-suite }}" ]; then
-            echo "⚠️  Test directory tests/${{ matrix.test-suite }}/ does not exist yet, skipping..."
+          # Check if test directory exists AND has test files
+          if [ ! -d "tests/${{ matrix.test-suite }}" ] || [ -z "$(find tests/${{ matrix.test-suite }} -name 'test_*.py' -type f)" ]; then
+            echo "⚠️  Test directory tests/${{ matrix.test-suite }}/ does not exist or has no tests yet, skipping..."
             exit 0
           fi
 
