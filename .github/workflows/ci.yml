@@ -26,16 +26,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      # Python 3.13 and uv 0.8.22 pre-installed on self-hosted runners
+      # No setup steps needed
 
       - name: Install dependencies
         run: uv sync --frozen
@@ -95,16 +87,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      # Python 3.13 and uv 0.8.22 pre-installed on self-hosted runners
+      # No setup steps needed
 
       - name: Install dependencies
         run: uv sync --frozen
