@@ -10,12 +10,15 @@ import asyncio
 import sys
 from pathlib import Path
 
+import pytest
+
 # Add spike directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from mcp_server import execute_query, check_health, QueryRequest
+from mcp_server import QueryRequest, check_health, execute_query  # noqa: E402
 
 
+@pytest.mark.asyncio
 async def test_health_check():
     """Test the health_check tool."""
     print("=" * 60)
@@ -41,6 +44,7 @@ async def test_health_check():
         return False
 
 
+@pytest.mark.asyncio
 async def test_query_tool():
     """Test the query_financial_documents tool."""
     print("\n" + "=" * 60)
@@ -54,7 +58,7 @@ async def test_query_tool():
         request = QueryRequest(query=test_query, top_k=3)
         result = await execute_query(request)
 
-        print(f"✓ Query executed successfully\n")
+        print("✓ Query executed successfully\n")
         print(f"Query: {result.query}")
         print(f"Results returned: {result.results_count}\n")
 
@@ -73,10 +77,12 @@ async def test_query_tool():
     except Exception as e:
         print(f"✗ Query tool failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
 
+@pytest.mark.asyncio
 async def test_multiple_queries():
     """Test with multiple diverse queries."""
     print("\n" + "=" * 60)
@@ -86,7 +92,7 @@ async def test_multiple_queries():
     test_queries = [
         "What is the total revenue?",
         "Describe the safety performance",
-        "What are the key metrics in the document?"
+        "What are the key metrics in the document?",
     ]
 
     results = []
