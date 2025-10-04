@@ -22,24 +22,20 @@ jobs:
     name: Code Quality & Security
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        python-version: ["3.11", "3.12"]
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Python ${{ matrix.python-version }}
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.11'
 
       - name: Cache Poetry installation
         uses: actions/cache@v4
         with:
           path: ~/.local
-          key: poetry-${{ runner.os }}-${{ matrix.python-version }}
+          key: poetry-${{ runner.os }}-3.11
 
       - name: Install Poetry
         run: |
@@ -52,9 +48,9 @@ jobs:
           path: |
             ~/.cache/pypoetry
             .venv
-          key: poetry-deps-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+          key: poetry-deps-${{ runner.os }}-3.11-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
-            poetry-deps-${{ runner.os }}-${{ matrix.python-version }}-
+            poetry-deps-${{ runner.os }}-3.11-
 
       - name: Install dependencies
         run: |
@@ -78,7 +74,6 @@ jobs:
           use-quiet-mode: 'yes'
           config-file: '.github/markdown-link-check-config.json'
         continue-on-error: true
-        if: matrix.python-version == '3.11'
 
       - name: Verify BMAD standard files exist
         run: |
@@ -86,14 +81,12 @@ jobs:
           test -f docs/architecture/tech-stack.md || (echo "Missing tech-stack.md" && exit 1)
           test -f docs/architecture/source-tree.md || (echo "Missing source-tree.md" && exit 1)
           echo "✅ All BMAD standard files present"
-        if: matrix.python-version == '3.11'
 
       - name: Security scan (Safety)
         run: |
           pip install safety
           safety check --json || true
         continue-on-error: true
-        if: matrix.python-version == '3.11'
 
       - name: Check for secrets in code
         uses: trufflesecurity/trufflehog@main
@@ -102,7 +95,6 @@ jobs:
           base: ${{ github.event.repository.default_branch }}
           head: HEAD
         continue-on-error: true
-        if: matrix.python-version == '3.11'
 
   # Test matrix with parallel execution
   test-matrix:
