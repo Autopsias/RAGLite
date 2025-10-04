@@ -3,13 +3,15 @@
 import time
 from pathlib import Path
 
-from config import TEST_PDF_PATH
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
 
+# Test PDF path
+TEST_PDF_PATH = "tests/ground_truth.json"  # Will be updated with actual test PDF
 
-def test_page_extraction():
+
+def test_page_extraction() -> None:
     """Test that Docling can extract page-level content with page numbers."""
     print("Testing page extraction...")
 

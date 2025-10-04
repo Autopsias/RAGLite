@@ -184,7 +184,7 @@ ensure_newline_before_comments = true
 # ============================================================================
 [tool.pytest.ini_options]
 minversion = "7.0"
-testpaths = ["raglite/tests"]
+testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -197,8 +197,9 @@ addopts = [
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests",
-    "unit: marks tests as unit tests",
+    "integration: marks tests as integration tests (require Qdrant)",
+    "unit: marks tests as unit tests (no external dependencies)",
+    "e2e: marks tests as end-to-end tests",
 ]
 asyncio_mode = "auto"
 

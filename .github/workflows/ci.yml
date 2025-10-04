@@ -58,14 +58,14 @@ jobs:
           poetry install --no-interaction --no-ansi --no-root
 
       - name: Linting (Black)
-        run: poetry run black --check spike/
+        run: poetry run black --check spike/ tests/
         continue-on-error: false
 
       - name: Linting (Ruff)
-        run: poetry run ruff check spike/
+        run: poetry run ruff check spike/ tests/
 
       - name: Linting (isort)
-        run: poetry run isort --check-only spike/
+        run: poetry run isort --check-only spike/ tests/
         continue-on-error: false
 
       - name: Check Markdown files
@@ -103,7 +103,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-suite: ["unit", "integration", "e2e", "api", "database", "performance", "spike"]
+        test-suite: ["unit", "integration", "e2e", "api", "database", "performance"]
 
     services:
       qdrant:
@@ -169,18 +169,14 @@ jobs:
           QDRANT_PORT: 6333
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          # Determine test path based on suite type
-          if [ "${{ matrix.test-suite }}" = "spike" ]; then
-            TEST_PATH="spike/"
-          elif [ -d "tests/${{ matrix.test-suite }}" ]; then
-            TEST_PATH="tests/${{ matrix.test-suite }}/"
-          else
+          # Check if test directory exists
+          if [ ! -d "tests/${{ matrix.test-suite }}" ]; then
             echo "⚠️  Test directory tests/${{ matrix.test-suite }}/ does not exist yet, skipping..."
             exit 0
           fi
 
           # Run pytest with appropriate settings
-          poetry run pytest ${TEST_PATH} \
+          poetry run pytest tests/${{ matrix.test-suite }}/ \
             -n 4 \
             --dist worksteal \
             --cov=spike --cov=src --cov=raglite \
@@ -203,7 +199,7 @@ jobs:
           flags: ${{ matrix.test-suite }}
           name: codecov-${{ matrix.test-suite }}
           fail_ci_if_error: false
-        if: matrix.test-suite == 'spike' && hashFiles('coverage.xml') != ''
+        if: hashFiles('coverage.xml') != ''
 
   # Deployment (only on main branch)
   deploy:

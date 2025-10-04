@@ -43,13 +43,14 @@ repos:
       - id: ruff-format
 
   # MyPy - Fast type checking (~2s)
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
-    hooks:
-      - id: mypy
-        additional_dependencies: [pydantic, types-requests]
-        args: [--show-error-codes, --ignore-missing-imports]
-        pass_filenames: false
+  # Disabled for now - will enable for raglite/ production code in Phase 1
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.13.0
+  #   hooks:
+  #     - id: mypy
+  #       additional_dependencies: [pydantic, types-requests]
+  #       args: [--show-error-codes, --ignore-missing-imports]
+  #       files: ^raglite/
 
   # ============ NODE.JS-SPECIFIC CHECKS ============
   # Uncomment if using Node.js

@@ -12,14 +12,15 @@ from pathlib import Path
 
 import pytest
 
-# Add spike directory to path
-sys.path.insert(0, str(Path(__file__).parent))
+# Add spike directory to path for importing spike modules
+spike_dir = Path(__file__).parent.parent.parent / "spike"
+sys.path.insert(0, str(spike_dir))
 
 from mcp_server import QueryRequest, check_health, execute_query  # noqa: E402
 
 
 @pytest.mark.asyncio
-async def test_health_check():
+async def test_health_check() -> bool:
     """Test the health_check tool."""
     print("=" * 60)
     print("TEST 1: Health Check")
@@ -45,7 +46,7 @@ async def test_health_check():
 
 
 @pytest.mark.asyncio
-async def test_query_tool():
+async def test_query_tool() -> bool:
     """Test the query_financial_documents tool."""
     print("\n" + "=" * 60)
     print("TEST 2: Query Tool - Sample Financial Query")
@@ -83,7 +84,7 @@ async def test_query_tool():
 
 
 @pytest.mark.asyncio
-async def test_multiple_queries():
+async def test_multiple_queries() -> bool:
     """Test with multiple diverse queries."""
     print("\n" + "=" * 60)
     print("TEST 3: Multiple Query Types")
@@ -114,7 +115,7 @@ async def test_multiple_queries():
     return all(results)
 
 
-async def main():
+async def main() -> None:
     """Run all tests."""
     print("\n" + "=" * 60)
     print("MCP SERVER FUNCTIONALITY TESTS")
