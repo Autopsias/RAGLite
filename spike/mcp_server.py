@@ -4,22 +4,19 @@ Implements a minimal MCP server with a single query tool for testing
 vector similarity search against Qdrant.
 """
 
-import asyncio
-from typing import List, Dict, Any
-from pydantic import BaseModel, Field
-
-from fastmcp import FastMCP
-from qdrant_client import QdrantClient
-from sentence_transformers import SentenceTransformer
+from typing import Any
 
 from config import (
-    QDRANT_URL,
-    QDRANT_COLLECTION_NAME,
-    EMBEDDING_MODEL,
     DEFAULT_TOP_K,
-    MCP_SERVER_PORT
+    EMBEDDING_MODEL,
+    MCP_SERVER_PORT,
+    QDRANT_COLLECTION_NAME,
+    QDRANT_URL,
 )
-
+from fastmcp import FastMCP
+from pydantic import BaseModel, Field
+from qdrant_client import QdrantClient
+from sentence_transformers import SentenceTransformer
 
 # Initialize FastMCP server
 mcp = FastMCP("RAGLite-Spike")
@@ -47,12 +44,14 @@ def get_embedding_model() -> SentenceTransformer:
 
 class QueryRequest(BaseModel):
     """Request model for financial document query."""
+
     query: str = Field(..., description="Natural language query about financial documents")
     top_k: int = Field(DEFAULT_TOP_K, description="Number of results to return (default: 5)")
 
 
 class QueryResult(BaseModel):
     """Single search result from Qdrant."""
+
     score: float = Field(..., description="Similarity score (0-1, higher is better)")
     chunk_id: str = Field(..., description="Unique chunk identifier")
     text: str = Field(..., description="Retrieved text chunk")
@@ -64,12 +63,14 @@ class QueryResult(BaseModel):
 
 class QueryResponse(BaseModel):
     """Response model for query tool."""
+
     query: str = Field(..., description="Original query")
-    results: List[QueryResult] = Field(..., description="List of search results")
+    results: list[QueryResult] = Field(..., description="List of search results")
     results_count: int = Field(..., description="Number of results returned")
 
 
 # Business logic functions (can be tested directly)
+
 
 async def execute_query(request: QueryRequest) -> QueryResponse:
     """
@@ -93,9 +94,7 @@ async def execute_query(request: QueryRequest) -> QueryResponse:
 
     # Search Qdrant using updated API
     search_results = qdrant.query_points(
-        collection_name=QDRANT_COLLECTION_NAME,
-        query=query_embedding,
-        limit=request.top_k
+        collection_name=QDRANT_COLLECTION_NAME, query=query_embedding, limit=request.top_k
     ).points
 
     # Convert results to QueryResult objects
@@ -107,19 +106,15 @@ async def execute_query(request: QueryRequest) -> QueryResponse:
             source_document=result.payload.get("source_document", ""),
             page_number=result.payload.get("page_number") or 0,  # Handle None
             chunk_index=result.payload.get("chunk_index", 0),
-            word_count=result.payload.get("word_count", 0)
+            word_count=result.payload.get("word_count", 0),
         )
         for result in search_results
     ]
 
-    return QueryResponse(
-        query=request.query,
-        results=results,
-        results_count=len(results)
-    )
+    return QueryResponse(query=request.query, results=results, results_count=len(results))
 
 
-async def check_health() -> Dict[str, Any]:
+async def check_health() -> dict[str, Any]:
     """
     Check health status of server and dependencies (business logic).
 
@@ -130,7 +125,7 @@ async def check_health() -> Dict[str, Any]:
         "server": "healthy",
         "qdrant": "unknown",
         "embedding_model": "unknown",
-        "collection": QDRANT_COLLECTION_NAME
+        "collection": QDRANT_COLLECTION_NAME,
     }
 
     try:
@@ -145,7 +140,7 @@ async def check_health() -> Dict[str, Any]:
             status["collection_info"] = {
                 "points_count": collection_info.points_count,
                 "vector_dimension": collection_info.config.params.vectors.size,
-                "distance_metric": collection_info.config.params.vectors.distance.name
+                "distance_metric": collection_info.config.params.vectors.distance.name,
             }
         else:
             status["qdrant"] = "collection_not_found"
@@ -167,6 +162,7 @@ async def check_health() -> Dict[str, Any]:
 
 
 # MCP Tool wrappers
+
 
 @mcp.tool()
 async def query_financial_documents(request: QueryRequest) -> QueryResponse:
@@ -191,7 +187,7 @@ async def query_financial_documents(request: QueryRequest) -> QueryResponse:
 
 
 @mcp.tool()
-async def health_check() -> Dict[str, Any]:
+async def health_check() -> dict[str, Any]:
     """
     Check health status of MCP server and dependencies.
 
@@ -203,15 +199,15 @@ async def health_check() -> Dict[str, Any]:
 
 if __name__ == "__main__":
     # Run the MCP server
-    print(f"Starting RAGLite MCP Server...")
+    print("Starting RAGLite MCP Server...")
     print(f"Qdrant URL: {QDRANT_URL}")
     print(f"Collection: {QDRANT_COLLECTION_NAME}")
     print(f"Embedding Model: {EMBEDDING_MODEL}")
     print(f"Port: {MCP_SERVER_PORT}")
-    print(f"\nAvailable tools:")
-    print(f"  - query_financial_documents: Query financial docs via vector search")
-    print(f"  - health_check: Check server health status")
-    print(f"\nStarting server...\n")
+    print("\nAvailable tools:")
+    print("  - query_financial_documents: Query financial docs via vector search")
+    print("  - health_check: Check server health status")
+    print("\nStarting server...\n")
 
     # Note: FastMCP handles server startup via CLI
     # Run with: mcp dev spike/mcp_server.py

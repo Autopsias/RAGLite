@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -11,7 +12,7 @@ load_dotenv()
 PROJECT_ROOT = Path(__file__).parent.parent
 TEST_PDF_PATH = os.getenv(
     "TEST_PDF_PATH",
-    str(PROJECT_ROOT / "docs" / "sample pdf" / "2025-08 Performance Review CONSO_v2.pdf")
+    str(PROJECT_ROOT / "docs" / "sample pdf" / "2025-08 Performance Review CONSO_v2.pdf"),
 )
 
 # Qdrant Configuration

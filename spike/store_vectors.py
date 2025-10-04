@@ -2,20 +2,19 @@
 
 import json
 import time
-from typing import List, Dict, Any
 import uuid
+from typing import Any
 
+from config import EMBEDDING_DIMENSION, QDRANT_COLLECTION_NAME, QDRANT_URL
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
-
-from config import QDRANT_URL, QDRANT_COLLECTION_NAME, EMBEDDING_DIMENSION
+from qdrant_client.models import Distance, PointStruct, VectorParams
 
 
 def create_qdrant_collection(
     client: QdrantClient,
     collection_name: str = QDRANT_COLLECTION_NAME,
     vector_size: int = EMBEDDING_DIMENSION,
-    distance: Distance = Distance.COSINE
+    distance: Distance = Distance.COSINE,
 ) -> bool:
     """
     Create a Qdrant collection for storing document embeddings.
@@ -44,10 +43,7 @@ def create_qdrant_collection(
 
     client.create_collection(
         collection_name=collection_name,
-        vectors_config=VectorParams(
-            size=vector_size,
-            distance=distance
-        )
+        vectors_config=VectorParams(size=vector_size, distance=distance),
     )
 
     print(f"✓ Collection '{collection_name}' created successfully\n")
@@ -58,8 +54,8 @@ def store_embeddings_in_qdrant(
     embeddings_path: str = "spike_embeddings.json",
     client: QdrantClient = None,
     collection_name: str = QDRANT_COLLECTION_NAME,
-    batch_size: int = 100
-) -> Dict[str, Any]:
+    batch_size: int = 100,
+) -> dict[str, Any]:
     """
     Load embeddings and store them in Qdrant.
 
@@ -80,7 +76,7 @@ def store_embeddings_in_qdrant(
 
     # Load embeddings
     print(f"Loading embeddings from: {embeddings_path}")
-    with open(embeddings_path, 'r', encoding='utf-8') as f:
+    with open(embeddings_path, encoding="utf-8") as f:
         embeddings_data = json.load(f)
 
     chunks = embeddings_data["chunks"]
@@ -106,8 +102,8 @@ def store_embeddings_in_qdrant(
                 "source_document": chunk["metadata"]["source_document"],
                 "page_number": chunk["metadata"]["page_number"],
                 "chunk_index": chunk["metadata"]["chunk_index"],
-                "total_chunks": chunk["metadata"]["total_chunks"]
-            }
+                "total_chunks": chunk["metadata"]["total_chunks"],
+            },
         )
         points.append(point)
 
@@ -119,19 +115,16 @@ def store_embeddings_in_qdrant(
 
     for i in range(0, len(points), batch_size):
         batch_num = (i // batch_size) + 1
-        batch_points = points[i:i + batch_size]
+        batch_points = points[i : i + batch_size]
 
         print(f"Uploading batch {batch_num}/{total_batches} ({len(batch_points)} points)...")
 
-        client.upsert(
-            collection_name=collection_name,
-            points=batch_points
-        )
+        client.upsert(collection_name=collection_name, points=batch_points)
 
     upload_time = time.time() - start_time
 
     # Verify storage
-    print(f"\nVerifying storage...")
+    print("\nVerifying storage...")
     collection_info = client.get_collection(collection_name)
 
     print(f"\n{'='*60}")
@@ -151,7 +144,7 @@ def store_embeddings_in_qdrant(
         "vector_dimension": collection_info.config.params.vectors.size,
         "distance_metric": collection_info.config.params.vectors.distance.name,
         "upload_time_seconds": round(upload_time, 2),
-        "upload_rate_vectors_per_second": round(len(points) / upload_time, 2)
+        "upload_rate_vectors_per_second": round(len(points) / upload_time, 2),
     }
 
 
@@ -159,7 +152,7 @@ def test_qdrant_search(
     client: QdrantClient,
     collection_name: str = QDRANT_COLLECTION_NAME,
     embeddings_path: str = "spike_embeddings.json",
-    top_k: int = 3
+    top_k: int = 3,
 ):
     """
     Test Qdrant search functionality with a sample query.
@@ -170,24 +163,22 @@ def test_qdrant_search(
         embeddings_path: Path to embeddings (to get a sample vector)
         top_k: Number of results to return
     """
-    print(f"Testing Qdrant search functionality...")
+    print("Testing Qdrant search functionality...")
 
     # Load embeddings to get a test vector
-    with open(embeddings_path, 'r', encoding='utf-8') as f:
+    with open(embeddings_path, encoding="utf-8") as f:
         embeddings_data = json.load(f)
 
     # Use first chunk's embedding as test query
     test_vector = embeddings_data["chunks"][0]["embedding"]
     test_text = embeddings_data["chunks"][0]["text"][:100]
 
-    print(f"\nTest query (first chunk preview):")
+    print("\nTest query (first chunk preview):")
     print(f"  {test_text}...\n")
 
     # Perform search using updated API
     search_results = client.query_points(
-        collection_name=collection_name,
-        query=test_vector,
-        limit=top_k
+        collection_name=collection_name, query=test_vector, limit=top_k
     ).points
 
     print(f"Top {top_k} search results:")
@@ -197,7 +188,7 @@ def test_qdrant_search(
         print(f"    Chunk ID: {result.payload.get('chunk_id')}")
         print(f"    Text preview: {result.payload.get('text', '')[:80]}...")
 
-    print(f"\n✓ Search test successful!\n")
+    print("\n✓ Search test successful!\n")
 
 
 if __name__ == "__main__":
@@ -210,7 +201,7 @@ if __name__ == "__main__":
     # Test search
     test_qdrant_search(client=client)
 
-    print(f"✓ Qdrant storage complete!")
+    print("✓ Qdrant storage complete!")
     print(f"  Collection: {stats['collection_name']}")
     print(f"  Vectors: {stats['vectors_stored']}")
     print(f"  Dimension: {stats['vector_dimension']}")

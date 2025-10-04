@@ -2,12 +2,10 @@
 
 import json
 import time
-import numpy as np
-from typing import List, Dict, Any
-from pathlib import Path
+from typing import Any
 
+from config import EMBEDDING_DIMENSION, EMBEDDING_MODEL
 from sentence_transformers import SentenceTransformer
-from config import EMBEDDING_MODEL, EMBEDDING_DIMENSION
 
 
 def load_embedding_model(model_name: str = EMBEDDING_MODEL) -> SentenceTransformer:
@@ -34,10 +32,8 @@ def load_embedding_model(model_name: str = EMBEDDING_MODEL) -> SentenceTransform
 
 
 def generate_embeddings_batch(
-    chunks: List[Dict[str, Any]],
-    model: SentenceTransformer,
-    batch_size: int = 32
-) -> List[Dict[str, Any]]:
+    chunks: list[dict[str, Any]], model: SentenceTransformer, batch_size: int = 32
+) -> list[dict[str, Any]]:
     """
     Generate embeddings for chunks in batches for efficiency.
 
@@ -63,21 +59,17 @@ def generate_embeddings_batch(
 
     for i in range(0, len(texts), batch_size):
         batch_num = (i // batch_size) + 1
-        batch_texts = texts[i:i + batch_size]
+        batch_texts = texts[i : i + batch_size]
 
         print(f"Processing batch {batch_num}/{total_batches} ({len(batch_texts)} chunks)...")
 
         # Generate embeddings for batch
-        batch_embeddings = model.encode(
-            batch_texts,
-            show_progress_bar=False,
-            convert_to_numpy=True
-        )
+        batch_embeddings = model.encode(batch_texts, show_progress_bar=False, convert_to_numpy=True)
 
         all_embeddings.extend(batch_embeddings)
 
     # Add embeddings to chunks
-    for chunk, embedding in zip(chunks, all_embeddings):
+    for chunk, embedding in zip(chunks, all_embeddings, strict=True):
         chunk["embedding"] = embedding.tolist()  # Convert numpy to list for JSON
         chunk["embedding_dimension"] = len(embedding)
 
@@ -97,9 +89,8 @@ def generate_embeddings_batch(
 
 
 def generate_embeddings_from_chunks(
-    chunks_path: str = "spike_chunks.json",
-    output_path: str = "spike_embeddings.json"
-) -> Dict[str, Any]:
+    chunks_path: str = "spike_chunks.json", output_path: str = "spike_embeddings.json"
+) -> dict[str, Any]:
     """
     Load chunks, generate embeddings, and save results.
 
@@ -112,7 +103,7 @@ def generate_embeddings_from_chunks(
     """
     # Load chunks
     print(f"Loading chunks from: {chunks_path}")
-    with open(chunks_path, 'r', encoding='utf-8') as f:
+    with open(chunks_path, encoding="utf-8") as f:
         chunks_data = json.load(f)
 
     chunks = chunks_data["chunks"]
@@ -132,22 +123,22 @@ def generate_embeddings_from_chunks(
         "embedding_time_seconds": round(embedding_time, 2),
         "time_per_chunk_seconds": round(embedding_time / len(chunks_with_embeddings), 3),
         "throughput_chunks_per_second": round(len(chunks_with_embeddings) / embedding_time, 2),
-        "chunks": chunks_with_embeddings
+        "chunks": chunks_with_embeddings,
     }
 
     # Save results
     print(f"Saving embeddings to: {output_path}")
 
     # Save embeddings to file (this will be large)
-    with open(output_path, 'w', encoding='utf-8') as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2)
 
     # Also save metadata only (without embeddings) for easier inspection
-    metadata_path = output_path.replace('.json', '_metadata.json')
+    metadata_path = output_path.replace(".json", "_metadata.json")
     metadata = {k: v for k, v in result.items() if k != "chunks"}
     metadata["sample_embedding_shape"] = len(chunks_with_embeddings[0]["embedding"])
 
-    with open(metadata_path, 'w', encoding='utf-8') as f:
+    with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)
 
     print(f"✓ Embeddings saved to: {output_path}")
@@ -160,7 +151,7 @@ if __name__ == "__main__":
     # Run embedding generation
     result = generate_embeddings_from_chunks()
 
-    print(f"\n✓ Embedding generation complete!")
+    print("\n✓ Embedding generation complete!")
     print(f"  Model: {result['model']}")
     print(f"  Dimension: {result['embedding_dimension']}")
     print(f"  Total chunks: {result['total_chunks']}")

@@ -51,3 +51,4 @@ models/
 .pytest_cache/
 htmlcov/
 .coverage
+.coverage.*

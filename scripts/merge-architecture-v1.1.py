@@ -14,21 +14,24 @@ This script:
 
 from pathlib import Path
 
+
 def read_file(file_path: Path) -> str:
     """Read file content."""
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, encoding="utf-8") as f:
         return f.read()
+
 
 def write_file(file_path: Path, content: str):
     """Write content to file."""
-    with open(file_path, 'w', encoding='utf-8') as f:
+    with open(file_path, "w", encoding="utf-8") as f:
         f.write(content)
+
 
 def update_header(content: str) -> str:
     """Update document header to v1.1."""
     updated = content.replace(
-        '**Version:** 1.0\n**Date:** October 3, 2025\n**Status:** Draft - Ready for Review',
-        '**Version:** 1.1 (Simplified MVP-First Approach)\n**Date:** October 3, 2025\n**Status:** Ready for Development - Recommended Approach'
+        "**Version:** 1.0\n**Date:** October 3, 2025\n**Status:** Draft - Ready for Review",
+        "**Version:** 1.1 (Simplified MVP-First Approach)\n**Date:** October 3, 2025\n**Status:** Ready for Development - Recommended Approach",
     )
 
     # Update change log
@@ -41,6 +44,7 @@ def update_header(content: str) -> str:
     updated = updated.replace(change_log_entry, new_change_log)
 
     return updated
+
 
 def update_table_of_contents(content: str) -> str:
     """Update table of contents with new sections."""
@@ -86,6 +90,7 @@ def update_table_of_contents(content: str) -> str:
 - **For Future Scaling (Phase 4+):** Review sections 7-8, 12-16"""
 
     return content.replace(old_toc, new_toc)
+
 
 def update_executive_summary(content: str) -> str:
     """Update executive summary to recommend monolithic approach."""
@@ -157,6 +162,7 @@ RAGLite implements a **simplified monolithic-first architecture** that evolves t
 
     return content
 
+
 def insert_v1_1_content_after_executive_summary(content: str, insert_content: str) -> str:
     """Insert v1.1 monolithic approach section after Executive Summary."""
     # Find the end of Executive Summary section (before Research Findings)
@@ -165,23 +171,24 @@ def insert_v1_1_content_after_executive_summary(content: str, insert_content: st
     if marker in content:
         parts = content.split(marker, 1)
         # Insert v1.1 content between Executive Summary and Research Findings
-        insert_section = read_file(Path("/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/architecture-v1.1-insert.md"))
+        insert_section = read_file(
+            Path("/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/architecture-v1.1-insert.md")
+        )
 
         # Extract the first major section (Architecture Approach + Monolithic Architecture)
-        v1_1_intro = """
----
-
-"""
         # Get content between first "## INSERT AFTER LINE 60" and "## INSERT AFTER SECTION 5"
         start = insert_section.find("### Architecture Approach: v1.1")
         end = insert_section.find("## INSERT AFTER SECTION 5")
 
         if start != -1 and end != -1:
             v1_1_section = insert_section[start:end].strip()
-            new_content = parts[0] + "\n\n---\n\n" + v1_1_section + "\n\n---\n\n" + marker + parts[1]
+            new_content = (
+                parts[0] + "\n\n---\n\n" + v1_1_section + "\n\n---\n\n" + marker + parts[1]
+            )
             return new_content
 
     return content
+
 
 def main():
     """Main merge logic."""
@@ -209,13 +216,14 @@ def main():
     output_file = docs_dir / "architecture.md"
     write_file(output_file, updated)
 
-    print(f"\n✅ Successfully created comprehensive architecture.md v1.1")
+    print("\n✅ Successfully created comprehensive architecture.md v1.1")
     print(f"📄 Backup of v1.0 saved at: {docs_dir / 'architecture-v1.0-backup.md'}")
     print(f"📄 New v1.1 architecture at: {output_file}")
-    print(f"\n📊 File stats:")
+    print("\n📊 File stats:")
     print(f"   - Original v1.0: {len(original)} characters")
     print(f"   - New v1.1: {len(updated)} characters")
     print(f"   - Added: {len(updated) - len(original)} characters")
+
 
 if __name__ == "__main__":
     main()
