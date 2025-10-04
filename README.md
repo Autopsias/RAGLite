@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/YOUR_USERNAME/RAGLite/workflows/Tests/badge.svg)](https://github.com/YOUR_USERNAME/RAGLite/actions)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Poetry](https://img.shields.io/badge/dependency%20manager-Poetry-blue)](https://python-poetry.org/)
+[![uv](https://img.shields.io/badge/dependency%20manager-uv-blue)](https://docs.astral.sh/uv/)
 
 **RAGLite** is a monolithic MVP for an AI-powered financial document analysis system using Retrieval-Augmented Generation (RAG). Query financial PDFs and Excel files using natural language via the Model Context Protocol (MCP).
 
@@ -18,7 +18,7 @@
 
 - **Python 3.11+** ([Download](https://www.python.org/downloads/))
 - **Docker & Docker Compose** ([Download](https://www.docker.com/products/docker-desktop))
-- **Poetry** (installed automatically via setup script)
+- **uv** (installed automatically via setup script)
 
 ### Installation
 
@@ -27,7 +27,7 @@
 git clone https://github.com/YOUR_USERNAME/RAGLite.git
 cd RAGLite
 
-# 2. Run setup script (installs Poetry, dependencies, starts Qdrant)
+# 2. Run setup script (installs uv, dependencies, starts Qdrant)
 chmod +x scripts/setup-dev.sh
 ./scripts/setup-dev.sh
 
@@ -36,26 +36,26 @@ cp .env.example .env
 # Edit .env and add your ANTHROPIC_API_KEY
 
 # 4. Start the MCP server
-poetry run python -m raglite.main
+uv run python -m raglite.main
 ```
 
 **Alternative Manual Setup:**
 
 ```bash
-# Install Poetry
-curl -sSL https://install.python-poetry.org | python3 -
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Install dependencies
-poetry install
+uv sync
 
 # Start Qdrant vector database
 docker-compose up -d
 
 # Initialize Qdrant collection
-poetry run python scripts/init-qdrant.py
+uv run python scripts/init-qdrant.py
 
 # Run the server
-poetry run python -m raglite.main
+uv run python -m raglite.main
 ```
 
 ---
@@ -125,7 +125,7 @@ raglite/
 │   └── tests/         # Tests (~200 lines)
 ├── scripts/           # Utility scripts
 ├── docs/              # Architecture & PRD (sharded)
-└── pyproject.toml     # Poetry dependencies
+└── pyproject.toml     # uv dependencies (+ uv.lock)
 ```
 
 **See full details:** [docs/architecture/source-tree.md](docs/architecture/source-tree.md)
@@ -157,40 +157,40 @@ raglite/
 
 ```bash
 # Run all tests
-poetry run pytest
+uv run pytest
 
 # Run with coverage
-poetry run pytest --cov=raglite --cov-report=html
+uv run pytest --cov=raglite --cov-report=html
 
 # Run specific test file
-poetry run pytest raglite/tests/test_ingestion.py
+uv run pytest raglite/tests/test_ingestion.py
 
 # Run ground truth accuracy validation
-poetry run python scripts/run-accuracy-tests.py
+uv run python scripts/run-accuracy-tests.py
 ```
 
 ### Code Quality
 
 ```bash
 # Format code (black)
-poetry run black raglite/
+uv run black raglite/
 
 # Lint code (ruff)
-poetry run ruff check raglite/
+uv run ruff check raglite/
 
 # Type check (mypy - Phase 4)
-poetry run mypy raglite/
+uv run mypy raglite/
 
 # Pre-commit hooks (auto-format on commit)
-poetry run pre-commit install
+uv run pre-commit install
 ```
 
 ### Daily Development Workflow
 
-1. **Activate virtual environment:** `poetry shell`
+1. **Sync dependencies:** `uv sync`
 2. **Make changes** to code
-3. **Run tests:** `pytest`
-4. **Format code:** `black raglite/`
+3. **Run tests:** `uv run pytest`
+4. **Format code:** `uv run black raglite/`
 5. **Commit:** Git pre-commit hooks run automatically
 6. **Push:** CI/CD pipeline validates changes
 
@@ -206,7 +206,7 @@ poetry run pre-commit install
 | **MCP Server** | FastMCP | 1.x |
 | **LLM** | Claude 3.7 Sonnet | API |
 | **Language** | Python | 3.11+ |
-| **Package Manager** | Poetry | 1.7+ |
+| **Package Manager** | uv | Latest |
 | **Testing** | pytest + pytest-asyncio | Latest |
 | **Container** | Docker + Docker Compose | Latest |
 
@@ -276,10 +276,10 @@ poetry run pre-commit install
 
 ### Common Issues
 
-**1. Poetry not found**
+**1. uv not found**
 
 ```bash
-curl -sSL https://install.python-poetry.org | python3 -
+curl -LsSf https://astral.sh/uv/install.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
@@ -306,10 +306,10 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
 docker-compose up -d
 
 # Reinstall dependencies
-poetry install
+uv sync
 
 # Run tests with verbose output
-poetry run pytest -v
+uv run pytest -v
 ```
 
 ---

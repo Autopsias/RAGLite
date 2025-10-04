@@ -1,13 +1,25 @@
-[tool.poetry]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
 name = "raglite"
 version = "1.1.0"
 description = "AI-powered financial document analysis using Retrieval-Augmented Generation (RAG)"
-authors = ["Your Name <you@example.com>"]
 readme = "README.md"
-license = "MIT"
-homepage = "https://github.com/YOUR_USERNAME/RAGLite"
-repository = "https://github.com/YOUR_USERNAME/RAGLite"
-keywords = ["rag", "financial-analysis", "mcp", "ai", "llm", "vector-search"]
+requires-python = ">=3.11,<4.0"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "you@example.com"},
+]
+keywords = [
+    "rag",
+    "financial-analysis",
+    "mcp",
+    "ai",
+    "llm",
+    "vector-search",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -15,82 +27,46 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.11"
+# Production dependencies
+dependencies = [
+    "docling==2.55.1",
+    "sentence-transformers==5.1.1",
+    "qdrant-client==1.15.1",
+    "fastmcp==2.12.4",
+    "anthropic>=0.18.0,<1.0.0",
+    "pydantic>=2.0,<3.0",
+    "pydantic-settings>=2.0,<3.0",
+    "openpyxl>=3.1,<4.0",
+    "pandas>=2.0,<3.0",
+    "python-dotenv==1.1.1",
+    "asyncio>=3.4.3,<4.0.0",
+    "httpx>=0.28.1,<1.0.0",
+]
 
-# PDF Processing (Week 0 validated)
-docling = "==2.55.1"
+[project.urls]
+homepage = "https://github.com/YOUR_USERNAME/RAGLite"
+repository = "https://github.com/YOUR_USERNAME/RAGLite"
 
-# Embeddings (Week 0 validated - Fin-E5)
-sentence-transformers = "==5.1.1"
-
-# Vector Database (Week 0 validated)
-qdrant-client = "==1.15.1"
-
-# MCP Server (Week 0 validated)
-fastmcp = "==2.12.4"
-
-# LLM API Client (Phase 1 - Story 1.11)
-anthropic = "^0.18.0"
-
-# Data Validation & Settings (Phase 1 - Story 1.1)
-pydantic = "^2.0"
-pydantic-settings = "^2.0"
-
-# Excel Processing (Phase 1 - Story 1.3)
-openpyxl = "^3.1"
-pandas = "^2.0"
-
-# Environment Variables (Week 0 validated)
-python-dotenv = "==1.1.1"
-
-# Async Support
-asyncio = "^3.4.3"
-
-# HTTP Client (required by fastmcp >=0.28.1)
-httpx = "^0.28.1"
-
-# Forecasting (Phase 3 - deferred)
-# prophet = "^1.1"
-
-# Graph Database (Phase 2 - conditional)
-# neo4j = "^5.0"
-
-[tool.poetry.group.dev.dependencies]
-# Testing (Week 0 validated)
-pytest = "==8.4.2"
-pytest-asyncio = "==1.2.0"
-pytest-cov = "^4.1"
-pytest-mock = "^3.12"
-
-# Code Formatting & Linting (Story 1.1)
-black = "^23.3"
-ruff = "^0.0.270"
-isort = "^5.12"
-
-# Type Checking (Phase 4 - optional for Phase 1)
-mypy = "^1.4"
-
-# Pre-commit Hooks
-pre-commit = "^3.0"
-
-# Documentation (optional)
-# sphinx = "^7.0"
-# sphinx-rtd-theme = "^1.3"
-
-[tool.poetry.group.test.dependencies]
-# Additional test utilities
-faker = "^18.0"  # Generate test data
-freezegun = "^1.2"  # Mock datetime in tests
-
-[tool.poetry.scripts]
-# CLI entrypoints
+[project.scripts]
 raglite-server = "raglite.main:main"
 raglite-ingest = "scripts.init_qdrant:main"
 
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[dependency-groups]
+dev = [
+    "pytest==8.4.2",
+    "pytest-asyncio==1.2.0",
+    "pytest-cov>=4.1,<5.0",
+    "pytest-mock>=3.12,<4.0",
+    "black>=23.3,<24.0",
+    "ruff>=0.0.270,<1.0.0",
+    "isort>=5.12,<6.0",
+    "mypy>=1.4,<2.0",
+    "pre-commit>=3.0,<4.0",
+]
+test = [
+    "faker>=18.0,<19.0",
+    "freezegun>=1.2,<2.0",
+]
 
 # ============================================================================
 # BLACK CONFIGURATION (Code Formatter)

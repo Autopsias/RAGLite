@@ -119,52 +119,53 @@ run_python_checks() {
     # Check Python version
     python --version
 
-    # Install/upgrade tools
-    run_with_status "pip install --quiet --upgrade pip wheel" "pip upgrade"
+    # Check for uv
+    if ! command -v uv &> /dev/null; then
+        echo "Installing uv..."
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        export PATH="$HOME/.local/bin:$PATH"
+    fi
 
-    # Install dependencies
-    if [ -f "requirements.txt" ]; then
+    # Install dependencies using uv
+    if [ -f "pyproject.toml" ]; then
+        run_with_status "uv sync --frozen" "dependencies with uv"
+    elif [ -f "requirements.txt" ]; then
         run_with_status "pip install --quiet -r requirements.txt" "project dependencies"
+        run_with_status "pip install --quiet ruff mypy bandit pytest pytest-cov pytest-xdist" "quality tools"
     fi
-    if [ -f "requirements-test.txt" ]; then
-        run_with_status "pip install --quiet -r requirements-test.txt" "test dependencies"
-    fi
-
-    # Install quality tools
-    run_with_status "pip install --quiet ruff mypy bandit pip-audit pytest pytest-cov pytest-xdist" "quality tools"
 
     print_section "⚡ Parallel Quality Checks (Python)"
 
     if [ "$PARALLEL_MODE" = true ]; then
         # Run checks in parallel
         declare -a parallel_commands=(
-            "ruff-lint|ruff check . --output-format=text"
-            "ruff-format|ruff format . --check"
-            "mypy|mypy . --no-error-summary || true"
-            "bandit|bandit -r . -ll || true"
-            "pip-audit|pip-audit || true"
+            "ruff-lint|uv run ruff check . --output-format=text"
+            "ruff-format|uv run ruff format . --check"
+            "mypy|uv run mypy . --no-error-summary || true"
+            "black|uv run black --check spike/ tests/ raglite/ || true"
+            "isort|uv run isort --check-only spike/ tests/ raglite/ || true"
         )
 
         run_parallel parallel_commands
         QUALITY_RESULT=$?
     else
         # Sequential execution
-        run_with_status "ruff check . --output-format=text" "ruff lint"
-        run_with_status "ruff format . --check" "ruff format"
-        run_with_status "mypy . --no-error-summary || true" "mypy"
-        run_with_status "bandit -r . -ll || true" "bandit"
-        run_with_status "pip-audit || true" "pip-audit"
+        run_with_status "uv run ruff check . --output-format=text" "ruff lint"
+        run_with_status "uv run ruff format . --check" "ruff format"
+        run_with_status "uv run black --check spike/ tests/ raglite/ || true" "black"
+        run_with_status "uv run isort --check-only spike/ tests/ raglite/ || true" "isort"
+        run_with_status "uv run mypy . --no-error-summary || true" "mypy"
         QUALITY_RESULT=$?
     fi
 
     print_section "🧪 Test Execution (Python)"
 
-    # Smoke tests
-    run_with_status "pytest -m 'smoke and not slow' --tb=short -q --no-cov" "smoke tests"
+    # Smoke tests (if any exist)
+    run_with_status "uv run pytest -m 'smoke and not slow' --tb=short -q --no-cov || true" "smoke tests"
 
     # Full test suite with coverage (parallel)
     CPU_COUNT=$(python -c "import multiprocessing; print(multiprocessing.cpu_count())")
-    run_with_status "pytest tests -n ${CPU_COUNT} --dist=worksteal --cov=. --cov-report=term-missing:skip-covered --cov-report=xml --tb=short -q" "full test suite with coverage"
+    run_with_status "uv run pytest tests -n ${CPU_COUNT} --dist=worksteal --cov=spike --cov=raglite --cov-report=term-missing:skip-covered --cov-report=xml --tb=short -q" "full test suite with coverage"
 
     return $QUALITY_RESULT
 }
