@@ -49,7 +49,7 @@
 **Story File:** docs/stories/0.0.production-repository-setup.md
 
 **As a** developer,
-**I want** the production repository fully configured with Poetry, README, and CI/CD,
+**I want** the production repository fully configured with UV, README, and CI/CD,
 **so that** Phase 1 development can start immediately without tooling blockers.
 
 **Duration:** 2-3 hours
@@ -58,25 +58,25 @@
 
 **Acceptance Criteria:**
 
-1. Convert requirements.txt → pyproject.toml (Poetry migration)
+1. Convert requirements.txt → pyproject.toml (UV migration)
 2. Create README.md at project root with setup instructions
-3. Update .gitignore for Poetry (.venv/, poetry.lock, .poetry/)
+3. Update .gitignore for UV (.venv/, uv.lock)
 4. Create .github/workflows/tests.yml (GitHub Actions CI/CD)
 5. Create .pre-commit-config.yaml (code quality hooks)
 6. Verify BMAD standard files exist (coding-standards.md, tech-stack.md, source-tree.md) ✅ DONE
 7. Archive requirements.txt to spike/ directory
-8. Test installation: poetry install completes without errors
+8. Test installation: uv sync --frozen completes without errors
 
 **Deliverables:**
 
 - ✅ README.md (project overview, quick start)
-- ✅ pyproject.toml (Poetry dependencies)
+- ✅ pyproject.toml (UV dependencies - PEP 621)
 - ✅ .github/workflows/tests.yml (CI/CD pipeline)
 - ✅ .pre-commit-config.yaml (pre-commit hooks)
 - ✅ scripts/setup-dev.sh (one-command setup)
 - ✅ scripts/test_page_extraction.py (page number diagnostic)
 
-**Rationale:** Week 0 spike used pip for quick validation. Production requires Poetry (per architecture), README for onboarding, and CI/CD for quality gates.
+**Rationale:** Week 0 spike used pip for quick validation. Production requires UV (per architecture), README for onboarding, and CI/CD for quality gates.
 
 **Dependencies:**
 
@@ -85,70 +85,39 @@
 
 ---
 
-## Story 0.2: API Account & Cloud Infrastructure Setup (MANDATORY PRE-PHASE 1)
+## 🗑️ Story 0.2: API Account & Cloud Infrastructure Setup (DEPRECATED)
 
-**As a** user,
-**I want** all required third-party API accounts and cloud infrastructure configured BEFORE development begins,
-**so that** development is not blocked by account provisioning delays or missing credentials.
+**STATUS: REMOVED - NOT NEEDED FOR STANDARD MCP ARCHITECTURE**
 
-**Duration:** 1-2 days (account approval may cause delays)
-**Priority:** CRITICAL - Blocks all Phase 1 work
-**Assignment:** USER (human-only task - requires payment information, company email verification, terms acceptance)
+**Why This Story Was Removed:**
 
-**Acceptance Criteria:**
+This story originally required setting up:
+- Anthropic Claude API account (for RAGLite to call Claude for answer synthesis)
+- AWS account (conditional)
+- Qdrant Cloud account (Phase 4 only)
 
-1. **Anthropic Claude API Account:**
-   - Account created at console.anthropic.com
-   - API key generated and securely stored
-   - Usage limits reviewed (ensure sufficient for MVP development: ~1M tokens estimated)
-   - Billing configured (credit card or payment method on file)
-   - API key added to `.env.example` template as placeholder: `ANTHROPIC_API_KEY=your_key_here`
+**Architecture Change:**
 
-2. **AWS Account (Conditional - if using Bedrock or cloud deployment):**
-   - AWS account created or existing account identified
-   - IAM user created with appropriate permissions (Bedrock access if using, ECS/S3 if deploying)
-   - Access keys generated (Access Key ID and Secret Access Key)
-   - AWS credentials stored securely (not in repository)
-   - AWS CLI configured locally for development/deployment
+RAGLite now follows the **standard MCP pattern** where:
+- **RAGLite MCP tools return:** Raw chunks + metadata (no synthesis in RAGLite)
+- **Claude Code (LLM client) synthesizes:** Coherent answers from chunks
 
-3. **Qdrant Cloud Account (for Production Deployment - Epic 5):**
-   - Qdrant Cloud account created at cloud.qdrant.io
-   - Free tier or paid plan selected based on MVP requirements
-   - API key generated for cloud instance access
-   - Note: Local Qdrant via Docker Compose for MVP development (Epic 1-4)
+**Result:** No Claude API account needed because the user already has Claude Code subscription. The LLM client (Claude Code) handles synthesis, not RAGLite.
 
-4. **Secrets Management Setup:**
-   - `.env.example` template created with all required API key placeholders
-   - `.env` added to `.gitignore` (prevent credential leakage)
-   - Documentation includes instructions for developers to create local `.env` from template
-   - For cloud deployment: AWS Secrets Manager or equivalent identified for production
+**What's Still Needed (No Story Required):**
 
-5. **Cost Monitoring Setup:**
-   - Anthropic Claude API usage alerts configured (notify at 50%, 75%, 90% of budget)
-   - AWS billing alerts configured if using AWS services
-   - Budget defined: Estimated $200-500 for MVP development phase (verify sufficiency)
+- ✅ Local Qdrant via Docker Compose (already configured in Story 0.0)
+- ✅ `.env.example` for future Phase 4 cloud credentials (can be added in Story 1.1 if needed)
+- ⏭️ AWS/Qdrant Cloud accounts deferred to Phase 4 (production deployment)
 
-**Success Criteria:**
+**See:** Story 1.11 (Enhanced Chunk Metadata & MCP Response Formatting) for the new approach
 
-- ✅ All API keys generated and accessible (verified by test API call)
-- ✅ No credential exposure in version control (`.env` gitignored, `.env.example` has placeholders only)
-- ✅ Documentation complete for other developers to replicate setup
-- ✅ Billing/budget alerts active to prevent surprise costs
+---
 
-**Deliverables:**
+## Story 1.1: Project Setup & Development Environment ✅ DONE
 
-- `.env.example` file with all API key placeholders documented
-- `docs/api-setup-guide.md` documenting account creation steps and credential management
-- Active API accounts with valid credentials ready for Story 1.1
-
-**Rationale:** External API accounts often have 24-48 hour approval delays (especially AWS). Creating accounts BEFORE development ensures no blocking delays during Phase 1. This is a human-only task requiring payment methods and email verification that cannot be automated.
-
-**Dependencies:**
-
-- None (can run in parallel with Story 0.0 and Story 0.1)
-- **⚠️ CRITICAL:** Story 0.2 MUST complete before Story 1.11 (Claude API key required for LLM synthesis)
-
-## Story 1.1: Project Setup & Development Environment
+**Status:** Done (QA approved with PASS - production ready)
+**QA Gate:** docs/qa/gates/1.1-project-setup-development-environment.yml
 
 **As a** developer,
 **I want** a configured development environment with all necessary tools and dependencies,
@@ -156,13 +125,13 @@
 
 **Acceptance Criteria:**
 
-1. Python virtual environment created with dependencies managed via requirements.txt or poetry
+1. Python virtual environment created with dependencies managed via UV (uv sync)
 2. Git repository initialized with .gitignore configured for Python, secrets, and IDE files
 3. Docker and Docker Compose installed and validated on macOS development machine
 4. Project directory structure established per Architect's design
 5. Environment variables template (.env.example) created for API keys and configuration
 6. README.md includes setup instructions, architecture overview, and development workflow
-7. Pre-commit hooks configured for code formatting (black, isort) and linting (flake8/ruff)
+7. Pre-commit hooks configured for formatting and linting (Ruff) and type checking (MyPy)
 
 ## Story 1.2: PDF Document Ingestion with Docling ⭐ ENHANCED
 
@@ -189,7 +158,7 @@
 
 **Recommended Approach:**
 
-1. Run `poetry run python scripts/test_page_extraction.py` (diagnostic)
+1. Run `uv run python scripts/test_page_extraction.py` (diagnostic)
 2. IF Docling returns page numbers → Fix chunking logic to preserve metadata (Story 1.4)
 3. IF Docling lacks pages → Implement hybrid: Docling (tables) + PyMuPDF (page detection)
 
@@ -318,31 +287,43 @@
 
 **Acceptance Criteria:**
 
-1. MCP tool defined: "query_financial_documents" with natural language query parameter
-2. Tool receives query, generates embedding, performs retrieval, synthesizes answer
-3. Response includes synthesized answer and source citations
-4. Query understanding handles financial terminology correctly
-5. Response format optimized for conversational display in MCP client
+1. MCP tool defined: `query_financial_documents` with natural language query parameter and `top_k` (default: 5)
+2. Tool receives query, generates embedding, performs vector similarity search in Qdrant
+3. Response includes retrieved chunks with metadata (score, text, source_document, page_number, chunk_index)
+4. Query embedding handles financial terminology correctly (via Fin-E5 model)
+5. Response format follows Week 0 spike pattern (QueryResponse with list of QueryResult objects)
 6. Tool tested via Claude Desktop or MCP-compatible test client
-7. End-to-end test: Ask question → Receive accurate answer with citation
-8. 10+ sample queries from ground truth test set validated for accuracy
+7. End-to-end test: Ask question → Claude Code synthesizes answer from returned chunks
+8. 10+ sample queries from ground truth test set validated for retrieval accuracy (chunks contain answer)
 
-## Story 1.11: Answer Synthesis & Response Generation
+## Story 1.11: Enhanced Chunk Metadata & MCP Response Formatting
 
 **As a** system,
-**I want** to synthesize coherent answers from retrieved chunks using LLM,
-**so that** users receive natural language answers instead of raw document fragments.
+**I want** to return well-structured chunk metadata via MCP tools,
+**so that** Claude Code (the LLM client) can synthesize accurate, well-cited answers from the raw data.
+
+**⚠️ ARCHITECTURE CHANGE:** This story was originally "Answer Synthesis & Response Generation" requiring Claude API integration. That approach has been **deprecated** in favor of the standard MCP pattern where:
+- **RAGLite MCP tools return:** Raw chunks + metadata (scores, text, citations)
+- **Claude Code (LLM client) synthesizes:** Coherent answers from chunks
+
+**Rationale:** Standard MCP architecture, cost-effective (user already has Claude Code subscription), flexible (works with any MCP-compatible LLM client).
 
 **Acceptance Criteria:**
 
-1. LLM integration (Claude API or Bedrock) per Architect's specification
-2. Prompt engineering incorporates retrieved chunks with instruction to synthesize answer
-3. Prompt includes instruction to cite sources and avoid hallucination
-4. Response generated in <5 seconds for standard queries (NFR13)
-5. Hallucination rate <5% validated on test queries (NFR8)
-6. Answer quality manually validated on sample queries (coherent, accurate, properly cited)
-7. Error handling for LLM API failures (retries, fallback messaging)
-8. Unit tests cover prompt construction and response parsing
+1. MCP tool response includes comprehensive chunk metadata:
+   - `score`: Similarity score (0-1, higher is better)
+   - `text`: Full chunk content
+   - `source_document`: Document filename
+   - `page_number`: Page in source document (**MUST be populated**, not None)
+   - `chunk_index`: Position in document
+   - `word_count`: Chunk size
+2. Response format follows Week 0 spike pattern (see `spike/mcp_server.py` QueryResult model)
+3. Metadata validation: All required fields populated (no None values for critical fields like page_number)
+4. Response JSON structure optimized for LLM synthesis (clear, consistent field names)
+5. Integration with Story 1.8 (Source Attribution) - citations include all necessary data
+6. Testing: Verify LLM client (Claude Code) can synthesize accurate answers from returned chunks
+7. Performance: Response generated in <5 seconds for standard queries (NFR13)
+8. Unit tests cover response formatting and metadata validation
 
 ## Story 1.12A: Ground Truth Test Set Creation ⭐ MOVED TO WEEK 1
 
@@ -397,7 +378,7 @@
 3. Source attribution accuracy measured: % of citations pointing to correct documents (target: 95%+ per NFR7)
 4. Performance metrics captured (p50, p95 response times)
 5. Test results documented with failure analysis for inaccurate queries
-6. Test suite executable via CLI command: `poetry run python scripts/run-accuracy-tests.py`
+6. Test suite executable via CLI command: `uv run python scripts/run-accuracy-tests.py`
 7. **ENHANCED - DAILY TRACKING:** Daily accuracy tracking report generated (Week 1-5 trend line)
 8. **ENHANCED - DECISION GATE:** GO/NO-GO report for Phase 2/3:
    - IF accuracy ≥90% → GO to Phase 3 (skip GraphRAG)
@@ -437,8 +418,7 @@
 ```
 Pre-Phase 1 (Parallel Execution Allowed):
 ├─ Story 0.1: Week 0 Integration Spike ✅ DONE
-├─ Story 0.0: Production Repository Setup (2-3 hours)
-└─ Story 0.2: API Account & Cloud Infrastructure Setup (1-2 days)
+└─ Story 0.0: Production Repository Setup (2-3 hours) ✅ DONE
 
 Week 1 (Sequential + Some Parallel):
 ├─ Story 1.1: Project Setup (REQUIRES Story 0.0 complete)
@@ -455,8 +435,8 @@ Week 2 (Sequential):
 ├─ Story 1.9: MCP Server Foundation
 └─ Story 1.10: Query Tool (REQUIRES 1.9, REQUIRES 1.7)
 
-Week 3 (Critical Dependency):
-└─ Story 1.11: Answer Synthesis (REQUIRES Story 0.2 API key, REQUIRES 1.10)
+Week 3:
+└─ Story 1.11: Enhanced Chunk Metadata & Response Formatting (REQUIRES 1.10)
 
 Week 4-5 (Integration & Validation):
 ├─ Integration Testing (continuous)
@@ -468,11 +448,11 @@ Week 4-5 (Integration & Validation):
 
 | Story | Blocks | Rationale |
 |-------|--------|-----------|
-| **Story 0.0** | Story 1.1 | Poetry, README, BMAD files required |
-| **Story 0.2** | Story 1.11 | Claude API key needed for LLM synthesis |
+| **Story 0.0** | Story 1.1 | UV, README, BMAD files required |
 | **Story 1.2** | Story 1.8 | Page numbers MUST extract for source attribution (NFR7) |
 | **Story 1.4** | Story 1.5 | Chunks needed before embedding generation |
 | **Story 1.6** | Story 1.7 | Vector DB needed before search |
+| **Story 1.10** | Story 1.11 | Query tool needed before response formatting |
 | **Story 1.12A** | Daily tracking | Test set enables Week 1-5 accuracy monitoring |
 | **ALL 1.1-1.11** | Story 1.12B | Full pipeline needed for final validation |
 
@@ -480,7 +460,7 @@ Week 4-5 (Integration & Validation):
 
 **Pre-Phase 1:**
 
-- Story 0.0 + Story 0.2 can run **in parallel** (different developers OR sequential if solo)
+- Story 0.0 completed ✅ (no remaining pre-Phase 1 stories)
 
 **Week 1:**
 
@@ -503,8 +483,8 @@ Week 4-5 (Integration & Validation):
 
 **Week 3 Gate:**
 
-- ✅ Story 0.2 API key configured? → IF NO, Story 1.11 will fail immediately
-- ✅ LLM synthesis working? → Test with 5-10 queries from Story 1.12A
+- ✅ MCP tool response format complete? → Chunks have all required metadata (page_number, source_document)
+- ✅ Claude Code synthesis working? → Test with 5-10 queries from Story 1.12A (LLM client synthesizes answers from chunks)
 
 **Week 5 Gate (Decision):**
 

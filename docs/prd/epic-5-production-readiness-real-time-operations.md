@@ -177,15 +177,14 @@
    - Parallel job execution for faster feedback (lint + test in parallel)
 
 2. **Pre-Commit Hooks:**
-   - `.pre-commit-config.yaml` configured with black, isort, ruff, mypy
+   - `.pre-commit-config.yaml` configured with Ruff (format + lint), MyPy (type checking), Gitleaks (secrets)
    - Installation instructions in README.md
    - Hooks run automatically on `git commit` (enforce code quality locally)
 
 3. **Linting & Formatting Stage:**
-   - Black (code formatting) runs on all PRs
-   - isort (import sorting) validates import organization
-   - Ruff (fast linter) checks code quality
-   - Mypy (type checking) validates type hints
+   - Ruff format (code formatting) runs on all PRs - replaces Black + isort
+   - Ruff check (linting) validates code quality
+   - MyPy (type checking) validates type hints
    - **Failure action:** Block merge if linting fails
 
 4. **Unit Test Stage:**

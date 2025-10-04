@@ -21,8 +21,8 @@ This document defines the **exact repository structure** for RAGLite monolithic 
 
 ```
 raglite/
-├── pyproject.toml              # Poetry dependencies
-├── poetry.lock                 # Locked dependency versions
+├── pyproject.toml              # UV dependencies (PEP 621 + dependency-groups)
+├── uv.lock                     # Locked dependency versions
 ├── docker-compose.yml          # Qdrant + app containers
 ├── Dockerfile                  # Container image definition
 ├── .env.example                # Environment variable template
@@ -131,22 +131,34 @@ raglite/
 
 #### `pyproject.toml`
 
-**Purpose:** Poetry dependency management (replaces requirements.txt)
-**Created:** Story 1.1 (Project Setup)
-**Size:** ~50 lines
+**Purpose:** UV dependency management (PEP 621 standard, replaces Poetry)
+**Created:** Story 0.0 (Production Repository Setup)
+**Size:** ~230 lines (includes tool configs for Black, Ruff, pytest, mypy)
 **Example:**
 
 ```toml
-[tool.poetry]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
 name = "raglite"
 version = "1.1.0"
-description = "AI-powered financial document analysis"
+requires-python = ">=3.11,<4.0"
 
-[tool.poetry.dependencies]
-python = "^3.11"
-fastmcp = "^1.0"
-qdrant-client = "^1.11"
-# ... see tech-stack.md for full list
+dependencies = [
+    "fastmcp==2.12.4",
+    "docling==2.55.1",
+    "qdrant-client==1.15.1",
+    # ... see actual pyproject.toml for full list
+]
+
+[dependency-groups]
+dev = [
+    "pytest==8.4.2",
+    "ruff>=0.0.270,<1.0.0",
+    # ...
+]
 ```
 
 #### `docker-compose.yml`
@@ -175,8 +187,8 @@ services:
 **Sections:**
 
 - Project overview
-- Prerequisites (Python 3.11+, Docker)
-- Installation (Poetry, Docker Compose)
+- Prerequisites (Python 3.11+, Docker, UV)
+- Installation (UV sync, Docker Compose)
 - Quick start guide
 - Architecture reference (link to docs/architecture/)
 - Contributing guidelines
@@ -350,7 +362,7 @@ settings = Settings()  # Singleton
 **Created:** Story 1.1
 **Actions:**
 
-- Install Python dependencies (Poetry)
+- Install Python dependencies (uv sync --frozen)
 - Start Docker Compose (Qdrant)
 - Initialize Qdrant collection
 - Validate environment

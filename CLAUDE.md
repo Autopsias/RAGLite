@@ -76,7 +76,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
    - Entry point: `docs/prd/index.md`
    - Epics: `epic-1-foundation-accurate-retrieval.md` through `epic-5-production-readiness-real-time-operations.md`
 
-3. **BMAD Configuration:** `.bmad-core/core-config.yaml`
+3. **BMAD Configuration:** `bmad/core/config.yaml`
    - Defines documentation structure and agent workflows
    - References to sharded docs in `docs/architecture/`, `docs/prd/`, `docs/front-end-spec/`
 
@@ -380,12 +380,14 @@ Reference agents by role in prompts (e.g., "As dev, implement Story 1.1"):
 - **bmad-master** - General-purpose expert for ad-hoc tasks
 - **bmad-orchestrator** - Multi-agent coordination
 
-### BMAD Commands (Slash Prefix: `/BMad`)
+### BMAD Commands & Workflows
 
-Access BMAD tasks via custom slash commands:
-- Story creation: `.bmad-core/tasks/create-next-story.md`
-- Documentation: `.bmad-core/tasks/create-doc.md`
-- Test design: `.bmad-core/tasks/test-design.md`
+BMAD now uses a workflow-based structure:
+- Core workflows: `bmad/core/workflows/` (bmad-init, brainstorming, party-mode)
+- BMM workflows: `bmad/bmm/workflows/` (analysis, plan, solutioning, implementation, testarch)
+- Agent customizations: `bmad/_cfg/agents/`
+
+Access workflows through the BMAD CLI or custom slash commands.
 
 See `AGENTS.md` for full agent definitions and capabilities.
 
@@ -481,7 +483,7 @@ async def query_financial_documents(request: QueryRequest) -> str:
 - **Prefer editing over creating:** Always edit existing files rather than creating new documentation
 - **No proactive documentation:** Only create .md files if explicitly requested
 - **Architecture is sharded:** Use `docs/architecture/` and `docs/prd/` subdirectories, not monolithic files
-- **BMAD integration:** Agent personas and tasks are in `.bmad-core/` (auto-generated in `AGENTS.md`)
+- **BMAD integration:** Agent personas and tasks are in `bmad/` (auto-generated in `AGENTS.md`)
 - **Week 0 first:** Do NOT start Phase 1 implementation until Week 0 spike validates the stack
 
 ### Strict SDK Usage

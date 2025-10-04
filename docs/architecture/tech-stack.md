@@ -1,8 +1,20 @@
 # RAGLite Technology Stack
 
-**Version:** 1.1 (Definitive)
+**Version:** 1.2 (Definitive - Updated for UV + Modern CI/CD)
 **Status:** LOCKED - No additions without user approval
-**Last Updated:** October 3, 2025
+**Last Updated:** October 4, 2025
+
+---
+
+## 🚨 PACKAGE MANAGER NOTICE
+
+**This project uses UV, NOT Poetry.** All references to `poetry` commands in legacy documentation should be replaced with `uv` equivalents:
+
+- `poetry install` → `uv sync --frozen`
+- `poetry run <cmd>` → `uv run <cmd>`
+- `poetry add <pkg>` → `uv add <pkg>`
+
+UV is 10-100× faster than Poetry, Rust-based, and fully PEP 621/PEP 735 compliant.
 
 ---
 
@@ -45,11 +57,16 @@ This document defines the **complete and definitive** technology stack for RAGLi
 
 | Category | Tool | Version | Purpose | Phase |
 |----------|------|---------|---------|-------|
-| **Package Manager** | uv | Latest | Fast Python dependency management | Phase 1+ |
-| **Formatter** | Black | 23.3+ | Code formatting | Phase 1+ |
-| **Linter** | Ruff | 0.0.270+ | Fast Python linter | Phase 1+ |
-| **Type Checker** | mypy | 1.4+ (optional) | Static type checking | Phase 4 |
+| **Package Manager** | uv | 0.8+ | Fast Python dependency management (replaces Poetry) | Phase 1+ |
+| **Formatter** | Ruff | 0.13+ | Code formatting (replaces Black) | Phase 1+ |
+| **Linter** | Ruff | 0.13+ | Fast Python linter + import sorting | Phase 1+ |
+| **Type Checker** | mypy | 1.4+ | Static type checking (enabled Phase 1+) | Phase 1+ |
 | **Pre-commit** | pre-commit | 3.x | Git hooks for quality | Phase 1+ |
+
+**Important Changes:**
+- **Ruff replaces both Black AND isort** - Single tool for formatting + linting
+- **MyPy enabled in Phase 1** (not deferred to Phase 4) for `raglite/` production code
+- **UV replaces Poetry** - 10-100× faster, Rust-based, better caching
 
 ---
 
@@ -59,15 +76,18 @@ This document defines the **complete and definitive** technology stack for RAGLi
 
 **Active Technologies:**
 
-- Python 3.11+
+- Python 3.11+ (3.13 on CI runners)
 - Docling (PDF extraction)
 - Fin-E5 (embeddings)
 - Qdrant (vector DB via Docker Compose)
 - FastMCP (MCP server)
 - Claude 3.7 Sonnet API (synthesis)
-- pytest + pytest-asyncio (testing)
-- uv (fast dependency management)
+- pytest + pytest-asyncio + pytest-xdist (testing with parallelization)
+- uv (fast dependency management - replaces Poetry)
+- Ruff (formatting + linting - replaces Black + isort)
+- mypy (type checking - enabled Phase 1)
 - Docker + Docker Compose (local development)
+- GitHub Actions with self-hosted macOS runners (CI/CD)
 
 **NOT Used in Phase 1:**
 
@@ -132,6 +152,9 @@ The following technologies are **explicitly forbidden** to prevent over-engineer
 | ❌ Redis / Memcached | Premature optimization | Add in Phase 4 if needed |
 | ❌ Celery / RQ | Task queue not needed | Async Python sufficient for monolith |
 | ❌ Custom abstraction libraries | Over-engineering | Write direct, simple code |
+| ❌ **Poetry** | **Slower, more complex** | **Use UV instead** |
+| ❌ **Black (standalone)** | **Redundant** | **Ruff handles formatting** |
+| ❌ **isort (standalone)** | **Redundant** | **Ruff handles import sorting** |
 
 **Rationale:** RAGLite is a 600-800 line MVP. Additional frameworks add complexity without value. Use SDK documentation directly.
 
@@ -139,9 +162,9 @@ The following technologies are **explicitly forbidden** to prevent over-engineer
 
 ## Dependency Management
 
-### uv (pyproject.toml + uv.lock)
+### uv (pyproject.toml + uv.lock) ✅ ACTIVE
 
-**Why uv?** 10-100× faster than Poetry, Rust-based, PEP 517 compliant, built-in caching.
+**Why uv?** 10-100× faster than Poetry (which this project does NOT use), Rust-based, PEP 621/PEP 735 compliant, built-in caching, zero Python dependencies.
 
 ```toml
 [build-system]

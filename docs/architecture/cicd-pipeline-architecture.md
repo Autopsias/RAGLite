@@ -1,37 +1,44 @@
 # CI/CD Pipeline Architecture
 
+**Version:** 2.0 (Aligned with Actual Implementation)
+**Last Updated:** October 4, 2025
+**Status:** Active (Week 0 / Pre-Phase 1)
+
+---
+
 ## Overview
 
-RAGLite implements a **production-grade CI/CD pipeline** following 2025 best practices for Python microservices, AI/ML systems, and AWS ECS deployments. The pipeline enforces quality gates, security scanning, accuracy regression testing, and zero-downtime deployments.
+RAGLite implements a **pragmatic, high-performance CI/CD pipeline** using **self-hosted macOS runners** with **UV package management** and **Ruff formatting/linting**. The pipeline prioritizes **speed** (<5 min total), **developer experience**, and **incremental complexity**.
 
-**⚠️ Pragmatic Implementation Note:**
+**Current Implementation:** 3-stage pipeline for Week 0 validation
+**Future State:** 5-stage enterprise pipeline (Phase 4)
 
-The CI/CD workflow described below represents the **complete, mature state** of the pipeline. **Start simple and add complexity incrementally:**
+---
 
-**Phase 1 (MVP - Week 1):**
-- Basic linting (Black, Ruff)
-- Unit tests with coverage
-- Manual deployment to dev
+## Architecture Philosophy
 
-**Phase 2 (Weeks 2-3):**
-- Add integration tests
-- Automated dev deployment
-- Docker builds
+### Start Simple, Scale Gradually
 
-**Phase 3 (Weeks 4-6):**
-- Security scanning (Bandit, Trivy)
-- Accuracy regression tests
-- Staging environment
+**❌ ANTI-PATTERN:** Implementing enterprise CI/CD before product-market fit
+**✅ PATTERN:** Begin with essentials, add stages as project matures
 
-**Phase 4 (Production-Ready):**
-- Full 5-stage pipeline
-- Canary deployments
-- Auto-rollback
-- Cost tracking
+**Phase Progression:**
 
-**Anti-pattern:** Implementing all stages upfront delays first deployment and adds maintenance burden before product-market fit.
+| Phase | CI/CD Complexity | Duration | Features |
+|-------|-----------------|----------|----------|
+| **Week 0 (Current)** | 3-stage pipeline | <5 min | Quality checks, test matrix, basic deploy |
+| **Phase 1 (Weeks 1-5)** | + Integration tests | <8 min | Add Qdrant integration tests |
+| **Phase 2 (Conditional)** | + GraphRAG tests | <12 min | Neo4j integration if needed |
+| **Phase 3 (Weeks 9-12)** | + Performance tests | <15 min | Forecasting, insights validation |
+| **Phase 4 (Prod-Ready)** | 5-stage enterprise | <20 min | Canary, auto-rollback, cost tracking |
 
-## CI/CD Flow Diagram
+---
+
+## Current CI/CD Pipeline (Week 0)
+
+**File:** `.github/workflows/ci.yml`
+
+### Pipeline Stages
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -39,630 +46,464 @@ The CI/CD workflow described below represents the **complete, mature state** of 
 └────────────────┬────────────────────────────────────────────────┘
                  │
 ┌────────────────▼────────────────────────────────────────────────┐
-│  Stage 1: Code Quality & Security (Parallel)                    │
-│  ├─ Linting (Black, Ruff, isort)                                │
-│  ├─ Type Checking (mypy)                                        │
-│  ├─ Security Scan (Bandit SAST)                                 │
-│  ├─ Secret Detection (truffleHog)                               │
-│  └─ Dependency Scan (Safety, pip-audit)                         │
+│  Stage 1: Code Quality & Security (~2 min)                      │
+│  ├─ Ruff linting (Black, isort rules)                           │
+│  ├─ Security scan (Safety)                                      │
+│  └─ BMAD standard files verification                            │
 └────────────────┬────────────────────────────────────────────────┘
                  │
 ┌────────────────▼────────────────────────────────────────────────┐
-│  Stage 2: Multi-Layer Testing (Parallel Matrix)                 │
-│  ├─ Unit Tests (pytest, 80%+ coverage)                          │
-│  ├─ Integration Tests (Testcontainers)                          │
-│  ├─ Accuracy Regression Tests (Ground truth validation)         │
-│  ├─ RAG Pipeline Tests (Retrieval + generation)                 │
-│  └─ LLM Cost Tracking (OpenAI usage API)                        │
+│  Stage 2: Test Matrix (Parallel - ~3 min)                       │
+│  ├─ Unit tests                                                  │
+│  ├─ Integration tests (Qdrant required)                         │
+│  ├─ E2E tests                                                   │
+│  ├─ API tests                                                   │
+│  ├─ Database tests                                              │
+│  └─ Performance tests                                           │
+│  Note: Tests run in parallel with pytest-xdist (-n 4)           │
 └────────────────┬────────────────────────────────────────────────┘
                  │
 ┌────────────────▼────────────────────────────────────────────────┐
-│  Stage 3: Docker Build & Scan (Per Service)                     │
-│  ├─ Multi-stage build (builder + runtime)                       │
-│  ├─ Layer caching (Poetry cache, pip wheels)                    │
-│  ├─ Trivy vulnerability scan                                    │
-│  ├─ Push to ECR with semantic tags                              │
-│  └─ Image size validation (<500MB runtime)                      │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-┌────────────────▼────────────────────────────────────────────────┐
-│  Stage 4: Deployment (Environment-Specific)                     │
-│  ├─ Dev: Auto-deploy on merge to main                           │
-│  ├─ Staging: Manual approval + smoke tests                      │
-│  ├─ Prod: Approval + canary deployment (10% → 50% → 100%)       │
-│  └─ Health check validation (30s timeout)                       │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-┌────────────────▼────────────────────────────────────────────────┐
-│  Stage 5: Post-Deployment Validation                            │
-│  ├─ Smoke tests (critical endpoints)                            │
-│  ├─ Accuracy validation (subset of ground truth)                │
-│  ├─ Performance benchmarks (p50, p95 latency)                   │
-│  ├─ Cost anomaly detection (LLM spend)                          │
-│  └─ Auto-rollback on SLO breach                                 │
+│  Stage 3: Deploy (Main branch only)                             │
+│  └─ Placeholder for Phase 4 AWS deployment                      │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Complete GitHub Actions Workflows
+## Implementation Details
 
-### Primary CI Workflow
+### Infrastructure
 
-**File:** `.github/workflows/ci.yml`
+**Self-Hosted Runners (macOS):**
+- **Why?** Persistent Qdrant instance, faster builds, no GitHub runner limits
+- **Pre-installed:** Python 3.13, UV 0.8.22, Docker Desktop
+- **Qdrant:** Runs persistently via Docker on localhost:6333
+- **Limitations:** No container actions (TruffleHog, markdown link checker disabled)
+
+### Dependency Management
+
+**UV (NOT Poetry):**
 
 ```yaml
-name: RAGLite CI/CD
-
-on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main]
-
-env:
-  PYTHON_VERSION: "3.11"
-  POETRY_VERSION: "1.8.2"
-  AWS_REGION: us-east-1
-
-jobs:
-  # ============================================================
-  # STAGE 1: Code Quality & Security
-  # ============================================================
-  code-quality:
-    name: Code Quality & Linting
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: ${{ env.POETRY_VERSION }}
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
-      - name: Cache Poetry dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pypoetry
-            .venv
-          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-poetry-
-
-      - name: Install dependencies
-        run: poetry install --no-interaction --no-ansi --with dev
-
-      - name: Format check (Black)
-        run: poetry run black --check .
-
-      - name: Import sort check (isort)
-        run: poetry run isort --check-only .
-
-      - name: Lint (Ruff)
-        run: poetry run ruff check .
-
-      - name: Type check (mypy)
-        run: poetry run mypy services/ orchestrator/ shared/
-        continue-on-error: true  # Warn but don't fail on type errors initially
-
-  security-scan:
-    name: Security Scanning
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write  # For uploading to Security tab
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-
-      - name: Install dependencies
-        run: poetry install --no-interaction --with dev
-
-      - name: SAST with Bandit
-        run: |
-          poetry run bandit -r services/ orchestrator/ shared/ -f json -o bandit-report.json
-        continue-on-error: true
-
-      - name: Upload Bandit results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: bandit-security-report
-          path: bandit-report.json
-
-      - name: Dependency vulnerability scan (Safety)
-        run: |
-          poetry run safety check --json > safety-report.json
-        continue-on-error: true
-
-      - name: Secret detection (truffleHog)
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
-
-      - name: Python dependency audit (pip-audit)
-        run: |
-          poetry run pip-audit --format json > pip-audit-report.json
-        continue-on-error: true
-
-  # ============================================================
-  # STAGE 2: Multi-Layer Testing
-  # ============================================================
-  unit-tests:
-    name: Unit Tests (Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11", "3.12"]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-
-      - name: Cache Poetry dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pypoetry
-            .venv
-          key: ${{ runner.os }}-poetry-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Install dependencies
-        run: poetry install --no-interaction --with dev,test
-
-      - name: Run unit tests with coverage
-        run: |
-          poetry run pytest \
-            --cov=services \
-            --cov=orchestrator \
-            --cov=shared \
-            --cov-report=xml \
-            --cov-report=term \
-            --cov-branch \
-            --junitxml=pytest-report.xml \
-            -v \
-            services/*/tests/ \
-            orchestrator/tests/ \
-            shared/tests/
-
-      - name: Coverage threshold enforcement (80%)
-        run: |
-          poetry run coverage report --fail-under=80
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.xml
-          flags: unit-tests-py${{ matrix.python-version }}
-          name: unit-coverage
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: pytest-results-${{ matrix.python-version }}
-          path: pytest-report.xml
-
-  integration-tests:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    services:
-      qdrant:
-        image: qdrant/qdrant:latest
-        ports:
-          - 6333:6333
-      neo4j:
-        image: neo4j:5-community
-        env:
-          NEO4J_AUTH: neo4j/test-password
-        ports:
-          - 7687:7687
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-
-      - name: Install dependencies
-        run: poetry install --no-interaction --with dev,test
-
-      - name: Run integration tests
-        env:
-          QDRANT_HOST: localhost
-          QDRANT_PORT: 6333
-          NEO4J_URI: bolt://localhost:7687
-          NEO4J_USER: neo4j
-          NEO4J_PASSWORD: test-password
-        run: |
-          poetry run pytest \
-            --cov=services \
-            --cov-append \
-            --cov-report=xml \
-            -v \
-            -m integration \
-            tests/integration/
-
-      - name: Upload integration coverage
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.xml
-          flags: integration-tests
-
-  accuracy-regression:
-    name: Accuracy Regression Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-
-      - name: Install dependencies
-        run: poetry install --no-interaction --with test
-
-      - name: Run accuracy validation (ground truth)
-        env:
-          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-        run: |
-          poetry run python scripts/run-accuracy-tests.py \
-            --threshold 0.90 \
-            --output accuracy-report.json
-
-      - name: Validate accuracy threshold
-        run: |
-          poetry run python scripts/validate-accuracy.py \
-            --input accuracy-report.json \
-            --retrieval-threshold 0.90 \
-            --attribution-threshold 0.95
-
-      - name: Upload accuracy report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: accuracy-regression-report
-          path: accuracy-report.json
-
-  llm-cost-tracking:
-    name: LLM Cost Tracking
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Track LLM API usage
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          # Run test suite and capture API call metrics
-          poetry run python scripts/track-llm-costs.py \
-            --output llm-cost-report.json
-
-      - name: Comment cost estimate on PR
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const report = JSON.parse(fs.readFileSync('llm-cost-report.json', 'utf8'));
-            const body = `## 💰 LLM Cost Estimate
-
-            **Total estimated cost for this PR:** $${report.total_cost.toFixed(4)}
-
-            | Service | Tokens (Input) | Tokens (Output) | Cost |
-            |---------|----------------|-----------------|------|
-            | Claude 3.7 Sonnet | ${report.claude.input_tokens.toLocaleString()} | ${report.claude.output_tokens.toLocaleString()} | $${report.claude.cost.toFixed(4)} |
-            | Embeddings (Fin-E5) | ${report.embeddings.tokens.toLocaleString()} | - | $${report.embeddings.cost.toFixed(4)} |
-
-            **Warning threshold:** $5.00 per PR
-            ${report.total_cost > 5.0 ? '⚠️ **Cost exceeds threshold!**' : '✅ Within budget'}
-            `;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: body
-            });
-
-  # ============================================================
-  # STAGE 3: Docker Build & Security Scan
-  # ============================================================
-  docker-build:
-    name: Build Docker Images
-    runs-on: ubuntu-latest
-    needs: [code-quality, security-scan, unit-tests]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    strategy:
-      matrix:
-        service:
-          - ingestion
-          - retrieval
-          - graphrag
-          - forecasting
-          - insights
-          - gateway
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Extract metadata (tags, labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ steps.login-ecr.outputs.registry }}/raglite-${{ matrix.service }}
-          tags: |
-            type=sha,prefix={{branch}}-
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=ref,event=branch
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ matrix.service }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-${{ matrix.service }}-
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./services/${{ matrix.service }}
-          file: ./services/${{ matrix.service }}/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-          build-args: |
-            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
-            POETRY_VERSION=${{ env.POETRY_VERSION }}
-
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ steps.login-ecr.outputs.registry }}/raglite-${{ matrix.service }}:${{ github.sha }}
-          format: 'sarif'
-          output: 'trivy-results-${{ matrix.service }}.sarif'
-          severity: 'CRITICAL,HIGH'
-
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
-          category: 'trivy-${{ matrix.service }}'
-
-      - name: Validate image size
-        run: |
-          IMAGE_SIZE=$(docker image inspect ${{ steps.login-ecr.outputs.registry }}/raglite-${{ matrix.service }}:${{ github.sha }} --format='{{.Size}}')
-          MAX_SIZE=524288000  # 500MB
-          if [ $IMAGE_SIZE -gt $MAX_SIZE ]; then
-            echo "Error: Image size ${IMAGE_SIZE} bytes exceeds maximum ${MAX_SIZE} bytes"
-            exit 1
-          fi
-          echo "✅ Image size: $(($IMAGE_SIZE / 1024 / 1024))MB (within limit)"
-
-  # ============================================================
-  # STAGE 4: Deployment
-  # ============================================================
-  deploy-dev:
-    name: Deploy to Development
-    runs-on: ubuntu-latest
-    needs: [docker-build, integration-tests, accuracy-regression]
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: development
-      url: https://dev.raglite.internal
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Deploy to ECS (Development)
-        run: |
-          for service in gateway ingestion retrieval forecasting insights; do
-            aws ecs update-service \
-              --cluster raglite-dev-cluster \
-              --service raglite-dev-${service} \
-              --force-new-deployment \
-              --region ${{ env.AWS_REGION }}
-          done
-
-      - name: Wait for deployment stabilization
-        run: |
-          for service in gateway ingestion retrieval forecasting insights; do
-            aws ecs wait services-stable \
-              --cluster raglite-dev-cluster \
-              --services raglite-dev-${service} \
-              --region ${{ env.AWS_REGION }}
-          done
-
-      - name: Run smoke tests
-        run: |
-          poetry run python scripts/smoke-tests.py \
-            --env development \
-            --endpoint https://dev.raglite.internal
-
-  deploy-staging:
-    name: Deploy to Staging
-    runs-on: ubuntu-latest
-    needs: [deploy-dev]
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: staging
-      url: https://staging.raglite.internal
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Deploy to ECS (Staging) with canary
-        run: |
-          # Canary deployment: 10% → 50% → 100%
-          ./scripts/canary-deploy.sh staging 10 50 100
-
-      - name: Validate staging deployment
-        run: |
-          poetry run pytest tests/e2e/ \
-            --env staging \
-            --endpoint https://staging.raglite.internal
-
-  deploy-production:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: [deploy-staging]
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: production
-      url: https://raglite.production
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Blue/Green deployment (Production)
-        run: |
-          # Use AWS CodeDeploy for blue/green deployment
-          aws deploy create-deployment \
-            --application-name raglite-prod \
-            --deployment-group-name raglite-prod-dg \
-            --deployment-config-name CodeDeployDefault.ECSCanary10Percent5Minutes \
-            --region ${{ env.AWS_REGION }}
-
-      - name: Monitor deployment health
-        run: |
-          ./scripts/monitor-deployment.sh production 300
-
-      - name: Run production smoke tests
-        run: |
-          poetry run python scripts/smoke-tests.py \
-            --env production \
-            --endpoint https://raglite.production
-
-  # ============================================================
-  # STAGE 5: Post-Deployment Validation
-  # ============================================================
-  post-deploy-validation:
-    name: Post-Deployment Validation
-    runs-on: ubuntu-latest
-    needs: [deploy-production]
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run accuracy validation (production subset)
-        env:
-          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-        run: |
-          poetry run python scripts/run-accuracy-tests.py \
-            --env production \
-            --subset critical \
-            --threshold 0.90
-
-      - name: Performance benchmark
-        run: |
-          poetry run python scripts/performance-benchmark.py \
-            --env production \
-            --duration 300 \
-            --concurrent-users 10
-
-      - name: Cost anomaly check
-        env:
-          AWS_COST_EXPLORER_ENABLED: true
-        run: |
-          poetry run python scripts/check-cost-anomalies.py \
-            --lookback-days 7 \
-            --threshold-increase 50
-
-      - name: Notify deployment status
-        uses: slackapi/slack-github-action@v1
-        with:
-          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
-          slack-message: |
-            ✅ RAGLite deployed to production successfully!
-
-            **Commit:** ${{ github.sha }}
-            **Author:** ${{ github.actor }}
-            **Accuracy:** Validated ✓
-            **Performance:** Within SLO ✓
-            **Cost:** No anomalies ✓
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+- name: Install dependencies
+  run: uv sync --frozen
+
+- name: Run tests
+  run: uv run pytest -n 4 --dist worksteal
+```
+
+**Why UV?**
+- 10-100× faster than Poetry
+- Zero Python dependencies (Rust binary)
+- Built-in parallel installs
+- PEP 621/PEP 735 compliant
+
+---
+
+## Stage 1: Code Quality & Security
+
+**Execution Time:** ~2 minutes
+
+```yaml
+quality:
+  name: Code Quality & Security
+  runs-on: self-hosted
+
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: uv sync --frozen
+
+    - name: Linting (Black compatibility)
+      run: uv run black --check spike/ tests/
+
+    - name: Linting (Ruff)
+      run: uv run ruff check spike/ tests/
+
+    - name: Linting (isort)
+      run: uv run isort --check-only spike/ tests/
+
+    - name: Verify BMAD standard files exist
+      run: |
+        test -f docs/architecture/coding-standards.md
+        test -f docs/architecture/tech-stack.md
+        test -f docs/architecture/source-tree.md
+        echo "✅ All BMAD standard files present"
+
+    - name: Security scan (Safety)
+      run: |
+        pip install safety
+        safety check --json || true
+      continue-on-error: true
+```
+
+**Notes:**
+- **Ruff** handles formatting (replaces Black) + linting + import sorting
+- **Black check** still runs for compatibility verification (Week 0)
+- **TruffleHog** secret scanning disabled (macOS self-hosted limitation)
+  - Alternative: Gitleaks in pre-commit hook
+- **MyPy** type checking disabled (will enable Phase 1 for `raglite/` code)
+
+---
+
+## Stage 2: Test Matrix (Parallel Execution)
+
+**Execution Time:** ~3 minutes (parallel across 6 test suites)
+
+```yaml
+test-matrix:
+  name: Tests - ${{ matrix.test-suite }}
+  runs-on: self-hosted
+  strategy:
+    fail-fast: false
+    matrix:
+      test-suite: ["unit", "integration", "e2e", "api", "database", "performance"]
+
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: uv sync --frozen
+
+    - name: Verify Qdrant is available
+      run: |
+        if curl -sf http://localhost:6333/collections > /dev/null; then
+          echo "✅ Qdrant is available at localhost:6333"
+        else
+          echo "⚠️  Qdrant not available - tests may fail"
+        fi
+      if: matrix.test-suite != 'unit'
+
+    - name: Run tests
+      env:
+        QDRANT_HOST: localhost
+        QDRANT_PORT: 6333
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      run: |
+        # Skip if test directory doesn't exist yet
+        if [ ! -d "tests/${{ matrix.test-suite }}" ]; then
+          echo "⚠️  Test directory doesn't exist yet, skipping..."
+          exit 0
+        fi
+
+        # Run pytest with parallel execution
+        uv run pytest tests/${{ matrix.test-suite }}/ \
+          -n 4 \
+          --dist worksteal \
+          --cov=spike --cov=src --cov=raglite \
+          --cov-report=xml \
+          --cov-report=term-missing \
+          -v
+
+    - name: Upload coverage
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-${{ matrix.test-suite }}
+        path: coverage.xml
+        retention-days: 1
+```
+
+**Key Features:**
+- **Parallel execution:** 6 test suites run concurrently
+- **pytest-xdist:** Each suite uses 4 workers (`-n 4 --dist worksteal`)
+- **Graceful skipping:** Tests not created yet don't fail the build
+- **Persistent Qdrant:** Integration tests connect to localhost:6333
+- **Coverage tracking:** XML reports uploaded as artifacts
+
+**Disabled Features (Week 0):**
+- ❌ Codecov upload (re-enable Phase 1 with token configuration)
+- ❌ Accuracy regression tests (waiting for ground truth dataset)
+
+---
+
+## Stage 3: Deploy
+
+**Current:** Placeholder only (main branch)
+**Phase 4:** AWS ECS deployment with canary releases
+
+```yaml
+deploy:
+  name: Deploy to Production
+  needs: [quality, test-matrix]
+  runs-on: self-hosted
+  if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+  steps:
+    - name: Deploy
+      run: |
+        echo "Deployment steps go here"
+        # Phase 4: Terraform apply, ECS task updates, etc.
 ```
 
 ---
 
-## Multi-Stage Dockerfile Example
+## Pre-commit Hooks (Local Development)
 
-**File:** `services/retrieval/Dockerfile`
+**File:** `.pre-commit-config.yaml`
 
-```dockerfile
+```yaml
+repos:
+  # Universal file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+
+  # Ruff (formatting + linting)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.13.0
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format  # Replaces Black
+
+  # MyPy type checking (enabled Phase 1)
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        files: ^raglite/  # Only production code
+        args: [--show-error-codes, --ignore-missing-imports]
+        additional_dependencies: [pydantic, types-requests]
+
+  # Secret detection
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+```
+
+**Execution Time:** <5 seconds (optimized for developer experience)
+
+---
+
+## Phase 4: Future Enterprise Pipeline
+
+**NOT IMPLEMENTED YET** - Documented for future reference
+
+### 5-Stage Enterprise Pipeline
+
+```
+Stage 1: Quality (Parallel)
+  ├─ Ruff (format + lint)
+  ├─ MyPy (strict type checking)
+  ├─ Bandit (SAST)
+  ├─ TruffleHog (secret scanning)
+  └─ Safety + pip-audit (dependency vulnerabilities)
+
+Stage 2: Multi-Layer Testing (Parallel)
+  ├─ Unit tests (80%+ coverage)
+  ├─ Integration tests (Testcontainers)
+  ├─ Accuracy regression (ground truth)
+  ├─ RAG pipeline tests
+  └─ LLM cost tracking
+
+Stage 3: Docker Build & Scan (Per Service)
+  ├─ Multi-stage build (UV cache optimization)
+  ├─ Trivy vulnerability scan
+  ├─ Push to ECR with semantic tags
+  └─ Image size validation (<500MB)
+
+Stage 4: Deployment (Environment-Specific)
+  ├─ Dev: Auto-deploy on merge
+  ├─ Staging: Manual approval + smoke tests
+  ├─ Prod: Canary deployment (10% → 50% → 100%)
+  └─ Health check validation (30s timeout)
+
+Stage 5: Post-Deployment Validation
+  ├─ Smoke tests (critical endpoints)
+  ├─ Accuracy validation (subset of ground truth)
+  ├─ Performance benchmarks (p50, p95 latency)
+  ├─ Cost anomaly detection (LLM spend)
+  └─ Auto-rollback on SLO breach
+```
+
+**Estimated Total Time:** 15-20 minutes
+
+---
+
+## Monitoring & Observability
+
+### Current (Week 0)
+
+- ✅ GitHub Actions run logs
+- ✅ Coverage artifacts uploaded
+- ✅ Test failure summaries
+
+### Phase 1 Additions
+
+- Codecov integration (re-enable with `CODECOV_TOKEN`)
+- Daily accuracy tracking reports
+- Test execution time trends
+
+### Phase 4 Additions
+
+- CloudWatch metrics (ECS health, API latency)
+- Prometheus + Grafana dashboards
+- LLM cost tracking (Anthropic API usage)
+- Accuracy regression alerts (Slack notifications)
+- Auto-rollback on SLO violations
+
+---
+
+## Performance Characteristics
+
+### Current Pipeline Benchmarks
+
+| Stage | Execution Time | Parallelization | Bottleneck |
+|-------|----------------|-----------------|------------|
+| Quality | ~2 min | Single runner | Ruff linting |
+| Test Matrix | ~3 min | 6 suites × 4 workers | Qdrant integration tests |
+| Deploy | <1 min | N/A | Placeholder only |
+| **TOTAL** | **<5 min** | High | Well-optimized |
+
+### Optimization Strategies
+
+**UV Dependency Caching:**
+- UV automatically caches downloads in `~/.cache/uv`
+- Self-hosted runners persist cache across builds
+- **Result:** Dependency install ~5-10s (vs 60-90s with Poetry)
+
+**pytest-xdist Parallelization:**
+- Each test suite uses 4 workers (`-n 4`)
+- `--dist worksteal` dynamically balances load
+- **Result:** 4× faster test execution
+
+**Qdrant Persistence:**
+- Docker container runs continuously on self-hosted runner
+- No service startup overhead (vs Testcontainers: 20-30s)
+- **Result:** Integration tests start immediately
+
+---
+
+## Migration Path (Week 0 → Phase 4)
+
+### Week 1-5 (Phase 1)
+
+**Add:**
+- MyPy type checking in pre-commit (already in config, just uncomment)
+- Codecov upload (set `CODECOV_TOKEN` secret)
+- Accuracy regression tests (after Story 1.12A creates ground truth)
+
+**No changes to:**
+- UV (already optimal)
+- Ruff (already configured)
+- Test matrix (already comprehensive)
+
+### Week 9-12 (Phase 3)
+
+**Add:**
+- Performance benchmarking tests
+- Forecasting validation tests
+
+### Week 13-16 (Phase 4)
+
+**Major refactor:**
+- Migrate to GitHub-hosted runners (ubuntu-latest)
+- Add Docker build + Trivy scan stage
+- Implement AWS ECS deployment
+- Add canary release logic
+- Implement auto-rollback on failures
+
+---
+
+## Security Considerations
+
+### Current Safeguards
+
+- ✅ Gitleaks in pre-commit (secret detection)
+- ✅ Safety dependency scan (continue-on-error: true)
+- ✅ BMAD standard files verification
+
+### Disabled (Self-Hosted Runner Limitations)
+
+- ❌ TruffleHog (container action, not supported on macOS)
+- ❌ Trivy (Docker scanning, deferred to Phase 4)
+- ❌ Bandit SAST (deferred to Phase 1)
+
+### Manual Alternatives (Week 0)
+
+```bash
+# Secret scanning (local)
+brew install trufflesecurity/trufflehog/trufflehog
+trufflehog git file://. --since-commit HEAD~1
+
+# Markdown link checking (local)
+npm install -g markdown-link-check
+markdown-link-check docs/**/*.md
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+**1. Qdrant connection failures in integration tests**
+
+```bash
+# Verify Qdrant is running
+docker ps | grep qdrant
+
+# Start Qdrant if not running
+docker run -d -p 6333:6333 --name raglite-qdrant qdrant/qdrant:v1.11.0
+```
+
+**2. UV sync fails with "lock file out of sync"**
+
+```bash
+# Re-lock dependencies
+uv lock
+
+# Force sync
+uv sync --frozen
+```
+
+**3. Pre-commit hooks fail locally but CI passes**
+
+```bash
+# Update pre-commit hooks to CI versions
+pre-commit autoupdate
+
+# Re-run
+pre-commit run --all-files
+```
+
+---
+
+## References
+
+- **Actual CI Workflow:** `.github/workflows/ci.yml`
+- **Pre-commit Config:** `.pre-commit-config.yaml`
+- **UV Documentation:** https://github.com/astral-sh/uv
+- **Ruff Documentation:** https://github.com/astral-sh/ruff
+- **pytest-xdist:** https://pytest-xdist.readthedocs.io/
+
+---
+
+## Summary
+
+**Current State (Week 0):**
+- ✅ Fast (<5 min total)
+- ✅ Developer-friendly (UV, Ruff, self-hosted)
+- ✅ Pragmatic (test suites scale as code grows)
+- ✅ Future-proof (clear migration path to Phase 4)
+
+**Key Differentiators:**
+- **UV replaces Poetry:** 10-100× faster
+- **Ruff replaces Black + isort:** Single tool, Rust-based
+- **Self-hosted macOS runners:** Persistent Qdrant, faster builds
+- **pytest-xdist:** 4× parallelization per test suite
+
+**Next Steps (Phase 1):**
+1. Enable MyPy in pre-commit (uncomment config)
+2. Add Codecov token secret
+3. Create ground truth dataset (Story 1.12A)
+4. Measure accuracy regression daily

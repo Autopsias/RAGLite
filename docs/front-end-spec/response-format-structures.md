@@ -1,5 +1,52 @@
 # Response Format Structures
 
+## 🔑 CRITICAL ARCHITECTURE CLARIFICATION
+
+**WHO GENERATES THESE RESPONSES:**
+
+These response formats describe what **Claude Code (the LLM client)** should synthesize from RAGLite's MCP tool outputs, NOT what RAGLite returns directly.
+
+**Standard MCP Architecture Pattern:**
+
+```
+User Query → Claude Code (LLM)
+  ↓
+  Calls MCP tool: query_financial_documents(query, top_k)
+  ↓
+RAGLite Returns: {
+  results: [
+    {score, text, source_document, page_number, chunk_index, ...},
+    {score, text, source_document, page_number, chunk_index, ...},
+    ...
+  ]
+}
+  ↓
+Claude Code (LLM) Synthesizes: Formatted answer using chunks + citations
+  ↓
+Display to User: Synthesized answer in formats below
+```
+
+**What RAGLite MCP Tools Return:**
+- **Raw chunks** with metadata (text, scores, source attribution)
+- **Structured data** from Qdrant vector search
+- **No pre-synthesized prose** - that's the LLM client's job
+
+**What Claude Code (LLM Client) Does:**
+- Receives raw chunks from RAGLite tools
+- Synthesizes coherent answers using the formats below
+- Combines multiple chunks into readable prose
+- Formats citations and source attributions
+
+**Why This Matters:**
+- ✅ Standard MCP pattern: Tools provide data, LLM does reasoning
+- ✅ Cost-effective: No duplicate Claude API costs (user already has Claude Code subscription)
+- ✅ Flexible: Users can use any MCP-compatible LLM client
+- ✅ Separation of concerns: RAGLite = retrieval expert, Claude Code = synthesis expert
+
+**The formats below are EXAMPLES for the LLM client (Claude Code) to follow when synthesizing RAGLite's raw chunk data.**
+
+---
+
 ## Response Format: Simple Factual Answer
 
 **Purpose:** Deliver concise, accurate information with verifiable sources

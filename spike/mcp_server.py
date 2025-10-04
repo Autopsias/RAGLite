@@ -30,7 +30,7 @@ def get_qdrant_client() -> QdrantClient:
     """Get or create Qdrant client instance."""
     global _qdrant_client
     if _qdrant_client is None:
-        _qdrant_client = QdrantClient(url=QDRANT_URL)
+        _qdrant_client = QdrantClient(url=QDRANT_URL, check_compatibility=False)
     return _qdrant_client
 
 

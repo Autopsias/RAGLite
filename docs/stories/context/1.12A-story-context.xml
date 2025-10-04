@@ -1,0 +1,329 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.1">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.12A</storyId>
+    <title>Ground Truth Test Set Creation</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-12</generatedAt>
+    <lastUpdated>2025-10-12</lastUpdated>
+    <generator>BMAD Story Context Workflow</generator>
+    <updatedBy>Bob (Scrum Master) - Enhanced with detailed subtask granularity</updatedBy>
+    <sourceStoryPath>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/1.12A.ground-truth-test-set-creation.md</sourceStoryPath>
+    <changeLog>v1.1: Added detailed subtasks with category breakdowns, field specifications, and validation steps for developer clarity</changeLog>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>to create a comprehensive ground truth test set early in Phase 1</iWant>
+    <soThat>I can track accuracy daily throughout development and catch regressions immediately</soThat>
+    <tasks>
+      <task id="1" title="Review Week 0 Ground Truth Baseline">
+        <description>Review spike/create_ground_truth.py structure, analyze existing 15 Q&amp;A pairs, identify coverage gaps</description>
+        <subtasks>
+          <subtask>Read spike/create_ground_truth.py to understand Week 0 structure</subtask>
+          <subtask>Review Week 0 test document: docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf</subtask>
+          <subtask>Analyze existing 15 Q&amp;A pairs for patterns and coverage gaps</subtask>
+          <subtask>Identify which categories need more coverage (operating_expenses only had 3, need more)</subtask>
+        </subtasks>
+      </task>
+      <task id="2" title="Expand Ground Truth to 50+ Questions">
+        <description>Create 50+ questions across 6 categories with 40/40/20 difficulty distribution</description>
+        <subtasks>
+          <subtask category="cost_analysis" target="12" difficulty="5 easy, 5 medium, 2 hard">
+            Category: cost_analysis (12 questions total) - Expand from 4 to 12
+            <details>Add 8 new questions about variable costs, fixed costs, distribution costs, other costs</details>
+          </subtask>
+          <subtask category="margins" target="8" difficulty="3 easy, 4 medium, 1 hard">
+            Category: margins (8 questions total) - Expand from 2 to 8
+            <details>Add 6 new questions about unit margin, EBITDA margin, gross margin</details>
+          </subtask>
+          <subtask category="financial_performance" target="10" difficulty="4 easy, 4 medium, 2 hard">
+            Category: financial_performance (10 questions total) - Expand from 2 to 10
+            <details>Add 8 new questions about EBITDA, revenue, contribution metrics</details>
+          </subtask>
+          <subtask category="safety_metrics" target="6" difficulty="2 easy, 3 medium, 1 hard">
+            Category: safety_metrics (6 questions total) - Expand from 2 to 6
+            <details>Add 4 new questions about frequency ratios, KPIs, safety performance</details>
+          </subtask>
+          <subtask category="workforce" target="6" difficulty="3 easy, 2 medium, 1 hard">
+            Category: workforce (6 questions total) - Expand from 2 to 6
+            <details>Add 4 new questions about employee counts, employee costs, headcount</details>
+          </subtask>
+          <subtask category="operating_expenses" target="8" difficulty="3 easy, 3 medium, 2 hard">
+            Category: operating_expenses (8 questions total) - Expand from 3 to 8
+            <details>Add 5 new questions about renting, transport, fuel, other operating costs</details>
+          </subtask>
+          <subtask>Verify distribution: 20 easy (40%), 20 medium (40%), 10 hard (20%) = 50 questions</subtask>
+        </subtasks>
+      </task>
+      <task id="3" title="Structure Ground Truth Data">
+        <description>Create raglite/tests/ground_truth.py with Python data structure (list of dicts)</description>
+        <subtasks>
+          <subtask>Create raglite/tests/ground_truth.py file</subtask>
+          <subtask>Define Python data structure (list of dicts) for ground truth questions</subtask>
+          <subtask>For EACH question, include the following fields:
+            <field name="id" type="int">Unique integer (1-50+)</field>
+            <field name="question" type="str">Natural language question text</field>
+            <field name="expected_answer" type="str">Expected answer text or answer criteria</field>
+            <field name="expected_keywords" type="list[str]">List of keywords that should appear in retrieved chunks</field>
+            <field name="source_document" type="str">2025-08 Performance Review CONSO_v2.pdf</field>
+            <field name="expected_page_number" type="int">Page number where answer is found (verify manually)</field>
+            <field name="expected_section" type="str">Section/chunk identifier (e.g., "Financial Metrics Summary")</field>
+            <field name="category" type="str">One of the 6 categories</field>
+            <field name="difficulty" type="str">"easy", "medium", or "hard"</field>
+          </subtask>
+          <subtask>Add module-level docstring explaining the ground truth structure</subtask>
+          <subtask>Export GROUND_TRUTH_QA constant for use by test scripts</subtask>
+        </subtasks>
+      </task>
+      <task id="4" title="Manual Validation Against Test PDF">
+        <description>Verify each question against 2025-08 Performance Review CONSO_v2.pdf</description>
+        <subtasks>
+          <subtask>For EACH of the 50+ questions:
+            <validation-step>Open test PDF at expected page number</validation-step>
+            <validation-step>Verify answer is present in the specified section</validation-step>
+            <validation-step>Confirm expected keywords match the actual text</validation-step>
+            <validation-step>Note any discrepancies or corrections needed</validation-step>
+          </subtask>
+          <subtask>Update ground truth data with corrections from manual validation</subtask>
+          <subtask>Create validation checklist spreadsheet (optional but recommended)</subtask>
+          <subtask>Document validation process and date in ground_truth.py header</subtask>
+        </subtasks>
+      </task>
+      <task id="5" title="Create Documentation">
+        <description>Add comprehensive docstrings explaining structure, usage, and maintenance</description>
+        <subtasks>
+          <subtask>Add comprehensive docstring to raglite/tests/ground_truth.py:
+            <doc-section>Purpose of ground truth test set</doc-section>
+            <doc-section>How to add new questions (copy template, fill fields, validate manually)</doc-section>
+            <doc-section>Explanation of each field in the data structure</doc-section>
+            <doc-section>Guidelines for categorization and difficulty rating</doc-section>
+            <doc-section>How to run validation tests (reference to future accuracy scripts)</doc-section>
+          </subtask>
+          <subtask>Create inline comments in ground_truth.py for each category section</subtask>
+          <subtask>Document difficulty criteria:
+            <criteria level="easy">Direct factual lookup (single number, single table cell)</criteria>
+            <criteria level="medium">Requires understanding multiple data points or comparison</criteria>
+            <criteria level="hard">Requires cross-referencing sections or complex calculation</criteria>
+          </subtask>
+        </subtasks>
+      </task>
+      <task id="6" title="Create Helper Script for Validation (Optional)">
+        <description>Create scripts/validate_ground_truth.py for automated validation</description>
+        <subtasks>
+          <subtask>Create scripts/validate_ground_truth.py (optional but recommended)</subtask>
+          <subtask>Script functionality:
+            <feature>Load ground truth from raglite/tests/ground_truth.py</feature>
+            <feature>Print summary statistics (total questions, category breakdown, difficulty distribution)</feature>
+            <feature>Validate required fields are populated</feature>
+            <feature>Check page numbers are valid integers</feature>
+            <feature>Verify distribution matches 40/40/20 target</feature>
+          </subtask>
+          <subtask>Test: Run validation script and confirm all checks pass</subtask>
+        </subtasks>
+      </task>
+      <task id="7" title="Integration with Future Testing">
+        <description>Document integration with scripts/run-accuracy-tests.py (Story 1.12B)</description>
+        <subtasks>
+          <subtask>Add note in documentation: "Used by scripts/run-accuracy-tests.py (Story 1.12B)"</subtask>
+          <subtask>Ensure ground_truth.py exports data in format easy to consume by test runners</subtask>
+          <subtask>Plan for daily tracking: document how subset (10-15 questions) can be selected for daily runs</subtask>
+          <subtask>Add comment explaining how to measure accuracy: % of questions with retrieved chunks containing answer</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Expand Week 0 ground truth (15 queries) to 50+ representative financial queries</criterion>
+    <criterion id="2">Cover all categories: cost_analysis, margins, financial_performance, safety_metrics, workforce, operating_expenses</criterion>
+    <criterion id="3">Difficulty distribution: 40% easy, 40% medium, 20% hard</criterion>
+    <criterion id="4">Store in raglite/tests/ground_truth.py as structured data (JSON or Python dict)</criterion>
+    <criterion id="5">Each query includes: question text, expected answer, source document reference, expected page number, expected chunk/section identifier</criterion>
+    <criterion id="6">Manual validation: All answers verified against Week 0 test PDF</criterion>
+    <criterion id="7">Documentation: README explains ground truth structure and maintenance</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/prd/epic-1-foundation-accurate-retrieval.md</path>
+        <title>Epic 1: Foundation &amp; Accurate Retrieval</title>
+        <section>Story 1.12A Context</section>
+        <snippet>Epic goal: 90%+ retrieval accuracy (NFR6), 95%+ source attribution (NFR7). Week 0 achieved 66.7% baseline (10/15 queries) - insufficient for robust tracking. Story 1.12A expands to 50+ queries with balanced difficulty.</snippet>
+        <relevance>Provides context for why 50+ questions are needed and target accuracy metrics</relevance>
+      </doc>
+      <doc>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/architecture/testing-strategy.md</path>
+        <title>Testing Strategy</title>
+        <section>Testing Pyramid - E2E Tests (5%)</section>
+        <snippet>Ground truth = top of testing pyramid for accuracy validation. Target: 90%+ retrieval accuracy (NFR6), 95%+ source attribution (NFR7). Daily tracking: 10-15 questions subset for quick validation.</snippet>
+        <relevance>Explains testing approach and how ground truth fits into overall strategy</relevance>
+      </doc>
+      <doc>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/architecture/3-repository-structure-monolithic.md</path>
+        <title>Repository Structure (Monolithic)</title>
+        <section>raglite/tests/</section>
+        <snippet>File location: raglite/tests/ground_truth.py (~300-400 lines). Co-located with test_ingestion.py, test_retrieval.py. Used by scripts/run-accuracy-tests.py for validation.</snippet>
+        <relevance>Defines exact file location and line count targets</relevance>
+      </doc>
+      <doc>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/week-0-spike-report.md</path>
+        <title>Week 0 Integration Spike Report</title>
+        <section>Accuracy Results</section>
+        <snippet>Week 0 baseline: 66.7% (10/15 queries). Category breakdown: cost_analysis 100%, operating_expenses 33%. High semantic similarity (0.83 avg) indicates good matching. 5 failed queries due to strict keyword matching, not retrieval failure.</snippet>
+        <relevance>Provides baseline metrics and identifies weak categories needing more coverage</relevance>
+      </doc>
+      <doc>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/architecture/coding-standards.md</path>
+        <title>RAGLite Coding Standards</title>
+        <section>Type Hints, Docstrings, Module Structure</section>
+        <snippet>Mandatory: Google-style docstrings for all public functions. Type hints required. Module-level docstring explaining purpose. Modern Python type hints: str | None instead of Optional[str].</snippet>
+        <relevance>Coding standards to follow when creating ground_truth.py</relevance>
+      </doc>
+      <doc>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/qa/assessments/1.12A-test-design-20251004.md</path>
+        <title>Test Design: Story 1.12A</title>
+        <section>Test Strategy Overview</section>
+        <snippet>15 test scenarios: 11 unit tests (73%), 4 integration tests (27%). Focus on data structure validation, distribution verification, and import accessibility. Manual validation process serves as E2E.</snippet>
+        <relevance>Test plan for validating the ground truth data structure</relevance>
+      </doc>
+    </docs>
+
+    <code>
+      <file>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/spike/create_ground_truth.py</path>
+        <kind>module</kind>
+        <symbol>GROUND_TRUTH_QA</symbol>
+        <lines>14-120</lines>
+        <reason>Week 0 baseline with 15 Q&amp;A pairs - template for expansion to 50+</reason>
+      </file>
+      <file>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/raglite/tests/conftest.py</path>
+        <kind>test fixture</kind>
+        <symbol>test_settings, sample_document_metadata, sample_chunk</symbol>
+        <lines>1-92</lines>
+        <reason>Test infrastructure with fixtures and mocking patterns to reference</reason>
+      </file>
+      <file>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/raglite/shared/models.py</path>
+        <kind>module</kind>
+        <symbol>DocumentMetadata, Chunk</symbol>
+        <lines>N/A</lines>
+        <reason>Pydantic models that might be referenced in ground truth structure</reason>
+      </file>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="pytest" version="8.4.2">Testing framework</package>
+        <package name="pytest-asyncio" version="1.2.0">Async test support</package>
+        <package name="pydantic" version=">=2.0,&lt;3.0">Data models</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Store in raglite/tests/ground_truth.py as Python module (not JSON file)</constraint>
+    <constraint type="architecture">Target ~300-400 lines total for ground_truth.py (50 questions × 6-8 lines each + documentation)</constraint>
+    <constraint type="simplicity">KISS principle - simple list of dicts, no abstractions or custom classes</constraint>
+    <constraint type="simplicity">NO custom base classes, factories, or framework abstractions</constraint>
+    <constraint type="technology">Use ONLY Python stdlib + imports from existing raglite modules</constraint>
+    <constraint type="technology">NO additional dependencies beyond what's in pyproject.toml</constraint>
+    <constraint type="coding">Modern Python type hints: list[dict] instead of List[Dict], str | None instead of Optional[str]</constraint>
+    <constraint type="coding">Google-style docstrings mandatory for module and any helper functions</constraint>
+    <constraint type="coding">Structured data format: list of dicts with 9 required fields per question</constraint>
+    <constraint type="testing">Manual validation against source PDF required for all 50+ questions</constraint>
+    <constraint type="testing">Each question must include page_number for NFR7 (95%+ source attribution validation)</constraint>
+    <constraint type="testing">Distribution: 40% easy (20 questions), 40% medium (20 questions), 20% hard (10 questions)</constraint>
+    <constraint type="testing">Categories: cost_analysis (12), margins (8), financial_performance (10), safety_metrics (6), workforce (6), operating_expenses (8)</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>GROUND_TRUTH_QA</name>
+      <kind>constant</kind>
+      <signature>GROUND_TRUTH_QA: list[dict[str, Any]]</signature>
+      <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/raglite/tests/ground_truth.py</path>
+      <usage>Exported constant for use by scripts/run-accuracy-tests.py (Story 1.12B) and pytest tests</usage>
+    </interface>
+    <interface>
+      <name>Question Structure</name>
+      <kind>data schema</kind>
+      <signature>
+        {
+          "id": int,                          # Unique identifier (1-50+)
+          "question": str,                    # Natural language question text
+          "expected_answer": str,             # Expected answer or answer criteria
+          "expected_keywords": list[str],     # Keywords that should appear in retrieved chunks
+          "source_document": str,             # Source PDF filename
+          "expected_page_number": int,        # Page where answer is found (for NFR7)
+          "expected_section": str,            # Section/chunk identifier
+          "category": str,                    # One of 6 categories
+          "difficulty": str                   # "easy", "medium", or "hard"
+        }
+      </signature>
+      <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/raglite/tests/ground_truth.py</path>
+      <usage>Data structure format for each question in GROUND_TRUTH_QA</usage>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing follows pytest framework with 80%+ coverage target. This story focuses on data creation - testing validates data structure integrity (unit tests), distribution correctness (unit tests), and import accessibility (integration tests). Manual validation serves as E2E verification that answers exist in source PDFs. Test file: raglite/tests/test_ground_truth.py for automated structure validation.
+    </standards>
+
+    <locations>
+      <location>raglite/tests/test_ground_truth.py</location>
+      <location>scripts/validate_ground_truth.py (optional helper)</location>
+    </locations>
+
+    <ideas>
+      <test ac="1">
+        <id>1.12A-UNIT-001</id>
+        <description>Verify GROUND_TRUTH_QA contains at least 50 questions</description>
+        <priority>P0</priority>
+      </test>
+      <test ac="1">
+        <id>1.12A-UNIT-002</id>
+        <description>Verify all question IDs are unique (no duplicates)</description>
+        <priority>P0</priority>
+      </test>
+      <test ac="2">
+        <id>1.12A-UNIT-004</id>
+        <description>Verify all 6 categories are represented in data set</description>
+        <priority>P0</priority>
+      </test>
+      <test ac="2">
+        <id>1.12A-UNIT-005</id>
+        <description>Verify category distribution matches target percentages (±1 question tolerance)</description>
+        <priority>P1</priority>
+      </test>
+      <test ac="3">
+        <id>1.12A-UNIT-007</id>
+        <description>Verify difficulty distribution is 40/40/20 (±5% tolerance)</description>
+        <priority>P0</priority>
+      </test>
+      <test ac="4,5">
+        <id>1.12A-UNIT-009</id>
+        <description>Verify all required fields present in each question (9 fields)</description>
+        <priority>P0</priority>
+      </test>
+      <test ac="5">
+        <id>1.12A-UNIT-010</id>
+        <description>Verify expected_page_number is valid integer for all questions</description>
+        <priority>P0</priority>
+      </test>
+      <test ac="4">
+        <id>1.12A-INT-001</id>
+        <description>Import test: Verify GROUND_TRUTH_QA can be imported from raglite.tests.ground_truth</description>
+        <priority>P0</priority>
+      </test>
+      <test ac="7">
+        <id>1.12A-INT-002</id>
+        <description>Verify module docstring explains usage and maintenance</description>
+        <priority>P1</priority>
+      </test>
+    </ideas>
+  </tests>
+</story-context>

@@ -473,50 +473,79 @@ async def test_ingest_document_file_not_found():
 
 ```bash
 # Run all tests
-poetry run pytest
+uv run pytest
 
 # Run specific test file
-poetry run pytest raglite/tests/test_ingestion_pipeline.py
+uv run pytest raglite/tests/test_ingestion_pipeline.py
 
-# Run with coverage (Phase 4)
-poetry run pytest --cov=raglite --cov-report=html
+# Run with coverage (Phase 1+)
+uv run pytest --cov=raglite --cov-report=html
 
 # Run specific test function
-poetry run pytest raglite/tests/test_ingestion_pipeline.py::test_ingest_document_success
+uv run pytest raglite/tests/test_ingestion_pipeline.py::test_ingest_document_success
+
+# Run tests in parallel (faster)
+uv run pytest -n 4 --dist worksteal
 ```
 
 ---
 
 ## 11. Code Formatting (Automated)
 
-Use **black** (formatter) and **ruff** (linter) to enforce standards automatically.
+Use **Ruff** for ALL formatting and linting. Ruff replaces Black + isort + multiple flake8 plugins.
 
 ### Setup (Story 1.1)
 
 ```bash
 # Install dev dependencies
-poetry add --group dev black ruff pytest pytest-asyncio
+uv add --group dev ruff pytest pytest-asyncio pytest-xdist
 
-# Format code
-poetry run black raglite/
+# Format code (replaces Black)
+uv run ruff format raglite/
+
+# Check formatting without modifying
+uv run ruff format --check raglite/
 
 # Lint code
-poetry run ruff check raglite/
+uv run ruff check raglite/
+
+# Lint and auto-fix issues
+uv run ruff check --fix raglite/
 ```
+
+**Why Ruff over Black + isort?**
+- 10-100× faster than Black
+- Single tool for formatting + linting + import sorting
+- Written in Rust, zero Python dependencies
+- Drop-in replacement for Black (same formatting rules)
 
 ### Pre-commit Hook (Recommended)
 
 ```yaml
 # .pre-commit-config.yaml
 repos:
-  - repo: https://github.com/psf/black
-    rev: 23.3.0
-    hooks:
-      - id: black
+  # Ruff for formatting (replaces Black)
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.0.270
+    rev: v0.13.0
     hooks:
       - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format  # Formatting (replaces Black)
+
+  # MyPy for type checking (enabled Phase 1)
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [pydantic, types-requests]
+        args: [--show-error-codes, --ignore-missing-imports]
+        files: ^raglite/  # Only check production code
+
+  # Secret scanning
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
 ```
 
 ---
