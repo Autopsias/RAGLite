@@ -43,12 +43,8 @@ jobs:
         run: uv run isort --check-only spike/ tests/
         continue-on-error: false
 
-      - name: Check Markdown files
-        uses: gaurav-nelson/github-action-markdown-link-check@v1
-        with:
-          use-quiet-mode: 'yes'
-          config-file: '.github/markdown-link-check-config.json'
-        continue-on-error: true
+      # Markdown link checking disabled - container actions not supported on macOS self-hosted runners
+      # For manual checks: npm install -g markdown-link-check && markdown-link-check docs/**/*.md
 
       - name: Verify BMAD standard files exist
         run: |
@@ -63,13 +59,8 @@ jobs:
           safety check --json || true
         continue-on-error: true
 
-      - name: Check for secrets in code
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          base: ${{ github.event.pull_request.base.sha || github.event.repository.default_branch }}
-          head: HEAD
-        continue-on-error: true
+      # TruffleHog secret scanning disabled - container actions not supported on macOS self-hosted runners
+      # For manual checks: brew install trufflesecurity/trufflehog/trufflehog && trufflehog git file://. --since-commit HEAD~1
 
   # Test matrix with parallel execution
   test-matrix:
@@ -134,14 +125,18 @@ jobs:
           retention-days: 1
         if: steps.run-tests.outcome == 'success' && hashFiles('coverage.xml') != ''
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./coverage.xml
-          flags: ${{ matrix.test-suite }}
-          name: codecov-${{ matrix.test-suite }}
-          fail_ci_if_error: false
-        if: hashFiles('coverage.xml') != ''
+      # Codecov upload disabled for Week 0 spike phase
+      # Coverage is still generated and uploaded as artifact (line 129-135)
+      # Re-enable in Phase 1 when needed with proper token configuration
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     file: ./coverage.xml
+      #     flags: ${{ matrix.test-suite }}
+      #     name: codecov-${{ matrix.test-suite }}
+      #     fail_ci_if_error: false
+      #   if: hashFiles('coverage.xml') != ''
 
   # Deployment (only on main branch)
   deploy:

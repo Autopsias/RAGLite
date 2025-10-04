@@ -7,8 +7,8 @@ from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
 
-# Test PDF path
-TEST_PDF_PATH = "tests/ground_truth.json"  # Will be updated with actual test PDF
+# Test PDF path - using actual financial document
+TEST_PDF_PATH = "docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf"
 
 
 def test_page_extraction() -> None:
