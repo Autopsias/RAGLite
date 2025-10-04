@@ -95,7 +95,7 @@ repos:
     hooks:
       - id: gitleaks
         name: gitleaks-scan
-        args: [--verbose, --no-git]
+        args: [--verbose, --staged]
         stages: [pre-commit]
 
   # ============ CUSTOM LOCAL HOOKS ============
