@@ -1,6 +1,6 @@
 # Story 1.2: PDF Document Ingestion with Docling
 
-Status: Ready for Review
+Status: Done
 
 ## Story
 

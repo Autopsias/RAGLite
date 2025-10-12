@@ -14,10 +14,13 @@ Finance teams currently spend 40-60% of their time manually searching through PD
 
 RAGLite addresses this gap by combining RAG (Retrieval-Augmented Generation) architecture with AI-powered intelligence capabilities. The system ingests financial documents into a vector database, exposes knowledge via MCP (Model Context Protocol), and layers on agentic workflows, forecasting, and proactive insight generation. The MVP validates the complete vision end-to-end: from accurate retrieval through advanced forecasting, accepting higher complexity to prove the full value proposition in a single delivery.
 
-## Change Log
+## Change Log Summary
+
+For complete PRD change history including 5 major updates (page extraction, MCP pattern, story splits, etc.), see [**PRD Change Log**](./change-log.md).
 
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
+| 2025-10-12 | 1.5 | 5 major updates: Story 1.2/1.4 (page extraction), Story 1.11 (MCP pattern), Story 0.2 (deprecation), Story 1.12 split | Sarah (PO) |
 | 2025-10-03 | 1.0 | Initial PRD creation from Project Brief | John (PM) |
 
 ---

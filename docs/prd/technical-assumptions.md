@@ -180,14 +180,57 @@ See Story 0.1 (Week 0 Spike) and Story 1.12 (Daily Tracking) for detailed implem
 - **Monitoring:** Logging and performance tracking required (NFR30)
 - **Consideration:** Rolling updates without downtime for cloud deployments (NFR31)
 
-**Critical Research Spike Validation Points (FR33):**
+## Pre-Epic Work: Week 0 Integration Spike
 
-Before any implementation begins, the following MUST be validated:
+**Originally FR33 - Reorganized to Technical Assumptions as meta-requirement**
 
-1. ✅ **Docling PDF extraction quality** - Test with sample company financial PDFs, validate table extraction accuracy, select optimal embedding model
-2. ✅ **Knowledge graph necessity** - Benchmark RAG-only vs. Hybrid RAG+KG, evaluate entity extraction quality, determine if complexity justified
-3. ✅ **Agentic framework selection** - Define workflow complexity, compare LangGraph/Bedrock/function calling, prototype simple workflow
-4. ✅ **Forecasting implementation strategy** - Inventory KPIs, benchmark LLM vs. statistical forecasting, determine hybrid viability
-5. ✅ **Architecture & repository structure** - Determine monorepo/multi-repo, define service boundaries, complete deep research before finalizing structure
+### Week 0 Integration Spike (COMPLETED 2025-10-03)
+
+Comprehensive research spike validating technology integration before Phase 1 commitment:
+
+**Validation Points & Status:**
+
+1. ✅ **Docling PDF Extraction Quality** → **VALIDATED**
+   - Test document: 160-page financial PDF (Secil Group Performance Review)
+   - Table extraction: 157 tables extracted successfully (97.9% accuracy claimed)
+   - Performance: 6.88 min for 160 pages → 4.28 min projected per 100 pages (EXCEEDS <5 min target)
+   - Selected embedding model: **Fin-E5 (intfloat/e5-large-v2)** - 71.05% financial domain accuracy
+   - **Decision:** APPROVED for Phase 1
+
+2. ⚠️ **Knowledge Graph Necessity** → **CONDITIONAL (Phase 2)**
+   - Semantic similarity: 0.83 avg (high quality vector retrieval)
+   - Baseline accuracy: 66.7% (10/15 queries) with high semantic scores
+   - **Decision:** Vector-only for Phase 1, GraphRAG Phase 2 IF accuracy <80% due to multi-hop failures
+   - Neo4j integration deferred to conditional Phase 2
+
+3. ⚠️ **Agentic Framework Selection** → **PENDING (Phase 3 Research Spike)**
+   - Framework selection deferred to Phase 3 (after Phase 1 accuracy validation)
+   - Options: LangGraph, AWS Bedrock Agents, Claude function calling
+   - **Decision:** Week 0 focused on retrieval validation; agentic research spike before Phase 3
+
+4. ⚠️ **Forecasting Implementation Strategy** → **PENDING (Phase 3 Research Spike)**
+   - Forecasting research deferred to Phase 3
+   - Options: LLM-based, Prophet (statistical), hybrid approach
+   - **Decision:** Phase 1 focuses on accurate retrieval foundation
+
+5. ✅ **Architecture & Repository Structure** → **VALIDATED (Monolithic MVP)**
+   - Architecture: **Monolithic first** (600-800 lines, 15 files)
+   - Repository: **Monorepo** (single repository)
+   - Deployment: Docker Compose → AWS Phase 4
+   - **Decision:** APPROVED - Monolithic v1.1 approach validated
+
+**Week 0 Spike Report:** `docs/week-0-spike-report.md`
+**Integration Issues:** `docs/integration-issues.md` (8 issues documented with mitigations)
+
+**GO/NO-GO Decision:** ✅ **CONDITIONAL GO for Phase 1**
+- Conditions: Fix page number extraction (Story 1.2 in progress)
+- Baseline: 66.7% accuracy with high semantic similarity (0.83) indicates good retrieval
+- Target: 90%+ accuracy by Phase 1 Week 5 (with Contextual Retrieval boost)
+
+**Implementation Status:**
+- Story 0.1 (Week 0 Spike): ✅ COMPLETE (QA approved)
+- Story 0.0 (Repository Setup): ✅ COMPLETE
+- Story 1.1 (Project Setup): ✅ COMPLETE (95/100 QA score)
+- Story 1.2 (PDF Ingestion): 🔄 IN PROGRESS
 
 ---

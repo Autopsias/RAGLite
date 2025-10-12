@@ -1,0 +1,276 @@
+<story-context id="story-1.3-excel-ingestion" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.3</storyId>
+    <title>Excel Document Ingestion</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-12</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.3.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>to ingest Excel spreadsheets and extract tabular financial data with structure preservation</iWant>
+    <soThat>financial data from Excel files is available for retrieval and analysis alongside PDF content</soThat>
+    <tasks>
+      <task id="1" status="pending">
+        <title>Implement Excel Extraction Function</title>
+        <acs>1, 2, 3, 4, 7</acs>
+        <subtasks>
+          <subtask>Extend raglite/ingestion/pipeline.py with extract_excel() function</subtask>
+          <subtask>Integrate openpyxl for Excel parsing (.xlsx files)</subtask>
+          <subtask>Integrate pandas for data manipulation and type preservation</subtask>
+          <subtask>Extract all sheets from workbook with sheet names as metadata</subtask>
+          <subtask>Preserve numeric formatting (currencies, percentages, dates)</subtask>
+          <subtask>Extract sheet numbers for each data chunk (required for citations)</subtask>
+          <subtask>Return structured data model compatible with existing DocumentMetadata</subtask>
+          <subtask>Follow Story 1.2 patterns: async/await, type hints, docstrings, error handling</subtask>
+        </subtasks>
+      </task>
+      <task id="2" status="pending">
+        <title>Integrate Excel Path into Main Ingestion Pipeline</title>
+        <acs>2</acs>
+        <subtasks>
+          <subtask>Update ingest_document() in pipeline.py to detect .xlsx/.xls extensions</subtask>
+          <subtask>Route Excel files to extract_excel() function</subtask>
+          <subtask>Ensure Excel chunks flow through same embedding/storage pipeline as PDF chunks</subtask>
+          <subtask>Validate sheet_number field populated in ChunkMetadata</subtask>
+        </subtasks>
+      </task>
+      <task id="3" status="pending">
+        <title>Error Handling and Edge Cases</title>
+        <acs>6</acs>
+        <subtasks>
+          <subtask>Handle password-protected Excel files (log error, raise clear exception)</subtask>
+          <subtask>Handle corrupted Excel files gracefully (log error, return failure status)</subtask>
+          <subtask>Handle missing files (raise FileNotFoundError with clear message)</subtask>
+          <subtask>Handle empty workbooks (log warning, return empty result)</subtask>
+          <subtask>Structured logging with context for all error paths</subtask>
+        </subtasks>
+      </task>
+      <task id="4" status="pending">
+        <title>Unit Tests</title>
+        <acs>8</acs>
+        <subtasks>
+          <subtask>Create tests in raglite/tests/test_ingestion.py for Excel path</subtask>
+          <subtask>Test: test_extract_excel_success() - Happy path with valid Excel file</subtask>
+          <subtask>Test: test_extract_excel_multi_sheet() - Multi-sheet workbook handling</subtask>
+          <subtask>Test: test_extract_excel_numeric_formats() - Preserve currencies, percentages, dates</subtask>
+          <subtask>Test: test_extract_excel_file_not_found() - Missing file error handling</subtask>
+          <subtask>Test: test_extract_excel_password_protected() - Password-protected file handling</subtask>
+          <subtask>Test: test_extract_excel_sheet_numbers() - Verify sheet_number != None</subtask>
+          <subtask>Mock openpyxl responses for unit tests (use pytest-mock)</subtask>
+        </subtasks>
+      </task>
+      <task id="5" status="pending">
+        <title>Integration Tests</title>
+        <acs>5, 9</acs>
+        <subtasks>
+          <subtask>Add integration test to raglite/tests/test_ingestion_integration.py</subtask>
+          <subtask>Test with real sample Excel file (multi-sheet financial data)</subtask>
+          <subtask>Validates: Sheet number extraction, multi-sheet handling, numeric formatting preservation</subtask>
+          <subtask>Mark with @pytest.mark.slow if processing time &gt;5s</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Excel parsing library integrated (openpyxl + pandas per Tech Stack)</criterion>
+    <criterion id="2">Excel ingestion pipeline accepts file path and extracts sheet data preserving formulas and relationships</criterion>
+    <criterion id="3">Multi-sheet workbooks handled with sheet names preserved as metadata</criterion>
+    <criterion id="4">Numeric formatting preserved (currencies, percentages, dates)</criterion>
+    <criterion id="5">Successfully ingests sample company Excel financial files</criterion>
+    <criterion id="6">Errors handled gracefully for password-protected or corrupted files</criterion>
+    <criterion id="7">Sheet numbers extracted and validated (required for source attribution NFR7)</criterion>
+    <criterion id="8">Unit tests cover Excel parsing logic with mocked openpyxl responses</criterion>
+    <criterion id="9">Integration test validates end-to-end Excel ingestion with real sample document</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/tech-spec-epic-1.md</path>
+        <title>Technical Specification: Epic 1 - Foundation &amp; Accurate Retrieval</title>
+        <section>4.2 Ingestion Pipeline</section>
+        <snippet>Ingestion Pipeline (~150 lines) includes PDF extraction, Excel extraction (Story 1.3), chunking, and embedding generation. Excel extraction pattern follows same structure as PDF: async function, type hints, error handling, structured logging.</snippet>
+        <relevance>Defines architecture patterns and line count budget for ingestion pipeline. Story 1.3 adds extract_excel() to existing pipeline.py (~50 lines).</relevance>
+      </doc>
+      <doc>
+        <path>docs/prd/epic-1-foundation-accurate-retrieval.md</path>
+        <title>Epic 1: Foundation &amp; Accurate Retrieval</title>
+        <section>Story 1.3: Excel Document Ingestion</section>
+        <snippet>Story 1.3 requirements: openpyxl + pandas integration, multi-sheet handling, numeric formatting preservation, sheet numbers for source attribution (NFR7), error handling for password-protected/corrupted files.</snippet>
+        <relevance>Source of acceptance criteria and functional requirements for Excel ingestion.</relevance>
+      </doc>
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack (Definitive)</title>
+        <section>Approved Libraries</section>
+        <snippet>Excel Processing: openpyxl + pandas. openpyxl for .xlsx/.xls file parsing, pandas for DataFrame operations and markdown table generation. LOCKED - no additions without user approval.</snippet>
+        <relevance>Defines approved libraries for Excel parsing. Must use openpyxl and pandas only.</relevance>
+      </doc>
+      <doc>
+        <path>docs/architecture/coding-standards.md</path>
+        <title>RAGLite Coding Standards</title>
+        <section>Multiple</section>
+        <snippet>MANDATORY patterns: Type hints on all functions, Google-style docstrings, structured logging with extra={}, Pydantic models, async/await for I/O, specific exceptions (FileNotFoundError, RuntimeError), constants UPPERCASE. FORBIDDEN: No type hints, bare except, generic Exception, print() statements.</snippet>
+        <relevance>All code must follow these patterns. Critical for maintaining consistency with Story 1.2 PDF ingestion.</relevance>
+      </doc>
+      <doc>
+        <path>docs/architecture/testing-strategy.md</path>
+        <title>Testing Strategy</title>
+        <section>Testing Pyramid</section>
+        <snippet>80% unit tests (mocked dependencies), 15% integration tests (real services), 5% E2E (accuracy validation). Target: 80%+ coverage for critical paths. Tools: pytest, pytest-asyncio, pytest-mock.</snippet>
+        <relevance>Defines test coverage targets and testing tools. Story 1.3 follows same pattern as Story 1.2: 7 unit tests + 1 integration test.</relevance>
+      </doc>
+      <doc>
+        <path>docs/stories/story-1.2.md</path>
+        <title>Story 1.2: PDF Document Ingestion with Docling</title>
+        <section>Dev Notes - Patterns from Story 1.2</section>
+        <snippet>Proven patterns: async def ingest_pdf() with type hints and Google docstrings, structured logging with extra={'doc_filename', 'page_count'}, error handling (FileNotFoundError, RuntimeError with context), Pydantic DocumentMetadata model, 7 unit tests + 1 integration test with 100% coverage.</snippet>
+        <relevance>MUST follow same patterns for Excel extraction. Story 1.2 is reference implementation for ingestion pipeline.</relevance>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>function</kind>
+        <symbol>ingest_pdf</symbol>
+        <lines>18-131</lines>
+        <signature>async def ingest_pdf(file_path: str) -> DocumentMetadata</signature>
+        <reason>Reference implementation to follow for extract_excel(). Same structure: async, type hints, Path.resolve(), FileNotFoundError, RuntimeError, structured logging, DocumentMetadata return.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>class</kind>
+        <symbol>DocumentMetadata</symbol>
+        <lines>9-20</lines>
+        <signature>class DocumentMetadata(BaseModel): filename, doc_type, ingestion_timestamp, page_count, source_path</signature>
+        <reason>Data model for ingestion results. Excel extraction must return DocumentMetadata with page_count = sheet_count for consistency.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>class</kind>
+        <symbol>Chunk</symbol>
+        <lines>22-33</lines>
+        <signature>class Chunk(BaseModel): chunk_id, content, metadata, page_number, embedding</signature>
+        <reason>Excel chunks must populate page_number field with sheet_number for source attribution (NFR7 requirement).</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/logging.py</path>
+        <kind>module</kind>
+        <symbol>get_logger</symbol>
+        <lines>N/A</lines>
+        <signature>get_logger(__name__) -> Logger</signature>
+        <reason>Structured logging utility. Use logger.info/error with extra={} for all Excel extraction events.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="openpyxl" version=">=3.1,&lt;4.0" reason="Excel file parsing (.xlsx, .xls)" />
+        <package name="pandas" version=">=2.0,&lt;3.0" reason="DataFrame operations, markdown table generation with df.to_markdown()" />
+        <package name="pydantic" version=">=2.0,&lt;3.0" reason="Data validation with DocumentMetadata, Chunk models" />
+        <package name="pytest" version="==8.4.2" group="dev" reason="Test framework" />
+        <package name="pytest-asyncio" version="==1.2.0" group="dev" reason="Async test support for async def extract_excel()" />
+        <package name="pytest-mock" version=">=3.12,&lt;4.0" group="dev" reason="Mocking openpyxl/pandas in unit tests" />
+        <package name="pytest-xdist" version=">=3.5,&lt;4.0" group="dev" reason="Parallel test execution" />
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">
+      <rule>Extend existing raglite/ingestion/pipeline.py (DO NOT create new file)</rule>
+      <rationale>Maintains monolithic architecture pattern. Line count budget: current 130 lines + 50 Excel lines = 180 lines (within 150-line module budget with flexibility).</rationale>
+    </constraint>
+    <constraint type="pattern">
+      <rule>Follow Story 1.2 PDF ingestion patterns EXACTLY: async def extract_excel(file_path: str) -> DocumentMetadata, type hints, Google docstrings, structured logging with extra={}, error handling (FileNotFoundError, RuntimeError), Pydantic models</rule>
+      <rationale>Proven patterns from Story 1.2 (100% test coverage, QA approved). Maintains code consistency across ingestion module.</rationale>
+    </constraint>
+    <constraint type="technology">
+      <rule>ONLY use openpyxl + pandas for Excel parsing (locked tech stack)</rule>
+      <rationale>Architecture constraint from 5-technology-stack-definitive.md. No other Excel libraries permitted without user approval.</rationale>
+    </constraint>
+    <constraint type="source-attribution">
+      <rule>Extract and validate sheet_number != None for all Excel chunks (NFR7: 95%+ source attribution accuracy)</rule>
+      <rationale>Required for citation format: (Source: Financial_Data.xlsx, Sheet: Revenue_Analysis, Row: 12). Use sheet_number as equivalent to page_number in PDF chunks.</rationale>
+    </constraint>
+    <constraint type="testing">
+      <rule>7 unit tests + 1 integration test pattern (same as Story 1.2). Target: 80%+ coverage for Excel extraction path. Mock openpyxl/pandas in unit tests. Integration test with @pytest.mark.slow.</rule>
+      <rationale>Maintains testing standards from Story 1.2. Fast unit tests (&lt;12s) with mocks, slow integration test (&gt;5s) with real Excel file.</rationale>
+    </constraint>
+    <constraint type="logging">
+      <rule>Use structured logging with extra={} for ALL events. Avoid reserved LogRecord attributes (do not use 'filename' key, use 'doc_filename' instead per Story 1.2 lesson learned).</rule>
+      <rationale>Lesson learned from Story 1.2: 'filename' is reserved by LogRecord. Use 'doc_filename', 'sheet_count', 'duration_ms' in extra={}.</rationale>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>extract_excel</name>
+      <kind>async function</kind>
+      <signature>async def extract_excel(file_path: str) -> DocumentMetadata</signature>
+      <location>raglite/ingestion/pipeline.py (new function to add)</location>
+      <purpose>Extract financial data from Excel file with multi-sheet support, numeric formatting preservation, and sheet number attribution</purpose>
+      <contract>
+        <input>file_path: str (absolute or relative path to .xlsx or .xls file)</input>
+        <output>DocumentMetadata with filename, doc_type='Excel', page_count=sheet_count, ingestion_timestamp, source_path</output>
+        <raises>FileNotFoundError: If Excel file doesn't exist at specified path</raises>
+        <raises>RuntimeError: If openpyxl parsing fails, password-protected file, or corrupted file</raises>
+      </contract>
+      <implementation-notes>
+        - Follow ingest_pdf() structure from lines 18-131 in pipeline.py
+        - Use openpyxl.load_workbook(file_path, data_only=True) to get computed values
+        - Iterate over workbook.sheetnames with enumerate(start=1) for sheet numbers
+        - Convert each sheet to pandas DataFrame: pd.DataFrame(sheet.values)
+        - Generate markdown table: df.to_markdown(index=False)
+        - Combine all sheets with sheet headers: "## Sheet: {sheet_name}\n\n{markdown_table}"
+        - Store sheet metadata: sheet_name, sheet_number, content, row_count
+        - Return DocumentMetadata with page_count = len(sheets_data)
+      </implementation-notes>
+    </interface>
+    <interface>
+      <name>DocumentMetadata</name>
+      <kind>Pydantic model</kind>
+      <signature>class DocumentMetadata(BaseModel): filename, doc_type, ingestion_timestamp, page_count, source_path</signature>
+      <location>raglite/shared/models.py (lines 9-20)</location>
+      <purpose>Data structure for document ingestion results</purpose>
+      <contract>
+        Excel extraction must populate: filename (original .xlsx name), doc_type='Excel', ingestion_timestamp (ISO8601), page_count (number of sheets), source_path (resolved Path)
+      </contract>
+    </interface>
+    <interface>
+      <name>get_logger</name>
+      <kind>function</kind>
+      <signature>get_logger(__name__) -> Logger</signature>
+      <location>raglite/shared/logging.py</location>
+      <purpose>Get structured logger for module</purpose>
+      <contract>
+        Use logger.info/error with extra={'doc_filename': ..., 'sheet_count': ..., 'duration_ms': ...} for all Excel extraction events. Do NOT use 'filename' key (reserved by LogRecord).
+      </contract>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing follows Story 1.2 proven pattern: 7 unit tests (mocked openpyxl/pandas) + 1 integration test (real Excel file marked @pytest.mark.slow). Target: 80%+ coverage for Excel extraction path. Fast unit tests (&lt;12s total), slow integration test (&gt;5s). Use pytest-mock for mocking openpyxl.load_workbook and pandas.DataFrame. Test execution: uv run pytest raglite/tests/test_ingestion.py::test_extract_excel -v
+    </standards>
+    <locations>
+      <location>raglite/tests/test_ingestion.py</location>
+      <location>raglite/tests/test_ingestion_integration.py</location>
+      <location>raglite/tests/fixtures/sample_financial_data.xlsx (new test fixture to add)</location>
+    </locations>
+    <ideas>
+      <idea ac="1,2">Test: test_extract_excel_success() - Happy path with valid multi-sheet Excel file. Mock openpyxl.load_workbook to return workbook with 3 sheets. Verify DocumentMetadata returned with doc_type='Excel', page_count=3, sheet metadata extracted.</idea>
+      <idea ac="3">Test: test_extract_excel_multi_sheet() - Multi-sheet workbook handling. Mock workbook with sheetnames=['Sheet1', 'Sheet2', 'Sheet3']. Verify all 3 sheets extracted with correct sheet_number (1, 2, 3) and sheet_name preserved.</idea>
+      <idea ac="4">Test: test_extract_excel_numeric_formats() - Numeric formatting preservation. Mock DataFrame with currencies ($1000), percentages (50%), dates (2024-10-12). Verify df.to_markdown() preserves formatting in output.</idea>
+      <idea ac="6">Test: test_extract_excel_file_not_found() - Missing file error handling. Pass non-existent path. Assert FileNotFoundError raised with clear message matching "Excel file not found".</idea>
+      <idea ac="6">Test: test_extract_excel_password_protected() - Password-protected file handling. Mock openpyxl to raise InvalidFileException. Assert RuntimeError raised with "Excel parsing failed" message. Verify structured logging with extra={'path', 'error'}.</idea>
+      <idea ac="6">Test: test_extract_excel_corrupted() - Corrupted file handling. Mock openpyxl to raise Exception. Assert RuntimeError raised with "Unexpected error extracting Excel". Verify exc_info=True in logger.error.</idea>
+      <idea ac="7">Test: test_extract_excel_sheet_numbers() - Sheet number extraction validation. Mock workbook with 2 sheets. Verify sheet_number field populated (1, 2) and != None for all extracted sheets.</idea>
+      <idea ac="5,9">Integration Test: test_extract_excel_integration() - End-to-end with real Excel file (sample_financial_data.xlsx with 3 sheets, financial data, currencies/percentages). Validates: Sheet extraction, numeric formatting, sheet numbers. Mark with @pytest.mark.slow.</idea>
+    </ideas>
+  </tests>
+</story-context>
