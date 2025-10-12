@@ -121,9 +121,9 @@ async def ingest_pdf(file_path: str) -> DocumentMetadata:
             "total_elements": total_elements,
             "elements_with_pages": elements_with_pages,
             "duration_ms": duration_ms,
-            "pages_per_second": round(page_count / (duration_ms / 1000), 2)
-            if duration_ms > 0
-            else 0,
+            "pages_per_second": (
+                round(page_count / (duration_ms / 1000), 2) if duration_ms > 0 else 0
+            ),
         },
     )
 
