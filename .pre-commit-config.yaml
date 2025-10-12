@@ -106,6 +106,7 @@ repos:
       - id: bandit
         args: [-r, raglite/, -f, screen]
         exclude: ^tests/
+        pass_filenames: false
 
   # ============ CUSTOM LOCAL HOOKS ============
   # Add project-specific checks here
