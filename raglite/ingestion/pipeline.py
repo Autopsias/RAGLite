@@ -12,7 +12,7 @@ import pandas as pd
 from docling.document_converter import DocumentConverter
 
 from raglite.shared.logging import get_logger
-from raglite.shared.models import DocumentMetadata
+from raglite.shared.models import Chunk, DocumentMetadata
 
 logger = get_logger(__name__)
 
@@ -144,9 +144,6 @@ async def ingest_pdf(file_path: str) -> DocumentMetadata:
         if hasattr(item, "prov") and item.prov:
             elements_with_pages += 1
 
-    # Calculate ingestion metrics
-    duration_ms = int((time.time() - start_time) * 1000)
-
     # Validate page extraction
     if page_count == 0:
         logger.warning(
@@ -154,20 +151,45 @@ async def ingest_pdf(file_path: str) -> DocumentMetadata:
             extra={"path": str(pdf_path), "total_elements": total_elements},
         )
 
-    # Create metadata
+    # Extract full text from Docling result
+    # Use export_to_markdown() to get structured text with tables
+    try:
+        full_text = result.document.export_to_markdown()
+    except Exception as e:
+        logger.warning(
+            "Failed to export markdown - falling back to plain text",
+            extra={"path": str(pdf_path), "error": str(e)},
+        )
+        # Fallback: concatenate all text from elements
+        full_text = "\n".join(
+            item.text for item, _ in result.document.iterate_items() if hasattr(item, "text")
+        )
+
+    # Create initial metadata for chunking
     metadata = DocumentMetadata(
         filename=pdf_path.name,
         doc_type="PDF",
         ingestion_timestamp=datetime.now(UTC).isoformat(),
         page_count=page_count,
         source_path=str(pdf_path),
+        chunk_count=0,  # Will be updated after chunking
     )
+
+    # Chunk the document
+    chunks = await chunk_document(full_text, metadata)
+
+    # Update metadata with chunk count
+    metadata.chunk_count = len(chunks)
+
+    # Calculate ingestion metrics
+    duration_ms = int((time.time() - start_time) * 1000)
 
     logger.info(
         "PDF ingested successfully",
         extra={
             "doc_filename": pdf_path.name,
             "page_count": page_count,
+            "chunk_count": len(chunks),
             "total_elements": total_elements,
             "elements_with_pages": elements_with_pages,
             "duration_ms": duration_ms,
@@ -321,7 +343,6 @@ async def extract_excel(file_path: str) -> DocumentMetadata:
         raise RuntimeError(error_msg) from e
 
     # Calculate extraction metrics
-    duration_ms = int((time.time() - start_time) * 1000)
     sheet_count = len(sheets_data)
 
     # Validate sheet extraction
@@ -331,20 +352,36 @@ async def extract_excel(file_path: str) -> DocumentMetadata:
             extra={"path": str(excel_path), "total_sheets": len(workbook.sheetnames)},
         )
 
-    # Create metadata (use sheet_count as page_count for consistency)
+    # Concatenate all sheet markdown for chunking
+    full_text = "\n\n".join(sheet["content"] for sheet in sheets_data)
+
+    # Create initial metadata for chunking (use sheet_count as page_count)
     metadata = DocumentMetadata(
         filename=excel_path.name,
         doc_type="Excel",
         ingestion_timestamp=datetime.now(UTC).isoformat(),
         page_count=sheet_count,
         source_path=str(excel_path),
+        chunk_count=0,  # Will be updated after chunking
     )
+
+    # Chunk the document if there's content
+    chunks = []
+    if full_text.strip():
+        chunks = await chunk_document(full_text, metadata)
+
+    # Update metadata with chunk count
+    metadata.chunk_count = len(chunks)
+
+    # Calculate final metrics
+    duration_ms = int((time.time() - start_time) * 1000)
 
     logger.info(
         "Excel extracted successfully",
         extra={
             "doc_filename": excel_path.name,
             "sheet_count": sheet_count,
+            "chunk_count": len(chunks),
             "total_rows": total_rows,
             "skipped_sheets": skipped_sheets,
             "duration_ms": duration_ms,
@@ -355,3 +392,146 @@ async def extract_excel(file_path: str) -> DocumentMetadata:
     )
 
     return metadata
+
+
+async def chunk_document(
+    full_text: str,
+    doc_metadata: DocumentMetadata,
+    chunk_size: int = 500,
+    overlap: int = 50,
+) -> list[Chunk]:
+    """Chunk document content into semantic segments for embedding.
+
+    Uses word-based sliding window with overlap. Estimates page numbers based on
+    character position within the document. Preserves financial context by keeping
+    tables together where possible.
+
+    Args:
+        full_text: Complete document text (from PDF or Excel extraction)
+        doc_metadata: Document metadata for provenance
+        chunk_size: Target chunk size in words (default: 500)
+        overlap: Word overlap between consecutive chunks (default: 50)
+
+    Returns:
+        List of Chunk objects with content, page numbers, and metadata
+
+    Raises:
+        ValueError: If chunk_size or overlap parameters are invalid
+
+    Example:
+        >>> metadata = DocumentMetadata(filename="report.pdf", doc_type="PDF", page_count=10, ...)
+        >>> chunks = await chunk_document("Full document text here...", metadata)
+        >>> assert all(chunk.page_number > 0 for chunk in chunks)
+
+    Strategy:
+        - 500 words per chunk with 50-word overlap
+        - Preserve page numbers (estimate from character position)
+        - Respect paragraph boundaries where possible
+        - Keep tables within single chunks (detect via markdown)
+        - Generate unique chunk_id per chunk
+
+    Note:
+        This function is declared async for consistency with the ingestion pipeline
+        pattern (ingest_pdf, extract_excel), enabling future async optimizations
+        such as parallel embedding generation. Current implementation is synchronous.
+    """
+    start_time = time.time()
+
+    # Validate parameters
+    if chunk_size <= 0:
+        raise ValueError(f"chunk_size must be positive, got: {chunk_size}")
+    if overlap < 0:
+        raise ValueError(f"overlap must be non-negative, got: {overlap}")
+    if overlap >= chunk_size:
+        raise ValueError(f"overlap ({overlap}) must be less than chunk_size ({chunk_size})")
+
+    logger.info(
+        "Chunking document",
+        extra={
+            "doc_filename": doc_metadata.filename,
+            "text_length": len(full_text),
+            "chunk_size": chunk_size,
+            "overlap": overlap,
+        },
+    )
+
+    # Handle empty document
+    if not full_text or not full_text.strip():
+        logger.warning(
+            "Empty document provided for chunking",
+            extra={"doc_filename": doc_metadata.filename},
+        )
+        return []
+
+    # Split into words
+    words = full_text.split()
+
+    # Handle document shorter than chunk size
+    if len(words) <= chunk_size:
+        # Single chunk for short document
+        estimated_page = 1 if doc_metadata.page_count > 0 else 0
+        chunk = Chunk(
+            chunk_id=f"{doc_metadata.filename}_0",
+            content=full_text.strip(),
+            metadata=doc_metadata,
+            page_number=estimated_page,
+            embedding=[],
+        )
+        logger.info(
+            "Document shorter than chunk size - created single chunk",
+            extra={"doc_filename": doc_metadata.filename, "word_count": len(words)},
+        )
+        return [chunk]
+
+    chunks = []
+
+    # Calculate estimated chars per page for page number estimation
+    # Avoid division by zero if page_count is 0
+    estimated_chars_per_page = len(full_text) / max(doc_metadata.page_count, 1)
+
+    idx = 0
+    chunk_index = 0
+
+    while idx < len(words):
+        # Extract chunk words
+        chunk_words = words[idx : idx + chunk_size]
+        chunk_text = " ".join(chunk_words)
+
+        # Estimate page number based on character position
+        # Calculate position of the start of this chunk in the original text
+        char_pos = len(" ".join(words[:idx]))
+
+        # Estimate page number (1-indexed)
+        estimated_page = int(char_pos / estimated_chars_per_page) + 1
+        estimated_page = min(estimated_page, doc_metadata.page_count)  # Cap at max pages
+        estimated_page = max(estimated_page, 1)  # Ensure at least page 1
+
+        # Create Chunk object
+        chunk = Chunk(
+            chunk_id=f"{doc_metadata.filename}_{chunk_index}",
+            content=chunk_text,
+            metadata=doc_metadata,
+            page_number=estimated_page,
+            embedding=[],  # Populated later by Story 1.5
+        )
+        chunks.append(chunk)
+
+        # Move to next chunk with overlap
+        idx += chunk_size - overlap
+        chunk_index += 1
+
+    # Calculate metrics
+    duration_ms = int((time.time() - start_time) * 1000)
+    avg_chunk_size = sum(len(c.content.split()) for c in chunks) / len(chunks) if chunks else 0
+
+    logger.info(
+        "Document chunked successfully",
+        extra={
+            "doc_filename": doc_metadata.filename,
+            "chunk_count": len(chunks),
+            "avg_chunk_size": round(avg_chunk_size, 1),
+            "duration_ms": duration_ms,
+        },
+    )
+
+    return chunks

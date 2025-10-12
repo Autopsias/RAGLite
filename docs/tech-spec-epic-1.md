@@ -1170,7 +1170,30 @@ uv run pytest --cov=raglite --cov-report=html
 
 ---
 
+## Post-Review Follow-ups
+
+### Story 1.4 Review Action Items (Added 2025-10-12)
+
+Following Senior Developer Review of Story 1.4 (Document Chunking), the following items require resolution for Epic 1 completion:
+
+**Story 1.5 Prerequisites (HIGH Priority):**
+- **Integration Test for Page Number Flow** - Create end-to-end test validating page numbers survive Docling extraction → chunking → Qdrant storage. Use Week 0 sample PDF. (Related: AC9, NFR7)
+- **Performance Test** - Add @pytest.mark.integration timing test for 100-page PDF chunking to validate <30s requirement. (Related: AC7)
+- **Manual QA Checklist** - Execute manual review of chunks from Week 0 PDF: verify no mid-sentence splits, logical boundaries, document findings. (Related: AC5)
+
+**Phase 1 Scope Clarification (MEDIUM Priority):**
+- **Section Heading Field** - Product/Architect decision needed: Should Chunk model include section_heading field for enhanced citation granularity (AC3), or defer to Phase 2? Current implementation has page_number only. (Related: NFR7 - 95%+ source attribution accuracy)
+
+**Future Enhancements (LOW Priority - Phase 2+):**
+- **Table-Aware Chunking** - Implement table boundary detection to prevent context fragmentation for large financial tables exceeding 500-word chunk size. Currently deferred from Story 1.4 AC2/AC4.
+- **Code Documentation** - Add inline comment explaining async chunk_document pattern (async declaration for pipeline consistency despite no await statements).
+
+**Tracking:** All action items documented in `/docs/backlog.md` and Story 1.4 Tasks/Subtasks.
+
+---
+
 **Document Version:** 1.0
 **Created:** 2025-10-12
 **Author:** Sarah (Product Owner)
+**Last Review:** 2025-10-12 (Ricardo - Story 1.4 Developer Review)
 **Next Update:** After Story 1.2 completion or Week 5 validation

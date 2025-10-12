@@ -17,6 +17,7 @@ class DocumentMetadata(BaseModel):
     ingestion_timestamp: str = Field(..., description="ISO8601 timestamp of ingestion")
     page_count: int = Field(default=0, description="Number of pages/sheets in document")
     source_path: str = Field(default="", description="Original file path")
+    chunk_count: int = Field(default=0, description="Number of chunks created from document")
 
 
 class Chunk(BaseModel):
