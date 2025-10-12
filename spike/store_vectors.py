@@ -127,16 +127,16 @@ def store_embeddings_in_qdrant(
     print("\nVerifying storage...")
     collection_info = client.get_collection(collection_name)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("QDRANT STORAGE SUMMARY")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Collection: {collection_name}")
     print(f"Total vectors stored: {collection_info.points_count}")
     print(f"Vector dimension: {collection_info.config.params.vectors.size}")
     print(f"Distance metric: {collection_info.config.params.vectors.distance.name}")
     print(f"Upload time: {upload_time:.2f} seconds")
     print(f"Upload rate: {len(points) / upload_time:.2f} vectors/second")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     return {
         "collection_name": collection_name,
@@ -183,7 +183,7 @@ def test_qdrant_search(
 
     print(f"Top {top_k} search results:")
     for i, result in enumerate(search_results):
-        print(f"\n  Result {i+1}:")
+        print(f"\n  Result {i + 1}:")
         print(f"    Score: {result.score:.4f}")
         print(f"    Chunk ID: {result.payload.get('chunk_id')}")
         print(f"    Text preview: {result.payload.get('text', '')[:80]}...")

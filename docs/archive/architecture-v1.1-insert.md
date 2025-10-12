@@ -1264,4 +1264,3 @@ echo "Setup complete! RAGLite is running on http://localhost:5000"
 - Qdrant Cloud: ~$50-100/month (4GB RAM tier)
 - S3 + CloudWatch: ~$15/month
 - **Total:** ~$115-165/month (vs $200-270 for microservices)
-

@@ -75,15 +75,15 @@ def generate_embeddings_batch(
 
     embedding_time = time.time() - start_time
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("EMBEDDING GENERATION SUMMARY")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Total chunks processed: {len(chunks)}")
     print(f"Embedding dimension: {len(all_embeddings[0])}")
     print(f"Total generation time: {embedding_time:.2f} seconds")
     print(f"Time per chunk: {embedding_time / len(chunks):.3f} seconds")
     print(f"Throughput: {len(chunks) / embedding_time:.2f} chunks/second")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     return chunks, embedding_time
 

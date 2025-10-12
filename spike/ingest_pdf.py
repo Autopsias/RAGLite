@@ -109,15 +109,15 @@ def ingest_pdf(pdf_path: str = TEST_PDF_PATH) -> dict[str, Any]:
         }
 
         # Print summary
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("INGESTION SUMMARY")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print("Status: SUCCESS")
         print(f"Pages: {page_count}")
         print(f"Text length: {len(text_content):,} characters")
         print(f"Tables found: {len(tables)}")
         print(f"Ingestion time: {ingestion_time:.2f} seconds")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         # Display sample text
         print("SAMPLE EXTRACTED TEXT (first 500 chars):")
@@ -128,7 +128,7 @@ def ingest_pdf(pdf_path: str = TEST_PDF_PATH) -> dict[str, Any]:
             print(f"TABLES FOUND: {len(tables)}")
             for i, table in enumerate(tables[:3]):  # Show first 3 tables
                 print(
-                    f"  Table {i+1}: {table['rows']} rows x {table['cols']} cols (Page {table['page']})"
+                    f"  Table {i + 1}: {table['rows']} rows x {table['cols']} cols (Page {table['page']})"
                 )
 
         return result_data
