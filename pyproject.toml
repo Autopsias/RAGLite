@@ -227,3 +227,16 @@ module = [
     "qdrant_client.*",
 ]
 ignore_missing_imports = true
+
+# ============================================================================
+# BANDIT CONFIGURATION (Security Linting)
+# ============================================================================
+[tool.bandit]
+exclude_dirs = [
+    "tests/",
+    ".venv/",
+    "venv/",
+    "build/",
+    "dist/",
+]
+skips = ["B101"]  # Allow assert statements (used in tests)
