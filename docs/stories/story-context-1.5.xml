@@ -1,0 +1,231 @@
+<story-context id="story-1.5-embedding-model-integration" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.5</storyId>
+    <title>Embedding Model Integration &amp; Vector Generation</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-12</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.5.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>to generate semantic embeddings for document chunks using the Fin-E5 financial embedding model</iWant>
+    <soThat>vector similarity search can retrieve relevant financial information accurately</soThat>
+    <tasks>
+      - Task 1: Integrate Fin-E5 Model (AC: 1) - Add generate_embeddings() function, load model, configure caching
+      - Task 2: Batch Embedding Generation (AC: 2, 3, 9) - Implement batch processing (32 chunks), generate 1024-dimensional embeddings, log progress
+      - Task 3: Qdrant Storage Integration (AC: 4, 8) - Update store_in_qdrant(), store embeddings with metadata, validate all embeddings
+      - Task 4: Unit Tests (AC: 6, 8) - 5 unit tests covering happy path, dimensions, batching, empty handling, validation
+      - Task 5: Integration Test &amp; Performance Validation (AC: 7, 9) - End-to-end test with Week 0 PDF, validate all embeddings stored, measure performance (&lt;2 min)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. Fin-E5 embedding model integrated using sentence-transformers library
+    2. Vector embeddings (1024 dimensions) generated for all document chunks
+    3. Embedding generation handles batch processing for efficiency (batch size: 32 chunks)
+    4. Embeddings persisted to Qdrant with chunk metadata (no separate caching layer needed for MVP)
+    5. API rate limiting not applicable (local model execution via sentence-transformers)
+    6. Unit tests cover embedding generation with mocked model responses
+    7. Integration test validates embeddings generated end-to-end for sample document chunks
+    8. **CRITICAL - VALIDATION:** All chunks from Story 1.4 have embeddings generated (validate != None/empty)
+    9. Performance: Embedding generation completes in &lt;2 minutes for 300-chunk document
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-1-foundation-accurate-retrieval.md</path>
+        <title>Epic 1 PRD - Story 1.5 Requirements</title>
+        <section>Story 1.5: Embedding Model Integration &amp; Vector Generation</section>
+        <snippet>Lines 200-215: Acceptance criteria for embedding model integration, batch processing, caching, unit tests, integration tests</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification - Embedding Implementation</title>
+        <section>Section 4.2: Ingestion Pipeline - generate_embeddings() specification</section>
+        <snippet>Lines 508-603: Detailed implementation guidance for embedding generation including Fin-E5 model configuration, batch processing strategy, error handling, and performance requirements</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/6-complete-reference-implementation.md</path>
+        <title>Complete Reference Implementation - Code Patterns</title>
+        <section>Ingestion Pipeline Patterns</section>
+        <snippet>Type hints, docstrings, structured logging, async patterns, error handling with specific exceptions</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/coding-standards.md</path>
+        <title>Coding Standards</title>
+        <section>All sections</section>
+        <snippet>Type hints required, Google-style docstrings, structured logging with extra={}, async/await for I/O, Pydantic models for data validation</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack - Approved Libraries</title>
+        <section>Embeddings Component</section>
+        <snippet>Fin-E5 (intfloat/fin-e5-large) via sentence-transformers 5.1.1, 1024 dimensions, financial domain optimization</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/testing-strategy.md</path>
+        <title>Testing Strategy</title>
+        <section>Unit Testing Guidelines</section>
+        <snippet>80%+ coverage target, mock-based unit tests, pytest patterns, integration tests marked with @pytest.mark.slow</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/story-1.4.md</path>
+        <title>Story 1.4: Document Chunking (Dependency)</title>
+        <section>All sections</section>
+        <snippet>Chunking implementation complete, Chunk model with embedding field, page_number preservation validated, 25 tests passing</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>data_model</kind>
+        <symbol>Chunk</symbol>
+        <lines>23-33</lines>
+        <reason>Chunk model already has embedding field (list[float]) ready for population. Must populate this field in generate_embeddings() function.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>data_model</kind>
+        <symbol>DocumentMetadata</symbol>
+        <lines>9-21</lines>
+        <reason>Document metadata used in Chunk objects, provides provenance for embeddings stored in Qdrant.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>module</kind>
+        <symbol>ingest_document, ingest_pdf, extract_excel</symbol>
+        <lines>20-66, 68-100+</lines>
+        <reason>Existing ingestion functions that call chunk_document(). Must integrate generate_embeddings() into this flow after chunking.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/logging.py</path>
+        <kind>utility</kind>
+        <symbol>get_logger</symbol>
+        <lines>N/A</lines>
+        <reason>Logging utility for structured logging with extra={} pattern. Use in generate_embeddings() for tracking batch progress.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/unit/test_ingestion.py</path>
+        <kind>test</kind>
+        <symbol>TestChunkDocument (existing tests)</symbol>
+        <lines>N/A</lines>
+        <reason>Existing test patterns to follow for embedding tests. Mock-based approach, pytest-asyncio, structured test classes.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/integration/test_ingestion_integration.py</path>
+        <kind>test</kind>
+        <symbol>Integration test patterns</symbol>
+        <lines>N/A</lines>
+        <reason>Integration test patterns with @pytest.mark.integration and @pytest.mark.slow markers. Follow for embedding integration test.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python ecosystem="pyproject.toml">
+        <package>sentence-transformers==5.1.1</package>
+        <package>numpy</package>
+        <package>pydantic&gt;=2.0,&lt;3.0</package>
+        <package>qdrant-client==1.15.1</package>
+        <dev-package>pytest==8.4.2</dev-package>
+        <dev-package>pytest-asyncio==1.2.0</dev-package>
+        <dev-package>pytest-mock&gt;=3.12,&lt;4.0</dev-package>
+        <note>All required dependencies already in pyproject.toml from Story 1.1. No new dependencies needed.</note>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint id="C1" priority="CRITICAL">
+      MUST use intfloat/fin-e5-large model (1024 dimensions) - locked per technology stack
+    </constraint>
+    <constraint id="C2" priority="CRITICAL">
+      ALL chunks MUST have embeddings != None before Qdrant storage - validate in unit and integration tests
+    </constraint>
+    <constraint id="C3" priority="HIGH">
+      Batch processing MUST use batch_size=32 for memory efficiency - specified in AC3
+    </constraint>
+    <constraint id="C4" priority="HIGH">
+      Performance target: &lt;2 minutes for 300-chunk document - must measure in integration test
+    </constraint>
+    <constraint id="C5" priority="MEDIUM">
+      Model singleton pattern: Load Fin-E5 model once at module level, reuse across calls - prevents memory bloat
+    </constraint>
+    <constraint id="C6" priority="MEDIUM">
+      Follow Stories 1.2-1.4 patterns: async/await, type hints, Google-style docstrings, structured logging with extra={}
+    </constraint>
+    <constraint id="C7" priority="MEDIUM">
+      Add to existing raglite/ingestion/pipeline.py - NO new files (KISS principle)
+    </constraint>
+    <constraint id="C8" priority="LOW">
+      No custom wrappers around sentence-transformers - use SDK directly (anti-over-engineering)
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>generate_embeddings</name>
+      <kind>async_function</kind>
+      <signature>async def generate_embeddings(chunks: List[Chunk]) -&gt; List[Chunk]</signature>
+      <path>raglite/ingestion/pipeline.py</path>
+      <description>Generate Fin-E5 embeddings for document chunks. Processes chunks in batches of 32, populates embedding field (1024 dimensions), returns same list with embeddings added.</description>
+    </interface>
+    <interface>
+      <name>get_embedding_model</name>
+      <kind>function</kind>
+      <signature>def get_embedding_model() -&gt; SentenceTransformer</signature>
+      <path>raglite/ingestion/pipeline.py</path>
+      <description>Lazy-load Fin-E5 model (singleton pattern). Returns cached SentenceTransformer instance, loads intfloat/fin-e5-large on first call.</description>
+    </interface>
+    <interface>
+      <name>Chunk.embedding</name>
+      <kind>pydantic_field</kind>
+      <signature>embedding: list[float] = Field(default_factory=list, description="Semantic embedding vector")</signature>
+      <path>raglite/shared/models.py</path>
+      <description>Chunk model field for storing 1024-dimensional embedding vector. Must be populated by generate_embeddings() before Qdrant storage.</description>
+    </interface>
+    <interface>
+      <name>ingest_document</name>
+      <kind>async_function</kind>
+      <signature>async def ingest_document(file_path: str) -&gt; DocumentMetadata</signature>
+      <path>raglite/ingestion/pipeline.py</path>
+      <description>Main ingestion pipeline. Must integrate generate_embeddings() call after chunk_document() and before store_in_qdrant().</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing follows established patterns from Stories 1.2-1.4: pytest 8.4.2 with pytest-asyncio for async tests, pytest-mock for mocking sentence-transformers model, 80%+ coverage target. Unit tests mock external dependencies (SentenceTransformer.encode), integration tests use real Fin-E5 model with sample PDF. All tests use structured assertions with clear failure messages.
+    </standards>
+
+    <locations>
+      - tests/unit/test_ingestion.py (add TestGenerateEmbeddings class with 5 unit tests)
+      - tests/integration/test_ingestion_integration.py (add TestEmbeddingIntegration class with 1 integration test)
+    </locations>
+
+    <ideas>
+      <test-idea ac="1">
+        Test: test_generate_embeddings_basic() - Mock SentenceTransformer, pass 10 sample chunks, verify all chunks have embedding field populated with list of 1024 floats
+      </test-idea>
+      <test-idea ac="2">
+        Test: test_embedding_dimensions() - Generate embeddings for 1 chunk, assert len(chunk.embedding) == 1024 and all elements are float type
+      </test-idea>
+      <test-idea ac="3">
+        Test: test_batch_processing() - Pass 100 chunks, mock encode() to track batch_size argument, verify called with batch_size=32
+      </test-idea>
+      <test-idea ac="6">
+        Test: test_empty_chunk_handling() - Pass chunk with empty content string, verify graceful handling (either skip or zero vector, no exception raised)
+      </test-idea>
+      <test-idea ac="8">
+        Test: test_embeddings_not_none() - CRITICAL: Pass 50 chunks, assert all chunks[i].embedding is not None and not empty list after generation
+      </test-idea>
+      <test-idea ac="7,9">
+        Integration Test: test_embedding_generation_end_to_end() - Ingest Week 0 PDF, call chunk_document(), call generate_embeddings(), validate all 300+ chunks have embeddings, measure duration (&lt;120s), optionally store in Qdrant and retrieve to validate persistence
+      </test-idea>
+    </ideas>
+  </tests>
+</story-context>
