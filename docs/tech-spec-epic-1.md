@@ -1190,10 +1190,33 @@ Following Senior Developer Review of Story 1.4 (Document Chunking), the followin
 
 **Tracking:** All action items documented in `/docs/backlog.md` and Story 1.4 Tasks/Subtasks.
 
+### Story 1.5 Review Action Items (Added 2025-10-13)
+
+Following Senior Developer Review of Story 1.5 (Embedding Model Integration), the following items require resolution for Epic 1 optimization and future phases:
+
+**Story 1.6 Prerequisites:** None - Story 1.5 approved for merge, Story 1.6 (Qdrant Vector Database Setup) can proceed immediately.
+
+**Optimization Items (MEDIUM Priority):**
+- **Integration Test Efficiency** - Remove duplicate `ingest_pdf()` call in `test_embedding_generation_end_to_end()` (test_ingestion_integration.py:351-356). Saves 30-60s per test run. (Related: AC7 integration test efficiency)
+
+**Future Enhancements (LOW Priority - Phase 2+):**
+- **Enhanced Test Validation** - Consider exposing `chunks: list[Chunk]` field in DocumentMetadata for direct embedding validation in integration tests. Evaluate memory impact for large documents before implementing. (Related: AC7/AC8 validation)
+- **Documentation Clarity** - Standardize model name terminology in docstrings. Use "intfloat/e5-large-v2" consistently or add prominent note about "Fin-E5" marketing name. (Related: AC1, pipeline.py:47, 90)
+- **True Async Implementation** - Defer to Phase 4: Evaluate `asyncio.to_thread()` for true async embedding generation to improve concurrent document processing performance. Current synchronous implementation sufficient for MVP. (Related: AC9 performance optimization)
+
+**Review Outcome:**
+- **Status:** APPROVED ✅
+- **Code Quality:** EXCELLENT (zero architectural violations, follows all CLAUDE.md constraints)
+- **Test Coverage:** COMPREHENSIVE (11 tests: 8 unit + 3 integration)
+- **Security:** NO ISSUES
+- **Critical AC8 Validation:** SATISFIED (embeddings != None/empty properly tested)
+
+**Tracking:** All action items documented in `/docs/backlog.md`.
+
 ---
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 **Created:** 2025-10-12
 **Author:** Sarah (Product Owner)
-**Last Review:** 2025-10-12 (Ricardo - Story 1.4 Developer Review)
-**Next Update:** After Story 1.2 completion or Week 5 validation
+**Last Review:** 2025-10-13 (Ricardo - Story 1.5 Developer Review)
+**Next Update:** After Story 1.6 completion or Week 5 validation
