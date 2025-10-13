@@ -1,0 +1,232 @@
+<story-context id="story-1.10" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.10</storyId>
+    <title>Natural Language Query Tool (MCP) - Validation & Testing</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-13</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.10.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to ask natural language financial questions via MCP client and receive accurate, relevant chunks with comprehensive metadata</iWant>
+    <soThat>I can access financial knowledge conversationally without learning query syntax, and Claude Code can synthesize accurate, well-cited answers from the retrieved information</soThat>
+
+    <tasks>
+      <task id="1" ac="1,2,5">Verify MCP Tool Implementation - Verify query_financial_documents tool defined, accepts QueryRequest, calls search_documents and generate_citations, returns QueryResponse matching Tech Spec</task>
+      <task id="2" ac="4">Financial Terminology Handling Validation - Test queries with financial terms (EBITDA, COGS, OpEx, CapEx, ARPU), verify Fin-E5 model handles domain terminology</task>
+      <task id="3" ac="3,9">Metadata Completeness Validation - Verify all QueryResult objects include required fields (score, text, source_document, page_number, chunk_index, word_count), validate page_number != None, citations appended</task>
+      <task id="4" ac="6">MCP Client Testing - Connect Claude Desktop to local RAGLite MCP server, verify tool discovery, execute 3-5 manual test queries, validate error handling</task>
+      <task id="5" ac="7">End-to-End Claude Code Synthesis Testing - Start RAGLite server, connect Claude Code, ask financial questions, verify synthesis quality and citation accuracy (5+ questions)</task>
+      <task id="6" ac="8,10">Ground Truth Test Set Validation - Load ground truth from Story 1.12A (50+ Q&A pairs), execute 10-15 representative queries, validate retrieval accuracy ≥70%, semantic score ≥0.7</task>
+      <task id="7" ac="9">Integration Testing - End-to-end smoke tests covering PDF ingestion → Embedding → Storage → Retrieval → MCP response (5+ integration tests)</task>
+      <task id="8" ac="3,10">Performance Measurement & Logging - Measure p50/p95 query latency on 20+ queries, validate <5s p50, <10s p95, log query metrics</task>
+      <task id="9" ac="10">Documentation & Validation Report - Create Story 1.10 Validation Report documenting retrieval accuracy, metadata completeness, terminology handling, synthesis results, performance metrics</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">MCP tool `query_financial_documents` fully operational with natural language query parameter and `top_k` (default: 5) per Tech Spec</criterion>
+    <criterion id="2">Tool receives query, generates embedding using Fin-E5 model (Story 1.5), performs vector similarity search in Qdrant (Story 1.7)</criterion>
+    <criterion id="3">Response includes retrieved chunks with complete metadata (score, text, source_document, page_number, chunk_index, word_count) per QueryResult model</criterion>
+    <criterion id="4">Query embedding handles financial terminology correctly (via Fin-E5 financial domain model from Story 1.5)</criterion>
+    <criterion id="5">Response format follows Week 0 spike pattern (QueryResponse with list of QueryResult objects) and matches Tech Spec API contract</criterion>
+    <criterion id="6">Tool tested via Claude Desktop or MCP-compatible test client (manual validation)</criterion>
+    <criterion id="7">End-to-end test: Ask question via MCP → Claude Code synthesizes answer from returned chunks → Validate accuracy</criterion>
+    <criterion id="8">10+ sample queries from ground truth test set (Story 1.12A) validated for retrieval accuracy (chunks contain correct answer)</criterion>
+    <criterion id="9" critical="true">INTEGRATION: All Stories 1.2-1.9 components work together seamlessly (ingestion → embedding → storage → retrieval → MCP exposure)</criterion>
+    <criterion id="10" critical="true">ACCURACY BASELINE: Document retrieval accuracy on ground truth queries (target: 70%+ by Week 2 end, path to 90%+ by Week 5)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/prd/epic-1-foundation-accurate-retrieval.md" section="Story 1.10 (lines 282-298)">
+        Natural language query tool requirements: MCP tool with query parameter and top_k (default: 5), response includes chunks with metadata, handles financial terminology via Fin-E5, Week 0 spike pattern, Claude Desktop testing, end-to-end synthesis validation, 10+ ground truth query validation
+      </doc>
+      <doc path="docs/tech-spec-epic-1.md" section="MCP Tool API Contract (lines 711-741)">
+        API contract for query_financial_documents: Input (query string, top_k int), Output (QueryResponse with results array containing score, text, source_document, page_number, chunk_index, word_count, retrieval_time_ms), Error handling (QueryError for embedding/search failures)
+      </doc>
+      <doc path="docs/tech-spec-epic-1.md" section="Section 4.1: MCP Server (lines 142-228)">
+        MCP server implementation patterns: FastMCP initialization, tool definitions with @mcp.tool() decorator, async/await functions, Pydantic models for request/response, structured logging with extra={}, error handling with specific exceptions
+      </doc>
+      <doc path="docs/stories/story-1.9.md" section="Complete Story">
+        MCP Server Foundation implementation (COMPLETE): query_financial_documents tool defined in raglite/main.py, calls search_documents() from Story 1.7 and generate_citations() from Story 1.8, returns QueryResponse, structured logging, error handling
+      </doc>
+      <doc path="docs/stories/story-1.7.md" section="Complete Story">
+        Vector Similarity Search & Retrieval implementation (COMPLETE): search_documents() function in raglite/retrieval/search.py, generates query embedding with Fin-E5, performs Qdrant query_points(), returns List[QueryResult], p50 <5s latency target
+      </doc>
+      <doc path="docs/stories/story-1.8.md" section="Complete Story">
+        Source Attribution & Citation Generation implementation (COMPLETE): generate_citations() function in raglite/retrieval/attribution.py, appends formatted citations to chunk text, format: "(Source: document.pdf, page 12, chunk 5)"
+      </doc>
+      <doc path="docs/stories/story-1.12A.ground-truth-test-set-creation.md" section="Complete Story">
+        Ground Truth Test Set (COMPLETE): 50+ Q&A pairs in tests/fixtures/ground_truth.py, covers all categories (cost_analysis, margins, financial_performance, safety_metrics, workforce, operating_expenses), difficulty distribution (40% easy, 40% medium, 20% hard), each query includes question, expected answer, source document, expected page number
+      </doc>
+      <doc path="docs/week-0-spike-report.md" section="Accuracy and Performance Baseline">
+        Week 0 baseline metrics: Retrieval accuracy 60% (9/15 queries), avg query latency 0.83s, avg semantic score 0.84, issues identified (page number extraction, chunking strategy), Week 2 targets: 70%+ accuracy, <5s p50 latency
+      </doc>
+      <doc path="CLAUDE.md" section="Development Commands (Testing)">
+        Test execution commands: uv run pytest tests/integration/test_e2e_query_validation.py -v --slow, uv run pytest with --log-cli-level=INFO for detailed logging, markers: @pytest.mark.integration, @pytest.mark.slow, @pytest.mark.e2e
+      </doc>
+      <doc path="CLAUDE.md" section="Coding Standards">
+        Type hints on all functions, Google-style docstrings with Args/Returns/Raises, structured logging with extra={}, async/await pattern for I/O, Pydantic models for data structures, no custom wrappers (use SDKs directly), simplicity first (no abstractions beyond utility functions)
+      </doc>
+    </docs>
+
+    <code>
+      <artifact path="raglite/main.py" kind="module" symbol="query_financial_documents" lines="~50-110" reason="MCP tool implementation from Story 1.9 - primary function to validate">
+        @mcp.tool() async def query_financial_documents(request: QueryRequest) -> QueryResponse - Implemented in Story 1.9, calls search_documents() and generate_citations(), returns QueryResponse with list of QueryResult objects, this is the tool being validated in Story 1.10
+      </artifact>
+      <artifact path="raglite/retrieval/search.py" kind="module" symbol="search_documents" lines="~20-80" reason="Vector search function from Story 1.7 - validates query embedding and Qdrant search">
+        async def search_documents(query: str, top_k: int = 5) -> List[QueryResult] - Generates query embedding with Fin-E5 model, performs Qdrant vector similarity search, converts results to QueryResult objects, measures latency, returns top-k relevant chunks
+      </artifact>
+      <artifact path="raglite/retrieval/attribution.py" kind="module" symbol="generate_citations" lines="~10-40" reason="Citation generation from Story 1.8 - validates source attribution format">
+        async def generate_citations(results: List[QueryResult]) -> List[QueryResult] - Appends formatted citations to each chunk text, format: "(Source: {source_document}, page {page_number}, chunk {chunk_index})"
+      </artifact>
+      <artifact path="raglite/shared/models.py" kind="module" symbol="QueryRequest" lines="~50-53" reason="Input model for query tool validation">
+        class QueryRequest(BaseModel): query: str, top_k: int = 5 - Pydantic model for MCP tool input
+      </artifact>
+      <artifact path="raglite/shared/models.py" kind="module" symbol="QueryResponse" lines="~60-64" reason="Output model for query tool validation">
+        class QueryResponse(BaseModel): results: List[QueryResult], query: str, retrieval_time_ms: float - Pydantic model for MCP tool output
+      </artifact>
+      <artifact path="raglite/shared/models.py" kind="module" symbol="QueryResult" lines="~55-59" reason="Result object model containing all required metadata">
+        class QueryResult(BaseModel): score: float, text: str, source_document: str, page_number: int, chunk_index: int, word_count: int - All fields must be validated for completeness
+      </artifact>
+      <artifact path="tests/fixtures/ground_truth.py" kind="module" symbol="GROUND_TRUTH_QUERIES" lines="~1-500" reason="Ground truth test set from Story 1.12A - 50+ Q&A pairs for accuracy validation">
+        GROUND_TRUTH_QUERIES: List[Dict] - Contains 50+ test queries with question, expected_answer, expected_answer_keyword, source_document, expected_page_number, category, difficulty - Use 10-15 representative queries for Story 1.10 validation
+      </artifact>
+      <artifact path="tests/integration/test_mcp_server.py" kind="test" symbol="test_query_tool_end_to_end" lines="~50-100" reason="Existing integration test pattern to follow">
+        Existing MCP server integration test demonstrating tool discovery, query execution, response validation - Follow this pattern for Story 1.10 e2e tests
+      </artifact>
+      <artifact path="tests/integration/test_retrieval_integration.py" kind="test" symbol="test_search_documents_integration" lines="~20-60" reason="Existing retrieval integration test pattern">
+        Existing test validating search_documents() with real Qdrant - Demonstrates latency measurement, metadata validation, result assertions
+      </artifact>
+      <artifact path="tests/e2e/test_ground_truth.py" kind="test" symbol="test_ground_truth_accuracy" lines="~10-80" reason="Existing ground truth accuracy test pattern">
+        Existing test loading ground truth queries, executing via MCP tool, calculating accuracy percentage - Extend this for Story 1.10 validation
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="fastmcp" version="2.12.4">MCP server framework - Used in raglite/main.py</package>
+        <package name="sentence-transformers" version="5.1.1">Fin-E5 embedding model - Used in raglite/retrieval/search.py</package>
+        <package name="qdrant-client" version="1.15.1">Vector database client - Used in raglite/retrieval/search.py</package>
+        <package name="pydantic" version=">=2.0,<3.0">Data validation models - QueryRequest, QueryResponse, QueryResult</package>
+        <package name="pytest" version="8.4.2">Testing framework</package>
+        <package name="pytest-asyncio" version="1.2.0">Async test support</package>
+        <package name="pytest-timeout" version=">=2.0,<3.0">Test timeout markers</package>
+        <package name="anthropic" version=">=0.18.0,<1.0.0">Claude API client for synthesis testing (optional for Story 1.10 manual testing)</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint id="1" type="architecture">Story 1.10 is a VALIDATION story, NOT a feature implementation story - No new code should be written, only tests and documentation</constraint>
+    <constraint id="2" type="architecture">Follow standard MCP pattern: RAGLite tools return raw chunks + metadata, Claude Code (LLM client) synthesizes answers - Do not implement answer synthesis in RAGLite</constraint>
+    <constraint id="3" type="testing">All integration tests must be marked with @pytest.mark.integration and @pytest.mark.slow</constraint>
+    <constraint id="4" type="testing">Ground truth validation must use 10-15 representative queries from tests/fixtures/ground_truth.py (not all 50+)</constraint>
+    <constraint id="5" type="nfr">Retrieval accuracy target for Week 2: ≥70% (path to 90%+ by Week 5 per NFR6)</constraint>
+    <constraint id="6" type="nfr">Query latency target: p50 <5s, p95 <10s (NFR13)</constraint>
+    <constraint id="7" type="nfr">Metadata completeness: 100% of QueryResult objects must have page_number != None (critical for NFR7: 95%+ source attribution accuracy)</constraint>
+    <constraint id="8" type="anti-over-engineering">No custom wrappers or abstraction layers - Use existing functions directly (search_documents, generate_citations)</constraint>
+    <constraint id="9" type="simplicity">Follow patterns from Stories 1.2-1.9: async/await, type hints, docstrings, structured logging with extra={}, specific exceptions</constraint>
+    <constraint id="10" type="process">Manual testing via Claude Desktop is REQUIRED (AC 6) - Document results with screenshots or logs</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="query_financial_documents" kind="mcp-tool" signature="async def query_financial_documents(request: QueryRequest) -> QueryResponse" path="raglite/main.py">
+      MCP tool for natural language queries - Implemented in Story 1.9, validates in Story 1.10
+      Input: QueryRequest(query: str, top_k: int = 5)
+      Output: QueryResponse(results: List[QueryResult], query: str, retrieval_time_ms: float)
+      Each QueryResult contains: score (0-1), text (with citation appended), source_document, page_number, chunk_index, word_count
+    </interface>
+    <interface name="search_documents" kind="function" signature="async def search_documents(query: str, top_k: int = 5) -> List[QueryResult]" path="raglite/retrieval/search.py">
+      Vector similarity search - Implemented in Story 1.7
+      Generates query embedding with Fin-E5, performs Qdrant search, returns top-k results
+      Used by query_financial_documents tool
+    </interface>
+    <interface name="generate_citations" kind="function" signature="async def generate_citations(results: List[QueryResult]) -> List[QueryResult]" path="raglite/retrieval/attribution.py">
+      Source attribution - Implemented in Story 1.8
+      Appends formatted citation to each chunk text: "(Source: {doc}, page {page}, chunk {chunk})"
+      Used by query_financial_documents tool
+    </interface>
+    <interface name="GROUND_TRUTH_QUERIES" kind="data" signature="List[Dict[str, Any]]" path="tests/fixtures/ground_truth.py">
+      Ground truth test set - Created in Story 1.12A
+      Each entry contains: question (str), expected_answer (str), expected_answer_keyword (str), source_document (str), expected_page_number (int), category (str), difficulty (str)
+      Use for accuracy validation in Story 1.10
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing Standards for Story 1.10:
+      - Framework: pytest with pytest-asyncio for async support
+      - Test Types: Integration tests (5+), Manual testing (Claude Desktop), End-to-end tests
+      - Markers: @pytest.mark.integration, @pytest.mark.slow, @pytest.mark.e2e
+      - Test Locations: tests/integration/test_e2e_query_validation.py (NEW), tests/manual/ (NEW)
+      - Assertions: Retrieval accuracy ≥70%, p50 latency <5s, metadata completeness 100%
+      - Coverage: Not applicable (validation story, no new code)
+      - Manual Testing: Claude Desktop connection, tool discovery, 5+ test queries, synthesis validation
+      - Performance Measurement: p50/p95 latency on 20+ queries using time.perf_counter()
+      - Documentation: Results in Story 1.10 Completion Notes and separate Validation Report
+    </standards>
+
+    <locations>
+      tests/integration/test_e2e_query_validation.py (NEW - 5+ integration tests)
+      tests/manual/test_claude_desktop_queries.md (NEW - manual testing documentation)
+      tests/e2e/test_ground_truth.py (EXTEND - add Story 1.10 specific validations)
+    </locations>
+
+    <ideas>
+      <test ac="8,10" name="test_e2e_ground_truth_validation">
+        Load 10-15 representative queries from GROUND_TRUTH_QUERIES, execute via query_financial_documents, validate retrieval accuracy ≥70%, semantic score ≥0.7, page_number != None, calculate accuracy percentage
+      </test>
+      <test ac="3,9" name="test_e2e_metadata_preservation">
+        Execute query via MCP tool, validate all QueryResult objects have required fields (score, text, source_document, page_number, chunk_index, word_count), verify page_number preserved from Story 1.2 → Story 1.10, verify citations appended by generate_citations (Story 1.8)
+      </test>
+      <test ac="9" name="test_e2e_citation_flow">
+        Execute query, verify citations in final QueryResponse match format: "(Source: {doc}, page {page}, chunk {chunk})", verify citations point to correct document/page (manual validation on sample)
+      </test>
+      <test ac="4" name="test_financial_terminology_handling">
+        Execute 5+ queries with financial jargon (EBITDA, COGS, OpEx, CapEx, ARPU), verify Fin-E5 model handles domain terms correctly, compare semantic scores vs generic queries, verify relevant chunks returned
+      </test>
+      <test ac="3,10" name="test_e2e_performance_validation">
+        Execute 20+ queries, measure p50/p95 latency using time.perf_counter(), validate p50 <5s, p95 <10s, log metrics with structured logging
+      </test>
+      <test ac="6" name="manual_test_claude_desktop_connection">
+        Start RAGLite MCP server (uv run python -m raglite.main), connect Claude Desktop, verify tool discovery (both tools visible), execute 3-5 test queries, validate error handling (empty query, invalid top_k), document results with screenshots/logs
+      </test>
+      <test ac="7" name="manual_test_claude_code_synthesis">
+        Connect Claude Code to RAGLite server, ask 5+ financial questions (covering easy/medium/hard difficulty), verify Claude Code receives QueryResponse, validate synthesis quality (coherent answer from chunks), verify citations in synthesized answer, document synthesis examples
+      </test>
+    </ideas>
+  </tests>
+
+  <devNotes>
+    <note category="validation-focus">
+      Story 1.10 is a VALIDATION story, not a feature implementation story. The query_financial_documents tool was already implemented in Story 1.9. Story 1.10 validates: (1) Does it work correctly end-to-end? (2) Is it accurate? (3) Does Claude Code synthesize well from the returned chunks? (4) What is the Week 2 accuracy baseline?
+    </note>
+    <note category="week-0-baseline">
+      Week 0 spike baseline for comparison: Retrieval accuracy 60% (9/15 queries), avg query latency 0.83s, avg semantic score 0.84. Week 2 targets (Story 1.10 outcome): Retrieval accuracy ≥70%, p50 latency <5s, p95 latency <10s, metadata completeness 100%.
+    </note>
+    <note category="ground-truth-usage">
+      Story 1.12A created 50+ Q&A pairs in tests/fixtures/ground_truth.py. Story 1.10 validation should use 10-15 REPRESENTATIVE queries (not all 50+) covering all categories and difficulty levels. Full 50+ query validation happens in Story 1.12B (Week 5 final validation).
+    </note>
+    <note category="mcp-architecture">
+      Standard MCP pattern: RAGLite tools return raw chunks + metadata → Claude Code (LLM client) synthesizes coherent answers. Do NOT implement answer synthesis in RAGLite (deprecated Story 1.11 original approach). Focus on metadata completeness for LLM synthesis.
+    </note>
+    <note category="dependencies">
+      Story 1.10 depends on Stories 1.9 (MCP Server - COMPLETE), 1.7 (Vector Search - COMPLETE), 1.8 (Source Attribution - COMPLETE), 1.12A (Ground Truth Test Set - COMPLETE). All dependencies are complete, ready for validation.
+    </note>
+    <note category="blocks">
+      Story 1.10 results inform Story 1.11 (Enhanced Chunk Metadata) and Story 1.12B (Final Validation). Document all findings, issues, and recommendations for these downstream stories.
+    </note>
+    <note category="manual-testing">
+      Manual testing via Claude Desktop is REQUIRED (AC 6). Start server: uv run python -m raglite.main, update Claude Desktop config to point to localhost:8000 (or configured port), verify tool discovery, execute queries, document results.
+    </note>
+    <note category="performance-measurement">
+      Measure p50/p95 latency on 20+ queries using time.perf_counter() or similar. Week 0 baseline: 0.83s avg (exceeds target). Validate continues to meet NFR13 (<5s p50, <10s p95). Use structured logging for metrics.
+    </note>
+  </devNotes>
+</story-context>
