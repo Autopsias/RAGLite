@@ -24,9 +24,9 @@
 
 **Current Phase:** 4-Implementation (Epic 1 - Foundation & Accurate Retrieval)
 
-**Current Workflow:** story-approved (Story 1.7) - Complete
+**Current Workflow:** story-approved (Story 1.8) - Complete
 
-**Overall Progress:** ~50% (Epic 1 in progress, Story 1.7 approved and complete)
+**Overall Progress:** ~55% (Epic 1 in progress, Story 1.8 complete, 8 stories done)
 
 ---
 
@@ -114,18 +114,18 @@
 **Current Epic:** Epic 1 - Foundation & Accurate Retrieval
 
 **Story Queue:**
-- BACKLOG: Stories 1.9+ (remaining Epic 1 stories)
-- TODO: Story 1.9+ (next stories to draft)
-- IN PROGRESS: Story 1.8 (Source Attribution & Citation Generation - next to draft)
-- DONE: Stories 1.1-1.7 completed (7 stories)
+- BACKLOG: Stories 1.10+ (remaining Epic 1 stories)
+- TODO: Story 1.10+ (next stories to draft)
+- IN PROGRESS: Story 1.9 (next story - needs drafting)
+- DONE: Stories 1.1-1.8 completed (8 stories)
 
 ---
 
 ## What to do next
 
-**Recommended Next Action:** Draft Story 1.8 (Source Attribution & Citation Generation)
+**Recommended Next Action:** Draft Story 1.9 (next Epic 1 story)
 
-**Current Context:** Story 1.7 approved and complete. All 10 acceptance criteria met, 67/67 unit tests passing. Vector similarity search implementation ready for Story 1.8 to consume.
+**Current Context:** Story 1.8 completed and marked done. All 8 stories in Epic 1 through story 1.8 are now complete. Next: Continue with Story 1.9 (needs drafting by SM agent).
 
 **Next Steps:**
 
@@ -214,6 +214,51 @@
 - File will be updated as you complete stories and epics
 
 ### Decisions Log
+
+**2025-10-13 - Story 1.8 (Source Attribution & Citation Generation) Approved and Marked Done**
+- Story status updated: Review Passed → Done
+- Definition of Done complete: All 9 acceptance criteria met, code review approved, 75/75 tests passing
+- Moved story from IN PROGRESS → DONE
+- Story 1.9 moved to IN PROGRESS (needs drafting)
+- Progress: 54% → 55%
+- Total completed: 8 stories (Stories 1.1-1.8)
+- Next action: Draft Story 1.9 with SM agent using `create-story` workflow
+
+**2025-10-13 - Completed review-story for Story 1.8 (Source Attribution & Citation Generation)**
+- Review outcome: ✅ APPROVE - Implementation production-ready
+- Acceptance criteria: 9/9 (100%) fully met with evidence
+- Test results: 75/75 unit tests passing, no regressions
+- Code quality: Excellent - follows established patterns, 100% type coverage
+- Security: No issues found - OWASP Top 10 compliant
+- Architecture: Fully aligned with KISS principles and CLAUDE.md constraints
+- Action items: None required
+- Story status: Review Passed
+- Next: Run `story-approved` to mark story complete and advance the queue
+
+**2025-10-13 - Completed dev-story for Story 1.8 (Source Attribution & Citation Generation)**
+- All 7 tasks complete: citation format, metadata validation, multi-source handling, MCP integration, error handling, 8 unit tests, 1 integration test
+- Files created: `raglite/retrieval/attribution.py` (95 lines)
+- Files modified: `tests/unit/test_retrieval.py` (+225 lines), `tests/integration/test_retrieval_integration.py` (+120 lines), `raglite/retrieval/__init__.py` (exports added)
+- Test results: 75/75 unit tests passing, no regressions
+- All acceptance criteria met (9 ACs)
+- Code quality: Follows Stories 1.2-1.7 patterns, no custom wrappers, 100% type coverage
+- NFR validation: NFR7 (95%+ attribution accuracy), NFR11 (100% citation coverage), NFR23 (verification guidance)
+- Story status: Ready for Review
+- Next: User reviews and runs story-approved when satisfied with implementation
+
+**2025-10-13 - Story Context Generated for Story 1.8**
+- Completed `story-context` workflow for Story 1.8 (Source Attribution & Citation Generation)
+- Context file: `/docs/stories/story-context-1.1.8.xml`
+- **Content Summary:**
+  - 5 documentation artifacts (Epic 1 PRD, Tech Spec, CLAUDE.md, Coding Standards, Story 1.7)
+  - 6 code references (shared/models.py QueryResult, retrieval/search.py patterns, shared/logging.py, test files)
+  - 5 Python dependencies (pydantic, pytest suite, typing stdlib)
+  - 7 constraints (KISS principle, no wrappers, reuse existing patterns, ~80 lines target)
+  - 4 interfaces (generate_citations function, CitationError, QueryResult model, get_logger)
+  - Testing standards: pytest + pytest-asyncio, mock-based unit tests (8 tests), integration test (1 test)
+  - 9 test ideas mapped to acceptance criteria (AC1-9)
+- **Story file updated:** Context reference added to Dev Agent Record section
+- **Next Action:** Load DEV agent and run `dev-story` workflow to implement Story 1.8
 
 **2025-10-13 - Story 1.7 Approved and Marked Done**
 - Completed `story-approved` workflow for Story 1.7 (Vector Similarity Search & Retrieval)

@@ -1,0 +1,214 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.8</storyId>
+    <title>Source Attribution & Citation Generation</title>
+    <status>Ready</status>
+    <generatedAt>2025-10-13</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.8.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>to provide verifiable source citations for all retrieved information</iWant>
+    <soThat>users can validate answers against original financial documents and meet 95%+ source attribution accuracy (NFR7)</soThat>
+    <tasks>
+      <task n="1">Citation Format Implementation - Create attribution.py module with generate_citations() function</task>
+      <task n="2">Metadata Validation - Validate QueryResult objects have non-None page_number and source_document</task>
+      <task n="3">Multi-Source Citation Handling - Handle multiple QueryResult objects with different sources</task>
+      <task n="4">MCP Response Integration - Integrate citations with Story 1.10 MCP query tool workflow</task>
+      <task n="5">Error Handling &amp; Logging - Implement CitationError exception and structured logging</task>
+      <task n="6">Unit Tests - 8+ tests covering citation generation, format validation, error handling</task>
+      <task n="7">Integration Test &amp; Manual Validation - End-to-end validation with 10+ queries from Story 1.12A</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion n="1">Each retrieved chunk includes source metadata (document name, page number, section heading if available)</criterion>
+    <criterion n="2">Citation format clearly identifies source: "(Source: Q3_Report.pdf, page 12, chunk 5)"</criterion>
+    <criterion n="3">Source attribution accuracy 95%+ validated on test queries from Story 1.12A ground truth (NFR7)</criterion>
+    <criterion n="4">Multiple sources cited when answer synthesizes information from multiple chunks</criterion>
+    <criterion n="5">Citations appended to chunk text in QueryResult objects (compatible with MCP response format)</criterion>
+    <criterion n="6">Unit tests validate citation generation from metadata (8+ tests)</criterion>
+    <criterion n="7">Integration test confirms citations point to correct document locations (manual validation on 10+ queries)</criterion>
+    <criterion n="8">🚨 CRITICAL - METADATA VALIDATION: All QueryResult objects have non-None page_number and source_document (from Story 1.7)</criterion>
+    <criterion n="9">🚨 FORMAT CONSISTENCY: Citation format matches Week 0 spike pattern for MCP client compatibility</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-1-foundation-accurate-retrieval.md</path>
+        <title>Epic 1: Foundation &amp; Accurate Retrieval - Story 1.8 Requirements</title>
+        <section>Story 1.8: Source Attribution &amp; Citation Generation (lines 250-264)</section>
+        <snippet>
+          Requirements: Each retrieved chunk includes source metadata (document name, page number, section heading).
+          Citation format: "(Source: Q3_Report.pdf, page 12, Revenue section)".
+          Source attribution accuracy 95%+ validated on test queries (NFR7).
+          Multiple sources cited when answer synthesizes information from multiple chunks.
+        </snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec-epic-1.md</path>
+        <title>Tech Spec Epic 1 - Attribution Implementation Pattern</title>
+        <section>Section 4.5: Source Attribution (raglite/retrieval/attribution.py ~50 lines) (lines 605-661)</section>
+        <snippet>
+          Implementation: async def generate_citations(results: List[QueryResult]) -&gt; List[QueryResult]
+          Citation Format: "(Source: document.pdf, page 12, chunk 5)"
+          Strategy: Append citation to chunk text, validate required metadata, log warnings for missing page numbers, raise error if source_document missing.
+          NFRs: NFR7 (95%+ attribution accuracy), NFR11 (all information includes citations), NFR23 ("how to verify" guidance).
+        </snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>RAGLite Project Instructions - Anti-Over-Engineering Rules</title>
+        <section>Section: CRITICAL DEVELOPMENT CONSTRAINTS (lines 15-62)</section>
+        <snippet>
+          RULE 1: KISS - This is a ~600-800 line MVP. NO custom base classes, factories, or abstract layers.
+          RULE 2: Technology Stack is LOCKED - ONLY use libraries in docs/architecture/5-technology-stack-definitive.md.
+          RULE 3: No Customization Beyond Standard SDKs - NO custom wrappers, use SDKs EXACTLY as documented.
+          Target: ~80 lines for attribution.py (simple function, no abstractions).
+        </snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/coding-standards.md</path>
+        <title>RAGLite Coding Standards - Type Hints, Docstrings, Logging</title>
+        <section>Sections 1-3: Type Hints (MANDATORY), Docstrings (Google-style), Structured Logging</section>
+        <snippet>
+          All functions MUST have type hints for parameters and return values.
+          Google-style docstrings required (Args, Returns, Raises, Strategy sections).
+          Structured logging: logger.info(..., extra={"key": "value"}) for all context.
+        </snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/story-1.7.md</path>
+        <title>Story 1.7: Vector Similarity Search &amp; Retrieval (Complete)</title>
+        <section>Dev Notes - Requirements Context Summary (lines 86-117)</section>
+        <snippet>
+          Story 1.7 provides QueryResult objects with validated metadata (page_number, source_document, chunk_index).
+          AC9 ensures page_number != None for all retrieved chunks (CRITICAL for Story 1.8 NFR7).
+          search_documents() function returns List[QueryResult] sorted by relevance score (highest first).
+        </snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>model</kind>
+        <symbol>QueryResult</symbol>
+        <lines>48-65</lines>
+        <reason>QueryResult model with all required metadata fields (text, score, source_document, page_number, chunk_index, word_count). Story 1.8 will append citations to QueryResult.text field.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/retrieval/search.py</path>
+        <kind>function</kind>
+        <symbol>search_documents, generate_query_embedding</symbol>
+        <lines>1-181</lines>
+        <reason>search_documents() returns List[QueryResult] that Story 1.8 will process to add citations. Follow same async pattern, type hints, docstrings, and structured logging.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/logging.py</path>
+        <kind>function</kind>
+        <symbol>get_logger</symbol>
+        <lines>10-30</lines>
+        <reason>Reuse get_logger(__name__) for structured logging in attribution.py. Use logger.info(..., extra={...}) pattern from search.py.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/clients.py</path>
+        <kind>singleton</kind>
+        <symbol>get_qdrant_client, get_embedding_model</symbol>
+        <lines>Various</lines>
+        <reason>Singleton pattern examples from Stories 1.5-1.6. Attribution.py does NOT need singletons (stateless function), but follow same error handling patterns.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/unit/test_retrieval.py</path>
+        <kind>test</kind>
+        <symbol>test_search_documents_basic, test_query_embedding_generation</symbol>
+        <lines>Various (~500 lines total)</lines>
+        <reason>Mock-based unit test patterns from Story 1.7. Story 1.8 will add 8 new tests to this file following same pytest patterns.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/integration/test_retrieval_integration.py</path>
+        <kind>test</kind>
+        <symbol>test_retrieval_accuracy, test_metadata_preservation</symbol>
+        <lines>Various (~350 lines total)</lines>
+        <reason>Integration test patterns with real Qdrant. Story 1.8 will add 1 citation accuracy test with manual validation of 10+ queries.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pydantic" version=">=2.0,&lt;3.0" ecosystem="Production">Data validation for QueryResult models</package>
+        <package name="typing" version="stdlib" ecosystem="Production">Type hints (List, Optional)</package>
+        <package name="pytest" version="8.4.2" ecosystem="Dev">Unit testing framework</package>
+        <package name="pytest-asyncio" version="1.2.0" ecosystem="Dev">Async test support</package>
+        <package name="pytest-mock" version=">=3.12,&lt;4.0" ecosystem="Dev">Mocking for unit tests</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint n="1">NO custom wrappers or abstraction layers - write simple generate_citations() function (~80 lines max)</constraint>
+    <constraint n="2">REUSE QueryResult model from shared/models.py - do NOT create new models</constraint>
+    <constraint n="3">FOLLOW Stories 1.2-1.7 patterns: async/await, type hints, Google-style docstrings, structured logging with extra={}</constraint>
+    <constraint n="4">METADATA PRESERVATION CRITICAL: All QueryResult objects from Story 1.7 have page_number and source_document validated in AC9</constraint>
+    <constraint n="5">Citation format MUST match Tech Spec: "(Source: {source_document}, page {page_number}, chunk {chunk_index})"</constraint>
+    <constraint n="6">Graceful degradation: Log warning if page_number is None, raise CitationError if source_document missing</constraint>
+    <constraint n="7">Target module size: raglite/retrieval/attribution.py ~80 lines (function ~40 lines, exception ~5 lines, validation ~20 lines)</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>generate_citations</name>
+      <kind>async function</kind>
+      <signature>async def generate_citations(results: List[QueryResult]) -&gt; List[QueryResult]</signature>
+      <path>raglite/retrieval/attribution.py (NEW FILE)</path>
+      <description>Add formatted citations to query results. Validates metadata (page_number, source_document), appends citation to QueryResult.text field, returns same list with citations added.</description>
+    </interface>
+    <interface>
+      <name>CitationError</name>
+      <kind>exception class</kind>
+      <signature>class CitationError(Exception)</signature>
+      <path>raglite/retrieval/attribution.py (NEW FILE)</path>
+      <description>Exception raised when citation generation fails due to missing critical metadata (source_document).</description>
+    </interface>
+    <interface>
+      <name>QueryResult</name>
+      <kind>pydantic model</kind>
+      <signature>class QueryResult(BaseModel): text, score, source_document, page_number, chunk_index, word_count</signature>
+      <path>raglite/shared/models.py (REUSE)</path>
+      <description>Data model for retrieved chunks with metadata. Story 1.8 appends citation to text field: result.text = f"{result.text}\n\n{citation}"</description>
+    </interface>
+    <interface>
+      <name>get_logger</name>
+      <kind>function</kind>
+      <signature>def get_logger(name: str) -&gt; logging.Logger</signature>
+      <path>raglite/shared/logging.py (REUSE)</path>
+      <description>Get configured logger with structured JSON output. Use logger.info(..., extra={"citations_generated": X, "warnings_count": Y})</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing framework: pytest 8.4.2 + pytest-asyncio 1.2.0
+      Test organization: Mock-based unit tests (fast, 85%+ coverage), integration tests with real Qdrant (marked @pytest.mark.integration)
+      Patterns from Stories 1.2-1.7: Use pytest fixtures for setup, mock external dependencies (Qdrant, embedding model), test edge cases (empty input, missing metadata)
+      Code quality: All tests must pass with no warnings, follow same patterns as existing test_retrieval.py
+    </standards>
+    <locations>
+      <location>tests/unit/test_retrieval.py - Add 8 new attribution tests to existing file (~150 lines new code)</location>
+      <location>tests/integration/test_retrieval_integration.py - Add 1 citation accuracy test (~50 lines new code)</location>
+    </locations>
+    <ideas>
+      <idea ac="1,2,5">test_generate_citations_basic - Single QueryResult → citation appended to text in correct format</idea>
+      <idea ac="4">test_generate_citations_multi_source - Multiple QueryResult objects → unique citations per chunk, ordering preserved</idea>
+      <idea ac="2">test_citation_format - Validate format matches spec: "(Source: doc.pdf, page 12, chunk 5)"</idea>
+      <idea ac="8">test_missing_page_number - Graceful degradation with warning logged, citation uses "N/A" for page</idea>
+      <idea ac="8">test_missing_source_document - CitationError raised (critical field missing)</idea>
+      <idea ac="5">test_citation_appended_to_text - Original chunk text preserved, citation appended with double newline</idea>
+      <idea ac="6">test_empty_results_list - Handle empty List[QueryResult] gracefully (return empty list)</idea>
+      <idea ac="4">test_citation_ordering - Citations match QueryResult order (highest score first from search)</idea>
+      <idea ac="3,7">test_citation_accuracy_integration - End-to-end test with real Qdrant: 10+ queries from Story 1.12A, manual validation of citations pointing to correct pages</idea>
+    </ideas>
+  </tests>
+</story-context>
