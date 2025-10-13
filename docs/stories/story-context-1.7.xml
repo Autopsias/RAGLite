@@ -1,0 +1,383 @@
+<story-context id="story-1.7-vector-similarity-search-retrieval" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.7</storyId>
+    <title>Vector Similarity Search &amp; Retrieval</title>
+    <status>Ready</status>
+    <generatedAt>2025-10-13</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.7.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>to perform vector similarity search and retrieve relevant document chunks for user queries</iWant>
+    <soThat>accurate financial information can be surfaced conversationally through natural language queries</soThat>
+
+    <tasks>
+      <task id="1" status="pending">
+        <title>Query Embedding Generation (AC: 1)</title>
+        <subtasks>
+          <subtask>Add generate_query_embedding() function to raglite/retrieval/search.py</subtask>
+          <subtask>Reuse embedding model from Story 1.5 (get_embedding_model() singleton)</subtask>
+          <subtask>Generate 1024-dimensional embedding vector for natural language query</subtask>
+          <subtask>Log embedding generation time with structured logging</subtask>
+          <subtask>Handle errors: EmbeddingError if model fails</subtask>
+          <subtask>Follow Story 1.5 patterns: async/await, type hints, docstrings</subtask>
+        </subtasks>
+      </task>
+
+      <task id="2" status="pending">
+        <title>Vector Similarity Search Implementation (AC: 2, 3, 5)</title>
+        <subtasks>
+          <subtask>Add search_documents() function to raglite/retrieval/search.py</subtask>
+          <subtask>Implement Qdrant query_points() API call with query embedding</subtask>
+          <subtask>Configure top_k parameter (default: 5, configurable)</subtask>
+          <subtask>Convert Qdrant points to QueryResult objects (from shared/models.py)</subtask>
+          <subtask>Ensure relevance scores included (0-1 scale, higher is better)</subtask>
+          <subtask>Measure and log query latency (p50/p95 tracking)</subtask>
+          <subtask>Target: &lt;5s p50 retrieval (Week 0 baseline: 0.83s)</subtask>
+        </subtasks>
+      </task>
+
+      <task id="3" status="pending">
+        <title>Metadata Filtering Support (AC: 4)</title>
+        <subtasks>
+          <subtask>Add optional filters parameter to search_documents() function</subtask>
+          <subtask>Support filtering by source_document (exact match)</subtask>
+          <subtask>Support filtering by page_number range (if needed)</subtask>
+          <subtask>Use Qdrant Filter API for metadata filtering</subtask>
+          <subtask>Document filter syntax in docstring</subtask>
+          <subtask>Defer complex date_range filtering (not in Story 1.6 metadata)</subtask>
+        </subtasks>
+      </task>
+
+      <task id="4" status="pending">
+        <title>Result Validation &amp; Metadata Preservation (AC: 9)</title>
+        <subtasks>
+          <subtask>Validate all QueryResult objects have required fields (score, text, source_document, page_number, chunk_index, word_count)</subtask>
+          <subtask>Add assertion: page_number != None for all results</subtask>
+          <subtask>Add assertion: source_document != "" for all results</subtask>
+          <subtask>Log warning if any metadata fields missing</subtask>
+          <subtask>Critical for Story 1.8 (source attribution)</subtask>
+        </subtasks>
+      </task>
+
+      <task id="5" status="pending">
+        <title>Error Handling &amp; Logging (AC: 6)</title>
+        <subtasks>
+          <subtask>Implement QueryError exception for Qdrant search failures</subtask>
+          <subtask>Handle connection errors with retry logic (reuse Story 1.6 retry pattern)</subtask>
+          <subtask>Handle empty query edge case</subtask>
+          <subtask>Handle collection not found error</subtask>
+          <subtask>Structured logging with extra={'query', 'top_k', 'latency_ms', 'results_count'}</subtask>
+          <subtask>Follow Stories 1.2-1.6 patterns</subtask>
+        </subtasks>
+      </task>
+
+      <task id="6" status="pending">
+        <title>Unit Tests (AC: 6)</title>
+        <subtasks>
+          <subtask>Test: test_generate_query_embedding() - Happy path with mocked model</subtask>
+          <subtask>Test: test_search_documents_basic() - 5 chunks returned for query</subtask>
+          <subtask>Test: test_search_documents_custom_top_k() - top_k=10 returns 10 results</subtask>
+          <subtask>Test: test_metadata_filtering() - Filter by source_document</subtask>
+          <subtask>Test: test_empty_query_handling() - Handle empty query string</subtask>
+          <subtask>Test: test_relevance_scoring() - Scores in 0-1 range, sorted descending</subtask>
+          <subtask>Test: test_connection_error_handling() - QueryError raised on Qdrant failures</subtask>
+          <subtask>Test: test_metadata_validation() - All required fields present</subtask>
+          <subtask>Mock QdrantClient for fast unit tests (8 tests total)</subtask>
+        </subtasks>
+      </task>
+
+      <task id="7" status="pending">
+        <title>Integration Test &amp; Accuracy Validation (AC: 7, 8, 10)</title>
+        <subtasks>
+          <subtask>Integration test: End-to-end search validation with real Qdrant</subtask>
+          <subtask>Integration test: Retrieval accuracy on 10+ queries from Story 1.12A ground truth</subtask>
+          <subtask>Integration test: Performance validation (p50 &lt;5s, p95 &lt;15s)</subtask>
+          <subtask>Integration test: Metadata preservation (page_number, source_document validated)</subtask>
+          <subtask>Measure baseline retrieval accuracy (target: 70%+ by Week 2 end)</subtask>
+          <subtask>Document accuracy results in story Completion Notes</subtask>
+          <subtask>Tests marked with @pytest.mark.slow and @pytest.mark.integration</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" priority="high">
+      Query embedding generation using same embedding model as document embeddings (Fin-E5 from Story 1.5)
+    </criterion>
+    <criterion id="AC2" priority="high">
+      Similarity search returns top-k relevant chunks (k configurable, default: 5 per Architect)
+    </criterion>
+    <criterion id="AC3" priority="high">
+      Retrieval performance &lt;5 seconds (p50) for standard queries (NFR13: &lt;10s target, Week 0: 0.83s baseline)
+    </criterion>
+    <criterion id="AC4" priority="medium">
+      Filtering by metadata supported (document_name, date_range if available) via optional query parameters
+    </criterion>
+    <criterion id="AC5" priority="high">
+      Relevance scoring included in results for downstream ranking (similarity score 0-1, higher is better)
+    </criterion>
+    <criterion id="AC6" priority="high">
+      Unit tests cover retrieval logic with mocked Qdrant vector search (8+ tests)
+    </criterion>
+    <criterion id="AC7" priority="high">
+      Integration test validates end-to-end retrieval accuracy on ground truth query set (10+ queries from Story 1.12A)
+    </criterion>
+    <criterion id="AC8" priority="critical">
+      Retrieval accuracy measured and documented (target: 90%+ on test set per NFR6, Week 0 baseline: 60%)
+    </criterion>
+    <criterion id="AC9" priority="critical">
+      All retrieved chunks include page_number, source_document, chunk_index (required for Story 1.8 source attribution)
+    </criterion>
+    <criterion id="AC10" priority="high">
+      Measure and log p50/p95 latency for queries (target: p50 &lt;5s, p95 &lt;15s per NFR13)
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-1-foundation-accurate-retrieval.md</path>
+        <title>Epic 1: Foundation &amp; Accurate Retrieval</title>
+        <section>Story 1.7: Vector Similarity Search &amp; Retrieval (lines 233-249)</section>
+        <snippet>Requirements for query embedding generation, similarity search, top-k retrieval, metadata filtering, relevance scoring, 90%+ accuracy target</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec-epic-1.md</path>
+        <title>Technical Specification: Epic 1</title>
+        <section>4.4 Retrieval Search (lines 508-603)</section>
+        <snippet>Implementation patterns for search_documents() and generate_query_embedding(), Qdrant API usage, performance targets (p50 &lt;5s, p95 &lt;15s)</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/6-complete-reference-implementation.md</path>
+        <title>Complete Reference Implementation</title>
+        <section>Code patterns and standards</section>
+        <snippet>Type hints, docstrings, async/await patterns, structured logging examples</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/coding-standards.md</path>
+        <title>Coding Standards</title>
+        <section>Python standards</section>
+        <snippet>Type hints required, Google-style docstrings, structured logging with extra={}, async for I/O</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project Development Guidelines</title>
+        <section>Anti-Over-Engineering Rules (lines 9-72)</section>
+        <snippet>NO custom wrappers around SDKs, NO abstract base classes for 600-line MVP, use direct SDK calls</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>raglite/shared/clients.py</path>
+        <kind>module</kind>
+        <symbol>get_qdrant_client()</symbol>
+        <lines>52-62</lines>
+        <reason>Reuse Qdrant client singleton for vector search queries (Story 1.6 pattern)</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/clients.py</path>
+        <kind>module</kind>
+        <symbol>get_embedding_model()</symbol>
+        <lines>73-89</lines>
+        <reason>Reuse embedding model singleton for query embedding generation (Story 1.5 pattern)</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>module</kind>
+        <symbol>QueryResult</symbol>
+        <lines>45-52</lines>
+        <reason>Data model for search results (score, text, source_document, page_number, chunk_index, word_count)</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>module</kind>
+        <symbol>QueryRequest</symbol>
+        <lines>54-57</lines>
+        <reason>Data model for query input (query string, top_k parameter)</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>module</kind>
+        <symbol>QueryResponse</symbol>
+        <lines>59-63</lines>
+        <reason>Data model for query output (results list, original query, retrieval_time_ms)</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>module</kind>
+        <symbol>store_vectors_in_qdrant()</symbol>
+        <lines>250-395</lines>
+        <reason>Storage implementation from Story 1.6 - shows how chunks are stored with metadata (page_number, source_document, chunk_index)</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/config.py</path>
+        <kind>module</kind>
+        <symbol>settings</symbol>
+        <lines>1-30</lines>
+        <reason>Configuration for Qdrant collection name, URL, and other settings</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/logging.py</path>
+        <kind>module</kind>
+        <symbol>get_logger()</symbol>
+        <lines>1-25</lines>
+        <reason>Structured logging setup - use for all logging in retrieval module</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="qdrant-client" version="1.15.0">Qdrant Python SDK for vector search (query_points() API)</package>
+        <package name="sentence-transformers" version="5.1.1">Embedding model (Fin-E5) for query embedding generation</package>
+        <package name="pydantic" version="2.10.4">Data validation and models</package>
+        <package name="pytest" version="8.4.2">Testing framework</package>
+        <package name="pytest-asyncio" version="1.2.0">Async test support</package>
+        <package name="pytest-mock" version="3.14.0">Mocking for unit tests</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint priority="critical">
+      <title>No Custom Wrappers</title>
+      <description>Use qdrant-client SDK directly with query_points() API. NO custom wrapper classes around QdrantClient (per CLAUDE.md anti-over-engineering rules).</description>
+    </constraint>
+    <constraint priority="critical">
+      <title>Reuse Singletons</title>
+      <description>Reuse get_qdrant_client() from Story 1.6 and get_embedding_model() from Story 1.5. Do NOT create new client instances.</description>
+    </constraint>
+    <constraint priority="high">
+      <title>Follow Established Patterns</title>
+      <description>Match async/await patterns, type hints, docstrings, structured logging from Stories 1.2-1.6. See raglite/ingestion/pipeline.py for reference.</description>
+    </constraint>
+    <constraint priority="high">
+      <title>Metadata Preservation</title>
+      <description>ALL QueryResult objects MUST have page_number != None and source_document != "". This is CRITICAL for Story 1.8 source attribution.</description>
+    </constraint>
+    <constraint priority="medium">
+      <title>Module Organization</title>
+      <description>Create NEW directory raglite/retrieval/ with search.py (~80 lines). Do NOT modify existing ingestion code.</description>
+    </constraint>
+    <constraint priority="medium">
+      <title>Error Handling</title>
+      <description>Implement QueryError exception for search failures. Follow Story 1.6 VectorStorageError pattern.</description>
+    </constraint>
+    <constraint priority="medium">
+      <title>Performance Target</title>
+      <description>Target p50 latency &lt;5s, p95 &lt;15s. Week 0 baseline was 0.83s avg (12x better than 10s target), so this should be easily achievable with HNSW indexing.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>get_qdrant_client</name>
+      <kind>function</kind>
+      <signature>def get_qdrant_client() -&gt; QdrantClient</signature>
+      <path>raglite/shared/clients.py:52-62</path>
+      <description>Returns Qdrant client singleton. Call this to get client for query_points() API.</description>
+    </interface>
+    <interface>
+      <name>get_embedding_model</name>
+      <kind>function</kind>
+      <signature>def get_embedding_model() -&gt; SentenceTransformer</signature>
+      <path>raglite/shared/clients.py:73-89</path>
+      <description>Returns Fin-E5 embedding model singleton (intfloat/e5-large-v2). Call this to generate query embeddings.</description>
+    </interface>
+    <interface>
+      <name>query_points</name>
+      <kind>method</kind>
+      <signature>QdrantClient.query_points(collection_name, query, limit, query_filter=None, with_payload=True)</signature>
+      <path>qdrant-client SDK</path>
+      <description>Qdrant vector search API. Pass query embedding (list[float]), get back ScoredPoint objects with payload metadata.</description>
+    </interface>
+    <interface>
+      <name>QueryResult</name>
+      <kind>model</kind>
+      <signature>class QueryResult(BaseModel): score, text, source_document, page_number, chunk_index, word_count</signature>
+      <path>raglite/shared/models.py:45-52</path>
+      <description>Pydantic model for search results. Create from Qdrant ScoredPoint.payload data.</description>
+    </interface>
+    <interface>
+      <name>QueryRequest</name>
+      <kind>model</kind>
+      <signature>class QueryRequest(BaseModel): query, top_k=5</signature>
+      <path>raglite/shared/models.py:54-57</path>
+      <description>Input model for search_documents() function.</description>
+    </interface>
+    <interface>
+      <name>QueryResponse</name>
+      <kind>model</kind>
+      <signature>class QueryResponse(BaseModel): results, query, retrieval_time_ms</signature>
+      <path>raglite/shared/models.py:59-63</path>
+      <description>Output model for search_documents() function.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest 8.4.2 with pytest-asyncio 1.2.0 for async test support. Mock external dependencies (QdrantClient, SentenceTransformer) using pytest-mock 3.14.0. Follow Stories 1.2-1.6 test patterns: unit tests with mocks in tests/unit/test_retrieval.py (~250 lines, 8 tests), integration tests with real Qdrant in tests/integration/test_retrieval_integration.py (~150 lines, 4 tests). Mark integration tests with @pytest.mark.slow and @pytest.mark.integration. Target 85%+ coverage for retrieval logic (critical path).
+    </standards>
+
+    <locations>
+      <location>tests/unit/test_retrieval.py</location>
+      <location>tests/integration/test_retrieval_integration.py</location>
+    </locations>
+
+    <ideas>
+      <idea ac="AC1">
+        <test>test_generate_query_embedding_success</test>
+        <description>Mock embedding model, verify 1024-dim embedding returned for valid query</description>
+      </idea>
+      <idea ac="AC1">
+        <test>test_generate_query_embedding_empty_query</test>
+        <description>Verify QueryError raised for empty query string</description>
+      </idea>
+      <idea ac="AC2,AC5">
+        <test>test_search_documents_basic</test>
+        <description>Mock Qdrant query_points, verify 5 QueryResult objects returned with scores 0-1</description>
+      </idea>
+      <idea ac="AC2">
+        <test>test_search_documents_custom_top_k</test>
+        <description>Verify top_k=10 returns 10 results, top_k=3 returns 3 results</description>
+      </idea>
+      <idea ac="AC4">
+        <test>test_metadata_filtering_by_source_document</test>
+        <description>Mock Qdrant with Filter, verify only results from specified document returned</description>
+      </idea>
+      <idea ac="AC5">
+        <test>test_relevance_scoring_sorted</test>
+        <description>Verify results sorted by score descending, all scores in 0-1 range</description>
+      </idea>
+      <idea ac="AC6">
+        <test>test_connection_error_handling</test>
+        <description>Mock Qdrant connection failure, verify QueryError raised with context</description>
+      </idea>
+      <idea ac="AC9">
+        <test>test_metadata_validation_all_fields_present</test>
+        <description>Verify all QueryResult objects have page_number != None, source_document != ""</description>
+      </idea>
+      <idea ac="AC3,AC7,AC10">
+        <test>test_search_integration_end_to_end</test>
+        <description>Integration: Real Qdrant, real embedding model, verify search returns relevant results in &lt;5s</description>
+      </idea>
+      <idea ac="AC8,AC7">
+        <test>test_retrieval_accuracy_ground_truth</test>
+        <description>Integration: Run 10+ queries from Story 1.12A ground truth, measure % returning correct chunks</description>
+      </idea>
+      <idea ac="AC10">
+        <test>test_performance_p50_p95_latency</test>
+        <description>Integration: Run 20+ queries, calculate p50 and p95 latency, verify p50 &lt;5s, p95 &lt;15s</description>
+      </idea>
+      <idea ac="AC9">
+        <test>test_metadata_preservation_integration</test>
+        <description>Integration: Verify all results from real Qdrant have page_number and source_document populated</description>
+      </idea>
+    </ideas>
+  </tests>
+</story-context>

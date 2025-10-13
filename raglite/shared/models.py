@@ -45,5 +45,39 @@ class SearchResult(BaseModel):
     source_citation: str = Field(default="", description="Formatted citation string")
 
 
+class QueryResult(BaseModel):
+    """Vector search result for natural language queries.
+
+    Represents a document chunk retrieved from Qdrant similarity search
+    with relevance score and full metadata for source attribution.
+    """
+
+    score: float = Field(
+        ..., ge=0.0, le=1.0, description="Similarity score (0-1, higher is better)"
+    )
+    text: str = Field(..., description="Chunk text content")
+    source_document: str = Field(..., description="Source document filename")
+    page_number: int | None = Field(
+        ..., description="Page number where chunk appears (None if missing)"
+    )
+    chunk_index: int = Field(..., description="Sequential chunk index (0-based)")
+    word_count: int = Field(..., description="Word count of chunk")
+
+
+class QueryRequest(BaseModel):
+    """Natural language query request parameters."""
+
+    query: str = Field(..., description="Natural language query string")
+    top_k: int = Field(default=5, ge=1, le=50, description="Number of results to return")
+
+
+class QueryResponse(BaseModel):
+    """Natural language query response with results."""
+
+    results: list[QueryResult] = Field(..., description="Retrieved chunks sorted by relevance")
+    query: str = Field(..., description="Original query string")
+    retrieval_time_ms: float = Field(..., description="Retrieval time in milliseconds")
+
+
 # Type alias for job identifiers (used in ingestion pipeline)
 JobID = str

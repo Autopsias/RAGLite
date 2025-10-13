@@ -7,6 +7,7 @@ import time
 
 from anthropic import Anthropic
 from qdrant_client import QdrantClient
+from sentence_transformers import SentenceTransformer
 
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
@@ -14,8 +15,9 @@ from raglite.shared.logging import get_logger
 logger = get_logger(__name__)
 
 
-# Module-level Qdrant client (singleton pattern with connection pooling)
+# Module-level singletons (connection pooling and model caching)
 _qdrant_client: QdrantClient | None = None
+_embedding_model: SentenceTransformer | None = None
 
 
 def get_qdrant_client() -> QdrantClient:
@@ -131,3 +133,53 @@ def get_claude_client() -> Anthropic:
     client = Anthropic(api_key=settings.anthropic_api_key)
     logger.info("Claude API client initialized")
     return client
+
+
+def get_embedding_model() -> SentenceTransformer:
+    """Lazy-load Fin-E5 embedding model (singleton pattern).
+
+    Loads intfloat/e5-large-v2 model on first call and caches it for reuse.
+    Model is downloaded once and cached locally by sentence-transformers.
+
+    Returns:
+        SentenceTransformer: Cached Fin-E5 model instance (1024 dimensions)
+
+    Raises:
+        RuntimeError: If model loading fails
+
+    Note:
+        Model specifications:
+        - Name: intfloat/e5-large-v2 (marketed as "Fin-E5")
+        - Dimensions: 1024
+        - Domain: Financial text optimization
+        - Week 0 validation: 0.84 avg similarity score, 71.05% NDCG@10
+
+    Example:
+        >>> model = get_embedding_model()
+        >>> embedding = model.encode(["financial query text"])[0]
+        >>> len(embedding)
+        1024
+    """
+    global _embedding_model
+
+    if _embedding_model is None:
+        logger.info("Loading Fin-E5 embedding model", extra={"model": "intfloat/e5-large-v2"})
+
+        try:
+            _embedding_model = SentenceTransformer("intfloat/e5-large-v2")
+            dimensions = _embedding_model.get_sentence_embedding_dimension()
+
+            logger.info(
+                "Fin-E5 model loaded successfully",
+                extra={"model": "intfloat/e5-large-v2", "dimensions": dimensions},
+            )
+        except Exception as e:
+            error_msg = f"Failed to load Fin-E5 model: {e}"
+            logger.error(
+                "Embedding model loading failed",
+                extra={"model": "intfloat/e5-large-v2", "error": str(e)},
+                exc_info=True,
+            )
+            raise RuntimeError(error_msg) from e
+
+    return _embedding_model

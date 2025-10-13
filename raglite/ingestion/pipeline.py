@@ -12,9 +12,8 @@ import openpyxl
 import pandas as pd
 from docling.document_converter import DocumentConverter
 from qdrant_client.models import Distance, PointStruct, VectorParams
-from sentence_transformers import SentenceTransformer
 
-from raglite.shared.clients import get_qdrant_client
+from raglite.shared.clients import get_embedding_model, get_qdrant_client
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 from raglite.shared.models import Chunk, DocumentMetadata
@@ -33,54 +32,6 @@ class VectorStorageError(Exception):
     """Raised when vector storage to Qdrant fails."""
 
     pass
-
-
-# Module-level embedding model (singleton pattern)
-_embedding_model: SentenceTransformer | None = None
-
-
-def get_embedding_model() -> SentenceTransformer:
-    """Lazy-load Fin-E5 embedding model (singleton pattern).
-
-    Loads intfloat/e5-large-v2 model on first call and caches it for reuse.
-    Model is downloaded once and cached locally by sentence-transformers.
-
-    Returns:
-        SentenceTransformer: Cached Fin-E5 model instance
-
-    Raises:
-        RuntimeError: If model loading fails
-
-    Note:
-        Model specifications:
-        - Name: intfloat/e5-large-v2 (marketed as "Fin-E5")
-        - Dimensions: 1024
-        - Domain: Financial text optimization
-        - Week 0 validation: 0.84 avg similarity score, 71.05% NDCG@10
-    """
-    global _embedding_model
-
-    if _embedding_model is None:
-        logger.info("Loading Fin-E5 embedding model", extra={"model": "intfloat/e5-large-v2"})
-
-        try:
-            _embedding_model = SentenceTransformer("intfloat/e5-large-v2")
-            dimensions = _embedding_model.get_sentence_embedding_dimension()
-
-            logger.info(
-                "Fin-E5 model loaded successfully",
-                extra={"model": "intfloat/e5-large-v2", "dimensions": dimensions},
-            )
-        except Exception as e:
-            error_msg = f"Failed to load Fin-E5 model: {e}"
-            logger.error(
-                "Embedding model loading failed",
-                extra={"model": "intfloat/e5-large-v2", "error": str(e)},
-                exc_info=True,
-            )
-            raise RuntimeError(error_msg) from e
-
-    return _embedding_model
 
 
 async def generate_embeddings(chunks: list[Chunk]) -> list[Chunk]:

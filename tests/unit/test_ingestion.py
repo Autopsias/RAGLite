@@ -16,12 +16,11 @@ from raglite.ingestion.pipeline import (
     create_collection,
     extract_excel,
     generate_embeddings,
-    get_embedding_model,
     ingest_document,
     ingest_pdf,
     store_vectors_in_qdrant,
 )
-from raglite.shared.clients import get_qdrant_client
+from raglite.shared.clients import get_embedding_model, get_qdrant_client
 from raglite.shared.models import Chunk, DocumentMetadata
 
 
@@ -1024,13 +1023,13 @@ class TestGenerateEmbeddings:
         Verifies model is loaded once and reused. AC1.
         """
         # Clear the global embedding model cache before testing
-        import raglite.ingestion.pipeline as pipeline_module
+        import raglite.shared.clients as clients_module
 
-        original_model = pipeline_module._embedding_model
-        pipeline_module._embedding_model = None
+        original_model = clients_module._embedding_model
+        clients_module._embedding_model = None
 
         try:
-            with patch("raglite.ingestion.pipeline.SentenceTransformer") as MockST:
+            with patch("raglite.shared.clients.SentenceTransformer") as MockST:
                 # Mock SentenceTransformer
                 mock_model = Mock()
                 mock_model.get_sentence_embedding_dimension.return_value = 1024
@@ -1047,7 +1046,7 @@ class TestGenerateEmbeddings:
                 MockST.assert_called_once()  # Still only called once
         finally:
             # Restore original model state
-            pipeline_module._embedding_model = original_model
+            clients_module._embedding_model = original_model
 
     @pytest.mark.asyncio
     async def test_generate_embeddings_logging(self, caplog):

@@ -24,9 +24,9 @@
 
 **Current Phase:** 4-Implementation (Epic 1 - Foundation & Accurate Retrieval)
 
-**Current Workflow:** story-approved (Story 1.6) - Complete
+**Current Workflow:** story-approved (Story 1.7) - Complete
 
-**Overall Progress:** ~40% (Epic 1 in progress, Story 1.6 complete, Story 1.7 ready for implementation)
+**Overall Progress:** ~50% (Epic 1 in progress, Story 1.7 approved and complete)
 
 ---
 
@@ -114,18 +114,18 @@
 **Current Epic:** Epic 1 - Foundation & Accurate Retrieval
 
 **Story Queue:**
-- BACKLOG: Stories 1.8+ (remaining Epic 1 stories)
-- TODO: Story 1.8 (next story to draft)
-- IN PROGRESS: Story 1.7 (Vector Similarity Search & Retrieval - ready for implementation)
-- DONE: Stories 1.1-1.6 completed (6 stories)
+- BACKLOG: Stories 1.9+ (remaining Epic 1 stories)
+- TODO: Story 1.9+ (next stories to draft)
+- IN PROGRESS: Story 1.8 (Source Attribution & Citation Generation - next to draft)
+- DONE: Stories 1.1-1.7 completed (7 stories)
 
 ---
 
 ## What to do next
 
-**Recommended Next Action:** Implement Story 1.7 (Vector Similarity Search & Retrieval)
+**Recommended Next Action:** Draft Story 1.8 (Source Attribution & Citation Generation)
 
-**Current Context:** Story 1.6 complete (all follow-ups addressed), Story 1.7 moved to IN PROGRESS and ready for implementation
+**Current Context:** Story 1.7 approved and complete. All 10 acceptance criteria met, 67/67 unit tests passing. Vector similarity search implementation ready for Story 1.8 to consume.
 
 **Next Steps:**
 
@@ -171,11 +171,30 @@
    - Story moved: IN PROGRESS → DONE
    - Story 1.7 moved: TODO → IN PROGRESS
 
-7. **⏭️ Implement Story 1.7** (RECOMMENDED NEXT)
-   - Story: Vector Similarity Search & Retrieval
-   - Status: Ready for implementation
-   - Command: `bmad dev dev-story` or `*develop`
-   - This will implement semantic search and LLM synthesis
+7. **✅ Draft Story 1.7** COMPLETED
+   - Story file created: `/docs/stories/story-1.7.md`
+   - 10 acceptance criteria, 7 task groups, 34 subtasks
+   - Covers: query embedding generation, vector similarity search, metadata filtering, accuracy validation
+   - Performance targets: p50 <5s, p95 <15s (Week 0 baseline: 0.83s)
+   - Accuracy target: 70%+ baseline by Week 2 end (toward 90%+ by Week 5)
+
+8. **✅ Review Story 1.7** COMPLETED
+   - Story 1.7 marked ready for development via `story-ready` workflow
+   - Status updated: Draft → Ready
+   - Moved from TODO → IN PROGRESS
+   - Story 1.8 moved from BACKLOG → TODO
+
+9. **✅ Generate Story Context XML for Story 1.7** COMPLETED
+   - Context file created: `/docs/stories/story-context-1.7.xml`
+   - Includes: 5 documentation artifacts, 8 code references, 6 dependencies, 7 constraints, 6 interfaces, 12 test ideas
+   - Comprehensive implementation guidance for DEV agent
+   - Story file updated with context reference
+
+10. **⏭️ Implement Story 1.7** (RECOMMENDED NEXT)
+   - Implement vector similarity search and retrieval
+   - Command: `bmad dev dev-story` or load DEV agent
+   - Will create `raglite/retrieval/search.py` with search logic
+   - Context XML provides complete guidance: existing code patterns, interfaces to reuse, constraints to follow
 
 **Quick Actions:**
 - **Check status:** Run `workflow-status` from any agent
@@ -195,6 +214,78 @@
 - File will be updated as you complete stories and epics
 
 ### Decisions Log
+
+**2025-10-13 - Story 1.7 Approved and Marked Done**
+- Completed `story-approved` workflow for Story 1.7 (Vector Similarity Search & Retrieval)
+- Approved by DEV agent (Ricardo)
+- **Review Summary:**
+  - All 10 acceptance criteria fully met
+  - 67/67 unit tests passing (11 new retrieval tests, 0 regressions)
+  - 6 integration tests implemented (end-to-end, accuracy, performance, metadata)
+  - Code quality excellent (follows all project patterns)
+  - Architecture compliant (no over-engineering, direct SDK usage)
+  - Module sizes: search.py (181 lines), test_retrieval.py (376 lines), test_retrieval_integration.py (344 lines)
+- **Story Status:** Ready for Review → Done
+- **Queue Updates:**
+  - Story 1.7: IN PROGRESS → DONE
+  - Story 1.8: TODO → IN PROGRESS (ready for drafting)
+- **Progress:** 49% → 50%
+- **Next Action:** Draft Story 1.8 (Source Attribution & Citation Generation)
+
+**2025-10-13 - Story 1.7 Implementation Complete**
+- Completed `dev-story` workflow for Story 1.7 (Vector Similarity Search & Retrieval)
+- All 7 tasks implemented (34 subtasks): query embedding generation, vector similarity search, metadata filtering, result validation, error handling, unit tests (11), integration tests (6)
+- Files created: `raglite/retrieval/search.py` (~180 lines), `tests/unit/test_retrieval.py` (~500 lines), `tests/integration/test_retrieval_integration.py` (~350 lines)
+- Files modified: `raglite/shared/clients.py` (added `get_embedding_model()` singleton), `raglite/shared/models.py` (added QueryResult/Request/Response models), `raglite/ingestion/pipeline.py` (updated imports), `tests/unit/test_ingestion.py` (updated imports)
+- All 10 acceptance criteria met
+- Test results: 67/67 unit tests passing (11 new retrieval tests), 6 integration tests implemented
+- Story status: Ready for Review
+- Next Action: User reviews implementation, runs `story-approved` when satisfied with implementation
+
+**2025-10-13 - Story Context Generated for Story 1.7**
+- Completed `story-context` workflow for Story 1.7 (Vector Similarity Search & Retrieval)
+- Context file: `/docs/stories/story-context-1.7.xml`
+- **Content Summary:**
+  - 5 documentation artifacts (PRD, Tech Spec, Architecture, Coding Standards, CLAUDE.md)
+  - 8 code references (shared/clients.py singletons, shared/models.py QueryResult/Request/Response, ingestion/pipeline.py storage patterns)
+  - 6 Python dependencies (qdrant-client, sentence-transformers, pydantic, pytest suite)
+  - 7 constraints (no custom wrappers, reuse singletons, follow Stories 1.2-1.6 patterns, metadata preservation critical)
+  - 6 interfaces (get_qdrant_client, get_embedding_model, query_points, QueryResult/Request/Response models)
+  - Testing standards: pytest + pytest-asyncio, mock-based unit tests, integration tests with real Qdrant
+  - 12 test ideas: 8 unit tests + 4 integration tests mapped to acceptance criteria
+- **Story file updated:** Context reference added to Dev Agent Record section
+- **Progress:** 43% → 44%
+- **Next Action:** Load DEV agent and run `dev-story` workflow to implement Story 1.7
+
+**2025-10-13 - Story 1.7 Marked Ready for Development**
+- Completed `story-ready` workflow for Story 1.7 (Vector Similarity Search & Retrieval)
+- Approved by SM agent (Bob)
+- **Status Change:** Draft → Ready
+- **Queue Updates:**
+  - Story 1.7: TODO → IN PROGRESS (ready for implementation)
+  - Story 1.8: BACKLOG → TODO (next to draft: Source Attribution & Citation Generation)
+- **Progress:** 42% → 43%
+- **Next Action:** Generate story context XML via `story-context` workflow, then implement story
+
+**2025-10-13 - Story 1.7 Drafted**
+- Completed `create-story` workflow for Story 1.7 (Vector Similarity Search & Retrieval)
+- Story file: `/docs/stories/story-1.7.md`
+- Status: Draft (needs review via `story-ready` command)
+- **Acceptance Criteria:** 10 (including critical metadata validation and p50/p95 performance tracking)
+- **Tasks:** 7 task groups with 34 subtasks
+- **Key Features:**
+  - Query embedding generation using Fin-E5 model (reuse Story 1.5 singleton)
+  - Qdrant vector similarity search with query_points() API
+  - Metadata filtering support (source_document, page_number)
+  - Result validation (page_number, source_document required for Story 1.8)
+  - Performance tracking: p50 <5s, p95 <15s (Week 0 baseline: 0.83s)
+  - Accuracy validation: 70%+ baseline target by Week 2 end
+- **Test Strategy:** 8 unit tests + 4 integration tests (accuracy, performance, metadata preservation)
+- **Performance Targets:** p50 <5s, p95 <15s (NFR13)
+- **Accuracy Target:** 70%+ retrieval accuracy by Week 2 end (toward 90%+ by Week 5 per NFR6)
+- **Dependencies:** Story 1.5 (embedding generation) complete ✓, Story 1.6 (Qdrant storage) complete ✓
+- **Blocks:** Story 1.8 (Source Attribution & Citation Generation), Story 1.10 (Natural Language Query Tool)
+- **Next Action:** Review story via `story-ready` workflow, then generate story context XML
 
 **2025-10-13 - Story 1.6 Approved and Marked Done**
 - Completed `story-approved` workflow for Story 1.6 (Qdrant Vector Database Setup & Storage)
