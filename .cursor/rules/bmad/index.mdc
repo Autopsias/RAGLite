@@ -38,7 +38,6 @@ BMAD rules have been installed to: `.cursor/rules/bmad/`
 - @bmad/bmm/agents/game-designer - game-designer
 - @bmad/bmm/agents/game-dev - game-dev
 - @bmad/bmm/agents/pm - pm
-- @bmad/bmm/agents/po - po
 - @bmad/bmm/agents/sm - sm
 - @bmad/bmm/agents/tea - tea
 - @bmad/bmm/agents/ux-expert - ux-expert

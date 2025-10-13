@@ -10,6 +10,10 @@
 - Path: `bmad/bmm/workflows/1-analysis/brainstorm-project/workflow.yaml`
 - Facilitate project brainstorming sessions by orchestrating the CIS brainstorming workflow with project-specific context and guidance.
 
+**document-project**
+- Path: `bmad/bmm/workflows/1-analysis/document-project/workflow.yaml`
+- Analyzes and documents brownfield projects by scanning codebase, architecture, and patterns to create comprehensive reference documentation for AI-assisted development
+
 **game-brief**
 - Path: `bmad/bmm/workflows/1-analysis/game-brief/workflow.yaml`
 - Interactive game brief creation workflow that guides users through defining their game vision with multiple input sources and conversational collaboration
@@ -21,6 +25,10 @@
 **research**
 - Path: `bmad/bmm/workflows/1-analysis/research/workflow.yaml`
 - Adaptive research workflow supporting multiple research types: market research, deep research prompt generation, technical/architecture evaluation, competitive intelligence, user research, and domain analysis
+
+**workflow-status**
+- Path: `bmad/bmm/workflows/1-analysis/workflow-status/workflow.yaml`
+- Universal entry point for BMM workflows. Checks for existing workflow status, displays current state, suggests next actions, or helps plan new workflow. Can be invoked by any agent (bmad-master, analyst, pm) to understand where the project is and what to do next.
 
 **gdd**
 - Path: `bmad/bmm/workflows/2-plan/gdd/workflow.yaml`
@@ -74,9 +82,17 @@
 - Path: `bmad/bmm/workflows/4-implementation/review-story/workflow.yaml`
 - Perform a Senior Developer Review on a completed story flagged Ready for Review, leveraging story-context, epic tech-spec, repo docs, MCP servers for latest best-practices, and web search as fallback. Appends structured review notes to the story.
 
+**story-approved**
+- Path: `bmad/bmm/workflows/4-implementation/story-approved/workflow.yaml`
+- Marks a story as done (DoD complete) and moves it from IN PROGRESS → DONE in the status file. Advances the story queue. Simple status-update workflow with no searching required.
+
 **story-context**
 - Path: `bmad/bmm/workflows/4-implementation/story-context/workflow.yaml`
 - Assemble a dynamic Story Context XML by pulling latest documentation and existing code/library artifacts relevant to a drafted story
+
+**story-ready**
+- Path: `bmad/bmm/workflows/4-implementation/story-ready/workflow.yaml`
+- Marks a drafted story as ready for development and moves it from TODO → IN PROGRESS in the status file. Simple status-update workflow with no searching required.
 
 **testarch-atdd**
 - Path: `bmad/bmm/workflows/testarch/atdd/workflow.yaml`
