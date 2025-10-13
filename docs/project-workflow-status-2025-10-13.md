@@ -24,9 +24,9 @@
 
 **Current Phase:** 4-Implementation (Epic 1 - Foundation & Accurate Retrieval)
 
-**Current Workflow:** story-approved (Story 1.8) - Complete
+**Current Workflow:** story-approved (Story 1.9) - Complete
 
-**Overall Progress:** ~55% (Epic 1 in progress, Story 1.8 complete, 8 stories done)
+**Overall Progress:** ~60% (Epic 1 in progress, Story 1.9 complete, Story 1.10 needs drafting, 9 stories done)
 
 ---
 
@@ -114,18 +114,18 @@
 **Current Epic:** Epic 1 - Foundation & Accurate Retrieval
 
 **Story Queue:**
-- BACKLOG: Stories 1.10+ (remaining Epic 1 stories)
-- TODO: Story 1.10+ (next stories to draft)
-- IN PROGRESS: Story 1.9 (next story - needs drafting)
-- DONE: Stories 1.1-1.8 completed (8 stories)
+- BACKLOG: Stories 1.11-1.12B (remaining Epic 1 stories)
+- TODO: (Empty - Story 1.10 needs drafting)
+- IN PROGRESS: Story 1.10 (Natural Language Query Tool - needs drafting)
+- DONE: Stories 1.1-1.9 completed (9 stories)
 
 ---
 
 ## What to do next
 
-**Recommended Next Action:** Draft Story 1.9 (next Epic 1 story)
+**Recommended Next Action:** Draft Story 1.10 with SM agent
 
-**Current Context:** Story 1.8 completed and marked done. All 8 stories in Epic 1 through story 1.8 are now complete. Next: Continue with Story 1.9 (needs drafting by SM agent).
+**Current Context:** Story 1.9 (MCP Server Foundation & Protocol Compliance) completed successfully. All 10 acceptance criteria met, 141 tests passing, 0 regressions. Next: Draft Story 1.10 (Natural Language Query Tool).
 
 **Next Steps:**
 
@@ -214,6 +214,90 @@
 - File will be updated as you complete stories and epics
 
 ### Decisions Log
+
+**2025-10-13 - Story 1.9 (MCP Server Foundation & Protocol Compliance) Approved and Marked Done**
+- Completed `story-approved` workflow for Story 1.9 (MCP Server Foundation & Protocol Compliance)
+- Approved by DEV agent (Amelia via Claude Code)
+- **Implementation Complete:**
+  - Created raglite/main.py (221 lines) - FastMCP server with 2 MCP tools
+  - Implemented ingest_financial_document and query_financial_documents tools
+  - Integrated Stories 1.2, 1.7, 1.8 functions (ingest_document, search_documents, generate_citations)
+  - Created DocumentProcessingError custom exception
+  - Added structured logging with timing metrics
+  - Created 14 unit tests + 4 integration tests (18 total)
+  - Full test suite: 141 passed, 2 skipped, 0 regressions
+- **All 10 Acceptance Criteria Met:**
+  - AC1: FastMCP server implemented (221 lines) ✓
+  - AC2: MCP protocol compliance validated ✓
+  - AC3: 2 MCP tools exposed (ingest, query) ✓
+  - AC4: Tool schemas with Pydantic models ✓
+  - AC5: Error handling with proper MCP responses ✓
+  - AC6: Server starts via `uv run python -m raglite.main` ✓
+  - AC7: Integration tests validate MCP client ✓
+  - AC8: Structured logging with extra context ✓
+  - AC9: Stories 1.2-1.8 functions integrated ✓
+  - AC10: Standard MCP pattern followed ✓
+- **Code Quality:** 0 architecture violations, follows KISS principle, no custom wrappers
+- **Story Status:** Done
+- **Queue Updates:**
+  - Story 1.9: IN PROGRESS → DONE
+  - Story 1.10: TODO → IN PROGRESS (needs drafting)
+- **Progress:** 59% → 60%
+- **Total Completed:** 9 stories (Stories 1.1-1.9)
+- **Next Action:** Load SM agent and run `create-story` workflow to draft Story 1.10 (Natural Language Query Tool)
+
+**2025-10-13 - Story 1.9 (MCP Server Foundation & Protocol Compliance) Context Generated**
+- Completed `story-context` workflow for Story 1.9
+- **Context File:** `/docs/stories/story-context-1.9.xml`
+- **Context Summary:**
+  - 5 documentation artifacts: Epic 1 PRD, Tech Spec (MCP server reference implementation), CLAUDE.md (KISS constraints), Coding Standards, Story 1.8 (proven patterns)
+  - 6 code artifacts: models.py (QueryRequest, QueryResponse, DocumentMetadata), pipeline.py (ingest_document), search.py (search_documents), attribution.py (generate_citations), logging.py (get_logger), config.py (settings)
+  - 7 constraints: KISS principle (no custom wrappers), tech stack locked (fastmcp==2.12.4), follow Stories 1.2-1.8 patterns, standard MCP pattern (tools return raw chunks), error handling (DocumentProcessingError, QueryError), ~200 lines target, MCP protocol compliance
+  - 5 interfaces to reuse: ingest_document, search_documents, generate_citations, @mcp.tool decorator, get_logger
+  - 8 test ideas: 6 unit tests (tool success/error scenarios, logging), 2 integration tests (MCP client discovery/execution)
+  - 3 NFRs: NFR30 (protocol compliance), NFR31 (Claude Desktop integration), NFR32 (structured responses)
+  - 7 implementation notes: integration story (all dependencies complete), use FastMCP SDK exactly as documented, custom exceptions, standard MCP pattern, structured logging, tool schemas from Pydantic, server startup
+- **Story File Updated:** Context reference added to Dev Agent Record section
+- **Progress:** 58% → 59%
+- **Next Action:** Load DEV agent and run `dev-story` workflow to implement Story 1.9
+
+**2025-10-13 - Story 1.9 (MCP Server Foundation & Protocol Compliance) Marked Ready for Development**
+- Completed `story-ready` workflow for Story 1.9 (MCP Server Foundation & Protocol Compliance)
+- Approved by SM agent (Bob)
+- **Review Outcome:** ✅ APPROVED - Story is complete, comprehensive, and production-ready
+- **Status Change:** Draft → Ready
+- **Quality Assessment:**
+  - 10 acceptance criteria (all critical aspects covered)
+  - 7 task groups with 30+ detailed subtasks
+  - Comprehensive Dev Notes with dependencies, architecture context, reference implementation
+  - Test strategy defined (6 unit tests + 2 integration tests)
+  - All dependencies complete (Stories 1.2, 1.7, 1.8)
+  - NFR compliance (NFR30, NFR31, NFR32)
+  - No architecture violations
+- **Queue Updates:**
+  - Story 1.9: TODO → IN PROGRESS (ready for implementation)
+  - Story 1.10: BACKLOG → TODO (next to draft: Natural Language Query Tool)
+- **Progress:** 57% → 58%
+- **Next Action:** Generate story context XML via `story-context` workflow, then implement story with DEV agent
+
+**2025-10-13 - Story 1.9 (MCP Server Foundation & Protocol Compliance) Drafted**
+- Completed `create-story` workflow for Story 1.9 (MCP Server Foundation & Protocol Compliance)
+- Story file: `/docs/stories/story-1.9.md`
+- Status: Draft (needs review via `story-ready` command)
+- **Acceptance Criteria:** 10 (including critical MCP protocol compliance, tool integration, error handling)
+- **Tasks:** 7 task groups with 30+ subtasks
+- **Key Features:**
+  - FastMCP server with 2 tools: `ingest_financial_document`, `query_financial_documents`
+  - Integration of Stories 1.2-1.8 functions (ingest_document, search_documents, generate_citations)
+  - MCP protocol compliance (tool discovery, execution, error responses)
+  - Structured logging with request/response metrics
+  - Standard MCP pattern: tools return raw chunks, LLM client synthesizes answers
+- **Test Strategy:** 6 unit tests + 2 integration tests (tool discovery, query execution)
+- **Module Size:** ~200 lines (raglite/main.py per Tech Spec)
+- **Dependencies:** Stories 1.2-1.8 complete ✓ (ALL functions ready for integration)
+- **Blocks:** Story 1.10 (Natural Language Query Tool), Story 1.11 (Enhanced Chunk Metadata)
+- **Progress:** 55% → 57%
+- **Next Action:** Review story via `story-ready` workflow, then generate story context XML
 
 **2025-10-13 - Story 1.8 (Source Attribution & Citation Generation) Approved and Marked Done**
 - Story status updated: Review Passed → Done

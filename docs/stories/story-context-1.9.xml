@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id="1.9" epic="1" generated="2025-10-13">
+  <metadata>
+    <title>MCP Server Foundation &amp; Protocol Compliance</title>
+    <status>Ready</status>
+    <file>docs/stories/story-1.9.md</file>
+  </metadata>
+
+  <story>
+    <as-a>system</as-a>
+    <i-want>to expose RAGLite capabilities via Model Context Protocol server</i-want>
+    <so-that>Claude Desktop and other MCP clients can discover tools, connect, and interact with the financial knowledge base</so-that>
+  </story>
+
+  <acceptance-criteria>
+    <criterion id="AC1">FastMCP server implemented in `raglite/main.py` (~200 lines per Tech Spec) using FastMCP SDK</criterion>
+    <criterion id="AC2">MCP protocol compliance validated (server initialization, tool discovery, tool execution per MCP spec)</criterion>
+    <criterion id="AC3">Server exposes 2 MCP tools: `ingest_financial_document` and `query_financial_documents`</criterion>
+    <criterion id="AC4">Tool schemas defined with Pydantic models (QueryRequest, DocumentMetadata) for type safety</criterion>
+    <criterion id="AC5">Error handling returns proper MCP error responses (DocumentProcessingError, QueryError)</criterion>
+    <criterion id="AC6">Server starts successfully via `uv run python -m raglite.main` command</criterion>
+    <criterion id="AC7">Integration test validates MCP client can connect, discover tools, and execute queries</criterion>
+    <criterion id="AC8">Server logs requests and responses using structured logging (extra={'tool', 'duration_ms'})</criterion>
+    <criterion id="AC9" critical="true">Integrates Stories 1.2-1.8 functions (ingest_document, search_documents, generate_citations)</criterion>
+    <criterion id="AC10" critical="true">Follows standard MCP pattern: tools return raw chunks, LLM client synthesizes answers</criterion>
+  </acceptance-criteria>
+
+  <artifacts>
+    <documentation>
+      <artifact id="DOC1">
+        <path>docs/prd/epic-1-foundation-accurate-retrieval.md</path>
+        <title>Epic 1 PRD - Story 1.9 Requirements</title>
+        <section>Story 1.9: MCP Server Foundation &amp; Protocol Compliance (lines 266-281)</section>
+        <relevance>Defines acceptance criteria, MCP server requirements, protocol compliance expectations</relevance>
+      </artifact>
+
+      <artifact id="DOC2">
+        <path>docs/tech-spec-epic-1.md</path>
+        <title>Tech Spec Epic 1 - MCP Server Implementation Pattern</title>
+        <section>Section 4.1: MCP Server (raglite/main.py ~200 lines) (lines 142-228)</section>
+        <relevance>Complete reference implementation with code examples for both MCP tools, error handling, logging patterns</relevance>
+      </artifact>
+
+      <artifact id="DOC3">
+        <path>CLAUDE.md</path>
+        <title>Project Coding Constraints &amp; Anti-Over-Engineering Rules</title>
+        <section>Critical Development Constraints (lines 10-55)</section>
+        <relevance>MUST follow KISS principle, NO custom wrappers, use SDKs directly, locked technology stack</relevance>
+      </artifact>
+
+      <artifact id="DOC4">
+        <path>docs/architecture/coding-standards.md</path>
+        <title>RAGLite Coding Standards</title>
+        <section>Type Hints, Docstrings, Structured Logging, Async/Await Patterns</section>
+        <relevance>Mandatory coding patterns for all RAGLite development (Google-style docstrings, type hints, structured logging with extra={})</relevance>
+      </artifact>
+
+      <artifact id="DOC5">
+        <path>docs/stories/story-1.8.md</path>
+        <title>Story 1.8 - Source Attribution (Complete)</title>
+        <section>Dev Notes, Reference Implementation, Patterns</section>
+        <relevance>Shows proven patterns from Stories 1.2-1.8 that Story 1.9 must follow (async/await, error handling, logging)</relevance>
+      </artifact>
+    </documentation>
+
+    <code>
+      <artifact id="CODE1">
+        <path>raglite/shared/models.py</path>
+        <kind>module</kind>
+        <symbol>QueryRequest, QueryResponse, DocumentMetadata</symbol>
+        <lines>0-79</lines>
+        <relevance>Pydantic models for MCP tool request/response validation (AC4). Use these exact models in tool definitions.</relevance>
+      </artifact>
+
+      <artifact id="CODE2">
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>function</kind>
+        <symbol>ingest_document</symbol>
+        <lines>TBD</lines>
+        <relevance>Story 1.2 function to call from ingest_financial_document MCP tool. Returns DocumentMetadata (AC9).</relevance>
+      </artifact>
+
+      <artifact id="CODE3">
+        <path>raglite/retrieval/search.py</path>
+        <kind>function</kind>
+        <symbol>search_documents</symbol>
+        <lines>TBD</lines>
+        <relevance>Story 1.7 function to call from query_financial_documents MCP tool. Returns list[QueryResult] (AC9).</relevance>
+      </artifact>
+
+      <artifact id="CODE4">
+        <path>raglite/retrieval/attribution.py</path>
+        <kind>function</kind>
+        <symbol>generate_citations</symbol>
+        <lines>TBD</lines>
+        <relevance>Story 1.8 function to call from query_financial_documents MCP tool. Adds citations to QueryResult.text (AC9).</relevance>
+      </artifact>
+
+      <artifact id="CODE5">
+        <path>raglite/shared/logging.py</path>
+        <kind>function</kind>
+        <symbol>get_logger</symbol>
+        <lines>TBD</lines>
+        <relevance>Structured logging setup. Use logger.info(..., extra={...}) for all tool operations (AC8).</relevance>
+      </artifact>
+
+      <artifact id="CODE6">
+        <path>raglite/shared/config.py</path>
+        <kind>module</kind>
+        <symbol>settings</symbol>
+        <lines>TBD</lines>
+        <relevance>Pydantic Settings singleton for environment variables (Qdrant URL, Claude API key, etc.).</relevance>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="fastmcp" version="2.12.4" purpose="FastMCP SDK for MCP server implementation (AC1)" />
+        <package name="pydantic" version=">=2.0,&lt;3.0" purpose="Data validation for MCP tool schemas (AC4)" />
+        <package name="pydantic-settings" version=">=2.0,&lt;3.0" purpose="Environment variable configuration" />
+        <package name="asyncio" version=">=3.4.3,&lt;4.0.0" purpose="Async/await support for tool functions" />
+        <package name="httpx" version=">=0.28.1,&lt;1.0.0" purpose="HTTP client for MCP protocol" />
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint id="CONST1" severity="critical">
+      KISS Principle: NO custom wrappers, NO abstract base classes, NO factory patterns. Direct function calls to ingestion/retrieval modules. Story 1.9 is ~200 lines total (per Tech Spec).
+    </constraint>
+
+    <constraint id="CONST2" severity="critical">
+      Technology Stack LOCKED: Only use fastmcp==2.12.4. NO custom MCP libraries, NO alternative frameworks. Check CLAUDE.md if adding ANY dependency.
+    </constraint>
+
+    <constraint id="CONST3" severity="critical">
+      Follow Stories 1.2-1.8 Patterns EXACTLY: Same async/await, same error handling (specific exceptions), same structured logging (extra={}), same type hints, same Google-style docstrings.
+    </constraint>
+
+    <constraint id="CONST4" severity="high">
+      Standard MCP Pattern (AC10): MCP tools return raw QueryResponse with list[QueryResult]. NO answer synthesis in RAGLite. LLM client (Claude Code) synthesizes answers from chunks.
+    </constraint>
+
+    <constraint id="CONST5" severity="high">
+      Error Handling: Create DocumentProcessingError and QueryError exceptions (in shared/exceptions.py or shared/models.py). Use try-except in both tool functions. Log with exc_info=True.
+    </constraint>
+
+    <constraint id="CONST6" severity="medium">
+      Module Size Target: raglite/main.py should be ~200 lines (per Tech Spec reference implementation). If exceeding 250 lines, refactor to extract helper functions.
+    </constraint>
+
+    <constraint id="CONST7" severity="medium">
+      MCP Protocol Compliance (AC2): Server must follow FastMCP conventions. Tool discovery must work. Error responses must be MCP-compliant. Test with Claude Desktop connection.
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface id="IFACE1">
+      <name>ingest_document</name>
+      <kind>function</kind>
+      <signature>async def ingest_document(doc_path: str) -> DocumentMetadata</signature>
+      <source>raglite/ingestion/pipeline.py (Story 1.2)</source>
+      <usage>Call from ingest_financial_document MCP tool. Handles PDF/Excel ingestion. Returns metadata with doc_id, chunk_count, etc.</usage>
+    </interface>
+
+    <interface id="IFACE2">
+      <name>search_documents</name>
+      <kind>function</kind>
+      <signature>async def search_documents(query: str, top_k: int) -> list[QueryResult]</signature>
+      <source>raglite/retrieval/search.py (Story 1.7)</source>
+      <usage>Call from query_financial_documents MCP tool. Performs vector search in Qdrant. Returns list of QueryResult objects sorted by score.</usage>
+    </interface>
+
+    <interface id="IFACE3">
+      <name>generate_citations</name>
+      <kind>function</kind>
+      <signature>async def generate_citations(results: list[QueryResult]) -> list[QueryResult]</signature>
+      <source>raglite/retrieval/attribution.py (Story 1.8)</source>
+      <usage>Call from query_financial_documents MCP tool AFTER search_documents. Appends formatted citations to QueryResult.text field.</usage>
+    </interface>
+
+    <interface id="IFACE4">
+      <name>@mcp.tool()</name>
+      <kind>decorator</kind>
+      <signature>@mcp.tool()\nasync def tool_name(params: PydanticModel) -> PydanticModel</signature>
+      <source>FastMCP SDK</source>
+      <usage>Decorator for MCP tool definitions. FastMCP handles protocol, validation, tool discovery automatically. Use Pydantic models for request/response.</usage>
+    </interface>
+
+    <interface id="IFACE5">
+      <name>get_logger</name>
+      <kind>function</kind>
+      <signature>def get_logger(name: str) -> logging.Logger</signature>
+      <source>raglite/shared/logging.py</source>
+      <usage>Get structured logger. Use logger.info(..., extra={...}) for all operations. Include extra={'tool', 'query', 'duration_ms'} for tracing.</usage>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest with pytest-asyncio for async test support. Mock external dependencies (ingestion, retrieval functions) in unit tests. Use @pytest.mark.integration for integration tests requiring real MCP client connection. Target 80%+ coverage for main.py logic.
+    </standards>
+
+    <locations>
+      - tests/unit/test_main.py (6 unit tests)
+      - tests/integration/test_mcp_integration.py (2 integration tests)
+    </locations>
+
+    <ideas>
+      <test id="TEST1" ac="AC1,AC3,AC6">
+        Test: test_mcp_server_initialization - Server starts successfully, exposes 2 tools (ingest_financial_document, query_financial_documents)
+      </test>
+
+      <test id="TEST2" ac="AC3,AC4,AC5">
+        Test: test_ingest_tool_success - Mock ingest_document, call ingest_financial_document tool, verify DocumentMetadata returned
+      </test>
+
+      <test id="TEST3" ac="AC3,AC4,AC5">
+        Test: test_ingest_tool_file_not_found - Mock ingest_document to raise exception, verify DocumentProcessingError raised with proper MCP error format
+      </test>
+
+      <test id="TEST4" ac="AC3,AC4,AC5,AC9">
+        Test: test_query_tool_success - Mock search_documents and generate_citations, call query_financial_documents tool, verify QueryResponse with cited results
+      </test>
+
+      <test id="TEST5" ac="AC3,AC4,AC5">
+        Test: test_query_tool_invalid_query - Call query_financial_documents with empty query, verify proper error handling
+      </test>
+
+      <test id="TEST6" ac="AC8">
+        Test: test_structured_logging - Verify logger.info called with extra={'tool', 'query', 'duration_ms'} for both tools
+      </test>
+
+      <test id="TEST7" ac="AC2,AC7" integration="true">
+        Test: test_mcp_client_tool_discovery - Real MCP client connects, discovers 2 tools, validates tool schemas match MCP spec
+      </test>
+
+      <test id="TEST8" ac="AC2,AC7,AC9,AC10" integration="true">
+        Test: test_mcp_client_query_execution - Real MCP client executes query_financial_documents with real Qdrant, receives QueryResponse with citations, validates standard MCP pattern
+      </test>
+    </ideas>
+  </tests>
+
+  <implementation-notes>
+    <note priority="critical" ac="AC9">
+      Story 1.9 is an INTEGRATION story. All dependencies (Stories 1.2, 1.7, 1.8) are COMPLETE. Import and call their functions directly. NO reimplementation. Test end-to-end integration.
+    </note>
+
+    <note priority="critical" ac="AC1,AC2">
+      Use FastMCP SDK EXACTLY as documented. Reference implementation in Tech Spec (lines 154-213) shows complete pattern. Copy structure, adapt for error handling and logging.
+    </note>
+
+    <note priority="high" ac="AC5">
+      Custom Exceptions: Create DocumentProcessingError and QueryError exceptions. Add to raglite/shared/exceptions.py or raglite/shared/models.py. Use in try-except blocks.
+    </note>
+
+    <note priority="high" ac="AC10">
+      Standard MCP Pattern: Tools return raw data (DocumentMetadata, QueryResponse). NO LLM synthesis in RAGLite. Claude Code (LLM client) synthesizes answers from QueryResult chunks.
+    </note>
+
+    <note priority="medium" ac="AC8">
+      Structured Logging: Every tool operation must log with extra={}. Example: logger.info("Query received", extra={"query": request.query, "top_k": request.top_k})
+    </note>
+
+    <note priority="medium" ac="AC3,AC4">
+      Tool Schemas: Use existing Pydantic models (QueryRequest, QueryResponse, DocumentMetadata). FastMCP auto-generates tool schemas from type hints. No manual schema definition needed.
+    </note>
+
+    <note priority="low" ac="AC6">
+      Server Startup: Use `uv run python -m raglite.main` to start server. FastMCP handles protocol, no custom startup code needed beyond `mcp = FastMCP("RAGLite")`.
+    </note>
+  </implementation-notes>
+
+  <nfrs>
+    <nfr id="NFR30">MCP protocol compliance - Server must follow Model Context Protocol spec for tool discovery, execution, error responses</nfr>
+    <nfr id="NFR31">Claude Desktop integration - Server must be discoverable and connectable by Claude Desktop and other MCP clients</nfr>
+    <nfr id="NFR32">Structured tool responses - QueryResponse must include comprehensive metadata (page_number, source_document, citations) for LLM synthesis</nfr>
+  </nfrs>
+
+  <risks>
+    <risk id="RISK1" severity="medium">
+      Integration complexity: Story 1.9 integrates 3 modules (ingestion, retrieval, attribution). Ensure import paths correct, function signatures match, error handling propagates properly.
+    </risk>
+
+    <risk id="RISK2" severity="low">
+      MCP protocol compliance: FastMCP SDK handles protocol, but manual testing with Claude Desktop required to validate tool discovery and execution work correctly.
+    </risk>
+  </risks>
+
+  <completion-criteria>
+    <criterion>All 10 acceptance criteria met with evidence</criterion>
+    <criterion>8+ tests passing (6 unit + 2 integration)</criterion>
+    <criterion>raglite/main.py created (~200 lines)</criterion>
+    <criterion>Custom exceptions created (DocumentProcessingError, QueryError)</criterion>
+    <criterion>Manual test: Claude Desktop can connect and execute query tool</criterion>
+    <criterion>Code review: No architecture violations (KISS principle, no custom wrappers)</criterion>
+  </completion-criteria>
+</story-context>
