@@ -4,14 +4,18 @@ Extracts text, tables, and page numbers from financial documents with high accur
 """
 
 import time
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
 import openpyxl
 import pandas as pd
 from docling.document_converter import DocumentConverter
+from qdrant_client.models import Distance, PointStruct, VectorParams
 from sentence_transformers import SentenceTransformer
 
+from raglite.shared.clients import get_qdrant_client
+from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 from raglite.shared.models import Chunk, DocumentMetadata
 
@@ -21,6 +25,12 @@ logger = get_logger(__name__)
 # Exception classes
 class EmbeddingGenerationError(Exception):
     """Raised when embedding generation fails."""
+
+    pass
+
+
+class VectorStorageError(Exception):
+    """Raised when vector storage to Qdrant fails."""
 
     pass
 
@@ -167,6 +177,222 @@ async def generate_embeddings(chunks: list[Chunk]) -> list[Chunk]:
     )
 
     return chunks
+
+
+def create_collection(
+    collection_name: str = "financial_docs",
+    vector_size: int = 1024,
+    distance: Distance = Distance.COSINE,
+) -> None:
+    """Create Qdrant collection if it doesn't exist.
+
+    Checks for existing collection before creation to ensure idempotency.
+    Configures collection with HNSW indexing (default) for optimal retrieval
+    performance and COSINE distance for semantic similarity.
+
+    Args:
+        collection_name: Name of the collection (default: financial_docs)
+        vector_size: Vector dimension (default: 1024 for Fin-E5)
+        distance: Distance metric (default: COSINE for embeddings)
+
+    Raises:
+        VectorStorageError: If collection creation fails
+
+    Strategy:
+        - Check if collection exists (idempotent operation)
+        - Create with HNSW indexing (default, O(log n) search complexity)
+        - COSINE distance for semantic similarity (best for embeddings)
+        - No manual index configuration needed (Qdrant uses optimal defaults)
+
+    Example:
+        >>> create_collection("financial_docs", vector_size=1024)
+        >>> # Safe to call multiple times - won't error if exists
+        >>> create_collection("financial_docs", vector_size=1024)
+    """
+    client = get_qdrant_client()
+
+    try:
+        # Check if collection exists
+        collections = client.get_collections().collections
+        existing = [c.name for c in collections]
+
+        if collection_name in existing:
+            logger.info(
+                "Collection already exists",
+                extra={"collection": collection_name, "status": "exists"},
+            )
+            return
+
+        # Create collection with HNSW indexing (default)
+        logger.info(
+            "Creating Qdrant collection",
+            extra={
+                "collection": collection_name,
+                "vector_size": vector_size,
+                "distance": distance.name,
+                "indexing": "HNSW (default)",
+            },
+        )
+
+        client.create_collection(
+            collection_name=collection_name,
+            vectors_config=VectorParams(size=vector_size, distance=distance),
+        )
+
+        logger.info("Collection created successfully", extra={"collection": collection_name})
+
+    except Exception as e:
+        logger.error(
+            "Collection creation failed",
+            extra={"collection": collection_name, "error": str(e)},
+            exc_info=True,
+        )
+        raise VectorStorageError(f"Failed to create collection {collection_name}: {e}") from e
+
+
+async def store_vectors_in_qdrant(
+    chunks: list[Chunk], collection_name: str = "financial_docs", batch_size: int = 100
+) -> int:
+    """Store document chunks with embeddings in Qdrant vector database.
+
+    Processes chunks in batches for memory efficiency. Generates unique UUIDs for
+    each point and stores all chunk metadata for retrieval and attribution.
+
+    Args:
+        chunks: List of Chunk objects with embeddings from Story 1.5
+        collection_name: Qdrant collection name (default: financial_docs)
+        batch_size: Vectors per batch (default: 100 for memory efficiency)
+
+    Returns:
+        Number of points successfully stored in Qdrant
+
+    Raises:
+        VectorStorageError: If storage fails
+
+    Strategy:
+        - Ensure collection exists (create if needed)
+        - Batch upload: 100 vectors per batch to prevent memory issues
+        - Generate unique UUID for each point (Qdrant requirement)
+        - Store metadata: chunk_id, text, word_count, source_document, page_number, chunk_index
+        - Validate: points_count == len(chunks) after storage
+        - Performance target: <30 seconds for 300 chunks (AC10)
+
+    Example:
+        >>> chunks = await generate_embeddings(chunks)
+        >>> points_stored = await store_vectors_in_qdrant(chunks)
+        >>> assert points_stored == len(chunks)
+    """
+    start_time = time.time()
+
+    logger.info(
+        "Storing vectors in Qdrant",
+        extra={
+            "chunk_count": len(chunks),
+            "collection": collection_name,
+            "batch_size": batch_size,
+        },
+    )
+
+    if not chunks:
+        logger.warning("No chunks provided for storage", extra={"collection": collection_name})
+        return 0
+
+    # Ensure collection exists
+    create_collection(collection_name, vector_size=settings.embedding_dimension)
+
+    client = get_qdrant_client()
+
+    # Prepare points for upload
+    points = []
+    for chunk in chunks:
+        if not chunk.embedding:
+            logger.warning(
+                "Chunk has no embedding, skipping",
+                extra={"chunk_id": chunk.chunk_id, "collection": collection_name},
+            )
+            continue
+
+        # Calculate word count from content
+        word_count = len(chunk.content.split())
+
+        point = PointStruct(
+            id=str(uuid.uuid4()),
+            vector=chunk.embedding,
+            payload={
+                "chunk_id": chunk.chunk_id,
+                "text": chunk.content,
+                "word_count": word_count,
+                "source_document": chunk.metadata.filename,
+                "page_number": chunk.page_number,
+                "chunk_index": chunk.chunk_index,  # Use explicit field from Chunk model
+            },
+        )
+        points.append(point)
+
+    if not points:
+        logger.warning(
+            "No valid chunks with embeddings to store", extra={"collection": collection_name}
+        )
+        return 0
+
+    # Upload in batches
+    total_batches = (len(points) + batch_size - 1) // batch_size
+
+    try:
+        for i in range(0, len(points), batch_size):
+            batch_num = (i // batch_size) + 1
+            batch_points = points[i : i + batch_size]
+
+            logger.info(
+                f"Uploading batch {batch_num}/{total_batches}",
+                extra={
+                    "batch_num": batch_num,
+                    "batch_size": len(batch_points),
+                    "total_batches": total_batches,
+                    "collection": collection_name,
+                },
+            )
+
+            client.upsert(collection_name=collection_name, points=batch_points)
+
+        # Verify storage (critical validation for AC9)
+        collection_info = client.get_collection(collection_name)
+        points_stored: int = collection_info.points_count or 0  # Handle None case
+
+        duration_ms = int((time.time() - start_time) * 1000)
+
+        logger.info(
+            "Vector storage complete",
+            extra={
+                "points_stored": points_stored,
+                "collection": collection_name,
+                "duration_ms": duration_ms,
+                "chunks_per_second": round(len(chunks) / (duration_ms / 1000), 2)
+                if duration_ms > 0
+                else 0,
+            },
+        )
+
+        # Critical validation: points_count should match chunk_count (AC9)
+        if points_stored < len(chunks):
+            logger.warning(
+                "Storage count mismatch - some chunks may not be stored",
+                extra={
+                    "expected": len(chunks),
+                    "actual": points_stored,
+                    "missing": len(chunks) - points_stored,
+                },
+            )
+
+        return points_stored
+
+    except Exception as e:
+        logger.error(
+            "Vector storage failed",
+            extra={"collection": collection_name, "error": str(e)},
+            exc_info=True,
+        )
+        raise VectorStorageError(f"Failed to store vectors in Qdrant: {e}") from e
 
 
 async def ingest_document(file_path: str) -> DocumentMetadata:
@@ -332,6 +558,20 @@ async def ingest_pdf(file_path: str) -> DocumentMetadata:
 
     # Generate embeddings for chunks (Story 1.5)
     chunks_with_embeddings = await generate_embeddings(chunks)
+
+    # Store vectors in Qdrant (Story 1.6)
+    if chunks_with_embeddings:
+        points_stored = await store_vectors_in_qdrant(
+            chunks_with_embeddings, collection_name=settings.qdrant_collection_name
+        )
+        logger.info(
+            "Vectors stored in Qdrant",
+            extra={
+                "doc_filename": pdf_path.name,
+                "points_stored": points_stored,
+                "collection": settings.qdrant_collection_name,
+            },
+        )
 
     # Update metadata with chunk count
     metadata.chunk_count = len(chunks_with_embeddings)
@@ -530,6 +770,20 @@ async def extract_excel(file_path: str) -> DocumentMetadata:
     if chunks:
         chunks_with_embeddings = await generate_embeddings(chunks)
 
+    # Store vectors in Qdrant (Story 1.6)
+    if chunks_with_embeddings:
+        points_stored = await store_vectors_in_qdrant(
+            chunks_with_embeddings, collection_name=settings.qdrant_collection_name
+        )
+        logger.info(
+            "Vectors stored in Qdrant",
+            extra={
+                "doc_filename": excel_path.name,
+                "points_stored": points_stored,
+                "collection": settings.qdrant_collection_name,
+            },
+        )
+
     # Update metadata with chunk count
     metadata.chunk_count = len(chunks_with_embeddings)
 
@@ -635,6 +889,7 @@ async def chunk_document(
             content=full_text.strip(),
             metadata=doc_metadata,
             page_number=estimated_page,
+            chunk_index=0,
             embedding=[],
         )
         logger.info(
@@ -672,6 +927,7 @@ async def chunk_document(
             content=chunk_text,
             metadata=doc_metadata,
             page_number=estimated_page,
+            chunk_index=chunk_index,
             embedding=[],  # Populated later by Story 1.5
         )
         chunks.append(chunk)

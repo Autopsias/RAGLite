@@ -30,6 +30,7 @@ class Chunk(BaseModel):
     content: str = Field(..., description="Chunk text content")
     metadata: DocumentMetadata = Field(..., description="Parent document metadata")
     page_number: int = Field(default=0, description="Page number where chunk appears")
+    chunk_index: int = Field(default=0, description="Sequential chunk index (0-based)")
     embedding: list[float] = Field(default_factory=list, description="Semantic embedding vector")
 
 

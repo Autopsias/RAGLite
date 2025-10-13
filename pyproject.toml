@@ -225,6 +225,8 @@ module = [
     "docling.*",
     "sentence_transformers.*",
     "qdrant_client.*",
+    "openpyxl.*",
+    "pandas.*",
 ]
 ignore_missing_imports = true
 

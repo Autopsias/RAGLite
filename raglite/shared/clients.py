@@ -3,6 +3,8 @@
 Provides singleton client instances for Qdrant and Claude API.
 """
 
+import time
+
 from anthropic import Anthropic
 from qdrant_client import QdrantClient
 
@@ -12,29 +14,95 @@ from raglite.shared.logging import get_logger
 logger = get_logger(__name__)
 
 
+# Module-level Qdrant client (singleton pattern with connection pooling)
+_qdrant_client: QdrantClient | None = None
+
+
 def get_qdrant_client() -> QdrantClient:
-    """Factory function for Qdrant vector database client.
+    """Lazy-load Qdrant client (singleton pattern with connection pooling and retry logic).
+
+    Creates client on first call and caches it for reuse. Provides connection
+    pooling for efficient resource management across multiple storage operations.
+    Implements exponential backoff retry logic for transient connection failures.
 
     Returns:
-        Configured QdrantClient instance connected to local or cloud Qdrant
+        Cached QdrantClient instance connected to local or cloud Qdrant
 
     Raises:
-        ConnectionError: If Qdrant connection fails
+        ConnectionError: If Qdrant connection fails after all retries
+
+    Note:
+        Connection parameters:
+        - Host: settings.qdrant_host (default: localhost)
+        - Port: settings.qdrant_port (default: 6333)
+        - Timeout: 30 seconds for operation completion
+        - Retry policy: 3 attempts with exponential backoff (1s, 2s, 4s)
 
     Example:
         >>> client = get_qdrant_client()
         >>> client.get_collections()
+        >>> # Subsequent calls return same cached instance
+        >>> same_client = get_qdrant_client()
+        >>> assert client is same_client
     """
-    try:
-        client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
+    global _qdrant_client
+
+    if _qdrant_client is None:
         logger.info(
-            "Qdrant client initialized",
+            "Connecting to Qdrant",
             extra={"host": settings.qdrant_host, "port": settings.qdrant_port},
         )
-        return client
-    except Exception as e:
-        logger.error("Qdrant connection failed", extra={"error": str(e)}, exc_info=True)
-        raise ConnectionError(f"Failed to connect to Qdrant: {e}") from e
+
+        # Retry configuration
+        max_retries = 3
+        retry_delays = [1, 2, 4]  # Exponential backoff: 1s, 2s, 4s
+
+        for attempt in range(max_retries):
+            try:
+                _qdrant_client = QdrantClient(
+                    host=settings.qdrant_host, port=settings.qdrant_port, timeout=30
+                )
+                logger.info(
+                    "Qdrant client connected successfully",
+                    extra={
+                        "host": settings.qdrant_host,
+                        "port": settings.qdrant_port,
+                        "attempt": attempt + 1,
+                    },
+                )
+                break  # Success - exit retry loop
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    delay = retry_delays[attempt]
+                    logger.warning(
+                        f"Qdrant connection failed (attempt {attempt + 1}/{max_retries}), retrying in {delay}s",
+                        extra={
+                            "host": settings.qdrant_host,
+                            "port": settings.qdrant_port,
+                            "attempt": attempt + 1,
+                            "delay_seconds": delay,
+                            "error": str(e),
+                        },
+                    )
+                    time.sleep(delay)
+                else:
+                    logger.error(
+                        f"Qdrant connection failed after {max_retries} attempts",
+                        extra={
+                            "host": settings.qdrant_host,
+                            "port": settings.qdrant_port,
+                            "error": str(e),
+                        },
+                        exc_info=True,
+                    )
+                    raise ConnectionError(
+                        f"Failed to connect to Qdrant after {max_retries} attempts: {e}"
+                    ) from e
+
+    # Type safety: _qdrant_client is guaranteed to be initialized after the retry loop
+    if _qdrant_client is None:
+        raise ConnectionError("Qdrant client failed to initialize after successful retry loop")
+    return _qdrant_client
 
 
 def get_claude_client() -> Anthropic:
