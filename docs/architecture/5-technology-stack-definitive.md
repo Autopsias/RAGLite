@@ -47,7 +47,8 @@
 
 | Component | Technology | Version | Purpose | Required/Optional | Story |
 |-----------|------------|---------|---------|-------------------|-------|
-| **Hybrid Search** | Qdrant SDK + custom logic | N/A | Combine semantic + keyword search | Required (if Phase 2) | Story 2.1 |
+| **Hybrid Search (BM25)** | rank-bm25 | 0.2.2 | BM25 sparse vectors for keyword search | Required (if Phase 2) | Story 2.1 |
+| **Hybrid Search (Fusion)** | Qdrant SDK + custom logic | N/A | Combine semantic + keyword search | Required (if Phase 2) | Story 2.1 |
 | **Cross-Encoder Re-ranking** | sentence-transformers | ≥2.2,<3.0 | Two-stage retrieval with re-ranking | Required (Story 2.4) | Story 2.4 |
 | **Financial Embeddings (Option 1)** | OpenAI API (text-embedding-3-large) | N/A | SOTA embedding quality ($0.13/1M tokens) | Optional (Story 2.2) | Story 2.2 |
 | **Financial Embeddings (Option 2)** | FinBERT (ProsusAI/finbert) | N/A | Finance-specific embeddings (free, local) | Optional (Story 2.2) | Story 2.2 |
@@ -57,10 +58,13 @@
 **Phase 2 Technology Notes:**
 
 1. **Hybrid Search (Story 2.1):**
-   - No new dependencies required
-   - Uses existing Qdrant SDK for vector search
-   - Custom Python logic for keyword extraction and score fusion
-   - Minimal complexity, high impact (+5-10% accuracy)
+   - **NEW DEPENDENCY APPROVED (2025-10-16):** `rank-bm25` library for BM25 implementation
+   - Apache 2.0 license, industry-standard (1,800+ GitHub stars)
+   - Used by major AI projects: camel-ai, MetaGPT, mem0ai, crawl4ai
+   - BM25 parameters tuned for financial documents (k1=1.7, b=0.6)
+   - Weighted sum fusion (alpha=0.7: 70% semantic, 30% BM25)
+   - Expected impact: +15-20% retrieval accuracy
+   - Latency impact: +70-150ms (well within NFR13 budget)
 
 2. **Cross-Encoder (Story 2.4):**
    - Requires: `sentence-transformers` library

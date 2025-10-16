@@ -24,9 +24,9 @@
 
 **Current Phase:** 4-Implementation (Epic 1 - Foundation & Accurate Retrieval)
 
-**Current Workflow:** story-context (Story 1.15B) - Complete
+**Current Workflow:** Epic 1 Complete - Ready for Epic 2 Implementation
 
-**Overall Progress:** ~96.0% (Epic 1: Story 1.15B context generated, ready for DEV implementation after Story 1.15)
+**Overall Progress:** ~98.0% (Epic 1: ALL 17 stories complete, Decision Gate executed - Epic 2 required)
 
 ---
 
@@ -114,11 +114,10 @@
 **Current Epic:** Epic 1 - Foundation & Accurate Retrieval
 
 **Story Queue:**
-- BACKLOG: Epic 2 (Stories 2.1-2.6) - CONDITIONAL on Story 1.15B baseline results
-- TODO: Story 1.15 (Table Extraction Fix) - Ready for development (2-3 hours)
-- TODO: Story 1.15B (Baseline Validation) - Ready for development after 1.15 (1.5 hours)
-- IN PROGRESS: (None - Story 1.15A complete, ready for Story 1.15)
-- DONE: Stories 1.1-1.14 + Story 1.15A completed and approved (15 stories)
+- BACKLOG: Epic 2 (Stories 2.1-2.6) - ACTIVATED per Decision Gate Path 3
+- TODO: Epic 2 Stories 2.1 (Hybrid Search) + 2.2 (Financial Embeddings) - Prioritized for parallel implementation
+- IN PROGRESS: (None - Epic 1 complete)
+- DONE: Stories 1.1-1.15B completed and approved (17 stories - Epic 1 COMPLETE)
 
 #### IN PROGRESS (Approved for Development)
 
@@ -141,49 +140,49 @@
 
 | Story ID | File | Completed Date | Notes |
 | -------- | ---- | -------------- | ----- |
+| 1.15B | story-1.15B-baseline-validation.md | 2025-10-16 | Baseline Validation & Decision Gate (Path 3: Epic 2 required) |
+| 1.15 | story-1.15-table-extraction-fix.md | 2025-10-16 | Table Extraction Fix (TableItem handling, 321 chunks) |
+| 1.15A | story-1.15A.md | 2025-10-14 | PDF Ingestion Completion & Root Cause Analysis |
 | 1.14 | story-1.14-fix-ground-truth-test-set.md | 2025-10-14 | Fix Ground Truth Test Set (NEW ground truth created) |
 | 1.13 | story-1.13.md | 2025-10-13 | Fix Page Number Attribution Bug |
 | 1.12A | 1.12A.ground-truth-test-set-creation.md | 2025-10-13 | Ground Truth Test Set Creation (50 questions) |
 | 1.12B | story-1.12B.md | 2025-10-13 | Continuous Accuracy Tracking & Final Validation |
 | 1.1-1.11 | (various) | 2025-10-13 | All Epic 1 core stories |
 
-**Total completed:** 14 stories
+**Total completed:** 17 stories (Epic 1 COMPLETE)
 
 ---
 
 ## What to do next
 
-**Recommended Next Action:** Implement Story 1.15A (HIGH) - PDF Ingestion Completion & Quick Diagnostic
+**🎉 EPIC 1 COMPLETE - Decision Gate Executed**
 
-**Current Context:** Story 1.15A is ready for implementation. This is a quick diagnostic story (1-1.5 hours) to complete PDF ingestion and identify root cause of 0% accuracy before full validation in Story 1.15.
+**Recommended Next Action:** Implement Epic 2 Stories 2.1 (Hybrid Search) + 2.2 (Financial Embeddings) in parallel
 
-**Story 1.15A Objectives:**
-- ✅ Complete PDF ingestion for all 160 pages (currently pages 1-80 only)
-- ✅ Run quick diagnostic on 0% accuracy (3-5 manual queries)
-- ✅ Identify root cause category (test script vs. retrieval vs. keywords)
-- ✅ Document findings and recommend fix approach for Story 1.15
+**Current Context:** Epic 1 baseline validation complete. Decision Gate Path 3 executed: Retrieval accuracy 56% and attribution accuracy 32% require full Epic 2 implementation to meet NFR6 (90%+) and NFR7 (95%+) targets.
 
-**Prerequisites:**
-- ✅ Story 1.13 (page extraction fix) - COMPLETE
-- ✅ Story 1.14 (NEW ground truth created) - COMPLETE
-- ✅ Story context XML generated - COMPLETE
+**Epic 1 Completion Summary:**
+- ✅ 17 stories complete (Stories 1.1-1.15B)
+- ✅ Baseline established: 56% retrieval, 32% attribution, p50=33ms, p95=63ms
+- ✅ Table extraction working: 321 chunks with financial data searchable
+- ✅ Decision Gate: Path 3 (Epic 2 full implementation required)
+- ✅ Performance excellent: 99.6% latency budget remaining for Epic 2
 
-**Agent to load:** bmad/bmm/agents/dev.md (Dev Agent - Amelia)
-
-**Command to run:** Run `dev-story` workflow to implement Story 1.15A
-- `/docs/qa/epic-1-root-cause-analysis-20251013.md` - Complete investigation (345 lines)
-- `/docs/stories/story-1.13.md` - Fix implementation story
+**Epic 2 Prioritization (per baseline failure analysis):**
+- **Priority 1:** Story 2.1 (Hybrid Search) - addresses keyword coverage gaps (+15-20% retrieval)
+- **Priority 2:** Story 2.2 (Financial Embeddings) - addresses domain terminology issues (+10-15% retrieval)
+- **Combined Target:** 80-85% retrieval, 50-60% attribution after 2.1+2.2
 
 **Next Steps:**
-1. **Implement Story 1.13 (5-6 hours):**
-   - Create `chunk_by_docling_items()` function with actual page extraction
-   - Update `ingest_pdf()` to use new chunking
-   - Add unit & integration tests
-   - Clear Qdrant and re-ingest with fixed pipeline
-2. **Re-Run Validation:**
-   - Target: 95%+ attribution, 90%+ retrieval
-   - Expected: HALT → GO decision
-3. **Proceed to Phase 3** (if validation passes)
+1. **Run Epic 2 Retrospective** (optional - review Epic 1 learnings before starting Epic 2)
+2. **Draft Story 2.1 (Hybrid Search)** via SM agent `create-story` workflow
+3. **Draft Story 2.2 (Financial Embeddings)** via SM agent `create-story` workflow
+4. **Implement Stories 2.1 + 2.2 in parallel** (estimated 8-12 hours combined)
+5. **Re-validate baseline** after each story to track accuracy improvements
+
+**Agent to load:** bmad/bmm/agents/sm.md (Scrum Master - Bob) to draft Epic 2 stories
+
+**Command to run:** Run `create-story` workflow for Stories 2.1 and 2.2
 
 ---
 
@@ -274,6 +273,146 @@
 - File will be updated as you complete stories and epics
 
 ### Decisions Log
+
+**2025-10-16 - Tech Stack Approval: rank_bm25 Library APPROVED**
+- **Decision Type:** Technology stack addition (Epic 2 Story 2.1 requirement)
+- **Approver:** Ricardo (User)
+- **Library:** rank-bm25 (version 0.2.2 - latest stable)
+- **Purpose:** BM25 sparse vector implementation for hybrid search
+- **License:** Apache 2.0 (compatible with RAGLite)
+- **Justification:**
+  - Industry-standard BM25 library (1,800+ GitHub stars)
+  - Used by major AI projects: camel-ai, MetaGPT, mem0ai, crawl4ai
+  - Full BM25 parameter control (k1=1.7, b=0.6 for financial docs)
+  - Expected: +15-20% retrieval accuracy improvement
+  - KISS-compliant: Direct library usage, no abstractions
+- **Files Updated:**
+  - ✅ `pyproject.toml` - Added rank-bm25==0.2.2 dependency
+  - ✅ `docs/architecture/5-technology-stack-definitive.md` - Added to Phase 2 table
+  - ✅ `docs/epic-2-preparation/tech-stack-approval-request.md` - Marked APPROVED
+- **Impact:**
+  - Latency: +70-150ms (well within NFR13 budget)
+  - Complexity: Minimal (simple API, 3 methods)
+  - Risk: Low (proven library, active maintenance)
+- **Status:** APPROVED - Story 2.1 unblocked
+- **Next Action:** Implement Story 2.1 (Hybrid Search) with rank_bm25
+
+**2025-10-16 - Epic 2 Testing Infrastructure Implemented**
+- **Task Type:** Testing infrastructure implementation (pre-Story 2.1 setup)
+- **Duration:** 2 hours (3 scripts implemented)
+- **Executor:** Test Architect (Murat via Claude Code)
+- **Deliverables:** 3 testing infrastructure scripts
+  1. `scripts/track-epic-2-progress.py` - Incremental accuracy tracking across Epic 2 stories
+  2. `scripts/hybrid-search-diagnostics.py` - BM25 vs semantic score analysis (post-Story 2.1)
+  3. `tests/integration/test_epic2_regression.py` - Regression tests (56%/32% floor, 10s p95 ceiling)
+- **Capabilities:**
+  - **Progress Tracking:** Compare metrics against Epic 1 baseline (56% retrieval, 32% attribution)
+  - **Diagnostics:** Analyze BM25/semantic contributions and recommend fusion alpha parameter
+  - **Regression Prevention:** 4 pytest regression tests (retrieval floor, attribution floor, latency ceiling, hybrid fusion quality)
+- **Validation:**
+  - ✅ All scripts pass Python syntax validation (py_compile)
+  - ✅ `track-epic-2-progress.py --show-only` displays baseline correctly
+  - ✅ `hybrid-search-diagnostics.py` handles pre-Story-2.1 state gracefully (semantic-only mode)
+  - ✅ Regression tests ready for CI/CD integration
+- **Status:** COMPLETE - Ready for Story 2.1 implementation
+- **Next Action:** Await tech stack approval (rank_bm25 decision), then implement Story 2.1
+
+**2025-10-16 - Epic 2 Preparation Sprint Complete**
+- **Sprint Type:** Research & planning sprint (Epic 2 preparation)
+- **Duration:** 12.5 hours (6 tasks completed)
+- **Facilitator:** SM agent (Bob via Claude Code)
+- **Deliverables:** 7 documents created
+  1. BM25 Architecture Decision Record (4-6h research)
+  2. Financial Embedding Model Comparison (2-3h research)
+  3. Tech Stack Approval Request (30min)
+  4. Testing Infrastructure Plan (2h plan)
+  5. Story 2.1 (Hybrid Search) DRAFTED
+  6. Story 2.2 (Financial Embeddings) CONDITIONAL
+  7. Stakeholder Demo Plan (1h)
+- **Key Decisions:**
+  - **BM25 Implementation:** Option A (rank_bm25 library) recommended, Option B (Qdrant built-in) fallback
+  - **Embedding Model:** KEEP Fin-E5 (state-of-the-art 0.7105 FinMTEB), defer Story 2.2
+  - **Story Prioritization:** Story 2.1 HIGH (expected +15-20% improvement), Story 2.2 CONDITIONAL
+- **Blockers Identified:**
+  - BLOCKER 1: Tech stack approval for rank_bm25 (PENDING USER DECISION)
+  - BLOCKER 2: Story 2.1 validation results (determines Story 2.2 need)
+- **Research Sources:** Perplexity AI, Exa AI, GitHub Code Search, ArXiv 2024-2025
+- **Status:** COMPLETE - Ready for Story 2.1 implementation after approval
+- **Next:** Tech stack approval decision, testing infrastructure implementation (2h), stakeholder demo (1h)
+
+**2025-10-16 - Epic 1 Retrospective Complete**
+- **Retrospective Type:** Epic completion review (Epic 1 - Foundation & Accurate Retrieval)
+- **Facilitator:** SM agent (Bob via Claude Code)
+- **Participants:** Amelia (Dev), Winston (Architect), John (PM), Murat (Test Architect)
+- **Retrospective File:** `/docs/retrospectives/epic-1-retro-2025-10-16.md`
+- **Key Findings:**
+  - **What Went Well:** Story Context XML quality, incremental delivery, test-driven development, adaptive problem-solving, performance excellence
+  - **What Could Improve:** Earlier library deep-dive, number format specification, ground truth timing, epic overlap planning
+  - **Critical Lessons:** Format-agnostic design, early validation, decision gates, library data structure inspection, international considerations upfront
+- **Action Items:** 7 total (4 process improvements, 1 documentation, 2 team agreements)
+  - Update architecture templates with international format specifications (Winston)
+  - Refine story estimation guidelines for exploratory stories (Bob)
+  - Document ground truth early pattern for future epics (Murat)
+  - Create Epic 1 lessons learned document (Bob)
+- **Epic 2 Preparation:** 6 preparation tasks identified (12-15 hours total)
+  - BM25 architecture research (Winston + Amelia, 4-6h)
+  - Financial embedding model evaluation (Amelia, 2-3h)
+  - Enhanced accuracy tracking (Murat, 2h)
+  - Epic 2 story drafting (Bob, 2-3h)
+  - Tech stack approval for rank_bm25 if needed (Winston, 30min)
+  - Stakeholder demo (John, 1h)
+- **Critical Path:** 2 blockers (BM25 decision, tech stack approval), 2 dependencies (story context quality, parallel execution)
+- **Team Agreements:** 5 agreements (international formats upfront, validation early, estimation buffers, epic overlap, format-agnostic patterns)
+- **Progress:** 98% (no change - Epic 1 complete, Epic 2 preparation phase)
+- **Next Action:** Execute Epic 2 preparation sprint (1.5-2 days), then draft Stories 2.1+2.2
+
+**2025-10-16 - 🎉 EPIC 1 COMPLETE - All 17 Stories Approved**
+- **Epic Status:** Epic 1 (Foundation & Accurate Retrieval) - COMPLETE
+- **Stories Complete:** 1.1 through 1.15B (17 total stories)
+- **Final Baseline Metrics:**
+  - Retrieval Accuracy: 56.0% (28/50 queries pass)
+  - Attribution Accuracy: 32.0% (16/50 queries pass)
+  - Performance: p50=33.20ms, p95=63.34ms (150x-237x better than NFR13 targets)
+  - Latency Budget Remaining: 99.6% (9,935ms available for Epic 2)
+- **Decision Gate Result:** Path 3 - Epic 2 Full Implementation Required
+  - Retrieval 56% < 85% (29 pp below Path 2 threshold)
+  - Attribution 32% < 93% (61 pp below Path 2 threshold)
+- **Epic 2 Activation:** Stories 2.1 (Hybrid Search) + 2.2 (Financial Embeddings) prioritized
+- **Expected Impact:** +25-35% retrieval, +15-25% attribution after 2.1+2.2 implementation
+- **Progress:** 96% → 98%
+- **Next Action:** Draft Epic 2 stories via SM agent, implement 2.1+2.2 in parallel
+
+**2025-10-16 - Completed story-approved for Story 1.15B (Baseline Validation & Analysis)**
+- Approved by Dev Agent (Amelia via Claude Code) after Senior Developer Review (Ricardo)
+- **Review Outcome:** ✅ APPROVED
+- **All 5 Acceptance Criteria Met:**
+  - AC1: Ingestion quality validated (321 chunks, pages 1-160, table data searchable)
+  - AC2: Full test suite executed (50 queries, 56% retrieval, 32% attribution)
+  - AC3: Failure patterns analyzed (page ranking 32% failure, keyword coverage 44% failure)
+  - AC4: Performance benchmarked (p50/p95 excellent, 99.6% budget remaining)
+  - AC5: Decision Gate executed (Path 3 correctly determined and documented)
+- **Deliverables:** 5 files created/updated (baseline reports, failure analysis, performance benchmarks)
+- **Critical Achievement:** Adaptive number normalization implemented (handles American/European formats)
+- **Technical Excellence:** Format-agnostic validation, comprehensive baseline documentation
+- **Story Status:** Done
+- **Progress:** 97% → 98%
+- **Next Action:** Epic 1 complete, proceed to Epic 2 implementation
+
+**2025-10-16 - Completed story-approved for Story 1.15 (Table Extraction Fix)**
+- Approved by Dev Agent (Amelia via Claude Code)
+- **Review Outcome:** ✅ APPROVED
+- **All 4 Acceptance Criteria Met:**
+  - AC1: Docling table extraction researched (export_to_markdown() identified)
+  - AC2: TableItem handling implemented (15-line fix as predicted)
+  - AC3: PDF re-ingested with table data (321 chunks, "23.2" found in 7 results)
+  - AC4: Diagnostic queries validated (83% success rate, exceeds 50-70% target)
+- **Implementation:** Added TableItem handling in `raglite/ingestion/pipeline.py` (15 lines)
+- **Test Results:** 103/103 passing (100% success, no regressions)
+- **Table Data Extraction:** 5/6 critical values searchable (23.2, 20.3, 29.4, 50.6, EUR/ton)
+- **Architectural Decision:** KEEP Docling (95-98% accuracy), fix code instead of replacing library
+- **Story Status:** Done
+- **Progress:** 96% → 97%
+- **Next Action:** Story 1.15B baseline validation
 
 **2025-10-16 - Completed review-story for Story 1.15B (Baseline Validation & Analysis)**
 - Review performed by Ricardo (AI Developer Agent - Dev Agent persona via review-story workflow)
