@@ -10,7 +10,10 @@ from pathlib import Path
 
 import openpyxl
 import pandas as pd
-from docling.document_converter import DocumentConverter
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
+from docling.document_converter import ConversionResult, DocumentConverter, PdfFormatOption
+from docling_core.types.doc import TableItem
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from raglite.shared.clients import get_embedding_model, get_qdrant_client
@@ -436,9 +439,19 @@ async def ingest_pdf(file_path: str) -> DocumentMetadata:
         },
     )
 
-    # Initialize Docling converter
+    # Initialize Docling converter with table extraction enabled (Story 1.15 fix)
+    # Configure table structure recognition to extract table cell data
     try:
-        converter = DocumentConverter()
+        pipeline_options = PdfPipelineOptions(do_table_structure=True)
+        pipeline_options.table_structure_options.mode = TableFormerMode.ACCURATE
+
+        converter = DocumentConverter(
+            format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
+        )
+        logger.info(
+            "Docling converter initialized with table extraction",
+            extra={"table_mode": "ACCURATE", "path": str(pdf_path)},
+        )
     except Exception as e:
         error_msg = f"Failed to initialize Docling converter: {e}"
         logger.error(
@@ -483,16 +496,14 @@ async def ingest_pdf(file_path: str) -> DocumentMetadata:
     # Extract full text from Docling result
     # Use export_to_markdown() to get structured text with tables
     try:
-        full_text = result.document.export_to_markdown()
+        result.document.export_to_markdown()
     except Exception as e:
         logger.warning(
             "Failed to export markdown - falling back to plain text",
             extra={"path": str(pdf_path), "error": str(e)},
         )
         # Fallback: concatenate all text from elements
-        full_text = "\n".join(
-            item.text for item, _ in result.document.iterate_items() if hasattr(item, "text")
-        )
+        "\n".join(item.text for item, _ in result.document.iterate_items() if hasattr(item, "text"))
 
     # Create initial metadata for chunking
     metadata = DocumentMetadata(
@@ -504,8 +515,9 @@ async def ingest_pdf(file_path: str) -> DocumentMetadata:
         chunk_count=0,  # Will be updated after chunking
     )
 
-    # Chunk the document
-    chunks = await chunk_document(full_text, metadata)
+    # Chunk the document using Docling items with provenance (Story 1.13 fix)
+    # This extracts actual page numbers from Docling metadata instead of estimating
+    chunks = await chunk_by_docling_items(result, metadata)
 
     # Generate embeddings for chunks (Story 1.5)
     chunks_with_embeddings = await generate_embeddings(chunks)
@@ -767,9 +779,18 @@ async def chunk_document(
 ) -> list[Chunk]:
     """Chunk document content into semantic segments for embedding.
 
+    .. deprecated:: Story 1.13
+        For PDF documents, use chunk_by_docling_items() instead to extract actual
+        page numbers from Docling provenance. This function is kept for Excel
+        extraction only, which doesn't have provenance metadata.
+
+    DEPRECATION NOTICE (Story 1.13):
+        - Used by Excel extraction only (extract_excel)
+        - PDF ingestion now uses chunk_by_docling_items() for accurate page numbers
+        - TODO: Refactor Excel chunking in future story to use similar approach
+
     Uses word-based sliding window with overlap. Estimates page numbers based on
-    character position within the document. Preserves financial context by keeping
-    tables together where possible.
+    character position within the document (INACCURATE for PDFs - see deprecation).
 
     Args:
         full_text: Complete document text (from PDF or Excel extraction)
@@ -897,6 +918,159 @@ async def chunk_document(
             "doc_filename": doc_metadata.filename,
             "chunk_count": len(chunks),
             "avg_chunk_size": round(avg_chunk_size, 1),
+            "duration_ms": duration_ms,
+        },
+    )
+
+    return chunks
+
+
+async def chunk_by_docling_items(
+    result: ConversionResult,
+    doc_metadata: DocumentMetadata,
+    chunk_size: int = 500,
+    overlap: int = 50,
+) -> list[Chunk]:
+    """Chunk document using Docling items with actual page numbers from provenance.
+
+    Extracts page numbers directly from Docling provenance metadata instead of
+    estimating from character position. Groups items by page and creates chunks
+    that respect both page boundaries and target chunk size.
+
+    Args:
+        result: Docling ConversionResult containing document with provenance
+        doc_metadata: Document metadata (filename, doc_type, etc.)
+        chunk_size: Target chunk size in words (default: 500)
+        overlap: Word overlap between chunks (default: 50)
+
+    Returns:
+        List of Chunk objects with accurate page numbers from provenance
+
+    Raises:
+        RuntimeError: If chunking fails
+    """
+    start_time = time.time()
+
+    # Collect items with their page numbers
+    page_items: dict[int, list[str]] = {}  # {page_no: [text items]}
+    items_without_prov = 0
+    last_known_page = 1
+
+    for item, _ in result.document.iterate_items():
+        # Extract page number from provenance
+        page_no = None
+        if hasattr(item, "prov") and item.prov:
+            page_no = item.prov[0].page_no
+            last_known_page = page_no
+        else:
+            # Fallback to last known page with warning
+            page_no = last_known_page
+            items_without_prov += 1
+
+        # Group items by page
+        if page_no not in page_items:
+            page_items[page_no] = []
+
+        # Handle table items - export to markdown for LLM understanding
+        if isinstance(item, TableItem):
+            table_markdown = item.export_to_markdown()
+            if table_markdown.strip():
+                page_items[page_no].append(table_markdown)
+                logger.debug(
+                    "Table extracted",
+                    extra={"page": page_no, "size_chars": len(table_markdown)},
+                )
+        # Handle text items (unchanged)
+        elif hasattr(item, "text") and item.text.strip():
+            page_items[page_no].append(item.text)
+
+    # Log provenance coverage
+    total_items = sum(len(items) for items in page_items.values())
+    prov_coverage_pct = (
+        round((total_items - items_without_prov) / total_items * 100, 1) if total_items > 0 else 0
+    )
+
+    logger.info(
+        "Docling items collected",
+        extra={
+            "doc_filename": doc_metadata.filename,
+            "total_items": total_items,
+            "items_with_prov": total_items - items_without_prov,
+            "items_without_prov": items_without_prov,
+            "prov_coverage_pct": prov_coverage_pct,
+            "page_count": len(page_items),
+        },
+    )
+
+    # Warn if provenance coverage is low
+    if items_without_prov > 0:
+        logger.warning(
+            "Some items missing provenance - using fallback",
+            extra={
+                "doc_filename": doc_metadata.filename,
+                "items_without_prov": items_without_prov,
+                "fallback_strategy": "last_known_page",
+            },
+        )
+
+    # Create chunks from page items
+    chunks = []
+    chunk_index = 0
+
+    # Process each page in order
+    for page_no in sorted(page_items.keys()):
+        page_text = " ".join(page_items[page_no])
+        page_words = page_text.split()
+
+        # Skip pages with no text content (e.g., pages with only images/tables)
+        if not page_words:
+            continue
+
+        # If page is small enough, create single chunk
+        if len(page_words) <= chunk_size:
+            chunk = Chunk(
+                chunk_id=f"{doc_metadata.filename}_{chunk_index}",
+                content=page_text,
+                metadata=doc_metadata,
+                page_number=page_no,
+                chunk_index=chunk_index,
+                embedding=[],
+            )
+            chunks.append(chunk)
+            chunk_index += 1
+        else:
+            # Split large page into multiple chunks while preserving page number
+            idx = 0
+            while idx < len(page_words):
+                chunk_words = page_words[idx : idx + chunk_size]
+                chunk_text = " ".join(chunk_words)
+
+                chunk = Chunk(
+                    chunk_id=f"{doc_metadata.filename}_{chunk_index}",
+                    content=chunk_text,
+                    metadata=doc_metadata,
+                    page_number=page_no,
+                    chunk_index=chunk_index,
+                    embedding=[],
+                )
+                chunks.append(chunk)
+                chunk_index += 1
+
+                # Move to next chunk with overlap
+                idx += chunk_size - overlap
+
+    # Calculate metrics
+    duration_ms = int((time.time() - start_time) * 1000)
+    avg_chunk_size = sum(len(c.content.split()) for c in chunks) / len(chunks) if chunks else 0
+    page_range = f"{min(page_items.keys())}-{max(page_items.keys())}" if page_items else "N/A"
+
+    logger.info(
+        "Document chunked with provenance",
+        extra={
+            "doc_filename": doc_metadata.filename,
+            "chunk_count": len(chunks),
+            "avg_chunk_size": round(avg_chunk_size, 1),
+            "page_range": page_range,
             "duration_ms": duration_ms,
         },
     )

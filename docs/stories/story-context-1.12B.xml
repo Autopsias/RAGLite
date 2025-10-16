@@ -1,0 +1,367 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.12B</storyId>
+    <title>Continuous Accuracy Tracking &amp; Final Validation</title>
+    <status>Ready</status>
+    <generatedAt>2025-10-13</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.12B.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>to run continuous accuracy validation throughout Phase 1 and perform final testing in Week 5</iWant>
+    <soThat>I can make data-driven decisions about Phase 2/3 readiness and ensure Epic 1 meets all NFR targets</soThat>
+    <tasks>
+      - Task 1: Create Automated Test Runner Script (scripts/run-accuracy-tests.py ~150 lines)
+      - Task 2: Implement Retrieval Accuracy Calculation (accuracy metrics, failure analysis)
+      - Task 3: Implement Source Attribution Accuracy Validation (attribution metrics, ±1 page tolerance)
+      - Task 4: Capture Performance Metrics (p50, p95 latency tracking)
+      - Task 5: Daily Tracking &amp; Trend Analysis (scripts/daily-accuracy-check.py ~80 lines, early warning system)
+      - Task 6: Generate Week 5 Final Validation Report (GO/NO-GO decision gate)
+      - Task 7: Create Documentation &amp; Usage Guide (README updates, troubleshooting)
+      - Task 8: Integration Tests &amp; CI/CD Integration (pytest tests, GitHub Actions integration)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1" priority="critical">
+      <description>Automated Test Suite: Test suite runs all 50+ queries from Story 1.12A ground truth test set (tests/fixtures/ground_truth.py)</description>
+      <validation>Run `uv run python scripts/run-accuracy-tests.py` and verify all 50+ queries execute successfully</validation>
+    </criterion>
+    <criterion id="2" priority="critical">
+      <description>Retrieval Accuracy Measurement: Calculate % of queries returning correct information (target: ≥90% per NFR6)</description>
+      <validation>Measure accuracy = (queries_with_correct_answer / total_queries) * 100. Target: ≥90%</validation>
+    </criterion>
+    <criterion id="3" priority="critical">
+      <description>Source Attribution Accuracy: Calculate % of citations pointing to correct documents/pages (target: ≥95% per NFR7)</description>
+      <validation>Verify page_number matches expected_page_number (±1 page tolerance) for 95%+ of queries</validation>
+    </criterion>
+    <criterion id="4" priority="high">
+      <description>Performance Metrics: Capture p50 and p95 response times across all test queries (target: p50 &lt;5s, p95 &lt;15s per NFR13)</description>
+      <validation>Calculate p50 and p95 latency using numpy.percentile(). Verify p50 &lt;5000ms, p95 &lt;15000ms</validation>
+    </criterion>
+    <criterion id="5" priority="high">
+      <description>Failure Analysis: Document test results with detailed failure analysis for any inaccurate queries (root cause, expected vs actual results)</description>
+      <validation>Generate JSON report with failure details for each failed query</validation>
+    </criterion>
+    <criterion id="6" priority="high">
+      <description>CLI Executable: Test suite executable via command: `uv run python scripts/run-accuracy-tests.py` (exit code 0 if passing, 1 if failing)</description>
+      <validation>Test CLI: Run command, verify exit codes (0 = pass, 1 = fail), test --subset, --category, --verbose options</validation>
+    </criterion>
+    <criterion id="7" priority="medium">
+      <description>Daily Tracking Report: Generate daily accuracy tracking report showing Week 1-5 trend line (accuracy improvement over time)</description>
+      <validation>Run scripts/daily-accuracy-check.py, verify JSONL log created, trend line generated</validation>
+    </criterion>
+    <criterion id="8" priority="critical">
+      <description>GO/NO-GO Decision Gate: Final Week 5 validation report with decision (GO ≥90%, ACCEPTABLE 80-89%, HALT &lt;80%)</description>
+      <validation>Generate final report, verify decision logic correctly maps accuracy to recommendation</validation>
+    </criterion>
+    <criterion id="9" priority="medium">
+      <description>Weekly Checkpoints: Document weekly accuracy milestones (Week 1-5 progression tracking)</description>
+      <validation>Verify weekly milestone documentation in final report</validation>
+    </criterion>
+    <criterion id="10" priority="high">
+      <description>Early Warning System: If accuracy drops below 70% mid-phase, trigger investigation workflow</description>
+      <validation>Test early warning: Simulate 65% accuracy, verify HALT warning printed with investigation checklist</validation>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/prd/epic-1-foundation-accurate-retrieval.md</path>
+        <title>Epic 1 PRD</title>
+        <section>Story 1.12B Definition (lines 363-409)</section>
+        <snippet>Story 1.12B defines the final validation gate for Epic 1. Includes acceptance criteria, decision gate thresholds (GO ≥90%, ACCEPTABLE 80-89%, HALT &lt;80%), daily tracking strategy, and weekly checkpoints</snippet>
+        <reason>Defines story requirements, NFR targets (NFR6, NFR7, NFR13), decision gate logic</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification</title>
+        <section>NFR Validation Requirements</section>
+        <snippet>NFR6: 90%+ retrieval accuracy. NFR7: 95%+ source attribution accuracy. NFR13: &lt;10s query response time (p50 &lt;5s, p95 &lt;15s)</snippet>
+        <reason>Defines technical requirements and validation thresholds for accuracy testing</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/architecture/testing-strategy.md</path>
+        <title>Testing Strategy</title>
+        <section>Testing Pyramid, E2E Test Coverage</section>
+        <snippet>Story 1.12B IS the E2E test for Epic 1. Validates entire RAG pipeline accuracy. Uses pytest framework for unit/integration tests of test runner itself</snippet>
+        <reason>Defines testing approach and framework standards</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/CLAUDE.md</path>
+        <title>Project Constraints &amp; KISS Principle</title>
+        <section>KISS Principle, No Over-Engineering</section>
+        <snippet>Direct SDK usage only. No custom wrappers, no abstractions beyond simple utility functions. Simple accuracy calculation: (correct_count / total_count) * 100</snippet>
+        <reason>Enforces simplicity constraints for test runner implementation</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/1.12A.ground-truth-test-set-creation.md</path>
+        <title>Story 1.12A - Ground Truth Test Set Creation</title>
+        <section>Full Story (Status: Review Passed)</section>
+        <snippet>Story 1.12A created tests/fixtures/ground_truth.py with 50+ Q&amp;A pairs covering 6 categories (cost_analysis, margins, financial_performance, safety_metrics, workforce, operating_expenses). Difficulty distribution: 40% easy, 40% medium, 20% hard</snippet>
+        <reason>REQUIRED DEPENDENCY - Defines ground truth test set structure and content</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/week-0-spike-report.md</path>
+        <title>Week 0 Integration Spike Report</title>
+        <section>Baseline Accuracy Results</section>
+        <snippet>Week 0 baseline: 15 queries, 73.3% retrieval accuracy, 0.83s average query latency. Established proof of concept for technology stack</snippet>
+        <reason>Provides baseline metrics for comparison and improvement tracking</reason>
+      </artifact>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/tests/fixtures/ground_truth.py</path>
+        <kind>test-data</kind>
+        <symbol>GROUND_TRUTH_QA</symbol>
+        <lines>1-800+</lines>
+        <reason>50+ Q&amp;A pairs for accuracy validation. REQUIRED input for test runner. Structure: [{id, question, expected_answer, expected_keywords, source_document, expected_page_number, expected_section, category, difficulty}, ...]</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/raglite/main.py</path>
+        <kind>mcp-server</kind>
+        <symbol>query_financial_documents</symbol>
+        <lines>80-130</lines>
+        <reason>MCP tool to call for executing queries. Returns QueryResponse with list of QueryResult objects (chunks with metadata: score, text, source_document, page_number, chunk_index, word_count)</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/raglite/shared/models.py</path>
+        <kind>pydantic-models</kind>
+        <symbol>QueryRequest, QueryResponse, QueryResult</symbol>
+        <lines>48-90</lines>
+        <reason>Data models for query requests and responses. QueryResult contains: score, text, source_document, page_number, chunk_index, word_count. Use for parsing returned chunks</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/raglite/retrieval/search.py</path>
+        <kind>retrieval-logic</kind>
+        <symbol>search_documents</symbol>
+        <lines>1-180</lines>
+        <reason>Vector similarity search implementation. Can be imported directly for testing without going through MCP server overhead</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/raglite/retrieval/attribution.py</path>
+        <kind>attribution-logic</kind>
+        <symbol>generate_citations</symbol>
+        <lines>1-95</lines>
+        <reason>Citation generation logic. Used for validating source attribution accuracy (AC3). Appends citations to QueryResult.text field</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/pyproject.toml</path>
+        <kind>dependency-manifest</kind>
+        <symbol>dependencies</symbol>
+        <lines>30-44</lines>
+        <reason>Production dependencies. Test runner only uses Python stdlib (argparse, json, time) + existing pytest infrastructure. NO NEW DEPENDENCIES REQUIRED</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python-stdlib>
+        <package name="argparse" version="stdlib">CLI argument parsing (--subset, --category, --verbose, --output)</package>
+        <package name="json" version="stdlib">Results storage, JSONL log format</package>
+        <package name="time" version="stdlib">Performance timing (time.perf_counter() for latency measurement)</package>
+        <package name="sys" version="stdlib">Exit codes (sys.exit(0) for pass, sys.exit(1) for fail)</package>
+        <package name="random" version="stdlib">Daily subset selection (random.sample() for 10-15 query subset)</package>
+      </python-stdlib>
+      <python-ecosystem>
+        <package name="pytest" version="~8.0">Unit and integration tests for test runner script</package>
+        <package name="pytest-asyncio" version="~0.24.0">Async test support</package>
+        <package name="numpy" version="via sentence-transformers">Percentile calculation for p50, p95 metrics (numpy.percentile())</package>
+      </python-ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint priority="critical">
+      <category>KISS Principle</category>
+      <rule>Direct function calls to query_financial_documents(). NO custom test frameworks, NO abstractions. Simple accuracy calculation: (correct_count / total_count) * 100</rule>
+      <source>CLAUDE.md lines 200-250</source>
+    </constraint>
+    <constraint priority="critical">
+      <category>No New Dependencies</category>
+      <rule>Use ONLY Python stdlib (argparse, json, time, sys, random) + existing pytest/numpy. NO additional packages beyond project dependencies</rule>
+      <source>docs/architecture/tech-stack.md</source>
+    </constraint>
+    <constraint priority="high">
+      <category>Module Size Target</category>
+      <rule>run-accuracy-tests.py: ~150 lines. daily-accuracy-check.py: ~80 lines. Unit tests: ~120 lines. Integration tests: ~80 lines. Total: ~430 lines</rule>
+      <source>Story 1.12B Dev Notes</source>
+    </constraint>
+    <constraint priority="high">
+      <category>NFR Validation Thresholds</category>
+      <rule>NFR6: 90%+ retrieval accuracy (queries returning correct answer). NFR7: 95%+ attribution accuracy (correct page_number ±1). NFR13: p50 &lt;5s, p95 &lt;15s response time</rule>
+      <source>docs/tech-spec-epic-1.md, docs/prd/epic-1-foundation-accurate-retrieval.md</source>
+    </constraint>
+    <constraint priority="high">
+      <category>Decision Gate Logic</category>
+      <rule>GO to Phase 3 if accuracy ≥90%. ACCEPTABLE if 80-89% (proceed with notes). HALT &amp; REASSESS if &lt;80% (consider Phase 2 GraphRAG)</rule>
+      <source>docs/prd/epic-1-foundation-accurate-retrieval.md lines 390-410</source>
+    </constraint>
+    <constraint priority="medium">
+      <category>Attribution Tolerance</category>
+      <rule>Page number validation uses ±1 page tolerance (boundary chunks may span pages). Comparison: abs(actual_page - expected_page) &lt;= 1</rule>
+      <source>Story 1.12B AC3</source>
+    </constraint>
+    <constraint priority="medium">
+      <category>Daily Tracking Frequency</category>
+      <rule>Daily spot checks use 10-15 query subset (random.sample()). Full 50+ query validation only for weekly checkpoints and final Week 5 report</rule>
+      <source>Story 1.12B Task 5</source>
+    </constraint>
+    <constraint priority="medium">
+      <category>Early Warning Threshold</category>
+      <rule>If accuracy drops below 70% mid-phase → Print HALT warning with investigation checklist (Docling extraction, chunking, embeddings, Qdrant params)</rule>
+      <source>Story 1.12B AC10</source>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="query_financial_documents">
+      <kind>async-function</kind>
+      <signature>async def query_financial_documents(request: QueryRequest) -> QueryResponse</signature>
+      <path>raglite/main.py</path>
+      <usage>Import and call directly: `from raglite.main import query_financial_documents; result = await query_financial_documents(QueryRequest(query="...", top_k=5))`</usage>
+    </interface>
+    <interface name="GROUND_TRUTH_QA">
+      <kind>test-data-list</kind>
+      <signature>GROUND_TRUTH_QA: List[dict] = [{id, question, expected_answer, expected_keywords, source_document, expected_page_number, expected_section, category, difficulty}, ...]</signature>
+      <path>tests/fixtures/ground_truth.py</path>
+      <usage>Import: `from tests.fixtures.ground_truth import GROUND_TRUTH_QA`. Iterate over list for test execution</usage>
+    </interface>
+    <interface name="QueryRequest">
+      <kind>pydantic-model</kind>
+      <signature>class QueryRequest(BaseModel): query: str, top_k: int = 5</signature>
+      <path>raglite/shared/models.py</path>
+      <usage>Create request: `req = QueryRequest(query="What was Q3 revenue?", top_k=5)`</usage>
+    </interface>
+    <interface name="QueryResponse">
+      <kind>pydantic-model</kind>
+      <signature>class QueryResponse(BaseModel): results: List[QueryResult], query: str, top_k: int, retrieved_at: datetime</signature>
+      <path>raglite/shared/models.py</path>
+      <usage>Parse response: `response.results` is list of QueryResult objects with chunks</usage>
+    </interface>
+    <interface name="QueryResult">
+      <kind>pydantic-model</kind>
+      <signature>class QueryResult(BaseModel): score: float, text: str, source_document: str, page_number: int, chunk_index: int, word_count: int</signature>
+      <path>raglite/shared/models.py</path>
+      <usage>Access chunk metadata: `result.page_number`, `result.source_document`, `result.text` (includes citation)</usage>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest + pytest-asyncio for unit and integration tests. Co-locate tests in tests/unit/test_validation.py and tests/integration/test_accuracy_validation.py. Mock external dependencies (query_financial_documents) for unit tests. Use real ground truth data for integration tests. Test CLI argument parsing, accuracy calculation, attribution validation, performance metrics calculation, early warning system, decision gate logic. Target: 80%+ test coverage
+    </standards>
+    <locations>
+      - tests/unit/test_validation.py (~120 lines, 8 test functions)
+      - tests/integration/test_accuracy_validation.py (~80 lines, 3 test functions)
+      - scripts/run-accuracy-tests.py (main test runner, ~150 lines, self-contained)
+      - scripts/daily-accuracy-check.py (daily tracker, ~80 lines, calls run-accuracy-tests.py)
+    </locations>
+    <ideas>
+      <test id="1" ac="1,6" type="unit">
+        <description>Test CLI argument parsing (--subset, --category, --verbose, --output)</description>
+        <approach>Mock sys.argv, parse args with argparse, verify correct values extracted</approach>
+      </test>
+      <test id="2" ac="2" type="unit">
+        <description>Test retrieval accuracy calculation with known results (all pass, all fail, 50% pass)</description>
+        <approach>Create mock query results with known correct/incorrect answers, verify accuracy calculation</approach>
+      </test>
+      <test id="3" ac="3" type="unit">
+        <description>Test source attribution validation with ±1 page tolerance</description>
+        <approach>Test cases: exact match, ±1 page (should pass), ±2 pages (should fail), wrong document (should fail)</approach>
+      </test>
+      <test id="4" ac="4" type="unit">
+        <description>Test performance metrics calculation (p50, p95 from latency list)</description>
+        <approach>Create mock latency data [100ms, 200ms, ...], calculate p50/p95 with numpy.percentile(), verify correct values</approach>
+      </test>
+      <test id="5" ac="5" type="unit">
+        <description>Test failure analysis JSON generation</description>
+        <approach>Mock failed queries, generate failure report, verify JSON structure (expected vs actual, root cause hypothesis)</approach>
+      </test>
+      <test id="6" ac="7" type="unit">
+        <description>Test daily tracking log appending (JSONL format)</description>
+        <approach>Simulate daily check, verify JSONL file appended with timestamped entry</approach>
+      </test>
+      <test id="8" ac="8" type="unit">
+        <description>Test decision gate logic mapping (90%+ GO, 80-89% ACCEPTABLE, &lt;80% HALT)</description>
+        <approach>Test with accuracy values: 95% (expect GO), 85% (expect ACCEPTABLE), 75% (expect HALT)</approach>
+      </test>
+      <test id="10" ac="10" type="unit">
+        <description>Test early warning system trigger (&lt;70% accuracy)</description>
+        <approach>Simulate 65% accuracy, verify HALT warning printed with investigation checklist</approach>
+      </test>
+      <test id="11" ac="1,2,3" type="integration">
+        <description>Run test runner on 5-query subset from ground truth</description>
+        <approach>Load real GROUND_TRUTH_QA, sample 5 queries, execute with query_financial_documents(), verify end-to-end flow, check accuracy/attribution calculations</approach>
+      </test>
+      <test id="12" ac="6" type="integration">
+        <description>Test CLI execution with various options</description>
+        <approach>Run `uv run python scripts/run-accuracy-tests.py --subset 5 --verbose`, verify output format, exit codes</approach>
+      </test>
+      <test id="13" ac="7,9" type="integration">
+        <description>Test daily tracking workflow end-to-end</description>
+        <approach>Run scripts/daily-accuracy-check.py, verify JSONL log updated, trend analysis generated</approach>
+      </test>
+    </ideas>
+  </tests>
+
+  <nfrs>
+    <nfr id="NFR6" priority="critical">
+      <description>90%+ retrieval accuracy on 50+ test queries</description>
+      <validation>Run full test suite, calculate accuracy = (correct_answers / total_queries) * 100. Must be ≥90%</validation>
+      <source>docs/prd/epic-1-foundation-accurate-retrieval.md</source>
+    </nfr>
+    <nfr id="NFR7" priority="critical">
+      <description>95%+ source attribution accuracy (correct document, page, section citations)</description>
+      <validation>Validate page_number matches expected_page_number (±1 tolerance) for 95%+ queries</validation>
+      <source>docs/prd/epic-1-foundation-accurate-retrieval.md</source>
+    </nfr>
+    <nfr id="NFR13" priority="high">
+      <description>&lt;10s query response time (p50 &lt;5s, p95 &lt;15s)</description>
+      <validation>Measure latency for all queries, calculate p50 and p95 using numpy.percentile(). Verify p50 &lt;5000ms, p95 &lt;15000ms</validation>
+      <source>docs/prd/epic-1-foundation-accurate-retrieval.md</source>
+    </nfr>
+  </nfrs>
+
+  <implementationNotes priority="high">
+    <note n="1">Story 1.12B is the FINAL VALIDATION GATE for Epic 1. This is the E2E test that validates the entire RAG pipeline meets NFR targets before proceeding to Phase 3</note>
+    <note n="2">CRITICAL DEPENDENCY: Story 1.12A (Ground Truth Test Set Creation) MUST be complete before implementing this story. tests/fixtures/ground_truth.py with 50+ Q&amp;A pairs is REQUIRED input</note>
+    <note n="3">Decision gate logic is critical: GO (≥90%) → Phase 3, ACCEPTABLE (80-89%), HALT (&lt;80%) → Reassess. Final Week 5 report MUST include clear recommendation based on accuracy</note>
+    <note n="4">Daily tracking enables early detection of accuracy regressions. Run daily-accuracy-check.py with 10-15 query subset throughout Weeks 1-5 to catch issues early</note>
+    <note n="5">Module size target is ~430 lines total. Follow KISS principle: direct function calls, simple calculations, no abstractions. Test runner should be a straightforward script with CLI args</note>
+    <note n="6">Attribution validation uses ±1 page tolerance because boundary chunks may span pages. Compare: abs(actual_page - expected_page) &lt;= 1</note>
+    <note n="7">Import query_financial_documents directly from raglite.main for testing. No need to start MCP server for test execution (reduces overhead, faster test runs)</note>
+  </implementationNotes>
+
+  <dependencies>
+    <blocks>
+      <story id="None">No stories blocked - Story 1.12B is final Epic 1 validation</story>
+    </blocks>
+    <blockedBy>
+      <story id="1.12A" status="Review Passed" priority="critical">Ground Truth Test Set Creation - tests/fixtures/ground_truth.py with 50+ Q&amp;A pairs REQUIRED</story>
+      <story id="1.1-1.11" status="Done" priority="high">All Epic 1 implementation stories (ingestion, retrieval, MCP server) must be complete for end-to-end validation</story>
+    </blockedBy>
+  </dependencies>
+
+  <risks>
+    <risk severity="high">
+      <description>Ground truth test set incomplete or low quality</description>
+      <impact>Inaccurate validation results, false confidence in system accuracy</impact>
+      <mitigation>Story 1.12A must be complete and validated before starting 1.12B. Manually review subset of ground truth Q&amp;A pairs for quality</mitigation>
+    </risk>
+    <risk severity="medium">
+      <description>Accuracy below 80% threshold (HALT scenario)</description>
+      <impact>Epic 1 does not meet NFR targets, may require Phase 2 GraphRAG implementation or technology stack reassessment</impact>
+      <mitigation>Daily tracking (Task 5) enables early detection. Week 2 checkpoint validates ≥70% baseline. If accuracy trends low, investigate root causes early (chunking, embeddings, retrieval params)</mitigation>
+    </risk>
+    <risk severity="low">
+      <description>Performance metrics exceed targets (p50 &gt;5s, p95 &gt;15s)</description>
+      <impact>System does not meet NFR13 response time requirement</impact>
+      <mitigation>Optimize retrieval pipeline if needed (Qdrant HNSW params, embedding batch size, connection pooling). Performance degradation is acceptable if accuracy meets target (90%+)</mitigation>
+    </risk>
+  </risks>
+</story-context>

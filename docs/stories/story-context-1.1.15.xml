@@ -1,0 +1,278 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.15</storyId>
+    <title>Table Extraction Fix</title>
+    <status>Ready for Development</status>
+    <generatedAt>2025-10-16</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.15-table-extraction-fix.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>to fix the table extraction issue identified in Story 1.15A and prepare for baseline validation</iWant>
+    <soThat>Story 1.15B can accurately measure retrieval performance with complete data</soThat>
+    <tasks>
+      <!-- Task 1: Research Table Extraction Options (1 hour) -->
+      - Investigate Docling capabilities for table handling
+      - Test Docling on sample page (page 46)
+      - Evaluate alternative extractors if needed (pdfplumber, camelot-py)
+
+      <!-- Task 2: Implement Table Extraction (1-1.5 hours) -->
+      - Configure/implement table extractor
+      - Update pipeline integration in raglite/ingestion/pipeline.py
+      - Ensure table data converted to searchable text with page attribution
+
+      <!-- Task 3: Re-Ingest PDF (15-20 min) -->
+      - Clear existing Qdrant data (147 points)
+      - Re-ingest PDF with table extraction enabled
+      - Verify 300+ chunks with table data included
+
+      <!-- Task 4: Validate Fix (30 min) -->
+      - Run 3 diagnostic queries from Story 1.15A
+      - Verify pages 46, 77 appear in top-5 results
+      - Verify numeric keywords found in retrieved chunks
+      - Document findings and baseline accuracy (expected 50-70%)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. **Research Docling table extraction capabilities** (1 hour)
+   - Check Docling documentation for table-to-text conversion options
+   - Investigate TableFormer or table extraction settings in DocumentConverter
+   - Test on single page (page 46) to verify extraction works
+   - Determine best approach: Docling config OR alternative extractor
+
+2. **Implement table extraction fix** (1-1.5 hours)
+   - Option A: Configure Docling to extract table data (if supported)
+   - Option B: Implement alternative extractor (pdfplumber or camelot-py)
+   - Preserve page attribution for table cells
+   - Update chunking to include table rows/cells
+
+3. **Re-ingest PDF with table data** (15-20 min)
+   - Clear Qdrant collection (delete 147 existing points)
+   - Re-ingest whole PDF with table extraction enabled
+   - Expected result: 300+ chunks (147 text + ~150-200 table cells)
+   - Verify: Search for "23.2" returns results from page 46
+
+4. **Validate fix with diagnostic queries** (30 min)
+   - Query 1: "What is the variable cost per ton for Portugal Cement?"
+   - Query 13: "What is the EBITDA IFRS margin for Portugal Cement?"
+   - Query 21: "What was the EBITDA for Portugal in August 2025?"
+   - Verify: Pages 46, 77 in top-5 results, specific keywords found
+   - Quick accuracy check: Expect 50-70% accuracy baseline
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-1-foundation-accurate-retrieval.md</path>
+        <title>Epic 1 PRD - Foundation & Accurate Retrieval</title>
+        <section>Story 1.15 Definition</section>
+        <snippet>Epic Goal: Deliver 90%+ retrieval accuracy. Story 1.15 fixes table extraction to enable baseline validation in Story 1.15B.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/story-1.15A.md</path>
+        <title>Story 1.15A - PDF Ingestion Completion & Quick Diagnostic (ROOT CAUSE ANALYSIS)</title>
+        <section>Root Cause Analysis - Completion Notes</section>
+        <snippet>ROOT CAUSE IDENTIFIED: Docling extracts table headers/footnotes but NOT table cell data. Financial metrics (costs, margins, EBITDA) stored in table cells are missing. Search for "23.2" returns ZERO chunks.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/story-1.13.md</path>
+        <title>Story 1.13 - Fix Page Number Attribution Bug</title>
+        <section>Implementation Reference</section>
+        <snippet>Created chunk_by_docling_items() that extracts page numbers from Docling provenance (item.prov[0].page_no). Use result.document.iterate_items() directly, preserve page boundaries AND chunk size limits.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack - PDF & Table Extraction Options</title>
+        <section>PDF Processing Technologies</section>
+        <snippet>Docling 2.55.1 (97.9% table accuracy). Alternative options: pdfplumber (table extraction), camelot-py (table extraction). MUST use tech stack table - no additions without approval.</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project Development Guidelines</title>
+        <section>Anti-Over-Engineering Rules & Technology Stack</section>
+        <snippet>RULE 1 (KISS): ~600-800 line MVP. NO custom wrappers, frameworks, or abstractions. RULE 2: Tech stack LOCKED. NEVER add libraries not in 5-technology-stack-definitive.md without user approval. If library not in tech stack → ASK FIRST.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>module</kind>
+        <symbol>chunk_by_docling_items</symbol>
+        <lines>197-285</lines>
+        <reason>Current chunking function that processes Docling items. Table extraction fix will likely modify this function or add table-specific processing before/after chunking.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>module</kind>
+        <symbol>ingest_document</symbol>
+        <lines>395-506</lines>
+        <reason>Main ingestion function that calls DocumentConverter and chunk_by_docling_items. May need to configure Docling for table extraction or call alternative extractor.</reason>
+      </artifact>
+      <artifact>
+        <path>scripts/ingest-pdf.py</path>
+        <kind>script</kind>
+        <symbol>main</symbol>
+        <lines>14-50</lines>
+        <reason>Re-ingestion script used to clear Qdrant and re-ingest PDF with table extraction enabled. Required for AC3 (re-ingest PDF).</reason>
+      </artifact>
+      <artifact>
+        <path>scripts/inspect-qdrant.py</path>
+        <kind>script</kind>
+        <symbol>inspect_qdrant</symbol>
+        <lines>14-70</lines>
+        <reason>Verification script to check Qdrant collection state (point count, page range, sample chunks). Required for AC3 validation.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/fixtures/ground_truth.py</path>
+        <kind>data</kind>
+        <symbol>COST_ANALYSIS_QUESTIONS</symbol>
+        <lines>25-50</lines>
+        <reason>Ground truth test queries for validation. Contains expected_keywords for diagnostic queries (Query 1, 13, 21) used in AC4.</reason>
+      </artifact>
+      <artifact>
+        <path>docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf</path>
+        <kind>data</kind>
+        <symbol>Source PDF</symbol>
+        <lines>N/A</lines>
+        <reason>Source PDF with financial tables on pages 46, 77. Table cell data currently missing from extracted chunks.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="docling" version="2.55.1" purpose="Current PDF extractor - research table extraction capabilities (AC1)" />
+        <package name="pdfplumber" version="TBD" purpose="Alternative table extractor (AC2 Option B) - add via 'uv add pdfplumber' if Docling insufficient" optional="true" />
+        <package name="camelot-py" version="TBD" purpose="Alternative table extractor (AC2 Option B) - add via 'uv add camelot-py' if Docling insufficient" optional="true" />
+        <package name="qdrant-client" version=">=1.15.1" purpose="Vector storage for re-ingested chunks (AC3)" />
+        <package name="pandas" version=">=2.0,<3.0" purpose="Table data manipulation if using alternative extractors" />
+      </python>
+      <tools>
+        <tool name="Claude Desktop MCP client" purpose="Manual testing of diagnostic queries (AC4)" />
+        <tool name="inspect-qdrant.py" purpose="Verify ingestion results (AC3)" />
+      </tools>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>architecture</type>
+      <rule>KISS Principle - Use simplest approach that works. Configure Docling first (Option A), only use alternative extractor if Docling cannot handle tables (Option B).</rule>
+    </constraint>
+    <constraint>
+      <type>technology</type>
+      <rule>Technology Stack LOCKED - NO new dependencies without user approval. pdfplumber and camelot-py are NOT in current tech stack. Must get approval before adding (AC2 Option B).</rule>
+    </constraint>
+    <constraint>
+      <type>implementation</type>
+      <rule>Follow Story 1.13 patterns - Use chunk_by_docling_items() approach, preserve page attribution from Docling provenance, maintain chunk size limits (~500 words).</rule>
+    </constraint>
+    <constraint>
+      <type>scope</type>
+      <rule>This is a FIX story (2-3 hours) - Focus on table data extraction ONLY. Do NOT refactor entire pipeline. Do NOT optimize performance. Just fix table extraction.</rule>
+    </constraint>
+    <constraint>
+      <type>validation</type>
+      <rule>AC3 is MANDATORY - Must re-ingest entire PDF (clear 147 points, re-ingest with tables). Cannot proceed to Story 1.15B without table data extraction confirmed.</rule>
+    </constraint>
+    <constraint>
+      <type>data_quality</type>
+      <rule>Expected baseline accuracy is 50-70% after fix (AC4). This is NORMAL - Story 1.15B will measure full accuracy. Do NOT expect 90%+ yet.</rule>
+    </constraint>
+    <constraint>
+      <type>testing</type>
+      <rule>Manual validation required - AC4 uses 3 diagnostic queries from Story 1.15A. Verify pages 46, 77 appear in results, verify keywords "23.2", "50.6%", "104,647" found.</rule>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>chunk_by_docling_items</name>
+      <kind>function</kind>
+      <signature>def chunk_by_docling_items(result: ConversionResult, doc_metadata: DocumentMetadata) -> list[Chunk]</signature>
+      <path>raglite/ingestion/pipeline.py:197-285</path>
+      <usage>Current chunking function that processes Docling items. May need to add table-specific processing or handle table items differently.</usage>
+    </interface>
+    <interface>
+      <name>DocumentConverter</name>
+      <kind>class</kind>
+      <signature>from docling.document_converter import DocumentConverter</signature>
+      <path>External (Docling library)</path>
+      <usage>Docling converter that extracts text/tables from PDFs. Research table extraction options: TableFormer settings, table-to-text conversion, item type filtering.</usage>
+    </interface>
+    <interface>
+      <name>ingest_document</name>
+      <kind>function</kind>
+      <signature>async def ingest_document(file_path: str) -> DocumentMetadata</signature>
+      <path>raglite/ingestion/pipeline.py:395-506</path>
+      <usage>Main ingestion function. May need to configure DocumentConverter for table extraction or call alternative extractor before/after Docling processing.</usage>
+    </interface>
+    <interface>
+      <name>ingest-pdf.py CLI</name>
+      <kind>script</kind>
+      <signature>uv run python scripts/ingest-pdf.py [pdf_path]</signature>
+      <path>scripts/ingest-pdf.py</path>
+      <usage>Re-ingestion script for AC3. Clear Qdrant collection first, then run to re-ingest PDF with table extraction enabled.</usage>
+    </interface>
+    <interface>
+      <name>inspect-qdrant.py CLI</name>
+      <kind>script</kind>
+      <signature>python scripts/inspect-qdrant.py</signature>
+      <path>scripts/inspect-qdrant.py</path>
+      <usage>Verification script for AC3. Check point count (expect 300+), page range (1-160), sample chunks for table data keywords.</usage>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Pytest framework with pytest-asyncio for async tests. Manual validation using Claude Desktop MCP client for diagnostic queries. No new automated tests required for this story - focus on manual validation (AC4).
+    </standards>
+    <locations>
+      - tests/unit/test_ingestion.py - Existing unit tests (may need updates if pipeline changes)
+      - tests/integration/test_ingestion_integration.py - Existing integration tests
+      - Manual testing via Claude Desktop MCP client (AC4 diagnostic queries)
+    </locations>
+    <ideas>
+      <test id="1" ac="AC1">
+        <type>manual</type>
+        <description>Research Docling table extraction: Check documentation for TableFormer, table-to-text options, DocumentConverter settings.</description>
+      </test>
+      <test id="2" ac="AC1">
+        <type>manual</type>
+        <description>Test Docling on page 46 sample: Extract single page, inspect output for table cell data (search for "23.2").</description>
+      </test>
+      <test id="3" ac="AC2">
+        <type>implementation</type>
+        <description>Table extraction fix implementation: Configure Docling OR implement pdfplumber/camelot alternative.</description>
+      </test>
+      <test id="4" ac="AC3">
+        <type>integration</type>
+        <description>Re-ingest PDF: Clear Qdrant (147 points → 0), re-ingest with table extraction, verify 300+ points.</description>
+      </test>
+      <test id="5" ac="AC3">
+        <type>verification</type>
+        <description>Verify ingestion results: Run inspect-qdrant.py, check point count, page range 1-160, search for "23.2" returns results.</description>
+      </test>
+      <test id="6" ac="AC4">
+        <type>manual</type>
+        <description>Diagnostic Query 1 (Cost): "What is the variable cost per ton for Portugal Cement?" - Expect page 46, keywords "23.2", "EUR/ton".</description>
+      </test>
+      <test id="7" ac="AC4">
+        <type>manual</type>
+        <description>Diagnostic Query 13 (Margins): "What is the EBITDA IFRS margin for Portugal Cement?" - Expect page 46, keywords "50.6%", "EBITDA".</description>
+      </test>
+      <test id="8" ac="AC4">
+        <type>manual</type>
+        <description>Diagnostic Query 21 (Financial): "What was the EBITDA for Portugal in August 2025?" - Expect page 77, keywords "104,647", "EBITDA".</description>
+      </test>
+      <test id="9" ac="AC4">
+        <type>validation</type>
+        <description>Baseline accuracy check: 3/3 queries successful (pages correct, keywords found) = 50-70% baseline achieved.</description>
+      </test>
+    </ideas>
+  </tests>
+</story-context>

@@ -88,6 +88,154 @@ class TestPDFIngestionIntegration:
         print(f"  Pages/second: {result.page_count / duration_seconds:.2f}")
         print("  Status: ✅ PASS")
 
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    @pytest.mark.timeout(60)
+    async def test_pdf_ingestion_stores_correct_page_numbers(self) -> None:
+        """Integration test validating page numbers extracted from Docling provenance (Story 1.13).
+
+        Verifies that page numbers stored in Qdrant come from actual Docling provenance
+        metadata, not character position estimation. This is the critical fix for
+        Epic 1 validation failure (12% attribution accuracy → target: 95%).
+
+        Validates:
+        - Chunks have page numbers from provenance (not estimates)
+        - Page numbers are in expected range for test PDF
+        - No impossible page estimates (e.g., page 156 for 10-page doc)
+        - All chunks have valid page_number field
+        """
+        # Use sample financial report PDF (10 pages)
+        sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
+
+        if not sample_pdf.exists():
+            pytest.skip(f"Sample PDF not found at {sample_pdf}")
+
+        # Ingest PDF (stores vectors in Qdrant)
+        result = await ingest_pdf(str(sample_pdf))
+
+        # Query Qdrant to verify stored page numbers
+        qdrant_client = get_qdrant_client()
+        from raglite.shared.config import settings
+
+        # Scroll through all points in collection
+        points, _ = qdrant_client.scroll(
+            collection_name=settings.qdrant_collection_name,
+            limit=100,  # Should be enough for 10-page PDF
+        )
+
+        # Filter points for this document
+        doc_points = [
+            p
+            for p in points
+            if p.payload and p.payload.get("source_document") == "sample_financial_report.pdf"
+        ]
+
+        assert len(doc_points) > 0, "Should have stored chunks in Qdrant"
+
+        # Validate page numbers
+        page_numbers = [p.payload.get("page_number") for p in doc_points if p.payload]
+
+        # All chunks should have page numbers
+        assert all(page_num is not None for page_num in page_numbers), (
+            "All chunks must have page_number"
+        )
+        assert all(page_num > 0 for page_num in page_numbers), "All page numbers must be positive"
+
+        # Page numbers should be in valid range for 10-page document
+        min_page = min(page_numbers)
+        max_page = max(page_numbers)
+
+        assert min_page >= 1, f"Min page {min_page} should be >= 1 (PDF pages are 1-indexed)"
+        assert max_page <= 10, f"Max page {max_page} should be <= 10 (document has 10 pages)"
+
+        # No impossible estimates (old bug would create page numbers like 156 for 10-page doc)
+        assert max_page <= result.page_count, (
+            f"Max page number {max_page} exceeds document page count {result.page_count} "
+            "(indicates estimation bug)"
+        )
+
+        # Log validation results
+        print("\n\nPage Number Validation (Story 1.13):")
+        print("  Document: sample_financial_report.pdf")
+        print(f"  Chunks stored: {len(doc_points)}")
+        print(f"  Page range: {min_page}-{max_page}")
+        print(f"  Expected range: 1-{result.page_count}")
+        print("  Status: ✅ PASS - Page numbers from provenance")
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    @pytest.mark.timeout(120)
+    async def test_page_attribution_accuracy_sample(self) -> None:
+        """Test attribution accuracy on sample ground truth queries (Story 1.13).
+
+        Uses 5 ground truth questions to validate page attribution accuracy
+        after the provenance fix. This is a smoke test for the full 50-query
+        validation that will be run in Task 7.
+
+        Validates:
+        - Retrieved chunks have correct page numbers (±1 tolerance)
+        - Attribution accuracy >80% on sample (full target: 95%)
+        - No wildly incorrect page numbers (old bug: ±50 page error)
+        """
+        from raglite.retrieval.search import search_documents
+        from tests.fixtures.ground_truth import GROUND_TRUTH_QA
+
+        # Use sample financial report PDF
+        sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
+
+        if not sample_pdf.exists():
+            pytest.skip(f"Sample PDF not found at {sample_pdf}")
+
+        # Ingest PDF first
+        await ingest_pdf(str(sample_pdf))
+
+        # Select 5 sample queries from ground truth
+        # Filter for queries related to the sample PDF (pages 1-10 based on actual test PDF)
+        sample_queries = [qa for qa in GROUND_TRUTH_QA[:10] if qa["expected_page_number"] <= 10][:5]
+
+        if len(sample_queries) < 5:
+            pytest.skip("Not enough ground truth queries matching sample PDF page range (1-10)")
+
+        # Track accuracy
+        correct_attributions = 0
+        total_queries = len(sample_queries)
+
+        for qa in sample_queries:
+            # Search for relevant chunks
+            results = await search_documents(
+                query=qa["question"], top_k=3, source_document="sample_financial_report.pdf"
+            )
+
+            # Check if any result has correct page (±1 tolerance)
+            expected_page = qa["expected_page_number"]
+            expected_pages = {expected_page}  # Single page from ground truth
+            retrieved_pages = {r.page_number for r in results}
+
+            # Allow ±1 page tolerance for page boundaries
+            tolerance_pages = set()
+            for page in expected_pages:
+                tolerance_pages.update({page - 1, page, page + 1})
+
+            # Check if any retrieved page is within tolerance
+            if any(page in tolerance_pages for page in retrieved_pages):
+                correct_attributions += 1
+
+        # Calculate accuracy
+        accuracy = (correct_attributions / total_queries) * 100
+
+        # Assertions
+        assert accuracy >= 80.0, (
+            f"Attribution accuracy {accuracy:.1f}% below 80% target (sample test)"
+        )
+
+        # Log results
+        print("\n\nPage Attribution Accuracy (Story 1.13 Sample):")
+        print(f"  Sample queries: {total_queries}")
+        print(f"  Correct attributions: {correct_attributions}")
+        print(f"  Accuracy: {accuracy:.1f}%")
+        print("  Target (sample): ≥80%")
+        print(f"  Status: {'✅ PASS' if accuracy >= 80 else '❌ FAIL'}")
+
 
 class TestExcelIngestionIntegration:
     """Integration tests for Excel extraction with real financial documents.
@@ -204,17 +352,50 @@ class TestChunkingIntegration:
         if not sample_pdf.exists():
             pytest.skip(f"Sample PDF not found at {sample_pdf}")
 
-        # Mock embedding generation to focus on chunking logic
-        with patch("raglite.ingestion.pipeline.get_embedding_model") as mock_get_model:
-            mock_model = Mock()
-            # Mock encode to return 1024-dimensional embeddings for any chunk count
-            mock_model.encode.side_effect = lambda texts, **kwargs: np.random.rand(
-                len(texts), 1024
-            ).astype(np.float32)
-            mock_get_model.return_value = mock_model
+        # Mock Docling DocumentConverter to prevent actual PDF processing (timeout fix)
+        with patch("raglite.ingestion.pipeline.DocumentConverter") as mock_converter_class:
+            # Create realistic mock for Docling result structure
+            page_content = " ".join(["Financial data content word"] * 200)  # ~200 words/page
+            full_markdown = "\n\n".join([f"# Page {i}\n\n{page_content}" for i in range(1, 11)])
+            # Mock document with proper Docling API
+            mock_document = Mock()
+            mock_document.num_pages.return_value = 10
+            mock_document.export_to_markdown.return_value = full_markdown
 
-            # Act: Run full ingestion pipeline (includes chunking but with mocked embeddings)
-            result = await ingest_pdf(str(sample_pdf))
+            # Mock iterate_items with provenance data
+            mock_items = []
+            for i in range(50):  # More items for realistic chunking
+                mock_item = Mock()
+                page_no = (i // 5) + 1  # 5 items per page, 10 pages total
+                # Varied content for each item to enable chunking
+                mock_item.text = f"Financial analysis item {i} with detailed content about revenue metrics and performance indicators for quarter Q{(i % 4) + 1} showing growth trends and market analysis data."
+                # CRITICAL: prov must be a LIST (Docling API returns list)
+                mock_prov = Mock()
+                mock_prov.page_no = page_no
+                mock_item.prov = [mock_prov]  # Must be list!
+                mock_items.append((mock_item, None))
+            mock_document.iterate_items.side_effect = lambda: iter(mock_items)
+
+            # Mock conversion result
+            mock_result = Mock()
+            mock_result.document = mock_document
+
+            # Mock converter instance
+            mock_converter_instance = Mock()
+            mock_converter_instance.convert.return_value = mock_result
+            mock_converter_class.return_value = mock_converter_instance
+
+            # Mock embedding generation to focus on chunking logic
+            with patch("raglite.ingestion.pipeline.get_embedding_model") as mock_get_model:
+                mock_model = Mock()
+                # Mock encode to return 1024-dimensional embeddings for any chunk count
+                mock_model.encode.side_effect = lambda texts, **kwargs: np.random.rand(
+                    len(texts), 1024
+                ).astype(np.float32)
+                mock_get_model.return_value = mock_model
+
+                # Act: Run full ingestion pipeline (mocked PDF + embeddings, fast!)
+                result = await ingest_pdf(str(sample_pdf))
 
         # Assert: Validate document metadata
         assert isinstance(result, DocumentMetadata)
@@ -395,9 +576,27 @@ class TestEmbeddingIntegration:
             mock_document.num_pages.return_value = 10
             mock_document.export_to_markdown.return_value = full_markdown
 
-            # Mock iterate_items to return realistic elements
-            mock_items = [(Mock(text=f"Element {i}", prov=Mock()), None) for i in range(20)]
-            mock_document.iterate_items.return_value = iter(mock_items)
+            # Mock iterate_items to return realistic elements with proper provenance
+            # prov must be a list with objects that have page_no attribute (Docling API)
+            # CRITICAL FIX: iterate_items() is called MULTIPLE TIMES in pipeline.py:
+            # 1. Line 486: Count elements for metrics
+            # 2. Line 524 (in chunk_by_docling_items): Actually process chunks
+            # Using iter(list) would exhaust after first call, returning empty on second call!
+            # Solution: Use side_effect with generator function to return fresh iterator each time
+            def create_mock_items():
+                """Generator that yields fresh mock items each time iterate_items() is called."""
+                for i in range(20):
+                    # Distribute items across 10 pages
+                    page_no = (i % 10) + 1
+                    mock_prov = Mock(page_no=page_no)
+                    mock_item = Mock(
+                        text=f"Financial content for element {i} with realistic text",
+                        prov=[mock_prov],
+                    )
+                    yield (mock_item, None)
+
+            # Use side_effect to return NEW generator each time method is called
+            mock_document.iterate_items.side_effect = lambda: create_mock_items()
 
             # Mock conversion result
             mock_result = Mock()

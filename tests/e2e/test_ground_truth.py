@@ -13,28 +13,28 @@ Test Coverage:
     - AC7: Module is importable and documented
 """
 
-from tests.fixtures.ground_truth import GROUND_TRUTH_QA
+from tests.fixtures.ground_truth import GROUND_TRUTH_QA, GroundTruthQuestion
 
 
 class TestGroundTruthStructure:
     """Test ground truth data structure and basic validation."""
 
-    def test_minimum_question_count(self):
+    def test_minimum_question_count(self) -> None:
         """Verify GROUND_TRUTH_QA contains at least 50 questions (AC1)."""
         assert len(GROUND_TRUTH_QA) >= 50, f"Expected ≥50 questions, got {len(GROUND_TRUTH_QA)}"
 
-    def test_unique_question_ids(self):
+    def test_unique_question_ids(self) -> None:
         """Verify all question IDs are unique (AC1)."""
         ids = [qa["id"] for qa in GROUND_TRUTH_QA]
         assert len(ids) == len(set(ids)), "Question IDs must be unique"
 
-    def test_ids_are_sequential(self):
+    def test_ids_are_sequential(self) -> None:
         """Verify question IDs are sequential starting from 1."""
-        ids = sorted([qa["id"] for qa in GROUND_TRUTH_QA])
+        ids: list[int] = sorted([qa["id"] for qa in GROUND_TRUTH_QA])
         expected_ids = list(range(1, len(GROUND_TRUTH_QA) + 1))
         assert ids == expected_ids, "Question IDs should be sequential 1, 2, 3, ..."
 
-    def test_all_required_fields_present(self):
+    def test_all_required_fields_present(self) -> None:
         """Verify all required fields present in each question (AC5)."""
         required_fields = [
             "id",
@@ -52,17 +52,19 @@ class TestGroundTruthStructure:
             missing_fields = [field for field in required_fields if field not in qa]
             assert not missing_fields, f"Question {qa.get('id')} missing fields: {missing_fields}"
 
-    def test_question_text_non_empty(self):
+    def test_question_text_non_empty(self) -> None:
         """Verify all questions have non-empty text."""
         for qa in GROUND_TRUTH_QA:
-            assert qa["question"].strip(), f"Question {qa['id']} has empty question text"
+            question: str = qa["question"]
+            assert question.strip(), f"Question {qa['id']} has empty question text"
 
-    def test_expected_answer_non_empty(self):
+    def test_expected_answer_non_empty(self) -> None:
         """Verify all questions have non-empty expected answers (AC5)."""
         for qa in GROUND_TRUTH_QA:
-            assert qa["expected_answer"].strip(), f"Question {qa['id']} has empty expected_answer"
+            answer: str = qa["expected_answer"]
+            assert answer.strip(), f"Question {qa['id']} has empty expected_answer"
 
-    def test_expected_keywords_non_empty(self):
+    def test_expected_keywords_non_empty(self) -> None:
         """Verify all questions have non-empty keyword lists (AC5)."""
         for qa in GROUND_TRUTH_QA:
             assert isinstance(qa["expected_keywords"], list), (
@@ -75,19 +77,20 @@ class TestGroundTruthStructure:
                 f"Question {qa['id']} has empty keyword strings"
             )
 
-    def test_page_numbers_valid(self):
+    def test_page_numbers_valid(self) -> None:
         """Verify expected_page_number is valid integer for all questions (AC5)."""
         for qa in GROUND_TRUTH_QA:
-            page = qa["expected_page_number"]
+            page: int = qa["expected_page_number"]
             assert isinstance(page, int), f"Question {qa['id']} page number must be integer"
             assert page > 0, f"Question {qa['id']} page number must be positive"
 
-    def test_expected_section_non_empty(self):
+    def test_expected_section_non_empty(self) -> None:
         """Verify all questions have non-empty section identifiers (AC5)."""
         for qa in GROUND_TRUTH_QA:
-            assert qa["expected_section"].strip(), f"Question {qa['id']} has empty expected_section"
+            section: str = qa["expected_section"]
+            assert section.strip(), f"Question {qa['id']} has empty expected_section"
 
-    def test_source_document_consistent(self):
+    def test_source_document_consistent(self) -> None:
         """Verify all questions reference the same source document (AC5)."""
         expected_doc = "2025-08 Performance Review CONSO_v2.pdf"
         for qa in GROUND_TRUTH_QA:
@@ -108,27 +111,27 @@ class TestCategoryDistribution:
         "operating_expenses": 8,
     }
 
-    def test_all_categories_present(self):
+    def test_all_categories_present(self) -> None:
         """Verify all 6 categories are represented in data set (AC2)."""
-        actual_categories = {qa["category"] for qa in GROUND_TRUTH_QA}
-        expected_categories = set(self.EXPECTED_CATEGORIES.keys())
+        actual_categories: set[str] = {qa["category"] for qa in GROUND_TRUTH_QA}
+        expected_categories: set[str] = set(self.EXPECTED_CATEGORIES.keys())
         assert actual_categories == expected_categories, (
             f"Missing categories: {expected_categories - actual_categories}"
         )
 
-    def test_no_invalid_categories(self):
+    def test_no_invalid_categories(self) -> None:
         """Verify no invalid category values present."""
-        valid_categories = set(self.EXPECTED_CATEGORIES.keys())
+        valid_categories: set[str] = set(self.EXPECTED_CATEGORIES.keys())
         for qa in GROUND_TRUTH_QA:
             assert qa["category"] in valid_categories, (
                 f"Question {qa['id']} has invalid category: {qa['category']}"
             )
 
-    def test_category_distribution(self):
+    def test_category_distribution(self) -> None:
         """Verify category distribution matches target percentages (AC2)."""
-        category_counts = {}
+        category_counts: dict[str, int] = {}
         for qa in GROUND_TRUTH_QA:
-            cat = qa["category"]
+            cat: str = qa["category"]
             category_counts[cat] = category_counts.get(cat, 0) + 1
 
         for cat, expected_count in self.EXPECTED_CATEGORIES.items():
@@ -137,11 +140,11 @@ class TestCategoryDistribution:
                 f"Category {cat}: expected {expected_count}, got {actual_count}"
             )
 
-    def test_category_distribution_tolerance(self):
+    def test_category_distribution_tolerance(self) -> None:
         """Verify category distribution is within ±1 question tolerance."""
-        category_counts = {}
+        category_counts: dict[str, int] = {}
         for qa in GROUND_TRUTH_QA:
-            cat = qa["category"]
+            cat: str = qa["category"]
             category_counts[cat] = category_counts.get(cat, 0) + 1
 
         for cat, expected_count in self.EXPECTED_CATEGORIES.items():
@@ -162,27 +165,27 @@ class TestDifficultyDistribution:
         "hard": 10,  # 20%
     }
 
-    def test_all_difficulties_present(self):
+    def test_all_difficulties_present(self) -> None:
         """Verify all 3 difficulty levels are present."""
-        actual_difficulties = {qa["difficulty"] for qa in GROUND_TRUTH_QA}
-        expected_difficulties = set(self.EXPECTED_DIFFICULTIES.keys())
+        actual_difficulties: set[str] = {qa["difficulty"] for qa in GROUND_TRUTH_QA}
+        expected_difficulties: set[str] = set(self.EXPECTED_DIFFICULTIES.keys())
         assert actual_difficulties == expected_difficulties, (
             f"Missing difficulties: {expected_difficulties - actual_difficulties}"
         )
 
-    def test_no_invalid_difficulties(self):
+    def test_no_invalid_difficulties(self) -> None:
         """Verify no invalid difficulty values present."""
-        valid_difficulties = set(self.EXPECTED_DIFFICULTIES.keys())
+        valid_difficulties: set[str] = set(self.EXPECTED_DIFFICULTIES.keys())
         for qa in GROUND_TRUTH_QA:
             assert qa["difficulty"] in valid_difficulties, (
                 f"Question {qa['id']} has invalid difficulty: {qa['difficulty']}"
             )
 
-    def test_difficulty_distribution_exact(self):
+    def test_difficulty_distribution_exact(self) -> None:
         """Verify difficulty distribution is exactly 40/40/20 (AC3)."""
-        difficulty_counts = {}
+        difficulty_counts: dict[str, int] = {}
         for qa in GROUND_TRUTH_QA:
-            diff = qa["difficulty"]
+            diff: str = qa["difficulty"]
             difficulty_counts[diff] = difficulty_counts.get(diff, 0) + 1
 
         for diff, expected_count in self.EXPECTED_DIFFICULTIES.items():
@@ -191,11 +194,11 @@ class TestDifficultyDistribution:
                 f"Difficulty {diff}: expected {expected_count}, got {actual_count}"
             )
 
-    def test_difficulty_percentages(self):
+    def test_difficulty_percentages(self) -> None:
         """Verify difficulty percentages match 40/40/20 target (AC3)."""
-        difficulty_counts = {}
+        difficulty_counts: dict[str, int] = {}
         for qa in GROUND_TRUTH_QA:
-            diff = qa["difficulty"]
+            diff: str = qa["difficulty"]
             difficulty_counts[diff] = difficulty_counts.get(diff, 0) + 1
 
         total = len(GROUND_TRUTH_QA)
@@ -213,7 +216,7 @@ class TestDifficultyDistribution:
 class TestImportAndAccessibility:
     """Test module import and data accessibility (AC4, AC7)."""
 
-    def test_import_ground_truth_qa(self):
+    def test_import_ground_truth_qa(self) -> None:
         """Import test: Verify GROUND_TRUTH_QA can be imported (AC4)."""
         from tests.fixtures.ground_truth import GROUND_TRUTH_QA as imported_qa
 
@@ -221,13 +224,13 @@ class TestImportAndAccessibility:
         assert isinstance(imported_qa, list)
         assert len(imported_qa) >= 50
 
-    def test_ground_truth_is_list_of_dicts(self):
+    def test_ground_truth_is_list_of_dicts(self) -> None:
         """Verify ground truth is a list of dictionaries (AC4)."""
         assert isinstance(GROUND_TRUTH_QA, list), "GROUND_TRUTH_QA must be a list"
         for qa in GROUND_TRUTH_QA:
             assert isinstance(qa, dict), f"Question {qa.get('id')} must be a dict"
 
-    def test_module_has_docstring(self):
+    def test_module_has_docstring(self) -> None:
         """Verify module docstring explains usage and maintenance (AC7)."""
         import tests.fixtures.ground_truth as gt_module
 
@@ -244,39 +247,42 @@ class TestImportAndAccessibility:
 class TestDataQuality:
     """Test data quality and consistency."""
 
-    def test_no_duplicate_questions(self):
+    def test_no_duplicate_questions(self) -> None:
         """Verify no duplicate question text."""
-        questions = [qa["question"].lower().strip() for qa in GROUND_TRUTH_QA]
+        questions: list[str] = [qa["question"].lower().strip() for qa in GROUND_TRUTH_QA]
         assert len(questions) == len(set(questions)), "Duplicate questions found"
 
-    def test_expected_keywords_are_relevant(self):
+    def test_expected_keywords_are_relevant(self) -> None:
         """Verify expected_keywords appear in question or expected_answer."""
         for qa in GROUND_TRUTH_QA:
-            question_text = qa["question"].lower()
-            answer_text = qa["expected_answer"].lower()
-            combined_text = question_text + " " + answer_text
+            question_text: str = qa["question"].lower()
+            answer_text: str = qa["expected_answer"].lower()
+            combined_text: str = question_text + " " + answer_text
 
             # At least some keywords should appear in the question or answer context
-            relevant_count = sum(1 for kw in qa["expected_keywords"] if kw.lower() in combined_text)
+            keywords: list[str] = qa["expected_keywords"]
+            relevant_count = sum(1 for kw in keywords if kw.lower() in combined_text)
 
             # Allow flexibility - at least 30% of keywords should be contextually relevant
-            threshold = max(1, len(qa["expected_keywords"]) * 0.3)
+            threshold = max(1, len(keywords) * 0.3)
             assert relevant_count >= threshold, (
                 f"Question {qa['id']}: Expected keywords not sufficiently relevant to question/answer"
             )
 
-    def test_page_numbers_within_reasonable_range(self):
+    def test_page_numbers_within_reasonable_range(self) -> None:
         """Verify page numbers are within reasonable range for a 160-page document."""
         max_expected_page = 160  # Based on test document specs
         for qa in GROUND_TRUTH_QA:
-            page = qa["expected_page_number"]
+            page: int = qa["expected_page_number"]
             assert 1 <= page <= max_expected_page, (
                 f"Question {qa['id']} has page number {page} outside valid range 1-{max_expected_page}"
             )
 
-    def test_questions_are_actually_questions(self):
+    def test_questions_are_actually_questions(self) -> None:
         """Verify most question texts are formatted as questions (end with ?)."""
-        question_count = sum(1 for qa in GROUND_TRUTH_QA if qa["question"].strip().endswith("?"))
+        question_count = sum(
+            1 for qa in GROUND_TRUTH_QA if str(qa["question"]).strip().endswith("?")
+        )
         percentage = (question_count / len(GROUND_TRUTH_QA)) * 100
 
         # Allow some flexibility - at least 80% should be formatted as questions
@@ -288,20 +294,20 @@ class TestDataQuality:
 class TestSubsetSelection:
     """Test subset selection for daily tracking (AC7)."""
 
-    def test_random_subset_selection(self):
+    def test_random_subset_selection(self) -> None:
         """Verify random subset selection works for daily tracking."""
         import random
 
         subset_size = 15
-        subset = random.sample(GROUND_TRUTH_QA, subset_size)
+        subset: list[GroundTruthQuestion] = random.sample(GROUND_TRUTH_QA, subset_size)
 
         assert len(subset) == subset_size
         assert all(q in GROUND_TRUTH_QA for q in subset)
 
-    def test_category_balanced_subset(self):
+    def test_category_balanced_subset(self) -> None:
         """Verify subset can be selected with balanced categories."""
         # Select 2-3 questions from each category for balanced daily tracking
-        subset = []
+        subset: list[GroundTruthQuestion] = []
         categories = [
             "cost_analysis",
             "margins",
@@ -312,25 +318,34 @@ class TestSubsetSelection:
         ]
 
         for cat in categories:
-            cat_questions = [qa for qa in GROUND_TRUTH_QA if qa["category"] == cat]
+            cat_questions: list[GroundTruthQuestion] = [
+                qa for qa in GROUND_TRUTH_QA if qa["category"] == cat
+            ]
             subset.extend(cat_questions[:2])  # Take first 2 from each
 
         assert len(subset) == 12  # 6 categories × 2 questions
         assert len({q["category"] for q in subset}) == 6  # All categories represented
 
-    def test_difficulty_balanced_subset(self):
+    def test_difficulty_balanced_subset(self) -> None:
         """Verify subset can be selected with balanced difficulty."""
         # Select subset with 40/40/20 difficulty distribution
-        easy = [qa for qa in GROUND_TRUTH_QA if qa["difficulty"] == "easy"][:6]
-        medium = [qa for qa in GROUND_TRUTH_QA if qa["difficulty"] == "medium"][:6]
-        hard = [qa for qa in GROUND_TRUTH_QA if qa["difficulty"] == "hard"][:3]
+        easy: list[GroundTruthQuestion] = [
+            qa for qa in GROUND_TRUTH_QA if qa["difficulty"] == "easy"
+        ][:6]
+        medium: list[GroundTruthQuestion] = [
+            qa for qa in GROUND_TRUTH_QA if qa["difficulty"] == "medium"
+        ][:6]
+        hard: list[GroundTruthQuestion] = [
+            qa for qa in GROUND_TRUTH_QA if qa["difficulty"] == "hard"
+        ][:3]
 
-        subset = easy + medium + hard
+        subset: list[GroundTruthQuestion] = easy + medium + hard
         assert len(subset) == 15  # 6+6+3
 
-        diff_counts = {}
+        diff_counts: dict[str, int] = {}
         for qa in subset:
-            diff_counts[qa["difficulty"]] = diff_counts.get(qa["difficulty"], 0) + 1
+            difficulty: str = qa["difficulty"]
+            diff_counts[difficulty] = diff_counts.get(difficulty, 0) + 1
 
         assert diff_counts["easy"] == 6
         assert diff_counts["medium"] == 6

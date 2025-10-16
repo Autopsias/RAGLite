@@ -150,11 +150,14 @@ RAGLite now follows the **standard MCP pattern** where:
 5. Ingestion errors logged with clear error messages for malformed or corrupted PDFs
 6. Successfully ingests sample company financial PDFs provided for testing
 7. Ingestion performance meets <5 minutes for 100-page financial report (NFR2)
-8. Unit tests cover ingestion pipeline with mocked Docling responses
-9. Integration test validates end-to-end PDF ingestion with real sample document
-10. **🚨 NEW - PAGE NUMBER EXTRACTION:** Page numbers extracted and validated (test with Week 0 PDF, ensure page_number != None)
-11. **🚨 NEW - FALLBACK IF NEEDED:** IF Docling page extraction fails, implement PyMuPDF fallback for page detection (hybrid approach: Docling for tables, PyMuPDF for pages)
-12. **🚨 NEW - DIAGNOSTIC SCRIPT:** Run scripts/test_page_extraction.py to diagnose root cause before implementation
+8. **🚨 TABLE EXTRACTION:** Financial table cell data extracted and converted to searchable text
+9. **🚨 TABLE VALIDATION:** Test queries for tabular data (e.g., "23.2 EUR/ton") retrieve correct chunks
+10. Unit tests cover ingestion pipeline with mocked Docling responses
+11. Unit tests validate table extraction from sample financial PDF
+12. Integration test validates end-to-end PDF ingestion with real sample document
+13. **🚨 NEW - PAGE NUMBER EXTRACTION:** Page numbers extracted and validated (test with Week 0 PDF, ensure page_number != None)
+14. **🚨 NEW - FALLBACK IF NEEDED:** IF Docling page extraction fails, implement PyMuPDF fallback for page detection (hybrid approach: Docling for tables, PyMuPDF for pages)
+15. **🚨 NEW - DIAGNOSTIC SCRIPT:** Run scripts/test_page_extraction.py to diagnose root cause before implementation
 
 **Recommended Approach:**
 
@@ -406,6 +409,132 @@ RAGLite now follows the **standard MCP pattern** where:
 - Daily tracking log (Week 1-5 trend data)
 
 **Rationale:** Splitting into 1.12A (Week 1 test creation) and 1.12B (Week 5 validation) distributes workload, enables daily tracking, and provides early warning system for accuracy issues.
+
+---
+
+## Story 1.15: Table Extraction Fix ⭐ NEW
+
+**Status:** Ready for Development (post-Story 1.15A)
+**Epic:** 1 - Foundation & Accurate Retrieval
+**Priority:** CRITICAL - Blocks baseline validation
+**Duration:** 2-3 hours
+**Prerequisites:** Story 1.15A complete (root cause identified)
+
+**Story:**
+```markdown
+**As a** developer,
+**I want** to fix the table extraction issue identified in Story 1.15A and prepare for baseline validation,
+**so that** Story 1.15B can accurately measure retrieval performance with complete data.
+```
+
+**Acceptance Criteria:**
+
+1. **Research Docling table extraction capabilities** (1 hour)
+   - Check documentation for table-to-text conversion options
+   - Test on single page (page 46) to verify extraction
+   - Determine best approach: Docling config OR alternative extractor
+
+2. **Implement table extraction fix** (1-1.5 hours)
+   - Configure Docling for table data extraction OR
+   - Implement alternative (pdfplumber, camelot) + merge with Docling text
+   - Ensure table data converted to searchable text
+   - Preserve page attribution for table cells
+
+3. **Re-ingest PDF with table data** (15-20 min)
+   - Clear Qdrant collection (delete 147 existing points)
+   - Re-ingest with table extraction enabled
+   - Expected result: 300+ chunks (147 text + ~150-200 table cells)
+   - Verify: Search for "23.2" returns results from page 46
+
+4. **Validate fix with diagnostic queries** (30 min)
+   - Run 3 queries from Story 1.15A again
+   - Verify: Pages 46, 77 now in top-5 results
+   - Verify: Specific keywords found ("23.2", "50.6%", "104,647")
+   - Quick accuracy check: Expect 50-70% accuracy on sample queries
+
+**Deliverables:**
+- Updated ingestion pipeline with table extraction
+- Re-ingested PDF (300+ chunks)
+- Diagnostic validation report
+- Fix documentation in completion notes
+
+**Rationale:** Story 1.15A identified root cause (Docling table extraction failure). Story 1.15 fixes the issue to enable accurate baseline validation in Story 1.15B.
+
+---
+
+## Story 1.15B: Baseline Validation & Analysis ⭐ NEW
+
+**Status:** Ready for Development (post-Story 1.15)
+**Epic:** 1 - Foundation & Accurate Retrieval
+**Priority:** HIGH - Decision gate for Phase 2
+**Duration:** 1.5 hours
+**Prerequisites:** Story 1.15 complete (table extraction fixed)
+
+**Story:**
+```markdown
+**As a** developer,
+**I want** to validate that basic ingestion and semantic search work correctly with the original PDF BEFORE implementing Phase 2 enhancements,
+**so that** I can establish a performance baseline and determine if Phase 2 is actually needed.
+```
+
+**Acceptance Criteria:**
+
+1. **Validate ingestion quality** (15 min)
+   - Verify: 300+ chunks, pages 1-160
+   - Verify: Critical pages (46, 47, 77, 108) have table data
+   - Verify: Table data searchable (search for "23.2" returns results)
+
+2. **Run full accuracy test suite** (15 min)
+   - Execute: `uv run python scripts/run-accuracy-tests.py`
+   - Measure: Retrieval accuracy %, Attribution accuracy %
+   - Document: Baseline metrics
+
+3. **Analyze failure patterns** (20 min)
+   - Categorize failures: keyword mismatch, table split, financial term, multi-hop
+   - Identify: Which Phase 2 enhancements would help most
+   - Document: Phase 2 priority recommendations
+
+4. **Performance benchmarking** (10 min)
+   - Measure: Query latency (p50, p95, p99)
+   - Calculate: Latency budget for Phase 2 (10s - baseline)
+   - Verify: NFR5 compliance (<10s response time)
+
+5. **Decision gate** (5 min)
+   - **IF** Retrieval ≥90% AND Attribution ≥95% → Epic 1 VALIDATED, skip Phase 2
+   - **IF** Retrieval 85-89% OR Attribution 93-94% → Implement Phase 2A only
+   - **IF** Retrieval <85% OR Attribution <93% → Implement Phase 2A → 2B → 2C
+
+**Deliverables:**
+- `baseline-accuracy-report.txt` - Full test results
+- `baseline-failure-analysis.md` - Failure patterns + Phase 2 recommendations
+- `baseline-performance-benchmarks.txt` - Latency metrics
+- Decision: GO to Epic 3 OR implement Epic 2
+
+**Rationale:** Establishes baseline performance BEFORE committing to Phase 2 enhancements. Prevents over-engineering if baseline already meets NFR6/NFR7.
+
+---
+
+## Epic 1 → Epic 2 Decision Gate
+
+**After Story 1.15B completion, one of three paths:**
+
+**Path 1: Epic 1 VALIDATED (Best Case)**
+- ✅ Retrieval ≥90% AND Attribution ≥95%
+- ✅ Skip Epic 2 entirely
+- ✅ Proceed directly to Epic 3 (Intelligence Features)
+
+**Path 2: Epic 2 Partial Implementation (Likely Case)**
+- ⚠️ Retrieval 85-89% OR Attribution 93-94%
+- Implement Epic 2, Story 2.1 only (Hybrid Search)
+- Re-validate, likely achieves 92%+
+- If still <90%: Continue Stories 2.2 → 2.3
+
+**Path 3: Epic 2 Full Implementation (Worst Case)**
+- ✗ Retrieval <85% OR Attribution <93%
+- Implement Epic 2, Stories 2.1 → 2.2 → 2.3 sequentially
+- Test after EACH, STOP when 95% achieved
+
+**For Epic 2 story details:** See `docs/prd/epic-2-advanced-rag-enhancements.md`
 
 ---
 

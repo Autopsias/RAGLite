@@ -1,0 +1,301 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.15B</storyId>
+    <title>Baseline Validation & Analysis</title>
+    <status>Ready for Development (post-Story 1.15)</status>
+    <generatedAt>2025-10-16</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.15B-baseline-validation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a developer</asA>
+    <iWant>to validate that basic ingestion and semantic search work correctly with the original PDF BEFORE implementing Phase 2 enhancements</iWant>
+    <soThat>I can establish a performance baseline and determine if Phase 2 is actually needed</soThat>
+    <tasks>
+      <task id="1" duration="15min">
+        <title>Validate Ingestion Quality</title>
+        <subtasks>
+          <subtask id="1.1">Check Qdrant statistics (verify 300+ chunks, pages 1-160)</subtask>
+          <subtask id="1.2">Verify table data searchable (search for "23.2", "50.6", "104,647")</subtask>
+          <subtask id="1.3">Inspect critical pages (46, 47, 77, 108 have chunks with table data)</subtask>
+        </subtasks>
+      </task>
+      <task id="2" duration="15min">
+        <title>Run Full Accuracy Test Suite</title>
+        <subtasks>
+          <subtask id="2.1">Execute test script: uv run python scripts/run-accuracy-tests.py</subtask>
+          <subtask id="2.2">Extract metrics (retrieval %, attribution %, p50/p95/p99 latency)</subtask>
+          <subtask id="2.3">Compare to targets (NFR6: ≥90%, NFR7: ≥95%, NFR13: &lt;10s)</subtask>
+        </subtasks>
+      </task>
+      <task id="3" duration="20min">
+        <title>Analyze Failure Patterns</title>
+        <subtasks>
+          <subtask id="3.1">Review failed queries and identify root cause (keyword mismatch, table split, financial term, multi-hop)</subtask>
+          <subtask id="3.2">Identify Phase 2 priorities based on failure taxonomy</subtask>
+        </subtasks>
+      </task>
+      <task id="4" duration="10min">
+        <title>Performance Benchmarking</title>
+        <subtasks>
+          <subtask id="4.1">Extract latency metrics (p50, p95, p99)</subtask>
+          <subtask id="4.2">Calculate latency budget (10,000ms - baseline)</subtask>
+          <subtask id="4.3">Analyze chunk counts (avg, max per query)</subtask>
+        </subtasks>
+      </task>
+      <task id="5" duration="5min">
+        <title>Decision Gate Execution</title>
+        <subtasks>
+          <subtask id="5.1">Evaluate metrics against criteria (retrieval ≥90%?, attribution ≥95%?)</subtask>
+          <subtask id="5.2">Document decision (Path 1: Skip Epic 2 / Path 2: Story 2.1 only / Path 3: Stories 2.1→2.3)</subtask>
+          <subtask id="5.3">Update project status file with decision log entry</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" priority="HIGH">
+      <description>Validate ingestion quality: 300+ chunks indexed, pages 1-160 all have chunks, critical pages (46, 47, 77, 108) have table data chunks, table data searchable</description>
+      <validation>Run inspect-qdrant.py to verify point count ≥300, page range 1-160. Search for "23.2" (page 46), "50.6" (page 46), "104,647" (page 77) - all must return results from correct pages</validation>
+    </criterion>
+    <criterion id="AC2" priority="CRITICAL">
+      <description>Run full accuracy test suite: Execute run-accuracy-tests.py, measure retrieval accuracy % (target: ≥90%), attribution accuracy % (target: ≥95%), document baseline metrics</description>
+      <validation>Test script completes successfully, produces retrieval accuracy %, attribution accuracy %, p50/p95 latency metrics. Document results in baseline-accuracy-report.txt</validation>
+    </criterion>
+    <criterion id="AC3" priority="HIGH">
+      <description>Analyze failure patterns: Review failed queries, categorize failures (keyword mismatch, table split, financial term, multi-hop), identify Phase 2 enhancements that would help most</description>
+      <validation>Document failure taxonomy with examples in baseline-failure-analysis.md. Prioritized Phase 2 story recommendations based on failure patterns (Story 2.1/2.2/2.3/2.5)</validation>
+    </criterion>
+    <criterion id="AC4" priority="MEDIUM">
+      <description>Performance benchmarking: Measure query latency (p50, p95, p99), calculate average chunks per query, calculate latency budget for Phase 2, verify NFR13 compliance (&lt;10s response time)</description>
+      <validation>Document performance metrics in baseline-performance-benchmarks.txt. p95 latency &lt;10s (NFR13). Calculate available latency budget: (10,000ms - baseline p95)</validation>
+    </criterion>
+    <criterion id="AC5" priority="CRITICAL">
+      <description>Decision gate execution: Determine Path 1 (≥90% retrieval AND ≥95% attribution → skip Epic 2), Path 2 (85-89% OR 93-94% → Story 2.1 only), or Path 3 (&lt;85% OR &lt;93% → Stories 2.1→2.3)</description>
+      <validation>Decision clearly documented in project-workflow-status-2025-10-13.md decisions log. Next steps explicitly stated (Epic 3 / Epic 2 Story 2.1 / Epic 2 Stories 2.1-2.3)</validation>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/prd/epic-1-foundation-accurate-retrieval.md</path>
+        <title>Epic 1 PRD - Foundation &amp; Accurate Retrieval</title>
+        <section>Story 1.15B definition, NFR6 (90%+ retrieval), NFR7 (95%+ attribution), NFR13 (&lt;10s response)</section>
+        <relevance>Defines acceptance criteria targets and decision gate logic for baseline validation</relevance>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2 PRD - Advanced RAG Enhancements (CONDITIONAL)</title>
+        <section>Stories 2.1-2.6 (Hybrid Search, Financial Embeddings, Table-Aware Chunking, Query Expansion, Knowledge Graph, Advanced Prompts)</section>
+        <relevance>Reference for Phase 2 options based on failure analysis. Decision gate determines if Epic 2 needed</relevance>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/architecture/implementation-plan-option-c-phase2.md</path>
+        <title>Implementation Plan - Phase 2 Decision Gates</title>
+        <section>Decision gate strategy, baseline validation approach, Phase 2 implementation criteria</section>
+        <relevance>Provides decision gate framework and Phase 2 activation criteria based on baseline results</relevance>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.15-table-extraction-fix.md</path>
+        <title>Story 1.15 - Table Extraction Fix (PREREQUISITE)</title>
+        <section>Table extraction implementation, Docling configuration, re-ingestion, 300+ chunks expected</section>
+        <relevance>Prerequisite story that fixes table extraction. Story 1.15B validates the fix was successful</relevance>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.15A.md</path>
+        <title>Story 1.15A - PDF Ingestion Completion &amp; Quick Diagnostic</title>
+        <section>Root cause analysis, diagnostic approach, table data verification, ingestion quality checks</section>
+        <relevance>Context for root cause (Docling table extraction failure). Provides diagnostic methodology and baseline expectations</relevance>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/CLAUDE.md</path>
+        <title>CLAUDE.md - Project Guidelines</title>
+        <section>Anti-Over-Engineering Rules, KISS principle, NFR targets, Quality Gates &amp; Testing</section>
+        <relevance>Validation-only story - NO code changes expected. Focus on measurement and decision gate execution</relevance>
+      </artifact>
+    </docs>
+    <code>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/scripts/run-accuracy-tests.py</path>
+        <kind>script</kind>
+        <symbol>main()</symbol>
+        <relevance>PRIMARY VALIDATION SCRIPT - Executes 50 ground truth queries, measures retrieval/attribution accuracy, latency metrics</relevance>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/scripts/inspect-qdrant.py</path>
+        <kind>script</kind>
+        <symbol>main()</symbol>
+        <relevance>INGESTION QUALITY CHECK - Verifies point count (≥300), page distribution (1-160), unique pages (~146)</relevance>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/scripts/accuracy_utils.py</path>
+        <kind>module</kind>
+        <symbol>calculate_retrieval_accuracy(), calculate_attribution_accuracy(), calculate_latency_metrics()</symbol>
+        <relevance>SHARED UTILITIES - Accuracy calculation functions, TypedDict models, configuration constants</relevance>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/tests/fixtures/ground_truth.py</path>
+        <kind>data</kind>
+        <symbol>GROUND_TRUTH_QA (50 test queries)</symbol>
+        <relevance>TEST DATA - 50 validated Q&amp;A pairs for accuracy measurement (created in Story 1.14)</relevance>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/scripts/ingest-pdf.py</path>
+        <kind>script</kind>
+        <symbol>main()</symbol>
+        <relevance>CONTEXT REFERENCE - Used in Story 1.15 to re-ingest PDF with table extraction. Not run in Story 1.15B (validation only)</relevance>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf</path>
+        <kind>data</kind>
+        <symbol>Source PDF (160 pages)</symbol>
+        <relevance>SOURCE DOCUMENT - Financial PDF with table data on pages 46, 47, 77, 108 (used for ground truth validation)</relevance>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pytest" version="8.4.2" usage="Test framework (if running test suite directly)" />
+        <package name="pytest-asyncio" version="1.2.0" usage="Async test support" />
+        <package name="qdrant-client" version="1.15.1" usage="Qdrant client for inspect-qdrant.py" />
+        <package name="sentence-transformers" version="5.1.1" usage="Fin-E5 model for embeddings (used by run-accuracy-tests.py)" />
+        <package name="pydantic" version="≥2.0,&lt;3.0" usage="Data validation models" />
+      </python>
+      <tools>
+        <tool name="uv" usage="Python package manager and script runner (uv run python scripts/...)" />
+        <tool name="Docker Compose" usage="Qdrant vector database (must be running)" />
+        <tool name="PDF reader" usage="Manual validation of table data on specific pages (pages 46, 47, 77, 108)" />
+      </tools>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint id="C1" type="scope">
+      <description>VALIDATION-ONLY STORY - NO CODE CHANGES expected. Focus on measurement, analysis, and decision gate execution</description>
+      <rationale>Story 1.15B validates existing ingestion and retrieval, does not implement new features</rationale>
+    </constraint>
+    <constraint id="C2" type="prerequisite">
+      <description>Story 1.15 (Table Extraction Fix) MUST be complete before starting Story 1.15B</description>
+      <rationale>Cannot validate baseline until table extraction is fixed and PDF re-ingested with 300+ chunks</rationale>
+    </constraint>
+    <constraint id="C3" type="nfr">
+      <description>NFR6: 90%+ retrieval accuracy target (baseline validation)</description>
+      <rationale>Critical quality gate for Epic 1 validation</rationale>
+    </constraint>
+    <constraint id="C4" type="nfr">
+      <description>NFR7: 95%+ source attribution accuracy target (baseline validation)</description>
+      <rationale>Critical quality gate for Epic 1 validation</rationale>
+    </constraint>
+    <constraint id="C5" type="nfr">
+      <description>NFR13: &lt;10s response time (p95 latency)</description>
+      <rationale>Performance validation - ensure query performance acceptable before Phase 2</rationale>
+    </constraint>
+    <constraint id="C6" type="decision-gate">
+      <description>AC5 (Decision Gate) is MANDATORY - Cannot proceed without clear decision on Epic 2 need</description>
+      <rationale>Decision gate determines project path (Epic 3 vs Epic 2 implementation)</rationale>
+    </constraint>
+    <constraint id="C7" type="deliverables">
+      <description>Three mandatory deliverable files: baseline-accuracy-report.txt, baseline-failure-analysis.md, baseline-performance-benchmarks.txt</description>
+      <rationale>Document baseline metrics for future comparison and decision justification</rationale>
+    </constraint>
+    <constraint id="C8" type="expected-outcome">
+      <description>Expected baseline: 50-70% accuracy after Story 1.15 table fix (table data now searchable, but basic semantic search may still have gaps)</description>
+      <rationale>Realistic expectations - Story 1.15B measures current state, Epic 2 would improve if needed</rationale>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>run-accuracy-tests.py CLI</name>
+      <kind>script</kind>
+      <signature>uv run python scripts/run-accuracy-tests.py [--output baseline-accuracy-report.txt] [--ground-truth-path tests/fixtures/ground_truth.py]</signature>
+      <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/scripts/run-accuracy-tests.py</path>
+      <usage>PRIMARY TEST EXECUTION - Run 50 ground truth queries, measure retrieval/attribution accuracy, latency metrics</usage>
+    </interface>
+    <interface>
+      <name>inspect-qdrant.py CLI</name>
+      <kind>script</kind>
+      <signature>uv run python scripts/inspect-qdrant.py [--collection financial_documents] [--show-stats] [--show-pages]</signature>
+      <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/scripts/inspect-qdrant.py</path>
+      <usage>INGESTION VALIDATION - Check point count, page distribution, unique pages, verify table data indexed</usage>
+    </interface>
+    <interface>
+      <name>GROUND_TRUTH_QA data structure</name>
+      <kind>data</kind>
+      <signature>List[Dict[str, Any]] with fields: question, expected_answer, expected_pages, category, difficulty</signature>
+      <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/tests/fixtures/ground_truth.py</path>
+      <usage>TEST DATA - 50 validated Q&amp;A pairs for accuracy measurement</usage>
+    </interface>
+    <interface>
+      <name>accuracy_utils module</name>
+      <kind>module</kind>
+      <signature>calculate_retrieval_accuracy(results), calculate_attribution_accuracy(results), calculate_latency_metrics(results)</signature>
+      <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/scripts/accuracy_utils.py</path>
+      <usage>SHARED UTILITIES - Accuracy calculation functions used by validation scripts</usage>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      This story is a VALIDATION story - it RUNS tests but does NOT create new test code.
+
+      Testing approach:
+      - Execute existing validation scripts (run-accuracy-tests.py, inspect-qdrant.py)
+      - Manual verification of table data searchability (search for specific values)
+      - Manual inspection of critical pages (46, 47, 77, 108) via inspect-qdrant.py
+      - Manual analysis of failure patterns and categorization
+      - Document findings in deliverable files
+
+      No pytest tests required for Story 1.15B - this is an analysis and documentation story.
+    </standards>
+    <locations>
+      - scripts/run-accuracy-tests.py (execute to validate accuracy)
+      - scripts/inspect-qdrant.py (execute to validate ingestion)
+      - tests/fixtures/ground_truth.py (50 test queries - input data)
+      - baseline-accuracy-report.txt (OUTPUT - to be created)
+      - baseline-failure-analysis.md (OUTPUT - to be created)
+      - baseline-performance-benchmarks.txt (OUTPUT - to be created)
+    </locations>
+    <ideas>
+      <idea id="T1" ac="AC1" priority="HIGH">
+        <description>Execute inspect-qdrant.py and verify: point_count ≥ 300, page_range includes 1-160, unique_pages ≈ 146</description>
+        <approach>Run CLI script, capture output, verify statistics match expectations from Story 1.15 (300+ chunks expected)</approach>
+      </idea>
+      <idea id="T2" ac="AC1" priority="HIGH">
+        <description>Manual search for table data: Search for "23.2" (page 46 cost), "50.6" (page 46 margin), "104,647" (page 77 EBITDA) - all must return results</description>
+        <approach>Use MCP query tool or run test queries directly, verify results contain expected pages (46, 77)</approach>
+      </idea>
+      <idea id="T3" ac="AC1" priority="MEDIUM">
+        <description>Inspect critical pages: Verify pages 46, 47, 77, 108 have chunks with table data (not just headers/footnotes)</description>
+        <approach>Use inspect-qdrant.py with page filter, manually read chunk text to verify table cell data present</approach>
+      </idea>
+      <idea id="T4" ac="AC2" priority="CRITICAL">
+        <description>Execute full accuracy test suite: Run run-accuracy-tests.py, capture output (retrieval %, attribution %, p50/p95/p99 latency)</description>
+        <approach>uv run python scripts/run-accuracy-tests.py --output baseline-accuracy-report.txt. Review output file for metrics</approach>
+      </idea>
+      <idea id="T5" ac="AC2" priority="CRITICAL">
+        <description>Compare metrics to targets: NFR6 (≥90% retrieval), NFR7 (≥95% attribution), NFR13 (&lt;10s p95 latency) - document PASS/FAIL for each</description>
+        <approach>Extract metrics from baseline-accuracy-report.txt, compare to targets, create PASS/FAIL table</approach>
+      </idea>
+      <idea id="T6" ac="AC3" priority="HIGH">
+        <description>Analyze failure patterns: Review queries with &lt;100% retrieval accuracy, categorize root cause (keyword mismatch, table split, financial term, multi-hop)</description>
+        <approach>Manual review of failed queries, identify patterns, create failure taxonomy with examples</approach>
+      </idea>
+      <idea id="T7" ac="AC3" priority="MEDIUM">
+        <description>Identify Phase 2 priorities: Based on failure taxonomy, recommend which Epic 2 stories would help most (Story 2.1/2.2/2.3/2.5)</description>
+        <approach>Map failure categories to Epic 2 enhancements (keyword → hybrid search, financial terms → domain embeddings, etc.)</approach>
+      </idea>
+      <idea id="T8" ac="AC4" priority="MEDIUM">
+        <description>Extract latency metrics: p50, p95, p99 from test results, calculate latency budget (10,000ms - p95)</description>
+        <approach>Parse baseline-accuracy-report.txt or run-accuracy-tests.py output, document in baseline-performance-benchmarks.txt</approach>
+      </idea>
+      <idea id="T9" ac="AC5" priority="CRITICAL">
+        <description>Execute decision gate: Evaluate retrieval ≥90%? attribution ≥95%? Determine Path 1/2/3, update project-workflow-status-2025-10-13.md</description>
+        <approach>Apply decision gate logic based on metrics, document decision in status file decisions log, state next steps explicitly</approach>
+      </idea>
+    </ideas>
+  </tests>
+</story-context>

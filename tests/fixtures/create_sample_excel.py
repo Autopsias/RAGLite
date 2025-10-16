@@ -9,7 +9,7 @@ from pathlib import Path
 import openpyxl
 
 
-def create_sample_financial_excel():
+def create_sample_financial_excel() -> Path:
     """Create sample financial Excel file with 3 sheets."""
     # Create workbook
     wb = openpyxl.Workbook()

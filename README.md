@@ -155,6 +155,8 @@ raglite/
 
 ### Running Tests
 
+**Unit & Integration Tests:**
+
 ```bash
 # Run all tests
 uv run pytest
@@ -164,10 +166,39 @@ uv run pytest --cov=raglite --cov-report=html
 
 # Run specific test file
 uv run pytest raglite/tests/test_ingestion.py
-
-# Run ground truth accuracy validation
-uv run python scripts/run-accuracy-tests.py
 ```
+
+**Accuracy Validation (Story 1.12B):**
+
+```bash
+# Run full accuracy test suite (50+ queries)
+uv run python scripts/run-accuracy-tests.py
+
+# Run subset for quick checks
+uv run python scripts/run-accuracy-tests.py --subset 15
+
+# Run specific category
+uv run python scripts/run-accuracy-tests.py --category cost_analysis
+
+# Save results to file
+uv run python scripts/run-accuracy-tests.py --output results.json --verbose
+
+# Daily accuracy check (10-15 queries)
+uv run python scripts/daily-accuracy-check.py
+
+# Show historical trend analysis
+uv run python scripts/daily-accuracy-check.py --show-trend
+
+# Generate Week 5 final validation report
+uv run python scripts/generate-final-validation-report.py
+```
+
+**Interpreting Results:**
+
+- **Retrieval Accuracy:** % of queries returning correct information (target: ≥90%)
+- **Attribution Accuracy:** % of citations with correct page numbers (target: ≥95%)
+- **Performance:** p50 <5s, p95 <15s (target per NFR13)
+- **Exit Codes:** 0 = pass, 1 = fail or accuracy below targets
 
 ### Code Quality
 

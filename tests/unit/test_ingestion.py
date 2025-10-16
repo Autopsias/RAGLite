@@ -206,6 +206,7 @@ class TestIngestPDF:
 
         # Mock minimal Docling response
         mock_element = Mock()
+        mock_element.text = "Test PDF content"  # Story 1.13: chunk_by_docling_items needs item.text
         mock_prov = Mock()
         mock_prov.page_no = 1
         mock_element.prov = [mock_prov]

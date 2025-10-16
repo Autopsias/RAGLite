@@ -1,0 +1,342 @@
+============================================================
+RAGLite Baseline Accuracy Report - Story 1.15B (FINAL)
+============================================================
+
+Date: 2025-10-16
+Story: Story 1.15B - Baseline Validation & Analysis
+Test Duration: ~6.5 seconds (50 queries)
+Test Script: scripts/run-accuracy-tests.py
+Ground Truth: tests/fixtures/ground_truth.py (50 queries)
+
+------------------------------------------------------------
+EXECUTIVE SUMMARY
+------------------------------------------------------------
+
+Baseline accuracy established with adaptive number format matching.
+Results show system requires Epic 2 (Advanced RAG Enhancements) to meet NFR targets.
+
+DECISION GATE OUTCOME: Path 3 - Implement Epic 2, Stories 2.1 → 2.2 → 2.3
+
+------------------------------------------------------------
+FINAL ACCURACY RESULTS (VALID)
+------------------------------------------------------------
+
+Total Queries:         50
+Retrieval Accuracy:    56.0% (28/50 pass) ❌ Below NFR6 target (90%)
+Attribution Accuracy:  32.0% (16/50 pass) ❌ Below NFR7 target (95%)
+Errors:                0
+
+Latency Metrics:
+  p50 Latency:         33.20ms ✅ (target: <5000ms - 150x better)
+  p95 Latency:         63.34ms ✅ (target: <15000ms - 237x better)
+
+------------------------------------------------------------
+NFR VALIDATION
+------------------------------------------------------------
+
+NFR6 (≥90% retrieval):      ✗ FAIL (56.0% - 34 percentage points below target)
+NFR7 (≥95% attribution):    ✗ FAIL (32.0% - 63 percentage points below target)
+NFR13 (p50 <5s):            ✓ PASS (33.20ms - 150x better than target)
+NFR13 (p95 <15s):           ✓ PASS (63.34ms - 237x better than target)
+
+Status: 2/4 NFR targets met (performance targets achieved, accuracy targets missed)
+
+------------------------------------------------------------
+CRITICAL FIX APPLIED
+------------------------------------------------------------
+
+Issue: Number Format Mismatch
+  - Ground truth expects American format (23.2)
+  - PDF contains European format (23,2)
+  - Original result: 0% accuracy (all queries failed)
+
+Solution: Adaptive Number Normalization
+  - Added normalize_numbers() function to accuracy_utils.py
+  - Normalizes both American and European formats to canonical form
+  - Enables format-agnostic keyword matching
+  - Result: 56% retrieval accuracy, 32% attribution accuracy (REAL baseline)
+
+Technical Changes:
+  1. Added regex-based number normalization in accuracy_utils.py:
+     - European decimals (23,2) → American (23.2)
+     - European thousands (104 647) → normalized (104647)
+     - American formats remain unchanged
+  2. Fixed pass_/pass key mismatch in calculate_performance_metrics()
+  3. Applied normalization to both keywords and retrieved text
+
+------------------------------------------------------------
+ACCURACY BREAKDOWN BY QUERY TYPE
+------------------------------------------------------------
+
+Retrieval Accuracy: 56.0% (28/50 pass)
+  - Passed: 28 queries successfully retrieved expected keywords
+  - Failed: 22 queries did not meet 50% keyword match threshold
+
+Attribution Accuracy: 32.0% (16/50 pass)
+  - Passed: 16 queries retrieved correct page (±1 tolerance)
+  - Failed: 34 queries did not retrieve expected page in top-5 results
+
+Key Observation:
+  - Retrieval accuracy (56%) is moderate - semantic search finding relevant content
+  - Attribution accuracy (32%) is low - correct pages not prioritized in top-5
+  - Gap between retrieval and attribution suggests ranking/relevance issue
+
+------------------------------------------------------------
+FAILURE PATTERN ANALYSIS
+------------------------------------------------------------
+
+Primary Issues Identified:
+
+1. Page Ranking/Relevance (Attribution Failures)
+   - Correct pages often not in top-5 results
+   - Semantic similarity not sufficient for precise page targeting
+   - Example: Query expects page 46, retrieves pages 93, 62, 132, 153, 49
+   - Impact: 34/50 queries (68%) have attribution failures
+
+2. Keyword Coverage (Retrieval Failures)
+   - Some queries have insufficient keyword matches (<50% threshold)
+   - Domain-specific terminology may not be captured in embeddings
+   - Example: "alternative fuel rate percentage" - only 1/4 keywords matched
+   - Impact: 22/50 queries (44%) have retrieval failures
+
+3. Generality of Queries
+   - Some queries too generic (e.g., "packaging costs per ton")
+   - Match multiple pages with similar content
+   - Semantic search retrieves relevant but not exact pages
+
+------------------------------------------------------------
+DECISION GATE EXECUTION
+------------------------------------------------------------
+
+Criteria Evaluation:
+
+**Path 1:** Retrieval ≥90% AND Attribution ≥95% → Skip Epic 2
+  ❌ NOT MET (Retrieval: 56%, Attribution: 32%)
+
+**Path 2:** Retrieval 85-89% OR Attribution 93-94% → Epic 2, Story 2.1 only
+  ❌ NOT MET (Both metrics significantly below thresholds)
+
+**Path 3:** Retrieval <85% OR Attribution <93% → Epic 2, Stories 2.1→2.3
+  ✅ MET (Retrieval: 56% << 85%, Attribution: 32% << 93%)
+
+**DECISION:** Path 3 - Implement FULL Epic 2 (Advanced RAG Enhancements)
+
+Required Stories:
+  - Story 2.1: Hybrid Search (BM25 + Semantic) - HIGH PRIORITY
+  - Story 2.2: Financial Domain Embeddings (Fin-BERT) - HIGH PRIORITY
+  - Story 2.3: Table-Aware Chunking - MEDIUM PRIORITY
+  - Story 2.4: LLM Synthesis (Claude 3.7 Sonnet) - MEDIUM PRIORITY
+  - Story 2.5: Query Expansion - LOW PRIORITY
+
+Expected Impact:
+  - Story 2.1 (Hybrid Search): +15-20% retrieval accuracy
+  - Story 2.2 (Financial Embeddings): +10-15% retrieval accuracy
+  - Story 2.3 (Table-Aware Chunking): +5-10% attribution accuracy
+  - Combined target: 85-90% retrieval, 65-75% attribution after Epic 2
+
+------------------------------------------------------------
+PHASE 2 RECOMMENDATIONS
+------------------------------------------------------------
+
+Priority 1: Story 2.1 - Hybrid Search (BM25 + Semantic)
+  Rationale: Address page ranking/relevance issues
+  Expected Improvement: +15-20% retrieval, +10-15% attribution
+  Risk: Low (proven technique, minimal latency impact)
+
+Priority 2: Story 2.2 - Financial Domain Embeddings
+  Rationale: Improve semantic understanding of financial terminology
+  Expected Improvement: +10-15% retrieval, +5-10% attribution
+  Risk: Low (drop-in replacement for Fin-E5)
+
+Priority 3: Story 2.3 - Table-Aware Chunking
+  Rationale: Preserve table structure for better attribution
+  Expected Improvement: +5-10% attribution
+  Risk: Low (preprocessing, no query-time impact)
+
+Priority 4: Story 2.4 - LLM Synthesis
+  Rationale: Improve answer quality and citation accuracy
+  Expected Improvement: +10-15% attribution (better citation generation)
+  Risk: Medium (significant latency increase, 2-5s per query)
+
+Priority 5: Story 2.5 - Query Expansion
+  Rationale: Improve keyword coverage for domain-specific queries
+  Expected Improvement: +5-10% retrieval
+  Risk: Low (minimal latency impact)
+
+Implementation Sequence:
+  1. Stories 2.1 + 2.2 in parallel (independent, both high priority)
+  2. Re-validate after 2.1 + 2.2 (expect 80-85% retrieval)
+  3. Story 2.3 (if attribution still <70%)
+  4. Story 2.4 (if attribution still <75%)
+  5. Story 2.5 (if retrieval still <90%)
+
+------------------------------------------------------------
+PERFORMANCE BASELINE (EXCELLENT)
+------------------------------------------------------------
+
+Query Latency:
+  p50: 33.20ms ✅ (150x better than 5s target)
+  p95: 63.34ms ✅ (237x better than 15s target)
+
+Performance Budget:
+  Current baseline: 63.34ms (p95)
+  NFR13 target: 15,000ms (p95)
+  Available for Epic 2: 14,936.66ms (99.6% of budget remaining)
+
+Epic 2 Latency Budget:
+  - Story 2.1 (Hybrid Search): ~100-200ms
+  - Story 2.2 (Financial Embeddings): ~0ms (drop-in)
+  - Story 2.3 (Table-Aware Chunking): ~0ms (preprocessing)
+  - Story 2.4 (LLM Synthesis): ~2000-5000ms
+  - Story 2.5 (Query Expansion): ~50-100ms
+  - Total estimated: ~5250ms (p95)
+  - Final expected latency: ~5313ms (still 2.8x better than target)
+
+Conclusion: Sufficient latency budget for ALL Epic 2 enhancements
+
+------------------------------------------------------------
+SYSTEM ASSESSMENT
+------------------------------------------------------------
+
+What's Working ✅:
+  1. Ingestion: 321 chunks, pages 1-160, table data preserved
+  2. Semantic Search: Retrieving relevant content (56% accuracy)
+  3. Performance: Excellent (33ms p50, 63ms p95)
+  4. Stability: Zero errors during 50-query test
+  5. Number Format Handling: Adaptive checker works for both formats
+
+What Needs Improvement ❌:
+  1. Page Ranking: Correct pages not prioritized in top-5 (32% attribution)
+  2. Keyword Coverage: Domain-specific terminology gaps (56% retrieval)
+  3. Semantic Relevance: Not sufficient for precise page targeting
+
+Root Cause:
+  - Single-stage semantic search insufficient for financial domain
+  - Embedding model (Fin-E5) not optimized for financial reports
+  - No hybrid search to complement semantic with keyword matching
+
+------------------------------------------------------------
+VALIDATION STATUS
+------------------------------------------------------------
+
+Story 1.15B Status: ✅ COMPLETE
+
+Acceptance Criteria:
+  ✅ AC1: Ingestion quality validated (321 chunks, pages 1-160)
+  ✅ AC2: Full accuracy test executed (50 queries, valid results)
+  ✅ AC3: Retrieval accuracy measured (56.0%)
+  ✅ AC4: Attribution accuracy measured (32.0%)
+  ✅ AC5: Decision gate executed (Path 3)
+
+Deliverables:
+  ✅ baseline-accuracy-report-FINAL.txt (this file)
+  ✅ baseline-failure-analysis.md (detailed failure taxonomy)
+  ✅ baseline-performance-benchmarks.txt (latency metrics)
+  ✅ accuracy_utils.py updated (adaptive number normalization)
+
+Quality Gate: PASSED (all AC met, decision gate executed)
+
+------------------------------------------------------------
+NEXT STEPS (IMMEDIATE)
+------------------------------------------------------------
+
+Epic 2 Implementation Sequence:
+
+Week 1-2: Stories 2.1 + 2.2 (Parallel)
+  - Story 2.1: Implement hybrid search (BM25 + semantic)
+  - Story 2.2: Integrate financial domain embeddings (Fin-BERT)
+  - Expected result: 80-85% retrieval, 50-60% attribution
+
+Week 2-3: Re-Validation
+  - Run full accuracy test suite
+  - Measure improvement from Stories 2.1 + 2.2
+  - Decision: Continue with Stories 2.3-2.5 or stop if targets met
+
+Week 3-4: Stories 2.3-2.5 (Conditional)
+  - Story 2.3: Table-aware chunking (if attribution <70%)
+  - Story 2.4: LLM synthesis (if attribution <75%)
+  - Story 2.5: Query expansion (if retrieval <90%)
+
+Final Target:
+  - Retrieval Accuracy: 90%+ (NFR6)
+  - Attribution Accuracy: 95%+ (NFR7)
+  - Performance: <15s p95 (NFR13) - maintained
+
+------------------------------------------------------------
+RISKS & MITIGATION
+------------------------------------------------------------
+
+Risk 1: Epic 2 insufficient to reach 90% retrieval
+  Likelihood: MEDIUM
+  Impact: HIGH (blocks Epic 1 completion)
+  Mitigation:
+    - Implement Stories 2.1-2.3 first, measure incrementally
+    - If still <85% after Epic 2, escalate to architecture review
+    - Consider additional enhancements (reranking, query understanding)
+
+Risk 2: Ground truth quality issues
+  Likelihood: LOW
+  Impact: MEDIUM (accuracy measurements unreliable)
+  Mitigation:
+    - Ground truth validated in Story 1.14
+    - Adaptive number formatting resolves format mismatches
+    - Re-validate ground truth if accuracy remains low after Epic 2
+
+Risk 3: Latency budget exceeded by LLM synthesis
+  Likelihood: LOW
+  Impact: MEDIUM (NFR13 violation)
+  Mitigation:
+    - Monitor latency after each story implementation
+    - Use streaming responses for LLM synthesis
+    - Client-side timeout handling
+    - Skip Story 2.4 if p95 approaches 10s
+
+------------------------------------------------------------
+LESSONS LEARNED
+------------------------------------------------------------
+
+1. Number Format Handling
+   - PDFs may use different regional number formats
+   - Always implement format-agnostic comparison for numeric data
+   - Regex-based normalization is effective for both American and European formats
+
+2. Ground Truth Validation
+   - Keyword existence verification is critical during ground truth creation
+   - Format assumptions (American vs European) should be explicit
+   - Validation should include actual keyword matching tests
+
+3. Baseline Establishment
+   - Early baseline validation reveals actual system performance
+   - Adaptive solutions (like number normalization) better than manual fixes
+   - Decision gates based on real data prevent over/under-engineering
+
+------------------------------------------------------------
+CONCLUSION
+------------------------------------------------------------
+
+Story 1.15B successfully established the baseline accuracy for RAGLite Phase 1:
+
+Baseline Metrics:
+  - Retrieval Accuracy: 56.0% (34 pp below NFR6 target)
+  - Attribution Accuracy: 32.0% (63 pp below NFR7 target)
+  - Performance: 33ms p50, 63ms p95 (excellent, 150-237x better than target)
+
+Decision Gate Outcome:
+  - Path 3: Implement FULL Epic 2 (Advanced RAG Enhancements)
+  - Required Stories: 2.1 → 2.2 → 2.3 → 2.4 → 2.5 (conditional)
+
+Key Achievement:
+  - Adaptive number format matching enables accurate validation
+  - Real baseline established (not 0% due to format mismatch)
+  - Clear path forward with Epic 2 implementation
+
+Epic 1 Status:
+  - Foundation established (ingestion, retrieval, performance)
+  - Accuracy gap identified (requires Epic 2)
+  - Story 1.15B COMPLETE ✅
+
+Next Action: Proceed to Epic 2, Story 2.1 (Hybrid Search) + Story 2.2 (Financial Embeddings)
+
+============================================================
+END OF BASELINE ACCURACY REPORT
+============================================================
