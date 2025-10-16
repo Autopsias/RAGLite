@@ -38,6 +38,7 @@ dependencies = [
     "pydantic-settings>=2.0,<3.0",
     "openpyxl>=3.1,<4.0",
     "pandas>=2.0,<3.0",
+    "rank-bm25==0.2.2", # Epic 2: BM25 hybrid search (Story 2.1)
     "python-dotenv==1.1.1",
     "asyncio>=3.4.3,<4.0.0",
     "httpx>=0.28.1,<1.0.0",
@@ -227,6 +228,7 @@ module = [
     "qdrant_client.*",
     "openpyxl.*",
     "pandas.*",
+    "rank_bm25.*",
 ]
 ignore_missing_imports = true
 

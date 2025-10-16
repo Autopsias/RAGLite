@@ -7,8 +7,8 @@ from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
 
-# Test PDF path - using actual financial document
-TEST_PDF_PATH = "docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf"
+# Test PDF path - using small 10-page test fixture for fast unit tests
+TEST_PDF_PATH = "tests/fixtures/sample_financial_report.pdf"
 
 
 def test_page_extraction() -> None:
