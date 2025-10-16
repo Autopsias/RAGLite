@@ -52,3 +52,4 @@ models/
 htmlcov/
 .coverage
 .coverage.*
+docs/sample pdf/split/
