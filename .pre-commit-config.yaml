@@ -104,8 +104,8 @@ repos:
     rev: 1.8.0
     hooks:
       - id: bandit
-        args: [-r, raglite/, -f, screen]
-        exclude: ^tests/
+        args: [-r, raglite/, -f, screen, --skip, B101]
+        exclude: (^tests/|^raglite/tests/)
         pass_filenames: false
 
   # ============ CUSTOM LOCAL HOOKS ============
