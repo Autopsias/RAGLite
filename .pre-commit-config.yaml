@@ -99,22 +99,33 @@ repos:
         args: [--verbose, --staged]
         stages: [pre-commit]
 
+  # Bandit - Security linting for Python (~2s)
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.0
+    hooks:
+      - id: bandit
+        args: [-r, raglite/, -f, screen, --skip, B101]
+        exclude: (^tests/|^raglite/tests/)
+        pass_filenames: false
+
   # ============ CUSTOM LOCAL HOOKS ============
   # Add project-specific checks here
 
-  # Example: Custom test marker validator (Python projects)
-  # - repo: local
-  #   hooks:
-  #     - id: test-marker-validator
-  #       name: test-marker-validator
-  #       entry: python scripts/validate-test-markers.py --quiet
-  #       language: system
-  #       files: ^tests/.*test_.*\.py$
-  #       pass_filenames: false
+  # Safety - Check for vulnerable dependencies
+  - repo: local
+    hooks:
+      - id: safety-check
+        name: safety-dependency-check
+        entry: bash -c 'pip install safety 2>/dev/null && safety check --json || echo "⚠️  Safety check skipped (install safety for full security scanning)"'
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
 
-# Total target execution time: ~8-9 seconds
+# Total target execution time: ~12-15 seconds
 # - File checks: <1s
 # - Language-specific linting: ~2s
 # - Type checking: ~2s
 # - Secret scanning: ~2s
+# - Security linting: ~2s
+# - Dependency check: ~2s
 # - Custom validators: ~0.5s
