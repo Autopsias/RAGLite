@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Story Context: Story 1.11 - Enhanced Chunk Metadata & MCP Response Formatting -->
+<!-- Generated: 2025-10-13 -->
+<!-- Purpose: Provide comprehensive implementation context for DEV agent -->
+
+<story-context id="1.11" epic="1" version="1.0">
+
+  <!-- ================================================================== -->
+  <!-- STORY OVERVIEW -->
+  <!-- ================================================================== -->
+  <story>
+    <id>1.11</id>
+    <title>Enhanced Chunk Metadata & MCP Response Formatting</title>
+    <status>Ready</status>
+    <epic>Epic 1 - Foundation & Accurate Retrieval</epic>
+
+    <user-story>
+      <as-a>system</as-a>
+      <i-want>to return well-structured, comprehensive chunk metadata via MCP tools with complete source attribution fields</i-want>
+      <so-that>Claude Code (the LLM client) can synthesize accurate, well-cited answers from the raw data and users can verify information sources</so-that>
+    </user-story>
+
+    <summary>
+      Story 1.11 is a validation and enhancement story that confirms the MCP response format and chunk metadata are complete, well-structured, and optimized for LLM synthesis. This story validates the standard MCP pattern where RAGLite returns raw chunks with metadata, and Claude Code synthesizes natural language answers.
+
+      Key focus areas:
+      - Metadata completeness validation (100% target on 50+ ground truth queries)
+      - Standard MCP pattern validation (RAGLite returns raw chunks → Claude Code synthesizes)
+      - Response format validation (QueryResponse matches Tech Spec API contract)
+      - LLM synthesis testing (5+ manual queries)
+      - Performance validation (<5s p50, <10s p95 latency)
+
+      This is a TESTING/VALIDATION story - no new production code expected, only test additions.
+    </summary>
+  </story>
+
+  <!-- ================================================================== -->
+  <!-- ACCEPTANCE CRITERIA -->
+  <!-- ================================================================== -->
+  <acceptance-criteria>
+    <criterion id="AC1" priority="high">
+      <text>MCP tool response includes comprehensive chunk metadata per Tech Spec: score, text, source_document, page_number (MUST be populated), chunk_index, word_count</text>
+      <validation>Test with 20+ diverse queries, verify all QueryResult objects have complete metadata</validation>
+    </criterion>
+
+    <criterion id="AC2" priority="high">
+      <text>Response format follows Week 0 spike pattern and matches Tech Spec API contract (QueryResult model in models.py:48-64)</text>
+      <validation>Compare current QueryResponse format to Week 0 spike, verify JSON serialization works</validation>
+    </criterion>
+
+    <criterion id="AC3" priority="critical">
+      <text>Metadata validation: All required fields populated correctly (no None values for critical fields like page_number, no empty strings for source_document)</text>
+      <validation>Validate page_number != None, source_document != "", word_count > 0, score in [0.0, 1.0] for ALL results</validation>
+    </criterion>
+
+    <criterion id="AC4" priority="medium">
+      <text>Response JSON structure optimized for LLM synthesis (clear field names, consistent format, citation appended to text)</text>
+      <validation>Test JSON serialization, verify citation format in text field</validation>
+    </criterion>
+
+    <criterion id="AC5" priority="high">
+      <text>Integration with Story 1.8 (Source Attribution) validated - citations include all necessary data: (Source: document.pdf, page X, chunk Y)</text>
+      <validation>Verify generate_citations() appends citations correctly, test edge cases</validation>
+    </criterion>
+
+    <criterion id="AC6" priority="medium">
+      <text>Testing: Verify LLM client (Claude Code) can synthesize accurate answers from returned chunks (5+ manual test queries)</text>
+      <validation>Manual testing with Claude Code, validate synthesis quality</validation>
+    </criterion>
+
+    <criterion id="AC7" priority="high">
+      <text>Performance: Response generated in <5 seconds for standard queries per NFR13 (measure p50/p95 latency on 20+ queries)</text>
+      <validation>Measure p50 <5s and p95 <10s, compare to Week 0 baseline (0.83s) and Story 1.10 (25ms p50)</validation>
+    </criterion>
+
+    <criterion id="AC8" priority="medium">
+      <text>Unit tests cover response formatting, metadata validation, and edge cases (missing page_number, empty text, etc.)</text>
+      <validation>8+ unit tests in test_response_formatting.py</validation>
+    </criterion>
+
+    <criterion id="AC9" priority="critical">
+      <text>CRITICAL - METADATA COMPLETENESS: All 50+ queries in ground truth test set return results with 100% metadata completeness</text>
+      <validation>Execute ALL 50+ ground truth queries, validate no missing page_number, source_document, or other required fields</validation>
+    </criterion>
+
+    <criterion id="AC10" priority="critical">
+      <text>ARCHITECTURE VALIDATION: Standard MCP pattern confirmed: RAGLite returns raw chunks → Claude Code synthesizes answers → User receives natural language response with citations</text>
+      <validation>Manual validation with Claude Code, confirm no answer synthesis in RAGLite</validation>
+    </criterion>
+  </acceptance-criteria>
+
+  <!-- ================================================================== -->
+  <!-- DOCUMENTATION ARTIFACTS -->
+  <!-- ================================================================== -->
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/prd/epic-1-foundation-accurate-retrieval.md</path>
+        <title>Epic 1: Foundation & Accurate Retrieval</title>
+        <section>Story 1.11 (lines 299-327)</section>
+        <snippet>Story 1.11 requirements: Enhanced chunk metadata, standard MCP pattern (RAGLite returns raw chunks, Claude Code synthesizes), metadata completeness validation</snippet>
+      </artifact>
+
+      <artifact>
+        <path>docs/tech-spec-epic-1.md</path>
+        <title>Technical Specification: Epic 1</title>
+        <section>QueryResponse API Contract (lines 711-741)</section>
+        <snippet>MCP tool response format: QueryResponse with list of QueryResult objects. Required fields: score, text, source_document, page_number, chunk_index, word_count. Citation format: (Source: document.pdf, page X, chunk Y)</snippet>
+      </artifact>
+
+      <artifact>
+        <path>docs/tech-spec-epic-1.md</path>
+        <title>Technical Specification: Epic 1</title>
+        <section>QueryResult/QueryResponse Data Models (lines 89-136)</section>
+        <snippet>Pydantic models for QueryResult and QueryResponse. QueryResult fields must include score (0-1 float), text (with appended citation), source_document (filename), page_number (int or None), chunk_index (int), word_count (int)</snippet>
+      </artifact>
+
+      <artifact>
+        <path>CLAUDE.md</path>
+        <title>Project Development Guidelines</title>
+        <section>Anti-over-engineering rules (lines 17-61)</section>
+        <snippet>KISS principle: No custom wrappers, no abstract base classes, no configuration frameworks for 600-line MVP. Direct SDK usage only. Story 1.11 is validation/testing - NO new production code expected</snippet>
+      </artifact>
+
+      <artifact>
+        <path>docs/stories/story-1.10.md</path>
+        <title>Story 1.10: Natural Language Query Tool - Validation & Testing</title>
+        <section>Completion Notes</section>
+        <snippet>Story 1.10 validation results: 100% retrieval accuracy (15/15 queries), 25ms p50 latency, 100% metadata completeness. All acceptance criteria met. Provides baseline for Story 1.11 validation</snippet>
+      </artifact>
+
+      <artifact>
+        <path>docs/stories/story-1.8.md</path>
+        <title>Story 1.8: Source Attribution & Citation Generation</title>
+        <section>Implementation</section>
+        <snippet>generate_citations() function in raglite/retrieval/attribution.py. Appends citation format: (Source: {source_document}, page {page_number}, chunk {chunk_index}) to chunk text. Must handle None page_number gracefully</snippet>
+      </artifact>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>data-model</kind>
+        <symbol>QueryResult</symbol>
+        <lines>48-64</lines>
+        <reason>Core data model for Story 1.11 validation. Contains all metadata fields to validate: score, text, source_document, page_number, chunk_index, word_count. Must verify all fields populated correctly</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>data-model</kind>
+        <symbol>QueryResponse</symbol>
+        <lines>74-79</lines>
+        <reason>MCP tool response model. Contains results list (List[QueryResult]), query string, and retrieval_time_ms. Must verify format matches Tech Spec API contract</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/main.py</path>
+        <kind>mcp-tool</kind>
+        <symbol>query_financial_documents</symbol>
+        <lines>115-180</lines>
+        <reason>MCP tool that returns QueryResponse. Already implemented in Story 1.9. Story 1.11 validates this tool's response format and metadata completeness</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/retrieval/search.py</path>
+        <kind>function</kind>
+        <symbol>search_documents</symbol>
+        <lines>1-180</lines>
+        <reason>Returns QueryResult objects with metadata from Qdrant search. Story 1.11 validates metadata completeness from this function</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/retrieval/attribution.py</path>
+        <kind>function</kind>
+        <symbol>generate_citations</symbol>
+        <lines>1-95</lines>
+        <reason>Appends citations to QueryResult.text. Story 1.11 validates citation format and integration with Story 1.8</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/tests/ground_truth.py</path>
+        <kind>test-data</kind>
+        <symbol>GROUND_TRUTH_QUERIES</symbol>
+        <lines>1-200</lines>
+        <reason>50+ Q&A pairs for Story 1.12A. Story 1.11 validates metadata completeness on ALL ground truth queries (AC9 - 100% target)</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="pydantic" version=">=2.0,<3.0" reason="Data models for QueryResult/QueryResponse validation"/>
+        <package name="pytest" version="8.4.2" reason="Unit testing framework"/>
+        <package name="pytest-asyncio" version="1.2.0" reason="Async test support"/>
+        <package name="pytest-mock" version=">=3.12,<4.0" reason="Mocking for unit tests"/>
+        <package name="fastmcp" version="2.12.4" reason="MCP server - validate protocol compliance"/>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <!-- ================================================================== -->
+  <!-- CONSTRAINTS -->
+  <!-- ================================================================== -->
+  <constraints>
+    <constraint id="C1" type="architecture" severity="critical">
+      <text>KISS Principle: This is a validation/testing story. NO new production code expected. Only add tests and documentation</text>
+      <source>CLAUDE.md:17-61</source>
+    </constraint>
+
+    <constraint id="C2" type="validation" severity="critical">
+      <text>Metadata Completeness: 100% target on all 50+ ground truth queries. All QueryResult objects must have page_number != None, source_document != "", word_count > 0, score in [0.0, 1.0]</text>
+      <source>Story 1.11 AC3, AC9</source>
+    </constraint>
+
+    <constraint id="C3" type="architecture" severity="critical">
+      <text>Standard MCP Pattern: RAGLite returns raw chunks with metadata. Claude Code (LLM client) synthesizes natural language answers. NO answer synthesis in RAGLite codebase</text>
+      <source>Epic 1 PRD lines 299-327</source>
+    </constraint>
+
+    <constraint id="C4" type="testing" severity="high">
+      <text>Follow Stories 1.8-1.10 testing patterns: Integration tests marked with @pytest.mark.integration and @pytest.mark.slow. Unit tests marked with @pytest.mark.unit. Use async/await, type hints, docstrings</text>
+      <source>Story 1.10 patterns</source>
+    </constraint>
+
+    <constraint id="C5" type="performance" severity="high">
+      <text>Performance validation: p50 <5s, p95 <10s per NFR13. Compare to Week 0 baseline (0.83s) and Story 1.10 (25ms p50)</text>
+      <source>NFR13, Tech Spec lines 789-800</source>
+    </constraint>
+
+    <constraint id="C6" type="validation" severity="high">
+      <text>Response format must match Tech Spec API contract (lines 711-741) exactly. QueryResponse with list of QueryResult objects. Citation format: (Source: document.pdf, page X, chunk Y)</text>
+      <source>Tech Spec Epic 1 lines 711-741</source>
+    </constraint>
+
+    <constraint id="C7" type="testing" severity="medium">
+      <text>LLM synthesis testing: Manual validation with Claude Code (5+ queries). Verify Claude Code can synthesize accurate answers from QueryResponse chunks</text>
+      <source>Story 1.11 AC6</source>
+    </constraint>
+  </constraints>
+
+  <!-- ================================================================== -->
+  <!-- INTERFACES TO REUSE -->
+  <!-- ================================================================== -->
+  <interfaces>
+    <interface>
+      <name>query_financial_documents</name>
+      <kind>mcp-tool</kind>
+      <signature>async def query_financial_documents(request: QueryRequest) -> QueryResponse</signature>
+      <path>raglite/main.py:115-180</path>
+      <description>MCP tool that performs semantic search and returns QueryResponse. Already implemented in Story 1.9. Story 1.11 validates response format and metadata</description>
+    </interface>
+
+    <interface>
+      <name>search_documents</name>
+      <kind>function</kind>
+      <signature>async def search_documents(query: str, top_k: int = 5) -> List[QueryResult]</signature>
+      <path>raglite/retrieval/search.py</path>
+      <description>Performs Qdrant vector search and returns QueryResult objects with metadata. Story 1.11 validates metadata completeness from this function</description>
+    </interface>
+
+    <interface>
+      <name>generate_citations</name>
+      <kind>function</kind>
+      <signature>async def generate_citations(results: List[QueryResult]) -> List[QueryResult]</signature>
+      <path>raglite/retrieval/attribution.py</path>
+      <description>Appends citation format to QueryResult.text: (Source: document.pdf, page X, chunk Y). Story 1.11 validates citation integration</description>
+    </interface>
+
+    <interface>
+      <name>QueryResult</name>
+      <kind>data-model</kind>
+      <signature>class QueryResult(BaseModel): score, text, source_document, page_number, chunk_index, word_count</signature>
+      <path>raglite/shared/models.py:48-64</path>
+      <description>Pydantic model for single query result. Story 1.11 validates all fields populated correctly</description>
+    </interface>
+
+    <interface>
+      <name>QueryResponse</name>
+      <kind>data-model</kind>
+      <signature>class QueryResponse(BaseModel): results, query, retrieval_time_ms</signature>
+      <path>raglite/shared/models.py:74-79</path>
+      <description>Pydantic model for MCP tool response. Story 1.11 validates format matches Tech Spec API contract</description>
+    </interface>
+  </interfaces>
+
+  <!-- ================================================================== -->
+  <!-- TESTING STRATEGY -->
+  <!-- ================================================================== -->
+  <tests>
+    <standards>
+      Testing follows pytest patterns from Stories 1.8-1.10:
+      - Unit tests: Mock external dependencies, test in isolation, mark with @pytest.mark.unit
+      - Integration tests: Use real Qdrant and embedding model, mark with @pytest.mark.integration and @pytest.mark.slow
+      - Async tests: Use pytest-asyncio for async functions
+      - Type hints: All test functions have type annotations
+      - Docstrings: Google-style for all test functions
+      - Fixtures: Use pytest fixtures for test data and setup/teardown
+
+      Story 1.11 is validation/testing focused:
+      - 8 unit tests in tests/unit/test_response_formatting.py (~200 lines)
+      - 5 integration tests in tests/integration/test_mcp_response_validation.py (~250 lines)
+      - Total: ~450 lines of test code, no new production code
+    </standards>
+
+    <locations>
+      - tests/unit/test_response_formatting.py (NEW - unit tests for Story 1.11)
+      - tests/integration/test_mcp_response_validation.py (NEW - integration tests for Story 1.11)
+      - raglite/tests/ground_truth.py (REUSE - 50+ Q&A pairs for validation)
+    </locations>
+
+    <ideas>
+      <test id="T1" ac="AC1,AC3" type="unit">
+        <description>test_query_result_metadata_completeness(): Validate QueryResult has all required metadata fields (score, text, source_document, page_number, chunk_index, word_count). Assert page_number != None, source_document != "", word_count > 0, score in [0.0, 1.0]</description>
+      </test>
+
+      <test id="T2" ac="AC3" type="unit">
+        <description>test_query_result_page_number_none_handling(): Test QueryResult handles None page_number gracefully. Edge case for documents with missing page metadata</description>
+      </test>
+
+      <test id="T3" ac="AC1" type="unit">
+        <description>test_query_result_score_range(): Validate score is float between 0.0-1.0 for all QueryResult objects</description>
+      </test>
+
+      <test id="T4" ac="AC2,AC4" type="unit">
+        <description>test_query_response_serialization(): Validate JSON serialization works (json.dumps(response.model_dump())). Test field naming consistency (snake_case)</description>
+      </test>
+
+      <test id="T5" ac="AC4,AC5" type="unit">
+        <description>test_citation_format(): Validate citation appended to text correctly: (Source: document.pdf, page X, chunk Y). Test edge case: page_number = None → citation handles gracefully</description>
+      </test>
+
+      <test id="T6" ac="AC2" type="unit">
+        <description>test_empty_results_handling(): Test QueryResponse with empty results list. Verify no errors during serialization</description>
+      </test>
+
+      <test id="T7" ac="AC3" type="unit">
+        <description>test_edge_case_metadata(): Test very long filenames, special characters in source_document, missing page numbers. Verify no crashes or validation errors</description>
+      </test>
+
+      <test id="T8" ac="AC3" type="unit">
+        <description>test_metadata_completeness_validation(): Test validation logic for all required fields. Create QueryResult with missing/invalid fields, verify appropriate validation errors</description>
+      </test>
+
+      <test id="T9" ac="AC9" type="integration">
+        <description>test_e2e_metadata_completeness_validation(): Execute ALL 50+ ground truth queries. Validate 100% metadata completeness (page_number != None, source_document != "", word_count > 0 for ALL results). Calculate completeness rate</description>
+      </test>
+
+      <test id="T10" ac="AC5" type="integration">
+        <description>test_e2e_citation_integration(): Validate citations from Story 1.8 work correctly. Test generate_citations() appends citations to QueryResult.text. Verify citation format</description>
+      </test>
+
+      <test id="T11" ac="AC6,AC10" type="integration">
+        <description>test_e2e_llm_synthesis_compatibility(): Simulate LLM client processing QueryResponse. Verify Claude Code can synthesize accurate answers from returned chunks</description>
+      </test>
+
+      <test id="T12" ac="AC7" type="integration">
+        <description>test_e2e_performance_validation(): Measure p50/p95 latency on 20+ queries. Validate p50 <5s and p95 <10s per NFR13. Compare to Week 0 baseline (0.83s) and Story 1.10 (25ms p50)</description>
+      </test>
+
+      <test id="T13" ac="AC9" type="integration">
+        <description>test_e2e_ground_truth_metadata(): Validate metadata completeness on ground truth queries. For each of 50+ queries, check: page_number present, source_document populated, citations appended</description>
+      </test>
+    </ideas>
+  </tests>
+
+  <!-- ================================================================== -->
+  <!-- NFRS (NON-FUNCTIONAL REQUIREMENTS) -->
+  <!-- ================================================================== -->
+  <nfrs>
+    <nfr id="NFR6">
+      <text>90%+ retrieval accuracy on test set (Story 1.10 achieved 100%)</text>
+      <validation>Story 1.11 maintains 100% accuracy while validating metadata completeness</validation>
+    </nfr>
+
+    <nfr id="NFR7">
+      <text>95%+ source attribution accuracy (requires 100% metadata completeness)</text>
+      <validation>Story 1.11 validates 100% metadata completeness on all 50+ ground truth queries (AC9)</validation>
+    </nfr>
+
+    <nfr id="NFR13">
+      <text><10s query response time (p50 <5s, p95 <10s). Story 1.10 achieved 25ms p50</text>
+      <validation>Story 1.11 measures p50/p95 latency on 20+ queries, validates meets targets (AC7)</validation>
+    </nfr>
+
+    <nfr id="NFR30">
+      <text>MCP protocol compliance (standard MCP pattern)</text>
+      <validation>Story 1.11 validates standard MCP pattern: RAGLite returns raw chunks → Claude Code synthesizes (AC10)</validation>
+    </nfr>
+
+    <nfr id="NFR31">
+      <text>Claude Desktop integration (manual validation)</text>
+      <validation>Story 1.11 includes manual testing with Claude Code (5+ queries, AC6)</validation>
+    </nfr>
+  </nfrs>
+
+  <!-- ================================================================== -->
+  <!-- IMPLEMENTATION NOTES -->
+  <!-- ================================================================== -->
+  <implementation-notes>
+    <note priority="critical">
+      Story 1.11 is a VALIDATION/TESTING story - NO new production code expected. Only add tests (8 unit + 5 integration) and documentation. All production code already exists from Stories 1.7-1.10.
+    </note>
+
+    <note priority="critical">
+      Metadata completeness is CRITICAL for NFR7 (95%+ source attribution). AC9 requires 100% metadata completeness on all 50+ ground truth queries. Any QueryResult with page_number = None or source_document = "" is a FAILURE.
+    </note>
+
+    <note priority="high">
+      Standard MCP pattern validation (AC10): Confirm RAGLite returns raw chunks with metadata, Claude Code synthesizes natural language answers. NO answer synthesis logic should exist in RAGLite codebase.
+    </note>
+
+    <note priority="high">
+      LLM synthesis testing (AC6): Manual validation required. Connect Claude Code to RAGLite MCP server, execute 5+ diverse queries, verify synthesis quality and citation accuracy.
+    </note>
+
+    <note priority="medium">
+      Performance baseline: Story 1.10 achieved 25ms p50 latency (exceeds <5s target). Story 1.11 should maintain similar performance while validating metadata completeness.
+    </note>
+
+    <note priority="medium">
+      Citation format from Story 1.8: (Source: document.pdf, page X, chunk Y). Test edge case: page_number = None → citation should handle gracefully (e.g., "page ?").
+    </note>
+
+    <note priority="low">
+      Test file organization: Create tests/unit/test_response_formatting.py (~200 lines, 8 tests) and tests/integration/test_mcp_response_validation.py (~250 lines, 5 tests). Follow Story 1.10 patterns.
+    </note>
+  </implementation-notes>
+
+  <!-- ================================================================== -->
+  <!-- DEPENDENCIES -->
+  <!-- ================================================================== -->
+  <dependencies>
+    <story-dependencies>
+      <dependency id="1.10" status="complete">
+        <title>Natural Language Query Tool - Validation & Testing</title>
+        <reason>query_financial_documents tool operational, 100% accuracy baseline, 25ms p50 latency. Provides baseline for Story 1.11 validation</reason>
+      </dependency>
+
+      <dependency id="1.8" status="complete">
+        <title>Source Attribution & Citation Generation</title>
+        <reason>generate_citations() function appends citations to chunks. Story 1.11 validates citation integration</reason>
+      </dependency>
+
+      <dependency id="1.7" status="complete">
+        <title>Vector Similarity Search & Retrieval</title>
+        <reason>search_documents() returns QueryResult objects with metadata. Story 1.11 validates metadata completeness</reason>
+      </dependency>
+
+      <dependency id="1.12A" status="complete">
+        <title>Ground Truth Test Set Creation</title>
+        <reason>50+ Q&A pairs for Story 1.12A. Story 1.11 validates metadata completeness on ALL ground truth queries</reason>
+      </dependency>
+    </story-dependencies>
+
+    <blocks>
+      <story id="1.12B">
+        <title>Continuous Accuracy Tracking & Final Validation</title>
+        <reason>Story 1.12B final validation requires 100% metadata completeness confirmed by Story 1.11</reason>
+      </story>
+    </blocks>
+  </dependencies>
+
+  <!-- ================================================================== -->
+  <!-- RISKS & MITIGATION -->
+  <!-- ================================================================== -->
+  <risks>
+    <risk severity="medium">
+      <description>Metadata completeness <100% on ground truth queries</description>
+      <impact>Blocks NFR7 (95%+ source attribution accuracy), Story 1.12B final validation</impact>
+      <mitigation>If metadata incomplete: Debug root cause (Story 1.2 page extraction? Story 1.4 chunking?), fix in production code, re-run Story 1.11 validation</mitigation>
+    </risk>
+
+    <risk severity="low">
+      <description>LLM synthesis testing reveals response format issues</description>
+      <impact>May require QueryResponse format adjustments, Story 1.9 modifications</impact>
+      <mitigation>If synthesis fails: Analyze Claude Code error messages, adjust response format if needed, validate with Tech Spec API contract</mitigation>
+    </risk>
+
+    <risk severity="low">
+      <description>Performance regression (p50 latency > 5s)</description>
+      <impact>Fails NFR13 (<10s query response time)</impact>
+      <mitigation>If performance regresses: Profile query pipeline (embedding generation, Qdrant search, citation generation), identify bottleneck, optimize if needed</mitigation>
+    </risk>
+  </risks>
+
+</story-context>

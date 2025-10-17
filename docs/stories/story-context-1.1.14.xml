@@ -1,0 +1,298 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.14</storyId>
+    <title>Fix Ground Truth Test Set</title>
+    <status>Ready for Development</status>
+    <generatedAt>2025-10-14</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.14-fix-ground-truth-test-set.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>to complete manual validation of the ground truth test set against the actual PDF content</iWant>
+    <soThat>Epic 1 can be accurately validated and signed off as complete</soThat>
+    <tasks>
+### Task 1: Setup and Manual Validation (3-3.5 hours)
+- Subtask 1.1: Preparation (15 min) - Open PDF, validation checklist, ground truth file, create tracking document
+- Subtask 1.2: Validate All 50 Questions (2.5-3 hours) - Navigate to pages, search for keywords, mark as validated or document mismatches for all 6 categories
+
+### Task 2: Apply Corrections (30 minutes)
+- Subtask 2.1: Update Ground Truth File - Apply corrections to tests/fixtures/ground_truth.py (page numbers, keywords, expected answers, section names, module header)
+
+### Task 3: Validation and Testing (30 minutes)
+- Subtask 3.1: Run Structural Validation (5 min) - Execute validate_ground_truth.py
+- Subtask 3.2: Run Accuracy Tests (15 min) - Execute run-accuracy-tests.py
+- Subtask 3.3: Spot-Check Results (10 min) - Manually review 5-10 query results
+
+### Task 4: Update Documentation (30 minutes)
+- Subtask 4.1: Update Story 1.12A (5 min) - Add change log entry
+- Subtask 4.2: Complete Story 1.14 Dev Record (10 min) - Fill in completion notes
+- Subtask 4.3: Update Epic 1 Validation Report (10 min) - Replace placeholder accuracy with actual metrics
+- Subtask 4.4: Update Workflow Status (5 min) - Mark Story 1.14 complete, Epic 1 validated
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. All 50 ground truth questions manually validated against PDF - Navigate to expected_page_number, verify expected_keywords and expected_answer, document mismatches
+2. Corrections applied to tests/fixtures/ground_truth.py - Update incorrect page numbers (15-20 corrections expected), refine keywords, update answers and sections
+3. Structural validation passes - Execute validate_ground_truth.py with exit code 0, VALIDATION PASSED
+4. Retrieval accuracy ≥90% (NFR6 compliance) - Execute run-accuracy-tests.py, verify ≥45 out of 50 queries return correct information
+5. Attribution accuracy ≥95% (NFR7 compliance) - Verify ≥48 out of 50 queries cite correct page numbers
+6. Story 1.14 documentation complete - Fill in Dev Agent Record, document validation completion, list corrections, add accuracy metrics
+7. Epic 1 validation report updated with accurate metrics - Update epic-1-final-validation-report-20251013.md, replace 18% with actual accuracy, mark Epic 1 as VALIDATED ✅
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/prd/epic-1-foundation-accurate-retrieval.md</path>
+        <title>Epic 1: Foundation & Accurate Retrieval</title>
+        <section>Epic Overview</section>
+        <snippet>Epic Goal: Deliver a working conversational financial Q&A system with 90%+ retrieval accuracy (NFR6) and 95%+ source attribution accuracy (NFR7). Contains 13 stories including ground truth test set creation (Story 1.12A) and validation infrastructure (Story 1.12B).</snippet>
+      </doc>
+      <doc>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/1.12A.ground-truth-test-set-creation.md</path>
+        <title>Story 1.12A: Ground Truth Test Set Creation</title>
+        <section>Ground Truth Data Structure</section>
+        <snippet>50-question ground truth test set created with ESTIMATED page numbers. AC6 (manual validation against PDF) was marked pending and never completed. This is the ROOT CAUSE of Story 1.14 - questions reference content that doesn't exist on the specified pages.</snippet>
+      </doc>
+      <doc>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.13.md</path>
+        <title>Story 1.13: Fix Page Number Attribution Bug</title>
+        <section>Background Context</section>
+        <snippet>CRITICAL BUG: Epic 1 validation revealed 18% retrieval accuracy (target: 90%) and 12% attribution accuracy (target: 95%). Root cause: pipeline.py estimates page numbers from character position instead of using Docling provenance. Story 1.13 fixed the pipeline - Story 1.14 must now fix the ground truth data quality issue.</snippet>
+      </doc>
+      <doc>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/qa/epic-1-root-cause-analysis-20251013.md</path>
+        <title>Epic 1 Root Cause Analysis</title>
+        <section>Root Cause Investigation</section>
+        <snippet>88% of queries returned wrong page numbers. Two-part problem identified: (1) pipeline.py bug (fixed in Story 1.13), (2) ground truth data quality issue (Story 1.14). Ground truth questions were created with estimated pages but manual validation step was skipped.</snippet>
+      </doc>
+      <doc>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/qa/epic-1-final-validation-report-20251013.md</path>
+        <title>Epic 1 Final Validation Report</title>
+        <section>Validation Results</section>
+        <snippet>HALT decision triggered. Retrieval: 42% (target: 90%), Attribution: 12% (target: 95%). After Story 1.13 pipeline fix, Story 1.14 must correct ground truth data to achieve GO decision and validate Epic 1 completion.</snippet>
+      </doc>
+      <doc>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/qa/assessments/1.12A-validation-checklist.md</path>
+        <title>Ground Truth Validation Checklist</title>
+        <section>Manual Validation Process</section>
+        <snippet>Step-by-step checklist for validating each ground truth question against PDF. Navigate to expected_page_number, verify expected_keywords appear, confirm expected_answer matches. This is the PRIMARY ARTIFACT for executing Story 1.14 Task 1.</snippet>
+      </doc>
+      <doc>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/CLAUDE.md</path>
+        <title>RAGLite Project Guidelines</title>
+        <section>Development Constraints</section>
+        <snippet>KISS principle mandatory. No abstractions beyond standard SDKs. Manual validation is a CRITICAL step that cannot be automated. Ground truth data quality is non-negotiable for Epic 1 validation.</snippet>
+      </doc>
+      <doc>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/qa/story-1.13-root-cause-analysis.md</path>
+        <title>Story 1.13 Root Cause Analysis</title>
+        <section>Correct-Course Decision</section>
+        <snippet>Scrum Master (Bob) correct-course analysis revealed two-part failure: pipeline bug (Story 1.13) + ground truth data quality (Story 1.14). Both must be fixed to achieve Epic 1 validation success.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/tests/fixtures/ground_truth.py</path>
+        <kind>Data Module</kind>
+        <symbol>GROUND_TRUTH_QA</symbol>
+        <lines>1-693</lines>
+        <reason>PRIMARY FILE TO MODIFY. Contains 50 ground truth Q&A pairs with ESTIMATED page numbers. Must manually validate each question against PDF and correct page numbers, keywords, and expected answers where mismatches found. Lines 66-68 contain module header to update with validation completion date.</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/scripts/validate_ground_truth.py</path>
+        <kind>Validation Script</kind>
+        <symbol>validate_ground_truth</symbol>
+        <lines>1-239</lines>
+        <reason>STRUCTURAL VALIDATION TOOL (AC3). Validates ground truth structure: 50 questions, required fields, category/difficulty distributions, no duplicates. Run after corrections to verify structure integrity. Exit code 0 = PASS.</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/scripts/run-accuracy-tests.py</path>
+        <kind>Accuracy Testing Script</kind>
+        <symbol>run_accuracy_tests</symbol>
+        <lines>1-400</lines>
+        <reason>ACCURACY VALIDATION TOOL (AC4-5). Executes all 50 ground truth queries against RAGLite system. Measures retrieval accuracy (NFR6 target: ≥90%) and attribution accuracy (NFR7 target: ≥95%). Generates detailed report with pass/fail for each query.</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/sample pdf/split/</path>
+        <kind>Source Document (Split PDFs)</kind>
+        <symbol>Source PDFs</symbol>
+        <lines>N/A</lines>
+        <reason>SOURCE OF TRUTH for manual validation (Task 1). Four split PDF files (40 pages each) for easier handling:
+        - Part 1: Pages 1-40 (2025-08 Performance Review CONSO_v2_part01_pages001-040.pdf)
+        - Part 2: Pages 41-80 (2025-08 Performance Review CONSO_v2_part02_pages041-080.pdf)
+        - Part 3: Pages 81-120 (2025-08 Performance Review CONSO_v2_part03_pages081-120.pdf)
+        - Part 4: Pages 121-160 (2025-08 Performance Review CONSO_v2_part04_pages121-160.pdf)
+        Open the appropriate split PDF based on expected_page_number to verify expected_keywords and expected_answer match actual content. This is the REFERENCE DOCUMENT for correcting ground truth mismatches. Page numbers remain consistent with original 160-page PDF.</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/qa/assessments/1.12A-validation-checklist.md</path>
+        <kind>Process Guide</kind>
+        <symbol>Validation Checklist</symbol>
+        <lines>1-150</lines>
+        <reason>STEP-BY-STEP PROCESS for Task 1 (manual validation). Follow this checklist to validate each of the 50 questions systematically. Includes optimization strategies (sequential by page, use PDF search) to reduce 3-hour task time.</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/1.12A.ground-truth-test-set-creation.md</path>
+        <kind>Story Documentation</kind>
+        <symbol>Story 1.12A</symbol>
+        <lines>1-700</lines>
+        <reason>ORIGINAL STORY that created ground_truth.py with estimated page numbers. AC6 (manual validation) was marked pending and never completed - this is why Story 1.14 exists. Update change log (line 468) after Story 1.14 completion.</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/qa/epic-1-final-validation-report-20251013.md</path>
+        <kind>Validation Report</kind>
+        <symbol>Epic 1 Validation Report</symbol>
+        <lines>1-300</lines>
+        <reason>REPORT TO UPDATE (AC7). Currently shows 18% retrieval accuracy (placeholder). After Story 1.14 completion, replace with actual validated accuracy (target: ≥90%) and mark Epic 1 as VALIDATED ✅. Critical for Epic 1 sign-off.</reason>
+      </artifact>
+      <artifact>
+        <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/project-workflow-status-2025-10-13.md</path>
+        <kind>Workflow Status</kind>
+        <symbol>Workflow Status</symbol>
+        <lines>1-886</lines>
+        <reason>WORKFLOW TRACKING (AC6/7). Update after Story 1.14 completion: add Story 1.14 entry with status COMPLETE, update Epic 1 status to VALIDATED, add decisions log entry with validation completion date and accuracy results.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pytest" version="~8.3.3">Unit testing framework - used by validate_ground_truth.py and run-accuracy-tests.py</package>
+        <package name="pydantic" version="~2.9.2">Data validation models - used in ground truth structure validation</package>
+      </python>
+      <tools>
+        <tool name="PDF Reader">PDF viewer application (Preview, Adobe Reader, etc.) - REQUIRED for Task 1 manual validation. Must support page navigation and text search.</tool>
+        <tool name="Text Editor">Code editor or IDE - REQUIRED for Task 2 corrections to ground_truth.py. VSCode, PyCharm, vim, etc.</tool>
+      </tools>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>MANUAL VALIDATION REQUIRED: This is a DATA QUALITY story, not a code story. Task 1 (manual validation) CANNOT be automated and MUST be performed by opening PDF and verifying each question against actual page content. No shortcuts.</constraint>
+    <constraint>ALL 50 QUESTIONS MANDATORY: Every question must be validated. Reduced scope (30 questions) is fallback ONLY if validation takes >8 hours. Quality gate failure if <90% accuracy after corrections.</constraint>
+    <constraint>STORY 1.13 DEPENDENCY: Pipeline fix (Story 1.13) must be complete and Qdrant re-ingested with fixed page numbers BEFORE running accuracy tests (AC4-5). Otherwise, tests will still fail.</constraint>
+    <constraint>NFR6 MANDATORY: Retrieval accuracy must reach ≥90% (45+ out of 50 queries correct). HALT decision remains if <90% after corrections. Iterate or reassess tech stack.</constraint>
+    <constraint>NFR7 MANDATORY: Source attribution accuracy must reach ≥95% (48+ out of 50 citations correct). Critical for Epic 1 validation and user trust in system.</constraint>
+    <constraint>KISS PRINCIPLE: No custom validation tools or automation. Use existing scripts (validate_ground_truth.py, run-accuracy-tests.py). Manual validation uses PDF reader + text editor only.</constraint>
+    <constraint>PDF AS SOURCE OF TRUTH: Ground truth corrections MUST match actual PDF content at the page specified. Do NOT use LLM-generated content or estimates. Only what appears in the PDF.</constraint>
+    <constraint>SPLIT PDF FILES: Original 160-page PDF has been split into 4 files (40 pages each) for easier handling in Claude Code. Use appropriate split file based on page number: Part 1 (pages 1-40), Part 2 (pages 41-80), Part 3 (pages 81-120), Part 4 (pages 121-160). Page numbers in ground truth remain consistent with original PDF numbering.</constraint>
+    <constraint>EPIC 1 BLOCKER: Epic 1 cannot be validated or signed off until Story 1.14 is complete and accuracy targets are met. This story is CRITICAL PATH for Phase 3 start.</constraint>
+    <constraint>NO NEW CODE: This is a data correction story. No changes to raglite/ package code. Only modifications to tests/fixtures/ground_truth.py and documentation files.</constraint>
+    <constraint>DOCUMENTATION UPDATES MANDATORY (AC6-7): Must update 4 documentation files after validation: Story 1.12A change log, Story 1.14 dev record, Epic 1 validation report, workflow status. Missing any = incomplete story.</constraint>
+  </constraints>
+  <interfaces>
+    <interface>
+      <name>GROUND_TRUTH_QA</name>
+      <kind>Data Structure</kind>
+      <signature>list[dict[str, Any]] - Each dict has keys: id, question, expected_answer, expected_keywords, source_document, expected_page_number, expected_section, category, difficulty</signature>
+      <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/tests/fixtures/ground_truth.py</path>
+      <usage>Import and modify to correct page numbers, keywords, and expected answers. Maintain structure integrity (all required fields, correct types).</usage>
+    </interface>
+    <interface>
+      <name>validate_ground_truth.py</name>
+      <kind>CLI Script</kind>
+      <signature>python scripts/validate_ground_truth.py → exit code 0 (PASS) or 1 (FAIL)</signature>
+      <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/scripts/validate_ground_truth.py</path>
+      <usage>Run after corrections to verify structure: 50 questions, required fields, distributions correct. Must pass (exit 0) for AC3.</usage>
+    </interface>
+    <interface>
+      <name>run-accuracy-tests.py</name>
+      <kind>CLI Script</kind>
+      <signature>python scripts/run-accuracy-tests.py [--subset N] [--category NAME] [--output FILE] [--verbose] → JSON report with retrieval_accuracy and attribution_accuracy percentages</signature>
+      <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/scripts/run-accuracy-tests.py</path>
+      <usage>Run after corrections to measure accuracy. Must achieve ≥90% retrieval (AC4) and ≥95% attribution (AC5). Generates detailed pass/fail report for each query.</usage>
+    </interface>
+    <interface>
+      <name>PDF Reader</name>
+      <kind>External Tool</kind>
+      <signature>Open PDF at page N, search for keywords, verify content matches expected answer</signature>
+      <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/sample pdf/split/</path>
+      <usage>Primary tool for Task 1 manual validation. Four split PDF files (40 pages each) for easier handling in Claude Code:
+      - Pages 1-40: Use part01 file
+      - Pages 41-80: Use part02 file
+      - Pages 81-120: Use part03 file
+      - Pages 121-160: Use part04 file
+      Use page navigation and text search features to efficiently validate 50 questions. Optimization: validate sequentially by page number to reduce navigation time and minimize switching between split files. Page numbers in ground truth remain consistent with original 160-page PDF numbering.</usage>
+    </interface>
+    <interface>
+      <name>Validation Checklist</name>
+      <kind>Process Document</kind>
+      <signature>Step-by-step checklist with validation criteria for each question category</signature>
+      <path>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/qa/assessments/1.12A-validation-checklist.md</path>
+      <usage>Follow this checklist systematically during Task 1. Provides optimization strategies (group by page, use search) and tracks progress. Create tracking spreadsheet to document corrections needed.</usage>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+Story 1.14 is a DATA CORRECTION story, not a code implementation story. Testing focuses on data quality validation and accuracy measurement rather than unit/integration tests.
+
+**Testing Approach:**
+1. **Manual Validation (Task 1):** Open PDF, navigate to each expected_page_number, verify expected_keywords appear on that page, confirm expected_answer matches PDF content. Document mismatches in tracking spreadsheet.
+
+2. **Structural Validation (Task 3.1):** Run validate_ground_truth.py after corrections to verify: 50 questions present, all required fields populated, category/difficulty distributions correct, no duplicate IDs, page numbers are valid integers.
+
+3. **Accuracy Validation (Task 3.2):** Run run-accuracy-tests.py after corrections to measure: retrieval accuracy (% of queries returning correct information), attribution accuracy (% of citations with correct page numbers), performance metrics (p50, p95 response times).
+
+4. **Spot-Check Validation (Task 3.3):** Manually review 5-10 query results to verify: retrieved chunks contain expected content, page attributions match PDF pages, semantic relevance is high.
+
+**Success Criteria:**
+- Structural validation: EXIT CODE 0 (all validations passed)
+- Retrieval accuracy: ≥90% (45+ out of 50 queries correct) - NFR6
+- Attribution accuracy: ≥95% (48+ out of 50 citations correct) - NFR7
+- Spot-check: 5-10 queries visually confirmed correct
+
+**No New Tests Required:** No changes to raglite/ package code, so no new unit/integration tests needed. Use existing validation scripts.
+    </standards>
+    <locations>
+      <location>/Users/ricardocarvalho/DeveloperFolder/RAGLite/scripts/validate_ground_truth.py</location>
+      <location>/Users/ricardocarvalho/DeveloperFolder/RAGLite/scripts/run-accuracy-tests.py</location>
+      <location>/Users/ricardocarvalho/DeveloperFolder/RAGLite/tests/fixtures/ground_truth.py (data file to correct)</location>
+      <location>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/sample pdf/split/ (manual validation source - 4 split PDFs, 40 pages each)</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">
+        <name>Manual Validation Process</name>
+        <description>For each of the 50 ground truth questions: (1) Open PDF at expected_page_number, (2) Use PDF search to find expected_keywords, (3) Verify expected_answer matches page content, (4) If mismatch: document correct page number, keywords, and answer in tracking spreadsheet.</description>
+        <priority>CRITICAL - Core of Story 1.14</priority>
+      </idea>
+      <idea ac="AC2">
+        <name>Apply Corrections to ground_truth.py</name>
+        <description>Using tracking spreadsheet from AC1, edit tests/fixtures/ground_truth.py to update: page numbers (expected 15-20 corrections), expected_keywords (refine for better matching), expected_answer (match PDF phrasing), expected_section (if section names incorrect). Update module header lines 66-68 with validation completion date.</description>
+        <priority>CRITICAL - Data quality fix</priority>
+      </idea>
+      <idea ac="AC3">
+        <name>Run Structural Validation</name>
+        <description>Execute: uv run python scripts/validate_ground_truth.py. Expected result: EXIT CODE 0 with output "✅ ALL VALIDATIONS PASSED". Verifies: 50 questions, required fields, distributions correct, no structural errors introduced.</description>
+        <priority>HIGH - Quality gate</priority>
+      </idea>
+      <idea ac="AC4">
+        <name>Run Retrieval Accuracy Tests</name>
+        <description>Execute: uv run python scripts/run-accuracy-tests.py. Expected result: Retrieval accuracy ≥90% (45+ out of 50 queries return correct information). If <90%: analyze failed queries, iterate corrections, retest. HALT decision remains if unable to reach 90%.</description>
+        <priority>CRITICAL - NFR6 validation</priority>
+      </idea>
+      <idea ac="AC5">
+        <name>Run Attribution Accuracy Tests</name>
+        <description>From run-accuracy-tests.py output, verify: Attribution accuracy ≥95% (48+ out of 50 citations have correct page numbers). Check that retrieved chunks cite the expected_page_number from ground truth. If <95%: investigate page number mismatches, correct ground truth data.</description>
+        <priority>CRITICAL - NFR7 validation</priority>
+      </idea>
+      <idea ac="AC3.3">
+        <name>Spot-Check Query Results</name>
+        <description>Manually review 5-10 query results from run-accuracy-tests.py: (1) Open PDF at cited page number, (2) Verify retrieved chunk text matches PDF content, (3) Confirm semantic relevance is high, (4) Check that expected_keywords appear in retrieved chunks. Builds confidence in automated accuracy results.</description>
+        <priority>MEDIUM - Quality assurance</priority>
+      </idea>
+      <idea ac="AC6-7">
+        <name>Update Documentation Files</name>
+        <description>After validation complete and accuracy targets met: (1) Story 1.12A change log (line 468), (2) Story 1.14 dev record completion notes, (3) Epic 1 validation report (replace 18% with actual accuracy), (4) Workflow status (mark Story 1.14 COMPLETE, Epic 1 VALIDATED). Critical for Epic 1 sign-off.</description>
+        <priority>CRITICAL - Epic 1 completion</priority>
+      </idea>
+      <idea ac="Regression">
+        <name>Verify No Regressions</name>
+        <description>After corrections, run validate_ground_truth.py to ensure no structural errors introduced (duplicate IDs, missing fields, incorrect types). Verify GROUND_TRUTH_QA still has 50 questions with correct distributions (6 categories, 3 difficulty levels).</description>
+        <priority>MEDIUM - Safety check</priority>
+      </idea>
+    </ideas>
+  </tests>
+</story-context>

@@ -1,0 +1,293 @@
+<story-context id="story-1.15A-context" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.15A</storyId>
+    <title>PDF Ingestion Completion &amp; Quick Diagnostic</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-14</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.15A.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>to complete PDF ingestion for all 160 pages and run quick diagnostic tests on the 0% accuracy issue</iWant>
+    <soThat>I can identify the root cause and prepare for full Epic 1 validation</soThat>
+    <tasks>
+      <task id="1" title="Complete PDF Ingestion (30-40 minutes)">
+        <subtask id="1.1">Verify current state - inspect Qdrant for current point count (~73 expected)</subtask>
+        <subtask id="1.2">Ingest remaining pages (parts 3-4: pages 81-160) using ingest-pdf.py</subtask>
+        <subtask id="1.3">Verify complete ingestion - ≥147 points total, page range 1-160</subtask>
+      </task>
+      <task id="2" title="Quick Diagnostic Tests (20-30 minutes)">
+        <subtask id="2.1">Manual query test - test 3 queries from different categories</subtask>
+        <subtask id="2.2">Analyze retrieval results - check pages, scores, keywords, relevance</subtask>
+        <subtask id="2.3">Identify failure pattern - keyword, retrieval, or critical failure</subtask>
+      </task>
+      <task id="3" title="Root Cause Analysis (10-15 minutes)">
+        <subtask id="3.1">Hypothesis testing - test 3 hypotheses (keywords, pages, specificity)</subtask>
+        <subtask id="3.2">Document root cause - identify primary failure mode</subtask>
+        <subtask id="3.3">Estimate fix effort - 15 min to 2 hours based on root cause</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" priority="CRITICAL">
+      <description>Complete PDF ingestion for all 160 pages</description>
+      <validationMethod>Run scripts/inspect-qdrant.py and verify ≥147 points, page range 1-160, pages 46/47/77/108 indexed, no duplicates</validationMethod>
+      <dependencies>Story 1.13 (page extraction fix), Story 1.14 (ground truth created)</dependencies>
+    </criterion>
+    <criterion id="AC2" priority="HIGH">
+      <description>Run quick diagnostic on 0% accuracy</description>
+      <validationMethod>Test 3-5 queries manually via MCP client, check if chunks retrieved, pages correct, keywords present</validationMethod>
+      <dependencies>AC1 (complete ingestion first)</dependencies>
+    </criterion>
+    <criterion id="AC3" priority="CRITICAL">
+      <description>Identify root cause category</description>
+      <validationMethod>Document specific failure mode: test script issue vs. retrieval issue vs. keyword mismatch with evidence</validationMethod>
+      <dependencies>AC2 (diagnostic results)</dependencies>
+    </criterion>
+    <criterion id="AC4" priority="HIGH">
+      <description>Document findings in completion notes</description>
+      <validationMethod>Completion notes include: ingestion stats, diagnostic results, root cause summary, recommended next steps</validationMethod>
+      <dependencies>AC1, AC2, AC3</dependencies>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact path="/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/prd/epic-1-foundation-accurate-retrieval.md" title="Epic 1 PRD" section="Story 1.15: Accuracy Test Validation">
+        Epic 1 requirements and validation criteria. NFR6 (90%+ retrieval accuracy), NFR7 (95%+ attribution accuracy), NFR13 (<10s response time). Current status: Story 1.14 complete (NEW ground truth created), Story 1.15 pending full validation.
+      </artifact>
+      <artifact path="/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/tech-spec-epic-1.md" title="Epic 1 Technical Specification" section="Section 2-7">
+        Technical implementation details for Epic 1 RAG pipeline. Architecture overview, data models, API specifications, testing requirements.
+      </artifact>
+      <artifact path="/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.14-fix-ground-truth-test-set.md" title="Story 1.14: Fix Ground Truth Test Set" section="Completion Notes">
+        Story 1.14 created entirely NEW ground truth (50 questions validated against PDF). Structural validation: PASS. Accuracy tests: 0% (keyword matching issue identified). Full PDF ingestion incomplete (pages 1-80 only). Story 1.15A prerequisite: complete ingestion + diagnose 0% accuracy.
+      </artifact>
+      <artifact path="/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.13.md" title="Story 1.13: Fix Page Number Attribution Bug" section="Completion Notes">
+        Page number attribution bug fixed (Story 1.13). Page numbers now extracted from Docling provenance (item.prov[0].page_no) instead of estimated from character position. Small PDF test: 87.5% keyword accuracy. Full PDF validation pending (Story 1.14-1.15).
+      </artifact>
+      <artifact path="/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/qa/story-1.14-validation-corrections-report.md" title="Story 1.14 Validation Report" section="All">
+        Comprehensive validation analysis from Story 1.14. Original ground truth 68% failure rate (34/50 questions invalid). Decision: Created entirely NEW ground truth from scratch. All 50 questions validated against actual PDF content (pages 46, 47, 77, 87, 108).
+      </artifact>
+      <artifact path="/Users/ricardocarvalho/DeveloperFolder/RAGLite/CLAUDE.md" title="Project Guidelines" section="CRITICAL DEVELOPMENT CONSTRAINTS">
+        KISS principle mandatory. No new code expected for Story 1.15A (diagnostic-only). Use existing scripts. Technology stack locked (no new dependencies). Epic 1 accuracy targets: NFR6 (≥90% retrieval), NFR7 (≥95% attribution).
+      </artifact>
+      <artifact path="/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.15-accuracy-test-validation.md" title="Story 1.15: Accuracy Test Validation &amp; Epic 1 Sign-Off" section="Context">
+        Story 1.15 (successor): Full validation effort (2-3 hours). Requires complete PDF ingestion (Story 1.15A deliverable) and root cause clarity (Story 1.15A deliverable). Story 1.15A purpose: Quick prep work to unblock Story 1.15 full investigation.
+      </artifact>
+    </docs>
+
+    <code>
+      <artifact path="/Users/ricardocarvalho/DeveloperFolder/RAGLite/scripts/inspect-qdrant.py" kind="script" symbol="inspect_qdrant(), clean_qdrant()" lines="1-80">
+        Qdrant inspection utility. Use inspect_qdrant() to verify current state: collection count, point count, page range, sample documents. Critical for AC1 (verify ingestion completion). Expected: ≥147 points covering pages 1-160 after Story 1.15A.
+      </artifact>
+      <artifact path="/Users/ricardocarvalho/DeveloperFolder/RAGLite/scripts/ingest-pdf.py" kind="script" symbol="main()" lines="1-51">
+        PDF ingestion script for split PDFs. Ingests 4 parts (40 pages each): part01 (1-40), part02 (41-80), part03 (81-120), part04 (121-160). Uses raglite.ingestion.pipeline.ingest_document(). Critical for AC1 (complete ingestion). Story 1.14 completed parts 1-2 only. Story 1.15A must complete parts 3-4.
+      </artifact>
+      <artifact path="/Users/ricardocarvalho/DeveloperFolder/RAGLite/scripts/run-accuracy-tests.py" kind="script" symbol="main(), filter_queries(), check_retrieval_accuracy()" lines="1-100">
+        Accuracy test runner (reference only - not executed in Story 1.15A). Runs 50 ground truth queries, calculates retrieval/attribution accuracy, performance metrics. Used for context: understand how accuracy is calculated. Story 1.15A does MANUAL queries (3-5 only), not full automated run.
+      </artifact>
+      <artifact path="/Users/ricardocarvalho/DeveloperFolder/RAGLite/tests/fixtures/ground_truth.py" kind="data" symbol="GROUND_TRUTH_QA, COST_ANALYSIS_QUESTIONS" lines="1-50">
+        NEW validated ground truth (Story 1.14). 50 questions validated against actual PDF content. Categories: Cost Analysis (12), Margins (8), Financial Performance (10), Safety (6), Workforce (6), Operating Expenses (8). Story 1.15A will test 3-5 queries manually from this set.
+      </artifact>
+      <artifact path="/Users/ricardocarvalho/DeveloperFolder/RAGLite/raglite/retrieval/search.py" kind="module" symbol="search_documents()" lines="~180">
+        Vector search function. Used indirectly via MCP client during Story 1.15A manual testing. Returns QueryResult list with chunks, page numbers, similarity scores. Critical for AC2 (diagnostic testing). Story 1.13 fix ensures page numbers are correct.
+      </artifact>
+      <artifact path="/Users/ricardocarvalho/DeveloperFolder/RAGLite/raglite/shared/models.py" kind="module" symbol="QueryRequest, QueryResponse, QueryResult" lines="~200">
+        Pydantic data models. QueryRequest(query, top_k), QueryResponse(results, metadata), QueryResult(chunk_id, text, page_number, score). Critical for understanding MCP response format during diagnostic testing.
+      </artifact>
+      <artifact path="/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/sample pdf/split/" kind="data" symbol="4 split PDFs (40 pages each)">
+        Source PDFs for ingestion. Part 1: pages 1-40, Part 2: 41-80, Part 3: 81-120, Part 4: 121-160. Total: 160 pages. Story 1.14 ingested parts 1-2 only. Story 1.15A Task 1: ingest parts 3-4 to complete coverage.
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="qdrant-client" version="1.15.1" usage="Vector database client for inspection and verification"/>
+        <package name="docling" version="2.55.1" usage="PDF processing (already complete in pipeline)"/>
+        <package name="sentence-transformers" version="5.1.1" usage="Fin-E5 embeddings (already complete in pipeline)"/>
+        <package name="fastmcp" version="2.12.4" usage="MCP server (for manual query testing via Claude Code client)"/>
+        <package name="pydantic" version="2.x" usage="Data models (QueryRequest, QueryResponse, QueryResult)"/>
+        <package name="asyncio" version="3.4.3+" usage="Async execution for ingestion script"/>
+      </python>
+      <tools>
+        <tool name="Claude Code MCP client" usage="Manual query testing for diagnostic (AC2)"/>
+        <tool name="scripts/inspect-qdrant.py" usage="Verify ingestion completion (AC1)"/>
+        <tool name="scripts/ingest-pdf.py" usage="Complete PDF ingestion (Task 1)"/>
+      </tools>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint id="CONST1" category="architecture" severity="CRITICAL">
+      KISS principle: Story 1.15A is DIAGNOSTIC-ONLY. NO new code expected. Use existing scripts and MCP client. No modifications to pipeline, retrieval, or test logic.
+    </constraint>
+    <constraint id="CONST2" category="scope" severity="HIGH">
+      Story 1.15A scope: (1) Complete ingestion, (2) Quick diagnostic (3-5 queries), (3) Identify root cause. Full fix and validation deferred to Story 1.15. Duration: 1-1.5 hours max.
+    </constraint>
+    <constraint id="CONST3" category="dependencies" severity="CRITICAL">
+      Story 1.13 (page extraction fix) and Story 1.14 (NEW ground truth) MUST be complete. Do not proceed if either incomplete. Qdrant must be accessible. MCP server must be running.
+    </constraint>
+    <constraint id="CONST4" category="validation" severity="CRITICAL">
+      AC1 (complete ingestion) is BLOCKING. Cannot run diagnostics (AC2) until all 160 pages ingested (≥147 points in Qdrant). Verify with inspect-qdrant.py before proceeding to Task 2.
+    </constraint>
+    <constraint id="CONST5" category="testing" severity="HIGH">
+      Manual testing only (NO automated tests for Story 1.15A). Use Claude Code MCP client for queries. Test 3-5 queries max from different categories. Goal: Identify root cause, not full validation.
+    </constraint>
+    <constraint id="CONST6" category="nfr" severity="INFO">
+      NFR targets (for reference, not validated in Story 1.15A): NFR6 (≥90% retrieval), NFR7 (≥95% attribution), NFR13 (<10s response). Full validation in Story 1.15. Story 1.15A provides diagnostic data only.
+    </constraint>
+    <constraint id="CONST7" category="documentation" severity="HIGH">
+      AC4 (document findings) is MANDATORY. Completion notes must include: ingestion stats (point count, page range, duration), diagnostic results (3-5 query examples with pages/scores/keywords), root cause summary (Hypothesis A/B/C), recommended fix approach for Story 1.15.
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="scripts/inspect-qdrant.py" kind="cli-script" signature="python scripts/inspect-qdrant.py">
+      <description>Inspect Qdrant database state. No arguments needed. Prints: collection count, point count, page range, sample documents (top 3).</description>
+      <usage>Task 1 Subtask 1.1 (verify current state) and Subtask 1.3 (verify completion)</usage>
+      <expectedOutput>
+        Before Story 1.15A: ~73 points (pages 1-80)
+        After Story 1.15A: ≥147 points (pages 1-160)
+      </expectedOutput>
+    </interface>
+    <interface name="scripts/ingest-pdf.py" kind="cli-script" signature="uv run python scripts/ingest-pdf.py">
+      <description>Ingest split PDF files (4 parts, 40 pages each). Automatically processes all 4 parts sequentially. Uses async raglite.ingestion.pipeline.ingest_document().</description>
+      <usage>Task 1 Subtask 1.2 (ingest remaining pages)</usage>
+      <expectedOutput>
+        Part 1: ✓ Ingested (already complete from Story 1.14)
+        Part 2: ✓ Ingested (already complete from Story 1.14)
+        Part 3: [NEW in Story 1.15A] Ingested X chunks from Y pages
+        Part 4: [NEW in Story 1.15A] Ingested X chunks from Y pages
+      </expectedOutput>
+    </interface>
+    <interface name="Claude Code MCP Client" kind="mcp-client" signature="query via Claude Code interface">
+      <description>Manual query testing via Claude Code MCP client. Send natural language queries to raglite.main query_financial_documents tool. Inspect responses: chunks, page numbers, scores.</description>
+      <usage>Task 2 Subtask 2.1 (manual query test)</usage>
+      <expectedInput>
+        Example queries from ground_truth.py:
+        - "What is the variable cost per ton for Portugal Cement in August 2025 YTD?"
+        - "What is the EBITDA IFRS margin for Portugal Cement?"
+        - "What was the EBITDA for Portugal in August 2025?"
+      </expectedInput>
+      <expectedOutput>
+        QueryResponse with results list (QueryResult objects):
+        - chunk_id: str
+        - text: str (chunk content)
+        - page_number: int (from Docling provenance - Story 1.13 fix)
+        - score: float (similarity score)
+        - source_document: str
+      </expectedOutput>
+    </interface>
+    <interface name="ground_truth.py:GROUND_TRUTH_QA" kind="data-structure" signature="List[dict]">
+      <description>Ground truth test set (50 questions). Each question has: id, question, expected_answer, expected_keywords, expected_page_number, category, difficulty. Use for selecting 3-5 diagnostic queries.</description>
+      <usage>Task 2 Subtask 2.1 (select test queries)</usage>
+      <recommendation>Select queries from different categories: cost_analysis (Q1), margins (Q13), financial_performance (Q21). Vary difficulty: easy, medium, hard.</recommendation>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Story 1.15A is a DIAGNOSTIC story - NO automated tests created. All testing is MANUAL via scripts and MCP client. Testing standards for reference: pytest + pytest-asyncio (used in other stories). Story 1.15A verification: (1) Run inspect-qdrant.py, (2) Manual MCP queries, (3) Visual inspection of results.
+    </standards>
+    <locations>
+      N/A - Story 1.15A does not create or modify tests. Existing test locations for reference: tests/unit/, tests/integration/, scripts/ (diagnostic scripts).
+    </locations>
+    <ideas>
+      <idea id="TEST1" ac="AC1" priority="CRITICAL">
+        Verify ingestion completion: Run inspect-qdrant.py before Task 1 (expect ~73 points), then after Task 1 (expect ≥147 points). Check page range is 1-160. Verify pages 46, 47, 77, 108 are indexed. Check for duplicates (should be none).
+      </idea>
+      <idea id="TEST2" ac="AC2" priority="HIGH">
+        Diagnostic Query 1 (Cost Analysis): "What is the variable cost per ton for Portugal Cement?" Expected page: 46, Keywords: "23.2", "EUR/ton", "variable costs". Check: Are chunks from page 46? Do they contain keywords? What are similarity scores?
+      </idea>
+      <idea id="TEST3" ac="AC2" priority="HIGH">
+        Diagnostic Query 2 (Margins): "What is the EBITDA IFRS margin for Portugal Cement?" Expected page: 46, Keywords: "21%", "EBITDA", "margin". Check: Page attribution correct? Keyword matching? Content relevance?
+      </idea>
+      <idea id="TEST4" ac="AC2" priority="HIGH">
+        Diagnostic Query 3 (Financial): "What was the EBITDA for Portugal in August 2025?" Expected page: 77, Keywords: "26.5", "million EUR", "EBITDA". Check: Different page (77 vs 46) retrieved correctly? Cross-page retrieval working?
+      </idea>
+      <idea id="TEST5" ac="AC3" priority="CRITICAL">
+        Root cause analysis: Compare retrieved chunks vs. expected_keywords. Pattern A (keywords don't match but content relevant) → keyword issue. Pattern B (wrong pages retrieved) → retrieval issue. Pattern C (no chunks retrieved) → critical failure. Document which pattern observed.
+      </idea>
+      <idea id="TEST6" ac="AC3" priority="HIGH">
+        Hypothesis testing: (A) Test script expects exact matches, chunks have paraphrases. (B) Embedding/chunking returns wrong pages. (C) Keywords too specific ("23.2 EUR" vs "23.2" or "EUR/ton"). Identify primary hypothesis with evidence from diagnostic queries.
+      </idea>
+      <idea id="TEST7" ac="AC4" priority="HIGH">
+        Documentation verification: Completion notes include all required sections: (1) Ingestion stats (point count, page range, duration), (2) Diagnostic results (query examples with pages/scores/keywords), (3) Root cause summary (primary failure mode), (4) Recommended fix (test script/keywords/retrieval with effort estimate).
+      </idea>
+    </ideas>
+  </tests>
+
+  <implementation-notes>
+    <note priority="1" category="execution-sequence">
+      CRITICAL: Execute tasks in strict order. Task 1 (ingestion) MUST complete successfully before Task 2 (diagnostic). Task 2 MUST complete before Task 3 (root cause). Do not skip verification steps (inspect-qdrant.py).
+    </note>
+    <note priority="2" category="diagnostic-strategy">
+      Story 1.15A is QUICK diagnostic (1-1.5 hours). Select 3 diverse queries (different categories, pages). Goal: Identify root cause pattern, not comprehensive testing. Full validation in Story 1.15.
+    </note>
+    <note priority="3" category="root-cause-identification">
+      Story 1.14 showed 0% accuracy. Three hypotheses: (A) Keyword matching too strict, (B) Retrieval returns wrong pages, (C) Keywords too specific. Story 1.15A must identify which hypothesis is correct with evidence from diagnostic queries.
+    </note>
+    <note priority="4" category="success-criteria">
+      Story 1.15A success: (1) All 160 pages ingested (≥147 points), (2) 3-5 diagnostic queries tested, (3) Root cause identified, (4) Fix approach recommended. Even if accuracy is still 0%, story succeeds if root cause is clear.
+    </note>
+    <note priority="5" category="handoff-to-story-1.15">
+      Story 1.15A output becomes Story 1.15 input. Completion notes must provide: clear root cause diagnosis, specific fix recommendation, estimated effort. Story 1.15 will execute fix and run full validation (50 queries).
+    </note>
+    <note priority="6" category="no-code-changes">
+      Story 1.15A is DIAGNOSTIC-ONLY. Do NOT modify: pipeline.py, search.py, run-accuracy-tests.py, ground_truth.py. Use existing scripts AS-IS. Only document findings in completion notes.
+    </note>
+    <note priority="7" category="rollback-planning">
+      If ingestion fails (Task 1), check error logs, verify PDF files exist, re-run with debug. If all queries return empty (Task 2), critical retrieval failure → escalate to Story 1.15. If root cause unclear (Task 3), document uncertainty, proceed to Story 1.15 for deeper investigation.
+    </note>
+  </implementation-notes>
+
+  <story-dependencies>
+    <dependency story="1.13" status="COMPLETE" criticality="BLOCKING">
+      Story 1.13 (Fix Page Number Attribution Bug) MUST be complete. Page numbers extracted from Docling provenance (item.prov[0].page_no). Small PDF test passed (87.5% accuracy). Full validation pending Story 1.15A-1.15.
+    </dependency>
+    <dependency story="1.14" status="COMPLETE" criticality="BLOCKING">
+      Story 1.14 (Fix Ground Truth Test Set) MUST be complete. NEW ground truth created (50 validated questions). Structural validation passed. Partial PDF ingestion complete (pages 1-80). Accuracy tests show 0% (keyword matching issue).
+    </dependency>
+    <dependency story="1.12B" status="COMPLETE" criticality="REFERENCE">
+      Story 1.12B (Continuous Accuracy Tracking) provides validation scripts for reference. run-accuracy-tests.py shows how accuracy is calculated. Story 1.15A does NOT run full validation (Story 1.15 responsibility).
+    </dependency>
+  </story-dependencies>
+
+  <blocks-stories>
+    <blocks story="1.15" reason="Story 1.15 (Full Accuracy Validation) requires complete PDF ingestion (Story 1.15A AC1) and root cause clarity (Story 1.15A AC3) before executing full fix and validation."/>
+  </blocks-stories>
+
+  <risks>
+    <risk id="RISK1" severity="HIGH" probability="MEDIUM">
+      <description>Ingestion fails for pages 81-160 due to PDF corruption or resource limits</description>
+      <mitigation>Check error logs, verify PDF files exist and are readable, increase timeout if needed</mitigation>
+      <fallback>Use partial PDF (pages 1-80 only) for diagnostic, defer full ingestion to Story 1.15</fallback>
+    </risk>
+    <risk id="RISK2" severity="HIGH" probability="LOW">
+      <description>All diagnostic queries return empty results (critical retrieval failure)</description>
+      <mitigation>Check Qdrant connectivity, verify embedding model loaded, test basic Qdrant search manually</mitigation>
+      <fallback>Skip diagnostic in Story 1.15A, escalate to Story 1.15 for full investigation</fallback>
+    </risk>
+    <risk id="RISK3" severity="MEDIUM" probability="MEDIUM">
+      <description>Root cause remains unclear after diagnostic (multiple conflicting hypotheses)</description>
+      <mitigation>Document all observed patterns, list multiple hypotheses with evidence</mitigation>
+      <fallback>Proceed to Story 1.15 for systematic debugging with Story 1.15 Task 2 investigation</fallback>
+    </risk>
+  </risks>
+
+  <nfr-compliance>
+    <nfr id="NFR6" target="90% retrieval accuracy" status="DEFERRED">
+      Not validated in Story 1.15A (diagnostic only). Full validation in Story 1.15. Story 1.15A provides diagnostic data to inform fix approach.
+    </nfr>
+    <nfr id="NFR7" target="95% attribution accuracy" status="DEFERRED">
+      Not validated in Story 1.15A (diagnostic only). Full validation in Story 1.15. Story 1.13 fix ensures page numbers are correct (87.5% on small PDF).
+    </nfr>
+    <nfr id="NFR13" target="p50 <5s, p95 <15s response time" status="REFERENCE">
+      Not measured in Story 1.15A. Story 1.14 showed excellent performance (p50=25ms, p95=53ms). Maintained for reference.
+    </nfr>
+  </nfr-compliance>
+</story-context>

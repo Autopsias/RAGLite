@@ -50,8 +50,7 @@
 - FR31: System shall integrate with Claude Desktop and other MCP-compatible clients
 - FR32: System shall support structured tool responses and function calling patterns
 
-**Research & Validation**
-- FR33: System shall complete comprehensive research spike (Week 1-2) validating: (a) Docling PDF extraction quality on company financial documents, (b) embedding model selection and retrieval accuracy benchmarking, (c) knowledge graph value vs. complexity assessment, (d) agentic framework selection (LangGraph/Bedrock/function calling), (e) forecasting approach validation (LLM/statistical/hybrid). All FR6-8, FR14-21 implementation BLOCKED until research spike completion and go/no-go decisions made.
+**Note:** Research spike validation requirements (originally FR33) have been reorganized to [Technical Assumptions - Pre-Epic Work](./technical-assumptions.md#pre-epic-work-week-0-integration-spike) as they are meta-requirements rather than functional requirements. Week 0 Integration Spike was completed 2025-10-03 with CONDITIONAL GO decision for Phase 1.
 
 ## Non-Functional Requirements
 

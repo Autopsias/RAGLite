@@ -1,0 +1,237 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.6</storyId>
+    <title>Qdrant Vector Database Setup & Storage</title>
+    <status>Ready</status>
+    <generatedAt>2025-10-13</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.6.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>to store document chunk embeddings in Qdrant vector database with efficient indexing</iWant>
+    <soThat>sub-5 second semantic search retrieval is possible for natural language queries</soThat>
+    <tasks>
+      <taskGroup id="1" name="Qdrant Client Integration & Collection Setup" acceptanceCriteria="1, 2, 6">
+        <task>Add get_qdrant_client() function to raglite/shared/clients.py with connection pooling</task>
+        <task>Add create_collection() function to raglite/ingestion/pipeline.py</task>
+        <task>Configure collection: 1024 dimensions, COSINE distance, HNSW indexing</task>
+        <task>Implement connection retry logic (3 retries, exponential backoff)</task>
+        <task>Verify Docker Compose Qdrant service running (port 6333)</task>
+        <task>Follow Story 1.2-1.5 patterns: async/await, type hints, docstrings, structured logging</task>
+      </taskGroup>
+      <taskGroup id="2" name="Vector Storage Implementation" acceptanceCriteria="3, 5, 9, 10">
+        <task>Add store_vectors_in_qdrant() function to raglite/ingestion/pipeline.py</task>
+        <task>Implement batch upload (100 vectors per batch for memory efficiency)</task>
+        <task>Store chunk metadata: chunk_id, text, word_count, source_document, page_number, chunk_index</task>
+        <task>Generate unique point IDs (UUID) for each chunk</task>
+        <task>Validate all chunks stored successfully (points_count == chunk_count)</task>
+        <task>Log batch progress with duration metrics</task>
+      </taskGroup>
+      <taskGroup id="3" name="Pipeline Integration" acceptanceCriteria="9">
+        <task>Update ingest_pdf() to call store_vectors_in_qdrant() after embedding generation</task>
+        <task>Update extract_excel() to call store_vectors_in_qdrant() after embedding generation</task>
+        <task>Ensure page_number metadata preserved from Story 1.2/1.4</task>
+        <task>Update DocumentMetadata to include Qdrant storage confirmation</task>
+      </taskGroup>
+      <taskGroup id="4" name="Error Handling & Logging" acceptanceCriteria="6">
+        <task>Implement VectorStorageError exception for Qdrant failures</task>
+        <task>Handle connection errors with retry logic</task>
+        <task>Handle collection creation failures gracefully</task>
+        <task>Log storage progress with structured logging (extra={'batch_num', 'points_stored', 'duration_ms'})</task>
+      </taskGroup>
+      <taskGroup id="5" name="Unit Tests" acceptanceCriteria="7">
+        <task>Test: test_create_collection() - Happy path with mocked Qdrant client</task>
+        <task>Test: test_store_vectors_basic() - 10 chunks stored successfully</task>
+        <task>Test: test_batch_upload_processing() - 250 chunks in batches of 100</task>
+        <task>Test: test_connection_retry_logic() - Retry on connection failure</task>
+        <task>Test: test_metadata_preservation() - All metadata fields preserved</task>
+        <task>Test: test_empty_chunks_handling() - Empty list handling</task>
+        <task>Test: test_storage_error_handling() - VectorStorageError raised on failures</task>
+        <task>Test: test_get_qdrant_client_singleton() - Client reuse validation</task>
+      </taskGroup>
+      <taskGroup id="6" name="Integration Test & Performance Validation" acceptanceCriteria="8, 10">
+        <task>Integration test: End-to-end storage validation with real Qdrant</task>
+        <task>Integration test: Storage + retrieval round-trip validation</task>
+        <task>Integration test: Performance validation (&lt;30s for 300 chunks)</task>
+        <task>Integration test: Metadata preservation validation (page_number != None)</task>
+      </taskGroup>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Qdrant deployed via Docker Compose in local development environment (v1.11.0)</criterion>
+    <criterion id="2">Collection created with appropriate vector dimensions (1024) and distance metric (COSINE) per Architect's specification</criterion>
+    <criterion id="3">Document chunks and embeddings stored with metadata (chunk_id, source_document, page_number, chunk_index, text, word_count)</criterion>
+    <criterion id="4">Indexing configured for optimal retrieval performance (HNSW default configuration)</criterion>
+    <criterion id="5">Storage handles 100+ documents without performance degradation (NFR3)</criterion>
+    <criterion id="6">Connection management and error handling implemented (retries, connection pooling, graceful failures)</criterion>
+    <criterion id="7">Unit tests cover Qdrant client operations with mocked database (create collection, upsert, query)</criterion>
+    <criterion id="8">Integration test validates storage and retrieval from actual Qdrant instance</criterion>
+    <criterion id="9" critical="true">CRITICAL - VALIDATION: All chunks from Story 1.5 successfully stored with embeddings in Qdrant (validate points_count matches chunk_count)</criterion>
+    <criterion id="10">Performance: Storage completes in &lt;30 seconds for 300-chunk document (batch upload: 100 vectors/batch)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-1-foundation-accurate-retrieval.md</path>
+        <title>Epic 1: Foundation & Accurate Retrieval</title>
+        <section>Story 1.6: Qdrant Vector Database Setup & Storage (lines 216-232)</section>
+        <snippet>Requirements for Qdrant deployment, collection setup, and vector storage with metadata. Critical NFRs: NFR3 (100+ docs), NFR5 (sub-5s retrieval), NFR13 (&lt;10s query response)</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec-epic-1.md</path>
+        <title>Technical Specification: Epic 1</title>
+        <section>Section 4.2: Ingestion Pipeline - store_in_qdrant() (lines 231-305)</section>
+        <snippet>Detailed implementation guidance for Qdrant storage including batch processing, metadata structure, and error handling patterns. Week 0 baseline: 0.83s avg query latency (exceeds target).</snippet>
+      </doc>
+      <doc>
+        <path>docker-compose.yml</path>
+        <title>Docker Compose Configuration</title>
+        <section>Qdrant Service Definition (lines 1-14)</section>
+        <snippet>Qdrant v1.11.0 container configuration: HTTP port 6333, gRPC port 6334, persistent storage volume, restart policy</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project Development Guidelines</title>
+        <section>Coding Standards & Anti-Over-Engineering Rules (lines 95-220)</section>
+        <snippet>CRITICAL constraints: NO custom wrappers around Qdrant SDK, use qdrant-client directly, follow Stories 1.2-1.5 patterns (type hints, docstrings, structured logging, async/await)</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack (Definitive)</title>
+        <section>Vector Database & Embeddings</section>
+        <snippet>Qdrant 1.11+ for vector storage/search, Fin-E5 (intfloat/e5-large-v2) for 1024-dim embeddings, HNSW indexing for O(log n) search complexity</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>module</kind>
+        <symbol>generate_embeddings</symbol>
+        <lines>76-169</lines>
+        <reason>Story 1.5 implementation - generates 1024-dim Fin-E5 embeddings, populates Chunk.embedding field. Story 1.6 stores these embeddings in Qdrant.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>module</kind>
+        <symbol>ingest_pdf, extract_excel</symbol>
+        <lines>220-554</lines>
+        <reason>Ingestion pipeline functions that Story 1.6 must integrate with. Call store_vectors_in_qdrant() after generate_embeddings() in both functions.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>module</kind>
+        <symbol>chunk_document</symbol>
+        <lines>557-697</lines>
+        <reason>Story 1.4 chunking implementation - preserves page_number metadata. Story 1.6 must ensure page_number flows through to Qdrant payload.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>module</kind>
+        <symbol>Chunk</symbol>
+        <lines>23-34</lines>
+        <reason>Pydantic Chunk model with embedding field (list[float]). Story 1.6 extracts chunk.embedding and metadata for Qdrant PointStruct payload.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/clients.py</path>
+        <kind>module</kind>
+        <symbol>get_qdrant_client</symbol>
+        <lines>15-37</lines>
+        <reason>EXISTING Qdrant client factory. Story 1.6 NOTE: clients.py already has get_qdrant_client() - DO NOT create duplicate. Use existing function or refactor for singleton pattern.</reason>
+      </artifact>
+      <artifact>
+        <path>spike/store_vectors.py</path>
+        <kind>reference</kind>
+        <symbol>Week 0 Qdrant implementation</symbol>
+        <lines>1-209</lines>
+        <reason>Week 0 spike proof-of-concept for Qdrant vector storage. Reference for batch upload patterns and metadata structure. IMPORTANT: Migrate to async, follow production patterns.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="qdrant-client" version="1.15.1" purpose="Qdrant Python SDK for vector database operations" />
+        <package name="sentence-transformers" version="5.1.1" purpose="Fin-E5 embedding model (intfloat/e5-large-v2, 1024 dimensions)" />
+        <package name="pydantic" version=">=2.0,&lt;3.0" purpose="Data validation for Chunk and DocumentMetadata models" />
+        <package name="asyncio" version=">=3.4.3,&lt;4.0.0" purpose="Async/await pattern for pipeline integration" />
+      </python>
+      <docker>
+        <service name="qdrant" image="qdrant/qdrant:v1.11.0" ports="6333 (HTTP), 6334 (gRPC)" volumes="./qdrant_storage:/qdrant/storage" />
+      </docker>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Follow Stories 1.2-1.5 patterns: Same file (pipeline.py), same async pattern, same error handling (VectorStorageError), same logging (structured with extra={})</constraint>
+    <constraint type="anti-pattern">NO custom wrappers around qdrant-client SDK. Use QdrantClient, PointStruct, VectorParams directly per CLAUDE.md anti-over-engineering rules.</constraint>
+    <constraint type="data-model">Use existing Chunk model from shared/models.py. Extract chunk.embedding (list[float]) and metadata (page_number, chunk_id, source_document, chunk_index, content, word_count) for Qdrant payload.</constraint>
+    <constraint type="client-management">NOTE: clients.py already has get_qdrant_client(). Either use as-is or refactor to singleton pattern with connection pooling (global _qdrant_client variable).</constraint>
+    <constraint type="performance">Batch upload: 100 vectors per batch to prevent memory issues. Target: &lt;30 seconds for 300-chunk document (AC10). Week 0 baseline: 0.83s avg query latency.</constraint>
+    <constraint type="validation">CRITICAL AC9: Validate all chunks stored successfully. Check: client.get_collection(name).points_count == len(chunks). Log mismatch as WARNING.</constraint>
+    <constraint type="metadata-preservation">CRITICAL: page_number metadata MUST flow from Story 1.2 ingestion → Story 1.4 chunking → Story 1.5 embedding → Story 1.6 Qdrant storage. Validate page_number != None in integration test.</constraint>
+    <constraint type="testing">Mock-based unit tests (8 tests), integration tests with real Qdrant (4 tests). Mark integration tests with @pytest.mark.integration. 80%+ coverage target.</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>create_collection</name>
+      <kind>function</kind>
+      <signature>def create_collection(collection_name: str = "financial_docs", vector_size: int = 1024, distance: Distance = Distance.COSINE) -> None</signature>
+      <path>raglite/ingestion/pipeline.py</path>
+      <description>Create Qdrant collection if it doesn't exist. Check existing collections first. Configure with HNSW indexing (default), COSINE distance for semantic similarity. Raise VectorStorageError on failure.</description>
+    </interface>
+    <interface>
+      <name>store_vectors_in_qdrant</name>
+      <kind>function</kind>
+      <signature>async def store_vectors_in_qdrant(chunks: List[Chunk], collection_name: str = "financial_docs", batch_size: int = 100) -> int</signature>
+      <path>raglite/ingestion/pipeline.py</path>
+      <description>Store chunks with embeddings in Qdrant. Returns number of points stored. Process in batches of 100. Generate UUID for each point. Validate points_count == len(chunks). Raise VectorStorageError on failure.</description>
+    </interface>
+    <interface>
+      <name>get_qdrant_client</name>
+      <kind>function</kind>
+      <signature>def get_qdrant_client() -> QdrantClient</signature>
+      <path>raglite/shared/clients.py</path>
+      <description>EXISTING FUNCTION in clients.py. Returns QdrantClient instance. Story 1.6 may need to refactor for singleton pattern with global _qdrant_client variable (like get_embedding_model in pipeline.py).</description>
+    </interface>
+    <interface>
+      <name>Chunk.embedding</name>
+      <kind>field</kind>
+      <signature>embedding: list[float] = Field(default_factory=list, description="Semantic embedding vector")</signature>
+      <path>raglite/shared/models.py</path>
+      <description>Populated by Story 1.5 generate_embeddings(). Story 1.6 extracts this field for Qdrant PointStruct.vector. Length: 1024 (Fin-E5 dimensions).</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      <standard>Use pytest 8.4.2 with pytest-asyncio 1.2.0 for async test support</standard>
+      <standard>Mock external dependencies: QdrantClient for unit tests (use pytest-mock)</standard>
+      <standard>Integration tests require real Qdrant running (docker-compose up -d). Mark with @pytest.mark.integration</standard>
+      <standard>Target: 80%+ test coverage for storage logic (critical path)</standard>
+      <standard>Follow Stories 1.2-1.5 test patterns: test file in raglite/tests/test_ingestion.py (co-locate with related tests)</standard>
+      <standard>Structured assertions: assert points_count == expected, assert all(chunk.embedding for chunk in chunks)</standard>
+    </standards>
+    <locations>
+      <location>raglite/tests/test_ingestion.py</location>
+      <location>raglite/tests/test_ingestion_integration.py (for @pytest.mark.integration tests)</location>
+    </locations>
+    <ideas>
+      <test acceptanceCriteria="1,2,7">Unit: test_create_collection() - Mock QdrantClient, verify collection created with correct VectorParams (size=1024, distance=COSINE). Validate idempotency (calling twice doesn't error).</test>
+      <test acceptanceCriteria="3,7">Unit: test_store_vectors_basic() - Mock QdrantClient.upsert(), store 10 chunks with embeddings. Verify PointStruct payload includes all metadata fields (chunk_id, text, page_number, source_document, chunk_index, word_count).</test>
+      <test acceptanceCriteria="10,7">Unit: test_batch_upload_processing() - Store 250 chunks, verify batches of 100. Mock QdrantClient.upsert() to track call count (should be 3 calls: 100, 100, 50).</test>
+      <test acceptanceCriteria="6,7">Unit: test_connection_retry_logic() - Mock QdrantClient to raise ConnectionError on first 2 calls, succeed on 3rd. Verify retry logic with exponential backoff.</test>
+      <test acceptanceCriteria="3,7">Unit: test_metadata_preservation() - Verify page_number, source_document, chunk_index preserved in Qdrant payload. Assert payload['page_number'] == chunk.page_number for all chunks.</test>
+      <test acceptanceCriteria="7">Unit: test_empty_chunks_handling() - Pass empty list to store_vectors_in_qdrant(). Verify returns 0, logs warning, no Qdrant calls made.</test>
+      <test acceptanceCriteria="6,7">Unit: test_storage_error_handling() - Mock QdrantClient.upsert() to raise exception. Verify VectorStorageError raised with context message.</test>
+      <test acceptanceCriteria="6,7">Unit: test_get_qdrant_client_singleton() - Call get_qdrant_client() twice, verify same instance returned (singleton pattern).</test>
+      <test acceptanceCriteria="8,9">Integration: test_storage_end_to_end() - Real Qdrant, store 10 chunks from Week 0 PDF, verify points_count == 10. Retrieve one point, validate metadata intact.</test>
+      <test acceptanceCriteria="8,9">Integration: test_storage_retrieval_roundtrip() - Store chunks, perform vector search, verify retrieved chunks match original metadata (page_number != None).</test>
+      <test acceptanceCriteria="10">Integration: test_performance_validation() - Store 300 chunks, measure duration, assert &lt; 30 seconds. Log chunks_per_second metric.</test>
+      <test acceptanceCriteria="9">Integration: test_metadata_preservation_end_to_end() - Ingest Week 0 PDF → chunk → embed → store. Verify all chunks have page_number != None in Qdrant payload.</test>
+    </ideas>
+  </tests>
+</story-context>

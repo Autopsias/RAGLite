@@ -160,15 +160,15 @@ def chunk_ingested_document(
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(output_data, f, indent=2, ensure_ascii=False)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("CHUNKING SUMMARY")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Total chunks: {stats['total_chunks']}")
     print(f"Average words per chunk: {stats['avg_words_per_chunk']}")
     print(f"Average characters per chunk: {stats['avg_chars_per_chunk']:,}")
     print(f"Min/Max words: {stats['min_words']}/{stats['max_words']}")
     print(f"Output saved to: {output_path}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     return chunks
 

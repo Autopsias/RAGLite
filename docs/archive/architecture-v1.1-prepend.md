@@ -612,4 +612,3 @@ services:
 ---
 
 *[The rest of the original architecture.md content follows here, serving as detailed reference for when you need to scale to microservices in Phase 4+]*
-

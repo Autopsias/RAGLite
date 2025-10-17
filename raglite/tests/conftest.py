@@ -3,6 +3,8 @@
 Provides test fixtures for configuration, mock clients, and test data.
 """
 
+import tempfile
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -63,12 +65,16 @@ def sample_document_metadata() -> DocumentMetadata:
     Returns:
         DocumentMetadata instance with test data
     """
+    # Use system temp directory for security
+    temp_dir = Path(tempfile.gettempdir())
+    test_path = temp_dir / "test_financial_report.pdf"
+
     return DocumentMetadata(
         filename="test_financial_report.pdf",
         doc_type="PDF",
         ingestion_timestamp="2025-10-04T12:00:00Z",
         page_count=10,
-        source_path="/tmp/test_financial_report.pdf",
+        source_path=str(test_path),
     )
 
 

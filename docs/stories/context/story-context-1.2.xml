@@ -1,0 +1,279 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.2</storyId>
+    <title>PDF Document Ingestion with Docling</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-12</generatedAt>
+    <lastUpdated>2025-10-12</lastUpdated>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/story-1.2.md</sourceStoryPath>
+    <criticalBlocker>Week 0 page number extraction failure - must resolve before Story 1.4 (chunking)</criticalBlocker>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>to ingest financial PDF documents and extract text, tables, and structure with accurate page numbers</iWant>
+    <soThat>financial data is available for retrieval and analysis with proper source attribution</soThat>
+    <tasks>
+      <task id="1" title="Diagnose Page Number Extraction Issue" critical="true">
+        <description>Run scripts/test_page_extraction.py, analyze Docling Document object, decide on solution</description>
+        <acceptanceCriteria>10, 12</acceptanceCriteria>
+        <subtasks>
+          <subtask>Run existing uv run python scripts/test_page_extraction.py script</subtask>
+          <subtask>Analyze Docling Document object structure for page metadata</subtask>
+          <subtask>Document findings: Does Docling extract page numbers or not?</subtask>
+          <subtask>Decision: Use Docling pages directly OR implement PyMuPDF fallback</subtask>
+        </subtasks>
+      </task>
+      <task id="2" title="Implement PDF Ingestion Pipeline">
+        <description>Create raglite/ingestion/pipeline.py with ingest_pdf() function</description>
+        <acceptanceCriteria>1, 2, 3, 4, 10</acceptanceCriteria>
+        <subtasks>
+          <subtask>Create raglite/ingestion/__init__.py</subtask>
+          <subtask>Create raglite/ingestion/pipeline.py with ingest_pdf() function</subtask>
+          <subtask>Integrate Docling library for PDF parsing</subtask>
+          <subtask>Extract text content and preserve formatting</subtask>
+          <subtask>Extract financial tables with structure (rows, columns, headers)</subtask>
+          <subtask critical="true">Extract page numbers for each chunk/segment (implement solution from Task 1)</subtask>
+          <subtask>Capture document metadata (filename, timestamp, type)</subtask>
+          <subtask>Return structured data model (Pydantic: DocumentMetadata with pages, chunks)</subtask>
+        </subtasks>
+      </task>
+      <task id="3" title="Error Handling & Logging">
+        <description>Add structured logging, handle errors gracefully</description>
+        <acceptanceCriteria>5</acceptanceCriteria>
+      </task>
+      <task id="4" title="Performance Validation">
+        <description>Test with Week 0 PDF (160 pages), measure ingestion time</description>
+        <acceptanceCriteria>7</acceptanceCriteria>
+        <performanceTarget>&lt;5 min for 100 pages, &lt;8 min for 160 pages</performanceTarget>
+      </task>
+      <task id="5" title="Unit Tests">
+        <description>Create raglite/tests/test_ingestion.py with 5+ tests</description>
+        <acceptanceCriteria>8</acceptanceCriteria>
+        <testCount>5 minimum (success, file not found, corrupted, page numbers, edge cases)</testCount>
+      </task>
+      <task id="6" title="Integration Tests">
+        <description>Test with Week 0 PDF, verify text/table/page extraction</description>
+        <acceptanceCriteria>6, 9, 10</acceptanceCriteria>
+        <testDocument>docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf (160 pages, 157 tables)</testDocument>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Docling library integrated and configured per Architect's specifications</criterion>
+    <criterion id="2">PDF ingestion pipeline accepts file path and extracts text content with 95%+ accuracy</criterion>
+    <criterion id="3">Financial tables extracted with structure preserved (rows, columns, headers, merged cells)</criterion>
+    <criterion id="4">Document metadata captured (filename, ingestion timestamp, document type if detectable)</criterion>
+    <criterion id="5">Ingestion errors logged with clear error messages for malformed or corrupted PDFs</criterion>
+    <criterion id="6">Successfully ingests sample company financial PDFs provided for testing</criterion>
+    <criterion id="7">Ingestion performance meets &lt;5 minutes for 100-page financial report (NFR2)</criterion>
+    <criterion id="8">Unit tests cover ingestion pipeline with mocked Docling responses</criterion>
+    <criterion id="9">Integration test validates end-to-end PDF ingestion with real sample document</criterion>
+    <criterion id="10" critical="true">Page numbers extracted and validated (test with Week 0 PDF, ensure page_number != None)</criterion>
+    <criterion id="11">IF Docling page extraction fails, implement PyMuPDF fallback for page detection</criterion>
+    <criterion id="12">Run scripts/test_page_extraction.py to diagnose root cause before implementation</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/prd/epic-1-foundation-accurate-retrieval.md" section="Story 1.2">
+        <title>Epic 1 - Story 1.2 Requirements</title>
+        <relevance>Primary source for acceptance criteria and story definition</relevance>
+      </doc>
+      <doc path="docs/week-0-spike-report.md" section="Section 5.1 - Page Number Extraction Issue" critical="true">
+        <title>Week 0 Spike Report - Page Number Blocker</title>
+        <relevance>Documents critical blocker: page numbers not extracted in Week 0, blocks NFR7 (95%+ source attribution)</relevance>
+        <keyFinding>All chunks had page_number = None - root cause unknown, requires diagnosis</keyFinding>
+      </doc>
+      <doc path="docs/architecture/3-repository-structure-monolithic.md">
+        <title>Repository Structure</title>
+        <relevance>Defines file locations: raglite/ingestion/pipeline.py (~100 lines), raglite/tests/test_ingestion.py</relevance>
+        <lineCountTarget>~100 lines for pipeline.py (within 150-line ingestion module budget)</lineCountTarget>
+      </doc>
+      <doc path="docs/architecture/5-technology-stack-definitive.md">
+        <title>Technology Stack</title>
+        <relevance>Docling specification: 97.9% table accuracy, DocLayNet-based, official extraction library</relevance>
+        <technology>Docling (Latest version) for PDF extraction</technology>
+        <fallbackOption>PyMuPDF if Docling page extraction fails (hybrid approach)</fallbackOption>
+      </doc>
+      <doc path="docs/architecture/6-complete-reference-implementation.md">
+        <title>Reference Implementation Patterns</title>
+        <relevance>Code patterns: async/await, Pydantic models, structured logging, error handling</relevance>
+      </doc>
+      <doc path="docs/architecture/coding-standards.md">
+        <title>Coding Standards</title>
+        <relevance>Mandatory patterns: type hints, Google docstrings, structured logging with extra={}, Pydantic models</relevance>
+        <forbiddenPatterns>No print(), no bare except, no generic Exception, no relative imports</forbiddenPatterns>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact path="raglite/shared/models.py" kind="module" status="exists">
+        <symbol>DocumentMetadata</symbol>
+        <signature>class DocumentMetadata(BaseModel): doc_id, filename, page_count, chunk_count, ingestion_timestamp, doc_type</signature>
+        <relevance>Data model for ingestion results - reuse existing model, may need to extend for page metadata</relevance>
+      </artifact>
+      <artifact path="raglite/shared/logging.py" kind="module" status="exists">
+        <symbol>get_logger</symbol>
+        <signature>def get_logger(name: str) -> logging.Logger</signature>
+        <relevance>Structured logging setup - use for all logging in pipeline.py</relevance>
+      </artifact>
+      <artifact path="raglite/shared/config.py" kind="module" status="exists">
+        <symbol>Settings</symbol>
+        <signature>class Settings(BaseSettings): qdrant_host, qdrant_port, anthropic_api_key, log_level</signature>
+        <relevance>Configuration management - import settings if needed for Docling config</relevance>
+      </artifact>
+      <artifact path="raglite/tests/conftest.py" kind="test_fixture" status="exists">
+        <fixtures>test_settings, mock_qdrant_client, mock_claude_client, sample_document_metadata, sample_chunk</fixtures>
+        <relevance>Test infrastructure ready - 5 fixtures available for unit tests</relevance>
+      </artifact>
+      <artifact path="scripts/test_page_extraction.py" kind="script" status="exists">
+        <relevance>Diagnostic script for Week 0 page number issue - run FIRST in Task 1</relevance>
+      </artifact>
+      <artifact path="docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf" kind="test_data" status="exists">
+        <relevance>Week 0 test PDF - 160 pages, 157 tables, 3.63 MB - use for integration testing</relevance>
+      </artifact>
+      <artifact path="raglite/ingestion/__init__.py" kind="module" status="exists">
+        <contents>Empty file</contents>
+        <action>Add exports after creating pipeline.py</action>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="docling" version="latest">PDF extraction with 97.9% table accuracy</package>
+        <package name="pymupdf" version="latest" conditional="true">Fallback for page number extraction if Docling fails</package>
+        <package name="pydantic" version="^2.0">Data validation and settings</package>
+        <package name="pytest" version="latest">Testing framework</package>
+        <package name="pytest-asyncio" version="latest">Async test support</package>
+        <package name="pytest-mock" version="latest">Mocking for unit tests</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture" critical="true">
+      <rule>File must be raglite/ingestion/pipeline.py (exactly this path per architecture)</rule>
+      <rule>Target ~100 lines for pipeline.py (within 150-line ingestion module budget)</rule>
+      <rule>Use direct Docling SDK calls - NO custom wrappers or abstraction layers</rule>
+    </constraint>
+    <constraint type="coding_standards" critical="true">
+      <rule>ALL functions must have type hints (parameters and return values)</rule>
+      <rule>ALL public functions must have Google-style docstrings (Args, Returns, Raises, Example)</rule>
+      <rule>Structured logging with extra={} context (NOT print statements)</rule>
+      <rule>Pydantic models for all data structures (DocumentMetadata, etc.)</rule>
+      <rule>Async/await for all I/O operations</rule>
+      <rule>Specific exceptions (FileNotFoundError, RuntimeError) NOT generic Exception</rule>
+      <rule>Import organization: stdlib, third-party, local (alphabetical within each)</rule>
+    </constraint>
+    <constraint type="performance" critical="true">
+      <rule>Ingestion time &lt;5 minutes for 100-page PDF (NFR2)</rule>
+      <rule>Ingestion time &lt;8 minutes for 160-page PDF (extrapolated)</rule>
+      <rule>Text extraction accuracy ≥95%</rule>
+      <rule>Table preservation ≥95% of 157 tables in test PDF</rule>
+    </constraint>
+    <constraint type="week0_blocker" critical="true">
+      <rule>MUST extract page numbers for all chunks/segments</rule>
+      <rule>page_number field must NOT be None</rule>
+      <rule>Blocks Story 1.4 (chunking) and Story 1.8 (source attribution) if not resolved</rule>
+      <rule>If Docling cannot extract pages, implement PyMuPDF hybrid approach</rule>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="ingest_pdf" kind="function" path="raglite/ingestion/pipeline.py" status="to_create">
+      <signature>async def ingest_pdf(file_path: str) -> DocumentMetadata</signature>
+      <description>Ingest financial PDF and extract text, tables, and structure with page numbers</description>
+      <parameters>
+        <param name="file_path" type="str">Path to PDF file</param>
+      </parameters>
+      <returns type="DocumentMetadata">Metadata with extraction results including page_count, chunk_count</returns>
+      <raises>
+        <exception>FileNotFoundError: If file doesn't exist</exception>
+        <exception>RuntimeError: If Docling parsing fails</exception>
+      </raises>
+      <logging>
+        <log level="info">Starting PDF ingestion (extra: {path: file_path})</log>
+        <log level="info">PDF ingested successfully (extra: {doc_id, pages, chunks, duration_ms})</log>
+        <log level="error">Ingestion failed (extra: {path, error}, exc_info=True)</log>
+      </logging>
+    </interface>
+    <interface name="DocumentMetadata" kind="pydantic_model" path="raglite/shared/models.py" status="exists">
+      <fields>
+        <field name="doc_id" type="str">Unique document identifier</field>
+        <field name="filename" type="str">Original filename</field>
+        <field name="page_count" type="int">Number of pages extracted</field>
+        <field name="chunk_count" type="int">Number of chunks/segments</field>
+        <field name="ingestion_timestamp" type="str">ISO 8601 timestamp</field>
+        <field name="doc_type" type="Optional[str]">Document type if detectable</field>
+      </fields>
+      <action>Verify this model supports page metadata - may need to extend with page-level details</action>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      <framework>pytest with pytest-asyncio for async test support</framework>
+      <coverage>80%+ for critical path (PDF ingestion is critical)</coverage>
+      <coLocation>Tests in raglite/tests/test_ingestion.py</coLocation>
+      <fixtures>Use existing conftest.py fixtures (test_settings, sample_document_metadata)</fixtures>
+      <mocking>Use pytest-mock or unittest.mock for Docling responses in unit tests</mocking>
+      <execution>uv run pytest raglite/tests/test_ingestion.py -v</execution>
+      <performance>Maintain fast test execution (&lt;5 seconds for unit tests)</performance>
+    </standards>
+
+    <locations>
+      <directory>raglite/tests/</directory>
+      <pattern>test_ingestion*.py</pattern>
+      <fixture_dir>raglite/tests/fixtures/</fixture_dir>
+    </locations>
+
+    <ideas>
+      <test_idea ac="8" type="unit">
+        <name>test_ingest_pdf_success</name>
+        <description>Happy path: ingest valid PDF, verify DocumentMetadata returned with correct page_count</description>
+        <mockRequired>Mock Docling PDF parsing response</mockRequired>
+      </test_idea>
+      <test_idea ac="8" type="unit">
+        <name>test_ingest_pdf_file_not_found</name>
+        <description>Error handling: nonexistent file raises FileNotFoundError with clear message</description>
+        <assertion>pytest.raises(FileNotFoundError, match="not found")</assertion>
+      </test_idea>
+      <test_idea ac="8" type="unit">
+        <name>test_ingest_pdf_corrupted</name>
+        <description>Error handling: corrupted PDF raises RuntimeError, logs error with context</description>
+        <mockRequired>Mock Docling parsing failure</mockRequired>
+      </test_idea>
+      <test_idea ac="10" type="unit" critical="true">
+        <name>test_ingest_pdf_page_numbers_extracted</name>
+        <description>CRITICAL: Verify page numbers extracted and NOT None for all chunks</description>
+        <assertion>assert all(chunk.page_number is not None for chunk in result.chunks)</assertion>
+      </test_idea>
+      <test_idea ac="5" type="unit">
+        <name>test_ingest_pdf_logging</name>
+        <description>Verify structured logging with extra={} context (path, doc_id, duration)</description>
+        <mockRequired>Mock logger to capture log calls</mockRequired>
+      </test_idea>
+      <test_idea ac="6,9,10" type="integration" critical="true">
+        <name>test_ingest_pdf_week0_document</name>
+        <description>Integration: Ingest Week 0 PDF (160 pages), verify text accuracy ≥95%, tables preserved, page numbers present</description>
+        <testData>docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf</testData>
+        <assertions>
+          <assert>result.page_count == 160</assert>
+          <assert>result.chunk_count > 0</assert>
+          <assert>text_extraction_accuracy >= 0.95</assert>
+          <assert>tables_extracted >= 149 (95% of 157)</assert>
+          <assert>all chunks have page_number != None</assert>
+        </assertions>
+      </test_idea>
+      <test_idea ac="7" type="integration">
+        <name>test_ingest_pdf_performance</name>
+        <description>Performance: Measure ingestion time for Week 0 PDF (160 pages), verify &lt;8 minutes</description>
+        <performanceTarget>duration &lt; 480 seconds (8 minutes)</performanceTarget>
+      </test_idea>
+    </ideas>
+  </tests>
+</story-context>

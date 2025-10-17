@@ -1,5 +1,9 @@
 # User Interface Design Goals
 
+**⚠️ Important Context:** RAGLite is an MCP (Model Context Protocol) backend server with **no custom user interface**. This section defines the "user experience" from the perspective of **MCP protocol responses and conversational interactions**. Users interact via existing MCP clients (Claude Desktop, Claude Code, etc.) rather than a RAGLite-specific UI. The "interface" is the structure and format of tool responses returned via MCP.
+
+---
+
 ## Overall UX Vision
 
 **Conversational-First Financial Intelligence Interface**
