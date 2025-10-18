@@ -1,6 +1,10 @@
 """Integration tests for vector similarity search and retrieval.
 
 Tests search_documents and generate_query_embedding with real Qdrant and embedding model.
+
+Performance Optimization:
+- Lazy imports: Expensive modules (raglite.retrieval.*, raglite.shared.*) imported inside test functions
+  to avoid 6+ second import overhead during test discovery (critical for test explorers)
 """
 
 import json
@@ -10,14 +14,23 @@ from pathlib import Path
 
 import pytest
 
-from raglite.retrieval.attribution import generate_citations
-from raglite.retrieval.search import search_documents
-from raglite.shared.clients import get_qdrant_client
-from raglite.shared.config import settings
+# Lazy imports for expensive modules - DO NOT import raglite modules at module level!
+# Test explorers (VS Code) run discovery multiple times causing 30+ second delays.
+# Import inside test functions instead:
+#   from raglite.retrieval.search import search_documents
+#   from raglite.retrieval.attribution import generate_citations
+#   from raglite.shared.clients import get_qdrant_client
+#   from raglite.shared.config import settings
 
 
+@pytest.mark.xdist_group(name="embedding_model")
 class TestRetrievalIntegration:
-    """Integration tests for end-to-end retrieval with real Qdrant."""
+    """Integration tests for end-to-end retrieval with real Qdrant.
+
+    Note: Tests in this class load the embedding model (3s overhead).
+    The @pytest.mark.xdist_group ensures all tests run in the same worker
+    to avoid multiple model loads during parallel execution.
+    """
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -35,6 +48,11 @@ class TestRetrievalIntegration:
         - Qdrant running (docker-compose up -d)
         - Collection exists with stored chunks
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.retrieval.search import search_documents
+        from raglite.shared.clients import get_qdrant_client
+        from raglite.shared.config import settings
+
         # Check if Qdrant collection exists
         qdrant = get_qdrant_client()
         collections = qdrant.get_collections().collections
@@ -95,6 +113,11 @@ class TestRetrievalIntegration:
         - Ground truth JSON file with queries and expected keywords
         - Qdrant collection with ingested chunks
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.retrieval.search import search_documents
+        from raglite.shared.clients import get_qdrant_client
+        from raglite.shared.config import settings
+
         # Load ground truth queries
         ground_truth_path = Path("tests/ground_truth.json")
         if not ground_truth_path.exists():
@@ -170,6 +193,11 @@ class TestRetrievalIntegration:
         Requires:
         - Qdrant collection with stored chunks
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.retrieval.search import search_documents
+        from raglite.shared.clients import get_qdrant_client
+        from raglite.shared.config import settings
+
         # Check if Qdrant collection exists
         qdrant = get_qdrant_client()
         collections = qdrant.get_collections().collections
@@ -242,6 +270,11 @@ class TestRetrievalIntegration:
         Requires:
         - Qdrant collection with stored chunks
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.retrieval.search import search_documents
+        from raglite.shared.clients import get_qdrant_client
+        from raglite.shared.config import settings
+
         # Check if Qdrant collection exists
         qdrant = get_qdrant_client()
         collections = qdrant.get_collections().collections
@@ -312,6 +345,11 @@ class TestRetrievalIntegration:
         Requires:
         - Qdrant collection with multiple documents
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.retrieval.search import search_documents
+        from raglite.shared.clients import get_qdrant_client
+        from raglite.shared.config import settings
+
         # Check if Qdrant collection exists
         qdrant = get_qdrant_client()
         collections = qdrant.get_collections().collections
@@ -376,6 +414,12 @@ class TestRetrievalIntegration:
         - Review output to verify citations point to correct pages
         - Check that citations enable users to find original text
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.retrieval.attribution import generate_citations
+        from raglite.retrieval.search import search_documents
+        from raglite.shared.clients import get_qdrant_client
+        from raglite.shared.config import settings
+
         # Load ground truth queries
         ground_truth_path = Path("tests/ground_truth.json")
         if not ground_truth_path.exists():

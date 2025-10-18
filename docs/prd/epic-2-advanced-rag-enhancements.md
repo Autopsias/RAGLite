@@ -21,11 +21,11 @@ This epic contains 6 RAG enhancement stories that are implemented sequentially w
 - Story 1.15B baseline shows <90% retrieval accuracy OR <95% attribution accuracy
 
 **Expected Progression:**
-- Baseline (Option C): 90-92% retrieval accuracy
-- After Story 2.1 (Hybrid Search): 92-94% accuracy
-- After Story 2.2 (Financial Embeddings): 94-96% accuracy → Likely STOP here ✅
-- After Story 2.3 (Table-Aware Chunking): 95-97% accuracy
-- After Story 2.4+ (Cross-Encoder, Query Expansion, Multi-Vector): 96-98%+ accuracy
+- Baseline (ACTUAL Post-Epic 1): 56.0% retrieval accuracy ⚠️ (Reality: 34-36pp below assumptions)
+- After Story 2.1 (Hybrid Search): 56.0% accuracy ❌ FAILED - no improvement (whitespace tokenization inadequate)
+- After Story 2.2 (Element Chunking): 64-68% accuracy (+8-12pp conservative estimate) ✅ Phase 1
+- After Story 2.3 (Query Preprocessing): 74-76% accuracy (+6-8pp) ✅ Phase 2
+- After Story 2.4 (Table Summarization): 78-80% accuracy (+4-6pp) ✅ Phase 3 → Epic 2 Target Exceeded
 
 **Technologies Added:**
 - sentence-transformers (cross-encoder re-ranking) ✅ Already in requirements
@@ -35,9 +35,23 @@ This epic contains 6 RAG enhancement stories that are implemented sequentially w
 
 ---
 
-## Story 2.1: Phase 2A - Hybrid Search (4-6 hours)
+## Story 2.1: Phase 2A - Hybrid Search (FAILED - PIVOT)
 
-**Goal:** Combine semantic vector search with keyword matching for precision
+**Status:** ❌ CLOSED - Failed AC6 (56% accuracy vs ≥70% target)
+**Date Closed:** 2025-10-18
+**Outcome:** BM25 approach inadequate for financial documents with complex tables
+**Root Cause:** Whitespace tokenization destroys table structure; length normalization bias; low BM25 coverage
+**Decision:** PIVOT to Stories 2.2-2.4 (element-based chunking + query preprocessing + table summarization)
+**Research Evidence:** Jimeno Yepes et al. (2024), Kim et al. (ICLR 2025), Min et al. (NAACL 2024)
+
+**Goal (Original):** Combine semantic vector search with keyword matching for precision
+
+**Lessons Learned:**
+- ✅ Whitespace tokenization inadequate for financial domain (numbers split: "23.2 EUR/ton")
+- ✅ BM25 length normalization bias inflates short chunk scores (confidentiality notices)
+- ✅ Table structure lost in linear token streams (semantic coherence destroyed)
+- ✅ Element-based chunking required for complex financial documents
+- ✅ Research validation: +16.3pp page-level recall with element-aware boundaries (Jimeno Yepes et al.)
 
 **As a** system,
 **I want** to combine vector search with keyword matching and re-ranking,
@@ -101,75 +115,172 @@ This epic contains 6 RAG enhancement stories that are implemented sequentially w
 
 ---
 
-## Story 2.2: Phase 2B - Financial Embeddings Evaluation (6-8 hours)
+## Story 2.2: Phase 2B - Element-Based Chunking Enhancement (1 week)
 
-**Goal:** Evaluate financial domain-specific embeddings vs. general E5 embeddings
+**Status:** ✅ READY FOR IMPLEMENTATION (Priority: HIGH - Critical path after Story 2.1 pivot)
+**Research Foundation:** Jimeno Yepes et al. (2024) arXiv:2402.05131, Kim et al. (ICLR 2025) arXiv:2503.15191
+**Detailed Specification:** `docs/stories/story-2.2-element-chunking.md` (1,144 lines)
 
-**As a** system,
-**I want** to test if financial domain-specific embeddings improve retrieval accuracy,
-**so that** queries with financial terminology find semantically relevant chunks more accurately.
+**Goal:** Replace fixed 512-token chunking with structure-aware boundaries (tables, sections, paragraphs) using Docling's element detection
+
+**As a** RAG system processing financial documents,
+**I want** structure-aware chunking that respects element boundaries,
+**so that** chunks preserve semantic coherence and improve retrieval accuracy from 56% to 64-68%.
 
 ### Acceptance Criteria
 
-1. **Embedding model options researched** (1 hour)
-   - Option 1: OpenAI text-embedding-3-large (API, 3072-dim, $0.13/1M tokens)
-   - Option 2: FinBERT (local, 768-dim, finance-trained, free)
-   - Option 3: Baseline E5-large-v2 (current, 1024-dim, general purpose)
-   - Document pros/cons of each
+1. **Element-Aware Chunk Boundaries** (AC1) ⭐ CRITICAL
+   - Chunks MUST NOT split tables mid-row (tables are indivisible units)
+   - Chunks MUST NOT split section headers from their content
+   - Tables <2,048 tokens stored as single chunk
+   - Sections >512 tokens split at paragraph boundaries (not mid-sentence)
 
-2. **A/B testing setup** (2 hours)
-   - Re-ingest PDF with each embedding model (3 separate Qdrant collections)
-   - Run accuracy tests on all 50 ground truth queries for each model
-   - Compare: Retrieval accuracy, cost, latency
+2. **Chunk Metadata Enhancement** (AC2) ⭐ CRITICAL
+   - Add `element_type` field: "table" | "section" | "paragraph" | "list" | "mixed"
+   - Add `section_title` field for context (e.g., "Revenue by Segment")
+   - Preserve existing fields: `page_number`, `chunk_index`, `source_document`
 
-3. **OpenAI embeddings tested** (1 hour)
-   - API integration: `openai.embeddings.create()`
-   - Measure: Accuracy, cost ($), latency (ms)
-   - Store results in comparison table
+3. **Retrieval Accuracy Validation** (AC3) ⭐ CRITICAL - DECISION GATE
+   - Run 50-query ground truth test suite
+   - **MANDATORY:** Retrieval accuracy ≥64.0% (32/50 queries pass) - minimum viable improvement
+   - **TARGET:** Retrieval accuracy ≥68.0% (34/50 queries pass) - research-backed stretch goal
+   - Attribution accuracy ≥45.0% (maintain or improve over 40% baseline)
 
-4. **FinBERT embeddings tested** (1 hour)
-   - HuggingFace model: `ProsusAI/finbert`
-   - Measure: Accuracy, cost (free), latency (ms)
-   - Store results in comparison table
+4. **Performance & NFR Compliance** (AC4)
+   - Ingestion time ≤30s per 100 pages (same as baseline)
+   - Memory usage ≤4 GB during ingestion
+   - p95 retrieval latency <10,000ms (NFR13)
 
-5. **Comparison analysis** (1 hour)
-   - Generate report: Accuracy vs. Cost vs. Latency
-   - Identify: Best model for financial queries
-   - Decision: Adopt new model if improvement >5%
-
-6. **Model adoption (conditional)** (2 hours)
-   - IF new model >+5% accuracy: Update pipeline
-   - Re-ingest all documents with new embeddings
-   - Update configuration to use new model
-   - Document migration in completion notes
-
-7. **Validation** (30 min)
-   - Run full ground truth test with adopted model
-   - Measure: Retrieval accuracy with new embeddings
-   - Target: ≥95% (up from 92-94%)
+5. **Backward Compatibility** (AC5)
+   - Qdrant collection schema remains compatible (additive changes only)
+   - `hybrid_search()` API signature unchanged
+   - Existing queries work without modification
 
 ### Expected Impact
 
-- +10-15% accuracy on financial terminology queries
-- Better understanding of domain-specific vs. general embeddings
-- Cost-benefit analysis for production deployment
+- **Accuracy:** 56% → 64-68% (+8-12pp conservative, based on Jimeno Yepes et al.)
+- **Table Queries:** +15-25% improvement on number-heavy queries
+- **Semantic Coherence:** Tables and sections preserved intact
+- **Research Evidence:** +16.3pp page-level recall, +24.8% ROUGE, +80.8% BLEU (arXiv:2402.05131)
 
 ### Decision Gate
 
-- **IF ≥95%:** STOP - Phase 2 complete, proceed to Epic 3
-- **IF <95%:** Continue to Story 2.3 (Table-Aware Chunking)
+- **IF <64%:** ESCALATE to PM for strategy review (approach may be insufficient)
+- **IF 64-68%:** PROCEED to Story 2.3 with caution flag
+- **IF ≥68%:** PROCEED to Story 2.3 with high confidence
 
-**Technologies:** OpenAI API (optional), FinBERT from HuggingFace (optional)
+### Implementation Timeline (5-7 days)
+
+- **Day 1-2:** Data models & Docling element extraction
+- **Day 3-4:** Smart chunking algorithm (respect table/section boundaries)
+- **Day 5:** Qdrant integration & metadata enhancement
+- **Day 6:** End-to-end validation & accuracy testing
+- **Day 7:** Documentation & handoff
+
+**Technologies:** Docling (already approved) - ZERO new dependencies
 
 **Files Modified:**
-- `raglite/shared/clients.py` (add embedding model selection)
-- `raglite/ingestion/pipeline.py` (support multiple embedding models)
-- `scripts/embedding-comparison-report.py` (NEW - 200 lines)
-- `docs/embedding-comparison-results.md` (NEW - comparison report)
+- `raglite/ingestion/pipeline.py` (~80 lines - element extraction + chunking)
+- `raglite/shared/models.py` (~30 lines - ElementType enum, DocumentElement, Chunk enhancements)
+- `tests/unit/test_element_extraction.py` (NEW - 150 lines)
+- `tests/unit/test_element_chunking.py` (NEW - 150 lines)
+- `tests/integration/test_element_metadata.py` (NEW - 100 lines)
 
 ---
 
-## Story 2.3: Phase 2C - Table-Aware Chunking (8-10 hours)
+## Story 2.3: Phase 2C - Query Preprocessing & Retrieval Optimization (2 weeks)
+
+**Status:** 📋 PLANNED (depends on Story 2.2 achieving ≥65% accuracy)
+**Research Foundation:** Kim et al. (ICLR 2025 Workshop) arXiv:2503.15191
+**Detailed Specification:** `docs/epic-2-preparation/implementation-plan-stories-2.2-2.4.md` (lines 236-428)
+
+**Goal:** Implement pre-retrieval query enhancement and post-retrieval optimization without fine-tuning embeddings
+
+**Target Accuracy:** 68% → 74-76% (+6-8pp)
+**Risk Level:** MEDIUM
+**Effort:** 2 weeks
+
+**As a** RAG system handling financial queries,
+**I want** query preprocessing (financial acronym expansion, number normalization) and retrieval optimization (metadata boosting, chunk bundling),
+**so that** retrieval accuracy improves from 68% to 74-76%.
+
+### Key Features
+
+1. **Query Rewriting for Financial Terms**
+   - Expand acronyms: "EBITDA" → "EBITDA (Earnings Before Interest, Taxes, Depreciation, and Amortization)"
+   - Normalize numbers: "23.2" → "23.2 | twenty-three point two"
+   - Expand units: "EUR/ton" → "EUR/ton | euros per ton"
+
+2. **Metadata-Aware Filtering**
+   - Number-heavy queries prioritize `element_type="table"` results
+   - Trend queries ("change", "growth") expand to adjacent time periods
+   - Section-aware boosting: "revenue" query boosts `section_title="Revenue"` chunks
+
+3. **Chunk Bundling for Context**
+   - Retrieve top-20 candidates, expand each with ±1 adjacent chunk (same section)
+   - Re-rank expanded bundles using similarity threshold (tau=0.7)
+   - Return top-5 after bundling
+
+### Decision Gate
+
+- **IF <74%:** Continue to Story 2.4 (Table Summarization)
+- **IF ≥74% AND <70% original target:** Consider stopping (reassess Epic 2 target)
+- **IF ≥74% AND meets 70% Epic 2 target:** MAY STOP (Epic 2 complete)
+
+**Technologies:** ZERO new dependencies (Python stdlib + existing stack)
+
+---
+
+## Story 2.4: Phase 2D - Table-to-Text Summarization (3 weeks)
+
+**Status:** 📋 PLANNED (depends on Story 2.3 achieving ≥74% but missing ≥78% stretch goal)
+**Research Foundation:** Min et al. (NAACL 2024) ACL Anthology
+**Detailed Specification:** `docs/epic-2-preparation/implementation-plan-stories-2.2-2.4.md` (lines 431-643)
+
+**Goal:** Generate LLM summaries of financial tables; embed both raw table + summary for improved semantic matching
+
+**Target Accuracy:** 74% → 78-80% (+4-6pp)
+**Risk Level:** MEDIUM
+**Effort:** 3 weeks
+**Cost:** ~$0.60 per 160-page document (Claude 3.7 Sonnet API)
+
+**As a** RAG system processing complex financial tables,
+**I want** LLM-generated table summaries stored alongside raw tables,
+**so that** semantic search finds tables via both structure and natural language descriptions.
+
+### Key Features
+
+1. **LLM-Based Table Summarization**
+   - Use Claude 3.7 Sonnet API (already approved in tech stack)
+   - Prompt: "Summarize this financial table in 2-3 sentences, focusing on key figures, trends, and insights"
+   - Summary length: 50-150 words per table
+
+2. **Dual Chunk Storage**
+   - Store TWO chunks per table: (1) Raw Markdown table, (2) LLM summary
+   - Link via `parent_chunk_id` metadata field
+   - Enables both structured and semantic table retrieval
+
+3. **Cost & Performance Monitoring**
+   - Track API token usage per table
+   - Monitor summarization latency (target: <5s per table)
+   - Budget: <$10 per full corpus re-ingestion
+
+### Decision Gate
+
+- **IF ≥78%:** Epic 2 COMPLETE (exceeds 70% target, approaches 80%)
+- **IF <78%:** ESCALATE to PM for Epic 2 strategy review
+
+**Technologies:** Claude 3.7 Sonnet API (already approved) - ZERO new dependencies
+
+---
+
+## ⚠️ ARCHIVED STORIES (Pre-Pivot Approach - Phase 3+ Only)
+
+The following stories (OLD 2.3-2.6) assumed a 90%+ baseline and are now **DEFERRED** after Story 2.1 pivot. They MAY be revisited in Phase 3+ if element-based approach (NEW Stories 2.2-2.4) proves insufficient to reach 90%+ accuracy.
+
+---
+
+## Story 2.5 (OLD 2.3): Phase 2C - Table-Aware Chunking (ARCHIVED - see NEW Story 2.2)
 
 **Goal:** Preserve financial tables intact during chunking (prevent mid-table splits)
 
@@ -434,17 +545,28 @@ This epic contains 6 RAG enhancement stories that are implemented sequentially w
 
 ## Decision Gates Summary
 
+### NEW Approach (Post-Pivot, 2025-10-18)
+
 | Story | Expected Accuracy | Decision |
 |-------|------------------|----------|
-| Baseline | 90-92% | Continue to 2.1 |
-| **2.1 (Hybrid Search)** | 92-94% | IF ≥95% STOP, else continue to 2.2 |
-| **2.2 (Financial Embeddings)** | 94-96% | IF ≥95% STOP, else continue to 2.3 |
-| **2.3 (Table-Aware Chunking)** | 95-97% | IF ≥95% STOP, else continue to 2.4 |
-| **2.4 (Cross-Encoder)** | 96-98% | IF ≥95% STOP, else continue to 2.5 |
-| **2.5 (Query Expansion)** | 96-98% | IF ≥95% STOP, else continue to 2.6 |
-| **2.6 (Multi-Vector)** | 98%+ | Phase 2 COMPLETE |
+| **Baseline (Post-Epic 1)** | 56.0% | PIVOT to element-based approach |
+| **2.1 (Hybrid Search)** | 56.0% ❌ | FAILED - whitespace tokenization inadequate → PIVOT |
+| **2.2 (Element Chunking)** | 64-68% | IF <65% ESCALATE; IF ≥68% high confidence to 2.3 |
+| **2.3 (Query Preprocessing)** | 74-76% | IF ≥70% MAY STOP (Epic 2 target met); else continue to 2.4 |
+| **2.4 (Table Summarization)** | 78-80% | Epic 2 COMPLETE (exceeds 70% target) |
 
-**Most Likely Outcome:** STOP after Story 2.2 (Financial Embeddings) with 94-96% accuracy ✅
+**Most Likely Outcome:** STOP after Story 2.3 or 2.4 with 74-80% accuracy ✅
+
+### OLD Approach (Pre-Pivot - ARCHIVED)
+
+The following progression assumed 90%+ baseline and is now DEFERRED:
+
+| Story | Expected Accuracy | Status |
+|-------|------------------|--------|
+| 2.5 (OLD 2.3 - Table-Aware) | 95-97% | ARCHIVED - see NEW Story 2.2 |
+| 2.6 (OLD 2.4 - Cross-Encoder) | 96-98% | DEFERRED to Phase 3+ |
+| 2.7 (OLD 2.5 - Query Expansion) | 96-98% | DEFERRED to Phase 3+ |
+| 2.8 (OLD 2.6 - Multi-Vector) | 98%+ | DEFERRED to Phase 3+ |
 
 ---
 

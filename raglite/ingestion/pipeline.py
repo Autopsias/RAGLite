@@ -14,8 +14,15 @@ from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
 from docling.document_converter import ConversionResult, DocumentConverter, PdfFormatOption
 from docling_core.types.doc import TableItem
-from qdrant_client.models import Distance, PointStruct, VectorParams
+from qdrant_client.models import (
+    Distance,
+    PointStruct,
+    SparseIndexParams,
+    SparseVectorParams,
+    VectorParams,
+)
 
+from raglite.shared.bm25 import create_bm25_index, save_bm25_index
 from raglite.shared.clients import get_embedding_model, get_qdrant_client
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
@@ -177,7 +184,7 @@ def create_collection(
             )
             return
 
-        # Create collection with HNSW indexing (default)
+        # Create collection with HNSW indexing (default) + sparse vectors for BM25
         logger.info(
             "Creating Qdrant collection",
             extra={
@@ -185,12 +192,20 @@ def create_collection(
                 "vector_size": vector_size,
                 "distance": distance.name,
                 "indexing": "HNSW (default)",
+                "sparse_vectors": "enabled (BM25)",
             },
         )
 
         client.create_collection(
             collection_name=collection_name,
-            vectors_config=VectorParams(size=vector_size, distance=distance),
+            vectors_config={
+                "text-dense": VectorParams(size=vector_size, distance=distance),
+            },
+            sparse_vectors_config={
+                "text-sparse": SparseVectorParams(
+                    index=SparseIndexParams(on_disk=False),
+                )
+            },
         )
 
         logger.info("Collection created successfully", extra={"collection": collection_name})
@@ -211,6 +226,7 @@ async def store_vectors_in_qdrant(
 
     Processes chunks in batches for memory efficiency. Generates unique UUIDs for
     each point and stores all chunk metadata for retrieval and attribution.
+    Creates and persists BM25 index for hybrid search (Story 2.1).
 
     Args:
         chunks: List of Chunk objects with embeddings from Story 1.5
@@ -225,6 +241,7 @@ async def store_vectors_in_qdrant(
 
     Strategy:
         - Ensure collection exists (create if needed)
+        - Create BM25 index and save to disk (Story 2.1 AC1)
         - Batch upload: 100 vectors per batch to prevent memory issues
         - Generate unique UUID for each point (Qdrant requirement)
         - Store metadata: chunk_id, text, word_count, source_document, page_number, chunk_index
@@ -254,6 +271,31 @@ async def store_vectors_in_qdrant(
     # Ensure collection exists
     create_collection(collection_name, vector_size=settings.embedding_dimension)
 
+    # Create BM25 index for hybrid search (Story 2.1 AC1.2)
+    try:
+        bm25, tokenized_docs = create_bm25_index(chunks, k1=1.7, b=0.6)
+
+        # Create chunk metadata for BM25-to-Qdrant mapping
+        chunk_metadata = [
+            {
+                "source_document": chunk.metadata.filename,
+                "chunk_index": chunk.chunk_index,
+                "page_number": chunk.page_number,
+            }
+            for chunk in chunks
+        ]
+
+        save_bm25_index(bm25, tokenized_docs, chunk_metadata=chunk_metadata)
+        logger.info(
+            "BM25 index created and saved",
+            extra={"chunk_count": len(chunks), "collection": collection_name},
+        )
+    except Exception as e:
+        logger.warning(
+            "BM25 index creation failed - continuing with semantic-only",
+            extra={"error": str(e), "collection": collection_name},
+        )
+
     client = get_qdrant_client()
 
     # Prepare points for upload
@@ -271,7 +313,7 @@ async def store_vectors_in_qdrant(
 
         point = PointStruct(
             id=str(uuid.uuid4()),
-            vector=chunk.embedding,
+            vector={"text-dense": chunk.embedding},  # Named vector for Story 2.1 sparse support
             payload={
                 "chunk_id": chunk.chunk_id,
                 "text": chunk.content,

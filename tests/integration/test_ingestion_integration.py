@@ -1,6 +1,10 @@
 """Integration tests for document ingestion with real files.
 
 Tests ingest_pdf and extract_excel with actual document files.
+
+Performance Optimization:
+- Lazy imports: Expensive modules (raglite.ingestion.*, raglite.shared.*) imported inside test functions
+  to avoid 6+ second import overhead during test discovery (critical for test explorers)
 """
 
 import time
@@ -10,15 +14,12 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
-from raglite.ingestion.pipeline import (
-    chunk_document,
-    extract_excel,
-    generate_embeddings,
-    ingest_pdf,
-    store_vectors_in_qdrant,
-)
-from raglite.shared.clients import get_qdrant_client
-from raglite.shared.models import Chunk, DocumentMetadata
+# Lazy imports for expensive modules - DO NOT import raglite modules at module level!
+# Test explorers (VS Code) run discovery multiple times causing 30+ second delays.
+# Import inside test functions instead:
+#   from raglite.ingestion.pipeline import ingest_pdf, chunk_document, generate_embeddings
+#   from raglite.shared.clients import get_qdrant_client
+#   from raglite.shared.models import Chunk, DocumentMetadata
 
 
 class TestPDFIngestionIntegration:
@@ -51,6 +52,10 @@ class TestPDFIngestionIntegration:
         Note: Timeout increased to 120s to accommodate real Docling PDF processing
         with table extraction, which takes ~60s on this 10-page financial document.
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.ingestion.pipeline import ingest_pdf
+        from raglite.shared.models import DocumentMetadata
+
         # Locate sample PDF
         sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
 
@@ -107,6 +112,11 @@ class TestPDFIngestionIntegration:
         - No impossible page estimates (e.g., page 156 for 10-page doc)
         - All chunks have valid page_number field
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.ingestion.pipeline import ingest_pdf
+        from raglite.shared.clients import get_qdrant_client
+        from raglite.shared.config import settings
+
         # Use sample financial report PDF (10 pages)
         sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
 
@@ -118,7 +128,6 @@ class TestPDFIngestionIntegration:
 
         # Query Qdrant to verify stored page numbers
         qdrant_client = get_qdrant_client()
-        from raglite.shared.config import settings
 
         # Scroll through all points in collection
         points, _ = qdrant_client.scroll(
@@ -180,6 +189,8 @@ class TestPDFIngestionIntegration:
         - Attribution accuracy >80% on sample (full target: 95%)
         - No wildly incorrect page numbers (old bug: ±50 page error)
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.ingestion.pipeline import ingest_pdf
         from raglite.retrieval.search import search_documents
         from tests.fixtures.ground_truth import GROUND_TRUTH_QA
 
@@ -269,6 +280,10 @@ class TestExcelIngestionIntegration:
         This validates AC 5 (successfully ingests sample Excel files)
         and AC 9 (end-to-end integration test).
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.ingestion.pipeline import extract_excel
+        from raglite.shared.models import DocumentMetadata
+
         # Locate sample Excel file
         sample_excel = Path("tests/fixtures/sample_financial_data.xlsx")
 
@@ -349,6 +364,10 @@ class TestChunkingIntegration:
         - TestEmbeddingIntegration validates embedding generation separately
         - This allows fast chunking tests without waiting for model download
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.ingestion.pipeline import chunk_document, ingest_pdf
+        from raglite.shared.models import DocumentMetadata
+
         # Locate sample PDF
         sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
 
@@ -477,6 +496,10 @@ class TestChunkingIntegration:
         - Docling PDF processing is separate and validated in TestPDFIngestionIntegration
         - This focuses on AC7 chunking performance without Docling overhead
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.ingestion.pipeline import chunk_document
+        from raglite.shared.models import DocumentMetadata
+
         # Create sample text simulating 100 pages
         # Each "page" is ~500 words (typical financial document page)
         words_per_page = 500
@@ -528,11 +551,16 @@ class TestChunkingIntegration:
         print(f"     Throughput: {metadata.page_count / elapsed_seconds:.1f} pages/second")
 
 
+@pytest.mark.xdist_group(name="embedding_model")
 class TestEmbeddingIntegration:
     """Integration tests for Story 1.5: Embedding generation with real Fin-E5 model.
 
     Validates end-to-end flow: ingestion → chunking → embedding generation.
     Tests AC7 (end-to-end integration), AC8 (all embeddings != None), AC9 (performance).
+
+    Note: Tests in this class load the embedding model (3s overhead).
+    The @pytest.mark.xdist_group ensures all tests run in the same worker
+    to avoid multiple model loads during parallel execution.
     """
 
     @pytest.mark.asyncio
@@ -558,6 +586,10 @@ class TestEmbeddingIntegration:
         - PDF processing validated separately in TestPDFIngestionIntegration
         - This focuses on embedding generation speed, not Docling speed
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.ingestion.pipeline import ingest_pdf
+        from raglite.shared.models import DocumentMetadata
+
         # Locate sample PDF
         sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
 
@@ -694,6 +726,8 @@ class TestEmbeddingIntegration:
 
         This validates AC2 with real model (not mocked) by directly testing generate_embeddings.
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.ingestion.pipeline import generate_embeddings
         from raglite.shared.models import Chunk, DocumentMetadata
 
         # Create test chunks
@@ -741,6 +775,9 @@ class TestEmbeddingIntegration:
 
         Ensures pipeline doesn't crash with edge cases.
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.ingestion.pipeline import generate_embeddings
+
         # Test with empty chunk list
         result = await generate_embeddings([])
 
@@ -749,8 +786,14 @@ class TestEmbeddingIntegration:
         print("\n  ✅ Empty document handled gracefully (no crash)")
 
 
+@pytest.mark.xdist_group(name="embedding_model")
 class TestQdrantStorageIntegration:
-    """Integration tests for Qdrant vector storage with real database (Story 1.6)."""
+    """Integration tests for Qdrant vector storage with real database (Story 1.6).
+
+    Note: Tests in this class load the embedding model (3s overhead).
+    The @pytest.mark.xdist_group ensures all tests run in the same worker
+    to avoid multiple model loads during parallel execution.
+    """
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -764,6 +807,11 @@ class TestQdrantStorageIntegration:
         - Points_count matches chunk_count after storage (AC9)
         - All metadata fields are preserved
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.ingestion.pipeline import generate_embeddings, store_vectors_in_qdrant
+        from raglite.shared.clients import get_qdrant_client
+        from raglite.shared.models import Chunk, DocumentMetadata
+
         # Create test metadata
         metadata = DocumentMetadata(
             filename="integration_test.pdf",
@@ -846,6 +894,11 @@ class TestQdrantStorageIntegration:
         - Retrieved chunks match original metadata
         - Vector search works correctly
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.ingestion.pipeline import generate_embeddings, store_vectors_in_qdrant
+        from raglite.shared.clients import get_qdrant_client
+        from raglite.shared.models import Chunk, DocumentMetadata
+
         metadata = DocumentMetadata(
             filename="roundtrip_test.pdf",
             doc_type="PDF",
@@ -884,6 +937,7 @@ class TestQdrantStorageIntegration:
             search_results = client.query_points(
                 collection_name=test_collection,
                 query=chunks_with_embeddings[0].embedding,
+                using="text-dense",  # Named vector for hybrid search (Story 2.1)
                 limit=3,
             ).points
 
@@ -923,6 +977,11 @@ class TestQdrantStorageIntegration:
         - Batch processing works efficiently
         - No performance degradation with larger datasets
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.ingestion.pipeline import generate_embeddings, store_vectors_in_qdrant
+        from raglite.shared.clients import get_qdrant_client
+        from raglite.shared.models import Chunk, DocumentMetadata
+
         metadata = DocumentMetadata(
             filename="performance_test.pdf",
             doc_type="PDF",
@@ -995,6 +1054,15 @@ class TestQdrantStorageIntegration:
         - All metadata fields preserved end-to-end
         - No data loss during pipeline
         """
+        # Lazy imports to avoid test discovery overhead
+        from raglite.ingestion.pipeline import (
+            chunk_document,
+            generate_embeddings,
+            store_vectors_in_qdrant,
+        )
+        from raglite.shared.clients import get_qdrant_client
+        from raglite.shared.models import DocumentMetadata
+
         # Create test document with page information
         full_text = """Page 1 content: Executive Summary
 Financial highlights for Q4 2024.

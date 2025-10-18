@@ -117,7 +117,7 @@ class TestQueryFinancialDocumentsTool:
     @pytest.mark.asyncio
     async def test_query_tool_success(self):
         """Test successful query returns QueryResponse with cited results."""
-        # Mock Story 1.7 search results
+        # Mock Story 2.1 hybrid search results
         mock_search_results = [
             QueryResult(
                 score=0.95,
@@ -158,10 +158,10 @@ class TestQueryFinancialDocumentsTool:
         ]
 
         with (
-            patch("raglite.main.search_documents", new_callable=AsyncMock) as mock_search,
+            patch("raglite.main.hybrid_search", new_callable=AsyncMock) as mock_hybrid_search,
             patch("raglite.main.generate_citations", new_callable=AsyncMock) as mock_citations,
         ):
-            mock_search.return_value = mock_search_results
+            mock_hybrid_search.return_value = mock_search_results
             mock_citations.return_value = mock_cited_results
 
             request = QueryRequest(query="What was Q3 revenue?", top_k=5)
@@ -174,7 +174,10 @@ class TestQueryFinancialDocumentsTool:
             assert response.results[0].score == 0.95
             assert response.retrieval_time_ms >= 0
 
-            mock_search.assert_called_once_with("What was Q3 revenue?", 5)
+            # Verify hybrid_search called with correct parameters
+            mock_hybrid_search.assert_called_once_with(
+                "What was Q3 revenue?", top_k=5, enable_hybrid=True
+            )
             mock_citations.assert_called_once_with(mock_search_results)
 
     @pytest.mark.asyncio
@@ -200,8 +203,8 @@ class TestQueryFinancialDocumentsTool:
     @pytest.mark.asyncio
     async def test_query_tool_search_error(self):
         """Test query with search failure re-raises QueryError."""
-        with patch("raglite.main.search_documents", new_callable=AsyncMock) as mock_search:
-            mock_search.side_effect = QueryError("Qdrant connection failed")
+        with patch("raglite.main.hybrid_search", new_callable=AsyncMock) as mock_hybrid_search:
+            mock_hybrid_search.side_effect = QueryError("Qdrant connection failed")
 
             request = QueryRequest(query="valid query", top_k=5)
 
@@ -213,8 +216,8 @@ class TestQueryFinancialDocumentsTool:
     @pytest.mark.asyncio
     async def test_query_tool_unexpected_error(self):
         """Test query with unexpected error wraps in QueryError."""
-        with patch("raglite.main.search_documents", new_callable=AsyncMock) as mock_search:
-            mock_search.side_effect = Exception("Unexpected failure")
+        with patch("raglite.main.hybrid_search", new_callable=AsyncMock) as mock_hybrid_search:
+            mock_hybrid_search.side_effect = Exception("Unexpected failure")
 
             request = QueryRequest(query="valid query", top_k=5)
 
@@ -238,10 +241,10 @@ class TestQueryFinancialDocumentsTool:
         ]
 
         with (
-            patch("raglite.main.search_documents", new_callable=AsyncMock) as mock_search,
+            patch("raglite.main.hybrid_search", new_callable=AsyncMock) as mock_hybrid_search,
             patch("raglite.main.generate_citations", new_callable=AsyncMock) as mock_citations,
         ):
-            mock_search.return_value = mock_results
+            mock_hybrid_search.return_value = mock_results
             mock_citations.return_value = mock_results
 
             request = QueryRequest(query="test query", top_k=5)

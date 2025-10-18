@@ -23,7 +23,7 @@ from fastmcp import FastMCP
 
 from raglite.ingestion.pipeline import ingest_document
 from raglite.retrieval.attribution import generate_citations
-from raglite.retrieval.search import QueryError, search_documents
+from raglite.retrieval.search import QueryError, hybrid_search
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 from raglite.shared.models import DocumentMetadata, QueryRequest, QueryResponse
@@ -114,15 +114,15 @@ async def ingest_financial_document(doc_path: str) -> DocumentMetadata:
 
 @mcp.tool()
 async def query_financial_documents(request: QueryRequest) -> QueryResponse:
-    """Query financial documents using natural language.
+    """Query financial documents using natural language with hybrid search.
 
-    Performs semantic search across ingested documents and returns relevant chunks
-    with source attribution. The MCP client (Claude) synthesizes natural language
-    answers from the returned chunks.
+    Performs hybrid search (BM25 + semantic) across ingested documents and returns
+    relevant chunks with source attribution. The MCP client (Claude) synthesizes
+    natural language answers from the returned chunks.
 
-    Query pipeline:
+    Query pipeline (Story 2.1):
       1. Generate query embedding (Fin-E5 model)
-      2. Vector similarity search in Qdrant
+      2. Hybrid search: semantic (Fin-E5) + keyword (BM25) fusion
       3. Generate source citations for each chunk
       4. Return raw chunks with metadata for LLM synthesis
 
@@ -167,9 +167,9 @@ async def query_financial_documents(request: QueryRequest) -> QueryResponse:
         raise QueryError(error_msg)
 
     try:
-        # Call Story 1.7 search pipeline
+        # Call Story 2.1 hybrid search pipeline (BM25 + semantic)
         start_time = time.perf_counter()
-        results = await search_documents(request.query, request.top_k)
+        results = await hybrid_search(request.query, top_k=request.top_k, enable_hybrid=True)
         search_duration_ms = (time.perf_counter() - start_time) * 1000
 
         # Call Story 1.8 citation generation

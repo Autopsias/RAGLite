@@ -1,11 +1,38 @@
-# Story 2.2: Financial Embeddings Evaluation (CONDITIONAL)
+# Story 2.2: Financial Embeddings Evaluation (DEFERRED / ARCHIVED)
 
-**Status:** CONDITIONAL - Deferred pending Story 2.1 results
+**Status:** ⚠️ **DEFERRED TO PHASE 3+** - Made CONDITIONAL after Story 2.1 pivot (2025-10-18)
 **Epic:** 2 - Advanced RAG Enhancements
-**Priority:** MEDIUM (May be SKIPPED if Story 2.1 achieves ≥75% accuracy)
-**Duration:** 6-8 hours (IF implemented)
-**Assigned:** Dev Agent (Amelia)
-**Prerequisites:** Story 2.1 complete, validation results reviewed
+**Priority:** ~~MEDIUM~~ → DEFERRED (Element-based chunking takes priority)
+**Duration:** 6-8 hours (IF revisited)
+**Assigned:** None (unassigned after pivot)
+**Prerequisites:** ~~Story 2.1 complete~~ → NEW Story 2.2-2.4 must achieve <70% to revisit
+
+---
+
+## ⚠️ DEFERRAL NOTICE (2025-10-18)
+
+**THIS STORY HAS BEEN DEFERRED AFTER STORY 2.1 PIVOT**
+
+**Context:**
+- Story 2.1 (BM25 Hybrid Search) FAILED AC6 with 56% accuracy (target: ≥70%)
+- Root cause: Whitespace tokenization inadequate for financial documents
+- Decision: PIVOT to element-based chunking approach (NEW Stories 2.2-2.4)
+- Element-based chunking addresses ROOT CAUSE (table structure preservation)
+- Financial embeddings evaluation deferred until element approach is tested
+
+**New Priority:**
+1. **NEW Story 2.2** (Element-Based Chunking): 56% → 64-68% ✅ HIGH PRIORITY
+2. **NEW Story 2.3** (Query Preprocessing): 68% → 74-76% ✅ HIGH PRIORITY
+3. **NEW Story 2.4** (Table Summarization): 74% → 78-80% ✅ MEDIUM PRIORITY
+4. **OLD Story 2.2** (Financial Embeddings): DEFERRED to Phase 3+ ⏸️
+
+**Revisit Condition:**
+- **ONLY IF** NEW Stories 2.2-2.4 complete AND accuracy still <70%
+- **ALTERNATIVE:** May revisit for 90%+ optimization in Phase 3+
+
+---
+
+## ORIGINAL STORY (FOR REFERENCE ONLY)
 
 ---
 
