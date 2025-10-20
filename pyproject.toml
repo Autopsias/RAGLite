@@ -39,6 +39,7 @@ dependencies = [
     "openpyxl>=3.1,<4.0",
     "pandas>=2.0,<3.0",
     "rank-bm25==0.2.2", # Epic 2: BM25 hybrid search (Story 2.1)
+    "tiktoken>=0.5.1,<1.0.0", # Story 2.2: Token counting for element-aware chunking
     "python-dotenv==1.1.1",
     "asyncio>=3.4.3,<4.0.0",
     "httpx>=0.28.1,<1.0.0",
@@ -60,6 +61,7 @@ dev = [
     "pytest-mock>=3.12,<4.0",
     "pytest-xdist>=3.5,<4.0",
     "pytest-timeout>=2.0,<3.0",
+    "pytest-rerunfailures>=16.0,<17.0",  # Automatic retry for flaky tests
     # Performance monitoring and reporting
     "pytest-instafail>=0.5,<1.0",  # Show failures instantly
     "pytest-sugar>=1.0,<2.0",      # Better progress output

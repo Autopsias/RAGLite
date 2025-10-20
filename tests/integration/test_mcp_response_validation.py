@@ -17,7 +17,6 @@ from tests.fixtures.ground_truth import GROUND_TRUTH_QA
 
 
 @pytest.mark.integration
-@pytest.mark.slow
 async def test_e2e_metadata_completeness():
     """Validate metadata completeness from ingestion to response.
 
@@ -49,11 +48,12 @@ async def test_e2e_metadata_completeness():
             total_results += 1
 
             # Check metadata completeness
+            # Note: BM25 hybrid search (Story 2.1) can produce negative scores
             metadata_complete = (
                 result.page_number is not None
                 and result.source_document != ""
                 and result.word_count > 0
-                and 0.0 <= result.score <= 1.0
+                and result.score <= 1.0  # Only upper bound (BM25 can be negative)
                 and result.text != ""
                 and "(Source:" in result.text  # Citation appended
             )
@@ -92,7 +92,6 @@ async def test_e2e_metadata_completeness():
 
 
 @pytest.mark.integration
-@pytest.mark.slow
 async def test_e2e_citation_integration():
     """Validate citations from Story 1.8 work correctly in end-to-end flow.
 
@@ -132,7 +131,6 @@ async def test_e2e_citation_integration():
 
 
 @pytest.mark.integration
-@pytest.mark.slow
 async def test_e2e_llm_synthesis_compatibility():
     """Simulate LLM client processing QueryResponse.
 
@@ -178,7 +176,6 @@ async def test_e2e_llm_synthesis_compatibility():
 
 
 @pytest.mark.integration
-@pytest.mark.slow
 async def test_e2e_performance_validation():
     """Measure p50/p95 latency on multiple queries.
 
@@ -252,7 +249,6 @@ async def test_e2e_performance_validation():
 
 
 @pytest.mark.integration
-@pytest.mark.slow
 async def test_e2e_ground_truth_metadata():
     """Validate metadata completeness on ground truth test set.
 
@@ -282,11 +278,12 @@ async def test_e2e_ground_truth_metadata():
             total_results += 1
 
             # Check metadata completeness
+            # Note: BM25 hybrid search (Story 2.1) can produce negative scores
             metadata_complete = (
                 result.page_number is not None
                 and result.source_document != ""
                 and result.word_count > 0
-                and 0.0 <= result.score <= 1.0
+                and result.score <= 1.0  # Only upper bound (BM25 can be negative)
                 and result.text != ""
                 and "(Source:" in result.text
             )
@@ -329,7 +326,6 @@ async def test_e2e_ground_truth_metadata():
 
 
 @pytest.mark.integration
-@pytest.mark.slow
 async def test_e2e_standard_mcp_pattern():
     """Validate standard MCP pattern: RAGLite returns raw chunks, no synthesis.
 

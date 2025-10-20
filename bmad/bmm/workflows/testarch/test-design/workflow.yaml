@@ -8,6 +8,7 @@ config_source: "{project-root}/bmad/bmm/config.yaml"
 output_folder: "{config_source}:output_folder"
 user_name: "{config_source}:user_name"
 communication_language: "{config_source}:communication_language"
+document_output_language: "{config_source}:document_output_language"
 date: system-generated
 
 # Workflow components
@@ -35,7 +36,7 @@ recommended_inputs:
   - prd: "Product Requirements Document for context"
   - epics: "Epic documentation (epics.md or specific epic)"
   - story: "Story markdown with acceptance criteria"
-  - architecture: "Architecture documents (solution-architecture.md, tech-spec)"
+  - architecture: "Architecture documents (architecture.md, tech-spec)"
   - existing_tests: "Current test coverage for gap analysis"
 
 tags:

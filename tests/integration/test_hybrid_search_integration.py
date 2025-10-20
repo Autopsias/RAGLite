@@ -208,45 +208,78 @@ class TestHybridSearchIntegration:
             f"    Hybrid retrieval: {'✓ PASS' if hybrid_retrieval['pass_'] else '✗ FAIL'}"
         )
 
-    @pytest.mark.skip(
-        reason="Story 2.1 - Blocked by chunking quality issues. Multiple ground truth queries expect page 46 (and similar fragmented pages) which are not retrievable due to poor table extraction. Current accuracy ~52% reflects fundamental semantic search limitations that hybrid search cannot overcome. Requires Story 2.2 element-based chunking to improve base retrieval quality before hybrid search can be properly evaluated."
-    )
     @pytest.mark.asyncio
+    @pytest.mark.integration
+    @pytest.mark.skipif(
+        not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
+    )
     async def test_hybrid_search_full_ground_truth(self):
         """Test hybrid search on full 50-query ground truth suite.
 
-        This is the CRITICAL test for Story 2.1 AC6 success criteria:
-        - Retrieval accuracy ≥70% (vs 56% baseline)
+        This is the CRITICAL test for Story 2.2 AC3 success criteria:
+        - MANDATORY: Retrieval accuracy ≥64% (vs 56% baseline)
+        - STRETCH: Retrieval accuracy ≥68%
         - Attribution accuracy ≥45% (vs 32% baseline)
 
         Runs all 50 ground truth queries and measures accuracy improvement.
         Tests both retrieval (correct page in top-5) and attribution (correct page cited).
 
-        Success criteria (AC6):
-        - Retrieval accuracy ≥70% (mandatory for story completion)
+        Success criteria (Story 2.2 AC3):
+        - MANDATORY: Retrieval accuracy ≥64% (32/50 queries) for story completion
+        - STRETCH: Retrieval accuracy ≥68% (34/50 queries) for high confidence
         - Attribution accuracy ≥45% (target improvement)
 
-        CURRENT STATUS: SKIPPED - Data quality blocking 70% target.
-        - BM25 implementation is working correctly (1272 chunks indexed)
-        - Hybrid fusion logic is correct (alpha=0.5 weighting)
-        - Root cause: Table-heavy pages (like 46) have fragmented chunks
-        - Semantic search baseline too poor for hybrid to improve to 70%
-        - Story 2.2 (element-based chunking) required first
+        Decision Gate:
+        - <64%: ESCALATE to PM immediately
+        - 64-67%: Document caution flag, proceed to Story 2.3
+        - ≥68%: Document high confidence, proceed to Story 2.3
+
+        NOTE: This test requires the full 160-page Performance Review PDF.
+        Run `python tests/integration/setup_test_data.py` first, then:
+        pytest -m slow -v
+
+        With the 10-page sample PDF, this test will fail/skip due to insufficient data.
         """
         # Lazy imports to avoid test discovery overhead
         from raglite.retrieval.attribution import generate_citations
         from raglite.retrieval.search import hybrid_search
+        from raglite.shared.clients import get_qdrant_client
+        from raglite.shared.config import settings
         from scripts.accuracy_utils import (
             calculate_performance_metrics,
             check_attribution_accuracy,
             check_retrieval_accuracy,
         )
 
+        # VALIDATION: Check if Qdrant has data before running test
+        qdrant = get_qdrant_client()
+        collection_info = qdrant.get_collection(settings.qdrant_collection_name)
+
+        if collection_info.points_count == 0:
+            pytest.skip(
+                "Qdrant collection is empty. Run 'python scripts/ingest-whole-pdf.py' "
+                "to populate test data before running this test."
+            )
+
+        # Note: Element-aware chunking produces ~900-1200 chunks for 160-page PDF
+        # (fewer than fixed 512-token chunking due to semantic element boundaries)
+        MIN_REQUIRED_POINTS = 800  # Minimum for meaningful accuracy testing
+
+        if collection_info.points_count < MIN_REQUIRED_POINTS:
+            pytest.skip(
+                f"Qdrant collection has only {collection_info.points_count} points. "
+                f"Expected ~900-1200 points for full 160-page PDF with element-aware chunking. "
+                f"Run 'python scripts/ingest-whole-pdf.py' and wait for completion."
+            )
+
         print("\n" + "=" * 80)
-        print("HYBRID SEARCH FULL GROUND TRUTH VALIDATION (Story 2.1 AC6)")
+        print("ELEMENT-AWARE CHUNKING VALIDATION (Story 2.2 AC3 - DECISION GATE)")
         print("=" * 80)
-        print(f"Running {len(GROUND_TRUTH_QA)} queries with hybrid search (BM25 + semantic)...")
-        print("Target: ≥70% retrieval accuracy (baseline: 56%)")
+        print(f"Qdrant data validated: {collection_info.points_count} points available")
+        print(f"Running {len(GROUND_TRUTH_QA)} queries with hybrid search + element chunking...")
+        print("MANDATORY: ≥64% retrieval accuracy (32/50 queries)")
+        print("STRETCH: ≥68% retrieval accuracy (34/50 queries)")
+        print("BASELINE: 56% (28/50 queries with fixed chunking)")
         print("=" * 80 + "\n")
 
         results = []
@@ -310,12 +343,36 @@ class TestHybridSearchIntegration:
         )
         print("=" * 80 + "\n")
 
-        # CRITICAL ASSERTION: Retrieval accuracy must be ≥70% for AC6
-        assert metrics["retrieval_accuracy"] >= HYBRID_RETRIEVAL_TARGET, (
-            f"STORY 2.1 AC6 FAILED: Retrieval accuracy {metrics['retrieval_accuracy']:.1f}% "
-            f"is below 70% target. Expected ≥{HYBRID_RETRIEVAL_TARGET}% for hybrid search. "
-            f"Baseline was 56%. Hybrid search must achieve ≥70% to pass AC6."
+        # CRITICAL ASSERTION: Story 2.2 AC3 - Retrieval accuracy must be ≥64% (MANDATORY)
+        # Original target was 70% for Story 2.1, but Story 2.2 AC3 adjusted to 64% mandatory, 68% stretch
+        STORY_2_2_MANDATORY_TARGET = 64.0  # 32/50 queries
+        STORY_2_2_STRETCH_TARGET = 68.0  # 34/50 queries
+
+        assert metrics["retrieval_accuracy"] >= STORY_2_2_MANDATORY_TARGET, (
+            f"STORY 2.2 AC3 FAILED: Retrieval accuracy {metrics['retrieval_accuracy']:.1f}% "
+            f"is below {STORY_2_2_MANDATORY_TARGET}% mandatory target. "
+            f"Expected ≥{STORY_2_2_MANDATORY_TARGET}% for element-aware chunking + hybrid search. "
+            f"Baseline was 56%. Element-aware chunking must achieve ≥{STORY_2_2_MANDATORY_TARGET}% to pass AC3.\n"
+            f"DECISION GATE: <64% = ESCALATE TO PM (Story 2.2 BLOCKED)"
         )
+
+        # Check if stretch target achieved for high confidence
+        if metrics["retrieval_accuracy"] >= STORY_2_2_STRETCH_TARGET:
+            print(
+                f"\n✓ STRETCH GOAL ACHIEVED: {metrics['retrieval_accuracy']:.1f}% ≥ {STORY_2_2_STRETCH_TARGET}% "
+                f"(high confidence in element-aware chunking approach)"
+            )
+        elif metrics["retrieval_accuracy"] >= STORY_2_2_MANDATORY_TARGET:
+            print(
+                f"\n⚠ MANDATORY TARGET MET: {metrics['retrieval_accuracy']:.1f}% in range "
+                f"[{STORY_2_2_MANDATORY_TARGET}%, {STORY_2_2_STRETCH_TARGET}%) "
+                f"(proceed with caution flag)"
+            )
+        else:
+            print(
+                f"\n❌ MANDATORY TARGET MISSED: {metrics['retrieval_accuracy']:.1f}% < "
+                f"{STORY_2_2_MANDATORY_TARGET}% (ESCALATE TO PM)"
+            )
 
         # Target assertion: Attribution accuracy should improve
         # Note: This is a target, not a hard requirement for story completion

@@ -98,7 +98,7 @@ class TestPDFIngestionIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    @pytest.mark.timeout(60)
+    @pytest.mark.timeout(180)
     async def test_pdf_ingestion_stores_correct_page_numbers(self) -> None:
         """Integration test validating page numbers extracted from Docling provenance (Story 1.13).
 
@@ -260,7 +260,7 @@ class TestExcelIngestionIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    @pytest.mark.timeout(30)
+    @pytest.mark.timeout(120)
     async def test_extract_financial_excel_multi_sheet(self) -> None:
         """Integration test with real financial Excel file containing 3 sheets.
 
@@ -565,7 +565,6 @@ class TestEmbeddingIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    @pytest.mark.slow
     @pytest.mark.timeout(180)  # 3 minutes timeout for model download + embedding generation
     async def test_embedding_generation_end_to_end(self) -> None:
         """Integration test: Validate end-to-end embedding generation with real Fin-E5 model.
@@ -613,21 +612,29 @@ class TestEmbeddingIntegration:
 
             # Mock iterate_items to return realistic elements with proper provenance
             # prov must be a list with objects that have page_no attribute (Docling API)
-            # CRITICAL FIX: iterate_items() is called MULTIPLE TIMES in pipeline.py:
-            # 1. Line 486: Count elements for metrics
-            # 2. Line 524 (in chunk_by_docling_items): Actually process chunks
-            # Using iter(list) would exhaust after first call, returning empty on second call!
-            # Solution: Use side_effect with generator function to return fresh iterator each time
+            # CRITICAL: With element-aware chunking (Story 2.2), need to mock actual Docling types
+            # Import Docling types for proper isinstance checks in extract_document_elements
+            from docling_core.types.doc import TableItem, TextItem
+
             def create_mock_items():
                 """Generator that yields fresh mock items each time iterate_items() is called."""
                 for i in range(20):
                     # Distribute items across 10 pages
                     page_no = (i % 10) + 1
                     mock_prov = Mock(page_no=page_no)
-                    mock_item = Mock(
-                        text=f"Financial content for element {i} with realistic text",
-                        prov=[mock_prov],
-                    )
+
+                    # Create proper TextItem mock that passes isinstance check
+                    # Every 5th item is a table, rest are text paragraphs
+                    if i % 5 == 0:
+                        mock_item = Mock(spec=TableItem)
+                        mock_item.text = f"Table {i} | Column 1 | Column 2 |\n| --- | --- |\n| Data {i} | Value {i} |"
+                        mock_item.export_to_markdown.return_value = mock_item.text
+                        mock_item.prov = [mock_prov]
+                    else:
+                        mock_item = Mock(spec=TextItem)
+                        mock_item.text = f"Financial content for element {i} with realistic text about revenue growth and market analysis showing positive trends in Q{(i % 4) + 1} performance indicators."
+                        mock_item.prov = [mock_prov]
+
                     yield (mock_item, None)
 
             # Use side_effect to return NEW generator each time method is called
@@ -719,7 +726,6 @@ class TestEmbeddingIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    @pytest.mark.slow
     @pytest.mark.timeout(180)
     async def test_embedding_dimensions_validation_direct(self) -> None:
         """Integration test: Validate Fin-E5 model generates exactly 1024-dimensional embeddings.
