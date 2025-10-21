@@ -3,52 +3,7 @@
 Defines core data structures used across ingestion and retrieval modules.
 """
 
-from enum import Enum
-
 from pydantic import BaseModel, Field
-
-
-class ElementType(str, Enum):
-    """Element types detected by Docling.
-
-    Used to classify document chunks by their semantic structure type,
-    enabling element-aware retrieval and metadata filtering.
-    """
-
-    TABLE = "table"
-    SECTION_HEADER = "section_header"
-    PARAGRAPH = "paragraph"
-    LIST = "list"
-    FIGURE = "figure"
-    MIXED = "mixed"  # Chunk contains multiple element types
-
-
-class DocumentElement(BaseModel):
-    """Structured element from Docling parsing.
-
-    Represents a single document element (table, section, paragraph)
-    with its content, type, and position metadata. Used as intermediate
-    representation before chunking.
-
-    Attributes:
-        element_id: Unique ID from Docling or generated identifier
-        type: Element type classification (table, section, paragraph, etc.)
-        content: Raw Markdown content of the element
-        page_number: Page number where element appears
-        section_title: Parent section header text for context (None if no parent)
-        token_count: Estimated token count via tiktoken for chunking decisions
-        metadata: Additional element-specific metadata from Docling
-    """
-
-    element_id: str = Field(..., description="Unique element identifier")
-    type: ElementType = Field(..., description="Element type classification")
-    content: str = Field(..., description="Raw Markdown content")
-    page_number: int = Field(..., description="Page number where element appears")
-    section_title: str | None = Field(
-        default=None, description="Parent section header text for context"
-    )
-    token_count: int = Field(default=0, description="Estimated token count via tiktoken")
-    metadata: dict = Field(default_factory=dict, description="Additional element-specific metadata")
 
 
 class DocumentMetadata(BaseModel):
@@ -69,7 +24,7 @@ class Chunk(BaseModel):
     """Document chunk with content and metadata.
 
     Represents a semantic chunk of a document after chunking and embedding.
-    Enhanced in Story 2.2 with element-type metadata for structure-aware retrieval.
+    Simplified in Story 2.3 to use fixed 512-token chunking (no element-aware metadata).
 
     Attributes:
         chunk_id: Unique chunk identifier
@@ -78,10 +33,8 @@ class Chunk(BaseModel):
         page_number: Page number where chunk appears
         chunk_index: Sequential chunk index (0-based)
         embedding: Semantic embedding vector
-        element_type: Primary element type (table, section, paragraph, etc.) - NEW in Story 2.2
-        section_title: Parent section header for context - NEW in Story 2.2
-        parent_chunk_id: Reference to parent chunk for summaries - NEW in Story 2.2 (for Story 2.4)
-        word_count: Word count of chunk content - NEW in Story 2.2
+        parent_chunk_id: Reference to parent chunk for summaries (for Story 2.4)
+        word_count: Word count of chunk content
     """
 
     chunk_id: str = Field(..., description="Unique chunk identifier")
@@ -90,13 +43,6 @@ class Chunk(BaseModel):
     page_number: int = Field(default=0, description="Page number where chunk appears")
     chunk_index: int = Field(default=0, description="Sequential chunk index (0-based)")
     embedding: list[float] = Field(default_factory=list, description="Semantic embedding vector")
-    # NEW FIELDS for Story 2.2: Element-aware chunking
-    element_type: ElementType = Field(
-        default=ElementType.MIXED, description="Primary element type in chunk"
-    )
-    section_title: str | None = Field(
-        default=None, description="Parent section header text for context"
-    )
     parent_chunk_id: str | None = Field(
         default=None, description="Reference to parent chunk (for table summaries in Story 2.4)"
     )

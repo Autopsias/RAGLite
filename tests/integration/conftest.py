@@ -78,3 +78,39 @@ def ingest_test_data():
 
     # Fixture doesn't need to yield anything - data is now in Qdrant
     # Tests can directly query Qdrant using search_documents()
+
+
+@pytest.fixture(scope="module")
+async def ingested_160_page_pdf():
+    """Module-scoped fixture for 160-page PDF ingestion - shared across slow tests.
+
+    This fixture ingests the 160-page PDF ONCE per test module and reuses the result
+    across multiple tests, avoiding the 16-18 minute re-ingestion cost per test.
+
+    Usage:
+        @pytest.mark.slow
+        @pytest.mark.asyncio
+        async def test_something(ingested_160_page_pdf):
+            # PDF is already ingested, just use the Qdrant collection
+            client = get_qdrant_client()
+            # ... test logic here ...
+
+    Returns:
+        tuple: (metadata, qdrant_client) - Ingestion metadata and Qdrant client
+    """
+    from raglite.ingestion.pipeline import ingest_pdf
+    from raglite.shared.clients import get_qdrant_client
+
+    pdf_path = Path("docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf")
+    if not pdf_path.exists():
+        pytest.skip(f"160-page PDF not found: {pdf_path}")
+
+    print("\n⚙️  Ingesting 160-page PDF (shared fixture - runs once per module)...")
+    metadata = await ingest_pdf(str(pdf_path), clear_collection=True)
+    client = get_qdrant_client()
+
+    print(f"✓ 160-page PDF ingested: {metadata.chunk_count} chunks")
+
+    yield metadata, client
+
+    # No cleanup - let next test use the data or clean it up themselves

@@ -1,5 +1,14 @@
 """Integration tests for element-aware chunking metadata (Story 2.2).
 
+⚠️  OBSOLETE: Story 2.2 (element-aware chunking) has been replaced by Story 2.3 (fixed 512-token chunking).
+These tests are SKIPPED and preserved only for historical reference.
+
+Story 2.2 → Story 2.3 Pivot:
+- Element-aware chunking achieved only 42% accuracy (vs 56% baseline)
+- Project moved to fixed 512-token chunking approach (Story 2.3)
+- element_type and section_title metadata fields NO LONGER EXIST in current architecture
+- See story-2.2-pivot-analysis/ for complete strategic pivot analysis
+
 Tests that element_type and section_title metadata are correctly stored in Qdrant
 and can be used for filtering.
 
@@ -7,9 +16,13 @@ Performance Optimization:
 - Lazy imports: Expensive modules imported inside test functions to avoid test discovery overhead
 """
 
+import os
 from pathlib import Path
 
 import pytest
+
+# Skip Story 2.2 tests - obsolete after strategic pivot to Story 2.3
+SKIP_STORY_2_2_TESTS = os.getenv("RUN_STORY_2_2_TESTS") != "1"
 
 # Lazy imports for expensive modules - DO NOT import raglite modules at module level!
 
@@ -20,6 +33,10 @@ class TestElementMetadataIntegration:
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(180)
+    @pytest.mark.skipif(
+        SKIP_STORY_2_2_TESTS,
+        reason="Story 2.2 (element-aware chunking) replaced by Story 2.3 (fixed chunking). Element metadata no longer exists. See story-2.2-pivot-analysis/ for details.",
+    )
     async def test_element_metadata_stored_in_qdrant(self) -> None:
         """Test that element_type and section_title are stored in Qdrant (AC2).
 
@@ -111,6 +128,10 @@ class TestElementMetadataIntegration:
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(180)
+    @pytest.mark.skipif(
+        SKIP_STORY_2_2_TESTS,
+        reason="Story 2.2 (element-aware chunking) replaced by Story 2.3 (fixed chunking). Element metadata no longer exists. See story-2.2-pivot-analysis/ for details.",
+    )
     async def test_filter_chunks_by_element_type(self) -> None:
         """Test that chunks can be filtered by element_type in Qdrant.
 
@@ -171,6 +192,10 @@ class TestElementMetadataIntegration:
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(180)
+    @pytest.mark.skipif(
+        SKIP_STORY_2_2_TESTS,
+        reason="Story 2.2 (element-aware chunking) replaced by Story 2.3 (fixed chunking). Element metadata no longer exists. See story-2.2-pivot-analysis/ for details.",
+    )
     async def test_chunk_count_within_baseline_range(self) -> None:
         """Test that element-aware chunking produces reasonable chunk count (AC4).
 
@@ -250,6 +275,10 @@ class TestElementMetadataIntegration:
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(180)
+    @pytest.mark.skipif(
+        SKIP_STORY_2_2_TESTS,
+        reason="Story 2.2 (element-aware chunking) replaced by Story 2.3 (fixed chunking). Element metadata no longer exists. See story-2.2-pivot-analysis/ for details.",
+    )
     async def test_section_context_propagated(self) -> None:
         """Test that section_title is propagated to child elements.
 

@@ -26,6 +26,14 @@ This backlog tracks technical debt, deferred features, and follow-up work identi
 | 2025-10-18 | 2.2 | 2 | Enhancement | HIGH | Dev | Open | **Story 2.2: Element-Based Chunking Enhancement** - Replace fixed 512-token chunking with structure-aware boundaries (tables, sections) using Docling. Target: 56%→64-68% accuracy (+8-12pp). Effort: 1 week. Risk: LOW. Files: raglite/ingestion/pipeline.py, raglite/shared/models.py. See: docs/epic-2-preparation/implementation-plan-stories-2.2-2.4.md |
 | 2025-10-18 | 2.3 | 2 | Enhancement | HIGH | Dev | Open | **Story 2.3: Query Preprocessing & Retrieval Optimization** - Query expansion (financial acronyms, numbers), metadata boosting, chunk bundling. Target: 68%→74-76% accuracy (+6-8pp). Effort: 2 weeks. Risk: MEDIUM. Depends on: Story 2.2 ≥65%. Files: raglite/retrieval/search.py, new raglite/retrieval/preprocessing.py |
 | 2025-10-18 | 2.4 | 2 | Enhancement | MEDIUM | Dev | Open | **Story 2.4: Table-to-Text Summarization** - LLM (Claude 3.7 Sonnet) summaries of financial tables; dual chunk storage (raw + summary). Target: 74%→78-80% accuracy (+4-6pp). Effort: 3 weeks. Risk: MEDIUM. Cost: ~$0.60/doc. Depends on: Story 2.3 ≥74%. Files: raglite/ingestion/pipeline.py, new raglite/ingestion/table_summarization.py |
+| 2025-10-21 | 2.3 | 2 | Bug | CRITICAL | Dev | Resolved | **[P1-BLOCKER]** 160-page PDF test timeout blocks AC4 validation. Root: Missing document_timeout configuration. FIXED: Added document_timeout=1500 (25min) to PdfPipelineOptions. Files: raglite/ingestion/pipeline.py:575-582, tests/integration/test_fixed_chunking.py:39 |
+| 2025-10-21 | 2.3 | 2 | Enhancement | HIGH | Dev | Resolved | **[P1-ENHANCE]** Page number estimation inaccuracy. Root: Token-based estimation discarded provenance. FIXED: Implemented token range → page mapping during concatenation. Files: raglite/ingestion/pipeline.py:1173-1242 |
+| 2025-10-21 | 2.3 | 2 | Decision | CRITICAL | PM/User | Resolved | **[DECISION GATE RESOLVED] AC5/AC6 Acceptance Criteria Conflict** - User approved Option A: Adjust AC5/AC6 to calculate metrics for TEXT chunks only (exclude tables). Tests updated to separate table vs text chunks. AC5/AC6 now validate 512-token chunking for text content while preserving table integrity per AC3. Files: tests/integration/test_fixed_chunking.py:167-200, 231-284. Story unblocked. See: docs/stories/story-2.3.md:625-646 |
+| 2025-10-21 | 2.3 | 2 | Test | MEDIUM | Dev | Open | **[P2-TEST]** Missing unit tests for chunking logic (Task 2.5 incomplete). Impact: Slower debugging, harder to isolate bugs. Action: Create tests/unit/test_fixed_chunking.py with unit tests for token counting, overlap, sentence boundaries, table separation. Est: 3-4h |
+| 2025-10-21 | 2.3 | 2 | Documentation | LOW | SM | Open | **[P2-DOC]** Chunk count range documentation mismatch (AC4/AC5 show 250-350, tests use 180-220). Impact: Confusion for developers. Action: Update story AC4/AC5 with corrected 180-220 range and math justification. Files: docs/stories/story-2.3.md. Est: 30min |
+| 2025-10-21 | 2.3 | 2 | Test | MEDIUM | Dev/TEA | Open | **[P2-TEST]** Test timeout configuration too aggressive (30min may be insufficient for Docling at scale). Impact: Flaky CI/CD builds. Action: Increase timeout to 45-60min OR mark as @pytest.mark.slow and skip in CI. Files: tests/integration/test_fixed_chunking.py:38. Est: 1h |
+| 2025-10-21 | 2.3 | 2 | Enhancement | LOW | Dev | Open | **[P3-ENHANCE]** Add explicit table metadata to chunks (current markdown detection fragile: "|" count >10). Action: Add is_table: bool field to Chunk model. Files: raglite/shared/models.py, raglite/ingestion/pipeline.py. Est: 2h |
+| 2025-10-21 | 2.3 | 2 | Test | LOW | Dev | Open | **[P3-TEST]** Missing edge case tests for chunking (single-sentence docs, no-table docs, extreme table sizes >5000 tokens, empty chunks). Action: Add edge case test suite. Files: tests/integration/test_fixed_chunking.py. Est: 2-3h |
 
 ## Completed Items
 
@@ -40,7 +48,7 @@ This backlog tracks technical debt, deferred features, and follow-up work identi
 
 ---
 
-**Last Updated:** 2025-10-18 (Story 2.1 Failed - Pivot to Stories 2.2-2.4)
-**Total Open Items:** 11 (5 HIGH, 1 MEDIUM, 5 LOW)
+**Last Updated:** 2025-10-21 (Story 2.3 Review - 7 action items added)
+**Total Open Items:** 18 (6 HIGH + 1 CRITICAL, 3 MEDIUM, 8 LOW)
 **Total Resolved Items:** 10 (4 HIGH + 3 CRITICAL, 1 MEDIUM, 2 LOW)
 **Total Closed Items:** 1 (1 CRITICAL - Story 2.1 pivot decision)

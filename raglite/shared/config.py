@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     # MCP Server Configuration
     mcp_server_port: int = 8000
 
+    # PDF Processing Configuration (Story 2.2)
+    pdf_processing_threads: int = 8  # Parallel page processing threads (default 8, range 1-16)
+
     # Pydantic 2.x configuration using SettingsConfigDict
     model_config = SettingsConfigDict(
         env_file=".env",

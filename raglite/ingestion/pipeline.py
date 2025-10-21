@@ -7,18 +7,16 @@ import time
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Optional
 
 import openpyxl
 import pandas as pd
+from docling.datamodel.accelerator_options import AcceleratorOptions
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
 from docling.document_converter import ConversionResult, DocumentConverter, PdfFormatOption
 from docling_core.types.doc import (
-    DocItem,
-    ListItem,
-    SectionHeaderItem,
     TableItem,
-    TextItem,
 )
 from qdrant_client.models import (
     Distance,
@@ -32,21 +30,23 @@ from raglite.shared.bm25 import create_bm25_index, save_bm25_index
 from raglite.shared.clients import get_embedding_model, get_qdrant_client
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
-from raglite.shared.models import Chunk, DocumentElement, DocumentMetadata, ElementType
+from raglite.shared.models import Chunk, DocumentMetadata
 
 logger = get_logger(__name__)
 
-# Initialize tiktoken encoding for token counting (Story 2.2)
+# Initialize tiktoken encoding for token counting (Story 2.3 AC2)
+# Using cl100k_base encoding as specified in research (Yepes et al. 2024)
+encoding: Optional["Encoding"] = None  # Forward reference to avoid import errors
 try:
     import tiktoken
+    from tiktoken import Encoding
 
-    encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+    encoding = tiktoken.get_encoding("cl100k_base")
 except ImportError:
     logger.warning(
         "tiktoken not installed - token counting will be approximate",
         extra={"fallback": "word count estimation"},
     )
-    encoding = None
 
 
 # Exception classes
@@ -62,463 +62,8 @@ class VectorStorageError(Exception):
     pass
 
 
-def extract_elements(doc_result: ConversionResult) -> list[DocumentElement]:
-    """Extract structured elements from Docling parsing result.
-
-    Iterates through Docling document items and converts them to
-    DocumentElement objects with type, content, and metadata. Tracks
-    parent section headers for context attribution.
-
-    Args:
-        doc_result: Docling conversion result with parsed document
-
-    Returns:
-        List of DocumentElement objects sorted by page/position
-
-    Strategy:
-        - Use doc_result.document.iterate_items() to traverse elements
-        - Map Docling types to ElementType enum (table, section_header, paragraph, list)
-        - Track parent section headers for context
-        - Count tokens for chunking decisions using tiktoken
-        - Extract page numbers from provenance metadata
-
-    Example:
-        >>> doc_result = converter.convert("report.pdf")
-        >>> elements = extract_elements(doc_result)
-        >>> elements[0].type
-        ElementType.TABLE
-
-    Implementation Notes (Story 2.2 AC1):
-        - Tables detected via TableItem → ElementType.TABLE
-        - Section headers via SectionHeaderItem → ElementType.SECTION_HEADER
-        - Paragraphs via TextItem → ElementType.PARAGRAPH
-        - Lists via ListItem → ElementType.LIST
-        - Unknown types → ElementType.PARAGRAPH (fallback)
-    """
-    elements: list[DocumentElement] = []
-    current_section = None
-
-    for item, _ in doc_result.document.iterate_items():
-        # Determine element type via Docling type mapping
-        if isinstance(item, TableItem):
-            element_type = ElementType.TABLE
-            content = item.export_to_markdown()
-        elif isinstance(item, SectionHeaderItem):
-            element_type = ElementType.SECTION_HEADER
-            content = item.text if hasattr(item, "text") else str(item)
-            current_section = content  # Update section context
-        elif isinstance(item, TextItem):
-            element_type = ElementType.PARAGRAPH
-            content = item.text if hasattr(item, "text") else str(item)
-        elif isinstance(item, ListItem):
-            element_type = ElementType.LIST
-            content = (
-                item.export_to_markdown() if hasattr(item, "export_to_markdown") else str(item)
-            )
-        else:
-            # Unknown element type - treat as paragraph with warning
-            element_type = ElementType.PARAGRAPH
-            content = str(item)
-            logger.debug(
-                "Unknown Docling element type - treating as paragraph",
-                extra={"type": type(item).__name__, "has_text": hasattr(item, "text")},
-            )
-
-        # Get page number from provenance (first page if spans multiple)
-        page_number = 1  # Default fallback
-        if hasattr(item, "prov") and item.prov:
-            page_number = item.prov[0].page_no
-
-        # Count tokens for chunking decisions
-        if encoding is not None:
-            try:
-                token_count = len(encoding.encode(content))
-            except Exception as e:
-                # Fallback to word count * 1.3 (rough approximation)
-                token_count = int(len(content.split()) * 1.3)
-                logger.debug(
-                    "Token counting failed - using word count approximation",
-                    extra={"error": str(e), "element_id": len(elements)},
-                )
-        else:
-            # Fallback: word count * 1.3 (rough token approximation)
-            token_count = int(len(content.split()) * 1.3)
-
-        # Generate unique element ID
-        element_id = f"elem_{len(elements)}"
-        if isinstance(item, DocItem) and hasattr(item, "self_ref"):
-            element_id = str(item.self_ref)
-
-        elements.append(
-            DocumentElement(
-                element_id=element_id,
-                type=element_type,
-                content=content,
-                page_number=page_number,
-                section_title=current_section,
-                token_count=token_count,
-                metadata={"docling_type": type(item).__name__},
-            )
-        )
-
-    logger.info(
-        "Extracted elements from document",
-        extra={
-            "total_elements": len(elements),
-            "tables": sum(1 for e in elements if e.type == ElementType.TABLE),
-            "sections": sum(1 for e in elements if e.type == ElementType.SECTION_HEADER),
-            "paragraphs": sum(1 for e in elements if e.type == ElementType.PARAGRAPH),
-            "lists": sum(1 for e in elements if e.type == ElementType.LIST),
-        },
-    )
-
-    return elements
-
-
-def chunk_elements(
-    elements: list[DocumentElement],
-    doc_metadata: DocumentMetadata,
-    max_tokens: int = 512,
-    overlap_tokens: int = 128,
-) -> list[Chunk]:
-    """Create chunks respecting element boundaries.
-
-    Implements structure-aware chunking that preserves semantic coherence
-    by respecting element boundaries (tables, sections, paragraphs).
-
-    Args:
-        elements: List of DocumentElement from Docling
-        doc_metadata: Document metadata for chunk provenance
-        max_tokens: Target chunk size in tokens (default: 512)
-        overlap_tokens: Overlap between chunks in tokens (default: 128)
-
-    Returns:
-        List of Chunk objects with element-type metadata
-
-    Strategy (Story 2.2 AC1):
-        1. Tables <2,048 tokens → single chunk (indivisible)
-        2. Tables >2,048 tokens → split at row boundaries (parse Markdown)
-        3. Section headers → group with first paragraph
-        4. Paragraphs → accumulate until max_tokens, no mid-sentence splits
-        5. Preserve section_title context for all chunks
-
-    Example:
-        >>> elements = extract_elements(doc_result)
-        >>> chunks = chunk_elements(elements, metadata, max_tokens=512)
-        >>> assert chunks[0].element_type in [ElementType.TABLE, ElementType.SECTION_HEADER, ...]
-
-    Implementation Notes (Story 2.2):
-        - AC1: Chunks MUST NOT split tables mid-row or section headers from content
-        - AC2: Each chunk includes element_type and section_title metadata
-        - AC4: Chunk count should be within 20% of baseline (321 ± 64 chunks)
-    """
-    chunks = []
-    current_buffer: list[DocumentElement] = []
-    current_tokens = 0
-    current_section = None
-    chunk_index = 0
-
-    for elem in elements:
-        # Update section context
-        if elem.type == ElementType.SECTION_HEADER:
-            current_section = elem.content
-
-        # Strategy 1: Tables are indivisible (unless >2,048 tokens)
-        if elem.type == ElementType.TABLE:
-            # Use element's section_title if available, else current_section
-            table_section_title = elem.section_title if elem.section_title else current_section
-
-            if elem.token_count > 2048:
-                # Large table - split at row boundaries
-                logger.warning(
-                    "Large table detected - splitting at row boundaries",
-                    extra={"token_count": elem.token_count, "page": elem.page_number},
-                )
-                table_chunks = _split_large_table(elem, max_tokens=512)
-                for table_chunk_content in table_chunks:
-                    chunk = _create_chunk(
-                        content=table_chunk_content,
-                        element_type=ElementType.TABLE,
-                        section_title=table_section_title,
-                        page_number=elem.page_number,
-                        chunk_index=chunk_index,
-                        doc_metadata=doc_metadata,
-                    )
-                    chunks.append(chunk)
-                    chunk_index += 1
-            else:
-                # Small/medium table - single chunk
-                if current_buffer:
-                    # Flush buffer first
-                    chunk = _create_chunk_from_buffer(
-                        buffer=current_buffer,
-                        section_title=current_section,
-                        chunk_index=chunk_index,
-                        doc_metadata=doc_metadata,
-                    )
-                    chunks.append(chunk)
-                    chunk_index += 1
-                    current_buffer = []
-                    current_tokens = 0
-
-                # Store table as standalone chunk
-                chunk = _create_chunk(
-                    content=elem.content,
-                    element_type=ElementType.TABLE,
-                    section_title=table_section_title,
-                    page_number=elem.page_number,
-                    chunk_index=chunk_index,
-                    doc_metadata=doc_metadata,
-                )
-                chunks.append(chunk)
-                chunk_index += 1
-
-        # Strategy 2: Section headers - group with first paragraph
-        elif elem.type == ElementType.SECTION_HEADER:
-            # Start new chunk with section header
-            if current_buffer:
-                chunk = _create_chunk_from_buffer(
-                    buffer=current_buffer,
-                    section_title=current_section,
-                    chunk_index=chunk_index,
-                    doc_metadata=doc_metadata,
-                )
-                chunks.append(chunk)
-                chunk_index += 1
-            current_buffer = [elem]
-            current_tokens = elem.token_count
-
-        # Strategy 3: Paragraphs and lists - accumulate until limit
-        else:
-            if current_tokens + elem.token_count > max_tokens:
-                # Flush buffer
-                if current_buffer:
-                    chunk = _create_chunk_from_buffer(
-                        buffer=current_buffer,
-                        section_title=current_section,
-                        chunk_index=chunk_index,
-                        doc_metadata=doc_metadata,
-                    )
-                    chunks.append(chunk)
-                    chunk_index += 1
-
-                # Start new chunk with overlap
-                overlap_buffer = _get_overlap(current_buffer, overlap_tokens)
-                current_buffer = overlap_buffer + [elem]
-                current_tokens = sum(e.token_count for e in current_buffer)
-            else:
-                current_buffer.append(elem)
-                current_tokens += elem.token_count
-
-    # Flush final buffer
-    if current_buffer:
-        chunk = _create_chunk_from_buffer(
-            buffer=current_buffer,
-            section_title=current_section,
-            chunk_index=chunk_index,
-            doc_metadata=doc_metadata,
-        )
-        chunks.append(chunk)
-
-    logger.info(
-        "Created element-aware chunks",
-        extra={
-            "chunk_count": len(chunks),
-            "avg_tokens": int(sum(c.word_count * 1.3 for c in chunks) / len(chunks))
-            if chunks
-            else 0,
-            "table_chunks": sum(1 for c in chunks if c.element_type == ElementType.TABLE),
-            "section_chunks": sum(
-                1 for c in chunks if c.element_type == ElementType.SECTION_HEADER
-            ),
-            "mixed_chunks": sum(1 for c in chunks if c.element_type == ElementType.MIXED),
-        },
-    )
-
-    return chunks
-
-
-def _split_large_table(elem: DocumentElement, max_tokens: int) -> list[str]:
-    """Split table >2,048 tokens at row boundaries.
-
-    Parses Markdown table, preserves header row in each chunk, splits at row boundaries.
-    Ensures no partial rows in any chunk.
-
-    Args:
-        elem: DocumentElement with type=TABLE and token_count >2,048
-        max_tokens: Maximum tokens per chunk (default: 512)
-
-    Returns:
-        List of Markdown table strings, each with header row preserved
-
-    Strategy (Story 2.2 AC1):
-        - Parse Markdown table into header + rows
-        - Preserve header row (first 2 lines: header + separator)
-        - Split remaining rows across chunks
-        - Each chunk includes header + N rows (no partial rows)
-    """
-    lines = elem.content.split("\n")
-    if len(lines) < 3:
-        # Table too small to split (header + separator only)
-        return [elem.content]
-
-    header = lines[0:2]  # Header row + separator (|---|---|)
-    rows = lines[2:]
-
-    chunks = []
-    current_chunk = header.copy()
-    current_tokens = (
-        len(encoding.encode("\n".join(current_chunk))) if encoding else len(header) * 10
-    )
-
-    for row in rows:
-        row_tokens = len(encoding.encode(row)) if encoding else len(row.split()) * 1.3
-        if current_tokens + row_tokens > max_tokens and len(current_chunk) > 2:
-            # Flush current chunk (only if it has data rows beyond header)
-            chunks.append("\n".join(current_chunk))
-            current_chunk = header.copy() + [row]
-            current_tokens = int(
-                len(encoding.encode("\n".join(current_chunk)))
-                if encoding
-                else (len(header) * 10 + row_tokens)
-            )
-        else:
-            current_chunk.append(row)
-            current_tokens += int(row_tokens)
-
-    # Add final chunk if it has data beyond header
-    if len(current_chunk) > 2:
-        chunks.append("\n".join(current_chunk))
-
-    logger.info(
-        "Split large table into chunks",
-        extra={
-            "original_tokens": elem.token_count,
-            "chunk_count": len(chunks),
-            "original_rows": len(rows),
-        },
-    )
-
-    return chunks
-
-
-def _create_chunk_from_buffer(
-    buffer: list[DocumentElement],
-    section_title: str | None,
-    chunk_index: int,
-    doc_metadata: DocumentMetadata,
-) -> Chunk:
-    """Create Chunk from element buffer.
-
-    Combines multiple elements into a single chunk, determines primary
-    element type, and populates all required metadata fields.
-
-    Args:
-        buffer: List of DocumentElement objects to combine
-        section_title: Parent section header for context
-        chunk_index: Sequential chunk index
-        doc_metadata: Document metadata for provenance
-
-    Returns:
-        Chunk object with combined content and metadata
-    """
-    content = "\n\n".join(e.content for e in buffer)
-
-    # Determine primary element type
-    element_counts: dict[ElementType, int] = {}
-    for elem in buffer:
-        element_counts[elem.type] = element_counts.get(elem.type, 0) + 1
-
-    # Primary type = most frequent (or MIXED if multiple types tied)
-    if len(element_counts) == 1:
-        element_type = list(element_counts.keys())[0]
-    else:
-        # Multiple element types - mark as MIXED
-        element_type = ElementType.MIXED
-
-    # Page number = first element's page
-    page_number = buffer[0].page_number
-
-    # Word count for metadata
-    word_count = len(content.split())
-
-    return Chunk(
-        chunk_id=f"{doc_metadata.filename}_{chunk_index}",
-        content=content,
-        metadata=doc_metadata,
-        page_number=page_number,
-        chunk_index=chunk_index,
-        embedding=[],
-        # Story 2.2 fields
-        element_type=element_type,
-        section_title=section_title,
-        parent_chunk_id=None,
-        word_count=word_count,
-    )
-
-
-def _create_chunk(
-    content: str,
-    element_type: ElementType,
-    section_title: str | None,
-    page_number: int,
-    chunk_index: int,
-    doc_metadata: DocumentMetadata,
-) -> Chunk:
-    """Create single Chunk from element content.
-
-    Args:
-        content: Element content (Markdown for tables, text for others)
-        element_type: Element type classification
-        section_title: Parent section header for context
-        page_number: Page number where element appears
-        chunk_index: Sequential chunk index
-        doc_metadata: Document metadata for provenance
-
-    Returns:
-        Chunk object with element metadata
-    """
-    word_count = len(content.split())
-
-    return Chunk(
-        chunk_id=f"{doc_metadata.filename}_{chunk_index}",
-        content=content,
-        metadata=doc_metadata,
-        page_number=page_number,
-        chunk_index=chunk_index,
-        embedding=[],
-        # Story 2.2 fields
-        element_type=element_type,
-        section_title=section_title,
-        parent_chunk_id=None,
-        word_count=word_count,
-    )
-
-
-def _get_overlap(buffer: list[DocumentElement], overlap_tokens: int) -> list[DocumentElement]:
-    """Get last N tokens from buffer for overlap.
-
-    Selects elements from end of buffer until overlap token limit is reached.
-    Used to create smooth transitions between chunks.
-
-    Args:
-        buffer: Current buffer of elements
-        overlap_tokens: Target overlap size in tokens
-
-    Returns:
-        List of elements from end of buffer totaling ~overlap_tokens
-    """
-    overlap: list[DocumentElement] = []
-    tokens = 0
-
-    for elem in reversed(buffer):
-        if tokens + elem.token_count <= overlap_tokens:
-            overlap.insert(0, elem)
-            tokens += elem.token_count
-        else:
-            break
-
-    return overlap
+# Element-aware chunking functions removed in Story 2.3 (AC1)
+# Replaced with fixed 512-token chunking approach
 
 
 async def generate_embeddings(chunks: list[Chunk]) -> list[Chunk]:
@@ -812,11 +357,6 @@ async def store_vectors_in_qdrant(
                 "source_document": chunk.metadata.filename,
                 "page_number": chunk.page_number,
                 "chunk_index": chunk.chunk_index,  # Use explicit field from Chunk model
-                # NEW FIELDS for Story 2.2: Element-aware chunking metadata
-                "element_type": chunk.element_type.value
-                if hasattr(chunk, "element_type")
-                else "mixed",
-                "section_title": chunk.section_title if hasattr(chunk, "section_title") else None,
             },
         )
         points.append(point)
@@ -1025,7 +565,19 @@ async def ingest_pdf(file_path: str, clear_collection: bool = True) -> DocumentM
     # Configure table structure recognition to extract table cell data
     # Story 2.1: Use pypdfium backend for 50-60% memory reduction
     try:
-        pipeline_options = PdfPipelineOptions(do_table_structure=True)
+        # Story 2.2: Configure parallel page processing
+        # Thread count configurable via PDF_PROCESSING_THREADS env var (default: 8)
+        # NOTE: Default AcceleratorOptions is 4 threads - we use 8 for 1.55x speedup
+        thread_count = settings.pdf_processing_threads
+
+        # Story 2.3 Fix: Add document_timeout to prevent indefinite hangs on large PDFs
+        # Timeout set to 1500s (25 minutes) for 160-page PDFs
+        # Based on: 40-page = 3m51s, 160-page expected = ~15-18min, buffer = 25min
+        pipeline_options = PdfPipelineOptions(
+            do_table_structure=True,
+            accelerator_options=AcceleratorOptions(num_threads=thread_count),
+            document_timeout=1500,  # 25 minutes max per document
+        )
         pipeline_options.table_structure_options.mode = TableFormerMode.ACCURATE
 
         # Story 2.1: PyPdfium backend (optimized)
@@ -1040,7 +592,12 @@ async def ingest_pdf(file_path: str, clear_collection: bool = True) -> DocumentM
         )
         logger.info(
             "Docling converter initialized with pypdfium backend and table extraction",
-            extra={"table_mode": "ACCURATE", "backend": "pypdfium", "path": str(pdf_path)},
+            extra={
+                "table_mode": "ACCURATE",
+                "backend": "pypdfium",
+                "num_threads": thread_count,
+                "path": str(pdf_path),
+            },
         )
     except Exception as e:
         error_msg = f"Failed to initialize Docling converter: {e}"
@@ -1518,75 +1075,204 @@ async def chunk_document(
 async def chunk_by_docling_items(
     result: ConversionResult,
     doc_metadata: DocumentMetadata,
-    chunk_size: int = 500,
+    chunk_size: int = 512,
     overlap: int = 50,
 ) -> list[Chunk]:
-    """Chunk document using element-aware boundaries from Docling.
+    """Chunk document using fixed 512-token approach with table boundary preservation.
 
-    MODIFIED in Story 2.2: Now uses extract_elements() and chunk_elements() for
-    structure-aware chunking that respects element boundaries (tables, sections, paragraphs).
+    MODIFIED in Story 2.3: Replaced element-aware chunking with research-validated
+    fixed 512-token chunking (Yepes et al. 2024: 68.09% accuracy on financial reports).
 
-    Extracts page numbers directly from Docling provenance metadata and preserves
-    element type and section context for improved retrieval accuracy.
+    Implements AC2 (Fixed 512-token chunking) and AC3 (Table boundary preservation).
 
     Args:
         result: Docling ConversionResult containing document with provenance
         doc_metadata: Document metadata (filename, doc_type, etc.)
-        chunk_size: Target chunk size in words (default: 500) - converted to ~650 tokens
-        overlap: Word overlap between chunks (default: 50) - converted to ~65 tokens
+        chunk_size: Target chunk size in tokens (default: 512 as per AC2)
+        overlap: Token overlap between chunks (default: 50 as per AC2)
 
     Returns:
-        List of Chunk objects with element-type metadata and accurate page numbers
+        List of Chunk objects with fixed 512-token size
 
     Raises:
         RuntimeError: If chunking fails
 
-    Strategy (Story 2.2):
-        1. Extract structured elements from Docling (tables, sections, paragraphs)
-        2. Apply element-aware chunking algorithm
-        3. Preserve element_type and section_title metadata in each chunk
+    Strategy (Story 2.3 AC2, AC3):
+        1. Extract tables as separate items (preserve table boundaries - AC3)
+        2. Extract text content from non-table elements
+        3. Tokenize using tiktoken cl100k_base (AC2)
+        4. Create 512-token chunks with 50-token overlap (AC2)
+        5. Preserve sentence boundaries when possible (AC2)
+        6. Keep tables as single chunks even if >512 tokens (AC3 exception)
     """
     start_time = time.time()
 
-    # Story 2.2: Extract structured elements from Docling
-    logger.info(
-        "Extracting structured elements from document",
-        extra={"doc_filename": doc_metadata.filename},
-    )
-    elements = extract_elements(result)
-
-    # Story 2.2: Apply element-aware chunking algorithm
-    # Convert word-based parameters to token-based parameters
-    # Rough approximation: 1 word ≈ 1.3 tokens
-    max_tokens = int(chunk_size * 1.3)  # 500 words ≈ 650 tokens
-    overlap_tokens = int(overlap * 1.3)  # 50 words ≈ 65 tokens
+    if encoding is None:
+        raise RuntimeError("tiktoken not available - required for Story 2.3 fixed chunking")
 
     logger.info(
-        "Applying element-aware chunking",
+        "Starting fixed 512-token chunking",
         extra={
             "doc_filename": doc_metadata.filename,
-            "max_tokens": max_tokens,
-            "overlap_tokens": overlap_tokens,
+            "chunk_size": chunk_size,
+            "overlap": overlap,
         },
     )
-    chunks = chunk_elements(
-        elements=elements,
-        doc_metadata=doc_metadata,
-        max_tokens=max_tokens,
-        overlap_tokens=overlap_tokens,
-    )
+
+    chunks = []
+    chunk_index = 0
+
+    # AC3: Extract tables separately to preserve table boundaries
+    tables: list[tuple[TableItem, int]] = []  # (table_item, page_number)
+    text_items: list[tuple[str, int]] = []  # (text_content, page_number)
+
+    for item, _ in result.document.iterate_items():
+        # Get page number from provenance
+        page_number = 1  # Default fallback
+        if hasattr(item, "prov") and item.prov:
+            page_number = item.prov[0].page_no
+
+        if isinstance(item, TableItem):
+            # AC3: Store tables separately
+            tables.append((item, page_number))
+        elif hasattr(item, "text"):
+            # Text content (paragraphs, sections, lists)
+            text_items.append((item.text, page_number))
+
+    # Process tables first (AC3: each table becomes a single chunk)
+    for table_item, page_num in tables:
+        table_content = table_item.export_to_markdown(doc=result.document)
+        token_count = len(encoding.encode(table_content))
+        word_count = len(table_content.split())
+
+        chunk = Chunk(
+            chunk_id=f"{doc_metadata.filename}_{chunk_index}",
+            content=table_content,
+            metadata=doc_metadata,
+            page_number=page_num,
+            chunk_index=chunk_index,
+            embedding=[],
+            word_count=word_count,
+        )
+        chunks.append(chunk)
+        chunk_index += 1
+
+        logger.debug(
+            "Table preserved as single chunk",
+            extra={
+                "chunk_index": chunk_index - 1,
+                "token_count": token_count,
+                "page": page_num,
+                "exceeds_512": token_count > 512,
+            },
+        )
+
+    # Process text content with fixed 512-token chunking (AC2)
+    # Build page number mapping for accurate attribution (Story 2.3 P1-ENHANCE fix)
+    # Track token ranges → page numbers during concatenation
+    page_mapping: list[tuple[int, int, int]] = []  # (token_start, token_end, page_number)
+    full_text_parts: list[str] = []
+    current_token_offset = 0
+
+    for text_content, page_num in text_items:
+        if text_content.strip():
+            # Tokenize this text item
+            item_tokens = encoding.encode(text_content)
+            item_token_count = len(item_tokens)
+
+            # Record page mapping: [start_token, end_token) → page_number
+            page_mapping.append(
+                (current_token_offset, current_token_offset + item_token_count, page_num)
+            )
+
+            full_text_parts.append(text_content)
+            current_token_offset += item_token_count
+
+            # Add separator tokens (2 newlines = ~1-2 tokens)
+            separator_tokens = encoding.encode("\n\n")
+            current_token_offset += len(separator_tokens)
+
+    full_text = "\n\n".join(full_text_parts)
+
+    if full_text.strip():
+        # Tokenize full text
+        tokens = encoding.encode(full_text)
+        total_tokens = len(tokens)
+
+        logger.info(
+            "Tokenized document text",
+            extra={
+                "total_tokens": total_tokens,
+                "estimated_chunks": (total_tokens // (chunk_size - overlap)) + 1,
+                "page_mappings": len(page_mapping),
+            },
+        )
+
+        # Create chunks with sliding window
+        idx = 0
+        while idx < total_tokens:
+            # Extract chunk tokens
+            chunk_tokens = tokens[idx : idx + chunk_size]
+            chunk_text = encoding.decode(chunk_tokens)
+
+            # AC2: Preserve sentence boundaries when possible
+            # If not at the end, try to end at a sentence boundary
+            if idx + chunk_size < total_tokens and len(chunk_text) > 50:
+                # Look for sentence-ending punctuation near the end
+                last_50_chars = chunk_text[-50:]
+                sentence_end_positions = [
+                    last_50_chars.rfind(". "),
+                    last_50_chars.rfind("! "),
+                    last_50_chars.rfind("? "),
+                    last_50_chars.rfind(".\n"),
+                ]
+                max_pos = max(sentence_end_positions)
+
+                if max_pos > 0:
+                    # Trim to sentence boundary
+                    cut_position = len(chunk_text) - 50 + max_pos + 1
+                    chunk_text = chunk_text[:cut_position].strip()
+
+            # Story 2.3 P1-ENHANCE: Accurate page number from provenance mapping
+            # Find the page number for this chunk's starting token position
+            chunk_page = 1  # Fallback default
+            for token_start, token_end, page_num in page_mapping:
+                if token_start <= idx < token_end:
+                    chunk_page = page_num
+                    break
+
+            word_count = len(chunk_text.split())
+
+            chunk = Chunk(
+                chunk_id=f"{doc_metadata.filename}_{chunk_index}",
+                content=chunk_text,
+                metadata=doc_metadata,
+                page_number=chunk_page,  # Story 2.3: Accurate page from provenance mapping
+                chunk_index=chunk_index,
+                embedding=[],
+                word_count=word_count,
+            )
+            chunks.append(chunk)
+            chunk_index += 1
+
+            # Advance with overlap (AC2: 50-token overlap)
+            idx += chunk_size - overlap
 
     # Calculate metrics
     duration_ms = int((time.time() - start_time) * 1000)
     avg_chunk_size = sum(c.word_count for c in chunks) / len(chunks) if chunks else 0
+    token_counts = [len(encoding.encode(c.content)) for c in chunks]
+    avg_tokens = sum(token_counts) / len(token_counts) if token_counts else 0
 
     logger.info(
-        "Document chunked with element-aware boundaries",
+        "Fixed 512-token chunking complete",
         extra={
             "doc_filename": doc_metadata.filename,
             "chunk_count": len(chunks),
-            "avg_chunk_size": round(avg_chunk_size, 1),
-            "element_count": len(elements),
+            "table_chunks": len(tables),
+            "text_chunks": len(chunks) - len(tables),
+            "avg_chunk_size_words": round(avg_chunk_size, 1),
+            "avg_chunk_size_tokens": round(avg_tokens, 1),
             "duration_ms": duration_ms,
         },
     )
