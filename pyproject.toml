@@ -34,6 +34,7 @@ dependencies = [
     "qdrant-client==1.15.1",
     "fastmcp==2.12.4",
     "anthropic>=0.18.0,<1.0.0",
+    "openai>=1.0.0,<2.0.0", # Story 2.4: GPT-5 nano for metadata extraction
     "pydantic>=2.0,<3.0",
     "pydantic-settings>=2.0,<3.0",
     "openpyxl>=3.1,<4.0",

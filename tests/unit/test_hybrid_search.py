@@ -59,7 +59,7 @@ class TestBM25IndexCreation:
         query_tokens = ["EBITDA", "margin"]
         scores = bm25.get_scores(query_tokens)
         assert len(scores) == 10
-        assert all(isinstance(s, (int, float)) for s in scores)
+        assert all(isinstance(s, int | float) for s in scores)
 
     def test_bm25_index_empty_chunks(self):
         """Test BM25 index creation fails with empty chunks list."""
@@ -167,7 +167,7 @@ class TestBM25Query:
 
         # Assert: Scores returned for all chunks
         assert len(scores) == 5
-        assert all(isinstance(s, (int, float)) for s in scores)
+        assert all(isinstance(s, int | float) for s in scores)
 
         # Chunks with "EBITDA" should have higher scores
         assert scores[0] > scores[1]  # chunk_0 has EBITDA, chunk_1 doesn't

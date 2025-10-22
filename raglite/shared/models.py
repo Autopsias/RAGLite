@@ -20,11 +20,31 @@ class DocumentMetadata(BaseModel):
     chunk_count: int = Field(default=0, description="Number of chunks created from document")
 
 
+class ExtractedMetadata(BaseModel):
+    """LLM-extracted business context metadata from financial documents.
+
+    Story 2.4: Extracted using GPT-5 nano for query filtering and precision boosting.
+    All fields are optional as extraction may not find all information.
+    """
+
+    fiscal_period: str | None = Field(
+        default=None, description="Fiscal period (e.g., 'Q3 2024', 'FY 2023')"
+    )
+    company_name: str | None = Field(
+        default=None, description="Company name (e.g., 'ACME Corporation')"
+    )
+    department_name: str | None = Field(
+        default=None, description="Department name (e.g., 'Finance', 'Operations')"
+    )
+
+
 class Chunk(BaseModel):
     """Document chunk with content and metadata.
 
     Represents a semantic chunk of a document after chunking and embedding.
     Simplified in Story 2.3 to use fixed 512-token chunking (no element-aware metadata).
+
+    Story 2.4 additions: LLM-extracted business context metadata for filtering.
 
     Attributes:
         chunk_id: Unique chunk identifier
@@ -35,6 +55,9 @@ class Chunk(BaseModel):
         embedding: Semantic embedding vector
         parent_chunk_id: Reference to parent chunk for summaries (for Story 2.4)
         word_count: Word count of chunk content
+        fiscal_period: LLM-extracted fiscal period (Story 2.4)
+        company_name: LLM-extracted company name (Story 2.4)
+        department_name: LLM-extracted department name (Story 2.4)
     """
 
     chunk_id: str = Field(..., description="Unique chunk identifier")
@@ -47,6 +70,16 @@ class Chunk(BaseModel):
         default=None, description="Reference to parent chunk (for table summaries in Story 2.4)"
     )
     word_count: int = Field(default=0, description="Word count of chunk content")
+    # Story 2.4: LLM-extracted business context metadata
+    fiscal_period: str | None = Field(
+        default=None, description="Fiscal period (e.g., 'Q3 2024', 'FY 2023')"
+    )
+    company_name: str | None = Field(
+        default=None, description="Company name (e.g., 'ACME Corporation')"
+    )
+    department_name: str | None = Field(
+        default=None, description="Department name (e.g., 'Finance', 'Operations')"
+    )
 
 
 class SearchResult(BaseModel):

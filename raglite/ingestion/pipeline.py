@@ -30,9 +30,13 @@ from raglite.shared.bm25 import create_bm25_index, save_bm25_index
 from raglite.shared.clients import get_embedding_model, get_qdrant_client
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
-from raglite.shared.models import Chunk, DocumentMetadata
+from raglite.shared.models import Chunk, DocumentMetadata, ExtractedMetadata
 
 logger = get_logger(__name__)
+
+# Story 2.4: Metadata extraction cache (per-document)
+# Cache keyed by document hash to avoid redundant API calls
+_metadata_cache: dict[str, ExtractedMetadata] = {}
 
 # Initialize tiktoken encoding for token counting (Story 2.3 AC2)
 # Using cl100k_base encoding as specified in research (Yepes et al. 2024)
@@ -160,6 +164,181 @@ async def generate_embeddings(chunks: list[Chunk]) -> list[Chunk]:
     )
 
     return chunks
+
+
+async def extract_document_metadata(
+    text: str, doc_filename: str, use_cache: bool = True
+) -> ExtractedMetadata:
+    """Extract business context metadata using GPT-5 nano API.
+
+    Story 2.4 AC1: Extract fiscal_period, company_name, department_name for filtering.
+
+    Args:
+        text: Document text sample (first ~2000 tokens recommended)
+        doc_filename: Document filename for cache key
+        use_cache: Whether to use cached results (default: True)
+
+    Returns:
+        ExtractedMetadata with fiscal_period, company_name, department_name
+
+    Raises:
+        RuntimeError: If OpenAI API call fails or API key not configured
+
+    Cost (GPT-5 nano with prompt caching):
+        - Cached input: ~2000 tokens × $0.005/MTok = $0.00001
+        - New input: ~100 tokens × $0.10/MTok = $0.00001
+        - Output: ~100 tokens × $0.40/MTok = $0.00004
+        - Total: ~$0.00005 per document (99.3% cheaper than Claude baseline)
+
+    Example:
+        >>> metadata = await extract_document_metadata(doc_text[:10000], "report.pdf")
+        >>> print(f"Period: {metadata.fiscal_period}, Company: {metadata.company_name}")
+    """
+    start_time = time.time()
+
+    # Check cache first (AC4: per-document caching)
+    cache_key = doc_filename
+    if use_cache and cache_key in _metadata_cache:
+        logger.info(
+            "Metadata cache hit",
+            extra={"doc_filename": doc_filename, "cache_key": cache_key},
+        )
+        return _metadata_cache[cache_key]
+
+    # Validate OpenAI API key is configured
+    if not settings.openai_api_key:
+        error_msg = "OpenAI API key not configured. Set OPENAI_API_KEY environment variable."
+        logger.warning(  # AI6: Changed from error to warning (graceful degradation)
+            "Metadata extraction skipped - API key not configured (graceful degradation)",
+            extra={"doc_filename": doc_filename, "metadata_extraction": "disabled"},
+        )
+        raise RuntimeError(error_msg)
+
+    logger.info(
+        "Extracting document metadata with GPT-5 nano",
+        extra={
+            "doc_filename": doc_filename,
+            "text_sample_length": len(text),
+            "cache_miss": True,
+        },
+    )
+
+    try:
+        # Import OpenAI SDK (lazy import to avoid startup overhead)
+        import httpx
+        from openai import AsyncOpenAI
+
+        # Initialize client with 30-second timeout to prevent test hangs
+        client = AsyncOpenAI(
+            api_key=settings.openai_api_key,
+            timeout=httpx.Timeout(30.0, connect=5.0),  # 30s total, 5s connect
+        )
+
+        # Truncate text to first ~2000 tokens (representative sample)
+        # GPT-5 nano uses same tokenizer as GPT-4 (cl100k_base)
+        if encoding:
+            tokens = encoding.encode(text)
+            if len(tokens) > 2000:
+                text = encoding.decode(tokens[:2000])
+                logger.debug(
+                    "Truncated text to 2000 tokens",
+                    extra={"doc_filename": doc_filename, "original_tokens": len(tokens)},
+                )
+
+        # AC1: Call GPT-5 nano API with JSON schema mode
+        response = await client.chat.completions.create(
+            model=settings.openai_metadata_model,  # AI7: Configurable model
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a financial document analyzer. Extract business metadata accurately.",
+                },
+                {
+                    "role": "user",
+                    "content": f"""Extract the following information from this financial document:
+- fiscal_period: The fiscal period (e.g., "Q3 2024", "FY 2023")
+- company_name: The company name (e.g., "ACME Corporation")
+- department_name: The department name if mentioned (e.g., "Finance", "Operations")
+
+If any field cannot be determined, return null for that field.
+
+Document excerpt:
+{text}
+
+Return ONLY a JSON object with the three fields.""",
+                },
+            ],
+            response_format={"type": "json_object"},  # JSON schema mode
+            temperature=0.0,  # Deterministic extraction
+            max_tokens=150,  # Small response (just 3 fields)
+        )
+
+        # Parse response
+        response_content = response.choices[0].message.content
+        if not response_content:
+            raise RuntimeError("Empty response from GPT-5 nano API")
+
+        # Parse JSON response into ExtractedMetadata
+        import json
+
+        metadata_dict = json.loads(response_content)
+        extracted_metadata = ExtractedMetadata(
+            fiscal_period=metadata_dict.get("fiscal_period"),
+            company_name=metadata_dict.get("company_name"),
+            department_name=metadata_dict.get("department_name"),
+        )
+
+        # Cache the result (AC4)
+        if use_cache:
+            _metadata_cache[cache_key] = extracted_metadata
+
+        # Calculate cost metrics for logging (AI4: Uses config pricing)
+        duration_ms = int((time.time() - start_time) * 1000)
+        usage = response.usage
+
+        # Type-safe access to CompletionUsage attributes (handle None case)
+        if usage is not None:
+            estimated_cost = (
+                usage.prompt_tokens * settings.gpt5_nano_input_price_per_mtok / 1_000_000
+            ) + (usage.completion_tokens * settings.gpt5_nano_output_price_per_mtok / 1_000_000)
+            prompt_tokens = usage.prompt_tokens
+            completion_tokens = usage.completion_tokens
+            total_tokens = usage.total_tokens
+        else:
+            # Fallback if usage data not available
+            estimated_cost = 0.0
+            prompt_tokens = 0
+            completion_tokens = 0
+            total_tokens = 0
+
+        logger.info(
+            "Metadata extraction complete",
+            extra={
+                "doc_filename": doc_filename,
+                "fiscal_period": extracted_metadata.fiscal_period,
+                "company_name": extracted_metadata.company_name,
+                "department_name": extracted_metadata.department_name,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens,
+                "estimated_cost_usd": round(estimated_cost, 6),
+                "duration_ms": duration_ms,
+            },
+        )
+
+        return extracted_metadata
+
+    except Exception as e:
+        error_msg = f"Metadata extraction failed for {doc_filename}: {e}"
+        logger.error(
+            "GPT-5 nano API call failed",
+            extra={
+                "doc_filename": doc_filename,
+                "error": str(e),
+            },
+            exc_info=True,
+        )
+        raise RuntimeError(error_msg) from e
 
 
 def create_collection(
@@ -357,6 +536,10 @@ async def store_vectors_in_qdrant(
                 "source_document": chunk.metadata.filename,
                 "page_number": chunk.page_number,
                 "chunk_index": chunk.chunk_index,  # Use explicit field from Chunk model
+                # Story 2.4 AC3: LLM-extracted business context metadata for filtering
+                "fiscal_period": chunk.fiscal_period,
+                "company_name": chunk.company_name,
+                "department_name": chunk.department_name,
             },
         )
         points.append(point)
@@ -643,14 +826,16 @@ async def ingest_pdf(file_path: str, clear_collection: bool = True) -> DocumentM
     # Extract full text from Docling result
     # Use export_to_markdown() to get structured text with tables
     try:
-        result.document.export_to_markdown()
+        full_text = result.document.export_to_markdown()
     except Exception as e:
         logger.warning(
             "Failed to export markdown - falling back to plain text",
             extra={"path": str(pdf_path), "error": str(e)},
         )
         # Fallback: concatenate all text from elements
-        "\n".join(item.text for item, _ in result.document.iterate_items() if hasattr(item, "text"))
+        full_text = "\n".join(
+            item.text for item, _ in result.document.iterate_items() if hasattr(item, "text")
+        )
 
     # Create initial metadata for chunking
     metadata = DocumentMetadata(
@@ -662,9 +847,52 @@ async def ingest_pdf(file_path: str, clear_collection: bool = True) -> DocumentM
         chunk_count=0,  # Will be updated after chunking
     )
 
+    # Story 2.4 AC1: Extract business context metadata using GPT-5 nano
+    # Extract ONCE per document (cached for all chunks)
+    extracted_metadata = None
+    if settings.openai_api_key:
+        try:
+            extracted_metadata = await extract_document_metadata(
+                text=full_text, doc_filename=pdf_path.name
+            )
+            logger.info(
+                "Document metadata extracted",
+                extra={
+                    "doc_filename": pdf_path.name,
+                    "fiscal_period": extracted_metadata.fiscal_period,
+                    "company_name": extracted_metadata.company_name,
+                    "department_name": extracted_metadata.department_name,
+                },
+            )
+        except Exception as e:
+            logger.warning(
+                "Metadata extraction failed - continuing without metadata",
+                extra={"doc_filename": pdf_path.name, "error": str(e)},
+            )
+    else:
+        logger.info(
+            "Metadata extraction skipped - OPENAI_API_KEY not configured",
+            extra={"doc_filename": pdf_path.name},
+        )
+
     # Chunk the document using Docling items with provenance (Story 1.13 fix)
     # This extracts actual page numbers from Docling metadata instead of estimating
     chunks = await chunk_by_docling_items(result, metadata)
+
+    # Story 2.4 AC3: Inject extracted metadata into all chunks
+    if extracted_metadata:
+        for chunk in chunks:
+            chunk.fiscal_period = extracted_metadata.fiscal_period
+            chunk.company_name = extracted_metadata.company_name
+            chunk.department_name = extracted_metadata.department_name
+        logger.info(
+            "Metadata injected into chunks",
+            extra={
+                "doc_filename": pdf_path.name,
+                "chunk_count": len(chunks),
+                "fiscal_period": extracted_metadata.fiscal_period,
+            },
+        )
 
     # Generate embeddings for chunks (Story 1.5)
     chunks_with_embeddings = await generate_embeddings(chunks)

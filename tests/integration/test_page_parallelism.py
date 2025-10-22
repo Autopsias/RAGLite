@@ -141,6 +141,10 @@ async def test_ac4_thread_safety_determinism():
     - No deadlocks or race conditions
     - No exceptions during concurrent processing
     - Identical chunk counts across all runs
+
+    DETERMINISM FIX: Clears metadata cache and BM25 cache between runs to ensure
+    each iteration starts with a clean state and validates true parallel processing
+    determinism (not cached results).
     """
     pipeline = get_ingestion_module()
 
@@ -158,6 +162,17 @@ async def test_ac4_thread_safety_determinism():
 
     for run_num in range(1, 11):
         try:
+            # CRITICAL FIX: Clear metadata cache before each run to ensure determinism
+            # The metadata extraction cache persists across runs and can cause non-deterministic
+            # behavior if the first run's cached metadata is reused in subsequent runs
+            pipeline._metadata_cache.clear()
+
+            # CRITICAL FIX: Clear BM25 index cache to force regeneration each run
+            # This ensures BM25 index creation is tested for determinism, not just cache hits
+            from raglite.shared.bm25 import clear_bm25_cache
+
+            clear_bm25_cache()
+
             result = await pipeline.ingest_pdf(
                 file_path=str(pdf_path),
                 clear_collection=True,

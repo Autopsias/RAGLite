@@ -22,6 +22,16 @@ class Settings(BaseSettings):
     # Anthropic Claude API (optional for Phase 1 setup, required for Story 1.11+)
     anthropic_api_key: str | None = None
 
+    # OpenAI API (Story 2.4: GPT-5 nano for metadata extraction)
+    openai_api_key: str | None = None
+    openai_metadata_model: str = "gpt-5-nano"  # AI7: Configurable model for metadata extraction
+
+    # OpenAI Pricing (Story 2.4 AI4: Externalized for maintainability)
+    # GPT-5 nano pricing as of 2025-10 (per million tokens)
+    gpt5_nano_input_price_per_mtok: float = 0.10  # $0.10 per 1M input tokens
+    gpt5_nano_output_price_per_mtok: float = 0.40  # $0.40 per 1M output tokens
+    gpt5_nano_cached_input_price_per_mtok: float = 0.005  # $0.005 per 1M cached tokens
+
     # Embedding Model Configuration
     embedding_model: str = "intfloat/e5-large-v2"
     embedding_dimension: int = 1024

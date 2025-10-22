@@ -167,7 +167,7 @@ raglite/
 │   └── init-qdrant.py
 ├── docs/                      # Architecture & PRD (sharded)
 ├── docker-compose.yml
-├── pyproject.toml             # Poetry dependencies
+├── pyproject.toml             # UV/pip dependencies (PEP 735)
 └── README.md
 ```
 
@@ -177,8 +177,11 @@ raglite/
 
 ### Environment Setup (When Ready)
 ```bash
-# Install dependencies (Poetry)
-poetry install
+# Install dependencies (UV - recommended, 10-100x faster than pip)
+uv sync --all-groups
+
+# Alternative: pip (slower, limited PEP 735 support)
+pip install -e ".[dev,test]"
 
 # Start Qdrant + services
 docker-compose up -d
@@ -187,22 +190,22 @@ docker-compose up -d
 python scripts/init-qdrant.py
 
 # Run tests
-poetry run pytest
+uv run pytest
 
 # Run MCP server (local testing)
-poetry run python -m raglite.main
+uv run python -m raglite.main
 ```
 
 ### Testing
 ```bash
 # Unit tests
-poetry run pytest raglite/tests/
+uv run pytest raglite/tests/
 
 # Ground truth accuracy validation
-poetry run python scripts/run-accuracy-tests.py
+uv run python scripts/run-accuracy-tests.py
 
 # With coverage
-poetry run pytest --cov=raglite --cov-report=html
+uv run pytest --cov=raglite --cov-report=html
 ```
 
 ---

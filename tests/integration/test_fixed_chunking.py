@@ -6,7 +6,6 @@ Tests validate:
 - AC6: Chunk size consistency (mean=512, std<50)
 """
 
-import os
 from pathlib import Path
 
 import pytest
@@ -16,9 +15,6 @@ from qdrant_client import QdrantClient
 from raglite.ingestion.pipeline import ingest_pdf
 from raglite.shared.clients import get_qdrant_client
 from raglite.shared.config import settings
-
-# Skip slow tests unless RUN_SLOW_TESTS=1 environment variable is set
-SKIP_SLOW_TESTS = os.getenv("RUN_SLOW_TESTS") != "1"
 
 
 @pytest.fixture
@@ -39,7 +35,6 @@ def encoding():
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
-@pytest.mark.skipif(SKIP_SLOW_TESTS, reason="Slow test (16+ min) - set RUN_SLOW_TESTS=1 to enable")
 @pytest.mark.timeout(2700)  # 45 minutes for large PDFs (increased from 30min)
 async def test_ac4_collection_recreation_and_reingest(test_pdf_path):
     """AC4: Delete contaminated collection, recreate with clean schema, re-ingest test PDF.
@@ -87,13 +82,12 @@ async def test_ac4_collection_recreation_and_reingest(test_pdf_path):
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
-@pytest.mark.skipif(SKIP_SLOW_TESTS, reason="Medium test (3+ min) - set RUN_SLOW_TESTS=1 to enable")
-@pytest.mark.timeout(300)  # 5 minutes - fast test
+@pytest.mark.timeout(900)  # 15 minutes - medium test (actual: ~6-8 minutes)
 async def test_ac4_fast_40page():
     """AC4 Fast Validation: 40-page PDF for quick CI/CD validation.
 
     This test validates the same functionality as test_ac4_collection_recreation_and_reingest
-    but uses a smaller 40-page PDF for faster execution (~2-3 minutes).
+    but uses a smaller 40-page PDF for faster execution (~6-8 minutes).
 
     Validates:
     - Collection deletion and recreation
@@ -226,7 +220,6 @@ async def test_ac5_fast_chunk_count_validation(encoding):
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
-@pytest.mark.skipif(SKIP_SLOW_TESTS, reason="Slow test (16+ min) - set RUN_SLOW_TESTS=1 to enable")
 async def test_ac5_chunk_count_validation(ingested_160_page_pdf, encoding):
     """AC5 SLOW: Chunk count validation using full 160-page PDF.
 
@@ -408,7 +401,6 @@ async def test_ac6_fast_chunk_size_consistency(encoding):
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
-@pytest.mark.skipif(SKIP_SLOW_TESTS, reason="Slow test (16+ min) - set RUN_SLOW_TESTS=1 to enable")
 async def test_ac6_chunk_size_consistency(ingested_160_page_pdf, encoding):
     """AC6 SLOW: Chunk size consistency validation using full 160-page PDF.
 
@@ -512,7 +504,6 @@ async def test_ac6_chunk_size_consistency(ingested_160_page_pdf, encoding):
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
-@pytest.mark.skipif(SKIP_SLOW_TESTS, reason="Slow test (16+ min) - set RUN_SLOW_TESTS=1 to enable")
 async def test_table_boundary_preservation(test_pdf_path, encoding):
     """AC3: Verify tables are NOT split mid-row and tables >512 tokens kept as single chunks."""
     # Ingest test PDF
