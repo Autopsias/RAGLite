@@ -19,18 +19,23 @@ class Settings(BaseSettings):
     qdrant_port: int = 6333
     qdrant_collection_name: str = "financial_docs"
 
+    # PostgreSQL Database (Story 2.6: Structured metadata storage)
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
+    postgres_db: str = "raglite"
+    postgres_user: str = "raglite"
+    postgres_password: str = "raglite"
+
     # Anthropic Claude API (optional for Phase 1 setup, required for Story 1.11+)
     anthropic_api_key: str | None = None
 
-    # OpenAI API (Story 2.4: GPT-5 nano for metadata extraction)
-    openai_api_key: str | None = None
-    openai_metadata_model: str = "gpt-5-nano"  # AI7: Configurable model for metadata extraction
-
-    # OpenAI Pricing (Story 2.4 AI4: Externalized for maintainability)
-    # GPT-5 nano pricing as of 2025-10 (per million tokens)
-    gpt5_nano_input_price_per_mtok: float = 0.10  # $0.10 per 1M input tokens
-    gpt5_nano_output_price_per_mtok: float = 0.40  # $0.40 per 1M output tokens
-    gpt5_nano_cached_input_price_per_mtok: float = 0.005  # $0.005 per 1M cached tokens
+    # Mistral API (Story 2.4: Mistral Small for metadata extraction)
+    # Replaces OpenAI o1-mini which had 50% failure rate due to reasoning token overflow
+    # Mistral Small: FREE, 91% accuracy, native JSON schema support
+    mistral_api_key: str | None = None
+    metadata_extraction_model: str = (
+        "mistral-small-latest"  # Mistral model for chunk metadata extraction
+    )
 
     # Embedding Model Configuration
     embedding_model: str = "intfloat/e5-large-v2"

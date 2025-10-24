@@ -1,0 +1,245 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>5</storyId>
+    <title>AC3 Validation and Optimization (Decision Gate)</title>
+    <status>Ready</status>
+    <generatedAt>2025-10-22</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/story-2.5.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>QA engineer</asA>
+    <iWant>comprehensive accuracy validation</iWant>
+    <soThat>we can verify ≥70% retrieval accuracy and decide if Epic 2 is complete</soThat>
+    <tasks>
+      - Task 1: Prepare Ground Truth Test Suite (AC1 - 2 hours)
+      - Task 2: Execute Full Accuracy Validation (AC1 - 2 hours)
+      - Task 3: DECISION GATE Evaluation (AC2 - 30 min)
+      - Task 4: Validate Attribution Accuracy (AC3 - 30 min)
+      - Task 5: Failure Mode Analysis (AC4 - 1 day) - CONDITIONAL if &lt;70%
+      - Task 6: Rebuild BM25 Index (AC5 - 2 hours)
+      - Task 7: Validate Query Performance (AC6 - 2 hours)
+      - Task 8: Update Documentation (1 hour)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="AC1" effort="4h" priority="MANDATORY">
+      <requirement>Run all 50 ground truth queries from test suite</requirement>
+      <requirement>Measure retrieval accuracy (% queries with correct chunk in top-5)</requirement>
+      <requirement>Measure attribution accuracy (% correct source citations)</requirement>
+      <requirement>Document test execution results with detailed metrics</requirement>
+      <source>Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.5 AC1</source>
+      <goal>Establish baseline accuracy post-Stories 2.3 + 2.4 implementation</goal>
+    </ac>
+
+    <ac id="AC2" effort="30min" priority="CRITICAL">
+      <requirement>MANDATORY: Retrieval accuracy ≥70.0% (35/50 queries pass)</requirement>
+      <requirement>This is the DECISION GATE for Epic 2 completion</requirement>
+      <requirement>Calculate pass rate: (successful_queries / 50) × 100%</requirement>
+      <decision>IF ≥70% → Epic 2 Phase 2A COMPLETE → Recommend Epic 3 start</decision>
+      <decision>IF &lt;70% → Escalate to PM for Phase 2B (Structured Multi-Index) approval</decision>
+      <source>Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.5 AC2</source>
+      <critical>This AC determines Epic 2 success/failure and unlocks Epic 3-5</critical>
+    </ac>
+
+    <ac id="AC3" effort="30min" priority="MANDATORY">
+      <requirement>Attribution accuracy ≥95.0% (NFR7 compliance)</requirement>
+      <requirement>Verify correct document, page, section references in top-5 results</requirement>
+      <requirement>Document attribution failures with root cause analysis</requirement>
+      <source>Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.5 AC3</source>
+      <nfr>NFR7 - 95%+ source attribution accuracy</nfr>
+    </ac>
+
+    <ac id="AC4" effort="1 day" priority="CONDITIONAL">
+      <trigger>ONLY if AC2 &lt;70% accuracy (15% probability)</trigger>
+      <requirement>Analyze all failed queries (queries where correct chunk NOT in top-5)</requirement>
+      <requirement>Categorize failure types: table queries, multi-hop, entity-based, temporal</requirement>
+      <requirement>Document failure patterns with examples</requirement>
+      <requirement>Recommend Phase 2B/2C approaches based on failure analysis</requirement>
+      <source>Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.5 AC4</source>
+      <goal>Inform decision on Phase 2B (Structured Multi-Index) vs Phase 2C (Hybrid GraphRAG)</goal>
+    </ac>
+
+    <ac id="AC5" effort="2h" priority="MANDATORY">
+      <requirement>Rebuild BM25 keyword index for new chunk structure (180-220 chunks, down from 504)</requirement>
+      <requirement>Verify hybrid search (semantic + keyword fusion) still works</requirement>
+      <requirement>Test BM25 + semantic score fusion with Reciprocal Rank Fusion (RRF)</requirement>
+      <requirement>Measure hybrid search improvement over semantic-only baseline</requirement>
+      <source>Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.5 AC5</source>
+      <context>Story 2.3 reduced chunk count from 504 → ~200, requiring BM25 index rebuild</context>
+    </ac>
+
+    <ac id="AC6" effort="2h" priority="MANDATORY">
+      <requirement>p50 query latency &lt;5s (target for user experience)</requirement>
+      <requirement>p95 query latency &lt;15s (NFR13 compliance)</requirement>
+      <requirement>Measure query latency across all 50 ground truth queries</requirement>
+      <requirement>Document latency distribution (p50, p75, p90, p95, p99)</requirement>
+      <source>Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.5 AC6</source>
+      <nfr>NFR13 - &lt;15s p95 query response time</nfr>
+    </ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2: Advanced RAG Architecture Enhancement</title>
+        <section>Story 2.5: AC3 Validation and Optimization (Decision Gate)</section>
+        <snippet>Story 2.5 executes the critical decision gate for Epic 2 Phase 2A completion. Target: ≥70% retrieval accuracy. IF ≥70% → Epic 2 COMPLETE, proceed to Epic 3. IF &lt;70% → Escalate to Phase 2B (Structured Multi-Index).</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec-epic-2.md</path>
+        <title>Technical Specification: Epic 2 - Advanced Document Understanding</title>
+        <section>Section 5: NFR Validation Criteria</section>
+        <snippet>Target accuracy improvement: 80% → 90%+ for relational/multi-hop queries. Validation method: Expanded test set with 20+ relational queries, comparison of Vector-only vs Hybrid RAG accuracy.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/story-2.3.md</path>
+        <title>Story 2.3: Refactor Chunking Strategy to Fixed 512-Token Approach</title>
+        <section>Testing Standards Summary</section>
+        <snippet>Fixed 512-token chunking with 50-token overlap implemented. Expected chunk count: 180-220 (down from 504 element-aware). Research evidence: Yepes et al. (2024) - 68.09% accuracy baseline with fixed chunks.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/story-2.4.md</path>
+        <title>Story 2.4: Add LLM-Generated Contextual Metadata Injection</title>
+        <section>Dev Notes - Expected Impact</section>
+        <snippet>GPT-5 nano metadata extraction implemented. Expected accuracy boost: 68-72% (Story 2.3 baseline) → 70-75% (+2-3pp from metadata). Snowflake research validates +20% improvement with metadata.</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>RAGLite Project Overview and Development Constraints</title>
+        <section>Technology Stack and Anti-Over-Engineering Rules</section>
+        <snippet>KISS principle enforced - no abstractions, no frameworks, no wrappers. Direct SDK usage only. Technology stack LOCKED per docs/architecture/5-technology-stack-definitive.md. Target: ~600-800 lines of Python code across 15 files.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>tests/fixtures/ground_truth.py</path>
+        <kind>test_fixture</kind>
+        <symbol>GROUND_TRUTH_QUERIES</symbol>
+        <lines>1-500</lines>
+        <reason>Contains 50 ground truth Q&amp;A pairs for AC1 validation. Each query includes expected document, page, and chunk ID for retrieval accuracy measurement.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/e2e/test_ground_truth.py</path>
+        <kind>test</kind>
+        <symbol>test_ground_truth_queries</symbol>
+        <lines>1-200</lines>
+        <reason>Existing end-to-end ground truth test. Pattern to follow for AC1 full test suite execution with 50 queries.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/integration/test_hybrid_search_integration.py</path>
+        <kind>test</kind>
+        <symbol>test_hybrid_search_accuracy</symbol>
+        <lines>1-300</lines>
+        <reason>Hybrid search integration test (BM25 + semantic). Reference for AC5 BM25 index rebuild validation patterns.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/retrieval/search.py</path>
+        <kind>module</kind>
+        <symbol>hybrid_search</symbol>
+        <lines>1-200</lines>
+        <reason>Core hybrid search function combining BM25 + semantic vector search. Used in AC1 query execution and AC5 validation.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="pytest" version="8.4.2" />
+        <package name="pytest-asyncio" version="1.2.0" />
+        <package name="pytest-benchmark" version=">=4.0,&lt;5.0" />
+        <package name="rank-bm25" version="0.2.2" />
+        <package name="qdrant-client" version="1.15.1" />
+        <package name="sentence-transformers" version="5.1.1" />
+        <package name="tiktoken" version=">=0.5.1,&lt;1.0.0" />
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>KISS Principle: No custom test frameworks, no test orchestration layers. Use pytest with standard fixtures directly.</constraint>
+    <constraint>Direct SDK Usage: Use rank_bm25.BM25Okapi, qdrant_client, and hybrid_search function directly. No wrappers or abstractions.</constraint>
+    <constraint>Decision Gate is MANDATORY: AC2 ≥70% is Epic 2 success/failure criterion. This threshold is non-negotiable.</constraint>
+    <constraint>Failure Analysis CONDITIONAL: AC4 only executes if AC2 &lt;70% (15% probability). Do not implement unless triggered.</constraint>
+    <constraint>Code Size Target: Test suite should be ~380-480 lines total across 4 test files. Avoid over-engineering.</constraint>
+    <constraint>Performance Thresholds: p50 &lt;5s (target), p95 &lt;15s (MANDATORY NFR13). Measure latency across all 50 queries.</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>hybrid_search</name>
+      <kind>async function</kind>
+      <signature>async def hybrid_search(query: str, top_k: int = 5) -&gt; List[SearchResult]</signature>
+      <path>raglite/retrieval/search.py</path>
+      <description>Combines BM25 keyword search with semantic vector search using Reciprocal Rank Fusion (RRF). Returns top-k ranked results.</description>
+    </interface>
+
+    <interface>
+      <name>GROUND_TRUTH_QUERIES</name>
+      <kind>test_fixture</kind>
+      <signature>List[GroundTruthQuery] - 50 Q&amp;A pairs</signature>
+      <path>tests/fixtures/ground_truth.py</path>
+      <description>50 ground truth queries with expected_document, expected_page, expected_chunk for validation. Used in AC1 full test execution.</description>
+    </interface>
+
+    <interface>
+      <name>BM25Okapi</name>
+      <kind>class</kind>
+      <signature>BM25Okapi(corpus: List[List[str]]) from rank_bm25</signature>
+      <path>External: rank-bm25 library</path>
+      <description>BM25 keyword scoring for hybrid search. AC5 requires rebuilding index for new 180-220 chunk corpus (down from 504).</description>
+    </interface>
+
+    <interface>
+      <name>AccuracyMetrics</name>
+      <kind>pydantic model</kind>
+      <signature>AccuracyMetrics(retrieval_accuracy: float, attribution_accuracy: float, total_queries: int, successful_queries: int, failed_queries: List[FailedQuery])</signature>
+      <path>To be created in test file</path>
+      <description>Data model for AC1/AC2 validation results. Stores accuracy metrics and failed queries for AC4 analysis.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest 8.4.2 with pytest-asyncio for async test execution. All tests must have type hints and docstrings (Google style). Use pytest.mark.asyncio for async tests. Follow existing patterns from tests/e2e/test_ground_truth.py and tests/integration/test_hybrid_search_integration.py. Measure accuracy with simple assertions (assert accuracy &gt;= threshold). Document results in structured format (JSON/CSV) for failure analysis.
+    </standards>
+
+    <locations>
+      tests/integration/test_ac3_ground_truth.py (AC1, AC2, AC3 - create new)
+      tests/integration/test_failure_mode_analysis.py (AC4 conditional - create new)
+      tests/integration/test_bm25_index_rebuild.py (AC5 - create new)
+      tests/integration/test_query_performance.py (AC6 - create new)
+      tests/fixtures/ground_truth.py (existing - 50 Q&amp;A pairs)
+    </locations>
+
+    <ideas>
+      <idea ac="AC1" name="test_ac1_full_ground_truth_execution">
+        Execute all 50 ground truth queries from tests/fixtures/ground_truth.py. For each query, call hybrid_search(query.question, top_k=5) and validate: 1) retrieval success (correct chunk in top-5), 2) attribution success (correct document + page). Calculate retrieval_accuracy and attribution_accuracy percentages. Return AccuracyMetrics object.
+      </idea>
+
+      <idea ac="AC2" name="test_ac2_decision_gate_validation">
+        Assert retrieval_accuracy &gt;= 70.0 from AC1 results. This is the DECISION GATE. If pass: document Epic 2 Phase 2A COMPLETE. If fail: raise assertion error with message to escalate to PM for Phase 2B approval. Update bmm-workflow-status.md with decision gate result.
+      </idea>
+
+      <idea ac="AC3" name="test_ac3_attribution_accuracy_validation">
+        Assert attribution_accuracy &gt;= 95.0 from AC1 results (NFR7 compliance). Analyze attribution failures: extract queries where top-5 results have wrong document/page. Document failure patterns (e.g., multi-document synthesis failures).
+      </idea>
+
+      <idea ac="AC4" name="test_ac4_failure_mode_analysis">
+        CONDITIONAL: Only run if AC2 &lt;70%. Extract failed_queries from AC1 results. Categorize by type: table (keywords: "table", "financial table"), multi_hop (keywords: "compare", "correlation"), entity (specific company/metric names), temporal (keywords: "trend", "Q2", "Q3"). Count failures by category. Recommend Phase 2B if &gt;50% table failures, Phase 2C if &gt;50% multi_hop failures.
+      </idea>
+
+      <idea ac="AC5" name="test_ac5_bm25_index_rebuild">
+        Load all chunks from Qdrant (~200 chunks, down from 504 element-aware). Tokenize chunk texts (whitespace split). Create BM25Okapi(tokenized_corpus) index. Save to data/bm25_index.pkl. Verify index size == chunk count. Test hybrid search with rebuilt index: run 10 sample queries, verify BM25 + semantic fusion works, measure improvement over semantic-only baseline.
+      </idea>
+
+      <idea ac="AC6" name="test_ac6_query_performance_validation">
+        Measure query latency for all 50 ground truth queries. Track start/end time for each hybrid_search() call. Calculate latency distribution: p50, p75, p90, p95, p99. Assert p50 &lt; 5s (target) and p95 &lt; 15s (NFR13 MANDATORY). Document outliers (queries &gt;15s) with reasons.
+      </idea>
+    </ideas>
+  </tests>
+</story-context>

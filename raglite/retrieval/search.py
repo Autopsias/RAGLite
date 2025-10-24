@@ -7,6 +7,7 @@ Supports hybrid search (BM25 + semantic) for improved keyword precision (Story 2
 import time
 from typing import Any
 
+from raglite.retrieval.query_classifier import classify_query_metadata
 from raglite.shared.bm25 import BM25IndexError, compute_bm25_scores, load_bm25_index
 from raglite.shared.clients import get_embedding_model, get_qdrant_client
 from raglite.shared.config import settings
@@ -80,7 +81,13 @@ async def search_documents(
     Args:
         query: Natural language query
         top_k: Number of results to return (default: 5)
-        filters: Optional metadata filters (e.g., {'source_document': 'Q3_Report.pdf'})
+        filters: Optional metadata filters. Supports all 15 rich metadata fields:
+            - Document-Level (7): document_type, reporting_period, time_granularity,
+              company_name, geographic_jurisdiction, data_source_type, version_date
+            - Section-Level (5): section_type, metric_category, units, department_scope
+            - Table-Specific (3): table_context, table_name, statistical_summary
+            - Legacy: source_document
+            Example: {'metric_category': 'Revenue', 'section_type': 'Table'}
 
     Returns:
         List of QueryResult objects sorted by relevance (highest score first)
@@ -121,16 +128,43 @@ async def search_documents(
         # Get Qdrant client
         qdrant = get_qdrant_client()
 
-        # Build Qdrant filter (if provided)
+        # Build Qdrant filter (if provided) - Story 2.4 REVISION: 15 Rich Metadata Fields
         qdrant_filter = None
-        if filters and "source_document" in filters:
-            qdrant_filter = Filter(
-                must=[
-                    FieldCondition(
-                        key="source_document", match=MatchValue(value=filters["source_document"])
+        if filters:
+            conditions: list[FieldCondition] = []
+
+            # Supported filter fields (all 15 rich metadata fields + legacy source_document)
+            supported_fields = [
+                # Document-Level (7)
+                "document_type",
+                "reporting_period",
+                "time_granularity",
+                "company_name",
+                "geographic_jurisdiction",
+                "data_source_type",
+                "version_date",
+                # Section-Level (5)
+                "section_type",
+                "metric_category",
+                "units",
+                "department_scope",
+                # Table-Specific (3)
+                "table_context",
+                "table_name",
+                "statistical_summary",
+                # Legacy
+                "source_document",
+            ]
+
+            for field in supported_fields:
+                if field in filters:
+                    conditions.append(
+                        FieldCondition(key=field, match=MatchValue(value=filters[field]))
                     )
-                ]
-            )
+
+            if conditions:
+                # Cast to list union type for mypy compatibility
+                qdrant_filter = Filter(must=conditions)  # type: ignore[arg-type]
 
         # Perform vector search
         search_result = qdrant.query_points(
@@ -205,11 +239,15 @@ def fuse_search_results(
     chunk_metadata: list[dict[str, Any]],
     alpha: float = 0.7,
     top_k: int = 5,
+    metadata_boost: dict[str, str] | None = None,
 ) -> list[QueryResult]:
-    """Fuse semantic and BM25 search results using weighted sum.
+    """Fuse semantic and BM25 search results using weighted sum with optional metadata boosting.
 
     Combines semantic similarity scores with BM25 keyword matching scores to
     improve retrieval precision for financial queries with specific terms/numbers.
+
+    Story 2.4 Enhancement: Supports soft metadata boosting - if metadata_boost provided,
+    chunks matching the query metadata get score multipliers (NOT hard filtering).
 
     Args:
         semantic_results: Results from semantic search (already sorted by score)
@@ -217,9 +255,12 @@ def fuse_search_results(
         chunk_metadata: Metadata mapping BM25 array positions to (source_document, chunk_index)
         alpha: Fusion weight (default: 0.7 = 70% semantic, 30% BM25)
         top_k: Number of top results to return
+        metadata_boost: Optional metadata extracted from query for soft boosting.
+                        Format: {'metric_category': 'EBITDA', 'company_name': 'Portugal'}
+                        Matching chunks get 1.2x score boost per field match.
 
     Returns:
-        Fused and re-ranked results (top-k by hybrid score)
+        Fused and re-ranked results (top-k by hybrid+boosted score)
 
     Strategy:
         - Build mapping from (source_document, chunk_index) to BM25 array position
@@ -227,13 +268,16 @@ def fuse_search_results(
         - Normalize BM25 scores to [0, 1] (divide by max score)
         - For each semantic result, find matching BM25 score using metadata mapping
         - Combine: hybrid_score = alpha * semantic + (1 - alpha) * bm25
-        - Re-rank by hybrid score and return top-k
+        - If metadata_boost: Apply 1.2x multiplier per matching metadata field (soft boosting)
+        - Re-rank by boosted hybrid score and return top-k
 
     Example:
-        >>> semantic_results = await search_documents("EBITDA margin", top_k=20)
+        >>> semantic_results = await search_documents("EBITDA margin for Portugal", top_k=20)
         >>> bm25, _, metadata = load_bm25_index()
-        >>> bm25_scores = compute_bm25_scores(bm25, "EBITDA margin")
-        >>> fused = fuse_search_results(semantic_results, bm25_scores, metadata, alpha=0.7, top_k=5)
+        >>> bm25_scores = compute_bm25_scores(bm25, "EBITDA margin for Portugal")
+        >>> query_metadata = {"metric_category": "EBITDA", "company_name": "Portugal"}
+        >>> fused = fuse_search_results(semantic_results, bm25_scores, metadata,
+        ...                              alpha=0.7, top_k=5, metadata_boost=query_metadata)
     """
     if not semantic_results:
         logger.warning("No semantic results to fuse")
@@ -269,7 +313,9 @@ def fuse_search_results(
     bm25_normalized = [score / bm25_max if bm25_max > 0 else 0 for score in bm25_scores]
 
     # Map semantic results to their chunk indices and compute hybrid scores
-    fused_results = []
+    # Story 2.4: Collect scores first, then normalize if needed, then create QueryResult objects
+    scored_results = []  # List of (score, result_data) tuples
+
     for result in semantic_results:
         # Find BM25 score for this chunk using metadata mapping
         lookup_key = (result.source_document, result.chunk_index)
@@ -293,16 +339,62 @@ def fuse_search_results(
             # Weighted fusion: alpha * semantic + (1 - alpha) * bm25
             hybrid_score = alpha * semantic_score + (1 - alpha) * bm25_score
 
-        # Create new QueryResult with hybrid score
-        fused_result = QueryResult(
-            score=hybrid_score,
+        # Story 2.4 Enhancement: Apply metadata score boosting (soft filtering)
+        # If metadata_boost provided and we have chunk metadata, apply 1.2x multiplier per matching field
+        if metadata_boost and chunk_bm25_pos is not None and chunk_bm25_pos < len(chunk_metadata):
+            chunk_meta = chunk_metadata[chunk_bm25_pos]
+            boost_multiplier = 1.0
+            matches = []
+
+            # Check each metadata field in the boost dict for fuzzy matches
+            for field, query_value in metadata_boost.items():
+                chunk_value = chunk_meta.get(field)
+                if chunk_value and query_value:
+                    # Fuzzy/substring matching for semantic flexibility (handles "Portugal" vs "Portugal Cement")
+                    query_lower = str(query_value).lower()
+                    chunk_lower = str(chunk_value).lower()
+
+                    if query_lower in chunk_lower or chunk_lower in query_lower:
+                        boost_multiplier *= 1.2
+                        matches.append(field)
+
+            # Apply boost if any matches found
+            if matches:
+                original_score = hybrid_score
+                hybrid_score *= boost_multiplier
+                logger.debug(
+                    "Metadata boost applied",
+                    extra={
+                        "chunk": f"{result.source_document}:{result.chunk_index}",
+                        "matched_fields": matches,
+                        "boost_multiplier": round(boost_multiplier, 2),
+                        "original_score": round(original_score, 4),
+                        "boosted_score": round(hybrid_score, 4),
+                    },
+                )
+
+        # Store score and result data (don't create QueryResult yet)
+        scored_results.append((hybrid_score, result))
+
+    # Story 2.4 Enhancement: Normalize scores back to [0, 1] if boosting pushed them above 1.0
+    # This maintains relative rankings while satisfying QueryResult validation (score ≤ 1.0)
+    max_score = max((score for score, _ in scored_results), default=1.0)
+    if metadata_boost and max_score > 1.0:
+        logger.debug(f"Normalizing boosted scores (max={max_score:.4f}) back to [0, 1]")
+        scored_results = [(score / max_score, result) for score, result in scored_results]
+
+    # Now create QueryResult objects with normalized scores
+    fused_results = [
+        QueryResult(
+            score=score,
             text=result.text,
             source_document=result.source_document,
             page_number=result.page_number,
             chunk_index=result.chunk_index,
             word_count=result.word_count,
         )
-        fused_results.append(fused_result)
+        for score, result in scored_results
+    ]
 
     # Sort by hybrid score (descending) and return top-k
     fused_results_sorted = sorted(fused_results, key=lambda x: x.score, reverse=True)
@@ -312,6 +404,7 @@ def fuse_search_results(
         extra={
             "fused_count": len(fused_results_sorted),
             "top_score": round(fused_results_sorted[0].score, 4) if fused_results_sorted else None,
+            "metadata_boosted": metadata_boost is not None and len(metadata_boost) > 0,
         },
     )
 
@@ -324,19 +417,26 @@ async def hybrid_search(
     alpha: float = 0.7,
     filters: dict[str, str] | None = None,
     enable_hybrid: bool = True,
+    auto_classify: bool = True,
 ) -> list[QueryResult]:
     """Perform hybrid search combining semantic (Fin-E5) and keyword (BM25) matching.
 
+    Story 2.4 Enhancement: Now supports automatic query metadata classification for
+    intelligent filter extraction from natural language queries.
+
     Improves retrieval precision for financial queries containing specific terms
     (e.g., "EBITDA") and numbers (e.g., "23.2 EUR/ton") by combining semantic
-    understanding with exact keyword matching.
+    understanding with exact keyword matching and metadata-aware filtering.
 
     Args:
         query: Natural language query
         top_k: Number of results to return (default: 5)
         alpha: Fusion weight - 0.7 = 70% semantic, 30% BM25 (default: 0.7)
         filters: Optional metadata filters (e.g., {'source_document': 'Q3_Report.pdf'})
+                 If provided, disables auto_classify
         enable_hybrid: If False, falls back to semantic-only search (default: True)
+        auto_classify: If True and filters=None, automatically extract metadata filters
+                       from query using LLM classification (default: True)
 
     Returns:
         List of QueryResult objects ranked by hybrid score (highest first)
@@ -345,16 +445,24 @@ async def hybrid_search(
         QueryError: If search fails or query is invalid
 
     Strategy:
-        - Retrieve top-20 semantic results (cast wider net for fusion)
+        - If auto_classify enabled and no filters: Extract metadata filters from query
+        - Retrieve top-20 semantic results with filters (cast wider net for fusion)
         - Load BM25 index and compute BM25 scores for query
         - Fuse semantic + BM25 using weighted sum (alpha=0.7)
         - Return top-k hybrid-ranked results
         - Fallback to semantic-only if BM25 index unavailable
 
     Example:
-        >>> results = await hybrid_search("What is the EBITDA margin?", top_k=5)
-        >>> results[0].score  # Hybrid score (semantic + BM25)
-        0.89
+        >>> # Automatic metadata filtering
+        >>> results = await hybrid_search("What is the EBITDA margin for Portugal?", top_k=5)
+        >>> # Filters extracted: {'metric_category': 'EBITDA', 'company_name': 'Portugal Cement'}
+
+        >>> # Explicit filters (disables auto_classify)
+        >>> results = await hybrid_search(
+        ...     "What is the margin?",
+        ...     filters={'metric_category': 'EBITDA'},
+        ...     top_k=5
+        ... )
     """
     logger.info(
         "Hybrid search started",
@@ -363,9 +471,28 @@ async def hybrid_search(
             "top_k": top_k,
             "alpha": alpha,
             "enable_hybrid": enable_hybrid,
+            "auto_classify": auto_classify,
+            "filters_provided": filters is not None,
         },
     )
     start_time = time.time()
+
+    # Story 2.4 Enhancement: Automatic query metadata classification for SOFT BOOSTING
+    # Extract metadata from query but DON'T filter - use for score boosting instead
+    extracted_metadata = {}
+    if auto_classify and filters is None:
+        logger.info("Auto-classifying query for metadata boosting (soft filtering)")
+        extracted_metadata = await classify_query_metadata(query)
+        if extracted_metadata:
+            logger.info(
+                "Metadata extracted for score boosting",
+                extra={
+                    "extracted_metadata": extracted_metadata,
+                    "field_count": len(extracted_metadata),
+                },
+            )
+        else:
+            logger.info("No metadata extracted - using semantic/BM25 only")
 
     # Fallback to semantic-only if hybrid disabled
     if not enable_hybrid:
@@ -373,8 +500,9 @@ async def hybrid_search(
         return await search_documents(query, top_k=top_k, filters=filters)
 
     try:
-        # Step 1: Retrieve semantic results (top-20 for better fusion coverage)
+        # Step 1: Retrieve semantic results WITHOUT hard filtering (for soft boosting)
         semantic_top_k = max(top_k * 4, 20)  # Cast wider net (minimum 20)
+        # NOTE: Explicitly pass filters=None for soft boosting approach (no hard filtering)
         semantic_results = await search_documents(query, top_k=semantic_top_k, filters=filters)
 
         if not semantic_results:
@@ -386,9 +514,14 @@ async def hybrid_search(
             bm25, _, chunk_metadata = load_bm25_index()
             bm25_scores = compute_bm25_scores(bm25, query)
 
-            # Step 3: Fuse results (pass chunk_metadata for proper mapping)
+            # Step 3: Fuse results with metadata boosting (if metadata extracted)
             hybrid_results = fuse_search_results(
-                semantic_results, bm25_scores, chunk_metadata, alpha=alpha, top_k=top_k
+                semantic_results,
+                bm25_scores,
+                chunk_metadata,
+                alpha=alpha,
+                top_k=top_k,
+                metadata_boost=extracted_metadata if extracted_metadata else None,
             )
 
             elapsed_ms = (time.time() - start_time) * 1000
@@ -400,6 +533,9 @@ async def hybrid_search(
                     "top_score": round(hybrid_results[0].score, 4) if hybrid_results else None,
                     "semantic_count": len(semantic_results),
                     "fusion_alpha": alpha,
+                    "metadata_boosted": len(extracted_metadata) > 0
+                    if extracted_metadata
+                    else False,
                 },
             )
 

@@ -44,6 +44,8 @@ dependencies = [
     "python-dotenv==1.1.1",
     "asyncio>=3.4.3,<4.0.0",
     "httpx>=0.28.1,<1.0.0",
+    "mistralai>=1.9.11",
+    "psycopg2-binary>=2.9,<3.0", # Story 2.6: PostgreSQL for structured metadata storage
 ]
 
 [project.urls]

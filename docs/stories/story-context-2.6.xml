@@ -1,0 +1,445 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.6</storyId>
+    <title>PostgreSQL Schema + Data Migration</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-24</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/story-2.6.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>backend developer</asA>
+    <iWant>PostgreSQL schema with 15 metadata fields and data migration pipeline</iWant>
+    <soThat>we can enable structured metadata filtering for multi-index retrieval architecture</soThat>
+    <tasks>
+      <task id="1" name="PostgreSQL Setup and Schema Creation" duration="2 hours">
+        <subtask id="1.1">Add PostgreSQL service to docker-compose.yml</subtask>
+        <subtask id="1.2">Create database initialization script</subtask>
+        <subtask id="1.3">Add psycopg2 dependency to pyproject.toml</subtask>
+        <subtask id="1.4">Test schema creation</subtask>
+      </task>
+      <task id="2" name="Re-enable Metadata Extraction" duration="30 minutes">
+        <subtask id="2.1">Modify raglite/ingestion/pipeline.py line 913</subtask>
+        <subtask id="2.2">Test metadata extraction on single chunk</subtask>
+      </task>
+      <task id="3" name="Implement Data Migration Script" duration="2.5 hours">
+        <subtask id="3.1">Create migration script scripts/migrate-to-postgresql.py</subtask>
+        <subtask id="3.2">Implement PostgreSQL insertion logic</subtask>
+        <subtask id="3.3">Add logging and progress tracking</subtask>
+        <subtask id="3.4">Run full migration</subtask>
+      </task>
+      <task id="4" name="Implement PostgreSQL ↔ Qdrant Linking" duration="1.5 hours">
+        <subtask id="4.1">Populate embedding_id field in PostgreSQL</subtask>
+        <subtask id="4.2">Create validation script scripts/validate-pg-qdrant-link.py</subtask>
+        <subtask id="4.3">Run linking validation</subtask>
+      </task>
+      <task id="5" name="Metadata Quality Validation" duration="1.5 hours">
+        <subtask id="5.1">Create validation script scripts/validate-metadata-quality.py</subtask>
+        <subtask id="5.2">Run metadata quality validation</subtask>
+        <subtask id="5.3">Create validation report</subtask>
+      </task>
+      <task id="6" name="Metadata Extraction Performance Optimization" duration="2 hours">
+        <subtask id="6.0">Create test PDF for fast iteration (15 minutes)</subtask>
+        <subtask id="6.1">Fix async client configuration (Bug #1 - CRITICAL)</subtask>
+        <subtask id="6.2">Implement client connection pooling (Bug #2)</subtask>
+        <subtask id="6.3">Add timeout configuration (Bug #3)</subtask>
+        <subtask id="6.4">Benchmark configuration fixes on test PDF</subtask>
+        <subtask id="6.5">Run full 334-chunk performance validation</subtask>
+        <subtask id="6.6">Alternative model integration (ONLY if config fixes insufficient)</subtask>
+      </task>
+      <task id="7" name="Update Configuration and Documentation" duration="30 minutes">
+        <subtask id="7.1">Add PostgreSQL config to raglite/shared/config.py</subtask>
+        <subtask id="7.2">Update .env.example</subtask>
+        <subtask id="7.3">Update CLAUDE.md</subtask>
+        <subtask id="7.4">Update technology stack documentation</subtask>
+      </task>
+      <task id="8" name="Testing and Validation" duration="1 hour">
+        <subtask id="8.1">Create unit tests for PostgreSQL schema</subtask>
+        <subtask id="8.2">Create integration tests for migration</subtask>
+        <subtask id="8.3">Create performance tests for metadata extraction</subtask>
+        <subtask id="8.4">Run all tests</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" duration="2 hours" priority="CRITICAL">
+      <title>PostgreSQL Schema Created</title>
+      <requirements>
+        <requirement>PostgreSQL financial_chunks table created with 15 metadata fields</requirement>
+        <requirement>UUID primary key (chunk_id) for unique chunk identification</requirement>
+        <requirement>All metadata fields defined: company_name, business_unit, metric_category, metric_type, time_period, geographic_region, currency, report_type, data_format, semantic_summary, key_entities, numeric_ranges, content_tsv, embedding_id, created_at, updated_at</requirement>
+        <requirement>4 indexes created: company_metric, time_period, content_tsv GIN, data_format</requirement>
+        <requirement>Schema documented with field descriptions and rationale</requirement>
+      </requirements>
+      <validation>
+        <check>Run psql command to describe table structure</check>
+        <check>Verify all 15 metadata fields present</check>
+        <check>Verify all 4 indexes created</check>
+        <check>Schema documentation includes purpose of each field</check>
+      </validation>
+      <source>/tmp/PHASE_2B_HANDOFF.md - PostgreSQL Schema Design</source>
+    </criterion>
+    <criterion id="AC2" duration="2 hours" priority="CRITICAL">
+      <title>Data Migration Script Implemented</title>
+      <requirements>
+        <requirement>Migration script ingests PDF with metadata extraction enabled</requirement>
+        <requirement>Script connects to PostgreSQL and Qdrant</requirement>
+        <requirement>Re-enables metadata extraction (line 913 in pipeline.py: if settings.mistral_api_key)</requirement>
+        <requirement>Extracts metadata for all 334 chunks using existing Mistral pipeline</requirement>
+        <requirement>Stores chunks + metadata in PostgreSQL financial_chunks table</requirement>
+        <requirement>Links PostgreSQL chunks to Qdrant vectors via embedding_id</requirement>
+      </requirements>
+      <validation>
+        <check>Run migration script on test PDF (docs/sample pdf/test-10-pages.pdf)</check>
+        <check>Verify script completes without errors</check>
+        <check>Verify metadata extraction logs show successful API calls</check>
+        <check>Check PostgreSQL table has 334 rows</check>
+        <check>Verify embedding_id field populated for all rows</check>
+      </validation>
+      <source>/tmp/PHASE_2B_HANDOFF.md - Story 2.6 Technical Details</source>
+    </criterion>
+    <criterion id="AC3" duration="1 hour" priority="HIGH">
+      <title>All Chunks + Metadata Stored</title>
+      <requirements>
+        <requirement>All 334 chunks from table-aware splitting stored in PostgreSQL</requirement>
+        <requirement>Metadata fields populated for each chunk (no NULL values for critical fields)</requirement>
+        <requirement>content field contains full chunk text</requirement>
+        <requirement>page_number and chunk_index correctly populated</requirement>
+        <requirement>created_at and updated_at timestamps present</requirement>
+      </requirements>
+      <validation>
+        <check>Run SQL query: SELECT COUNT(*) FROM financial_chunks → returns 334</check>
+        <check>Run SQL query to check NULL counts for critical fields</check>
+        <check>Verify page_number range matches PDF (pages 1-65 for test PDF)</check>
+        <check>Spot-check 5 random chunks for content accuracy</check>
+      </validation>
+      <source>/tmp/PHASE_2B_HANDOFF.md - PostgreSQL Schema + Data Migration</source>
+    </criterion>
+    <criterion id="AC4" duration="1.5 hours" priority="HIGH">
+      <title>PostgreSQL ↔ Qdrant Linking</title>
+      <requirements>
+        <requirement>embedding_id field in PostgreSQL matches Qdrant vector ID</requirement>
+        <requirement>Can query PostgreSQL and retrieve corresponding Qdrant vector</requirement>
+        <requirement>Can query Qdrant and retrieve corresponding PostgreSQL metadata</requirement>
+        <requirement>Linking validated for all 334 chunks (no orphaned records)</requirement>
+      </requirements>
+      <validation>
+        <check>Run SQL query to get 10 random embedding_id values</check>
+        <check>Query Qdrant collection with those IDs → verify all found</check>
+        <check>Query Qdrant for 10 random vectors → verify PostgreSQL records exist</check>
+        <check>Run SQL query: SELECT COUNT(DISTINCT embedding_id) FROM financial_chunks → returns 334</check>
+      </validation>
+      <source>/tmp/PHASE_2B_HANDOFF.md - Linking Table Connects PostgreSQL → Qdrant</source>
+    </criterion>
+    <criterion id="AC5" duration="1.5 hours" priority="MEDIUM">
+      <title>Metadata Quality Validated</title>
+      <requirements>
+        <requirement>Spot-check 20 chunks for metadata extraction accuracy</requirement>
+        <requirement>Verify company_name field correctly extracted (e.g., Portugal Cement)</requirement>
+        <requirement>Verify metric_category correctly classified (e.g., Variable Costs, Fixed Costs, EBITDA)</requirement>
+        <requirement>Verify time_period correctly extracted (e.g., August 2025 YTD)</requirement>
+        <requirement>Verify semantic_summary generated (2-3 sentences per chunk)</requirement>
+        <requirement>Document metadata quality scores (% accurate per field)</requirement>
+      </requirements>
+      <validation>
+        <check>Manually review 20 chunks (4 chunks × 5 pages from test PDF)</check>
+        <check>Compare extracted metadata vs source PDF content</check>
+        <check>Calculate accuracy: (correct_fields / total_fields) per chunk</check>
+        <check>Overall metadata accuracy ≥80% (acceptable for Phase 2B)</check>
+      </validation>
+      <source>/tmp/PHASE_2B_HANDOFF.md - Metadata Quality Validated</source>
+    </criterion>
+    <criterion id="AC6" duration="2 hours" priority="CRITICAL">
+      <title>Metadata Extraction Performance Optimized</title>
+      <requirements>
+        <requirement>Metadata extraction completes in ≤30 minutes for 334 chunks (vs 2+ hours baseline)</requirement>
+        <requirement>Fix async client configuration (use AsyncMistral, not sync Mistral)</requirement>
+        <requirement>Implement client connection pooling (single client instance, not per-request)</requirement>
+        <requirement>Add timeout configuration (fail fast on slow API calls)</requirement>
+        <requirement>Monitor and log extraction throughput (chunks/minute)</requirement>
+        <requirement>Document final performance metrics and any model changes</requirement>
+      </requirements>
+      <problem_context>
+        <issue>Story 2.5 observed: Mistral PAID API extracts only ~3 chunks/minute (very slow)</issue>
+        <impact>For 334 chunks: 111 minutes (1.85 hours) minimum</impact>
+        <status>User has Mistral PAID tier - slowness likely due to configuration issues</status>
+      </problem_context>
+      <root_causes>
+        <cause priority="CRITICAL">Using SYNC client in ASYNC function (blocks event loop, even with asyncio.gather)</cause>
+        <cause priority="HIGH">Creating new client per request (334 client initializations, connection overhead)</cause>
+        <cause priority="MEDIUM">No timeout configuration (waits indefinitely if API slow)</cause>
+      </root_causes>
+      <expected_performance>
+        <metric>Target: 20-30 chunks/minute (vs 3 chunks/min baseline)</metric>
+        <metric>Time for 334 chunks: 11-16 minutes (vs 111 minutes baseline)</metric>
+        <metric>10-15x throughput improvement from async client alone</metric>
+      </expected_performance>
+      <validation>
+        <check>Run metadata extraction on 334 chunks</check>
+        <check>Measure total time (target ≤30 minutes)</check>
+        <check>Calculate throughput (chunks/minute)</check>
+        <check>Document model used, cost, and performance</check>
+        <check>Log any API rate limit issues</check>
+      </validation>
+      <source>Story 2.5 Session Summary - Mistral API Throttling Issues</source>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact type="handoff">
+        <path>/tmp/PHASE_2B_HANDOFF.md</path>
+        <title>Phase 2B Implementation Handoff Document</title>
+        <section>PostgreSQL Schema Design + Story 2.6 Technical Details</section>
+        <snippet>Complete implementation roadmap for multi-index architecture. Defines 15-field metadata schema (company_name, business_unit, metric_category, etc.), PostgreSQL indexing strategy, data migration approach, and linking with Qdrant via embedding_id</snippet>
+      </artifact>
+      <artifact type="analysis">
+        <path>/tmp/STRATEGIC_DECISION_ANALYSIS.md</path>
+        <title>Strategic Decision Analysis - Phase 2B Selection</title>
+        <section>Research Evidence + Decision Matrix</section>
+        <snippet>Quantitative analysis proving multi-index architecture achieves 70-92% accuracy. Research from FinSage (arXiv 2024) and production PostgreSQL+pgvector systems validates metadata filtering approach. Option B (PostgreSQL + Qdrant + Cross-Encoder) scores 8.35/10</snippet>
+      </artifact>
+      <artifact type="prd">
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2 PRD - Advanced RAG Enhancements</title>
+        <section>Phase 2B: Structured Multi-Index Architecture</section>
+        <snippet>Phase 2B triggered by Story 2.5 failure (18% vs 70% target). Implements PostgreSQL schema for structured metadata filtering. Stories 2.6-2.9 span 4 weeks. Success probability 85% based on research evidence</snippet>
+      </artifact>
+      <artifact type="architecture">
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack - Definitive List</title>
+        <section>Phase 2B Conditional Approvals</section>
+        <snippet>PostgreSQL approved for Phase 2B (multi-index architecture). psycopg2-binary for database connectivity. Mistral API for metadata extraction (with AsyncMistral client for performance)</snippet>
+      </artifact>
+      <artifact type="constraints">
+        <path>CLAUDE.md</path>
+        <title>Development Constraints and KISS Principles</title>
+        <section>Anti-Over-Engineering Rules + Technology Stack Locking</section>
+        <snippet>NO custom wrappers, NO ORMs beyond Pydantic. Direct SDK usage only. Use psycopg2 directly with raw SQL queries. No repository pattern. Target ~600-800 lines total. All dependencies must be pre-approved in tech stack</snippet>
+      </artifact>
+      <artifact type="story">
+        <path>docs/stories/story-2.5.md</path>
+        <title>Story 2.5 - AC3 Validation (Decision Gate FAILED)</title>
+        <section>Table-Aware Chunking Implementation + Mistral Performance Issues</section>
+        <snippet>Implemented table-aware chunking (334 chunks). Decision gate failed with 18% accuracy. Identified Mistral API performance bottleneck: sync client in async function, per-request client creation, no timeout. Triggers Phase 2B escalation</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>ingestion</kind>
+        <symbol>extract_chunk_metadata</symbol>
+        <lines>228-253</lines>
+        <reason>CRITICAL: Contains metadata extraction logic with Mistral API. Line 913 has disabled metadata extraction (if False and settings.mistral_api_key). Lines 228-253 contain three critical configuration bugs: (1) sync Mistral client instead of AsyncMistral, (2) client created per-request, (3) no timeout. Must fix all three for AC6 performance optimization</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/config.py</path>
+        <kind>configuration</kind>
+        <symbol>Settings</symbol>
+        <lines>1-50</lines>
+        <reason>Must add PostgreSQL connection settings (postgresql_host, postgresql_port, postgresql_db, postgresql_user, postgresql_password) for AC1. All environment variables must follow existing pattern with POSTGRESQL_ prefix</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>data models</kind>
+        <symbol>Chunk</symbol>
+        <lines>20-40</lines>
+        <reason>Reference Chunk model to understand existing structure. PostgreSQL financial_chunks table will store similar data with 15 additional metadata fields. Chunk model has page_number and content - PostgreSQL extends with company_name, metric_category, time_period, etc</reason>
+      </artifact>
+      <artifact>
+        <path>docker-compose.yml</path>
+        <kind>infrastructure</kind>
+        <symbol>services</symbol>
+        <lines>1-30</lines>
+        <reason>Must add PostgreSQL 16+ service for AC1. Follow existing pattern for Qdrant service (port, volumes, environment variables). Add POSTGRES_DB=raglite, POSTGRES_USER=raglite, POSTGRES_PASSWORD=raglite, expose port 5432</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="psycopg2-binary" version=">=2.9,<3.0" status="NEEDS ADDING">PostgreSQL database adapter for Python (AC1 - schema creation and migration)</package>
+        <package name="docling" version="2.55.1" status="INSTALLED">PDF extraction with table support</package>
+        <package name="qdrant-client" version="1.15.1" status="INSTALLED">Vector database client for semantic search</package>
+        <package name="mistralai" version=">=1.9.11" status="INSTALLED">Mistral API for metadata extraction (CRITICAL: must use AsyncMistral from mistralai.async_client for AC6)</package>
+        <package name="pydantic" version=">=2.0,<3.0" status="INSTALLED">Data validation and settings management</package>
+        <package name="tiktoken" version=">=0.5.1,<1.0.0" status="INSTALLED">Token counting for chunking (from Story 2.3)</package>
+        <package name="rank-bm25" version="0.2.2" status="INSTALLED">BM25 keyword search (hybrid search from Story 2.1)</package>
+        <package name="pytest" version=">=8.0" status="INSTALLED">Testing framework for unit and integration tests</package>
+      </python>
+      <infrastructure>
+        <service name="PostgreSQL" version="16+" status="NEEDS SETUP">Relational database for structured metadata storage and filtering (AC1)</service>
+        <service name="Qdrant" version="1.11+" status="RUNNING">Vector database for semantic search (already configured)</service>
+      </infrastructure>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint priority="CRITICAL" source="CLAUDE.md">
+      <title>KISS Principle - NO ORMs or Custom Wrappers</title>
+      <description>Use psycopg2 directly with raw SQL queries. NO SQLAlchemy, NO repository pattern, NO query builders. Direct database operations only. Target ~600-800 lines total for entire project - PostgreSQL code must be minimal</description>
+    </constraint>
+    <constraint priority="CRITICAL" source="CLAUDE.md">
+      <title>Direct SDK Usage Only</title>
+      <description>Use psycopg2.connect() and cursor.execute() directly. NO custom database abstraction layers. Follow existing pattern from Qdrant client (direct API calls, no wrappers). Keep migration scripts as standalone Python files with direct SQL</description>
+    </constraint>
+    <constraint priority="HIGH" source="Story 2.6 - Dev Notes">
+      <title>Code Size Target</title>
+      <description>New files (init-postgresql.py, migrate-to-postgresql.py, validate scripts) should total ~200-300 lines. Modifications to existing files (config.py, pipeline.py) should be minimal. Follow existing code patterns and structure</description>
+    </constraint>
+    <constraint priority="HIGH" source="Phase 2B Handoff">
+      <title>Accuracy Target for Phase 2B</title>
+      <description>Multi-index architecture must achieve ≥70% retrieval accuracy to complete Epic 2. Story 2.6 sets up infrastructure (no accuracy validation yet). Story 2.9 will validate final accuracy. Research evidence: 85% probability of success</description>
+    </constraint>
+    <constraint priority="MEDIUM" source="Story 2.5">
+      <title>Table Preservation</title>
+      <description>All 334 chunks from table-aware chunking (Story 2.5) must be preserved during migration. Do NOT re-chunk or re-split. Migration script should load existing Qdrant collection and add metadata, not re-ingest PDF</description>
+    </constraint>
+    <constraint priority="HIGH" source="CLAUDE.md">
+      <title>Testing Requirements</title>
+      <description>Unit tests for schema creation. Integration tests for full migration pipeline. Validation scripts for data quality checks. Manual spot-checks for metadata accuracy. All tests must use pytest framework following existing patterns</description>
+    </constraint>
+  </constraints>
+  <interfaces>
+    <interface type="database">
+      <name>PostgreSQL financial_chunks Table</name>
+      <kind>SQL schema definition</kind>
+      <signature>
+CREATE TABLE financial_chunks (
+    chunk_id UUID PRIMARY KEY,
+    document_id UUID NOT NULL,
+    page_number INTEGER NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    company_name VARCHAR(100),
+    business_unit VARCHAR(100),
+    metric_category VARCHAR(50),
+    metric_type VARCHAR(50),
+    time_period VARCHAR(50),
+    geographic_region VARCHAR(50),
+    currency VARCHAR(10),
+    report_type VARCHAR(50),
+    data_format VARCHAR(20),
+    semantic_summary TEXT,
+    key_entities TEXT[],
+    numeric_ranges JSONB,
+    content_tsv TSVECTOR,
+    embedding_id VARCHAR(100),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX idx_company_metric ON financial_chunks(company_name, metric_category);
+CREATE INDEX idx_time_period ON financial_chunks(time_period);
+CREATE INDEX idx_content_tsv ON financial_chunks USING GIN(content_tsv);
+CREATE INDEX idx_data_format ON financial_chunks(data_format);
+      </signature>
+      <path>scripts/init-postgresql.py</path>
+    </interface>
+    <interface type="python_function">
+      <name>extract_chunk_metadata (EXISTING - needs fixes)</name>
+      <kind>async function</kind>
+      <signature>
+async def extract_chunk_metadata(text: str, chunk_id: str) -> dict:
+    """Extract metadata from chunk using Mistral API.
+
+    CURRENT BUGS TO FIX (AC6):
+    1. Using sync Mistral client - change to AsyncMistral
+    2. Creating client per request - move outside function
+    3. No timeout configuration - add timeout=30
+
+    Returns dict with: company_name, business_unit, metric_category,
+    metric_type, time_period, geographic_region, currency, report_type,
+    data_format, semantic_summary, key_entities, numeric_ranges
+    """
+      </signature>
+      <path>raglite/ingestion/pipeline.py:228-253</path>
+    </interface>
+    <interface type="python_client">
+      <name>psycopg2 PostgreSQL Connection</name>
+      <kind>database client</kind>
+      <signature>
+import psycopg2
+from psycopg2.extras import execute_batch
+
+conn = psycopg2.connect(
+    host=settings.postgresql_host,
+    port=settings.postgresql_port,
+    dbname=settings.postgresql_db,
+    user=settings.postgresql_user,
+    password=settings.postgresql_password
+)
+cursor = conn.cursor()
+cursor.execute("INSERT INTO financial_chunks (...) VALUES (...)")
+execute_batch(cursor, query, data_batch)  # Batch insertions
+conn.commit()
+      </signature>
+      <path>scripts/migrate-to-postgresql.py (to be created)</path>
+    </interface>
+    <interface type="qdrant_client">
+      <name>Qdrant Collection Query (EXISTING)</name>
+      <kind>vector database client</kind>
+      <signature>
+from qdrant_client import QdrantClient
+
+qdrant = QdrantClient(url=settings.qdrant_url)
+points = qdrant.scroll(
+    collection_name="financial_docs",
+    limit=1000
+)  # Returns List[PointStruct] with id, vector, payload
+      </signature>
+      <path>raglite/shared/clients.py (existing pattern)</path>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      Use pytest framework with pytest-asyncio for async tests. Unit tests for database schema creation and validation. Integration tests for end-to-end migration pipeline on 10-page test PDF. Validation scripts for data quality checks (metadata accuracy, linking verification). Manual spot-checks for 20 chunks to validate metadata extraction quality (≥80% accuracy threshold per AC5). Follow existing test patterns from tests/integration/ directory. All tests must be runnable in CI/CD without external API dependencies (use mocked Mistral client for unit tests).
+    </standards>
+    <locations>
+      <location>tests/unit/test_postgresql_schema.py (to be created)</location>
+      <location>tests/integration/test_migration_pipeline.py (to be created)</location>
+      <location>scripts/validate-pg-qdrant-link.py (validation script, not pytest)</location>
+      <location>scripts/validate-metadata-quality.py (validation script, not pytest)</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">
+        <test>test_postgresql_service_starts: Verify PostgreSQL service starts in docker-compose</test>
+        <test>test_financial_chunks_table_created: Verify table exists with correct schema (15 fields)</test>
+        <test>test_all_indexes_created: Verify 4 indexes (company_metric, time_period, content_tsv, data_format)</test>
+        <test>test_field_types_correct: Verify UUID, VARCHAR, INTEGER, JSONB, TSVECTOR types</test>
+      </idea>
+      <idea ac="AC2">
+        <test>test_migration_script_runs: Execute migration on 10-page test PDF, verify completes</test>
+        <test>test_metadata_extraction_enabled: Verify line 913 fix (if settings.mistral_api_key)</test>
+        <test>test_postgresql_connection: Verify script connects to PostgreSQL successfully</test>
+        <test>test_chunks_inserted: Verify ~20-30 chunks inserted for 10-page PDF</test>
+      </idea>
+      <idea ac="AC3">
+        <test>test_chunk_count_matches: Verify SQL SELECT COUNT(*) returns correct number</test>
+        <test>test_no_null_critical_fields: Verify company_name, content, page_number not NULL</test>
+        <test>test_content_accuracy: Spot-check 5 random chunks for content match with source</test>
+        <test>test_timestamps_populated: Verify created_at and updated_at fields set</test>
+      </idea>
+      <idea ac="AC4">
+        <test>test_embedding_id_populated: Verify all rows have embedding_id (not NULL)</test>
+        <test>test_qdrant_vectors_exist: Query Qdrant with 10 random embedding_ids, verify found</test>
+        <test>test_no_orphaned_records: Verify PostgreSQL count == Qdrant count (334)</test>
+        <test>test_bidirectional_linking: Query both directions (PG→Q and Q→PG), verify match</test>
+      </idea>
+      <idea ac="AC5">
+        <test>test_metadata_quality_script: Run validation script on 20 chunks, calculate accuracy</test>
+        <test>test_company_name_extraction: Verify "Portugal Cement" extracted correctly</test>
+        <test>test_metric_category_classification: Verify "Variable Costs", "EBITDA" correct</test>
+        <test>test_time_period_extraction: Verify "August 2025 YTD" format correct</test>
+        <test>test_overall_accuracy_threshold: Verify ≥80% accuracy across all fields</test>
+      </idea>
+      <idea ac="AC6">
+        <test>test_async_client_usage: Verify AsyncMistral import (not sync Mistral)</test>
+        <test>test_client_pooling: Verify single client instance reused (not per-request)</test>
+        <test>test_timeout_configuration: Verify timeout=30 parameter in API call</test>
+        <test>test_throughput_measurement: Calculate chunks/minute, verify ≥20 chunks/min</test>
+        <test>test_performance_target: Verify 334 chunks complete in ≤30 minutes</test>
+      </idea>
+    </ideas>
+  </tests>
+</story-context>

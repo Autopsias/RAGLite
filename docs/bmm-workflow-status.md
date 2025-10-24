@@ -9,10 +9,10 @@
 
 ## Workflow Status Tracker
 
-**Current Phase:** 4-Implementation (Epic 2, Phase 2A - Story 2.4 COMPLETE ✅, Story 2.5 Next)
-**Current Workflow:** create-story (Story 2.5 - AC3 Decision Gate)
-**Current Agent:** SM (Scrum Master) - Draft Story 2.5
-**Overall Progress:** 61%
+**Current Phase:** 4-Implementation (Epic 2, Phase 2B - Story 2.7 TO BE DRAFTED)
+**Current Workflow:** story-approved (Story 2.6) - Complete
+**Current Agent:** SM - Draft Story 2.7 (Multi-Stage Retrieval Pipeline)
+**Overall Progress:** 69% (Epic 2 Phase 2B in progress, Story 2.6 complete, 87 points delivered)
 
 ### Phase Completion Status
 
@@ -39,8 +39,8 @@
 | 4-Implementation | Epic 4 - Forecasting & Insights | Dev | Predictive intelligence and strategic recommendations | Planned |
 | 4-Implementation | Epic 5 - Production Readiness | Dev | AWS deployment, monitoring, real-time operations | Planned |
 
-**Current Step:** Story 2.4 - Add LLM-Generated Contextual Metadata Injection (Context generated, ready for implementation)
-**Next Step:** DEV agent run `dev-story` workflow to implement Story 2.4
+**Current Step:** Story 2.6 - PostgreSQL Schema + Data Migration (Ready, context generated)
+**Next Step:** DEV agent run `dev-story` workflow to implement Story 2.6
 
 **Instructions:**
 
@@ -74,33 +74,42 @@
 
 #### TODO (Needs Drafting)
 
-- **Story ID:** 2.5
-- **Story Title:** AC3 Validation and Optimization (Decision Gate)
-- **Story File:** `docs/stories/story-2.5.md`
-- **Status:** Not created (needs drafting)
-- **Action:** SM should run `*create-story` workflow to draft this story after Story 2.4 complete
+- **Story ID:** 2.7
+- **Story Title:** Multi-Stage Retrieval Pipeline (PostgreSQL + Qdrant)
+- **Story File:** story-2.7.md
+- **Status:** Not created (will be drafted after Story 2.6 complete)
+- **Action:** SM should run `create-story` workflow after Story 2.6 is complete
 
 **Instructions:**
 
 - Only ONE story in TODO at a time
 - Story stays in TODO until user marks it "ready for development"
 - SM reads this section to know which story to draft next
-- **CURRENT STATE:** Story 2.4 awaits drafting, Story 2.5 will be next
+- **CURRENT STATE:** Epic 2 Phase 2A stories complete, Story 2.5 in review
 
 #### IN PROGRESS (Approved for Development)
 
-- **Story ID:** 2.5
-- **Story Title:** AC3 Validation and Optimization (Decision Gate) - Needs Drafting
-- **Story File:** `docs/stories/story-2.5.md` (not yet created)
-- **Story Status:** Not created (needs drafting)
-- **Action:** SM agent run `create-story` to draft Story 2.5 after user approves Story 2.4
+- **Story ID:** 2.7
+- **Story Title:** Multi-Stage Retrieval Pipeline (PostgreSQL + Qdrant)
+- **Story File:** story-2.7.md
+- **Story Status:** Not created (needs drafting by SM agent)
+- **Action:** SM should run `create-story` workflow to draft Story 2.7
+
+**Phase 2B Status:**
+- **Decision**: ✅ APPROVED - Phase 2B implementation in progress
+- **Current Story**: 2.7 (Multi-Stage Retrieval Pipeline - needs drafting)
+- **Completed Stories**: 2.6 (PostgreSQL infrastructure) ✅
+- **Handoff Document**: `/tmp/PHASE_2B_HANDOFF.md` ✅ READY
+- **Strategic Analysis**: `/tmp/STRATEGIC_DECISION_ANALYSIS.md` ✅ READY
+- **Research Report**: MCP Exa task 01k89hyp50nvm6jndykhw2zgwn ✅ COMPLETE
+- **Remaining Stories**: 2.8-2.9 (to be created after 2.7 complete)
 
 **Instructions:**
 
-- Only ONE story in IN PROGRESS at a time
-- Story stays here until user marks it "approved" (DoD complete)
-- DEV reads this section to know which story to implement
-- After DEV completes story, user reviews and runs `story-approved` workflow
+- Story 2.6 COMPLETE ✅
+- SM agent should now draft Story 2.7 (Multi-Stage Retrieval Pipeline)
+- Story 2.7 implements PostgreSQL metadata filtering + Qdrant vector search
+- DEV will implement Story 2.7 after SM drafts and user approves
 
 #### DONE (Completed Stories)
 
@@ -112,9 +121,15 @@
 | 2.2 | docs/stories/story-2.2.md | 2025-10-20 | 5 |
 | 2.3 | docs/stories/story-2.3.md | 2025-10-21 | 8 |
 | 2.4 | docs/stories/story-2.4.md | 2025-10-22 | 5 |
+| 2.5 | docs/stories/story-2.5.md | 2025-10-23 | 8 |
+| 2.6 | docs/stories/story-2.6.md | 2025-10-24 | 8 |
 
-**Total completed:** 6 stories (Week 0 + Epic 1 + Story 2.1 + Story 2.2 + Story 2.3 + Story 2.4)
-**Total points completed:** 71 points
+**Total completed:** 8 stories (Week 0 + Epic 1 + Stories 2.1-2.6)
+**Total points completed:** 87 points
+
+**Story 2.5 Status:** ❌ FAILED - AC2 Decision Gate (18% accuracy vs 70% target)
+**Epic 2 Phase 2A Status:** ✅ COMPLETE (all stories done, Phase 2B escalation required)
+**Epic 2 Phase 2B Status:** ✅ IN PROGRESS - Story 2.6 complete, Story 2.7 next
 
 **Instructions:**
 
@@ -125,16 +140,16 @@
 #### Epic/Story Summary
 
 **Total Epics:** 5 (Epic 1-5)
-**Total Stories:** ~30 estimated (5 defined for Epic 2, rest TBD)
-**Stories in Backlog:** 3 (0 Epic 2 stories, 3 placeholder Epic 3-5)
-**Stories in TODO:** 0 (Story 2.5 moved to IN PROGRESS - needs drafting)
-**Stories in IN PROGRESS:** 1 (Story 2.5 - needs drafting after user approves Story 2.4)
-**Stories DONE:** 6 (Week 0 + Epic 1 + Story 2.1 + Story 2.2 + Story 2.3 + Story 2.4)
+**Total Stories:** ~30 estimated (9 defined for Epic 2 Phase 2A+2B, rest TBD)
+**Stories in Backlog:** 3 (3 placeholder Epic 3-5 stories)
+**Stories in TODO:** 0 (none currently)
+**Stories in IN PROGRESS:** 1 (Story 2.7 - Multi-Stage Retrieval Pipeline, needs drafting)
+**Stories DONE:** 8 (Week 0 + Epic 1 + Stories 2.1-2.6)
 
 **Epic Breakdown:**
 
 - Epic 1: Foundation & Accurate Retrieval (COMPLETE - 100%)
-- Epic 2: Advanced RAG Architecture Enhancement (IN PROGRESS - 4/5 stories complete, Phase 1 COMPLETE, Phase 2A nearly complete, Story 2.5 Decision Gate remaining)
+- Epic 2: Advanced RAG Architecture Enhancement (IN PROGRESS - 6/9 stories complete, Phase 1 COMPLETE ✅, Phase 2A COMPLETE ✅, Phase 2B IN PROGRESS - Story 2.6 COMPLETE ✅, Story 2.7 next)
 - Epic 3: AI Intelligence & Orchestration (PLANNED - 0% complete, blocked by Epic 2)
 - Epic 4: Forecasting & Proactive Insights (PLANNED - 0% complete, blocked by Epic 3)
 - Epic 5: Production Readiness & Real-Time Operations (PLANNED - 0% complete, blocked by Epic 4)
@@ -159,12 +174,13 @@ BACKLOG → TODO → IN PROGRESS → DONE
 - DEV agent NEVER searches for "current story" - always reads IN PROGRESS section
 - Both agents update this status file after their workflows complete
 
-**Current State (2025-10-21):**
-- Story 2.3 COMPLETE ✅ (fixed 512-token chunking implemented, all ACs validated)
-- Story 2.4 in IN PROGRESS (draft created, awaiting user review and approval)
-- Story 2.5 in TODO (will move to IN PROGRESS after 2.4 complete)
-- **Epic 2 Phase 1 COMPLETE:** Stories 2.1 + 2.2 done (pypdfium + parallelism)
-- **Epic 2 Phase 2A IN PROGRESS:** Story 2.3 done (fixed chunking), Story 2.4 drafted, Story 2.5 remaining
+**Current State (2025-10-24):**
+- Story 2.5 COMPLETE ❌ (18% accuracy - FAILED decision gate as expected, escalated to Phase 2B)
+- Story 2.6 in IN PROGRESS (PostgreSQL Schema + Data Migration, ready for DEV implementation)
+- Story 2.7 in TODO (Multi-Stage Retrieval Pipeline, will be drafted after 2.6 complete)
+- **Epic 2 Phase 1 COMPLETE:** Stories 2.1 + 2.2 done ✅ (pypdfium + parallelism)
+- **Epic 2 Phase 2A COMPLETE:** Stories 2.3-2.5 done ✅ (fixed chunking + metadata + validation)
+- **Epic 2 Phase 2B IN PROGRESS:** Story 2.6 started (PostgreSQL infrastructure for multi-index architecture)
 
 ### Artifacts Generated
 
@@ -191,26 +207,35 @@ BACKLOG → TODO → IN PROGRESS → DONE
 
 ### Next Action Required
 
-**What to do next:** Draft Story 2.5 (AC3 Validation and Optimization - Decision Gate)
+**What to do next:** Draft Story 2.7 (Multi-Stage Retrieval Pipeline - PostgreSQL + Qdrant)
 
-**Status:** Story 2.4 APPROVED ✅ (All review issues resolved, DoD complete)
+**Status:** Epic 2 Phase 2B IN PROGRESS - Story 2.6 COMPLETE ✅
 
-**Current Task:** Create Story 2.5 to complete Epic 2 Phase 2A
+**Current Task:** SM agent to draft Story 2.7
 
-**Goal:** SM drafts Story 2.5 → Execute AC3 Decision Gate → Determine Epic 2 completion
+**Phase 2B Status:**
+- Phase 2A: ✅ COMPLETE (Stories 2.1-2.5 done)
+- Decision Gate: ❌ FAILED (18% accuracy vs 70% target - escalated to Phase 2B as planned)
+- Phase 2B: ✅ IN PROGRESS (Story 2.6 complete)
+- Current Story: Story 2.7 (Multi-Stage Retrieval Pipeline - needs drafting)
+
+**Story 2.6 Status:**
+1. ✅ **Implementation COMPLETE**: All 6 ACs validated
+2. ✅ **Review APPROVED**: Senior Developer Review passed (all issues resolved)
+3. ✅ **Test Results**: AC4 linking (100%), AC6 performance (24.5 chunks/min)
+4. ✅ **Story Marked DONE**: 2025-10-24
 
 **Next Steps:**
-1. **SM (Scrum Master):** Draft Story 2.5 (AC3 Validation and Optimization - Decision Gate)
-   - Run `create-story` workflow to draft Story 2.5
-   - Include AC3 validation requirements (≥70% retrieval accuracy target)
-   - Define decision gate criteria and validation approach
-   - Document Epic 2 Phase 2A completion criteria
-2. **User:** Review drafted Story 2.5 and approve for development
-3. **DEV:** Implement Story 2.5 (AC3 validation tests and accuracy measurement)
-4. **Decision Gate (T+17, Week 3 Day 3):** Execute AC3 validation
-   - Target: ≥70% retrieval accuracy
-   - IF ≥70% → Epic 2 Phase 2A COMPLETE ✅ → Proceed to Epic 3
-   - IF <70% → Escalate to Phase 2B (Structured Multi-Index, +3-4 weeks)
+1. **SM (Scrum Master):** Draft Story 2.7 (NEXT - use `create-story` workflow)
+   - Story 2.7: Multi-Stage Retrieval Pipeline (PostgreSQL metadata filtering + Qdrant vector search)
+   - This is the CORE Phase 2B story that implements hybrid retrieval
+   - Expected to achieve ≥70% accuracy target
+2. **User:** Review Story 2.7 draft → approve for development
+3. **SM:** Generate Story 2.7 context XML (use `story-context` workflow)
+4. **DEV:** Implement Story 2.7 (use `dev-story` workflow)
+5. **Remaining Phase 2B Stories:**
+   - Story 2.8: Cross-Encoder Reranking (optional enhancement)
+   - Story 2.9: AC3 Validation ≥70% (final decision gate)
 
 ---
 
@@ -396,6 +421,13 @@ BACKLOG → TODO → IN PROGRESS → DONE
 - **2025-10-22**: Completed review-story for Story 2.4 (Senior Developer Review). Review outcome: ⚠️ **CHANGES REQUESTED**. Critical finding (P1-BLOCKER): 6/10 unit tests failing (60% failure rate) due to incorrect mock path for lazy-loaded OpenAI import. 9 action items identified: 1 P1-BLOCKER (15 min fix), 2 HIGH priority (2.5-3 hrs), 3 MEDIUM (1.75-2.75 hrs), 3 LOW (1 hr). Implementation quality: HIGH (exemplary CLAUDE.md alignment, proper async patterns, structured logging). Security posture: STRONG (secure API key handling, graceful degradation). AC Coverage: AC2 ✅ COMPLETE, AC1/AC3/AC4/AC5 ⚠️ BLOCKED by P1. Review notes appended to story file. Progress: 61% (72 points - 1 point for review completion). Next: DEV fixes AI1 P1-BLOCKER → Re-run tests → Validate 10/10 passing → Re-submit for approval.
 - **2025-10-22**: All review issues resolved for Story 2.4. Completed ALL 9 action items: AI1 [P1-BLOCKER] already passing (10/10 tests ✅), AI2 [HIGH] Story Context XML updated (Claude → OpenAI references fixed), AI3 [HIGH] added 4 mocked integration tests (201 lines, CI/CD friendly, no API key required), AI4 [MEDIUM] pricing externalized to config (gpt5_nano_input/output_price_per_mtok), AI5 [MEDIUM] file list verified correct, AI6 [MEDIUM] log level changed ERROR → WARNING (graceful degradation), AI7 [LOW] openai_metadata_model config variable + .env.example docs added, AI8 [LOW] mock fixture refactored with Pydantic validation, AI9 [LOW] Qdrant filter test now uses actual filter API. Test Results: 10/10 unit tests passing (100% pass rate) ✅. Files Modified: 7 files updated. Code Quality: Improved maintainability, configurability, and test coverage. Story status: ✅ **ALL ISSUES RESOLVED** - Ready for final user approval. Progress: 61% (unchanged - awaiting story-approved). Next: User reviews fixes → validates tests passing → runs `*story-approved` → SM drafts Story 2.5 to complete Phase 2A.
 - **2025-10-22**: Story 2.4 (Add LLM-Generated Contextual Metadata Injection) FINAL APPROVAL confirmed by user via `*story-approved` workflow. All review fixes validated, all acceptance criteria met (AC1-AC5 ✅), all 9 action items resolved ✅, test suite passing 10/10 (100%) ✅. Code quality: Production-ready with improved maintainability, configurability, and test coverage. Story 2.4 confirmed DONE (already in DONE table from 2025-10-22). Epic 2 Phase 2A progress: Story 2.4 complete, Story 2.5 (AC3 Decision Gate) remains. Progress: 61% (unchanged - Story 2.4 already counted). Next: SM agent to draft Story 2.5 (AC3 Validation and Optimization - Decision Gate) to complete Phase 2A.
+- **2025-10-22**: Completed create-story for Story 2.5 (AC3 Validation and Optimization - Decision Gate). Story file created: `docs/stories/story-2.5.md`. Story includes complete acceptance criteria (AC1-AC6), tasks/subtasks breakdown, dev notes with DECISION GATE context (≥70% accuracy target), failure mode analysis (conditional if <70%), and comprehensive testing strategy. Story structure: 6 ACs (AC2 = MANDATORY decision gate), 8 tasks with 30+ subtasks, expected impact analysis (3 decision scenarios), and Epic 2 completion path. Status: Draft (needs review). Progress: 63% (74 points - 2 points for story creation). Next: User review draft → SM run `*story-ready` to approve for development → SM run `*story-context` → DEV implement AC3 validation.
+- **2025-10-22**: Story 2.5 (AC3 Validation and Optimization - Decision Gate) marked ready for development by SM agent. Story file updated: Status: Draft → Ready. Story remains IN PROGRESS (now approved for development). Epic 2 Phase 2A: All 5 stories drafted and approved (2.1-2.5 ✅). Progress: 64% (75 points - 1 point for story approval). Next: SM run `*story-context` to generate implementation context (RECOMMENDED) OR DEV run `dev-story` to implement directly.
+- **2025-10-22**: Completed story-context for Story 2.5 (AC3 Validation and Optimization - Decision Gate). Context file: docs/stories/story-context-2.5.xml. Comprehensive context includes: 6 ACs with decision gate requirements (AC2 = CRITICAL ≥70% threshold), 4 code artifacts (ground_truth.py, test patterns, hybrid_search), 5 doc references (Epic 2 PRD, Tech Spec, Stories 2.3-2.4, CLAUDE.md), dependencies (pytest, rank-bm25, qdrant-client), 6 constraints (KISS, direct SDK, decision gate mandatory, conditional AC4), 4 interfaces (hybrid_search, GROUND_TRUTH_QUERIES, BM25Okapi, AccuracyMetrics), and 6 test ideas mapped to ACs. Story file updated with context reference. Progress: 65% (76 points - 1 point for context generation). Next: DEV agent should run `dev-story` to implement AC3 validation and execute DECISION GATE.
+- **2025-10-24**: Completed story-context for Story 2.6 (PostgreSQL Schema + Data Migration - Phase 2B Start). Context file: docs/stories/story-context-2.6.xml. Comprehensive context includes: 6 ACs (AC1 PostgreSQL schema, AC2 migration script, AC3 data storage, AC4 PG↔Qdrant linking, AC5 metadata quality, AC6 CRITICAL performance optimization with async client fixes), 4 code artifacts (pipeline.py with Mistral bugs, config.py, models.py, docker-compose.yml), 6 doc references (Phase 2B Handoff, Strategic Analysis, Epic 2 PRD, Tech Stack, CLAUDE.md, Story 2.5), dependencies (psycopg2-binary NEEDS ADDING, mistralai AsyncMistral, qdrant-client, pytest), 6 constraints (NO ORMs, direct psycopg2, code size target ~200-300 lines, ≥70% accuracy goal, table preservation, testing), 4 interfaces (PostgreSQL schema SQL, extract_chunk_metadata with bugs to fix, psycopg2 connection, Qdrant query), and 26 test ideas mapped to 6 ACs. Story file updated with context reference. Progress: 65% (77 points - 1 point for context generation). Next: DEV agent should run `dev-story` to implement Story 2.6 (PostgreSQL infrastructure for Phase 2B multi-index architecture).
+- **2025-10-24**: Story 2.6 (PostgreSQL Schema + Data Migration) marked ready for development by SM agent. Story status updated Draft → Ready. Moved to IN PROGRESS. Story 2.7 (Multi-Stage Retrieval Pipeline) moved to TODO. Phase 2B implementation officially started. Context already generated (27KB XML). Progress: 66% (78 points - 1 point for story approval). Next: DEV agent should run `dev-story` to implement Story 2.6.
+- **2025-10-24**: Story 2.6 Senior Developer Review completed. Initial outcome: ⚠️ Changes Requested. Found 2 P1-BLOCKERS (AI1: incorrect async client assessment - RETRACTED, AI2: UUID registration - already fixed in code) + 1 HIGH priority (AI3: datetime timezone). User challenged AI1 assessment. After MCP tool verification (ref_search_documentation, searchGitHub), discovered Mistral SDK 1.0+ uses unified `Mistral` class (AsyncMistral deprecated). AI1 RETRACTED - implementation was correct. All remaining issues fixed: AI3 datetime timezone-awareness applied to migration script. Test Results: Dry-run validation passing ✅. Files Modified: 1 (migrate-to-postgresql.py - datetime.now(UTC)). Review Status: ✅ **ALL ISSUES RESOLVED** - Ready for final user approval. Progress: 66% (unchanged - awaiting story-approved). Next: User validates fixes → runs `*story-approved` → Story 2.6 moves to DONE → SM drafts Story 2.7.
+- **2025-10-24**: Story 2.6 (PostgreSQL Schema + Data Migration) APPROVED and marked COMPLETE. All review issues resolved (AI1 RETRACTED after MCP verification, AI2 already fixed, AI3 datetime fix validated). Story file updated: Status: Ready → ✅ Done. Comprehensive Senior Developer Review notes appended to story file documenting the review process and key learning about Mistral SDK 1.0+ unified client pattern. Story 2.6 moved: IN PROGRESS → DONE (completed 2025-10-24, 8 points). Story 2.7 (Multi-Stage Retrieval Pipeline - PostgreSQL + Qdrant) moved to IN PROGRESS (needs drafting by SM agent). Updated story counts: 8 DONE, 1 IN PROGRESS, 0 TODO, 3 BACKLOG. Updated points: 87 completed (69% overall progress). **Epic 2 Phase 2B progress:** Story 2.6 complete ✅, Story 2.7 next (CORE hybrid retrieval implementation). Next: SM agent to draft Story 2.7 using `create-story` workflow.
 
 ---
 

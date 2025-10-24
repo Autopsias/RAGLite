@@ -53,3 +53,4 @@ htmlcov/
 .coverage
 .coverage.*
 docs/sample pdf/split/
+postgresql_data/

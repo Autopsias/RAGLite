@@ -35,6 +35,20 @@ def ingest_test_data(request):
             reason="Requires full 160-page PDF. Run with: pytest --run-slow"
         )
     """
+    # SKIP conftest for AC3 ground truth tests (Story 2.5)
+    # These tests require the full 160-page PDF which must be pre-ingested
+    # using: python tests/integration/setup_test_data.py
+    #
+    # Check if we're collecting AC3 ground truth tests by looking at the session items
+    if hasattr(request.session, "items"):
+        for item in request.session.items:
+            if "test_ac3_ground_truth.py" in str(item.fspath):
+                print(
+                    "\n⚠️  AC3 ground truth test detected - skipping conftest sample PDF ingestion"
+                )
+                print("   Using pre-ingested full 160-page PDF from setup_test_data.py\n")
+                return  # Skip conftest - use pre-ingested full PDF
+
     global _session_sample_pdf_chunk_count
 
     # Lazy import to avoid test discovery overhead
