@@ -26,6 +26,10 @@
 - Path: `bmad/bmm/workflows/1-analysis/research/workflow.yaml`
 - Adaptive research workflow supporting multiple research types: market research, deep research prompt generation, technical/architecture evaluation, competitive intelligence, user research, and domain analysis
 
+**create-ux-design**
+- Path: `bmad/bmm/workflows/2-plan-workflows/create-ux-design/workflow.yaml`
+- Collaborative UX design facilitation workflow that creates exceptional user experiences through visual exploration and informed decision-making. Unlike template-driven approaches, this workflow facilitates discovery, generates visual options, and collaboratively designs the UX with the user at every step.
+
 **gdd**
 - Path: `bmad/bmm/workflows/2-plan-workflows/gdd/workflow.yaml`
 - Game Design Document workflow for all game project levels - from small prototypes to full AAA games. Generates comprehensive GDD with game mechanics, systems, progression, and implementation guidance.
@@ -36,15 +40,11 @@
 
 **prd**
 - Path: `bmad/bmm/workflows/2-plan-workflows/prd/workflow.yaml`
-- Unified PRD workflow for project levels 2-4. Produces strategic PRD and tactical epic breakdown. Hands off to solution-architecture workflow for technical design. Note: Level 0-1 use tech-spec workflow.
+- Unified PRD workflow for project levels 2-4. Produces strategic PRD and tactical epic breakdown. Hands off to architecture workflow for technical design. Note: Level 0-1 use tech-spec workflow.
 
 **tech-spec-sm**
 - Path: `bmad/bmm/workflows/2-plan-workflows/tech-spec/workflow.yaml`
 - Technical specification workflow for Level 0 projects (single atomic changes). Creates focused tech spec for bug fixes, single endpoint additions, or small isolated changes. Tech-spec only - no PRD needed.
-
-**ux-spec**
-- Path: `bmad/bmm/workflows/2-plan-workflows/ux/workflow.yaml`
-- UX/UI specification workflow for defining user experience and interface design. Creates comprehensive UX documentation including wireframes, user flows, component specifications, and design system guidelines.
 
 **architecture**
 - Path: `bmad/bmm/workflows/3-solutioning/architecture/workflow.yaml`
@@ -78,17 +78,25 @@
 - Path: `bmad/bmm/workflows/4-implementation/review-story/workflow.yaml`
 - Perform a Senior Developer Review on a completed story flagged Ready for Review, leveraging story-context, epic tech-spec, repo docs, MCP servers for latest best-practices, and web search as fallback. Appends structured review notes to the story.
 
-**story-approved**
-- Path: `bmad/bmm/workflows/4-implementation/story-approved/workflow.yaml`
-- Marks a story as done (DoD complete) and moves it from IN PROGRESS → DONE in the status file. Advances the story queue. Simple status-update workflow with no searching required.
+**sprint-planning**
+- Path: `bmad/bmm/workflows/4-implementation/sprint-planning/workflow.yaml`
+- Generate and manage the sprint status tracking file for Phase 4 implementation, extracting all epics and stories from epic files and tracking their status through the development lifecycle
 
 **story-context**
 - Path: `bmad/bmm/workflows/4-implementation/story-context/workflow.yaml`
 - Assemble a dynamic Story Context XML by pulling latest documentation and existing code/library artifacts relevant to a drafted story
 
+**story-done**
+- Path: `bmad/bmm/workflows/4-implementation/story-done/workflow.yaml`
+- Marks a story as done (DoD complete) and moves it from IN PROGRESS → DONE in the status file. Advances the story queue. Simple status-update workflow with no searching required.
+
 **story-ready**
 - Path: `bmad/bmm/workflows/4-implementation/story-ready/workflow.yaml`
 - Marks a drafted story as ready for development and moves it from TODO → IN PROGRESS in the status file. Simple status-update workflow with no searching required.
+
+**sprint-status**
+- Path: `bmad/bmm/workflows/helpers/sprint-status/workflow.yaml`
+- Helper workflow for reading and updating sprint-status.yaml tracking file. Provides query and update operations for Phase 4 implementation workflows.
 
 **testarch-atdd**
 - Path: `bmad/bmm/workflows/testarch/atdd/workflow.yaml`

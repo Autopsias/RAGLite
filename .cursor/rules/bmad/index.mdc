@@ -40,7 +40,7 @@ BMAD rules have been installed to: `.cursor/rules/bmad/`
 - @bmad/bmm/agents/pm - pm
 - @bmad/bmm/agents/sm - sm
 - @bmad/bmm/agents/tea - tea
-- @bmad/bmm/agents/ux-expert - ux-expert
+- @bmad/bmm/agents/ux-designer - ux-designer
 
 
 ## Quick Reference

@@ -54,3 +54,4 @@ htmlcov/
 .coverage.*
 docs/sample pdf/split/
 postgresql_data/
+BMAD-METHOD/
