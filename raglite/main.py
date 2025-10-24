@@ -23,7 +23,11 @@ from fastmcp import FastMCP
 
 from raglite.ingestion.pipeline import ingest_document
 from raglite.retrieval.attribution import generate_citations
-from raglite.retrieval.search import QueryError, hybrid_search
+from raglite.retrieval.multi_index_search import (
+    MultiIndexSearchError,
+    multi_index_search,
+)
+from raglite.retrieval.search import QueryError
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 from raglite.shared.models import DocumentMetadata, QueryRequest, QueryResponse
@@ -114,15 +118,17 @@ async def ingest_financial_document(doc_path: str) -> DocumentMetadata:
 
 @mcp.tool()
 async def query_financial_documents(request: QueryRequest) -> QueryResponse:
-    """Query financial documents using natural language with hybrid search.
+    """Query financial documents using natural language with multi-index search.
 
-    Performs hybrid search (BM25 + semantic) across ingested documents and returns
-    relevant chunks with source attribution. The MCP client (Claude) synthesizes
-    natural language answers from the returned chunks.
+    Story 2.7 AC4: Updated to use multi-index search (vector + SQL) with intelligent
+    query routing. Maintains backward compatibility with Story 2.1 hybrid search.
 
-    Query pipeline (Story 2.1):
-      1. Generate query embedding (Fin-E5 model)
-      2. Hybrid search: semantic (Fin-E5) + keyword (BM25) fusion
+    Query pipeline (Story 2.7):
+      1. Classify query type (SQL_ONLY, VECTOR_ONLY, or HYBRID)
+      2. Route to appropriate index(es):
+         - SQL_ONLY → PostgreSQL table search
+         - VECTOR_ONLY → Qdrant semantic search
+         - HYBRID → Both indexes in parallel with fusion
       3. Generate source citations for each chunk
       4. Return raw chunks with metadata for LLM synthesis
 
@@ -144,7 +150,7 @@ async def query_financial_documents(request: QueryRequest) -> QueryResponse:
           - retrieval_time_ms: Retrieval time in milliseconds
 
     Raises:
-        QueryError: If search fails (empty query, embedding error, Qdrant error)
+        QueryError: If search fails (empty query, embedding error, index error)
 
     Example:
         >>> request = QueryRequest(query="What was Q3 revenue?", top_k=5)
@@ -167,22 +173,43 @@ async def query_financial_documents(request: QueryRequest) -> QueryResponse:
         raise QueryError(error_msg)
 
     try:
-        # Call Story 2.1 hybrid search pipeline (BM25 + semantic)
+        # Story 2.7: Call multi-index search (vector + SQL routing)
         start_time = time.perf_counter()
-        results = await hybrid_search(request.query, top_k=request.top_k, enable_hybrid=True)
+        search_results = await multi_index_search(request.query, top_k=request.top_k)
         search_duration_ms = (time.perf_counter() - start_time) * 1000
 
+        # Convert SearchResult to QueryResult for backward compatibility
+        from raglite.shared.models import QueryResult
+
+        query_results = [
+            QueryResult(
+                score=r.score,
+                text=r.text,
+                source_document=r.document_id,
+                page_number=r.page_number,
+                chunk_index=r.metadata.get("chunk_index", 0),
+                word_count=r.metadata.get("word_count", 0),
+            )
+            for r in search_results
+        ]
+
         # Call Story 1.8 citation generation
-        cited_results = await generate_citations(results)
+        cited_results = await generate_citations(query_results)
         total_duration_ms = (time.perf_counter() - start_time) * 1000
 
+        # AC4: Observability logging (classification, index usage, timing)
+        retrieval_sources = {r.source for r in search_results}
         logger.info(
-            "Query complete",
+            "Query complete (multi-index)",
             extra={
                 "query": request.query,
                 "results_count": len(cited_results),
+                "retrieval_sources": list(
+                    retrieval_sources
+                ),  # ["vector"], ["sql"], or ["vector", "sql", "hybrid"]
                 "search_time_ms": f"{search_duration_ms:.2f}",
                 "total_time_ms": f"{total_duration_ms:.2f}",
+                "retrieval_method": "multi-index",
             },
         )
 
@@ -191,6 +218,18 @@ async def query_financial_documents(request: QueryRequest) -> QueryResponse:
             query=request.query,
             retrieval_time_ms=total_duration_ms,
         )
+
+    except MultiIndexSearchError as e:
+        # Story 2.7: Multi-index search error
+        logger.error(
+            "Multi-index search failed",
+            extra={
+                "query": request.query,
+                "error": str(e),
+            },
+            exc_info=True,
+        )
+        raise QueryError(f"Multi-index search failed: {e}") from e
 
     except QueryError:
         # Re-raise QueryError (already logged in search.py)

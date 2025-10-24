@@ -14,6 +14,7 @@ from raglite.main import (
     mcp,
     query_financial_documents,
 )
+from raglite.retrieval.multi_index_search import MultiIndexSearchError, SearchResult
 from raglite.retrieval.search import QueryError
 from raglite.shared.models import (
     DocumentMetadata,
@@ -117,23 +118,33 @@ class TestQueryFinancialDocumentsTool:
     @pytest.mark.asyncio
     async def test_query_tool_success(self):
         """Test successful query returns QueryResponse with cited results."""
-        # Mock Story 2.1 hybrid search results
+        # Mock Story 2.7 multi-index search results (SearchResult objects)
         mock_search_results = [
-            QueryResult(
+            SearchResult(
                 score=0.95,
                 text="Q3 revenue was $10M.",
-                source_document="Q3_2023.pdf",
+                document_id="Q3_2023.pdf",
                 page_number=3,
-                chunk_index=5,
-                word_count=20,
+                source="vector",
+                metadata={
+                    "source_document": "Q3_2023.pdf",
+                    "page_number": 3,
+                    "chunk_index": 5,
+                    "word_count": 20,
+                },
             ),
-            QueryResult(
+            SearchResult(
                 score=0.87,
                 text="Operating expenses decreased 15%.",
-                source_document="Q3_2023.pdf",
+                document_id="Q3_2023.pdf",
                 page_number=7,
-                chunk_index=12,
-                word_count=18,
+                source="vector",
+                metadata={
+                    "source_document": "Q3_2023.pdf",
+                    "page_number": 7,
+                    "chunk_index": 12,
+                    "word_count": 18,
+                },
             ),
         ]
 
@@ -158,10 +169,10 @@ class TestQueryFinancialDocumentsTool:
         ]
 
         with (
-            patch("raglite.main.hybrid_search", new_callable=AsyncMock) as mock_hybrid_search,
+            patch("raglite.main.multi_index_search", new_callable=AsyncMock) as mock_multi_search,
             patch("raglite.main.generate_citations", new_callable=AsyncMock) as mock_citations,
         ):
-            mock_hybrid_search.return_value = mock_search_results
+            mock_multi_search.return_value = mock_search_results
             mock_citations.return_value = mock_cited_results
 
             request = QueryRequest(query="What was Q3 revenue?", top_k=5)
@@ -174,11 +185,10 @@ class TestQueryFinancialDocumentsTool:
             assert response.results[0].score == 0.95
             assert response.retrieval_time_ms >= 0
 
-            # Verify hybrid_search called with correct parameters
-            mock_hybrid_search.assert_called_once_with(
-                "What was Q3 revenue?", top_k=5, enable_hybrid=True
-            )
-            mock_citations.assert_called_once_with(mock_search_results)
+            # Verify multi_index_search called with correct parameters
+            mock_multi_search.assert_called_once_with("What was Q3 revenue?", top_k=5)
+            # Verify conversion to QueryResult and citation generation
+            assert mock_citations.call_count == 1
 
     @pytest.mark.asyncio
     async def test_query_tool_empty_query(self):
@@ -202,22 +212,22 @@ class TestQueryFinancialDocumentsTool:
 
     @pytest.mark.asyncio
     async def test_query_tool_search_error(self):
-        """Test query with search failure re-raises QueryError."""
-        with patch("raglite.main.hybrid_search", new_callable=AsyncMock) as mock_hybrid_search:
-            mock_hybrid_search.side_effect = QueryError("Qdrant connection failed")
+        """Test query with multi-index search failure re-raises QueryError."""
+        with patch("raglite.main.multi_index_search", new_callable=AsyncMock) as mock_multi_search:
+            mock_multi_search.side_effect = MultiIndexSearchError("Qdrant connection failed")
 
             request = QueryRequest(query="valid query", top_k=5)
 
             with pytest.raises(QueryError) as exc_info:
                 await query_financial_documents.fn(request)
 
-            assert "Qdrant connection failed" in str(exc_info.value)
+            assert "Multi-index search failed" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_query_tool_unexpected_error(self):
         """Test query with unexpected error wraps in QueryError."""
-        with patch("raglite.main.hybrid_search", new_callable=AsyncMock) as mock_hybrid_search:
-            mock_hybrid_search.side_effect = Exception("Unexpected failure")
+        with patch("raglite.main.multi_index_search", new_callable=AsyncMock) as mock_multi_search:
+            mock_multi_search.side_effect = Exception("Unexpected failure")
 
             request = QueryRequest(query="valid query", top_k=5)
 
@@ -229,7 +239,25 @@ class TestQueryFinancialDocumentsTool:
     @pytest.mark.asyncio
     async def test_query_tool_structured_logging(self, caplog):
         """Test query tool logs with structured extra context."""
-        mock_results = [
+        # Mock SearchResult objects for multi-index search
+        mock_search_results = [
+            SearchResult(
+                score=0.95,
+                text="Test result.",
+                document_id="test.pdf",
+                page_number=1,
+                source="vector",
+                metadata={
+                    "source_document": "test.pdf",
+                    "page_number": 1,
+                    "chunk_index": 0,
+                    "word_count": 10,
+                },
+            )
+        ]
+
+        # Mock cited QueryResult objects
+        mock_cited_results = [
             QueryResult(
                 score=0.95,
                 text="Test result.\n\n[Source: test.pdf, Page 1, Chunk 0]",
@@ -241,11 +269,11 @@ class TestQueryFinancialDocumentsTool:
         ]
 
         with (
-            patch("raglite.main.hybrid_search", new_callable=AsyncMock) as mock_hybrid_search,
+            patch("raglite.main.multi_index_search", new_callable=AsyncMock) as mock_multi_search,
             patch("raglite.main.generate_citations", new_callable=AsyncMock) as mock_citations,
         ):
-            mock_hybrid_search.return_value = mock_results
-            mock_citations.return_value = mock_results
+            mock_multi_search.return_value = mock_search_results
+            mock_citations.return_value = mock_cited_results
 
             request = QueryRequest(query="test query", top_k=5)
 

@@ -88,6 +88,7 @@
 | **Financial Embeddings (Option 2)** | FinBERT (ProsusAI/finbert) | N/A | Finance-specific embeddings (free, local) | Optional (Story 2.2) | Story 2.2 |
 | **Query Expansion** | Anthropic API (Claude) | ≥0.18.0,<1.0.0 | LLM-generated query variations | Optional (Story 2.5) | Story 2.5 |
 | **Multi-Vector Collections** | Qdrant multi-collection | ≥1.15.1 | Multiple embeddings per chunk | Optional (Story 2.6) | Story 2.6 |
+| **Metadata Extraction** | Mistral Small (mistralai) | ≥1.9.11,<2.0.0 | LLM-based query metadata extraction (FREE tier) | Required (Story 2.4) | Story 2.4 |
 
 **Phase 2 Technology Notes:**
 
@@ -122,6 +123,16 @@
    - Requires 3x storage (3 Qdrant collections)
    - Requires Claude API for keyword/summary extraction
    - Significant complexity increase
+
+6. **Metadata Extraction (Story 2.4):**
+   - **NEW DEPENDENCY APPROVED (2025-10-24):** `mistralai` library for metadata extraction
+   - Uses Mistral Small API (FREE tier, no cost)
+   - Extracts structured metadata filters from natural language queries
+   - JSON mode for reliable structured output
+   - 15-field rich schema: company_name, metric_category, reporting_period, time_granularity, etc.
+   - Latency: ~200-400ms per query (acceptable for metadata classification)
+   - Zero cost alternative to GPT-4 or Claude for simple structured extraction
+   - Reference: https://docs.mistral.ai/api/
 
 **NOT Approved for OLD Phase 2 (DEPRECATED section below):**
 - ❌ LangChain / LangGraph (NOT approved for element-aware chunking approach)

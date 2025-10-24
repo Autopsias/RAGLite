@@ -197,6 +197,20 @@ def get_postgresql_connection() -> "psycopg2.extensions.connection":
     Creates connection on first call and caches it for reuse. Provides connection
     pooling for efficient resource management across multiple storage operations.
 
+    **Connection Lifecycle (MVP):**
+    - Singleton pattern: One connection per application lifetime
+    - Connection persists for entire application runtime
+    - Automatically reconnects if connection closes (checked via `conn.closed`)
+    - No explicit cleanup required - connection closes on application shutdown
+
+    **Phase 4 Upgrade Path:**
+    For production deployment, migrate to proper connection pooling:
+    - Use `psycopg2.pool.ThreadedConnectionPool` for multi-threaded applications
+    - Configure pool size based on expected concurrent query load
+    - Add explicit connection release and cleanup methods
+    - Implement connection health checks and automatic reconnection
+    - Reference: https://www.psycopg.org/docs/pool.html
+
     Returns:
         Cached psycopg2 connection instance
 
