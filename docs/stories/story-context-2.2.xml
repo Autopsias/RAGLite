@@ -1,0 +1,276 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.2</storyId>
+    <title>Implement Page-Level Parallelism (4-8 Threads)</title>
+    <status>IN PROGRESS</status>
+    <generatedAt>2025-10-19</generatedAt>
+    <generator>Developer (Amelia)</generator>
+    <sourceStoryPath>docs/stories/story-2.2.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a system administrator</asA>
+    <iWant>page-level parallel processing</iWant>
+    <soThat>PDF ingestion is 1.7-2.5x faster</soThat>
+    <tasks>
+- Task 1: Configure Page-Level Parallelism (AC1 - 2 hours)
+  - 1.1: Add max_num_pages_visible=4 to DocumentConverter config
+  - 1.2: Configure thread pool size (test 4 vs 8 threads)
+  - 1.3: Implement proper thread pool cleanup in pipeline
+  - 1.4: Verify parallel processing engaged via logs/metrics
+- Task 2: Performance Benchmarking (AC2 - 1 hour)
+  - 2.1: Establish baseline time from Story 2.1 (single-threaded pypdfium)
+  - 2.2: Run 160-page PDF ingestion with 4 threads
+  - 2.3: Run 160-page PDF ingestion with 8 threads
+  - 2.4: Calculate speedup factor and select optimal configuration
+  - 2.5: Validate 1.7-2.5x speedup achieved (MANDATORY)
+- Task 3: Performance Documentation (AC3 - 30 min)
+  - 3.1: Document baseline time (Story 2.1 single-threaded)
+  - 3.2: Document parallel time (Story 2.2 multi-threaded)
+  - 3.3: Document speedup factor and thread count selection
+  - 3.4: Add results to Epic 2 tracking documentation
+- Task 4: Thread Safety Validation (AC4 - 30 min)
+  - 4.1: Create test that runs ingestion 10 times consecutively
+  - 4.2: Verify chunk count identical across all runs
+  - 4.3: Verify no exceptions, deadlocks, or race conditions
+  - 4.4: Document thread safety validation results
+- Task 5: Update Documentation (15 min)
+  - 5.1: Update Story 2.2 with performance results
+  - 5.2: Update CLAUDE.md with Phase 1 completion status
+  - 5.3: Prepare for Story 2.3 (Phase 2A start)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+**AC1: Parallel Processing Configuration** (2 hours)
+- Configure Docling with max_num_pages_visible=4
+- Implement page-level concurrency (4-8 threads)
+- Handle thread pool cleanup
+- Source: Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.2 AC1
+
+**AC2: Speedup Validation** (1 hour) ⭐ MANDATORY
+- Ingest test PDF (160 pages) with parallelism
+- Measure ingestion time: target 3.3-4.8 min (vs 8.2 min baseline)
+- Calculate speedup: target 1.7-2.5x
+- MANDATORY: 1.7-2.5x speedup achieved
+- Source: Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.2 AC2
+- Tech Stack Reference: docs/architecture/5-technology-stack-definitive.md - Docling: 1.7-2.5x speedup
+
+**AC3: Speedup Documentation** (30 min)
+- Document ingestion time before/after
+- Document speedup factor (1.7x-2.5x range)
+- Document optimal thread count (4 vs 8)
+- Source: Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.2 AC3
+
+**AC4: No Race Conditions** (30 min)
+- Test 10 consecutive ingestions
+- Verify no deadlocks or race conditions
+- Verify output deterministic (same chunks every time)
+- Source: Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.2 AC4
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <!-- Epic 2 PRD - Story 2.2 Specification -->
+      <doc>
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2: Advanced RAG Architecture Enhancement</title>
+        <section>Story 2.2: Implement Page-Level Parallelism (4-8 Threads)</section>
+        <snippet>Goal: Add concurrent page processing to Docling for 1.7-2.5x speedup. Depends on Story 2.1 (pypdfium backend). Expected: 8.2 min → 3.3-4.8 min for 160-page PDF. Strategic: Faster iterations for Phase 2A testing. Risk: LOW (official Docling feature).</snippet>
+      </doc>
+
+      <!-- Technology Stack - Docling Parallelism -->
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack (Definitive)</title>
+        <section>PDF Processing - Docling</section>
+        <snippet>Docling 2.0+ with page-level parallelism support via max_num_pages_visible parameter. Empirically validated 1.7-2.5x speedup with 4-8 concurrent pages. Thread-safe with pypdfium backend. No additional dependencies required.</snippet>
+      </doc>
+
+      <!-- Implementation Strategy - Epic 2 Phase 1 -->
+      <doc>
+        <path>docs/architecture/8-phased-implementation-strategy-v11-simplified.md</path>
+        <title>Phased Implementation Strategy</title>
+        <section>Epic 2 Phase 1: PDF Ingestion Performance Optimization</section>
+        <snippet>Phase 1 completion: Story 2.1 (pypdfium) + Story 2.2 (parallelism) = 1.7-2.5x combined speedup. Enables faster Phase 2A iterations. Timeline: 1-2 days total. Unblocks Phase 2A (Stories 2.3-2.5).</snippet>
+      </doc>
+
+      <!-- Story 2.1 - Baseline Time Reference -->
+      <doc>
+        <path>docs/stories/story-2.1.md</path>
+        <title>Story 2.1: Implement pypdfium Backend</title>
+        <section>AC4 Validation Results</section>
+        <snippet>Story 2.1 baseline (single-threaded pypdfium): 13.3 minutes for 160-page PDF. This is the baseline for Story 2.2 speedup calculation. Target: 3.3-4.8 min (1.7-2.5x speedup).</snippet>
+      </doc>
+
+      <!-- CLAUDE.md - Development Constraints and Anti-Over-Engineering Rules -->
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project Development Guidelines</title>
+        <section>Anti-Over-Engineering Rules & Technology Stack Constraints</section>
+        <snippet>CRITICAL: KISS principle enforced - target ~600-800 lines. Technology stack LOCKED (no additions without approval). Direct SDK usage only (NO custom wrappers). Story 2.2: This is a 1-parameter configuration change (max_num_pages_visible). No custom thread pools, no async refactoring, no architectural changes. Simplicity first.</snippet>
+      </doc>
+
+      <!-- Documentation Structure and Navigation -->
+      <doc>
+        <path>docs/README.md</path>
+        <title>Documentation Guide and Navigation</title>
+        <section>Documentation Structure</section>
+        <snippet>Documentation organized in sharded files: docs/architecture/ (30 files), docs/prd/ (15 files), docs/stories/ (active user stories). Testing guidelines in pytest.ini. Quality gates and decision logs in workflow status. Story 2.2 artifacts location: docs/stories/.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <!-- Primary Integration Point - DocumentConverter Initialization -->
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>service</kind>
+        <symbol>DocumentConverter initialization</symbol>
+        <lines>1013-1022</lines>
+        <reason>CRITICAL: Add max_num_pages_visible parameter to DocumentConverter initialization. Currently single-threaded. Need to add max_num_pages_visible=4 (or 8) to enable parallelism.</reason>
+      </artifact>
+
+      <!-- Imports Section - Already has required imports -->
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>import</kind>
+        <symbol>Docling imports</symbol>
+        <lines>13-22</lines>
+        <reason>All required imports already present (DocumentConverter, PdfFormatOption, PyPdfiumDocumentBackend). No new imports needed for parallelism.</reason>
+      </artifact>
+
+      <!-- Integration Test - PDF Ingestion Template -->
+      <artifact>
+        <path>tests/integration/test_ingestion_integration.py</path>
+        <kind>test</kind>
+        <symbol>TestPDFIngestionIntegration.test_ingest_financial_pdf_with_tables</symbol>
+        <lines>36-97</lines>
+        <reason>Use as template for parallel ingestion test. Extend to measure ingestion time and validate speedup. Already includes page count and table extraction validation.</reason>
+      </artifact>
+
+      <!-- AC4 Comprehensive Test - Timing Reference -->
+      <artifact>
+        <path>tests/integration/test_ac4_comprehensive.py</path>
+        <kind>test</kind>
+        <symbol>test_ac4_160page_pypdfium_optimized</symbol>
+        <lines>127-201</lines>
+        <reason>Story 2.1 baseline test: 13.3 min for 160-page PDF (single-threaded). Use this timing as Story 2.2 baseline comparison. Duplicate test with parallelism enabled.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <!-- Python Dependencies from pyproject.toml -->
+      <python>
+        <package name="docling" version="2.55.1" />
+        <package name="sentence-transformers" version="5.1.1" />
+        <package name="qdrant-client" version="1.15.1" />
+        <package name="fastmcp" version="2.12.4" />
+        <package name="anthropic" version=">=0.18.0,<1.0.0" />
+        <package name="pydantic" version=">=2.0,<3.0" />
+        <package name="openpyxl" version=">=3.1,<4.0" />
+        <package name="pandas" version=">=2.0,<3.0" />
+        <package name="rank-bm25" version="0.2.2" />
+        <package name="tiktoken" version=">=0.5.1,<1.0.0" />
+        <package name="python-dotenv" version="1.1.1" />
+        <package name="asyncio" version=">=3.4.3,<4.0.0" />
+        <package name="httpx" version=">=0.28.1,<1.0.0" />
+      </python>
+
+      <dev>
+        <package name="pytest" version="8.4.2" />
+        <package name="pytest-asyncio" version="1.2.0" />
+        <package name="pytest-cov" version="5.0.0" />
+        <package name="pytest-mock" version=">=3.12,<4.0" />
+        <package name="pytest-xdist" version=">=3.5,<4.0" />
+        <package name="pytest-timeout" version=">=2.0,<3.0" />
+        <package name="black" version=">=23.3,<24.0" />
+        <package name="ruff" version=">=0.0.270,<1.0.0" />
+      </dev>
+
+      <note>No new dependencies required for Story 2.2. Parallelism is a built-in Docling feature accessible via max_num_pages_visible parameter.</note>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <!-- Development Constraints from Story Dev Notes -->
+    <constraint type="accuracy">MUST maintain table accuracy from Story 2.1 (100%). Parallelism must NOT affect extraction quality. TableFormerMode.ACCURATE configuration must be preserved.</constraint>
+
+    <constraint type="performance">MANDATORY 1.7-2.5x speedup requirement. This is a DECISION GATE for Phase 1 completion. Speedup <1.7x requires PM escalation.</constraint>
+
+    <constraint type="determinism">Output MUST be deterministic across parallel runs. Same chunk count, same embeddings, same metadata regardless of thread count or scheduling.</constraint>
+
+    <constraint type="thread-safety">MUST verify thread safety with 10 consecutive runs. No deadlocks, no race conditions, no data corruption. Qdrant client must handle concurrent writes safely.</constraint>
+
+    <constraint type="simplicity">KISS principle - This is a 1-parameter configuration change. Add max_num_pages_visible=4 (or 8) to DocumentConverter. No custom thread pools, no async refactoring, no architectural changes. Direct SDK usage only.</constraint>
+
+    <constraint type="baseline">Story 2.1 MUST be complete before starting Story 2.2. Baseline timing from Story 2.1 single-threaded pypdfium (13.3 min) is required for speedup calculation.</constraint>
+  </constraints>
+
+  <interfaces>
+    <!-- DocumentConverter Parallelism API -->
+    <interface>
+      <name>DocumentConverter</name>
+      <kind>class</kind>
+      <signature>DocumentConverter(format_options=..., max_num_pages_visible=4)</signature>
+      <path>docling.document_converter</path>
+      <usage>Add max_num_pages_visible parameter to existing DocumentConverter initialization. Value: 4 or 8 (test both). Enables concurrent page processing. Existing initialization at raglite/ingestion/pipeline.py:1016-1022.</usage>
+    </interface>
+
+    <!-- PdfFormatOption - Unchanged -->
+    <interface>
+      <name>PdfFormatOption</name>
+      <kind>class</kind>
+      <signature>PdfFormatOption(pipeline_options=pipeline_options, backend=PyPdfiumDocumentBackend)</signature>
+      <path>docling.document_converter</path>
+      <usage>No changes required to PdfFormatOption. Pipeline options and pypdfium backend configuration from Story 2.1 remain unchanged.</usage>
+    </interface>
+
+    <!-- PdfPipelineOptions - Unchanged -->
+    <interface>
+      <name>PdfPipelineOptions</name>
+      <kind>class</kind>
+      <signature>PdfPipelineOptions(do_table_structure=True, table_structure_options=...)</signature>
+      <path>docling.datamodel.pipeline_options</path>
+      <usage>No changes required to PdfPipelineOptions. All configuration from Story 2.1 preserved (pypdfium backend, TableFormerMode.ACCURATE).</usage>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+Testing framework: pytest with pytest-asyncio for async function testing. Integration tests marked with @pytest.mark.integration and @pytest.mark.asyncio. Performance tests use pytest-timeout (900s for 160-page PDF tests). Lazy imports to avoid test discovery overhead (DO NOT import raglite modules at module level). Test markers: integration, unit, slow, smoke, p0/p1/p2 for priority. Code coverage via pytest-cov (target 80%+). Parallel execution via pytest-xdist with loadfile scheduling. Performance tests document timing with time.time() measurements.</standards>
+
+    <locations>
+      <location>tests/integration/test_ingestion_integration.py - Integration tests with real PDFs (10-page sample: tests/fixtures/sample_financial_report.pdf)</location>
+      <location>tests/integration/test_ac4_comprehensive.py - Production-scale tests (160-page PDF: docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf)</location>
+      <location>tests/integration/test_page_parallelism.py - NEW: Story 2.2 parallel processing tests (AC2, AC4)</location>
+      <location>pytest.ini - Test configuration (markers, timeouts, parallel execution settings)</location>
+    </locations>
+
+    <ideas>
+      <!-- AC1: Parallel Processing Configuration -->
+      <test_idea ac="AC1">
+        <description>Unit test: Verify DocumentConverter initialization includes max_num_pages_visible parameter</description>
+        <approach>Mock DocumentConverter, assert max_num_pages_visible=4 (or 8) is set. Verify all Story 2.1 configuration preserved (pypdfium backend, TableFormerMode.ACCURATE). Log/inspect thread usage to confirm parallelism engaged.</approach>
+      </test_idea>
+
+      <!-- AC2: Speedup Validation -->
+      <test_idea ac="AC2">
+        <description>Performance test: Measure speedup with 160-page PDF (4 vs 8 threads)</description>
+        <approach>Duplicate test_ac4_160page_pypdfium_optimized with max_num_pages_visible=4. Measure ingestion time. Compare with Story 2.1 baseline (13.3 min). Calculate speedup factor. MANDATORY: Validate ≥1.7x. Repeat with max_num_pages_visible=8 to find optimal configuration. Document results.</approach>
+      </test_idea>
+
+      <!-- AC3: Speedup Documentation -->
+      <test_idea ac="AC3">
+        <description>Documentation task: Record performance results in story file</description>
+        <approach>Create results table: Baseline (13.3 min), 4-thread (measured), 8-thread (measured), speedup factor, selected configuration. Add to Story 2.2 and Epic 2 tracking. Include in PR description.</approach>
+      </test_idea>
+
+      <!-- AC4: Thread Safety Validation -->
+      <test_idea ac="AC4">
+        <description>Determinism test: Run parallel ingestion 10 times, verify identical output</description>
+        <approach>Create test loop: ingest same PDF 10 times with parallelism enabled. Collect chunk_count from each run. Assert all runs produce identical chunk_count. Verify no exceptions, no deadlocks. Log any variance. Pass if 10/10 runs match.</approach>
+      </test_idea>
+    </ideas>
+  </tests>
+</story-context>

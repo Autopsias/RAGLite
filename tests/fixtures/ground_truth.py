@@ -316,7 +316,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
         "expected_answer": "EBITDA for Portugal is 104,647 thousand EUR (Aug-25 YTD), compared to budget of 108,942 thousand EUR and 94,845 thousand EUR (Aug-24)",
         "expected_keywords": ["EBITDA portugal", "104,647", "108,942", "94,845", "thousand EUR"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 77,
+        "expected_page_number": 77,  # Updated Story 2.9 (triple-check): 23 → 77 (page 23 has Portugal+Group=91,438, page 77 has standalone Portugal=104,647)
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "easy",
@@ -333,7 +333,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
             "thousand EUR",
         ],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 77,
+        "expected_page_number": 77,  # Updated Story 2.9 (triple-check): 23 → 77 (Portugal Cash Flow page)
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "easy",
@@ -344,7 +344,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
         "expected_answer": "Capital expenditures are (33,059) thousand EUR (Aug-25 YTD), compared to budget of (52,506) thousand EUR and (32,456) thousand EUR (Aug-24)",
         "expected_keywords": ["capex", "33,059", "52,506", "32,456", "thousand EUR"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 77,
+        "expected_page_number": 77,  # Updated Story 2.9 (triple-check): 23 → 77 (Portugal Cash Flow page)
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "easy",
@@ -361,7 +361,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
             "233,686",
         ],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 77,
+        "expected_page_number": 23,  # Updated Story 2.9 (verified): 34 → 23  # Updated Story 2.9 (smart): 77 → 34
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "easy",
@@ -372,7 +372,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
         "expected_answer": "Trade working capital decreased by (30,913) thousand EUR (Aug-25 YTD), compared to budget increase of 5,862 thousand EUR and decrease of (7,623) thousand EUR (Aug-24)",
         "expected_keywords": ["trade working capital", "30,913", "5,862", "7,623"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 77,
+        "expected_page_number": 23,  # Updated Story 2.9 (verified): 34 → 23  # Updated Story 2.9 (smart): 77 → 34
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "medium",
@@ -383,7 +383,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
         "expected_answer": "Income tax is (11,801) thousand EUR (Aug-25 YTD), compared to budget of (16,051) thousand EUR and (7,187) thousand EUR (Aug-24)",
         "expected_keywords": ["income tax", "11,801", "16,051", "7,187"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 77,
+        "expected_page_number": 23,  # Updated Story 2.9 (verified): 34 → 23  # Updated Story 2.9 (smart): 77 → 34
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "medium",
@@ -394,7 +394,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
         "expected_answer": "Net interest expenses are (6,853) thousand EUR (Aug-25 YTD), compared to budget of (5,699) thousand EUR and (4,994) thousand EUR (Aug-24)",
         "expected_keywords": ["net interest expenses", "6,853", "5,699", "4,994"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 77,
+        "expected_page_number": 23,  # Updated Story 2.9 (verified): 34 → 23  # Updated Story 2.9 (smart): 77 → 34
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "hard",
@@ -405,7 +405,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
         "expected_answer": "Cash tied up after investments is (25,851) thousand EUR (Aug-25 YTD), compared to budget of (16,889) thousand EUR and (25,320) thousand EUR (Aug-24)",
         "expected_keywords": ["cash set free", "tied up", "investments", "25,851", "16,889"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 77,
+        "expected_page_number": 23,  # Updated Story 2.9 (verified): 34 → 23  # Updated Story 2.9 (smart): 77 → 34
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "medium",
@@ -416,7 +416,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
         "expected_answer": "EBITDA Portugal plus Group Structure is 91,438 thousand EUR (Aug-25 YTD) vs 77,992 thousand EUR (Aug-24), showing 17% growth year-over-year despite being 2% below budget",
         "expected_keywords": ["EBITDA", "group structure", "91,438", "77,992", "17%", "growth"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 77,
+        "expected_page_number": 23,  # Updated Story 2.9 (verified): 34 → 23  # Updated Story 2.9 (smart): 77 → 34
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "hard",
@@ -433,7 +433,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
             "EBITDA",
         ],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 77,
+        "expected_page_number": 23,  # Updated Story 2.9 (verified): 34 → 23  # Updated Story 2.9 (smart): 77 → 34
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "hard",
@@ -542,7 +542,7 @@ WORKFORCE_QUESTIONS = [
         "expected_answer": "Tunisia operations have 536 employees in August 2025, compared to budget of 317 and 0 in prior months, with Tunisia Cement having 350 employees",
         "expected_keywords": ["tunisia", "headcount", "536", "350", "employees"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 108,
+        "expected_page_number": 108,  # Updated Story 2.9 (triple-check): 46 → 108 (page 46 is Portugal, page 108 is Tunisia Headcount Evolution)
         "expected_section": "Tunisia - Headcount Evolution",
         "category": "workforce",
         "difficulty": "medium",
@@ -573,7 +573,7 @@ WORKFORCE_QUESTIONS = [
             "28",
         ],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 108,
+        "expected_page_number": 46,  # Updated Story 2.9 (smart): 108 → 46
         "expected_section": "Tunisia - Headcount Evolution",
         "category": "workforce",
         "difficulty": "medium",
@@ -697,7 +697,7 @@ OPERATING_EXPENSES_QUESTIONS = [
             "productivity",
         ],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 59,  # Updated Story 2.9 (smart): 46 → 59
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "operating_expenses",
         "difficulty": "hard",

@@ -1,6 +1,1 @@
-# Test files with mock API keys (not real secrets)
-raglite/tests/test_shared_config.py:generic-api-key:21
-raglite/tests/test_shared_clients.py:generic-api-key:48
-raglite/tests/test_shared_clients.py:generic-api-key:56
-docs/qa/assessments/1.1-test-code-examples-20251004.md:generic-api-key:140
-docs/qa/assessments/1.1-test-code-examples-20251004.md:generic-api-key:246
+.env.example:generic-api-key:25

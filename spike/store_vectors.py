@@ -176,9 +176,12 @@ def test_qdrant_search(
     print("\nTest query (first chunk preview):")
     print(f"  {test_text}...\n")
 
-    # Perform search using updated API
+    # Perform search using updated API with named vectors (Story 2.1 hybrid search)
     search_results = client.query_points(
-        collection_name=collection_name, query=test_vector, limit=top_k
+        collection_name=collection_name,
+        query=test_vector,
+        using="text-dense",  # Named vector for hybrid search
+        limit=top_k,
     ).points
 
     print(f"Top {top_k} search results:")

@@ -1,0 +1,316 @@
+<story-context id="story-2.10-query-classification-fix" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>10</storyId>
+    <title>Fix Query Classification Over-Routing</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/story-2.10.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>query router and retrieval orchestration system</asA>
+    <iWant>tightened query classification logic that only routes to SQL when both metric AND temporal terms are present</iWant>
+    <soThat>SQL over-routing is reduced from 48% → 8%, eliminating 300-500ms latency overhead and reducing failed SQL searches</soThat>
+    <tasks>
+      - Implement temporal and metric pattern detection (AC1)
+      - Refactor classification logic to require both metric + temporal for SQL_ONLY (AC2)
+      - Add routing metrics logging to multi_index_search (AC3)
+      - Validate routing improvements with test suite (AC4)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" effort="1.5h">
+      <goal>Add temporal term detection to distinguish between SQL-worthy queries and general semantic queries</goal>
+      <details>
+        - Add temporal pattern list: Q1-Q4, months, years, YTD, H1, FY, relative terms (last quarter, this year)
+        - Add metric/financial pattern list: revenue, EBITDA, margin, cost, expense, production metrics
+        - Integrate pattern matching into classify_query() with has_temporal_terms and has_metric_terms flags
+        - Test on ground truth queries: expected 4% temporal detection rate, 54% metric detection rate
+      </details>
+      <successCriteria>
+        - Temporal pattern list created (15+ patterns)
+        - Metric pattern list created (20+ patterns)
+        - Pattern matching integrated with word boundary regex
+        - Detection tested on ground truth (4% temporal, 54% metric)
+      </successCriteria>
+    </criterion>
+
+    <criterion id="AC2" effort="1h">
+      <goal>Tighten SQL_ONLY routing to only trigger when BOTH metric terms AND temporal terms are present</goal>
+      <details>
+        - Refactor classification logic (lines 279-299 in query_classifier.py)
+        - New routing rules:
+          1. SQL_ONLY: Table keywords OR (metric + temporal + precision question)
+          2. HYBRID: Semantic keywords + (metric OR temporal OR numeric) - DEFAULT for ambiguous
+          3. VECTOR_ONLY: Pure semantic queries without data indicators
+        - Change default from VECTOR_ONLY to HYBRID for safer fallback
+      </details>
+      <successCriteria>
+        - Classification logic refactored
+        - SQL_ONLY requires BOTH metric AND temporal terms
+        - Default changed to HYBRID
+        - Ground truth routing tested: SQL_ONLY ≤8%, HYBRID ≥50%
+      </successCriteria>
+    </criterion>
+
+    <criterion id="AC3" effort="30min">
+      <goal>Add instrumentation to track routing decisions and SQL fallback rates for monitoring and debugging</goal>
+      <details>
+        - Add routing decision logging to multi_index_search()
+        - Track SQL fallback rate (queries routed to SQL that return 0 results)
+        - Log result counts and top scores for debugging
+      </details>
+      <successCriteria>
+        - Routing decision logging added
+        - SQL fallback tracking implemented
+        - Result metrics logged (count, top score)
+        - Routing distribution documented: SQL_ONLY ≤8%, HYBRID ≥50%, fallback &lt;5%
+      </successCriteria>
+    </criterion>
+
+    <criterion id="AC4" effort="1h">
+      <goal>Run accuracy tests to validate routing improvements and latency reduction</goal>
+      <details>
+        - Create validation script: scripts/validate-routing-improvements.py
+        - Run on full ground truth test suite (50 queries)
+        - Measure routing distribution before/after changes
+        - Measure query latency (p50, p95) before/after
+        - Validate SQL fallback rate &lt;5%
+      </details>
+      <successCriteria>
+        - Validation script created
+        - SQL_ONLY routing: 48% → 8% (target met)
+        - HYBRID routing: ≥50% (default for ambiguous cases)
+        - SQL fallback rate: &lt;5%
+        - p50 latency reduced by 300-500ms
+        - Validation report saved
+      </successCriteria>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2: Advanced RAG Architecture Enhancement</title>
+        <section>Story 2.10: Fix Query Classification Over-Routing</section>
+        <snippet>Fix heuristic classifier over-routing from 48% → 8% SQL routing. Require BOTH metric terms AND temporal terms for SQL_ONLY routing. Expected impact: -300-500ms p50 latency reduction.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/phase2a-deep-dive-analysis.md</path>
+        <title>Phase 2A Deep Dive Analysis</title>
+        <section>Root Cause #3: Over-Aggressive Query Classification</section>
+        <snippet>Current classification logic routes 48% of queries to SQL_ONLY when only 4% have temporal qualifiers. Evidence shows 12x over-routing causing failed SQL searches with 500-1000ms fallback latency.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/architecture/6-complete-reference-implementation.md</path>
+        <title>Complete Reference Implementation</title>
+        <section>Heuristic Classification Patterns</section>
+        <snippet>Use heuristic-based query classification (&lt;50ms) instead of LLM overhead. Pattern matching with regex word boundaries for temporal/metric detection.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack</title>
+        <section>PostgreSQL Multi-Index Architecture</section>
+        <snippet>PostgreSQL 16 for structured table storage (Story 2.6), Qdrant for vector search (Epic 1), BM25 for hybrid search (Story 2.1).</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>raglite/retrieval/query_classifier.py</path>
+        <kind>module</kind>
+        <symbol>classify_query</symbol>
+        <lines>197-312</lines>
+        <reason>PRIMARY FILE TO MODIFY - Contains problematic classification logic (lines 294-296) that routes ANY numeric reference to SQL_ONLY. Need to add temporal/metric pattern detection and refactor routing logic.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/retrieval/query_classifier.py</path>
+        <kind>module</kind>
+        <symbol>QueryType</symbol>
+        <lines>30-41</lines>
+        <reason>Enum defining query types (VECTOR_ONLY, SQL_ONLY, HYBRID) - used for routing decisions.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/retrieval/multi_index_search.py</path>
+        <kind>module</kind>
+        <symbol>multi_index_search</symbol>
+        <lines>0-50</lines>
+        <reason>SECONDARY FILE TO MODIFY - Multi-index search orchestration. Need to add routing metrics logging for SQL fallback tracking (AC3).</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/retrieval/query_preprocessing.py</path>
+        <kind>module</kind>
+        <symbol>preprocess_query_for_table_search</symbol>
+        <lines>N/A</lines>
+        <reason>Query preprocessing module (Story 2.7) - used when queries are routed to SQL. Stopword removal and metadata extraction.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/retrieval/search.py</path>
+        <kind>module</kind>
+        <symbol>hybrid_search</symbol>
+        <lines>N/A</lines>
+        <reason>Hybrid search implementation (Story 2.1) - combines BM25 and semantic search. Used when queries are routed to HYBRID.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/structured/table_retrieval.py</path>
+        <kind>module</kind>
+        <symbol>search_tables_with_metadata_filter</symbol>
+        <lines>N/A</lines>
+        <reason>PostgreSQL table search (Story 2.6-2.7) - used when queries are routed to SQL_ONLY. Returns 0 results when no matches, triggering fallback.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="python" version="&gt;=3.11,&lt;4.0"/>
+        <package name="asyncio" version="&gt;=3.4.3,&lt;4.0.0"/>
+        <package name="qdrant-client" version="1.15.1"/>
+        <package name="psycopg2-binary" version="&gt;=2.9,&lt;3.0"/>
+        <package name="rank-bm25" version="0.2.2"/>
+        <package name="mistralai" version="&gt;=1.9.11"/>
+        <package name="tiktoken" version="&gt;=0.5.1,&lt;1.0.0"/>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">
+      <description>Heuristic-based classification (&lt;50ms) - no LLM overhead for latency optimization</description>
+      <source>docs/architecture/6-complete-reference-implementation.md</source>
+    </constraint>
+
+    <constraint type="simplicity">
+      <description>KISS Principle - Use pattern matching with regex, no ML classification models, no query intent parsing with LLM</description>
+      <source>CLAUDE.md - Anti-Over-Engineering Rules</source>
+    </constraint>
+
+    <constraint type="routing">
+      <description>SQL_ONLY routing requires BOTH metric terms (revenue, EBITDA, cost) AND temporal terms (Q3 2024, August 2025, YTD)</description>
+      <source>Story 2.10 AC2</source>
+    </constraint>
+
+    <constraint type="default">
+      <description>Default routing changed from VECTOR_ONLY to HYBRID for ambiguous cases (safer fallback, graceful degradation)</description>
+      <source>Story 2.10 AC2</source>
+    </constraint>
+
+    <constraint type="validation">
+      <description>Target: SQL_ONLY ≤8%, HYBRID ≥50%, SQL fallback &lt;5%, p50 latency -300-500ms</description>
+      <source>Story 2.10 AC4</source>
+    </constraint>
+
+    <constraint type="course-correction">
+      <description>Story 2.10 is THIRD of four course correction stories (2.8 → 2.9 → 2.10 → 2.11). Combined expected result: 65-75% accuracy</description>
+      <source>docs/prd/epic-2-advanced-rag-enhancements.md</source>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>classify_query</name>
+      <kind>function</kind>
+      <signature>def classify_query(query: str) -&gt; QueryType</signature>
+      <path>raglite/retrieval/query_classifier.py:197-312</path>
+      <description>
+        Heuristic-based query type classification for multi-index routing.
+        Returns: QueryType enum (VECTOR_ONLY, SQL_ONLY, or HYBRID)
+
+        Story 2.10 Changes:
+        - Add temporal_patterns list (15+ regex patterns)
+        - Add metric_patterns list (20+ regex patterns)
+        - Add has_temporal_terms boolean flag
+        - Add has_metric_terms boolean flag
+        - Refactor routing logic: SQL_ONLY requires metric AND temporal
+        - Change default from VECTOR_ONLY to HYBRID
+      </description>
+    </interface>
+
+    <interface>
+      <name>multi_index_search</name>
+      <kind>async function</kind>
+      <signature>async def multi_index_search(query: str, top_k: int = 5, auto_classify: bool = True, metadata_filters: dict[str, str] | None = None) -&gt; list[QueryResult]</signature>
+      <path>raglite/retrieval/multi_index_search.py</path>
+      <description>
+        Multi-index search orchestration combining Qdrant vector search with PostgreSQL table search.
+
+        Story 2.10 Changes (AC3):
+        - Add routing decision logging (query, query_type, top_k)
+        - Add SQL fallback tracking (log when SQL returns 0 results)
+        - Add result metrics logging (result_count, top_score)
+      </description>
+    </interface>
+
+    <interface>
+      <name>QueryType</name>
+      <kind>enum</kind>
+      <signature>class QueryType(Enum): VECTOR_ONLY = "vector_only"; SQL_ONLY = "sql_only"; HYBRID = "hybrid"</signature>
+      <path>raglite/retrieval/query_classifier.py:30-41</path>
+      <description>Query type enum for multi-index routing decisions. Determines which index(es) to use for retrieval.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest framework with async support (pytest-asyncio). All tests in tests/ directory.
+      Testing patterns from docs/architecture/6-complete-reference-implementation.md:
+      - Unit tests: Mock external dependencies, validate logic
+      - Integration tests: End-to-end query routing validation
+      - Accuracy tests: Validate routing distribution and latency metrics
+    </standards>
+
+    <locations>
+      - tests/ (no existing tests found - validation script will be in scripts/)
+      - scripts/validate-routing-improvements.py (AC4 - new validation script)
+    </locations>
+
+    <ideas>
+      <test ac="AC1">
+        Unit test for temporal pattern detection:
+        - Test: "Q3 2024" → has_temporal_terms=True
+        - Test: "revenue" → has_temporal_terms=False
+        - Test: "last quarter" → has_temporal_terms=True
+      </test>
+
+      <test ac="AC1">
+        Unit test for metric pattern detection:
+        - Test: "EBITDA margin" → has_metric_terms=True
+        - Test: "explain growth" → has_metric_terms=False
+        - Test: "variable cost per ton" → has_metric_terms=True
+      </test>
+
+      <test ac="AC2">
+        Integration test for routing logic:
+        - Test: "What is EBITDA for Q3 2024?" → QueryType.SQL_ONLY (metric + temporal)
+        - Test: "What is EBITDA?" → QueryType.HYBRID (metric only)
+        - Test: "Explain the growth strategy" → QueryType.VECTOR_ONLY (pure semantic)
+      </test>
+
+      <test ac="AC3">
+        Integration test for routing metrics:
+        - Test: SQL_ONLY query returns 0 results → log fallback event
+        - Test: Routing decision logged with query_type, top_k
+        - Test: Result metrics logged with result_count, top_score
+      </test>
+
+      <test ac="AC4">
+        Validation test (full ground truth suite):
+        - Run all 50 queries through updated classifier
+        - Measure: SQL_ONLY ≤8%, HYBRID ≥50%, SQL fallback &lt;5%
+        - Measure: p50 latency reduction -300-500ms
+        - Generate validation report JSON
+      </test>
+    </ideas>
+  </tests>
+</story-context>

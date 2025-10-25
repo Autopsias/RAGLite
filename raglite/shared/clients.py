@@ -1,10 +1,12 @@
 """API client factories for external services.
 
-Provides singleton client instances for Qdrant and Claude API.
+Provides singleton client instances for Qdrant, Claude API, and PostgreSQL.
 """
 
 import time
 
+import psycopg2
+import psycopg2.extras
 from anthropic import Anthropic
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
@@ -12,12 +14,16 @@ from sentence_transformers import SentenceTransformer
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 
+# Register UUID adapter for psycopg2 (Story 2.6 AC4)
+psycopg2.extras.register_uuid()
+
 logger = get_logger(__name__)
 
 
 # Module-level singletons (connection pooling and model caching)
 _qdrant_client: QdrantClient | None = None
 _embedding_model: SentenceTransformer | None = None
+_postgresql_connection: "psycopg2.extensions.connection | None" = None
 
 
 def get_qdrant_client() -> QdrantClient:
@@ -183,3 +189,90 @@ def get_embedding_model() -> SentenceTransformer:
             raise RuntimeError(error_msg) from e
 
     return _embedding_model
+
+
+def get_postgresql_connection() -> "psycopg2.extensions.connection":
+    """Lazy-load PostgreSQL connection (singleton pattern with connection pooling).
+
+    Creates connection on first call and caches it for reuse. Provides connection
+    pooling for efficient resource management across multiple storage operations.
+
+    **Connection Lifecycle (MVP):**
+    - Singleton pattern: One connection per application lifetime
+    - Connection persists for entire application runtime
+    - Automatically reconnects if connection closes (checked via `conn.closed`)
+    - No explicit cleanup required - connection closes on application shutdown
+
+    **Phase 4 Upgrade Path:**
+    For production deployment, migrate to proper connection pooling:
+    - Use `psycopg2.pool.ThreadedConnectionPool` for multi-threaded applications
+    - Configure pool size based on expected concurrent query load
+    - Add explicit connection release and cleanup methods
+    - Implement connection health checks and automatic reconnection
+    - Reference: https://www.psycopg.org/docs/pool.html
+
+    Returns:
+        Cached psycopg2 connection instance
+
+    Raises:
+        ConnectionError: If PostgreSQL connection fails
+
+    Note:
+        Connection parameters from settings:
+        - Host: settings.postgres_host (default: localhost)
+        - Port: settings.postgres_port (default: 5432)
+        - Database: settings.postgres_db (default: raglite)
+        - User: settings.postgres_user (default: raglite)
+        - Password: settings.postgres_password (default: raglite)
+
+    Example:
+        >>> conn = get_postgresql_connection()
+        >>> cursor = conn.cursor()
+        >>> cursor.execute("SELECT COUNT(*) FROM financial_chunks")
+        >>> # Subsequent calls return same cached instance
+        >>> same_conn = get_postgresql_connection()
+        >>> assert conn is same_conn
+    """
+    global _postgresql_connection
+
+    if _postgresql_connection is None or _postgresql_connection.closed:
+        logger.info(
+            "Connecting to PostgreSQL",
+            extra={
+                "host": settings.postgres_host,
+                "port": settings.postgres_port,
+                "database": settings.postgres_db,
+            },
+        )
+
+        try:
+            _postgresql_connection = psycopg2.connect(
+                host=settings.postgres_host,
+                port=settings.postgres_port,
+                dbname=settings.postgres_db,
+                user=settings.postgres_user,
+                password=settings.postgres_password,
+            )
+            logger.info(
+                "PostgreSQL connection established",
+                extra={
+                    "host": settings.postgres_host,
+                    "port": settings.postgres_port,
+                    "database": settings.postgres_db,
+                },
+            )
+        except psycopg2.Error as e:
+            error_msg = f"Failed to connect to PostgreSQL: {e}"
+            logger.error(
+                "PostgreSQL connection failed",
+                extra={
+                    "host": settings.postgres_host,
+                    "port": settings.postgres_port,
+                    "database": settings.postgres_db,
+                    "error": str(e),
+                },
+                exc_info=True,
+            )
+            raise ConnectionError(error_msg) from e
+
+    return _postgresql_connection

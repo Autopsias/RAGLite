@@ -1,481 +1,588 @@
-# Epic 2: Advanced RAG Enhancements (Phase 2)
+# Epic 2: Advanced RAG Architecture Enhancement
 
-**Status:** CONDITIONAL (only if Epic 1 baseline <90% retrieval or <95% attribution)
-**Priority:** MEDIUM
-**Duration:** 4-10 weeks (depends on how many stories needed)
-**Goal:** Achieve 95-98% retrieval accuracy through incremental RAG improvements
+**Status:** IN PROGRESS
+**Priority:** 🔴 **CRITICAL** (blocks Epic 3-5)
+**Duration:** 2-3 weeks (best case, Phase 1+2A) to 18 weeks (worst case, all contingencies)
+**Goal:** Achieve minimum 70% retrieval accuracy through staged RAG architecture enhancement
 
-**⚠️ IMPLEMENTATION STRATEGY:**
-- Stories implemented **SEQUENTIALLY** (not parallel)
-- Test **AFTER EACH** story
-- **STOP** when 95% accuracy achieved
-- Do NOT implement all 6 stories unless necessary
+**⚠️ STRATEGIC PIVOT (2025-10-19):**
+Epic 2 has been redefined following the catastrophic failure of element-aware chunking (Story 2.2 achieved 42% vs 56% baseline = -14pp regression). This epic now implements a **staged RAG architecture approach** with decision gates at each phase.
 
 ---
 
 ## Epic Overview
 
-This epic contains 6 RAG enhancement stories that are implemented sequentially with decision gates after EACH story. Implementation **STOPS** when 95% accuracy is achieved.
+Epic 2 pivots from the failed element-aware chunking approach (42% accuracy, -14pp regression) to a staged RAG architecture enhancement strategy. This epic implements PDF ingestion optimization followed by a research-validated fixed chunking approach, with contingency paths to Structured Multi-Index or Hybrid Architecture if accuracy thresholds are not met.
 
-**ONLY IMPLEMENT IF:**
-- Story 1.15B baseline shows <90% retrieval accuracy OR <95% attribution accuracy
+**Root Cause of Pivot:**
+Story 2.2 (Element-Aware Chunking) implemented the **exact failure mode warned against in research** (Yepes et al. 2024):
+- Research evidence: Element-based "Keywords Chipper" = **46.10% accuracy**
+- Research evidence: Fixed 512-token chunks = **68.09% accuracy**
+- **We built the 46% solution instead of the 68% solution**
 
-**Expected Progression:**
-- Baseline (Option C): 90-92% retrieval accuracy
-- After Story 2.1 (Hybrid Search): 92-94% accuracy
-- After Story 2.2 (Financial Embeddings): 94-96% accuracy → Likely STOP here ✅
-- After Story 2.3 (Table-Aware Chunking): 95-97% accuracy
-- After Story 2.4+ (Cross-Encoder, Query Expansion, Multi-Vector): 96-98%+ accuracy
-
-**Technologies Added:**
-- sentence-transformers (cross-encoder re-ranking) ✅ Already in requirements
-- OpenAI API (optional: embeddings, query expansion)
-- FinBERT (optional: financial embeddings)
-- Qdrant multi-collection support
+**New Approach:**
+Staged implementation with empirical decision gates based on production-proven RAG patterns.
 
 ---
 
-## Story 2.1: Phase 2A - Hybrid Search (4-6 hours)
+## Business Value
 
-**Goal:** Combine semantic vector search with keyword matching for precision
+- **Achieve minimum 70% retrieval accuracy** (unblock Epic 3-5)
+- **1.7-2.5x faster PDF ingestion** (accelerate testing iterations)
+- **Production-proven approaches** (68-72% guaranteed by research)
+- **Staged implementation with decision gates** (minimize risk)
+- **Cost-efficient path to accuracy** (start simple, escalate only if needed)
 
-**As a** system,
-**I want** to combine vector search with keyword matching and re-ranking,
-**so that** queries with specific numbers or financial terms retrieve correct chunks with higher precision.
+---
 
-### Acceptance Criteria
+## Success Criteria
 
-1. **Post-search keyword re-ranking implemented** (2 hours)
-   - Retrieve top-20 candidates via semantic search
-   - Extract keywords from query (financial terms, numbers, units)
-   - Score documents by keyword presence + semantic similarity
-   - Re-rank to top-5 using combined score
+Epic 2 is considered COMPLETE when:
 
-2. **Scoring formula configured** (30 min)
-   - Default: 70% semantic + 30% keyword (configurable)
-   - Test alternative weights (80/20, 60/40) on ground truth
-   - Document optimal weighting in completion notes
+- ✅ **Retrieval accuracy ≥70%** (MANDATORY for Epic 3)
+- ✅ **Attribution accuracy ≥95%** (NFR7 compliance)
+- ✅ **Query response time <15s p95** (NFR13 compliance)
+- ✅ **All 50 AC3 ground truth queries validated**
+- ✅ **PRD Epic 2 documentation updated**
+- ✅ **Technology stack documentation updated**
+- ✅ **Test suite passing with new chunking strategy**
 
-3. **Financial term detection** (1 hour)
-   - Identify financial keywords: EBITDA, CAPEX, YTD, margins, EUR/ton
-   - Boost scores for exact matches on numeric values
-   - Case-insensitive matching for terms
+---
 
-4. **Integration with existing search** (30 min)
-   - Update `retrieval/search.py` to support hybrid mode
-   - Add `enable_hybrid` parameter to search functions
-   - Default: hybrid=True for production
+## Implementation Phases
 
-5. **Unit tests** (1 hour)
-   - Test keyword extraction from queries
-   - Test scoring formula variations
-   - Test re-ranking logic
+### PHASE 1: PDF Ingestion Performance Optimization (1-2 days)
 
-6. **Integration tests** (1 hour)
-   - Test queries with exact numbers (e.g., "23.2 EUR/ton")
-   - Verify correct chunks in top 3 (vs. semantic-only top 10)
-   - Measure accuracy improvement on ground truth
+**Goal:** 1.7-2.5x speedup (8.2 min → 3.3-4.8 min for 160-page PDF)
+**Risk:** LOW (empirically validated by Docling official benchmarks)
+**Strategic Benefit:** Faster ingestion enables quicker RAG testing iterations in Phase 2
 
-7. **Accuracy validation** (30 min)
-   - Run full ground truth test (50 queries)
-   - Measure: Retrieval accuracy with hybrid search
-   - Target: ≥92% (up from 85-89% baseline)
+---
 
-### Expected Impact
+### Story 2.1: Implement pypdfium Backend for Docling
 
-- +5-10% retrieval accuracy (better for queries with specific numbers/terms)
-- Queries with "23.2", "50.6%", "EBITDA" will find correct chunks in top 3
-- No latency impact (post-search re-ranking is fast)
+**Priority:** 🔴 CRITICAL (blocks Phase 2A)
+**Effort:** 4 hours
+**Goal:** Replace default PDF.js backend with pypdfium for 50-60% memory reduction and faster processing
 
-### Decision Gate
+**As a** system administrator,
+**I want** Docling configured with pypdfium backend,
+**so that** PDF ingestion is faster and uses less memory.
 
-- **IF ≥92%:** Continue to Story 2.2 (Financial Embeddings)
-- **IF ≥95%:** STOP - Phase 2 complete, proceed to Epic 3
+#### Acceptance Criteria
 
-**Technologies:** Qdrant SDK (no new dependencies)
+1. **AC1: Docling Backend Configuration** (1 hour)
+   - Configure `PdfiumBackend` in `raglite/ingestion/pipeline.py`
+   - Remove default PDF.js backend configuration
+   - Validate backend switch successful
+
+2. **AC2: Ingestion Validation** (1 hour)
+   - Ingest test PDF (160 pages) successfully
+   - Verify all pages processed
+   - Verify table extraction still works
+
+3. **AC3: Table Accuracy Maintained** (1 hour)
+   - Run 10 ground truth table queries
+   - Validate table extraction accuracy ≥97.9% (no degradation)
+   - Document any accuracy changes
+
+4. **AC4: Memory Reduction Validation** (1 hour)
+   - Measure peak memory usage during ingestion
+   - Expected: 50-60% reduction (6.2GB → 2.4GB)
+   - Document memory usage before/after
+
+#### Expected Impact
+
+- **Memory:** 50-60% reduction (6.2GB → 2.4GB)
+- **Speed:** 1.0x baseline (unchanged at this step)
+- **Accuracy:** 97.9% maintained
+- **Risk:** LOW (pypdfium is official Docling backend)
+
+#### Decision Gate
+
+- **IF successful:** Proceed to Story 2.2
+- **IF failed:** Escalate to PM (technology stack issue)
+
+**Technologies:** pypdfium (APPROVED - new dependency)
 
 **Files Modified:**
-- `raglite/retrieval/search.py` (+80 lines)
-- `tests/unit/test_retrieval.py` (+100 lines)
-- `tests/integration/test_retrieval_integration.py` (+80 lines)
+- `raglite/ingestion/pipeline.py` (~15 lines - backend configuration)
+- `pyproject.toml` (+1 dependency: pypdfium)
 
 ---
 
-## Story 2.2: Phase 2B - Financial Embeddings Evaluation (6-8 hours)
+### Story 2.2: Implement Page-Level Parallelism (4-8 Threads)
 
-**Goal:** Evaluate financial domain-specific embeddings vs. general E5 embeddings
+**Priority:** 🔴 CRITICAL (blocks Phase 2A)
+**Effort:** 4 hours
+**Depends On:** Story 2.1
+**Goal:** Add concurrent page processing to Docling for 1.7-2.5x speedup
 
-**As a** system,
-**I want** to test if financial domain-specific embeddings improve retrieval accuracy,
-**so that** queries with financial terminology find semantically relevant chunks more accurately.
+**As a** system administrator,
+**I want** page-level parallel processing,
+**so that** PDF ingestion is 1.7-2.5x faster.
 
-### Acceptance Criteria
+#### Acceptance Criteria
 
-1. **Embedding model options researched** (1 hour)
-   - Option 1: OpenAI text-embedding-3-large (API, 3072-dim, $0.13/1M tokens)
-   - Option 2: FinBERT (local, 768-dim, finance-trained, free)
-   - Option 3: Baseline E5-large-v2 (current, 1024-dim, general purpose)
-   - Document pros/cons of each
+1. **AC1: Parallel Processing Configuration** (2 hours)
+   - Configure Docling with `max_num_pages_visible=4`
+   - Implement page-level concurrency (4-8 threads)
+   - Handle thread pool cleanup
 
-2. **A/B testing setup** (2 hours)
-   - Re-ingest PDF with each embedding model (3 separate Qdrant collections)
-   - Run accuracy tests on all 50 ground truth queries for each model
-   - Compare: Retrieval accuracy, cost, latency
+2. **AC2: Speedup Validation** (1 hour)
+   - Ingest test PDF (160 pages) with parallelism
+   - Measure ingestion time: target 3.3-4.8 min (vs 8.2 min baseline)
+   - Calculate speedup: target 1.7-2.5x
 
-3. **OpenAI embeddings tested** (1 hour)
-   - API integration: `openai.embeddings.create()`
-   - Measure: Accuracy, cost ($), latency (ms)
-   - Store results in comparison table
+3. **AC3: Speedup Documentation** (30 min)
+   - Document ingestion time before/after
+   - Document speedup factor (1.7x-2.5x range)
+   - Document optimal thread count (4 vs 8)
 
-4. **FinBERT embeddings tested** (1 hour)
-   - HuggingFace model: `ProsusAI/finbert`
-   - Measure: Accuracy, cost (free), latency (ms)
-   - Store results in comparison table
+4. **AC4: No Race Conditions** (30 min)
+   - Test 10 consecutive ingestions
+   - Verify no deadlocks or race conditions
+   - Verify output deterministic (same chunks every time)
 
-5. **Comparison analysis** (1 hour)
-   - Generate report: Accuracy vs. Cost vs. Latency
-   - Identify: Best model for financial queries
-   - Decision: Adopt new model if improvement >5%
+#### Expected Impact
 
-6. **Model adoption (conditional)** (2 hours)
-   - IF new model >+5% accuracy: Update pipeline
-   - Re-ingest all documents with new embeddings
-   - Update configuration to use new model
-   - Document migration in completion notes
+- **Speed:** 1.7-2.5x faster ingestion (8.2 min → 3.3-4.8 min)
+- **Accuracy:** 97.9% maintained
+- **Memory:** 2.4GB maintained (from Story 2.1)
+- **Strategic:** Faster iterations for Phase 2A testing
 
-7. **Validation** (30 min)
-   - Run full ground truth test with adopted model
-   - Measure: Retrieval accuracy with new embeddings
-   - Target: ≥95% (up from 92-94%)
+#### Decision Gate
 
-### Expected Impact
+- **IF ≥1.7x speedup:** Phase 1 COMPLETE → Proceed to Phase 2A
+- **IF <1.7x speedup:** Escalate to PM (expected speedup not achieved)
 
-- +10-15% accuracy on financial terminology queries
-- Better understanding of domain-specific vs. general embeddings
-- Cost-benefit analysis for production deployment
-
-### Decision Gate
-
-- **IF ≥95%:** STOP - Phase 2 complete, proceed to Epic 3
-- **IF <95%:** Continue to Story 2.3 (Table-Aware Chunking)
-
-**Technologies:** OpenAI API (optional), FinBERT from HuggingFace (optional)
+**Technologies:** Docling parallelism (no new dependencies)
 
 **Files Modified:**
-- `raglite/shared/clients.py` (add embedding model selection)
-- `raglite/ingestion/pipeline.py` (support multiple embedding models)
-- `scripts/embedding-comparison-report.py` (NEW - 200 lines)
-- `docs/embedding-comparison-results.md` (NEW - comparison report)
+- `raglite/ingestion/pipeline.py` (~30 lines - parallel configuration)
 
 ---
 
-## Story 2.3: Phase 2C - Table-Aware Chunking (8-10 hours)
+### PHASE 2A: Fixed Chunking + Metadata (1-2 weeks)
 
-**Goal:** Preserve financial tables intact during chunking (prevent mid-table splits)
+**Goal:** Achieve 68-72% retrieval accuracy (unblock Epic 3)
+**Probability:** 80% success (research-validated: 68-72% accuracy)
+**Risk:** MEDIUM-LOW (production-proven approach)
+**Decision Gate:** IF ≥70% → STOP (Epic 2 complete), IF <70% → Phase 2B
 
-**As a** system,
-**I want** to keep entire financial tables in single chunks with surrounding context,
-**so that** tabular queries retrieve complete data without mid-table splits.
+---
 
-### Acceptance Criteria
+### Story 2.3: Refactor Chunking Strategy to Fixed 512-Token Approach
 
-1. **Docling TableItem detection** (2 hours)
-   - Identify Docling `TableItem` objects during ingestion
-   - Extract table boundaries (start/end positions)
-   - Mark table chunks with metadata (`chunk_type="table"`)
+**Priority:** 🔴 CRITICAL
+**Effort:** 3 days
+**Depends On:** Story 2.2 (Phase 1 complete)
+**Goal:** Replace element-aware chunking with research-validated fixed 512-token chunks with 50-token overlap
 
-2. **Table-aware chunking logic** (3 hours)
-   - Keep entire table in single chunk (even if >500 words)
-   - Include 2 sentences before table (context)
-   - Include 2 sentences after table (context)
-   - Preserve table structure in chunk text
+**As a** RAG system,
+**I want** fixed 512-token chunking with 50-token overlap,
+**so that** retrieval accuracy improves from 42% to 68-72%.
 
-3. **Table chunk boosting** (1 hour)
-   - Add `chunk_type` metadata field to Chunk model
-   - Boost table chunks in search (1.2x score multiplier)
-   - Prioritize table chunks for tabular queries
+#### Acceptance Criteria
 
-4. **Unit tests** (2 hours)
-   - Test table detection from Docling output
-   - Test chunking preserves full tables
-   - Test context inclusion (before/after sentences)
+1. **AC1: Remove Element-Aware Logic** (4 hours)
+   - Delete element-aware chunking code from `raglite/ingestion/pipeline.py`
+   - Remove ElementType enum from `raglite/shared/models.py`
+   - Remove element detection logic
 
-5. **Integration tests** (2 hours)
-   - Test end-to-end ingestion with tables
-   - Verify: Tables no longer split mid-row
-   - Verify: Table queries retrieve table chunks first
+2. **AC2: Implement Fixed 512-Token Chunking** (1 day)
+   - Chunk size: 512 tokens
+   - Overlap: 50 tokens
+   - Tokenizer: OpenAI tiktoken (cl100k_base)
+   - Preserve sentence boundaries when possible
 
-6. **Validation** (30 min)
-   - Run full ground truth test with table-aware chunking
-   - Measure: Retrieval accuracy on tabular queries
-   - Target: ≥95% (up from 94-96%)
+3. **AC3: Table Boundary Preservation** (4 hours)
+   - Detect Docling TableItem objects
+   - Ensure tables NOT split mid-row
+   - If table >512 tokens, keep as single chunk (exception to 512-token rule)
 
-### Expected Impact
+4. **AC4: Clean Collection and Re-ingest** (4 hours)
+   - Delete contaminated Qdrant collection
+   - Recreate collection with clean schema
+   - Re-ingest test PDF (160 pages)
+   - Verify chunk count: 250-350 (vs 504 element-aware)
 
-- +5-8% accuracy on tabular queries
-- +15-20% accuracy on table-specific questions
-- No performance degradation (larger chunks, but fewer total chunks)
+5. **AC5: Chunk Count Validation** (1 hour)
+   - Expected chunk count: 250-350
+   - Measure chunk size consistency: 512 tokens ±50 variance
+   - Document chunk count and size distribution
 
-### Decision Gate
+6. **AC6: Chunk Size Consistency** (1 hour)
+   - Measure chunk size: mean=512, std<50
+   - Verify 95% of chunks within 462-562 token range
+   - Document outliers (tables >512 tokens)
 
-- **IF ≥95%:** STOP - Phase 2 complete, proceed to Epic 3
-- **IF <95%:** Continue to Story 2.4 (Cross-Encoder Re-ranking)
+#### Expected Impact
 
-**Technologies:** Docling TableItem API (already available)
+- **Accuracy:** 42% → 68-72% (+26-30pp improvement)
+- **Chunks:** 504 → 250-350 (-50% chunk count)
+- **Research Evidence:** Yepes et al. (2024) - 68.09% accuracy on financial reports
+
+#### Decision Gate
+
+- **IF implemented successfully:** Proceed to Story 2.4
+- **IF technical blockers:** Escalate to PM
+
+**Technologies:** tiktoken (APPROVED - new dependency)
 
 **Files Modified:**
-- `raglite/ingestion/pipeline.py` (+120 lines - table detection + chunking)
-- `raglite/shared/models.py` (+10 lines - chunk_type field)
-- `raglite/retrieval/search.py` (+30 lines - table boosting)
-- `tests/unit/test_ingestion.py` (+150 lines)
-- `tests/integration/test_ingestion_integration.py` (+100 lines)
+- `raglite/ingestion/pipeline.py` (-150 lines element-aware, +80 lines fixed chunking)
+- `raglite/shared/models.py` (-30 lines element types)
+- `pyproject.toml` (+1 dependency: tiktoken)
 
 ---
 
-## Story 2.4: Phase 2D - Cross-Encoder Re-ranking (6-8 hours)
+### Story 2.4: Add LLM-Generated Contextual Metadata Injection
 
-**Goal:** Add second-stage re-ranking with cross-encoder for improved precision
+**Priority:** 🟠 HIGH
+**Effort:** 2 days
+**Depends On:** Story 2.3
+**Goal:** Implement Claude API-based metadata extraction (fiscal period, company, department) and inject into chunk payload
 
-**As a** system,
-**I want** to re-rank top-20 vector search results using a cross-encoder model,
-**so that** the final top-5 results have higher relevance precision.
+**As a** RAG system,
+**I want** LLM-generated metadata (fiscal period, company, department),
+**so that** queries can filter by business context and improve precision.
 
-### Acceptance Criteria
+#### Acceptance Criteria
 
-1. **Cross-encoder model integration** (2 hours)
-   - Load model: `cross-encoder/ms-marco-MiniLM-L-6-v2`
-   - Implement two-stage retrieval:
-     - Stage 1: Vector search → retrieve top-20 candidates
-     - Stage 2: Cross-encoder → re-rank to top-5
+1. **AC1: Metadata Extraction Function** (1 day)
+   - Use Claude 3.7 Sonnet API
+   - Extract: fiscal_period, company_name, department_name
+   - Prompt: "Extract fiscal period, company name, and department from this text"
+   - Cache results per document (not per chunk)
 
-2. **Re-ranking logic** (2 hours)
-   - Process query+document pairs through cross-encoder
-   - Generate relevance scores (0-1) for each pair
-   - Sort by cross-encoder scores, return top-5
+2. **AC2: Metadata Schema Update** (2 hours)
+   - Add metadata fields to Chunk model: fiscal_period, company_name, department_name
+   - Update Qdrant payload schema
+   - Ensure backward compatibility
 
-3. **Performance optimization** (1 hour)
-   - Batch processing for cross-encoder (process 20 pairs at once)
-   - Measure latency impact (expect +150-200ms)
-   - Verify: Total latency still <10s (NFR5)
+3. **AC3: Metadata Injection** (4 hours)
+   - Inject metadata into Qdrant chunk payload
+   - Metadata accessible via search filters
+   - Document metadata usage patterns
 
-4. **Unit tests** (1 hour)
-   - Test cross-encoder scoring
-   - Test re-ranking logic
+4. **AC4: Metadata Caching** (2 hours)
+   - Cache metadata extraction results per document
+   - Avoid re-extracting for every chunk (performance optimization)
+   - Measure: <$0.10 per document metadata extraction
 
-5. **Integration tests** (1 hour)
-   - Test two-stage retrieval end-to-end
-   - Verify: Top-5 more relevant than vector-only
-   - Measure: Precision@5 improvement
+5. **AC5: Cost Validation** (1 hour)
+   - Measure Claude API token usage
+   - Expected cost: <$0.10 per 160-page document
+   - Document metadata extraction cost per document
 
-6. **Validation** (30 min)
-   - Run full ground truth test with cross-encoder
-   - Measure: Retrieval accuracy, precision@5
-   - Target: ≥95% (up from previous stage)
+#### Expected Impact
 
-### Expected Impact
+- **Accuracy:** 68-72% → 70-75% (+2-3pp improvement via metadata boosting)
+- **Cost:** $0.05-0.10 per document (one-time extraction)
+- **Research Evidence:** Snowflake research - 20% improvement over large chunks
 
-- +3-5% precision improvement (top-5 more accurate)
-- +150ms latency (acceptable, still <10s total)
-- More robust to query phrasing variations
+#### Decision Gate
 
-### Decision Gate
+- **IF implemented successfully:** Proceed to Story 2.5
+- **IF technical blockers:** Escalate to PM
 
-- **IF ≥95%:** STOP - Phase 2 complete, proceed to Epic 3
-- **IF <95%:** Continue to Story 2.5 (Query Expansion)
-
-**Technologies:** sentence-transformers (cross-encoder)
+**Technologies:** Claude 3.7 Sonnet API (already approved), tiktoken
 
 **Files Modified:**
-- `raglite/shared/clients.py` (+40 lines - cross-encoder singleton)
-- `raglite/retrieval/search.py` (+100 lines - two-stage retrieval)
-- `tests/unit/test_retrieval.py` (+80 lines)
-- `tests/integration/test_retrieval_integration.py` (+60 lines)
+- `raglite/ingestion/pipeline.py` (+100 lines - metadata extraction)
+- `raglite/shared/models.py` (+20 lines - metadata fields)
 
 ---
 
-## Story 2.5: Phase 2E - Query Expansion (4-6 hours, OPTIONAL)
+### Story 2.5: AC3 Validation and Optimization (Target: ≥70% Accuracy) - DECISION GATE
 
-**Goal:** Expand queries with synonyms and related terms for better recall
+**Status:** ⚠️ FAILED - 52% accuracy, course correction required (Stories 2.8-2.11)
+**Priority:** 🔴 CRITICAL (Epic 2 completion gate)
+**Effort:** 2-3 days
+**Depends On:** Story 2.4
+**Goal:** Run full AC3 ground truth test suite (50 queries) and optimize chunking if needed
 
-**As a** system,
-**I want** to generate 3-5 query variations and fuse results,
-**so that** queries with synonyms or paraphrases find relevant content.
+**⚠️ OUTCOME (2025-10-25):** AC2 FAILED with 52% accuracy (vs ≥70% target). Deep-dive analysis identified 4 critical root causes requiring course correction via Stories 2.8-2.11 before re-validation.
 
-### Acceptance Criteria
+**As a** QA engineer,
+**I want** comprehensive accuracy validation,
+**so that** we can verify ≥70% retrieval accuracy and decide if Epic 2 is complete.
 
-1. **Claude API query expansion** (2 hours)
-   - Use Claude API to generate 3-5 query variations
-   - Example: "variable costs" → ["variable expenses", "variable costs EUR/ton", "cost per ton"]
-   - Prompt engineering for financial domain
+#### Acceptance Criteria
 
-2. **Parallel search implementation** (1 hour)
-   - Search with each variation (parallel execution)
-   - Collect all results (3-5 result sets)
+1. **AC1: Full Ground Truth Execution** (4 hours)
+   - Run all 50 ground truth queries
+   - Measure retrieval accuracy (% queries with correct chunk in top-5)
+   - Measure attribution accuracy (% correct source citations)
 
-3. **Reciprocal Rank Fusion (RRF)** (2 hours)
-   - Fuse results using RRF algorithm
-   - Rank documents by fused scores
-   - Return top-k from fused results
+2. **AC2: DECISION GATE - Retrieval Accuracy ≥70%** (30 min) ⭐ MANDATORY
+   - **MANDATORY:** Retrieval accuracy ≥70.0% (35/50 queries pass)
+   - **This is the DECISION GATE for Epic 2 completion**
+   - IF ≥70% → Epic 2 COMPLETE
+   - IF <70% → Escalate to PM for Phase 2B approval
 
-4. **Unit tests** (1 hour)
-   - Test query expansion
-   - Test RRF fusion
+3. **AC3: Attribution Accuracy ≥95%** (30 min)
+   - Attribution accuracy ≥95.0%
+   - Correct document, page, section references
+   - NFR7 compliance
 
-5. **Integration tests** (1 hour)
-   - Test end-to-end query expansion pipeline
-   - Verify: Queries with synonyms find content
-   - Measure: Recall improvement
+4. **AC4: Failure Mode Analysis** (1 day)
+   - Analyze all failed queries (<70% accuracy scenario)
+   - Categorize failure types (table queries, multi-hop, entity-based, etc.)
+   - Document failure patterns
+   - Recommend Phase 2B/2C approaches if needed
 
-6. **Validation** (30 min)
-   - Run full ground truth test with query expansion
-   - Measure: Retrieval accuracy, recall
-   - Target: ≥95% (up from previous stage)
+5. **AC5: BM25 Index Rebuild** (2 hours)
+   - Rebuild BM25 index for new chunk structure (250-350 chunks)
+   - Verify hybrid search still works
+   - Test BM25 + semantic fusion
 
-### Expected Impact
+6. **AC6: Performance Validation** (2 hours)
+   - p50 query latency <5s
+   - p95 query latency <15s
+   - NFR13 compliance verified
 
-- +2-5% recall improvement
-- +500-800ms latency (parallel searches + LLM call)
-- More robust to query phrasing variations
+#### Expected Impact
 
-### Decision Gate
+- **Accuracy:** 68-72% target (research-validated)
+- **Decision:** IF ≥70% → Epic 2 COMPLETE (proceed to Epic 3)
+- **Decision:** IF <70% → Phase 2B Structured Multi-Index (3-4 weeks, 70-80% expected)
 
-- **IF ≥95%:** STOP - Phase 2 complete
-- **IF <95%:** Continue to Story 2.6 (Multi-Vector)
+#### Decision Gate
 
-**Technologies:** Anthropic API (Claude for query expansion)
+- **IF ≥70%:** Epic 2 COMPLETE → Proceed to Epic 3 🎉
+- **IF <70%:** Escalate to PM for Phase 2B (Structured Multi-Index) approval
+- **IF <64%:** CRITICAL ESCALATION → Strategy review required
+
+**Technologies:** pytest, ground truth test suite
 
 **Files Modified:**
-- `raglite/retrieval/search.py` (+150 lines - query expansion + RRF)
-- `tests/unit/test_retrieval.py` (+100 lines)
-- `tests/integration/test_retrieval_integration.py` (+80 lines)
+- `tests/integration/test_hybrid_search_integration.py` (updates for new chunking)
 
 ---
 
-## Story 2.6: Phase 2F - Multi-Vector Representations (12-16 hours, OPTIONAL)
+### PHASE 2A COURSE CORRECTION (2-3 days)
 
-**Goal:** Store multiple embeddings per chunk (content, keywords, summary) for robustness
+**Trigger:** Story 2.5 FAILED with 52% accuracy (2025-10-25)
+**Root Cause Analysis:** `/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/phase2a-deep-dive-analysis.md`
+**Goal:** Fix 4 critical root causes before re-validation
+**Expected Outcome:** 65-75% accuracy (Phase 2A target range)
 
-**As a** system,
-**I want** to generate 3 vector representations per chunk and search all collections,
-**so that** different query styles (keyword, semantic, conceptual) all achieve high accuracy.
-
-### Acceptance Criteria
-
-1. **Multi-vector generation** (4 hours)
-   - Generate 3 representations per chunk:
-     1. Content vector: Full chunk text (current approach)
-     2. Keyword vector: LLM-extracted keywords only
-     3. Summary vector: LLM-generated 2-3 sentence summary
-   - Use Claude API for keyword/summary extraction
-
-2. **Qdrant multi-collection setup** (3 hours)
-   - Create 3 Qdrant collections: `content`, `keywords`, `summary`
-   - Store embeddings in separate collections
-   - Link chunks via `chunk_id` metadata
-
-3. **Multi-collection search** (3 hours)
-   - Search all 3 collections in parallel
-   - Fuse results using RRF
-   - Return top-k from fused results
-
-4. **Unit tests** (2 hours)
-   - Test multi-vector generation
-   - Test multi-collection storage
-
-5. **Integration tests** (2 hours)
-   - Test end-to-end multi-vector pipeline
-   - Verify: Different query styles achieve high accuracy
-   - Measure: Accuracy improvement
-
-6. **Validation** (1 hour)
-   - Run full ground truth test with multi-vector
-   - Measure: Retrieval accuracy across query types
-   - Target: ≥98% (exceeds NFR6/NFR7)
-
-### Expected Impact
-
-- +5-10% accuracy across varied query styles
-- +3x storage (3 collections instead of 1)
-- +3x ingestion time (generate 3 representations)
-- More robust to query phrasing variations
-
-### Decision Gate
-
-- **IF ≥98%:** Phase 2 complete (advanced optimization achieved)
-
-**Technologies:** Qdrant multi-collection, Claude API (keyword/summary extraction)
-
-**Files Modified:**
-- `raglite/ingestion/pipeline.py` (+200 lines - multi-vector generation)
-- `raglite/retrieval/search.py` (+150 lines - multi-collection search)
-- `tests/unit/test_ingestion.py` (+150 lines)
-- `tests/unit/test_retrieval.py` (+120 lines)
-- `tests/integration/test_retrieval_integration.py` (+100 lines)
+**Sprint Change Proposal:** Approved 2025-10-25 by PM (John) + User (Ricardo)
 
 ---
 
-## Epic 2 Success Criteria
+### Story 2.8: Implement Table-Aware Chunking Strategy
 
-**Overall Epic Success:**
-- ✅ 95%+ retrieval accuracy (exceeds NFR6)
-- ✅ 95%+ attribution accuracy (meets NFR7)
-- ✅ <10s response time maintained (NFR5)
-- ✅ Sequential implementation with decision gates
-- ✅ STOP when 95% achieved (prevent over-engineering)
+**Priority:** 🔴 CRITICAL
+**Effort:** 6-8 hours
+**Goal:** Fix severe table fragmentation (8.6 chunks/table → 1.2 chunks/table)
 
-**Technologies Summary:**
-- sentence-transformers (cross-encoder re-ranking)
-- OpenAI API (optional: embeddings, query expansion)
-- FinBERT (optional: financial embeddings)
-- Qdrant multi-collection support
-- Anthropic API (query expansion, keyword/summary extraction)
+**Problem:** Fixed 512-token chunking splits tables across multiple chunks, destroying semantic coherence.
+
+**Solution:** Preserve complete tables as single chunks (<4096 tokens) or split by rows with headers preserved (>4096 tokens).
+
+**Expected Impact:** +10-15pp accuracy improvement from restored table semantic coherence.
 
 ---
 
-## Decision Gates Summary
+### Story 2.9: Fix Ground Truth Page References
 
-| Story | Expected Accuracy | Decision |
-|-------|------------------|----------|
-| Baseline | 90-92% | Continue to 2.1 |
-| **2.1 (Hybrid Search)** | 92-94% | IF ≥95% STOP, else continue to 2.2 |
-| **2.2 (Financial Embeddings)** | 94-96% | IF ≥95% STOP, else continue to 2.3 |
-| **2.3 (Table-Aware Chunking)** | 95-97% | IF ≥95% STOP, else continue to 2.4 |
-| **2.4 (Cross-Encoder)** | 96-98% | IF ≥95% STOP, else continue to 2.5 |
-| **2.5 (Query Expansion)** | 96-98% | IF ≥95% STOP, else continue to 2.6 |
-| **2.6 (Multi-Vector)** | 98%+ | Phase 2 COMPLETE |
+**Priority:** 🔴 CRITICAL
+**Effort:** 3-4 hours
+**Goal:** Add page references to all 50 ground truth queries for proper validation
 
-**Most Likely Outcome:** STOP after Story 2.2 (Financial Embeddings) with 94-96% accuracy ✅
+**Problem:** All ground truth queries have zero expected page references, making accuracy metrics invalid.
+
+**Solution:** Manually annotate all 50 queries with correct page numbers from source PDF.
+
+**Expected Impact:** Valid accuracy metrics, confidence in measurements restored.
+
+---
+
+### Story 2.10: Fix Query Classification Over-Routing
+
+**Priority:** 🟠 HIGH
+**Effort:** 3-4 hours
+**Goal:** Reduce SQL over-routing from 48% → 8%
+
+**Problem:** Heuristic classifier routes 48% of queries to SQL when only 4% have temporal qualifiers.
+
+**Solution:** Require BOTH metric terms AND temporal terms for SQL_ONLY routing.
+
+**Expected Impact:** -300-500ms p50 latency reduction, fewer failed SQL searches.
+
+---
+
+### Story 2.11: Fix Hybrid Search Score Normalization & Fusion
+
+**Priority:** 🟡 MEDIUM
+**Effort:** 4-6 hours
+**Goal:** Debug hybrid search scoring bug and tune BM25 fusion weights
+
+**Problem:** All hybrid searches return score=1.0, hiding actual relevance ranking.
+
+**Solution:** Fix scoring bug, preserve raw fusion scores, tune BM25 fusion weight (alpha parameter).
+
+**Expected Impact:** Improved ranking quality, score visibility for debugging.
+
+---
+
+### Story 2.5 RE-VALIDATION (After Stories 2.8-2.11)
+
+**Goal:** Re-run AC3 validation with all fixes applied
+**Expected Accuracy:** 65-75% (Phase 2A target range)
+
+**Decision Gate:**
+- IF ≥70% → Epic 2 COMPLETE → Proceed to Epic 3 🎉
+- IF 65-70% → Re-evaluate Phase 2B necessity
+- IF <65% → Escalate to Phase 2B (PM approval required)
+
+---
+
+## PHASE 2B: Structured Multi-Index (CONDITIONAL - 3-4 weeks)
+
+**Trigger:** ONLY if Phase 2A achieves <70% accuracy after Stories 2.8-2.11 course correction
+**Probability:** LOW (expected 65-75% from course correction)
+**Goal:** Achieve 70-80% retrieval accuracy
+**Approach:** SQL tables + vector search + re-ranking (FinSage pattern)
+
+**Status Update (2025-10-25):**
+- ✅ Story 2.6: PostgreSQL Schema + Data Migration (COMPLETE)
+- ✅ Story 2.7: Multi-Index Search Architecture (COMPLETE)
+- ⏸️ Story 2.12: Cross-Encoder Re-Ranking (ON HOLD - awaiting Phase 2A re-validation)
+- ⏸️ Story 2.13: AC3 Validation (ON HOLD - awaiting Story 2.12)
+
+**NOTE:** Stories 2.6-2.7 were implemented proactively during Phase 2A. If Phase 2A course correction achieves ≥70%, Phase 2B remaining stories (2.12-2.13) will be SKIPPED.
+
+**Expected Outcome:** 70-80% accuracy
+**Decision Gate:** IF ≥75% → STOP, IF <75% → Phase 2C
+
+---
+
+## PHASE 2C: Hybrid Architecture (CONDITIONAL - 6 weeks)
+
+**Trigger:** ONLY if Phase 2B achieves <75% accuracy (5% probability)
+**Goal:** Achieve 75-92% retrieval accuracy
+**Approach:** GraphRAG + Structured + Vector (full multi-index)
+
+**Production Evidence:**
+- BlackRock/NVIDIA HybridRAG: 0.96 answer relevancy (SOTA)
+- BNP Paribas GraphRAG: 6% hallucination reduction, 80% token savings
+
+**Stories (if triggered):**
+- 2.10: Neo4j Graph Database Integration
+- 2.11: Entity Extraction & Graph Construction
+- 2.12: Intelligent Query Routing Across 3 Indexes
+- 2.13: AC3 Validation (Target: ≥80%)
+
+**Expected Outcome:** 75-92% accuracy
+**Decision Gate:** STOP when ≥80%
+
+---
+
+## PHASE 3: Agentic Coordination (OPTIONAL - 2-16 weeks)
+
+**Trigger:** ONLY if Phase 2 (any path) achieves <85% accuracy (20% probability)
+**Goal:** Achieve 90-95% retrieval accuracy
+**Approach:** LLM-based query planning + specialist agents
+
+**Production Evidence:**
+- AWS, CapitalOne, NVIDIA agentic RAG systems
+- +15-20pp accuracy improvement over non-agentic
+
+**Framework:** LangGraph + AWS Strands OR Claude Agent SDK
+
+**Expected Outcome:** 90-95% accuracy
 
 ---
 
 ## Epic 2 Dependencies
 
 **Prerequisites:**
-- ✅ Epic 1 complete (Stories 1.1-1.15B)
-- ✅ Story 1.15B baseline validation executed
-- ✅ Baseline <90% retrieval OR <95% attribution (triggers Epic 2)
+- ✅ Epic 1 complete (Stories 1.1-1.12)
+- ✅ Story 2.1 (Hybrid Search) completed and validated
+- ✅ Story 2.2 (Element Chunking) FAILED (42% accuracy = pivot trigger)
 
 **Blocks:**
-- Epic 3 (Intelligence Features) - needs Epic 2 complete if baseline <90%
+- Epic 3 (Intelligence Features) - needs Epic 2 complete (≥70% accuracy)
+- Epic 4 (Forecasting) - needs Epic 3 complete
+- Epic 5 (Production) - needs Epic 3-4 complete
+
+---
+
+## Technologies Summary
+
+**APPROVED (Phase 1 + 2A):**
+- ✅ pypdfium (PDF backend for Docling)
+- ✅ tiktoken (OpenAI tokenizer for fixed chunking)
+- ✅ Claude 3.7 Sonnet API (metadata extraction)
+
+**CONDITIONAL (Phase 2B):**
+- ⚠️ PostgreSQL 16 (structured table storage)
+
+**CONDITIONAL (Phase 2C):**
+- ⚠️ Neo4j 5.x (knowledge graph)
+- ⚠️ PostgreSQL 16 (structured table storage)
+
+**CONDITIONAL (Phase 3):**
+- ⚠️ LangGraph + AWS Strands (agentic orchestration)
+- ⚠️ Claude Agent SDK (alternative)
+
+**Decision Authority:** PM (John) approves at each decision gate based on accuracy validation results.
+
+---
+
+## Timeline Summary
+
+**Updated Timeline (2025-10-25 - Post-Course Correction):**
+
+**Best Case (Phase 1 + 2A with Course Correction):**
+- Week 1: Phase 1 (PDF optimization) - 1-2 days ✅ COMPLETE
+- Week 2-3: Phase 2A Initial (Stories 2.3-2.7) - 1-2 weeks ✅ COMPLETE (52% accuracy)
+- **Week 3-4: Phase 2A Course Correction (Stories 2.8-2.11) - 2-3 days** ⭐ CURRENT
+- Week 4: AC3 Re-validation → Target ≥70% accuracy → Epic 2 COMPLETE
+- **Total: 3-4 weeks (revised from 2-3 weeks)**
+
+**If Course Correction Insufficient (<70%):**
+- Week 1-4: Phase 1 + 2A (as above)
+- Week 5-8: Phase 2B Remaining (Stories 2.12-2.13) - 3-4 weeks
+- Week 8: AC3 Validation → ≥75% accuracy → Epic 2 COMPLETE
+- **Total: 7-9 weeks**
+
+**Worst Case (All paths):**
+- Week 1-8: Phase 1 + 2A + 2B (as above)
+- Week 9-14: Phase 2C (Hybrid Architecture) - 6 weeks
+- Week 15-31: Phase 3 (Agentic Coordination) - 2-16 weeks (staged)
+- **Total: 15-31 weeks**
+
+**Most Likely Outcome:** 3-4 weeks (Phase 2A course correction achieves 65-75% accuracy) ✅
+
+**Probability Analysis:**
+- 80% chance: Course correction achieves 65-75% (Epic 2 complete or nearly complete)
+- 15% chance: Need Phase 2B Stories 2.12-2.13 (cross-encoder re-ranking)
+- 5% chance: Need Phase 2C (full hybrid architecture)
 
 ---
 
 ## Rationale
 
-**Why Epic 2 is Conditional:**
-- Prevents over-engineering if baseline already meets NFR6/NFR7
-- Allows data-driven decision based on Story 1.15B results
-- Incremental approach with decision gates maximizes efficiency
+**Why This Pivot:**
+- Element-aware chunking **catastrophic failure** (42% vs 56% baseline = -14pp)
+- Research evidence: Fixed 512-token = 68.09% accuracy (Yepes et al. 2024)
+- Production-proven approaches reduce risk (BlackRock, BNP Paribas, FinSage)
+- Staged implementation with decision gates minimizes wasted effort
 
-**Why Sequential Implementation:**
-- Test after EACH enhancement to measure impact
-- STOP when 95% achieved (prevent unnecessary work)
-- Each story builds on previous improvements
+**Why Sequential Phases:**
+- Test accuracy after EACH phase (decision gates prevent over-engineering)
+- STOP when 70% achieved (Epic 2 success criteria)
+- Start simple (fixed chunking), escalate only if needed (structured → hybrid → agentic)
 
-**Why These 6 Stories:**
-- Based on RAG best practices and research
-- Proven techniques for improving retrieval accuracy
-- Incremental complexity (simple → advanced)
+**Why These Technologies:**
+- pypdfium: Official Docling backend (1.7-2.5x speedup proven)
+- Fixed chunking: Research-validated (68% accuracy guaranteed)
+- Conditional tech: Approved contingency paths based on empirical decision gates
 
 ---
 
@@ -483,4 +590,13 @@ This epic contains 6 RAG enhancement stories that are implemented sequentially w
 
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
+| 2025-10-19 | 2.0 | Epic 2 complete rewrite after element-aware pivot | Product Owner (Sarah) |
+| 2025-10-18 | 1.5 | Story 2.2 FAILED (42% accuracy) - pivot analysis | PM (John) + Dev (Amelia) |
 | 2025-10-16 | 1.0 | Epic 2 created from implementation plan Option C Phase 2 | Scrum Master (Bob) |
+
+---
+
+**Epic Status:** IN PROGRESS
+**Current Phase:** Phase 1 (PDF Optimization)
+**Next Milestone:** T+2 (Phase 1 complete, Phase 2A start)
+**Expected Completion:** T+17 (Week 3, Day 3 - AC3 Decision Gate)

@@ -1124,8 +1124,18 @@ class TestQdrantStorage:
             mock_client.create_collection.assert_called_once()
             call_args = mock_client.create_collection.call_args
             assert call_args.kwargs["collection_name"] == "financial_docs"
-            assert call_args.kwargs["vectors_config"].size == 1024
-            assert call_args.kwargs["vectors_config"].distance.name == "COSINE"
+
+            # Story 2.1: vectors_config is now a dict with named vectors for hybrid search
+            vectors_config = call_args.kwargs["vectors_config"]
+            assert isinstance(vectors_config, dict)
+            assert "text-dense" in vectors_config
+            assert vectors_config["text-dense"].size == 1024
+            assert vectors_config["text-dense"].distance.name == "COSINE"
+
+            # Verify sparse vectors config for BM25 (Story 2.1)
+            sparse_config = call_args.kwargs["sparse_vectors_config"]
+            assert isinstance(sparse_config, dict)
+            assert "text-sparse" in sparse_config
 
     @pytest.mark.asyncio
     async def test_create_collection_idempotent(self):

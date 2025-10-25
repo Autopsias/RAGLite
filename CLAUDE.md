@@ -8,9 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **RAGLite** is a monolithic MVP for an AI-powered financial document analysis system using Retrieval-Augmented Generation (RAG). The system ingests financial PDFs/Excel files, enables natural language querying via MCP (Model Context Protocol), and provides accurate answers with source citations.
 
-**Current Status:** Pre-Phase 1 (architecture and planning complete, no code yet)
+**Current Status:** Epic 2 - Phase 1 (PDF Optimization) ready to start (Post-Week 0 Integration Spike, Post-Epic 2 Strategic Pivot)
 
 **Target:** ~600-800 lines of Python code across 15 files
+
+**⚠️ STRATEGIC PIVOT (2025-10-19):** Epic 2 redefined following element-aware chunking failure (42% accuracy vs 56% baseline). Now implementing staged RAG architecture enhancement with decision gates. See `story-2.2-pivot-analysis/` for full analysis.
 
 ---
 
@@ -101,6 +103,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | PDF Processing | Docling | Extract text/tables (97.9% accuracy) |
+| PDF Backend | pypdfium | Docling backend (1.7-2.5x speedup, 50-60% memory reduction) ✅ APPROVED |
 | Excel Processing | openpyxl + pandas | Tabular data extraction |
 | Embeddings | Fin-E5 | Financial domain semantic vectors |
 | Vector DB | Qdrant 1.11+ | Vector storage/search |
@@ -110,12 +113,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Containerization | Docker Compose | Local development |
 | Testing | pytest + pytest-asyncio | Unit/integration tests |
 
-**Phase 2 (Conditional):** Neo4j for Knowledge Graph (only if Phase 1 accuracy <80%)
+**Epic 2 Phase 2B (Conditional - 15% probability):** PostgreSQL (only if Phase 2A fixed chunking <70%)
+
+**Epic 2 Phase 2C (Conditional - 5% probability):** Neo4j + PostgreSQL (only if Phase 2B <75%)
+
+**Epic 2 Phase 3 (Conditional - 20% probability):** LangGraph + AWS Strands (only if Phase 2 <85%)
 
 **Phase 4:** AWS (ECS/Fargate), CloudWatch, Terraform
 
 ### NOT Approved (Do Not Use)
-- ❌ LangChain / LangGraph (use direct SDK calls instead)
+- ❌ LangChain (use direct SDK calls instead)
 - ❌ LlamaIndex (use Qdrant directly)
 - ❌ Haystack (use Qdrant directly)
 - ❌ Semantic Kernel (use direct SDK calls)
@@ -123,6 +130,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ❌ Redis/Memcached (not needed until Phase 4)
 - ❌ Celery/RQ (not needed for monolith)
 - ❌ Custom abstraction libraries (write direct code)
+
+**⚠️ NOTE ON LANGGRAPH:** LangGraph IS conditionally approved for Epic 2 Phase 3 (Agentic Coordination) - ONLY if Phase 2 achieves <85% accuracy. Do NOT use LangGraph for Epic 1 or Phase 2A/2B/2C implementations.
 
 ---
 
@@ -158,7 +167,7 @@ raglite/
 │   └── init-qdrant.py
 ├── docs/                      # Architecture & PRD (sharded)
 ├── docker-compose.yml
-├── pyproject.toml             # Poetry dependencies
+├── pyproject.toml             # UV/pip dependencies (PEP 735)
 └── README.md
 ```
 
@@ -168,8 +177,11 @@ raglite/
 
 ### Environment Setup (When Ready)
 ```bash
-# Install dependencies (Poetry)
-poetry install
+# Install dependencies (UV - recommended, 10-100x faster than pip)
+uv sync --all-groups
+
+# Alternative: pip (slower, limited PEP 735 support)
+pip install -e ".[dev,test]"
 
 # Start Qdrant + services
 docker-compose up -d
@@ -178,22 +190,22 @@ docker-compose up -d
 python scripts/init-qdrant.py
 
 # Run tests
-poetry run pytest
+uv run pytest
 
 # Run MCP server (local testing)
-poetry run python -m raglite.main
+uv run python -m raglite.main
 ```
 
 ### Testing
 ```bash
 # Unit tests
-poetry run pytest raglite/tests/
+uv run pytest raglite/tests/
 
 # Ground truth accuracy validation
-poetry run python scripts/run-accuracy-tests.py
+uv run python scripts/run-accuracy-tests.py
 
 # With coverage
-poetry run pytest --cov=raglite --cov-report=html
+uv run pytest --cov=raglite --cov-report=html
 ```
 
 ---
@@ -323,42 +335,102 @@ async def ingest_document(doc_path: str):
 
 ## Implementation Phases
 
-### Current Phase: Week 0 - Integration Spike (Pre-Phase 1)
+### ✅ Completed: Week 0 - Integration Spike
 
-**Active Story:** `docs/stories/0.1.week-0-integration-spike.md`
+**Story:** `docs/stories/0.1.week-0-integration-spike.md` - **COMPLETE**
 
-**Goals:**
-- Validate technology stack (Docling + Fin-E5 + Qdrant + FastMCP)
-- Ingest 1 real financial PDF
-- Create 15 ground truth Q&A pairs
-- Measure baseline accuracy (target: ≥70%)
+**Result:** Technology stack validated ✅
+- Docling + Fin-E5 + Qdrant + FastMCP integration successful
+- Baseline accuracy established
+- **Decision:** GO to Epic 2 implementation
 
-**Success = GO to Phase 1 | Failure (<50%) = Reassess tech stack**
+---
 
-### Phase 1: Monolithic MVP (Weeks 1-5)
-- Week 1: Ingestion pipeline
-- Week 2: Retrieval & search
-- Week 3-4: LLM synthesis
-- Week 5: Accuracy validation (target: 90%+)
+### Current Phase: Epic 2 - Advanced RAG Architecture Enhancement
 
-**Phase 1 Success Criteria:**
-- 90%+ retrieval accuracy (50+ queries)
-- 95%+ source attribution accuracy
-- <10s query response time
-- All answers cite sources
+**⚠️ STRATEGIC PIVOT:** Epic 2 redefined following element-aware chunking failure (42% vs 56% baseline). New staged approach with decision gates.
 
-### Phase 2: GraphRAG (Conditional, Weeks 5-8)
-**ONLY if Phase 1 accuracy <80% due to multi-hop query failures**
+**Timeline:** 2-3 weeks (best case) to 18 weeks (worst case)
 
-### Phase 3: Intelligence Features (Weeks 9-12 or 5-8)
+**Goal:** Achieve minimum 70% retrieval accuracy to unblock Epic 3-5
+
+---
+
+#### Epic 2 - Phase 1: PDF Ingestion Performance Optimization (STARTING NOW - 1-2 days)
+
+**Status:** ✅ APPROVED - Ready to implement
+
+**Stories:**
+- Story 2.1: Implement pypdfium Backend (4 hours)
+- Story 2.2: Implement Page-Level Parallelism (4 hours)
+
+**Goal:** 1.7-2.5x speedup (8.2 min → 3.3-4.8 min for 160-page PDF)
+
+**Success Criteria:**
+- ✅ 1.7-2.5x speedup validated
+- ✅ 97.9% table accuracy maintained
+- ✅ 50-60% memory reduction
+
+---
+
+#### Epic 2 - Phase 2A: Fixed Chunking + Metadata (1-2 weeks) - PRIMARY PATH
+
+**Status:** Pending (starts after Phase 1)
+
+**Probability:** 80% success (research-validated: 68-72% accuracy)
+
+**Stories:**
+- Story 2.3: Refactor Chunking to Fixed 512-Token (3 days)
+- Story 2.4: Add LLM Contextual Metadata (2 days)
+- Story 2.5: AC3 Validation ≥70% - DECISION GATE (2-3 days)
+
+**Decision Gate (T+17, Week 3 Day 3):**
+- IF ≥70% accuracy → Epic 2 COMPLETE ✅
+- IF <70% accuracy → Phase 2B (Structured Multi-Index)
+
+---
+
+#### Epic 2 - Phase 2B: Structured Multi-Index (3-4 weeks) - CONTINGENCY
+
+**Trigger:** ONLY if Phase 2A <70% (15% probability)
+
+**Goal:** 70-80% accuracy via PostgreSQL + Qdrant + cross-encoder
+
+**Decision Gate:** IF ≥75% → Epic 2 complete, IF <70% → Phase 2C
+
+---
+
+#### Epic 2 - Phase 2C: Hybrid Architecture (6 weeks) - CONTINGENCY
+
+**Trigger:** ONLY if Phase 2B <75% (5% probability)
+
+**Goal:** 75-92% accuracy via Neo4j + PostgreSQL + Qdrant
+
+**Decision Gate:** Epic 2 complete when ≥80%
+
+---
+
+#### Epic 2 - Phase 3: Agentic Coordination (2-16 weeks, staged) - OPTIONAL
+
+**Trigger:** ONLY if Phase 2 <85% (20% probability)
+
+**Goal:** 90-95% accuracy via LangGraph + AWS Strands multi-agent orchestration
+
+**Decision Gate:** Epic 2 complete when ≥90%
+
+---
+
+### Epic 3: Intelligence Features (Future)
 - Forecasting (Prophet + LLM)
 - Anomaly detection
 - Trend analysis
+- **Prerequisites:** Epic 2 complete (≥70% accuracy)
 
-### Phase 4: Production (Weeks 13-16)
+### Epic 4-5: Production & Real-Time Operations (Future)
 - AWS deployment (ECS/Fargate)
 - Monitoring (CloudWatch)
 - Performance optimization
+- **Prerequisites:** Epic 3 complete
 
 ---
 
@@ -504,12 +576,77 @@ async def query_financial_documents(request: QueryRequest) -> str:
 
 ---
 
+## Implementation Notes
+
+### Table-Aware Chunking Strategy (Story 2.8)
+
+**Status:** ✅ IMPLEMENTED (2025-10-25)
+
+**Problem:** Fixed 512-token chunking splits tables across 8.6 chunks on average, destroying semantic coherence and causing 40% table query accuracy.
+
+**Solution:** Table-aware chunking with 4096-token threshold
+
+**Implementation:**
+- **File:** `raglite/ingestion/pipeline.py`
+- **Function:** `split_large_table_by_rows()` (lines 1605-1738)
+- **Function:** `chunk_by_docling_items()` modified (lines 1741-1936)
+
+**Key Decisions:**
+1. **4096 Token Threshold** (AC1):
+   - Tables <4096 tokens kept intact as single chunks
+   - Significantly reduces fragmentation (8.6 → 1.2 chunks per table)
+
+2. **Row-Based Splitting** (AC2):
+   - Large tables >4096 tokens split by logical rows
+   - Column headers duplicated in each chunk
+   - Table context prefix: "Table {index} (Part {n} of {total}): {caption}"
+
+3. **Metadata Preservation** (AC1):
+   - All table chunks marked with `section_type='Table'`
+   - Enables table-specific retrieval and filtering
+
+**Expected Impact:**
+- Chunks per table: 8.6 → 1.2 (-86%)
+- Table query accuracy: 40% → 75% (+35pp)
+- Overall accuracy: 52% → 65% (+13pp)
+
+**Validation:**
+- Unit tests: `raglite/tests/unit/test_table_aware_chunking.py`
+- Validation script: `scripts/test-table-aware-chunking.py`
+- Re-ingestion script: `scripts/reingest-with-table-aware-chunking.py`
+- Dilution analysis: `scripts/analyze-semantic-dilution.py`
+
+**Trade-Offs:**
+- Larger table chunks may exhibit semantic dilution
+- Monitoring via AC5 dilution detection script
+- Threshold tunable via Story 2.8.1 if needed
+
+---
+
 ## Current Next Steps
 
-1. Complete **Story 0.1: Week 0 Integration Spike** (`docs/stories/0.1.week-0-integration-spike.md`)
-2. Set up API accounts (Claude, AWS if needed)
-3. Run integration spike with 1 PDF + 15 test queries
-4. Generate Week 0 Spike Report
-5. **Decision Gate:** GO/NO-GO for Phase 1 based on accuracy (≥70% = GO)
+**IMMEDIATE (T+0 to T+2):**
 
-**DO NOT** begin Phase 1 implementation until Week 0 validates the technology stack.
+1. ✅ **Week 0 Integration Spike COMPLETE** - Technology stack validated
+2. ✅ **Sprint Change Proposal APPROVED** - Epic 2 strategic pivot approved by PM + User
+3. ✅ **Documentation Updates COMPLETE** - PRD, Architecture, Tech Stack all updated
+4. **START Epic 2 Phase 1 Implementation** (T+1):
+   - Story 2.1: Implement pypdfium Backend (4 hours)
+   - Story 2.2: Implement Page-Level Parallelism (4 hours)
+   - Validate 1.7-2.5x speedup
+
+**SHORT-TERM (T+3 to T+17 - Weeks 2-3):**
+
+5. **Epic 2 Phase 2A Implementation** (1-2 weeks):
+   - Story 2.3: Fixed 512-token chunking (3 days)
+   - Story 2.4: LLM contextual metadata (2 days)
+   - Story 2.5: AC3 validation ≥70% (2-3 days)
+
+6. **DECISION GATE (T+17, Week 3 Day 3)**:
+   - IF ≥70% accuracy → **Epic 2 COMPLETE** → Proceed to Epic 3 planning
+   - IF <70% accuracy → Phase 2B (Structured Multi-Index) - PM approval required
+
+**For full implementation details, see:**
+- `docs/prd/epic-2-advanced-rag-enhancements.md` - Epic 2 stories and acceptance criteria
+- `docs/architecture/8-phased-implementation-strategy-v11-simplified.md` - Phased approach
+- `story-2.2-pivot-analysis/` - Complete strategic pivot analysis and Sprint Change Proposal

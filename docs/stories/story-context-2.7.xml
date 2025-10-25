@@ -1,0 +1,280 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.7</storyId>
+    <title>Multi-Index Search Architecture (Tables + Vector)</title>
+    <status>Ready</status>
+    <generatedAt>2025-10-24</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/story-2.7.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>RAG retrieval system</asA>
+    <iWant>multi-index search architecture combining vector (Qdrant) and structured table (PostgreSQL) retrieval</iWant>
+    <soThat>table-heavy queries can be served from SQL while semantic queries use vectors, achieving 70-80% retrieval accuracy</soThat>
+    <tasks>
+      - Task 1: Query Classification (AC1) - 6 hours
+        - 1.1: Create query_classifier.py with QueryType enum
+        - 1.2: Implement heuristic classification logic (SQL/VECTOR/HYBRID)
+        - 1.3: Write unit tests for 20 test queries
+        - 1.4: Validate &lt;50ms classification latency
+      - Task 2: Multi-Index Orchestrator (AC2) - 1 day
+        - 2.1: Create multi_index_search.py with SearchResult model
+        - 2.2: Implement query routing logic (3-way conditional)
+        - 2.3: Add parallel execution for HYBRID queries (asyncio.gather)
+        - 2.4: Write integration tests for all query types
+      - Task 3: Result Fusion (AC3) - 1 day
+        - 3.1: Implement weighted sum fusion algorithm
+        - 3.2: Add deduplication logic for cross-index results
+        - 3.3: Implement score normalization [0,1]
+        - 3.4: Write unit tests for edge cases (empty results, duplicates)
+      - Task 4: MCP Tool Integration (AC4) - 4 hours
+        - 4.1: Update query_financial_documents to call multi_index_search()
+        - 4.2: Add observability logging (classification, index usage, timing)
+        - 4.3: Update QueryResponse model with retrieval_method field
+        - 4.4: Write end-to-end MCP integration tests
+      - Task 5: Performance Validation (AC5) - 4 hours
+        - 5.1: Run 50 ground truth queries with latency measurement
+        - 5.2: Measure p50/p95/p99 latency breakdown
+        - 5.3: Validate NFR13 compliance (&lt;15s p95)
+        - 5.4: Document performance report with bottleneck analysis
+      - Task 6: Error Handling (AC6) - 4 hours
+        - 6.1: Implement PostgreSQL fallback logic
+        - 6.2: Implement Qdrant fallback logic
+        - 6.3: Add classification failure handling
+        - 6.4: Write chaos tests for all failure scenarios
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    AC1: Query Classification Module (6 hours)
+    - Create raglite/retrieval/query_classifier.py (~80 lines)
+    - Classifier function: classify_query(query: str) -&gt; QueryType
+    - Query types: VECTOR_ONLY, SQL_ONLY, HYBRID
+    - Classification accuracy ≥90% on test set
+    - Latency &lt;50ms per classification
+
+    AC2: Multi-Index Search Orchestrator (1 day)
+    - Create raglite/retrieval/multi_index_search.py (~150 lines)
+    - Main function: multi_index_search(query: str, top_k: int = 5) -&gt; List[SearchResult]
+    - Route queries based on classification: SQL_ONLY -&gt; PostgreSQL, VECTOR_ONLY -&gt; Qdrant, HYBRID -&gt; both
+    - Parallel execution for HYBRID queries (asyncio.gather)
+    - Error handling with fallback logic
+
+    AC3: Result Fusion and Re-Ranking (1 day)
+    - Fusion function: merge_results(vector_results, sql_results, alpha=0.6) -&gt; List[SearchResult]
+    - Weighted sum algorithm: final_score = alpha * vector_score + (1 - alpha) * sql_score
+    - Deduplication logic for cross-index results
+    - &lt;20ms fusion overhead
+
+    AC4: MCP Tool Integration (4 hours)
+    - Update raglite/main.py query_financial_documents tool
+    - Replace direct Qdrant calls with multi_index_search()
+    - Add observability logging (classification, index usage, timing)
+    - Maintain backward compatibility
+
+    AC5: Performance Validation (4 hours)
+    - p50 query latency &lt;5s
+    - p95 query latency &lt;15s (NFR13 compliance)
+    - Multi-index overhead &lt;200ms vs baseline
+    - Performance report documented
+
+    AC6: Error Handling and Fallback Logic (4 hours)
+    - PostgreSQL unavailable -&gt; fallback to vector-only
+    - Qdrant unavailable -&gt; fallback to SQL (if applicable)
+    - Classification failure -&gt; default to VECTOR_ONLY
+    - Fusion timeout (5s) -&gt; return partial results
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2: Advanced RAG Architecture Enhancement</title>
+        <section>Phase 2B: Structured Multi-Index</section>
+        <snippet>Epic 2 Phase 2B implements multi-index search combining Qdrant vector search with PostgreSQL table search. Conditional implementation triggered if Phase 2A achieves &lt;70% accuracy. Expected accuracy: 70-80%.</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec-epic-2.md</path>
+        <title>Technical Specification: Epic 2</title>
+        <section>Multi-Index Search Architecture</section>
+        <snippet>Hybrid retrieval combining vector similarity (Qdrant) with graph traversal (Neo4j) for relational queries. Query routing based on heuristic classification. FinSage-style architecture for financial RAG.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/3-repository-structure-monolithic.md</path>
+        <title>Repository Structure (Monolithic)</title>
+        <section>Structured Layer (Phase 2B)</section>
+        <snippet>Conditional structured/ module (15% probability trigger). Includes table_extraction.py, sql_querying.py, table_retrieval.py. Total impact: +150 lines, +PostgreSQL infrastructure.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack (Definitive)</title>
+        <section>Phase 2B Conditional Technologies</section>
+        <snippet>PostgreSQL 16+: ONLY if Phase 2A &lt;70% accuracy. Decision Authority: PM (John). Qdrant 1.15+ (existing). asyncio (Python stdlib). psycopg2-binary for PostgreSQL client.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/6-complete-reference-implementation.md</path>
+        <title>Complete Reference Implementation</title>
+        <section>Coding Patterns</section>
+        <snippet>Type hints mandatory. Google-style docstrings. Structured logging with extra={}. Async/await for I/O. Pydantic models. NO custom wrappers, NO abstract base classes, direct SDK usage only.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/story-2.6.md</path>
+        <title>Story 2.6: SQL Table Extraction &amp; PostgreSQL Integration</title>
+        <section>Dependency</section>
+        <snippet>Story 2.6 implements PostgreSQL table extraction and storage. Creates raglite/structured/ module with table_retrieval.py exposing search_tables(query) function. Story 2.7 depends on this completion.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/testing-strategy.md</path>
+        <title>Testing Strategy</title>
+        <section>Test Standards</section>
+        <snippet>pytest + pytest-asyncio for unit/integration tests. Test coverage target: 80%+. Ground truth accuracy validation. Performance tests for NFR compliance. Chaos testing for failure scenarios.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>raglite/retrieval/search.py</path>
+        <kind>service</kind>
+        <symbol>vector_search</symbol>
+        <lines>N/A</lines>
+        <reason>Existing vector search implementation (Qdrant). Story 2.7 will call this for VECTOR_ONLY queries and as part of HYBRID queries.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/retrieval/query_classifier.py</path>
+        <kind>service</kind>
+        <symbol>classify_query</symbol>
+        <lines>N/A</lines>
+        <reason>Query classifier already exists. Story 2.7 may need to extend or reuse this for multi-index routing.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/structured/table_retrieval.py</path>
+        <kind>service</kind>
+        <symbol>search_tables</symbol>
+        <lines>N/A</lines>
+        <reason>Story 2.6 dependency. Provides SQL table search functionality for SQL_ONLY queries and HYBRID queries.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>model</kind>
+        <symbol>SearchResult, QueryRequest, QueryResponse</symbol>
+        <lines>N/A</lines>
+        <reason>Pydantic models for search results and MCP tool interfaces. Story 2.7 will extend SearchResult to include source: "vector" | "sql" field.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/clients.py</path>
+        <kind>client</kind>
+        <symbol>get_qdrant_client, get_postgres_client</symbol>
+        <lines>N/A</lines>
+        <reason>Client initialization for Qdrant and PostgreSQL. Story 2.7 orchestrator will use both clients for HYBRID queries.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/main.py</path>
+        <kind>mcp-server</kind>
+        <symbol>query_financial_documents</symbol>
+        <lines>N/A</lines>
+        <reason>Existing MCP tool for querying financial documents. Story 2.7 AC4 will update this tool to call multi_index_search() instead of direct Qdrant search.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="qdrant-client" version="1.15.1">Vector database client (existing)</package>
+        <package name="psycopg2-binary" version=">=2.9,&lt;3.0">PostgreSQL client (Story 2.6 dependency)</package>
+        <package name="asyncio" version=">=3.4.3,&lt;4.0.0">Parallel execution for HYBRID queries</package>
+        <package name="pydantic" version=">=2.0,&lt;3.0">Data models and validation</package>
+        <package name="fastmcp" version="2.12.4">MCP server SDK</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    1. SIMPLICITY FIRST: No abstractions, no frameworks, no custom wrappers. Direct SDK usage only.
+    2. NO Custom Wrappers: Use Qdrant and PostgreSQL SDKs directly. No QdrantManager or custom classes.
+    3. NO Abstract Base Classes: Just write the function. No BaseRetriever or abstract interfaces.
+    4. Heuristic Classification: Use simple keyword matching for query classification. NO LLM-based query planning (saves 500-800ms latency).
+    5. Type Hints Mandatory: All functions must have type annotations.
+    6. Structured Logging: Use logger.info() with extra={} for context.
+    7. Error Handling: Specific exceptions with context. Graceful fallback logic required.
+    8. Async Patterns: Use asyncio.gather() for parallel HYBRID queries.
+    9. NFR13 Compliance: p95 query latency &lt;15s. Multi-index overhead &lt;200ms.
+    10. Target Lines: query_classifier.py (~80 lines), multi_index_search.py (~230 lines), main.py (+30 lines modified)
+    11. Total Impact: +310 new lines, 30 lines modified (from Dev Notes)
+    12. CONDITIONAL: Only implement if Phase 2A &lt;70% accuracy (15% probability). PM approval required.
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>multi_index_search</name>
+      <kind>function</kind>
+      <signature>async def multi_index_search(query: str, top_k: int = 5) -&gt; List[SearchResult]</signature>
+      <path>raglite/retrieval/multi_index_search.py</path>
+      <description>Main orchestration function. Classifies query, routes to appropriate index(es), merges results.</description>
+    </interface>
+    <interface>
+      <name>classify_query</name>
+      <kind>function</kind>
+      <signature>def classify_query(query: str) -&gt; QueryType</signature>
+      <path>raglite/retrieval/query_classifier.py</path>
+      <description>Heuristic-based query classifier. Returns VECTOR_ONLY, SQL_ONLY, or HYBRID.</description>
+    </interface>
+    <interface>
+      <name>merge_results</name>
+      <kind>function</kind>
+      <signature>def merge_results(vector_results: List[SearchResult], sql_results: List[SearchResult], alpha: float = 0.6) -&gt; List[SearchResult]</signature>
+      <path>raglite/retrieval/multi_index_search.py</path>
+      <description>Fusion algorithm. Weighted sum: final_score = alpha * vector_score + (1 - alpha) * sql_score. Deduplication included.</description>
+    </interface>
+    <interface>
+      <name>SearchResult</name>
+      <kind>pydantic-model</kind>
+      <signature>class SearchResult(BaseModel):
+    text: str
+    score: float
+    source: str  # "vector" | "sql"
+    metadata: Dict[str, Any]
+    document_id: str
+    page_number: Optional[int] = None</signature>
+      <path>raglite/shared/models.py</path>
+      <description>Data model for search results from both indexes. NEW field: source to track origin (vector vs sql).</description>
+    </interface>
+    <interface>
+      <name>vector_search</name>
+      <kind>function</kind>
+      <signature>async def vector_search(query: str, top_k: int) -&gt; List[SearchResult]</signature>
+      <path>raglite/retrieval/search.py</path>
+      <description>Existing Qdrant vector search. Called for VECTOR_ONLY and HYBRID queries.</description>
+    </interface>
+    <interface>
+      <name>search_tables</name>
+      <kind>function</kind>
+      <signature>async def search_tables(query: str, top_k: int) -&gt; List[SearchResult]</signature>
+      <path>raglite/structured/table_retrieval.py</path>
+      <description>Story 2.6 dependency. PostgreSQL table search. Called for SQL_ONLY and HYBRID queries.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest + pytest-asyncio for all tests. Unit tests for classification logic and fusion algorithm. Integration tests for multi-index orchestration. Performance tests for latency validation. Chaos tests for failure scenarios (PostgreSQL/Qdrant unavailable). Target coverage: 80%+. Test files co-located in raglite/tests/.
+    </standards>
+    <locations>
+      - raglite/tests/unit/test_query_classifier.py
+      - raglite/tests/unit/test_multi_index_search.py
+      - raglite/tests/integration/test_multi_index_integration.py
+      - raglite/tests/performance/test_multi_index_latency.py
+    </locations>
+    <ideas>
+      AC1: Unit test query classification with 20 test queries (10 SQL, 5 VECTOR, 5 HYBRID). Validate ≥90% accuracy and &lt;50ms latency.
+
+      AC2: Integration test for SQL_ONLY routing (mock PostgreSQL, verify Qdrant not called). Integration test for VECTOR_ONLY routing (mock Qdrant, verify PostgreSQL not called). Integration test for HYBRID routing (verify both called in parallel via asyncio.gather).
+
+      AC3: Unit test weighted sum fusion with 5 vector + 5 SQL results. Test deduplication (same document in both indexes). Test edge cases (empty vector results, empty SQL results, all duplicates).
+
+      AC4: End-to-end MCP integration test. Mock multi_index_search(), verify tool calls it. Verify observability logging includes classification type, index usage, timing breakdown.
+
+      AC5: Performance test with 50 ground truth queries. Measure p50/p95/p99 latency. Validate &lt;15s p95. Identify slowest queries for bottleneck analysis.
+
+      AC6: Chaos test - mock PostgreSQL failure, verify fallback to vector-only. Chaos test - mock Qdrant failure, verify fallback to SQL or error. Chaos test - mock classification failure, verify default to VECTOR_ONLY. Chaos test - mock fusion timeout, verify partial results returned.
+    </ideas>
+  </tests>
+</story-context>

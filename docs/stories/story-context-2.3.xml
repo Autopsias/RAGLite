@@ -1,0 +1,283 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>3</storyId>
+    <title>Refactor Chunking Strategy to Fixed 512-Token Approach</title>
+    <status>Ready</status>
+    <generatedAt>2025-10-20</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/story-2.3.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>RAG system</asA>
+    <iWant>fixed 512-token chunking with 50-token overlap</iWant>
+    <soThat>retrieval accuracy improves from 42% to 68-72%</soThat>
+    <tasks>
+      <task id="1" ac="AC1">Remove Element-Aware Chunking (4 hours)</task>
+      <task id="2" ac="AC2">Implement Fixed 512-Token Chunking (1 day)</task>
+      <task id="3" ac="AC3">Preserve Table Boundaries (4 hours)</task>
+      <task id="4" ac="AC4">Clean and Re-ingest Collection (4 hours)</task>
+      <task id="5" ac="AC5,AC6">Validate Chunk Metrics (2 hours)</task>
+      <task id="6">Update Documentation (30 min)</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="AC1" effort="4 hours">
+      <description>Remove Element-Aware Logic</description>
+      <requirements>
+        - Delete element-aware chunking code from raglite/ingestion/pipeline.py
+        - Remove ElementType enum from raglite/shared/models.py
+        - Remove element detection logic
+      </requirements>
+      <source>Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.3 AC1</source>
+    </ac>
+
+    <ac id="AC2" effort="1 day" mandatory="true">
+      <description>Implement Fixed 512-Token Chunking</description>
+      <requirements>
+        - Chunk size: 512 tokens
+        - Overlap: 50 tokens
+        - Tokenizer: OpenAI tiktoken (cl100k_base)
+        - Preserve sentence boundaries when possible
+      </requirements>
+      <research>Yepes et al. (2024) - 68.09% accuracy on financial reports with fixed 512-token chunks</research>
+      <source>Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.3 AC2</source>
+    </ac>
+
+    <ac id="AC3" effort="4 hours">
+      <description>Table Boundary Preservation</description>
+      <requirements>
+        - Detect Docling TableItem objects
+        - Ensure tables NOT split mid-row
+        - If table &gt;512 tokens, keep as single chunk (exception to 512-token rule)
+      </requirements>
+      <source>Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.3 AC3</source>
+    </ac>
+
+    <ac id="AC4" effort="4 hours">
+      <description>Clean Collection and Re-ingest</description>
+      <requirements>
+        - Delete contaminated Qdrant collection
+        - Recreate collection with clean schema
+        - Re-ingest test PDF (160 pages)
+        - Verify chunk count: 250-350 (vs 504 element-aware)
+      </requirements>
+      <source>Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.3 AC4</source>
+    </ac>
+
+    <ac id="AC5" effort="1 hour">
+      <description>Chunk Count Validation</description>
+      <requirements>
+        - Expected chunk count: 250-350
+        - Measure chunk size consistency: 512 tokens ±50 variance
+        - Document chunk count and size distribution
+      </requirements>
+      <source>Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.3 AC5</source>
+    </ac>
+
+    <ac id="AC6" effort="1 hour">
+      <description>Chunk Size Consistency</description>
+      <requirements>
+        - Measure chunk size: mean=512, std&lt;50
+        - Verify 95% of chunks within 462-562 token range
+        - Document outliers (tables &gt;512 tokens)
+      </requirements>
+      <source>Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.3 AC6</source>
+    </ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2: Advanced RAG Architecture Enhancement</title>
+        <section>Story 2.3: Refactor Chunking Strategy to Fixed 512-Token Approach</section>
+        <snippet>Replaces failed element-aware chunking (42% accuracy) with research-validated fixed chunking (68-72% expected accuracy). Implements 512-token chunks with 50-token overlap using tiktoken tokenizer.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/tech-spec-epic-2.md</path>
+        <title>Technical Specification: Epic 2</title>
+        <section>Advanced Document Understanding (GraphRAG)</section>
+        <snippet>Epic 2 technical specification including architecture overview, component specifications, and implementation approach. Note: GraphRAG portions are conditional (Phase 2C only if Phase 2A &lt;70%).</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/stories/story-2.2.md</path>
+        <title>Story 2.2: Page-Level Parallelism</title>
+        <section>Phase 1 Baseline Context</section>
+        <snippet>Story 2.2 provides Phase 1 baseline: pypdfium backend configured, 8-thread parallelism validated, 1.55x speedup achieved. Current ingestion time: 8.57 min for 160-page PDF. This is the performance baseline for Story 2.3 re-ingestion testing.</snippet>
+      </doc>
+
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project Development Guidelines</title>
+        <section>Anti-Over-Engineering Rules & Technology Stack</section>
+        <snippet>Critical constraints: NO custom wrappers, NO abstractions beyond simple utility functions, direct SDK usage only. Technology stack is LOCKED - tiktoken approved for Story 2.3. Target: ~600-800 lines total Python code across 15 files.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/stories/story-2.2-investigation-findings.md</path>
+        <title>Element-Aware Chunking Failure Root Cause</title>
+        <section>Strategic Pivot Analysis</section>
+        <snippet>Element-aware chunking achieved 42% accuracy vs 56% baseline = -14pp regression. Root cause: Implemented exact failure mode warned against in research (Yepes et al. 2024). Fixed 512-token = 68.09% accuracy (research-validated). This is WHY Story 2.3 pivots to fixed chunking.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <file>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>ingestion module</kind>
+        <symbol>ingest_pdf</symbol>
+        <lines>1-1100</lines>
+        <reason>Primary ingestion pipeline. Contains element-aware chunking logic to DELETE (AC1) and location for new fixed 512-token chunking implementation (AC2). Also handles table detection (AC3) and Qdrant collection management (AC4).</reason>
+      </file>
+
+      <file>
+        <path>raglite/shared/models.py</path>
+        <kind>data models</kind>
+        <symbol>ElementType, Chunk</symbol>
+        <lines>1-200</lines>
+        <reason>Contains ElementType enum to DELETE (AC1). Also defines Chunk model which may need updates for fixed chunking metadata. Review for any element-aware references to remove.</reason>
+      </file>
+
+      <file>
+        <path>raglite/shared/config.py</path>
+        <kind>configuration</kind>
+        <symbol>Settings</symbol>
+        <lines>1-50</lines>
+        <reason>Configuration settings for chunking parameters. May need to add chunk_size=512 and chunk_overlap=50 settings. Current settings include pdf_processing_threads from Story 2.2.</reason>
+      </file>
+
+      <file>
+        <path>tests/integration/test_pypdfium_ingestion.py</path>
+        <kind>integration test</kind>
+        <symbol>test_ac3_table_accuracy_validation</symbol>
+        <lines>1-300</lines>
+        <reason>Existing AC3 table accuracy test from Story 2.1. Provides baseline test pattern for Story 2.3 AC5/AC6 chunk validation tests. Shows how to validate table extraction accuracy (100% in Story 2.1).</reason>
+      </file>
+    </code>
+
+    <dependencies>
+      <python ecosystem="Poetry" manifest="pyproject.toml">
+        <package name="tiktoken" version=">=0.5.1,<1.0.0" status="ALREADY INSTALLED" story="2.2">Required for AC2 - OpenAI cl100k_base tokenizer for fixed 512-token chunking. Already added in Story 2.2 for element-aware (now repurposed for fixed chunking).</package>
+        <package name="docling" version="2.55.1" status="installed">PDF processing framework. Provides TableItem objects for AC3 table boundary detection. No version changes needed.</package>
+        <package name="qdrant-client" version="1.15.1" status="installed">Vector database client for AC4 collection management (delete/recreate). No version changes needed.</package>
+        <package name="pytest" version="8.4.2" status="dev">Testing framework for AC5/AC6 chunk validation tests.</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint category="architecture">
+      <rule>KISS Principle: NO custom wrappers, NO abstractions. Write simple, direct functions using tiktoken and Docling APIs as documented.</rule>
+      <source>CLAUDE.md - Anti-Over-Engineering Rules</source>
+    </constraint>
+
+    <constraint category="implementation">
+      <rule>Direct SDK usage: Use tiktoken.get_encoding("cl100k_base") directly. Use Docling TableItem detection directly. NO wrapper classes or helper abstractions.</rule>
+      <source>CLAUDE.md - Rule 3: No Customization Beyond Standard SDKs</source>
+    </constraint>
+
+    <constraint category="code-size">
+      <rule>Target net code change: -150 lines (element-aware deletion) + 80 lines (fixed chunking) = -70 lines net. Keep implementation minimal.</rule>
+      <source>Story 2.3 Dev Notes - Files Modified, CLAUDE.md - ~600-800 lines total target</source>
+    </constraint>
+
+    <constraint category="accuracy">
+      <rule>Expected accuracy improvement: 42% → 68-72% (+26-30pp). This is research-validated (Yepes et al. 2024). MANDATORY success criterion for Phase 2A.</rule>
+      <source>Epic 2 PRD - Story 2.3 Expected Impact</source>
+    </constraint>
+
+    <constraint category="table-preservation">
+      <rule>Exception to 512-token rule: Tables must NOT be split mid-row. If table >512 tokens, keep as single chunk. This maintains 100% table accuracy from Story 2.1.</rule>
+      <source>Story 2.3 AC3, Story 2.1 100% table accuracy baseline</source>
+    </constraint>
+
+    <constraint category="testing">
+      <rule>All acceptance criteria (AC1-AC6) must have corresponding integration tests. Use pytest patterns from Story 2.1/2.2 test suites.</rule>
+      <source>Story 2.3 Tasks - Task 2 Subtask 2.5, Task 5 complete</source>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>chunk_document</name>
+      <kind>function signature</kind>
+      <signature>def chunk_document(doc: DoclingDocument, chunk_size: int = 512, overlap: int = 50) -> List[Chunk]</signature>
+      <path>raglite/ingestion/pipeline.py</path>
+      <description>Main chunking function to implement for AC2. Replaces element-aware chunking. Takes Docling document, returns list of fixed 512-token chunks with 50-token overlap. Preserves table boundaries (AC3).</description>
+    </interface>
+
+    <interface>
+      <name>Chunk</name>
+      <kind>data model</kind>
+      <signature>class Chunk(BaseModel): text: str; chunk_id: str; metadata: dict</signature>
+      <path>raglite/shared/models.py</path>
+      <description>Pydantic model for chunk data. May need updates to remove element-aware fields and add fixed chunking metadata (chunk_index, token_count, is_table_exception).</description>
+    </interface>
+
+    <interface>
+      <name>QdrantClient.delete_collection</name>
+      <kind>SDK method</kind>
+      <signature>client.delete_collection(collection_name: str)</signature>
+      <path>qdrant_client SDK</path>
+      <description>AC4: Delete contaminated collection with element-aware chunks. Call before recreating collection with fixed chunks.</description>
+    </interface>
+
+    <interface>
+      <name>tiktoken.get_encoding</name>
+      <kind>SDK method</kind>
+      <signature>encoding = tiktoken.get_encoding("cl100k_base")</signature>
+      <path>tiktoken SDK</path>
+      <description>AC2: OpenAI tokenizer for counting tokens in fixed 512-token chunking. Use encoding.encode(text) to get token list, len() for token count.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest with pytest-asyncio for async tests. Follow patterns from Story 2.1/2.2 integration tests: test file naming (test_*.py), marker usage (@pytest.mark.integration), fixture usage (sample PDFs in tests/fixtures/), assertion patterns (assert expected == actual with clear failure messages). Target 80%+ code coverage. All ACs must have corresponding integration tests validating success criteria.
+    </standards>
+
+    <locations>
+      - tests/unit/test_fixed_chunking.py (create new - AC2 unit tests)
+      - tests/integration/test_chunk_consistency.py (create new - AC5, AC6 validation)
+      - tests/integration/test_pypdfium_ingestion.py (reference for test patterns)
+      - tests/fixtures/ (sample PDFs and expected chunk data)
+    </locations>
+
+    <ideas>
+      <idea ac="AC2">
+        Test: test_fixed_512_token_chunking_with_50_overlap()
+        Validates: Chunk size = 512 tokens, overlap = 50 tokens, sentence boundaries preserved
+        Method: Ingest small test document (5 pages), count tokens per chunk, verify 512±10 size, verify 50-token overlap between adjacent chunks
+      </idea>
+
+      <idea ac="AC3">
+        Test: test_table_boundary_preservation()
+        Validates: Tables NOT split mid-row, tables >512 tokens kept as single chunk
+        Method: Ingest document with large table (>512 tokens), verify table is single chunk, verify no mid-row splits, verify table accuracy maintained at 100%
+      </idea>
+
+      <idea ac="AC4">
+        Test: test_collection_recreation_and_reingest()
+        Validates: Old collection deleted, new collection created, 160-page PDF re-ingested successfully
+        Method: Delete collection, recreate with clean schema, ingest test PDF, verify chunk count in 250-350 range
+      </idea>
+
+      <idea ac="AC5">
+        Test: test_ac5_chunk_count_validation()
+        Validates: Chunk count 250-350 (vs 504 element-aware), chunk size consistency 512±50
+        Method: Ingest 160-page test PDF, count total chunks, verify 250 <= count <= 350, measure chunk size variance
+      </idea>
+
+      <idea ac="AC6">
+        Test: test_ac6_chunk_size_consistency()
+        Validates: Mean=512, std<50, 95% within 462-562 range
+        Method: Calculate statistics on chunk token counts, verify mean=512±10, std<50, 95th percentile <= 562, document outliers (tables)
+      </idea>
+    </ideas>
+  </tests>
+</story-context>

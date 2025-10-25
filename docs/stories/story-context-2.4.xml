@@ -1,0 +1,180 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.4</storyId>
+    <title>Add LLM-Generated Contextual Metadata Injection</title>
+    <status>Ready</status>
+    <generatedAt>2025-10-22</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/story-2.4.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a RAG system</asA>
+    <iWant>LLM-generated metadata (fiscal period, company, department)</iWant>
+    <soThat>queries can filter by business context and improve precision</soThat>
+    <tasks>
+- Task 1: Implement Metadata Extraction Function (AC1 - 1 day)
+- Task 2: Update Data Models (AC2 - 2 hours)
+- Task 3: Inject Metadata into Qdrant (AC3 - 4 hours)
+- Task 4: Implement Metadata Caching (AC4 - 2 hours)
+- Task 5: Cost Validation and Tracking (AC5 - 1 hour)
+- Task 6: Update Documentation (30 min)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+AC1: Metadata Extraction Function (1 day) - Use GPT-5 nano API for metadata extraction (99.3% cost savings vs Claude 3.7 Sonnet). Extract: fiscal_period, company_name, department_name. Use JSON schema mode for structured output validation. Cache results per document (not per chunk).
+
+AC2: Metadata Schema Update (2 hours) - Add metadata fields to Chunk model: fiscal_period, company_name, department_name. Update Qdrant payload schema. Ensure backward compatibility with existing chunks.
+
+AC3: Metadata Injection (4 hours) - Inject metadata into Qdrant chunk payload during ingestion. Metadata accessible via search filters (Qdrant filter API). Document metadata usage patterns for query filtering.
+
+AC4: Metadata Caching (2 hours) - Cache metadata extraction results per document (avoid re-extraction for every chunk). Expected cost: <$0.0001 per 160-page document (with prompt caching). Measure performance optimization from caching.
+
+AC5: Cost Validation (1 hour) - Measure GPT-5 nano API token usage for metadata extraction. Expected cost: $0.00005 per 160-page document (with prompt caching). Create cost tracking test in integration suite. Validate 99.3% cost reduction vs Claude 3.7 Sonnet baseline.
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2 PRD - Advanced RAG Architecture Enhancement</title>
+        <section>Story 2.4: Add LLM-Generated Contextual Metadata Injection (lines 240-295)</section>
+        <snippet>Complete specification for metadata extraction (fiscal_period, company_name, department_name) using Claude API. Expected accuracy improvement: 68-72% → 70-75% (+2-3pp). Cost target: <$0.10/doc. Research evidence: Snowflake - 20% improvement with metadata.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack - Definitive</title>
+        <section>LLM (Primary) - Claude 3.7 Sonnet</section>
+        <snippet>Claude 3.7 Sonnet API approved for reasoning, analysis, synthesis. State-of-art reasoning, 200K context. Anthropic SDK ≥0.18.0,<1.0.0 specified in dependencies.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/story-2.3.md</path>
+        <title>Story 2.3 - Fixed 512-Token Chunking (Baseline)</title>
+        <section>Completed Story - Phase 2A Context</section>
+        <snippet>Fixed 512-token chunking with 50-token overlap completed. Establishes 68-72% accuracy baseline. Story 2.4 builds on this to add metadata injection for +2-3pp boost to 70-75% target.</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project Development Constraints</title>
+        <section>Anti-Over-Engineering Rules</section>
+        <snippet>RULE 2: Technology Stack is LOCKED. RULE 3: No Customization Beyond Standard SDKs. Use SDKs EXACTLY as documented. NO custom wrappers. Direct SDK usage only (AsyncAnthropic for Claude API).</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/8-phased-implementation-strategy-v11-simplified.md</path>
+        <title>Implementation Strategy - Epic 2 Phase 2A</title>
+        <section>Phase 2A: Fixed Chunking + Metadata (1-2 weeks)</section>
+        <snippet>Goal: 68-72% retrieval accuracy. Story 2.4 implements LLM metadata extraction. Decision Gate: IF ≥70% → Epic 2 COMPLETE. Research-validated approach with 80% success probability.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>module</kind>
+        <symbol>chunk_document, generate_embeddings, ingest_pdf</symbol>
+        <lines>921-1100 (chunk_document), 90-162 (generate_embeddings)</lines>
+        <reason>Main ingestion pipeline where metadata extraction will be added. Metadata should be extracted once per document before chunking loop (line ~300), then injected into each Chunk object during creation.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>data models</kind>
+        <symbol>Chunk, DocumentMetadata</symbol>
+        <lines>23-49 (Chunk model)</lines>
+        <reason>Chunk model needs three new optional fields: fiscal_period, company_name, department_name (all str | None). Existing fields: chunk_id, content, metadata, page_number, chunk_index, embedding, parent_chunk_id, word_count.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/config.py</path>
+        <kind>settings</kind>
+        <symbol>Settings</symbol>
+        <lines>10-45</lines>
+        <reason>Settings class needs new field: anthropic_api_key already exists (line 23). Pattern: Use SettingsConfigDict with env_file=".env" for environment loading. No changes needed unless OpenAI SDK required.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/clients.py</path>
+        <kind>client factories</kind>
+        <symbol>get_claude_client, get_qdrant_client, get_embedding_model</symbol>
+        <lines>110-136 (get_claude_client)</lines>
+        <reason>get_claude_client() factory pattern exists. Returns Anthropic client with API key validation. Follow same singleton pattern if new client needed for metadata extraction (e.g., AsyncAnthropic for async calls).</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="openai" version=">=1.0.0,<2.0.0" purpose="OpenAI API client for GPT-5 nano metadata extraction"/>
+        <package name="pydantic" version=">=2.0,<3.0" purpose="Data validation for DocumentMetadata schema"/>
+        <package name="tiktoken" version=">=0.5.1,<1.0.0" purpose="Token counting (already installed from Story 2.3)"/>
+        <package name="qdrant-client" version="1.15.1" purpose="Vector storage with metadata payload"/>
+        <package name="pytest" version="8.4.2" purpose="Testing framework"/>
+        <package name="pytest-asyncio" version="1.2.0" purpose="Async test support"/>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+1. **KISS Principle (Keep It Simple, Stupid)**: No custom base classes, factories, or abstractions. Direct SDK usage only.
+2. **No Custom Wrappers**: Use AsyncOpenAI EXACTLY as documented. NO wrapper classes or "convenience layers".
+3. **Code Size Target**: ~120 lines net addition (100 pipeline.py + 20 models.py). Total project: ~600-800 lines across 15 files.
+4. **Accuracy Targets**: 68-72% (Story 2.3 baseline) → 70-75% (+2-3pp from metadata). Decision Gate: ≥70% required.
+5. **Table Accuracy Preservation**: Maintain 97.9% table extraction accuracy from Story 2.1. Metadata should NOT interfere with table detection.
+6. **Testing Requirements**: 80%+ code coverage. Unit tests for metadata extraction. Integration tests for AC3 (metadata injection) and AC5 (cost validation).
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>extract_document_metadata</name>
+      <kind>async function</kind>
+      <signature>async def extract_document_metadata(text: str, doc_filename: str, use_cache: bool = True) -> ExtractedMetadata</signature>
+      <path>raglite/ingestion/pipeline.py (new function, ~161 lines)</path>
+    </interface>
+    <interface>
+      <name>Chunk model (updated)</name>
+      <kind>Pydantic model</kind>
+      <signature>
+class Chunk(BaseModel):
+    # Existing fields
+    chunk_id: str
+    content: str
+    metadata: DocumentMetadata
+    page_number: int
+    chunk_index: int
+    embedding: list[float]
+    parent_chunk_id: str | None
+    word_count: int
+    # NEW fields for Story 2.4
+    fiscal_period: str | None = None
+    company_name: str | None = None
+    department_name: str | None = None
+      </signature>
+      <path>raglite/shared/models.py (lines 23-49)</path>
+    </interface>
+    <interface>
+      <name>QdrantClient.upsert</name>
+      <kind>Qdrant SDK method</kind>
+      <signature>qdrant_client.upsert(collection_name: str, points: list[PointStruct])</signature>
+      <path>External SDK - Qdrant payload schema</path>
+    </interface>
+    <interface>
+      <name>AsyncOpenAI.chat.completions.create</name>
+      <kind>OpenAI SDK method</kind>
+      <signature>await client.chat.completions.create(model="gpt-5-nano", messages=[...], response_format={"type": "json_object"})</signature>
+      <path>External SDK - OpenAI API</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Testing framework: pytest 8.4.2 with pytest-asyncio 1.2.0. Target: 80%+ code coverage (pytest-cov). Unit tests in tests/unit/, integration tests in tests/integration/. Async test functions with @pytest.mark.asyncio (auto mode enabled). Mock external APIs (Anthropic) with pytest-mock. Use fixtures from conftest.py for shared setup (Qdrant client, embedding model). Structured logging assertions: verify extra={} context fields. Performance tests: validate <$0.10/doc cost budget in AC5.</standards>
+    <locations>
+      - tests/unit/ (unit tests for metadata extraction function)
+      - tests/integration/ (AC3 metadata injection, AC5 cost validation)
+      - tests/conftest.py (shared fixtures: qdrant_client, embedding_model, test PDFs)
+    </locations>
+    <ideas>
+      <test id="AC1" description="Unit test: Mock Claude API response, verify DocumentMetadata parsing (fiscal_period, company_name, department_name)"/>
+      <test id="AC1" description="Unit test: Verify metadata extraction caching (cache hit prevents redundant API call)"/>
+      <test id="AC2" description="Unit test: Verify Chunk model accepts new metadata fields with backward compatibility (None defaults)"/>
+      <test id="AC3" description="Integration test: Ingest test PDF, verify metadata injected into Qdrant payload, query with filter (fiscal_period='Q3 2024')"/>
+      <test id="AC4" description="Integration test: Verify cache effectiveness (~99% cache hits for multi-chunk document)"/>
+      <test id="AC5" description="Integration test: Track token usage and cost for 160-page PDF, assert <$0.10 per document"/>
+    </ideas>
+  </tests>
+</story-context>

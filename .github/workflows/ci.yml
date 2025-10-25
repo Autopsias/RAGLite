@@ -258,7 +258,7 @@ jobs:
           uv venv ci-venv
           source ci-venv/bin/activate
           uv pip install -e .
-          uv pip install pytest pytest-asyncio pytest-timeout
+          uv pip install pytest pytest-asyncio pytest-xdist pytest-timeout
 
       - name: Run E2E tests
         run: |

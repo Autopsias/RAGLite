@@ -1,0 +1,258 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.1</storyId>
+    <title>Implement pypdfium Backend for Docling</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-19</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/story-2.1.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a system administrator</asA>
+    <iWant>Docling configured with pypdfium backend</iWant>
+    <soThat>PDF ingestion is faster and uses less memory</soThat>
+    <tasks>
+- Task 1: Configure pypdfium Backend (AC1 - 1 hour)
+  - 1.1: Add pypdfium dependency to pyproject.toml
+  - 1.2: Import PdfiumBackend in raglite/ingestion/pipeline.py
+  - 1.3: Update DocumentConverter initialization to use pypdfium backend
+  - 1.4: Verify backend configuration logs successful initialization
+- Task 2: Validate Ingestion with Test PDF (AC2 - 1 hour)
+  - 2.1: Identify test PDF (160 pages) from existing test suite
+  - 2.2: Run PDF ingestion with pypdfium backend
+  - 2.3: Verify page count matches expected (160 pages)
+  - 2.4: Verify table extraction still functional
+- Task 3: Table Accuracy Regression Testing (AC3 - 1 hour)
+  - 3.1: Run 10 ground truth table queries from test suite
+  - 3.2: Measure table extraction accuracy
+  - 3.3: Compare with baseline accuracy (before pypdfium)
+  - 3.4: Document results in test output
+- Task 4: Memory Usage Profiling (AC4 - 1 hour)
+  - 4.1: Measure baseline memory usage (before pypdfium)
+  - 4.2: Measure memory usage with pypdfium backend
+  - 4.3: Calculate memory reduction percentage
+  - 4.4: Document memory metrics in test output
+- Task 5: Update Documentation (30 min)
+  - 5.1: Update CLAUDE.md if needed (backend change note)
+  - 5.2: Update test documentation with pypdfium validation results
+  - 5.3: Add memory profiling results to Epic 2 tracking
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+**AC1: Docling Backend Configuration** (1 hour)
+- Configure PdfiumBackend in raglite/ingestion/pipeline.py
+- Remove default PDF.js backend configuration
+- Validate backend switch successful
+- Source: Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.1 AC1
+
+**AC2: Ingestion Validation** (1 hour)
+- Ingest test PDF (160 pages) successfully
+- Verify all pages processed
+- Verify table extraction still works
+- Source: Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.1 AC2
+
+**AC3: Table Accuracy Maintained** (1 hour)
+- Run 10 ground truth table queries
+- Validate table extraction accuracy ≥97.9% (no degradation)
+- Document any accuracy changes
+- Source: Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.1 AC3
+- NFR Reference: Requirements: docs/prd/requirements.md - NFR9: 95%+ table extraction accuracy
+
+**AC4: Memory Reduction Validation** (1 hour)
+- Measure peak memory usage during ingestion
+- Expected: 50-60% reduction (6.2GB → 2.4GB)
+- Document memory usage before/after
+- Source: Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.1 AC4
+- Tech Stack Reference: docs/architecture/5-technology-stack-definitive.md - pypdfium: 50-60% memory reduction
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <!-- Epic 2 PRD - Story 2.1 Specification -->
+      <doc>
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2: Advanced RAG Architecture Enhancement</title>
+        <section>Story 2.1: Implement pypdfium Backend for Docling</section>
+        <snippet>Goal: Replace default PDF.js backend with pypdfium for 50-60% memory reduction (6.2GB → 2.4GB) and faster processing. Expected: 1.7-2.5x speedup empirically validated by Docling benchmarks. Risk: LOW (pypdfium is official Docling backend).</snippet>
+      </doc>
+
+      <!-- Technology Stack - pypdfium Approval -->
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack (Definitive)</title>
+        <section>PDF Backend - pypdfium</section>
+        <snippet>pypdfium: APPROVED (Phase 1) - Docling backend for faster, lower-memory PDF processing. 1.7-2.5x speedup, 50-60% memory reduction. Status: Official Docling backend, production-proven, minimal integration required.</snippet>
+      </doc>
+
+      <!-- Requirements - NFR9 Table Accuracy -->
+      <doc>
+        <path>docs/prd/requirements.md</path>
+        <title>Requirements</title>
+        <section>NFR9: Table Extraction Accuracy</section>
+        <snippet>Table extraction accuracy shall be 95%+ for financial tables with complex structures. Current baseline: 97.9% with TableFormerMode.ACCURATE. MUST NOT degrade when switching to pypdfium backend.</snippet>
+      </doc>
+
+      <!-- Implementation Strategy - Epic 2 Phase 1 -->
+      <doc>
+        <path>docs/architecture/8-phased-implementation-strategy-v11-simplified.md</path>
+        <title>Phased Implementation Strategy</title>
+        <section>Epic 2 Phase 1: PDF Ingestion Performance Optimization</section>
+        <snippet>Phase 1 implements pypdfium backend and page-level parallelism for 1.7-2.5x speedup. Strategic benefit: Faster ingestion enables quicker RAG testing iterations in Phase 2A. Timeline: 1-2 days.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <!-- Primary Integration Point - DocumentConverter Initialization -->
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>service</kind>
+        <symbol>DocumentConverter initialization</symbol>
+        <lines>1013-1018</lines>
+        <reason>CRITICAL: This is where pypdfium backend must be configured. Currently uses default PDF.js backend (implicit). Need to add backend=PdfiumBackend to PdfPipelineOptions.</reason>
+      </artifact>
+
+      <!-- Imports Section - Add pypdfium -->
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>import</kind>
+        <symbol>Docling imports</symbol>
+        <lines>13-22</lines>
+        <reason>Add 'from docling.backend.pypdfium_backend import PdfiumBackend' to existing Docling imports section.</reason>
+      </artifact>
+
+      <!-- Integration Test - PDF Ingestion -->
+      <artifact>
+        <path>tests/integration/test_ingestion_integration.py</path>
+        <kind>test</kind>
+        <symbol>TestPDFIngestionIntegration.test_ingest_financial_pdf_with_tables</symbol>
+        <lines>36-97</lines>
+        <reason>Integration test validates PDF ingestion with 10-page sample. Use as template for validating pypdfium backend switch. Already includes page count, table extraction, and performance validation.</reason>
+      </artifact>
+
+      <!-- Unit Test Location -->
+      <artifact>
+        <path>tests/unit/test_ingestion.py</path>
+        <kind>test</kind>
+        <symbol>Unit tests</symbol>
+        <lines>N/A</lines>
+        <reason>Location for unit-level backend configuration tests if needed (mock-based testing of DocumentConverter initialization).</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <!-- Python Dependencies from pyproject.toml -->
+      <python>
+        <package name="docling" version="2.55.1" />
+        <package name="sentence-transformers" version="5.1.1" />
+        <package name="qdrant-client" version="1.15.1" />
+        <package name="fastmcp" version="2.12.4" />
+        <package name="anthropic" version=">=0.18.0,&lt;1.0.0" />
+        <package name="pydantic" version=">=2.0,&lt;3.0" />
+        <package name="openpyxl" version=">=3.1,&lt;4.0" />
+        <package name="pandas" version=">=2.0,&lt;3.0" />
+        <package name="rank-bm25" version="0.2.2" />
+        <package name="tiktoken" version=">=0.5.1,&lt;1.0.0" />
+        <package name="python-dotenv" version="1.1.1" />
+        <package name="asyncio" version=">=3.4.3,&lt;4.0.0" />
+        <package name="httpx" version=">=0.28.1,&lt;1.0.0" />
+      </python>
+
+      <dev>
+        <package name="pytest" version="8.4.2" />
+        <package name="pytest-asyncio" version="1.2.0" />
+        <package name="pytest-cov" version="5.0.0" />
+        <package name="pytest-mock" version=">=3.12,&lt;4.0" />
+        <package name="pytest-xdist" version=">=3.5,&lt;4.0" />
+        <package name="pytest-timeout" version=">=2.0,&lt;3.0" />
+        <package name="black" version=">=23.3,&lt;24.0" />
+        <package name="ruff" version=">=0.0.270,&lt;1.0.0" />
+      </dev>
+
+      <note>pypdfium is likely included as a Docling dependency. Verify with 'pip show docling' before adding to pyproject.toml. If not included, add as dependency.</note>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <!-- Development Constraints from Story Dev Notes -->
+    <constraint type="accuracy">MUST maintain TableFormerMode.ACCURATE configuration - 97.9% table accuracy requirement (NFR9 compliance). No degradation allowed when switching backends.</constraint>
+
+    <constraint type="architecture">MUST preserve existing PdfPipelineOptions configuration structure. Only add backend=PdfiumBackend parameter, do not refactor or restructure converter initialization.</constraint>
+
+    <constraint type="async">MUST keep async pattern for pipeline consistency. DocumentConverter usage must remain async-compatible with existing ingest_pdf() async function.</constraint>
+
+    <constraint type="breaking-changes">NO breaking changes to downstream chunking/embedding pipeline. Backend switch must be transparent to extract_elements(), chunk_document(), and generate_embeddings() functions.</constraint>
+
+    <constraint type="simplicity">KISS principle - This is a 15-line modification-only change. No abstractions, no wrappers, no custom backend managers. Direct SDK usage only per CLAUDE.md anti-over-engineering rules.</constraint>
+
+    <constraint type="tech-stack">pypdfium is LOCKED and APPROVED technology (Phase 1). No other backend options should be explored. Follow docs/architecture/5-technology-stack-definitive.md exactly.</constraint>
+  </constraints>
+
+  <interfaces>
+    <!-- Docling Backend API -->
+    <interface>
+      <name>PdfiumBackend</name>
+      <kind>class</kind>
+      <signature>from docling.backend.pypdfium_backend import PdfiumBackend</signature>
+      <path>docling.backend.pypdfium_backend</path>
+      <usage>Pass as backend parameter to PdfPipelineOptions: PdfPipelineOptions(do_table_structure=True, backend=PdfiumBackend)</usage>
+    </interface>
+
+    <!-- DocumentConverter Configuration -->
+    <interface>
+      <name>DocumentConverter</name>
+      <kind>class</kind>
+      <signature>DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)})</signature>
+      <path>docling.document_converter</path>
+      <usage>Configure with PdfFormatOption containing PdfPipelineOptions with pypdfium backend. Existing initialization at raglite/ingestion/pipeline.py:1016-1018.</usage>
+    </interface>
+
+    <!-- PdfPipelineOptions Configuration -->
+    <interface>
+      <name>PdfPipelineOptions</name>
+      <kind>class</kind>
+      <signature>PdfPipelineOptions(do_table_structure: bool, backend: Type[Backend])</signature>
+      <path>docling.datamodel.pipeline_options</path>
+      <usage>Current: PdfPipelineOptions(do_table_structure=True). New: Add backend=PdfiumBackend parameter. Preserve table_structure_options.mode = TableFormerMode.ACCURATE.</usage>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+Testing framework: pytest with pytest-asyncio for async function testing. Integration tests marked with @pytest.mark.integration and @pytest.mark.asyncio. Unit tests use mocking (pytest-mock) to isolate components. Performance testing uses pytest-timeout (120s for PDF ingestion tests). Lazy imports to avoid test discovery overhead (DO NOT import raglite modules at module level). Test markers: integration, unit, slow, smoke, p0/p1/p2 for priority. Code coverage via pytest-cov (target 80%+). Parallel execution via pytest-xdist with loadfile scheduling.</standards>
+
+    <locations>
+      <location>tests/integration/test_ingestion_integration.py - Integration tests with real PDFs (10-page sample: tests/fixtures/sample_financial_report.pdf)</location>
+      <location>tests/unit/test_ingestion.py - Unit tests with mocked dependencies</location>
+      <location>pytest.ini - Test configuration (markers, timeouts, parallel execution settings)</location>
+    </locations>
+
+    <ideas>
+      <!-- AC1: Docling Backend Configuration -->
+      <test_idea ac="AC1">
+        <description>Unit test: Verify DocumentConverter initialization includes PdfiumBackend</description>
+        <approach>Mock DocumentConverter and PdfPipelineOptions, assert backend parameter is PdfiumBackend class. Verify do_table_structure=True and TableFormerMode.ACCURATE preserved.</approach>
+      </test_idea>
+
+      <!-- AC2: Ingestion Validation -->
+      <test_idea ac="AC2">
+        <description>Integration test: Ingest 10-page sample PDF with pypdfium backend</description>
+        <approach>Use existing test_ingest_financial_pdf_with_tables() as template. Verify page_count=10, all pages processed, no errors during conversion. Validate DocumentMetadata structure matches baseline.</approach>
+      </test_idea>
+
+      <!-- AC3: Table Accuracy Maintained -->
+      <test_idea ac="AC3">
+        <description>Integration test: Run 10 ground truth table queries with pypdfium</description>
+        <approach>Ingest sample PDF with tables, run table extraction queries, compare accuracy with baseline (97.9%). Use tests/integration/test_hybrid_search_integration.py pattern for accuracy validation.</approach>
+      </test_idea>
+
+      <!-- AC4: Memory Reduction Validation -->
+      <test_idea ac="AC4">
+        <description>Performance test: Measure peak memory usage before/after pypdfium</description>
+        <approach>Use memory_profiler or tracemalloc to measure peak memory during ingest_pdf(). Compare pypdfium vs PDF.js backend. Document results. Target: 50-60% reduction (6.2GB → 2.4GB for 160-page PDF).</approach>
+      </test_idea>
+    </ideas>
+  </tests>
+</story-context>

@@ -47,7 +47,8 @@ from accuracy_utils import (  # noqa: E402
 )
 
 from raglite.retrieval.attribution import generate_citations  # noqa: E402
-from raglite.retrieval.search import search_documents  # noqa: E402
+from raglite.retrieval.multi_index_search import multi_index_search  # noqa: E402
+from raglite.shared.models import QueryResult  # noqa: E402
 from tests.fixtures.ground_truth import GROUND_TRUTH_QA  # noqa: E402
 
 
@@ -131,8 +132,21 @@ async def run_single_query(qa: dict[str, Any], verbose: bool = False) -> dict[st
     # Measure query latency
     start_time = time.perf_counter()
     try:
-        # Call search_documents directly (returns list[QueryResult])
-        query_results = await search_documents(query=question, top_k=5)
+        # Call multi_index_search (Story 2.7 - returns list[SearchResult])
+        search_results = await multi_index_search(query=question, top_k=5)
+
+        # Convert SearchResult to QueryResult for attribution compatibility
+        query_results = [
+            QueryResult(
+                score=r.score,
+                text=r.text,
+                source_document=r.document_id,
+                page_number=r.page_number if r.page_number is not None else 0,
+                chunk_index=r.metadata.get("chunk_index", 0),
+                word_count=r.metadata.get("word_count", len(r.text.split())),
+            )
+            for r in search_results
+        ]
 
         # Generate citations (modifies text field in-place)
         query_results = await generate_citations(query_results)
