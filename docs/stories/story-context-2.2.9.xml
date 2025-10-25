@@ -1,0 +1,228 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.9</storyId>
+    <title>Fix Ground Truth Page References</title>
+    <status>Ready for Development</status>
+    <generatedAt>2025-10-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/story-2.9.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a QA engineer and accuracy validation system</asA>
+    <iWant>correct page references in all 50 ground truth queries</iWant>
+    <soThat>accuracy metrics are valid and we can properly measure Story 2.8's impact on retrieval performance</soThat>
+    <tasks>
+      - Task 1: Manual Page Reference Validation (AC1) - 2 hours
+      - Task 2: Update Ground Truth File (AC2) - 1 hour
+      - Task 3: Validation Documentation (AC3) - 30-60 min
+      - Task 4: Testing and Validation (30 min)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    - AC1: Manual Page Reference Validation (2 hours) - Systematically validate all 50 ground truth queries against the actual PDF to identify correct page numbers
+    - AC2: Update Ground Truth File (1 hour) - Correct all expected_page_number fields in ground truth file based on AC1 validation results
+    - AC3: Validation Documentation (30-60 min) - Document the validation process, corrections made, and impact on accuracy testing
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/phase2a-deep-dive-analysis.md</path>
+        <title>Phase 2A Deep Dive Analysis</title>
+        <section>Root Cause #2: Broken Ground Truth Validation</section>
+        <snippet>Ground truth test suite has incorrect or missing page references in expected_page_number field, making accuracy validation unreliable. Cannot validate retrieval accuracy without knowing correct source pages.</snippet>
+      </doc>
+      <doc>
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2: Advanced RAG Architecture Enhancement</title>
+        <section>Story 2.9: Fix Ground Truth Page References</section>
+        <snippet>CRITICAL course correction story to enable proper accuracy validation. Validates all 50 ground truth queries against PDF to identify correct page numbers.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/3-repository-structure-monolithic.md</path>
+        <title>Repository Structure (Monolithic)</title>
+        <section>Testing Infrastructure</section>
+        <snippet>Ground truth test fixtures located at tests/fixtures/ground_truth.py. Validation scripts in scripts/ directory.</snippet>
+      </doc>
+      <doc>
+        <path>docs/handoffs/phase2a-course-correction-2025-10-25/SPRINT-CHANGE-HANDOFF-2025-10-25.md</path>
+        <title>Sprint Change Handoff (Phase 2A Course Correction)</title>
+        <section>Story 2.9 Requirements</section>
+        <snippet>Part of 4-story course correction sequence. Unblocks Story 2.11 combined accuracy validation. Expected to fix attribution accuracy measurement.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf</path>
+        <title>Source PDF for Validation</title>
+        <section>160-page financial performance review document</section>
+        <snippet>Reference document for validating ground truth page numbers. Contains all answer content for 50 queries.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>tests/fixtures/ground_truth.py</path>
+        <kind>fixture</kind>
+        <symbol>GROUND_TRUTH_QA</symbol>
+        <lines>1-838</lines>
+        <reason>Ground truth test set with 50 validated Q&A pairs. Contains expected_page_number fields that need correction.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/fixtures/ground_truth.py</path>
+        <kind>type</kind>
+        <symbol>GroundTruthQuestion</symbol>
+        <lines>50-62</lines>
+        <reason>TypedDict defining structure of ground truth questions, including expected_page_number and expected_section fields.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/integration/test_ac3_ground_truth.py</path>
+        <kind>test</kind>
+        <symbol>test_ac3_ground_truth_accuracy</symbol>
+        <lines>N/A</lines>
+        <reason>AC3 accuracy validation test that uses ground truth page references for scoring retrieval accuracy.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/e2e/test_ground_truth.py</path>
+        <kind>test</kind>
+        <symbol>E2E ground truth tests</symbol>
+        <lines>N/A</lines>
+        <reason>End-to-end tests validating ground truth queries against RAG system.</reason>
+      </artifact>
+      <artifact>
+        <path>scripts/run-accuracy-tests.py</path>
+        <kind>script</kind>
+        <symbol>main</symbol>
+        <lines>N/A</lines>
+        <reason>Main accuracy testing script that evaluates retrieval accuracy using ground truth queries.</reason>
+      </artifact>
+      <artifact>
+        <path>scripts/verify-ground-truth-pages.py</path>
+        <kind>script</kind>
+        <symbol>verify_pages</symbol>
+        <lines>N/A</lines>
+        <reason>Script for verifying ground truth page references against Qdrant chunk metadata.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/retrieval/attribution.py</path>
+        <kind>module</kind>
+        <symbol>Attribution accuracy implementation</symbol>
+        <lines>N/A</lines>
+        <reason>Implements NFR7 attribution accuracy by validating page number citations against expected_page_number.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        - pytest (testing framework)
+        - pytest-asyncio (async test support)
+      </python>
+      <testing>
+        - tests/fixtures/ground_truth.py (50 validated Q&A pairs)
+        - docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf (source document)
+      </testing>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - KISS Principle: Manual validation required (automation insufficient for 50 queries)
+    - No Over-Engineering: Direct file editing, simple markdown reports, no complex tooling
+    - Page Number Standard: Use PDF footer page number (not document internal numbering)
+    - Primary Page Rule: For multi-page answers, record page where majority of data appears
+    - Table Location Rule: For table answers, prefer page with complete table or table header
+    - Traceability: Add inline comments documenting changes (# Updated Story 2.9: old → new)
+    - Quality Assurance: 10 spot-checks required for correction verification
+    - Regression Prevention: Verify previously correct queries remain unchanged
+    - Course Correction Context: Part of 4-story sequence (2.8→2.9→2.10→2.11) to achieve 65-75% accuracy
+    - Decision Gate Dependency: Story 2.11 validation blocked until page references corrected
+  </constraints>
+  <interfaces>
+    <interface>
+      <name>GroundTruthQuestion</name>
+      <kind>TypedDict</kind>
+      <signature>
+        class GroundTruthQuestion(TypedDict):
+            id: int
+            question: str
+            expected_answer: str
+            expected_keywords: list[str]
+            source_document: str
+            expected_page_number: int  # ← Field to be corrected
+            expected_section: str
+            category: str
+            difficulty: str
+      </signature>
+      <path>tests/fixtures/ground_truth.py</path>
+    </interface>
+    <interface>
+      <name>GROUND_TRUTH_QA</name>
+      <kind>List constant</kind>
+      <signature>GROUND_TRUTH_QA: list[GroundTruthQuestion] = [...]  # 50 questions</signature>
+      <path>tests/fixtures/ground_truth.py</path>
+    </interface>
+    <interface>
+      <name>Validation Worksheet Format</name>
+      <kind>Markdown table</kind>
+      <signature>
+        | Q# | Category | Current Page | Actual Page | Status | Notes |
+        |----|----------|--------------|-------------|--------|-------|
+      </signature>
+      <path>docs/validation/story-2.9-page-validation.md</path>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      Manual Validation Methodology:
+      - Search PDF using expected_keywords for each query
+      - Locate answer content (usually in tables for financial data)
+      - Record page number from PDF footer
+      - Compare to expected_page_number field
+      - Document discrepancies in validation worksheet
+
+      Correction Verification:
+      - Spot-check 10 random corrections against PDF
+      - Verify expected_section alignment with corrected pages
+      - Regression check: confirm previously correct queries unchanged
+      - Python syntax validation (no import errors)
+
+      Validation Report Requirements:
+      - Comprehensive methodology documentation
+      - Error analysis by category (root cause patterns)
+      - Impact assessment (what's now measurable)
+      - Recommendations for future prevention
+    </standards>
+    <locations>
+      - tests/fixtures/ground_truth.py (fixture to be modified)
+      - tests/integration/test_ac3_ground_truth.py (accuracy validation tests)
+      - tests/e2e/test_ground_truth.py (end-to-end ground truth tests)
+      - scripts/run-accuracy-tests.py (main accuracy testing script)
+      - scripts/verify-ground-truth-pages.py (page verification script)
+      - docs/validation/ (validation worksheet and report output)
+    </locations>
+    <ideas>
+      AC1 Validation:
+      - Create validation worksheet with 50 query rows
+      - For each query, manually search PDF using keywords
+      - Record actual page number and compare to expected_page_number
+      - Categorize results: correct/incorrect/missing
+      - Calculate error rate by category
+
+      AC2 Correction:
+      - Apply all corrections from AC1 validation worksheet
+      - Add inline comments: # Updated Story 2.9: old → new
+      - Verify expected_section still aligns with corrected pages
+      - Run Python import to verify syntax validity
+      - Spot-check 10 random corrections against PDF
+
+      AC3 Documentation:
+      - Create comprehensive validation report
+      - Document methodology, error patterns, corrections
+      - Assess impact on accuracy testing and unblocked workflows
+      - Provide recommendations (automated validation, CI/CD integration)
+
+      Integration Testing (Optional):
+      - Run sample accuracy test with corrected ground truth
+      - Verify test suite executes without errors
+      - Spot-check that corrected pages improve attribution accuracy
+    </ideas>
+  </tests>
+</story-context>

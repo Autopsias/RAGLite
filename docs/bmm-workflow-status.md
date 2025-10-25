@@ -10,9 +10,9 @@
 ## Workflow Status Tracker
 
 **Current Phase:** 4-Implementation (Epic 2, Phase 2A Course Correction - Stories 2.8-2.11)
-**Current Workflow:** correct-course (PO Approved) - Complete
-**Current Agent:** SM - Draft Story 2.8 (Table-Aware Chunking)
-**Overall Progress:** 75% (Epic 2 Phase 2A course correction approved, 95 points delivered)
+**Current Workflow:** Story 2.8 Complete - Story 2.9 TODO
+**Current Agent:** DEV - Implement Story 2.9 (Fix Ground Truth Page References)
+**Overall Progress:** 81% (Story 2.8 complete, 103 points delivered)
 
 ### Phase Completion Status
 
@@ -59,8 +59,6 @@
 
 | Epic | Story | ID  | Title | Priority | Effort | File |
 | ---- | ----- | --- | ----- | -------- | ------ | ---- |
-| 2 | 8 | 2.8 | Table-Aware Chunking Strategy | 🔴 CRITICAL | 6-8h | story-2.8.md |
-| 2 | 9 | 2.9 | Fix Ground Truth Page References | 🔴 CRITICAL | 3-4h | story-2.9.md |
 | 2 | 10 | 2.10 | Fix Query Classification Over-Routing | 🟠 HIGH | 3-4h | story-2.10.md |
 | 2 | 11 | 2.11 | Fix Hybrid Search Score Normalization | 🟡 MEDIUM | 4-6h | story-2.11.md |
 
@@ -79,7 +77,7 @@
 | 4 | 1 | 4.1 | TBD - Forecasting Features (pending Epic 3 completion) | story-4.1.md |
 | 5 | 1 | 5.1 | TBD - Production Deployment (pending Epic 4 completion) | story-5.1.md |
 
-**Total in backlog:** 7 stories (4 Phase 2A course correction, 2 Phase 2B on hold, 3 placeholder for Epic 3-5)
+**Total in backlog:** 5 stories (2 Phase 2A course correction, 2 Phase 2B on hold, 3 placeholder for Epic 3-5)
 
 **Instructions:**
 
@@ -89,25 +87,25 @@
 
 #### TODO (Next Story)
 
-- **Story ID:** 2.8
-- **Story Title:** Table-Aware Chunking Strategy (Phase 2A Course Correction)
-- **Story File:** story-2.8.md
+- **Story ID:** 2.9
+- **Story Title:** Fix Ground Truth Page References (Phase 2A Course Correction)
+- **Story File:** story-2.9.md
 - **Priority:** 🔴 CRITICAL
-- **Effort:** 6-8 hours
-- **Status:** Not created (needs SM to draft)
-- **Action:** SM should run `create-story` workflow to draft Story 2.8
+- **Effort:** 3-4 hours
+- **Status:** Ready for Development
+- **Action:** DEV should run `dev-story` workflow to implement Story 2.9
 
 **Instructions:**
 
 - Only ONE story in TODO at a time
 - Story stays in TODO until user marks it "ready for development"
 - SM reads this section to know which story to draft next
-- **CURRENT STATE:** Epic 2 Phase 2B stories 2.6-2.7 complete, Story 2.8 in progress
+- **CURRENT STATE:** Story 2.8 COMPLETE ✅ (table-aware chunking, 1.25 chunks/table), Story 2.9 ready for implementation
 
 #### IN PROGRESS (Approved for Development)
 
 - **No stories currently in progress**
-- **Next Action:** SM should draft Story 2.8 (Table-Aware Chunking)
+- **Next Action:** DEV should implement Story 2.9 (Fix Ground Truth Page References)
 
 **Phase 2A Course Correction Status:**
 - **Decision**: ✅ APPROVED by PO (Ricardo) on 2025-10-25
@@ -140,13 +138,14 @@
 | 2.5 | docs/stories/story-2.5.md | 2025-10-23 | 8 |
 | 2.6 | docs/stories/story-2.6.md | 2025-10-24 | 8 |
 | 2.7 | docs/stories/story-2.7.md | 2025-10-25 | 8 |
+| 2.8 | docs/stories/story-2.8.md | 2025-10-25 | 8 |
 
-**Total completed:** 9 stories (Week 0 + Epic 1 + Stories 2.1-2.7)
-**Total points completed:** 95 points
+**Total completed:** 10 stories (Week 0 + Epic 1 + Stories 2.1-2.8)
+**Total points completed:** 103 points
 
-**Story 2.5 Status:** ❌ FAILED - AC2 Decision Gate (18% accuracy vs 70% target)
-**Epic 2 Phase 2A Status:** ✅ COMPLETE (all stories done, Phase 2B escalation required)
-**Epic 2 Phase 2B Status:** ✅ IN PROGRESS - Stories 2.6-2.7 complete, Story 2.8 in progress
+**Story 2.5 Status:** ❌ FAILED - AC2 Decision Gate (52% accuracy vs 70% target)
+**Epic 2 Phase 2A Initial Status:** ✅ COMPLETE (Stories 2.1-2.7 done)
+**Epic 2 Phase 2A Course Correction Status:** 🔄 IN PROGRESS - Story 2.8 COMPLETE ✅, Story 2.9 TODO
 
 **Instructions:**
 
@@ -158,19 +157,19 @@
 
 **Total Epics:** 5 (Epic 1-5)
 **Total Stories:** ~30 estimated (11 defined for Epic 2, rest TBD)
-**Stories in Backlog:** 7 (4 Phase 2A course correction, 2 Phase 2B on hold, 3 Epic 3-5 placeholders)
-**Stories in TODO:** 1 (Story 2.8 - Table-Aware Chunking)
-**Stories in IN PROGRESS:** 0 (awaiting Story 2.8 drafting)
-**Stories DONE:** 7 (Week 0 + Epic 1 + Stories 2.1-2.7)
+**Stories in Backlog:** 6 (3 Phase 2A course correction, 2 Phase 2B on hold, 3 Epic 3-5 placeholders)
+**Stories in TODO:** 1 (Story 2.9 - Fix Ground Truth Page References)
+**Stories in IN PROGRESS:** 0 (Story 2.9 ready for DEV implementation)
+**Stories DONE:** 10 (Week 0 + Epic 1 + Stories 2.1-2.8)
 **Stories ON HOLD:** 2 (Phase 2B Stories 2.12-2.13 pending Phase 2A re-validation)
 
 **Epic Breakdown:**
 
 - Epic 1: Foundation & Accurate Retrieval (COMPLETE - 100%)
-- Epic 2: Advanced RAG Architecture Enhancement (IN PROGRESS - 7/11 stories complete, Phase 1 COMPLETE ✅, Phase 2A Initial COMPLETE ✅, Phase 2A Course Correction IN PROGRESS - Stories 2.8-2.11 approved)
+- Epic 2: Advanced RAG Architecture Enhancement (IN PROGRESS - 8/11 stories complete, Phase 1 COMPLETE ✅, Phase 2A Initial COMPLETE ✅, Phase 2A Course Correction IN PROGRESS - 1/4 stories done)
   - Phase 1 (Stories 2.1-2.2): ✅ COMPLETE
   - Phase 2A Initial (Stories 2.3-2.7): ✅ COMPLETE (52% accuracy - FAILED decision gate)
-  - Phase 2A Course Correction (Stories 2.8-2.11): 📋 APPROVED - Ready to draft
+  - Phase 2A Course Correction (Stories 2.8-2.11): 🔄 IN PROGRESS - Story 2.8 COMPLETE ✅, Story 2.9 TODO
   - Phase 2B (Stories 2.12-2.13): ⏸️ ON HOLD (pending Phase 2A re-validation)
 - Epic 3: AI Intelligence & Orchestration (PLANNED - 0% complete, blocked by Epic 2)
 - Epic 4: Forecasting & Proactive Insights (PLANNED - 0% complete, blocked by Epic 3)
@@ -197,12 +196,13 @@ BACKLOG → TODO → IN PROGRESS → DONE
 - Both agents update this status file after their workflows complete
 
 **Current State (2025-10-25):**
-- Story 2.7 COMPLETE ✅ (Multi-Index Search Architecture with PostgreSQL + Qdrant)
-- Story 2.8 in IN PROGRESS (Cross-Encoder Re-Ranking for +3-5pp accuracy improvement)
-- Story 2.9 in TODO (AC3 Final Validation ≥70% - Phase 2B decision gate)
-- **Epic 2 Phase 1 COMPLETE:** Stories 2.1 + 2.2 done ✅ (pypdfium + parallelism)
-- **Epic 2 Phase 2A COMPLETE:** Stories 2.3-2.5 done ✅ (fixed chunking + metadata + validation)
-- **Epic 2 Phase 2B IN PROGRESS:** Stories 2.6-2.7 complete ✅, Story 2.8 in progress (re-ranking)
+- Story 2.8 COMPLETE ✅ (Table-Aware Chunking - 1.25 chunks/table, down from 8.6)
+- Story 2.9 in TODO (Fix Ground Truth Page References - 3-4h manual validation)
+- Story 2.10 in BACKLOG (Fix Query Classification Over-Routing)
+- Story 2.11 in BACKLOG (Fix Hybrid Search Score Normalization)
+- **Epic 2 Phase 1 COMPLETE:** Stories 2.1-2.2 done ✅ (pypdfium + parallelism)
+- **Epic 2 Phase 2A Initial COMPLETE:** Stories 2.3-2.7 done ✅ (fixed chunking + metadata + validation + PostgreSQL + multi-index)
+- **Epic 2 Phase 2A Course Correction IN PROGRESS:** Story 2.8 COMPLETE ✅, Stories 2.9-2.11 remaining
 
 ### Artifacts Generated
 
@@ -229,34 +229,35 @@ BACKLOG → TODO → IN PROGRESS → DONE
 
 ### Next Action Required
 
-**What to do next:** Draft Story 2.8 (Table-Aware Chunking Strategy)
+**What to do next:** Implement Story 2.9 (Fix Ground Truth Page References)
 
-**Status:** Epic 2 Phase 2A Course Correction APPROVED - Story 2.7 COMPLETE ✅
+**Status:** Story 2.8 COMPLETE ✅ (Table-Aware Chunking, 1.25 chunks/table)
 
-**Current Task:** SM agent to draft Story 2.8
+**Current Task:** DEV agent to implement Story 2.9
 
 **Phase 2A Course Correction Status:**
 - Phase 2A Initial: ✅ COMPLETE (Stories 2.1-2.7 done)
 - Decision Gate: ❌ FAILED (52% accuracy vs 70% target)
 - Course Correction: ✅ APPROVED (PO Ricardo approved 2025-10-25)
-- Current Story: Story 2.8 (Table-Aware Chunking - needs drafting)
+- Story 2.8: ✅ COMPLETE (Table-Aware Chunking - re-ingestion validated)
+- Story 2.9: 📋 TODO (Fix Ground Truth Page References - ready for DEV)
 
-**Sprint Change Proposal Status:**
-1. ✅ **PM Analysis COMPLETE**: Root cause analysis identified 4 critical issues
-2. ✅ **PM Handoff COMPLETE**: Sprint change proposal prepared
-3. ✅ **User Approval**: Ricardo APPROVED (2025-10-25)
-4. ✅ **PO Approval**: Ricardo APPROVED (2025-10-25)
-5. ✅ **Backlog Updated**: Stories 2.8-2.11 added to backlog
+**Story 2.8 Re-Ingestion Results (2025-10-25):**
+- ✅ Chunks per table: 1.25 (down from 8.6 - TARGET MET)
+- ✅ Total chunks: 190 (down from ~500)
+- ✅ All tables <4096 tokens
+- ✅ Processing time: 13 minutes (160-page PDF)
 
 **Next Steps:**
-1. **SM (Scrum Master):** Draft Story 2.8 (NEXT - use `create-story` workflow)
-   - Story 2.8: Table-Aware Chunking Strategy
-   - Fixes severe table fragmentation (8.6 chunks/table → 1.2)
-   - Expected accuracy impact: +10-15pp
-2. **SM:** Draft Stories 2.9, 2.10, 2.11 (can parallel with Story 2.8 implementation)
-3. **DEV:** Implement Stories 2.8-2.11 (2-3 days total)
-4. **PO:** Re-run Story 2.5 AC3 validation after all fixes applied
-5. **Decision Gate (Week 4):**
+1. **DEV (Developer):** Implement Story 2.9 (NEXT - use `dev-story` workflow)
+   - Story 2.9: Fix Ground Truth Page References
+   - Manual validation: 50 queries against PDF (2h)
+   - Update ground truth file with correct pages (1h)
+   - Documentation: validation report (30-60min)
+   - Total effort: 3-4 hours
+2. **DEV:** Implement Stories 2.10, 2.11 after Story 2.9 complete (2 days total)
+3. **PO:** Re-run Story 2.5 AC3 validation after all fixes applied (Story 2.11)
+4. **Decision Gate (End of Week):**
    - IF ≥70% accuracy → Epic 2 COMPLETE → Proceed to Epic 3 🎉
    - IF 65-70% → Re-evaluate Phase 2B necessity
    - IF <65% → Proceed to Phase 2B (Stories 2.12-2.13)
@@ -454,6 +455,7 @@ BACKLOG → TODO → IN PROGRESS → DONE
 - **2025-10-24**: Story 2.6 (PostgreSQL Schema + Data Migration) APPROVED and marked COMPLETE. All review issues resolved (AI1 RETRACTED after MCP verification, AI2 already fixed, AI3 datetime fix validated). Story file updated: Status: Ready → ✅ Done. Comprehensive Senior Developer Review notes appended to story file documenting the review process and key learning about Mistral SDK 1.0+ unified client pattern. Story 2.6 moved: IN PROGRESS → DONE (completed 2025-10-24, 8 points). Story 2.7 (Multi-Stage Retrieval Pipeline - PostgreSQL + Qdrant) moved to IN PROGRESS (needs drafting by SM agent). Updated story counts: 8 DONE, 1 IN PROGRESS, 0 TODO, 3 BACKLOG. Updated points: 87 completed (69% overall progress). **Epic 2 Phase 2B progress:** Story 2.6 complete ✅, Story 2.7 next (CORE hybrid retrieval implementation). Next: SM agent to draft Story 2.7 using `create-story` workflow.
 - **2025-10-25**: Story 2.7 (Multi-Index Search Architecture) APPROVED and marked COMPLETE. All acceptance criteria validated: AC1 ✅ (Query classification with 100% accuracy, <50ms latency), AC2 ✅ (Multi-index orchestrator with routing logic), AC3 ✅ (Result fusion with weighted sum alpha=0.6), AC4 ✅ (MCP tool integration), AC5 ✅ (Performance validation: p50=399ms, p95=1,031ms, p99=3,915ms - NFR13 COMPLIANT), AC6 ✅ (Error handling and fallback logic). Test results: 27/27 tests passing (100%) + 50/50 performance tests (100% success rate). Senior Developer Review: APPROVED (2025-10-24). Story 2.7 moved: IN PROGRESS → DONE (completed 2025-10-25, 8 points). Story 2.8 (Cross-Encoder Re-Ranking) moved to IN PROGRESS (ready for DEV implementation). Story 2.9 (AC3 Final Validation) moved to TODO. Updated story counts: 9 DONE, 1 IN PROGRESS, 1 TODO, 3 BACKLOG. Updated points: 95 completed (75% overall progress). **Epic 2 Phase 2B progress:** Stories 2.6-2.7 complete ✅, Story 2.8 in progress (re-ranking for +3-5pp accuracy improvement). Next: DEV agent to implement Story 2.8 using `dev-story` workflow.
 - **2025-10-25**: **SPRINT CHANGE PROPOSAL APPROVED** - Product Owner (Ricardo) formally approved Phase 2A Course Correction. Sprint Change: Add Stories 2.8-2.11 for Phase 2A course correction (16-22 hours, 2-3 days). Root Cause: Story 2.5 FAILED at 52% accuracy (18pp below ≥70% target). Deep-dive analysis identified 4 critical fixable issues: (1) Severe table fragmentation (8.6 chunks/table), (2) Broken ground truth (zero page references), (3) Query over-routing (48% SQL when 4% needed), (4) Hybrid search scoring bug (all results score=1.0). Decision: PIVOT from Phase 2B back to Phase 2A fundamentals. Expected Outcome: 65-75% accuracy (meets ≥70% threshold). ROI: 15:1 to 120:1 if successful (avoids 3-24 weeks Phase 2B/2C). Timeline Impact: +1 week to Epic 2 completion. Backlog Updates: Stories 2.8-2.11 added to backlog (CRITICAL/HIGH/MEDIUM priorities), Stories 2.12-2.13 (Phase 2B) moved to ON HOLD. Files Updated: `docs/sprint-status.yaml`, `docs/bmm-workflow-status.md`. Next: SM agent to draft Story 2.8 (Table-Aware Chunking Strategy) using `create-story` workflow.
+- **2025-10-25**: Story 2.8 (Table-Aware Chunking Strategy) APPROVED and marked COMPLETE. All acceptance criteria validated: AC1 ✅ (table detection and preservation), AC2 ✅ (large table row-based splitting), AC3 ✅ (re-ingestion validation - 1.25 chunks/table vs ≤1.5 target), AC4 ✅ (chunk quality spot-checks), AC5 ✅ (semantic dilution monitoring). Re-ingestion Results: Total chunks 190 (down from ~500), table chunks 171, chunks per table 1.25 (down from 8.6 - 86% improvement), all tables <4096 tokens, processing time 13min (160-page PDF). Expected accuracy impact: +10-15pp from restored table semantic coherence. Story 2.8 moved: TODO → DONE (completed 2025-10-25, 8 points). Story 2.9 (Fix Ground Truth Page References) moved to TODO (ready for DEV implementation). Updated story counts: 10 DONE, 1 TODO, 0 IN PROGRESS, 5 BACKLOG. Updated points: 103 completed (81% overall progress). **Epic 2 Phase 2A Course Correction progress:** Story 2.8 complete ✅ (1/4 stories), Stories 2.9-2.11 remaining. Next: DEV agent to implement Story 2.9 using `dev-story` workflow.
 
 ---
 
@@ -559,7 +561,7 @@ BACKLOG → TODO → IN PROGRESS → DONE
   - Added decision log entry
   - Next action: User review draft → SM run `*story-ready` → SM run `*story-context` → DEV implement
 
-### 2025-10-25 - PM (Product Manager - John)
+### 2025-10-25 - PM (Product Manager - John) - Session 1
 
 - Phase: 4-Implementation (Epic 2, Phase 2B - Story 2.7 Complete → Story 2.8 In Progress)
 - Changes:
@@ -585,6 +587,34 @@ BACKLOG → TODO → IN PROGRESS → DONE
   - Updated Next Action Required section: DEV to implement Story 2.8
   - Added decision log entry for Story 2.7 completion
   - Next action: DEV agent should run `dev-story` workflow to implement Story 2.8
+
+### 2025-10-25 - PM (Product Manager - John) - Session 2
+
+- Phase: 4-Implementation (Epic 2, Phase 2A Course Correction - Story 2.8 Complete)
+- Changes:
+  - Executed `workflow-status` update to record Story 2.8 completion (user correction)
+  - Updated workflow status header: Current Workflow → Story 2.8 Complete - Story 2.9 TODO
+  - Updated current agent: SM → DEV (Story 2.9 ready for implementation)
+  - Updated progress: 75% → 81% (8 points for Story 2.8 completion = 103 total points)
+  - Moved Story 2.8 from TODO → DONE section:
+    - Completion date: 2025-10-25
+    - Points: 8
+    - All 5 ACs validated (table detection, large table splitting, re-ingestion, quality checks, dilution monitoring)
+    - Re-ingestion results: 1.25 chunks/table (down from 8.6 - 86% improvement), 190 total chunks, 13min processing
+    - Expected accuracy impact: +10-15pp from restored table semantic coherence
+  - Moved Story 2.9 from BACKLOG → TODO:
+    - Story: Fix Ground Truth Page References
+    - Status: Ready for Development
+    - Effort: 3-4 hours (manual validation + updates + docs)
+    - Priority: CRITICAL (blocks Story 2.11 combined validation)
+  - Updated BACKLOG: Removed Stories 2.8 and 2.9 (5 stories remaining: 2.10-2.11 + placeholders 3.1, 4.1, 5.1)
+  - Updated story counts: 10 DONE, 0 IN PROGRESS, 1 TODO, 5 BACKLOG
+  - Updated Epic 2 breakdown: 8/11 stories complete (Phase 2A Course Correction 1/4 done)
+  - Updated Current State section with Story 2.8 re-ingestion results
+  - Updated Next Action Required section: DEV to implement Story 2.9
+  - Updated Phase 2A Course Correction status notes
+  - Added decision log entry for Story 2.8 completion with re-ingestion metrics
+  - Next action: DEV agent should run `dev-story` workflow to implement Story 2.9
 
 ---
 
