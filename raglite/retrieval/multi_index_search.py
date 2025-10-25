@@ -100,7 +100,16 @@ async def multi_index_search(query: str, top_k: int = 5) -> list[SearchResult]:
     try:
         # Step 1: Classify query type (AC1)
         query_type = classify_query(query)
-        logger.info("Query classified", extra={"query_type": query_type.value})
+
+        # NEW (Story 2.10 AC3): Log routing decision with metrics
+        logger.info(
+            "Query routing decision",
+            extra={
+                "query": query[:100],
+                "query_type": query_type.value,
+                "top_k": top_k,
+            },
+        )
 
         # Step 2: Route to appropriate index(es) (AC2)
         if query_type == QueryType.SQL_ONLY:
@@ -241,8 +250,16 @@ async def _execute_sql_search(query: str, top_k: int) -> list[SearchResult]:
         logger.debug("SQL search complete", extra={"results_count": len(results)})
 
         # AC6: Fallback to vector search if SQL returns no results
+        # NEW (Story 2.10 AC3): Track SQL fallback rate for monitoring
         if not results:
-            logger.warning("SQL search returned no results, falling back to vector search")
+            logger.warning(
+                "SQL search returned 0 results - falling back to vector search",
+                extra={
+                    "query": query[:100],
+                    "query_type": "sql_only",
+                    "fallback_reason": "empty_sql_results",
+                },
+            )
             return await _execute_vector_search(query, top_k)
 
         return results

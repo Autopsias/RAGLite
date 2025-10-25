@@ -200,20 +200,24 @@ def classify_query(query: str) -> QueryType:
     Story 2.7 AC1: Fast heuristic-based classification (<50ms) to route queries
     to appropriate retrieval index(es). No LLM overhead for latency optimization.
 
-    Classification Logic:
-      1. SQL_ONLY: Table-heavy queries requiring precise data lookups
-         - Keywords: table, row, column, cell, exact, precise, specific
-         - Numeric references: $1.2M, 15%, Q3 2024, etc.
-         - "What is..." or "Show me..." patterns
+    Story 2.10 Update: Tightened SQL routing to reduce over-routing from 48% → 8%.
+    Now requires BOTH metric indicators AND temporal terms for SQL_ONLY routing.
 
-      2. VECTOR_ONLY: Semantic/conceptual queries
+    Classification Logic (Story 2.10 revised):
+      1. SQL_ONLY: Table-heavy or metric+temporal queries requiring precise data lookups
+         - Table keywords: table, row, column, cell
+         - Metric + Temporal: "EBITDA for Q3 2024", "revenue in August 2025"
+         - Precision keywords with data: "exact revenue for Q3"
+
+      2. VECTOR_ONLY: Pure semantic/conceptual queries
          - Keywords: explain, summarize, why, describe, compare, analyze
-         - Multi-paragraph understanding required
-         - No numeric precision needed
+         - No metric/temporal/numeric indicators
+         - Example: "Explain the growth strategy"
 
-      3. HYBRID: Combination queries needing both context and precision
-         - Semantic keywords + numeric references
-         - Example: "Why did revenue increase 15% in Q3?"
+      3. HYBRID: Ambiguous or combined queries (NEW DEFAULT)
+         - Semantic + data indicators: "Why did revenue increase?"
+         - Metric OR temporal (not both): "What is EBITDA?", "What happened in Q3?"
+         - Default for unclear cases (safer fallback with graceful degradation)
 
     Args:
         query: Natural language query string
@@ -222,14 +226,17 @@ def classify_query(query: str) -> QueryType:
         QueryType enum (VECTOR_ONLY, SQL_ONLY, or HYBRID)
 
     Example:
-        >>> classify_query("What is the exact revenue in Q3 2024?")
-        QueryType.SQL_ONLY
+        >>> classify_query("What is EBITDA margin for Q3 2024?")
+        QueryType.SQL_ONLY  # metric + temporal
+
+        >>> classify_query("What is EBITDA?")
+        QueryType.HYBRID  # metric only, no temporal
 
         >>> classify_query("Explain the company's growth strategy")
-        QueryType.VECTOR_ONLY
+        QueryType.VECTOR_ONLY  # pure semantic
 
-        >>> classify_query("Why did EBITDA increase 15% last quarter?")
-        QueryType.HYBRID
+        >>> classify_query("Why did revenue increase last quarter?")
+        QueryType.HYBRID  # semantic + metric + temporal
     """
     query_lower = query.lower()
 
@@ -257,7 +264,47 @@ def classify_query(query: str) -> QueryType:
         r"\b(19|20)\d{2}\b",  # Years: 2024, 2023, etc.
     ]
 
-    question_patterns = ["what is", "show me", "give me", "display", "list"]
+    # NEW: Temporal term patterns (Story 2.10 AC1)
+    # Distinguishes temporal queries requiring structured table search from general semantic queries
+    temporal_patterns = [
+        # Explicit periods
+        r"\bQ[1-4]\b",  # Q1, Q2, Q3, Q4
+        r"\b(19|20)\d{2}\b",  # 2024, 2023, etc.
+        r"\b(january|february|march|april|may|june|july|august|september|october|november|december)\b",
+        r"\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[-\s]?\d{2,4}\b",  # Aug-25, Aug 2025
+        # Granularity terms
+        r"\bYTD\b",  # Year-to-date
+        r"\bH[1-2]\b",  # H1, H2 (half-year)
+        r"\bFY\s*\d{2,4}\b",  # FY 2024, FY24
+        # Relative temporal
+        r"\blast\s+(quarter|year|month|week)\b",
+        r"\bthis\s+(quarter|year|month|week)\b",
+        r"\bprevious\s+(quarter|year|month|period)\b",
+        r"\bnext\s+(quarter|year|month)\b",
+        # Temporal modifiers
+        r"\bcurrent\b",
+        r"\blatest\b",
+        r"\brecent\b",
+        r"\bhistorical\b",
+        # Date formats
+        r"\d{4}-\d{2}-\d{2}\b",  # 2024-08-15
+        r"\d{2}/\d{2}/\d{4}\b",  # 08/15/2024
+    ]
+
+    # NEW: Metric/financial term patterns (Story 2.10 AC1)
+    # Financial and operational metrics that benefit from structured table search
+    metric_patterns = [
+        # Financial metrics
+        r"\b(revenue|ebitda|profit|margin|cost|expense|capex|opex)\b",
+        r"\b(cash\s+flow|balance\s+sheet|income\s+statement)\b",
+        r"\b(assets|liabilities|equity|ratios)\b",
+        # Operational metrics
+        r"\b(production|volume|capacity|headcount|fte|employees)\b",
+        r"\b(efficiency|utilization|throughput|output)\b",
+        # Cost metrics
+        r"\b(variable\s+cost|fixed\s+cost|unit\s+cost|per\s+ton)\b",
+        r"\b(raw\s+materials?|packaging|energy|electricity|thermal)\b",
+    ]
 
     # Count matches using regex for word boundaries
     has_table_keywords = any(bool(re.search(keyword, query_lower)) for keyword in table_keywords)
@@ -270,33 +317,54 @@ def classify_query(query: str) -> QueryType:
     has_numeric_refs = any(
         bool(re.search(pattern, query_lower, re.IGNORECASE)) for pattern in numeric_patterns
     )
-    has_precision_question = any(pattern in query_lower for pattern in question_patterns)
 
-    # Classification logic with improved scoring
-    # Priority: Table keywords are strongest SQL_ONLY indicator
-    # HYBRID requires semantic keywords + data indicators (but NOT if table keyword present)
+    # NEW: Check for temporal and metric terms (Story 2.10 AC1)
+    has_temporal_terms = any(
+        bool(re.search(pattern, query_lower, re.IGNORECASE)) for pattern in temporal_patterns
+    )
+    has_metric_terms = any(
+        bool(re.search(pattern, query_lower, re.IGNORECASE)) for pattern in metric_patterns
+    )
+
+    # Story 2.10: Tightened classification logic
+    # Priority: Table keywords > Semantic + data > Metric + temporal > Default to HYBRID
+    # NEW: Requires BOTH metric AND temporal for SQL_ONLY (except table keywords)
+    # NEW: Default changed from VECTOR_ONLY to HYBRID for safer fallback
 
     if has_table_keywords:
-        # Table keywords are strong SQL_ONLY indicators UNLESS there are semantic keywords
+        # Strong SQL indicator UNLESS semantic keywords present
         if has_semantic_keywords:
-            result = QueryType.HYBRID
+            result = QueryType.HYBRID  # Table + semantic = HYBRID
         else:
-            result = QueryType.SQL_ONLY
+            result = QueryType.SQL_ONLY  # Pure table query
+
     elif has_semantic_keywords:
         # Semantic keywords present
-        if has_numeric_refs or has_precision_question:
+        if has_metric_terms or has_temporal_terms or has_numeric_refs:
             result = QueryType.HYBRID  # Semantic + data = HYBRID
         else:
             result = QueryType.VECTOR_ONLY  # Pure semantic
-    elif has_precision_keywords or (has_precision_question and has_numeric_refs):
-        # Precision indicators without semantic → SQL_ONLY
+
+    elif has_metric_terms and has_temporal_terms:
+        # NEW (Story 2.10): Require BOTH metric AND temporal for SQL_ONLY
+        # Example: "What is the EBITDA margin for August 2025?"
+        #   → has_metric_terms=True (EBITDA, margin)
+        #   → has_temporal_terms=True (August 2025)
+        #   → Route to SQL_ONLY for structured table search
         result = QueryType.SQL_ONLY
-    elif has_numeric_refs or has_precision_question:
-        # Some data indicators → SQL_ONLY
+
+    elif has_precision_keywords and has_metric_terms and has_temporal_terms:
+        # Precision + metric + temporal (all three) → SQL_ONLY
+        # Story 2.10: Tightened to require all three for SQL routing
+        # Example: "Show exact revenue for Q3 2024"
         result = QueryType.SQL_ONLY
+
     else:
-        # Default to VECTOR_ONLY (safe default)
-        result = QueryType.VECTOR_ONLY
+        # DEFAULT: HYBRID for ambiguous cases (Story 2.10 change)
+        # Old: Defaulted to VECTOR_ONLY
+        # New: Default to HYBRID to use both indexes safely
+        # Rationale: HYBRID gracefully degrades if SQL returns 0 results
+        result = QueryType.HYBRID
 
     logger.debug(
         "Query classified",
@@ -306,6 +374,8 @@ def classify_query(query: str) -> QueryType:
             "has_semantic_keywords": has_semantic_keywords,
             "has_table_keywords": has_table_keywords,
             "has_numeric_refs": has_numeric_refs,
+            "has_temporal_terms": has_temporal_terms,  # NEW (Story 2.10)
+            "has_metric_terms": has_metric_terms,  # NEW (Story 2.10)
         },
     )
 
