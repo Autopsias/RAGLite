@@ -55,3 +55,8 @@ htmlcov/
 docs/sample pdf/split/
 postgresql_data/
 BMAD-METHOD/
+
+# BMAD Method files (not part of RAGLite)
+BMAD-METHOD/
+bmad/
+.cursor/rules/bmad/
