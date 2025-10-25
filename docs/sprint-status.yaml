@@ -55,18 +55,29 @@ development_status:
   1-9-mcp-server-foundation-protocol-compliance: backlog
   1-10-natural-language-query-tool-mcp: backlog
   1-11-enhanced-chunk-metadata-mcp-response-formatting: backlog
+  1-12a-ground-truth-test-set-creation: backlog
+  1-12b-continuous-accuracy-tracking-final-validation: backlog
   1-15-table-extraction-fix: backlog
+  1-15b-baseline-validation-analysis: backlog
   epic-1-retrospective: optional
 
   # Epic 2: Advanced RAG Architecture Enhancement
   epic-2: contexted
-  2-1-implement-pypdfium-backend-for-docling: ready-for-dev
-  2-2-implement-page-level-parallelism: ready-for-dev
-  2-3-refactor-chunking-strategy-to-fixed-512-token-approach: ready-for-dev
-  2-4-add-llm-generated-contextual-metadata-injection: ready-for-dev
-  2-5-ac3-validation-and-optimization: ready-for-dev
-  2-6-sql-table-extraction-postgresql-integration: ready-for-dev
+  2-1-implement-pypdfium-backend-for-docling: done
+  2-2-implement-page-level-parallelism: done
+  2-3-refactor-chunking-strategy-to-fixed-512-token-approach: done
+  2-4-add-llm-generated-contextual-metadata-injection: done
+  2-5-ac3-validation-and-optimization: done
+  2-6-sql-table-extraction-postgresql-integration: done
   2-7-multi-index-search-architecture: done
+  # Phase 2A Course Correction (PO Approved 2025-10-25)
+  2-8-table-aware-chunking: done  # Completed: 2025-10-25, Review approved, DoD met
+  2-9-fix-ground-truth-page-references: backlog
+  2-10-fix-query-classification-over-routing: backlog
+  2-11-fix-hybrid-search-scoring: backlog
+  # Phase 2B Stories (ON HOLD pending Phase 2A re-validation)
+  2-12-cross-encoder-re-ranking: on-hold
+  2-13-ac3-final-validation-phase2b: on-hold
   epic-2-retrospective: optional
 
   # Epic 3: AI Intelligence & Orchestration

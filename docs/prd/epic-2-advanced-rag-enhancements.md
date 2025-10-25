@@ -297,10 +297,13 @@ Epic 2 is considered COMPLETE when:
 
 ### Story 2.5: AC3 Validation and Optimization (Target: ≥70% Accuracy) - DECISION GATE
 
+**Status:** ⚠️ FAILED - 52% accuracy, course correction required (Stories 2.8-2.11)
 **Priority:** 🔴 CRITICAL (Epic 2 completion gate)
 **Effort:** 2-3 days
 **Depends On:** Story 2.4
 **Goal:** Run full AC3 ground truth test suite (50 queries) and optimize chunking if needed
+
+**⚠️ OUTCOME (2025-10-25):** AC2 FAILED with 52% accuracy (vs ≥70% target). Deep-dive analysis identified 4 critical root causes requiring course correction via Stories 2.8-2.11 before re-validation.
 
 **As a** QA engineer,
 **I want** comprehensive accuracy validation,
@@ -359,17 +362,99 @@ Epic 2 is considered COMPLETE when:
 
 ---
 
+### PHASE 2A COURSE CORRECTION (2-3 days)
+
+**Trigger:** Story 2.5 FAILED with 52% accuracy (2025-10-25)
+**Root Cause Analysis:** `/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/phase2a-deep-dive-analysis.md`
+**Goal:** Fix 4 critical root causes before re-validation
+**Expected Outcome:** 65-75% accuracy (Phase 2A target range)
+
+**Sprint Change Proposal:** Approved 2025-10-25 by PM (John) + User (Ricardo)
+
+---
+
+### Story 2.8: Implement Table-Aware Chunking Strategy
+
+**Priority:** 🔴 CRITICAL
+**Effort:** 6-8 hours
+**Goal:** Fix severe table fragmentation (8.6 chunks/table → 1.2 chunks/table)
+
+**Problem:** Fixed 512-token chunking splits tables across multiple chunks, destroying semantic coherence.
+
+**Solution:** Preserve complete tables as single chunks (<4096 tokens) or split by rows with headers preserved (>4096 tokens).
+
+**Expected Impact:** +10-15pp accuracy improvement from restored table semantic coherence.
+
+---
+
+### Story 2.9: Fix Ground Truth Page References
+
+**Priority:** 🔴 CRITICAL
+**Effort:** 3-4 hours
+**Goal:** Add page references to all 50 ground truth queries for proper validation
+
+**Problem:** All ground truth queries have zero expected page references, making accuracy metrics invalid.
+
+**Solution:** Manually annotate all 50 queries with correct page numbers from source PDF.
+
+**Expected Impact:** Valid accuracy metrics, confidence in measurements restored.
+
+---
+
+### Story 2.10: Fix Query Classification Over-Routing
+
+**Priority:** 🟠 HIGH
+**Effort:** 3-4 hours
+**Goal:** Reduce SQL over-routing from 48% → 8%
+
+**Problem:** Heuristic classifier routes 48% of queries to SQL when only 4% have temporal qualifiers.
+
+**Solution:** Require BOTH metric terms AND temporal terms for SQL_ONLY routing.
+
+**Expected Impact:** -300-500ms p50 latency reduction, fewer failed SQL searches.
+
+---
+
+### Story 2.11: Fix Hybrid Search Score Normalization & Fusion
+
+**Priority:** 🟡 MEDIUM
+**Effort:** 4-6 hours
+**Goal:** Debug hybrid search scoring bug and tune BM25 fusion weights
+
+**Problem:** All hybrid searches return score=1.0, hiding actual relevance ranking.
+
+**Solution:** Fix scoring bug, preserve raw fusion scores, tune BM25 fusion weight (alpha parameter).
+
+**Expected Impact:** Improved ranking quality, score visibility for debugging.
+
+---
+
+### Story 2.5 RE-VALIDATION (After Stories 2.8-2.11)
+
+**Goal:** Re-run AC3 validation with all fixes applied
+**Expected Accuracy:** 65-75% (Phase 2A target range)
+
+**Decision Gate:**
+- IF ≥70% → Epic 2 COMPLETE → Proceed to Epic 3 🎉
+- IF 65-70% → Re-evaluate Phase 2B necessity
+- IF <65% → Escalate to Phase 2B (PM approval required)
+
+---
+
 ## PHASE 2B: Structured Multi-Index (CONDITIONAL - 3-4 weeks)
 
-**Trigger:** ONLY if Phase 2A achieves <70% accuracy (15% probability)
+**Trigger:** ONLY if Phase 2A achieves <70% accuracy after Stories 2.8-2.11 course correction
+**Probability:** LOW (expected 65-75% from course correction)
 **Goal:** Achieve 70-80% retrieval accuracy
 **Approach:** SQL tables + vector search + re-ranking (FinSage pattern)
 
-**Stories (if triggered):**
-- 2.6: SQL Table Extraction & PostgreSQL Integration
-- 2.7: Multi-Index Search Architecture (Tables + Vector)
-- 2.8: Cross-Encoder Re-Ranking
-- 2.9: AC3 Validation (Target: ≥75%)
+**Status Update (2025-10-25):**
+- ✅ Story 2.6: PostgreSQL Schema + Data Migration (COMPLETE)
+- ✅ Story 2.7: Multi-Index Search Architecture (COMPLETE)
+- ⏸️ Story 2.12: Cross-Encoder Re-Ranking (ON HOLD - awaiting Phase 2A re-validation)
+- ⏸️ Story 2.13: AC3 Validation (ON HOLD - awaiting Story 2.12)
+
+**NOTE:** Stories 2.6-2.7 were implemented proactively during Phase 2A. If Phase 2A course correction achieves ≥70%, Phase 2B remaining stories (2.12-2.13) will be SKIPPED.
 
 **Expected Outcome:** 70-80% accuracy
 **Decision Gate:** IF ≥75% → STOP, IF <75% → Phase 2C
@@ -451,25 +536,33 @@ Epic 2 is considered COMPLETE when:
 
 ## Timeline Summary
 
-**Best Case (Phase 1 + 2A only):**
-- Week 1: Phase 1 (PDF optimization) - 1-2 days
-- Week 2-3: Phase 2A (Fixed chunking + metadata) - 1-2 weeks
-- Week 3: AC3 Validation → ≥70% accuracy → Epic 2 COMPLETE
-- **Total: 2-3 weeks**
+**Updated Timeline (2025-10-25 - Post-Course Correction):**
 
-**Likely Case (Phase 1 + 2A + 2B):**
-- Week 1-3: Phase 1 + 2A (as above)
-- Week 4-7: Phase 2B (Structured Multi-Index) - 3-4 weeks
-- Week 7: AC3 Validation → ≥75% accuracy → Epic 2 COMPLETE
-- **Total: 7-8 weeks**
+**Best Case (Phase 1 + 2A with Course Correction):**
+- Week 1: Phase 1 (PDF optimization) - 1-2 days ✅ COMPLETE
+- Week 2-3: Phase 2A Initial (Stories 2.3-2.7) - 1-2 weeks ✅ COMPLETE (52% accuracy)
+- **Week 3-4: Phase 2A Course Correction (Stories 2.8-2.11) - 2-3 days** ⭐ CURRENT
+- Week 4: AC3 Re-validation → Target ≥70% accuracy → Epic 2 COMPLETE
+- **Total: 3-4 weeks (revised from 2-3 weeks)**
+
+**If Course Correction Insufficient (<70%):**
+- Week 1-4: Phase 1 + 2A (as above)
+- Week 5-8: Phase 2B Remaining (Stories 2.12-2.13) - 3-4 weeks
+- Week 8: AC3 Validation → ≥75% accuracy → Epic 2 COMPLETE
+- **Total: 7-9 weeks**
 
 **Worst Case (All paths):**
-- Week 1-7: Phase 1 + 2A + 2B (as above)
-- Week 8-13: Phase 2C (Hybrid Architecture) - 6 weeks
-- Week 14-30: Phase 3 (Agentic Coordination) - 2-16 weeks (staged)
-- **Total: 14-30 weeks**
+- Week 1-8: Phase 1 + 2A + 2B (as above)
+- Week 9-14: Phase 2C (Hybrid Architecture) - 6 weeks
+- Week 15-31: Phase 3 (Agentic Coordination) - 2-16 weeks (staged)
+- **Total: 15-31 weeks**
 
-**Most Likely Outcome:** 2-3 weeks (Phase 1 + 2A achieves 70-72% accuracy) ✅
+**Most Likely Outcome:** 3-4 weeks (Phase 2A course correction achieves 65-75% accuracy) ✅
+
+**Probability Analysis:**
+- 80% chance: Course correction achieves 65-75% (Epic 2 complete or nearly complete)
+- 15% chance: Need Phase 2B Stories 2.12-2.13 (cross-encoder re-ranking)
+- 5% chance: Need Phase 2C (full hybrid architecture)
 
 ---
 

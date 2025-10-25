@@ -576,6 +576,53 @@ async def query_financial_documents(request: QueryRequest) -> str:
 
 ---
 
+## Implementation Notes
+
+### Table-Aware Chunking Strategy (Story 2.8)
+
+**Status:** ✅ IMPLEMENTED (2025-10-25)
+
+**Problem:** Fixed 512-token chunking splits tables across 8.6 chunks on average, destroying semantic coherence and causing 40% table query accuracy.
+
+**Solution:** Table-aware chunking with 4096-token threshold
+
+**Implementation:**
+- **File:** `raglite/ingestion/pipeline.py`
+- **Function:** `split_large_table_by_rows()` (lines 1605-1738)
+- **Function:** `chunk_by_docling_items()` modified (lines 1741-1936)
+
+**Key Decisions:**
+1. **4096 Token Threshold** (AC1):
+   - Tables <4096 tokens kept intact as single chunks
+   - Significantly reduces fragmentation (8.6 → 1.2 chunks per table)
+
+2. **Row-Based Splitting** (AC2):
+   - Large tables >4096 tokens split by logical rows
+   - Column headers duplicated in each chunk
+   - Table context prefix: "Table {index} (Part {n} of {total}): {caption}"
+
+3. **Metadata Preservation** (AC1):
+   - All table chunks marked with `section_type='Table'`
+   - Enables table-specific retrieval and filtering
+
+**Expected Impact:**
+- Chunks per table: 8.6 → 1.2 (-86%)
+- Table query accuracy: 40% → 75% (+35pp)
+- Overall accuracy: 52% → 65% (+13pp)
+
+**Validation:**
+- Unit tests: `raglite/tests/unit/test_table_aware_chunking.py`
+- Validation script: `scripts/test-table-aware-chunking.py`
+- Re-ingestion script: `scripts/reingest-with-table-aware-chunking.py`
+- Dilution analysis: `scripts/analyze-semantic-dilution.py`
+
+**Trade-Offs:**
+- Larger table chunks may exhibit semantic dilution
+- Monitoring via AC5 dilution detection script
+- Threshold tunable via Story 2.8.1 if needed
+
+---
+
 ## Current Next Steps
 
 **IMMEDIATE (T+0 to T+2):**

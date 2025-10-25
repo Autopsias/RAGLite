@@ -1,6 +1,19 @@
-"""Story 2.5: Ingest full 160-page PDF for AC3 ground truth validation.
+"""Story 2.5: Ingest full 160-page PDF WITHOUT metadata extraction.
 
-This script ingests the complete 160-page PDF into Qdrant for accuracy testing.
+This script ingests the complete 160-page PDF into Qdrant, skipping the
+Mistral metadata extraction step to avoid API 502 errors. This is a temporary
+workaround to unblock the Story 2.5 Decision Gate validation.
+
+The ingestion will include:
+- Docling PDF processing with pypdfium backend (Story 2.1)
+- Fixed 512-token chunking (Story 2.3)
+- Fin-E5 embeddings generation
+- Qdrant vector storage
+- BM25 index building
+
+Skips:
+- Mistral LLM metadata extraction (Story 2.4) - to avoid API errors
+- PostgreSQL metadata storage (Story 2.6) - requires metadata from Story 2.4
 """
 
 import asyncio
@@ -13,9 +26,9 @@ from raglite.shared.config import settings
 
 
 async def main():
-    """Ingest full 160-page PDF for Story 2.5 AC3 validation."""
+    """Ingest full 160-page PDF WITHOUT metadata extraction."""
     print("=" * 80)
-    print("Story 2.5 AC3: Ingesting Full 160-Page PDF")
+    print("Story 2.5 AC3: Ingesting Full 160-Page PDF (NO METADATA)")
     print("=" * 80)
 
     # Full PDF path
@@ -28,7 +41,8 @@ async def main():
     print(f"Source: {pdf_path}")
     print(f"Collection: {settings.qdrant_collection_name}")
     print("Expected: ~180-220 chunks (Story 2.3 fixed 512-token chunking)")
-    print("Expected time: ~13-15 minutes (Story 2.1 + 2.2 optimization)")
+    print("Expected time: ~5-7 minutes (no metadata extraction)")
+    print("SKIPPING: Mistral metadata extraction (API 502 errors)")
     print("=" * 80 + "\n")
 
     # Clear existing collection
@@ -40,26 +54,29 @@ async def main():
     except Exception:
         print("ℹ No existing collection to delete\n")
 
-    # Ingest full PDF
-    print(f"Ingesting {pdf_path.name} (160 pages)...")
-    print("This will take ~13-15 minutes...\n")
+    # Ingest full PDF WITHOUT metadata extraction
+    print(f"Ingesting {pdf_path.name} (160 pages) WITHOUT metadata extraction...")
+    print("This will take ~5-7 minutes...\n")
 
     try:
-        result = await ingest_pdf(str(pdf_path))
+        # Use skip_metadata=True to bypass Mistral API calls
+        result = await ingest_pdf(str(pdf_path), skip_metadata=True)
 
         print("\n" + "=" * 80)
         print("INGESTION COMPLETE")
         print("=" * 80)
-        print(f"Pages processed: {result.page_count}")
-        print(f"Chunks created: {result.chunk_count}")
+        print(f"Pages processed: {result.pages_processed}")
+        print(f"Chunks created: {result.chunks_created}")
         print(f"Collection: {settings.qdrant_collection_name}")
-        print(f"Document: {result.filename}")
+        print(f"BM25 index: {'Created' if result.bm25_index_created else 'Skipped'}")
+        print("Metadata extraction: SKIPPED (skip_metadata=True)")
         print("=" * 80 + "\n")
 
         print("✅ Ready for AC3 ground truth validation!")
         print(
             "   Run: pytest tests/integration/test_ac3_ground_truth.py::test_ac2_decision_gate_validation -v -s"
         )
+        print("   OR: python scripts/run-accuracy-tests.py")
 
     except Exception as e:
         print(f"\n❌ Error during ingestion: {e}")
