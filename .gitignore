@@ -58,5 +58,5 @@ BMAD-METHOD/
 
 # BMAD Method files (not part of RAGLite)
 BMAD-METHOD/
-bmad/
+/bmad/
 .cursor/rules/bmad/

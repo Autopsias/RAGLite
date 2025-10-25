@@ -72,7 +72,7 @@ development_status:
   2-7-multi-index-search-architecture: done
   # Phase 2A Course Correction (PO Approved 2025-10-25)
   2-8-table-aware-chunking: done  # Completed: 2025-10-25, Review approved, DoD met
-  2-9-fix-ground-truth-page-references: in-progress
+  2-9-fix-ground-truth-page-references: done
   2-10-fix-query-classification-over-routing: backlog
   2-11-fix-hybrid-search-scoring: backlog
   # Phase 2B Stories (ON HOLD pending Phase 2A re-validation)

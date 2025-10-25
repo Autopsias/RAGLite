@@ -70,7 +70,7 @@ COST_ANALYSIS_QUESTIONS = [
         "expected_answer": "Variable costs for Portugal Cement are 23.2 EUR/ton (Aug-25 YTD), compared to budget of 20.3 EUR/ton and 29.4 EUR/ton in Aug-24",
         "expected_keywords": ["variable costs", "23.2", "EUR/ton", "20.3", "29.4"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 20,  # Updated Story 2.9: 46 → 20
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "cost_analysis",
         "difficulty": "easy",
@@ -81,7 +81,7 @@ COST_ANALYSIS_QUESTIONS = [
         "expected_answer": "Thermal energy costs are 5.8 EUR/ton (Aug-25 YTD), 5.7 EUR/ton (Budget), and 8.3 EUR/ton (Aug-24)",
         "expected_keywords": ["termic energy", "thermal energy", "5.8", "EUR/ton", "8.3"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 20,  # Updated Story 2.9: 46 → 20
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "cost_analysis",
         "difficulty": "easy",
@@ -92,7 +92,7 @@ COST_ANALYSIS_QUESTIONS = [
         "expected_answer": "Electricity costs are 7.8 EUR/ton (Aug-25 YTD), 4.4 EUR/ton (Budget), and 9.6 EUR/ton (Aug-24)",
         "expected_keywords": ["electricity", "7.8", "EUR/ton", "4.4", "9.6"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 33,  # Updated Story 2.9: 46 → 33
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "cost_analysis",
         "difficulty": "easy",
@@ -103,7 +103,7 @@ COST_ANALYSIS_QUESTIONS = [
         "expected_answer": "Raw materials costs are 3.5 EUR/ton (Aug-25 YTD), 4.2 EUR/ton (Budget), and 6.2 EUR/ton (Aug-24)",
         "expected_keywords": ["raw materials", "3.5", "EUR/ton", "4.2", "6.2"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 33,  # Updated Story 2.9: 46 → 33
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "cost_analysis",
         "difficulty": "easy",
@@ -114,7 +114,7 @@ COST_ANALYSIS_QUESTIONS = [
         "expected_answer": "Packaging costs are 3.7 EUR/ton (Aug-25 YTD), 3.3 EUR/ton (Budget), and 3.3 EUR/ton (Aug-24)",
         "expected_keywords": ["packaging", "3.7", "EUR/ton", "3.3"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 33,  # Updated Story 2.9: 46 → 33
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "cost_analysis",
         "difficulty": "easy",
@@ -147,7 +147,7 @@ COST_ANALYSIS_QUESTIONS = [
         "expected_answer": "Electricity specific consumption for clinker grey is 77 Kwh/ton (Aug-25 YTD), 58 Kwh/ton (Budget), and 78 Kwh/ton (Aug-24)",
         "expected_keywords": ["electricity spec", "clinker grey", "77", "Kwh/ton", "78"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 15,  # Updated Story 2.9: 46 → 15
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "cost_analysis",
         "difficulty": "hard",
@@ -180,7 +180,7 @@ COST_ANALYSIS_QUESTIONS = [
         "expected_answer": "Variable costs decreased from 29.4 EUR/ton (Aug-24) to 23.2 EUR/ton (Aug-25 YTD), showing 21% reduction year-over-year, driven by lower thermal energy and electricity costs",
         "expected_keywords": ["variable costs", "29.4", "23.2", "EUR/ton", "21%", "reduction"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 20,  # Updated Story 2.9: 46 → 20
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "cost_analysis",
         "difficulty": "hard",
@@ -226,7 +226,7 @@ MARGINS_QUESTIONS = [
         "expected_answer": "EBITDA is 64.4 EUR/ton (Aug-25 YTD), 67.4 EUR/ton (Budget), and 49.5 EUR/ton (Aug-24)",
         "expected_keywords": ["EBITDA", "64.4", "EUR/ton", "67.4", "49.5"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 20,  # Updated Story 2.9: 46 → 20
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "margins",
         "difficulty": "easy",
@@ -237,7 +237,7 @@ MARGINS_QUESTIONS = [
         "expected_answer": "Unit variable margin is 90.1 EUR/ton (Aug-25 YTD), 92.0 EUR/ton (Budget), and 78.2 EUR/ton (Aug-24)",
         "expected_keywords": ["unit variable margin", "90.1", "EUR/ton", "92.0", "78.2"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 33,  # Updated Story 2.9: 46 → 33
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "margins",
         "difficulty": "easy",
@@ -248,7 +248,7 @@ MARGINS_QUESTIONS = [
         "expected_answer": "Outão plant fixed costs are 23.7 EUR/ton (Aug-25), 21.6 EUR/ton (Budget), and 26.5 EUR/ton (Aug-24)",
         "expected_keywords": ["outão", "fixed costs", "23.7", "EUR/ton", "21.6", "26.5"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 47,
+        "expected_page_number": 20,  # Updated Story 2.9: 47 → 20
         "expected_section": "Portugal Cement - Margin by Plant",
         "category": "margins",
         "difficulty": "medium",
@@ -259,7 +259,7 @@ MARGINS_QUESTIONS = [
         "expected_answer": "Maceira plant fixed costs are 26.8 EUR/ton (Aug-25), 22.1 EUR/ton (Budget), and 20.5 EUR/ton (Aug-24)",
         "expected_keywords": ["maceira", "fixed costs", "26.8", "EUR/ton", "22.1", "20.5"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 47,
+        "expected_page_number": 20,  # Updated Story 2.9: 47 → 20
         "expected_section": "Portugal Cement - Margin by Plant",
         "category": "margins",
         "difficulty": "medium",
@@ -281,7 +281,7 @@ MARGINS_QUESTIONS = [
         "expected_answer": "Pataias plant fixed costs are 59.8 EUR/ton (Aug-25), significantly higher than Outão (23.7) and Maceira (26.8), reflecting its smaller scale of operations",
         "expected_keywords": ["pataias", "fixed costs", "59.8", "EUR/ton", "outão", "maceira"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 47,
+        "expected_page_number": 20,  # Updated Story 2.9: 47 → 20
         "expected_section": "Portugal Cement - Margin by Plant",
         "category": "margins",
         "difficulty": "medium",
@@ -300,7 +300,7 @@ MARGINS_QUESTIONS = [
             "efficiency",
         ],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 20,  # Updated Story 2.9: 46 → 20
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "margins",
         "difficulty": "hard",
@@ -316,7 +316,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
         "expected_answer": "EBITDA for Portugal is 104,647 thousand EUR (Aug-25 YTD), compared to budget of 108,942 thousand EUR and 94,845 thousand EUR (Aug-24)",
         "expected_keywords": ["EBITDA portugal", "104,647", "108,942", "94,845", "thousand EUR"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 77,  # Updated Story 2.9 (triple-check): 23 → 77 (page 23 has Portugal+Group=91,438, page 77 has standalone Portugal=104,647)
+        "expected_page_number": 77,
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "easy",
@@ -333,7 +333,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
             "thousand EUR",
         ],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 77,  # Updated Story 2.9 (triple-check): 23 → 77 (Portugal Cash Flow page)
+        "expected_page_number": 77,
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "easy",
@@ -344,7 +344,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
         "expected_answer": "Capital expenditures are (33,059) thousand EUR (Aug-25 YTD), compared to budget of (52,506) thousand EUR and (32,456) thousand EUR (Aug-24)",
         "expected_keywords": ["capex", "33,059", "52,506", "32,456", "thousand EUR"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 77,  # Updated Story 2.9 (triple-check): 23 → 77 (Portugal Cash Flow page)
+        "expected_page_number": 77,
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "easy",
@@ -361,7 +361,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
             "233,686",
         ],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 23,  # Updated Story 2.9 (verified): 34 → 23  # Updated Story 2.9 (smart): 77 → 34
+        "expected_page_number": 23,  # Updated Story 2.9: 77 → 23
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "easy",
@@ -372,7 +372,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
         "expected_answer": "Trade working capital decreased by (30,913) thousand EUR (Aug-25 YTD), compared to budget increase of 5,862 thousand EUR and decrease of (7,623) thousand EUR (Aug-24)",
         "expected_keywords": ["trade working capital", "30,913", "5,862", "7,623"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 23,  # Updated Story 2.9 (verified): 34 → 23  # Updated Story 2.9 (smart): 77 → 34
+        "expected_page_number": 77,
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "medium",
@@ -383,7 +383,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
         "expected_answer": "Income tax is (11,801) thousand EUR (Aug-25 YTD), compared to budget of (16,051) thousand EUR and (7,187) thousand EUR (Aug-24)",
         "expected_keywords": ["income tax", "11,801", "16,051", "7,187"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 23,  # Updated Story 2.9 (verified): 34 → 23  # Updated Story 2.9 (smart): 77 → 34
+        "expected_page_number": 77,
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "medium",
@@ -394,7 +394,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
         "expected_answer": "Net interest expenses are (6,853) thousand EUR (Aug-25 YTD), compared to budget of (5,699) thousand EUR and (4,994) thousand EUR (Aug-24)",
         "expected_keywords": ["net interest expenses", "6,853", "5,699", "4,994"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 23,  # Updated Story 2.9 (verified): 34 → 23  # Updated Story 2.9 (smart): 77 → 34
+        "expected_page_number": 77,
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "hard",
@@ -405,7 +405,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
         "expected_answer": "Cash tied up after investments is (25,851) thousand EUR (Aug-25 YTD), compared to budget of (16,889) thousand EUR and (25,320) thousand EUR (Aug-24)",
         "expected_keywords": ["cash set free", "tied up", "investments", "25,851", "16,889"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 23,  # Updated Story 2.9 (verified): 34 → 23  # Updated Story 2.9 (smart): 77 → 34
+        "expected_page_number": 77,
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "medium",
@@ -416,7 +416,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
         "expected_answer": "EBITDA Portugal plus Group Structure is 91,438 thousand EUR (Aug-25 YTD) vs 77,992 thousand EUR (Aug-24), showing 17% growth year-over-year despite being 2% below budget",
         "expected_keywords": ["EBITDA", "group structure", "91,438", "77,992", "17%", "growth"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 23,  # Updated Story 2.9 (verified): 34 → 23  # Updated Story 2.9 (smart): 77 → 34
+        "expected_page_number": 3,  # Updated Story 2.9: 77 → 3
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "hard",
@@ -433,7 +433,7 @@ FINANCIAL_PERFORMANCE_QUESTIONS = [
             "EBITDA",
         ],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 23,  # Updated Story 2.9 (verified): 34 → 23  # Updated Story 2.9 (smart): 77 → 34
+        "expected_page_number": 23,  # Updated Story 2.9: 77 → 23
         "expected_section": "Portugal - Cash Flow",
         "category": "financial_performance",
         "difficulty": "hard",
@@ -449,7 +449,7 @@ SAFETY_METRICS_QUESTIONS = [
         "expected_answer": "Portugal Cement has 232 FTEs (Aug-25), compared to budget of 287 FTEs and 222 FTEs (Aug-24)",
         "expected_keywords": ["FTEs", "232", "287", "222", "employees"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 17,  # Updated Story 2.9: 46 → 17
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "safety_metrics",
         "difficulty": "easy",
@@ -504,7 +504,7 @@ SAFETY_METRICS_QUESTIONS = [
         "expected_answer": "CO2 emissions are 763 kg/ton clinker (Aug-25 YTD), compared to 748 kg/ton (Budget) and 768 kg/ton (Aug-24), showing 2% increase vs budget but 1% reduction vs prior year",
         "expected_keywords": ["emissions", "CO2", "763", "kg", "ton clinker", "748", "768"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 15,  # Updated Story 2.9: 46 → 15
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "safety_metrics",
         "difficulty": "hard",
@@ -531,7 +531,7 @@ WORKFORCE_QUESTIONS = [
         "expected_answer": "Distribution has 18 FTEs (Aug-25), compared to budget of 19 FTEs and 19 FTEs (Aug-24)",
         "expected_keywords": ["distribution", "FTEs", "18", "19"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 6,  # Updated Story 2.9: 46 → 6
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "workforce",
         "difficulty": "easy",
@@ -542,7 +542,7 @@ WORKFORCE_QUESTIONS = [
         "expected_answer": "Tunisia operations have 536 employees in August 2025, compared to budget of 317 and 0 in prior months, with Tunisia Cement having 350 employees",
         "expected_keywords": ["tunisia", "headcount", "536", "350", "employees"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 108,  # Updated Story 2.9 (triple-check): 46 → 108 (page 46 is Portugal, page 108 is Tunisia Headcount Evolution)
+        "expected_page_number": 16,  # Updated Story 2.9: 108 → 16
         "expected_section": "Tunisia - Headcount Evolution",
         "category": "workforce",
         "difficulty": "medium",
@@ -553,7 +553,7 @@ WORKFORCE_QUESTIONS = [
         "expected_answer": "Sales has 16 FTEs (Aug-25), compared to budget of 15 FTEs and 15 FTEs (Aug-24), showing 7% increase",
         "expected_keywords": ["sales", "FTEs", "16", "15", "7%"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 4,  # Updated Story 2.9: 46 → 4
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "workforce",
         "difficulty": "medium",
@@ -573,7 +573,7 @@ WORKFORCE_QUESTIONS = [
             "28",
         ],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,  # Updated Story 2.9 (smart): 108 → 46
+        "expected_page_number": 9,  # Updated Story 2.9: 108 → 9
         "expected_section": "Tunisia - Headcount Evolution",
         "category": "workforce",
         "difficulty": "medium",
@@ -593,7 +593,7 @@ WORKFORCE_QUESTIONS = [
             "increase",
         ],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 35,  # Updated Story 2.9: 46 → 35
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "workforce",
         "difficulty": "hard",
@@ -609,7 +609,7 @@ OPERATING_EXPENSES_QUESTIONS = [
         "expected_answer": "Other costs are 9.8 EUR/ton (Aug-25 YTD), compared to budget of 9.2 EUR/ton and 10.1 EUR/ton (Aug-24)",
         "expected_keywords": ["other costs", "9.8", "EUR/ton", "9.2", "10.1"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 20,  # Updated Story 2.9: 46 → 20
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "operating_expenses",
         "difficulty": "easy",
@@ -620,7 +620,7 @@ OPERATING_EXPENSES_QUESTIONS = [
         "expected_answer": "Distribution costs are 1.7 EUR/ton (Aug-25 YTD), compared to budget of 1.5 EUR/ton and 1.5 EUR/ton (Aug-24)",
         "expected_keywords": ["distribution costs", "1.7", "EUR/ton", "1.5"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 33,  # Updated Story 2.9: 46 → 33
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "operating_expenses",
         "difficulty": "easy",
@@ -631,7 +631,7 @@ OPERATING_EXPENSES_QUESTIONS = [
         "expected_answer": "Sales costs are 1.2 EUR/ton (Aug-25 YTD), compared to budget of 1.1 EUR/ton and 1.2 EUR/ton (Aug-24)",
         "expected_keywords": ["sales costs", "1.2", "EUR/ton", "1.1"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 33,  # Updated Story 2.9: 46 → 33
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "operating_expenses",
         "difficulty": "easy",
@@ -653,7 +653,7 @@ OPERATING_EXPENSES_QUESTIONS = [
         "expected_answer": "Rents and rentals are (1,262) thousand EUR (Aug-25 YTD), compared to budget of (807) thousand EUR and (1,273) thousand EUR (Aug-24)",
         "expected_keywords": ["rents", "rentals", "1,262", "807", "1,273"],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 46,
+        "expected_page_number": 35,  # Updated Story 2.9: 46 → 35
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "operating_expenses",
         "difficulty": "medium",
@@ -697,7 +697,7 @@ OPERATING_EXPENSES_QUESTIONS = [
             "productivity",
         ],
         "source_document": "2025-08 Performance Review CONSO_v2.pdf",
-        "expected_page_number": 59,  # Updated Story 2.9 (smart): 46 → 59
+        "expected_page_number": 20,  # Updated Story 2.9: 46 → 20
         "expected_section": "Portugal Cement - Operational Performance",
         "category": "operating_expenses",
         "difficulty": "hard",
