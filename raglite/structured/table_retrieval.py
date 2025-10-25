@@ -67,11 +67,13 @@ async def search_tables(query: str, top_k: int = 5) -> list[dict[str, Any]]:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
         # Story 2.7 AC2: Full-text search using PostgreSQL ts_rank
-        # Prioritize table-formatted content for structured data queries
+        # Use websearch_to_tsquery for natural language queries (OR logic for high recall)
+        # Best practice: websearch_to_tsquery handles natural language better than plainto_tsquery
+        # which uses strict AND logic - see PostgreSQL FTS best practices
         sql_query = """
             SELECT
                 content AS text,
-                ts_rank(content_tsv, plainto_tsquery('english', %s)) AS score,
+                ts_rank(content_tsv, websearch_to_tsquery('english', %s)) AS score,
                 document_id,
                 page_number,
                 chunk_index,
@@ -85,7 +87,7 @@ async def search_tables(query: str, top_k: int = 5) -> list[dict[str, Any]]:
                 table_name
             FROM financial_chunks
             WHERE
-                content_tsv @@ plainto_tsquery('english', %s)
+                content_tsv @@ websearch_to_tsquery('english', %s)
                 AND section_type = 'Table'  -- Prioritize table content (correct column)
             ORDER BY score DESC
             LIMIT %s;
@@ -102,12 +104,17 @@ async def search_tables(query: str, top_k: int = 5) -> list[dict[str, Any]]:
             # ts_rank typically returns 0.0-1.0, but can exceed 1.0 for very high relevance
             normalized_score = min(row["score"], 1.0)
 
+            # Convert UUID to string for document_id (PostgreSQL returns UUID objects)
+            document_id = row.get("document_id", "unknown")
+            if document_id != "unknown":
+                document_id = str(document_id)
+
             results.append(
                 {
                     "text": row["text"],
                     "score": float(normalized_score),
                     "metadata": {
-                        "source_document": row.get("document_id", "unknown"),
+                        "source_document": document_id,
                         "page_number": row.get("page_number"),
                         "chunk_index": row.get("chunk_index", 0),
                         "company_name": row.get("company_name"),
@@ -120,7 +127,7 @@ async def search_tables(query: str, top_k: int = 5) -> list[dict[str, Any]]:
                         "table_name": row.get("table_name"),
                         "word_count": len(row["text"].split()),
                     },
-                    "document_id": row.get("document_id", "unknown"),
+                    "document_id": document_id,
                     "page_number": row.get("page_number"),
                 }
             )
@@ -202,8 +209,9 @@ async def search_tables_with_metadata_filter(
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
         # Build WHERE clause with filters
-        where_conditions = ["content_tsv @@ plainto_tsquery('english', %s)"]
-        params = [query]
+        # Use websearch_to_tsquery for natural language OR logic (same as search_tables)
+        where_conditions = ["content_tsv @@ websearch_to_tsquery('english', %s)"]
+        params: list[Any] = [query]  # Type hint to allow str, int, or other filter values
 
         # Add metadata filters with SQL injection protection
         if filters:
@@ -214,8 +222,14 @@ async def search_tables_with_metadata_filter(
                         f"Invalid filter field: {field}. "
                         f"Allowed fields: {', '.join(sorted(ALLOWED_FILTER_FIELDS))}"
                     )
-                # Safe to use field name after whitelist validation
-                where_conditions.append(f"{field} = %s")  # nosec B608
+                # Support LIKE pattern matching for values with wildcards (%)
+                # This enables temporal queries like "Aug-25%" to match "Aug-25 YTD", "Aug-25", etc.
+                if isinstance(value, str) and "%" in value:
+                    # Use LIKE for pattern matching (safe after whitelist validation)
+                    where_conditions.append(f"{field} LIKE %s")  # nosec B608
+                else:
+                    # Use exact equality for non-pattern values
+                    where_conditions.append(f"{field} = %s")  # nosec B608
                 params.append(value)
 
         # Construct SQL query
@@ -227,7 +241,7 @@ async def search_tables_with_metadata_filter(
         sql_query = f"""
             SELECT
                 content AS text,
-                ts_rank(content_tsv, plainto_tsquery('english', %s)) AS score,
+                ts_rank(content_tsv, websearch_to_tsquery('english', %s)) AS score,
                 document_id,
                 page_number,
                 chunk_index,
@@ -255,12 +269,17 @@ async def search_tables_with_metadata_filter(
         results = []
         for row in rows:
             normalized_score = min(row["score"], 1.0)
+            # Convert UUID to string for document_id (PostgreSQL returns UUID objects)
+            document_id = row.get("document_id", "unknown")
+            if document_id != "unknown":
+                document_id = str(document_id)
+
             results.append(
                 {
                     "text": row["text"],
                     "score": float(normalized_score),
                     "metadata": {
-                        "source_document": row.get("document_id", "unknown"),
+                        "source_document": document_id,
                         "page_number": row.get("page_number"),
                         "chunk_index": row.get("chunk_index", 0),
                         "company_name": row.get("company_name"),
@@ -273,7 +292,7 @@ async def search_tables_with_metadata_filter(
                         "table_name": row.get("table_name"),
                         "word_count": len(row["text"].split()),
                     },
-                    "document_id": row.get("document_id", "unknown"),
+                    "document_id": document_id,
                     "page_number": row.get("page_number"),
                 }
             )
