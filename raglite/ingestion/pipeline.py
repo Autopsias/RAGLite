@@ -899,7 +899,9 @@ async def ingest_document(file_path: str) -> DocumentMetadata:
         raise ValueError(error_msg)
 
 
-async def ingest_pdf(file_path: str, clear_collection: bool = True) -> DocumentMetadata:
+async def ingest_pdf(
+    file_path: str, clear_collection: bool = True, skip_metadata: bool = False
+) -> DocumentMetadata:
     """Ingest financial PDF and extract text, tables, and structure with page numbers.
 
     Uses Docling library for high-accuracy extraction (97.9% table accuracy).
@@ -909,6 +911,8 @@ async def ingest_pdf(file_path: str, clear_collection: bool = True) -> DocumentM
         file_path: Path to PDF file (relative or absolute)
         clear_collection: If True, clears existing Qdrant collection before ingestion
                          to prevent data contamination. Default True for clean state.
+        skip_metadata: If True, skips LLM metadata extraction (Story 2.4) to avoid API issues.
+                       Default False. Use when Mistral API is unavailable.
 
     Returns:
         DocumentMetadata with extraction results including page_count and ingestion timestamp
@@ -923,6 +927,9 @@ async def ingest_pdf(file_path: str, clear_collection: bool = True) -> DocumentM
 
         >>> # Append to existing collection without clearing
         >>> metadata = await ingest_pdf("report2.pdf", clear_collection=False)
+
+        >>> # Skip metadata extraction to avoid API errors
+        >>> metadata = await ingest_pdf("report.pdf", skip_metadata=True)
     """
     start_time = time.time()
 
@@ -1095,7 +1102,7 @@ async def ingest_pdf(file_path: str, clear_collection: bool = True) -> DocumentM
     # more accurate metadata for each chunk (chunks are ~512 tokens, perfect size for Mistral Small)
     # RE-ENABLED for Story 2.6 PostgreSQL data migration
     # NOTE: Performance bugs (sync client, per-request client, no timeout) will be fixed in Task 6 (AC6)
-    if settings.mistral_api_key:
+    if settings.mistral_api_key and not skip_metadata:
         logger.info(
             "Starting per-chunk metadata extraction with Mistral Small",
             extra={
@@ -1114,9 +1121,9 @@ async def ingest_pdf(file_path: str, clear_collection: bool = True) -> DocumentM
 
         # Extract metadata for each chunk with rate limiting (Story 2.4 FIX + Story 2.5 OPTIMIZATION)
         # Semaphore limits concurrent API calls to respect Mistral rate limits
-        # Story 2.5: Increased from 5 to 20 concurrent requests for table-aware chunking (424 chunks)
-        # Mistral Free API supports higher concurrency than initially configured
-        semaphore = asyncio.Semaphore(20)  # Max 20 concurrent requests to Mistral API
+        # RATE LIMIT FIX: Reduced from 20 to 5 concurrent requests to avoid 429 errors
+        # Mistral Free API has stricter rate limits than initially tested
+        semaphore = asyncio.Semaphore(5)  # Max 5 concurrent requests to Mistral API
 
         async def extract_for_chunk(chunk: Chunk) -> tuple[Chunk, ExtractedMetadata | None]:
             """Extract metadata for a single chunk with error handling and rate limiting."""
@@ -1171,9 +1178,10 @@ async def ingest_pdf(file_path: str, clear_collection: bool = True) -> DocumentM
             },
         )
     else:
+        skip_reason = "skip_metadata=True" if skip_metadata else "MISTRAL_API_KEY not configured"
         logger.info(
-            "Metadata extraction skipped - MISTRAL_API_KEY not configured",
-            extra={"doc_filename": pdf_path.name},
+            f"Metadata extraction skipped - {skip_reason}",
+            extra={"doc_filename": pdf_path.name, "skip_metadata": skip_metadata},
         )
 
     # Generate embeddings for chunks (Story 1.5)
@@ -1594,119 +1602,140 @@ async def chunk_document(
     return chunks
 
 
-def split_large_table(table_content: str, encoding: Any, max_words: int = 800) -> list[str]:
-    """Split large tables into focused sub-chunks by metric sections.
+def split_large_table_by_rows(
+    table_item: TableItem,
+    result: ConversionResult,
+    encoding: Any,
+    max_tokens: int = 4096,
+    table_index: int = 0,
+) -> list[tuple[str, str | None]]:
+    """Split large tables by logical rows while preserving column headers.
 
-    Story 2.5 Enhancement: Table-Aware Chunking to fix page 46 oversized chunk issue.
-
-    Large financial tables (>800 words ≈ 1000 tokens) get split into focused sections
-    to improve semantic retrieval. Each section contains related metrics (e.g., Variable
-    Costs, Fixed Costs, EBITDA) rather than mixing 50+ metrics in one diluted chunk.
+    Story 2.8 AC2: Row-based table splitting strategy for tables exceeding 4096 tokens.
 
     Args:
-        table_content: Markdown table content
+        table_item: Docling TableItem to split
+        result: ConversionResult for markdown export
         encoding: tiktoken encoding for token counting
-        max_words: Threshold for splitting (default: 800 words ≈ 1000 tokens)
+        max_tokens: Token threshold for splitting (default: 4096)
+        table_index: Index of table in document (for context prefix)
 
     Returns:
-        List of table sub-chunks (or [table_content] if small enough)
+        List of (table_chunk_content, table_caption) tuples
 
-    Strategy:
-        - If table ≤800 words: return as-is (single chunk)
-        - If table >800 words: split by metric category sections
-        - Preserve table headers in each sub-chunk
-        - Keep related metrics together (e.g., all Variable Cost sub-metrics)
-
-    Section Detection:
-        - Variable Costs section
-        - Fixed Costs section
-        - EBITDA/Margins section
-        - Production Metrics section
-        - Employee Metrics section
+    Strategy (AC2):
+        - Split by table rows (preserve row boundaries)
+        - Duplicate column headers in each chunk
+        - Add table context prefix: "Table {index} (Part {n} of {total}): {caption}"
+        - Ensure all chunks <4096 tokens
     """
-    word_count = len(table_content.split())
+    # Export table to markdown
+    table_content = table_item.export_to_markdown(doc=result.document)
+    token_count = len(encoding.encode(table_content))
 
-    # If table is small enough, keep as single chunk
-    if word_count <= max_words:
-        return [table_content]
+    # If table is small enough, return as-is (AC1: tables <4096 tokens kept intact)
+    if token_count < max_tokens:
+        return [(table_content, None)]
 
-    logger.debug(
-        f"Splitting large table ({word_count} words) into focused sub-chunks",
-        extra={"word_count": word_count, "threshold": max_words},
+    logger.info(
+        f"Splitting large table ({token_count} tokens) by rows",
+        extra={"token_count": token_count, "threshold": max_tokens, "table_index": table_index},
     )
 
     # Split table into lines
     lines = table_content.split("\n")
 
-    # Extract table header (first 2-3 lines typically)
-    header_lines = []
-    data_lines = []
+    # Extract table caption (first non-empty line before table header)
+    caption = None
+    table_start_idx = 0
     for i, line in enumerate(lines):
-        if i < 3 and ("|" in line):  # Table header rows
-            header_lines.append(line)
-        elif "|" in line:
-            data_lines.append(line)
+        if "|" in line:
+            table_start_idx = i
+            break
+        elif line.strip() and not line.startswith("#"):
+            caption = line.strip()
 
-    # Define section markers (lines containing these keywords start new sections)
-    section_markers = [
-        "Variable Costs",
-        "Fixed Costs",
-        "EBITDA",
-        "Employees",
-        "Maintenance",
-        "Distribution Costs",
-        "Sales Costs",
-        "Production",
-    ]
-
-    # Group lines into sections
-    sections: list[list[str]] = []
-    current_section: list[str] = []
-
-    for line in data_lines:
-        # Check if line starts a new section
-        is_section_start = any(marker in line for marker in section_markers)
-
-        if is_section_start and current_section:
-            # Save previous section
-            sections.append(current_section)
-            current_section = [line]
+    # Extract table header (first 2-3 lines of markdown table)
+    # Markdown tables have: header row | separator row | data rows
+    header_lines = []
+    data_start_idx = table_start_idx
+    for i in range(table_start_idx, min(table_start_idx + 3, len(lines))):
+        if i < len(lines) and "|" in lines[i]:
+            header_lines.append(lines[i])
+            data_start_idx = i + 1
         else:
-            current_section.append(line)
+            break
 
-    # Add final section
-    if current_section:
-        sections.append(current_section)
+    # Extract data rows (everything after header)
+    data_rows = [line for line in lines[data_start_idx:] if "|" in line]
 
-    # Build sub-chunks: header + section data
-    sub_chunks = []
-    for section_lines in sections:
-        # Combine header + section data
-        chunk_lines = header_lines + section_lines
-        chunk_content = "\n".join(chunk_lines)
-
-        # Only add if substantial content (not just header)
-        if len(section_lines) > 2:  # At least a few data rows
-            sub_chunks.append(chunk_content)
-
-    # Fallback: if splitting produced no valid chunks, keep original
-    if not sub_chunks:
+    if not header_lines or not data_rows:
         logger.warning(
-            "Table splitting produced no valid sub-chunks - keeping original",
-            extra={"word_count": word_count},
+            "Table splitting failed - no headers or data rows found",
+            extra={"table_index": table_index},
         )
-        return [table_content]
+        return [(table_content, caption)]
+
+    # AC2: Split rows into chunks, accumulating until max_tokens
+    header_text = "\n".join(header_lines)
+    header_tokens = len(encoding.encode(header_text))
+
+    chunks: list[tuple[str, str | None]] = []
+    current_chunk_rows: list[str] = []
+    current_token_count = header_tokens
+
+    for row in data_rows:
+        row_tokens = len(encoding.encode(row + "\n"))
+
+        # Check if adding this row would exceed limit
+        if current_token_count + row_tokens > max_tokens and current_chunk_rows:
+            # Create chunk from accumulated rows
+            chunk_content = header_text + "\n" + "\n".join(current_chunk_rows)
+            chunks.append((chunk_content, caption))
+
+            # Reset for next chunk
+            current_chunk_rows = [row]
+            current_token_count = header_tokens + row_tokens
+        else:
+            current_chunk_rows.append(row)
+            current_token_count += row_tokens
+
+    # Add final chunk
+    if current_chunk_rows:
+        chunk_content = header_text + "\n" + "\n".join(current_chunk_rows)
+        chunks.append((chunk_content, caption))
+
+    # AC2: Add table context prefix to each chunk
+    total_parts = len(chunks)
+    chunks_with_prefix: list[tuple[str, str | None]] = []
+
+    for part_num, (chunk_content, chunk_caption) in enumerate(chunks, start=1):
+        # Format: "Table {index} (Part {n} of {total}): {caption}"
+        if total_parts > 1:
+            prefix = f"Table {table_index} (Part {part_num} of {total_parts})"
+            if chunk_caption:
+                prefix += f": {chunk_caption}"
+            prefixed_content = f"{prefix}\n\n{chunk_content}"
+        else:
+            # Single chunk doesn't need part number
+            if chunk_caption:
+                prefixed_content = f"Table {table_index}: {chunk_caption}\n\n{chunk_content}"
+            else:
+                prefixed_content = chunk_content
+
+        chunks_with_prefix.append((prefixed_content, chunk_caption))
 
     logger.info(
-        f"Split large table into {len(sub_chunks)} focused sub-chunks",
+        f"Split large table into {total_parts} row-based chunks",
         extra={
-            "original_words": word_count,
-            "num_sub_chunks": len(sub_chunks),
-            "avg_sub_chunk_words": word_count // len(sub_chunks) if sub_chunks else 0,
+            "original_tokens": token_count,
+            "num_chunks": total_parts,
+            "avg_chunk_tokens": token_count // total_parts if total_parts else 0,
+            "table_index": table_index,
         },
     )
 
-    return sub_chunks
+    return chunks_with_prefix
 
 
 async def chunk_by_docling_items(
@@ -1761,7 +1790,7 @@ async def chunk_by_docling_items(
     chunks = []
     chunk_index = 0
 
-    # AC3: Extract tables separately to preserve table boundaries
+    # Story 2.8 AC1: Extract tables separately to preserve table boundaries
     tables: list[tuple[TableItem, int]] = []  # (table_item, page_number)
     text_items: list[tuple[str, int]] = []  # (text_content, page_number)
 
@@ -1772,46 +1801,54 @@ async def chunk_by_docling_items(
             page_number = item.prov[0].page_no
 
         if isinstance(item, TableItem):
-            # AC3: Store tables separately
+            # Story 2.8 AC1: Store tables separately to preserve table boundaries
             tables.append((item, page_number))
         elif hasattr(item, "text"):
             # Text content (paragraphs, sections, lists)
             text_items.append((item.text, page_number))
 
-    # Story 2.5 Enhancement: Process tables with table-aware splitting for large tables
+    # Story 2.8 AC1 + AC2: Process tables with 4096-token threshold and row-based splitting
+    table_index = 0
     for table_item, page_num in tables:
-        table_content = table_item.export_to_markdown(doc=result.document)
-        len(encoding.encode(table_content))
-        word_count = len(table_content.split())
+        table_index += 1
 
-        # Story 2.5: Split large tables (>800 words) into focused sub-chunks
-        table_sub_chunks = split_large_table(table_content, encoding, max_words=800)
+        # Story 2.8 AC2: Split tables by rows if >4096 tokens, else keep intact
+        table_chunks = split_large_table_by_rows(
+            table_item=table_item,
+            result=result,
+            encoding=encoding,
+            max_tokens=4096,  # AC1: 4096 token threshold
+            table_index=table_index,
+        )
 
-        for sub_chunk_content in table_sub_chunks:
-            sub_word_count = len(sub_chunk_content.split())
-            sub_token_count = len(encoding.encode(sub_chunk_content))
+        for chunk_content, _caption in table_chunks:
+            word_count = len(chunk_content.split())
+            token_count = len(encoding.encode(chunk_content))
 
+            # Story 2.8 AC1: Set section_type='Table' metadata for table chunks
             chunk = Chunk(
                 chunk_id=f"{doc_metadata.filename}_{chunk_index}",
-                content=sub_chunk_content,
+                content=chunk_content,
                 metadata=doc_metadata,
                 page_number=page_num,
                 chunk_index=chunk_index,
                 embedding=[],
-                word_count=sub_word_count,
+                word_count=word_count,
+                section_type="Table",  # AC1: Mark as table chunk
             )
             chunks.append(chunk)
             chunk_index += 1
 
             logger.debug(
-                "Table chunk created (table-aware splitting)",
+                "Table chunk created (table-aware chunking with 4096-token threshold)",
                 extra={
                     "chunk_index": chunk_index - 1,
-                    "token_count": sub_token_count,
-                    "word_count": sub_word_count,
+                    "token_count": token_count,
+                    "word_count": word_count,
                     "page": page_num,
-                    "is_sub_chunk": len(table_sub_chunks) > 1,
-                    "total_sub_chunks": len(table_sub_chunks),
+                    "table_index": table_index,
+                    "is_multi_part": len(table_chunks) > 1,
+                    "total_parts": len(table_chunks),
                 },
             )
 

@@ -177,7 +177,7 @@ async def classify_query_metadata(query: str) -> dict[str, str]:
             },
         )
 
-        return filters  # type: ignore[no-any-return]
+        return dict(filters)  # Explicitly convert to dict for mypy
 
     except json.JSONDecodeError as e:
         logger.warning(

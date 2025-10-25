@@ -18,8 +18,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from raglite.retrieval.query_classifier import QueryType, classify_query
+from raglite.retrieval.query_preprocessing import preprocess_query_for_table_search
 from raglite.retrieval.search import hybrid_search
-from raglite.structured.table_retrieval import TableRetrievalError, search_tables
+from raglite.structured.table_retrieval import (
+    TableRetrievalError,
+    search_tables,
+    search_tables_with_metadata_filter,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -202,8 +207,22 @@ async def _execute_sql_search(query: str, top_k: int) -> list[SearchResult]:
     try:
         logger.debug("Executing SQL search", extra={"query": query[:100]})
 
-        # Call Story 2.6 table retrieval
-        sql_results = await search_tables(query, top_k=top_k)
+        # Story 2.7 Enhancement: Preprocess query to extract keywords and metadata filters
+        # This separates business keywords from temporal qualifiers for better matching
+        keywords, filters = preprocess_query_for_table_search(query)
+
+        # Call table retrieval with metadata filtering if available
+        if filters:
+            logger.debug(
+                "Using metadata-filtered search",
+                extra={"keywords": keywords, "filters": filters},
+            )
+            sql_results = await search_tables_with_metadata_filter(
+                query=keywords, top_k=top_k, filters=filters
+            )
+        else:
+            logger.debug("Using standard search", extra={"keywords": keywords})
+            sql_results = await search_tables(query=keywords, top_k=top_k)
 
         # Convert table rows to SearchResult objects
         # STUB: search_tables returns empty list until Story 2.6 complete
