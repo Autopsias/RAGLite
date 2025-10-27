@@ -182,11 +182,12 @@ jobs:
 
   # ============================================================================
   # JOB 5: Integration Tests (requires Qdrant)
+  # CI MODE: Uses 160-page full PDF for comprehensive testing
   # ============================================================================
   test-integration:
-    name: Integration Tests
+    name: Integration Tests (CI Comprehensive)
     runs-on: self-hosted
-    timeout-minutes: 15
+    timeout-minutes: 60
     needs: [test-unit]
 
     steps:
@@ -214,15 +215,23 @@ jobs:
             exit 1
           fi
 
-      - name: Run integration tests
+      - name: Run integration tests (CI comprehensive mode)
         env:
           QDRANT_HOST: localhost
           QDRANT_PORT: 6333
+          TEST_USE_FULL_PDF: "true"
         run: |
           source ci-venv/bin/activate
+          echo "========================================="
+          echo "CI MODE: Comprehensive Testing"
+          echo "- Using 160-page full PDF (~150s ingestion)"
+          echo "- Running ALL tests including slow ones"
+          echo "- Target: 30-50 minutes total"
+          echo "========================================="
           if [ -d "tests/integration" ] && [ -n "$(find tests/integration -name 'test_*.py' -type f)" ]; then
             pytest tests/integration/ \
               -v \
+              -m "" \
               --junitxml=pytest-integration-report.xml
           else
             echo "⚠️  No integration tests found, skipping..."

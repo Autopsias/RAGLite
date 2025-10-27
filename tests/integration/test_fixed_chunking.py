@@ -35,6 +35,7 @@ def encoding():
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
+@pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_collection=True) - skip re-ingest cleanup
 @pytest.mark.timeout(2700)  # 45 minutes for large PDFs (increased from 30min)
 async def test_ac4_collection_recreation_and_reingest(test_pdf_path):
     """AC4: Delete contaminated collection, recreate with clean schema, re-ingest test PDF.
@@ -82,6 +83,7 @@ async def test_ac4_collection_recreation_and_reingest(test_pdf_path):
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
+@pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_collection=True) - skip re-ingest cleanup
 @pytest.mark.timeout(900)  # 15 minutes - medium test (actual: ~6-8 minutes)
 async def test_ac4_fast_40page():
     """AC4 Fast Validation: 40-page PDF for quick CI/CD validation.
@@ -504,6 +506,7 @@ async def test_ac6_chunk_size_consistency(ingested_160_page_pdf, encoding):
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
+@pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_collection=True) - skip re-ingest cleanup
 async def test_table_boundary_preservation(test_pdf_path, encoding):
     """AC3: Verify tables are NOT split mid-row and tables >512 tokens kept as single chunks."""
     # Ingest test PDF

@@ -18,6 +18,7 @@ import pytest
 
 @pytest.mark.asyncio
 @pytest.mark.integration
+@pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_collection=True) - skip re-ingest cleanup
 @pytest.mark.skipif(
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
 )
@@ -108,6 +109,7 @@ async def test_ac4_160page_doclingparse_baseline():
 
 @pytest.mark.asyncio
 @pytest.mark.integration
+@pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_collection=True) - skip re-ingest cleanup
 @pytest.mark.skipif(
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
 )

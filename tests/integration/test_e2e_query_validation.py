@@ -32,6 +32,7 @@ from tests.fixtures.ground_truth import GROUND_TRUTH_QA
     reason="Story 2.2 dependency - Current chunking quality produces fragmented chunks with low semantic scores. Semantic search accuracy is 56% baseline, below the 70% target. This test requires element-based chunking (Story 2.2) to achieve the expected 0.7+ scores consistently. Will be re-enabled after Story 2.2 implementation."
 )
 @pytest.mark.integration
+@pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 async def test_financial_terminology_handling():
     """Test query tool with financial domain terminology.
 
@@ -126,6 +127,7 @@ async def test_financial_terminology_handling():
 
 
 @pytest.mark.integration
+@pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 @pytest.mark.skipif(
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
 )
@@ -220,6 +222,7 @@ async def test_metadata_completeness_validation():
 
 
 @pytest.mark.integration
+@pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 @pytest.mark.skipif(
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
 )
@@ -318,6 +321,7 @@ async def test_ground_truth_validation_subset():
 
 
 @pytest.mark.integration
+@pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 async def test_e2e_integration_flow():
     """Test end-to-end integration flow from query to response.
 
@@ -386,6 +390,7 @@ async def test_e2e_integration_flow():
 
 
 @pytest.mark.integration
+@pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 async def test_performance_measurement():
     """Measure p50/p95 query latency on 20+ queries.
 

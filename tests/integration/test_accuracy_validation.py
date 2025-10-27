@@ -14,6 +14,7 @@ import pytest
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
+@pytest.mark.preserve_collection  # Tests don't modify Qdrant - skip cleanup
 class TestAccuracyTestRunner:
     """Test suite for run-accuracy-tests.py script."""
 
@@ -109,6 +110,7 @@ class TestAccuracyTestRunner:
         assert "Latency" in result.stdout or "latency" in result.stdout.lower()
 
 
+@pytest.mark.preserve_collection  # Tests don't modify Qdrant - skip cleanup
 class TestDailyAccuracyCheck:
     """Test suite for daily-accuracy-check.py script."""
 

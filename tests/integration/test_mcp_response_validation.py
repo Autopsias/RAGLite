@@ -17,6 +17,7 @@ from tests.fixtures.ground_truth import GROUND_TRUTH_QA
 
 
 @pytest.mark.integration
+@pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 async def test_e2e_metadata_completeness():
     """Validate metadata completeness from ingestion to response.
 
@@ -92,6 +93,7 @@ async def test_e2e_metadata_completeness():
 
 
 @pytest.mark.integration
+@pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 async def test_e2e_citation_integration():
     """Validate citations from Story 1.8 work correctly in end-to-end flow.
 
@@ -131,6 +133,7 @@ async def test_e2e_citation_integration():
 
 
 @pytest.mark.integration
+@pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 async def test_e2e_llm_synthesis_compatibility():
     """Simulate LLM client processing QueryResponse.
 
@@ -176,6 +179,7 @@ async def test_e2e_llm_synthesis_compatibility():
 
 
 @pytest.mark.integration
+@pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 async def test_e2e_performance_validation():
     """Measure p50/p95 latency on multiple queries.
 
@@ -249,6 +253,7 @@ async def test_e2e_performance_validation():
 
 
 @pytest.mark.integration
+@pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 async def test_e2e_ground_truth_metadata():
     """Validate metadata completeness on ground truth test set.
 
@@ -326,6 +331,7 @@ async def test_e2e_ground_truth_metadata():
 
 
 @pytest.mark.integration
+@pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 async def test_e2e_standard_mcp_pattern():
     """Validate standard MCP pattern: RAGLite returns raw chunks, no synthesis.
 

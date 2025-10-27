@@ -22,6 +22,7 @@ import pytest
 #   from raglite.shared.models import Chunk, DocumentMetadata
 
 
+@pytest.mark.manages_collection_state  # Tests call ingest_pdf() - skip re-ingest cleanup
 class TestPDFIngestionIntegration:
     """Integration tests for PDF ingestion with real financial documents.
 

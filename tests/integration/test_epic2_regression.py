@@ -47,6 +47,7 @@ BASELINE_ATTRIBUTION_FLOOR = 32.0  # Must not regress below 32%
 LATENCY_CEILING_P95 = NFR13_P95_TARGET_MS  # Must stay under 10s p95
 
 
+@pytest.mark.preserve_collection  # Tests are read-only - skip expensive Qdrant cleanup
 class TestEpic2Regression:
     """Regression tests to ensure Epic 2 doesn't degrade Epic 1 baseline.
 
@@ -232,6 +233,7 @@ class TestEpic2Regression:
             )
 
 
+@pytest.mark.preserve_collection  # Tests are read-only - skip cleanup
 class TestEpic2IntegrationSanity:
     """Sanity checks for Epic 2 integration testing infrastructure."""
 

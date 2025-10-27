@@ -41,6 +41,7 @@ LATENCY_CEILING_P95 = NFR13_P95_TARGET_MS  # Must stay under 10s p95
 
 
 @pytest.mark.xdist_group(name="embedding_model")
+@pytest.mark.preserve_collection  # Tests are read-only - skip expensive Qdrant cleanup
 class TestHybridSearchIntegration:
     """Integration tests for hybrid search accuracy and performance.
 

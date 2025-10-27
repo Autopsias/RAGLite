@@ -24,6 +24,7 @@ import pytest
 
 
 @pytest.mark.xdist_group(name="embedding_model")
+@pytest.mark.preserve_collection  # Tests are read-only - skip expensive Qdrant cleanup
 class TestRetrievalIntegration:
     """Integration tests for end-to-end retrieval with real Qdrant.
 

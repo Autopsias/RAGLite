@@ -14,6 +14,7 @@ from raglite.shared.clients import get_qdrant_client
 from raglite.shared.config import settings
 
 
+@pytest.mark.manages_collection_state  # Tests call ingest_pdf(clear_collection=True) - skip re-ingest cleanup
 class TestMetadataInjection:
     """Integration tests for AC3: Metadata injection into Qdrant."""
 
