@@ -1,0 +1,1049 @@
+section_4_data_inventory:
+  metadata:
+    document_title: "Secil - Portugal - Operational Performance Review - August 2025"
+    section_number: 4
+    pages: "61-80 (PT 33-43)"
+    report_period: "August 2025 (Month and YTD)"
+    currency: "1000 EUR"
+    analysis_date: "2025-10-26"
+    thoroughness_level: "very thorough"
+    total_tables_identified: 13
+
+  section_overview:
+    description: "Section 4 covers operational performance across multiple geographic regions and business segments"
+    main_regions_covered:
+      - "Portugal Aggregates - North (Pages 61-62)"
+      - "Portugal Aggregates - Center (Pages 63-64)"
+      - "Portugal Aggregates - South (Pages 65-66)"
+      - "External Quarrying Service (Pages 67-68)"
+      - "Mortars Operations (Pages 69-71)"
+      - "Commercial Segments - Total/MI/ME (Pages 72-75)"
+      - "Terminal Groups - Madeira/Cape Verde/Netherland/Spain (Pages 76-83)"
+      - "Portugal CCL - Clean Cement Line (Pages 84-85)"
+      - "Portugal Structure (Pages 86-87)"
+      - "Rolling Forecast & Working Capital (Pages 88-98)"
+
+  tables_identified:
+    table_001:
+      name: "Secil Portugal Aggregates North - YTD vs Budget vs LY"
+      page: "PT 33"
+      entity: "SECIL AGREGADOS - North Region"
+      period: "August 2025 (Month + YTD)"
+      comparison_type: "Three-way: Actual vs Budget vs Last Year"
+      rows_count: 87
+      columns_count: "8 (Aug-25, B Aug-25, Aug-24, % B, % LY, YTD Aug-25, YTD B Aug-25, YTD Aug-24, YTD % B, YTD % LY)"
+
+      key_metrics_extracted:
+        sales_aggregates_im:
+          value: 882
+          unit: "1000 EUR"
+          metric_type: "Monthly Sales"
+          ytd_value: 6997
+          comparison: "5% vs Budget, 18% vs LY"
+
+        volume_aggregates_kton:
+          value: 111
+          unit: "kton"
+          metric_type: "Monthly Volume"
+          ytd_value: 872
+          comparison: "-6% vs Budget, 9% vs LY"
+
+        price_aggregates:
+          value: 7.9
+          unit: "EUR/ton"
+          metric_type: "Unit Price"
+          ytd_value: 8.02
+          comparison: "3.5% vs Budget, 0.5% vs LY"
+
+        variable_costs:
+          value: 185
+          unit: "1000 EUR"
+          monthly_ytd: 1587
+          cost_per_ton: 1.8
+          note: "Includes Fuel, Electricity, Other Variable Costs"
+
+        fixed_costs:
+          value: 446
+          unit: "1000 EUR"
+          monthly_ytd: 3841
+          cost_per_ton: 4.3
+          note: "Includes Employees, Maintenance, Renting, Other Costs"
+
+        employee_costs:
+          value: 121
+          unit: "1000 EUR"
+          ytd_value: 961
+          fte_count: 44
+          average_cost_per_fte: 21.8
+          turnover_percentage: "11% of turnover"
+
+        ebitda_ifrs:
+          value: 386
+          unit: "1000 EUR"
+          ytd_value: 2012
+          margin_percentage: "24%"
+          comparison: "99% vs Budget, 255% vs LY"
+
+        unit_variable_margin:
+          value: 6.4
+          unit: "EUR/ton"
+          ytd_value: 6.2
+          comparison: "4% vs Budget, -1% vs LY"
+
+        turnover:
+          value: 1002
+          unit: "1000 EUR"
+          ytd_value: 8381
+          comparison: "-8% vs Budget, 8% vs LY"
+
+    table_002:
+      name: "Secil Portugal Aggregates Center - YTD vs Budget vs LY"
+      page: "PT 34"
+      entity: "SECIL AGREGADOS - Center Region"
+      period: "August 2025 (Month + YTD)"
+      comparison_type: "Three-way: Actual vs Budget vs Last Year"
+
+      key_metrics_extracted:
+        sales_aggregates_im:
+          monthly: 1200
+          ytd: 9805
+          ytd_budget: 9660
+          ytd_ly: 9117
+          unit: "1000 EUR"
+          variance_vs_budget: "1%"
+          variance_vs_ly: "8%"
+
+        volume_aggregates_kton:
+          monthly: 156
+          ytd: 1316
+          unit: "kton"
+          monthly_budget: 186
+          monthly_ly: 120
+          variance_pct: "-16%"
+
+        price_aggregates:
+          monthly: 7.7
+          ytd: 7.45
+          unit: "EUR/ton"
+          variance_vs_budget: "16.4%"
+          variance_vs_ly: "3.2%"
+
+        ebitda_ifrs:
+          monthly: 537
+          ytd: 5728
+          ytd_budget: 5901
+          ytd_ly: 5397
+          unit: "1000 EUR"
+          margin_pct: "49%"
+          variance_vs_budget: "-3%"
+          variance_vs_ly: "6%"
+
+        turnover:
+          monthly: 1405
+          ytd: 11602
+          unit: "1000 EUR"
+          variance_vs_budget: "-5%"
+          variance_vs_ly: "1%"
+
+    table_003:
+      name: "Secil Portugal Aggregates South - YTD vs Budget vs LY"
+      page: "PT 35"
+      entity: "SECIL AGREGADOS - South Region"
+      period: "August 2025"
+
+      key_metrics_extracted:
+        sales_aggregates_im:
+          monthly: 844
+          ytd: 7304
+          ytd_budget: 6612
+          ytd_ly: 6482
+          unit: "1000 EUR"
+          variance_pct: "10%"
+
+        volume_aggregates_kton:
+          monthly: 95
+          ytd: 841
+          unit: "kton"
+          variance_pct: "13%"
+
+        price_aggregates:
+          monthly: 8.8
+          ytd: 8.68
+          unit: "EUR/ton"
+          variance_pct: "-0.3%"
+
+        ebitda_ifrs:
+          monthly: 322
+          ytd: 3258
+          unit: "1000 EUR"
+          margin_pct: "40%"
+          variance_vs_budget: "-8%"
+          variance_vs_ly: "-3%"
+
+        turnover:
+          monthly: 926
+          ytd: 8180
+          unit: "1000 EUR"
+          variance_pct: "8% vs Budget, 12% vs LY"
+
+    table_004:
+      name: "Secil Portugal Aggregates External Quarrying Service"
+      page: "PT 36"
+      entity: "SECIL AGREGADOS - External Quarrying Service"
+      period: "August 2025"
+
+      key_metrics_extracted:
+        sales_gypsum_im:
+          monthly: 60
+          ytd: 568
+          unit: "1000 EUR"
+          variance_pct: "12%"
+
+        volume_gypsum_kton:
+          monthly: 7
+          ytd: 65
+          unit: "kton"
+          variance_pct: "12%"
+
+        price_gypsum:
+          monthly: 8.8
+          ytd: 8.78
+          unit: "EUR/ton"
+          variance_pct: "6.0%"
+
+        variable_costs:
+          monthly: 54
+          ytd: 509
+          unit: "1000 EUR"
+          variance_pct: "-17%"
+
+        ebitda_ifrs:
+          monthly: 103
+          ytd: 641
+          unit: "1000 EUR"
+          margin_pct: "27%"
+          variance_pct: "32% vs Budget"
+
+        turnover:
+          monthly: 283
+          ytd: 2380
+          unit: "1000 EUR"
+          variance_pct: "-2%"
+
+        fte_count: 27
+        fte_variance: "-16%"
+
+    table_005:
+      name: "Mortars Business Segment"
+      page: "PT 37-38"
+      entity: "Mortars - Commercial Operations"
+      period: "August 2025"
+      description: "Multi-product mortar lines with geographic and channel breakdown"
+
+      key_metrics_extracted:
+        total_sales_eur:
+          monthly: 2835
+          ytd: 25219
+          unit: "1000 EUR"
+          variance_vs_budget: "-12%"
+          variance_vs_ly: "-6%"
+
+        total_volume_ton:
+          monthly: 25822
+          ytd: 226110
+          unit: "ton"
+          variance_pct: "-11%"
+
+        average_selling_price:
+          monthly: 109.8
+          ytd: 111.5
+          unit: "EUR/ton"
+          variance_pct: "-1%"
+
+        sales_intermediate_market:
+          monthly: 2633
+          ytd: 22567
+          unit: "1000 EUR"
+          pct_of_total: "89%"
+
+        sales_medium_enterprises:
+          monthly: 202
+          ytd: 2651
+          unit: "1000 EUR"
+          pct_of_total: "11%"
+
+        variable_costs:
+          monthly: 1405
+          ytd: 12594
+          unit: "1000 EUR"
+          cost_per_ton: 54.5
+          components:
+            - "Thermal Energy (491k EUR)"
+            - "Gas (326k EUR)"
+            - "Petcoque (129k EUR)"
+            - "Electricity (218k EUR)"
+            - "Raw Materials (9.402M EUR)"
+            - "Packaging (2.450M EUR)"
+
+        fixed_costs:
+          monthly: 276
+          ytd: 5411
+          unit: "1000 EUR"
+          cost_per_ton: 23.4
+          variance_pct: "1%"
+
+        employee_costs:
+          internal_monthly: 234
+          internal_ytd: 1933
+          external_monthly: 145
+          external_ytd: 1039
+          unit: "1000 EUR"
+          total_fte_internal: 76
+          total_fte_external: 51
+
+        ebitda_ifrs:
+          monthly: 483
+          ytd: 6283
+          unit: "1000 EUR"
+          margin_pct: "23%"
+          variance_vs_budget: "-12%"
+
+        turnover:
+          monthly: 2181
+          ytd: 24026
+          unit: "1000 EUR"
+
+    table_006:
+      name: "Commercial - Total Mortars & Accessories"
+      page: "PT 38-40"
+      entity: "Commercial Operations (MI: Intermediate Market, ME: Medium Enterprises)"
+      period: "August 2025"
+      transposed_structure: true
+      note: "This table exhibits transposed structure with product lines as rows and performance metrics as columns"
+
+      key_metrics_extracted:
+        commercial_mi_sales:
+          total_monthly: 2815
+          unit: "1000 EUR"
+          budget_variance: "-2%"
+          product_breakdown:
+            - "Cal (Lime): 67k EUR"
+            - "Argamassas (Mortars): 2566k EUR"
+            - "Granel (Bulk): 141k EUR"
+
+        commercial_me_sales:
+          total_monthly: 20
+          unit: "1000 EUR"
+          ytd: 2651
+          budget_variance: "-51%"
+
+        individual_product_metrics:
+          cal_hidraulica_hl:
+            monthly_sales: 58
+            ytd_sales: 825
+            monthly_volume_ton: 0.5
+            ytd_volume_ton: 6.3
+            price_eur_ton: "130 EUR/ton"
+            variance_vs_budget: "-1%"
+
+          mortars_saco_bagged:
+            monthly_sales: 2426
+            ytd_sales: 20324
+            monthly_volume_ton: 19640
+            ytd_volume_ton: 183508
+            price_eur_ton: "117.8 EUR/ton"
+
+          mortars_redur:
+            monthly_sales: 622
+            ytd_sales: 5348
+            price_eur_ton: "70.4 EUR/ton"
+
+          mortars_adhere:
+            monthly_sales: 228
+            ytd_sales: 1952
+            ytd_volume_ton: 7776
+            variance_vs_ly: "-1%"
+
+          mortars_betao_s:
+            monthly_sales: 262
+            ytd_sales: 2312
+            ytd_variance: "20% vs Budget"
+
+          mortars_isovit:
+            monthly_sales: 498
+            ytd_sales: 3525
+            variance_vs_budget: "-1%"
+
+    table_007:
+      name: "Terminal Group Madeira - Cement & Building Materials"
+      page: "PT 41"
+      entity: "TERMINAL GROUP MADEIRA"
+      period: "August 2025"
+      regions: ["Madeira Terminal Operations"]
+
+      key_metrics_extracted:
+        cement_sales:
+          monthly_volume_kton: 15
+          ytd_volume_kton: 112
+          monthly_price_eur_ton: 157.3
+          ytd_price_eur_ton: 154.1
+          monthly_sales_eur: 1282
+          ytd_sales_eur: 9708
+          unit: "1000 EUR"
+          market_share_pct: "56%"
+          variance_vs_budget: "26%"
+
+        variable_costs_cement:
+          monthly: 1001
+          ytd: 7634
+          unit: "1000 EUR"
+          cost_per_ton: 121.2
+          variance_pct: "1%"
+
+        fixed_costs:
+          monthly: 120
+          ytd: 1074
+          unit: "1000 EUR"
+          cost_per_ton: 17.1
+
+        employee_costs:
+          monthly: 63
+          ytd: 525
+          unit: "1000 EUR"
+          fte_count: 15
+          average_cost_per_fte: 35.0
+
+        ebitda_ifrs_cement:
+          monthly: 194
+          ytd: 1373
+          unit: "1000 EUR"
+          margin_pct: "14%"
+          variance_vs_budget: "28%"
+
+        building_materials:
+          ready_mix_volume_km3: 4
+          aggregates_volume_kton: 9
+          ebitda_monthly: 99
+          ebitda_ytd: 570
+          unit: "1000 EUR"
+          margin_pct: "13%"
+
+        terminal_group_ebitda:
+          monthly: 292
+          ytd: 1943
+          unit: "1000 EUR"
+          margin_pct: "15%"
+          variance_vs_budget: "40%"
+
+        turnover:
+          monthly: 1672
+          ytd: 13051
+          unit: "1000 EUR"
+
+    table_008:
+      name: "Terminal Cape Verde - Cement & Building Materials"
+      page: "PT 42"
+      entity: "TERMINAL CAPE VERDE"
+      period: "August 2025"
+
+      key_metrics_extracted:
+        cement_sales:
+          monthly_volume_kton: 10
+          ytd_volume_kton: 88
+          monthly_sales_eur: 458
+          ytd_sales_eur: 3916
+          unit: "1000 EUR"
+          market_share_pct: "29%"
+          variance_vs_budget: "-20%"
+
+        cement_price:
+          monthly: 159.6
+          ytd: 151.6
+          unit: "EUR/ton"
+          variance_vs_budget: "-7.2%"
+
+        variable_costs:
+          monthly: 392
+          ytd: 3469
+          unit: "1000 EUR"
+          cost_per_ton: 134.3
+          variance_pct: "-14%"
+
+        ebitda_ifrs:
+          cement_monthly: 79
+          cement_ytd: 885
+          building_materials_monthly: 7
+          building_materials_ytd: 29
+          unit: "1000 EUR"
+          total_margin_pct: "20%"
+
+        terminal_ebitda_total:
+          monthly: 86
+          ytd: 915
+          unit: "1000 EUR"
+          margin_pct: "20%"
+          variance_vs_budget: "-26%"
+
+    table_009:
+      name: "Terminal Netherland - Cement Operations"
+      page: "PT 43"
+      entity: "TERMINAL Netherland"
+      period: "August 2025"
+
+      key_metrics_extracted:
+        cement_sales:
+          monthly_volume_kton: 8.7
+          ytd_volume_kton: 102.9
+          monthly_sales_eur: 1312
+          ytd_sales_eur: 15204
+          unit: "1000 EUR"
+          variance_vs_budget: "-22%"
+          variance_vs_ly: "6%"
+
+        cement_price:
+          monthly: 150.5
+          ytd: 147.7
+          unit: "EUR/ton"
+          variance_vs_budget: "-1.3%"
+
+        variable_costs:
+          monthly: 799
+          ytd: 9319
+          unit: "1000 EUR"
+          cost_per_ton: 90.5
+          variance_pct: "-15%"
+
+        net_transport_costs:
+          monthly: 97
+          ytd: 1152
+          unit: "1000 EUR"
+          variance_pct: "-26%"
+
+        ebitda_ifrs:
+          monthly: 333
+          ytd: 4017
+          unit: "1000 EUR"
+          margin_pct: "26%"
+          variance_vs_budget: "-7%"
+
+        turnover:
+          monthly: 1312
+          ytd: 15204
+          unit: "1000 EUR"
+
+    table_010:
+      name: "Terminal Spain - Cement & Building Materials"
+      page: "PT 44"
+      entity: "TERMINAL GROUP SPAIN"
+      period: "August 2025"
+
+      key_metrics_extracted:
+        cement_sales:
+          monthly_volume_kton: 5.6
+          ytd_volume_kton: 43.0
+          monthly_sales_eur: 633
+          ytd_sales_eur: 4854
+          unit: "1000 EUR"
+          price_eur_ton: 112.8
+          variance_vs_budget: "-10%"
+
+        building_materials_ready_mix:
+          monthly_volume_km3: 3
+          monthly_sales_eur: 231
+          ytd_sales_eur: 2866
+          unit: "1000 EUR"
+          price_eur_m3: 82.2
+
+        aggregates:
+          monthly_volume_kton: 16
+          ytd_volume_kton: 153
+          monthly_sales_eur: 142
+          ytd_sales_eur: 1332
+          unit: "1000 EUR"
+          price_eur_ton: 8.7
+
+        ebitda_ifrs:
+          cement_monthly: 205
+          cement_ytd: 1498
+          building_materials_monthly: 40
+          building_materials_ytd: 1236
+          unit: "1000 EUR"
+          terminal_total_ytd: 2735
+          margin_pct: "29%"
+          variance_vs_budget: "23%"
+
+        turnover:
+          monthly: 1049
+          ytd: 9381
+          unit: "1000 EUR"
+
+    table_011:
+      name: "Portugal CCL - Clean Cement Line"
+      page: "PT 45"
+      entity: "Portugal CCL - Clean Cement Line"
+      period: "August 2025"
+      structure_type: "Specialized operational unit"
+
+      key_metrics_extracted:
+        revenue:
+          monthly: 80
+          ytd: 1267
+          unit: "1000 EUR"
+          variance_pct: "4%"
+
+        total_costs:
+          monthly: 74
+          ytd: 1838
+          unit: "1000 EUR"
+          variance_pct: "51%"
+
+        cost_breakdown:
+          maintenance: 1185
+          employees: 435
+          travel_accommodation: 57
+          car_expenses: 5
+          specialized_services: 74
+          insurance: 0
+          unit: "1000 EUR YTD"
+
+        ebitda_ifrs:
+          monthly: 6
+          ytd: -570
+          unit: "1000 EUR"
+          note: "Negative EBITDA indicates losses"
+
+    table_012:
+      name: "Portugal Structure - Support Functions"
+      page: "PT 46"
+      entity: "Portugal Structure - Corporate Support Functions"
+      period: "August 2025"
+      description: "Overhead and support function costs for Portuguese operations"
+
+      key_metrics_extracted:
+        corporate_general_management_cgpt:
+          monthly_cost: -46.38
+          ytd_cost: -719.23
+          unit: "1000 EUR"
+          fte_count: 8
+          variance_vs_budget: "-39%"
+
+        operational_improvement_cimp:
+          monthly_cost: 18.36
+          ytd_cost: -1011.23
+          unit: "1000 EUR"
+          fte_count: 20
+          variance_vs_budget: "-10%"
+
+        comptroller_comp:
+          monthly_cost: -126.92
+          ytd_cost: -1238.78
+          unit: "1000 EUR"
+          fte_count: 22
+          variance_vs_budget: "1%"
+
+        engineering_materials_emat:
+          monthly_cost: -46.24
+          ytd_cost: -525.86
+          unit: "1000 EUR"
+          fte_count: 15
+          variance_vs_budget: "28%"
+
+        environment_systems_mgmt:
+          monthly_cost: -45.58
+          ytd_cost: -496.20
+          unit: "1000 EUR"
+          fte_count: 8
+          variance_vs_budget: "-18%"
+
+        legal_jurd_pt:
+          monthly_cost: -14.75
+          ytd_cost: -195.31
+          unit: "1000 EUR"
+          fte_count: 1
+          variance_vs_budget: "-32%"
+
+        marketing_mktg:
+          monthly_cost: -70.89
+          ytd_cost: -1414.49
+          unit: "1000 EUR"
+          fte_count: 8
+          variance_vs_budget: "4%"
+
+        digital_pt:
+          monthly_cost: -297.80
+          ytd_cost: -2111.16
+          unit: "1000 EUR"
+          fte_count: 19
+          variance_vs_budget: "-6%"
+
+        total_structure_costs:
+          monthly: -1435.83
+          ytd: -14012.30
+          unit: "1000 EUR"
+          total_fte: 161
+          variance_vs_budget: "-9%"
+          variance_vs_ly: "96%"
+
+    table_013:
+      name: "Net Working Capital Analysis"
+      page: "PT 48"
+      entity: "Secil Portugal - Net Working Capital"
+      period: "YTD August 2025"
+
+      key_metrics_extracted:
+        accounts_receivable:
+          ytd_aug_2025: 86454
+          budget_aug_2025: 67504
+          ytd_aug_2024: 84656
+          unit: "1000 EUR"
+          dso_days: 54
+          variance_vs_budget: "28%"
+          variance_vs_ly: "2%"
+
+        inventories:
+          ytd_aug_2025: 60957
+          ytd_budget: 58706
+          ytd_ly: 55276
+          unit: "1000 EUR"
+          variance_vs_budget: "4%"
+          variance_vs_ly: "10%"
+          inventory_breakdown:
+            finished_goods: 21124
+            raw_materials: 9929
+            subsidiaries_packing: 4562
+            other_materials: 15551
+            other_goods: 9792
+
+          dio_days: 142
+          variance_vs_budget_dio: "-3 days"
+
+        accounts_payable:
+          ytd_aug_2025: 69572
+          ytd_budget: 84433
+          ytd_ly: 79201
+          unit: "1000 EUR"
+          dpo_days: 67
+          variance_vs_budget: "-18%"
+          variance_vs_ly: "-12%"
+
+        trade_working_capital:
+          ytd_aug_2025: 77839
+          ytd_budget: 41777
+          ytd_ly: 60730
+          unit: "1000 EUR"
+          pct_of_turnover: "14%"
+          variance_vs_budget: "86%"
+          variance_vs_ly: "28%"
+
+        turnover_12m:
+          amount: 541196
+          unit: "1000 EUR"
+
+  data_samples:
+    sample_values_with_context:
+      - metric: "Portugal Aggregates North - Monthly Sales"
+        value: 882
+        unit: "1000 EUR"
+        date: "August 2025"
+        variance_budget: "5% favorable"
+        variance_ly: "18% favorable"
+        segment: "Aggregates - Intermediate Market"
+
+      - metric: "Portugal Aggregates North - Volume"
+        value: 111
+        unit: "kton"
+        date: "August 2025 Monthly"
+        ytd_value: 872
+        variance_pct: "-6% vs Budget"
+
+      - metric: "Portugal Aggregates Center - EBITDA"
+        value: 537
+        unit: "1000 EUR"
+        date: "August 2025 Monthly"
+        ytd: 5728
+        margin_pct: "49%"
+        variance_vs_budget: "-3%"
+
+      - metric: "Portugal Aggregates South - Price per Ton"
+        value: 8.8
+        unit: "EUR/ton"
+        variance_vs_ly: "-0.3%"
+        ytd_price: 8.68
+
+      - metric: "Terminal Madeira - Cement Sales"
+        value: 1282
+        unit: "1000 EUR"
+        date: "August 2025"
+        market_share: "56%"
+        variance_vs_budget: "26% favorable"
+
+      - metric: "Terminal Cape Verde - Market Share"
+        value: 29
+        unit: "%"
+        ytd_volume: 88
+        ytd_volume_unit: "kton"
+
+      - metric: "Terminal Netherland - Price per Ton"
+        value: 150.5
+        unit: "EUR/ton"
+        monthly: "August 2025"
+        ytd_price: 147.7
+        variance: "-1.3%"
+
+      - metric: "Terminal Spain - Ready-Mix Sales"
+        value: 231
+        unit: "1000 EUR"
+        monthly: "August 2025"
+        ytd: 2866
+        volume_km3: 3
+
+      - metric: "Mortars - Total Sales"
+        value: 2835
+        unit: "1000 EUR"
+        date: "August 2025"
+        ytd: 25219
+        variance_vs_budget: "-12%"
+        variance_vs_ly: "-6%"
+
+      - metric: "Mortars - Variable Cost per Ton"
+        value: 54.5
+        unit: "EUR/ton"
+        ytd_value: "54.5"
+        variance_pct: "-4%"
+
+      - metric: "Portugal Structure - Total Costs"
+        value: 1435.83
+        unit: "1000 EUR"
+        monthly: "August 2025"
+        ytd: 14012.30
+        headcount: 161
+        variance_vs_budget: "-9%"
+
+      - metric: "Trade Working Capital"
+        value: 77839
+        unit: "1000 EUR"
+        period: "YTD August 2025"
+        pct_of_turnover: "14%"
+        dso_days: 54
+        dio_days: 142
+        dpo_days: 67
+
+      - metric: "Accounts Receivable"
+        value: 86454
+        unit: "1000 EUR"
+        period: "YTD August 2025"
+        dso_days: 54
+        variance_vs_budget: "28%"
+
+      - metric: "Inventories - Raw Materials"
+        value: 9929
+        unit: "1000 EUR"
+        period: "YTD August 2025"
+        variance_vs_budget: "0%"
+
+      - metric: "Terminal Group Madeira - Terminal EBITDA"
+        value: 292
+        unit: "1000 EUR"
+        monthly: "August 2025"
+        ytd: 1943
+        margin_pct: "15%"
+
+      - metric: "Mortars - Employee Costs Internal"
+        value: 234
+        unit: "1000 EUR"
+        monthly: "August 2025"
+        ytd: 1933
+        fte: 76
+        average_cost_fte: 25.39
+
+  table_structure_analysis:
+    transposed_tables:
+      - table_name: "Commercial Operations (Table 006)"
+        page: "PT 38-40"
+        description: "Product lines listed as rows with financial metrics as columns"
+        characteristics:
+          - "Products: Cal, Argamassas (Mortars), Granel, etc."
+          - "Metrics: Sales EUR, Volume, Price/Ton, Margins, Variances"
+          - "Cross-tabulation between Commercial MI/ME segments"
+
+    standard_format_tables:
+      - table_name: "All regional operational performance tables"
+        format: "Rows = metrics, Columns = periods (Monthly Aug-25, Budget, LY, YTD)"
+        columns_structure:
+          - "Column 1: Metric Name"
+          - "Columns 2-5: Monthly Comparison (Actual, Budget, LY, Variance %)"
+          - "Columns 6-10: YTD Comparison (Actual, Budget, LY, Variance %)"
+
+    multi_level_hierarchies:
+      - "Mortars table with product-level breakdown"
+      - "Terminal groups with segment breakdowns (Cement, Building Materials, etc.)"
+      - "Portugal Structure with departmental cost centers"
+
+  data_quality_observations:
+    completeness:
+      - "All tables contain Month and YTD periods"
+      - "Variance calculations: % vs Budget and % vs LY"
+      - "Most metrics have both absolute and per-unit values"
+
+    anomalies_detected:
+      - "Terminal Madeira and Cape Verde show significantly lower volumes than Portugal operations"
+      - "CCL (Clean Cement Line) shows negative EBITDA (-570k EUR YTD) - loss-making operation"
+      - "Morocco market share in Cape Verde is only 2.1% vs budget 3.1% - significant underperformance"
+      - "Trade Receivables (86.5M EUR) 28% above budget, indicating collection challenges"
+      - "Some cells contain extreme percentage variances (e.g., '-64331800%') indicating data quality issues or division by near-zero values"
+
+    data_consolidation_notes:
+      - "Portugal operations consolidated into North/Center/South regions"
+      - "Terminal operations reported separately (Madeira, Cape Verde, Netherland, Spain)"
+      - "Corporate Structure costs broken down by 15+ cost centers"
+      - "Mortars segment has complex product matrix (11+ product lines)"
+
+  ground_truth_query_proposals:
+    query_set_1:
+      query_001:
+        question: "What was the EBITDA margin percentage for Portugal Aggregates Center in August 2025 YTD, and how does this compare to the prior year?"
+        expected_answer: "The EBITDA margin for Portugal Aggregates Center was 49% YTD in August 2025, compared to 47% in August 2024, a 2.4 percentage point increase."
+        table_reference: "Table PT 34 (Aggregates Center)"
+        metrics_required: ["EBITDA IFRS Margin", "YTD comparison"]
+        difficulty: "Medium"
+        data_points_needed: [5728, 5901, 5397, "49%", "47%"]
+
+      query_002:
+        question: "How many FTEs (Full-Time Equivalents) does the Portugal Structure employ across all cost centers, and what is the total annual cost per FTE?"
+        expected_answer: "Portugal Structure has 161 FTEs with a YTD cost of 14,012k EUR, or an average of 87k EUR per FTE annually."
+        table_reference: "Table PT 46 (Portugal Structure)"
+        metrics_required: ["Total FTE count", "Total EBITDA cost", "Cost per FTE calculation"]
+        difficulty: "Medium"
+        data_points_needed: [161, 14012.30, 87]
+
+      query_003:
+        question: "What is the combined YTD EBITDA for all Terminal Groups (Madeira, Cape Verde, Netherland, Spain), and which terminal has the highest margin percentage?"
+        expected_answer: "Combined YTD EBITDA: 1,943 + 915 + 4,017 + 2,735 = 9,610k EUR. Terminal Spain has the highest margin at 29%, followed by Madeira at 15%, Cape Verde at 20%, and Netherland at 26%."
+        table_reference: "Tables PT 41-44"
+        metrics_required: ["EBITDA by terminal", "Margin percentages"]
+        difficulty: "High"
+        data_points_needed: [1943, 915, 4017, 2735, "29%", "26%", "20%", "15%"]
+
+      query_004:
+        question: "What was the total volume of aggregates sold across all three Portuguese regions in August 2025 (monthly), and which region had the highest price per ton?"
+        expected_answer: "Total monthly volume: 111 + 156 + 95 = 362 kton. South region had highest price at 8.8 EUR/ton, followed by North at 7.9 EUR/ton and Center at 7.7 EUR/ton."
+        table_reference: "Tables PT 33-35"
+        metrics_required: ["Volume by region", "Price per ton", "Regional comparison"]
+        difficulty: "Medium"
+        data_points_needed: [111, 156, 95, 8.8, 7.9, 7.7]
+
+      query_005:
+        question: "What is the Days Sales Outstanding (DSO) for accounts receivable, and how much is the trade working capital above budget?"
+        expected_answer: "DSO is 54 days (August 2025). Trade working capital is 77,839k EUR vs. budget of 41,777k EUR, representing an 86% variance above budget."
+        table_reference: "Table PT 48 (Net Working Capital)"
+        metrics_required: ["DSO calculation", "Trade working capital", "Budget variance"]
+        difficulty: "Medium"
+        data_points_needed: [54, 77839, 41777, "86%"]
+
+    query_set_2:
+      query_006:
+        question: "For Terminal Cape Verde, what was the market share percentage and how did the cement sales volume compare to budget?"
+        expected_answer: "Market share was 29%, with YTD cement sales of 88 kton vs. budget of 98 kton, representing a 10% variance below budget."
+        table_reference: "Table PT 42 (Terminal Cape Verde)"
+        metrics_required: ["Market share", "Volume actual vs budget", "Variance calculation"]
+        difficulty: "Medium"
+        data_points_needed: ["29%", 88, 98, "-10%"]
+
+      query_007:
+        question: "What is the cost breakdown for Portugal CCL (Clean Cement Line) YTD, and is this operation profitable?"
+        expected_answer: "YTD revenue is 1,267k EUR with total costs of 1,838k EUR, resulting in EBITDA of -570k EUR. This operation is loss-making, with maintenance costs of 1,185k EUR being the largest expense."
+        table_reference: "Table PT 45 (Portugal CCL)"
+        metrics_required: ["Revenue", "Total costs", "Cost components", "EBITDA", "Profitability assessment"]
+        difficulty: "Medium"
+        data_points_needed: [1267, 1838, 1185, -570, "loss-making"]
+
+      query_008:
+        question: "How much have inventories increased compared to last year, and which inventory category represents the largest share?"
+        expected_answer: "YTD inventories are 60,957k EUR vs. 55,276k EUR last year, a 10% increase. Other Materials represent the largest share at 15,551k EUR (25.5% of total), followed by Finished Goods at 21,124k EUR (34.7%)."
+        table_reference: "Table PT 48 (Net Working Capital)"
+        metrics_required: ["Inventory totals", "YoY comparison", "Inventory composition"]
+        difficulty: "Medium"
+        data_points_needed: [60957, 55276, "10%", 15551, 21124]
+
+      query_009:
+        question: "What are the price differences for Mortars Saco (bagged mortars) between the two commercial channels (MI vs. ME), and what explains the variance?"
+        expected_answer: "Mortars Saco shows 120.3 EUR/ton in MI channel vs. 252.1 EUR/ton in ME channel, reflecting the significant premium charged to medium enterprises. This represents a 109% price differential."
+        table_reference: "Table PT 38 (Commercial Operations)"
+        metrics_required: ["Product pricing by channel", "Channel analysis", "Price variance"]
+        difficulty: "High"
+        data_points_needed: [120.3, 252.1, "109% premium"]
+
+      query_010:
+        question: "For the Mortars segment, what is the total YTD raw materials cost, and what percentage of this is represented by cement and aggregates combined?"
+        expected_answer: "Total raw materials cost YTD is 9,402k EUR. Cement (Cimento) is 3,595k EUR and Aggregates are 2,603k EUR, combining for 6,198k EUR or 65.9% of raw materials."
+        table_reference: "Table PT 37-38 (Mortars)"
+        metrics_required: ["Raw materials breakdown", "Component analysis", "Percentage calculation"]
+        difficulty: "High"
+        data_points_needed: [9402, 3595, 2603, "65.9%"]
+
+    query_set_3:
+      query_011:
+        question: "What is the Variable Cost per Ton for Portugal Aggregates North, and how does it compare to the Fixed Cost per Ton?"
+        expected_answer: "Variable Cost per Ton YTD is 1.8 EUR/ton, while Fixed Cost per Ton is 4.3 EUR/ton. Total cost per ton is 6.1 EUR/ton, with fixed costs representing 70% of total unit costs."
+        table_reference: "Table PT 33 (Aggregates North)"
+        metrics_required: ["Variable cost per unit", "Fixed cost per unit", "Cost structure analysis"]
+        difficulty: "Medium"
+        data_points_needed: [1.8, 4.3, 6.1, "70%"]
+
+      query_012:
+        question: "How much has the financial net debt increased YTD August 2025, and what was the primary driver?"
+        expected_answer: "Financial net debt increased from 218.9M EUR opening balance to 244.7M EUR closing balance, an increase of 25.8M EUR or 11.8%. The primary drivers were negative operating cash flow (-25.9M EUR) partially offset by other working capital movements."
+        table_reference: "Table PT 49 (Cash Flow)"
+        metrics_required: ["Net debt analysis", "Cash flow drivers", "Working capital impact"]
+        difficulty: "High"
+        data_points_needed: [218858, 244709, 25851, "-25.9M EUR"]
+
+      query_013:
+        question: "For Terminal Netherland Cement, what is the EBITDA and margin percentage, and how did this compare to the prior year?"
+        expected_answer: "YTD EBITDA is 4,017k EUR with a 26% margin. This represents a -7% variance vs. budget (4,338k EUR budget) but is better than some other terminals due to the high margin percentage."
+        table_reference: "Table PT 43 (Terminal Netherland)"
+        metrics_required: ["EBITDA calculation", "Margin percentage", "Budget variance", "YoY comparison"]
+        difficulty: "Medium"
+        data_points_needed: [4017, "26%", "-7%"]
+
+      query_014:
+        question: "What are the total Operating Income and Costs for Portugal Aggregates North's entire YTD, and what is the resulting gross margin percentage?"
+        expected_answer: "YTD Operating Income (Sales) is 8,381k EUR. Total Operating Costs are 6,369k EUR (3,841k fixed + 2,528k variable). Gross margin is approximately 24% (2,012k EBITDA / 8,381k Sales)."
+        table_reference: "Table PT 33"
+        metrics_required: ["Revenue total", "Cost structure", "Margin calculation"]
+        difficulty: "High"
+        data_points_needed: [8381, 6369, "24%", 2012]
+
+      query_015:
+        question: "Which Portugal Aggregates region has the best EBITDA margin, and by how many percentage points does it exceed the worst performing region?"
+        expected_answer: "Portugal Aggregates Center has the best margin at 49%, while South has 40%, and North has 24%. Center exceeds North by 25 percentage points, and exceeds South by 9 percentage points."
+        table_reference: "Tables PT 33-35"
+        metrics_required: ["Margin comparison", "Regional benchmarking", "Variance analysis"]
+        difficulty: "High"
+        data_points_needed: ["49%", "40%", "24%", "25 pp", "9 pp"]
+
+  recommended_test_data_selections:
+    critical_metrics_for_validation:
+      - "Regional EBITDA and margins (North 24%, Center 49%, South 40%)"
+      - "Terminal EBITDA across all four locations (Madeira, Cape Verde, Netherland, Spain)"
+      - "Mortars segment YTD sales (25,219k EUR) and profitability"
+      - "Trade Working Capital composition and DSO/DIO/DPO days"
+      - "Portugal Structure headcount (161 FTEs) and cost management"
+      - "Price comparisons across channels and products"
+      - "Cost per unit metrics for benchmarking"
+
+    validation_gates:
+      - "All tables should reconcile: YTD totals = Sum of monthly actuals"
+      - "Variance calculations verified: (Actual - Budget) / Budget * 100"
+      - "Margin checks: EBITDA / Sales should match stated percentages"
+      - "Working capital reconciliation: AR + INV = AP + Trade WC"
+      - "FTE counts and cost per employee calculations"
+
+  storage_recommendations:
+    file_format: "YAML with structured nested hierarchy"
+    update_frequency: "Monthly with new operational data"
+    version_control: "Tag by report period (e.g., August-2025-v1.0)"
+    related_documents:
+      - "Section 3 (Pages 45-60) - Complementary operational metrics"
+      - "Management commentary and strategic decisions"
+      - "Prior month comparisons for trend analysis"

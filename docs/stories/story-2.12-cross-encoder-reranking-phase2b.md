@@ -1,8 +1,16 @@
-# Story 2.12: Cross-Encoder Re-Ranking (Phase 2B)
+# Story 2.12: Cross-Encoder Re-Ranking (Phase 2B Fallback)
 
-Status: Ready
+Status: ON HOLD - Awaiting Story 2.13 Validation
 
-**⚠️ CONDITIONAL STORY:** Only implement if Phase 2A achieves <70% retrieval accuracy after Stories 2.8-2.11 course correction AND Story 2.7 (Multi-Index Search) is complete.
+**⚠️ CONDITIONAL STORY:** Only implement if Story 2.13 (SQL Table Search) achieves <70% retrieval accuracy.
+
+**Context Update (2025-10-26):**
+Phase 2A failed with 18% accuracy due to semantic search being unable to distinguish tables with identical headers. Story 2.13 (SQL Table Search) is now the primary path (expected 70-80% accuracy based on production evidence from FinRAG, Bloomberg, Salesforce). This story (cross-encoder re-ranking) serves as a fallback to add +3-5pp improvement if Story 2.13 achieves <70%.
+
+**Dependencies:**
+- ✅ Story 2.13 must be validated first
+- ✅ Story 2.7 (Multi-Index Search) complete
+- Trigger condition: Story 2.13 accuracy <70%
 
 **NOTE:** This story was originally numbered 2.8 but renumbered to 2.12 to accommodate Phase 2A course correction stories (2.8-2.11) identified in the Phase 2A Deep Dive Analysis (2025-10-25).
 

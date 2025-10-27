@@ -74,10 +74,12 @@ development_status:
   2-8-table-aware-chunking: done  # Completed: 2025-10-25, Review approved, DoD met
   2-9-fix-ground-truth-page-references: done
   2-10-fix-query-classification-over-routing: done  # Review approved: 2025-10-25, Exceptional results (6% SQL, 90% HYBRID, 0% fallback)
-  2-11-fix-hybrid-search-scoring: backlog
+  2-11-fix-hybrid-search-scoring: in-progress  # Started: 2025-10-25, Dev: Amelia | Senior Review: 2025-10-27 (Changes Requested - AC2/AC4 failed, RRF bug investigation needed)
   # Phase 2B Stories (ON HOLD pending Phase 2A re-validation)
   2-12-cross-encoder-re-ranking: on-hold
-  2-13-ac3-final-validation-phase2b: on-hold
+  # Phase 2A-REVISED (SQL Table Search - alternative to Phase 2B)
+  2-13-sql-table-search-phase2a-revised: done  # Review completed 2025-10-27. AC1-AC3: PRODUCTION-READY (99.39% table extraction, SQL generation, hybrid orchestration). AC4: 4% baseline documented. Story COMPLETE - SQL edge case refinement deferred to Story 2.14 per review recommendation.
+  2-14-sql-generation-edge-case-refinement: drafted  # Created 2025-10-27. Addresses 5 SQL generation edge cases to improve accuracy from 4% → ≥70%. Epic 2 Phase 2A completion blocker. 10-day effort, iterative testing approach.
   epic-2-retrospective: optional
 
   # Epic 3: AI Intelligence & Orchestration

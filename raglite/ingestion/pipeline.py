@@ -30,6 +30,7 @@ from qdrant_client.models import (
     VectorParams,
 )
 
+from raglite.ingestion.table_extraction import TableExtractor
 from raglite.shared.bm25 import create_bm25_index, save_bm25_index
 from raglite.shared.clients import get_embedding_model, get_qdrant_client
 from raglite.shared.config import settings
@@ -851,6 +852,150 @@ async def store_metadata_in_postgresql(
         raise RuntimeError(f"Failed to store metadata in PostgreSQL: {e}") from e
 
 
+async def store_tables_in_postgresql(
+    table_rows: list[dict[str, Any]], batch_size: int = 100
+) -> tuple[int, int]:
+    """Store extracted table rows in PostgreSQL financial_tables table.
+
+    Story 2.13 AC1: Table Extraction to SQL Database
+
+    Args:
+        table_rows: List of table row dicts from TableExtractor
+        batch_size: Records per batch (default: 100 for memory efficiency)
+
+    Returns:
+        Tuple of (records_stored, records_skipped)
+
+    Raises:
+        RuntimeError: If PostgreSQL storage fails
+
+    Example:
+        >>> stored, skipped = await store_tables_in_postgresql(table_rows)
+        >>> logger.info(f"Stored {stored} rows, skipped {skipped}")
+    """
+    from psycopg2.extras import execute_values
+
+    from raglite.shared.clients import get_postgresql_connection
+
+    start_time = time.time()
+
+    logger.info(
+        "Storing table data in PostgreSQL",
+        extra={
+            "row_count": len(table_rows),
+            "batch_size": batch_size,
+        },
+    )
+
+    if not table_rows:
+        logger.info("No table rows to store in PostgreSQL")
+        return (0, 0)
+
+    # Filter rows with at least one data field populated
+    valid_rows = [
+        row
+        for row in table_rows
+        if row.get("entity") or row.get("metric") or row.get("value") is not None
+    ]
+
+    skipped_count = len(table_rows) - len(valid_rows)
+
+    if not valid_rows:
+        logger.info(
+            "No valid table rows to store in PostgreSQL - all rows empty",
+            extra={"total_rows": len(table_rows)},
+        )
+        return (0, len(table_rows))
+
+    logger.info(
+        "Filtered table rows for PostgreSQL storage",
+        extra={
+            "total_rows": len(table_rows),
+            "valid_rows": len(valid_rows),
+            "skipped": skipped_count,
+        },
+    )
+
+    try:
+        conn = get_postgresql_connection()
+        cursor = conn.cursor()
+
+        # Prepare records for batch insert
+        records = []
+        for row in valid_rows:
+            record = (
+                row.get("document_id"),
+                row.get("page_number"),
+                row.get("table_index"),
+                row.get("table_caption"),
+                row.get("entity"),
+                row.get("metric"),
+                row.get("period"),
+                row.get("fiscal_year"),
+                row.get("value"),
+                row.get("unit"),
+                row.get("row_index"),
+                row.get("column_name"),
+                row.get("chunk_text"),
+            )
+            records.append(record)
+
+        # Insert in batches
+        total_batches = (len(records) + batch_size - 1) // batch_size
+
+        for i in range(0, len(records), batch_size):
+            batch_num = (i // batch_size) + 1
+            batch_records = records[i : i + batch_size]
+
+            logger.info(
+                f"Uploading PostgreSQL batch {batch_num}/{total_batches}",
+                extra={
+                    "batch_num": batch_num,
+                    "batch_size": len(batch_records),
+                    "total_batches": total_batches,
+                },
+            )
+
+            execute_values(
+                cursor,
+                """
+                INSERT INTO financial_tables (
+                    document_id, page_number, table_index, table_caption,
+                    entity, metric, period, fiscal_year, value, unit,
+                    row_index, column_name, chunk_text
+                ) VALUES %s
+                """,
+                batch_records,
+            )
+
+        conn.commit()
+        cursor.close()
+
+        duration_ms = int((time.time() - start_time) * 1000)
+
+        logger.info(
+            "PostgreSQL table storage complete",
+            extra={
+                "records_stored": len(valid_rows),
+                "records_skipped": skipped_count,
+                "duration_ms": duration_ms,
+                "records_per_second": round(len(valid_rows) / (duration_ms / 1000), 2)
+                if duration_ms > 0
+                else 0,
+            },
+        )
+
+        return (len(valid_rows), skipped_count)
+
+    except Exception as e:
+        logger.error(
+            "PostgreSQL table storage failed",
+            extra={"error": str(e)},
+            exc_info=True,
+        )
+        raise RuntimeError(f"Failed to store tables in PostgreSQL: {e}") from e
+
+
 async def ingest_document(file_path: str) -> DocumentMetadata:
     """Ingest financial document (PDF or Excel) with automatic format detection.
 
@@ -1006,6 +1151,7 @@ async def ingest_pdf(
         # Based on: 40-page = 3m51s, 160-page expected = ~15-18min, buffer = 25min
         pipeline_options = PdfPipelineOptions(
             do_table_structure=True,
+            do_ocr=False,  # Disable OCR for 50% speedup - financial PDFs have embedded text
             accelerator_options=AcceleratorOptions(num_threads=thread_count),
             document_timeout=1500,  # 25 minutes max per document
         )
@@ -1050,6 +1196,49 @@ async def ingest_pdf(
             exc_info=True,
         )
         raise RuntimeError(error_msg) from e
+
+    # Story 2.13 AC1: Extract tables to PostgreSQL (avoid double-conversion)
+    # Extract tables from Docling result before chunking to reuse conversion
+    logger.info(
+        "Extracting tables for SQL storage",
+        extra={"doc_filename": pdf_path.name},
+    )
+    try:
+        extractor = TableExtractor()
+        table_rows = extractor.extract_tables_from_result(result, pdf_path.stem)
+
+        if table_rows:
+            logger.info(
+                "Tables extracted from document",
+                extra={
+                    "doc_filename": pdf_path.name,
+                    "table_count": len({row["table_index"] for row in table_rows}),
+                    "row_count": len(table_rows),
+                },
+            )
+
+            # Store tables in PostgreSQL
+            rows_stored, rows_skipped = await store_tables_in_postgresql(table_rows)
+            logger.info(
+                "Table storage complete",
+                extra={
+                    "doc_filename": pdf_path.name,
+                    "rows_stored": rows_stored,
+                    "rows_skipped": rows_skipped,
+                },
+            )
+        else:
+            logger.info(
+                "No tables found in document",
+                extra={"doc_filename": pdf_path.name},
+            )
+    except Exception as e:
+        # Don't fail ingestion if table extraction fails - log and continue
+        logger.warning(
+            "Table extraction failed - continuing with document ingestion",
+            extra={"doc_filename": pdf_path.name, "error": str(e)},
+            exc_info=True,
+        )
 
     # Extract page count from DoclingDocument
     # Use num_pages() method which returns total page count

@@ -11,8 +11,8 @@
   },
   "sql_fallback_rate": 0.0,
   "sql_fallback_count": 0,
-  "latency_p50_ms": 782.0848226547241,
-  "latency_p95_ms": 2152.632439136505,
+  "latency_p50_ms": 810.7044696807861,
+  "latency_p95_ms": 2584.9705815315247,
   "validation_passed": true,
   "checks": {
     "SQL_ONLY routing \u2264 8%": true,

@@ -1,0 +1,253 @@
+# Data Inventory Template
+# Use this template to document each 20-page section
+
+section_id: 1  # 1-8
+pages: [1, 20]  # Page range
+reviewer: "Claude Code"
+review_date: "2025-10-26"
+status: "pending"  # pending, in_progress, complete
+
+# Table Inventory
+tables:
+  - page: 6
+    type: "traditional"  # traditional | transposed | pivot | summary
+    caption: "EBITDA Summary - Monthly Evolution"
+    row_count: 15
+    col_count: 8
+    metrics:
+      - name: "EBITDA"
+        unit: "EUR"
+        format: "integer"  # integer | decimal | percentage
+      - name: "Turnover"
+        unit: "EUR"
+        format: "integer"
+      - name: "EBITDA/Turnover"
+        unit: "%"
+        format: "percentage"
+    entities:
+      - "Portugal Cement"
+      - "Spain Ready-Mix"
+      - "France Aggregates"
+      - "Tunisia Cement"
+    periods:
+      - "Aug-24"
+      - "Aug-25"
+      - "Budget"
+      - "YTD Aug-25"
+      - "YTD Aug-24"
+    notes: "Traditional table with entities in rows, metrics in columns"
+
+  - page: 20
+    type: "transposed"
+    caption: "Cost per ton - Variable and Fixed Costs"
+    row_count: 12
+    col_count: 9
+    metrics:
+      - name: "Variable Cost"
+        unit: "EUR/ton"
+        format: "decimal"
+      - name: "Thermal Energy"
+        unit: "EUR/ton"
+        format: "decimal"
+      - name: "Fixed Costs"
+        unit: "EUR/ton"
+        format: "decimal"
+      - name: "Sales Volumes"
+        unit: "kton"
+        format: "integer"
+    entities:
+      - "Portugal"
+      - "Tunisia"
+      - "Lebanon"
+      - "Brazil"
+    periods:
+      - "Aug-25"
+      - "Budget"
+      - "Aug-24"
+    notes: "Transposed table - metrics as row labels, entities as column headers"
+
+# Sample Data Values (for ground truth validation)
+sample_values:
+  - entity: "Portugal Cement"
+    metric: "EBITDA"
+    period: "Aug-25"
+    value: 12345
+    unit: "EUR"
+    page: 6
+    table_index: 1
+    row_index: 3
+    column_name: "EBITDA"
+    source_cell: "B3"
+    extraction_confidence: "high"  # high | medium | low
+    notes: "Main EBITDA figure for Portugal Cement division"
+
+  - entity: "Portugal"
+    metric: "Variable Cost"
+    period: "Aug-25"
+    value: -23.4
+    unit: "EUR/ton"
+    page: 20
+    table_index: 2
+    row_index: 3
+    column_name: "Portugal_Aug-25"
+    source_cell: "B3"
+    extraction_confidence: "high"
+    notes: "Transposed table - metric in first column, entity in header"
+
+# Ground Truth Query Ideas
+query_ideas:
+  # Point Queries (Single Value Retrieval)
+  - id: "Q001"
+    category: "point"
+    difficulty: "easy"
+    query: "What is the variable cost for Portugal Cement in August 2025?"
+    expected_answer:
+      type: "numeric_with_unit"
+      value: -23.4
+      unit: "EUR/ton"
+      entity: "Portugal"
+      metric: "Variable Cost"
+      period: "August 2025"
+    expected_sources:
+      pages: [20]
+      tables: ["Cost per ton - transposed"]
+    validation_criteria:
+      value_tolerance: 0.1  # ±0.1 EUR/ton
+      require_unit: true
+      require_entity: true
+      require_period: true
+    common_errors:
+      - "Wrong sign (positive instead of negative)"
+      - "Wrong entity (Portugal Ready-Mix instead of Portugal Cement)"
+      - "Wrong period (Aug-24 instead of Aug-25)"
+
+  # Comparison Queries
+  - id: "Q002"
+    category: "comparison"
+    difficulty: "medium"
+    query: "Compare the variable costs between Portugal and Tunisia in August 2025"
+    expected_answer:
+      type: "comparison"
+      values:
+        portugal: {value: -23.4, unit: "EUR/ton"}
+        tunisia: {value: -29.1, unit: "EUR/ton"}
+      comparison: "Tunisia has 5.7 EUR/ton higher variable costs than Portugal"
+      winner: "portugal"  # Lower costs = better
+    expected_sources:
+      pages: [20]
+      tables: ["Cost per ton - transposed"]
+    validation_criteria:
+      both_values_required: true
+      comparison_direction_required: true
+
+  # Budget vs Actual Queries
+  - id: "Q003"
+    category: "budget_variance"
+    difficulty: "medium"
+    query: "How did Portugal's variable costs in August 2025 compare to budget?"
+    expected_answer:
+      type: "budget_variance"
+      actual: {value: -23.4, unit: "EUR/ton"}
+      budget: {value: -20.4, unit: "EUR/ton"}
+      variance: -3.0  # Negative = worse than budget
+      variance_pct: -14.7
+      performance: "worse"  # worse | better | on_target
+    expected_sources:
+      pages: [20]
+      tables: ["Cost per ton - transposed"]
+    validation_criteria:
+      actual_required: true
+      budget_required: true
+      variance_required: true
+      performance_assessment_required: true
+
+# Section Insights
+insights:
+  - type: "table_pattern"
+    observation: "Pages 1-19 use traditional tables (entities in rows)"
+    impact: "Phase 2.6 extraction logic should work correctly"
+
+  - type: "table_pattern"
+    observation: "Page 20 uses transposed table (metrics in first column)"
+    impact: "Requires Phase 2.7 transposed extraction logic"
+
+  - type: "data_quality"
+    observation: "All tables have clear headers and consistent formatting"
+    impact: "High extraction confidence expected"
+
+  - type: "metric_coverage"
+    observation: "Section covers EBITDA, costs, and operational metrics"
+    impact: "Good coverage for financial and operational queries"
+
+# Data Quality Issues
+data_quality_issues:
+  - page: 15
+    issue: "Table has merged cells in header row"
+    severity: "low"  # low | medium | high
+    impact: "May affect entity extraction"
+    workaround: "Check column spanning logic in Phase 2.6"
+
+  - page: 20
+    issue: "Transposed table not detected by Phase 2.6"
+    severity: "high"
+    impact: "Metrics column stays NULL, SQL returns 0 rows"
+    workaround: "Phase 2.7 transposed detection solves this"
+
+# Coverage Analysis
+coverage:
+  financial_metrics:
+    - EBITDA
+    - Turnover
+    - EBITDA/Turnover %
+    - Variable Costs
+    - Fixed Costs
+  operational_metrics:
+    - Sales Volumes
+    - Production Volumes
+    - Thermal Energy Consumption
+  entities:
+    - Portugal (Cement, Ready-Mix, Aggregates)
+    - Spain (Cement, Ready-Mix)
+    - France (Cement, Aggregates)
+    - Tunisia (Cement)
+    - Lebanon (Cement)
+    - Brazil (Cement)
+  periods:
+    - August 2024 (Actual)
+    - August 2025 (Actual)
+    - Budget (2025)
+    - YTD August 2024
+    - YTD August 2025
+
+# Recommended Query Types
+recommended_queries:
+  - type: "point"
+    count: 5
+    examples:
+      - "What is the EBITDA for Portugal Cement in August 2025?"
+      - "What is the variable cost for Tunisia in August 2025?"
+
+  - type: "comparison"
+    count: 3
+    examples:
+      - "Compare EBITDA between Portugal and Spain in August 2025"
+      - "Compare variable costs between Portugal and Tunisia"
+
+  - type: "trend"
+    count: 2
+    examples:
+      - "What is the YTD EBITDA trend for Portugal Cement?"
+      - "How have variable costs changed from Aug-24 to Aug-25?"
+
+  - type: "budget_variance"
+    count: 2
+    examples:
+      - "How did Portugal's Aug-25 EBITDA compare to budget?"
+      - "Did Tunisia meet its variable cost budget in August 2025?"
+
+# Next Steps
+next_steps:
+  - "Review Section 2 (pages 21-40)"
+  - "Compile 10-15 ground truth queries from this section"
+  - "Validate sample values by extracting from PDF"
+  - "Document any transposed tables found"
