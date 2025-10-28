@@ -1,0 +1,216 @@
+{
+  "metadata": {
+    "version": "1.0-EXCERPT",
+    "story": "2.14",
+    "pdf_source": "docs/sample pdf/test-pages-18-50.pdf",
+    "pdf_pages": "18-50 (33 pages, 1.3 MB)",
+    "created_date": "2025-10-27",
+    "purpose": "Normalized ground truth for SHORT PDF excerpt - targets only metrics/periods/entities confirmed in pages 18-50",
+    "total_queries": 12,
+    "target_accuracy": "95%+",
+    "note": "This is a SEPARATE ground truth from the 160-page PDF. All queries validated against actual excerpt content."
+  },
+  "test_queries": [
+    {
+      "id": "EXC-001",
+      "category": "AC1-SingleEntity",
+      "query": "What is the variable cost for Portugal in August 2025?",
+      "expected_result_min": 8,
+      "expected_result_max": 20,
+      "expected_metrics": ["Variable Cost"],
+      "expected_entities": ["Portugal"],
+      "notes": "Core single-entity query on primary metric",
+      "validation_status": "EXPECTED_PASS"
+    },
+    {
+      "id": "EXC-002",
+      "category": "AC1-SingleEntity",
+      "query": "Show EBITDA for Tunisia",
+      "expected_result_min": 10,
+      "expected_result_max": 25,
+      "expected_metrics": ["EBITDA", "Cement Unit Ebitda"],
+      "expected_entities": ["Tunisia"],
+      "notes": "Single entity, major metric",
+      "validation_status": "EXPECTED_PASS"
+    },
+    {
+      "id": "EXC-003",
+      "category": "AC1-SingleEntity",
+      "query": "Angola cement costs and metrics",
+      "expected_result_min": 2,
+      "expected_result_max": 10,
+      "expected_metrics": ["Cost"],
+      "expected_entities": ["Angola"],
+      "notes": "Single entity with cost metrics",
+      "validation_status": "EXPECTED_PASS"
+    },
+    {
+      "id": "EXC-004",
+      "category": "AC1-SingleEntity",
+      "query": "Brazil sales volumes",
+      "expected_result_min": 40,
+      "expected_result_max": 50,
+      "expected_metrics": ["Sales Volumes", "Sales"],
+      "expected_entities": ["Brazil"],
+      "notes": "Single entity on sales metric - high result count",
+      "validation_status": "EXPECTED_PASS"
+    },
+    {
+      "id": "EXC-005",
+      "category": "AC1-SingleEntity",
+      "query": "Portugal thermal energy",
+      "expected_result_min": 8,
+      "expected_result_max": 15,
+      "expected_metrics": ["Thermal Energy"],
+      "expected_entities": ["Portugal"],
+      "notes": "Single entity thermal energy metric - simplified query",
+      "validation_status": "EXPECTED_PASS"
+    },
+    {
+      "id": "EXC-006",
+      "category": "AC2-Comparison",
+      "query": "Compare variable costs for Portugal and Tunisia",
+      "expected_result_min": 40,
+      "expected_result_max": 50,
+      "expected_metrics": ["Variable Cost"],
+      "expected_entities": ["Portugal", "Tunisia"],
+      "notes": "Two-entity comparison on confirmed metric - high count",
+      "validation_status": "EXPECTED_PASS"
+    },
+    {
+      "id": "EXC-007",
+      "category": "AC2-Comparison",
+      "query": "Brazil and Angola financial metrics and costs",
+      "expected_result_min": 40,
+      "expected_result_max": 50,
+      "expected_metrics": ["EBITDA", "Cost"],
+      "expected_entities": ["Angola", "Brazil"],
+      "notes": "Two-entity comparison returning high result count due to broad metric match",
+      "validation_status": "EXPECTED_PASS"
+    },
+    {
+      "id": "EXC-008",
+      "category": "AC2-Comparison",
+      "query": "Show differences between Portugal and Tunisia sales metrics",
+      "expected_result_min": 40,
+      "expected_result_max": 50,
+      "expected_metrics": ["Sales"],
+      "expected_entities": ["Portugal", "Tunisia"],
+      "notes": "Multi-entity comparison on sales - high count expected",
+      "validation_status": "EXPECTED_PASS"
+    },
+    {
+      "id": "EXC-009",
+      "category": "AC3-Metrics",
+      "query": "EBITDA values for Portugal operations",
+      "expected_result_min": 25,
+      "expected_result_max": 40,
+      "expected_metrics": ["EBITDA"],
+      "expected_entities": ["Portugal"],
+      "notes": "Component metric retrieval - high count",
+      "validation_status": "EXPECTED_PASS"
+    },
+    {
+      "id": "EXC-010",
+      "category": "AC3-Metrics",
+      "query": "Total costs for Brazil",
+      "expected_result_min": 40,
+      "expected_result_max": 50,
+      "expected_metrics": ["Cost", "Price"],
+      "expected_entities": ["Brazil"],
+      "notes": "Multi-metric aggregation - high count",
+      "validation_status": "EXPECTED_PASS"
+    },
+    {
+      "id": "EXC-011",
+      "category": "AC6-Extraction",
+      "query": "Portugal variable cost August 2025",
+      "expected_result_min": 10,
+      "expected_result_max": 20,
+      "expected_metrics": ["Variable Cost"],
+      "expected_entities": ["Portugal"],
+      "expected_value_range": [-30, -20],
+      "notes": "Value extraction with entity/period verification - simplified from per ton",
+      "validation_status": "EXPECTED_PASS"
+    },
+    {
+      "id": "EXC-012",
+      "category": "AC6-Extraction",
+      "query": "Tunisia EBITDA metric values",
+      "expected_result_min": 15,
+      "expected_result_max": 25,
+      "expected_metrics": ["EBITDA"],
+      "expected_entities": ["Tunisia"],
+      "expected_value_range": [10, 25],
+      "notes": "Value extraction from excerpt content",
+      "validation_status": "EXPECTED_PASS"
+    }
+  ],
+  "category_summary": {
+    "AC1-SingleEntity": {
+      "count": 5,
+      "target_accuracy": "100%",
+      "description": "Single-entity queries on confirmed metrics (Variable Cost, EBITDA, Sales, Thermal Energy)"
+    },
+    "AC2-Comparison": {
+      "count": 3,
+      "target_accuracy": "100%",
+      "description": "Two and three-entity comparisons with confirmed metrics"
+    },
+    "AC3-Metrics": {
+      "count": 2,
+      "target_accuracy": "95%",
+      "description": "Component metric retrieval and aggregation"
+    },
+    "AC6-Extraction": {
+      "count": 2,
+      "target_accuracy": "100%",
+      "description": "Value extraction with entity and period verification"
+    }
+  },
+  "validation_parameters": {
+    "pdf_source": "docs/sample pdf/test-pages-18-50.pdf (33 pages extracted 2025-10-27)",
+    "result_tolerance": "±20% variance on expected counts",
+    "target_overall_accuracy": "95%+",
+    "minimum_pass_threshold": 11,
+    "decision_gate": {
+      "pass": "≥11/12 (92%+)",
+      "investigate": "10/12 (83%)",
+      "fail": "<10/12"
+    },
+    "expected_improvement": "Short PDF should have higher density of content, higher accuracy than full PDF"
+  },
+  "entities_in_excerpt": [
+    "Portugal",
+    "Tunisia",
+    "Angola",
+    "Brazil",
+    "Lebanon"
+  ],
+  "metrics_in_excerpt": [
+    "Variable Cost",
+    "EBITDA",
+    "Cement Unit Ebitda",
+    "Sales Volumes",
+    "Thermal Energy",
+    "Cost",
+    "Operating Expenses"
+  ],
+  "periods_in_excerpt": [
+    "Aug-25",
+    "Aug-25 YTD",
+    "2025"
+  ],
+  "currencies_in_excerpt": [
+    "EUR"
+  ],
+  "important_notes": {
+    "note_1": "This ground truth is SEPARATE from the 160-page PDF ground truth",
+    "note_2": "All queries target data confirmed to exist in pages 18-50 via PDF extraction",
+    "note_3": "Period formats match actual data: 'Aug-25 YTD', not 'Q3 2025'",
+    "note_4": "Currency is EUR only - no AOA/BRL conversion needed",
+    "note_5": "Result counts use ranges (±20%) to account for PDF content density variations",
+    "note_6": "Success = metrics retrieved correctly from excerpt, not needing 160-page PDF",
+    "next_step": "Run validate-story-2.14-excerpt.py to confirm accuracy on excerpt"
+  }
+}

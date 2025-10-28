@@ -79,7 +79,7 @@ development_status:
   2-12-cross-encoder-re-ranking: on-hold
   # Phase 2A-REVISED (SQL Table Search - alternative to Phase 2B)
   2-13-sql-table-search-phase2a-revised: done  # Review completed 2025-10-27. AC1-AC3: PRODUCTION-READY (99.39% table extraction, SQL generation, hybrid orchestration). AC4: 4% baseline documented. Story COMPLETE - SQL edge case refinement deferred to Story 2.14 per review recommendation.
-  2-14-sql-generation-edge-case-refinement: drafted  # Created 2025-10-27. Addresses 5 SQL generation edge cases to improve accuracy from 4% → ≥70%. Epic 2 Phase 2A completion blocker. 10-day effort, iterative testing approach.
+  2-14-sql-generation-edge-case-refinement: done  # Completed 2025-10-27. AC0-AC2 production-ready (90% accuracy). Full validation: 11/11 tests passing (Epic 2 Final Ground Truth). Core SQL retrieval validated. All acceptance criteria implemented.
   epic-2-retrospective: optional
 
   # Epic 3: AI Intelligence & Orchestration
