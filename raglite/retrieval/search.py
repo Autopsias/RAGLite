@@ -288,7 +288,7 @@ def fuse_sql_vector_results(
     k = 60
 
     # Build result maps and RRF scores
-    rrf_scores = {}  # Map: (source_doc, chunk_idx) -> RRF score
+    rrf_scores: dict[tuple[str, int], float] = {}  # Map: (source_doc, chunk_idx) -> RRF score
     result_map = {}  # Map: (source_doc, chunk_idx) -> QueryResult
 
     # Add SQL ranking contributions (weighted by sql_weight)
@@ -398,7 +398,7 @@ def fuse_search_results(
     )
 
     # Build mapping from (source_document, chunk_index) to BM25 array position
-    chunk_to_bm25_pos = {}
+    chunk_to_bm25_pos: dict[tuple[str, int], int] = {}
     if chunk_metadata:
         for bm25_pos, metadata in enumerate(chunk_metadata):
             source_doc = metadata.get("source_document", "")
@@ -414,11 +414,13 @@ def fuse_search_results(
     # Build rank mappings for RRF
     # Semantic ranking: already sorted by score (rank = index + 1)
     # BM25 ranking: sort by score and assign ranks
-    bm25_rank_map = {bm25_pos: rank + 1 for rank, (bm25_pos, _) in enumerate(bm25_ranking)}
+    bm25_rank_map: dict[int, int] = {
+        bm25_pos: rank + 1 for rank, (bm25_pos, _) in enumerate(bm25_ranking)
+    }
 
     # Reciprocal Rank Fusion (RRF) with k=60 (standard constant)
     k = 60  # RRF constant from Cormack et al.
-    rrf_scores = {}  # Map: (source_doc, chunk_idx) -> RRF score
+    rrf_scores: dict[tuple[str, int], float] = {}  # Map: (source_doc, chunk_idx) -> RRF score
     result_map = {}  # Map: (source_doc, chunk_idx) -> QueryResult
 
     # Add semantic ranking contributions (weighted by alpha)
@@ -431,19 +433,19 @@ def fuse_search_results(
     # Add BM25 ranking contributions (weighted by 1-alpha)
     for result in semantic_results:
         doc_key = (result.source_document, result.chunk_index)
-        bm25_pos = chunk_to_bm25_pos.get(doc_key)
+        bm25_pos_opt = chunk_to_bm25_pos.get(doc_key)
 
-        if bm25_pos is not None and bm25_pos in bm25_rank_map:
-            bm25_rank = bm25_rank_map[bm25_pos]
+        if bm25_pos_opt is not None and bm25_pos_opt in bm25_rank_map:
+            bm25_rank: int = bm25_rank_map[bm25_pos_opt]
             # RRF contribution from BM25 ranking
             rrf_scores[doc_key] = rrf_scores.get(doc_key, 0.0) + (1 - alpha) / (k + bm25_rank)
 
     # Apply metadata boosting if provided (1.2x multiplier per field match)
     if metadata_boost and chunk_metadata:
         for doc_key, rrf_score in list(rrf_scores.items()):
-            bm25_pos = chunk_to_bm25_pos.get(doc_key)
-            if bm25_pos is not None and bm25_pos < len(chunk_metadata):
-                chunk_meta = chunk_metadata[bm25_pos]
+            bm25_pos_opt = chunk_to_bm25_pos.get(doc_key)
+            if bm25_pos_opt is not None and bm25_pos_opt < len(chunk_metadata):
+                chunk_meta: dict[str, Any] = chunk_metadata[bm25_pos_opt]
                 boost_multiplier = 1.0
                 matches = []
 

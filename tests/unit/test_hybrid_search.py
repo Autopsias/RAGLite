@@ -225,39 +225,37 @@ class TestScoreFusion:
     """Test weighted sum fusion of semantic and BM25 scores (AC2.4)."""
 
     def test_score_fusion_weighted_sum(self):
-        """Test fusion with alpha=0.7 (70% semantic, 30% BM25)."""
+        """Test fusion with RRF (Reciprocal Rank Fusion) - Story 2.11 fix."""
         # Arrange: Mock semantic results
         semantic_results = [
             QueryResult(
                 score=0.9,
-                text="Chunk 1",  # Changed from Chunk 0 to avoid filtering
+                text="Chunk 1",
                 source_document="test.pdf",
                 page_number=1,
-                chunk_index=1,  # Changed from 0 to avoid filtering
+                chunk_index=1,
                 word_count=10,
             ),
             QueryResult(
                 score=0.8,
-                text="Chunk 2",  # Changed from Chunk 1
+                text="Chunk 2",
                 source_document="test.pdf",
                 page_number=1,
-                chunk_index=2,  # Changed from 1
+                chunk_index=2,
                 word_count=10,
             ),
             QueryResult(
                 score=0.7,
-                text="Chunk 3",  # Changed from Chunk 2
+                text="Chunk 3",
                 source_document="test.pdf",
                 page_number=1,
-                chunk_index=3,  # Changed from 2
+                chunk_index=3,
                 word_count=10,
             ),
         ]
 
-        # BM25 scores (raw, will be normalized)
-        # Note: Chunk 0 is filtered out in production (confidentiality notice)
-        # So we need 4 scores: [0.0 (filtered chunk 0), 5.0, 10.0, 3.0]
-        bm25_scores = [0.0, 5.0, 10.0, 3.0]  # Max=10.0, normalized: [0.0, 0.5, 1.0, 0.3]
+        # BM25 scores (raw values, not normalized)
+        bm25_scores = [0.0, 5.0, 10.0, 3.0]
 
         # Create chunk metadata for BM25 score mapping
         chunk_metadata = [
@@ -267,28 +265,33 @@ class TestScoreFusion:
             {"source_document": "test.pdf", "chunk_index": 3},
         ]
 
-        # Act: Fuse with alpha=0.7
+        # Act: Fuse with RRF (alpha=0.7)
         fused_results = fuse_search_results(
             semantic_results, bm25_scores, chunk_metadata, alpha=0.7, top_k=3
         )
 
-        # Assert: Verify hybrid scores
-        # Expected hybrid scores (after chunk 0 filtering):
-        # chunk_1: 0.7 * 0.9 + 0.3 * 0.5 = 0.63 + 0.15 = 0.78
-        # chunk_2: 0.7 * 0.8 + 0.3 * 1.0 = 0.56 + 0.30 = 0.86
-        # chunk_3: 0.7 * 0.7 + 0.3 * 0.3 = 0.49 + 0.09 = 0.58
+        # Assert: Verify RRF ranking (not weighted sum!)
+        # RRF prioritizes semantic ranking (70%) over BM25 (30%)
+        # Semantic ranks: chunk_1=1, chunk_2=2, chunk_3=3
+        # BM25 ranks: chunk_2=1 (10.0), chunk_1=2 (5.0), chunk_3=3 (3.0)
+        # RRF scores (k=60, alpha=0.7):
+        # chunk_1: 0.7/(60+1) + 0.3/(60+2) ≈ 0.0163 (best - semantic rank 1)
+        # chunk_2: 0.7/(60+2) + 0.3/(60+1) ≈ 0.0162 (BM25 ranks it 1 but semantic is 2)
+        # chunk_3: 0.7/(60+3) + 0.3/(60+3) ≈ 0.0159 (worst - both ranks 3)
 
         assert len(fused_results) == 3
 
-        # Verify ranking: chunk_2 (0.86) > chunk_1 (0.78) > chunk_3 (0.58)
-        assert fused_results[0].chunk_index == 2  # Highest hybrid score
-        assert fused_results[1].chunk_index == 1
-        assert fused_results[2].chunk_index == 3  # Lowest hybrid score
+        # Verify RRF ranking order (semantic priority takes precedence)
+        assert fused_results[0].chunk_index == 1  # Highest RRF score (semantic rank 1)
+        assert fused_results[1].chunk_index == 2  # Middle RRF score
+        assert fused_results[2].chunk_index == 3  # Lowest RRF score (worst in both)
 
-        # Verify scores are calculated correctly (with small tolerance for float arithmetic)
-        assert abs(fused_results[0].score - 0.86) < 0.01
-        assert abs(fused_results[1].score - 0.78) < 0.01
-        assert abs(fused_results[2].score - 0.58) < 0.01
+        # Verify correct score order (decreasing)
+        assert fused_results[0].score > fused_results[1].score > fused_results[2].score
+
+        # Verify all scores are positive and in RRF range
+        assert all(r.score > 0 for r in fused_results)
+        assert all(r.score < 0.02 for r in fused_results)  # RRF scores are small
 
     def test_score_fusion_top_k(self):
         """Test fusion respects top_k parameter."""
@@ -363,14 +366,20 @@ class TestScoreFusion:
 class TestHybridSearchEndToEnd:
     """Test hybrid search end-to-end with mocks (AC2.4)."""
 
+    @patch("raglite.retrieval.search.classify_query")
     @patch("raglite.retrieval.search.search_documents")
     @patch("raglite.retrieval.search.load_bm25_index")
     @patch("raglite.retrieval.search.compute_bm25_scores")
     async def test_hybrid_search_combines_results(
-        self, mock_compute_bm25, mock_load_bm25, mock_search_docs
+        self, mock_compute_bm25, mock_load_bm25, mock_search_docs, mock_classify
     ):
         """Test hybrid search combines semantic and BM25 results."""
-        # Arrange: Mock semantic search results
+        # Arrange: Mock query classifier to return VECTOR_ONLY (skip SQL routing)
+        from raglite.retrieval.query_classifier import QueryType
+
+        mock_classify.return_value = QueryType.VECTOR_ONLY
+
+        # Mock semantic search results
         mock_search_docs.return_value = [
             QueryResult(
                 score=0.8,
@@ -400,7 +409,7 @@ class TestHybridSearchEndToEnd:
         mock_compute_bm25.return_value = [10.0, 5.0]  # BM25 prefers chunk 0
 
         # Act: Perform hybrid search
-        results = await hybrid_search("What is the EBITDA margin?", top_k=2, alpha=0.7)
+        results = await hybrid_search("What is the margin?", top_k=2, alpha=0.7)
 
         # Assert: Verify search called with wider net
         mock_search_docs.assert_called_once()
@@ -409,7 +418,7 @@ class TestHybridSearchEndToEnd:
 
         # Verify BM25 index loaded and scores computed
         mock_load_bm25.assert_called_once()
-        mock_compute_bm25.assert_called_once_with(mock_bm25, "What is the EBITDA margin?")
+        mock_compute_bm25.assert_called_once_with(mock_bm25, "What is the margin?")
 
         # Verify results returned
         assert len(results) == 2
@@ -506,11 +515,14 @@ class TestHybridSearchEndToEnd:
             3.0,
         ]  # Chunk 0 filtered, normalized: [0.0, 1.0, 0.2]
 
-        # Act: Hybrid search with alpha=0.7
+        # Act: Hybrid search with alpha=0.7 (Story 2.11: Uses RRF, not weighted sum)
         results = await hybrid_search("EBITDA 23.2", top_k=2, alpha=0.7)
 
-        # Assert: Verify hybrid ranking puts chunk_1 first
-        # chunk_1 hybrid: 0.7 * 0.80 + 0.3 * 1.0 = 0.56 + 0.30 = 0.86
-        # chunk_2 hybrid: 0.7 * 0.85 + 0.3 * 0.2 = 0.595 + 0.06 = 0.655
-        assert results[0].chunk_index == 1  # Hybrid boosts keyword match
-        assert results[1].chunk_index == 2
+        # Assert: Verify hybrid ranking with RRF algorithm
+        # RRF (Reciprocal Rank Fusion) formula: alpha/(k+semantic_rank) + (1-alpha)/(k+bm25_rank), k=60
+        # chunk_2: 0.7/(60+1) + 0.3/(60+2) ≈ 0.01632 (semantic rank 1, BM25 rank 2)
+        # chunk_1: 0.7/(60+2) + 0.3/(60+1) ≈ 0.01621 (semantic rank 2, BM25 rank 1)
+        # RRF prioritizes semantic ranking (70%) over BM25 (30%), so chunk_2 ranks first
+        assert results[0].chunk_index == 2  # Semantic score (0.85) wins with alpha=0.7
+        assert results[1].chunk_index == 1
+        assert results[0].score > results[1].score  # RRF scores are ordered

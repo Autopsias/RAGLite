@@ -247,24 +247,21 @@ Columns:
   - id (SERIAL PRIMARY KEY)
   - document_id (VARCHAR) - Document filename
   - page_number (INT) - Page number in document
-  - table_index (INT) - Table number on page
+  - table_index (INT) - Table number on page (METADATA ONLY - do not use in ORDER BY)
   - table_caption (TEXT) - Table title/caption
-  - entity (VARCHAR) - Company/division name RAW (e.g., "Portugal", "Brazil", "Tunisia")
-  - entity_normalized (VARCHAR) - Company/division CANONICAL name (e.g., "Portugal Cement", "Brazil Cement")
+  - entity (VARCHAR) - Company/division name (e.g., "Portugal", "Brazil", "Tunisia", "Portugal Cement")
   - metric (VARCHAR) - Cost type/metric (e.g., "variable costs", "thermal energy", "EBITDA")
   - period (VARCHAR) - Time period (e.g., "Aug-25 YTD", "Q2 2025", "2024")
   - fiscal_year (INT) - Year (e.g., 2025, 2024)
   - value (DECIMAL) - Numeric value
   - unit (VARCHAR) - Unit of measurement (e.g., "EUR/ton", "GJ/ton", "%")
-  - row_index (INT) - Row number in table
+  - row_index (INT) - Row number in table (METADATA ONLY - do not use in ORDER BY)
   - column_name (VARCHAR) - Column name from table
+  - section_type (VARCHAR) - Section type (default: "Table")
   - chunk_text (TEXT) - Full table context
 
 Indexes:
   - idx_entity ON entity
-  - idx_entity_normalized ON entity_normalized
-  - idx_entity_trgm ON entity (GIN trigram for fuzzy matching)
-  - idx_entity_normalized_trgm ON entity_normalized (GIN trigram for fuzzy matching)
   - idx_metric ON metric
   - idx_period ON period
   - idx_fiscal_year ON fiscal_year
@@ -272,48 +269,38 @@ Indexes:
 
 **QUERY GENERATION RULES:**
 
-1. **HYBRID ENTITY MATCHING** (CRITICAL - Use BOTH entity columns with fuzzy matching):
-   For entity queries, always search BOTH entity and entity_normalized with fuzzy fallback:
+1. **ENTITY MATCHING** (Use ILIKE for fuzzy text matching):
+   For entity queries, use ILIKE for case-insensitive pattern matching:
 
    ```sql
-   WHERE (
-     -- Tier 1: Exact normalized match (best)
-     entity_normalized = 'Portugal Cement'
-     OR entity_normalized ILIKE '%Portugal Cement%'
-
-     -- Tier 2: Fuzzy normalized match
-     OR similarity(entity_normalized, 'Portugal Cement') > 0.5
-
-     -- Tier 3: Exact raw match
-     OR entity = 'Portugal'
-     OR entity ILIKE '%Portugal%'
-
-     -- Tier 4: Fuzzy raw match
-     OR similarity(entity, 'Portugal Cement') > 0.3
-   )
+   WHERE entity ILIKE '%Portugal%'
+      OR entity ILIKE '%Portugal Cement%'
    ```
 
    Entity matching patterns:
-   - "Portugal Cement" → search BOTH entity_normalized='Portugal Cement' AND entity='Portugal'
-   - "Brazil" → search BOTH entity_normalized ILIKE '%Brazil%' AND entity='Brazil'
-   - "Tunisia Cement" → search entity_normalized='Tunisia Cement'
+   - "Portugal Cement" → entity ILIKE '%Portugal%' OR entity ILIKE '%Cement%'
+   - "Brazil" → entity ILIKE '%Brazil%'
+   - "Tunisia Cement" → entity ILIKE '%Tunisia%'
 
 2. **Use ILIKE for text matching** (case-insensitive pattern matching):
    - metric ILIKE '%variable cost%'
    - period ILIKE '%Aug-25%'
+   - entity ILIKE '%Portugal%'
 
 3. **Use exact match for numeric fields**:
    - fiscal_year = 2025
    - value > 100.0
 
 4. **Always ORDER BY for consistency**:
-   - ORDER BY page_number, table_index, row_index
+   - ORDER BY page_number DESC (most recent pages first)
+   - OR ORDER BY value DESC (highest values first)
+   - DO NOT use table_index or row_index in ORDER BY
 
 5. **Always LIMIT results** (default 50, max 100):
    - LIMIT 50
 
 6. **SELECT relevant columns only**:
-   - Core: entity, entity_normalized, metric, value, unit, period, fiscal_year
+   - Core: entity, metric, value, unit, period, fiscal_year
    - Context: page_number, table_caption, chunk_text (for attribution)
 
 7. **Handle ambiguity with OR conditions**:
@@ -329,22 +316,14 @@ Indexes:
 
 Query: "What is the variable cost per ton for Portugal Cement in August 2025 YTD?"
 SQL:
-SELECT entity, entity_normalized, metric, value, unit, period, fiscal_year, page_number, table_caption
+SELECT entity, metric, value, unit, period, fiscal_year, page_number, table_caption
 FROM financial_tables
-WHERE (
-    -- Hybrid entity matching for "Portugal Cement"
-    entity_normalized = 'Portugal Cement'
-    OR entity_normalized ILIKE '%Portugal Cement%'
-    OR similarity(entity_normalized, 'Portugal Cement') > 0.5
-    OR entity = 'Portugal'
-    OR entity ILIKE '%Portugal%'
-    OR similarity(entity, 'Portugal Cement') > 0.3
-  )
+WHERE (entity ILIKE '%Portugal%' OR entity ILIKE '%Portugal Cement%')
   AND metric ILIKE '%variable cost%'
   AND period ILIKE '%Aug-25%'
   AND period ILIKE '%YTD%'
   AND (fiscal_year = 2025 OR fiscal_year IS NULL)
-ORDER BY page_number, table_index, row_index
+ORDER BY page_number DESC
 LIMIT 50;
 
 Query: "Show me EBITDA margin for all entities in Q3 2024"
@@ -355,7 +334,7 @@ WHERE metric ILIKE '%EBITDA%'
   AND (metric ILIKE '%margin%' OR unit ILIKE '%%')
   AND period ILIKE '%Q3%'
   AND (fiscal_year = 2024 OR fiscal_year IS NULL)
-ORDER BY entity, page_number, table_index, row_index
+ORDER BY entity, page_number DESC
 LIMIT 100;
 
 Query: "What are the thermal energy costs?"
@@ -364,7 +343,7 @@ SELECT entity, metric, value, unit, period, fiscal_year, page_number, table_capt
 FROM financial_tables
 WHERE metric ILIKE '%thermal%'
   AND (metric ILIKE '%energy%' OR metric ILIKE '%cost%')
-ORDER BY fiscal_year DESC, page_number, table_index, row_index
+ORDER BY fiscal_year DESC, page_number DESC
 LIMIT 50;
 
 **USER QUERY:**
@@ -373,11 +352,11 @@ LIMIT 50;
 **INSTRUCTIONS:**
 - Return ONLY the SQL query (no explanations, no markdown, no code blocks)
 - Ensure query is valid PostgreSQL syntax
-- **CRITICAL: For entity queries, ALWAYS use hybrid matching (search BOTH entity and entity_normalized with similarity())**
-- Use ILIKE for all text matching (case-insensitive)
+- Use ILIKE for all text matching (case-insensitive entity and metric matching)
 - Always include ORDER BY and LIMIT
+- DO NOT use table_index or row_index in ORDER BY (causes SQL errors)
 - Select columns needed for answering the question + attribution (page_number, table_caption)
-- Include entity_normalized in SELECT when querying entities
+- Use simple ORDER BY patterns: page_number DESC, value DESC, or fiscal_year DESC
 """
 
         # Call Mistral API (using same pattern as metadata extraction)
@@ -398,7 +377,11 @@ LIMIT 50;
         )
 
         # Extract SQL from response
-        sql_query = response.choices[0].message.content.strip()
+        sql_query: str | None = response.choices[0].message.content
+        if sql_query:
+            sql_query = sql_query.strip()
+        else:
+            return None
 
         # Remove markdown code blocks if present
         sql_query = re.sub(r"```sql\n?", "", sql_query)
