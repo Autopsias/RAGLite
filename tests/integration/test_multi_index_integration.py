@@ -175,7 +175,14 @@ class TestMultiIndexIntegration:
         assert fused[1].document_id == "doc2"
 
     def test_result_fusion_deduplication(self) -> None:
-        """Test that duplicate documents are deduplicated and fused."""
+        """Test that duplicate documents are deduplicated and fused.
+
+        Story 2.11 AC1: Tests score normalization before fusion.
+        With normalization, scores are normalized to [0,1] before weighted fusion:
+        - Vector score 0.8 / max(0.8) = 1.0 (normalized)
+        - SQL score 0.6 / max(0.6) = 1.0 (normalized)
+        - Fused score: 0.6 * 1.0 + 0.4 * 1.0 = 1.0
+        """
         # Same document appears in both indexes with different scores
         vector_results = [
             SearchResult(
@@ -204,8 +211,12 @@ class TestMultiIndexIntegration:
         # Should have only 1 result after deduplication
         assert len(fused) == 1
 
-        # Fused score: 0.6 * 0.8 + 0.4 * 0.6 = 0.48 + 0.24 = 0.72
-        assert abs(fused[0].score - 0.72) < 0.01
+        # Story 2.11 FIX: Fused score with normalization
+        # max_vector_score = 0.8, max_sql_score = 0.6
+        # normalized_vector = 0.8/0.8 = 1.0
+        # normalized_sql = 0.6/0.6 = 1.0
+        # fused_score = 0.6 * 1.0 + 0.4 * 1.0 = 1.0
+        assert abs(fused[0].score - 1.0) < 0.01
 
         # Should be marked as "hybrid" source
         assert fused[0].source == "hybrid"
