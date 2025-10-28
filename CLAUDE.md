@@ -158,10 +158,21 @@ raglite/
 │   │   ├── logging.py
 │   │   ├── models.py
 │   │   └── clients.py
-│   └── tests/
-│       ├── test_ingestion.py
-│       ├── test_retrieval.py
-│       └── ground_truth.py
+├── tests/                     # All tests consolidated here (2025-10-28, organized 2025-10-28)
+│   ├── unit/                  # ~200 unit tests (no external dependencies)
+│   │   ├── test_shared_*.py   # Core shared module tests
+│   │   ├── test_ac*.py        # Epic 2 Phase 2A acceptance criteria tests
+│   │   ├── test_query_classifier.py  # Story 2.10 tests
+│   │   ├── test_table_aware_chunking.py  # Story 2.8 tests
+│   │   └── ... (other unit tests)
+│   ├── integration/           # ~115 integration tests (requires Qdrant/PostgreSQL)
+│   │   ├── test_sql_routing.py  # Story 2.13 SQL routing tests
+│   │   ├── test_ac3_ground_truth.py  # NFR6/NFR7 accuracy validation
+│   │   └── ... (other integration tests)
+│   ├── e2e/                   # ~28 end-to-end tests
+│   ├── fixtures/              # Test fixtures and sample data
+│   ├── conftest.py            # Shared pytest configuration
+│   └── ground_truth.json      # Accuracy validation test set
 ├── scripts/
 │   ├── setup-dev.sh
 │   └── init-qdrant.py
@@ -197,11 +208,27 @@ uv run python -m raglite.main
 ```
 
 ### Testing
-```bash
-# Unit tests
-uv run pytest raglite/tests/
 
-# Ground truth accuracy validation
+**Test Suite:** ~358 tests consolidated in `tests/` directory (updated 2025-10-28, organized 2025-10-28)
+
+**Structure:** Clean directory hierarchy matching VS Code Test Explorer and CI workflow
+
+**Slow Tests:** 12 tests marked with `@pytest.mark.slow` (excluded from VS Code by default, included in CI)
+
+```bash
+# All tests (fast - excludes slow tests marked with @pytest.mark.slow)
+uv run pytest tests/
+
+# Unit tests only (~200 tests, <2 min)
+uv run pytest tests/unit/
+
+# Integration tests (~115 tests, 5-10 min with 10-page PDF)
+uv run pytest tests/integration/ -m "not slow"
+
+# E2E tests (~28 tests)
+uv run pytest tests/e2e/
+
+# Ground truth accuracy validation (NFR6/NFR7)
 uv run python scripts/run-accuracy-tests.py
 
 # With coverage
@@ -467,21 +494,41 @@ See `AGENTS.md` for full agent definitions and capabilities.
 
 ## Quality Gates & Testing
 
-### Accuracy Validation (Critical NFR)
+**Test Suite (Updated 2025-10-28):** ~372 tests consolidated in `tests/` directory
+
+### Test Organization
+
+- **Unit Tests** (`tests/unit/`): ~200 tests, no external dependencies
+  - Core functionality: ingestion, retrieval, search, MCP server
+  - Epic 2 features: table-aware chunking, query classification, SQL routing
+  - Story-specific validation: Stories 2.8-2.14 (SQL table search, fuzzy matching)
+
+- **Integration Tests** (`tests/integration/`): ~115 tests, requires Qdrant/PostgreSQL
+  - End-to-end pipelines with real dependencies
+  - Multi-index search, hybrid search, SQL table retrieval
+  - Epic 2 Phase 2A validation
+
+- **E2E Tests** (`tests/e2e/`): ~28 tests
+  - Full system validation with ground truth queries
+  - MCP protocol compliance
+
+### NFR Validation (Automated in CI)
 
 **NFR6:** 90%+ retrieval accuracy on test set
-**NFR7:** 95%+ source attribution accuracy
+- Validated in: `tests/integration/test_ac3_ground_truth.py`
+- Ground truth: `tests/ground_truth.json` (50+ Q&A pairs)
 
-**Ground Truth Testing:**
-- Maintain 50+ Q&A pairs in `raglite/tests/ground_truth.py`
-- Run daily during Phase 1 development
-- Track accuracy trend line
-- Document failure modes
+**NFR7:** 95%+ source attribution accuracy
+- Validated in: `tests/integration/test_accuracy_validation.py`
+
+**NFR13:** Query response time <5s p50, <15s p95
+- Validated in: `tests/performance/` (when implemented)
 
 ### Test Coverage
-- Target: 80%+ unit test coverage
+- Target: 80%+ unit test coverage (enforced in CI)
 - Integration tests for end-to-end flows
 - Accuracy regression tests in CI/CD
+- Test count validation (prevents shadow test suites)
 
 ---
 
