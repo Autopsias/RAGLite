@@ -14,11 +14,6 @@ from raglite.shared.config import Settings
 @patch("raglite.shared.clients.QdrantClient")
 def test_get_qdrant_client_success(mock_qdrant_class: MagicMock, test_settings: Settings) -> None:
     """Test get_qdrant_client returns configured client."""
-    # Reset global singleton before test
-    import raglite.shared.clients as clients_module
-
-    clients_module._qdrant_client = None
-
     mock_client = MagicMock()
     mock_qdrant_class.return_value = mock_client
 
@@ -26,7 +21,7 @@ def test_get_qdrant_client_success(mock_qdrant_class: MagicMock, test_settings: 
 
     assert client == mock_client
     mock_qdrant_class.assert_called_once_with(
-        host=test_settings.qdrant_host, port=test_settings.qdrant_port, timeout=30
+        host=test_settings.qdrant_host, port=test_settings.qdrant_port
     )
 
 
@@ -35,11 +30,6 @@ def test_get_qdrant_client_success(mock_qdrant_class: MagicMock, test_settings: 
 @patch("raglite.shared.clients.QdrantClient")
 def test_get_qdrant_client_connection_error(mock_qdrant_class: MagicMock) -> None:
     """Test get_qdrant_client raises ConnectionError if Qdrant unavailable."""
-    # Reset global singleton before test
-    import raglite.shared.clients as clients_module
-
-    clients_module._qdrant_client = None
-
     mock_qdrant_class.side_effect = Exception("Connection refused")
 
     with pytest.raises(ConnectionError, match="Failed to connect to Qdrant"):

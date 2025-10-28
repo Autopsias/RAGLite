@@ -37,7 +37,8 @@ class ExcerptTestResult:
 def excerpt_ground_truth():
     """Load excerpt-specific ground truth from JSON file."""
     ground_truth_path = (
-        Path(__file__).parent.parent.parent / "docs/validation/story-2.14-excerpt-ground-truth.json"
+        Path(__file__).parent.parent.parent.parent
+        / "docs/validation/story-2.14-excerpt-ground-truth.json"
     )
     with open(ground_truth_path) as f:
         return json.load(f)
