@@ -26,8 +26,9 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from raglite.retrieval.multi_index_search import multi_index_search
-from tests.fixtures.ground_truth import GROUND_TRUTH_QA
+# Note: imports below are placed after sys.path.insert for local module discovery
+from raglite.retrieval.multi_index_search import multi_index_search  # noqa: E402
+from tests.fixtures.ground_truth import GROUND_TRUTH_QA  # noqa: E402
 
 
 async def run_phase2a_final_validation():
