@@ -54,6 +54,10 @@
 - Path: `bmad/bmm/workflows/3-solutioning/solutioning-gate-check/workflow.yaml`
 - Systematically validate that all planning and solutioning phases are complete and properly aligned before transitioning to Phase 4 implementation. Ensures PRD, architecture, and stories are cohesive with no gaps or contradictions.
 
+**code-review**
+- Path: `bmad/bmm/workflows/4-implementation/code-review/workflow.yaml`
+- Perform a Senior Developer code review on a completed story flagged Ready for Review, leveraging story-context, epic tech-spec, repo docs, MCP servers for latest best-practices, and web search as fallback. Appends structured review notes to the story.
+
 **correct-course**
 - Path: `bmad/bmm/workflows/4-implementation/correct-course/workflow.yaml`
 - Navigate significant changes during sprint execution by analyzing impact, proposing solutions, and routing for implementation
@@ -73,10 +77,6 @@
 **retrospective**
 - Path: `bmad/bmm/workflows/4-implementation/retrospective/workflow.yaml`
 - Run after epic completion to review overall success, extract lessons learned, and explore if new information emerged that might impact the next epic
-
-**review-story**
-- Path: `bmad/bmm/workflows/4-implementation/review-story/workflow.yaml`
-- Perform a Senior Developer Review on a completed story flagged Ready for Review, leveraging story-context, epic tech-spec, repo docs, MCP servers for latest best-practices, and web search as fallback. Appends structured review notes to the story.
 
 **sprint-planning**
 - Path: `bmad/bmm/workflows/4-implementation/sprint-planning/workflow.yaml`
