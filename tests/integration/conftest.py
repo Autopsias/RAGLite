@@ -19,9 +19,13 @@ Tests that modify data are marked with @pytest.mark.manages_collection_state.
 """
 
 import asyncio
+import sys
 from pathlib import Path
 
 import pytest
+
+# Debug: Track module load
+print("DEBUG: conftest.py loading...", file=sys.stderr)
 
 # Track session-level expected Qdrant state for test isolation
 _session_sample_pdf_chunk_count = None
@@ -38,20 +42,29 @@ def session_ingested_collection(request):
 
     This pattern reduces test suite from 40+ minutes to ~90 seconds.
     Expected: Tests run in ~90 seconds vs previous 40+ minutes (97% speedup).
+
+    TIMEOUT PROTECTION: If fixture hangs, pytest will timeout after 900s
+    (configured in pytest.ini timeout_func_only=true, so fixture has full timeout).
     """
     global _session_sample_pdf_chunk_count
 
     # Lazy import to avoid test discovery overhead
     import os
 
+    print("\nDEBUG: Entering session_ingested_collection fixture", file=sys.stderr)
+
     from raglite.ingestion.pipeline import create_collection, ingest_pdf
     from raglite.shared.clients import get_qdrant_client
     from raglite.shared.config import settings
+
+    print("DEBUG: Imports successful", file=sys.stderr)
 
     # Environment-based PDF selection:
     # - LOCAL (VS Code): 10-page sample PDF (fast ~10-15 seconds ingestion)
     # - CI: 160-page full PDF (comprehensive ~150 seconds ingestion)
     use_full_pdf = os.getenv("TEST_USE_FULL_PDF", "false").lower() == "true"
+
+    print(f"DEBUG: TEST_USE_FULL_PDF={use_full_pdf}", file=sys.stderr)
 
     if use_full_pdf:
         # CI: Use full 160-page PDF for comprehensive testing
@@ -64,7 +77,10 @@ def session_ingested_collection(request):
         pdf_description = "10-page sample PDF (local fast mode)"
         estimated_time = "10-15 seconds"
 
+    print(f"DEBUG: PDF selection complete - checking {sample_pdf}", file=sys.stderr)
+
     if not sample_pdf.exists():
+        print(f"DEBUG: PDF not found at {sample_pdf} - skipping", file=sys.stderr)
         pytest.skip(f"Test PDF not found at {sample_pdf} - skipping integration tests")
         return
 
@@ -77,7 +93,9 @@ def session_ingested_collection(request):
     print(f"{'=' * 80}\n")
 
     # Get Qdrant client
+    print("DEBUG: Getting Qdrant client...", file=sys.stderr)
     qdrant = get_qdrant_client()
+    print("DEBUG: Qdrant client obtained", file=sys.stderr)
 
     # Clear any existing data and create fresh collection
     print("⚙️  Preparing collection...")
@@ -100,7 +118,13 @@ def session_ingested_collection(request):
     print(f"   Estimated time: {estimated_time} (Docling + embeddings + Qdrant)")
 
     # Ingest with clear_collection=False (collection already fresh)
-    result = asyncio.run(ingest_pdf(str(sample_pdf), clear_collection=False))
+    print("DEBUG: Starting asyncio.run(ingest_pdf)...", file=sys.stderr)
+    try:
+        result = asyncio.run(ingest_pdf(str(sample_pdf), clear_collection=False))
+        print("DEBUG: ingest_pdf completed successfully", file=sys.stderr)
+    except Exception as e:
+        print(f"DEBUG: ingest_pdf failed with {type(e).__name__}: {e}", file=sys.stderr)
+        raise
 
     # Verify ingestion succeeded
     import time
