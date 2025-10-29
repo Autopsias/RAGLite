@@ -1083,9 +1083,14 @@ async def ingest_pdf(
     from docling.document_converter import DocumentConverter, PdfFormatOption
 
     start_time = time.time()
+    import sys
+
+    # Checkpoint: Start of function
+    print(f"CHECKPOINT: ingest_pdf started for {file_path}", file=sys.stderr, flush=True)
 
     # Resolve file path
     pdf_path = Path(file_path).resolve()
+    print(f"CHECKPOINT: PDF path resolved to {pdf_path}", file=sys.stderr, flush=True)
 
     if not pdf_path.exists():
         error_msg = f"PDF file not found: {file_path}"
@@ -1166,6 +1171,7 @@ async def ingest_pdf(
         # Story 2.1: PyPdfium backend (optimized)
         from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
 
+        print(f"CHECKPOINT: Creating DocumentConverter...", file=sys.stderr, flush=True)
         converter = DocumentConverter(
             format_options={
                 InputFormat.PDF: PdfFormatOption(
@@ -1173,6 +1179,7 @@ async def ingest_pdf(
                 )
             }
         )
+        print(f"CHECKPOINT: DocumentConverter created successfully", file=sys.stderr, flush=True)
         logger.info(
             "Docling converter initialized with pypdfium backend and table extraction",
             extra={
@@ -1193,7 +1200,9 @@ async def ingest_pdf(
 
     # Convert PDF with Docling
     try:
+        print(f"CHECKPOINT: Starting Docling conversion of {pdf_path.name}...", file=sys.stderr, flush=True)
         result = converter.convert(str(pdf_path))
+        print(f"CHECKPOINT: Docling conversion complete - {result.document.num_pages} pages", file=sys.stderr, flush=True)
     except Exception as e:
         error_msg = f"Docling parsing failed for {pdf_path.name}: {e}"
         logger.error(
@@ -1205,6 +1214,7 @@ async def ingest_pdf(
 
     # Story 2.13 AC1: Extract tables to PostgreSQL (avoid double-conversion)
     # Extract tables from Docling result before chunking to reuse conversion
+    print(f"CHECKPOINT: Starting table extraction...", file=sys.stderr, flush=True)
     logger.info(
         "Extracting tables for SQL storage",
         extra={"doc_filename": pdf_path.name},
@@ -1212,6 +1222,7 @@ async def ingest_pdf(
     try:
         extractor = TableExtractor()
         table_rows = extractor.extract_tables_from_result(result, pdf_path.stem)
+        print(f"CHECKPOINT: Table extraction complete - {len(table_rows)} rows", file=sys.stderr, flush=True)
 
         if table_rows:
             logger.info(
@@ -1290,7 +1301,9 @@ async def ingest_pdf(
 
     # Chunk the document using Docling items with provenance (Story 1.13 fix)
     # This extracts actual page numbers from Docling metadata instead of estimating
+    print(f"CHECKPOINT: Starting chunking...", file=sys.stderr, flush=True)
     chunks = await chunk_by_docling_items(result, metadata)
+    print(f"CHECKPOINT: Chunking complete - {len(chunks)} chunks created", file=sys.stderr, flush=True)
 
     # Story 2.4 AC1 (REVISED): Extract business context metadata PER CHUNK using Mistral Small
     # ARCHITECTURAL CHANGE: Per-chunk extraction avoids reasoning token overflow and provides
