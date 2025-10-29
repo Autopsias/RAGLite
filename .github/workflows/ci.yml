@@ -283,21 +283,21 @@ jobs:
         run: |
           source ci-venv/bin/activate
           echo "========================================="
-          echo "⚠️  TEMPORARILY DISABLED: Integration Tests"
-          echo "Reason: pytest hangs during collection phase"
-          echo "Status: Unit tests passing, debugging integration isolation"
+          echo "CI MODE: Comprehensive Testing"
+          echo "- Using 160-page full PDF (~150s ingestion)"
+          echo "- Running ALL tests including slow ones"
+          echo "- Single worker (session fixture + shared Qdrant collection)"
+          echo "- Target: 30-50 minutes total"
           echo "========================================="
-          echo "Integration tests disabled temporarily - re-enable after diagnosis"
-          # TODO: Re-enable after fixing pytest collection hang
-          # if [ -d "tests/integration" ] && [ -n "$(find tests/integration -name 'test_*.py' -type f)" ]; then
-          #   pytest tests/integration/ \
-          #     -n 1 \
-          #     -m "" \
-          #     -v \
-          #     --junitxml=pytest-integration-report.xml
-          # else
-          #   echo "⚠️  No integration tests found, skipping..."
-          # fi
+          if [ -d "tests/integration" ] && [ -n "$(find tests/integration -name 'test_*.py' -type f)" ]; then
+            pytest tests/integration/ \
+              -n 1 \
+              -m "" \
+              -v \
+              --junitxml=pytest-integration-report.xml
+          else
+            echo "⚠️  No integration tests found, skipping..."
+          fi
         continue-on-error: true
 
       - name: Upload integration test results
@@ -364,13 +364,12 @@ jobs:
 
   # ============================================================================
   # JOB 7: Ground Truth Accuracy Validation (NFR6/NFR7)
-  # TEMPORARILY DISABLED - depends on integration tests
   # ============================================================================
   test-accuracy:
     name: "✅ NFR: Accuracy Validation (NFR6/NFR7)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 30
-    needs: [test-unit]
+    needs: [test-integration]
 
     steps:
       - name: Checkout code
@@ -427,11 +426,17 @@ jobs:
         run: |
           source ci-venv/bin/activate
           echo "========================================="
-          echo "⚠️  TEMPORARILY DISABLED: Accuracy Tests"
-          echo "Reason: Depends on integration tests (temporarily disabled)"
+          echo "NFR6/NFR7 Validation"
+          echo "- Target: ≥90% retrieval accuracy (NFR6)"
+          echo "- Target: ≥95% attribution accuracy (NFR7)"
+          echo "- Sequential execution (read from integration collection)"
           echo "========================================="
-          echo "Accuracy tests disabled temporarily"
-          # TODO: Re-enable after integration tests fixed
+          pytest tests/integration/test_ac3_ground_truth.py \
+                 tests/integration/test_accuracy_validation.py \
+                 tests/e2e/test_ground_truth.py \
+                 -n 0 \
+                 -v \
+                 --junitxml=pytest-accuracy-report.xml || true
         continue-on-error: true
 
       - name: Upload accuracy test results
@@ -444,13 +449,12 @@ jobs:
 
   # ============================================================================
   # JOB 8: Performance Validation (NFR13)
-  # TEMPORARILY DISABLED - depends on integration tests
   # ============================================================================
   test-performance:
     name: "⚡ NFR: Performance Validation (NFR13)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 20
-    needs: [test-unit]
+    needs: [test-integration]
 
     steps:
       - name: Checkout code
@@ -473,11 +477,19 @@ jobs:
         run: |
           source ci-venv/bin/activate
           echo "========================================="
-          echo "⚠️  TEMPORARILY DISABLED: Performance Tests"
-          echo "Reason: Depends on integration tests (temporarily disabled)"
+          echo "NFR13 Performance Validation"
+          echo "- Target: <5s p50 query response"
+          echo "- Target: <15s p95 query response"
+          echo "- Sequential execution (accurate timing measurement)"
           echo "========================================="
-          echo "Performance tests disabled temporarily"
-          # TODO: Re-enable after integration tests fixed
+          if [ -d "tests/performance" ] && [ -n "$(find tests/performance -name 'test_*.py' -type f)" ]; then
+            pytest tests/performance/ \
+              -n 0 \
+              -v \
+              --junitxml=pytest-performance-report.xml || true
+          else
+            echo "⚠️  No performance tests found, skipping..."
+          fi
         continue-on-error: true
 
       - name: Upload performance test results
