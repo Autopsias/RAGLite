@@ -73,9 +73,18 @@ class TestIngestPDF:
         mock_collection_info.points_count = 2  # Match number of mock chunks
         mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
 
-        with patch("raglite.ingestion.pipeline.DocumentConverter") as MockConverter, \
-             patch("raglite.ingestion.pipeline.get_qdrant_client", return_value=mock_qdrant_client), \
-             patch("raglite.ingestion.pipeline.get_embedding_model") as MockEmbedding:
+        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        # Critical: patch both DocumentConverter and the required imports
+        with (
+            patch("docling.document_converter.DocumentConverter") as MockConverter,
+            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
+            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
+            patch("docling.datamodel.base_models.InputFormat"),
+            patch("docling.document_converter.PdfFormatOption"),
+            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+            patch("raglite.ingestion.pipeline.get_qdrant_client", return_value=mock_qdrant_client),
+            patch("raglite.ingestion.pipeline.get_embedding_model") as MockEmbedding,
+        ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
 
@@ -118,7 +127,15 @@ class TestIngestPDF:
         corrupt_pdf = tmp_path / "corrupted.pdf"
         corrupt_pdf.write_bytes(b"not a real pdf")
 
-        with patch("raglite.ingestion.pipeline.DocumentConverter") as MockConverter:
+        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        with (
+            patch("docling.document_converter.DocumentConverter") as MockConverter,
+            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
+            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
+            patch("docling.datamodel.base_models.InputFormat"),
+            patch("docling.document_converter.PdfFormatOption"),
+            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+        ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.side_effect = Exception("PDF parsing error")
 
@@ -155,7 +172,15 @@ class TestIngestPDF:
         mock_result = Mock()
         mock_result.document = mock_document
 
-        with patch("raglite.ingestion.pipeline.DocumentConverter") as MockConverter:
+        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        with (
+            patch("docling.document_converter.DocumentConverter") as MockConverter,
+            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
+            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
+            patch("docling.datamodel.base_models.InputFormat"),
+            patch("docling.document_converter.PdfFormatOption"),
+            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+        ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
 
@@ -187,7 +212,15 @@ class TestIngestPDF:
         mock_result = Mock()
         mock_result.document = mock_document
 
-        with patch("raglite.ingestion.pipeline.DocumentConverter") as MockConverter:
+        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        with (
+            patch("docling.document_converter.DocumentConverter") as MockConverter,
+            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
+            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
+            patch("docling.datamodel.base_models.InputFormat"),
+            patch("docling.document_converter.PdfFormatOption"),
+            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+        ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
 
@@ -205,7 +238,15 @@ class TestIngestPDF:
         pdf_file = tmp_path / "test.pdf"
         pdf_file.write_bytes(b"%PDF-1.4")
 
-        with patch("raglite.ingestion.pipeline.DocumentConverter") as MockConverter:
+        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        with (
+            patch("docling.document_converter.DocumentConverter") as MockConverter,
+            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
+            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
+            patch("docling.datamodel.base_models.InputFormat"),
+            patch("docling.document_converter.PdfFormatOption"),
+            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+        ):
             MockConverter.side_effect = Exception("Docling initialization failed")
 
             with pytest.raises(RuntimeError, match="Failed to initialize Docling converter"):
@@ -239,7 +280,15 @@ class TestIngestPDF:
         mock_result = Mock()
         mock_result.document = mock_document
 
-        with patch("raglite.ingestion.pipeline.DocumentConverter") as MockConverter:
+        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        with (
+            patch("docling.document_converter.DocumentConverter") as MockConverter,
+            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
+            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
+            patch("docling.datamodel.base_models.InputFormat"),
+            patch("docling.document_converter.PdfFormatOption"),
+            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+        ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
 
@@ -474,9 +523,11 @@ class TestExtractExcel:
         mock_collection_info.points_count = 1  # At least 1 chunk will be created
         mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
 
-        with patch("raglite.ingestion.pipeline.openpyxl.load_workbook") as mock_load, \
-             patch("raglite.ingestion.pipeline.get_qdrant_client", return_value=mock_qdrant_client), \
-             patch("raglite.ingestion.pipeline.get_embedding_model") as MockEmbedding:
+        with (
+            patch("raglite.ingestion.pipeline.openpyxl.load_workbook") as mock_load,
+            patch("raglite.ingestion.pipeline.get_qdrant_client", return_value=mock_qdrant_client),
+            patch("raglite.ingestion.pipeline.get_embedding_model") as MockEmbedding,
+        ):
             mock_load.return_value = mock_workbook
 
             # Mock embedding model
