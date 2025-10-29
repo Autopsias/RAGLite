@@ -11,6 +11,7 @@ from raglite.shared.models import DocumentMetadata, QueryRequest, QueryResponse
 
 
 @pytest.mark.integration
+@pytest.mark.preserve_collection  # Tests don't modify Qdrant - skip cleanup
 class TestMCPProtocolCompliance:
     """Test MCP protocol compliance and tool discovery."""
 
@@ -150,6 +151,7 @@ class TestMCPEndToEnd:
 
 
 @pytest.mark.integration
+@pytest.mark.preserve_collection  # Tests are read-only - skip cleanup
 class TestMCPErrorHandling:
     """Test MCP error handling with integration scenarios."""
 

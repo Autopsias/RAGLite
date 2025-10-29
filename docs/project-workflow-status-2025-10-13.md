@@ -26,7 +26,7 @@
 
 **Current Workflow:** Epic 1 Complete - Ready for Epic 2 Implementation
 
-**Overall Progress:** ~98.0% (Epic 1: ALL 17 stories complete, Decision Gate executed - Epic 2 required)
+**Overall Progress:** ~99.0% (Epic 1: COMPLETE, Epic 2: Story 2.1 context generated, ready for implementation)
 
 ---
 
@@ -114,15 +114,19 @@
 **Current Epic:** Epic 1 - Foundation & Accurate Retrieval
 
 **Story Queue:**
-- BACKLOG: Epic 2 (Stories 2.1-2.6) - ACTIVATED per Decision Gate Path 3
-- TODO: Epic 2 Stories 2.1 (Hybrid Search) + 2.2 (Financial Embeddings) - Prioritized for parallel implementation
-- IN PROGRESS: (None - Epic 1 complete)
+- BACKLOG: Epic 2 (Stories 2.2-2.6) - ACTIVATED per Decision Gate Path 3
+- TODO: Story 2.2 (Financial Embeddings) - CONDITIONAL on Story 2.1 validation results
+- IN PROGRESS: Story 2.1 (Hybrid Search) - Ready for implementation
 - DONE: Stories 1.1-1.15B completed and approved (17 stories - Epic 1 COMPLETE)
 
 #### IN PROGRESS (Approved for Development)
 
-- **None** - Story 1.15A complete
-- **Next Action:** Review Story 1.15A, then load DEV agent for Story 1.15 implementation
+- **Story ID:** 2.1
+- **Story Title:** Hybrid Search (BM25 + Semantic Fusion)
+- **Story File:** `story-2.1-hybrid-search.md`
+- **Story Status:** Ready
+- **Context File:** `docs/stories/story-context-2.1.xml` (Generated: 2025-10-17)
+- **Action:** DEV should run `story-context` workflow first, then `dev-story` to implement
 
 #### TODO (Needs Drafting)
 
@@ -155,34 +159,42 @@
 
 ## What to do next
 
-**🎉 EPIC 1 COMPLETE - Decision Gate Executed**
+**✅ STORY 2.1 CONTEXT GENERATED - READY FOR IMPLEMENTATION**
 
-**Recommended Next Action:** Implement Epic 2 Stories 2.1 (Hybrid Search) + 2.2 (Financial Embeddings) in parallel
+**Recommended Next Action:** Load DEV agent and implement Story 2.1 (Hybrid Search)
 
-**Current Context:** Epic 1 baseline validation complete. Decision Gate Path 3 executed: Retrieval accuracy 56% and attribution accuracy 32% require full Epic 2 implementation to meet NFR6 (90%+) and NFR7 (95%+) targets.
+**Current Status:**
+- ✅ Epic 1 COMPLETE (17 stories, baseline: 56% retrieval, 32% attribution)
+- ✅ Decision Gate Path 3: Epic 2 full implementation required
+- ✅ Story 2.1 DRAFTED and APPROVED (status: Ready)
+- ✅ Tech stack approved: rank_bm25 library (2025-10-16)
+- ✅ Story Context XML generated: `docs/stories/story-context-2.1.xml`
+- 📋 Story 2.1 in IN PROGRESS queue with full implementation context
 
-**Epic 1 Completion Summary:**
-- ✅ 17 stories complete (Stories 1.1-1.15B)
-- ✅ Baseline established: 56% retrieval, 32% attribution, p50=33ms, p95=63ms
-- ✅ Table extraction working: 321 chunks with financial data searchable
-- ✅ Decision Gate: Path 3 (Epic 2 full implementation required)
-- ✅ Performance excellent: 99.6% latency budget remaining for Epic 2
-
-**Epic 2 Prioritization (per baseline failure analysis):**
-- **Priority 1:** Story 2.1 (Hybrid Search) - addresses keyword coverage gaps (+15-20% retrieval)
-- **Priority 2:** Story 2.2 (Financial Embeddings) - addresses domain terminology issues (+10-15% retrieval)
-- **Combined Target:** 80-85% retrieval, 50-60% attribution after 2.1+2.2
+**Story 2.1 Details:**
+- **Title:** Hybrid Search (BM25 + Semantic Fusion)
+- **Duration:** 6-8 hours
+- **Expected Impact:** +15-20% retrieval accuracy (56% → 71-76%)
+- **Technology:** rank_bm25 library with Qdrant sparse vectors
+- **Research Basis:** BM25 ADR + Financial Embedding Model Comparison
+- **Context File:** Comprehensive XML with 7 ACs, 8 code artifacts, 7 constraints, 7 interfaces, 8 test ideas
 
 **Next Steps:**
-1. **Run Epic 2 Retrospective** (optional - review Epic 1 learnings before starting Epic 2)
-2. **Draft Story 2.1 (Hybrid Search)** via SM agent `create-story` workflow
-3. **Draft Story 2.2 (Financial Embeddings)** via SM agent `create-story` workflow
-4. **Implement Stories 2.1 + 2.2 in parallel** (estimated 8-12 hours combined)
-5. **Re-validate baseline** after each story to track accuracy improvements
+1. **IMPLEMENT Story 2.1:**
+   - Load DEV agent: `bmad/bmm/agents/dev.md` (Developer - Amelia)
+   - Run `dev-story` workflow to implement
+   - Context XML provides complete guidance: existing code patterns, interfaces, constraints, test ideas
 
-**Agent to load:** bmad/bmm/agents/sm.md (Scrum Master - Bob) to draft Epic 2 stories
+2. **After Story 2.1 completion:** Re-validate baseline to decide if Story 2.2 needed
+   - IF ≥95% accuracy → STOP, proceed to Epic 3
+   - IF 70-94% accuracy → Implement Story 2.2 (Financial Embeddings)
+   - IF <70% accuracy → Investigate BM25 parameters, consider alternative fusion (RRF)
 
-**Command to run:** Run `create-story` workflow for Stories 2.1 and 2.2
+**Agent to load:**
+- For implementation: bmad/bmm/agents/dev.md (Developer - Amelia)
+
+**Command to run:**
+- Implementation: `dev-story` workflow (DEV agent)
 
 ---
 
@@ -273,6 +285,35 @@
 - File will be updated as you complete stories and epics
 
 ### Decisions Log
+
+**2025-10-17 - Story 2.1 Context Generated (story-context workflow complete)**
+- **Workflow:** story-context (SM agent - Bob via Claude Code)
+- **Story:** Story 2.1 (Hybrid Search - BM25 + Semantic Fusion)
+- **Context File:** `docs/stories/story-context-2.1.xml`
+- **Context Quality:** EXCELLENT
+  - 7 Acceptance Criteria with detailed validation methods
+  - 8 Code artifacts (existing code to build on: pipeline.py, search.py, clients.py, models.py, test patterns)
+  - 6 Documentation artifacts (CLAUDE.md, Epic 2 PRD, BM25 ADR, coding standards, testing strategy, baseline results)
+  - 7 Development constraints (KISS, tech stack locked, follow existing patterns, metadata preservation, backward compatibility)
+  - 7 Interfaces to reuse (Qdrant client, embedding model, BM25Okapi, collection config, query methods, models)
+  - 8 Test ideas (4 unit + 3 integration + 1 performance test)
+  - 5 Python dependencies documented (rank-bm25==0.2.2, qdrant-client==1.15.1, sentence-transformers, pytest)
+- **Story File Updated:** Added Implementation Context section with context reference
+- **Next Action:** Load DEV agent (bmad/bmm/agents/dev.md) and run `dev-story` workflow to implement Story 2.1
+
+**2025-10-17 - Story 2.1 (Hybrid Search) Marked Ready for Development**
+- **Decision Type:** Story approval (story-ready workflow)
+- **Approver:** SM agent (Bob via Claude Code)
+- **Story Status:** DRAFT → Ready
+- **Action:** Story 2.1 moved to IN PROGRESS queue
+- **Context Status:** Not yet generated (run `story-context` workflow next)
+- **Implementation Details:**
+  - BM25 + Semantic Fusion approach (research-backed)
+  - Expected improvement: +15-20% retrieval accuracy (56% → 71-76%)
+  - Duration: 6-8 hours
+  - Technology: rank_bm25 library (already approved 2025-10-16)
+  - Research basis: BM25 Architecture Decision Record + Financial Embedding Model Comparison
+- **Next Action:** Run `story-context` workflow to generate implementation context XML, then implement via DEV agent
 
 **2025-10-16 - Tech Stack Approval: rank_bm25 Library APPROVED**
 - **Decision Type:** Technology stack addition (Epic 2 Story 2.1 requirement)

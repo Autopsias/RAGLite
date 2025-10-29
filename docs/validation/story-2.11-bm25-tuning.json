@@ -1,0 +1,41 @@
+{
+  "alpha_values_tested": [
+    0.7,
+    0.75,
+    0.8,
+    0.85,
+    0.9
+  ],
+  "results": {
+    "0.7": {
+      "accuracy": 18.0,
+      "correct": 9,
+      "total": 50
+    },
+    "0.75": {
+      "accuracy": 18.0,
+      "correct": 9,
+      "total": 50
+    },
+    "0.8": {
+      "accuracy": 18.0,
+      "correct": 9,
+      "total": 50
+    },
+    "0.85": {
+      "accuracy": 18.0,
+      "correct": 9,
+      "total": 50
+    },
+    "0.9": {
+      "accuracy": 18.0,
+      "correct": 9,
+      "total": 50
+    }
+  },
+  "best_alpha": 0.7,
+  "best_accuracy": 18.0,
+  "default_accuracy": 18.0,
+  "improvement_pp": 0.0,
+  "recommendation": "Update hybrid_search() default alpha to 0.7"
+}

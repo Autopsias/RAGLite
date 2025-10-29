@@ -1,0 +1,220 @@
+<story-context id="story-2.1-hybrid-search" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.1</storyId>
+    <title>Hybrid Search (BM25 + Semantic Fusion)</title>
+    <status>Ready</status>
+    <generatedAt>2025-10-17</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/story-2.1-hybrid-search.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user querying financial documents</asA>
+    <iWant>hybrid search combining keyword matching (BM25) with semantic search (Fin-E5)</iWant>
+    <soThat>queries with specific financial terms and numbers retrieve correct pages with high precision</soThat>
+    <tasks>
+      <task id="AC1" duration="2h">BM25 Index Creation - Install rank_bm25, create BM25 index during ingestion, store sparse vectors in Qdrant, unit test indexing (4 subtasks)</task>
+      <task id="AC2" duration="2h">Hybrid Search Query Implementation - Implement BM25 query, score fusion (weighted sum alpha=0.7), configuration parameter, unit test hybrid search (4 subtasks)</task>
+      <task id="AC3" duration="1h">BM25 Parameter Tuning - Baseline test, tune k1 (1.5-2.0), tune b (0.5-0.7), tune alpha (0.6-0.8) (4 subtasks)</task>
+      <task id="AC4" duration="30min">Integration with MCP Server - Update MCP tool, integration test (2 subtasks)</task>
+      <task id="AC5" duration="1h">Unit Tests - 4 tests: BM25 index creation, BM25 query, score fusion, hybrid search end-to-end</task>
+      <task id="AC6" duration="1h">Integration Tests - 3 tests: exact numbers, financial terms, full ground truth (50 queries)</task>
+      <task id="AC7" duration="30min">Performance Validation - Latency benchmarking (10-query test), NFR13 compliance check</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" priority="CRITICAL">
+      <title>BM25 Index Creation</title>
+      <description>BM25 index created and stored in Qdrant sparse vectors during ingestion with parameters k1=1.7, b=0.6</description>
+      <validation>Verify BM25 index functional, sparse vectors stored in Qdrant, unit tests passing</validation>
+    </criterion>
+    <criterion id="AC2" priority="CRITICAL">
+      <title>Hybrid Search Query Implementation</title>
+      <description>Hybrid search implemented with weighted sum fusion (alpha=0.7: 70% semantic, 30% BM25)</description>
+      <validation>Verify hybrid_search() function returns combined results, alpha parameter affects ranking, unit tests passing</validation>
+    </criterion>
+    <criterion id="AC3" priority="HIGH">
+      <title>BM25 Parameter Tuning</title>
+      <description>BM25 parameters (k1, b, alpha) tuned for optimal retrieval accuracy on financial documents</description>
+      <validation>Verify optimal parameters documented (k1: 1.5-2.0, b: 0.5-0.7, alpha: 0.6-0.8), tuning results in completion notes</validation>
+    </criterion>
+    <criterion id="AC4" priority="HIGH">
+      <title>Integration with MCP Server</title>
+      <description>MCP tool uses hybrid search by default with enable_hybrid=True</description>
+      <validation>Verify MCP query returns hybrid search results, response format unchanged (backward compatible)</validation>
+    </criterion>
+    <criterion id="AC5" priority="CRITICAL">
+      <title>Unit Tests</title>
+      <description>4 unit tests passing: BM25 indexing, querying, fusion, end-to-end</description>
+      <validation>All unit tests passing in tests/unit/test_hybrid_search.py</validation>
+    </criterion>
+    <criterion id="AC6" priority="CRITICAL">
+      <title>Integration Tests</title>
+      <description>3 integration tests passing with retrieval accuracy ≥70% (target: 71-76%)</description>
+      <validation>Integration tests passing, full 50-query ground truth suite shows ≥70% retrieval accuracy</validation>
+    </criterion>
+    <criterion id="AC7" priority="HIGH">
+      <title>Performance Validation</title>
+      <description>p95 latency <10,000ms (NFR13 compliance), expected p50 ~100-150ms</description>
+      <validation>Latency benchmarks documented, NFR13 compliance verified (9,785ms budget remaining)</validation>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="CLAUDE.md" section="Anti-Over-Engineering Rules">
+        <title>Development Constraints</title>
+        <snippet>KISS principle - no custom wrappers, direct SDK usage only, tech stack locked, one level of indirection maximum</snippet>
+      </doc>
+      <doc path="docs/prd/epic-2-advanced-rag-enhancements.md" section="Story 2.1: Phase 2A - Hybrid Search">
+        <title>Story Requirements</title>
+        <snippet>Combine semantic vector search with keyword matching for precision. Expected +5-10% retrieval accuracy. Post-search re-ranking with 70% semantic + 30% keyword scoring.</snippet>
+      </doc>
+      <doc path="docs/epic-2-preparation/bm25-architecture-decision-record.md" section="Full Document">
+        <title>BM25 Technical Guidance</title>
+        <snippet>BM25 implementation decision record with rank_bm25 library (industry standard), Qdrant sparse vector support, weighted sum fusion (alpha=0.7), parameters k1=1.7 b=0.6 for financial docs</snippet>
+      </doc>
+      <doc path="docs/architecture/coding-standards.md" section="Code Quality">
+        <title>Coding Standards</title>
+        <snippet>Type hints required, Google-style docstrings, structured logging with extra={}, async/await for I/O, Pydantic models for data structures</snippet>
+      </doc>
+      <doc path="docs/architecture/testing-strategy.md" section="Testing Standards">
+        <title>Testing Approach</title>
+        <snippet>pytest + pytest-asyncio, 80%+ coverage target, mock-based unit tests, real Qdrant integration tests, ground truth accuracy validation</snippet>
+      </doc>
+      <doc path="docs/stories/story-1.15B-baseline-validation.md" section="Baseline Results">
+        <title>Epic 1 Baseline</title>
+        <snippet>Retrieval accuracy 56.0% (28/50), attribution accuracy 32.0% (16/50), p50=33.20ms, p95=63.34ms. Failure analysis: 44% keyword coverage gaps, 32% page ranking issues.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact path="raglite/ingestion/pipeline.py" kind="module" symbol="generate_embeddings, ingest_pdf" lines="40-200">
+        <reason>Existing ingestion pipeline to enhance with BM25 indexing. Add BM25 tokenization and sparse vector generation after chunk creation.</reason>
+      </artifact>
+      <artifact path="raglite/retrieval/search.py" kind="module" symbol="search_documents" lines="70-180">
+        <reason>Existing semantic search function. Create new hybrid_search() function that combines semantic and BM25 results using weighted sum fusion.</reason>
+      </artifact>
+      <artifact path="raglite/shared/clients.py" kind="module" symbol="get_qdrant_client, get_embedding_model" lines="1-100">
+        <reason>Qdrant client and embedding model singletons. Reuse for BM25 sparse vector storage and semantic search components of hybrid search.</reason>
+      </artifact>
+      <artifact path="raglite/shared/models.py" kind="module" symbol="Chunk, QueryResult, SearchResult" lines="1-80">
+        <reason>Core data models. May need to extend Chunk model to store BM25 sparse vectors if not already in payload.</reason>
+      </artifact>
+      <artifact path="tests/unit/test_ingestion.py" kind="test" symbol="existing unit tests" lines="1-500">
+        <reason>Unit test patterns to follow. Create tests/unit/test_hybrid_search.py with same patterns (mock-based, async/await, pytest fixtures).</reason>
+      </artifact>
+      <artifact path="tests/integration/test_retrieval_integration.py" kind="test" symbol="integration test patterns" lines="1-350">
+        <reason>Integration test patterns. Create tests/integration/test_hybrid_search_integration.py with real Qdrant and ground truth queries.</reason>
+      </artifact>
+      <artifact path="tests/fixtures/ground_truth.py" kind="data" symbol="GROUND_TRUTH_QA" lines="1-700">
+        <reason>50 ground truth questions for accuracy validation. Use for AC6 integration test (full ground truth suite with ≥70% target).</reason>
+      </artifact>
+      <artifact path="pyproject.toml" kind="config" symbol="dependencies" lines="31-45">
+        <reason>rank-bm25==0.2.2 already added to dependencies (line 41). No changes needed, just verify during implementation.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="rank-bm25" version="0.2.2" usage="BM25 sparse vector generation (BM25Okapi class with k1, b parameters)" />
+        <package name="qdrant-client" version="1.15.1" usage="Sparse vector storage (SparseVectorParams, query with dense+sparse)" />
+        <package name="sentence-transformers" version="5.1.1" usage="Fin-E5 embeddings (semantic component of hybrid search)" />
+        <package name="pytest" version="8.4.2" usage="Unit and integration testing framework" />
+        <package name="pytest-asyncio" version="1.2.0" usage="Async test support for async functions" />
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint id="C1" severity="CRITICAL">
+      <title>KISS Principle - No Custom Wrappers</title>
+      <description>Use rank_bm25 library and Qdrant SDK directly as documented. NO custom abstraction layers, wrappers, or "simplified interfaces". If SDK has a method, use it directly.</description>
+    </constraint>
+    <constraint id="C2" severity="CRITICAL">
+      <title>Tech Stack Locked</title>
+      <description>ONLY use rank-bm25 library (already approved). Do NOT add alternative BM25 libraries or custom implementations. rank-bm25==0.2.2 is the approved solution.</description>
+    </constraint>
+    <constraint id="C3" severity="HIGH">
+      <title>Follow Existing Patterns</title>
+      <description>Match patterns from Stories 1.2-1.15B: singleton clients (get_qdrant_client), async/await for I/O, Pydantic models, structured logging, type hints, Google-style docstrings.</description>
+    </constraint>
+    <constraint id="C4" severity="HIGH">
+      <title>Metadata Preservation Critical</title>
+      <description>Preserve all existing chunk metadata (page_number, source_document, chunk_id, chunk_index). BM25 sparse vectors stored in Qdrant payload, NOT replacing semantic vectors.</description>
+    </constraint>
+    <constraint id="C5" severity="CRITICAL">
+      <title>Backward Compatibility</title>
+      <description>MCP tool response format MUST remain unchanged. Hybrid search is internal enhancement - clients should not see API changes. Add enable_hybrid parameter with default=True.</description>
+    </constraint>
+    <constraint id="C6" severity="HIGH">
+      <title>Performance Budget</title>
+      <description>NFR13: &lt;10s p95 latency. Epic 1 baseline: 63.34ms. Expected hybrid search: +100-150ms (3-4x increase). Total budget: 9,935ms remaining. Well within limits.</description>
+    </constraint>
+    <constraint id="C7" severity="CRITICAL">
+      <title>Accuracy Target</title>
+      <description>AC6 is MANDATORY: ≥70% retrieval accuracy on full 50-query ground truth suite. Baseline: 56%. Expected: 71-76% (+15-20pp improvement). Failure to meet 70% requires investigation.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="get_qdrant_client" kind="function">
+      <signature>def get_qdrant_client() -> QdrantClient</signature>
+      <path>raglite/shared/clients.py</path>
+      <usage>Reuse existing Qdrant client singleton. Used for collection creation with sparse vectors and hybrid search queries.</usage>
+    </interface>
+    <interface name="get_embedding_model" kind="function">
+      <signature>def get_embedding_model() -> SentenceTransformer</signature>
+      <path>raglite/shared/clients.py</path>
+      <usage>Reuse existing Fin-E5 model singleton. Used for semantic component of hybrid search (query embeddings).</usage>
+    </interface>
+    <interface name="BM25Okapi" kind="class">
+      <signature>class BM25Okapi(corpus, k1=1.5, b=0.75, epsilon=0.25)</signature>
+      <path>rank_bm25 (external library)</path>
+      <usage>Create BM25 index with k1=1.7, b=0.6 parameters. Use get_scores(query) to retrieve BM25 scores for fusion.</usage>
+    </interface>
+    <interface name="create_collection (sparse vectors)" kind="method">
+      <signature>client.create_collection(collection_name, vectors_config={...}, sparse_vectors_config={...})</signature>
+      <path>qdrant_client.QdrantClient</path>
+      <usage>Configure Qdrant collection with BOTH dense vectors (Fin-E5) and sparse vectors (BM25). Use SparseVectorParams for BM25 configuration.</usage>
+    </interface>
+    <interface name="query_points (hybrid)" kind="method">
+      <signature>client.query_points(collection_name, query=dense_vector, sparse_query=sparse_vector, limit=k)</signature>
+      <path>qdrant_client.QdrantClient</path>
+      <usage>Qdrant v1.15+ supports hybrid search with both dense and sparse query vectors. May use this OR implement weighted sum fusion in Python.</usage>
+    </interface>
+    <interface name="Chunk" kind="model">
+      <signature>class Chunk(BaseModel): chunk_id, content, metadata, page_number, chunk_index, embedding</signature>
+      <path>raglite/shared/models.py</path>
+      <usage>Core chunk model. BM25 sparse vectors stored in Qdrant payload (not in Chunk model itself). No model changes needed.</usage>
+    </interface>
+    <interface name="QueryResult" kind="model">
+      <signature>class QueryResult(BaseModel): score, chunk, source_citation</signature>
+      <path>raglite/shared/models.py</path>
+      <usage>Search result model. Hybrid search returns QueryResult with fused score (alpha * semantic + (1-alpha) * bm25). No changes needed.</usage>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      pytest + pytest-asyncio for async test support. Mock-based unit tests (no real Qdrant). Integration tests with real Qdrant and ground truth data. Target: 80%+ code coverage. Use pytest fixtures from conftest.py. Structured assertions with clear failure messages. Performance validation with timing measurements (time.time()).
+    </standards>
+    <locations>
+      - tests/unit/test_hybrid_search.py (NEW - 4 unit tests)
+      - tests/integration/test_hybrid_search_integration.py (NEW - 3 integration tests)
+      - tests/fixtures/ground_truth.py (EXISTING - 50 Q&A pairs for validation)
+    </locations>
+    <ideas>
+      <test id="T1" ac="AC1" type="unit">test_bm25_index_creation: Create BM25 index with 10 sample chunks, verify index created, verify tokenization correct</test>
+      <test id="T2" ac="AC1" type="unit">test_bm25_query: Query BM25 index with "EBITDA", verify scores returned for all chunks, verify relevant chunks ranked higher</test>
+      <test id="T3" ac="AC2" type="unit">test_score_fusion_weighted_sum: Mock semantic and BM25 scores, call fusion function with alpha=0.7, verify combined scores correct, verify top-k ranking correct</test>
+      <test id="T4" ac="AC2" type="unit">test_hybrid_search_end_to_end: Create test collection with 5 chunks, run hybrid search query, verify results include both semantic and BM25 matches, verify hybrid outperforms semantic-only</test>
+      <test id="T5" ac="AC6" type="integration">test_hybrid_search_exact_numbers: Query "What is the variable cost per ton?" (expects "23.2"), verify page 46 in top-3 results, measure improvement over semantic-only</test>
+      <test id="T6" ac="AC6" type="integration">test_hybrid_search_financial_terms: Query "What is the EBITDA IFRS margin for Portugal Cement?", verify page 46 in top-3 results, measure improvement over semantic-only</test>
+      <test id="T7" ac="AC6" type="integration">test_hybrid_search_full_ground_truth: Run full 50-query ground truth suite, measure retrieval accuracy with hybrid search, compare baseline (56%) vs hybrid (target: 71-76%), CRITICAL: ≥70% required for AC6</test>
+      <test id="T8" ac="AC7" type="performance">test_hybrid_search_latency: Run 10-query performance test, measure p50 and p95 latency, verify p50 &lt;150ms (expected 100-150ms), verify p95 &lt;10,000ms (NFR13 compliance)</test>
+    </ideas>
+  </tests>
+</story-context>

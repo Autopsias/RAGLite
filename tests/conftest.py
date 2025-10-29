@@ -128,23 +128,95 @@ def sample_chunk(sample_document_metadata: DocumentMetadata) -> Chunk:
     )
 
 
+@pytest.fixture
+def mock_mistral_client():
+    """Mock Mistral API client for SQL generation tests.
+
+    Prevents real API calls in CI when MISTRAL_API_KEY is not set.
+    Fixture returns (mock_client_instance, mock_class) tuple for flexibility.
+
+    Usage:
+        @pytest.mark.asyncio
+        async def test_sql_generation(mock_mistral_client):
+            mock_client, mock_class = mock_mistral_client
+            # Configure mock response
+            mock_client.chat.complete.return_value.choices[0].message.content = "SELECT ..."
+            # Now call function under test
+            sql = await generate_sql_query(query)
+    """
+    from unittest.mock import MagicMock, patch
+
+    with patch("raglite.retrieval.query_classifier.Mistral") as mock_class:
+        # Create mock client instance
+        mock_client = MagicMock()
+
+        # Mock the response structure matching mistralai SDK
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message = MagicMock()
+
+        # Default SQL response (valid SELECT query for financial_tables)
+        mock_response.choices[0].message.content = """
+SELECT entity, metric, value, unit, period, fiscal_year, page_number
+FROM financial_tables
+ORDER BY page_number DESC
+LIMIT 50;
+        """.strip()
+
+        # Configure mock to return this response
+        mock_client.chat.complete.return_value = mock_response
+        mock_class.return_value = mock_client
+
+        yield mock_client, mock_class
+
+
 # pytest-xdist parallel execution hooks
+def pytest_addoption(parser):
+    """Add custom command line options for pytest.
+
+    This allows us to control slow test execution via CLI flags.
+    """
+    parser.addoption(
+        "--run-slow",
+        action="store_true",
+        default=False,
+        help="Run slow tests (data-dependent tests requiring full 160-page PDF)",
+    )
+
+
 def pytest_configure(config):
-    """Configure pytest for optimal parallel execution.
+    """Configure pytest for optimal parallel execution and custom options.
 
     This hook is called once per worker process in pytest-xdist.
+    Makes the run_slow option available to all tests via pytest.run_slow.
     """
+    # Store run_slow flag globally so tests can access it via pytest.run_slow
+    pytest.run_slow = config.getoption("--run-slow")
+
     # Only set workerinput if we're actually in xdist mode
     # DO NOT create empty workerinput - it confuses pytest-cov!
     # pytest-xdist will create workerinput if running with -n flag
-    pass
 
 
 def pytest_collection_modifyitems(config, items):
-    """Modify test collection to optimize execution order.
+    """Modify test collection to optimize execution order and prevent race conditions.
 
-    Reorder tests to run fast tests first for quicker feedback.
+    1. Groups all integration tests to run in the same xdist worker (prevents Qdrant race conditions)
+    2. Reorders tests to run fast tests first for quicker feedback
     """
+
+    # Force ALL integration tests into the EXISTING "embedding_model" xdist worker group
+    # This prevents race conditions on shared Qdrant database AND avoids reloading embedding model
+    # Tests that already have @pytest.mark.xdist_group("embedding_model") keep it
+    # Tests without any group get added to "embedding_model" to ensure all integration tests
+    # run in the same worker (critical for session-scoped fixtures)
+    for item in items:
+        if "integration" in str(item.fspath):
+            # Check if test already has xdist_group marker
+            existing_group = item.get_closest_marker("xdist_group")
+            if not existing_group:
+                # Add to embedding_model group to match existing integration test group
+                item.add_marker(pytest.mark.xdist_group(name="embedding_model"))
 
     # Sort tests: unit tests first, then integration, then e2e/slow
     def test_priority(item):

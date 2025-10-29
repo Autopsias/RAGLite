@@ -1,0 +1,127 @@
+# generated: 2025-10-24
+# project: RAGLite
+# project_key: RAGLite
+# tracking_system: file-system
+# story_location: {project-root}/docs/stories
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic exists in epic file but not contexted
+#   - contexted: Epic tech context created (required before drafting stories)
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - drafted: Story file created in stories folder
+#   - ready-for-dev: Draft approved and story context created
+#   - in-progress: Developer actively working on implementation
+#   - review: Under SM review (via review-story workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - completed: Retrospective has been done
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epics should be 'contexted' before stories can be 'drafted'
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically drafts next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', SM reviews, then Dev moves to 'done'
+
+generated: 2025-10-24
+project: RAGLite
+project_key: RAGLite
+tracking_system: file-system
+story_location: "{project-root}/docs/stories"
+
+development_status:
+  # Epic 0: Pre-Phase 1 Foundation
+  epic-0: contexted
+  0-0-production-repository-setup: done
+  0-1-week-0-integration-spike: done
+  epic-0-retrospective: optional
+
+  # Epic 1: Foundation & Accurate Retrieval
+  epic-1: contexted
+  1-1-project-setup-development-environment: done
+  1-2-pdf-document-ingestion-with-docling: backlog
+  1-3-excel-document-ingestion: backlog
+  1-4-document-chunking-semantic-segmentation: backlog
+  1-5-embedding-model-integration-vector-generation: backlog
+  1-6-qdrant-vector-database-setup-storage: backlog
+  1-7-vector-similarity-search-retrieval: backlog
+  1-8-source-attribution-citation-generation: backlog
+  1-9-mcp-server-foundation-protocol-compliance: backlog
+  1-10-natural-language-query-tool-mcp: backlog
+  1-11-enhanced-chunk-metadata-mcp-response-formatting: backlog
+  1-12a-ground-truth-test-set-creation: backlog
+  1-12b-continuous-accuracy-tracking-final-validation: backlog
+  1-15-table-extraction-fix: backlog
+  1-15b-baseline-validation-analysis: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2: Advanced RAG Architecture Enhancement
+  epic-2: contexted
+  2-1-implement-pypdfium-backend-for-docling: done
+  2-2-implement-page-level-parallelism: done
+  2-3-refactor-chunking-strategy-to-fixed-512-token-approach: done
+  2-4-add-llm-generated-contextual-metadata-injection: done
+  2-5-ac3-validation-and-optimization: done
+  2-6-sql-table-extraction-postgresql-integration: done
+  2-7-multi-index-search-architecture: done
+  # Phase 2A Course Correction (PO Approved 2025-10-25)
+  2-8-table-aware-chunking: done  # Completed: 2025-10-25, Review approved, DoD met
+  2-9-fix-ground-truth-page-references: done
+  2-10-fix-query-classification-over-routing: done  # Review approved: 2025-10-25, Exceptional results (6% SQL, 90% HYBRID, 0% fallback)
+  2-11-fix-hybrid-search-scoring: in-progress  # Started: 2025-10-25, Dev: Amelia | Senior Review: 2025-10-27 (Changes Requested - AC2/AC4 failed, RRF bug investigation needed)
+  # Phase 2B Stories (ON HOLD pending Phase 2A re-validation)
+  2-12-cross-encoder-re-ranking: on-hold
+  # Phase 2A-REVISED (SQL Table Search - alternative to Phase 2B)
+  2-13-sql-table-search-phase2a-revised: done  # Review completed 2025-10-27. AC1-AC3: PRODUCTION-READY (99.39% table extraction, SQL generation, hybrid orchestration). AC4: 4% baseline documented. Story COMPLETE - SQL edge case refinement deferred to Story 2.14 per review recommendation.
+  2-14-sql-generation-edge-case-refinement: done  # Completed 2025-10-27. AC0-AC2 production-ready (90% accuracy). Full validation: 11/11 tests passing (Epic 2 Final Ground Truth). Core SQL retrieval validated. All acceptance criteria implemented.
+  epic-2-retrospective: optional
+
+  # Epic 3: AI Intelligence & Orchestration
+  epic-3: backlog
+  3-1-agentic-framework-integration: backlog
+  3-2-retrieval-agent-implementation: backlog
+  3-3-analysis-agent-implementation: backlog
+  3-4-synthesis-agent-implementation: backlog
+  3-5-multi-step-workflow-orchestration: backlog
+  3-6-analytical-query-tool-mcp: backlog
+  3-7-graceful-degradation-for-workflow-failures: backlog
+  3-8-agentic-workflow-test-suite: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Forecasting & Proactive Insights
+  epic-4: backlog
+  4-1-time-series-data-extraction: backlog
+  4-2-forecasting-engine-implementation: backlog
+  4-3-automated-forecast-updates: backlog
+  4-4-forecast-query-tool-mcp: backlog
+  4-5-anomaly-detection: backlog
+  4-6-trend-analysis-pattern-recognition: backlog
+  4-7-proactive-insight-generation: backlog
+  4-8-strategic-recommendation-engine: backlog
+  4-9-proactive-insights-tool-mcp: backlog
+  4-10-forecasting-insights-test-suite: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: Production Readiness & Real-Time Operations
+  epic-5: backlog
+  5-1-cloud-infrastructure-architecture: backlog
+  5-2-containerization-cloud-deployment: backlog
+  5-3-environment-configuration-secrets-management: backlog
+  5-4-data-encryption-at-rest: backlog
+  5-5-file-watching-real-time-document-detection: backlog
+  5-6-incremental-indexing-version-history: backlog
+  5-7-monitoring-logging-infrastructure: backlog
+  5-8-performance-optimization: backlog
+  5-9-scalability-validation: backlog
+  5-10-disaster-recovery-backup: backlog
+  5-11-production-validation-user-acceptance: backlog
+  5-12-ci-cd-pipeline-setup-automation: backlog
+  5-13-api-documentation-mcp-tool-reference: backlog
+  5-14-knowledge-transfer-team-onboarding-documentation: backlog
+  epic-5-retrospective: optional

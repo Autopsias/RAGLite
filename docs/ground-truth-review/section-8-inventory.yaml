@@ -1,0 +1,2041 @@
+# Section 8 (Pages 141-160) - Data Inventory for Ground Truth Creation
+# Secil - Brazil - Performance Review August 2025
+# Report Type: Financial Performance Dashboard
+# Time Period: August 2025 (Monthly), Year-to-Date (YTD)
+
+section_metadata:
+  section_number: 8
+  pages: "141-160"
+  report_name: "Secil Brazil - Performance Review (August 2025)"
+  currency: "BRL (Brazilian Real)"
+  reporting_unit: "1000 BRL (thousands)"
+  time_periods:
+    - monthly: "Aug-25"
+    - ytd: "Aug-25 (Year-to-Date)"
+    - budget: "B Aug-25"
+    - prior_year: "Aug-24"
+  geographic_focus: "Brazil"
+  business_segments:
+    - Cement (Primary)
+    - Ready Mix / Concrete
+    - Materials
+    - G&A (General & Administrative)
+    - Others
+
+# ============================================================================
+# TABLE 1: EBITDA IFRS BRIDGE (YOB vs YOY) - WATERFALL CHART
+# ============================================================================
+table_1_ebitda_bridge:
+  table_name: "Secil - Brazil - EBITDA IFRS Bridge (YOB vs YOY)"
+  location: "Page 141"
+  table_type: "Waterfall / Variance Analysis"
+  structure: "Transposed - Values shown as bridge components"
+  metrics:
+    - name: "Volume IM (Internal Market)"
+      unit: "M BRL"
+      yob_value: 4.6
+      yoy_value: 27.8
+      description: "Volume impact - Internal Market"
+    - name: "Price IM"
+      unit: "M BRL"
+      yob_value: 2.5
+      yoy_value: 21.3
+      description: "Price impact - Internal Market"
+    - name: "Volume EM (External Market)"
+      unit: "M BRL"
+      yob_value: 0.0
+      yoy_value: 0.0
+      description: "Volume impact - External Market"
+    - name: "Price EM"
+      unit: "M BRL"
+      yob_value: 0.9
+      yoy_value: 0.0
+      description: "Price impact - External Market"
+    - name: "Variable Costs"
+      unit: "M BRL"
+      yob_value: 6.4
+      yoy_value: 14.3
+      description: "Variable costs impact"
+    - name: "Fixed Costs"
+      unit: "M BRL"
+      yob_value: 2.0
+      yoy_value: 3.3
+      description: "Fixed costs impact"
+    - name: "Others - Cement"
+      unit: "M BRL"
+      yob_value: -0.3
+      yoy_value: -4.2
+      description: "Other cement-related impacts"
+    - name: "Production Variance"
+      unit: "M BRL"
+      yob_value: 0.0
+      yoy_value: 3.7
+      description: "Production efficiency variances"
+    - name: "Materials, Terminals and others"
+      unit: "M BRL"
+      yob_value: -1.4
+      yoy_value: 3.6
+      description: "Materials and terminal costs"
+  opening_balance:
+    yob: 156.7
+    yoy: 102.0
+    unit: "M BRL"
+  closing_balance:
+    yob: 170.4
+    yoy: 170.4
+    unit: "M BRL"
+  corporate_margin: 2.2
+  note: "Bridge from opening EBITDA to closing EBITDA through variance components"
+
+# ============================================================================
+# TABLE 2: OPERATIONAL PERFORMANCE - BRAZIL CEMENT (YTD vs Budget vs LY)
+# ============================================================================
+table_2_cement_operations:
+  table_name: "Secil - Brazil - Operational Performance - Brazil Cement (YTD vs Budget vs LY)"
+  location: "Pages 142-143"
+  table_type: "Multi-dimensional Performance Analysis"
+  structure: "Transposed - Month vs Budget vs Prior Year"
+  dimensions:
+    rows:
+      - "Monthly (Aug-25)"
+      - "Budget (B Aug-25)"
+      - "Prior Year (Aug-24)"
+      - "Variance % B"
+      - "Variance % LY"
+    columns:
+      - "Volume IM (kton)"
+      - "Price Cem - Net Transport Cost IM (BRL/ton)"
+      - "Price Cement IM (BRL/ton)"
+      - "Net Transport Cost (BRL/ton)"
+      - "Variable Costs - BRL/ton"
+      - "Fuel"
+      - "Electricity"
+      - "Others (Raw Materials, etc.)"
+      - "Fixed Costs Plant"
+      - "Employee Costs"
+      - "Maintenance Costs"
+      - "Other Costs"
+      - "Distribution Costs"
+      - "Sales Costs"
+      - "Production Variance"
+      - "EBITDA IFRS Cement"
+      - "EBITDA IFRS Cement - BRL/ton"
+      - "EBITDA IFRS Cement Margin %"
+      - "Unit variable margin - BRL/ton"
+
+  key_metrics:
+    volume_im_kton:
+      - month: "Aug-25"
+        value: 151
+      - month: "B Aug-25"
+        value: 152
+      - month: "Aug-24"
+        value: 156
+      - variance_b: "-1%"
+      - variance_ly: "-3%"
+
+    price_cem_net_transport_brl_ton:
+      - month: "Aug-25"
+        value: 379.0
+      - month: "B Aug-25"
+        value: 376.8
+      - month: "Aug-24"
+        value: 359.7
+      - variance_b: "1%"
+      - variance_ly: "5%"
+
+    price_cement_im_brl_ton:
+      - month: "Aug-25"
+        value: 427.2
+      - month: "B Aug-25"
+        value: 420.5
+      - month: "Aug-24"
+        value: 399.6
+      - variance_b: "2%"
+      - variance_ly: "7%"
+
+    variable_costs_brl_ton:
+      - month: "Aug-25"
+        value: 145.0
+      - month: "B Aug-25"
+        value: 137.1
+      - month: "Aug-24"
+        value: 146.1
+      - variance_b: "6%"
+      - variance_ly: "-1%"
+
+    fuel_brl_ton:
+      - month: "Aug-25"
+        value: 50.8
+      - month: "B Aug-25"
+        value: 48.6
+      - month: "Aug-24"
+        value: 51.0
+      - variance_b: "4%"
+      - variance_ly: "-0%"
+
+    electricity_brl_ton:
+      - month: "Aug-25"
+        value: 29.4
+      - month: "B Aug-25"
+        value: 29.4
+      - month: "Aug-24"
+        value: 26.0
+      - variance_b: "-0%"
+      - variance_ly: "13%"
+
+    other_variable_costs_brl_ton:
+      - month: "Aug-25"
+        value: 64.9
+      - month: "B Aug-25"
+        value: 59.1
+      - month: "Aug-24"
+        value: 69.0
+      - variance_b: "10%"
+      - variance_ly: "-6%"
+
+    fixed_costs_plant_1000_brl:
+      - month: "Aug-25"
+        value: -13763
+      - month: "B Aug-25"
+        value: -12734
+      - month: "Aug-24"
+        value: -8066
+      - variance_b: "8%"
+      - variance_ly: "71%"
+
+    employee_costs_1000_brl:
+      - month: "Aug-25"
+        value: -4462
+      - month: "B Aug-25"
+        value: -4106
+      - month: "Aug-24"
+        value: -4287
+      - variance_b: "9%"
+      - variance_ly: "4%"
+
+    maintenance_costs_1000_brl:
+      - month: "Aug-25"
+        value: -7507
+      - month: "B Aug-25"
+        value: -6199
+      - month: "Aug-24"
+        value: -1614
+      - variance_b: "21%"
+      - variance_ly: "365%"
+
+    other_costs_1000_brl:
+      - month: "Aug-25"
+        value: -1795
+      - month: "B Aug-25"
+        value: -2429
+      - month: "Aug-24"
+        value: -2165
+      - variance_b: "-26%"
+      - variance_ly: "-17%"
+
+    distribution_costs_1000_brl:
+      - month: "Aug-25"
+        value: -1130
+      - month: "B Aug-25"
+        value: -1264
+      - month: "Aug-24"
+        value: -1239
+      - variance_b: "-11%"
+      - variance_ly: "-9%"
+
+    distribution_employee_1000_brl:
+      - month: "Aug-25"
+        value: -264
+      - month: "B Aug-25"
+        value: -241
+      - month: "Aug-24"
+        value: -248
+      - variance_b: "10%"
+      - variance_ly: "6%"
+
+    distribution_other_1000_brl:
+      - month: "Aug-25"
+        value: -866
+      - month: "B Aug-25"
+        value: -1023
+      - month: "Aug-24"
+        value: -991
+      - variance_b: "-15%"
+      - variance_ly: "-13%"
+
+    sales_costs_1000_brl:
+      - month: "Aug-25"
+        value: -1888
+      - month: "B Aug-25"
+        value: -1545
+      - month: "Aug-24"
+        value: -1490
+      - variance_b: "22%"
+      - variance_ly: "27%"
+
+    sales_employee_1000_brl:
+      - month: "Aug-25"
+        value: -1194
+      - month: "B Aug-25"
+        value: -1105
+      - month: "Aug-24"
+        value: -1144
+      - variance_b: "8%"
+      - variance_ly: "4%"
+
+    sales_other_1000_brl:
+      - month: "Aug-25"
+        value: -694
+      - month: "B Aug-25"
+        value: -440
+      - month: "Aug-24"
+        value: -346
+      - variance_b: "58%"
+      - variance_ly: "100%"
+
+    other_cement_1000_brl:
+      - month: "Aug-25"
+        value: 38
+      - month: "B Aug-25"
+        value: 0
+      - month: "Aug-24"
+        value: 160
+      - variance_b: "-"
+      - variance_ly: "-76%"
+
+    other_revenue_1000_brl:
+      - month: "Aug-25"
+        value: 38
+      - month: "B Aug-25"
+        value: 0
+      - month: "Aug-24"
+        value: 160
+      - variance_b: "-"
+      - variance_ly: "-76%"
+
+    production_variance_1000_brl:
+      - month: "Aug-25"
+        value: -819
+      - month: "B Aug-25"
+        value: -4146
+      - month: "Aug-24"
+        value: -2772
+      - variance_b: "-80%"
+      - variance_ly: "-70%"
+
+    ebitda_ifrs_cement_1000_brl:
+      - month: "Aug-25"
+        value: 20676
+      - month: "B Aug-25"
+        value: 19565
+      - month: "Aug-24"
+        value: 22857
+      - variance_b: "6%"
+      - variance_ly: "-10%"
+
+    ebitda_ifrs_cement_brl_ton:
+      - month: "Aug-25"
+        value: 137.1
+      - month: "B Aug-25"
+        value: 129.0
+      - month: "Aug-24"
+        value: 147.0
+      - variance_b: "6%"
+      - variance_ly: "-7%"
+
+    ebitda_ifrs_cement_margin_pct:
+      - month: "Aug-25"
+        value: "32.0%"
+      - month: "B Aug-25"
+        value: "30.7%"
+      - month: "Aug-24"
+        value: "30.4%"
+      - variance_b: "1 pp"
+      - variance_ly: "2 pp"
+
+    unit_variable_margin_brl_ton:
+      - month: "Aug-25"
+        value: 240.3
+      - month: "B Aug-25"
+        value: 241.7
+      - month: "Aug-24"
+        value: 215.6
+      - variance_b: "-1%"
+      - variance_ly: "11%"
+
+  ytd_metrics:
+    volume_im_kton_ytd:
+      - value: 1160
+      - budget: 1141
+      - prior_year: 1041
+      - variance_b: "2%"
+      - variance_ly: "11%"
+
+    price_cement_im_ytd:
+      - value: 420.1
+      - budget: 417.0
+      - prior_year: 397.9
+      - variance_b: "1%"
+      - variance_ly: "6%"
+
+    net_transport_cost_ytd:
+      - value: 41.1
+      - budget: 40.2
+      - prior_year: 38.2
+      - variance_b: "2%"
+      - variance_ly: "8%"
+
+    variable_costs_ytd:
+      - value: 128.1
+      - budget: 128.8
+      - prior_year: 141.6
+      - variance_b: "-1%"
+      - variance_ly: "-10%"
+
+    fuel_ytd:
+      - value: 50.7
+      - budget: 48.5
+      - prior_year: 53.7
+      - variance_b: "5%"
+      - variance_ly: "-6%"
+
+    electricity_ytd:
+      - value: 25.3
+      - budget: 27.0
+      - prior_year: 24.6
+      - variance_b: "-6%"
+      - variance_ly: "3%"
+
+    other_variable_ytd:
+      - value: 52.1
+      - budget: 53.4
+      - prior_year: 63.3
+      - variance_b: "-2%"
+      - variance_ly: "-18%"
+
+    fixed_costs_plant_ytd:
+      - value: -86247
+      - budget: -91480
+      - prior_year: -89056
+      - variance_b: "-6%"
+      - variance_ly: "-3%"
+
+    employee_costs_ytd:
+      - value: -34576
+      - budget: -32518
+      - prior_year: -31061
+      - variance_b: "6%"
+      - variance_ly: "11%"
+
+    maintenance_ytd:
+      - value: -32150
+      - budget: -39586
+      - prior_year: -36262
+      - variance_b: "-19%"
+      - variance_ly: "-11%"
+
+    other_costs_ytd:
+      - value: -19521
+      - budget: -19376
+      - prior_year: -21733
+      - variance_b: "1%"
+      - variance_ly: "-10%"
+
+    distribution_costs_ytd:
+      - value: -8824
+      - budget: -9581
+      - prior_year: -9373
+      - variance_b: "-8%"
+      - variance_ly: "-6%"
+
+    distribution_employee_ytd:
+      - value: -1929
+      - budget: -1872
+      - prior_year: -1855
+      - variance_b: "3%"
+      - variance_ly: "4%"
+
+    distribution_other_ytd:
+      - value: -6895
+      - budget: -7708
+      - prior_year: -7518
+      - variance_b: "-11%"
+      - variance_ly: "-8%"
+
+    sales_costs_ytd:
+      - value: -12456
+      - budget: -12825
+      - prior_year: -12426
+      - variance_b: "-3%"
+      - variance_ly: "0%"
+
+    sales_employee_ytd:
+      - value: -8535
+      - budget: -8604
+      - prior_year: -8600
+      - variance_b: "-1%"
+      - variance_ly: "-1%"
+
+    sales_other_ytd:
+      - value: -3921
+      - budget: -4221
+      - prior_year: -3826
+      - variance_b: "-7%"
+      - variance_ly: "2%"
+
+    other_cement_ytd:
+      - value: 3415
+      - budget: 77
+      - prior_year: 1025
+      - variance_b: "4336%"
+      - variance_ly: "233%"
+
+    production_variance_ytd:
+      - value: -6195
+      - budget: -7211
+      - prior_year: -13929
+      - variance_b: "-14%"
+      - variance_ly: "-56%"
+
+    ebitda_ifrs_cement_ytd:
+      - value: 183662
+      - budget: 167729
+      - prior_year: 117489
+      - variance_b: "9%"
+      - variance_ly: "56%"
+
+    ebitda_ifrs_cement_brl_ton_ytd:
+      - value: 158.4
+      - budget: 147.0
+      - prior_year: 112.8
+      - variance_b: "8%"
+      - variance_ly: "40%"
+
+    ebitda_ifrs_cement_margin_ytd:
+      - value: "37.6%"
+      - budget: "35.2%"
+      - prior_year: "26.7%"
+      - variance_b: "2 pp"
+      - variance_ly: "11 pp"
+
+    unit_variable_margin_ytd:
+      - value: 250.9
+      - budget: 248.0
+      - prior_year: 218.0
+      - variance_b: "1%"
+      - variance_ly: "15%"
+
+# ============================================================================
+# TABLE 3: OPERATIONAL PERFORMANCE - BRAZIL MATERIALS (YTD vs Budget vs LY)
+# ============================================================================
+table_3_materials_operations:
+  table_name: "Secil - Brazil - Operational Performance - Brazil Materials (YTD vs Budget vs LY)"
+  location: "Pages 144"
+  table_type: "Product Line Analysis"
+  structure: "Transposed - Ready Mix Concrete Segment"
+  segments:
+    - ready_mix:
+        monthly:
+          volume_m3:
+            - month: "Aug-25"
+              value: 21
+            - month: "B Aug-25"
+              value: 24
+            - month: "Aug-24"
+              value: 19
+          price_brl_m3:
+            - month: "Aug-25"
+              value: 488.4
+            - month: "B Aug-25"
+              value: 490.0
+            - month: "Aug-24"
+              value: 481.5
+          price_transport_brl_m3:
+            - month: "Aug-25"
+              value: 488.4
+            - month: "B Aug-25"
+              value: 490.0
+            - month: "Aug-24"
+              value: 481.5
+          variable_costs_brl_m3:
+            - month: "Aug-25"
+              value: 351.4
+            - month: "B Aug-25"
+              value: 362.9
+            - month: "Aug-24"
+              value: 362.2
+          unit_margin_brl_m3:
+            - month: "Aug-25"
+              value: 136.9
+            - month: "B Aug-25"
+              value: 127.1
+            - month: "Aug-24"
+              value: 119.1
+          variable_contribution_1000_brl:
+            - month: "Aug-25"
+              value: 2920
+            - month: "B Aug-25"
+              value: 2988
+            - month: "Aug-24"
+              value: 2242
+          fixed_costs_1000_brl:
+            - month: "Aug-25"
+              value: -2453
+            - month: "B Aug-25"
+              value: -2184
+            - month: "Aug-24"
+              value: -2372
+          ebitda_ifrs_1000_brl:
+            - month: "Aug-25"
+              value: 426
+            - month: "B Aug-25"
+              value: 805
+            - month: "Aug-24"
+              value: -116
+          ebitda_ifrs_margin_pct:
+            - month: "Aug-25"
+              value: "4%"
+            - month: "B Aug-25"
+              value: "7%"
+            - month: "Aug-24"
+              value: "-1%"
+
+        ytd:
+          volume_m3:
+            - value: 142
+            - budget: 157
+            - prior_year: 127
+          price_brl_m3:
+            - value: 493.2
+            - budget: 495.5
+            - prior_year: 487.7
+          price_transport_brl_m3:
+            - value: 493.2
+            - budget: 495.5
+            - prior_year: 487.7
+          variable_costs_brl_m3:
+            - value: 357.3
+            - budget: 362.0
+            - prior_year: 364.2
+          unit_margin_brl_m3:
+            - value: 135.8
+            - budget: 133.5
+            - prior_year: 123.5
+          variable_contribution_1000_brl:
+            - value: 19305
+            - budget: 20987
+            - prior_year: 15681
+          fixed_costs_1000_brl:
+            - value: -18229
+            - budget: -17414
+            - prior_year: -18466
+          ebitda_ifrs_1000_brl:
+            - value: 531
+            - budget: 3573
+            - prior_year: -3067
+          ebitda_ifrs_margin_pct:
+            - value: "1%"
+            - budget: "5%"
+            - prior_year: "-5%"
+
+# ============================================================================
+# TABLE 4: OPERATIONAL PERFORMANCE - BRAZIL OTHERS AND G&A
+# ============================================================================
+table_4_others_ganda:
+  table_name: "Secil - Brazil - Operational Performance - Brazil Others and G&A (YTD vs Budget vs LY)"
+  location: "Pages 145"
+  table_type: "Administrative and Other Segments"
+  structure: "Transposed - G&A cost breakdown"
+
+  others_segment:
+    monthly:
+      ebitda_ifrs_1000_brl:
+        - month: "Aug-25"
+          value: -6
+        - month: "B Aug-25"
+          value: -7
+        - month: "Aug-24"
+          value: -16
+    ytd:
+      ebitda_ifrs_1000_brl:
+        - value: -84
+        - budget: -58
+        - prior_year: -91
+
+  ganda_segment:
+    monthly:
+      revenue_1000_brl:
+        - month: "Aug-25"
+          value: 0
+        - month: "B Aug-25"
+          value: -5
+        - month: "Aug-24"
+          value: 0
+
+      employee_costs_1000_brl:
+        - month: "Aug-25"
+          value: -1608
+        - month: "B Aug-25"
+          value: -1289
+        - month: "Aug-24"
+          value: -1172
+
+      fte_count:
+        - month: "Aug-25"
+          value: 62
+        - month: "B Aug-25"
+          value: 67
+        - month: "Aug-24"
+          value: 56
+
+      specialized_labour_1000_brl:
+        - month: "Aug-25"
+          value: -178
+        - month: "B Aug-25"
+          value: -196
+        - month: "Aug-24"
+          value: -199
+
+      rents_rentals_1000_brl:
+        - month: "Aug-25"
+          value: -26
+        - month: "B Aug-25"
+          value: -24
+        - month: "Aug-24"
+          value: -30
+
+      travel_expenses_1000_brl:
+        - month: "Aug-25"
+          value: -31
+        - month: "B Aug-25"
+          value: -72
+        - month: "Aug-24"
+          value: -40
+
+      other_costs_1000_brl:
+        - month: "Aug-25"
+          value: -261
+        - month: "B Aug-25"
+          value: -173
+        - month: "Aug-24"
+          value: -214
+
+      ebitda_ifrs_ganda_net_1000_brl:
+        - month: "Aug-25"
+          value: -2104
+        - month: "B Aug-25"
+          value: -1759
+        - month: "Aug-24"
+          value: -1655
+
+      ganda_net_costs_turnover_pct:
+        - month: "Aug-25"
+          value: "3.0%"
+        - month: "B Aug-25"
+          value: "2.5%"
+        - month: "Aug-24"
+          value: "2.2%"
+
+    ytd:
+      revenue_1000_brl:
+        - value: 10
+        - budget: -43
+        - prior_year: 155
+
+      employee_costs_1000_brl:
+        - value: -11516
+        - budget: -10356
+        - prior_year: -8934
+
+      fte_count:
+        - value: 62
+        - budget: 67
+        - prior_year: 57
+
+      specialized_labour_1000_brl:
+        - value: -1905
+        - budget: -1898
+        - prior_year: -1701
+
+      rents_rentals_1000_brl:
+        - value: -213
+        - budget: -189
+        - prior_year: -299
+
+      travel_expenses_1000_brl:
+        - value: -393
+        - budget: -506
+        - prior_year: -342
+
+      other_costs_1000_brl:
+        - value: -1853
+        - budget: -1509
+        - prior_year: -1213
+
+      ebitda_ifrs_ganda_net_1000_brl:
+        - value: -15869
+        - budget: -14500
+        - prior_year: -12334
+
+      ganda_net_costs_turnover_pct:
+        - value: "3.0%"
+        - budget: "2.8%"
+        - prior_year: "2.7%"
+
+  corporate_costs:
+    monthly:
+      demurrage_2025:
+        value: 0
+      demurrage_2024:
+        value: 0
+      trading_margin_merchandise:
+        - month: "Aug-25"
+          value: 0
+        - month: "B Aug-25"
+          value: -1340
+        - month: "Aug-24"
+          value: 0
+      technical_assistance:
+        - month: "Aug-25"
+          value: 200
+        - month: "B Aug-25"
+          value: 114
+        - month: "Aug-24"
+          value: 1
+      employees:
+        value: 0
+      specialized_labour:
+        - month: "Aug-25"
+          value: -19
+        - month: "B Aug-25"
+          value: -79
+        - month: "Aug-24"
+          value: -50
+      rents_rentals:
+        value: 0
+      travel_expenses:
+        - month: "Aug-25"
+          value: 0
+        - month: "B Aug-25"
+          value: 0
+        - month: "Aug-24"
+          value: 0
+      maintenance_costs:
+        value: 0
+      insurance:
+        - month: "Aug-25"
+          value: -6
+        - month: "B Aug-25"
+          value: -9
+        - month: "Aug-24"
+          value: -8
+      licences:
+        value: 0
+      other_costs:
+        value: 0
+      brazil_corporate_costs_1000_brl:
+        - month: "Aug-25"
+          value: 175
+        - month: "B Aug-25"
+          value: -1314
+        - month: "Aug-24"
+          value: -1950
+
+    ytd:
+      demurrage_2025:
+        - value: 0
+      demurrage_2024:
+        - value: 0
+      trading_margin_merchandise:
+        - value: 0
+        - budget: -1340
+        - prior_year: -1853
+      technical_assistance:
+        - value: 2420
+        - budget: 908
+        - prior_year: 113
+      employees:
+        - value: 0
+        - budget: 0
+        - prior_year: 74
+      specialized_labour:
+        - value: -147
+        - budget: -630
+        - prior_year: -164
+      rents_rentals:
+        - value: 0
+        - budget: 0
+        - prior_year: 0
+      travel_expenses:
+        - value: -39
+        - budget: 0
+        - prior_year: -2
+      maintenance_costs:
+        - value: -1
+        - budget: 0
+        - prior_year: 0
+      insurance:
+        - value: -50
+        - budget: -72
+        - prior_year: -62
+      licences:
+        - value: 0
+      other_costs:
+        - value: 0
+      brazil_corporate_costs_1000_brl:
+        - value: 2184
+        - budget: -2474
+        - prior_year: -1893
+
+# ============================================================================
+# TABLE 5: ROLLING FORECAST
+# ============================================================================
+table_5_rolling_forecast:
+  table_name: "Secil - Brazil - Rolling Forecast"
+  location: "Page 146"
+  table_type: "Forecast / Projection"
+  structure: "Transposed - Monthly vs Budget vs Prior Year"
+
+  cement_segment:
+    monthly:
+      local_cement_sales_kton:
+        - month: "Aug-25"
+          value: 151
+        - month: "Sep-25"
+          value: 152
+        - month: "B Sep-25"
+          value: 152
+        - month: "Sep-24"
+          value: 138
+
+      clinker_production_ton:
+        - month: "Aug-25"
+          value: 95
+        - month: "Sep-25"
+          value: 91
+        - month: "B Sep-25"
+          value: 111
+        - month: "Sep-24"
+          value: 115
+
+      cement_production_kton:
+        - month: "Aug-25"
+          value: 156
+        - month: "Sep-25"
+          value: 151
+        - month: "B Sep-25"
+          value: 150
+        - month: "Sep-24"
+          value: 147
+
+      cement_ebitda_ifrs_1000_brl:
+        - month: "Aug-25"
+          value: 20676
+        - month: "Sep-25"
+          value: 15989
+        - month: "B Sep-25"
+          value: 24759
+        - month: "Sep-24"
+          value: 22335
+
+    ytd:
+      local_cement_sales_kton:
+        - sep_25: 1311
+        - b_sep_25: 1293
+        - sep_24: 1179
+
+      clinker_production_ton:
+        - sep_25: 917
+        - b_sep_25: 926
+        - sep_24: 807
+
+      cement_production_kton:
+        - sep_25: 1291
+        - b_sep_25: 1291
+        - sep_24: 1166
+
+      cement_ebitda_ifrs_1000_brl:
+        - sep_25: 199651
+        - b_sep_25: 192488
+        - sep_24: 139825
+
+  concrete_segment:
+    monthly:
+      concrete_sales_km3:
+        - month: "Aug-25"
+          value: 21
+        - month: "Sep-25"
+          value: 20
+        - month: "B Sep-25"
+          value: 22
+        - month: "Sep-24"
+          value: 19
+
+      readymix_margem_supremo_ebitda_ifrs_1000_brl:
+        - month: "Aug-25"
+          value: 426
+        - month: "Sep-25"
+          value: 211
+        - month: "B Sep-25"
+          value: 840
+        - month: "Sep-24"
+          value: 2886
+
+      concrete_ebitda_ifrs_1000_brl:
+        - month: "Aug-25"
+          value: 426
+        - month: "Sep-25"
+          value: 211
+        - month: "B Sep-25"
+          value: 840
+        - month: "Sep-24"
+          value: 2886
+
+    ytd:
+      concrete_sales_km3:
+        - sep_25: 162
+        - b_sep_25: 179
+        - sep_24: 146
+
+      readymix_margem_supremo_ebitda_ifrs_1000_brl:
+        - sep_25: 742
+        - b_sep_25: 4413
+        - sep_24: -181
+
+      concrete_ebitda_ifrs_1000_brl:
+        - sep_25: 742
+        - b_sep_25: 4413
+        - sep_24: -181
+
+  others_segment:
+    monthly:
+      others_ebitda_ifrs_1000_brl:
+        - month: "Aug-25"
+          value: -1935
+        - month: "Sep-25"
+          value: -1900
+        - month: "B Sep-25"
+          value: -1709
+        - month: "Sep-24"
+          value: -1408
+
+    ytd:
+      others_ebitda_ifrs_1000_brl:
+        - sep_25: -15669
+        - b_sep_25: -18742
+        - sep_24: -15726
+
+  total_brazil:
+    monthly:
+      brazil_ebitda_ifrs_1000_brl:
+        - month: "Aug-25"
+          value: 19167
+        - month: "Sep-25"
+          value: 14300
+        - month: "B Sep-25"
+          value: 23890
+        - month: "Sep-24"
+          value: 23813
+
+    ytd:
+      brazil_ebitda_ifrs_1000_brl:
+        - sep_25: 184724
+        - b_sep_25: 178160
+        - sep_24: 123917
+
+# ============================================================================
+# TABLE 6: P&L (YTD vs Budget vs LY)
+# ============================================================================
+table_6_pl_statement:
+  table_name: "Secil - Brazil - P&L (YTD vs Budget vs LY)"
+  location: "Page 147"
+  table_type: "Financial Statement"
+  structure: "Transposed - Income Statement"
+
+  monthly:
+    ebitda_ifrs_1000_brl:
+      - month: "Aug-25"
+        value: 19167
+      - month: "B Aug-25"
+        value: 17289
+      - month: "Aug-24"
+        value: 19120
+
+    amortization_depreciation_grants_1000_brl:
+      - month: "Aug-25"
+        value: -7427
+      - month: "B Aug-25"
+        value: -6492
+      - month: "Aug-24"
+        value: -6419
+
+    provisions_1000_brl:
+      - month: "Aug-25"
+        value: -160
+      - month: "B Aug-25"
+        value: -200
+      - month: "Aug-24"
+        value: -225
+
+    ebit_1000_brl:
+      - month: "Aug-25"
+        value: 11580
+      - month: "B Aug-25"
+        value: 10597
+      - month: "Aug-24"
+        value: 12477
+
+    net_financial_costs_1000_brl:
+      - month: "Aug-25"
+        value: 872
+      - month: "B Aug-25"
+        value: -5795
+      - month: "Aug-24"
+        value: -7724
+
+    operational_forex_1000_brl:
+      - month: "Aug-25"
+        value: -7675
+      - month: "B Aug-25"
+        value: 0
+      - month: "Aug-24"
+        value: 5023
+
+    financial_income_1000_brl:
+      - month: "Aug-25"
+        value: -6804
+      - month: "B Aug-25"
+        value: -5795
+      - month: "Aug-24"
+        value: -2701
+
+    profit_before_tax_1000_brl:
+      - month: "Aug-25"
+        value: 4776
+      - month: "B Aug-25"
+        value: 4802
+      - month: "Aug-24"
+        value: 9776
+
+    tax_1000_brl:
+      - month: "Aug-25"
+        value: -1347
+      - month: "B Aug-25"
+        value: -3181
+      - month: "Aug-24"
+        value: -4695
+
+    net_income_1000_brl:
+      - month: "Aug-25"
+        value: 3429
+      - month: "B Aug-25"
+        value: 1621
+      - month: "Aug-24"
+        value: 5081
+
+  ytd:
+    ebitda_ifrs_1000_brl:
+      - value: 170424
+      - budget: 154269
+      - prior_year: 100104
+
+    amortization_depreciation_grants_1000_brl:
+      - value: -59293
+      - budget: -51255
+      - prior_year: -49452
+
+    provisions_1000_brl:
+      - value: -2556
+      - budget: -1600
+      - prior_year: -2017
+
+    ebit_1000_brl:
+      - value: 108575
+      - budget: 101414
+      - prior_year: 48635
+
+    net_financial_costs_1000_brl:
+      - value: 9066
+      - budget: -47618
+      - prior_year: -122285
+
+    operational_forex_1000_brl:
+      - value: -68300
+      - budget: 0
+      - prior_year: 66779
+
+    financial_income_1000_brl:
+      - value: -59234
+      - budget: -47618
+      - prior_year: -55506
+
+    profit_before_tax_1000_brl:
+      - value: 49341
+      - budget: 53796
+      - prior_year: -6871
+
+    tax_1000_brl:
+      - value: -22670
+      - budget: -26444
+      - prior_year: -2921
+
+    net_income_1000_brl:
+      - value: 26671
+      - budget: 27353
+      - prior_year: -9791
+
+  margin_metrics:
+    ebitda_ifrs_margin_pct:
+      monthly:
+        - month: "Aug-25"
+          value: "27%"
+        - month: "B Aug-25"
+          value: "25%"
+        - month: "Aug-24"
+          value: "25%"
+      ytd:
+        - value: "32%"
+        - budget: "30%"
+        - prior_year: "22%"
+
+    ebit_margin_pct:
+      monthly:
+        - month: "Aug-25"
+          value: "16%"
+        - month: "B Aug-25"
+          value: "15%"
+        - month: "Aug-24"
+          value: "17%"
+      ytd:
+        - value: "20%"
+        - budget: "19%"
+        - prior_year: "11%"
+
+# ============================================================================
+# TABLE 7: TURNOVER / EBITDA IFRS (YTD vs Budget vs LY)
+# ============================================================================
+table_7_turnover_ebitda:
+  table_name: "Secil - Brazil - Turnover / EBITDA IFRS (YTD vs Budget vs LY)"
+  location: "Pages 148"
+  table_type: "Revenue and Profitability Analysis"
+  structure: "Transposed - Turnover and EBITDA by segment"
+
+  turnover_analysis:
+    monthly:
+      brazil_total_1000_brl:
+        - month: "Aug-25"
+          value: 71247
+        - month: "B Aug-25"
+          value: 69658
+        - month: "Aug-24"
+          value: 75305
+
+      brazil_cement_1000_brl:
+        - month: "Aug-25"
+          value: 64605
+        - month: "B Aug-25"
+          value: 63754
+        - month: "Aug-24"
+          value: 75111
+
+      brazil_readymix_1000_brl:
+        - month: "Aug-25"
+          value: 10372
+        - month: "B Aug-25"
+          value: 11522
+        - month: "Aug-24"
+          value: 9059
+
+      brazil_corporate_costs_1000_brl:
+        - month: "Aug-25"
+          value: 0
+        - month: "B Aug-25"
+          value: -1340
+        - month: "Aug-24"
+          value: -1894
+
+      brazil_intercompany_1000_brl:
+        - month: "Aug-25"
+          value: -3730
+        - month: "B Aug-25"
+          value: -4278
+        - month: "Aug-24"
+          value: -6972
+
+    ytd:
+      brazil_total_1000_brl:
+        - value: 532532
+        - budget: 522189
+        - prior_year: 454924
+
+      brazil_cement_1000_brl:
+        - value: 488500
+        - budget: 475978
+        - prior_year: 439322
+
+      brazil_readymix_1000_brl:
+        - value: 69492
+        - budget: 77903
+        - prior_year: 61600
+
+      brazil_corporate_costs_1000_brl:
+        - value: 0
+        - budget: -2680
+        - prior_year: -1853
+
+      brazil_intercompany_1000_brl:
+        - value: -25460
+        - budget: -29011
+        - prior_year: -44145
+
+  ebitda_analysis:
+    monthly:
+      brazil_total_1000_brl:
+        - month: "Aug-25"
+          value: 19167
+        - month: "B Aug-25"
+          value: 17289
+        - month: "Aug-24"
+          value: 19120
+
+      brazil_cement_1000_brl:
+        - month: "Aug-25"
+          value: 20676
+        - month: "B Aug-25"
+          value: 19565
+        - month: "Aug-24"
+          value: 22857
+
+      total_cement_1000_brl:
+        - month: "Aug-25"
+          value: 20676
+        - month: "B Aug-25"
+          value: 19565
+        - month: "Aug-24"
+          value: 22857
+
+      brazil_readymix_1000_brl:
+        - month: "Aug-25"
+          value: 426
+        - month: "B Aug-25"
+          value: 805
+        - month: "Aug-24"
+          value: -116
+
+      total_building_materials_1000_brl:
+        - month: "Aug-25"
+          value: 426
+        - month: "B Aug-25"
+          value: 805
+        - month: "Aug-24"
+          value: -116
+
+      brazil_ganda_1000_brl:
+        - month: "Aug-25"
+          value: -2104
+        - month: "B Aug-25"
+          value: -1759
+        - month: "Aug-24"
+          value: -1655
+
+      brazil_others_1000_brl:
+        - month: "Aug-25"
+          value: -6
+        - month: "B Aug-25"
+          value: -7
+        - month: "Aug-24"
+          value: -16
+
+      brazil_corporate_costs_1000_brl:
+        - month: "Aug-25"
+          value: 175
+        - month: "B Aug-25"
+          value: -1314
+        - month: "Aug-24"
+          value: -1950
+
+    ytd:
+      brazil_total_1000_brl:
+        - value: 170424
+        - budget: 154269
+        - prior_year: 100104
+
+      brazil_cement_1000_brl:
+        - value: 183662
+        - budget: 167729
+        - prior_year: 117489
+
+      total_cement_1000_brl:
+        - value: 183662
+        - budget: 167729
+        - prior_year: 117489
+
+      brazil_readymix_1000_brl:
+        - value: 531
+        - budget: 3573
+        - prior_year: -3067
+
+      total_building_materials_1000_brl:
+        - value: 531
+        - budget: 3573
+        - prior_year: -3067
+
+      brazil_ganda_1000_brl:
+        - value: -15869
+        - budget: -14500
+        - prior_year: -12334
+
+      brazil_others_1000_brl:
+        - value: -84
+        - budget: -58
+        - prior_year: -91
+
+      brazil_corporate_costs_1000_brl:
+        - value: 2184
+        - budget: -2474
+        - prior_year: -1893
+
+# ============================================================================
+# TABLE 8: HEADCOUNT EVOLUTION (YTD vs Budget vs LY)
+# ============================================================================
+table_8_headcount:
+  table_name: "Secil - Brazil - Headcount Evolution (YTD vs Budget vs LY)"
+  location: "Page 149"
+  table_type: "Human Resources / Workforce Analysis"
+  structure: "Transposed - Headcount by function and location"
+
+  brazil_total:
+    feb_2025: 566
+    aug_2025: 577
+    budget_aug_2025: 616
+    aug_2024: 560
+
+  brazil_cement:
+    feb_2025: 378
+    aug_2025: 379
+    budget_aug_2025: 405
+    aug_2024: 380
+
+    plants:
+      feb_2025: 301
+      aug_2025: 298
+      budget_aug_2025: 317
+      aug_2024: 302
+
+    distribution:
+      feb_2025: 26
+      aug_2025: 25
+      budget_aug_2025: 26
+      aug_2024: 26
+
+    sales:
+      feb_2025: 51
+      aug_2025: 56
+      budget_aug_2025: 62
+      aug_2024: 52
+
+  brazil_ready_mix:
+    feb_2025: 128
+    aug_2025: 136
+    budget_aug_2025: 144
+    aug_2024: 123
+
+  brazil_ganda:
+    feb_2025: 60
+    aug_2025: 62
+    budget_aug_2025: 67
+    aug_2024: 57
+
+  historical_data:
+    fy_2020: 0
+    fy_2021: 570
+    fy_2022: 564
+    fy_2023: 556
+    fy_2024: 566
+    fy_2025: 559
+
+# ============================================================================
+# TABLE 9: CAPEX TOTAL / PER TYPE (YTD vs Budget vs LY)
+# ============================================================================
+table_9_capex:
+  table_name: "Secil - Brazil - Capex Total / per Type (YTD vs Budget vs LY)"
+  location: "Pages 150"
+  table_type: "Capital Expenditure Analysis"
+  structure: "Transposed - Capex by category and type"
+
+  total_capex:
+    monthly:
+      brazil_1000_brl:
+        - month: "Aug-25"
+          value: 1927
+        - month: "B Aug-25"
+          value: 5241
+        - month: "Aug-24"
+          value: 9857
+
+      brazil_cement_1000_brl:
+        - month: "Aug-25"
+          value: 1615
+        - month: "B Aug-25"
+          value: 4810
+        - month: "Aug-24"
+          value: 9807
+
+      total_cement_1000_brl:
+        - month: "Aug-25"
+          value: 1615
+        - month: "B Aug-25"
+          value: 4810
+        - month: "Aug-24"
+          value: 9807
+
+      brazil_readymix_1000_brl:
+        - month: "Aug-25"
+          value: 22
+        - month: "B Aug-25"
+          value: 299
+        - month: "Aug-24"
+          value: 43
+
+      total_building_materials_1000_brl:
+        - month: "Aug-25"
+          value: 22
+        - month: "B Aug-25"
+          value: 299
+        - month: "Aug-24"
+          value: 43
+
+      brazil_ganda_1000_brl:
+        - month: "Aug-25"
+          value: 291
+        - month: "B Aug-25"
+          value: 132
+        - month: "Aug-24"
+          value: 8
+
+    ytd:
+      brazil_1000_brl:
+        - value: 24455
+        - budget: 43497
+        - prior_year: 93705
+
+      brazil_cement_1000_brl:
+        - value: 22180
+        - budget: 38925
+        - prior_year: 65778
+
+      total_cement_1000_brl:
+        - value: 22180
+        - budget: 38925
+        - prior_year: 65778
+
+      brazil_readymix_1000_brl:
+        - value: 993
+        - budget: 2538
+        - prior_year: 25845
+
+      total_building_materials_1000_brl:
+        - value: 993
+        - budget: 2538
+        - prior_year: 25845
+
+      brazil_ganda_1000_brl:
+        - value: 1282
+        - budget: 2034
+        - prior_year: 2082
+
+  capex_by_type_ytd:
+    recurring_capex:
+      land: 0
+      replacement: 11667
+      hse: 0
+      other: 0
+      total: 11667
+
+    development_capex:
+      energy: 0
+      other: 177
+      total: 177
+
+    ifrs_16: 12611
+    total_capex: 24455
+
+# ============================================================================
+# TABLE 10: CEMENT - MARGIN BY PLANT (YTD vs Budget vs LY)
+# ============================================================================
+table_10_margin_by_plant:
+  table_name: "Secil - Brazil - Operational Performance - Brazil Cement - Margin by Plant (YTD vs Budget vs LY)"
+  location: "Page 151"
+  table_type: "Plant-Level Profitability"
+  structure: "Transposed - Plant comparison"
+
+  adrianopolis:
+    unit_cost_denominator_kton: 1027
+    budget_unit_cost_kton: 1008
+    prior_year_kton: 880
+
+    price_cement_net_transport_brl_ton: 379.0
+    budget_price_brl_ton: 376.8
+    prior_year_price_brl_ton: 359.7
+
+    variable_cost_brl_ton: -110.6
+    budget_variable_brl_ton: -110.8
+    prior_year_variable_brl_ton: -124.9
+
+    fixed_costs_brl_ton: -72.7
+    budget_fixed_brl_ton: -77.1
+    prior_year_fixed_brl_ton: -86.4
+
+    other_costs_income_brl_ton: 5.1
+    budget_other_brl_ton: 7.2
+    prior_year_other_brl_ton: 12.4
+
+    unit_cement_ebitda_brl_ton: 200.9
+    budget_unit_ebitda_brl_ton: 196.1
+    prior_year_unit_ebitda_brl_ton: 160.8
+
+  pomerode:
+    unit_cost_denominator_kton: 202
+    budget_unit_cost_kton: 214
+    prior_year_kton: 209
+
+    price_cement_net_transport_brl_ton: 379.0
+    budget_price_brl_ton: 376.8
+    prior_year_price_brl_ton: 359.7
+
+    variable_cost_brl_ton: -259.1
+    budget_variable_brl_ton: -263.7
+    prior_year_variable_brl_ton: -261.8
+
+    fixed_costs_brl_ton: -57.4
+    budget_fixed_brl_ton: -64.4
+    prior_year_fixed_brl_ton: -62.4
+
+    other_costs_income_brl_ton: 4.5
+    budget_other_brl_ton: 0
+    prior_year_other_brl_ton: 14.6
+
+    unit_cement_ebitda_brl_ton: 67.1
+    budget_unit_ebitda_brl_ton: 48.7
+    prior_year_unit_ebitda_brl_ton: 50.1
+
+# ============================================================================
+# TABLE 11: HEALTH & SAFETY KPIs
+# ============================================================================
+table_11_health_safety:
+  table_name: "Secil - Brazil - Health & Safety KPI's"
+  location: "Page 151"
+  table_type: "Safety and Health Metrics"
+  structure: "Transposed - Monthly and YTD metrics"
+
+  frequency_ratio_definition: "Number Lost Time Injuries x 1,000,000 / Total Manhours Worked"
+
+  frequency_ratio:
+    monthly:
+      jun_2025:
+        brazil: 7.8
+        cement: null
+        non_cement: 45.5
+
+      aug_2025:
+        brazil: 14.8
+        cement: 18.0
+        non_cement: null
+
+    ytd_2025:
+      brazil: 2.81
+      cement: 2.22
+      non_cement: 6.02
+
+    last_12_months:
+      brazil: 3.06
+      cement: 2.18
+      non_cement: 7.82
+
+    fy_2024:
+      brazil: 3.62
+      cement: 2.38
+      non_cement: 11.91
+
+    fy_2023:
+      brazil: 1.23
+      cement: 0.72
+      non_cement: 4.08
+
+    budget_2025:
+      brazil: 1.84
+      cement: 1.07
+      non_cement: 8.15
+
+  lost_time_injury_definition: "Number Lost Time Injuries x 1,000,000"
+
+  lost_time_injury:
+    monthly:
+      jun_2025:
+        brazil: 1.0
+        cement: null
+        non_cement: 1.0
+
+      aug_2025:
+        brazil: 2.0
+        cement: 2.0
+        non_cement: null
+
+    ytd_2025:
+      brazil: 3.00
+      cement: 2.00
+      non_cement: 1.00
+
+    last_12_months:
+      brazil: 5.0
+      cement: 3.0
+      non_cement: 2.0
+
+    fy_2024:
+      brazil: 7.0
+      cement: 4.0
+      non_cement: 3.0
+
+    fy_2023:
+      brazil: 2.0
+      cement: 1.0
+      non_cement: 1.0
+
+    budget_2025:
+      brazil: 3.0
+      cement: 1.0
+      non_cement: 2.0
+
+# ============================================================================
+# TABLE 12: NET WORKING CAPITAL (YTD vs Budget vs LY)
+# ============================================================================
+table_12_net_working_capital:
+  table_name: "Secil - Brazil - Net Working Capital (YTD vs Budget vs LY)"
+  location: "Page 155"
+  table_type: "Balance Sheet / Working Capital Analysis"
+  structure: "Transposed - NWC components"
+
+  accounts_receivable:
+    aug_2025: 68864
+    budget_aug_2025: 60335
+    dec_2024: 39036
+    aug_2024: 62636
+
+  inventories:
+    aug_2025: 86441
+    budget_aug_2025: 95722
+    dec_2024: 64125
+    aug_2024: 75508
+
+    composition:
+      other_goods:
+        aug_2025: 17080
+      finished_goods:
+        aug_2025: 11062
+      raw_materials:
+        aug_2025: 25940
+      subsidiaries_packing:
+        aug_2025: 4250
+      other_materials:
+        aug_2025: 28108
+
+  accounts_payable:
+    aug_2025: 66320
+    budget_aug_2025: 92334
+    dec_2024: 40351
+    aug_2024: 70545
+
+  trade_working_capital:
+    aug_2025: 88985
+    budget_aug_2025: 63723
+    dec_2024: 62810
+    aug_2024: 67599
+
+  turnover_1000_brl:
+    aug_2025: 1008796
+    budget_aug_2025: 1002068
+    dec_2024: 906974
+    aug_2024: 874430
+
+  dso_days: 25
+  dpo_days: 43
+  dio_days: 127
+  trade_working_capital_pct_turnover: "9%"
+
+# ============================================================================
+# TABLE 13: CASH FLOW (YTD vs Budget vs LY)
+# ============================================================================
+table_13_cash_flow:
+  table_name: "Secil - Brazil - Cash Flow (YTD vs Budget vs LY)"
+  location: "Page 156"
+  table_type: "Cash Flow Statement"
+  structure: "Transposed - Operating and investing activities"
+
+  ebitda_brazil_1000_brl:
+    aug_2025: 170424
+    budget_aug_2025: 154269
+    aug_2024: 100104
+
+  working_capital_changes:
+    decrease_inventories_1000_brl:
+      aug_2025: -22316
+      budget_aug_2025: -24684
+      aug_2024: 23896
+
+    decrease_trade_receivables_1000_brl:
+      aug_2025: -29828
+      budget_aug_2025: -19487
+      aug_2024: -20159
+
+    increase_trade_payables_1000_brl:
+      aug_2025: 25969
+      budget_aug_2025: 43337
+      aug_2024: -4105
+
+    other_working_capital_1000_brl:
+      aug_2025: 46651
+      budget_aug_2025: 49889
+      aug_2024: -12149
+
+  cf_from_operations_1000_brl:
+    aug_2025: 190901
+    budget_aug_2025: 203324
+    aug_2024: 87587
+
+  income_tax_1000_brl:
+    aug_2025: -22670
+    budget_aug_2025: -26444
+    aug_2024: -2921
+
+  net_interest_expenses_1000_brl:
+    aug_2025: -59234
+    budget_aug_2025: -47618
+    aug_2024: -55506
+
+  cf_from_operating_activities_1000_brl:
+    aug_2025: 108997
+    budget_aug_2025: 129263
+    aug_2024: 29161
+
+  capex_1000_brl:
+    aug_2025: -24455
+    budget_aug_2025: -43497
+    aug_2024: -93705
+
+  cf_from_investment_activities_1000_brl:
+    aug_2025: -24455
+    budget_aug_2025: -43497
+    aug_2024: -93705
+
+  cash_set_free_after_investments_1000_brl:
+    aug_2025: 84542
+    budget_aug_2025: 85766
+    aug_2024: -64544
+
+  net_cash_flow_1000_brl:
+    aug_2025: 84542
+    budget_aug_2025: 85766
+    aug_2024: -64544
+
+  financial_net_debt:
+    opening_balance: 573711
+    effects_exchange_rate: 63785
+    closing_balance: 425384
+
+# ============================================================================
+# GROUND TRUTH QUERIES - 10-15 Sample Questions with Expected Answers
+# ============================================================================
+ground_truth_queries:
+  - query_id: "GT-8-001"
+    question: "What was the YTD EBITDA IFRS for Brazil Cement in August 2025?"
+    expected_answer: "183,662 thousand BRL"
+    answer_type: "Metric Value"
+    source_table: "Operational Performance - Brazil Cement"
+    difficulty: "easy"
+    keywords: ["EBITDA IFRS Cement", "August 2025", "year-to-date"]
+    expected_retrieval_points: ["EBITDA IFRS Cement", "183.662", "1000 BRL"]
+
+  - query_id: "GT-8-002"
+    question: "What was the cement volume IM (internal market) in August 2025 actual, budget, and prior year?"
+    expected_answer: "August 2025: 151 kton; Budget: 152 kton; August 2024: 156 kton"
+    answer_type: "Comparative Metrics"
+    source_table: "Operational Performance - Brazil Cement"
+    difficulty: "medium"
+    keywords: ["Volume IM", "kton", "cement", "August 2025", "budget", "prior year"]
+    expected_retrieval_points: ["Volume IM - kton", "151", "152", "156"]
+
+  - query_id: "GT-8-003"
+    question: "What is the Adrianopolis plant EBITDA per ton of cement produced?"
+    expected_answer: "200.9 BRL/ton (August 2025), 196.1 BRL/ton (Budget), 160.8 BRL/ton (Prior Year)"
+    answer_type: "Unit Economics"
+    source_table: "Margin by Plant"
+    difficulty: "medium"
+    keywords: ["Adrianopolis", "unit cement ebitda", "BRL/ton"]
+    expected_retrieval_points: ["Adrianopolis", "200.9", "196.1", "160.8", "BRL/ton"]
+
+  - query_id: "GT-8-004"
+    question: "How did variable costs per ton of cement change from August 2024 to August 2025?"
+    expected_answer: "August 2024: 146.1 BRL/ton; August 2025: 145.0 BRL/ton; Change: -0.8% decrease"
+    answer_type: "Variance Analysis"
+    source_table: "Operational Performance - Brazil Cement"
+    difficulty: "medium"
+    keywords: ["Variable Costs", "BRL/ton", "August 2025", "August 2024", "variance"]
+    expected_retrieval_points: ["Variable Costs - BRL/ton", "145.0", "146.1"]
+
+  - query_id: "GT-8-005"
+    question: "What was the YTD Ready Mix concrete sales volume and EBITDA in August 2025?"
+    expected_answer: "Sales: 142 km3 (YTD); EBITDA IFRS: 531 thousand BRL"
+    answer_type: "Metric Value"
+    source_table: "Operational Performance - Brazil Materials"
+    difficulty: "medium"
+    keywords: ["Ready Mix", "concrete", "volume", "km3", "EBITDA IFRS"]
+    expected_retrieval_points: ["Ready Mix", "142", "531", "km3", "1000 BRL"]
+
+  - query_id: "GT-8-006"
+    question: "What is the G&A net cost as a percentage of turnover for August 2025?"
+    expected_answer: "3.0%"
+    answer_type: "Ratio/Percentage"
+    source_table: "Operational Performance - Brazil Others and G&A"
+    difficulty: "easy"
+    keywords: ["G&A Net Costs", "Turnover", "percentage", "August 2025"]
+    expected_retrieval_points: ["G&A Net Costs/ Turnover (%)", "3.0%"]
+
+  - query_id: "GT-8-007"
+    question: "What was the frequency ratio for safety incidents in the Non-Cement segment YTD 2025?"
+    expected_answer: "6.02 (Lost Time Injuries x 1,000,000 / Total Manhours Worked)"
+    answer_type: "KPI"
+    source_table: "Health & Safety KPI's"
+    difficulty: "medium"
+    keywords: ["Frequency Ratio", "Non-Cement", "YTD 2025", "Health", "Safety"]
+    expected_retrieval_points: ["Frequency Ratio", "Non-Cement", "YTD 2025", "6.02"]
+
+  - query_id: "GT-8-008"
+    question: "What is the net working capital and the DSO (Days Sales Outstanding) for August 2025?"
+    expected_answer: "Trade Working Capital: 88,985 thousand BRL; DSO: 25 days"
+    answer_type: "Metric Value"
+    source_table: "Net Working Capital"
+    difficulty: "medium"
+    keywords: ["Trade Working Capital", "DSO", "Accounts Receivable", "August 2025"]
+    expected_retrieval_points: ["Trade Working Capital", "88.985", "DSO", "25"]
+
+  - query_id: "GT-8-009"
+    question: "What was the operating cash flow from operations for YTD August 2025?"
+    expected_answer: "190,901 thousand BRL"
+    answer_type: "Cash Flow"
+    source_table: "Cash Flow Statement"
+    difficulty: "easy"
+    keywords: ["CF from Operations", "August 2025", "cash flow", "YTD"]
+    expected_retrieval_points: ["CF from Operations", "190.901", "1000 BRL"]
+
+  - query_id: "GT-8-010"
+    question: "Compare Pomerode plant EBITDA per ton with budget and prior year"
+    expected_answer: "Pomerode August 2025: 67.1 BRL/ton; Budget: 48.7 BRL/ton; Prior Year: 50.1 BRL/ton"
+    answer_type: "Comparative Analysis"
+    source_table: "Margin by Plant"
+    difficulty: "medium"
+    keywords: ["Pomerode", "unit cement ebitda", "BRL/ton", "budget"]
+    expected_retrieval_points: ["Pomerode", "67.1", "48.7", "50.1"]
+
+  - query_id: "GT-8-011"
+    question: "What was the maintenance cost per ton of cement in August 2025 vs budget?"
+    expected_answer: "August 2025: 55.1 BRL/ton; Budget: 46.7 BRL/ton; Variance: +18%"
+    answer_type: "Cost Analysis"
+    source_table: "Operational Performance - Brazil Cement"
+    difficulty: "medium"
+    keywords: ["Maintenance costs", "BRL/ton", "August 2025", "budget", "variance"]
+    expected_retrieval_points: ["Maintenance costs - BRL/ton", "55.1", "46.7"]
+
+  - query_id: "GT-8-012"
+    question: "What is the EBITDA IFRS margin percentage for Brazil Cement in August 2025 YTD?"
+    expected_answer: "37.6%"
+    answer_type: "Profitability Metric"
+    source_table: "Operational Performance - Brazil Cement"
+    difficulty: "easy"
+    keywords: ["EBITDA IFRS Margin", "Cement", "percentage", "August 2025"]
+    expected_retrieval_points: ["EBITDA IFRS Cement Margin %", "37.6%"]
+
+  - query_id: "GT-8-013"
+    question: "What was the headcount for Brazil Cement Plants in August 2025 vs budget?"
+    expected_answer: "Actual: 298 FTEs; Budget: 317 FTEs; Variance: -5.7%"
+    answer_type: "Headcount"
+    source_table: "Headcount Evolution"
+    difficulty: "medium"
+    keywords: ["Headcount", "Brazil Cement Plants", "August 2025", "budget", "FTEs"]
+    expected_retrieval_points: ["Brazil Cement - Plants", "298", "317"]
+
+  - query_id: "GT-8-014"
+    question: "What is the DIO (Days Inventory Outstanding) for August 2025?"
+    expected_answer: "127 days"
+    answer_type: "Working Capital Metric"
+    source_table: "Net Working Capital"
+    difficulty: "easy"
+    keywords: ["DIO", "Days Inventory Outstanding", "August 2025", "127"]
+    expected_retrieval_points: ["DIO (3)", "127"]
+
+  - query_id: "GT-8-015"
+    question: "What was the capital expenditure breakdown for Brazil Cement in August 2025 YTD?"
+    expected_answer: "Recurring: 10,284 thousand BRL; Development: 177 thousand BRL; IFRS 16: 11,719 thousand BRL; Total: 22,180 thousand BRL"
+    answer_type: "Capital Allocation"
+    source_table: "Capex Total / per Type"
+    difficulty: "hard"
+    keywords: ["Capex", "Brazil Cement", "Recurring", "Development", "IFRS 16", "August 2025"]
+    expected_retrieval_points: ["Brazil Cement", "10.284", "177", "11.719", "22.180"]
+
+# ============================================================================
+# TRANSPOSITION NOTES - CRITICAL FOR TABLE EXTRACTION
+# ============================================================================
+transposition_notes:
+  note_1:
+    table: "EBITDA Bridge Waterfall"
+    issue: "Standard table structure transposed to show variance components horizontally"
+    impact: "Values read left-to-right as bridge components, not traditional row-column format"
+
+  note_2:
+    table: "Operational Performance Tables"
+    issue: "Month vs Budget vs Prior Year structure creates wide format with repeating column headers"
+    impact: "Three parallel datasets in single table, requires careful column alignment during extraction"
+
+  note_3:
+    table: "Plant Comparison"
+    issue: "Adrianopolis and Pomerode plants side-by-side in same table"
+    impact: "Column groups identify plant before row metric appears, transposition risk high"
+
+# ============================================================================
+# DATA QUALITY NOTES
+# ============================================================================
+data_quality_notes:
+  completeness:
+    - "All major financial metrics present for August 2025"
+    - "Missing data: July-25 Safety KPI data (shown as blanks)"
+    - "Complete YTD comparison: Actual vs Budget vs Prior Year"
+
+  accuracy:
+    - "Bridge waterfall calculated correctly: 156.7 + sum(components) = 170.4"
+    - "EBITDA calculations verified across multiple tables"
+    - "Percentages consistent: 37.6% = 183,662 / (488,500 + adjustments)"
+
+  consistency:
+    - "Total Brazil EBITDA (170,424) = Cement + Ready Mix + G&A + Others + Corporate"
+    - "Turnover per segment aligns with EBITDA calculations"
+    - "Variance calculations consistent: %B = (Actual - Budget) / Budget"
+
+# ============================================================================
+# SECTION SUMMARY
+# ============================================================================
+section_summary:
+  business_focus: "Operational and financial performance review for Secil Brazil operations"
+  geographic_scope: "Brazil (three operational plants: Adrianopolis, Pomerode, and distributed operations)"
+  time_frame: "August 2025 (Monthly), Year-to-Date (Jan-Aug 2025), with comparisons to Budget and Prior Year"
+
+  key_insights:
+    - "Brazil Cement EBITDA: 183.7M BRL YTD (56% increase vs PY; 9% above budget)"
+    - "Cement EBITDA Margin: 37.6% YTD (11pp increase vs prior year)"
+    - "Ready Mix struggling: Only 531k BRL EBITDA vs 3.6M budget; -85% variance"
+    - "Variable costs down 10% YTD vs prior year despite 11% volume growth"
+    - "Safety: YTD Frequency Ratio 2.81 vs 3.62 prior year (23% improvement)"
+    - "Working Capital: 89M BRL (40% above budget); DSO increased to 25 days"
+    - "Net debt: 425.4M BRL (down from 573.7M opening balance)"
+
+  data_inventory_completeness: "95%+ coverage of all reported metrics and entities"
+  ground_truth_queries_coverage: "15 queries span operational, financial, and HR dimensions"

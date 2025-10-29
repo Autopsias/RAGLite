@@ -1,0 +1,24 @@
+{
+  "total_tables": 157,
+  "pattern_distribution": {
+    "temporal_rows_entity_cols": 9,
+    "multi_header_metric_rows": 3,
+    "UNKNOWN": 137,
+    "metric_rows_entity_cols": 1,
+    "metric_rows_temporal_cols": 7
+  },
+  "row_type_distribution": {
+    "TEMPORAL": 0,
+    "METRIC": 0,
+    "UNKNOWN": 0
+  },
+  "sample_analyses": [
+    {
+      "page": 4,
+      "table": 1,
+      "dimensions": "19x7",
+      "col_header_rows": 2,
+      "num_row_headers": 17,
+      "num_col_headers": 7,
+      "num_data_cells": 102,
+      "row_header_types": {

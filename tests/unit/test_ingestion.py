@@ -59,9 +59,38 @@ class TestIngestPDF:
         mock_result = Mock()
         mock_result.document = mock_document
 
-        with patch("raglite.ingestion.pipeline.DocumentConverter") as MockConverter:
+        # Mock Qdrant client to prevent real database calls in unit tests
+        mock_qdrant_client = Mock()
+        mock_qdrant_client.delete_collection = Mock()
+        mock_qdrant_client.create_collection = Mock()
+        mock_qdrant_client.upsert = Mock()
+        # Mock get_collections() for create_collection() idempotency check
+        mock_collections_response = Mock()
+        mock_collections_response.collections = []
+        mock_qdrant_client.get_collections = Mock(return_value=mock_collections_response)
+        # Mock get_collection() for points_count validation after upsert
+        mock_collection_info = Mock()
+        mock_collection_info.points_count = 2  # Match number of mock chunks
+        mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
+
+        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        # Critical: patch both DocumentConverter and the required imports
+        with (
+            patch("docling.document_converter.DocumentConverter") as MockConverter,
+            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
+            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
+            patch("docling.datamodel.base_models.InputFormat"),
+            patch("docling.document_converter.PdfFormatOption"),
+            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+            patch("raglite.ingestion.pipeline.get_qdrant_client", return_value=mock_qdrant_client),
+            patch("raglite.ingestion.pipeline.get_embedding_model") as MockEmbedding,
+        ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
+
+            # Mock embedding model
+            mock_embedding_instance = MockEmbedding.return_value
+            mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024, [0.2] * 1024])
 
             # Execute ingestion
             result = await ingest_pdf(str(pdf_file))
@@ -98,7 +127,15 @@ class TestIngestPDF:
         corrupt_pdf = tmp_path / "corrupted.pdf"
         corrupt_pdf.write_bytes(b"not a real pdf")
 
-        with patch("raglite.ingestion.pipeline.DocumentConverter") as MockConverter:
+        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        with (
+            patch("docling.document_converter.DocumentConverter") as MockConverter,
+            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
+            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
+            patch("docling.datamodel.base_models.InputFormat"),
+            patch("docling.document_converter.PdfFormatOption"),
+            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+        ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.side_effect = Exception("PDF parsing error")
 
@@ -135,7 +172,15 @@ class TestIngestPDF:
         mock_result = Mock()
         mock_result.document = mock_document
 
-        with patch("raglite.ingestion.pipeline.DocumentConverter") as MockConverter:
+        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        with (
+            patch("docling.document_converter.DocumentConverter") as MockConverter,
+            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
+            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
+            patch("docling.datamodel.base_models.InputFormat"),
+            patch("docling.document_converter.PdfFormatOption"),
+            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+        ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
 
@@ -167,7 +212,15 @@ class TestIngestPDF:
         mock_result = Mock()
         mock_result.document = mock_document
 
-        with patch("raglite.ingestion.pipeline.DocumentConverter") as MockConverter:
+        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        with (
+            patch("docling.document_converter.DocumentConverter") as MockConverter,
+            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
+            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
+            patch("docling.datamodel.base_models.InputFormat"),
+            patch("docling.document_converter.PdfFormatOption"),
+            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+        ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
 
@@ -185,7 +238,15 @@ class TestIngestPDF:
         pdf_file = tmp_path / "test.pdf"
         pdf_file.write_bytes(b"%PDF-1.4")
 
-        with patch("raglite.ingestion.pipeline.DocumentConverter") as MockConverter:
+        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        with (
+            patch("docling.document_converter.DocumentConverter") as MockConverter,
+            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
+            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
+            patch("docling.datamodel.base_models.InputFormat"),
+            patch("docling.document_converter.PdfFormatOption"),
+            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+        ):
             MockConverter.side_effect = Exception("Docling initialization failed")
 
             with pytest.raises(RuntimeError, match="Failed to initialize Docling converter"):
@@ -219,7 +280,15 @@ class TestIngestPDF:
         mock_result = Mock()
         mock_result.document = mock_document
 
-        with patch("raglite.ingestion.pipeline.DocumentConverter") as MockConverter:
+        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        with (
+            patch("docling.document_converter.DocumentConverter") as MockConverter,
+            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
+            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
+            patch("docling.datamodel.base_models.InputFormat"),
+            patch("docling.document_converter.PdfFormatOption"),
+            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+        ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
 
@@ -442,8 +511,28 @@ class TestExtractExcel:
         mock_workbook.sheetnames = ["First", "Second"]
         mock_workbook.__getitem__ = Mock(side_effect=lambda name: sheet_map[name])
 
-        with patch("raglite.ingestion.pipeline.openpyxl.load_workbook") as mock_load:
+        # Mock Qdrant client to prevent real database calls in unit tests
+        mock_qdrant_client = Mock()
+        mock_qdrant_client.upsert = Mock()
+        # Mock get_collections() for create_collection() idempotency check
+        mock_collections_response = Mock()
+        mock_collections_response.collections = []
+        mock_qdrant_client.get_collections = Mock(return_value=mock_collections_response)
+        # Mock get_collection() for points_count validation after upsert
+        mock_collection_info = Mock()
+        mock_collection_info.points_count = 1  # At least 1 chunk will be created
+        mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
+
+        with (
+            patch("raglite.ingestion.pipeline.openpyxl.load_workbook") as mock_load,
+            patch("raglite.ingestion.pipeline.get_qdrant_client", return_value=mock_qdrant_client),
+            patch("raglite.ingestion.pipeline.get_embedding_model") as MockEmbedding,
+        ):
             mock_load.return_value = mock_workbook
+
+            # Mock embedding model
+            mock_embedding_instance = MockEmbedding.return_value
+            mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024])
 
             result = await extract_excel(str(excel_file))
 
@@ -911,9 +1000,12 @@ class TestGenerateEmbeddings:
 
             # Verify batching: 100 chunks / 32 batch_size = 4 batches (32, 32, 32, 4)
             assert encode_call_count == 4, f"Expected 4 batch calls, got {encode_call_count}"
-            assert batch_sizes == [32, 32, 32, 4], (
-                f"Expected batch sizes [32, 32, 32, 4], got {batch_sizes}"
-            )
+            assert batch_sizes == [
+                32,
+                32,
+                32,
+                4,
+            ], f"Expected batch sizes [32, 32, 32, 4], got {batch_sizes}"
 
             # Verify all chunks have embeddings
             for chunk in result_chunks:
@@ -1124,8 +1216,18 @@ class TestQdrantStorage:
             mock_client.create_collection.assert_called_once()
             call_args = mock_client.create_collection.call_args
             assert call_args.kwargs["collection_name"] == "financial_docs"
-            assert call_args.kwargs["vectors_config"].size == 1024
-            assert call_args.kwargs["vectors_config"].distance.name == "COSINE"
+
+            # Story 2.1: vectors_config is now a dict with named vectors for hybrid search
+            vectors_config = call_args.kwargs["vectors_config"]
+            assert isinstance(vectors_config, dict)
+            assert "text-dense" in vectors_config
+            assert vectors_config["text-dense"].size == 1024
+            assert vectors_config["text-dense"].distance.name == "COSINE"
+
+            # Verify sparse vectors config for BM25 (Story 2.1)
+            sparse_config = call_args.kwargs["sparse_vectors_config"]
+            assert isinstance(sparse_config, dict)
+            assert "text-sparse" in sparse_config
 
     @pytest.mark.asyncio
     async def test_create_collection_idempotent(self):
