@@ -3,16 +3,23 @@
 Story 2.13 AC1: Extract tables from Docling output and parse into structured SQL format.
 """
 
+from __future__ import annotations
+
 import re
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
-from docling.datamodel.accelerator_options import AcceleratorOptions
-from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
-from docling.document_converter import ConversionResult, DocumentConverter, PdfFormatOption
-from docling_core.types.doc import TableItem
+if TYPE_CHECKING:
+    from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
+    from docling.datamodel.accelerator_options import AcceleratorOptions
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
+    from docling.document_converter import (
+        ConversionResult,
+        DocumentConverter,
+        PdfFormatOption,
+    )
+    from docling_core.types.doc import TableItem
 
 from raglite.ingestion.adaptive_table_extraction import extract_table_data_adaptive
 from raglite.shared.logging import get_logger
@@ -35,7 +42,18 @@ class TableExtractor:
     """
 
     def __init__(self):
-        """Initialize table extractor with Docling converter."""
+        """Initialize table extractor with Docling converter.
+
+        IMPORTANT: Docling imports are lazy-loaded to prevent pytest collection hangs
+        when Docling initializes PyTorch/CUDA. See commit 9bcc6b4.
+        """
+        # Lazy import to avoid Docling PyTorch initialization at module load time
+        from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
+        from docling.datamodel.accelerator_options import AcceleratorOptions
+        from docling.datamodel.base_models import InputFormat
+        from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
+        from docling.document_converter import DocumentConverter, PdfFormatOption
+
         # Configure Docling with pypdfium backend (Story 2.1)
         pipeline_options = PdfPipelineOptions()
         pipeline_options.accelerator_options = AcceleratorOptions(
@@ -105,6 +123,9 @@ class TableExtractor:
         Returns:
             List of table rows as dicts (ready for SQL insertion)
         """
+        # Lazy import for isinstance check
+        from docling_core.types.doc import TableItem
+
         all_rows: list[dict[str, Any]] = []
         table_index = 0
 

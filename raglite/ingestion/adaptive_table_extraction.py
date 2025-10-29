@@ -14,13 +14,16 @@ Strategy:
 - Gracefully handle ambiguous or unknown structures
 """
 
+from __future__ import annotations
+
 import logging
 import re
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from docling.document_converter import ConversionResult
-from docling_core.types.doc import TableItem
+if TYPE_CHECKING:
+    from docling.document_converter import ConversionResult
+    from docling_core.types.doc import TableItem
 
 logger = logging.getLogger(__name__)
 
