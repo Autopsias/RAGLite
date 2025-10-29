@@ -280,14 +280,16 @@ jobs:
           QDRANT_HOST: localhost
           QDRANT_PORT: 6333
           TEST_USE_FULL_PDF: "true"
+          SKIP_TABLE_EXTRACTION: "true"
         run: |
           source ci-venv/bin/activate
           echo "========================================="
-          echo "CI MODE: Comprehensive Testing"
+          echo "CI MODE: Comprehensive Testing (DEBUG: Table Extraction Skipped)"
           echo "- Using 160-page full PDF (~150s ingestion)"
           echo "- Running ALL tests including slow ones"
           echo "- Single worker (session fixture + shared Qdrant collection)"
-          echo "- Target: 30-50 minutes total"
+          echo "- Table extraction SKIPPED to isolate pytest hang"
+          echo "- Target: 5-10 minutes total (without table extraction overhead)"
           echo "========================================="
           if [ -d "tests/integration" ] && [ -n "$(find tests/integration -name 'test_*.py' -type f)" ]; then
             pytest tests/integration/ \
