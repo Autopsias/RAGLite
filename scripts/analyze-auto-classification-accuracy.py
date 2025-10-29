@@ -20,8 +20,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from raglite.retrieval.query_classifier import classify_query_metadata
-from tests.fixtures.ground_truth import GROUND_TRUTH_QA
+from raglite.retrieval.query_classifier import classify_query_metadata  # noqa: E402
+from tests.fixtures.ground_truth import GROUND_TRUTH_QA  # noqa: E402
 
 
 async def analyze_auto_classification_accuracy():
@@ -53,7 +53,6 @@ async def analyze_auto_classification_accuracy():
 
     for qa in GROUND_TRUTH_QA:
         query = qa["question"]
-        category = qa.get("category", "unknown")
 
         results["total_queries"] += 1
 

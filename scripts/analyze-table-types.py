@@ -99,7 +99,7 @@ def analyze_table_structure(table_cells, num_rows, num_cols):
         try:
             float(cell_text.replace(",", "").replace(" ", ""))
             numeric_count += 1
-        except:
+        except ValueError:
             text_count += 1
 
     total_samples = len(col_0_samples)
@@ -172,7 +172,7 @@ def main():
 
     # Group tables by page
     tables_by_page = {}
-    for item_idx, (item, level) in enumerate(result.document.iterate_items()):
+    for item, _ in result.document.iterate_items():
         if hasattr(item, "prov") and item.prov and len(item.prov) > 0:
             page_num = item.prov[0].page_no
             if item.__class__.__name__ == "TableItem":

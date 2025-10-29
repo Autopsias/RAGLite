@@ -187,7 +187,7 @@ async def analyze_page_tables(pdf_path: Path, page_number: int) -> list[dict[str
         print(f"Data cells: {len(data_cells)}")
 
         # Analyze column header structure
-        col_header_rows = set(cell.start_row_offset_idx for cell in column_headers)
+        col_header_rows = {cell.start_row_offset_idx for cell in column_headers}
         is_multi_header = len(col_header_rows) > 1
 
         print(f"Multi-header: {is_multi_header}")

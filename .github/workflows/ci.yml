@@ -239,13 +239,41 @@ jobs:
       - name: Verify Qdrant is available
         run: |
           echo "Checking persistent Qdrant instance..."
-          if curl -sf http://localhost:6333/collections > /dev/null; then
-            echo "✅ Qdrant is available at localhost:6333"
-          else
-            echo "⚠️  Qdrant not available - tests may fail"
-            echo "To start: docker run -d -p 6333:6333 --name raglite-qdrant qdrant/qdrant:v1.11.0"
-            exit 1
-          fi
+
+          # Wait for Qdrant to be ready (max 30 seconds)
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if curl -sf http://localhost:6333/collections > /dev/null 2>&1; then
+              echo "✅ Qdrant is available at localhost:6333"
+
+              # Additional health check: verify cluster status
+              CLUSTER_STATUS=$(curl -sf http://localhost:6333/cluster | python3 -c "import sys, json; print(json.load(sys.stdin)['status'])" 2>/dev/null || echo "unknown")
+              echo "Cluster status: $CLUSTER_STATUS"
+
+              # Check telemetry for any recent 500 errors
+              ERROR_500_COUNT=$(curl -sf http://localhost:6333/telemetry 2>/dev/null | python3 -c "import sys, json; data=json.load(sys.stdin); print(sum(endpoint.get('500', {}).get('count', 0) for endpoint in data['result']['requests']['rest']['responses'].values()))" 2>/dev/null || echo "0")
+              echo "Recent 500 errors: $ERROR_500_COUNT"
+
+              if [ "$ERROR_500_COUNT" -gt 0 ]; then
+                echo "⚠️  Warning: Qdrant has $ERROR_500_COUNT recent 500 errors"
+                echo "Restarting Qdrant to clear error state..."
+                docker restart raglite-qdrant
+                sleep 5
+              fi
+
+              exit 0
+            fi
+
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Waiting for Qdrant... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            sleep 1
+          done
+
+          echo "❌ Qdrant not available after ${MAX_RETRIES}s"
+          echo "To start: docker run -d -p 6333:6333 --name raglite-qdrant qdrant/qdrant:v1.15.0"
+          exit 1
 
       - name: Run integration tests (CI comprehensive mode)
         env:
@@ -355,12 +383,37 @@ jobs:
 
       - name: Verify Qdrant is available
         run: |
-          if curl -sf http://localhost:6333/collections > /dev/null; then
-            echo "✅ Qdrant available for accuracy tests"
-          else
-            echo "⚠️  Qdrant not available - accuracy tests will fail"
-            exit 1
-          fi
+          echo "Checking persistent Qdrant instance..."
+
+          # Wait for Qdrant to be ready (max 30 seconds)
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if curl -sf http://localhost:6333/collections > /dev/null 2>&1; then
+              echo "✅ Qdrant available for accuracy tests"
+
+              # Check telemetry for any recent 500 errors
+              ERROR_500_COUNT=$(curl -sf http://localhost:6333/telemetry 2>/dev/null | python3 -c "import sys, json; data=json.load(sys.stdin); print(sum(endpoint.get('500', {}).get('count', 0) for endpoint in data['result']['requests']['rest']['responses'].values()))" 2>/dev/null || echo "0")
+              echo "Recent 500 errors: $ERROR_500_COUNT"
+
+              if [ "$ERROR_500_COUNT" -gt 0 ]; then
+                echo "⚠️  Warning: Qdrant has $ERROR_500_COUNT recent 500 errors"
+                echo "Restarting Qdrant to clear error state..."
+                docker restart raglite-qdrant
+                sleep 5
+              fi
+
+              exit 0
+            fi
+
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Waiting for Qdrant... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            sleep 1
+          done
+
+          echo "❌ Qdrant not available after ${MAX_RETRIES}s"
+          exit 1
 
       - name: Run ground truth accuracy tests
         env:

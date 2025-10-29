@@ -42,7 +42,7 @@ def analyze_table_orientation(table_item: TableItem, page_no: int, table_idx: in
     data_cells = [cell for cell in table_cells if not cell.column_header and not cell.row_header]
 
     # Count column header rows
-    col_header_rows = sorted(set(cell.start_row_offset_idx for cell in column_headers))
+    col_header_rows = sorted({cell.start_row_offset_idx for cell in column_headers})
 
     # Classify all headers
     row_types = Counter()

@@ -84,7 +84,7 @@ def main():
 
     # Find tables on target page
     page_tables = []
-    for item_idx, (item, level) in enumerate(result.document.iterate_items()):
+    for item, _ in result.document.iterate_items():
         if hasattr(item, "prov") and item.prov and len(item.prov) > 0:
             page_num = item.prov[0].page_no
             if page_num == target_page and item.__class__.__name__ == "TableItem":

@@ -59,7 +59,7 @@ print("Step 3: Analyzing page 23 tables...")
 print()
 
 page_23_tables = []
-for item_idx, (item, level) in enumerate(result.document.iterate_items()):
+for item_idx, (item, _) in enumerate(result.document.iterate_items()):
     if hasattr(item, "prov") and item.prov and len(item.prov) > 0:
         page_num = item.prov[0].page_no
         if page_num == 23 and item.__class__.__name__ == "TableItem":
@@ -124,7 +124,7 @@ for table_num, (item_idx, table) in enumerate(page_23_tables, 1):
         for row_idx in sorted(header_rows.keys())[:5]:  # First 5 header rows
             cells_in_row = header_rows[row_idx]
             print(f"   Row {row_idx}: {len(cells_in_row)} cells")
-            for i, cell in enumerate(cells_in_row[:3]):  # First 3 cells
+            for cell in cells_in_row[:3]:  # First 3 cells
                 print(
                     f'      [{cell.start_row_offset_idx},{cell.start_col_offset_idx}]: "{cell.text}"'
                 )
@@ -224,7 +224,7 @@ for table_num, (item_idx, table) in enumerate(page_23_tables, 1):
     if col_1_cells:
         print(f"Total cells in column 1: {len(col_1_cells)}")
         print("Sample cells (first 10):")
-        for i, cell in enumerate(col_1_cells[:10]):
+        for cell in col_1_cells[:10]:
             has_unit = any(pattern.lower() in cell.text.lower() for pattern in unit_patterns)
             marker = "🔍 UNIT" if has_unit else ""
             print(

@@ -90,7 +90,7 @@ def test_table_cells_api():
             # Detect multi-header tables
             if len(column_headers) > 0:
                 # Check if column headers span multiple rows
-                header_rows = set(cell.start_row_offset_idx for cell in column_headers)
+                header_rows = {cell.start_row_offset_idx for cell in column_headers}
                 num_header_rows = len(header_rows)
 
                 print(f"🎯 Column header rows: {sorted(header_rows)}")

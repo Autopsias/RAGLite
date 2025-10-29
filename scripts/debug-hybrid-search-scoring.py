@@ -18,8 +18,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from raglite.retrieval.multi_index_search import multi_index_search
-from raglite.retrieval.search import hybrid_search, search_documents
+from raglite.retrieval.multi_index_search import multi_index_search  # noqa: E402
+from raglite.retrieval.search import hybrid_search, search_documents  # noqa: E402
 
 
 async def debug_hybrid_search_scoring():

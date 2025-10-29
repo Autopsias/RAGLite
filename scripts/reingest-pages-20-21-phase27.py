@@ -126,9 +126,7 @@ async def main():
         if any(expected.lower() in metric.lower() for metric in metrics_found):
             found_expected.append(expected)
 
-    print(
-        f"\n✅ Found {len(found_expected)}/{len(expected_metrics)} expected Cost per ton metrics:"
-    )
+    print(f"\n✅ Found {len(found_expected)}/{len(expected_metrics)} expected Cost per ton metrics:")
     for metric in found_expected:
         print(f"  - {metric}")
 

@@ -51,7 +51,7 @@ def main():
 
     # Group tables by page
     tables_by_page = {}
-    for item, level in result.document.iterate_items():
+    for item, _ in result.document.iterate_items():
         if hasattr(item, "prov") and item.prov and len(item.prov) > 0:
             page_num = item.prov[0].page_no
             if item.__class__.__name__ == "TableItem":

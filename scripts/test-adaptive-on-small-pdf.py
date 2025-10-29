@@ -109,9 +109,9 @@ def test_adaptive_extraction():
 
     if all_table_rows:
         # Analyze data quality
-        entities = set(row.get("entity") for row in all_table_rows if row.get("entity"))
-        metrics = set(row.get("metric") for row in all_table_rows if row.get("metric"))
-        periods = set(row.get("period") for row in all_table_rows if row.get("period"))
+        entities = {row.get("entity") for row in all_table_rows if row.get("entity")}
+        metrics = {row.get("metric") for row in all_table_rows if row.get("metric")}
+        periods = {row.get("period") for row in all_table_rows if row.get("period")}
 
         logger.info("")
         logger.info("Data Quality Check:")

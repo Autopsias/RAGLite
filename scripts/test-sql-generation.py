@@ -313,9 +313,7 @@ async def main() -> None:
         f"\n1. Text-to-SQL generation >80% accuracy: {success_rate:.1f}% {'✅' if success_rate >= 80 else '❌'}"
     )
     print(f"2. SQL queries execute successfully: {'✅' if execution_success else '❌'}")
-    print(
-        f"3. Results include page numbers for attribution: {'✅' if attribution_success else '❌'}"
-    )
+    print(f"3. Results include page numbers for attribution: {'✅' if attribution_success else '❌'}")
 
     if success_rate >= 80 and execution_success and attribution_success:
         print("\n✅ AC2 TASK 2.3 PASSED - SQL generation validated")

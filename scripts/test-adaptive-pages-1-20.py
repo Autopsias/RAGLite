@@ -35,7 +35,7 @@ def analyze_table_pattern(table_item: TableItem, result, page_no: int, table_idx
     row_headers = [cell for cell in table_cells if cell.row_header]
 
     # Count header rows
-    col_header_rows = set(cell.start_row_offset_idx for cell in column_headers)
+    col_header_rows = {cell.start_row_offset_idx for cell in column_headers}
 
     # Classify sample headers
     col_samples = []

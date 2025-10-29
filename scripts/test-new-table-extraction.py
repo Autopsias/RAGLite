@@ -48,9 +48,9 @@ async def test_new_extraction():
         print()
 
         # Analyze data quality
-        entities = set(r["entity"] for r in rows if r["entity"])
-        metrics = set(r["metric"] for r in rows if r["metric"])
-        periods = set(r["period"] for r in rows if r["period"])
+        entities = {r["entity"] for r in rows if r["entity"]}
+        metrics = {r["metric"] for r in rows if r["metric"]}
+        periods = {r["period"] for r in rows if r["period"]}
 
         print(f"Unique entities: {len(entities)}")
         print(f"Unique metrics: {len(metrics)}")

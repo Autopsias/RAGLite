@@ -59,9 +59,29 @@ class TestIngestPDF:
         mock_result = Mock()
         mock_result.document = mock_document
 
-        with patch("raglite.ingestion.pipeline.DocumentConverter") as MockConverter:
+        # Mock Qdrant client to prevent real database calls in unit tests
+        mock_qdrant_client = Mock()
+        mock_qdrant_client.delete_collection = Mock()
+        mock_qdrant_client.create_collection = Mock()
+        mock_qdrant_client.upsert = Mock()
+        # Mock get_collections() for create_collection() idempotency check
+        mock_collections_response = Mock()
+        mock_collections_response.collections = []
+        mock_qdrant_client.get_collections = Mock(return_value=mock_collections_response)
+        # Mock get_collection() for points_count validation after upsert
+        mock_collection_info = Mock()
+        mock_collection_info.points_count = 2  # Match number of mock chunks
+        mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
+
+        with patch("raglite.ingestion.pipeline.DocumentConverter") as MockConverter, \
+             patch("raglite.ingestion.pipeline.get_qdrant_client", return_value=mock_qdrant_client), \
+             patch("raglite.ingestion.pipeline.get_embedding_model") as MockEmbedding:
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
+
+            # Mock embedding model
+            mock_embedding_instance = MockEmbedding.return_value
+            mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024, [0.2] * 1024])
 
             # Execute ingestion
             result = await ingest_pdf(str(pdf_file))
@@ -442,8 +462,26 @@ class TestExtractExcel:
         mock_workbook.sheetnames = ["First", "Second"]
         mock_workbook.__getitem__ = Mock(side_effect=lambda name: sheet_map[name])
 
-        with patch("raglite.ingestion.pipeline.openpyxl.load_workbook") as mock_load:
+        # Mock Qdrant client to prevent real database calls in unit tests
+        mock_qdrant_client = Mock()
+        mock_qdrant_client.upsert = Mock()
+        # Mock get_collections() for create_collection() idempotency check
+        mock_collections_response = Mock()
+        mock_collections_response.collections = []
+        mock_qdrant_client.get_collections = Mock(return_value=mock_collections_response)
+        # Mock get_collection() for points_count validation after upsert
+        mock_collection_info = Mock()
+        mock_collection_info.points_count = 1  # At least 1 chunk will be created
+        mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
+
+        with patch("raglite.ingestion.pipeline.openpyxl.load_workbook") as mock_load, \
+             patch("raglite.ingestion.pipeline.get_qdrant_client", return_value=mock_qdrant_client), \
+             patch("raglite.ingestion.pipeline.get_embedding_model") as MockEmbedding:
             mock_load.return_value = mock_workbook
+
+            # Mock embedding model
+            mock_embedding_instance = MockEmbedding.return_value
+            mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024])
 
             result = await extract_excel(str(excel_file))
 

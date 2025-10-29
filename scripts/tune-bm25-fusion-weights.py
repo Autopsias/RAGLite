@@ -21,8 +21,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from raglite.retrieval.search import hybrid_search
-from tests.fixtures.ground_truth import GROUND_TRUTH_QA
+from raglite.retrieval.search import hybrid_search  # noqa: E402
+from tests.fixtures.ground_truth import GROUND_TRUTH_QA  # noqa: E402
 
 
 async def tune_bm25_fusion_weights():

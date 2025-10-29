@@ -43,7 +43,7 @@ async def inspect_page20_tables():
     print("=" * 80)
 
     page_20_tables = []
-    for item_idx, (item, level) in enumerate(result.document.iterate_items()):
+    for item_idx, (item, _) in enumerate(result.document.iterate_items()):
         if item.prov and len(item.prov) > 0:
             page_num = item.prov[0].page_no
             if page_num == 20 and hasattr(item, "data") and item.data is not None:
