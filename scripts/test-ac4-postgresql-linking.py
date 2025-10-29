@@ -61,7 +61,8 @@ async def test_ac4_postgresql_linking():
         total_records = cursor.fetchone()[0]
 
         # Check records with metadata
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 COUNT(*) as total,
                 COUNT(company_name) as with_company,
@@ -69,7 +70,8 @@ async def test_ac4_postgresql_linking():
                 COUNT(section_type) as with_section,
                 COUNT(embedding_id) as with_qdrant_link
             FROM financial_chunks
-        """)
+        """
+        )
         row = cursor.fetchone()
 
         cursor.close()

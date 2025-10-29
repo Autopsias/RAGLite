@@ -194,7 +194,7 @@ async def test_sql_generation_single(query_data: dict[str, Any]) -> dict[str, An
         sql_lower = sql.lower()
         has_select = "select" in sql_lower
         has_from = "from financial_tables" in sql_lower
-        has_where = "where" in sql_lower or "limit" in sql_lower
+        _has_where = "where" in sql_lower or "limit" in sql_lower  # noqa: F841
 
         if not (has_select and has_from):
             return {

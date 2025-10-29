@@ -33,10 +33,7 @@ from mistralai import Mistral
 from raglite.retrieval.multi_index_search import multi_index_search
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
-from scripts.ground_truth_v2_master import (
-    GROUND_TRUTH_V2,
-    validate_query_answer,
-)
+from scripts.ground_truth_v2_master import GROUND_TRUTH_V2, validate_query_answer
 
 logger = get_logger(__name__)
 

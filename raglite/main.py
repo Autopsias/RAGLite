@@ -23,10 +23,7 @@ from fastmcp import FastMCP
 
 from raglite.ingestion.pipeline import ingest_document
 from raglite.retrieval.attribution import generate_citations
-from raglite.retrieval.multi_index_search import (
-    MultiIndexSearchError,
-    multi_index_search,
-)
+from raglite.retrieval.multi_index_search import MultiIndexSearchError, multi_index_search
 from raglite.retrieval.search import QueryError
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger

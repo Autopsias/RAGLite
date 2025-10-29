@@ -60,7 +60,8 @@ def main():
         # Check 3: Section type distribution
         print("\n[CHECK 3] Section Type Distribution (Table vs Other)")
         print("-" * 80)
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 section_type,
                 COUNT(*) as count,
@@ -68,7 +69,8 @@ def main():
             FROM financial_chunks
             GROUP BY section_type
             ORDER BY count DESC;
-        """)
+        """
+        )
         rows = cursor.fetchall()
         for row in rows:
             section = row["section_type"] if row["section_type"] else "(null)"
@@ -79,7 +81,8 @@ def main():
         # Check 4: Sample metadata for inspection
         print("\n[CHECK 4] Sample Chunk Metadata (First 3 with metadata)")
         print("-" * 80)
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 chunk_index,
                 page_number,
@@ -91,7 +94,8 @@ def main():
             FROM financial_chunks
             WHERE metric_category IS NOT NULL
             LIMIT 3;
-        """)
+        """
+        )
         rows = cursor.fetchall()
         for i, row in enumerate(rows, 1):
             print(f"\nChunk {i}:")

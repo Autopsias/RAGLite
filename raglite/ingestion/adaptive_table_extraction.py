@@ -1270,7 +1270,7 @@ def _infer_entity_from_context(page_context: dict) -> str | None:
         (r"\bby\s+(country|region|entity|division|segment)\b", "multi-entity"),
     ]
 
-    for pattern, entity_type in entity_patterns:
+    for pattern, _entity_type in entity_patterns:
         match = re.search(pattern, combined_text)
         if match:
             # Return the matched text capitalized
@@ -1321,12 +1321,12 @@ def _detect_orientation(column_headers: list, row_headers: list) -> tuple[str, d
     dominant_row = None
     dominant_col = None
 
-    for htype, count in row_types.most_common():
+    for htype, _count in row_types.most_common():
         if htype != HeaderType.UNKNOWN:
             dominant_row = htype
             break
 
-    for htype, count in col_types.most_common():
+    for htype, _count in col_types.most_common():
         if htype != HeaderType.UNKNOWN:
             dominant_col = htype
             break
@@ -1825,12 +1825,6 @@ def _detect_table_orientation(
     # Multi-column analysis (industry best practice)
     col_0 = _analyze_column(table_cells, 0, metric_patterns, entity_patterns, unit_patterns)
     col_1 = _analyze_column(table_cells, 1, metric_patterns, entity_patterns, unit_patterns)
-    col_2 = (
-        _analyze_column(table_cells, 2, metric_patterns, entity_patterns, unit_patterns)
-        if num_cols > 2
-        else None
-    )
-
     # Header analysis
     col_headers = [c for c in table_cells if c.column_header]
     temporal_patterns = [
@@ -1877,10 +1871,7 @@ def _detect_table_orientation(
     # ENHANCED DECISION TREE (4-type taxonomy)
 
     # TYPE A: Transposed Metric-Entity (metrics in col 0, units in col 1)
-    if (
-        col_0["metric_ratio"] > 0.4  # LOWERED threshold from 0.5
-        and col_1["unit_ratio"] > 0.5
-    ):
+    if col_0["metric_ratio"] > 0.4 and col_1["unit_ratio"] > 0.5:  # LOWERED threshold from 0.5
         orientation = "transposed_metric"
         confidence = min(col_0["metric_ratio"] + col_1["unit_ratio"], 0.95)
 
@@ -1890,10 +1881,7 @@ def _detect_table_orientation(
         confidence = 0.90
 
     # TYPE C: Normal Metric-Entity (metrics in col 0, data in col 1+)
-    elif (
-        col_0["metric_ratio"] > 0.3  # LOWERED threshold from 0.5
-        and col_1["numeric_ratio"] > 0.5
-    ):
+    elif col_0["metric_ratio"] > 0.3 and col_1["numeric_ratio"] > 0.5:  # LOWERED threshold from 0.5
         orientation = "normal_metric"
         confidence = 0.85
 
@@ -2319,7 +2307,7 @@ def _extract_page_context(table_item: TableItem, result: ConversionResult) -> di
     best_title_size = 0
 
     # Iterate through document to find text on same page
-    for element, level in result.document.iterate_items():
+    for element, _level in result.document.iterate_items():
         # Only process text elements
         if not isinstance(element, (TextItem, SectionHeaderItem)):
             continue

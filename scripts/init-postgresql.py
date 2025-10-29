@@ -49,7 +49,8 @@ def create_database_schema(
 
         # Create financial_chunks table
         logger.info("Creating financial_chunks table...")
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS financial_chunks (
                 -- Core fields
                 chunk_id UUID PRIMARY KEY,
@@ -86,56 +87,69 @@ def create_database_schema(
                 created_at TIMESTAMP DEFAULT NOW(),
                 updated_at TIMESTAMP DEFAULT NOW()
             );
-        """)
+        """
+        )
         logger.info("✓ financial_chunks table created")
 
         # Create indexes for fast filtering
         logger.info("Creating indexes...")
 
         # Index 1: Composite index for company + metric queries
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_company_metric
             ON financial_chunks(company_name, metric_category);
-        """)
+        """
+        )
         logger.info("✓ idx_company_metric created (company_name, metric_category)")
 
         # Index 2: Time period filtering
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_reporting_period
             ON financial_chunks(reporting_period);
-        """)
+        """
+        )
         logger.info("✓ idx_reporting_period created")
 
         # Index 3: Full-text search using GIN index
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_content_tsv
             ON financial_chunks USING GIN(content_tsv);
-        """)
+        """
+        )
         logger.info("✓ idx_content_tsv created (GIN index for full-text search)")
 
         # Index 4: Section type filtering (table vs narrative)
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_section_type
             ON financial_chunks(section_type);
-        """)
+        """
+        )
         logger.info("✓ idx_section_type created")
 
         # Verify schema creation
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT column_name, data_type
             FROM information_schema.columns
             WHERE table_name = 'financial_chunks'
             ORDER BY ordinal_position;
-        """)
+        """
+        )
         columns = cursor.fetchall()
         logger.info(f"✓ Schema verification: {len(columns)} columns created")
 
         # Verify indexes
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT indexname
             FROM pg_indexes
             WHERE tablename = 'financial_chunks';
-        """)
+        """
+        )
         indexes = cursor.fetchall()
         logger.info(f"✓ Index verification: {len(indexes)} indexes created")
 

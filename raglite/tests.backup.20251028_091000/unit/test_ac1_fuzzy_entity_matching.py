@@ -121,9 +121,10 @@ async def test_fuzzy_matching_thresholds():
     # Accept both similarity thresholds (0.5, 0.3) or ILIKE pattern matching
     # similarity() requires pg_trgm extension, ILIKE works with base PostgreSQL
     assert (
-        ("0.5" in sql or "0.3" in sql)  # similarity() thresholds
-        or "ilike" in sql.lower()  # ILIKE pattern matching
-    ), "SQL should use fuzzy matching (similarity with thresholds or ILIKE patterns)"
+        "0.5" in sql or "0.3" in sql
+    ) or "ilike" in sql.lower(), (  # similarity() thresholds  # ILIKE pattern matching
+        "SQL should use fuzzy matching (similarity with thresholds or ILIKE patterns)"
+    )
 
 
 @pytest.mark.asyncio

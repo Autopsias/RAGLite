@@ -60,7 +60,7 @@ async def main():
     pages_20_21_rows = [row for row in rows if row["page_number"] in [20, 21]]
 
     print(f"✅ Extracted {len(pages_20_21_rows)} rows from pages 20-21")
-    print(f"   Total tables: {len(set(row['table_index'] for row in pages_20_21_rows))}")
+    print("   Total tables: {row['table_index'] for row in pages_20_21_rows}")
     print()
 
     # Step 3: Validate extraction

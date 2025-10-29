@@ -17,13 +17,15 @@ conn = psycopg2.connect(
 cursor = conn.cursor()
 
 # Query to find unique extraction methods on page 20
-cursor.execute("""
+cursor.execute(
+    """
     SELECT DISTINCT extraction_method, COUNT(*) as row_count
     FROM financial_tables
     WHERE page_number = 20
     GROUP BY extraction_method
     ORDER BY extraction_method
-""")
+"""
+)
 
 print("=" * 80)
 print("EXTRACTION METHODS ON PAGE 20")
@@ -33,14 +35,16 @@ for method, count in cursor.fetchall():
     print(f"{method}: {count} rows")
 
 # Check a sample row with NULL unit
-cursor.execute("""
+cursor.execute(
+    """
     SELECT entity, metric, value, unit, period, extraction_method, table_index
     FROM financial_tables
     WHERE page_number = 20
     AND entity = 'Portugal'
     AND metric = 'Variable Cost'
     LIMIT 5
-""")
+"""
+)
 
 print("\n" + "=" * 80)
 print("SAMPLE ROWS WITH NULL UNITS")

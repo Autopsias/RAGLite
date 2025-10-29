@@ -173,7 +173,8 @@ def main() -> None:
     try:
         # Step 1: Analyze distinct entities
         logger.info("Step 1/4: Analyzing distinct entities...")
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 entity,
                 COUNT(*) as row_count
@@ -181,7 +182,8 @@ def main() -> None:
             WHERE entity IS NOT NULL
             GROUP BY entity
             ORDER BY COUNT(*) DESC;
-        """)
+        """
+        )
         entity_data = cursor.fetchall()
 
         logger.info(f"Found {len(entity_data)} distinct entities")
@@ -282,12 +284,14 @@ def main() -> None:
         mapping_count = cursor.fetchone()[0]
         logger.info(f"Total mappings in database: {mapping_count}")
 
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT entity_type, COUNT(*) as count
             FROM entity_mappings
             GROUP BY entity_type
             ORDER BY count DESC;
-        """)
+        """
+        )
         type_distribution = cursor.fetchall()
 
         logger.info("")

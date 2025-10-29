@@ -54,7 +54,8 @@ def fix_tsvector_trigger(
 
         # Step 1: Create trigger function
         logger.info("Creating trigger function for content_tsv auto-population...")
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE OR REPLACE FUNCTION update_content_tsv()
             RETURNS TRIGGER AS $$
             BEGIN
@@ -62,51 +63,60 @@ def fix_tsvector_trigger(
                 RETURN NEW;
             END;
             $$ LANGUAGE plpgsql;
-        """)
+        """
+        )
         conn.commit()
         logger.info("✓ Trigger function created: update_content_tsv()")
 
         # Step 2: Create trigger for INSERT and UPDATE
         logger.info("Creating trigger on financial_chunks table...")
-        cursor.execute("""
+        cursor.execute(
+            """
             DROP TRIGGER IF EXISTS trg_update_content_tsv ON financial_chunks;
 
             CREATE TRIGGER trg_update_content_tsv
             BEFORE INSERT OR UPDATE ON financial_chunks
             FOR EACH ROW
             EXECUTE FUNCTION update_content_tsv();
-        """)
+        """
+        )
         conn.commit()
         logger.info("✓ Trigger created: trg_update_content_tsv")
 
         # Step 3: Check how many rows need backfilling
         logger.info("Checking existing NULL content_tsv rows...")
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT COUNT(*) FROM financial_chunks WHERE content_tsv IS NULL;
-        """)
+        """
+        )
         null_count = cursor.fetchone()[0]
         logger.info(f"Found {null_count} rows with NULL content_tsv")
 
         if null_count > 0:
             # Step 4: Backfill existing NULL content_tsv values
             logger.info(f"Backfilling {null_count} existing rows...")
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE financial_chunks
                 SET content_tsv = to_tsvector('english', content)
                 WHERE content_tsv IS NULL;
-            """)
+            """
+            )
             conn.commit()
             logger.info(f"✓ Backfilled {null_count} rows with tsvector values")
 
             # Step 5: Verify backfill
             logger.info("Verifying backfill...")
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT
                     COUNT(*) as total,
                     COUNT(content_tsv) as populated,
                     COUNT(*) - COUNT(content_tsv) as still_null
                 FROM financial_chunks;
-            """)
+            """
+            )
             result = cursor.fetchone()
             total, populated, still_null = result
 

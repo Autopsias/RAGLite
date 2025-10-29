@@ -63,14 +63,16 @@ async def main():
     logger.info("")
 
     # NULL field statistics
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             COUNT(CASE WHEN entity IS NULL THEN 1 END) as null_entity,
             COUNT(CASE WHEN metric IS NULL THEN 1 END) as null_metric,
             COUNT(CASE WHEN period IS NULL THEN 1 END) as null_period,
             COUNT(CASE WHEN value IS NULL THEN 1 END) as null_value
         FROM financial_tables
-    """)
+    """
+    )
     null_entity, null_metric, null_period, null_value = cursor.fetchone()
 
     logger.info("NULL Field Statistics:")
@@ -114,11 +116,13 @@ async def main():
     logger.info("SAMPLE DATA (first 10 rows)")
     logger.info("=" * 80)
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT entity, metric, period, value, unit
         FROM financial_tables
         LIMIT 10
-    """)
+    """
+    )
 
     for i, (entity, metric, period, value, unit) in enumerate(cursor.fetchall(), 1):
         logger.info(
@@ -133,7 +137,8 @@ async def main():
     logger.info("FIELD COMPLETENESS PATTERNS")
     logger.info("=" * 80)
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             CASE WHEN entity IS NULL THEN 'NULL' ELSE 'HAS' END as entity_status,
             CASE WHEN metric IS NULL THEN 'NULL' ELSE 'HAS' END as metric_status,
@@ -144,7 +149,8 @@ async def main():
         GROUP BY entity_status, metric_status, period_status, value_status
         ORDER BY count DESC
         LIMIT 10
-    """)
+    """
+    )
 
     for entity_status, metric_status, period_status, value_status, count in cursor.fetchall():
         pct = count / total_rows * 100

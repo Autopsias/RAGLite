@@ -93,40 +93,48 @@ async def main():
     )
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT MIN(page_number), MAX(page_number), COUNT(DISTINCT page_number)
         FROM financial_tables
         WHERE page_number IS NOT NULL;
-    """)
+    """
+    )
     min_page, max_page, page_count = cursor.fetchone()
     print("\n📄 Database Content:")
     print(f"   Page range: {min_page}-{max_page}")
     print(f"   Distinct pages: {page_count}")
 
     # Get pages in each region
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT MIN(page_number), MAX(page_number), COUNT(DISTINCT page_number)
         FROM financial_tables
         WHERE page_number BETWEEN 1 AND 17 AND page_number IS NOT NULL;
-    """)
+    """
+    )
     region_a = cursor.fetchone()
     print(
         f"\n   Region A (Pages 1-17): {region_a[0]}-{region_a[1]} ({region_a[2]} pages with data)"
     )
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT MIN(page_number), MAX(page_number), COUNT(DISTINCT page_number)
         FROM financial_tables
         WHERE page_number BETWEEN 18 AND 50 AND page_number IS NOT NULL;
-    """)
+    """
+    )
     region_b = cursor.fetchone()
     print(f"   Region B (Pages 18-50): {region_b[0]}-{region_b[1]} ({region_b[2]} pages with data)")
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT MIN(page_number), MAX(page_number), COUNT(DISTINCT page_number)
         FROM financial_tables
         WHERE page_number BETWEEN 80 AND 160 AND page_number IS NOT NULL;
-    """)
+    """
+    )
     region_c = cursor.fetchone()
     print(
         f"   Region C (Pages 80-160): {region_c[0]}-{region_c[1]} ({region_c[2]} pages with data)"

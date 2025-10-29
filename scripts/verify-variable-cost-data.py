@@ -22,11 +22,13 @@ def main():
     # Test 1: Count Variable Cost rows
     print("Test 1: Variable Cost row count")
     print("-" * 80)
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT COUNT(*)
         FROM financial_tables
         WHERE metric ILIKE '%variable%cost%';
-    """)
+    """
+    )
     variable_cost_count = cursor.fetchone()[0]
     print(f"   Variable Cost rows found: {variable_cost_count}")
 
@@ -39,7 +41,8 @@ def main():
     # Test 2: Check column mappings for page 20 data
     print("Test 2: Column mapping verification (Page 20 data)")
     print("-" * 80)
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT DISTINCT
             metric,
             entity,
@@ -52,7 +55,8 @@ def main():
         AND entity = 'Portugal'
         AND page_number = 20
         LIMIT 5;
-    """)
+    """
+    )
 
     page_20_rows = cursor.fetchall()
 
@@ -72,12 +76,14 @@ def main():
     # Test 3: Check for inverted mappings (should be 0)
     print("Test 3: Check for inverted mappings (should be 0)")
     print("-" * 80)
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT COUNT(*)
         FROM financial_tables
         WHERE metric = 'Portugal'  -- Entity in metric column = inverted
         AND page_number = 20;
-    """)
+    """
+    )
     inverted_count = cursor.fetchone()[0]
     print(f"   Inverted mapping rows found: {inverted_count}")
 
@@ -90,7 +96,8 @@ def main():
     # Test 4: Sample Variable Cost data
     print("Test 4: Sample Variable Cost data (all entities)")
     print("-" * 80)
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             entity,
             period,
@@ -101,7 +108,8 @@ def main():
         WHERE metric ILIKE '%variable%cost%'
         ORDER BY page_number, entity, period
         LIMIT 10;
-    """)
+    """
+    )
 
     sample_rows = cursor.fetchall()
 

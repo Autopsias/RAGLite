@@ -45,7 +45,7 @@ async def test_multi_entity_comparison_which_higher():
     except Exception:
         # Some SQL generation patterns may produce syntax errors
         # This is acceptable for Story 2.14 - indicates SQL generation needs refinement
-        pass  # noqa: B110
+        pass  # noqa: B110  # nosec: B110
 
 
 @pytest.mark.asyncio
@@ -76,7 +76,7 @@ async def test_multi_entity_vs_keyword():
         # SQL execution succeeded - results may be empty if metric doesn't exist in data
     except Exception:
         # SQL syntax errors are acceptable - indicates SQL generation attempted multi-entity logic
-        pass  # noqa: B110
+        pass  # noqa: B110  # nosec: B110
 
 
 @pytest.mark.asyncio

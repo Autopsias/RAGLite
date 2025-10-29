@@ -143,9 +143,7 @@ async def classify_query_metadata(query: str) -> dict[str, str]:
         response = client.chat.complete(
             model=settings.metadata_extraction_model,  # "mistral-small-latest" (FREE)
             messages=messages,
-            response_format={
-                "type": "json_object"  # JSON mode (Mistral's structured output)
-            },
+            response_format={"type": "json_object"},  # JSON mode (Mistral's structured output)
             temperature=0,  # Deterministic classification
             max_tokens=300,  # Sufficient for filter dict
         )
@@ -238,7 +236,7 @@ async def generate_sql_query(query: str) -> str | None:
         client = Mistral(api_key=settings.mistral_api_key)
 
         # SQL generation prompt with schema
-        sql_prompt = f"""You are a SQL expert specializing in financial data queries. Generate a PostgreSQL query for the following natural language question.
+        sql_prompt = f"""You are a SQL expert
 
 **DATABASE SCHEMA:**
 
@@ -272,15 +270,23 @@ Indexes:
 1. **ENTITY MATCHING** (Use ILIKE for fuzzy text matching):
    For entity queries, use ILIKE for case-insensitive pattern matching:
 
+   SINGLE ENTITY:
    ```sql
    WHERE entity ILIKE '%Portugal%'
-      OR entity ILIKE '%Portugal Cement%'
+   ```
+
+   MULTIPLE ENTITIES - CRITICAL: Use parentheses to group entity conditions:
+   ```sql
+   WHERE (entity ILIKE '%Portugal%' OR entity ILIKE '%Portugal Cement%'
+       OR entity ILIKE '%Tunisia%' OR entity ILIKE '%Tunisia Cement%')
+     AND metric ILIKE '%variable cost%'
    ```
 
    Entity matching patterns:
    - "Portugal Cement" → entity ILIKE '%Portugal%' OR entity ILIKE '%Cement%'
    - "Brazil" → entity ILIKE '%Brazil%'
    - "Tunisia Cement" → entity ILIKE '%Tunisia%'
+   - **CRITICAL FOR MULTI-ENTITY**: Always wrap multiple entity OR conditions in parentheses before AND metric
 
 2. **Use ILIKE for text matching** (case-insensitive pattern matching):
    - metric ILIKE '%variable cost%'
@@ -305,6 +311,7 @@ Indexes:
 
 7. **Handle ambiguity with OR conditions**:
    - "costs" → metric ILIKE '%cost%' OR metric ILIKE '%expense%'
+   - **CRITICAL**: Wrap multiple OR conditions in parentheses before AND
 
 8. **Extract temporal terms (IMPORTANT: Handle NULL fiscal_year)**:
    - "August 2025" → period ILIKE '%Aug-25%' AND (fiscal_year = 2025 OR fiscal_year IS NULL)
@@ -344,6 +351,16 @@ FROM financial_tables
 WHERE metric ILIKE '%thermal%'
   AND (metric ILIKE '%energy%' OR metric ILIKE '%cost%')
 ORDER BY fiscal_year DESC, page_number DESC
+LIMIT 50;
+
+Query: "Compare variable costs for Portugal and Tunisia"
+SQL:
+SELECT entity, metric, value, unit, period, fiscal_year, page_number, table_caption
+FROM financial_tables
+WHERE (entity ILIKE '%Portugal%' OR entity ILIKE '%Portugal Cement%'
+    OR entity ILIKE '%Tunisia%' OR entity ILIKE '%Tunisia Cement%')
+  AND metric ILIKE '%variable cost%'
+ORDER BY page_number DESC
 LIMIT 50;
 
 **USER QUERY:**
@@ -410,9 +427,10 @@ LIMIT 50;
         )
 
         # DEBUGGING: Log full SQL query to file for analysis
+        import tempfile
         from pathlib import Path
 
-        log_dir = Path("/tmp")
+        log_dir = Path(tempfile.gettempdir())
         log_file = log_dir / "sql_queries_debug.log"
 
         with open(log_file, "a") as f:

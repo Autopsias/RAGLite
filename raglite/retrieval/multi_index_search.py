@@ -20,9 +20,7 @@ from typing import Any
 from raglite.retrieval.query_classifier import QueryType, classify_query, generate_sql_query
 from raglite.retrieval.search import hybrid_search
 from raglite.retrieval.sql_table_search import SQLSearchError, search_tables_sql
-from raglite.structured.table_retrieval import (
-    TableRetrievalError,
-)
+from raglite.structured.table_retrieval import TableRetrievalError
 
 logger = logging.getLogger(__name__)
 

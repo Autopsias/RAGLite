@@ -34,11 +34,13 @@ def main() -> None:
         logger.info("")
 
         # Get all mappings
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT canonical_name, raw_mentions
             FROM entity_mappings
             ORDER BY canonical_name;
-        """)
+        """
+        )
         mappings = cursor.fetchall()
 
         if not mappings:
@@ -77,11 +79,13 @@ def main() -> None:
         cursor.execute("SELECT COUNT(*) FROM financial_tables")
         total_rows = cursor.fetchone()[0]
 
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT COUNT(*)
             FROM financial_tables
             WHERE entity_normalized IS NOT NULL
-        """)
+        """
+        )
         normalized_rows = cursor.fetchone()[0]
 
         coverage_pct = (normalized_rows / total_rows * 100) if total_rows > 0 else 0
@@ -102,13 +106,15 @@ def main() -> None:
 
         # Show entity distribution
         logger.info("Entity distribution:")
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT entity_normalized, COUNT(*) as count
             FROM financial_tables
             WHERE entity_normalized IS NOT NULL
             GROUP BY entity_normalized
             ORDER BY COUNT(*) DESC;
-        """)
+        """
+        )
         distribution = cursor.fetchall()
 
         for entity, count in distribution:

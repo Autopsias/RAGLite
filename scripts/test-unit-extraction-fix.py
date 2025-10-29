@@ -98,14 +98,16 @@ async def test_unit_extraction_fix():
     cursor = conn.cursor()
 
     # Check overall unit population on page 20
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             COUNT(*) as total_rows,
             COUNT(unit) as rows_with_unit,
             ROUND(COUNT(unit) * 100.0 / COUNT(*), 2) as percentage
         FROM financial_tables
         WHERE page_number = 20
-    """)
+    """
+    )
 
     total, with_unit, pct = cursor.fetchone()
     print("Page 20 Unit Population:")
@@ -116,7 +118,8 @@ async def test_unit_extraction_fix():
 
     # Check GT-001: Group EBITDA
     print("GT-001 (Group EBITDA YTD August 2025):")
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT entity, metric, value, unit, period
         FROM financial_tables
         WHERE page_number = 20
@@ -124,7 +127,8 @@ async def test_unit_extraction_fix():
         AND metric ILIKE '%EBITDA%'
         AND period ILIKE '%YTD%Aug-25%'
         LIMIT 1
-    """)
+    """
+    )
 
     row = cursor.fetchone()
     if row:
@@ -147,7 +151,8 @@ async def test_unit_extraction_fix():
 
     # Check GT-002: Portugal Variable Cost
     print("GT-002 (Portugal Variable Cost August 2025):")
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT entity, metric, value, unit, period
         FROM financial_tables
         WHERE page_number = 20
@@ -155,7 +160,8 @@ async def test_unit_extraction_fix():
         AND metric = 'Variable Cost'
         AND period = 'Aug-25'
         LIMIT 1
-    """)
+    """
+    )
 
     row = cursor.fetchone()
     if row:

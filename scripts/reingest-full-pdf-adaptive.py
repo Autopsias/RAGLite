@@ -102,14 +102,16 @@ async def main():
             )
             fallback_rows = cursor.fetchone()[0]
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT
                     COUNT(CASE WHEN entity IS NULL THEN 1 END) as null_entity,
                     COUNT(CASE WHEN metric IS NULL THEN 1 END) as null_metric,
                     COUNT(CASE WHEN period IS NULL THEN 1 END) as null_period,
                     COUNT(CASE WHEN value IS NULL THEN 1 END) as null_value
                 FROM financial_tables
-            """)
+            """
+            )
             nulls = cursor.fetchone()
 
             logger.info("")

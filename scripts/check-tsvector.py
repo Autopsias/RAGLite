@@ -15,12 +15,14 @@ def main():
 
     # Check if column exists
     print("\n[1] Checking if content_tsv column exists...")
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT column_name, data_type
         FROM information_schema.columns
         WHERE table_name = 'financial_chunks'
         AND column_name = 'content_tsv';
-    """)
+    """
+    )
     result = cursor.fetchone()
     if result:
         print(f"✅ Column exists: {result['column_name']} ({result['data_type']})")
@@ -30,13 +32,15 @@ def main():
 
     # Check if it's populated
     print("\n[2] Checking if content_tsv is populated...")
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             COUNT(*) as total,
             COUNT(content_tsv) as populated,
             COUNT(*) - COUNT(content_tsv) as null_count
         FROM financial_chunks;
-    """)
+    """
+    )
     result = cursor.fetchone()
     print(f"Total rows: {result['total']}")
     print(f"Populated: {result['populated']}")
@@ -49,14 +53,16 @@ def main():
 
     # Check sample content_tsv values
     print("\n[3] Sample content_tsv values...")
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             chunk_index,
             LEFT(content, 50) as content_preview,
             content_tsv::text as tsvector_value
         FROM financial_chunks
         LIMIT 3;
-    """)
+    """
+    )
     rows = cursor.fetchall()
     for i, row in enumerate(rows, 1):
         print(f"\nChunk {i} (index {row['chunk_index']}):")
@@ -77,19 +83,23 @@ def main():
 
     # Test manual tsvector matching
     print("\n[5] Testing manual content search (bypassing tsvector)...")
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT COUNT(*) as matches
         FROM financial_chunks
         WHERE content ILIKE '%variable%cost%';
-    """)
+    """
+    )
     result = cursor.fetchone()
     print(f"  Manual 'variable cost' search: {result['matches']} matches")
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT COUNT(*) as matches
         FROM financial_chunks
         WHERE content ILIKE '%EBITDA%';
-    """)
+    """
+    )
     result = cursor.fetchone()
     print(f"  Manual 'EBITDA' search: {result['matches']} matches")
 

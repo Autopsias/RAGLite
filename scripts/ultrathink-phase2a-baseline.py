@@ -75,12 +75,14 @@ def analyze_ground_truth_coverage():
     cursor.execute("SELECT COUNT(DISTINCT page_number) as pages FROM financial_chunks;")
     db_pages = cursor.fetchone()["pages"]
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT COUNT(*) as chunks_with_metadata
         FROM financial_chunks
         WHERE metric_category IS NOT NULL
           AND reporting_period IS NOT NULL;
-    """)
+    """
+    )
     chunks_with_metadata = cursor.fetchone()["chunks_with_metadata"]
 
     print("\nDatabase Statistics:")
@@ -185,14 +187,16 @@ async def analyze_chunking_strategy():
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
     # Analyze chunk sizes
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             AVG(LENGTH(content)) as avg_chars,
             MIN(LENGTH(content)) as min_chars,
             MAX(LENGTH(content)) as max_chars,
             AVG(array_length(string_to_array(content, ' '), 1)) as avg_words
         FROM financial_chunks;
-    """)
+    """
+    )
     chunk_stats = cursor.fetchone()
 
     print("\nChunk Size Statistics:")
@@ -202,12 +206,14 @@ async def analyze_chunking_strategy():
     print(f"  Average words: {chunk_stats['avg_words']:.0f}")
 
     # Check if tables are being split inappropriately
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT section_type, COUNT(*) as count
         FROM financial_chunks
         GROUP BY section_type
         ORDER BY count DESC;
-    """)
+    """
+    )
     section_types = cursor.fetchall()
 
     print("\nSection Type Distribution:")
@@ -215,14 +221,16 @@ async def analyze_chunking_strategy():
         print(f"  {row['section_type'] or 'NULL'}: {row['count']}")
 
     # Analyze table chunks specifically
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             COUNT(*) as table_chunks,
             AVG(LENGTH(content)) as avg_size,
             COUNT(DISTINCT table_name) as unique_tables
         FROM financial_chunks
         WHERE section_type = 'Table';
-    """)
+    """
+    )
     table_stats = cursor.fetchone()
 
     print("\nTable Chunking Analysis:")
@@ -264,12 +272,14 @@ async def analyze_metadata_quality():
 
     print("\nMetadata Field Population Rates:")
     for field in metadata_fields:
-        cursor.execute(f"""
+        cursor.execute(
+            f"""
             SELECT
                 COUNT(*) as total,
                 COUNT({field}) as populated
             FROM financial_chunks;
-        """)
+        """
+        )
         stats = cursor.fetchone()
         population_rate = (stats["populated"] / stats["total"]) * 100 if stats["total"] > 0 else 0
         print(f"  {field}: {stats['populated']}/{stats['total']} ({population_rate:.1f}%)")
@@ -277,26 +287,30 @@ async def analyze_metadata_quality():
     # Check for common metadata values
     print("\nMost Common Metadata Values:")
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT metric_category, COUNT(*) as count
         FROM financial_chunks
         WHERE metric_category IS NOT NULL
         GROUP BY metric_category
         ORDER BY count DESC
         LIMIT 10;
-    """)
+    """
+    )
     print("\n  Top Metric Categories:")
     for row in cursor.fetchall():
         print(f"    {row['metric_category']}: {row['count']}")
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT reporting_period, COUNT(*) as count
         FROM financial_chunks
         WHERE reporting_period IS NOT NULL
         GROUP BY reporting_period
         ORDER BY count DESC
         LIMIT 10;
-    """)
+    """
+    )
     print("\n  Top Reporting Periods:")
     for row in cursor.fetchall():
         print(f"    {row['reporting_period']}: {row['count']}")

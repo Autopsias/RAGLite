@@ -31,13 +31,15 @@ def verify_data_quality():
 
     # 2. Unique counts
     print("2. UNIQUE VALUES")
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             COUNT(DISTINCT entity) as unique_entities,
             COUNT(DISTINCT metric) as unique_metrics,
             COUNT(DISTINCT period) as unique_periods
         FROM financial_tables;
-    """)
+    """
+    )
     row = cursor.fetchone()
     print(f"   Unique entities: {row[0]}")
     print(f"   Unique metrics: {row[1]}")
@@ -46,13 +48,15 @@ def verify_data_quality():
 
     # 3. Check for corrupted entities (before these were "-", "0", "Jan-25")
     print("3. CORRUPTED ENTITY CHECK")
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT entity, COUNT(*)
         FROM financial_tables
         WHERE entity IN ('-', '0', 'Jan-25', 'Feb-25', 'Mar-25')
         GROUP BY entity
         ORDER BY COUNT(*) DESC;
-    """)
+    """
+    )
     corrupted_entities = cursor.fetchall()
     if corrupted_entities:
         print("   ⚠️  WARNING: Found corrupted entities:")
@@ -64,13 +68,15 @@ def verify_data_quality():
 
     # 4. Check for corrupted metrics (before these were "Group", "3,68")
     print("4. CORRUPTED METRIC CHECK")
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT metric, COUNT(*)
         FROM financial_tables
         WHERE metric IN ('Group', '3,68', '7,45', 'Portugal', 'Angola')
         GROUP BY metric
         ORDER BY COUNT(*) DESC;
-    """)
+    """
+    )
     corrupted_metrics = cursor.fetchall()
     if corrupted_metrics:
         print("   ⚠️  WARNING: Found corrupted metrics:")
@@ -82,14 +88,16 @@ def verify_data_quality():
 
     # 5. Sample entities (should be valid names)
     print("5. SAMPLE ENTITIES (Top 10)")
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT entity, COUNT(*)
         FROM financial_tables
         WHERE entity IS NOT NULL
         GROUP BY entity
         ORDER BY COUNT(*) DESC
         LIMIT 10;
-    """)
+    """
+    )
     entities = cursor.fetchall()
     for entity, count in entities:
         print(f"   - {entity}: {count:,} rows")
@@ -97,14 +105,16 @@ def verify_data_quality():
 
     # 6. Sample metrics (should be valid financial metrics)
     print("6. SAMPLE METRICS (Top 10)")
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT metric, COUNT(*)
         FROM financial_tables
         WHERE metric IS NOT NULL
         GROUP BY metric
         ORDER BY COUNT(*) DESC
         LIMIT 10;
-    """)
+    """
+    )
     metrics = cursor.fetchall()
     for metric, count in metrics:
         print(f"   - {metric}: {count:,} rows")
@@ -112,13 +122,15 @@ def verify_data_quality():
 
     # 7. Sample data rows
     print("7. SAMPLE DATA ROWS (First 5)")
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT entity, metric, period, value, unit, fiscal_year, page_number
         FROM financial_tables
         WHERE entity IS NOT NULL AND metric IS NOT NULL
         ORDER BY page_number, id
         LIMIT 5;
-    """)
+    """
+    )
     rows = cursor.fetchall()
     for i, row in enumerate(rows, 1):
         entity, metric, period, value, unit, fiscal_year, page_number = row

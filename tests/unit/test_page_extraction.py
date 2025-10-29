@@ -77,12 +77,16 @@ class TestChunkByDoclingItems:
 
         # Verify page numbers are extracted from provenance (not estimated)
         for chunk in chunks:
-            assert chunk.page_number in [43, 44, 118], (
-                f"Page number {chunk.page_number} should be from provenance (43, 44, or 118)"
-            )
-            assert chunk.page_number != 1 or chunk.page_number in [43, 44, 118], (
-                "Should use actual page from provenance, not default/estimate"
-            )
+            assert chunk.page_number in [
+                43,
+                44,
+                118,
+            ], f"Page number {chunk.page_number} should be from provenance (43, 44, or 118)"
+            assert chunk.page_number != 1 or chunk.page_number in [
+                43,
+                44,
+                118,
+            ], "Should use actual page from provenance, not default/estimate"
 
         # Verify first chunk starts with page from first element
         assert chunks[0].page_number == 43, "First chunk should use page number from first element"
@@ -156,7 +160,11 @@ class TestChunkByDoclingItems:
 
         # Verify page numbers come from provenance where available, default to 1 otherwise
         for chunk in chunks:
-            assert chunk.page_number in [1, 50, 51], (
+            assert chunk.page_number in [
+                1,
+                50,
+                51,
+            ], (
                 f"Page number should be from provenance (50, 51) or default (1), got {chunk.page_number}"
             )
 
@@ -213,9 +221,10 @@ class TestChunkByDoclingItems:
 
         # Verify page numbers come from provenance (10 or 11)
         for chunk in chunks:
-            assert chunk.page_number in [10, 11], (
-                f"Page number should be from provenance (10 or 11), got {chunk.page_number}"
-            )
+            assert chunk.page_number in [
+                10,
+                11,
+            ], f"Page number should be from provenance (10 or 11), got {chunk.page_number}"
 
         # Verify all content is present
         all_content = " ".join(c.content for c in chunks)

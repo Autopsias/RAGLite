@@ -71,11 +71,13 @@ print("Step 3: Clearing existing data for pages 20-21...")
 conn = get_postgresql_connection()
 cursor = conn.cursor()
 
-cursor.execute("""
+cursor.execute(
+    """
     DELETE FROM financial_tables
     WHERE document_id = '2025-08 Performance Review CONSO_v2'
       AND page_number IN (20, 21)
-""")
+"""
+)
 
 deleted_count = cursor.rowcount
 conn.commit()
@@ -129,14 +131,16 @@ print()
 
 # Step 5: Verify insertion
 print("Step 5: Verifying insertion...")
-cursor.execute("""
+cursor.execute(
+    """
     SELECT page_number, COUNT(*) as row_count
     FROM financial_tables
     WHERE document_id = '2025-08 Performance Review CONSO_v2'
       AND page_number IN (19, 20, 21, 22)
     GROUP BY page_number
     ORDER BY page_number
-""")
+"""
+)
 
 results = cursor.fetchall()
 print("Page distribution (19-22):")

@@ -911,9 +911,12 @@ class TestGenerateEmbeddings:
 
             # Verify batching: 100 chunks / 32 batch_size = 4 batches (32, 32, 32, 4)
             assert encode_call_count == 4, f"Expected 4 batch calls, got {encode_call_count}"
-            assert batch_sizes == [32, 32, 32, 4], (
-                f"Expected batch sizes [32, 32, 32, 4], got {batch_sizes}"
-            )
+            assert batch_sizes == [
+                32,
+                32,
+                32,
+                4,
+            ], f"Expected batch sizes [32, 32, 32, 4], got {batch_sizes}"
 
             # Verify all chunks have embeddings
             for chunk in result_chunks:

@@ -19,9 +19,7 @@ from docling.datamodel.accelerator_options import AcceleratorOptions
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
 from docling.document_converter import ConversionResult, DocumentConverter, PdfFormatOption
-from docling_core.types.doc import (
-    TableItem,
-)
+from docling_core.types.doc import TableItem
 from qdrant_client.models import (
     Distance,
     PointStruct,
@@ -292,9 +290,7 @@ async def extract_chunk_metadata(
                     content=f"Extract all 15 metadata fields from this financial document chunk:\n\n{text}"
                 ),
             ],
-            response_format={
-                "type": "json_object"  # JSON mode (Mistral's structured output)
-            },
+            response_format={"type": "json_object"},  # JSON mode (Mistral's structured output)
             temperature=0,  # Deterministic extraction
             max_tokens=400,  # Increased from 150 to accommodate 15 fields
         )

@@ -16,12 +16,7 @@ from raglite.main import (
 )
 from raglite.retrieval.multi_index_search import MultiIndexSearchError, SearchResult
 from raglite.retrieval.search import QueryError
-from raglite.shared.models import (
-    DocumentMetadata,
-    QueryRequest,
-    QueryResponse,
-    QueryResult,
-)
+from raglite.shared.models import DocumentMetadata, QueryRequest, QueryResponse, QueryResult
 
 
 class TestMCPServerInitialization:

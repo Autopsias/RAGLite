@@ -34,7 +34,8 @@ def validate_metadata_quality():
         cursor = conn.cursor()
 
         # Get 20 random chunks with metadata
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 chunk_id,
                 page_number,
@@ -61,7 +62,8 @@ def validate_metadata_quality():
             WHERE company_name IS NOT NULL OR metric_category IS NOT NULL
             ORDER BY RANDOM()
             LIMIT 20
-        """)
+        """
+        )
 
         chunks = cursor.fetchall()
         cursor.close()

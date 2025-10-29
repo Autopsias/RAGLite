@@ -9,10 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from raglite.retrieval.search import fuse_search_results, hybrid_search
-from raglite.shared.bm25 import (
-    compute_bm25_scores,
-    create_bm25_index,
-)
+from raglite.shared.bm25 import compute_bm25_scores, create_bm25_index
 from raglite.shared.models import Chunk, DocumentMetadata, QueryResult
 
 

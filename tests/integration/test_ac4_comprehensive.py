@@ -203,7 +203,8 @@ def test_ac4_160page_comparison():
     print("\n" + "=" * 80)
     print("AC4 COMPREHENSIVE TEST - Part 3: Comparison Methodology")
     print("=" * 80)
-    print("""
+    print(
+        """
 To complete AC4 validation:
 
 1. Run baseline test with DoclingParse backend:
@@ -226,5 +227,6 @@ To complete AC4 validation:
    - Reduction: 50-60% (3.8 GB savings)
 
 5. Document in: docs/stories/AC4-160page-results.md
-""")
+"""
+    )
     print("=" * 80 + "\n")
