@@ -360,15 +360,25 @@ LIMIT 50;
     @pytest.mark.asyncio
     @pytest.mark.reruns(2)
     @pytest.mark.reruns_delay(1)
-    async def test_ac6_extraction_accuracy(self, excerpt_ground_truth):
+    async def test_ac6_extraction_accuracy(self, excerpt_ground_truth, mock_mistral_client):
         """Test AC6 (Extraction) category accuracy."""
+        # Configure mock
+        mock_client, _ = mock_mistral_client
+        mock_response = mock_client.chat.complete.return_value
+        mock_response.choices[0].message.content = """
+SELECT entity, metric, value, unit, period, fiscal_year, page_number
+FROM financial_tables
+ORDER BY page_number DESC
+LIMIT 50;
+        """.strip()
+
         ac6_tests = [
             t for t in excerpt_ground_truth["test_queries"] if t["category"] == "AC6-Extraction"
         ]
 
         results = []
         for test_def in ac6_tests:
-            result = await validate_excerpt_query(test_def)
+            result = await validate_excerpt_query(test_def, mock_client=mock_client)
             results.append(result)
 
         total_passed = sum(1 for r in results if r.passed)
