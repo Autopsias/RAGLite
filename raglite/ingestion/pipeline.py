@@ -12,14 +12,14 @@ from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from mistralai import Mistral
+    from docling.datamodel.accelerator_options import AcceleratorOptions
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
+    from docling.document_converter import ConversionResult, DocumentConverter, PdfFormatOption
+    from docling_core.types.doc import TableItem
 
 import openpyxl
 import pandas as pd
-from docling.datamodel.accelerator_options import AcceleratorOptions
-from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
-from docling.document_converter import ConversionResult, DocumentConverter, PdfFormatOption
-from docling_core.types.doc import TableItem
 from qdrant_client.models import (
     Distance,
     PointStruct,
@@ -1072,6 +1072,14 @@ async def ingest_pdf(
         >>> # Skip metadata extraction to avoid API errors
         >>> metadata = await ingest_pdf("report.pdf", skip_metadata=True)
     """
+    # Lazy import Docling: Avoid hanging on import when this module loads
+    # Docling initializes PyTorch/CUDA on import which can hang without GPU
+    # Only load when actually ingesting PDFs
+    from docling.datamodel.accelerator_options import AcceleratorOptions
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
+    from docling.document_converter import DocumentConverter, PdfFormatOption
+
     start_time = time.time()
 
     # Resolve file path
@@ -1958,6 +1966,9 @@ async def chunk_by_docling_items(
         5. Preserve sentence boundaries when possible (AC2)
         6. Keep tables as single chunks even if >512 tokens (AC3 exception)
     """
+    # Lazy import TableItem: Only needed when chunking documents, not at module load
+    from docling_core.types.doc import TableItem
+
     start_time = time.time()
 
     if encoding is None:
