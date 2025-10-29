@@ -1163,7 +1163,10 @@ async def ingest_pdf(
         pipeline_options = PdfPipelineOptions(
             do_table_structure=True,
             do_ocr=False,  # Disable OCR for 50% speedup - financial PDFs have embedded text
-            accelerator_options=AcceleratorOptions(num_threads=thread_count),
+            accelerator_options=AcceleratorOptions(
+                num_threads=thread_count,
+                device="cpu",  # CRITICAL: Force CPU-only mode to prevent CUDA hang on CI runners
+            ),
             document_timeout=1500,  # 25 minutes max per document
         )
         pipeline_options.table_structure_options.mode = TableFormerMode.ACCURATE
