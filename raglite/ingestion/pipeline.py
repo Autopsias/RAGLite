@@ -3,6 +3,8 @@
 Extracts text, tables, and page numbers from financial documents with high accuracy.
 """
 
+from __future__ import annotations
+
 import asyncio
 import time
 import uuid
