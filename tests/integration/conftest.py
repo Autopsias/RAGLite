@@ -278,7 +278,6 @@ async def shared_ingested_sample_pdf():
     - test_element_metadata.py (element metadata tests)
     """
     from raglite.ingestion.pipeline import ingest_pdf
-    from raglite.shared.clients import get_qdrant_client
 
     sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
     if not sample_pdf.exists():
