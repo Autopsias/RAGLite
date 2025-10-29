@@ -128,6 +128,48 @@ def sample_chunk(sample_document_metadata: DocumentMetadata) -> Chunk:
     )
 
 
+@pytest.fixture
+def mock_mistral_client():
+    """Mock Mistral API client for SQL generation tests.
+
+    Prevents real API calls in CI when MISTRAL_API_KEY is not set.
+    Fixture returns (mock_client_instance, mock_class) tuple for flexibility.
+
+    Usage:
+        @pytest.mark.asyncio
+        async def test_sql_generation(mock_mistral_client):
+            mock_client, mock_class = mock_mistral_client
+            # Configure mock response
+            mock_client.chat.complete.return_value.choices[0].message.content = "SELECT ..."
+            # Now call function under test
+            sql = await generate_sql_query(query)
+    """
+    from unittest.mock import MagicMock, patch
+
+    with patch("raglite.retrieval.query_classifier.Mistral") as mock_class:
+        # Create mock client instance
+        mock_client = MagicMock()
+
+        # Mock the response structure matching mistralai SDK
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message = MagicMock()
+
+        # Default SQL response (valid SELECT query for financial_tables)
+        mock_response.choices[0].message.content = """
+SELECT entity, metric, value, unit, period, fiscal_year, page_number
+FROM financial_tables
+ORDER BY page_number DESC
+LIMIT 50;
+        """.strip()
+
+        # Configure mock to return this response
+        mock_client.chat.complete.return_value = mock_response
+        mock_class.return_value = mock_client
+
+        yield mock_client, mock_class
+
+
 # pytest-xdist parallel execution hooks
 def pytest_addoption(parser):
     """Add custom command line options for pytest.
