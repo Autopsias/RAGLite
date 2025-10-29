@@ -110,8 +110,19 @@ async def test_similarity_function_works():
 
 
 @pytest.mark.asyncio
-async def test_exact_match_fallback():
+async def test_exact_match_fallback(mock_mistral_client):
     """Test AC1: Verify exact match fallback when similarity fails."""
+    # Configure mock
+    mock_client, _ = mock_mistral_client
+    mock_response = mock_client.chat.complete.return_value
+    mock_response.choices[0].message.content = """
+SELECT entity, metric, value, unit, period, fiscal_year, page_number
+FROM financial_tables
+WHERE entity ILIKE '%Portugal%'
+ORDER BY page_number DESC
+LIMIT 50;
+    """.strip()
+
     test_query = "Show variable costs for Portugal"
     sql = await generate_sql_query(test_query)
 
@@ -123,8 +134,20 @@ async def test_exact_match_fallback():
 
 
 @pytest.mark.asyncio
-async def test_fuzzy_matching_thresholds():
+async def test_fuzzy_matching_thresholds(mock_mistral_client):
     """Test AC1: Fuzzy matching uses correct thresholds."""
+    # Configure mock
+    mock_client, _ = mock_mistral_client
+    mock_response = mock_client.chat.complete.return_value
+    mock_response.choices[0].message.content = """
+SELECT entity, metric, value, unit, period, fiscal_year, page_number
+FROM financial_tables
+WHERE entity ILIKE '%Angola%'
+  AND metric ILIKE '%variable cost%'
+ORDER BY page_number DESC
+LIMIT 50;
+    """.strip()
+
     test_query = "Angola variable costs"
     sql = await generate_sql_query(test_query)
 
@@ -139,8 +162,20 @@ async def test_fuzzy_matching_thresholds():
 
 
 @pytest.mark.asyncio
-async def test_case_insensitive_matching():
+async def test_case_insensitive_matching(mock_mistral_client):
     """Test AC1: Entity matching is case-insensitive."""
+    # Configure mock
+    mock_client, _ = mock_mistral_client
+    mock_response = mock_client.chat.complete.return_value
+    mock_response.choices[0].message.content = """
+SELECT entity, metric, value, unit, period, fiscal_year, page_number
+FROM financial_tables
+WHERE entity ILIKE '%Portugal%'
+  AND metric ILIKE '%variable cost%'
+ORDER BY page_number DESC
+LIMIT 50;
+    """.strip()
+
     test_query = "PORTUGAL CEMENT variable costs"
     sql = await generate_sql_query(test_query)
 
