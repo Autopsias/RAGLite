@@ -6,6 +6,7 @@ Extracts text, tables, and page numbers from financial documents with high accur
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 import uuid
 from datetime import UTC, datetime
@@ -1222,10 +1223,18 @@ async def ingest_pdf(
         "Extracting tables for SQL storage",
         extra={"doc_filename": pdf_path.name},
     )
+
+    # Skip table extraction in CI if env var set (for debugging hangs)
+    skip_table_extraction = os.getenv("SKIP_TABLE_EXTRACTION", "false").lower() == "true"
+
     try:
-        extractor = TableExtractor()
-        table_rows = extractor.extract_tables_from_result(result, pdf_path.stem)
-        print(f"CHECKPOINT: Table extraction complete - {len(table_rows)} rows", file=sys.stderr, flush=True)
+        if not skip_table_extraction:
+            extractor = TableExtractor()
+            table_rows = extractor.extract_tables_from_result(result, pdf_path.stem)
+            print(f"CHECKPOINT: Table extraction complete - {len(table_rows)} rows", file=sys.stderr, flush=True)
+        else:
+            table_rows = []
+            print(f"CHECKPOINT: Table extraction SKIPPED", file=sys.stderr, flush=True)
 
         if table_rows:
             logger.info(
