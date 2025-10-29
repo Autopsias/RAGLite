@@ -56,8 +56,29 @@ def session_ingested_collection(request):
     from raglite.ingestion.pipeline import create_collection, ingest_pdf
     from raglite.shared.clients import get_qdrant_client
     from raglite.shared.config import settings
+    import socket
 
     print("DEBUG: Imports successful", file=sys.stderr)
+
+    # CRITICAL: Check Qdrant is actually reachable before proceeding
+    # This prevents indefinite hangs if Qdrant is unresponsive in CI
+    print("DEBUG: Verifying Qdrant connection with socket check...", file=sys.stderr)
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)  # 5 second timeout for connection
+        result = sock.connect_ex((settings.qdrant_host, settings.qdrant_port))
+        sock.close()
+        if result == 0:
+            print(f"DEBUG: Qdrant socket check passed at {settings.qdrant_host}:{settings.qdrant_port}", file=sys.stderr)
+        else:
+            print(f"DEBUG: Qdrant connection refused at {settings.qdrant_host}:{settings.qdrant_port}", file=sys.stderr)
+            pytest.skip(f"Qdrant not available at {settings.qdrant_host}:{settings.qdrant_port}")
+    except socket.timeout:
+        print(f"DEBUG: Qdrant socket connection timed out", file=sys.stderr)
+        pytest.skip(f"Qdrant connection timeout - no response from {settings.qdrant_host}:{settings.qdrant_port}")
+    except Exception as e:
+        print(f"DEBUG: Qdrant socket check failed with: {type(e).__name__}: {e}", file=sys.stderr)
+        pytest.skip(f"Qdrant connection check failed: {e}")
 
     # Environment-based PDF selection:
     # - LOCAL (VS Code): 10-page sample PDF (fast ~10-15 seconds ingestion)

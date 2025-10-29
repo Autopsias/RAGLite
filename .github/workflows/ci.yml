@@ -276,27 +276,29 @@ jobs:
           exit 1
 
       - name: Run integration tests (CI comprehensive mode)
+        env:
+          QDRANT_HOST: localhost
+          QDRANT_PORT: 6333
+          TEST_USE_FULL_PDF: "true"
         run: |
+          source ci-venv/bin/activate
           echo "========================================="
-          echo "⏭️  TEMPORARILY SKIPPING INTEGRATION TESTS"
+          echo "CI MODE: Comprehensive Testing"
+          echo "- Using 160-page full PDF (~150s ingestion)"
+          echo "- Running ALL tests including slow ones"
+          echo "- Single worker (session fixture + shared Qdrant collection)"
+          echo "- Added socket connection check to prevent hangs"
+          echo "- Target: 30-50 minutes total"
           echo "========================================="
-          echo ""
-          echo "Reason: Session fixture hangs during Qdrant connection in CI"
-          echo "Status: Debugging - tests pass locally, fail in CI environment"
-          echo ""
-          echo "What's affected:"
-          echo "  - tests/integration/ (118 tests)"
-          echo "  - tests/e2e/ (28 tests)"
-          echo "  - Accuracy validation tests (NFR6/NFR7)"
-          echo ""
-          echo "Root cause investigation:"
-          echo "  ✅ Not import hangs (Docling lazy-loads work)"
-          echo "  ✅ Not table extraction (skip didn't help)"
-          echo "  ✅ Pytest collection works locally (21 seconds)"
-          echo "  ❌ Session fixture hangs in CI during Qdrant connection"
-          echo ""
-          echo "Next step: Debug Qdrant connection timing in CI environment"
-          echo "========================================="
+          if [ -d "tests/integration" ] && [ -n "$(find tests/integration -name 'test_*.py' -type f)" ]; then
+            pytest tests/integration/ \
+              -n 1 \
+              -m "" \
+              -v \
+              --junitxml=pytest-integration-report.xml
+          else
+            echo "⚠️  No integration tests found, skipping..."
+          fi
         continue-on-error: true
 
       - name: Upload integration test results
