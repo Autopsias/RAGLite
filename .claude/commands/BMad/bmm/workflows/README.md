@@ -88,7 +88,7 @@
 
 **workflow-status**
 - Path: `bmad/bmm/workflows/workflow-status/workflow.yaml`
-- Lightweight status checker - answers "what should I do now?" for any agent. Reads simple key-value status file for instant parsing. Use workflow-init for new projects.
+- Lightweight status checker - answers "what should I do now?" for any agent. Reads YAML status file for workflow tracking. Use workflow-init for new projects.
 
 
 ## Execution

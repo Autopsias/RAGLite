@@ -235,7 +235,7 @@ async def generate_sql_query(query: str) -> str | None:
         # Initialize Mistral client
         client = Mistral(api_key=settings.mistral_api_key)
 
-        # SQL generation prompt with schema
+        # SQL generation prompt with schema (prompt template for LLM, not SQL construction)
         sql_prompt = f"""You are a SQL expert
 
 **DATABASE SCHEMA:**
@@ -374,7 +374,7 @@ LIMIT 50;
 - DO NOT use table_index or row_index in ORDER BY (causes SQL errors)
 - Select columns needed for answering the question + attribution (page_number, table_caption)
 - Use simple ORDER BY patterns: page_number DESC, value DESC, or fiscal_year DESC
-"""
+"""  # nosec B608
 
         # Call Mistral API (using same pattern as metadata extraction)
         from mistralai.models import SystemMessage, UserMessage

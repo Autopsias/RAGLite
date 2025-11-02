@@ -84,6 +84,9 @@ class TestIngestPDF:
             patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
             patch("raglite.ingestion.pipeline.get_qdrant_client", return_value=mock_qdrant_client),
             patch("raglite.ingestion.pipeline.get_embedding_model") as MockEmbedding,
+            patch("raglite.ingestion.pipeline.store_metadata_in_postgresql", return_value=(1, 0)),
+            patch("raglite.ingestion.pipeline.store_tables_in_postgresql", return_value=(0, 0)),
+            patch("raglite.ingestion.pipeline.store_vectors_in_qdrant", return_value=None),
         ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
@@ -172,6 +175,15 @@ class TestIngestPDF:
         mock_result = Mock()
         mock_result.document = mock_document
 
+        # Mock Qdrant client
+        mock_qdrant_client = Mock()
+        mock_collections_response = Mock()
+        mock_collections_response.collections = []
+        mock_qdrant_client.get_collections = Mock(return_value=mock_collections_response)
+        mock_collection_info = Mock()
+        mock_collection_info.points_count = 5  # 5 mock elements
+        mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
+
         # Patch Docling at the source for lazy imports inside ingest_pdf()
         with (
             patch("docling.document_converter.DocumentConverter") as MockConverter,
@@ -180,9 +192,18 @@ class TestIngestPDF:
             patch("docling.datamodel.base_models.InputFormat"),
             patch("docling.document_converter.PdfFormatOption"),
             patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+            patch("raglite.ingestion.pipeline.get_qdrant_client", return_value=mock_qdrant_client),
+            patch("raglite.ingestion.pipeline.get_embedding_model") as MockEmbedding,
+            patch("raglite.ingestion.pipeline.store_metadata_in_postgresql", return_value=(5, 0)),
+            patch("raglite.ingestion.pipeline.store_tables_in_postgresql", return_value=(0, 0)),
+            patch("raglite.ingestion.pipeline.store_vectors_in_qdrant", return_value=None),
         ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
+
+            # Mock embedding model
+            mock_embedding_instance = MockEmbedding.return_value
+            mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024] * 5)
 
             result = await ingest_pdf(str(pdf_file))
 
@@ -212,6 +233,15 @@ class TestIngestPDF:
         mock_result = Mock()
         mock_result.document = mock_document
 
+        # Mock Qdrant client
+        mock_qdrant_client = Mock()
+        mock_collections_response = Mock()
+        mock_collections_response.collections = []
+        mock_qdrant_client.get_collections = Mock(return_value=mock_collections_response)
+        mock_collection_info = Mock()
+        mock_collection_info.points_count = 1
+        mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
+
         # Patch Docling at the source for lazy imports inside ingest_pdf()
         with (
             patch("docling.document_converter.DocumentConverter") as MockConverter,
@@ -220,9 +250,18 @@ class TestIngestPDF:
             patch("docling.datamodel.base_models.InputFormat"),
             patch("docling.document_converter.PdfFormatOption"),
             patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+            patch("raglite.ingestion.pipeline.get_qdrant_client", return_value=mock_qdrant_client),
+            patch("raglite.ingestion.pipeline.get_embedding_model") as MockEmbedding,
+            patch("raglite.ingestion.pipeline.store_metadata_in_postgresql", return_value=(1, 0)),
+            patch("raglite.ingestion.pipeline.store_tables_in_postgresql", return_value=(0, 0)),
+            patch("raglite.ingestion.pipeline.store_vectors_in_qdrant", return_value=None),
         ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
+
+            # Mock embedding model
+            mock_embedding_instance = MockEmbedding.return_value
+            mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024])
 
             result = await ingest_pdf(str(pdf_file))
 
@@ -280,6 +319,15 @@ class TestIngestPDF:
         mock_result = Mock()
         mock_result.document = mock_document
 
+        # Mock Qdrant client
+        mock_qdrant_client = Mock()
+        mock_collections_response = Mock()
+        mock_collections_response.collections = []
+        mock_qdrant_client.get_collections = Mock(return_value=mock_collections_response)
+        mock_collection_info = Mock()
+        mock_collection_info.points_count = 1
+        mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
+
         # Patch Docling at the source for lazy imports inside ingest_pdf()
         with (
             patch("docling.document_converter.DocumentConverter") as MockConverter,
@@ -288,9 +336,18 @@ class TestIngestPDF:
             patch("docling.datamodel.base_models.InputFormat"),
             patch("docling.document_converter.PdfFormatOption"),
             patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+            patch("raglite.ingestion.pipeline.get_qdrant_client", return_value=mock_qdrant_client),
+            patch("raglite.ingestion.pipeline.get_embedding_model") as MockEmbedding,
+            patch("raglite.ingestion.pipeline.store_metadata_in_postgresql", return_value=(1, 0)),
+            patch("raglite.ingestion.pipeline.store_tables_in_postgresql", return_value=(0, 0)),
+            patch("raglite.ingestion.pipeline.store_vectors_in_qdrant", return_value=None),
         ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
+
+            # Mock embedding model
+            mock_embedding_instance = MockEmbedding.return_value
+            mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024])
 
             await ingest_pdf(str(pdf_file))
 
@@ -353,8 +410,28 @@ class TestExtractExcel:
         mock_workbook.sheetnames = ["Revenue", "Metrics", "Summary"]
         mock_workbook.__getitem__ = Mock(side_effect=lambda name: sheet_map[name])
 
-        with patch("raglite.ingestion.pipeline.openpyxl.load_workbook") as mock_load:
+        # Mock Qdrant client
+        mock_qdrant_client = Mock()
+        mock_collections_response = Mock()
+        mock_collections_response.collections = []
+        mock_qdrant_client.get_collections = Mock(return_value=mock_collections_response)
+        mock_collection_info = Mock()
+        mock_collection_info.points_count = 3
+        mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
+
+        with (
+            patch("raglite.ingestion.pipeline.openpyxl.load_workbook") as mock_load,
+            patch("raglite.ingestion.pipeline.get_qdrant_client", return_value=mock_qdrant_client),
+            patch("raglite.ingestion.pipeline.get_embedding_model") as MockEmbedding,
+            patch("raglite.ingestion.pipeline.store_metadata_in_postgresql", return_value=(3, 0)),
+            patch("raglite.ingestion.pipeline.store_tables_in_postgresql", return_value=(0, 0)),
+            patch("raglite.ingestion.pipeline.store_vectors_in_qdrant", return_value=None),
+        ):
             mock_load.return_value = mock_workbook
+
+            # Mock embedding model
+            mock_embedding_instance = MockEmbedding.return_value
+            mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024] * 3)
 
             # Execute extraction
             result = await extract_excel(str(excel_file))
@@ -399,8 +476,28 @@ class TestExtractExcel:
         mock_workbook.sheetnames = ["Sheet1", "Sheet2", "Sheet3"]
         mock_workbook.__getitem__ = Mock(side_effect=lambda name: sheet_map[name])
 
-        with patch("raglite.ingestion.pipeline.openpyxl.load_workbook") as mock_load:
+        # Mock Qdrant client
+        mock_qdrant_client = Mock()
+        mock_collections_response = Mock()
+        mock_collections_response.collections = []
+        mock_qdrant_client.get_collections = Mock(return_value=mock_collections_response)
+        mock_collection_info = Mock()
+        mock_collection_info.points_count = 3
+        mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
+
+        with (
+            patch("raglite.ingestion.pipeline.openpyxl.load_workbook") as mock_load,
+            patch("raglite.ingestion.pipeline.get_qdrant_client", return_value=mock_qdrant_client),
+            patch("raglite.ingestion.pipeline.get_embedding_model") as MockEmbedding,
+            patch("raglite.ingestion.pipeline.store_metadata_in_postgresql", return_value=(3, 0)),
+            patch("raglite.ingestion.pipeline.store_tables_in_postgresql", return_value=(0, 0)),
+            patch("raglite.ingestion.pipeline.store_vectors_in_qdrant", return_value=None),
+        ):
             mock_load.return_value = mock_workbook
+
+            # Mock embedding model
+            mock_embedding_instance = MockEmbedding.return_value
+            mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024] * 3)
 
             result = await extract_excel(str(excel_file))
 
@@ -429,8 +526,28 @@ class TestExtractExcel:
         mock_workbook.sheetnames = ["Pricing"]
         mock_workbook.__getitem__ = Mock(return_value=mock_sheet)
 
-        with patch("raglite.ingestion.pipeline.openpyxl.load_workbook") as mock_load:
+        # Mock Qdrant client
+        mock_qdrant_client = Mock()
+        mock_collections_response = Mock()
+        mock_collections_response.collections = []
+        mock_qdrant_client.get_collections = Mock(return_value=mock_collections_response)
+        mock_collection_info = Mock()
+        mock_collection_info.points_count = 1
+        mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
+
+        with (
+            patch("raglite.ingestion.pipeline.openpyxl.load_workbook") as mock_load,
+            patch("raglite.ingestion.pipeline.get_qdrant_client", return_value=mock_qdrant_client),
+            patch("raglite.ingestion.pipeline.get_embedding_model") as MockEmbedding,
+            patch("raglite.ingestion.pipeline.store_metadata_in_postgresql", return_value=(1, 0)),
+            patch("raglite.ingestion.pipeline.store_tables_in_postgresql", return_value=(0, 0)),
+            patch("raglite.ingestion.pipeline.store_vectors_in_qdrant", return_value=None),
+        ):
             mock_load.return_value = mock_workbook
+
+            # Mock embedding model
+            mock_embedding_instance = MockEmbedding.return_value
+            mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024])
 
             result = await extract_excel(str(excel_file))
 
