@@ -277,20 +277,17 @@ jobs:
 
       - name: Start and verify PostgreSQL
         run: |
-          echo "Checking PostgreSQL container..."
+          echo "Ensuring fresh PostgreSQL container..."
 
           # Check if container exists
           if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
-            echo "PostgreSQL container exists"
+            echo "PostgreSQL container exists - restarting to ensure fresh state..."
 
-            # Check if it's running
-            if docker ps --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
-              echo "✅ PostgreSQL container is running"
-            else
-              echo "Starting existing PostgreSQL container..."
-              docker start raglite-postgresql
-              sleep 3
-            fi
+            # CRITICAL: Always restart to prevent zombie/hung state
+            # Container may show as "running" but be unresponsive (seen 4-day old logs)
+            docker restart raglite-postgresql
+            echo "Waiting for restart to complete..."
+            sleep 5
           else
             echo "Creating new PostgreSQL container..."
             docker run -d \
@@ -300,28 +297,54 @@ jobs:
               -e POSTGRES_PASSWORD=raglite \
               --name raglite-postgresql \
               postgres:16
-            sleep 5
+            echo "Waiting for initial startup..."
+            sleep 8
           fi
 
+          echo "✅ PostgreSQL container refreshed"
+
           # Wait for PostgreSQL to be ready (max 30 seconds)
-          # Use psql directly instead of pg_isready (which may not be installed)
           echo "Waiting for PostgreSQL to be ready..."
+
+          # Debug: Check if psql is available
+          if ! command -v psql &> /dev/null; then
+            echo "⚠️  WARNING: psql command not found! Attempting to use docker exec instead..."
+            USE_DOCKER_EXEC=true
+          else
+            echo "✓ psql command available"
+            USE_DOCKER_EXEC=false
+          fi
+
           MAX_RETRIES=30
           RETRY_COUNT=0
 
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            # Try to connect to postgres database (always exists)
-            if PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d postgres -c "SELECT 1" > /dev/null 2>&1; then
-              echo "✅ PostgreSQL is available at localhost:5432"
+            # Try to connect using docker exec if psql not available
+            if [ "$USE_DOCKER_EXEC" = true ]; then
+              if docker exec raglite-postgresql psql -U raglite -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+                echo "✅ PostgreSQL is available (via docker exec)"
 
-              # Verify raglite database exists, create if missing
-              if PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d raglite -c "SELECT 1" > /dev/null 2>&1; then
-                echo "✅ Database 'raglite' is accessible"
+                # Create raglite database if missing
+                docker exec raglite-postgresql psql -U raglite -d postgres -c "SELECT 1 FROM pg_database WHERE datname='raglite'" | grep -q 1 || \
+                  docker exec raglite-postgresql psql -U raglite -d postgres -c "CREATE DATABASE raglite" > /dev/null 2>&1
+
+                echo "✅ Database 'raglite' ready"
                 exit 0
-              else
-                echo "⚠️  Creating database 'raglite'..."
-                PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d postgres -c "CREATE DATABASE raglite" 2>&1 | grep -v "already exists" || true
-                sleep 1
+              fi
+            else
+              # Try to connect using local psql
+              if PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+                echo "✅ PostgreSQL is available at localhost:5432"
+
+                # Verify raglite database exists, create if missing
+                if PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d raglite -c "SELECT 1" > /dev/null 2>&1; then
+                  echo "✅ Database 'raglite' is accessible"
+                  exit 0
+                else
+                  echo "⚠️  Creating database 'raglite'..."
+                  PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d postgres -c "CREATE DATABASE raglite" 2>&1 | grep -v "already exists" || true
+                  sleep 1
+                fi
               fi
             fi
 
@@ -333,7 +356,12 @@ jobs:
           done
 
           echo "❌ PostgreSQL not available after ${MAX_RETRIES}s"
-          echo "Container logs:"
+          echo ""
+          echo "Debug information:"
+          echo "- Container status: $(docker ps -a --filter name=raglite-postgresql --format '{{.Status}}')"
+          echo "- psql available: $(command -v psql &> /dev/null && echo 'yes' || echo 'no')"
+          echo ""
+          echo "Container logs (last 50 lines):"
           docker logs raglite-postgresql --tail 50
           exit 1
 
