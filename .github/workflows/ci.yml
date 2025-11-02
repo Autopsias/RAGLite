@@ -304,31 +304,36 @@ jobs:
           fi
 
           # Wait for PostgreSQL to be ready (max 30 seconds)
+          # Use psql directly instead of pg_isready (which may not be installed)
           echo "Waiting for PostgreSQL to be ready..."
           MAX_RETRIES=30
           RETRY_COUNT=0
 
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            if pg_isready -h localhost -p 5432 -U raglite > /dev/null 2>&1; then
+            # Try to connect to postgres database (always exists)
+            if PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d postgres -c "SELECT 1" > /dev/null 2>&1; then
               echo "✅ PostgreSQL is available at localhost:5432"
 
-              # Verify database exists and is accessible
+              # Verify raglite database exists, create if missing
               if PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d raglite -c "SELECT 1" > /dev/null 2>&1; then
                 echo "✅ Database 'raglite' is accessible"
                 exit 0
               else
-                echo "⚠️  Database 'raglite' not accessible, attempting to create..."
-                PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d postgres -c "CREATE DATABASE raglite" 2>/dev/null || true
+                echo "⚠️  Creating database 'raglite'..."
+                PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d postgres -c "CREATE DATABASE raglite" 2>&1 | grep -v "already exists" || true
                 sleep 1
               fi
             fi
 
             RETRY_COUNT=$((RETRY_COUNT + 1))
-            echo "Waiting for PostgreSQL... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            if [ $((RETRY_COUNT % 5)) -eq 0 ]; then
+              echo "Waiting for PostgreSQL... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            fi
             sleep 1
           done
 
           echo "❌ PostgreSQL not available after ${MAX_RETRIES}s"
+          echo "Container logs:"
           docker logs raglite-postgresql --tail 50
           exit 1
 
