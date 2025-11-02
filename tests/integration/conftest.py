@@ -18,14 +18,72 @@ IMPORTANT: Integration tests use shared Qdrant collection (read-only mode).
 Tests that modify data are marked with @pytest.mark.manages_collection_state.
 """
 
-import asyncio
+import os
+import socket
 import sys
-from pathlib import Path
 
 import pytest
 
 # Debug: Track module load
 print("DEBUG: conftest.py loading...", file=sys.stderr)
+
+# CRITICAL: Check service availability BEFORE importing any raglite modules
+# Test modules import raglite code which may try to connect at import time
+# This prevents collection-time hangs when services are unavailable
+print("DEBUG: Checking service availability before imports...", file=sys.stderr)
+
+# Get connection settings from environment (same as shared.config.Settings)
+QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
+QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
+POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
+
+
+def check_service_available(host: str, port: int, service_name: str) -> bool:
+    """Check if service is reachable with 5-second timeout."""
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
+        result = sock.connect_ex((host, port))
+        sock.close()
+        if result == 0:
+            print(f"DEBUG: {service_name} available at {host}:{port}", file=sys.stderr)
+            return True
+        else:
+            print(f"DEBUG: {service_name} connection refused at {host}:{port}", file=sys.stderr)
+            return False
+    except TimeoutError:
+        print(f"DEBUG: {service_name} connection timeout at {host}:{port}", file=sys.stderr)
+        return False
+    except Exception as e:
+        print(f"DEBUG: {service_name} check failed: {e}", file=sys.stderr)
+        return False
+
+
+# Check both services at module load time
+qdrant_available = check_service_available(QDRANT_HOST, QDRANT_PORT, "Qdrant")
+postgres_available = check_service_available(POSTGRES_HOST, POSTGRES_PORT, "PostgreSQL")
+
+# Skip ALL integration tests if either service is unavailable
+if not qdrant_available or not postgres_available:
+    missing = []
+    if not qdrant_available:
+        missing.append(f"Qdrant ({QDRANT_HOST}:{QDRANT_PORT})")
+    if not postgres_available:
+        missing.append(f"PostgreSQL ({POSTGRES_HOST}:{POSTGRES_PORT})")
+
+    skip_reason = f"Integration tests require: {', '.join(missing)}"
+    print(f"DEBUG: Skipping all integration tests - {skip_reason}", file=sys.stderr)
+
+    # Configure pytest to skip all tests in this directory
+    collect_ignore_glob = ["*.py"]
+    pytest.skip(skip_reason, allow_module_level=True)
+
+print("DEBUG: Services available, continuing with imports...", file=sys.stderr)
+
+# Now safe to import raglite modules (services are confirmed available)
+import asyncio  # noqa: E402
+from pathlib import Path  # noqa: E402
 
 # Track session-level expected Qdrant state for test isolation
 _session_sample_pdf_chunk_count = None
@@ -48,78 +106,16 @@ def session_ingested_collection(request):
     """
     global _session_sample_pdf_chunk_count
 
-    # Lazy import to avoid test discovery overhead
+    # Lazy import (module-level checks already confirmed services are available)
     import os
 
     print("\nDEBUG: Entering session_ingested_collection fixture", file=sys.stderr)
-
-    import socket
 
     from raglite.ingestion.pipeline import create_collection, ingest_pdf
     from raglite.shared.clients import get_qdrant_client
     from raglite.shared.config import settings
 
-    print("DEBUG: Imports successful", file=sys.stderr)
-
-    # CRITICAL: Check Qdrant is actually reachable before proceeding
-    # This prevents indefinite hangs if Qdrant is unresponsive in CI
-    print("DEBUG: Verifying Qdrant connection with socket check...", file=sys.stderr)
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(5)  # 5 second timeout for connection
-        result = sock.connect_ex((settings.qdrant_host, settings.qdrant_port))
-        sock.close()
-        if result == 0:
-            print(
-                f"DEBUG: Qdrant socket check passed at {settings.qdrant_host}:{settings.qdrant_port}",
-                file=sys.stderr,
-            )
-        else:
-            print(
-                f"DEBUG: Qdrant connection refused at {settings.qdrant_host}:{settings.qdrant_port}",
-                file=sys.stderr,
-            )
-            pytest.skip(f"Qdrant not available at {settings.qdrant_host}:{settings.qdrant_port}")
-    except TimeoutError:
-        print("DEBUG: Qdrant socket connection timed out", file=sys.stderr)
-        pytest.skip(
-            f"Qdrant connection timeout - no response from {settings.qdrant_host}:{settings.qdrant_port}"
-        )
-    except Exception as e:
-        print(f"DEBUG: Qdrant socket check failed with: {type(e).__name__}: {e}", file=sys.stderr)
-        pytest.skip(f"Qdrant connection check failed: {e}")
-
-    # CRITICAL: Check PostgreSQL is actually reachable before proceeding
-    # ingest_pdf() calls PostgreSQL storage functions which will hang if DB is unavailable
-    print("DEBUG: Verifying PostgreSQL connection with socket check...", file=sys.stderr)
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(5)  # 5 second timeout for connection
-        result = sock.connect_ex((settings.postgres_host, settings.postgres_port))
-        sock.close()
-        if result == 0:
-            print(
-                f"DEBUG: PostgreSQL socket check passed at {settings.postgres_host}:{settings.postgres_port}",
-                file=sys.stderr,
-            )
-        else:
-            print(
-                f"DEBUG: PostgreSQL connection refused at {settings.postgres_host}:{settings.postgres_port}",
-                file=sys.stderr,
-            )
-            pytest.skip(
-                f"PostgreSQL not available at {settings.postgres_host}:{settings.postgres_port}"
-            )
-    except TimeoutError:
-        print("DEBUG: PostgreSQL socket connection timed out", file=sys.stderr)
-        pytest.skip(
-            f"PostgreSQL connection timeout - no response from {settings.postgres_host}:{settings.postgres_port}"
-        )
-    except Exception as e:
-        print(
-            f"DEBUG: PostgreSQL socket check failed with: {type(e).__name__}: {e}", file=sys.stderr
-        )
-        pytest.skip(f"PostgreSQL connection check failed: {e}")
+    print("DEBUG: Fixture imports successful", file=sys.stderr)
 
     # Environment-based PDF selection:
     # - LOCAL (VS Code): 10-page sample PDF (fast ~10-15 seconds ingestion)
