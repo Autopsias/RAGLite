@@ -275,10 +275,47 @@ jobs:
           echo "To start: docker run -d -p 6333:6333 --name raglite-qdrant qdrant/qdrant:v1.15.0"
           exit 1
 
+      - name: Verify PostgreSQL is available
+        run: |
+          echo "Checking persistent PostgreSQL instance..."
+
+          # Wait for PostgreSQL to be ready (max 30 seconds)
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if pg_isready -h localhost -p 5432 -U raglite > /dev/null 2>&1; then
+              echo "✅ PostgreSQL is available at localhost:5432"
+
+              # Additional health check: verify database exists
+              if PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d raglite -c "SELECT 1" > /dev/null 2>&1; then
+                echo "✅ Database 'raglite' is accessible"
+                exit 0
+              else
+                echo "⚠️  PostgreSQL running but database not accessible"
+                echo "Attempting to create database..."
+                PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d postgres -c "CREATE DATABASE raglite" 2>/dev/null || true
+              fi
+            fi
+
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Waiting for PostgreSQL... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            sleep 1
+          done
+
+          echo "❌ PostgreSQL not available after ${MAX_RETRIES}s"
+          echo "To start: docker run -d -p 5432:5432 -e POSTGRES_DB=raglite -e POSTGRES_USER=raglite -e POSTGRES_PASSWORD=raglite --name raglite-postgresql postgres:16"
+          exit 1
+
       - name: Run integration tests (CI comprehensive mode)
         env:
           QDRANT_HOST: localhost
           QDRANT_PORT: 6333
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: raglite
+          POSTGRES_USER: raglite
+          POSTGRES_PASSWORD: raglite
           TEST_USE_FULL_PDF: "true"
         run: |
           source ci-venv/bin/activate
