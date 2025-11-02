@@ -90,6 +90,32 @@ _session_sample_pdf_chunk_count = None
 
 
 @pytest.fixture(scope="session", autouse=True)
+def warmup_embedding_model():
+    """Pre-warm embedding model before any tests run.
+
+    CRITICAL PERFORMANCE FIX: Fin-E5 model takes 60-70s to load from cold start.
+    Without this fixture, the model loads during session_ingested_collection fixture,
+    adding 60-70s overhead to the expected 10-15s ingestion time.
+
+    This fixture loads the model ONCE at session start, before any PDF ingestion.
+    Expected savings: 60-70s per test session (reduces session fixture from 86s → 12-15s).
+
+    The model singleton persists across all tests in the session.
+    """
+    print("\n🔥 PRE-WARMING EMBEDDING MODEL (60-70s one-time load)...", file=sys.stderr)
+
+    from raglite.shared.clients import get_embedding_model
+
+    model = get_embedding_model()
+    dim = model.get_sentence_embedding_dimension()
+
+    print(f"✅ Embedding model ready: {dim} dimensions (Fin-E5 loaded)", file=sys.stderr)
+
+    yield
+    # Model singleton persists for entire session
+
+
+@pytest.fixture(scope="session", autouse=True)
 def session_ingested_collection(request):
     """Session-scoped fixture: Ingest test PDFs ONCE for entire test session.
 

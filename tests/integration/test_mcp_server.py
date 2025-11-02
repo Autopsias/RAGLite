@@ -19,6 +19,7 @@ sys.path.insert(0, str(spike_dir))
 from mcp_server import QueryRequest, check_health, execute_query  # noqa: E402
 
 
+@pytest.mark.preserve_collection  # Read-only query test - no data modification
 @pytest.mark.asyncio
 async def test_health_check() -> bool:
     """Test the health_check tool."""
@@ -45,6 +46,7 @@ async def test_health_check() -> bool:
         return False
 
 
+@pytest.mark.preserve_collection  # Read-only query test - no data modification
 @pytest.mark.asyncio
 async def test_query_tool() -> bool:
     """Test the query_financial_documents tool."""
@@ -83,6 +85,7 @@ async def test_query_tool() -> bool:
         return False
 
 
+@pytest.mark.preserve_collection  # Read-only query test - no data modification
 @pytest.mark.asyncio
 async def test_multiple_queries() -> bool:
     """Test with multiple diverse queries."""

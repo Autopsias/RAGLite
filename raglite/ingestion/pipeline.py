@@ -11,15 +11,12 @@ import time
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from mistralai import Mistral
-    from docling.datamodel.accelerator_options import AcceleratorOptions
-    from docling.datamodel.base_models import InputFormat
-    from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
-    from docling.document_converter import ConversionResult, DocumentConverter, PdfFormatOption
+    from docling.document_converter import ConversionResult
     from docling_core.types.doc import TableItem
+    from mistralai import Mistral
 
 import openpyxl
 import pandas as pd
@@ -46,7 +43,7 @@ _metadata_cache: dict[str, ExtractedMetadata] = {}
 
 # Initialize tiktoken encoding for token counting (Story 2.3 AC2)
 # Using cl100k_base encoding as specified in research (Yepes et al. 2024)
-encoding: Optional["Encoding"] = None  # Forward reference to avoid import errors
+encoding: Encoding | None = None  # Forward reference to avoid import errors
 try:
     import tiktoken
     from tiktoken import Encoding
@@ -173,7 +170,7 @@ async def generate_embeddings(chunks: list[Chunk]) -> list[Chunk]:
 
 
 async def extract_chunk_metadata(
-    text: str, chunk_id: str, client: Optional["Mistral"] = None
+    text: str, chunk_id: str, client: Mistral | None = None
 ) -> ExtractedMetadata:
     """Extract business context metadata from a single chunk using Mistral Small 3.2.
 
@@ -1175,7 +1172,7 @@ async def ingest_pdf(
         # Story 2.1: PyPdfium backend (optimized)
         from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
 
-        print(f"CHECKPOINT: Creating DocumentConverter...", file=sys.stderr, flush=True)
+        print("CHECKPOINT: Creating DocumentConverter...", file=sys.stderr, flush=True)
         converter = DocumentConverter(
             format_options={
                 InputFormat.PDF: PdfFormatOption(
@@ -1183,7 +1180,7 @@ async def ingest_pdf(
                 )
             }
         )
-        print(f"CHECKPOINT: DocumentConverter created successfully", file=sys.stderr, flush=True)
+        print("CHECKPOINT: DocumentConverter created successfully", file=sys.stderr, flush=True)
         logger.info(
             "Docling converter initialized with pypdfium backend and table extraction",
             extra={
@@ -1204,9 +1201,17 @@ async def ingest_pdf(
 
     # Convert PDF with Docling
     try:
-        print(f"CHECKPOINT: Starting Docling conversion of {pdf_path.name}...", file=sys.stderr, flush=True)
+        print(
+            f"CHECKPOINT: Starting Docling conversion of {pdf_path.name}...",
+            file=sys.stderr,
+            flush=True,
+        )
         result = converter.convert(str(pdf_path))
-        print(f"CHECKPOINT: Docling conversion complete - {result.document.num_pages} pages", file=sys.stderr, flush=True)
+        print(
+            f"CHECKPOINT: Docling conversion complete - {result.document.num_pages} pages",
+            file=sys.stderr,
+            flush=True,
+        )
     except Exception as e:
         error_msg = f"Docling parsing failed for {pdf_path.name}: {e}"
         logger.error(
@@ -1218,7 +1223,7 @@ async def ingest_pdf(
 
     # Story 2.13 AC1: Extract tables to PostgreSQL (avoid double-conversion)
     # Extract tables from Docling result before chunking to reuse conversion
-    print(f"CHECKPOINT: Starting table extraction...", file=sys.stderr, flush=True)
+    print("CHECKPOINT: Starting table extraction...", file=sys.stderr, flush=True)
     logger.info(
         "Extracting tables for SQL storage",
         extra={"doc_filename": pdf_path.name},
@@ -1231,10 +1236,14 @@ async def ingest_pdf(
         if not skip_table_extraction:
             extractor = TableExtractor()
             table_rows = extractor.extract_tables_from_result(result, pdf_path.stem)
-            print(f"CHECKPOINT: Table extraction complete - {len(table_rows)} rows", file=sys.stderr, flush=True)
+            print(
+                f"CHECKPOINT: Table extraction complete - {len(table_rows)} rows",
+                file=sys.stderr,
+                flush=True,
+            )
         else:
             table_rows = []
-            print(f"CHECKPOINT: Table extraction SKIPPED", file=sys.stderr, flush=True)
+            print("CHECKPOINT: Table extraction SKIPPED", file=sys.stderr, flush=True)
 
         if table_rows:
             logger.info(
@@ -1313,9 +1322,11 @@ async def ingest_pdf(
 
     # Chunk the document using Docling items with provenance (Story 1.13 fix)
     # This extracts actual page numbers from Docling metadata instead of estimating
-    print(f"CHECKPOINT: Starting chunking...", file=sys.stderr, flush=True)
+    print("CHECKPOINT: Starting chunking...", file=sys.stderr, flush=True)
     chunks = await chunk_by_docling_items(result, metadata)
-    print(f"CHECKPOINT: Chunking complete - {len(chunks)} chunks created", file=sys.stderr, flush=True)
+    print(
+        f"CHECKPOINT: Chunking complete - {len(chunks)} chunks created", file=sys.stderr, flush=True
+    )
 
     # Story 2.4 AC1 (REVISED): Extract business context metadata PER CHUNK using Mistral Small
     # ARCHITECTURAL CHANGE: Per-chunk extraction avoids reasoning token overflow and provides
@@ -2166,6 +2177,72 @@ async def chunk_by_docling_items(
             # Advance with overlap (AC2: 50-token overlap)
             idx += chunk_size - overlap
 
+    # Story 2.3 AC6 FIX: Merge tiny text chunks to reduce variance
+    # Problem: Sentence boundary trimming creates orphan chunks <100 tokens
+    # Solution: Merge tiny chunks with previous chunk (or next if first chunk)
+    MIN_CHUNK_TOKENS = 100  # Minimum viable chunk size
+
+    # Separate table chunks from text chunks for filtering
+    table_chunk_count = len(tables)  # Tables were added first
+    text_chunks_only = chunks[table_chunk_count:]  # Text chunks come after tables
+
+    if text_chunks_only:
+        # Filter and merge tiny text chunks
+        merged_text_chunks: list[Chunk] = []
+        i = 0
+        while i < len(text_chunks_only):
+            current_chunk = text_chunks_only[i]
+            current_token_count = len(encoding.encode(current_chunk.content))
+
+            # If chunk is tiny and we have a previous chunk to merge with
+            if current_token_count < MIN_CHUNK_TOKENS and merged_text_chunks:
+                # Merge with previous chunk
+                prev_chunk = merged_text_chunks[-1]
+                merged_content = prev_chunk.content + "\n\n" + current_chunk.content
+                prev_chunk.content = merged_content
+                prev_chunk.word_count = len(merged_content.split())
+
+                logger.debug(
+                    "Merged tiny text chunk with previous chunk",
+                    extra={
+                        "tiny_chunk_tokens": current_token_count,
+                        "merged_chunk_tokens": len(encoding.encode(merged_content)),
+                        "chunk_index": current_chunk.chunk_index,
+                    },
+                )
+            # If chunk is tiny and first chunk, try to merge with next
+            elif current_token_count < MIN_CHUNK_TOKENS and i + 1 < len(text_chunks_only):
+                # Merge with next chunk
+                next_chunk = text_chunks_only[i + 1]
+                merged_content = current_chunk.content + "\n\n" + next_chunk.content
+                next_chunk.content = merged_content
+                next_chunk.word_count = len(merged_content.split())
+                # Skip current chunk, keep next (which now has merged content)
+                i += 1
+                merged_text_chunks.append(next_chunk)
+
+                logger.debug(
+                    "Merged tiny text chunk with next chunk",
+                    extra={
+                        "tiny_chunk_tokens": current_token_count,
+                        "merged_chunk_tokens": len(encoding.encode(merged_content)),
+                        "chunk_index": current_chunk.chunk_index,
+                    },
+                )
+            else:
+                # Normal-sized chunk or orphan at end (keep as-is)
+                merged_text_chunks.append(current_chunk)
+
+            i += 1
+
+        # Rebuild chunks list: tables first (unchanged), then merged text chunks
+        chunks = chunks[:table_chunk_count] + merged_text_chunks
+
+        # Reindex chunks after merging
+        for idx, chunk in enumerate(chunks):
+            chunk.chunk_index = idx
+            chunk.chunk_id = f"{doc_metadata.filename}_{idx}"
+
     # Calculate metrics
     duration_ms = int((time.time() - start_time) * 1000)
     avg_chunk_size = sum(c.word_count for c in chunks) / len(chunks) if chunks else 0
@@ -2177,8 +2254,8 @@ async def chunk_by_docling_items(
         extra={
             "doc_filename": doc_metadata.filename,
             "chunk_count": len(chunks),
-            "table_chunks": len(tables),
-            "text_chunks": len(chunks) - len(tables),
+            "table_chunks": table_chunk_count,
+            "text_chunks": len(chunks) - table_chunk_count,
             "avg_chunk_size_words": round(avg_chunk_size, 1),
             "avg_chunk_size_tokens": round(avg_tokens, 1),
             "duration_ms": duration_ms,

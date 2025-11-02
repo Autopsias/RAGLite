@@ -13,6 +13,7 @@ from raglite.structured.table_retrieval import (
 )
 
 
+@pytest.mark.preserve_collection  # Read-only query tests - no data modification
 class TestTableRetrieval:
     """Integration tests for PostgreSQL table search."""
 

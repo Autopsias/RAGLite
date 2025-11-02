@@ -384,7 +384,9 @@ class TestChunkingIntegration:
             pytest.skip(f"Sample PDF not found at {sample_pdf}")
 
         # Mock Docling DocumentConverter to prevent actual PDF processing (timeout fix)
-        with patch("raglite.ingestion.pipeline.DocumentConverter") as mock_converter_class:
+        # CRITICAL: Patch at import source (docling), not at usage location (pipeline)
+        # DocumentConverter is imported inside ingest_pdf(), so it must be patched at source
+        with patch("docling.document_converter.DocumentConverter") as mock_converter_class:
             # Create realistic mock for Docling result structure
             page_content = " ".join(["Financial data content word"] * 200)  # ~200 words/page
             full_markdown = "\n\n".join([f"# Page {i}\n\n{page_content}" for i in range(1, 11)])
@@ -608,7 +610,9 @@ class TestEmbeddingIntegration:
 
         # Mock Docling to focus on embedding generation performance (AC9)
         # We test PDF processing separately - this test validates ONLY embedding speed
-        with patch("raglite.ingestion.pipeline.DocumentConverter") as mock_converter:
+        # CRITICAL: Patch at import source (docling), not at usage location (pipeline)
+        # DocumentConverter is imported inside ingest_pdf(), so it must be patched at source
+        with patch("docling.document_converter.DocumentConverter") as mock_converter:
             # Create realistic mock for Docling result structure
             # Simulate realistic text content that will generate ~13 chunks
             page_content = " ".join(["Financial data content word"] * 200)  # ~200 words per page

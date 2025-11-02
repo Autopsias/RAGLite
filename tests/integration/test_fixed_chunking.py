@@ -197,14 +197,17 @@ async def test_ac5_fast_chunk_count_validation(encoding):
         )
         text_std = text_variance**0.5
 
-        # AC5.3: Verify TEXT chunk size consistency (relaxed for 10-page sample)
-        # Note: Sample PDF is text-light (short paragraphs/headers) causing smaller chunks
-        # Observed mean: ~270 tokens (sentence boundary preservation reduces chunk size)
-        # Adjusted threshold: 200-450 tokens for 10-page sample (vs 400-562 for 160-page)
-        assert 200 <= text_mean <= 450, (
-            f"Mean TEXT chunk size {text_mean:.1f} not in range 200-450 (relaxed for text-light 10-page sample)"
+        # AC5.3: Verify TEXT chunk size consistency (10-page sample)
+        # Story 2.3 AC6 FIX: After merging tiny chunks, mean should be close to 512 target
+        # Observed mean: ~497 tokens (excellent - very close to 512 target)
+        # Acceptable range: 400-562 tokens (same as 160-page PDF, accommodates sentence boundaries)
+        assert 400 <= text_mean <= 562, (
+            f"Mean TEXT chunk size {text_mean:.1f} not in range 400-562 (target: 512, adjusted for sentence trimming)"
         )
-        # Relaxed std deviation for fast tests (sample may have outliers)
+        # Verify std deviation within acceptable bounds (<160 after tiny chunk merging)
+        assert text_std < 160, (
+            f"TEXT chunk std deviation {text_std:.1f} exceeds 160-token limit (after tiny chunk merging)"
+        )
 
         # AC5.4: Document chunk count and size distribution
         print("\n✅ AC5 FAST PASS: Chunk Count Validation (10-page PDF)")
@@ -358,21 +361,23 @@ async def test_ac6_fast_chunk_size_consistency(encoding):
         else:
             text_token_counts.append(token_count)
 
-    # AC6.2: Verify mean TEXT chunk size (relaxed for text-light 10-page sample)
-    # Note: 10-page sample has shorter text segments (headers, bullets) than 160-page PDF
-    # Adjusted threshold: 200-450 tokens (same as AC5 fast variant)
+    # AC6.2: Verify mean TEXT chunk size (10-page sample)
+    # Story 2.3 AC6 FIX: After merging tiny chunks, mean should match 160-page PDF
+    # Acceptable range: 400-562 tokens (accommodates sentence boundary trimming)
     if text_token_counts:
         text_mean = sum(text_token_counts) / len(text_token_counts)
-        assert 200 <= text_mean <= 450, (
-            f"Mean TEXT chunk size {text_mean:.1f} not within 200-450 (relaxed for text-light 10-page sample)"
+        assert 400 <= text_mean <= 562, (
+            f"Mean TEXT chunk size {text_mean:.1f} not within 400-562 (target: 512, adjusted for sentence trimming)"
         )
 
-        # AC6.3: Verify standard deviation for TEXT chunks (relaxed for 10-page sample)
+        # AC6.3: Verify standard deviation for TEXT chunks (<160 after tiny chunk merging)
         text_variance = sum((x - text_mean) ** 2 for x in text_token_counts) / len(
             text_token_counts
         )
         text_std = text_variance**0.5
-        # Note: Fast test uses relaxed std check - full validation happens in slow test
+        assert text_std < 160, (
+            f"TEXT chunk std deviation {text_std:.1f} exceeds 160-token limit (after tiny chunk merging)"
+        )
 
         # AC6.4: Verify 95% of TEXT chunks within range (same limit as slow test)
         # Note: 95th percentile can reach 512 for properly chunked text despite lower mean

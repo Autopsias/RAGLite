@@ -14,6 +14,7 @@ from raglite.retrieval.search import fuse_sql_vector_results, hybrid_search
 from raglite.shared.models import QueryResult
 
 
+@pytest.mark.preserve_collection  # Read-only query tests - no data modification
 class TestSQLRouting:
     """Test SQL routing integration in hybrid_search()."""
 
