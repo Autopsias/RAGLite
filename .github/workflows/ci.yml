@@ -286,13 +286,12 @@ jobs:
           echo "CI MODE: Comprehensive Testing"
           echo "- Using 160-page full PDF (~150s ingestion)"
           echo "- Running ALL tests including slow ones"
-          echo "- Single worker (session fixture + shared Qdrant collection)"
-          echo "- Added socket connection check to prevent hangs"
+          echo "- Sequential execution (session fixture + shared Qdrant collection)"
+          echo "- Module-level service checks to prevent hangs"
           echo "- Target: 30-50 minutes total"
           echo "========================================="
           if [ -d "tests/integration" ] && [ -n "$(find tests/integration -name 'test_*.py' -type f)" ]; then
             pytest tests/integration/ \
-              -n 1 \
               -m "" \
               -v \
               --junitxml=pytest-integration-report.xml
