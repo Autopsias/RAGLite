@@ -61,6 +61,7 @@ LIMIT 50;
 
 
 @pytest.mark.asyncio
+@pytest.mark.preserve_collection  # SQL-only test - no vector data needed
 async def test_pg_trgm_extension_installed():
     """Test AC1: Verify pg_trgm extension is installed."""
     conn = get_postgresql_connection()
@@ -74,6 +75,7 @@ async def test_pg_trgm_extension_installed():
 
 
 @pytest.mark.asyncio
+@pytest.mark.preserve_collection  # SQL-only test - no vector data needed
 async def test_gin_indexes_exist():
     """Test AC1: Verify GIN indexes exist for fuzzy matching."""
     conn = get_postgresql_connection()
@@ -92,6 +94,7 @@ async def test_gin_indexes_exist():
 
 
 @pytest.mark.asyncio
+@pytest.mark.preserve_collection  # SQL-only test - no vector data needed
 async def test_similarity_function_works():
     """Test AC1: Verify similarity() function returns proper threshold."""
     conn = get_postgresql_connection()

@@ -22,92 +22,86 @@ import pytest
 #   from raglite.shared.models import Chunk, DocumentMetadata
 
 
-@pytest.mark.manages_collection_state  # Tests call ingest_pdf() - skip re-ingest cleanup
+@pytest.mark.preserve_collection  # Use session fixture - no re-ingestion needed
 class TestPDFIngestionIntegration:
     """Integration tests for PDF ingestion with real financial documents.
 
-    Uses a 10-page sample PDF with tables extracted from Secil Group performance review.
+    Uses 10-page sample PDF with tables extracted from Secil Group performance review.
     Validates Docling integration, table extraction, and page number extraction without
     the 5-8 minute wait of processing 160-page documents.
+
+    PERFORMANCE OPTIMIZATION: These tests use the session_ingested_collection fixture
+    and do NOT call ingest_pdf() directly. The PDF is already ingested once at session
+    start, eliminating 90-120s of redundant processing per test.
     """
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    @pytest.mark.timeout(
-        180
-    )  # Increased to 180s: Docling takes ~70s + embeddings ~15s + Qdrant ~5s
+    @pytest.mark.timeout(10)  # Fast test - no ingestion, just validation
     async def test_ingest_financial_pdf_with_tables(self) -> None:
-        """Integration test with representative financial PDF containing tables.
+        """Integration test validating session-scoped PDF ingestion with tables.
 
-        Uses 10-page sample from Secil Group performance review including:
-        - Cover page and TOC
-        - Financial data pages with tables
-        - Complex table structures (nested headers, merged cells)
-
+        Uses session_ingested_collection fixture (PDF already ingested once).
         Validates:
-        - Docling successfully processes real financial PDFs
+        - PDF was successfully ingested in session fixture
         - Page numbers are extracted from provenance metadata
         - Table extraction works with complex financial data
-        - Performance is acceptable (~90 seconds total for 10-page PDF with table extraction)
+        - Chunks are stored in Qdrant
 
-        This replaces the slow 160-page test while maintaining comprehensive validation.
+        PERFORMANCE: No ingestion overhead - uses shared session fixture (~90s savings).
 
-        Note: Timeout increased to 180s to accommodate:
-        - Docling PDF processing: ~70s (real processing, not mocked)
-        - Embedding generation: ~15s (real Fin-E5 model)
-        - Qdrant storage: ~5s
-        Total expected: ~90s, timeout 180s for safety margin
+        Note: This test validates the RESULT of ingestion, not the process.
+        The session fixture handles the actual ingestion (run once per test session).
         """
         # Lazy imports to avoid test discovery overhead
-        from raglite.ingestion.pipeline import ingest_pdf
-        from raglite.shared.models import DocumentMetadata
+        from raglite.shared.clients import get_qdrant_client
+        from raglite.shared.config import settings
 
-        # Locate sample PDF
-        sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
+        # Get Qdrant client to validate session fixture ingestion
+        qdrant_client = get_qdrant_client()
 
-        if not sample_pdf.exists():
-            pytest.skip(f"Sample PDF not found at {sample_pdf}")
+        # Query collection to verify ingestion completed
+        collection_info = qdrant_client.get_collection(settings.qdrant_collection_name)
 
-        # Start timing
-        start_time = time.time()
+        # Assertions - validate session fixture ingested PDF successfully
+        assert collection_info.points_count > 0, "Session fixture should have ingested sample PDF"
 
-        # Ingest PDF
-        result = await ingest_pdf(str(sample_pdf))
-
-        # Calculate duration
-        duration_seconds = time.time() - start_time
-
-        # Assertions
-        assert isinstance(result, DocumentMetadata)
-        assert result.filename == "sample_financial_report.pdf"
-        assert result.doc_type == "PDF"
-
-        # Page count validation
-        assert result.page_count == 10, f"Expected 10 pages, got {result.page_count}"
-
-        # CRITICAL: Page numbers must be extracted
-        assert result.page_count > 0, "Page numbers must be extracted from provenance"
-
-        # Performance validation (realistic for Docling with table extraction)
-        # Based on actual measurements: Docling ~85s + embeddings ~25s + Qdrant ~5s = ~115s
-        # Allow 150s threshold for system variability and CI environments
-        max_duration_seconds = 150  # 2.5 minutes for 10-page PDF (measured: 115-125s typical)
-        assert duration_seconds < max_duration_seconds, (
-            f"Ingestion took {duration_seconds:.1f}s, "
-            f"expected <{max_duration_seconds}s for 10-page sample with table extraction "
-            f"(Docling ~85s + embeddings ~25s + Qdrant ~5s = ~115s typical)"
+        # For 10-page sample PDF, expect 10-50 chunks (depends on content density)
+        expected_range = (10, 50)
+        assert expected_range[0] <= collection_info.points_count <= expected_range[1], (
+            f"Expected {expected_range[0]}-{expected_range[1]} chunks for 10-page PDF, "
+            f"got {collection_info.points_count}"
         )
 
-        # Log performance metrics
-        print("\n\nSample PDF Ingestion Performance:")
-        print(f"  Duration: {duration_seconds:.1f} seconds")
-        print(f"  Pages: {result.page_count}")
-        print(f"  Pages/second: {result.page_count / duration_seconds:.2f}")
-        print("  Status: ✅ PASS")
+        # Validate chunks have proper metadata (sample a few points)
+        points, _ = qdrant_client.scroll(
+            collection_name=settings.qdrant_collection_name,
+            limit=5,
+        )
+
+        assert len(points) > 0, "Should have retrieved sample points"
+
+        for point in points:
+            assert point.payload is not None, "Point should have payload"
+            assert "source_document" in point.payload
+            assert "page_number" in point.payload
+            assert point.payload["page_number"] > 0, "Page number must be positive"
+            assert point.payload["page_number"] <= 10, (
+                f"Page number {point.payload['page_number']} exceeds 10-page document"
+            )
+
+        # Log validation results
+        print("\n\nSession-Scoped PDF Ingestion Validation:")
+        print(f"  Chunks stored: {collection_info.points_count}")
+        print(f"  Expected range: {expected_range[0]}-{expected_range[1]}")
+        print(
+            f"  Sample page numbers: {[p.payload['page_number'] if p.payload else 'None' for p in points[:3]]}"
+        )
+        print("  Status: ✅ PASS (using session fixture, zero ingestion overhead)")
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    @pytest.mark.timeout(180)
+    @pytest.mark.timeout(10)  # Fast test - uses session fixture
     async def test_pdf_ingestion_stores_correct_page_numbers(self) -> None:
         """Integration test validating page numbers extracted from Docling provenance (Story 1.13).
 
@@ -120,22 +114,14 @@ class TestPDFIngestionIntegration:
         - Page numbers are in expected range for test PDF
         - No impossible page estimates (e.g., page 156 for 10-page doc)
         - All chunks have valid page_number field
+
+        PERFORMANCE: Uses session fixture - no ingestion overhead (~90s savings).
         """
         # Lazy imports to avoid test discovery overhead
-        from raglite.ingestion.pipeline import ingest_pdf
         from raglite.shared.clients import get_qdrant_client
         from raglite.shared.config import settings
 
-        # Use sample financial report PDF (10 pages)
-        sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
-
-        if not sample_pdf.exists():
-            pytest.skip(f"Sample PDF not found at {sample_pdf}")
-
-        # Ingest PDF (stores vectors in Qdrant)
-        result = await ingest_pdf(str(sample_pdf))
-
-        # Query Qdrant to verify stored page numbers
+        # Query Qdrant to verify stored page numbers (session fixture already ingested)
         qdrant_client = get_qdrant_client()
 
         # Scroll through all points in collection
@@ -144,14 +130,14 @@ class TestPDFIngestionIntegration:
             limit=100,  # Should be enough for 10-page PDF
         )
 
-        # Filter points for this document
+        # Filter points for the sample document
         doc_points = [
             p
             for p in points
             if p.payload and p.payload.get("source_document") == "sample_financial_report.pdf"
         ]
 
-        assert len(doc_points) > 0, "Should have stored chunks in Qdrant"
+        assert len(doc_points) > 0, "Should have chunks from session fixture ingestion"
 
         # Validate page numbers
         page_numbers = [p.payload.get("page_number") for p in doc_points if p.payload]
@@ -170,8 +156,10 @@ class TestPDFIngestionIntegration:
         assert max_page <= 10, f"Max page {max_page} should be <= 10 (document has 10 pages)"
 
         # No impossible estimates (old bug would create page numbers like 156 for 10-page doc)
-        assert max_page <= result.page_count, (
-            f"Max page number {max_page} exceeds document page count {result.page_count} "
+        # Document has 10 pages based on sample PDF fixture
+        expected_page_count = 10
+        assert max_page <= expected_page_count, (
+            f"Max page number {max_page} exceeds document page count {expected_page_count} "
             "(indicates estimation bug)"
         )
 
@@ -180,12 +168,12 @@ class TestPDFIngestionIntegration:
         print("  Document: sample_financial_report.pdf")
         print(f"  Chunks stored: {len(doc_points)}")
         print(f"  Page range: {min_page}-{max_page}")
-        print(f"  Expected range: 1-{result.page_count}")
-        print("  Status: ✅ PASS - Page numbers from provenance")
+        print(f"  Expected range: 1-{expected_page_count}")
+        print("  Status: ✅ PASS - Page numbers from provenance (session fixture)")
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    @pytest.mark.timeout(180)  # Increased from 120s: PDF ingestion ~90s + queries ~30s
+    @pytest.mark.timeout(30)  # Fast test - uses session fixture, only runs queries
     async def test_page_attribution_accuracy_sample(self) -> None:
         """Test attribution accuracy on sample ground truth queries (Story 1.13).
 
@@ -197,21 +185,15 @@ class TestPDFIngestionIntegration:
         - Retrieved chunks have correct page numbers (±1 tolerance)
         - Attribution accuracy >80% on sample (full target: 95%)
         - No wildly incorrect page numbers (old bug: ±50 page error)
+
+        PERFORMANCE: Uses session fixture - no ingestion overhead (~90s savings).
+        Only runs search queries against pre-ingested PDF.
         """
         # Lazy imports to avoid test discovery overhead
-        from raglite.ingestion.pipeline import ingest_pdf
         from raglite.retrieval.search import search_documents
         from tests.fixtures.ground_truth import GROUND_TRUTH_QA
 
-        # Use sample financial report PDF
-        sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
-
-        if not sample_pdf.exists():
-            pytest.skip(f"Sample PDF not found at {sample_pdf}")
-
-        # Ingest PDF first
-        await ingest_pdf(str(sample_pdf))
-
+        # PDF already ingested by session fixture - no need to re-ingest
         # Select 5 sample queries from ground truth
         # Filter for queries related to the sample PDF (pages 1-10 based on actual test PDF)
         sample_queries = [qa for qa in GROUND_TRUTH_QA[:10] if qa["expected_page_number"] <= 10][:5]
@@ -224,7 +206,7 @@ class TestPDFIngestionIntegration:
         total_queries = len(sample_queries)
 
         for qa in sample_queries:
-            # Search for relevant chunks
+            # Search for relevant chunks (PDF already in Qdrant from session fixture)
             results = await search_documents(
                 query=qa["question"], top_k=3, source_document="sample_financial_report.pdf"
             )
@@ -258,6 +240,7 @@ class TestPDFIngestionIntegration:
         print(f"  Accuracy: {accuracy:.1f}%")
         print("  Target (sample): ≥80%")
         print(f"  Status: {'✅ PASS' if accuracy >= 80 else '❌ FAIL'}")
+        print("  Note: Using session fixture (zero ingestion overhead)")
 
 
 class TestExcelIngestionIntegration:

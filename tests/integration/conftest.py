@@ -129,6 +129,12 @@ def session_ingested_collection(request):
 
     TIMEOUT PROTECTION: If fixture hangs, pytest will timeout after 900s
     (configured in pytest.ini timeout_func_only=true, so fixture has full timeout).
+
+    PERFORMANCE OPTIMIZATION: This fixture runs EXACTLY ONCE per test session.
+    All integration tests share the same ingested PDF collection for maximum speed.
+
+    NOTE: Depends on warmup_embedding_model to ensure embedding model is loaded
+    before PDF ingestion starts.
     """
     global _session_sample_pdf_chunk_count
 
@@ -169,11 +175,11 @@ def session_ingested_collection(request):
         return
 
     print(f"\n{'=' * 80}")
-    print("SESSION FIXTURE: Ingesting test PDFs (production pattern)")
+    print("SESSION FIXTURE: Ingesting test PDFs ONCE (production pattern)")
     print(f"Mode: {'CI (comprehensive)' if use_full_pdf else 'LOCAL (fast)'}")
     print(f"Collection: {settings.qdrant_collection_name}")
     print(f"PDF: {pdf_description}")
-    print("This runs ONCE per test session, then all tests share the data")
+    print("THIS RUNS ONCE - All tests will share the ingested data")
     print(f"{'=' * 80}\n")
 
     # Get Qdrant client
@@ -222,9 +228,11 @@ def session_ingested_collection(request):
 
     # Ingest with clear_collection=False (collection already fresh)
     print("DEBUG: Starting asyncio.run(ingest_pdf)...", file=sys.stderr)
+    start_ingest = time.time()
     try:
         result = asyncio.run(ingest_pdf(str(sample_pdf), clear_collection=False))
-        print("DEBUG: ingest_pdf completed successfully", file=sys.stderr)
+        ingest_duration = time.time() - start_ingest
+        print(f"DEBUG: ingest_pdf completed in {ingest_duration:.1f}s", file=sys.stderr)
     except Exception as e:
         print(f"DEBUG: ingest_pdf failed with {type(e).__name__}: {e}", file=sys.stderr)
         raise
@@ -243,11 +251,12 @@ def session_ingested_collection(request):
     print(f"   PDF: {result.filename} ({result.page_count} pages)")
     print(f"   Path: {sample_pdf}")
     print(f"   Chunks: {count_after.count}")
+    print(f"   Ingestion time: {ingest_duration:.1f}s")
     print(f"   Mode: {'CI (160-page)' if use_full_pdf else 'LOCAL (10-page)'}")
     print(
         f"   Ready for {len(request.session.items) if hasattr(request.session, 'items') else '?'} tests"
     )
-    print("   All tests share this collection (read-only)\n")
+    print("   All tests share this collection (read-only, zero per-test overhead)\n")
 
     # CRITICAL VALIDATION: Chunk count should match PDF size expectations
     if use_full_pdf:
