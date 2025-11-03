@@ -373,7 +373,9 @@ class TestMetadataInjectionMocked:
             ):
                 metadata_field_count += 1
 
-        print(f"\n✓ Metadata injection validation: {metadata_field_count}/{len(points)} points have metadata")
+        print(
+            f"\n✓ Metadata injection validation: {metadata_field_count}/{len(points)} points have metadata"
+        )
 
         # At least 50% of points should have some metadata (realistic expectation)
         assert metadata_field_count >= len(points) * 0.5, (
@@ -440,7 +442,9 @@ class TestMetadataInjectionMocked:
         results = client.search(
             collection_name=settings.qdrant_collection_name,
             query_vector=query_vector,
-            query_filter=Filter(must=[FieldCondition(key=test_field, match=MatchValue(value=test_value))]),
+            query_filter=Filter(
+                must=[FieldCondition(key=test_field, match=MatchValue(value=test_value))]
+            ),
             limit=5,
         )
 
@@ -448,7 +452,8 @@ class TestMetadataInjectionMocked:
         assert len(results) > 0, f"Filter should return results for {test_field}={test_value}"
         for result in results:
             assert result.payload[test_field] == test_value, (
-                f"All results must match filter: expected '{test_value}', " f"got '{result.payload.get(test_field)}'"
+                f"All results must match filter: expected '{test_value}', "
+                f"got '{result.payload.get(test_field)}'"
             )
 
         print(f"✓ Filter API validation passed: {len(results)} results matched filter")
