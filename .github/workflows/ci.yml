@@ -381,14 +381,12 @@ jobs:
           echo "CI MODE: Fast Testing"
           echo "- Using 10-page sample PDF (~10-15s ingestion)"
           echo "- Running core integration tests (slow tests skipped)"
-          echo "- Parallel execution (4 workers, xdist_group keeps shared fixtures sequential)"
+          echo "- Sequential execution (shared Qdrant collection prevents parallelism)"
           echo "- Module-level service checks to prevent hangs"
-          echo "- Target: 20-30 minutes total"
+          echo "- Target: 45-50 minutes total (sequential due to shared state)"
           echo "========================================="
           if [ -d "tests/integration" ] && [ -n "$(find tests/integration -name 'test_*.py' -type f)" ]; then
             pytest tests/integration/ \
-              -n 4 \
-              --dist loadfile \
               -m "" \
               -v \
               --junitxml=pytest-integration-report.xml
