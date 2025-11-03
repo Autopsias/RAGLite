@@ -617,10 +617,60 @@ jobs:
 
       - name: Install dependencies with uv
         run: |
+          # Enable strict error handling
+          set -e
+          set -o pipefail
+
           uv venv ci-venv
           source ci-venv/bin/activate
-          uv pip install -e .
-          uv pip install pytest
+
+          echo "========================================="
+          echo "Installing dependencies..."
+          echo "========================================="
+
+          # Install raglite package with all production dependencies
+          # This installs all dependencies listed in pyproject.toml [project.dependencies]
+          echo "Installing raglite package..."
+          uv pip install -e . || {
+            echo "❌ Failed to install raglite package"
+            exit 1
+          }
+
+          # Install ALL test dependencies from dependency-groups
+          # CRITICAL: pytest-asyncio, pytest-xdist, pytest-timeout required for test collection
+          echo "Installing test dependencies..."
+          uv pip install pytest pytest-asyncio pytest-xdist pytest-timeout pytest-mock || {
+            echo "❌ Failed to install test dependencies"
+            exit 1
+          }
+
+          # Verify installation
+          echo ""
+          echo "========================================="
+          echo "Verifying installation..."
+          echo "========================================="
+          pytest --version || {
+            echo "❌ pytest not installed correctly"
+            exit 1
+          }
+
+          python -c "import raglite; print(f'✅ RAGLite package: {raglite.__file__}')" || {
+            echo "❌ raglite package import failed"
+            exit 1
+          }
+
+          python -c "import mistralai; print('✅ mistralai installed')" || {
+            echo "❌ mistralai not installed - test collection will fail"
+            exit 1
+          }
+
+          python -c "import qdrant_client; print('✅ qdrant_client installed')" || {
+            echo "❌ qdrant_client not installed"
+            exit 1
+          }
+
+          echo "✅ All dependencies installed successfully"
+          echo ""
 
       - name: Validate test count
         run: |
@@ -629,27 +679,62 @@ jobs:
           echo "Validating test discovery..."
           echo "========================================="
 
-          # Count total tests (including slow)
+          # Enable strict error handling
+          set -e
+          set -o pipefail
+
+          # Count total tests (including slow) - SHOW ERRORS for debugging
           EXPECTED_MIN_TESTS=355
-          TOTAL_TESTS=$(python -m pytest --collect-only -q tests/ -m "" 2>/dev/null | tail -1 | grep -oE '[0-9]+' | head -1 || echo "0")
+          echo "Collecting all tests (including slow)..."
+
+          # Capture full output for debugging
+          COLLECT_OUTPUT=$(python -m pytest --collect-only -q tests/ -m "" 2>&1 | tee /tmp/pytest-collect-total.log || true)
+          TOTAL_TESTS=$(echo "$COLLECT_OUTPUT" | tail -1 | grep -oE '[0-9]+' | head -1 || echo "")
+
+          # If collection failed or returned empty, show error and exit
+          if [ -z "$TOTAL_TESTS" ]; then
+            echo "❌ PYTEST TEST COLLECTION FAILED!"
+            echo ""
+            echo "Pytest output:"
+            cat /tmp/pytest-collect-total.log
+            echo ""
+            echo "Debugging info:"
+            echo "  Python version: $(python --version)"
+            echo "  Pytest version: $(pytest --version)"
+            echo "  Working directory: $(pwd)"
+            echo "  Test directory exists: $([ -d tests ] && echo 'YES' || echo 'NO')"
+            exit 1
+          fi
 
           # Count fast tests (default - excludes slow)
-          FAST_TESTS=$(python -m pytest --collect-only -q tests/ 2>/dev/null | tail -1 | grep -oE '[0-9]+' | head -1 || echo "0")
+          echo "Collecting fast tests (excluding slow)..."
+          COLLECT_FAST=$(python -m pytest --collect-only -q tests/ 2>&1 | tee /tmp/pytest-collect-fast.log || true)
+          FAST_TESTS=$(echo "$COLLECT_FAST" | tail -1 | grep -oE '[0-9]+' | head -1 || echo "0")
 
           # Count slow tests
-          SLOW_TESTS=$(python -m pytest --collect-only -q tests/ -m "slow" 2>/dev/null | tail -1 | grep -oE '[0-9]+' | head -1 || echo "0")
+          echo "Collecting slow tests..."
+          COLLECT_SLOW=$(python -m pytest --collect-only -q tests/ -m "slow" 2>&1 | tee /tmp/pytest-collect-slow.log || true)
+          SLOW_TESTS=$(echo "$COLLECT_SLOW" | tail -1 | grep -oE '[0-9]+' | head -1 || echo "0")
 
+          echo ""
+          echo "========================================="
+          echo "Test Discovery Results:"
+          echo "========================================="
           echo "Total tests (including slow): $TOTAL_TESTS"
           echo "Fast tests (default):         $FAST_TESTS"
           echo "Slow tests:                   $SLOW_TESTS"
           echo "Expected minimum:             $EXPECTED_MIN_TESTS"
           echo ""
 
+          # Validate total test count
           if [ "$TOTAL_TESTS" -ge "$EXPECTED_MIN_TESTS" ]; then
             echo "✅ Test discovery validated ($TOTAL_TESTS tests, $SLOW_TESTS marked slow)"
           else
             echo "❌ Test count too low ($TOTAL_TESTS < $EXPECTED_MIN_TESTS)"
             echo "⚠️  Some tests may not be discovered by pytest"
+            echo ""
+            echo "Debugging: Showing last 20 lines of collection output:"
+            tail -20 /tmp/pytest-collect-total.log
             exit 1
           fi
 
