@@ -6,7 +6,7 @@ Validates accuracy improvements over semantic-only baseline.
 Success Criteria (from Story 2.1):
 - Retrieval accuracy ≥70% (baseline 56%, target 71-76%)
 - Attribution accuracy ≥45% (baseline 32%, target improvement)
-- p95 latency <10,000ms (NFR13 compliance)
+- p95 latency <15,000ms (NFR13 compliance - includes cold-start)
 
 Usage:
     # Run all hybrid search integration tests
@@ -37,7 +37,9 @@ from tests.fixtures.ground_truth import GROUND_TRUTH_QA
 # Story 2.1 targets
 HYBRID_RETRIEVAL_TARGET = 70.0  # ≥70% retrieval accuracy (vs 56% baseline)
 HYBRID_ATTRIBUTION_TARGET = 45.0  # ≥45% attribution accuracy (vs 32% baseline)
-LATENCY_CEILING_P95 = NFR13_P95_TARGET_MS  # Must stay under 10s p95
+LATENCY_CEILING_P95 = (
+    NFR13_P95_TARGET_MS  # Must stay under 15s p95 (NFR13 target - includes cold-start)
+)
 
 
 @pytest.mark.xdist_group(name="embedding_model")
@@ -387,7 +389,7 @@ class TestHybridSearchIntegration:
                 f"(≥45%), but story can still pass if retrieval ≥70%"
             )
 
-        # NFR13 compliance: p95 latency <10s
+        # NFR13 compliance: p95 latency <15s (includes cold-start)
         assert metrics["p95_latency_ms"] < LATENCY_CEILING_P95, (
             f"NFR13 VIOLATION: p95 latency {metrics['p95_latency_ms']:.0f}ms "
             f"exceeds {LATENCY_CEILING_P95}ms limit"

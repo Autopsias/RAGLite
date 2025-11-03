@@ -90,6 +90,7 @@ class AccuracyMetrics:
 @pytest.mark.skipif(
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
 )
+@pytest.mark.timeout(600)  # 10 minutes - 50 queries × ~10 seconds each + overhead
 @pytest.mark.asyncio
 async def test_ac1_full_ground_truth_execution() -> AccuracyMetrics:
     """AC1: Execute all 50 ground truth queries and measure retrieval/attribution accuracy.
@@ -302,6 +303,7 @@ async def test_ac1_full_ground_truth_execution() -> AccuracyMetrics:
 @pytest.mark.skipif(
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
 )
+@pytest.mark.timeout(600)  # 10 minutes - delegates to test_ac1 which runs 50 queries
 @pytest.mark.asyncio
 async def test_ac2_decision_gate_validation():
     """AC2: DECISION GATE - Validate retrieval accuracy ≥70% (MANDATORY).
@@ -396,6 +398,7 @@ async def test_ac2_decision_gate_validation():
 @pytest.mark.skipif(
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
 )
+@pytest.mark.timeout(600)  # 10 minutes - delegates to test_ac1 which runs 50 queries
 @pytest.mark.asyncio
 async def test_ac3_attribution_accuracy_validation():
     """AC3: Validate attribution accuracy ≥95% (NFR7 compliance).

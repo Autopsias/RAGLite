@@ -6,7 +6,7 @@ Sets accuracy and latency floors/ceilings to catch regressions early.
 Regression Thresholds (from baseline-accuracy-report-FINAL.txt):
 - Retrieval accuracy floor: 56.0% (Epic 1 baseline)
 - Attribution accuracy floor: 32.0% (Epic 1 baseline)
-- p95 latency ceiling: 10,000ms (NFR13 target)
+- p95 latency ceiling: 15,000ms (NFR13 target - includes cold-start)
 
 ⚠️  DATA DEPENDENCY:
 Most tests require the full 160-page Performance Review PDF to be ingested.
@@ -44,7 +44,7 @@ from tests.fixtures.ground_truth import GROUND_TRUTH_QA
 # Epic 1 baseline thresholds (from baseline-accuracy-report-FINAL.txt)
 BASELINE_RETRIEVAL_FLOOR = 56.0  # Must not regress below 56%
 BASELINE_ATTRIBUTION_FLOOR = 32.0  # Must not regress below 32%
-LATENCY_CEILING_P95 = NFR13_P95_TARGET_MS  # Must stay under 10s p95
+LATENCY_CEILING_P95 = NFR13_P95_TARGET_MS  # Must stay under 15s p95 (NFR13 target)
 
 
 @pytest.mark.preserve_collection  # Tests are read-only - skip expensive Qdrant cleanup

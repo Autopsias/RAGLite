@@ -133,7 +133,7 @@ async def test_ac4_fast_40page():
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_ac5_fast_chunk_count_validation(encoding):
+async def test_ac5_fast_chunk_count_validation(session_ingested_collection, encoding):
     """AC5 FAST: Chunk count validation using 10-page sample PDF.
 
     This is the fast variant for local development (VS Code Test Explorer).
@@ -150,6 +150,7 @@ async def test_ac5_fast_chunk_count_validation(encoding):
     from raglite.shared.config import settings
 
     # Use existing ingested data from session fixture (10-page PDF)
+    # session_ingested_collection ensures data is available
     client: QdrantClient = get_qdrant_client()
     collection_name = settings.qdrant_collection_name
 
@@ -316,7 +317,7 @@ async def test_ac5_chunk_count_validation(ingested_160_page_pdf, encoding):
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_ac6_fast_chunk_size_consistency(encoding):
+async def test_ac6_fast_chunk_size_consistency(session_ingested_collection, encoding):
     """AC6 FAST: Chunk size consistency validation using 10-page sample PDF.
 
     This is the fast variant for local development (VS Code Test Explorer).
@@ -333,6 +334,7 @@ async def test_ac6_fast_chunk_size_consistency(encoding):
     from raglite.shared.config import settings
 
     # Use existing ingested data from session fixture (10-page PDF)
+    # session_ingested_collection ensures data is available
     client: QdrantClient = get_qdrant_client()
     collection_name = settings.qdrant_collection_name
 
