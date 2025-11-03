@@ -381,19 +381,21 @@ jobs:
           echo "CI MODE: Fast Testing"
           echo "- Using 10-page sample PDF (~10-15s ingestion)"
           echo "- Running core integration tests (slow tests skipped)"
-          echo "- Sequential execution (session fixture + shared Qdrant collection)"
+          echo "- Parallel execution (4 workers, xdist_group keeps shared fixtures sequential)"
           echo "- Module-level service checks to prevent hangs"
           echo "- Target: 20-30 minutes total"
           echo "========================================="
           if [ -d "tests/integration" ] && [ -n "$(find tests/integration -name 'test_*.py' -type f)" ]; then
             pytest tests/integration/ \
+              -n 4 \
+              --dist loadfile \
               -m "" \
               -v \
               --junitxml=pytest-integration-report.xml
           else
             echo "⚠️  No integration tests found, skipping..."
           fi
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Upload integration test results
         uses: actions/upload-artifact@v4

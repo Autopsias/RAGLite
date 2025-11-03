@@ -185,15 +185,34 @@ def session_ingested_collection(request):
     print("⚙️  Preparing collection...")
     try:
         try:
+            # CRITICAL FIX: Ensure complete deletion before recreation
             qdrant.delete_collection(collection_name=settings.qdrant_collection_name)
-        except Exception:
-            pass  # Doesn't exist, that's fine
+            print(
+                f"   ✓ Deleted existing collection: {settings.qdrant_collection_name}",
+                file=sys.stderr,
+            )
+        except Exception as e:
+            print(f"   ℹ️  No existing collection to delete: {e}", file=sys.stderr)
+
+        # Wait for deletion to complete (Qdrant async operation)
+        import time
+
+        time.sleep(0.5)
 
         create_collection(
             collection_name=settings.qdrant_collection_name,
             vector_size=settings.embedding_dimension,
         )
-        print(f"   ✓ Collection ready: {settings.qdrant_collection_name}")
+        print(f"   ✓ Collection created: {settings.qdrant_collection_name}")
+
+        # CRITICAL FIX: Verify collection is empty after creation
+        initial_count = qdrant.count(collection_name=settings.qdrant_collection_name)
+        if initial_count.count > 0:
+            error_msg = f"Collection {settings.qdrant_collection_name} has {initial_count.count} chunks after creation (expected 0). Stale data detected!"
+            print(f"   ❌ ERROR: {error_msg}", file=sys.stderr)
+            pytest.skip(error_msg)
+        print(f"   ✓ Collection verified empty: {initial_count.count} chunks", file=sys.stderr)
+
     except Exception as e:
         pytest.skip(f"Failed to initialize Qdrant collection: {e}")
 
@@ -221,12 +240,26 @@ def session_ingested_collection(request):
 
     _session_sample_pdf_chunk_count = count_after.count
     print("\n✅ Session fixture complete:")
-    print(f"   Pages: {result.page_count}")
+    print(f"   PDF: {result.filename} ({result.page_count} pages)")
+    print(f"   Path: {sample_pdf}")
     print(f"   Chunks: {count_after.count}")
+    print(f"   Mode: {'CI (160-page)' if use_full_pdf else 'LOCAL (10-page)'}")
     print(
         f"   Ready for {len(request.session.items) if hasattr(request.session, 'items') else '?'} tests"
     )
     print("   All tests share this collection (read-only)\n")
+
+    # CRITICAL VALIDATION: Chunk count should match PDF size expectations
+    if use_full_pdf:
+        expected_range = (150, 220)  # 160-page PDF
+    else:
+        expected_range = (10, 50)  # 10-page PDF
+
+    if not (expected_range[0] <= count_after.count <= expected_range[1]):
+        error_msg = f"CRITICAL: Chunk count {count_after.count} not in expected range {expected_range} for {pdf_description}"
+        print(f"\n❌ {error_msg}", file=sys.stderr)
+        print("   This suggests chunking bug or wrong PDF ingested!", file=sys.stderr)
+        pytest.fail(error_msg)
 
     # Cleanup at session end
     yield
