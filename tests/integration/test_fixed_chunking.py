@@ -140,7 +140,7 @@ async def test_ac5_fast_chunk_count_validation(encoding):
     For full 160-page PDF validation, use test_ac5_chunk_count_validation_slow.
 
     Validates:
-    - Expected chunk count: ~12-18 chunks for 10-page PDF
+    - Expected chunk count: 12-50 chunks for 10-page PDF
     - Measure chunk size consistency: 512 tokens ±50 variance
     - Document chunk count and size distribution
 
@@ -211,7 +211,7 @@ async def test_ac5_fast_chunk_count_validation(encoding):
 
         # AC5.4: Document chunk count and size distribution
         print("\n✅ AC5 FAST PASS: Chunk Count Validation (10-page PDF)")
-        print(f"   - Total chunks: {chunk_count} (expected 12-18)")
+        print(f"   - Total chunks: {chunk_count} (expected 12-50)")
         print(
             f"   - Text chunks: {len(text_token_counts)} (mean: {text_mean:.1f} tokens, std: {text_std:.1f})"
         )

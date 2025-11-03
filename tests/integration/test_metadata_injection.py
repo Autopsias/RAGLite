@@ -305,6 +305,7 @@ class TestBackwardCompatibility:
                 os.environ["OPENAI_API_KEY"] = original_key
 
 
+@pytest.mark.manages_collection_state  # Tests call ingest_pdf(clear_collection=True) - skip re-ingest cleanup
 class TestMetadataInjectionMocked:
     """Mocked integration tests for AC3 - No API key required for CI/CD."""
 
@@ -328,12 +329,17 @@ class TestMetadataInjectionMocked:
 
             # Use a small test PDF (if available) or skip
             test_pdf_path = Path(os.getenv("TEST_PDF_PATH", "docs/sample pdf"))
-            pdf_files = list(test_pdf_path.glob("*.pdf"))
 
-            if not pdf_files:
+            # Handle both file and directory paths
+            if test_pdf_path.is_file() and test_pdf_path.suffix == ".pdf":
+                test_pdf = test_pdf_path
+            elif test_pdf_path.is_dir():
+                pdf_files = list(test_pdf_path.glob("*.pdf"))
+                if not pdf_files:
+                    pytest.skip("No test PDF found - skipping mocked metadata injection test")
+                test_pdf = pdf_files[0]
+            else:
                 pytest.skip("No test PDF found - skipping mocked metadata injection test")
-
-            test_pdf = pdf_files[0]
 
             # Ingest with mocked metadata extraction
             metadata = await ingest_pdf(str(test_pdf), clear_collection=True)
@@ -382,12 +388,17 @@ class TestMetadataInjectionMocked:
             mock_extract.return_value = mock_metadata
 
             test_pdf_path = Path(os.getenv("TEST_PDF_PATH", "docs/sample pdf"))
-            pdf_files = list(test_pdf_path.glob("*.pdf"))
 
-            if not pdf_files:
+            # Handle both file and directory paths
+            if test_pdf_path.is_file() and test_pdf_path.suffix == ".pdf":
+                test_pdf = test_pdf_path
+            elif test_pdf_path.is_dir():
+                pdf_files = list(test_pdf_path.glob("*.pdf"))
+                if not pdf_files:
+                    pytest.skip("No test PDF found - skipping mocked filter test")
+                test_pdf = pdf_files[0]
+            else:
                 pytest.skip("No test PDF found - skipping mocked filter test")
-
-            test_pdf = pdf_files[0]
 
             # Ingest with mocked metadata
             await ingest_pdf(str(test_pdf), clear_collection=True)

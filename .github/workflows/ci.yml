@@ -219,7 +219,7 @@ jobs:
   test-integration:
     name: "🔗 Tests: Integration (~115 tests)"
     runs-on: [self-hosted, raglite]
-    timeout-minutes: 60
+    timeout-minutes: 90  # Sequential execution requires 45-50 min + buffer for slow tests
     needs: [test-unit]
 
     steps:
