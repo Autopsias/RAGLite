@@ -41,17 +41,20 @@ def apply_migration() -> None:
 
         # Step 2: Add entity_normalized column
         logger.info("Step 2/5: Adding entity_normalized column to financial_tables...")
-        cursor.execute("""
+        cursor.execute(
+            """
             ALTER TABLE financial_tables
             ADD COLUMN IF NOT EXISTS entity_normalized VARCHAR(255);
-        """)
+        """
+        )
         conn.commit()
         logger.info("✅ entity_normalized column added")
         logger.info("")
 
         # Step 3: Create entity_mappings dimension table
         logger.info("Step 3/5: Creating entity_mappings dimension table...")
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS entity_mappings (
                 entity_id SERIAL PRIMARY KEY,
                 canonical_name VARCHAR(255) NOT NULL,
@@ -61,7 +64,8 @@ def apply_migration() -> None:
                 created_at TIMESTAMP DEFAULT NOW(),
                 UNIQUE(canonical_name)
             );
-        """)
+        """
+        )
         conn.commit()
         logger.info("✅ entity_mappings table created")
         logger.info("")
@@ -70,17 +74,21 @@ def apply_migration() -> None:
         logger.info("Step 4/5: Creating indexes for exact matching...")
 
         # Index on entity_normalized
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_entity_normalized
             ON financial_tables(entity_normalized)
             WHERE entity_normalized IS NOT NULL;
-        """)
+        """
+        )
 
         # Index on entity_mappings.raw_mentions (GIN array index)
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_entity_mappings_raw
             ON entity_mappings USING GIN(raw_mentions);
-        """)
+        """
+        )
 
         conn.commit()
         logger.info("✅ Exact match indexes created")
@@ -90,18 +98,22 @@ def apply_migration() -> None:
         logger.info("Step 5/5: Creating GIN indexes for fuzzy text search...")
 
         # GIN trigram index on entity (raw)
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_entity_trgm
             ON financial_tables USING GIN (entity gin_trgm_ops)
             WHERE entity IS NOT NULL;
-        """)
+        """
+        )
 
         # GIN trigram index on entity_normalized
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_entity_normalized_trgm
             ON financial_tables USING GIN (entity_normalized gin_trgm_ops)
             WHERE entity_normalized IS NOT NULL;
-        """)
+        """
+        )
 
         conn.commit()
         logger.info("✅ Fuzzy match indexes created (pg_trgm)")
@@ -113,35 +125,42 @@ def apply_migration() -> None:
         logger.info("=" * 80)
 
         # Check entity_normalized column exists
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT COUNT(*)
             FROM information_schema.columns
             WHERE table_name = 'financial_tables'
               AND column_name = 'entity_normalized';
-        """)
+        """
+        )
         column_exists = cursor.fetchone()[0] == 1
         logger.info(f"entity_normalized column: {'✅ EXISTS' if column_exists else '❌ MISSING'}")
 
         # Check entity_mappings table exists
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT COUNT(*)
             FROM information_schema.tables
             WHERE table_name = 'entity_mappings';
-        """)
+        """
+        )
         table_exists = cursor.fetchone()[0] == 1
         logger.info(f"entity_mappings table: {'✅ EXISTS' if table_exists else '❌ MISSING'}")
 
         # Check pg_trgm extension
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT COUNT(*)
             FROM pg_extension
             WHERE extname = 'pg_trgm';
-        """)
+        """
+        )
         extension_exists = cursor.fetchone()[0] == 1
         logger.info(f"pg_trgm extension: {'✅ INSTALLED' if extension_exists else '❌ MISSING'}")
 
         # Count indexes
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT COUNT(*)
             FROM pg_indexes
             WHERE tablename IN ('financial_tables', 'entity_mappings')
@@ -151,7 +170,8 @@ def apply_migration() -> None:
                   'idx_entity_normalized_trgm',
                   'idx_entity_mappings_raw'
               );
-        """)
+        """
+        )
         index_count = cursor.fetchone()[0]
         logger.info(f"Indexes created: {index_count}/4 {'✅' if index_count == 4 else '❌'}")
         logger.info("")
@@ -162,9 +182,11 @@ def apply_migration() -> None:
         logger.info("=" * 80)
 
         # Test similarity function
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT similarity('Portugal Cement', 'Portugal') as score;
-        """)
+        """
+        )
         similarity_score = cursor.fetchone()[0]
         logger.info(
             f"Similarity test: similarity('Portugal Cement', 'Portugal') = {similarity_score:.3f}"

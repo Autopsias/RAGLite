@@ -160,9 +160,9 @@ async def generate_embeddings(chunks: list[Chunk]) -> list[Chunk]:
             "chunk_count": len(chunks),
             "dimensions": embedding_dim,
             "duration_ms": duration_ms,
-            "chunks_per_second": round(len(chunks) / (duration_ms / 1000), 2)
-            if duration_ms > 0
-            else 0,
+            "chunks_per_second": (
+                round(len(chunks) / (duration_ms / 1000), 2) if duration_ms > 0 else 0
+            ),
         },
     )
 
@@ -249,47 +249,48 @@ async def extract_chunk_metadata(
         # AC1 REVISION: Call Mistral Small API with RICH SCHEMA (15 fields)
         # Based on INEXDA, FinRAG, RAF research showing 20-25% accuracy gains
         # Story 2.6 AC6 FIX: Add await (async client) + timeout=30 (fail fast)
-        from mistralai.models import SystemMessage, UserMessage
+        from mistralai.models import AssistantMessage, SystemMessage, ToolMessage, UserMessage
 
+        messages: list[AssistantMessage | SystemMessage | ToolMessage | UserMessage] = [
+            SystemMessage(
+                content=(
+                    "Extract 15 metadata fields from financial document chunks for RAG retrieval optimization.\n"
+                    "Return ONLY valid JSON with these exact fields. Use null for missing values.\n\n"
+                    "DOCUMENT-LEVEL (7 fields):\n"
+                    "- document_type: Income Statement | Balance Sheet | Cash Flow Statement | Operational Report | "
+                    "Earnings Call | Management Discussion | Financial Notes\n"
+                    "- reporting_period: Q1 2024 | Aug-25 YTD | FY 2023 | 2024 Annual | H1 2025\n"
+                    "- time_granularity: Daily | Weekly | Monthly | Quarterly | YTD | Annual | Rolling 12-Month\n"
+                    "- company_name: Portugal Cement | CIMPOR | Cimpor Trading | InterCement\n"
+                    "- geographic_jurisdiction: Portugal | EU | APAC | Americas | Global\n"
+                    "- data_source_type: Audited | Internal Report | Regulatory Filing | Management Estimate | Preliminary\n"
+                    "- version_date: 2025-08-15 | 2024-Q3-Final | 2024-12-31-Revised\n\n"
+                    "SECTION-LEVEL (5 fields):\n"
+                    "- section_type: Narrative | Table | Footnote | Chart Caption | Summary | List | Formula\n"
+                    "- metric_category: Revenue | EBITDA | Operating Expenses | Capital Expenditure | Cash Flow | "
+                    "Assets | Liabilities | Equity | Ratios | Production Volume | Cost per Unit\n"
+                    "- units: EUR | USD | GBP | EUR/ton | USD/MWh | Percentage | Count | Tonnes | MWh | m³\n"
+                    "- department_scope: Operations | Finance | Production | Sales | Corporate | HR | IT | Supply Chain\n\n"
+                    "TABLE-SPECIFIC (3 fields - ONLY for table chunks):\n"
+                    "- table_context: Brief description of table purpose and contents (1-2 sentences)\n"
+                    "- table_name: Actual table title from document\n"
+                    "- statistical_summary: Key statistics if numerical (e.g., 'Mean=5.8, Range=3.5-61.4')\n\n"
+                    "EXAMPLES:\n"
+                    "Narrative chunk: {document_type: 'Operational Report', reporting_period: 'Aug-25 YTD', "
+                    "time_granularity: 'YTD', company_name: 'Portugal Cement', section_type: 'Narrative', "
+                    "metric_category: 'EBITDA', department_scope: 'Operations', ...}\n\n"
+                    "Table chunk: {document_type: 'Operational Report', reporting_period: 'Aug-25 YTD', "
+                    "section_type: 'Table', metric_category: 'Operating Expenses', units: 'EUR/ton', "
+                    "table_name: 'Variable Costs Summary', table_context: 'Breakdown of variable costs by category', ...}"
+                )
+            ),
+            UserMessage(
+                content=f"Extract all 15 metadata fields from this financial document chunk:\n\n{text}"
+            ),
+        ]
         response = await client.chat.complete_async(
             model=settings.metadata_extraction_model,  # "mistral-small-latest"
-            messages=[
-                SystemMessage(
-                    content=(
-                        "Extract 15 metadata fields from financial document chunks for RAG retrieval optimization.\n"
-                        "Return ONLY valid JSON with these exact fields. Use null for missing values.\n\n"
-                        "DOCUMENT-LEVEL (7 fields):\n"
-                        "- document_type: Income Statement | Balance Sheet | Cash Flow Statement | Operational Report | "
-                        "Earnings Call | Management Discussion | Financial Notes\n"
-                        "- reporting_period: Q1 2024 | Aug-25 YTD | FY 2023 | 2024 Annual | H1 2025\n"
-                        "- time_granularity: Daily | Weekly | Monthly | Quarterly | YTD | Annual | Rolling 12-Month\n"
-                        "- company_name: Portugal Cement | CIMPOR | Cimpor Trading | InterCement\n"
-                        "- geographic_jurisdiction: Portugal | EU | APAC | Americas | Global\n"
-                        "- data_source_type: Audited | Internal Report | Regulatory Filing | Management Estimate | Preliminary\n"
-                        "- version_date: 2025-08-15 | 2024-Q3-Final | 2024-12-31-Revised\n\n"
-                        "SECTION-LEVEL (5 fields):\n"
-                        "- section_type: Narrative | Table | Footnote | Chart Caption | Summary | List | Formula\n"
-                        "- metric_category: Revenue | EBITDA | Operating Expenses | Capital Expenditure | Cash Flow | "
-                        "Assets | Liabilities | Equity | Ratios | Production Volume | Cost per Unit\n"
-                        "- units: EUR | USD | GBP | EUR/ton | USD/MWh | Percentage | Count | Tonnes | MWh | m³\n"
-                        "- department_scope: Operations | Finance | Production | Sales | Corporate | HR | IT | Supply Chain\n\n"
-                        "TABLE-SPECIFIC (3 fields - ONLY for table chunks):\n"
-                        "- table_context: Brief description of table purpose and contents (1-2 sentences)\n"
-                        "- table_name: Actual table title from document\n"
-                        "- statistical_summary: Key statistics if numerical (e.g., 'Mean=5.8, Range=3.5-61.4')\n\n"
-                        "EXAMPLES:\n"
-                        "Narrative chunk: {document_type: 'Operational Report', reporting_period: 'Aug-25 YTD', "
-                        "time_granularity: 'YTD', company_name: 'Portugal Cement', section_type: 'Narrative', "
-                        "metric_category: 'EBITDA', department_scope: 'Operations', ...}\n\n"
-                        "Table chunk: {document_type: 'Operational Report', reporting_period: 'Aug-25 YTD', "
-                        "section_type: 'Table', metric_category: 'Operating Expenses', units: 'EUR/ton', "
-                        "table_name: 'Variable Costs Summary', table_context: 'Breakdown of variable costs by category', ...}"
-                    )
-                ),
-                UserMessage(
-                    content=f"Extract all 15 metadata fields from this financial document chunk:\n\n{text}"
-                ),
-            ],
+            messages=messages,
             response_format={"type": "json_object"},  # JSON mode (Mistral's structured output)
             temperature=0,  # Deterministic extraction
             max_tokens=400,  # Increased from 150 to accommodate 15 fields
@@ -653,9 +654,9 @@ async def store_vectors_in_qdrant(
                 "points_stored": points_stored,
                 "collection": collection_name,
                 "duration_ms": duration_ms,
-                "chunks_per_second": round(len(chunks) / (duration_ms / 1000), 2)
-                if duration_ms > 0
-                else 0,
+                "chunks_per_second": (
+                    round(len(chunks) / (duration_ms / 1000), 2) if duration_ms > 0 else 0
+                ),
             },
         )
 
@@ -831,9 +832,11 @@ async def store_metadata_in_postgresql(
                 "records_stored": len(chunks_with_metadata),
                 "records_skipped": skipped_count,
                 "duration_ms": duration_ms,
-                "records_per_second": round(len(chunks_with_metadata) / (duration_ms / 1000), 2)
-                if duration_ms > 0
-                else 0,
+                "records_per_second": (
+                    round(len(chunks_with_metadata) / (duration_ms / 1000), 2)
+                    if duration_ms > 0
+                    else 0
+                ),
             },
         )
 
@@ -975,9 +978,9 @@ async def store_tables_in_postgresql(
                 "records_stored": len(valid_rows),
                 "records_skipped": skipped_count,
                 "duration_ms": duration_ms,
-                "records_per_second": round(len(valid_rows) / (duration_ms / 1000), 2)
-                if duration_ms > 0
-                else 0,
+                "records_per_second": (
+                    round(len(valid_rows) / (duration_ms / 1000), 2) if duration_ms > 0 else 0
+                ),
             },
         )
 

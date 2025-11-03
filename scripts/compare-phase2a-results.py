@@ -1,6 +1,5 @@
 """Compare Phase 2A results before/after query preprocessing."""
 
-
 # Load previous results (if saved)
 # For now, let's look at the full test output to understand failures
 

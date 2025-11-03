@@ -231,14 +231,14 @@ def detect_table_layout(
     # Classify each row of column headers
     col_header_types: dict[int, dict[HeaderType, int]] = {}
     for row_idx, cells in col_header_by_row.items():
-        type_counts = {}
+        type_counts: dict[HeaderType, int] = {}
         for cell in cells:
             h_type = classify_header(cell.text)
             type_counts[h_type] = type_counts.get(h_type, 0) + 1
         col_header_types[row_idx] = type_counts
 
     # Classify row headers
-    row_header_type_counts = {}
+    row_header_type_counts: dict[HeaderType, int] = {}
     for cell in row_headers:
         h_type = classify_header(cell.text)
         row_header_type_counts[h_type] = row_header_type_counts.get(h_type, 0) + 1
@@ -284,7 +284,7 @@ def detect_table_layout(
     ]
     if first_col_cells and len(first_col_cells) >= 3:  # At least 3 data rows
         # Classify first column cells
-        first_col_types = {}
+        first_col_types: dict[HeaderType, int] = {}
         for cell in first_col_cells:
             if cell.text and cell.text.strip():
                 h_type = classify_header(cell.text)
@@ -564,7 +564,7 @@ def _extract_multi_header_metric_entity(
         column_mapping[col_idx] = (metric, entity)
 
     # Build row period mapping
-    row_period_map: dict[int, str] = {}
+    row_period_map: dict[int, str | None] = {}
     for cell in row_headers:
         row_idx = cell.start_row_offset_idx
         row_period_map[row_idx] = cell.text.strip() if cell.text else None
@@ -577,7 +577,9 @@ def _extract_multi_header_metric_entity(
         row_idx = cell.start_row_offset_idx
         col_idx = cell.start_col_offset_idx
 
-        metric, entity = column_mapping.get(col_idx, (None, None))
+        metric_entity = column_mapping.get(col_idx, (None, None))
+        cell_metric: str | None = metric_entity[0]
+        cell_entity: str | None = metric_entity[1]
         period = row_period_map.get(row_idx)
 
         # Parse value + unit
@@ -586,8 +588,8 @@ def _extract_multi_header_metric_entity(
         fiscal_year = _extract_year(period) if period else None
 
         row_dict = {
-            "entity": entity,
-            "metric": metric,
+            "entity": cell_entity,
+            "metric": cell_metric,
             "period": period,
             "fiscal_year": fiscal_year,
             "value": value,
@@ -596,7 +598,7 @@ def _extract_multi_header_metric_entity(
             "table_index": table_index,
             "table_caption": _get_table_caption(table_item),
             "row_index": row_idx,
-            "column_name": f"{metric}_{entity}" if metric and entity else None,
+            "column_name": f"{cell_metric}_{cell_entity}" if cell_metric and cell_entity else None,
             "chunk_text": _get_table_markdown(table_item, result)[:500],
             "document_id": document_id,
         }
@@ -625,13 +627,13 @@ def _extract_temporal_cols_metric_rows(
     data_cells = [cell for cell in table_cells if not cell.column_header and not cell.row_header]
 
     # Build column → period mapping
-    col_period_map: dict[int, str] = {}
+    col_period_map: dict[int, str | None] = {}
     for cell in column_headers:
         col_idx = cell.start_col_offset_idx
         col_period_map[col_idx] = cell.text.strip() if cell.text else None
 
     # Build row → metric mapping
-    row_metric_map: dict[int, str] = {}
+    row_metric_map: dict[int, str | None] = {}
     for cell in row_headers:
         row_idx = cell.start_row_offset_idx
         row_metric_map[row_idx] = cell.text.strip() if cell.text else None
@@ -698,13 +700,13 @@ def _extract_entity_cols_metric_rows(
     data_cells = [cell for cell in table_cells if not cell.column_header and not cell.row_header]
 
     # Build column → entity mapping
-    col_entity_map: dict[int, str] = {}
+    col_entity_map: dict[int, str | None] = {}
     for cell in column_headers:
         col_idx = cell.start_col_offset_idx
         col_entity_map[col_idx] = cell.text.strip() if cell.text else None
 
     # Build row → metric mapping
-    row_metric_map: dict[int, str] = {}
+    row_metric_map: dict[int, str | None] = {}
     for cell in row_headers:
         row_idx = cell.start_row_offset_idx
         row_metric_map[row_idx] = cell.text.strip() if cell.text else None
@@ -902,8 +904,8 @@ def _extract_transposed_entity_cols_metric_row_labels(
         # Single header row - assume entities (no periods)
         for cell in headers_by_row[row_levels[0]]:
             col_idx = cell.start_col_offset_idx
-            entity = cell.text.strip() if cell.text else None
-            column_mapping[col_idx] = (entity, None)
+            header_entity: str | None = cell.text.strip() if cell.text else None
+            column_mapping[col_idx] = (header_entity, None)
 
     # Build row → metric mapping from first column
     row_metric_map: dict[int, str] = {}
@@ -1093,7 +1095,9 @@ def _extract_transposed_entity_cols_metric_row_labels(
         col_idx = cell.start_col_offset_idx
 
         # Get entity and period from column mapping
-        entity, period = column_mapping.get(col_idx, (None, None))
+        entity_period = column_mapping.get(col_idx, (None, None))
+        cell_entity_transposed: str | None = entity_period[0]
+        cell_period: str | None = entity_period[1]
 
         # Get metric from first column
         metric = row_metric_map.get(row_idx)
@@ -1123,12 +1127,12 @@ def _extract_transposed_entity_cols_metric_row_labels(
             value, unit = _parse_value_unit(cell.text)
 
         # Extract fiscal year
-        fiscal_year = _extract_year(period) if period else None
+        fiscal_year = _extract_year(cell_period) if cell_period else None
 
         row_dict = {
-            "entity": entity,
+            "entity": cell_entity_transposed,
             "metric": metric,
-            "period": period,
+            "period": cell_period,
             "fiscal_year": fiscal_year,
             "value": value,
             "unit": unit,
@@ -1136,11 +1140,13 @@ def _extract_transposed_entity_cols_metric_row_labels(
             "table_index": table_index,
             "table_caption": caption,
             "row_index": row_idx,
-            "column_name": f"{metric}_{entity}_{period}"
-            if metric and entity and period
-            else f"{metric}_{entity}"
-            if metric and entity
-            else None,
+            "column_name": (
+                f"{metric}_{cell_entity_transposed}_{cell_period}"
+                if metric and cell_entity_transposed and cell_period
+                else f"{metric}_{cell_entity_transposed}"
+                if metric and cell_entity_transposed
+                else None
+            ),
             "chunk_text": _get_table_markdown(table_item, result)[:500],
             "document_id": document_id,
             "extraction_method": "transposed_entity_cols_metric_row_labels",
@@ -1285,11 +1291,14 @@ def _infer_entity_from_context(page_context: dict) -> str | None:
         return by_match.group(1).capitalize()
 
     # Fallback: if section heading mentions a specific entity term, use it
-    if page_context.get("section_heading"):
+    section_heading_value = page_context.get("section_heading")
+    if section_heading_value and isinstance(section_heading_value, str):
         # Simple heuristic: if section heading is short (< 5 words), use it as entity
-        heading_words = page_context["section_heading"].split()
+        heading_words = section_heading_value.split()
         if 1 <= len(heading_words) <= 4:
-            return page_context["section_heading"]
+            # Type narrowing: section_heading_value is confirmed str at this point
+            result: str = section_heading_value
+            return result
 
     return None
 
@@ -1308,13 +1317,13 @@ def _detect_orientation(column_headers: list, row_headers: list) -> tuple[str, d
     from collections import Counter
 
     # Classify all headers
-    col_types = Counter()
+    col_types: Counter[HeaderType] = Counter()
     for cell in column_headers:
         if cell.text:
             h_type = classify_header(cell.text)
             col_types[h_type] += 1
 
-    row_types = Counter()
+    row_types: Counter[HeaderType] = Counter()
     for cell in row_headers:
         if cell.text:
             h_type = classify_header(cell.text)
@@ -1399,13 +1408,13 @@ def _extract_fallback(
     orientation, orientation_meta = _detect_orientation(column_headers, row_headers)
 
     # Build header mappings
-    col_header_map: dict[int, str] = {}
+    col_header_map: dict[int, str | None] = {}
     for cell in column_headers:
         for col_idx in range(cell.start_col_offset_idx, cell.end_col_offset_idx):
             if col_idx not in col_header_map:  # First header wins if multiple rows
                 col_header_map[col_idx] = cell.text.strip() if cell.text else None
 
-    row_header_map: dict[int, str] = {}
+    row_header_map: dict[int, str | None] = {}
     for cell in row_headers:
         row_idx = cell.start_row_offset_idx
         if row_idx not in row_header_map:
@@ -1574,11 +1583,13 @@ def _extract_fallback(
             "table_index": table_index,
             "table_caption": caption,
             "row_index": row_idx,
-            "column_name": f"{metric}_{period}"
-            if metric and period
-            else f"{metric}_{entity}"
-            if metric and entity
-            else None,
+            "column_name": (
+                f"{metric}_{period}"
+                if metric and period
+                else f"{metric}_{entity}"
+                if metric and entity
+                else None
+            ),
             "chunk_text": _get_table_markdown(table_item, result)[:500],
             "document_id": document_id,
             "extraction_method": extraction_method,  # PHASE 2.5: Track orientation + caption inference
@@ -2307,7 +2318,7 @@ def _extract_page_context(table_item: TableItem, result: ConversionResult) -> di
     page_title = None
 
     best_heading_distance = float("inf")
-    best_title_size = 0
+    best_title_size: float = 0.0
 
     # Iterate through document to find text on same page
     for element, _level in result.document.iterate_items():
@@ -2365,7 +2376,8 @@ def _extract_page_context(table_item: TableItem, result: ConversionResult) -> di
 def _get_table_markdown(table_item: TableItem, result: ConversionResult | None) -> str:
     """Get markdown representation of table."""
     if result and hasattr(table_item, "export_to_markdown"):
-        return table_item.export_to_markdown()
+        markdown_result = table_item.export_to_markdown()
+        return str(markdown_result) if markdown_result is not None else ""
     return ""
 
 
@@ -2471,24 +2483,28 @@ METRIC INFORMATION:
     try:
         # Call Mistral API
         from mistralai import Mistral
-        from mistralai.models import SystemMessage, UserMessage
+        from mistralai.models import AssistantMessage, SystemMessage, ToolMessage, UserMessage
 
         client = Mistral(api_key=settings.mistral_api_key)
 
+        messages: list[AssistantMessage | SystemMessage | ToolMessage | UserMessage] = [
+            SystemMessage(content=system_prompt),
+            UserMessage(content=user_prompt),
+        ]
         response = client.chat.complete(
             model=settings.metadata_extraction_model,  # "mistral-small-latest"
-            messages=[SystemMessage(content=system_prompt), UserMessage(content=user_prompt)],
+            messages=messages,
             temperature=0.0,  # Deterministic inference
             max_tokens=50,
         )
 
         # Extract inferred unit
         response_content = response.choices[0].message.content
-        if not response_content:
+        if not response_content or not isinstance(response_content, str):
             logger.debug("Empty response from Mistral", extra={"metric": metric, "entity": entity})
             return None
 
-        inferred_unit = response_content.strip()
+        inferred_unit: str = response_content.strip()
 
         # Validate response
         if inferred_unit == "UNKNOWN" or not inferred_unit:

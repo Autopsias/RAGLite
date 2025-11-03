@@ -92,9 +92,9 @@ async def run_phase2a_final_validation():
                 top_doc = (
                     results[0].document_id
                     if hasattr(results[0], "document_id")
-                    else results[0].source_document
-                    if hasattr(results[0], "source_document")
-                    else ""
+                    else (
+                        results[0].source_document if hasattr(results[0], "source_document") else ""
+                    )
                 )
                 if top_doc == expected_doc or expected_doc in top_doc:
                     attribution_correct += 1

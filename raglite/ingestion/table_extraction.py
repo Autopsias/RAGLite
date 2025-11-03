@@ -10,14 +10,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
-    from docling.datamodel.accelerator_options import AcceleratorOptions
-    from docling.datamodel.base_models import InputFormat
-    from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
     from docling.document_converter import (
         ConversionResult,
-        DocumentConverter,
-        PdfFormatOption,
     )
     from docling_core.types.doc import TableItem
 
@@ -41,7 +35,7 @@ class TableExtractor:
     - unit (measurement unit from cells)
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize table extractor with Docling converter.
 
         IMPORTANT: Docling imports are lazy-loaded to prevent pytest collection hangs
@@ -202,7 +196,7 @@ class TableExtractor:
 
         # Detect multi-header structure
         column_headers = [cell for cell in table_cells if cell.column_header]
-        header_rows = set(cell.start_row_offset_idx for cell in column_headers)
+        header_rows = {cell.start_row_offset_idx for cell in column_headers}
         is_multi_header = len(header_rows) > 1
 
         logger.debug(

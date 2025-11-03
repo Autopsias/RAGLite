@@ -212,9 +212,11 @@ async def analyze_auto_classification_accuracy():
         "accuracy_percent": accuracy,
         "usage_percent": usage_percent,
         "decision": decision,
-        "recommendation": f"{decision} auto-classification ({'accuracy' if accuracy < 80 else 'usage'} threshold)"
-        if decision == "DISABLE"
-        else "KEEP auto-classification enabled",
+        "recommendation": (
+            f"{decision} auto-classification ({'accuracy' if accuracy < 80 else 'usage'} threshold)"
+            if decision == "DISABLE"
+            else "KEEP auto-classification enabled"
+        ),
         "extraction_examples": results["extraction_examples"],
     }
 

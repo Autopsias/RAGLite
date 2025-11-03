@@ -745,9 +745,9 @@ async def hybrid_search(
                     "top_score": round(hybrid_results[0].score, 4) if hybrid_results else None,
                     "semantic_count": len(semantic_results),
                     "fusion_alpha": alpha,
-                    "metadata_boosted": len(extracted_metadata) > 0
-                    if extracted_metadata
-                    else False,
+                    "metadata_boosted": (
+                        len(extracted_metadata) > 0 if extracted_metadata else False
+                    ),
                 },
             )
 

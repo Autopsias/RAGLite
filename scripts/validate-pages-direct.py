@@ -157,9 +157,11 @@ def validate_question(qa: dict, pages_text: dict) -> dict:
         "actual_page": actual_page,
         "matching_pages": matching_pages,
         "needs_correction": needs_correction,
-        "status": "incorrect"
-        if needs_correction
-        else ("correct" if actual_page == expected_page else "missing"),
+        "status": (
+            "incorrect"
+            if needs_correction
+            else ("correct" if actual_page == expected_page else "missing")
+        ),
         "keywords": keywords,
     }
 

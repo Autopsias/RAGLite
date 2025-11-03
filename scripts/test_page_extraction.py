@@ -110,9 +110,9 @@ def test_page_extraction(pdf_path: str) -> dict[str, Any]:
 
     # Add recommendation based on results
     if success:
-        result[
-            "recommendation"
-        ] = "✅ SUCCESS: Page numbers found! Verify chunking logic preserves metadata in Story 1.4."
+        result["recommendation"] = (
+            "✅ SUCCESS: Page numbers found! Verify chunking logic preserves metadata in Story 1.4."
+        )
     else:
         result["recommendation"] = (
             "🚨 BLOCKER: No page numbers extracted. "

@@ -132,9 +132,11 @@ async def validate_json_export(pdf_path: str, max_tables: int = 3):
                                     cells = header.get("cells", header.get("data", []))
                                     if isinstance(cells, list):
                                         cell_values = [
-                                            str(c.get("value", c.get("text", "")))[:30]
-                                            if isinstance(c, dict)
-                                            else str(c)[:30]
+                                            (
+                                                str(c.get("value", c.get("text", "")))[:30]
+                                                if isinstance(c, dict)
+                                                else str(c)[:30]
+                                            )
                                             for c in cells[:5]
                                         ]  # First 5 cells
                                         print(f"   Header {i}: {cell_values}")

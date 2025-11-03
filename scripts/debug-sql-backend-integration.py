@@ -362,9 +362,11 @@ async def test_fuzzy_matching_setup() -> TestResult:
         return TestResult(
             test_name="Fuzzy Matching Setup",
             passed=exists,
-            message="pg_trgm extension ready for fuzzy matching"
-            if exists
-            else "pg_trgm not installed - needed for AC1",
+            message=(
+                "pg_trgm extension ready for fuzzy matching"
+                if exists
+                else "pg_trgm not installed - needed for AC1"
+            ),
             details={"pg_trgm_installed": exists, "gin_indexes": len(indexes)},
         )
 

@@ -377,24 +377,26 @@ LIMIT 50;
 """  # nosec B608
 
         # Call Mistral API (using same pattern as metadata extraction)
-        from mistralai.models import SystemMessage, UserMessage
+        from mistralai.models import AssistantMessage, SystemMessage, ToolMessage, UserMessage
 
+        messages: list[AssistantMessage | SystemMessage | ToolMessage | UserMessage] = [
+            SystemMessage(
+                content="You are a SQL expert specializing in financial data queries. "
+                "Generate ONLY valid PostgreSQL queries. Return the SQL query without "
+                "explanations, markdown, or code blocks."
+            ),
+            UserMessage(content=sql_prompt),
+        ]
         response = client.chat.complete(
             model=settings.metadata_extraction_model,  # mistral-small-latest
             max_tokens=500,
             temperature=0,  # Deterministic SQL generation
-            messages=[
-                SystemMessage(
-                    content="You are a SQL expert specializing in financial data queries. "
-                    "Generate ONLY valid PostgreSQL queries. Return the SQL query without "
-                    "explanations, markdown, or code blocks."
-                ),
-                UserMessage(content=sql_prompt),
-            ],
+            messages=messages,
         )
 
         # Extract SQL from response
-        sql_query: str | None = response.choices[0].message.content
+        response_content = response.choices[0].message.content
+        sql_query: str | None = response_content if isinstance(response_content, str) else None
         if sql_query:
             sql_query = sql_query.strip()
         else:

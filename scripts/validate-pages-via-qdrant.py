@@ -93,9 +93,11 @@ def validate_question(qa: dict, client: QdrantClient, embedding_model) -> dict:
         "pages_found": pages_found,
         "confidence": confidence,
         "needs_correction": needs_correction,
-        "status": "incorrect"
-        if needs_correction
-        else ("correct" if actual_page == expected_page else "missing"),
+        "status": (
+            "incorrect"
+            if needs_correction
+            else ("correct" if actual_page == expected_page else "missing")
+        ),
     }
 
 
