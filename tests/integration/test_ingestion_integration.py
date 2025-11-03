@@ -345,6 +345,7 @@ class TestExcelIngestionIntegration:
         print("  ✅ End-to-end Excel ingestion (AC 9)")
 
 
+@pytest.mark.manages_collection_state  # Tests call ingest_pdf() - skip re-ingest cleanup
 class TestChunkingIntegration:
     """Integration tests for Story 1.4: Document chunking with page number preservation.
 
@@ -562,6 +563,7 @@ class TestChunkingIntegration:
         print(f"     Throughput: {metadata.page_count / elapsed_seconds:.1f} pages/second")
 
 
+@pytest.mark.manages_collection_state  # Tests call ingest_pdf() - skip re-ingest cleanup
 @pytest.mark.xdist_group(name="embedding_model")
 class TestEmbeddingIntegration:
     """Integration tests for Story 1.5: Embedding generation with real Fin-E5 model.

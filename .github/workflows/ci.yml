@@ -522,17 +522,21 @@ jobs:
           source ci-venv/bin/activate
           echo "========================================="
           echo "NFR6/NFR7 Validation"
-          echo "- Target: ≥90% retrieval accuracy (NFR6)"
+          echo "- Target: ≥70% retrieval accuracy (Epic 2 Phase 2A Decision Gate)"
           echo "- Target: ≥95% attribution accuracy (NFR7)"
+          echo "- Using full 160-page PDF (--run-slow enabled)"
           echo "- Sequential execution (read from integration collection)"
           echo "========================================="
-          pytest tests/integration/test_ac3_ground_truth.py \
+          pytest tests/integration/test_ac3_ground_truth.py::test_ac2_decision_gate_validation \
+                 tests/integration/test_ac3_ground_truth.py::test_ac3_attribution_accuracy_validation \
                  tests/integration/test_accuracy_validation.py \
                  tests/e2e/test_ground_truth.py \
+                 --run-slow \
+                 -m "" \
                  -n 0 \
                  -v \
-                 --junitxml=pytest-accuracy-report.xml || true
-        continue-on-error: true
+                 --junitxml=pytest-accuracy-report.xml
+        continue-on-error: false
 
       - name: Upload accuracy test results
         uses: actions/upload-artifact@v4
