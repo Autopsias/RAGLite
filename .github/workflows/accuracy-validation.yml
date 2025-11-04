@@ -1,0 +1,131 @@
+name: NFR Accuracy Validation (NFR6/NFR7)
+
+# This workflow runs comprehensive accuracy validation tests that require extended time
+# Separated from main CI to avoid blocking fast feedback loop (<15 minutes)
+#
+# Runtime: 30-38 minutes
+#   - PDF ingestion: ~18 minutes (160-page Crédit Agricole FY22 Annual Report)
+#   - Query validation: ~10-15 minutes (50+ ground truth queries)
+#   - Setup overhead: ~2-5 minutes
+#
+# NFR Targets:
+#   - NFR6: ≥70% retrieval accuracy (Epic 2 Phase 2A Decision Gate)
+#   - NFR7: ≥95% attribution accuracy
+
+on:
+  # Manual trigger for Epic 2 Phase 2A Decision Gate validation
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to test (default: current branch)'
+        required: false
+        default: ''
+
+  # Nightly validation on main and epic branches
+  schedule:
+    - cron: '0 2 * * *'  # 2 AM UTC daily
+
+  # Automatic trigger on release and epic branches
+  push:
+    branches:
+      - 'main'
+      - 'release/**'
+      - 'epic-2/**'
+
+  # Trigger on PR to main (optional - can be enabled if needed)
+  # pull_request:
+  #   branches:
+  #     - main
+
+jobs:
+  accuracy-validation:
+    name: "✅ NFR: Accuracy Validation (NFR6/NFR7)"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 60  # Increased from 30 to accommodate full test (30-38 min required)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies with uv
+        run: |
+          uv venv ci-venv
+          source ci-venv/bin/activate
+          uv pip install -e .
+          uv pip install pytest pytest-asyncio pytest-xdist pytest-timeout
+
+      - name: Verify Qdrant is available
+        run: |
+          echo "Checking persistent Qdrant instance..."
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if curl -sf http://localhost:6333/collections > /dev/null 2>&1; then
+              echo "✅ Qdrant available for accuracy tests"
+              # Check for 500 errors and restart if needed
+              ERROR_500_COUNT=$(curl -sf http://localhost:6333/telemetry 2>/dev/null | python3 -c "import sys, json; data=json.load(sys.stdin); print(sum(endpoint.get('500', {}).get('count', 0) for endpoint in data['result']['requests']['rest']['responses'].values()))" 2>/dev/null || echo "0")
+              echo "Recent 500 errors: $ERROR_500_COUNT"
+              if [ "$ERROR_500_COUNT" -gt 0 ]; then
+                echo "⚠️  Warning: Qdrant has $ERROR_500_COUNT recent 500 errors"
+                echo "Restarting Qdrant to clear error state..."
+                docker restart raglite-qdrant
+                sleep 5
+              fi
+              exit 0
+            fi
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Waiting for Qdrant... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            sleep 1
+          done
+          echo "❌ Qdrant not available after ${MAX_RETRIES}s"
+          exit 1
+
+      - name: Run ground truth accuracy tests
+        env:
+          QDRANT_HOST: localhost
+          QDRANT_PORT: 6333
+        run: |
+          source ci-venv/bin/activate
+          echo "========================================="
+          echo "NFR6/NFR7 Validation"
+          echo "- Target: ≥70% retrieval accuracy (Epic 2 Phase 2A Decision Gate)"
+          echo "- Target: ≥95% attribution accuracy (NFR7)"
+          echo "- Using full 160-page PDF (--run-slow enabled)"
+          echo "- Sequential execution (read from integration collection)"
+          echo "========================================="
+          pytest tests/integration/test_ac3_ground_truth.py::test_ac2_decision_gate_validation \
+                 tests/integration/test_ac3_ground_truth.py::test_ac3_attribution_accuracy_validation \
+                 tests/integration/test_accuracy_validation.py \
+                 tests/e2e/test_ground_truth.py \
+                 --run-slow \
+                 -m "" \
+                 -n 0 \
+                 -v \
+                 --junitxml=pytest-accuracy-report.xml
+        continue-on-error: false
+
+      - name: Upload accuracy test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: accuracy-validation-results
+          path: pytest-accuracy-report.xml
+          retention-days: 30
+
+      - name: Report accuracy metrics
+        if: always()
+        run: |
+          echo "========================================="
+          echo "Accuracy Validation Complete"
+          echo "========================================="
+          if [ -f pytest-accuracy-report.xml ]; then
+            echo "Results uploaded to artifacts: accuracy-validation-results"
+            echo "Review detailed metrics in GitHub Actions artifacts"
+          else
+            echo "⚠️  Warning: pytest-accuracy-report.xml not found"
+          fi
