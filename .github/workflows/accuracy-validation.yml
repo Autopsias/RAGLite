@@ -3,10 +3,10 @@ name: NFR Accuracy Validation (NFR6/NFR7)
 # This workflow runs comprehensive accuracy validation tests that require extended time
 # Separated from main CI to avoid blocking fast feedback loop (<15 minutes)
 #
-# UPDATED 2025-11-04: Story 2.15 - Now uses normalized ground truth (14 queries)
+# UPDATED 2025-11-04: Story 2.15 - Now uses normalized ground truth (49 queries, filtered from 50)
 #
 # Runtime: ~5-10 minutes (with cache)
-#   - Uses normalized ground truth: tests/ground_truth_normalized.json (14 queries)
+#   - Uses normalized ground truth: tests/ground_truth_normalized.json (49 queries)
 #   - Integrated validation: Stories 2.11 + 2.14 + 2.15 combined
 #   - Script: scripts/validate-epic-2-final.py
 #
@@ -214,7 +214,7 @@ jobs:
           source ci-venv/bin/activate
           echo "========================================="
           echo "Epic 2 Final Validation (Story 2.15)"
-          echo "- Ground truth: tests/ground_truth_normalized.json (14 queries)"
+          echo "- Ground truth: tests/ground_truth_normalized.json (49 queries from validated 50-query fixtures)"
           echo "- Target: ≥70% retrieval accuracy (Epic 2 Decision Gate)"
           echo "- Integrated: Stories 2.11 + 2.14 + 2.15 combined"
           echo "- Script: scripts/validate-epic-2-final.py"

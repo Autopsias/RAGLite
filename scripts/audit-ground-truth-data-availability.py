@@ -362,8 +362,8 @@ async def audit_ground_truth() -> list[AuditResult]:
     Returns:
         List of audit results for all queries
     """
-    # Load original ground truth
-    ground_truth_path = Path("tests/ground_truth.json")
+    # Load original ground truth (50 queries from validated fixtures)
+    ground_truth_path = Path("tests/ground_truth_50queries.json")
     if not ground_truth_path.exists():
         raise FileNotFoundError(f"Ground truth file not found: {ground_truth_path}")
 

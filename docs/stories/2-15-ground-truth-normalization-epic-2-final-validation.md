@@ -1,6 +1,6 @@
 # Story 2.15: Ground Truth Normalization + Period Mapping + Epic 2 Final Validation
 
-**Status:** ready-for-review
+**Status:** done
 **Epic:** Epic 2 - Advanced RAG Architecture Enhancement
 **Priority:** 🔴 CRITICAL (Epic 2 completion blocker)
 **Effort:** 9-13 days (2 weeks)
@@ -1411,26 +1411,53 @@ Claude 3.7 Sonnet (claude-sonnet-4-5-20250929)
 
 | Criterion | Target | Achieved | Status |
 |-----------|--------|----------|--------|
-| Retrieval Accuracy | ≥70% | 71.4% | ✅ PASS |
-| p95 Latency | <15s | 7.5s | ✅ PASS |
+| Retrieval Accuracy | ≥70% | 77.6% (38/49) | ✅ PASS |
+| p50 Latency | <5s | 2.67s | ✅ PASS |
+| p95 Latency | <15s | 4.67s | ✅ PASS |
 | Decision | - | EPIC_2_COMPLETE | ✅ |
+
+### Final Validation Results (2025-11-04)
+
+**Overall Performance:**
+- **Accuracy: 77.6% (38/49 queries)** - Exceeded 70% target by 7.6pp
+- **p50 Latency: 2,671ms** - Well below 5,000ms target
+- **p95 Latency: 4,673ms** - Well below 15,000ms target
+
+**Accuracy by Category:**
+- Safety metrics: **100.0% (5/5)** ⭐
+- Financial performance: **90.0% (9/10)**
+- Cost analysis: **83.3% (10/12)**
+- Workforce: **83.3% (5/6)**
+- Margins: **62.5% (5/8)**
+- Operating expenses: **50.0% (4/8)**
+
+**Critical Fix Applied:**
+The story initially used the wrong ground truth source (`tests/ground_truth.json` with only 15 queries from a test subset). After user feedback, the source was corrected to use `tests/fixtures/ground_truth.py` (50 validated queries), which after AC1 audit yielded 49 queries with 98% data availability.
+
+**Ground Truth Normalization:**
+- Started with: 50 queries from validated Python fixtures
+- Removed: 1 query (CO2 emissions - metric not in database)
+- Final: 49 queries with confirmed data availability
+- Audit report: `docs/validation/story-2.15-ground-truth-audit.json`
 
 ### Files Created/Modified
 
 **New Files:**
 - `raglite/retrieval/period_normalizer.py`
 - `tests/unit/test_period_normalizer.py`
-- `tests/ground_truth_normalized.json`
-- `scripts/audit-ground-truth-data-availability.py`
+- `tests/ground_truth_normalized.json` (✅ CORRECTED: Now 49 queries from validated fixtures)
+- `tests/ground_truth_50queries.json` (Converted from Python fixtures for AC1 audit)
+- `scripts/audit-ground-truth-data-availability.py` (✅ FIXED: Now uses correct 50-query source)
 - `scripts/validate-epic-2-final.py`
 - `scripts/root-cause-analysis-story-2.15.py`
-- `docs/validation/story-2.15-ground-truth-audit.json`
-- `docs/validation/epic-2-final-validation.json`
+- `docs/validation/story-2.15-ground-truth-audit.json` (✅ NEW: 98% data availability report)
+- `docs/validation/epic-2-final-validation.json` (✅ UPDATED: 77.6% accuracy results)
 - `docs/validation/story-2.15-rca-report.md`
 - `docs/validation/story-2.15-root-cause-analysis.json`
 
 **Modified Files:**
 - `raglite/retrieval/query_classifier.py` (period normalization integration)
+- `.github/workflows/accuracy-validation.yml` (✅ FIXED: Updated query count 14→49)
 
 ### CI/CD Verification
 

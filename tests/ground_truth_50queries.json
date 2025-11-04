@@ -1,17 +1,11 @@
 {
   "metadata": {
-    "description": "Normalized ground truth for Epic 2 Final Validation (AC1 filtered)",
-    "source": "tests/ground_truth_50queries.json (validated 50-query fixtures)",
-    "document": "2025-08 Performance Review CONSO_v2.pdf (160 pages)",
-    "total_questions": 49,
-    "normalization_date": "2025-11-04",
-    "removed_queries": 1,
-    "removed_reasons": [
-      "Query 36: What is the CO2 emissions per ton of clinker and how does it... - Metric 'co2 emissions' not found in database"
-    ],
-    "success_criteria": "\u226570% retrieval accuracy (Story 2.15 AC3)",
-    "rationale": "Removed queries for non-existent data to focus validation on actual database content",
-    "audit_report": "docs/validation/story-2.15-ground-truth-audit.json"
+    "description": "Ground truth test set from validated 50-query fixtures",
+    "document": "2025-08 Performance Review CONSO_v2.pdf",
+    "total_questions": 50,
+    "source": "tests/fixtures/ground_truth.py",
+    "validation_date": "2025-10-14",
+    "note": "Converted from Python fixtures for Story 2.15 AC1 audit"
   },
   "questions": [
     {
@@ -469,6 +463,21 @@
       ],
       "category": "safety_metrics",
       "difficulty": "medium"
+    },
+    {
+      "id": 36,
+      "question": "What is the CO2 emissions per ton of clinker and how does it compare across periods?",
+      "expected_keywords": [
+        "emissions",
+        "CO2",
+        "763",
+        "kg",
+        "ton clinker",
+        "748",
+        "768"
+      ],
+      "category": "safety_metrics",
+      "difficulty": "hard"
     },
     {
       "id": 37,
