@@ -1,0 +1,107 @@
+{
+  "metadata": {
+    "timestamp": "2025-11-04 21:33:45",
+    "queries_analyzed": 3,
+    "primary_root_cause": "UNKNOWN",
+    "root_cause_distribution": {
+      "UNKNOWN": 2,
+      "KEYWORDS_NOT_IN_DATABASE": 1
+    }
+  },
+  "findings": [
+    {
+      "query_id": 2,
+      "question": "What is the EBITDA IFRS for cement operations?",
+      "expected_keywords": [
+        "EBITDA",
+        "IFRS",
+        "cement",
+        "4017",
+        "4338",
+        "4263"
+      ],
+      "query_type": "hybrid",
+      "multi_index": {
+        "result_count": 5,
+        "keywords_found": [
+          "EBITDA",
+          "IFRS",
+          "cement"
+        ],
+        "structure_type": "<class 'raglite.retrieval.multi_index_search.SearchResult'>",
+        "sample_content": "SearchResult(text=\" EBITDA IFRS Bridge (YOB vs YOY)\\n\\nCurrency (M BRL)\\n\\nYOB\\n\\n156,7\\n\\n2025 B\\n\\n4,6\\n\\nVolume\\n\\nIM\\n\\nYOY\\n\\n2,5\\n\\nPrice\\n\\nIM\\n\\n0,0\\n\\nVolume\\n\\nEM\\n\\n0,0\\n\\nPrice\\n\\nEM\\n\\n0,9\\n\\nVariable\\n\\nCosts\\n\\nCement\\n\\nCement\\n\\n6,4\\n\\nFixed\\n\\nCosts\\n\\n2,0\\n\\nOthers\\n\\n-\\n\\nCement\\n\\n-\\n\\n0,3\\n\\nProduction\\n\\nVariance\\n\\n-\\n\\n3,0\\n\\nMaterials,\\n\\nTerminals and\\n\\nothers\\n\\n-\\n\\n1,4\\n\\nOthers\\n\\n168,2\\n\\n2025\\n\\n2,2\\n\\nCorpor.\\n\\nMargin\\n\\n170,4\\n\\n2025\\n\\nwith\\n\\nCorp.\\n\\nMargi"
+      },
+      "keywords_in_database": {
+        "EBITDA": true,
+        "IFRS": true,
+        "cement": true,
+        "4017": false,
+        "4338": false,
+        "4263": false
+      },
+      "database_rows": 38630,
+      "root_cause": "UNKNOWN: Unable to diagnose root cause from available data.",
+      "recommended_fix": "\ud83d\udd0d Further investigation needed. Review detailed findings."
+    },
+    {
+      "query_id": 3,
+      "question": "How do variable costs per ton compare across periods?",
+      "expected_keywords": [
+        "variable costs",
+        "EUR/ton",
+        "54.5",
+        "56.9"
+      ],
+      "query_type": "hybrid",
+      "multi_index": {
+        "result_count": 2,
+        "keywords_found": [
+          "variable costs",
+          "EUR/ton"
+        ],
+        "structure_type": "<class 'raglite.retrieval.multi_index_search.SearchResult'>",
+        "sample_content": "SearchResult(text='North | Variable Cost | -1.80 Eur/ton | Aug-25\\n [Page 60]', score=1.0, source='hybrid', metadata={'source_document': '2025-08 Performance Review CONSO_v2.pdf', 'page_number': 60, 'chunk_index': 8, 'word_count': 11}, document_id='2025-08 Performance Review CONSO_v2.pdf', page_number=60) SearchResult(text='Brazil | Other Variable Costs | -85.40 LCU/ton | Aug-24\\n [Page 21]', score=0.9228571428571429, source='hybrid', metadata={'source_document': '2025-08 Performance Review CONS"
+      },
+      "keywords_in_database": {
+        "variable costs": false,
+        "EUR/ton": false,
+        "54.5": false,
+        "56.9": false
+      },
+      "database_rows": 38630,
+      "root_cause": "KEYWORDS_NOT_IN_DATABASE: Expected keywords do not exist in financial_tables.chunk_text. Ground truth mismatch.",
+      "recommended_fix": "\u274c Remove or replace ground truth queries. Missing keywords: variable costs, EUR/ton, 54.5, 56.9"
+    },
+    {
+      "query_id": 4,
+      "question": "What are the fixed costs per ton for operations?",
+      "expected_keywords": [
+        "fixed costs",
+        "EUR/ton",
+        "26.8",
+        "22.1",
+        "20.5"
+      ],
+      "query_type": "hybrid",
+      "multi_index": {
+        "result_count": 2,
+        "keywords_found": [
+          "fixed costs",
+          "EUR/ton"
+        ],
+        "structure_type": "<class 'raglite.retrieval.multi_index_search.SearchResult'>",
+        "sample_content": "SearchResult(text='North | Fixed Costs | -4.30 Eur/ton | Aug-25\\n [Page 60]', score=1.0, source='hybrid', metadata={'source_document': '2025-08 Performance Review CONSO_v2.pdf', 'page_number': 60, 'chunk_index': 8, 'word_count': 11}, document_id='2025-08 Performance Review CONSO_v2.pdf', page_number=60) SearchResult(text='Brazil | Sales&Distribution Fixed Costs | -17.30 LCU/ton | Aug-24\\n [Page 21]', score=0.9228571428571429, source='hybrid', metadata={'source_document': '2025-08 Performance Rev"
+      },
+      "keywords_in_database": {
+        "fixed costs": false,
+        "EUR/ton": false,
+        "26.8": false,
+        "22.1": true,
+        "20.5": false
+      },
+      "database_rows": 38630,
+      "root_cause": "UNKNOWN: Unable to diagnose root cause from available data.",
+      "recommended_fix": "\ud83d\udd0d Further investigation needed. Review detailed findings."
+    }
+  ]
+}

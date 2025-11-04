@@ -1,0 +1,353 @@
+{
+  "metadata": {
+    "total_queries": 15,
+    "status_counts": {
+      "MISSING_METRIC": 1,
+      "AVAILABLE": 14
+    },
+    "audit_date": "2025-11-04"
+  },
+  "results": [
+    {
+      "query_id": 1,
+      "question": "What are the main health and safety KPIs tracked by Secil Group?",
+      "parsed_intent": {
+        "entity": "Secil",
+        "metric": "health",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "MISSING_METRIC",
+        "actual_period": null,
+        "actual_entity": "Secil Angola",
+        "available_metrics": null,
+        "actual_currency": null,
+        "details": "Metric 'health' not found in database"
+      },
+      "recommendation": "\u274c Remove query: Metric 'Metric 'health' not found in database' not in database"
+    },
+    {
+      "query_id": 2,
+      "question": "What is the EBITDA IFRS for cement operations?",
+      "parsed_intent": {
+        "entity": "cement",
+        "metric": "ebitda",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Cement",
+        "available_metrics": [
+          "Aggregates Unit Ebitda",
+          "Cement Unit Ebitda",
+          "EBITDA",
+          "EBITDA Angola + Group Structure",
+          "EBITDA Group Structure"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 3,
+      "question": "How do variable costs per ton compare across periods?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 4,
+      "question": "What are the fixed costs per ton for operations?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 5,
+      "question": "What is the distribution cost per ton?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "cost",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "All-in cost  Bank Debt  Contracted",
+          "All-in cost  Bank Debt  Used",
+          "Average cost of consolidation Debt",
+          "Cost",
+          "Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 6,
+      "question": "How many employees are mentioned in the financial metrics?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 7,
+      "question": "What are the employee costs per ton?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 8,
+      "question": "What is the unit margin in EUR per ton?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": null,
+        "period": null,
+        "currency": "EUR"
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 9,
+      "question": "What are the renting costs mentioned in the document?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 10,
+      "question": "What is the variable contribution in thousands of EUR?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": null,
+        "period": null,
+        "currency": "EUR"
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 11,
+      "question": "What are the net transport costs?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 12,
+      "question": "What are the other variable costs per ton?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 13,
+      "question": "What percentage change is shown for frequency ratios?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "frequency ratio",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Frequency Ratio",
+          "Frequency Ratio  (1)"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 14,
+      "question": "What is the EBITDA IFRS margin percentage?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "ebitda",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Aggregates Unit Ebitda",
+          "Cement Unit Ebitda",
+          "EBITDA",
+          "EBITDA Angola + Group Structure",
+          "EBITDA Group Structure"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 15,
+      "question": "What are the fuel costs mentioned in the operating expenses?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    }
+  ]
+}

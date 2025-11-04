@@ -25,6 +25,7 @@ from enum import Enum
 
 from mistralai import Mistral
 
+from raglite.retrieval.period_normalizer import detect_period_in_query, normalize_period
 from raglite.shared.config import settings
 
 logger = logging.getLogger(__name__)
@@ -232,6 +233,20 @@ async def generate_sql_query(query: str) -> str | None:
     start_time = time.time()
 
     try:
+        # Story 2.15 AC2: Detect and normalize period format
+        detected_period = detect_period_in_query(query)
+        period_variants = normalize_period(detected_period) if detected_period else []
+
+        # Log period normalization results
+        if period_variants:
+            logger.debug(
+                "Period normalized for SQL generation",
+                extra={
+                    "query_period": detected_period,
+                    "database_variants": period_variants,
+                },
+            )
+
         # Initialize Mistral client
         client = Mistral(api_key=settings.mistral_api_key)
 
@@ -307,7 +322,7 @@ Indexes:
 
 6. **SELECT relevant columns only**:
    - Core: entity, metric, value, unit, period, fiscal_year
-   - Context: page_number, table_caption, chunk_text (for attribution)
+   - Attribution: document_id, page_number, table_caption, chunk_text (REQUIRED for source tracking)
 
 7. **Handle ambiguity with OR conditions**:
    - "costs" → metric ILIKE '%cost%' OR metric ILIKE '%expense%'
@@ -319,11 +334,18 @@ Indexes:
    - "YTD" → period ILIKE '%YTD%'
    - **CRITICAL**: Many tables have fiscal_year=NULL. Always use (fiscal_year = YYYY OR fiscal_year IS NULL) pattern.
 
+9. **Story 2.15 AC2: Period Normalization** (USE WHEN PERIOD VARIANTS PROVIDED):
+   {f"   - Detected period: {detected_period}" if detected_period else "   - No period detected in query"}
+   {f"   - Use period IN {tuple(period_variants)} for exact matching" if period_variants else "   - No period variants available - use ILIKE pattern matching"}
+   - **WHEN period variants provided**: Use IN clause instead of ILIKE for exact period matching
+   - **Example**: period IN ('Jul-25', 'Aug-25', 'Sep-25', 'Aug-25 YTD', 'Q3-25')
+   - **WHEN no variants**: Fall back to ILIKE pattern matching
+
 **EXAMPLES:**
 
 Query: "What is the variable cost per ton for Portugal Cement in August 2025 YTD?"
 SQL:
-SELECT entity, metric, value, unit, period, fiscal_year, page_number, table_caption
+SELECT document_id, entity, metric, value, unit, period, fiscal_year, page_number, table_caption
 FROM financial_tables
 WHERE (entity ILIKE '%Portugal%' OR entity ILIKE '%Portugal Cement%')
   AND metric ILIKE '%variable cost%'
@@ -335,7 +357,7 @@ LIMIT 50;
 
 Query: "Show me EBITDA margin for all entities in Q3 2024"
 SQL:
-SELECT entity, metric, value, unit, period, fiscal_year, page_number
+SELECT document_id, entity, metric, value, unit, period, fiscal_year, page_number
 FROM financial_tables
 WHERE metric ILIKE '%EBITDA%'
   AND (metric ILIKE '%margin%' OR unit ILIKE '%%')
@@ -346,7 +368,7 @@ LIMIT 100;
 
 Query: "What are the thermal energy costs?"
 SQL:
-SELECT entity, metric, value, unit, period, fiscal_year, page_number, table_caption
+SELECT document_id, entity, metric, value, unit, period, fiscal_year, page_number, table_caption
 FROM financial_tables
 WHERE metric ILIKE '%thermal%'
   AND (metric ILIKE '%energy%' OR metric ILIKE '%cost%')
@@ -355,7 +377,7 @@ LIMIT 50;
 
 Query: "Compare variable costs for Portugal and Tunisia"
 SQL:
-SELECT entity, metric, value, unit, period, fiscal_year, page_number, table_caption
+SELECT document_id, entity, metric, value, unit, period, fiscal_year, page_number, table_caption
 FROM financial_tables
 WHERE (entity ILIKE '%Portugal%' OR entity ILIKE '%Portugal Cement%'
     OR entity ILIKE '%Tunisia%' OR entity ILIKE '%Tunisia Cement%')
@@ -372,7 +394,8 @@ LIMIT 50;
 - Use ILIKE for all text matching (case-insensitive entity and metric matching)
 - Always include ORDER BY and LIMIT
 - DO NOT use table_index or row_index in ORDER BY (causes SQL errors)
-- Select columns needed for answering the question + attribution (page_number, table_caption)
+- **CRITICAL**: Always include document_id in SELECT clause (REQUIRED for source attribution)
+- Select columns needed for answering the question + attribution (document_id, page_number, table_caption)
 - Use simple ORDER BY patterns: page_number DESC, value DESC, or fiscal_year DESC
 """  # nosec B608
 
