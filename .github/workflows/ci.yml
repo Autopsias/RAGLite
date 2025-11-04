@@ -601,7 +601,8 @@ jobs:
           set -o pipefail
 
           # Count total tests (including slow) - SHOW ERRORS for debugging
-          EXPECTED_MIN_TESTS=355
+          # Updated 2025-11-04: Story 2.15 added 36 period_normalizer tests (355 → 391)
+          EXPECTED_MIN_TESTS=390
           echo "Collecting all tests (including slow)..."
 
           # Capture full output for debugging
@@ -721,15 +722,17 @@ jobs:
           echo "  Type Check:        ${{ needs.type-check.result }}"
           echo "  Security Scan:     ${{ needs.security.result }}"
           echo ""
-          echo "🧪 TEST SUITES (358 tests total):"
-          echo "  Unit Tests:        ${{ needs.test-unit.result }} (~200 tests)"
+          echo "🧪 TEST SUITES (394 tests total):"
+          echo "  Unit Tests:        ${{ needs.test-unit.result }} (~236 tests)"
           echo "  Integration:       ${{ needs.test-integration.result }} (~115 tests)"
           echo "  E2E Tests:         ${{ needs.test-e2e.result }} (~28 tests)"
           echo ""
           echo "✅ NFR VALIDATION:"
-          echo "  Accuracy (NFR6/NFR7):  ${{ needs.test-accuracy.result }}"
           echo "  Performance (NFR13):   ${{ needs.test-performance.result }}"
           echo "  Test Discovery:        ${{ needs.test-count-validation.result }}"
+          echo ""
+          echo "  NOTE: NFR6/NFR7 (Accuracy) runs in separate workflow:"
+          echo "        .github/workflows/accuracy-validation.yml"
           echo ""
           echo "📚 DOCUMENTATION:"
           echo "  Validation:        ${{ needs.docs-validation.result }}"
@@ -777,11 +780,6 @@ jobs:
 
           if [[ "${{ needs.test-e2e.result }}" == "failure" ]]; then
             echo "⚠️  E2E test issues detected (non-blocking)"
-          fi
-
-          if [[ "${{ needs.test-accuracy.result }}" == "failure" ]]; then
-            echo "⚠️  Accuracy validation issues detected (non-blocking)"
-            echo "   Review NFR6/NFR7 compliance"
           fi
 
           if [[ "${{ needs.test-performance.result }}" == "failure" ]]; then
