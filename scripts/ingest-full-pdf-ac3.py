@@ -31,21 +31,19 @@ async def main():
     print("Expected time: ~13-15 minutes (Story 2.1 + 2.2 optimization)")
     print("=" * 80 + "\n")
 
-    # Clear existing collection
-    print("Clearing existing collection...")
-    qdrant = get_qdrant_client()
-    try:
-        qdrant.delete_collection(collection_name=settings.qdrant_collection_name)
-        print(f"✓ Collection deleted: {settings.qdrant_collection_name}\n")
-    except Exception:
-        print("ℹ No existing collection to delete\n")
+    # Ingest full PDF with collection clearing
+    # CRITICAL FIX: Do NOT manually delete collection before calling ingest_pdf()
+    # Double deletion (manual + ingest_pdf's clear_collection=True) creates a race
+    # condition in Qdrant that can delete data after successful ingestion.
+    _ = get_qdrant_client()  # Verify Qdrant connection before ingestion
 
-    # Ingest full PDF
     print(f"Ingesting {pdf_path.name} (160 pages)...")
+    print(f"Collection will be cleared and recreated: {settings.qdrant_collection_name}")
     print("This will take ~13-15 minutes...\n")
 
     try:
-        result = await ingest_pdf(str(pdf_path))
+        # Pass clear_collection=True to safely handle deletion + creation
+        result = await ingest_pdf(str(pdf_path), clear_collection=True)
 
         print("\n" + "=" * 80)
         print("INGESTION COMPLETE")

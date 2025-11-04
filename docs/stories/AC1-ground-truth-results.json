@@ -1,17 +1,17 @@
 {
   "story": "2.5",
   "acceptance_criteria": "AC1",
-  "timestamp": "2025-10-24 15:10:20",
+  "timestamp": "2025-11-04 19:14:43",
   "metrics": {
-    "retrieval_accuracy": 0.0,
-    "attribution_accuracy": 0.0,
+    "retrieval_accuracy": 12.0,
+    "attribution_accuracy": 12.0,
     "total_queries": 50,
-    "successful_queries": 0,
-    "failed_queries_count": 50,
-    "average_latency_ms": 496.42353534698486,
-    "p50_latency_ms": 437.02101707458496,
-    "p95_latency_ms": 819.2272186279297,
-    "p99_latency_ms": 2218.842029571533
+    "successful_queries": 6,
+    "failed_queries_count": 44,
+    "average_latency_ms": 1124.6406364440918,
+    "p50_latency_ms": 985.4850769042969,
+    "p95_latency_ms": 2322.0479488372803,
+    "p99_latency_ms": 2792.5238609313965
   },
   "failed_queries": [
     {
@@ -19,15 +19,9 @@
       "question": "What is the variable cost per ton for Portugal Cement in August 2025 YTD?",
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
-      "retrieved_pages": [
-        3,
-        1,
-        3,
-        5,
-        10
-      ],
-      "top_score": 1.0,
-      "latency_ms": 618.5851097106934
+      "retrieved_pages": [],
+      "top_score": 0.0,
+      "latency_ms": 1446.302890777588
     },
     {
       "query_id": 2,
@@ -35,14 +29,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        1,
-        5,
-        3,
-        10
+        21,
+        21,
+        21,
+        21,
+        21
       ],
-      "top_score": 0.8598100134734338,
-      "latency_ms": 482.78284072875977
+      "top_score": 0.009836065573770491,
+      "latency_ms": 1347.4419116973877
     },
     {
       "query_id": 3,
@@ -50,14 +44,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        1,
-        5,
-        3,
-        6
+        43,
+        17,
+        19,
+        18,
+        43
       ],
-      "top_score": 0.826529851958344,
-      "latency_ms": 487.20312118530273
+      "top_score": 0.01570076194874163,
+      "latency_ms": 2792.5238609313965
     },
     {
       "query_id": 4,
@@ -65,14 +59,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        3,
-        1,
-        5,
-        6
+        93,
+        156,
+        7,
+        153,
+        63
       ],
-      "top_score": 0.9989546939999999,
-      "latency_ms": 394.58203315734863
+      "top_score": 0.015223214285714284,
+      "latency_ms": 751.0199546813965
     },
     {
       "query_id": 5,
@@ -80,14 +74,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        1,
-        3,
-        5,
-        9
+        153,
+        119,
+        140,
+        7,
+        142
       ],
-      "top_score": 0.98111574,
-      "latency_ms": 415.1580333709717
+      "top_score": 0.014481897627965043,
+      "latency_ms": 947.9470252990723
     },
     {
       "query_id": 6,
@@ -95,14 +89,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        3,
-        5,
-        7,
-        3
+        43,
+        31,
+        18,
+        19,
+        43
       ],
-      "top_score": 0.832974981,
-      "latency_ms": 504.57191467285156
+      "top_score": 0.01602086438152012,
+      "latency_ms": 819.1640377044678
     },
     {
       "query_id": 7,
@@ -110,14 +104,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        1,
-        3,
+        63,
         7,
-        5
+        153,
+        93,
+        111
       ],
-      "top_score": 0.8392727042190393,
-      "latency_ms": 364.76993560791016
+      "top_score": 0.014808743169398907,
+      "latency_ms": 1137.1819972991943
     },
     {
       "query_id": 8,
@@ -125,14 +119,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        3,
-        5,
-        7,
-        3
+        43,
+        132,
+        36,
+        103,
+        75
       ],
-      "top_score": 0.819546685,
-      "latency_ms": 353.1219959259033
+      "top_score": 0.01597782258064516,
+      "latency_ms": 1124.0618228912354
     },
     {
       "query_id": 9,
@@ -140,14 +134,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        3,
-        3,
-        5,
-        7
+        43,
+        156,
+        47,
+        20,
+        132
       ],
-      "top_score": 0.836333952,
-      "latency_ms": 568.2797431945801
+      "top_score": 0.015638148667601683,
+      "latency_ms": 896.7747688293457
     },
     {
       "query_id": 10,
@@ -155,14 +149,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        3,
-        3,
-        7,
-        5
+        110,
+        48,
+        50,
+        109,
+        80
       ],
-      "top_score": 0.82902829,
-      "latency_ms": 381.17194175720215
+      "top_score": 0.01378248974008208,
+      "latency_ms": 891.2997245788574
     },
     {
       "query_id": 11,
@@ -170,14 +164,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        3,
-        1,
-        9,
-        6
+        60,
+        60,
+        60,
+        60,
+        60
       ],
-      "top_score": 0.9376847207171457,
-      "latency_ms": 541.7799949645996
+      "top_score": 0.009836065573770491,
+      "latency_ms": 705.5652141571045
     },
     {
       "query_id": 12,
@@ -185,14 +179,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        3,
-        1,
-        7,
-        5
+        156,
+        50,
+        132,
+        49,
+        132
       ],
-      "top_score": 1.0,
-      "latency_ms": 400.46000480651855
+      "top_score": 0.013888888888888888,
+      "latency_ms": 1205.0940990447998
     },
     {
       "query_id": 13,
@@ -200,14 +194,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        3,
-        9,
-        3,
-        5
+        40,
+        23,
+        40,
+        17,
+        43
       ],
-      "top_score": 1.0,
-      "latency_ms": 437.02101707458496
+      "top_score": 0.009836065573770491,
+      "latency_ms": 972.7842807769775
     },
     {
       "query_id": 14,
@@ -215,14 +209,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        3,
-        3,
-        9,
-        6
+        21,
+        21,
+        21,
+        21,
+        21
       ],
-      "top_score": 0.9940852559999999,
-      "latency_ms": 539.1418933868408
+      "top_score": 0.009836065573770491,
+      "latency_ms": 1042.471170425415
     },
     {
       "query_id": 15,
@@ -230,44 +224,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        3,
-        3,
-        9,
-        6
+        153,
+        121,
+        142,
+        101,
+        143
       ],
-      "top_score": 1.0,
-      "latency_ms": 373.6259937286377
-    },
-    {
-      "query_id": 16,
-      "question": "What are the fixed costs per ton for Out\u00e3o plant?",
-      "expected_page": 47,
-      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
-      "retrieved_pages": [
-        3,
-        1,
-        3,
-        5,
-        9
-      ],
-      "top_score": 0.9984131039999999,
-      "latency_ms": 456.87413215637207
-    },
-    {
-      "query_id": 17,
-      "question": "What are the fixed costs per ton for Maceira plant?",
-      "expected_page": 47,
-      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
-      "retrieved_pages": [
-        3,
-        1,
-        3,
-        5,
-        9
-      ],
-      "top_score": 1.0,
-      "latency_ms": 428.67207527160645
+      "top_score": 0.015642076502732243,
+      "latency_ms": 746.0570335388184
     },
     {
       "query_id": 18,
@@ -275,14 +239,14 @@
       "expected_page": 47,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        3,
-        3,
-        9,
-        3
+        84,
+        145,
+        124,
+        88,
+        158
       ],
-      "top_score": 1.0,
-      "latency_ms": 525.1100063323975
+      "top_score": 0.014203894616265748,
+      "latency_ms": 1513.7100219726562
     },
     {
       "query_id": 19,
@@ -290,14 +254,14 @@
       "expected_page": 47,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        3,
-        1,
-        9,
-        7
+        21,
+        21,
+        20,
+        20,
+        20
       ],
-      "top_score": 1.0,
-      "latency_ms": 439.8527145385742
+      "top_score": 0.009836065573770491,
+      "latency_ms": 1892.585039138794
     },
     {
       "query_id": 20,
@@ -305,14 +269,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        3,
-        9,
-        1,
-        7
+        52,
+        52,
+        52,
+        52,
+        52
       ],
-      "top_score": 1.0,
-      "latency_ms": 517.1060562133789
+      "top_score": 0.009836065573770491,
+      "latency_ms": 1777.3640155792236
     },
     {
       "query_id": 21,
@@ -320,29 +284,10 @@
       "expected_page": 77,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        3,
-        3,
-        9,
-        10
+        23
       ],
       "top_score": 1.0,
-      "latency_ms": 633.8653564453125
-    },
-    {
-      "query_id": 22,
-      "question": "What is the cash flow from operating activities?",
-      "expected_page": 77,
-      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
-      "retrieved_pages": [
-        3,
-        1,
-        3,
-        10,
-        7
-      ],
-      "top_score": 1.0,
-      "latency_ms": 326.08795166015625
+      "latency_ms": 1318.2761669158936
     },
     {
       "query_id": 23,
@@ -350,119 +295,89 @@
       "expected_page": 77,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        1,
-        3,
-        7,
-        5
+        160,
+        160,
+        160,
+        160,
+        160
       ],
-      "top_score": 0.85861757,
-      "latency_ms": 310.18590927124023
+      "top_score": 0.014945054945054943,
+      "latency_ms": 1240.3302192687988
     },
     {
       "query_id": 24,
       "question": "What is the financial net debt closing balance?",
-      "expected_page": 77,
+      "expected_page": 23,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        1,
-        3,
-        5,
-        7
+        160,
+        160,
+        160,
+        160,
+        160
       ],
-      "top_score": 0.84742429,
-      "latency_ms": 2218.842029571533
+      "top_score": 0.015677655677655677,
+      "latency_ms": 757.7779293060303
     },
     {
       "query_id": 25,
       "question": "What is the change in trade working capital?",
-      "expected_page": 77,
+      "expected_page": 23,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        1,
-        3,
-        7,
-        7
+        159,
+        160,
+        160,
+        160,
+        160
       ],
-      "top_score": 0.9586318115123267,
-      "latency_ms": 304.1539192199707
-    },
-    {
-      "query_id": 26,
-      "question": "What are the income tax payments for the period?",
-      "expected_page": 77,
-      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
-      "retrieved_pages": [
-        3,
-        1,
-        5,
-        7,
-        3
-      ],
-      "top_score": 0.84358647,
-      "latency_ms": 396.481990814209
+      "top_score": 0.014354066985645932,
+      "latency_ms": 699.0830898284912
     },
     {
       "query_id": 27,
       "question": "What are the net interest expenses?",
-      "expected_page": 77,
+      "expected_page": 23,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        1,
-        5,
-        7,
-        3
+        160,
+        137,
+        160,
+        160,
+        160
       ],
-      "top_score": 0.84574737,
-      "latency_ms": 329.1459083557129
+      "top_score": 0.015320910973084885,
+      "latency_ms": 1881.4818859100342
     },
     {
       "query_id": 28,
       "question": "What is the cash set free or tied up after investments?",
-      "expected_page": 77,
+      "expected_page": 23,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        1,
-        3,
-        7,
-        7
+        160,
+        137,
+        137,
+        160,
+        160
       ],
-      "top_score": 0.8449538090190394,
-      "latency_ms": 270.0626850128174
-    },
-    {
-      "query_id": 29,
-      "question": "How does the EBITDA Portugal plus Group Structure compare across periods and what is the growth rate?",
-      "expected_page": 77,
-      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
-      "retrieved_pages": [
-        1,
-        3,
-        3,
-        9,
-        10
-      ],
-      "top_score": 1.0,
-      "latency_ms": 672.5521087646484
+      "top_score": 0.015682382133995035,
+      "latency_ms": 994.147777557373
     },
     {
       "query_id": 30,
       "question": "What is the relationship between cash flow from operations and working capital changes?",
-      "expected_page": 77,
+      "expected_page": 23,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
+        160,
+        137,
+        120,
         1,
-        3,
-        7,
-        5
+        116
       ],
-      "top_score": 0.8550237,
-      "latency_ms": 450.70505142211914
+      "top_score": 0.016237314597970336,
+      "latency_ms": 1140.0320529937744
     },
     {
       "query_id": 31,
@@ -470,14 +385,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        3,
-        3,
-        3,
-        3
+        23,
+        23,
+        21,
+        21,
+        21
       ],
-      "top_score": 0.806208598,
-      "latency_ms": 354.201078414917
+      "top_score": 0.009836065573770491,
+      "latency_ms": 939.4609928131104
     },
     {
       "query_id": 32,
@@ -485,14 +400,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        3,
-        3,
-        4,
-        3
+        43,
+        132,
+        36,
+        18,
+        19
       ],
-      "top_score": 0.822807775,
-      "latency_ms": 489.58706855773926
+      "top_score": 0.016129032258064516,
+      "latency_ms": 991.5800094604492
     },
     {
       "query_id": 33,
@@ -500,14 +415,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        3,
-        4,
-        3,
-        3
+        43,
+        141,
+        120,
+        31,
+        76
       ],
-      "top_score": 0.831869569,
-      "latency_ms": 531.5120220184326
+      "top_score": 0.016162909836065574,
+      "latency_ms": 948.5180377960205
     },
     {
       "query_id": 34,
@@ -515,14 +430,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        3,
-        3,
-        4,
-        3
+        43,
+        141,
+        120,
+        31,
+        98
       ],
-      "top_score": 0.82207043,
-      "latency_ms": 453.0649185180664
+      "top_score": 0.01609079445145019,
+      "latency_ms": 1108.705997467041
     },
     {
       "query_id": 35,
@@ -530,14 +445,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        3,
-        3,
-        3,
-        3
+        43,
+        141,
+        98,
+        120,
+        76
       ],
-      "top_score": 0.823888281,
-      "latency_ms": 231.7519187927246
+      "top_score": 0.01605222734254992,
+      "latency_ms": 2580.687999725342
     },
     {
       "query_id": 36,
@@ -545,14 +460,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        1,
-        7,
-        5,
-        3
+        132,
+        36,
+        75,
+        33,
+        109
       ],
-      "top_score": 0.84422676,
-      "latency_ms": 394.81377601623535
+      "top_score": 0.015887174541947928,
+      "latency_ms": 2322.0479488372803
     },
     {
       "query_id": 37,
@@ -560,14 +475,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        1,
-        5,
-        3,
-        10
+        21,
+        21,
+        21,
+        21,
+        21
       ],
-      "top_score": 0.9482103877062488,
-      "latency_ms": 448.61292839050293
+      "top_score": 0.009836065573770491,
+      "latency_ms": 955.5680751800537
     },
     {
       "query_id": 38,
@@ -575,29 +490,23 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        5,
-        3,
-        3,
-        3
+        19,
+        17,
+        18,
+        43,
+        43
       ],
-      "top_score": 0.9772119576,
-      "latency_ms": 368.46303939819336
+      "top_score": 0.015225409836065573,
+      "latency_ms": 30.807018280029297
     },
     {
       "query_id": 39,
       "question": "What is the total headcount for Tunisia operations in August 2025?",
       "expected_page": 108,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
-      "retrieved_pages": [
-        1,
-        3,
-        3,
-        3,
-        10
-      ],
-      "top_score": 0.969516222,
-      "latency_ms": 600.4500389099121
+      "retrieved_pages": [],
+      "top_score": 0.0,
+      "latency_ms": 985.4850769042969
     },
     {
       "query_id": 40,
@@ -605,44 +514,29 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        1,
-        10,
-        8,
-        6
+        43,
+        19,
+        17,
+        18,
+        43
       ],
-      "top_score": 0.8209937574711604,
-      "latency_ms": 564.5513534545898
+      "top_score": 0.015133946421431427,
+      "latency_ms": 42.66190528869629
     },
     {
       "query_id": 41,
       "question": "What is the breakdown of Tunisia Cement employees by function?",
-      "expected_page": 108,
-      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
-      "retrieved_pages": [
-        1,
-        3,
-        3,
-        3,
-        3
-      ],
-      "top_score": 0.817936335,
-      "latency_ms": 433.3028793334961
-    },
-    {
-      "query_id": 42,
-      "question": "How does employee cost per ton efficiency compare across periods and what factors drive the changes?",
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
+        109,
+        98,
         3,
-        3,
-        1,
-        9,
-        7
+        107,
+        107
       ],
-      "top_score": 1.0,
-      "latency_ms": 819.2272186279297
+      "top_score": 0.015475409836065573,
+      "latency_ms": 925.3261089324951
     },
     {
       "query_id": 43,
@@ -650,14 +544,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        1,
-        3,
-        5,
-        9
+        21,
+        21,
+        21,
+        21,
+        21
       ],
-      "top_score": 0.8766131300225904,
-      "latency_ms": 550.94313621521
+      "top_score": 0.013571428571428571,
+      "latency_ms": 910.5582237243652
     },
     {
       "query_id": 44,
@@ -665,14 +559,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        3,
-        3,
-        6,
-        5
+        21,
+        21,
+        21,
+        21,
+        21
       ],
-      "top_score": 0.830964175,
-      "latency_ms": 382.34591484069824
+      "top_score": 0.009836065573770491,
+      "latency_ms": 904.1638374328613
     },
     {
       "query_id": 45,
@@ -680,14 +574,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        3,
-        1,
-        6,
-        5
+        21,
+        21,
+        21,
+        21,
+        21
       ],
-      "top_score": 0.9969096216,
-      "latency_ms": 436.80286407470703
+      "top_score": 0.009836065573770491,
+      "latency_ms": 807.8958988189697
     },
     {
       "query_id": 46,
@@ -697,12 +591,12 @@
       "retrieved_pages": [
         3,
         1,
-        3,
-        5,
-        7
+        11,
+        11,
+        39
       ],
-      "top_score": 0.835902661,
-      "latency_ms": 372.5428581237793
+      "top_score": 0.01579861111111111,
+      "latency_ms": 896.7306613922119
     },
     {
       "query_id": 47,
@@ -710,14 +604,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        1,
-        3,
-        7,
-        5
+        102,
+        123,
+        123,
+        73,
+        11
       ],
-      "top_score": 0.81984282,
-      "latency_ms": 326.5829086303711
+      "top_score": 0.015835777126099706,
+      "latency_ms": 1038.449764251709
     },
     {
       "query_id": 48,
@@ -725,14 +619,14 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        1,
-        3,
-        7,
-        5
+        98,
+        122,
+        63,
+        111,
+        1
       ],
-      "top_score": 0.822438028,
-      "latency_ms": 1161.5922451019287
+      "top_score": 0.013588709677419354,
+      "latency_ms": 830.6241035461426
     },
     {
       "query_id": 49,
@@ -740,29 +634,29 @@
       "expected_page": 46,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        3,
-        1,
-        3,
-        5,
-        7
+        98,
+        123,
+        39,
+        123,
+        102
       ],
-      "top_score": 0.8352423999999999,
-      "latency_ms": 365.4751777648926
+      "top_score": 0.013852813852813853,
+      "latency_ms": 791.3248538970947
     },
     {
       "query_id": 50,
       "question": "How do fixed costs break down into employee costs, maintenance, and other costs, and what is the efficiency trend?",
-      "expected_page": 46,
+      "expected_page": 59,
       "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
       "retrieved_pages": [
-        1,
-        3,
-        7,
-        3,
-        5
+        102,
+        123,
+        112,
+        123,
+        136
       ],
-      "top_score": 0.844493852,
-      "latency_ms": 393.3999538421631
+      "top_score": 0.014904780411970462,
+      "latency_ms": 1279.5288562774658
     }
   ]
 }

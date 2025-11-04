@@ -127,6 +127,17 @@ def session_ingested_collection(request):
     This pattern reduces test suite from 40+ minutes to ~90 seconds.
     Expected: Tests run in ~90 seconds vs previous 40+ minutes (97% speedup).
 
+    SKIP INGESTION MODE (--skip-ingestion flag):
+    When flag is set, skips ingestion and uses existing Qdrant/PostgreSQL data.
+    This saves ~25 minutes when data has already been ingested manually.
+
+    Usage:
+        # First: Ingest data manually
+        python scripts/ingest-full-pdf-ac3.py
+
+        # Then: Run tests with existing data
+        pytest tests/integration/ --skip-ingestion --run-slow -m ""
+
     TIMEOUT PROTECTION: If fixture hangs, pytest will timeout after 900s
     (configured in pytest.ini timeout_func_only=true, so fixture has full timeout).
 
@@ -143,11 +154,99 @@ def session_ingested_collection(request):
 
     print("\nDEBUG: Entering session_ingested_collection fixture", file=sys.stderr)
 
+    # Check if we should skip ingestion and use existing data
+    skip_ingestion = request.config.getoption("--skip-ingestion")
+
+    if skip_ingestion:
+        print("\n" + "=" * 80)
+        print("🚀 SKIP INGESTION MODE: Using existing Qdrant/PostgreSQL data")
+        print("=" * 80)
+
+        from raglite.shared.clients import get_qdrant_client
+        from raglite.shared.config import settings
+
+        qdrant = get_qdrant_client()
+
+        # Verify collection exists and has data
+        try:
+            count = qdrant.count(collection_name=settings.qdrant_collection_name).count
+
+            if count == 0:
+                error_msg = (
+                    "❌ ERROR: --skip-ingestion requires existing data, but Qdrant collection is empty!\n"
+                    "   Please ingest data first:\n"
+                    "   python scripts/ingest-full-pdf-ac3.py"
+                )
+                print(f"\n{error_msg}", file=sys.stderr)
+                pytest.fail(error_msg)
+
+            # Store chunk count for test isolation
+            _session_sample_pdf_chunk_count = count
+
+            print(f"\n✅ Using existing collection: {settings.qdrant_collection_name}")
+            print(f"   Chunks: {count}")
+            print("   Time saved: ~25 minutes")
+            print("   All tests will share this existing data\n")
+            print("=" * 80 + "\n")
+
+            # Yield without cleanup - data is managed externally
+            yield
+            return
+
+        except Exception as e:
+            error_msg = f"❌ ERROR: Failed to verify existing data: {e}"
+            print(f"\n{error_msg}", file=sys.stderr)
+            pytest.fail(error_msg)
+
+    print("\nDEBUG: Proceeding with full ingestion (--skip-ingestion not set)", file=sys.stderr)
+
     from raglite.ingestion.pipeline import create_collection, ingest_pdf
     from raglite.shared.clients import get_qdrant_client
     from raglite.shared.config import settings
 
     print("DEBUG: Fixture imports successful", file=sys.stderr)
+
+    # SAFETY CHECK: Warn if collection has data and user didn't use --skip-ingestion
+    # This prevents accidental deletion of manually ingested data
+    print("DEBUG: Checking for existing data...", file=sys.stderr)
+    qdrant_check = get_qdrant_client()
+    try:
+        existing_count = qdrant_check.count(collection_name=settings.qdrant_collection_name).count
+        if existing_count > 0:
+            warning_msg = (
+                f"\n{'=' * 80}\n"
+                f"⚠️  WARNING: Collection '{settings.qdrant_collection_name}' already has {existing_count} chunks!\n"
+                f"\n"
+                f"Without --skip-ingestion, this fixture will DELETE existing data and re-ingest.\n"
+                f"This wastes ~25 minutes if you already ingested manually.\n"
+                f"\n"
+                f"Options:\n"
+                f'  1. Use existing data: pytest --skip-ingestion --run-slow -m ""\n'
+                f"  2. Continue with re-ingestion: Press Enter to proceed (will delete existing data)\n"
+                f"  3. Abort: Ctrl+C to cancel\n"
+                f"{'=' * 80}\n"
+            )
+            print(warning_msg, file=sys.stderr)
+
+            # In CI/non-interactive mode, auto-proceed (CI always re-ingests fresh)
+            if os.getenv("CI") == "true" or not sys.stdin.isatty():
+                print(
+                    "DEBUG: CI/non-interactive mode - proceeding with re-ingestion", file=sys.stderr
+                )
+            else:
+                # Interactive mode - require confirmation
+                try:
+                    input(
+                        "Press Enter to DELETE existing data and re-ingest (or Ctrl+C to abort)..."
+                    )
+                except KeyboardInterrupt:
+                    pytest.skip(
+                        "\n\n❌ Test aborted by user to prevent data deletion. Use --skip-ingestion to preserve existing data."
+                    )
+
+    except Exception as e:
+        # Collection doesn't exist yet - safe to proceed
+        print(f"DEBUG: No existing collection found ({e}) - safe to create", file=sys.stderr)
 
     # Environment-based PDF selection:
     # - LOCAL (VS Code): 10-page sample PDF (fast ~10-15 seconds ingestion)
@@ -199,6 +298,32 @@ def session_ingested_collection(request):
             )
         except Exception as e:
             print(f"   ℹ️  No existing collection to delete: {e}", file=sys.stderr)
+
+        # CRITICAL FIX: Also clear PostgreSQL to maintain symmetric data lifecycle
+        # This prevents mixed document IDs from accumulating across test runs
+        try:
+            import psycopg2
+
+            conn_str = f"postgresql://{settings.postgres_user}:{settings.postgres_password}@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+            conn = psycopg2.connect(conn_str)
+            cursor = conn.cursor()
+
+            # Delete all data from both PostgreSQL tables
+            cursor.execute("DELETE FROM financial_chunks")
+            chunks_deleted = cursor.rowcount
+            cursor.execute("DELETE FROM financial_tables")
+            tables_deleted = cursor.rowcount
+
+            conn.commit()
+            cursor.close()
+            conn.close()
+
+            print(
+                f"   ✓ Cleared PostgreSQL: {tables_deleted} table rows, {chunks_deleted} chunk rows",
+                file=sys.stderr,
+            )
+        except Exception as e:
+            print(f"   ℹ️  PostgreSQL cleanup skipped: {e}", file=sys.stderr)
 
         # Wait for deletion to complete (Qdrant async operation)
         import time

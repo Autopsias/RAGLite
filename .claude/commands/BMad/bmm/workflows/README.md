@@ -22,11 +22,15 @@
 - Path: `bmad/bmm/workflows/2-plan-workflows/narrative/workflow.yaml`
 - Narrative design workflow for story-driven games and applications. Creates comprehensive narrative documentation including story structure, character arcs, dialogue systems, and narrative implementation guidance.
 
+**create-epics-and-stories**
+- Path: `bmad/bmm/workflows/2-plan-workflows/prd/create-epics-and-stories/workflow.yaml`
+- Transform PRD requirements into bite-sized stories organized in epics for 200k context dev agents
+
 **prd**
 - Path: `bmad/bmm/workflows/2-plan-workflows/prd/workflow.yaml`
-- Unified PRD workflow for project levels 2-4. Produces strategic PRD and tactical epic breakdown. Hands off to architecture workflow for technical design. Note: Level 0-1 use tech-spec workflow.
+- Unified PRD workflow for BMad Method and Enterprise Method tracks. Produces strategic PRD and tactical epic breakdown. Hands off to architecture workflow for technical design. Note: Quick Flow track uses tech-spec workflow.
 
-**tech-spec-sm**
+**tech-spec**
 - Path: `bmad/bmm/workflows/2-plan-workflows/tech-spec/workflow.yaml`
 - Technical specification workflow for Level 0 projects (single atomic changes). Creates focused tech spec for bug fixes, single endpoint additions, or small isolated changes. Tech-spec only - no PRD needed.
 
@@ -54,7 +58,7 @@
 - Path: `bmad/bmm/workflows/4-implementation/dev-story/workflow.yaml`
 - Execute a story by implementing tasks/subtasks, writing tests, validating, and updating the story file per acceptance criteria
 
-**tech-spec**
+**epic-tech-context**
 - Path: `bmad/bmm/workflows/4-implementation/epic-tech-context/workflow.yaml`
 - Generate a comprehensive Technical Specification from PRD and Architecture with acceptance criteria and traceability mapping
 

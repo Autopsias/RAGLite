@@ -2,11 +2,11 @@
   "story": "2.5",
   "decision_gate": "AC2",
   "status": "FAILED",
-  "retrieval_accuracy": 0.0,
+  "retrieval_accuracy": 12.0,
   "target_accuracy": 70.0,
-  "shortfall_pp": 70.0,
-  "successful_queries": 0,
-  "failed_queries_count": 50,
+  "shortfall_pp": 58.0,
+  "successful_queries": 6,
+  "failed_queries_count": 44,
   "recommendation": "Escalate to Phase 2B (Structured Multi-Index)",
-  "timestamp": "2025-10-24 15:09:55"
+  "timestamp": "2025-11-04 19:14:43"
 }

@@ -174,7 +174,7 @@ LIMIT 50;
 def pytest_addoption(parser):
     """Add custom command line options for pytest.
 
-    This allows us to control slow test execution via CLI flags.
+    This allows us to control slow test execution and ingestion behavior via CLI flags.
     """
     parser.addoption(
         "--run-slow",
@@ -182,16 +182,23 @@ def pytest_addoption(parser):
         default=False,
         help="Run slow tests (data-dependent tests requiring full 160-page PDF)",
     )
+    parser.addoption(
+        "--skip-ingestion",
+        action="store_true",
+        default=False,
+        help="Skip session fixture ingestion and use existing Qdrant/PostgreSQL data (saves ~25 min)",
+    )
 
 
 def pytest_configure(config):
     """Configure pytest for optimal parallel execution and custom options.
 
     This hook is called once per worker process in pytest-xdist.
-    Makes the run_slow option available to all tests via pytest.run_slow.
+    Makes the run_slow and skip_ingestion options available to all tests.
     """
-    # Store run_slow flag globally so tests can access it via pytest.run_slow
+    # Store flags globally so tests can access them
     pytest.run_slow = config.getoption("--run-slow")
+    pytest.skip_ingestion = config.getoption("--skip-ingestion")
 
     # Only set workerinput if we're actually in xdist mode
     # DO NOT create empty workerinput - it confuses pytest-cov!
