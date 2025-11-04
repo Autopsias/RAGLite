@@ -13,7 +13,8 @@ name: NFR Accuracy Validation (NFR6/NFR7)
 #   - NFR7: ≥95% attribution accuracy
 
 on:
-  # Manual trigger for Epic 2 Phase 2A Decision Gate validation
+  # PRIMARY: Manual trigger for Epic 2 Phase 2A Decision Gate validation
+  # Use this to run accuracy tests on-demand without blocking CI
   workflow_dispatch:
     inputs:
       branch:
@@ -21,18 +22,23 @@ on:
         required: false
         default: ''
 
-  # Nightly validation on main and epic branches
-  schedule:
-    - cron: '0 2 * * *'  # 2 AM UTC daily
+  # OPTIONAL: Nightly validation on main branch
+  # GitHub Actions scheduled workflows work with self-hosted runners
+  # Uncomment if you want daily accuracy validation
+  # schedule:
+  #   - cron: '0 2 * * *'  # 2 AM UTC daily
 
-  # Automatic trigger on release and epic branches
+  # AUTOMATIC: Only run on main branch after merge
+  # This ensures merged code passes accuracy validation without blocking PRs
   push:
     branches:
       - 'main'
-      - 'release/**'
-      - 'epic-2/**'
+      # NOTE: NOT including epic-2/** or other feature branches
+      # Those should use manual workflow_dispatch to avoid blocking CI
 
-  # Trigger on PR to main (optional - can be enabled if needed)
+  # OPTIONAL: Trigger on PR to main (currently disabled)
+  # Enable this if you want accuracy validation as a required PR check
+  # WARNING: This will block PRs for 30-38 minutes
   # pull_request:
   #   branches:
   #     - main
