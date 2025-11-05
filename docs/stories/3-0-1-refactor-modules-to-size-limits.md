@@ -1,6 +1,6 @@
 # Story 3.0.1: Refactor Modules to Size Limits
 
-**Status:** ready-for-dev
+**Status:** review
 **Epic:** Epic 3 - AI Intelligence & Orchestration (Prep Sprint)
 **Priority:** 🔴 CRITICAL (Blocks Epic 3 feature implementation)
 **Effort:** 2-3 days

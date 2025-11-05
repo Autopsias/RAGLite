@@ -84,7 +84,7 @@ development_status:
   epic-3: contexted
 
   # Epic 3 Prep Stories (Technical Debt Reduction - Week 1-2)
-  3-0-1-refactor-modules-to-size-limits: in-progress
+  3-0-1-refactor-modules-to-size-limits: review
   3-0-2-create-epic-3-data-dictionary: drafted
   3-0-3-document-mcp-setup-guide: drafted
   3-0-4-create-uat-framework-templates: drafted
