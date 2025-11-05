@@ -37,3 +37,12 @@ tests/unit/test_sql_hybrid_search.py .......                             [ 50%]
 tests/unit/test_table_aware_chunking.py .......                          [ 52%]
 tests/unit/test_transposed_table_extraction.py ...........               [ 55%]
 tests/integration/test_ac1_fuzzy_entity_matching.py
+........             [ 57%]
+tests/integration/test_ac4_comprehensive.py sss                          [ 58%]
+tests/integration/test_accuracy_validation.py .............              [ 61%]
+tests/integration/test_e2e_query_validation.py sss..                     [ 62%]
+tests/integration/test_element_metadata.py ssss                          [ 63%]
+tests/integration/test_epic2_regression.py ss.s..                        [ 65%]
+tests/integration/test_fixed_chunking.py ..                              [ 65%]
+tests/integration/test_hybrid_search_integration.py ssss                 [ 67%]
+tests/integration/test_ingestion_integration.py ..s.
