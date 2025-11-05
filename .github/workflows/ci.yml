@@ -457,10 +457,12 @@ jobs:
   # ============================================================================
   # NFR VALIDATION
   # ============================================================================
-  # NOTE: NFR6/NFR7 Accuracy Validation has been moved to a separate workflow:
+  # NOTE: NFR6/NFR7 Accuracy Validation runs in a separate workflow:
   # .github/workflows/accuracy-validation.yml
-  # This allows the accuracy tests to run independently with a 60-minute timeout
-  # without blocking the main CI pipeline (which stays under 15 minutes).
+  #
+  # This is a REQUIRED CHECK on PRs to main with independent timeout (60 min).
+  # Runs in parallel with main CI (~5-10 min with cache).
+  # Blocks PRs that would degrade accuracy below 70% threshold.
   # ============================================================================
 
   # ============================================================================
@@ -731,8 +733,8 @@ jobs:
           echo "  Performance (NFR13):   ${{ needs.test-performance.result }}"
           echo "  Test Discovery:        ${{ needs.test-count-validation.result }}"
           echo ""
-          echo "  NOTE: NFR6/NFR7 (Accuracy) runs in separate workflow:"
-          echo "        .github/workflows/accuracy-validation.yml"
+          echo "  NOTE: NFR6/NFR7 (Accuracy) runs in PARALLEL as required PR check:"
+          echo "        .github/workflows/accuracy-validation.yml (~5-10 min with cache)"
           echo ""
           echo "📚 DOCUMENTATION:"
           echo "  Validation:        ${{ needs.docs-validation.result }}"

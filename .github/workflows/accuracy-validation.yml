@@ -1,22 +1,43 @@
 name: NFR Accuracy Validation (NFR6/NFR7)
 
-# This workflow runs comprehensive accuracy validation tests that require extended time
-# Separated from main CI to avoid blocking fast feedback loop (<15 minutes)
+# This workflow runs comprehensive accuracy validation tests that are critical for merge approval
+# Separated from main CI for better visibility and independent timeout management
 #
+# UPDATED 2025-11-05: Now runs as REQUIRED CHECK on PRs to main
 # UPDATED 2025-11-04: Story 2.15 - Now uses normalized ground truth (49 queries, filtered from 50)
 #
-# Runtime: ~5-10 minutes (with cache)
+# Runtime: ~5-10 minutes (with cache) | ~30 minutes (cache miss)
 #   - Uses normalized ground truth: tests/ground_truth_normalized.json (49 queries)
 #   - Integrated validation: Stories 2.11 + 2.14 + 2.15 combined
 #   - Script: scripts/validate-epic-2-final.py
+#   - Caching: PDF hash + ground truth hash (persistent on self-hosted runners)
 #
-# NFR Targets:
+# NFR Targets (BLOCKING):
 #   - NFR6: ≥70% retrieval accuracy (Epic 2 Phase 2A Decision Gate) ✅ ACHIEVED: 71.4%
 #   - NFR7: ≥95% attribution accuracy
+#
+# Strategy: Required PR Check (Best Practice for Expensive Tests)
+#   ✅ Cache hit (~5-10 min) is acceptable for PR merge delay
+#   ✅ Simple workflow - no merge queue complexity
+#   ✅ Blocks PRs that would degrade accuracy
+#   ✅ Validates after merge as safety net
 
 on:
-  # PRIMARY: Manual trigger for Epic 2 Phase 2A Decision Gate validation
-  # Use this to run accuracy tests on-demand without blocking CI
+  # PRIMARY: Required check on PRs to main
+  # This prevents merging PRs that would degrade accuracy
+  # Expected runtime: 5-10 min (with cache) | 30 min (cache miss on first run)
+  pull_request:
+    branches:
+      - main
+
+  # SECONDARY: Validation after merge to main (safety net)
+  # This catches any edge cases and validates the main branch state
+  push:
+    branches:
+      - 'main'
+
+  # MANUAL: On-demand testing during development
+  # Use this to test accuracy on feature branches before creating PR
   workflow_dispatch:
     inputs:
       branch:
@@ -25,25 +46,9 @@ on:
         default: ''
 
   # OPTIONAL: Nightly validation on main branch
-  # GitHub Actions scheduled workflows work with self-hosted runners
-  # Uncomment if you want daily accuracy validation
+  # Uncomment if you want daily accuracy regression testing
   # schedule:
   #   - cron: '0 2 * * *'  # 2 AM UTC daily
-
-  # AUTOMATIC: Only run on main branch after merge
-  # This ensures merged code passes accuracy validation without blocking PRs
-  push:
-    branches:
-      - 'main'
-      # NOTE: NOT including epic-2/** or other feature branches
-      # Those should use manual workflow_dispatch to avoid blocking CI
-
-  # OPTIONAL: Trigger on PR to main (currently disabled)
-  # Enable this if you want accuracy validation as a required PR check
-  # WARNING: This will block PRs for 30-38 minutes
-  # pull_request:
-  #   branches:
-  #     - main
 
 jobs:
   accuracy-validation:
