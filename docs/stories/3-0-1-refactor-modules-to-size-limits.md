@@ -364,16 +364,26 @@ Claude 3.7 Sonnet (claude-sonnet-4-5-20250929)
 - Git checkpoint: Refactoring docs and scripts staged
 
 **Next Step:**
-⏸️ BLOCKED - Awaiting Winston/Ricardo approval of `docs/refactoring/refactoring-strategy.md` before proceeding to AC3 execution
+✅ APPROVED - Strategy approved by Ricardo. AC3 execution ready for next session (2-3 hours estimated).
+
+**Session Plan:**
+- Priority 1: Refactor pipeline.py into 4 focused modules (1.5-2 hours)
+- Priority 2: Refactor adaptive_table_extraction.py into 5 modules (1-1.5 hours)
+- Final validation: All files <1000 lines, 349 tests passing (15 minutes)
+
+**Handoff Document:** `docs/refactoring/next-session-handoff.md` - Complete execution plan for next session
 
 ### File List
 
 **Created:**
 - `docs/refactoring/oversized-files-report.txt` - File identification report
 - `docs/refactoring/refactoring-strategy.md` - Comprehensive refactoring strategy (9,600 words)
+- `docs/refactoring/baseline-summary.md` - Pre-refactoring baseline summary
+- `docs/refactoring/next-session-handoff.md` - Complete handoff for AC3 execution
 - `docs/refactoring/test_dependencies_pipeline.txt` - Pipeline test import mapping (34 imports)
 - `docs/refactoring/test_dependencies_table.txt` - Table extraction test mapping (1 import)
-- `docs/refactoring/baseline_test_results.txt` - Pre-refactoring test baseline (in progress)
+- `docs/refactoring/baseline_test_results.txt` - Pre-refactoring test baseline (349 passed)
+- `docs/refactoring/baseline_coverage.txt` - Pre-refactoring coverage baseline
 - `scripts/identify-oversized-files.py` - Automated file identification script
 
 **Modified:**
