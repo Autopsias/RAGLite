@@ -14,6 +14,7 @@ from pydantic import ValidationError
 from raglite.shared.models import QueryRequest, QueryResponse, QueryResult
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.unit
 def test_query_result_metadata_completeness():
     """Validate QueryResult has all required metadata fields.
@@ -43,6 +44,7 @@ def test_query_result_metadata_completeness():
     assert result.word_count > 0, "Word count must be positive"
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.unit
 def test_query_result_page_number_none_handling():
     """Test QueryResult handles None page_number gracefully.
@@ -64,6 +66,7 @@ def test_query_result_page_number_none_handling():
     assert "page N/A" in result.text or "page ?" in result.text
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.unit
 def test_query_result_score_range():
     """Validate score validation for QueryResult.
@@ -98,6 +101,7 @@ def test_query_result_score_range():
             )
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.unit
 def test_query_response_serialization():
     """Validate JSON serialization works for QueryResponse.
@@ -155,6 +159,7 @@ def test_query_response_serialization():
     assert not has_camel_case, "All fields should use snake_case"
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.unit
 def test_citation_format():
     """Validate citation appended to text correctly.
@@ -192,6 +197,7 @@ def test_citation_format():
     assert "chunk 5" in result_no_page.text
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.unit
 def test_empty_results_handling():
     """Test QueryResponse with empty results list.
@@ -213,6 +219,7 @@ def test_empty_results_handling():
     assert parsed["results"] == []
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.unit
 def test_edge_case_metadata():
     """Test very long filenames, special characters, missing page numbers.
@@ -266,6 +273,7 @@ def test_edge_case_metadata():
     assert result_long_chunk.word_count == 1500
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.unit
 def test_metadata_completeness_validation():
     """Test validation logic for all required fields.
@@ -339,6 +347,7 @@ def test_metadata_completeness_validation():
     assert valid_none_page.page_number is None
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.unit
 def test_query_request_validation():
     """Test QueryRequest model validation.

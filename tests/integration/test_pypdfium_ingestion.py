@@ -32,6 +32,7 @@ class TestPypdfiumIngestionValidation:
     re-ingesting independently. This reduces test suite runtime from 40+ minutes to ~90 seconds.
     """
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.preserve_collection  # Uses session-scoped fixture, read-only
@@ -107,6 +108,7 @@ class TestPypdfiumIngestionValidation:
 class TestPypdfiumTableAccuracy:
     """Integration tests for table extraction accuracy with pypdfium (Story 2.1 AC3)."""
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(300)
@@ -174,6 +176,7 @@ class TestPypdfiumTableAccuracy:
     @pytest.mark.skipif(
         not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
     )
+    @pytest.mark.priority("P0")
     async def test_table_accuracy_maintained_with_pypdfium(self) -> None:
         """Test AC3: Table extraction accuracy ≥97.9% with pypdfium backend.
 
@@ -257,6 +260,7 @@ class TestPypdfiumMemoryReduction:
         SKIP_SLOW_TESTS,
         reason="Slow test (2+ min) - memory profiling with full ingestion pipeline. Run with: RUN_SLOW_TESTS=1",
     )
+    @pytest.mark.priority("P0")
     @pytest.mark.timeout(300)
     async def test_memory_reduction_validation(self) -> None:
         """Test AC4: Measure peak memory usage with pypdfium backend.

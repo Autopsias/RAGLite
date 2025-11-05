@@ -18,6 +18,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 class TestAccuracyTestRunner:
     """Test suite for run-accuracy-tests.py script."""
 
+    @pytest.mark.priority("P1")
     def test_cli_help(self):
         """Test --help flag displays usage information."""
         result = subprocess.run(
@@ -33,6 +34,7 @@ class TestAccuracyTestRunner:
         assert "--verbose" in result.stdout
         assert "--output" in result.stdout
 
+    @pytest.mark.priority("P1")
     def test_subset_option(self):
         """Test --subset N option runs N queries."""
         result = subprocess.run(
@@ -49,6 +51,7 @@ class TestAccuracyTestRunner:
             "Running 3 queries" in result.stdout or "Selected random subset of 3" in result.stdout
         )
 
+    @pytest.mark.priority("P1")
     def test_category_filter(self):
         """Test --category option filters queries by category."""
         result = subprocess.run(
@@ -68,6 +71,7 @@ class TestAccuracyTestRunner:
         assert result.returncode in [0, 1]
         assert "cost_analysis" in result.stdout or "Filtered to" in result.stdout
 
+    @pytest.mark.priority("P1")
     def test_output_file_generation(self, tmp_path):
         """Test --output FILE option saves results to JSON."""
         output_file = tmp_path / "test_results.json"
@@ -95,6 +99,7 @@ class TestAccuracyTestRunner:
             assert "results" in data
             assert "timestamp" in data
 
+    @pytest.mark.priority("P1")
     def test_verbose_output(self):
         """Test --verbose option shows detailed query output."""
         result = subprocess.run(
@@ -114,6 +119,7 @@ class TestAccuracyTestRunner:
 class TestDailyAccuracyCheck:
     """Test suite for daily-accuracy-check.py script."""
 
+    @pytest.mark.priority("P1")
     def test_cli_help(self):
         """Test --help flag displays usage information."""
         result = subprocess.run(
@@ -127,6 +133,7 @@ class TestDailyAccuracyCheck:
         assert "--subset" in result.stdout
         assert "--show-trend" in result.stdout
 
+    @pytest.mark.priority("P1")
     def test_daily_check_execution(self):
         """Test daily check runs with default subset."""
         result = subprocess.run(
@@ -141,6 +148,7 @@ class TestDailyAccuracyCheck:
         assert "DAILY CHECK RESULTS" in result.stdout
         assert "Retrieval Accuracy" in result.stdout
 
+    @pytest.mark.priority("P1")
     def test_tracking_log_created(self):
         """Test that tracking log file is created after daily check."""
         tracking_log = PROJECT_ROOT / "docs" / "accuracy-tracking-log.jsonl"
@@ -169,6 +177,7 @@ class TestDailyAccuracyCheck:
 class TestAccuracyCalculations:
     """Test accuracy calculation logic (unit-style tests on script functions)."""
 
+    @pytest.mark.priority("P1")
     def test_retrieval_accuracy_calculation(self, session_ingested_collection):
         """Test that retrieval accuracy is calculated correctly."""
         # This would test the check_retrieval_accuracy function
@@ -185,6 +194,7 @@ class TestAccuracyCalculations:
         assert "Retrieval Accuracy:" in result.stdout
         assert "%" in result.stdout
 
+    @pytest.mark.priority("P2")
     def test_attribution_accuracy_calculation(self, session_ingested_collection):
         """Test that attribution accuracy is calculated correctly."""
         result = subprocess.run(
@@ -199,6 +209,7 @@ class TestAccuracyCalculations:
         assert "Attribution Accuracy:" in result.stdout
         assert "%" in result.stdout
 
+    @pytest.mark.priority("P0")
     def test_performance_metrics_calculated(self, session_ingested_collection):
         """Test that p50/p95 latency metrics are calculated."""
         result = subprocess.run(
@@ -217,6 +228,7 @@ class TestAccuracyCalculations:
 class TestNFRValidation:
     """Test NFR (Non-Functional Requirements) validation."""
 
+    @pytest.mark.priority("P0")
     def test_nfr_targets_displayed(self, session_ingested_collection):
         """Test that NFR validation results are shown."""
         result = subprocess.run(
@@ -231,6 +243,7 @@ class TestNFRValidation:
         assert "NFR" in result.stdout or "NFR6" in result.stdout
         assert "90%" in result.stdout or "retrieval" in result.stdout.lower()
 
+    @pytest.mark.priority("P1")
     def test_exit_codes(self, session_ingested_collection):
         """Test that script returns correct exit codes."""
         # Running small subset likely to fail accuracy targets

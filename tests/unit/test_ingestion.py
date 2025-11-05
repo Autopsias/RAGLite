@@ -27,6 +27,7 @@ from raglite.shared.models import Chunk, DocumentMetadata
 class TestIngestPDF:
     """Test suite for PDF ingestion pipeline."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_ingest_pdf_success(self, tmp_path):
         """Test successful PDF ingestion with valid file.
@@ -109,6 +110,7 @@ class TestIngestPDF:
             # Verify ISO8601 timestamp format
             datetime.fromisoformat(result.ingestion_timestamp)
 
+    @pytest.mark.priority("P3")
     @pytest.mark.asyncio
     async def test_ingest_pdf_file_not_found(self):
         """Test that FileNotFoundError is raised for nonexistent file.
@@ -120,6 +122,7 @@ class TestIngestPDF:
         with pytest.raises(FileNotFoundError, match="PDF file not found"):
             await ingest_pdf(nonexistent_path)
 
+    @pytest.mark.priority("P3")
     @pytest.mark.asyncio
     async def test_ingest_pdf_corrupted(self, tmp_path):
         """Test error handling for corrupted PDF that Docling can't parse.
@@ -145,6 +148,7 @@ class TestIngestPDF:
             with pytest.raises(RuntimeError, match="Docling parsing failed"):
                 await ingest_pdf(str(corrupt_pdf))
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_ingest_pdf_page_numbers_extracted(self, tmp_path):
         """CRITICAL: Verify page numbers are extracted and NOT None.
@@ -211,6 +215,7 @@ class TestIngestPDF:
             assert result.page_count == 3  # Unique pages: 1, 2, 3
             assert result.page_count > 0, "Page numbers must NOT be None or zero"
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_ingest_pdf_no_page_metadata(self, tmp_path, caplog):
         """Test handling of PDFs where Docling extracts no page metadata.
@@ -271,6 +276,7 @@ class TestIngestPDF:
             # Should log warning
             assert "No page numbers extracted" in caplog.text
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_ingest_pdf_docling_init_failure(self, tmp_path):
         """Test error handling when Docling converter initialization fails."""
@@ -291,6 +297,7 @@ class TestIngestPDF:
             with pytest.raises(RuntimeError, match="Failed to initialize Docling converter"):
                 await ingest_pdf(str(pdf_file))
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_ingest_pdf_logging(self, tmp_path, caplog):
         """Test that structured logging includes correct context.
@@ -369,6 +376,7 @@ class TestIngestPDF:
 class TestExtractExcel:
     """Test suite for Excel extraction pipeline."""
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_extract_excel_success(self, tmp_path):
         """Test successful Excel extraction with valid multi-sheet file.
@@ -450,6 +458,7 @@ class TestExtractExcel:
             # Verify load_workbook called with data_only=True
             mock_load.assert_called_once_with(str(excel_file), data_only=True)
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_extract_excel_multi_sheet(self, tmp_path):
         """Test multi-sheet workbook handling with sheet names and numbers.
@@ -505,6 +514,7 @@ class TestExtractExcel:
             assert result.page_count == 3
             assert result.doc_type == "Excel"
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_extract_excel_numeric_formats(self, tmp_path):
         """Test numeric formatting preservation (currencies, percentages, dates).
@@ -557,6 +567,7 @@ class TestExtractExcel:
             # Note: Actual formatting preservation is handled by pandas to_markdown()
             # This test verifies the pipeline doesn't crash with numeric data
 
+    @pytest.mark.priority("P3")
     @pytest.mark.asyncio
     async def test_extract_excel_file_not_found(self):
         """Test that FileNotFoundError is raised for nonexistent Excel file.
@@ -568,6 +579,7 @@ class TestExtractExcel:
         with pytest.raises(FileNotFoundError, match="Excel file not found"):
             await extract_excel(nonexistent_path)
 
+    @pytest.mark.priority("P3")
     @pytest.mark.asyncio
     async def test_extract_excel_password_protected(self, tmp_path):
         """Test error handling for password-protected Excel file.
@@ -586,6 +598,7 @@ class TestExtractExcel:
             with pytest.raises(RuntimeError, match="Excel parsing failed.*password-protected"):
                 await extract_excel(str(excel_file))
 
+    @pytest.mark.priority("P3")
     @pytest.mark.asyncio
     async def test_extract_excel_corrupted(self, tmp_path):
         """Test error handling for corrupted Excel file.
@@ -602,6 +615,7 @@ class TestExtractExcel:
             with pytest.raises(RuntimeError, match="Unexpected error loading Excel"):
                 await extract_excel(str(excel_file))
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_extract_excel_sheet_numbers(self, tmp_path):
         """CRITICAL: Verify sheet numbers are extracted and NOT None.
@@ -659,6 +673,7 @@ class TestExtractExcel:
             # Note: sheet_number is extracted but not directly exposed in DocumentMetadata
             # It's used in chunking/embedding pipeline for citations
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_extract_excel_empty_workbook(self, tmp_path, caplog):
         """Test handling of empty Excel workbook with no sheets.
@@ -687,6 +702,7 @@ class TestExtractExcel:
 class TestIngestDocument:
     """Test suite for unified document ingestion router."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_ingest_document_pdf(self, tmp_path):
         """Test that ingest_document routes PDF files to ingest_pdf."""
@@ -711,6 +727,7 @@ class TestIngestDocument:
             assert result.doc_type == "PDF"
             assert result.filename == "test.pdf"
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_ingest_document_excel(self, tmp_path):
         """Test that ingest_document routes Excel files to extract_excel."""
@@ -735,6 +752,7 @@ class TestIngestDocument:
             assert result.doc_type == "Excel"
             assert result.filename == "test.xlsx"
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_ingest_document_unsupported_format(self, tmp_path):
         """Test that ingest_document raises ValueError for unsupported formats."""
@@ -744,6 +762,7 @@ class TestIngestDocument:
         with pytest.raises(ValueError, match="Unsupported file format: .txt"):
             await ingest_document(str(unsupported_file))
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_ingest_document_file_not_found(self):
         """Test that ingest_document raises FileNotFoundError for missing files."""
@@ -756,6 +775,7 @@ class TestIngestDocument:
 class TestChunkDocument:
     """Test suite for document chunking functionality."""
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_chunk_document_basic(self):
         """Test basic chunking with 1000-word document.
@@ -797,6 +817,7 @@ class TestChunkDocument:
         assert len(chunk2_words) == 500
         assert len(chunk3_words) == 100  # Last chunk is shorter
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_chunk_overlap(self):
         """Test that chunks have correct 50-word overlap.
@@ -837,6 +858,7 @@ class TestChunkDocument:
         assert chunk1_first_50[0] == "word450"
         assert chunk1_first_50[-1] == "word499"
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_chunk_page_numbers(self):
         """CRITICAL: Verify all chunks have page_number != None.
@@ -875,6 +897,7 @@ class TestChunkDocument:
         # Last chunk should be near last page (within 1-2 pages)
         assert chunks[-1].page_number >= metadata.page_count - 2
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_chunk_short_document(self):
         """Test document shorter than chunk size.
@@ -901,6 +924,7 @@ class TestChunkDocument:
         assert len(chunks[0].content.split()) == 200
         assert chunks[0].page_number == 1  # Should be page 1
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_chunk_empty_document(self):
         """Test empty document handling.
@@ -923,6 +947,7 @@ class TestChunkDocument:
         chunks = await chunk_document("   \n\n  ", metadata)
         assert chunks == []
 
+    @pytest.mark.priority("P3")
     @pytest.mark.asyncio
     async def test_chunk_invalid_parameters(self):
         """Test invalid chunk_size or overlap parameters.
@@ -962,6 +987,7 @@ class TestChunkDocument:
 class TestGenerateEmbeddings:
     """Test suite for embedding generation functionality (Story 1.5)."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_generate_embeddings_basic(self):
         """Test basic embedding generation with sample chunks.
@@ -1023,6 +1049,7 @@ class TestGenerateEmbeddings:
             assert call_kwargs["batch_size"] == 32
             assert call_kwargs["show_progress_bar"] is False
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_embedding_dimensions(self):
         """Test that embeddings have exactly 1024 dimensions.
@@ -1065,6 +1092,7 @@ class TestGenerateEmbeddings:
                     f"Embedding value at index {idx} is not float: {type(value)}"
                 )
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     async def test_batch_processing(self):
         """Test batch processing with 100+ chunks.
@@ -1128,6 +1156,7 @@ class TestGenerateEmbeddings:
             for chunk in result_chunks:
                 assert len(chunk.embedding) == 1024
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_empty_chunk_handling(self):
         """Test handling of empty chunk list.
@@ -1140,6 +1169,7 @@ class TestGenerateEmbeddings:
         # Should return empty list without error
         assert result == []
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_embeddings_not_none(self):
         """CRITICAL: Verify all chunks have embeddings != None.
@@ -1192,6 +1222,7 @@ class TestGenerateEmbeddings:
                     f"Chunk {idx} has invalid embedding dimension: {len(chunk.embedding)}"
                 )
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_embedding_generation_error_handling(self):
         """Test error handling when embedding generation fails.
@@ -1226,6 +1257,7 @@ class TestGenerateEmbeddings:
             with pytest.raises(EmbeddingGenerationError, match="Failed to generate embeddings"):
                 await generate_embeddings(chunks)
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_get_embedding_model_singleton(self):
         """Test that get_embedding_model returns cached model (singleton pattern).
@@ -1258,6 +1290,7 @@ class TestGenerateEmbeddings:
             # Restore original model state
             clients_module._embedding_model = original_model
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_generate_embeddings_logging(self, caplog):
         """Test that structured logging includes correct context.
@@ -1313,6 +1346,7 @@ class TestGenerateEmbeddings:
 class TestQdrantStorage:
     """Test suite for Qdrant vector storage (Story 1.6)."""
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_create_collection_success(self):
         """Test successful collection creation with mocked Qdrant client.
@@ -1346,6 +1380,7 @@ class TestQdrantStorage:
             assert isinstance(sparse_config, dict)
             assert "text-sparse" in sparse_config
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_create_collection_idempotent(self):
         """Test collection creation is idempotent (doesn't error if exists).
@@ -1367,6 +1402,7 @@ class TestQdrantStorage:
             # Verify create_collection was NOT called (already exists)
             mock_client.create_collection.assert_not_called()
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     async def test_store_vectors_basic(self):
         """Test storing 10 chunks with embeddings successfully.
@@ -1428,6 +1464,7 @@ class TestQdrantStorage:
             assert first_point.payload["page_number"] == 1
             assert first_point.payload["chunk_index"] == 0
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_batch_upload_processing(self):
         """Test batch processing for 250 chunks (batches of 100).
@@ -1479,6 +1516,7 @@ class TestQdrantStorage:
             assert len(calls[1].kwargs["points"]) == 100  # Second batch
             assert len(calls[2].kwargs["points"]) == 50  # Third batch
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     async def test_metadata_preservation(self):
         """Test all metadata fields are preserved in Qdrant payload.
@@ -1533,6 +1571,7 @@ class TestQdrantStorage:
                 assert payload["chunk_index"] == i
                 assert "word_count" in payload
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_empty_chunks_handling(self):
         """Test graceful handling of empty chunk list.
@@ -1550,6 +1589,7 @@ class TestQdrantStorage:
             assert points_stored == 0
             mock_client.upsert.assert_not_called()
 
+    @pytest.mark.priority("P3")
     @pytest.mark.asyncio
     async def test_storage_error_handling(self):
         """Test VectorStorageError raised on storage failures.
@@ -1589,6 +1629,7 @@ class TestQdrantStorage:
             with pytest.raises(VectorStorageError, match="Failed to store vectors in Qdrant"):
                 await store_vectors_in_qdrant(chunks)
 
+    @pytest.mark.priority("P2")
     def test_get_qdrant_client_singleton(self):
         """Test Qdrant client singleton pattern (client reuse).
 

@@ -22,6 +22,7 @@ from raglite.retrieval.query_classifier import generate_sql_query
 # =============================================================================
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.asyncio
 async def test_hybrid_search_single_entity_literal(mock_mistral_client):
     """Test AC0: Single entity literal retrieval via SQL.
@@ -51,6 +52,7 @@ LIMIT 50;
     assert "Portugal" in sql or "portugal" in sql.lower(), "SQL should reference Portugal"
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.asyncio
 async def test_hybrid_search_fuzzy_entity_matching(mock_mistral_client):
     """Test AC1: Fuzzy entity matching via PostgreSQL similarity().
@@ -83,6 +85,7 @@ LIMIT 50;
     )
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.asyncio
 async def test_hybrid_search_multi_entity_comparison(mock_mistral_client):
     """Test AC2: Multi-entity comparison queries.
@@ -115,6 +118,7 @@ LIMIT 50;
     )
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.asyncio
 async def test_hybrid_search_keyword_detection(mock_mistral_client):
     """Test AC2: Comparison keyword detection.
@@ -148,6 +152,7 @@ LIMIT 50;
         assert sql is not None, f"SQL should generate for: {query}"
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.asyncio
 async def test_hybrid_search_literal_metric_matching(mock_mistral_client):
     """Test AC0: Literal metric name matching.
@@ -182,6 +187,7 @@ LIMIT 50;
 # =============================================================================
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.asyncio
 async def test_hybrid_search_empty_result_handling(mock_mistral_client):
     """Test that empty results are handled gracefully.
@@ -210,6 +216,7 @@ LIMIT 50;
         pytest.fail(f"Should handle empty results gracefully: {str(e)[:100]}")
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.asyncio
 async def test_hybrid_search_sql_generation_success(mock_mistral_client):
     """Test that SQL generation succeeds for standard queries.

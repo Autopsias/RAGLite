@@ -88,6 +88,7 @@ def mock_mistral_response():
 class TestExtractChunkMetadata:
     """Test suite for extract_chunk_metadata function (AC1)."""
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_metadata_extraction_success(self, mock_mistral_response):
         """Test successful metadata extraction with all fields populated."""
@@ -122,31 +123,37 @@ class TestExtractChunkMetadata:
                 assert call_kwargs["model"] == "mistral-small-latest"
                 assert call_kwargs["temperature"] == 0
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_metadata_extraction_partial_fields(self):
         """Test extraction with some fields missing (null values)."""
         pytest.skip("Test needs updating for Mistral API - caching removed in Story 2.4")
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_metadata_extraction_no_api_key(self):
         """Test that extraction fails gracefully when API key not configured."""
         pytest.skip("Test needs updating for Mistral API - caching removed in Story 2.4")
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     async def test_metadata_extraction_api_failure(self):
         """Test handling of API failures."""
         pytest.skip("Test needs updating for Mistral API - caching removed in Story 2.4")
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     async def test_metadata_caching_enabled(self):
         """Test AC4: Metadata caching works correctly (cache hit)."""
         pytest.skip("Caching removed in Story 2.4 - per-chunk extraction doesn't use caching")
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     async def test_metadata_caching_disabled(self):
         """Test AC4: Caching can be disabled when needed."""
         pytest.skip("Caching removed in Story 2.4 - per-chunk extraction doesn't use caching")
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_text_truncation(self):
         """Test that long documents are truncated to 2000 tokens."""
@@ -156,6 +163,7 @@ class TestExtractChunkMetadata:
 class TestExtractedMetadataModel:
     """Test AC2: ExtractedMetadata Pydantic model validation (15-field rich schema)."""
 
+    @pytest.mark.priority("P2")
     def test_extracted_metadata_all_fields(self):
         """Test model with all 15 fields populated."""
         metadata = ExtractedMetadata(
@@ -192,6 +200,7 @@ class TestExtractedMetadataModel:
         assert metadata.units == "EUR"
         assert metadata.department_scope == "Finance"
 
+    @pytest.mark.priority("P2")
     def test_extracted_metadata_optional_fields(self):
         """Test model with optional fields as None."""
         metadata = ExtractedMetadata(
@@ -206,6 +215,7 @@ class TestExtractedMetadataModel:
         assert metadata.company_name is None
         assert metadata.department_scope is None
 
+    @pytest.mark.priority("P2")
     def test_extracted_metadata_defaults(self):
         """Test model default values (all None for 15 fields)."""
         metadata = ExtractedMetadata()

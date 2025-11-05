@@ -62,6 +62,7 @@ class TestEpic2Regression:
     @pytest.mark.skipif(
         not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
     )
+    @pytest.mark.priority("P0")
     async def test_retrieval_accuracy_floor(self):
         """Test that retrieval accuracy doesn't regress below 56% baseline.
 
@@ -104,6 +105,7 @@ class TestEpic2Regression:
     @pytest.mark.skipif(
         not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
     )
+    @pytest.mark.priority("P0")
     async def test_attribution_accuracy_floor(self):
         """Test that attribution accuracy doesn't regress below 32% baseline.
 
@@ -142,6 +144,7 @@ class TestEpic2Regression:
             f"Attribution accuracy regressed to {metrics['attribution_accuracy']:.1f}% (below {BASELINE_ATTRIBUTION_FLOOR}% floor)"
         )
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_latency_ceiling(self):
         """Test that p95 latency stays under 15s ceiling (NFR13).
@@ -187,6 +190,7 @@ class TestEpic2Regression:
     @pytest.mark.skipif(
         not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
     )
+    @pytest.mark.priority("P1")
     async def test_hybrid_fusion_quality(self):
         """Test that hybrid search outperforms single methods (Story 2.1+).
 
@@ -237,6 +241,7 @@ class TestEpic2Regression:
 class TestEpic2IntegrationSanity:
     """Sanity checks for Epic 2 integration testing infrastructure."""
 
+    @pytest.mark.priority("P0")
     def test_baseline_thresholds_defined(self):
         """Test that baseline regression thresholds are correctly defined."""
         assert BASELINE_RETRIEVAL_FLOOR == 56.0, "Retrieval floor should be 56% (Epic 1 baseline)"
@@ -245,6 +250,7 @@ class TestEpic2IntegrationSanity:
         )
         assert LATENCY_CEILING_P95 == 15000.0, "p95 latency ceiling should be 15s (NFR13)"
 
+    @pytest.mark.priority("P0")
     def test_ground_truth_available(self):
         """Test that ground truth data is loaded and available."""
         assert len(GROUND_TRUTH_QA) == 50, "Ground truth should have 50 queries"

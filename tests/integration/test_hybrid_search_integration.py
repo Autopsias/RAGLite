@@ -55,6 +55,7 @@ class TestHybridSearchIntegration:
     @pytest.mark.skip(
         reason="Story 2.1 - Same chunking quality issue as test_hybrid_search_financial_terms. Page 46 fragmented table data not retrievable in top-20 by semantic search. Hybrid search cannot fix poor semantic baseline. Requires Story 2.2 element-based chunking."
     )
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     async def test_hybrid_search_exact_numbers(self):
         """Test hybrid search finds exact numbers (e.g., '23.2') better than semantic-only.
@@ -134,6 +135,7 @@ class TestHybridSearchIntegration:
     @pytest.mark.skip(
         reason="Story 2.1 - Chunking quality issue: Page 46 contains fragmented table data with poor semantic quality. Neither semantic nor hybrid search can retrieve it in top-20. Requires Story 2.2 (element-based chunking) to fix. BM25 index rebuilt successfully (1272 chunks). Root cause: Table extraction produces disconnected text fragments that rank poorly in semantic search."
     )
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     async def test_hybrid_search_financial_terms(self):
         """Test hybrid search finds financial terms (e.g., 'EBITDA') better than semantic-only.
@@ -216,6 +218,7 @@ class TestHybridSearchIntegration:
     @pytest.mark.skipif(
         not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
     )
+    @pytest.mark.priority("P0")
     async def test_hybrid_search_full_ground_truth(self):
         """Test hybrid search on full 50-query ground truth suite.
 
@@ -398,6 +401,7 @@ class TestHybridSearchIntegration:
     @pytest.mark.skip(
         reason="Story 2.1 - BM25 fusion degrading results due to fragmented chunk data. Hybrid (53.3%) worse than semantic (60.0%) on 15-query subset. Root cause: BM25 trained on fragmented table chunks produces poor keyword matches that lower semantic scores when fused. Requires Story 2.2 element-based chunking to create coherent chunks that BM25 can properly index."
     )
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     async def test_hybrid_vs_semantic_comparison(self):
         """Compare hybrid search vs semantic-only on subset of queries.

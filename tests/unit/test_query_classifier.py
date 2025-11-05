@@ -48,6 +48,7 @@ class TestQueryClassification:
         "Why did production reach 500K tonnes?",
     ]
 
+    @pytest.mark.priority("P1")
     def test_sql_only_classification(self) -> None:
         """Test SQL_ONLY query classification."""
         correct = 0
@@ -63,6 +64,7 @@ class TestQueryClassification:
         accuracy = correct / len(self.sql_only_queries)
         assert accuracy >= 0.75, f"SQL_ONLY accuracy {accuracy:.1%} < 75%"
 
+    @pytest.mark.priority("P1")
     def test_vector_only_classification(self) -> None:
         """Test VECTOR_ONLY query classification."""
         correct = 0
@@ -77,6 +79,7 @@ class TestQueryClassification:
         accuracy = correct / len(self.vector_only_queries)
         assert accuracy >= 0.8, f"VECTOR_ONLY accuracy {accuracy:.1%} < 80%"
 
+    @pytest.mark.priority("P1")
     def test_hybrid_classification(self) -> None:
         """Test HYBRID query classification."""
         correct = 0
@@ -91,6 +94,7 @@ class TestQueryClassification:
         accuracy = correct / len(self.hybrid_queries)
         assert accuracy >= 0.8, f"HYBRID accuracy {accuracy:.1%} < 80%"
 
+    @pytest.mark.priority("P1")
     def test_overall_accuracy(self) -> None:
         """Test overall classification accuracy."""
         all_queries = [
@@ -110,6 +114,7 @@ class TestQueryClassification:
         accuracy = correct / len(all_queries)
         assert accuracy >= 0.75, f"Overall accuracy {accuracy:.1%} < 75% (Story 2.10 requirement)"
 
+    @pytest.mark.priority("P1")
     def test_classification_latency(self) -> None:
         """Test classification latency <50ms (AC1 requirement)."""
         test_query = "What is the revenue for Q3 2024?"
@@ -127,6 +132,7 @@ class TestQueryClassification:
 
         print(f"✅ Classification latency: {avg_latency_ms:.2f}ms (target: <50ms)")
 
+    @pytest.mark.priority("P1")
     def test_empty_query(self) -> None:
         """Test classification handles empty queries gracefully."""
         result = classify_query("")
@@ -134,6 +140,7 @@ class TestQueryClassification:
         # HYBRID allows both indexes to be used, falling back if SQL returns 0 results
         assert result == QueryType.HYBRID
 
+    @pytest.mark.priority("P1")
     def test_numeric_pattern_detection(self) -> None:
         """Test numeric pattern detection in queries."""
         # Updated (Story 2.10): Numeric values alone don't trigger SQL_ONLY
@@ -150,6 +157,7 @@ class TestQueryClassification:
             result = classify_query(query)
             assert result == expected_type, f"Query '{query}' misclassified as {result.value}"
 
+    @pytest.mark.priority("P1")
     def test_semantic_keyword_detection(self) -> None:
         """Test semantic keyword detection in queries."""
         semantic_queries = [

@@ -9,7 +9,7 @@ from raglite.shared.clients import get_claude_client, get_qdrant_client
 from raglite.shared.config import Settings
 
 
-@pytest.mark.p0
+@pytest.mark.priority("P0")
 @pytest.mark.unit
 @patch("raglite.shared.clients.QdrantClient")
 def test_get_qdrant_client_success(mock_qdrant_class: MagicMock, test_settings: Settings) -> None:
@@ -30,7 +30,7 @@ def test_get_qdrant_client_success(mock_qdrant_class: MagicMock, test_settings: 
     )
 
 
-@pytest.mark.p1
+@pytest.mark.priority("P1")
 @pytest.mark.unit
 @patch("raglite.shared.clients.QdrantClient")
 def test_get_qdrant_client_connection_error(mock_qdrant_class: MagicMock) -> None:
@@ -46,7 +46,7 @@ def test_get_qdrant_client_connection_error(mock_qdrant_class: MagicMock) -> Non
         get_qdrant_client()
 
 
-@pytest.mark.p0
+@pytest.mark.priority("P0")
 @pytest.mark.unit
 @patch("raglite.shared.clients.Anthropic")
 @patch("raglite.shared.clients.settings")
@@ -66,7 +66,7 @@ def test_get_claude_client_success(
     mock_anthropic_class.assert_called_once_with(api_key="valid-api-key-abc123")
 
 
-@pytest.mark.p0
+@pytest.mark.priority("P0")
 @pytest.mark.unit
 def test_get_claude_client_missing_api_key(monkeypatch: MonkeyPatch) -> None:
     """Test get_claude_client raises ValueError if API key not set."""
@@ -76,7 +76,7 @@ def test_get_claude_client_missing_api_key(monkeypatch: MonkeyPatch) -> None:
         get_claude_client()
 
 
-@pytest.mark.p0
+@pytest.mark.priority("P0")
 @pytest.mark.unit
 @patch("raglite.shared.clients.settings")
 def test_get_claude_client_empty_api_key(mock_settings: MagicMock) -> None:

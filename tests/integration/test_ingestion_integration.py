@@ -35,6 +35,7 @@ class TestPDFIngestionIntegration:
     start, eliminating 90-120s of redundant processing per test.
     """
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(10)  # Fast test - no ingestion, just validation
@@ -99,6 +100,7 @@ class TestPDFIngestionIntegration:
         )
         print("  Status: ✅ PASS (using session fixture, zero ingestion overhead)")
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(10)  # Fast test - uses session fixture
@@ -171,6 +173,7 @@ class TestPDFIngestionIntegration:
         print(f"  Expected range: 1-{expected_page_count}")
         print("  Status: ✅ PASS - Page numbers from provenance (session fixture)")
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(30)  # Fast test - uses session fixture, only runs queries
@@ -250,6 +253,7 @@ class TestExcelIngestionIntegration:
     Validates openpyxl + pandas integration, sheet extraction, and numeric formatting.
     """
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(120)
@@ -336,6 +340,7 @@ class TestChunkingIntegration:
     Tests AC8 (page number != None) and AC9 (page numbers flow through pipeline).
     """
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(45)
@@ -475,6 +480,7 @@ class TestChunkingIntegration:
         print(f"\n  ✅ AC8 PASS: All {result.chunk_count} chunks have page_number != None")
         print("  ✅ AC9 PASS: Page numbers preserved through ingestion → chunking pipeline")
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(45)
@@ -559,6 +565,7 @@ class TestEmbeddingIntegration:
     to avoid multiple model loads during parallel execution.
     """
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(180)  # 3 minutes timeout for model download + embedding generation
@@ -725,6 +732,7 @@ class TestEmbeddingIntegration:
             print("  Model: intfloat/e5-large-v2 (1024 dimensions)")
             print("  Note: Docling PDF processing mocked to isolate embedding performance")
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(180)
@@ -774,6 +782,7 @@ class TestEmbeddingIntegration:
             f"\n  ✅ All {len(result_chunks)} embeddings validated: 1024 dimensions (Fin-E5 model)"
         )
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(10)
@@ -802,6 +811,7 @@ class TestQdrantStorageIntegration:
     to avoid multiple model loads during parallel execution.
     """
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(60)
@@ -890,6 +900,7 @@ class TestQdrantStorageIntegration:
             except Exception as e:
                 print(f"  ⚠️  Failed to clean up collection: {e}")
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(60)
@@ -973,6 +984,7 @@ class TestQdrantStorageIntegration:
             except Exception as e:
                 print(f"  ⚠️  Failed to clean up collection: {e}")
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(120)
@@ -1050,6 +1062,7 @@ class TestQdrantStorageIntegration:
             except Exception as e:
                 print(f"  ⚠️  Failed to clean up collection: {e}")
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(60)

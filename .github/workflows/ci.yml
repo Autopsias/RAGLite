@@ -704,12 +704,160 @@ jobs:
           fi
 
   # ============================================================================
-  # JOB 11: Build Summary
+  # JOB 11: Burn-In Loop (Flaky Test Detection)
+  # ============================================================================
+  burn-in:
+    name: "🔥 Quality Gate: Burn-In Loop (3 iterations)"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 60
+    # Only run on PRs to main/develop branches
+    if: github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'develop')
+    needs: [test-unit, test-integration, test-e2e]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies with uv
+        run: |
+          uv venv ci-venv
+          source ci-venv/bin/activate
+          uv pip install -e .
+          uv pip install pytest pytest-asyncio pytest-xdist pytest-timeout
+
+      - name: Verify Qdrant is available
+        run: |
+          echo "Checking persistent Qdrant instance..."
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if curl -sf http://localhost:6333/collections > /dev/null 2>&1; then
+              echo "✅ Qdrant is available at localhost:6333"
+              exit 0
+            fi
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Waiting for Qdrant... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            sleep 1
+          done
+          echo "❌ Qdrant not available after ${MAX_RETRIES}s"
+          exit 1
+
+      - name: Start and verify PostgreSQL
+        run: |
+          echo "Ensuring fresh PostgreSQL container..."
+          if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+            echo "PostgreSQL container exists - restarting to ensure fresh state..."
+            docker restart raglite-postgresql
+            echo "Waiting for restart to complete..."
+            sleep 5
+          else
+            echo "Creating new PostgreSQL container..."
+            docker run -d \
+              -p 5432:5432 \
+              -e POSTGRES_DB=raglite \
+              -e POSTGRES_USER=raglite \
+              -e POSTGRES_PASSWORD=raglite \
+              --name raglite-postgresql \
+              postgres:16
+            echo "Waiting for initial startup..."
+            sleep 8
+          fi
+          echo "✅ PostgreSQL container refreshed"
+
+      - name: Run burn-in loop (3 iterations)
+        env:
+          QDRANT_HOST: localhost
+          QDRANT_PORT: 6333
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: raglite
+          POSTGRES_USER: raglite
+          POSTGRES_PASSWORD: raglite
+          TEST_USE_FULL_PDF: "false"
+        run: |
+          source ci-venv/bin/activate
+          echo "========================================="
+          echo "🔥 BURN-IN LOOP: Flaky Test Detection"
+          echo "========================================="
+          echo "- Iterations: 3 (quick feedback)"
+          echo "- Scope: Full test suite"
+          echo "- Failure policy: ANY failure = FLAKY"
+          echo "- Target: <20 minutes total"
+          echo "========================================="
+          echo ""
+
+          # Track failures across iterations
+          FAILED_ITERATIONS=0
+
+          for i in {1..3}; do
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "🔥 Burn-in iteration $i/3"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+
+            # Run full suite (fast tests only - skip slow)
+            if pytest tests/ \
+              -n 1 \
+              -m "not slow" \
+              -v \
+              --junitxml=burn-in-iteration-$i.xml 2>&1 | tee burn-in-iteration-$i.log; then
+              echo "✅ Iteration $i PASSED"
+            else
+              echo "❌ Iteration $i FAILED"
+              FAILED_ITERATIONS=$((FAILED_ITERATIONS + 1))
+
+              # Continue to run remaining iterations to collect all failures
+              echo "⚠️  Continuing to iteration $((i + 1)) to collect failure patterns..."
+            fi
+            echo ""
+          done
+
+          echo ""
+          echo "========================================="
+          echo "🔥 BURN-IN RESULTS"
+          echo "========================================="
+          echo "Total iterations: 3"
+          echo "Failed iterations: $FAILED_ITERATIONS"
+          echo ""
+
+          if [ $FAILED_ITERATIONS -gt 0 ]; then
+            echo "❌ FLAKY TESTS DETECTED!"
+            echo ""
+            echo "⚠️  $FAILED_ITERATIONS out of 3 iterations failed."
+            echo "This indicates non-deterministic test behavior."
+            echo ""
+            echo "Next steps:"
+            echo "1. Review burn-in artifacts (logs + XML reports)"
+            echo "2. Identify failing tests across iterations"
+            echo "3. Fix flaky tests before merging"
+            echo ""
+            exit 1
+          else
+            echo "✅ ALL ITERATIONS PASSED"
+            echo "No flaky tests detected - safe to merge!"
+          fi
+
+      - name: Upload burn-in artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: burn-in-failure-artifacts
+          path: |
+            burn-in-iteration-*.xml
+            burn-in-iteration-*.log
+          retention-days: 30
+
+  # ============================================================================
+  # JOB 12: Build Summary
   # ============================================================================
   build-summary:
     name: "📊 CI Pipeline: Summary"
     runs-on: [self-hosted, raglite]
-    needs: [lint, type-check, security, test-unit, test-integration, test-e2e, test-performance, test-count-validation, docs-validation]
+    needs: [lint, type-check, security, test-unit, test-integration, test-e2e, test-performance, test-count-validation, docs-validation, burn-in]
     if: always()
 
     steps:
@@ -735,6 +883,9 @@ jobs:
           echo ""
           echo "  NOTE: NFR6/NFR7 (Accuracy) runs in PARALLEL as required PR check:"
           echo "        .github/workflows/accuracy-validation.yml (~5-10 min with cache)"
+          echo ""
+          echo "🔥 QUALITY GATES:"
+          echo "  Burn-In Loop:      ${{ needs.burn-in.result }} (3 iterations)"
           echo ""
           echo "📚 DOCUMENTATION:"
           echo "  Validation:        ${{ needs.docs-validation.result }}"
@@ -787,6 +938,12 @@ jobs:
           if [[ "${{ needs.test-performance.result }}" == "failure" ]]; then
             echo "⚠️  Performance test issues detected (non-blocking)"
             echo "   Review NFR13 compliance"
+          fi
+
+          if [[ "${{ needs.burn-in.result }}" == "failure" ]]; then
+            echo "⚠️  Burn-in loop detected flaky tests (non-blocking)"
+            echo "   Review burn-in artifacts to identify non-deterministic tests"
+            echo "   Strongly recommended to fix before merging"
           fi
 
           echo ""

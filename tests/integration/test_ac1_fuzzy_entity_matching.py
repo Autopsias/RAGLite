@@ -11,6 +11,7 @@ from raglite.retrieval.sql_table_search import search_tables_sql
 from raglite.shared.clients import get_postgresql_connection
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.asyncio
 async def test_fuzzy_matching_portugal_cement(mock_mistral_client):
     """Test AC1: Fuzzy entity matching for Portugal Cement variations."""
@@ -39,6 +40,7 @@ LIMIT 50;
     )
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.asyncio
 async def test_fuzzy_matching_tunisia_cement(mock_mistral_client):
     """Test AC1: Fuzzy entity matching for Tunisia Cement."""
@@ -60,6 +62,7 @@ LIMIT 50;
     assert sql is not None
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.asyncio
 @pytest.mark.preserve_collection  # SQL-only test - no vector data needed
 async def test_pg_trgm_extension_installed():
@@ -74,6 +77,7 @@ async def test_pg_trgm_extension_installed():
     assert exists, "pg_trgm extension must be installed for fuzzy matching"
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.asyncio
 @pytest.mark.preserve_collection  # SQL-only test - no vector data needed
 async def test_gin_indexes_exist():
@@ -93,6 +97,7 @@ async def test_gin_indexes_exist():
     assert count >= 2, "Should have at least 2 GIN indexes for entity and entity_normalized"
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.asyncio
 @pytest.mark.preserve_collection  # SQL-only test - no vector data needed
 async def test_similarity_function_works():
@@ -112,6 +117,7 @@ async def test_similarity_function_works():
     )
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.asyncio
 async def test_exact_match_fallback(mock_mistral_client):
     """Test AC1: Verify exact match fallback when similarity fails."""
@@ -136,6 +142,7 @@ LIMIT 50;
     assert len(results) > 0, "Should return results via exact or fuzzy match fallback"
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.asyncio
 async def test_fuzzy_matching_thresholds(mock_mistral_client):
     """Test AC1: Fuzzy matching uses correct thresholds."""
@@ -164,6 +171,7 @@ LIMIT 50;
     )
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.asyncio
 async def test_case_insensitive_matching(mock_mistral_client):
     """Test AC1: Entity matching is case-insensitive."""

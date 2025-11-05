@@ -33,6 +33,7 @@ class TestRetrievalIntegration:
     to avoid multiple model loads during parallel execution.
     """
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_search_integration_end_to_end(self) -> None:
@@ -105,6 +106,7 @@ class TestRetrievalIntegration:
         "See: story-2.2-pivot-analysis/ for Strategic Pivot details. "
         "Re-enable after Story 2.3 implementation (target: 70%+ accuracy)."
     )
+    @pytest.mark.priority("P0")
     async def test_retrieval_accuracy_ground_truth(self) -> None:
         """Integration test: Retrieval accuracy on ground truth query set.
 
@@ -196,6 +198,7 @@ class TestRetrievalIntegration:
             f"Will be fixed in Story 2.3 with fixed 512-token chunking + LLM metadata (target: 70%+)."
         )
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_performance_p50_p95_latency(self) -> None:
@@ -271,6 +274,7 @@ class TestRetrievalIntegration:
         assert p50_latency < 5.0, f"P50 latency {p50_latency:.3f}s exceeds 5s target (NFR13)"
         assert p95_latency < 15.0, f"P95 latency {p95_latency:.3f}s exceeds 15s target (NFR13)"
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_metadata_preservation_integration(self) -> None:
@@ -347,6 +351,7 @@ class TestRetrievalIntegration:
             f"All results MUST have page_number, source_document, chunk_index for Story 1.8 source attribution."
         )
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_metadata_filtering_integration(self) -> None:
@@ -406,6 +411,7 @@ class TestRetrievalIntegration:
         print(f"  Results: {len(results)}")
         print("  All results match filter: ✅")
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_citation_accuracy_integration(self) -> None:

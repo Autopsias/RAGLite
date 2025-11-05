@@ -18,6 +18,7 @@ from raglite.shared.config import settings
 class TestMetadataInjection:
     """Integration tests for AC3: Metadata injection into Qdrant."""
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     async def test_metadata_injection_into_chunks(self, tmp_path):
         """Test that extracted metadata is injected into all chunks."""
@@ -72,6 +73,7 @@ class TestMetadataInjection:
             assert "table_name" in payload
             assert "statistical_summary" in payload
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     async def test_metadata_filtering(self, tmp_path):
         """Test AC3: Metadata accessible via Qdrant filter API."""
@@ -132,6 +134,7 @@ class TestMetadataInjection:
 class TestCostValidation:
     """Integration tests for AC5: Cost validation and tracking."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_cost_tracking_single_document(self, caplog):
         """Test AC5: Measure Mistral Small 3.2 API token usage and cost (Story 2.4 REVISION: FREE)."""
@@ -170,6 +173,7 @@ class TestCostValidation:
             for log in cost_logs:
                 assert "0.0" in str(log)  # Cost should be $0.00
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_cost_budget_compliance(self):
         """Test AC5: Verify cost is $0.00 per chunk (Story 2.4 REVISION: Mistral Small 3.2 is FREE)."""
@@ -225,6 +229,7 @@ class TestCostValidation:
 class TestBackwardCompatibility:
     """Test AC2: Backward compatibility with existing chunks."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_chunks_without_metadata_fields(self):
         """Test that chunks without metadata fields still work (backward compatible)."""
@@ -267,6 +272,7 @@ class TestBackwardCompatibility:
         assert chunk.table_name is None
         assert chunk.statistical_summary is None
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     async def test_ingestion_without_openai_key(self, tmp_path):
         """Test that ingestion works when OpenAI key not configured (graceful degradation)."""
@@ -312,6 +318,7 @@ class TestMetadataInjectionMocked:
     instead of re-ingesting. This fixes hanging tests and improves performance.
     """
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     @pytest.mark.preserve_collection  # This test relies on session fixture, don't need double-ingest
     async def test_metadata_injection_mocked(self):
@@ -383,6 +390,7 @@ class TestMetadataInjectionMocked:
             "(expected at least 50% coverage)"
         )
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     @pytest.mark.preserve_collection  # This test relies on session fixture
     async def test_metadata_filtering_mocked(self):
@@ -462,6 +470,7 @@ class TestMetadataInjectionMocked:
 class TestCostValidationMocked:
     """Mocked integration tests for AC5 - No API key required for CI/CD."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_cost_tracking_mocked(self, caplog):
         """Test AC5: Cost tracking with mocked Mistral response (CI/CD friendly, Story 2.4 REVISION: FREE)."""
@@ -525,6 +534,7 @@ class TestCostValidationMocked:
                         # If no cost field, that's also acceptable (free API doesn't need cost tracking)
                         pass
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_cost_budget_compliance_mocked(self):
         """Test AC5: Cost is $0.00 with mocked response (CI/CD friendly, Story 2.4 REVISION: FREE)."""

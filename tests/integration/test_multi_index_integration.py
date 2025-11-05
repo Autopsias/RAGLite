@@ -21,6 +21,7 @@ from raglite.retrieval.query_classifier import QueryType, classify_query
 class TestMultiIndexIntegration:
     """Integration tests for multi-index search pipeline."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_vector_only_query_routing(self) -> None:
         """Test that VECTOR_ONLY queries route to Qdrant only."""
@@ -41,6 +42,7 @@ class TestMultiIndexIntegration:
             assert isinstance(result, SearchResult)
             assert result.source == "vector"  # No SQL results from stub
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_sql_only_query_routing(self) -> None:
         """Test that SQL_ONLY queries route to PostgreSQL (with fallback to vector)."""
@@ -62,6 +64,7 @@ class TestMultiIndexIntegration:
             assert isinstance(result, SearchResult)
             assert result.source == "vector"  # Fallback from SQL stub
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_hybrid_query_routing(self) -> None:
         """Test that HYBRID queries route to both indexes with fusion."""
@@ -83,6 +86,7 @@ class TestMultiIndexIntegration:
             # Source should be "vector" (SQL stub) or "hybrid" (if both had results)
             assert result.source in ["vector", "sql", "hybrid"]
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_empty_query_error(self) -> None:
         """Test that empty queries raise appropriate error."""
@@ -92,6 +96,7 @@ class TestMultiIndexIntegration:
         with pytest.raises(MultiIndexSearchError, match="Query cannot be empty"):
             await multi_index_search("   ", top_k=5)
 
+    @pytest.mark.priority("P1")
     def test_result_fusion_vector_only(self) -> None:
         """Test fusion with only vector results."""
         vector_results = [
@@ -117,6 +122,7 @@ class TestMultiIndexIntegration:
         assert fused[0].score == 0.9  # Preserved ordering
         assert all(r.source == "vector" for r in fused)
 
+    @pytest.mark.priority("P1")
     def test_result_fusion_sql_only(self) -> None:
         """Test fusion with only SQL results."""
         sql_results = [
@@ -142,6 +148,7 @@ class TestMultiIndexIntegration:
         assert fused[0].score == 0.85  # Preserved ordering
         assert all(r.source == "sql" for r in fused)
 
+    @pytest.mark.priority("P1")
     def test_result_fusion_hybrid(self) -> None:
         """Test fusion with both vector and SQL results."""
         vector_results = [
@@ -174,6 +181,7 @@ class TestMultiIndexIntegration:
         assert fused[0].document_id == "doc1"
         assert fused[1].document_id == "doc2"
 
+    @pytest.mark.priority("P1")
     def test_result_fusion_deduplication(self) -> None:
         """Test that duplicate documents are deduplicated and fused.
 
@@ -225,6 +233,7 @@ class TestMultiIndexIntegration:
         assert "chunk_index" in fused[0].metadata
         assert "table_row" in fused[0].metadata
 
+    @pytest.mark.priority("P1")
     def test_result_fusion_top_k_limit(self) -> None:
         """Test that fusion respects top_k limit."""
         vector_results = [

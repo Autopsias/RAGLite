@@ -146,6 +146,7 @@ class TestStory214ExcerptValidation:
         ],
         ids=lambda x: x["id"],
     )
+    @pytest.mark.priority("P1")
     async def test_excerpt_query(self, test_query, excerpt_ground_truth, mock_mistral_client):
         """Test individual excerpt ground truth query."""
         # Configure mock for all queries
@@ -202,6 +203,7 @@ LIMIT 50;
             f"Error: {result.error}"
         )
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.reruns(2)
     @pytest.mark.reruns_delay(1)
@@ -251,6 +253,7 @@ LIMIT 50;
             cat_pct = (stats["passed"] / stats["total"] * 100) if stats["total"] > 0 else 0
             print(f"  {cat}: {stats['passed']}/{stats['total']} ({cat_pct:.0f}%)")
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     @pytest.mark.reruns(2)
     @pytest.mark.reruns_delay(1)
@@ -286,6 +289,7 @@ LIMIT 50;
         )
         print(f"\nAC1-SingleEntity: {total_passed}/{total} ({pct:.1f}%)")
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     @pytest.mark.reruns(2)
     @pytest.mark.reruns_delay(1)
@@ -322,6 +326,7 @@ LIMIT 50;
         )
         print(f"\nAC2-Comparison: {total_passed}/{total} ({pct:.1f}%)")
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     @pytest.mark.reruns(2)
     @pytest.mark.reruns_delay(1)
@@ -357,6 +362,7 @@ LIMIT 50;
         )
         print(f"\nAC3-Metrics: {total_passed}/{total} ({pct:.1f}%)")
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.reruns(2)
     @pytest.mark.reruns_delay(1)

@@ -8,6 +8,7 @@ import pytest
 from raglite.retrieval.query_classifier import generate_sql_query
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.asyncio
 async def test_multi_entity_comparison_portugal_vs_tunisia(mock_mistral_client):
     """Test AC2: Multi-entity comparison - Portugal vs Tunisia."""
@@ -32,6 +33,7 @@ LIMIT 50;
     )
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.asyncio
 async def test_multi_entity_comparison_which_higher(mock_mistral_client):
     """Test AC2: 'Which' comparison queries.
@@ -59,6 +61,7 @@ LIMIT 50;
     assert " OR " in sql.upper(), "SQL should contain OR clause for multiple entities"
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.asyncio
 async def test_multi_entity_vs_keyword(mock_mistral_client):
     """Test AC2: 'vs' keyword in comparison.
@@ -93,6 +96,7 @@ LIMIT 50;
     )
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.asyncio
 async def test_multi_entity_between_keyword(mock_mistral_client):
     """Test AC2: 'between' keyword in comparison."""
@@ -114,6 +118,7 @@ LIMIT 50;
     assert sql is not None
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.asyncio
 async def test_multi_entity_higher_lower(mock_mistral_client):
     """Test AC2: 'higher' and 'lower' keywords."""
@@ -135,6 +140,7 @@ LIMIT 50;
     assert sql is not None
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.asyncio
 async def test_comparison_keyword_detection(mock_mistral_client):
     """Test AC2: Comparison keywords are detected."""

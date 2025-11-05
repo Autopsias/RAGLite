@@ -16,6 +16,7 @@ from raglite.shared.models import Chunk, DocumentMetadata, QueryResult
 class TestBM25IndexCreation:
     """Test BM25 index creation with rank_bm25 (AC1.4)."""
 
+    @pytest.mark.priority("P1")
     def test_bm25_index_creation_success(self):
         """Test successful BM25 index creation with 10 sample chunks."""
         # Arrange: Create 10 test chunks
@@ -58,6 +59,7 @@ class TestBM25IndexCreation:
         assert len(scores) == 10
         assert all(isinstance(s, int | float) for s in scores)
 
+    @pytest.mark.priority("P2")
     def test_bm25_index_empty_chunks(self):
         """Test BM25 index creation fails with empty chunks list."""
         # Arrange: Empty chunks list
@@ -67,6 +69,7 @@ class TestBM25IndexCreation:
         with pytest.raises(ValueError, match="Cannot create BM25 index from empty chunks"):
             create_bm25_index(chunks)
 
+    @pytest.mark.priority("P1")
     def test_bm25_index_parameters(self):
         """Test BM25 index respects k1 and b parameters."""
         # Arrange: Create chunks
@@ -102,6 +105,7 @@ class TestBM25IndexCreation:
 class TestBM25Query:
     """Test BM25 score computation for queries (AC1.4)."""
 
+    @pytest.mark.priority("P1")
     def test_bm25_query_scores(self):
         """Test BM25 query returns scores for all chunks."""
         # Arrange: Create BM25 index with financial content
@@ -170,6 +174,7 @@ class TestBM25Query:
         assert scores[0] > scores[1]  # chunk_0 has EBITDA, chunk_1 doesn't
         assert scores[3] > scores[4]  # chunk_3 has EBITDA, chunk_4 doesn't
 
+    @pytest.mark.priority("P1")
     def test_bm25_query_relevant_ranking(self):
         """Test BM25 ranks relevant chunks higher."""
         # Arrange: Create chunks with varying relevance
@@ -221,6 +226,7 @@ class TestBM25Query:
 class TestScoreFusion:
     """Test weighted sum fusion of semantic and BM25 scores (AC2.4)."""
 
+    @pytest.mark.priority("P1")
     def test_score_fusion_weighted_sum(self):
         """Test fusion with RRF (Reciprocal Rank Fusion) - Story 2.11 fix."""
         # Arrange: Mock semantic results
@@ -290,6 +296,7 @@ class TestScoreFusion:
         assert all(r.score > 0 for r in fused_results)
         assert all(r.score < 0.02 for r in fused_results)  # RRF scores are small
 
+    @pytest.mark.priority("P1")
     def test_score_fusion_top_k(self):
         """Test fusion respects top_k parameter."""
         # Arrange: 5 semantic results
@@ -318,6 +325,7 @@ class TestScoreFusion:
         # Assert: Only 3 results returned
         assert len(fused_results) == 3
 
+    @pytest.mark.priority("P1")
     def test_score_fusion_empty_semantic(self):
         """Test fusion handles empty semantic results."""
         # Arrange: Empty semantic results
@@ -333,6 +341,7 @@ class TestScoreFusion:
         # Assert: Returns empty list
         assert len(fused_results) == 0
 
+    @pytest.mark.priority("P1")
     def test_score_fusion_empty_bm25(self):
         """Test fusion falls back to semantic-only if BM25 scores empty."""
         # Arrange: Semantic results but no BM25 scores
@@ -367,6 +376,7 @@ class TestHybridSearchEndToEnd:
     @patch("raglite.retrieval.search.search_documents")
     @patch("raglite.retrieval.search.load_bm25_index")
     @patch("raglite.retrieval.search.compute_bm25_scores")
+    @pytest.mark.priority("P1")
     async def test_hybrid_search_combines_results(
         self, mock_compute_bm25, mock_load_bm25, mock_search_docs, mock_classify
     ):
@@ -422,6 +432,7 @@ class TestHybridSearchEndToEnd:
         assert all(isinstance(r, QueryResult) for r in results)
 
     @patch("raglite.retrieval.search.search_documents")
+    @pytest.mark.priority("P1")
     async def test_hybrid_search_disabled_fallback(self, mock_search_docs):
         """Test hybrid search falls back to semantic-only when disabled."""
         # Arrange: Mock semantic results
@@ -448,6 +459,7 @@ class TestHybridSearchEndToEnd:
 
     @patch("raglite.retrieval.search.search_documents")
     @patch("raglite.retrieval.search.load_bm25_index")
+    @pytest.mark.priority("P1")
     async def test_hybrid_search_bm25_unavailable_fallback(self, mock_load_bm25, mock_search_docs):
         """Test hybrid search falls back if BM25 index unavailable."""
         # Arrange: Semantic search succeeds, BM25 index missing
@@ -473,6 +485,7 @@ class TestHybridSearchEndToEnd:
     @patch("raglite.retrieval.search.search_documents")
     @patch("raglite.retrieval.search.load_bm25_index")
     @patch("raglite.retrieval.search.compute_bm25_scores")
+    @pytest.mark.priority("P1")
     async def test_hybrid_search_improves_ranking(
         self, mock_compute_bm25, mock_load_bm25, mock_search_docs
     ):

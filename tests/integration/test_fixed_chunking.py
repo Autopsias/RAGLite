@@ -18,6 +18,7 @@ from raglite.shared.config import settings
 
 
 @pytest.fixture
+@pytest.mark.priority("P2")
 def test_pdf_path():
     """Path to 160-page test PDF."""
     pdf_path = Path("docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf")
@@ -32,6 +33,7 @@ def encoding():
     return tiktoken.get_encoding("cl100k_base")
 
 
+@pytest.mark.priority("P0")
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
@@ -80,6 +82,7 @@ async def test_ac4_collection_recreation_and_reingest(test_pdf_path):
     print(f"\n✅ AC4 PASS: Collection recreated, {chunk_count} chunks ingested (180-220 expected)")
 
 
+@pytest.mark.priority("P0")
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
@@ -131,6 +134,7 @@ async def test_ac4_fast_40page():
     print(f"\n✅ AC4 FAST PASS: 40-page PDF, {chunk_count} chunks ingested (45-55 expected)")
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_ac5_fast_chunk_count_validation(session_ingested_collection, encoding):
@@ -223,6 +227,7 @@ async def test_ac5_fast_chunk_count_validation(session_ingested_collection, enco
             )
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
@@ -315,6 +320,7 @@ async def test_ac5_chunk_count_validation(ingested_160_page_pdf, encoding):
     )
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_ac6_fast_chunk_size_consistency(session_ingested_collection, encoding):
@@ -407,6 +413,7 @@ async def test_ac6_fast_chunk_size_consistency(session_ingested_collection, enco
         print(f"   - TABLE chunks: {len(table_chunks)} total (preserved per AC3)")
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
@@ -510,6 +517,7 @@ async def test_ac6_chunk_size_consistency(ingested_160_page_pdf, encoding):
             print(f"       • {token_count} tokens: {preview}...")
 
 
+@pytest.mark.priority("P0")
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
