@@ -258,6 +258,7 @@ jobs:
 
       - name: Export data for caching (if cache miss)
         if: steps.cache-check.outputs.cache_hit == 'false' && success()
+        continue-on-error: true  # Don't block workflow if cache export fails (non-critical optimization)
         run: |
           source ci-venv/bin/activate
 
