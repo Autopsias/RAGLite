@@ -1,0 +1,661 @@
+section: 3
+page_range: 41-60
+total_pages: 20
+analysis_date: '2025-10-26'
+currency: EUR (thousands)
+reporting_period: August 2025 YTD
+executive_summary:
+  total_tables: 8
+  business_areas:
+  - Personnel
+  - Headcount
+  - Capital Expenditure
+  - Cement Operations
+  - Ready-Mix Operations
+  - Margin Analysis
+  geographic_coverage:
+  - Portugal
+  - Madeira
+  - Cape Verde
+  - Netherlands
+  - Spain
+  regional_breakdown:
+  - North
+  - Center
+  - Lisbon
+  - Alentejo
+  - Algarve
+  key_business_units:
+  - 'Portugal Cement (3 plants: Outão, Maceira, Pataias)'
+  - Portugal Unibetão (Concrete)
+  - Portugal Betotrans
+  - Portugal Ready-Mix
+  - Portugal Aggregates
+  - Portugal Mortars
+  - Portugal Precast
+tables_inventory:
+- table_id: T3-001
+  page: 41
+  name: Personnel Expenses (YTD vs Budget vs LY)
+  dimensions:
+    entities: 17
+    periods: 4
+    metrics: 3
+  sample_data_points: 4
+  metrics:
+  - Personnel Expense - Monthly Amount (1000 EUR)
+  - Personnel Expense - Budget Variance %
+  - Personnel Expense - Prior Year Variance %
+  - Personnel Expense - YTD Amount (1000 EUR)
+  - Personnel Expense - YTD Budget Variance %
+  - Personnel Expense - YTD Prior Year Variance %
+  dimensions_detail:
+    entities:
+    - Portugal
+    - Portugal Cement
+    - Portugal Cement - Outão
+    - Portugal Cement - Maceira
+    - Portugal Cement - Pataias
+    - Portugal Cement - Distribution
+    - Portugal Cement - Sales
+    - Portugal Madeira
+    - Portugal Cape Verde
+    - Portugal Nederland
+    - Portugal Spain
+    - Total Cement and Terminals
+    - Portugal Unibetão
+    - Portugal Betotrans
+    - Portugal Ready Mix
+    - Portugal Aggregates
+    - Portugal Mortars
+    - Portugal Precast
+    periods:
+    - Aug-25 Month
+    - Aug-25 Budget
+    - Aug-24 Month
+    - Aug-25 YTD
+    - Aug-25 YTD Budget
+    - Aug-24 YTD
+    period_formats:
+    - Monthly (single month)
+    - YTD (year-to-date)
+  transposed: false
+  sample_values:
+  - entity: Portugal
+    period: Aug-25 YTD
+    value: 38599
+    unit: 1000 EUR
+  - entity: Portugal Cement
+    period: Aug-25 YTD
+    value: 10317
+    unit: 1000 EUR
+  - entity: Portugal Cement - Outão
+    period: Aug-25 YTD
+    value: 4295
+    unit: 1000 EUR
+  - entity: Total Cement and Terminals
+    period: Aug-25 YTD
+    value: 12393
+    unit: 1000 EUR
+- table_id: T3-002
+  page: 42
+  name: Headcount Evolution (YTD vs Budget vs LY)
+  dimensions:
+    entities: 17
+    periods: 8
+    years_historical: 6
+  sample_data_points: 5
+  type: Transposed Timeline Table
+  metrics:
+  - FTE Count (Full-Time Equivalents)
+  dimensions_detail:
+    entities:
+    - Portugal
+    - Portugal Cement
+    - Portugal Cement - Plants
+    - Portugal Cement - Distribution
+    - Portugal Cement - Sales
+    - Portugal Group Madeira
+    - Portugal Cape Verde
+    - Portugal Netherland
+    - Portugal Espanha
+    - Portugal Terminals Structure
+    - Total Cement and Terminals
+    - Portugal Unibetão
+    - Portugal Betotrans
+    - Portugal Ready Mix
+    - Portugal Aggregates
+    - Portugal Mortars
+    - Portugal Precast
+    time_periods:
+    - 2020 FY
+    - 2021 FY
+    - 2022 FY
+    - 2023 FY
+    - 2024 FY
+    - Jan-25
+    - Feb-25
+    - Mar-25
+    - Apr-25
+    - May-25
+    - Jun-25
+    - Jul-25
+    - Aug-25
+    - Sep-25
+    - Oct-25
+    - Nov-25
+    - Dec-25 Budget
+    note: Sep-Nov 2025 not yet recorded (future periods)
+  transposed: true
+  note: This is a transposed table with months/years as columns and entities as rows
+  sample_values:
+  - entity: Portugal
+    period: Aug-25 Actual
+    value: 1164
+    unit: FTEs
+  - entity: Portugal
+    period: Dec-25 Budget
+    value: 1281
+    unit: FTEs
+  - entity: Portugal Cement
+    period: Aug-25 Actual
+    value: 266
+    unit: FTEs
+  - entity: Total Cement and Terminals
+    period: Aug-25 Actual
+    value: 355
+    unit: FTEs
+  - entity: Portugal Ready Mix
+    period: Aug-25 Actual
+    value: 387
+    unit: FTEs
+- table_id: T3-003
+  page: 43
+  name: Capex Total / per Type (YTD vs Budget vs LY)
+  dimensions:
+    entities: 16
+    periods: 4
+    capex_types: 8
+  sample_data_points: 5
+  primary_metrics:
+  - Capex Total by Entity
+  - Capex Budget Variance %
+  - Capex Prior Year Variance %
+  capex_types:
+  - Recurring
+  - Development
+  - Land
+  - Replacement
+  - HSE
+  - Other
+  - Energy
+  - Other (expansion)
+  dimensions_detail:
+    entities:
+    - Portugal
+    - Portugal Cement
+    - Portugal Group Madeira
+    - Portugal Cape Verde
+    - Portugal Netherland
+    - Portugal Espanha
+    - Total Cement and Terminals
+    - Portugal Ready Mix
+    - Portugal Aggregates
+    - Portugal Mortars
+    - Total Building Materials
+    - Portugal Bags
+    - Portugal CCL
+    - Portugal G&A
+    - Portugal Others
+    periods:
+    - Aug-25 Month
+    - Aug-25 Budget
+    - Aug-24 Month
+    - Aug-25 YTD
+    - Aug-25 YTD Budget
+    - Aug-24 YTD
+  transposed: false
+  sample_values:
+  - entity: Portugal
+    metric: Capex YTD
+    value: 33059
+    unit: 1000 EUR
+  - entity: Portugal
+    metric: Budget Variance %
+    value: -37
+    unit: '%'
+  - entity: Portugal Cement
+    metric: Capex YTD
+    value: 19766
+    unit: 1000 EUR
+  - entity: Portugal Ready Mix
+    metric: Capex YTD
+    value: 5244
+    unit: 1000 EUR
+  - entity: Portugal Bags
+    metric: Capex YTD
+    value: 886
+    unit: 1000 EUR
+- table_id: T3-004
+  page: 44
+  name: Portugal Cement - Internal Market Metrics
+  dimensions:
+    metrics: 14
+    periods: 4
+  sample_data_points: 5
+  metrics:
+  - Cement Market Size (kton)
+  - Population (Mpeople)
+  - Cement per Capita
+  - Market Share %
+  - Sales Cement IM Amount
+  - Sales Volume Cement (kton)
+  - '% Grey Cement Bulk'
+  - '% Grey Cement Bagged'
+  - '% White Cement'
+  - Price Cement (EUR/ton)
+  - Grey Cement Bulk Price (EUR/ton)
+  - Grey Cement Bagged Price (EUR/ton)
+  - White Cement Price (EUR/ton)
+  - Net Transport Costs
+  transposed: false
+  sample_values:
+  - metric: Cement Market
+    period: Aug-25 YTD
+    value: 3078
+    unit: kton
+  - metric: Market Share
+    period: Aug-25 YTD
+    value: 36.0
+    unit: '%'
+  - metric: Sales Volume
+    period: Aug-25 YTD
+    value: 1107
+    unit: kton
+  - metric: Price Cement
+    period: Aug-25 YTD
+    value: 132.5
+    unit: EUR/ton
+  - metric: Net Transport Costs
+    period: Aug-25 YTD
+    value: -7585
+    unit: 1000 EUR
+- table_id: T3-005
+  page: 46
+  name: Portugal Cement - Operational Costs (Variable, Energy, Raw Materials)
+  dimensions:
+    cost_categories: 6
+    energy_types: 4
+    metrics: 18
+  sample_data_points: 5
+  cost_categories:
+  - Variable Costs Total
+  - Termic Energy (with Petcoke, Fuel Oil, Alternative Fuel breakdown)
+  - Electricity
+  - Raw Materials
+  - Other operating costs
+  metrics:
+  - Variable Costs Amount (1000 EUR)
+  - Variable Costs per Ton (EUR/ton)
+  - Termic Energy Amount
+  - Termic Energy per Ton
+  - Petcoke % of Energy
+  - Fuel Oil % of Energy
+  - Alternative Fuel % of Energy
+  - Electricity Amount
+  - Electricity per Ton
+  - Electricity Specific Consumption (Kwh/ton)
+  transposed: false
+  sample_values:
+  - metric: Variable Costs
+    period: Aug-25 YTD
+    value: 30447
+    unit: 1000 EUR
+  - metric: Variable Costs per Ton
+    period: Aug-25 YTD
+    value: 23.2
+    unit: EUR/ton
+  - metric: Termic Energy
+    period: Aug-25 YTD
+    value: 7562
+    unit: 1000 EUR
+  - metric: Electricity
+    period: Aug-25 YTD
+    value: 10265
+    unit: 1000 EUR
+  - metric: Raw Materials
+    period: Aug-25 YTD
+    value: 2363
+    unit: 1000 EUR
+- table_id: T3-006
+  page: 51
+  name: Ready-Mix Consolidated Operational Performance
+  dimensions:
+    sections: 3
+    metrics: 15
+  sample_data_points: 5
+  sections:
+  - Sales (Revenue, Volume, Price)
+  - Other Income (goods, transport, operational)
+  - Variable Costs (Cement, Aggregates, Sand, Ashes)
+  - Fixed Costs
+  - EBITDA
+  metrics:
+  - Sales Ready Mix (1000 EUR)
+  - Volume Ready Mix (km3)
+  - Price Ready Mix (EUR/m3)
+  - Cement Content (kton)
+  - Cement per m3 (kg/m3)
+  - Aggregates
+  - Sand
+  - Ashes
+  - Variable Costs
+  - Fixed Costs
+  transposed: false
+  sample_values:
+  - metric: Sales Ready Mix
+    period: Aug-25 YTD
+    value: 89951
+    unit: 1000 EUR
+  - metric: Volume Ready Mix
+    period: Aug-25 YTD
+    value: 1055
+    unit: km3
+  - metric: Price Ready Mix
+    period: Aug-25 YTD
+    value: 85.2
+    unit: EUR/m3
+  - metric: Cement Consumption
+    period: Aug-25 YTD
+    value: 272.8
+    unit: kg/m3
+  - metric: Variable Costs
+    period: Aug-25 YTD
+    value: 69516
+    unit: 1000 EUR
+- table_id: T3-007
+  page: 52
+  name: Ready-Mix Margin by Region
+  dimensions:
+    regions: 5
+    metrics: 6
+  sample_data_points: 5
+  regions:
+  - North
+  - Center
+  - Lisbon
+  - Alentejo
+  - Algarve
+  metrics:
+  - Sales Volumes (km3)
+  - Sales Price (EUR/m3)
+  - Variable Cost (EUR/m3)
+  - Fixed Costs (EUR/m3)
+  - Other costs/income (EUR/m3)
+  - Unit EBITDA (EUR/m3)
+  transposed: false
+  sample_values:
+  - region: North
+    metric: Sales Volume
+    period: Aug-25
+    value: 415
+    unit: km3
+  - region: Lisbon
+    metric: Sales Price
+    period: Aug-25
+    value: 85.2
+    unit: EUR/m3
+  - region: Center
+    metric: Unit EBITDA
+    period: Aug-25
+    value: 10.2
+    unit: EUR/m3
+  - region: Alentejo
+    metric: Variable Cost
+    period: Aug-25
+    value: -77.1
+    unit: EUR/m3
+  - region: Algarve
+    metric: Unit EBITDA
+    period: Aug-25
+    value: 13.3
+    unit: EUR/m3
+- table_id: T3-008
+  page: 47
+  name: Margin by Plant (Cement Plants Analysis)
+  dimensions:
+    plants: 3
+    metrics: 9
+  sample_data_points: 5
+  plants:
+  - Outão
+  - Maceira
+  - Pataias
+  metrics:
+  - Unit Cost Denominator (kton)
+  - Price Cement MI - Net Transport Costs (EUR/ton)
+  - Price Cement ME - Net Transport Costs (EUR/ton)
+  - Variable Cost (EUR/ton)
+  - Fixed Costs (EUR/ton)
+  - Unit Cement EBITDA MI (EUR/ton)
+  transposed: false
+  sample_values:
+  - plant: Outão
+    metric: Volume
+    period: Aug-25
+    value: 798
+    unit: kton
+  - plant: Outão
+    metric: Price Cement MI
+    period: Aug-25
+    value: 125.6
+    unit: EUR/ton
+  - plant: Outão
+    metric: Unit EBITDA MI
+    period: Aug-25
+    value: 80.5
+    unit: EUR/ton
+  - plant: Maceira
+    metric: Unit EBITDA MI
+    period: Aug-25
+    value: 75.0
+    unit: EUR/ton
+  - plant: Pataias
+    metric: Unit EBITDA MI
+    period: Aug-25
+    value: 65.4
+    unit: EUR/ton
+ground_truth_queries:
+- query_id: GTQ-3-001
+  question: What was the Portugal total personnel expense for August 2025 YTD?
+  expected_answer: 38,599 thousand EUR
+  expected_number: 38599
+  source: Page 41 - Personnel Expenses table
+  entity: Portugal
+  metric: Personnel Expenses
+  period: Aug-25 YTD
+- query_id: GTQ-3-002
+  question: How many FTEs did Portugal Cement have in August 2025 actual vs budget?
+  expected_answer: 266 actual (Aug-25) vs 321 budgeted (Dec-25 Full Year)
+  expected_numbers:
+  - 266
+  - 321
+  source: Page 42 - Headcount Evolution table
+  entity: Portugal Cement
+  metric: Headcount (FTEs)
+  period: Aug-25 Actual / Dec-25 Budget
+- query_id: GTQ-3-003
+  question: What was the total Capex for Portugal in August 2025 YTD and what was
+    the variance vs budget?
+  expected_answer: 33,059 thousand EUR with -37% variance vs budget
+  expected_numbers:
+  - 33059
+  - -37
+  source: Page 43 - Capex Total table
+  entity: Portugal
+  metric: Capital Expenditure
+  period: Aug-25 YTD
+- query_id: GTQ-3-004
+  question: What was the cement market size in Portugal in August 2025 YTD?
+  expected_answer: 3,078 kton
+  expected_number: 3078
+  source: Page 44 - Portugal Cement Operational Performance
+  entity: Portugal
+  metric: Cement Market Size
+  unit: kton
+  period: Aug-25 YTD
+- query_id: GTQ-3-005
+  question: What was Portugal's market share in cement in August 2025 YTD?
+  expected_answer: 36.0%
+  expected_number: 36.0
+  source: Page 44 - Portugal Cement Internal Market metrics
+  entity: Portugal
+  metric: Market Share
+  unit: '%'
+  period: Aug-25 YTD
+- query_id: GTQ-3-006
+  question: What was the variable cost per ton for Portugal Cement in August 2025
+    YTD?
+  expected_answer: 23.2 EUR/ton
+  expected_number: 23.2
+  source: Page 46 - Portugal Cement Operational Costs
+  entity: Portugal Cement
+  metric: Variable Cost per ton
+  unit: EUR/ton
+  period: Aug-25 YTD
+- query_id: GTQ-3-007
+  question: What was the Ready-Mix sales price in the Lisbon region for August 2025?
+  expected_answer: 85.2 EUR/m3
+  expected_number: 85.2
+  source: Page 55 - Portugal Ready-Mix Lisbon regional breakdown
+  region: Lisbon
+  metric: Sales Price Ready Mix
+  unit: EUR/m3
+  period: Aug-25 Month
+- query_id: GTQ-3-008
+  question: How many km3 of Ready-Mix were sold in the North region for August 2025
+    YTD?
+  expected_answer: 415 km3
+  expected_number: 415
+  source: Page 53 - Portugal Ready-Mix North regional breakdown
+  region: North
+  metric: Sales Volume Ready Mix
+  unit: km3
+  period: Aug-25 YTD
+- query_id: GTQ-3-009
+  question: What was the unit EBITDA for Ready-Mix in the Center region for August
+    2025?
+  expected_answer: 10.2 EUR/m3
+  expected_number: 10.2
+  source: Page 52 - Ready-Mix Margin by Region
+  region: Center
+  metric: Unit EBITDA Ready-Mix
+  unit: EUR/m3
+  period: Aug-25 Month
+- query_id: GTQ-3-010
+  question: What was the variable cost per m3 for Ready-Mix in the Alentejo region?
+  expected_answer: -77.1 EUR/m3
+  expected_number: -77.1
+  source: Page 52 - Ready-Mix Margin by Region
+  region: Alentejo
+  metric: Variable Cost per m3
+  unit: EUR/m3
+  period: Aug-25 Month
+- query_id: GTQ-3-011
+  question: What was the electricity cost in absolute terms for Portugal Cement in
+    August 2025 YTD?
+  expected_answer: 10,265 thousand EUR with 56% variance vs budget
+  expected_numbers:
+  - 10265
+  - 56
+  source: Page 46 - Portugal Cement Electricity costs
+  entity: Portugal Cement
+  metric: Electricity Cost
+  unit: 1000 EUR
+  period: Aug-25 YTD
+- query_id: GTQ-3-012
+  question: What was the Ready-Mix cement consumption in kg/m3 for the total consolidated
+    in August 2025 YTD?
+  expected_answer: 272.8 kg/m3
+  expected_number: 272.8
+  source: Page 51 - Ready-Mix Consolidated Operations
+  entity: Consolidated Ready-Mix
+  metric: Cement Consumption
+  unit: kg/m3
+  period: Aug-25 YTD
+- query_id: GTQ-3-013
+  question: How many kton did Outão plant produce in cement in August 2025?
+  expected_answer: 798 kton
+  expected_number: 798
+  source: Page 47 - Portugal Cement Margin by Plant
+  plant: Outão
+  metric: Production Volume
+  unit: kton
+  period: Aug-25 Month
+- query_id: GTQ-3-014
+  question: What was the unit EBITDA margin for the Outão cement plant in August 2025?
+  expected_answer: 80.5 EUR/ton
+  expected_number: 80.5
+  source: Page 47 - Margin by Plant
+  plant: Outão
+  metric: Unit Cement EBITDA MI
+  unit: EUR/ton
+  period: Aug-25 Month
+- query_id: GTQ-3-015
+  question: What was the total Ready-Mix sales volume for August 2025 YTD across all
+    regions?
+  expected_answer: 1,055 km3
+  expected_number: 1055
+  source: Page 51 - Ready-Mix Consolidated Sales
+  metric: Total Sales Volume
+  unit: km3
+  period: Aug-25 YTD
+data_quality_notes:
+  transposed_tables:
+  - table_id: T3-002
+    name: Headcount Evolution
+    note: This table has months/years as COLUMNS and entities as ROWS. A standard
+      table parser expecting entities as columns may fail.
+    handling: Special parsing needed for timeline-oriented tables
+  multi_level_headers:
+  - table_id: T3-003
+    section: Capex by Type
+    note: Bottom section has sub-headers within the table for different capex categories
+  - table_id: T3-005
+    section: Energy breakdown
+    note: Energy costs broken down by fuel type with percentage indicators
+  percentage_metrics:
+  - Budget Variance % (all tables)
+  - Prior Year Variance % (all tables)
+  - Market Share %
+  - Product mix percentages (% Grey Cement Bulk, etc.)
+  - Energy source percentages (% Petcoke, % Fuel Oil, etc.)
+  unit_conversions:
+  - metric: Volume (Ready-Mix)
+    units:
+    - km3
+    - m3
+    note: 1 km3 = 1,000,000 m3
+  - metric: Volume (Cement)
+    units:
+    - kton
+    - ton
+    note: 1 kton = 1,000 tons
+  - metric: Currency
+    unit: EUR thousands
+    note: All amounts shown are in thousands of EUR
+metadata:
+  report_period: August 2025 Year-To-Date
+  report_type: Operational & Financial Analysis
+  comparison_periods:
+  - Current Month (Aug-25)
+  - Budget (Aug-25 Plan)
+  - Prior Year Month (Aug-24)
+  - Year-To-Date (Jan-Aug 2025)
+  - Prior Year YTD (Jan-Aug 2024)
+  key_business_metrics:
+  - Personnel costs and headcount
+  - Capital expenditure
+  - Operational metrics (volume, price, costs)
+  - Profitability (EBITDA by region/plant)
+  - Specific consumption metrics (energy, materials per unit)

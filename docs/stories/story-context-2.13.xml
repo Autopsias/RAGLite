@@ -1,0 +1,422 @@
+<story-context id="story-2.13-sql-table-search-phase2a-revised" v="1.1">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>13</storyId>
+    <title>SQL Table Search (Phase 2A-REVISED)</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-26</generatedAt>
+    <generator>BMAD Story Context Workflow v1.1</generator>
+    <sourceStoryPath>docs/stories/story-2.13-sql-table-search-phase2a-revised.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>RAG retrieval system</asA>
+    <iWant>SQL-based table search for structured queries and vector search for text queries</iWant>
+    <soThat>retrieval accuracy improves from 18% to 70-80% by using the right tool for each data type</soThat>
+    <tasks>
+      <task id="1" ac="AC1">
+        <description>Table Extraction to SQL (2 days)</description>
+        <subtasks>
+          <subtask id="1.1">Design SQL schema for financial_tables</subtask>
+          <subtask id="1.2">Implement TableExtractor class (parse entity, metric, period)</subtask>
+          <subtask id="1.3">Add table storage to ingestion pipeline</subtask>
+          <subtask id="1.4">Validate extraction accuracy >90%</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="AC2">
+        <description>Text-to-SQL Generation (2 days)</description>
+        <subtasks>
+          <subtask id="2.1">Enhance query classifier with SQL generation</subtask>
+          <subtask id="2.2">Implement SQLTableSearch class</subtask>
+          <subtask id="2.3">Test SQL generation on 20 sample queries</subtask>
+          <subtask id="2.4">Validate SQL execution and attribution</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="AC3">
+        <description>Hybrid Search Integration (2 days)</description>
+        <subtasks>
+          <subtask id="3.1">Update hybrid_search() with SQL routing</subtask>
+          <subtask id="3.2">Implement SQL+Vector fusion logic</subtask>
+          <subtask id="3.3">Update multi_index_search() wrapper</subtask>
+          <subtask id="3.4">Integration tests (SQL, Vector, Hybrid)</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="AC4">
+        <description>Accuracy Validation (2 days)</description>
+        <subtasks>
+          <subtask id="4.1">Create validation script</subtask>
+          <subtask id="4.2">Run 50 ground truth queries</subtask>
+          <subtask id="4.3">Measure accuracy by query type</subtask>
+          <subtask id="4.4">Decision gate (≥70% → Epic 2 complete)</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">
+      <title>Table Extraction to SQL Database</title>
+      <description>Extract tables from Docling output and store in structured SQL format</description>
+      <successCriteria>
+        - Tables extracted to PostgreSQL financial_tables table
+        - Entity, metric, period, value, unit correctly parsed
+        - Page numbers preserved for attribution
+        - >90% extraction accuracy on validation sample
+      </successCriteria>
+      <effort>2 days</effort>
+    </criterion>
+    <criterion id="AC2">
+      <title>Text-to-SQL Query Generation</title>
+      <description>Convert natural language queries to SQL for table search</description>
+      <successCriteria>
+        - Text-to-SQL generation >80% accuracy
+        - SQL queries execute successfully
+        - Results include page numbers for attribution
+        - Graceful error handling (fallback to vector search)
+      </successCriteria>
+      <effort>2 days</effort>
+    </criterion>
+    <criterion id="AC3">
+      <title>Hybrid Search Integration</title>
+      <description>Integrate SQL table search with existing vector search</description>
+      <successCriteria>
+        - Table queries routed to SQL search
+        - Text queries routed to vector search
+        - Hybrid queries fuse SQL + vector results
+        - Backward compatibility maintained
+      </successCriteria>
+      <effort>2 days</effort>
+    </criterion>
+    <criterion id="AC4">
+      <title>Accuracy Validation ≥70%</title>
+      <description>Validate SQL table search achieves ≥70% retrieval accuracy</description>
+      <successCriteria>
+        - Overall accuracy ≥70%
+        - Table query accuracy ≥75%
+        - Attribution accuracy ≥95% maintained
+        - Latency &lt;15s p95 (NFR13)
+      </successCriteria>
+      <effort>2 days</effort>
+      <decisionGate>IF ≥70% accuracy → Epic 2 COMPLETE, IF &lt;70% → Phase 2B</decisionGate>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2: Advanced RAG Architecture Enhancement</title>
+        <section>Phase 2A-REVISED: SQL Table Search (1-2 weeks)</section>
+        <snippet>Production-proven SQL-based approach INSTEAD of Phase 2B (cross-encoder re-ranking). Research shows SQL table search achieves 70-80% accuracy. Evidence from FinRAG (nDCG@10 0.804), TableRAG (Huawei Cloud), Bloomberg, Salesforce Data Cloud.</snippet>
+        <relevance>Primary PRD for Story 2.13, defines strategic pivot from Phase 2A course correction to SQL table search approach</relevance>
+      </doc>
+      <doc>
+        <path>docs/tech-spec-epic-2.md</path>
+        <title>Technical Specification: Epic 2 - Advanced Document Understanding (GraphRAG)</title>
+        <section>DEPRECATED (2025-10-24)</section>
+        <snippet>This document describes the original GraphRAG/Neo4j architecture which was superseded by the Phase 2A/2B/2C staged approach. Current approach: Phase 2A (Fixed chunking), Phase 2B (SQL tables), Phase 2C (Neo4j hybrid).</snippet>
+        <relevance>Historical reference only - original Epic 2 approach before strategic pivot</relevance>
+      </doc>
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack</title>
+        <section>Epic 2 Phase 2B (Conditional)</section>
+        <snippet>PostgreSQL 16 (structured table storage) - CONDITIONAL on Phase 2A achieving &lt;70% accuracy. Used for storing financial tables with entity, metric, period, value columns for SQL-based table search.</snippet>
+        <relevance>Defines approved technology (PostgreSQL) and conditional approval criteria for Story 2.13</relevance>
+      </doc>
+      <doc>
+        <path>docs/validation/CRITICAL-ROOT-CAUSE-FOUND.md</path>
+        <title>Phase 2A Failure Root Cause Analysis</title>
+        <section>Root Cause: Semantic Search Cannot Distinguish Tables</section>
+        <snippet>Table-aware chunking created semantically indistinguishable chunks. All tables have identical headers, causing Fin-E5 embeddings to produce nearly identical similarity scores (0.014241 vs 0.014154 = 0.6% variance). Solution: Use SQL for structured table queries instead of semantic search.</snippet>
+        <relevance>Justifies why SQL table search is needed - semantic search fundamentally cannot work for tables with identical headers</relevance>
+      </doc>
+      <doc>
+        <path>docs/validation/EXECUTIVE-SUMMARY-PM-PRESENTATION.md</path>
+        <title>Sprint Change Proposal: SQL Table Search (Phase 2A-REVISED)</title>
+        <section>Production Evidence</section>
+        <snippet>FinRAG (AI competition winner): nDCG@10 0.804 (80.4%). TableRAG (Huawei Cloud): 75-80% on table queries. Bloomberg: Hundreds of thousands of docs daily with hybrid SQL+vector. Salesforce Data Cloud RAG: SQL for structured + semantic for text.</snippet>
+        <relevance>Production benchmarks proving SQL table search achieves 70-80% accuracy</relevance>
+      </doc>
+      <doc>
+        <path>docs/stories/story-2.4-add-llm-generated-contextual-metadata-injection.md</path>
+        <title>Story 2.4: Add LLM-Generated Contextual Metadata Injection</title>
+        <section>PostgreSQL Integration</section>
+        <snippet>PostgreSQL operational for metadata storage (fiscal_period, company_name, department_name). Claude 3.7 Sonnet API used for metadata extraction. Database schema includes entity, metric, period fields.</snippet>
+        <relevance>Story 2.4 established PostgreSQL infrastructure that Story 2.13 will extend with financial_tables schema</relevance>
+      </doc>
+      <doc>
+        <path>docs/stories/story-2.7-multi-index-search-architecture.md</path>
+        <title>Story 2.7: Multi-Index Search Architecture</title>
+        <section>PostgreSQL + Qdrant Hybrid Search</section>
+        <snippet>Implemented multi-index search supporting PostgreSQL SQL queries and Qdrant vector search. Query routing logic directs table queries to SQL and text queries to vector. RRF fusion combines results from multiple sources.</snippet>
+        <relevance>Story 2.7 established multi-index architecture that Story 2.13 will enhance with table-specific SQL routing</relevance>
+      </doc>
+      <doc>
+        <path>docs/stories/story-2.10-fix-query-classification-over-routing.md</path>
+        <title>Story 2.10: Fix Query Classification Over-Routing</title>
+        <section>Query Classifier Heuristics</section>
+        <snippet>Query classifier routes queries based on temporal terms and metric terms. Reduced SQL over-routing from 48% to 8%. Requires BOTH metric AND temporal terms for SQL_ONLY routing. Hybrid mode for most queries.</snippet>
+        <relevance>Story 2.10 established query classification logic that Story 2.13 will enhance with text-to-SQL generation</relevance>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>pipeline</kind>
+        <symbol>chunk_by_docling_items()</symbol>
+        <lines>1741-1936</lines>
+        <reason>Document ingestion pipeline that Story 2.13 will extend with table extraction to PostgreSQL. Extracts TableItem objects from Docling which need to be parsed into SQL rows.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/retrieval/search.py</path>
+        <kind>search</kind>
+        <symbol>hybrid_search()</symbol>
+        <lines>1-150</lines>
+        <reason>Hybrid search function that combines vector (Qdrant) and keyword (BM25) search. Story 2.13 will add SQL table search routing to this function for table queries.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/retrieval/query_classifier.py</path>
+        <kind>classifier</kind>
+        <symbol>classify_query()</symbol>
+        <lines>1-100</lines>
+        <reason>Query classifier (Story 2.10) that routes queries to SQL vs RAG. Story 2.13 will enhance with text-to-SQL generation using Claude API.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/clients.py</path>
+        <kind>clients</kind>
+        <symbol>get_postgres_client()</symbol>
+        <lines>1-50</lines>
+        <reason>PostgreSQL client factory (Story 2.4). Story 2.13 will use this to execute SQL queries against financial_tables schema.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>models</kind>
+        <symbol>QueryResult</symbol>
+        <lines>1-50</lines>
+        <reason>Pydantic model for search results. Story 2.13 will extend with SQL-specific result fields (entity, metric, period, value, unit).</reason>
+      </artifact>
+      <artifact>
+        <path>tests/integration/test_hybrid_search_integration.py</path>
+        <kind>test</kind>
+        <symbol>test_hybrid_search()</symbol>
+        <lines>1-200</lines>
+        <reason>Integration tests for hybrid search (Stories 2.7, 2.11). Story 2.13 will add SQL table search test cases to ensure backward compatibility.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="docling" version="latest" purpose="PDF table extraction with TableItem objects"/>
+        <package name="psycopg" version="^3.1.0" purpose="PostgreSQL async client (installed in Story 2.4)"/>
+        <package name="anthropic" version="latest" purpose="Claude API for text-to-SQL generation"/>
+        <package name="pydantic" version="^2.0" purpose="Data validation for SQL result models"/>
+        <package name="qdrant-client" version="^1.11.0" purpose="Vector search for text queries (existing)"/>
+        <package name="tiktoken" version="latest" purpose="Token counting for chunking (Story 2.3)"/>
+      </python>
+      <database>
+        <system name="PostgreSQL" version="16" purpose="SQL table storage and querying"/>
+        <schema name="financial_tables" purpose="Store extracted table data with entity, metric, period, value columns"/>
+      </database>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint id="1">
+      <category>architecture</category>
+      <description>Reuse existing PostgreSQL infrastructure from Story 2.4 - do NOT create new database connections or client factories</description>
+      <source>docs/architecture/5-technology-stack-definitive.md</source>
+    </constraint>
+    <constraint id="2">
+      <category>simplicity</category>
+      <description>NO new ML models. Reuse existing Fin-E5 for vector search, use SQL for table search. Simple query routing logic.</description>
+      <source>CLAUDE.md - KISS principle, ~600-800 lines target</source>
+    </constraint>
+    <constraint id="3">
+      <category>backward-compatibility</category>
+      <description>Maintain backward compatibility with Stories 2.7 (multi-index) and 2.11 (BM25 fusion). Text queries must still route to vector search.</description>
+      <source>docs/stories/story-2.13-sql-table-search-phase2a-revised.md - AC3</source>
+    </constraint>
+    <constraint id="4">
+      <category>performance</category>
+      <description>NFR13: Query latency &lt;15s p95. SQL queries must execute in &lt;50ms. Text-to-SQL generation &lt;1s.</description>
+      <source>docs/prd/epic-2-advanced-rag-enhancements.md - NFR13</source>
+    </constraint>
+    <constraint id="5">
+      <category>testing</category>
+      <description>40+ total tests: 15-20 unit tests (table extraction), 10-15 integration tests (SQL search), 5 regression tests (backward compat), 4 performance tests (latency)</description>
+      <source>docs/stories/story-2.13-sql-table-search-phase2a-revised.md - Testing Strategy</source>
+    </constraint>
+    <constraint id="6">
+      <category>security</category>
+      <description>SQL injection prevention: Parameterized queries only. Validate and sanitize all user input before SQL generation.</description>
+      <source>docs/stories/story-2.13-sql-table-search-phase2a-revised.md - Integration Tests</source>
+    </constraint>
+    <constraint id="7">
+      <category>rollback</category>
+      <description>Preserve Story 2.11 code during implementation. If AC4 fails (&lt;70% accuracy), rollback to vector-only search in 2-4 hours.</description>
+      <source>docs/stories/story-2.13-sql-table-search-phase2a-revised.md - Rollback Strategy</source>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>financial_tables SQL Schema</name>
+      <kind>database-schema</kind>
+      <signature>
+CREATE TABLE financial_tables (
+    id SERIAL PRIMARY KEY,
+    document_id VARCHAR(255) NOT NULL,
+    page_number INT NOT NULL,
+    table_index INT NOT NULL,
+    table_caption TEXT,
+
+    entity VARCHAR(255),           -- e.g., "Portugal Cement"
+    metric VARCHAR(255),            -- e.g., "variable costs"
+    period VARCHAR(100),            -- e.g., "Aug-25 YTD"
+    fiscal_year INT,                -- e.g., 2025
+    value DECIMAL(15,2),            -- Numeric value
+    unit VARCHAR(50),               -- e.g., "EUR/ton"
+
+    row_index INT,
+    column_name VARCHAR(255),
+    section_type VARCHAR(100),
+    chunk_text TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    INDEX idx_entity (entity),
+    INDEX idx_metric (metric),
+    INDEX idx_period (period),
+    INDEX idx_fiscal_year (fiscal_year),
+    INDEX idx_document_page (document_id, page_number)
+);
+      </signature>
+      <path>docs/stories/story-2.13-sql-table-search-phase2a-revised.md:48-80</path>
+    </interface>
+
+    <interface>
+      <name>TableExtractor.extract_tables()</name>
+      <kind>function</kind>
+      <signature>
+async def extract_tables(self, doc_path: str) -> List[Dict[str, Any]]:
+    """Extract and parse all tables from document.
+
+    Args:
+        doc_path: Path to financial document
+
+    Returns:
+        List of table rows as dicts (ready for SQL insertion)
+    """
+      </signature>
+      <path>raglite/ingestion/table_extraction.py:90-102</path>
+    </interface>
+
+    <interface>
+      <name>SQLTableSearch.search_tables()</name>
+      <kind>function</kind>
+      <signature>
+async def search_tables(self, sql_query: str) -> List[Dict[str, Any]]:
+    """Execute SQL query and return results.
+
+    Args:
+        sql_query: Generated SQL query
+
+    Returns:
+        List of matching rows with page numbers for attribution
+    """
+      </signature>
+      <path>raglite/retrieval/sql_search.py:297-307</path>
+    </interface>
+
+    <interface>
+      <name>classify_query_and_generate_sql()</name>
+      <kind>function</kind>
+      <signature>
+async def classify_query_and_generate_sql(query: str) -> dict:
+    """Classify query and generate SQL if it's a table query.
+
+    Args:
+        query: Natural language query
+
+    Returns:
+        {
+            'query_type': 'table' | 'text' | 'hybrid',
+            'sql': Optional[str],
+            'search_query': str
+        }
+    """
+      </signature>
+      <path>raglite/retrieval/query_classifier.py:225-239</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest for all tests. Follow existing patterns from tests/integration/test_hybrid_search_integration.py.
+      Unit tests go in tests/unit/, integration tests in tests/integration/, performance tests in tests/performance/.
+      Target 80%+ code coverage. Mock external dependencies (PostgreSQL, Claude API) in unit tests.
+      Integration tests use real database (test fixtures). All tests must pass before story completion.
+    </standards>
+
+    <locations>
+      <location>tests/unit/test_table_extraction.py</location>
+      <location>tests/integration/test_sql_table_search.py</location>
+      <location>tests/integration/test_hybrid_search_integration.py</location>
+      <location>tests/performance/test_sql_latency.py</location>
+    </locations>
+
+    <ideas>
+      <idea ac="AC1">
+        - test_parse_table_structure_simple: Parse basic 3x3 table
+        - test_parse_value_unit_decimals: Parse "23.2 EUR/ton" → (23.2, "EUR/ton")
+        - test_extract_entity: Extract entity name from table row
+        - test_extract_tables_full_document: End-to-end extraction from PDF
+      </idea>
+      <idea ac="AC2">
+        - test_text_to_sql_simple_query: "What is variable cost?" → SQL
+        - test_text_to_sql_complex_query: Multi-entity, multi-period query
+        - test_sql_execution_returns_results: Execute SQL, verify page numbers
+        - test_graceful_sql_error_handling: SQL syntax error → fallback to vector
+      </idea>
+      <idea ac="AC3">
+        - test_hybrid_routing_table_query: Table query routes to SQL
+        - test_hybrid_routing_text_query: Text query routes to vector
+        - test_sql_vector_fusion_logic: RRF fusion with correct weights
+        - test_backward_compatibility_story_27: Multi-index still works
+      </idea>
+      <idea ac="AC4">
+        - test_sql_query_latency_p50: Median &lt;5s
+        - test_sql_query_latency_p95: p95 &lt;15s
+        - Full ground truth validation: 50 queries, measure accuracy by type
+      </idea>
+    </ideas>
+  </tests>
+
+  <productionEvidence>
+    <benchmark>
+      <name>FinRAG (AI Competition Winner)</name>
+      <accuracy>nDCG@10: 0.804 (80.4%)</accuracy>
+      <approach>Table extraction → SQL → Text-to-SQL</approach>
+      <source>https://app.readytensor.ai/publications/finragretrieval-augmented-generation-for-financial-document-processing-with-sql-integrated-pipeline-oOf0cV4wmeSC</source>
+    </benchmark>
+    <benchmark>
+      <name>TableRAG (Huawei Cloud)</name>
+      <accuracy>75-80% on table queries</accuracy>
+      <approach>Tables → Relational DB (PostgreSQL/SQLite), multi-hop via SQL</approach>
+      <source>https://arxiv.org/html/2506.10380v1</source>
+    </benchmark>
+    <benchmark>
+      <name>Bloomberg AI Document Insights</name>
+      <accuracy>Production system (hundreds of thousands of 10-Ks daily)</accuracy>
+      <approach>Hybrid: Structured DB + Vector search, RRF fusion</approach>
+      <source>https://www.bloomberg.com/company/press/bloomberg-accelerates-financial-analysis-with-gen-ai-document-insights</source>
+    </benchmark>
+    <benchmark>
+      <name>Salesforce Data Cloud RAG</name>
+      <accuracy>Production-validated architecture</accuracy>
+      <approach>SQL for structured tables + Semantic for unstructured text</approach>
+      <source>https://help.salesforce.com/s/articleView?id=data.c360_a_rag_overview.htm</source>
+    </benchmark>
+  </productionEvidence>
+</story-context>

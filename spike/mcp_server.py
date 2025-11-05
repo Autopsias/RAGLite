@@ -92,9 +92,12 @@ async def execute_query(request: QueryRequest) -> QueryResponse:
     # Generate query embedding
     query_embedding = model.encode([request.query])[0].tolist()
 
-    # Search Qdrant using updated API
+    # Search Qdrant using updated API with named vectors (Story 2.1 hybrid search)
     search_results = qdrant.query_points(
-        collection_name=QDRANT_COLLECTION_NAME, query=query_embedding, limit=request.top_k
+        collection_name=QDRANT_COLLECTION_NAME,
+        query=query_embedding,
+        using="text-dense",  # Named vector for hybrid search
+        limit=request.top_k,
     ).points
 
     # Convert results to QueryResult objects

@@ -1,0 +1,1684 @@
+# SECTION 7 (PAGES 121-140) - DATA INVENTORY FOR GROUND TRUTH CREATION
+# Secil Lebanon & Brazil Performance Review - August 2025
+# Comprehensive Analysis of All Tables, Metrics, and Data Points
+
+document_section:
+  title: "Secil - Lebanon - Operational Performance & P&L Analysis"
+  pages: "121-140 (LB 5 through LB 21 + BR 2-3)"
+  reporting_period: "August 2025 (Monthly vs YTD vs Budget vs LY)"
+  currency_primary: "1000 USD (Lebanon)"
+  currency_secondary: "1000 BRL (Brazil)"
+
+---
+
+# TABLE 1: LEBANON CEMENT OPERATIONAL PERFORMANCE
+table_1:
+  name: "Secil - Lebanon - Operational Performance - Lebanon Cement (YTD vs Budget vs LY)"
+  page: "121 (LB 5)"
+  type: "OPERATIONAL_METRICS"
+  layout: "DUAL_SPLIT (Month vs YTD)"
+  currency: "1000 USD"
+  transposed: false
+  description: "Month-to-date and year-to-date cement production, pricing, costs, and profitability metrics"
+
+  metrics_identified: 45
+
+  key_rows:
+    volume_im_kton:
+      month_aug25: 66
+      month_budget: 74
+      month_ly: 40
+      ytd_aug25: 531
+      ytd_budget: 429
+      ytd_ly: 400
+      variance_budget_pct: 24
+      variance_ly_pct: 33
+      unit: "kton"
+      description: "Volume Internal Market - cement in kilotons"
+
+    price_cement_net_transp:
+      month_aug25: 79.4
+      month_budget: 80.0
+      month_ly: 77.4
+      ytd_aug25: 80.3
+      ytd_budget: 80.0
+      ytd_ly: 77.9
+      variance_budget_pct: 0
+      variance_ly_pct: 3
+      unit: "1000 USD/ton"
+      description: "Price Cement - Net Transport Cost IM"
+
+    price_cement_im:
+      month_aug25: 79.4
+      month_budget: 80.0
+      month_ly: 79.2
+      ytd_aug25: 80.3
+      ytd_budget: 80.0
+      ytd_ly: 77.9
+      variance_budget_pct: 0
+      variance_ly_pct: 3
+      unit: "1000 USD/ton"
+
+    variable_costs:
+      month_aug25: 53.2
+      month_budget: 46.8
+      month_ly: 98.2
+      ytd_aug25: 56.3
+      ytd_budget: 49.4
+      ytd_ly: 60.7
+      variance_budget_pct: 14
+      variance_ly_pct: -7
+      unit: "1000 USD/ton"
+      description: "Variable Costs - includes fuel, electricity, raw materials, packaging"
+
+    fuel_costs:
+      month_aug25: 11.7
+      month_budget: 13.7
+      month_ly: 0.0
+      ytd_aug25: 10.8
+      ytd_budget: 13.8
+      ytd_ly: 7.5
+      variance_budget_pct: -22
+      variance_ly_pct: 43
+      unit: "1000 USD/ton"
+
+    electricity_costs:
+      month_aug25: 10.9
+      month_budget: 19.6
+      month_ly: 39.0
+      ytd_aug25: 20.1
+      ytd_budget: 22.5
+      ytd_ly: 21.9
+      variance_budget_pct: -11
+      variance_ly_pct: -8
+      unit: "1000 USD/ton"
+
+    fixed_costs_plant:
+      month_aug25: -1058
+      month_budget: -869
+      month_ly: -670
+      ytd_aug25: -7125
+      ytd_budget: -7486
+      ytd_ly: -5409
+      variance_budget_pct: -5
+      variance_ly_pct: 32
+      unit: "1000 USD"
+
+    employee_costs:
+      month_aug25: -462
+      month_budget: -454
+      month_ly: -391
+      ytd_aug25: -3493
+      ytd_budget: -3556
+      ytd_ly: -3301
+      variance_budget_pct: -2
+      variance_ly_pct: 6
+      unit: "1000 USD"
+
+    maintenance_costs:
+      month_aug25: -110
+      month_budget: -167
+      month_ly: -46
+      ytd_aug25: -1077
+      ytd_budget: -2211
+      ytd_ly: -730
+      variance_budget_pct: -51
+      variance_ly_pct: 48
+      unit: "1000 USD"
+
+    ebitda_ifrs_cement:
+      month_aug25: 836
+      month_budget: 1558
+      month_ly: -836
+      ytd_aug25: 5355
+      ytd_budget: 5151
+      ytd_ly: 1566
+      variance_budget_pct: 4
+      variance_ly_pct: 242
+      unit: "1000 USD"
+
+    ebitda_margin_pct:
+      month_aug25: 16.0
+      month_budget: 25.8
+      month_ly: -23.9
+      ytd_aug25: 12.4
+      ytd_budget: 14.7
+      ytd_ly: 4.9
+      variance_budget_pp: -2.3
+      variance_ly_pp: 7.5
+      description: "EBITDA Margin percentage"
+
+---
+
+# TABLE 2: LEBANON MATERIALS (READY-MIX & PRECAST)
+table_2:
+  name: "Secil - Lebanon - Operational Performance - Lebanon Materials (YTD vs Budget vs LY)"
+  page: "122 (LB 6)"
+  type: "OPERATIONAL_METRICS"
+  layout: "DUAL_SPLIT (Ready-Mix vs Precast)"
+  currency: "1000 USD"
+  transposed: false
+
+  ready_mix_segment:
+    volume_km3:
+      month_aug25: 7
+      ytd_aug25: 42
+      ytd_budget: 42
+      ytd_ly: 21
+      variance_budget_pct: 0
+      variance_ly_pct: 96
+      unit: "km3"
+
+    price_per_m3:
+      month_aug25: 65.2
+      month_budget: 72.7
+      month_ly: 74.2
+      ytd_aug25: 63.1
+      ytd_budget: 72.7
+      ytd_ly: 76.2
+      variance_budget_pct: -13
+      variance_ly_pct: -17
+      unit: "1000 USD/m3"
+
+    unit_margin_m3:
+      month_aug25: 6.0
+      month_budget: 15.9
+      month_ly: -0.9
+      ytd_aug25: 7.4
+      ytd_budget: 15.8
+      ytd_ly: 13.7
+      variance_budget_pct: -53
+      variance_ly_pct: -46
+      unit: "1000 USD/m3"
+
+    ebitda_ifrs:
+      month_aug25: -39
+      month_budget: 27
+      month_ly: -108
+      ytd_aug25: -171
+      ytd_budget: 28
+      ytd_ly: -196
+      variance_budget_pct: -718
+      variance_ly_pct: -12
+      unit: "1000 USD"
+
+    ebitda_margin_pct:
+      month_aug25: -9
+      month_budget: 6
+      month_ly: -47
+      ytd_aug25: -6
+      ytd_budget: 1
+      ytd_ly: -12
+      variance_budget_pp: -7.2
+      variance_ly_pp: 5.7
+
+  precast_segment:
+    turnover:
+      month_aug25: 67
+      month_budget: 134
+      month_ly: 63
+      ytd_aug25: 442
+      ytd_budget: 763
+      ytd_ly: 418
+      variance_budget_pct: -42
+      variance_ly_pct: 6
+      unit: "1000 USD"
+
+    variable_costs:
+      month_aug25: -33
+      month_budget: -59
+      month_ly: -36
+      ytd_aug25: -234
+      ytd_budget: -357
+      ytd_ly: -169
+      variance_budget_pct: -35
+      variance_ly_pct: 38
+      unit: "1000 USD"
+
+    ebitda_ifrs:
+      month_aug25: -3
+      month_budget: 42
+      month_ly: -5
+      ytd_aug25: -38
+      ytd_budget: 123
+      ytd_ly: 60
+      variance_budget_pct: -131
+      variance_ly_pct: -163
+      unit: "1000 USD"
+
+    ebitda_margin_pct:
+      month_aug25: -5
+      month_budget: 29
+      month_ly: -7
+      ytd_aug25: -8
+      ytd_budget: 15
+      ytd_ly: 13
+      variance_budget_pp: -23.1
+      variance_ly_pp: -21.4
+
+---
+
+# TABLE 3: LEBANON G&A AND CORPORATE COSTS
+table_3:
+  name: "Secil - Lebanon - Operational Performance - Lebanon Others and G&A (YTD vs Budget vs LY)"
+  page: "123 (LB 7)"
+  type: "OVERHEAD_COSTS"
+  layout: "DUAL_SPLIT (Others & G&A)"
+  currency: "1000 USD"
+  transposed: false
+
+  g&a_costs:
+    revenue_others:
+      month_aug25: 6
+      month_budget: 0
+      month_ly: 3
+      ytd_aug25: 30
+      ytd_budget: 0
+      ytd_ly: 5
+      variance_budget_pct: 455
+      variance_ly_pct: 455
+
+    employees_cost:
+      month_aug25: -185
+      month_budget: -197
+      month_ly: -162
+      ytd_aug25: -1649
+      ytd_budget: -1556
+      ytd_ly: -1641
+      variance_budget_pct: 6
+      variance_ly_pct: 0
+
+    fte_count:
+      month_aug25: 59
+      month_budget: 58
+      month_ly: 57
+      ytd_aug25: 59
+      ytd_budget: 58
+      ytd_ly: 57
+      variance_budget_pct: 2
+      variance_ly_pct: 4
+      description: "Full-time equivalent headcount"
+
+    specialized_labour:
+      month_aug25: -21
+      month_budget: -28
+      month_ly: -25
+      ytd_aug25: -262
+      ytd_budget: -226
+      ytd_ly: -226
+      variance_budget_pct: 16
+      variance_ly_pct: 16
+
+    travel_expenses:
+      month_aug25: -5
+      month_budget: -6
+      month_ly: -12
+      ytd_aug25: -65
+      ytd_budget: -48
+      ytd_ly: -77
+      variance_budget_pct: 36
+      variance_ly_pct: -15
+
+    other_costs:
+      month_aug25: -61
+      month_budget: -100
+      month_ly: -77
+      ytd_aug25: -906
+      ytd_budget: -797
+      ytd_ly: -823
+      variance_budget_pct: 14
+      variance_ly_pct: 10
+
+    ebitda_ifrs_gna:
+      month_aug25: -267
+      month_budget: -334
+      month_ly: -277
+      ytd_aug25: -2921
+      ytd_budget: -2651
+      ytd_ly: -2791
+      variance_budget_pct: 10
+      variance_ly_pct: 5
+
+    gna_to_turnover_pct:
+      month_aug25: 4.8
+      month_budget: 5.2
+      month_ly: 7.4
+      ytd_aug25: 6.5
+      ytd_budget: 7.1
+      ytd_ly: 8.4
+      variance_budget_pp: -0.6
+      variance_ly_pp: -1.9
+
+  corporate_costs_detail:
+    trading_margin_merchandise:
+      month_aug25: 0
+      month_budget: 0
+      month_ly: -1
+      ytd_aug25: 0
+      ytd_budget: 0
+      ytd_ly: 19
+      variance_budget_pct: -100
+
+    technical_assistance:
+      month_aug25: 28
+      month_budget: 31
+      month_ly: 25
+      ytd_aug25: 242
+      ytd_budget: 250
+      ytd_ly: 223
+      variance_budget_pct: -3
+      variance_ly_pct: 8
+
+    corporate_employee_costs:
+      month_aug25: -5
+      month_budget: -31
+      month_ly: -10
+      ytd_aug25: -220
+      ytd_budget: -250
+      ytd_ly: -218
+      variance_budget_pct: -12
+      variance_ly_pct: 1
+
+    insurance_costs:
+      month_aug25: -1
+      month_budget: -2
+      month_ly: -2
+      ytd_aug25: -9
+      ytd_budget: -13
+      ytd_ly: -12
+      variance_budget_pct: -35
+      variance_ly_pct: -26
+
+    total_corporate:
+      month_aug25: 16
+      month_budget: -10
+      month_ly: 8
+      ytd_aug25: -83
+      ytd_budget: -83
+      ytd_ly: -60
+      variance_budget_pct: -0
+      variance_ly_pct: 37
+
+---
+
+# TABLE 4: LEBANON ROLLING FORECAST (FORWARD-LOOKING)
+table_4:
+  name: "Secil - Lebanon - Rolling Forecast"
+  page: "124 (LB 8)"
+  type: "FORECAST_METRICS"
+  layout: "DUAL_SPLIT (Month vs YTD)"
+  currency: "1000 USD"
+  periods_covered: "Aug-25 actual, Sep-25 forecast, Sep-24 comparisons"
+  transposed: false
+  description: "Forward-looking forecast with rolling updates"
+
+  cement_segment:
+    local_cement_sales_kton:
+      aug_actual: 66
+      sep_forecast: 65
+      sep_budget: 72
+      sep_ly: 72
+      ytd_forecast: 596
+      ytd_budget: 502
+      ytd_ly: 472
+      variance_budget_pct: 19
+      variance_ly_pct: 26
+
+    clinker_production_ton:
+      aug_actual: 46
+      sep_forecast: 65
+      sep_budget: 57
+      sep_ly: 43
+      variance_budget_pct: 13
+      variance_ly_pct: 50
+
+    cement_ebitda_ifrs:
+      aug_actual: 836
+      sep_forecast: 950
+      sep_budget: 1479
+      sep_ly: 1086
+      ytd_forecast: 6305
+      ytd_budget: 6630
+      ytd_ly: 2652
+      variance_budget_pct: -5
+      variance_ly_pct: 138
+
+  concrete_segment:
+    volume_km3:
+      aug_actual: 7
+      sep_forecast: 7
+      sep_budget: 7
+      ytd_forecast: 49
+      ytd_budget: 49
+      ytd_ly: 21
+      variance_budget_pct: 0
+      variance_ly_pct: 129
+
+    ebitda_ifrs:
+      aug_actual: -39
+      sep_forecast: 10
+      sep_budget: 35
+      sep_ly: -0
+      ytd_forecast: -161
+      ytd_budget: 63
+      ytd_ly: -196
+      variance_budget_pct: -355
+      variance_ly_pct: -18
+
+  precast_segment:
+    volume_kton:
+      aug_actual: 2
+      sep_forecast: 3
+      sep_budget: 4
+      sep_ly: 1
+      ytd_forecast: 17
+      ytd_budget: 28
+      ytd_ly: 13
+      variance_budget_pct: -40
+      variance_ly_pct: 27
+
+  lebanon_total_ebitda:
+    aug_actual: 543
+    sep_forecast: 621
+    sep_budget: 1209
+    sep_ly: 798
+    ytd_forecast: 2763
+    ytd_budget: 3777
+    ytd_ly: -623
+    variance_budget_pct: -27
+    variance_ly_pct: -442
+
+---
+
+# TABLE 5: LEBANON P&L (INCOME STATEMENT)
+table_5:
+  name: "Secil - Lebanon - P&L (YTD vs Budget vs LY)"
+  page: "125 (LB 9)"
+  type: "FINANCIAL_STATEMENT"
+  layout: "DUAL_SPLIT (Income Statement)"
+  currency: "1000 USD"
+  transposed: false
+  description: "Comprehensive profit and loss statement with variance analysis"
+
+  profitability_metrics:
+    ebitda_ifrs:
+      month_aug25: 543
+      month_budget: 1282
+      month_ly: -1217
+      ytd_aug25: 2142
+      ytd_budget: 2568
+      ytd_ly: -1421
+      variance_budget_pct: -17
+      variance_ly_pct: -251
+
+    ebitda_margin_pct:
+      month_aug25: 10.0
+      month_budget: 20.0
+      month_ly: -32.0
+      ytd_aug25: 5.0
+      ytd_budget: 7.0
+      ytd_ly: -4.0
+      variance_budget_pp: -2.1
+      variance_ly_pp: 9.0
+
+    amortization_depreciation:
+      month_aug25: -94
+      month_budget: -350
+      month_ly: -84
+      ytd_aug25: -738
+      ytd_budget: -2237
+      ytd_ly: -718
+      variance_budget_pct: -67
+      variance_ly_pct: 3
+
+    provisions:
+      month_aug25: -101
+      month_budget: -134
+      month_ly: -34
+      ytd_aug25: -740
+      ytd_budget: -1072
+      ytd_ly: -290
+      variance_budget_pct: -31
+      variance_ly_pct: 155
+
+    ebit:
+      month_aug25: 348
+      month_budget: 798
+      month_ly: -1335
+      ytd_aug25: 665
+      ytd_budget: -741
+      ytd_ly: -2429
+      variance_budget_pct: -190
+      variance_ly_pct: -127
+
+    net_financial_costs:
+      month_aug25: -71
+      month_budget: -97
+      month_ly: -121
+      ytd_aug25: -160
+      ytd_budget: -748
+      ytd_ly: -523
+      variance_budget_pct: -79
+      variance_ly_pct: -69
+
+    operational_forex:
+      month_aug25: 13
+      month_budget: 0
+      month_ly: -6
+      ytd_aug25: 115
+      ytd_budget: 0
+      ytd_ly: 202
+      variance_budget_pct: -43
+      variance_ly_pct: -43
+
+    financial_income:
+      month_aug25: -58
+      month_budget: -97
+      month_ly: -127
+      ytd_aug25: -46
+      ytd_budget: -748
+      ytd_ly: -321
+      variance_budget_pct: -94
+      variance_ly_pct: -86
+
+    profit_before_tax:
+      month_aug25: 290
+      month_budget: 702
+      month_ly: -1462
+      ytd_aug25: 619
+      ytd_budget: -1489
+      ytd_ly: -2750
+      variance_budget_pct: -142
+      variance_ly_pct: -123
+
+    tax_expense:
+      month_aug25: -49
+      month_budget: 0
+      month_ly: 222
+      ytd_aug25: -265
+      ytd_budget: 0
+      ytd_ly: 418
+      variance_budget_pct: -163
+      variance_ly_pct: -163
+
+    net_income:
+      month_aug25: 241
+      month_budget: 702
+      month_ly: -1240
+      ytd_aug25: 354
+      ytd_budget: -1489
+      ytd_ly: -2332
+      variance_budget_pct: -124
+      variance_ly_pct: -115
+
+    ebit_margin_pct:
+      month_aug25: 6.0
+      month_budget: 12.0
+      month_ly: -36.0
+      ytd_aug25: 1.0
+      ytd_budget: -2.0
+      ytd_ly: -7.0
+      variance_budget_pp: 3.4
+      variance_ly_pp: 8.7
+
+---
+
+# TABLE 6: HEALTH & SAFETY KPIs
+table_6:
+  name: "Secil - Lebanon - Health & Safety KPI's"
+  page: "126 (LB 11)"
+  type: "OPERATIONAL_METRICS"
+  layout: "TIME_SERIES (Monthly + Aggregates)"
+  metric_unit: "Ratio per million hours worked"
+  transposed: false
+  description: "Safety metrics for Lebanon with cement vs non-cement breakdown"
+
+  frequency_ratio_metrics:
+    lebanon_ytd_2025: 3.8
+    lebanon_last_12_months: 3.6
+    lebanon_fy_2024: 3.0
+    lebanon_fy_2023: 1.1
+    lebanon_budget_2025: 2.3
+
+    cement_ytd_2025: 1.5
+    cement_last_12_months: 2.1
+    cement_fy_2024: 2.3
+    cement_fy_2023: null
+    cement_budget_2025: 1.3
+
+    non_cement_ytd_2025: 16.1
+    non_cement_last_12_months: 11.5
+    non_cement_fy_2024: 6.8
+    non_cement_fy_2023: 7.5
+    non_cement_budget_2025: 7.8
+
+  lost_time_injury_metrics:
+    lebanon_ytd_2025: 3.00
+    lebanon_last_12_months: 4.00
+    lebanon_fy_2024: 3.00
+    lebanon_fy_2023: 1.00
+    lebanon_budget_2025: 2.00
+
+    cement_ytd_2025: 1.00
+    cement_last_12_months: 2.00
+    cement_fy_2024: 2.00
+    cement_fy_2023: null
+    cement_budget_2025: 1.00
+
+    non_cement_ytd_2025: 2.00
+    non_cement_last_12_months: 2.00
+    non_cement_fy_2024: 1.00
+    non_cement_fy_2023: 1.00
+    non_cement_budget_2025: 1.00
+
+  monthly_data_points:
+    - month: "Apr-25"
+      frequency_ratio_lebanon: 21.26
+      frequency_ratio_cement: 12.42
+      frequency_ratio_non_cement: 73.72
+      lost_time_injury_lebanon: 2.00
+      lost_time_injury_cement: 1.00
+      lost_time_injury_non_cement: 1.00
+
+    - month: "Jun-25"
+      frequency_ratio_lebanon: 11.79
+      frequency_ratio_cement: null
+      frequency_ratio_non_cement: 79.99
+      lost_time_injury_lebanon: 1.00
+      lost_time_injury_cement: null
+      lost_time_injury_non_cement: 1.00
+
+---
+
+# TABLE 7: TURNOVER & EBITDA SUMMARY
+table_7:
+  name: "Secil - Lebanon - Turnover / EBITDA IFRS (YTD vs Budget vs LY)"
+  page: "127 (LB 12)"
+  type: "FINANCIAL_SUMMARY"
+  layout: "DUAL_SPLIT (Turnover & EBITDA)"
+  currency: "1000 USD"
+  transposed: false
+
+  turnover_segment_breakdown:
+    lebanon_total:
+      month_aug25: 5593
+      month_budget: 6478
+      month_ly: 3750
+      ytd_aug25: 45056
+      ytd_budget: 37604
+      ytd_ly: 33408
+      variance_budget_pct: 19.8
+      variance_ly_pct: 34.9
+
+    lebanon_cement:
+      month_aug25: 5241
+      month_budget: 6047
+      month_ly: 3503
+      ytd_aug25: 43114
+      ytd_budget: 34932
+      ytd_ly: 31866
+      variance_budget_pct: 23.0
+      variance_ly_pct: 35.3
+
+    lebanon_ready_mix:
+      month_aug25: 427
+      month_budget: 473
+      month_ly: 231
+      ytd_aug25: 2737
+      ytd_budget: 3053
+      ytd_ly: 1640
+      variance_budget_pct: -10.3
+      variance_ly_pct: 66.9
+
+    lebanon_precast:
+      month_aug25: 68
+      month_budget: 144
+      month_ly: 72
+      ytd_aug25: 467
+      ytd_budget: 820
+      ytd_ly: 449
+      variance_budget_pct: -43.0
+      variance_ly_pct: 3.9
+
+  ebitda_segment_breakdown:
+    lebanon_total:
+      month_aug25: 543
+      month_budget: 1282
+      month_ly: -1217
+      ytd_aug25: 2142
+      ytd_budget: 2568
+      ytd_ly: -1421
+      variance_budget_pct: -16.6
+      variance_ly_pct: -250.7
+
+    lebanon_cement:
+      month_aug25: 836
+      month_budget: 1558
+      month_ly: -836
+      ytd_aug25: 5355
+      ytd_budget: 5151
+      ytd_ly: 1566
+      variance_budget_pct: 3.9
+      variance_ly_pct: 241.9
+
+    total_building_materials:
+      month_aug25: -42
+      month_budget: 69
+      month_ly: -113
+      ytd_aug25: -209
+      ytd_budget: 151
+      ytd_ly: -136
+      variance_budget_pct: -238.4
+      variance_ly_pct: 53.7
+
+    lebanon_gna:
+      month_aug25: -267
+      month_budget: -334
+      month_ly: -277
+      ytd_aug25: -2921
+      ytd_budget: -2651
+      ytd_ly: -2791
+      variance_budget_pct: 10.1
+      variance_ly_pct: 4.7
+
+---
+
+# TABLE 8: HEADCOUNT EVOLUTION
+table_8:
+  name: "Secil - Lebanon - Headcount Evolution (YTD vs Budget vs LY)"
+  page: "128 (LB 13)"
+  type: "HR_METRICS"
+  layout: "TIME_SERIES (Annual + Monthly 2025)"
+  transposed: false
+  description: "Full-time equivalent headcount by business segment over multi-year period"
+
+  headcount_trends:
+    historical_annual:
+      - year: 2020
+        total_lebanon: 497
+        cement: 322
+        ready_mix: 54
+        precast: 25
+        gna: 96
+
+      - year: 2021
+        total_lebanon: 486
+        cement: 310
+        ready_mix: 56
+        precast: 23
+        gna: 97
+
+      - year: 2022
+        total_lebanon: 444
+        cement: 322
+        ready_mix: 50
+        precast: 19
+        gna: 53
+
+      - year: 2023
+        total_lebanon: 391
+        cement: 294
+        ready_mix: 30
+        precast: 17
+        gna: 50
+
+      - year: 2024
+        total_lebanon: 463
+        cement: 336
+        ready_mix: 44
+        precast: 24
+        gna: 59
+
+    current_ytd_2025:
+      jan: 452
+      feb: 437
+      mar: 439
+      apr: 437
+      may: 441
+      jun: 441
+      jul: 444
+      aug: 437
+      ytd_average: 441
+
+    cement_headcount_2025:
+      aug: 308
+      plants: 0
+      distribution: 16
+      sales: 0
+
+    ready_mix_headcount_aug: 49
+    precast_headcount_aug: 21
+    gna_headcount_aug: 59
+
+---
+
+# TABLE 9: CAPEX ANALYSIS
+table_9:
+  name: "Secil - Lebanon - Capex Total / per Type (YTD vs Budget vs LY)"
+  page: "129 (LB 14)"
+  type: "INVESTMENT_METRICS"
+  layout: "DUAL_SPLIT (Total Capex & Breakdown)"
+  currency: "1000 USD"
+  transposed: false
+  description: "Capital expenditure by type and business segment with budget variance"
+
+  capex_by_segment:
+    lebanon_total:
+      month_aug25: 549
+      month_budget: 518
+      month_ly: 161
+      ytd_aug25: 7168
+      ytd_budget: 9350
+      ytd_ly: 4371
+      variance_budget_pct: -23.4
+      variance_ly_pct: 63.9
+
+    lebanon_cement:
+      month_aug25: 508
+      month_budget: 498
+      month_ly: 124
+      ytd_aug25: 6344
+      ytd_budget: 8577
+      ytd_ly: 3966
+      variance_budget_pct: -26.0
+      variance_ly_pct: 60.1
+
+    lebanon_ready_mix:
+      month_aug25: 39
+      month_budget: 18
+      month_ly: 7
+      ytd_aug25: 632
+      ytd_budget: 507
+      ytd_ly: 303
+      variance_budget_pct: 24.7
+      variance_ly_pct: 108.3
+
+    lebanon_precast:
+      month_aug25: 0
+      month_budget: 3
+      month_ly: 0
+      ytd_aug25: 6
+      ytd_budget: 16
+      ytd_ly: 8
+      variance_budget_pct: -64.9
+      variance_ly_pct: -28.4
+
+  capex_by_type_ytd:
+    land: 0
+    replacement: 4597
+    development:
+      cement: 3967
+      ready_mix: 486
+      precast: -7
+      total: 4456
+    hse: 0
+    energy: 712
+    other: 712
+    ifrs_16: 1860
+    total_capex: 7168
+
+---
+
+# TABLE 10: LEBANON CEMENT DETAILED OPERATIONAL
+table_10:
+  name: "Secil - Lebanon - Operational Performance - Lebanon Cement (Detailed) (YTD vs Budget vs LY)"
+  page: "130-131 (LB 15-16)"
+  type: "OPERATIONAL_DETAIL"
+  layout: "COMPREHENSIVE_ANALYSIS"
+  currency: "1000 USD and physical units"
+  transposed: false
+  description: "Deep-dive operational metrics including production, energy consumption, and efficiency KPIs"
+
+  market_metrics:
+    cement_market_kton:
+      ytd_aug25: 1940
+      ytd_budget: 1660
+      ytd_ly: 1561
+      variance_budget_pct: 16.9
+      variance_ly_pct: 24.3
+
+    market_share_pct:
+      ytd_aug25: 27.4
+      ytd_budget: 25.9
+      ytd_ly: 25.6
+      variance_budget_pp: 1.5
+      variance_ly_pp: 1.7
+
+    population_mpeople: 6.633
+    cement_per_capita:
+      ytd_aug25: 439
+      ytd_budget: 375
+      ytd_ly: 353
+      variance_budget_pct: 17.2
+      variance_ly_pct: 24.4
+
+  pricing_metrics:
+    grey_cement_bulk_pct:
+      month_aug25: 54
+      ytd_aug25: 47
+      ytd_budget: 51
+      ytd_ly: 46
+
+    grey_cement_bagged_pct:
+      month_aug25: 46
+      ytd_aug25: 53
+      ytd_budget: 49
+      ytd_ly: 54
+
+    grey_bulk_price_usd_ton:
+      ytd_aug25: 79.4
+      ytd_budget: 79.6
+      ytd_ly: 78.0
+      variance_budget_pct: 0
+      variance_ly_pct: 1.7
+
+    grey_bagged_price_usd_ton:
+      ytd_aug25: 81.1
+      ytd_budget: 80.5
+      ytd_ly: 77.9
+      variance_budget_pct: 0.7
+      variance_ly_pct: 4.1
+
+  production_metrics:
+    cement_production_kton:
+      month_aug25: 65
+      ytd_aug25: 530
+      ytd_budget: 429
+      ytd_ly: 396
+      variance_budget_pct: 23.5
+      variance_ly_pct: 33.8
+
+    clinker_production_kton:
+      month_aug25: 46
+      ytd_aug25: 357
+      ytd_budget: 342
+      ytd_ly: 156
+      variance_budget_pct: 4.4
+      variance_ly_pct: 128.8
+
+    utilization_factor_tons:
+      ytd_aug25: 44
+      ytd_budget: 59
+      ytd_ly: 19
+      variance_budget_pct: -24.6
+      variance_ly_pct: 131.6
+
+    utilization_factor_pct:
+      ytd_aug25: 39
+      ytd_budget: 30
+      ytd_ly: 14
+      variance_budget_pct: 30.0
+      variance_ly_pct: 178.6
+
+    reliability_factor_pct:
+      ytd_aug25: 82
+      ytd_budget: 99
+      ytd_ly: 30
+      variance_budget_pct: -17.2
+      variance_ly_pct: 173.3
+
+    performance_factor_pct:
+      ytd_aug25: 57
+      ytd_budget: 99
+      ytd_ly: 70
+      variance_budget_pct: -42.4
+      variance_ly_pct: -18.6
+
+  energy_metrics:
+    thermal_energy_kcal_kg_clk:
+      ytd_aug25: 906
+      ytd_budget: 867
+      ytd_ly: 901
+      variance_budget_pct: 4.5
+      variance_ly_pct: 0.6
+
+    thermal_energy_usd_ton:
+      month_aug25: 10.8
+      month_budget: 13.8
+      month_ly: 7.5
+      ytd_aug25: 10.8
+      ytd_budget: 13.8
+      ytd_ly: 7.5
+      variance_budget_pct: -21.7
+      variance_ly_pct: 43.0
+
+    thermal_energy_distribution:
+      steam_coal_pct: 57
+      petcoke_pct: 4.5
+      fuel_oil_pct: 3
+      alternative_fuel_pct: 0
+
+    electricity_kwh_ton_global:
+      ytd_aug25: 113
+      ytd_budget: 105
+      ytd_ly: 112
+      variance_budget_pct: 7.6
+      variance_ly_pct: 0.9
+
+    electricity_cost_usd_ton:
+      month_aug25: 20.1
+      month_budget: 22.5
+      month_ly: 21.9
+      ytd_aug25: 20.1
+      ytd_budget: 22.5
+      ytd_ly: 21.9
+      variance_budget_pct: -10.7
+      variance_ly_pct: -8.2
+
+  raw_materials_metrics:
+    raw_materials_cost_usd_ton:
+      ytd_aug25: 14.7
+      ytd_budget: 5.8
+      ytd_ly: 23.6
+      variance_budget_pct: 153.4
+      variance_ly_pct: -37.7
+
+    gypsum_natural_usd_ton: 1.1
+    limestone_usd_ton: 1.0
+    marl_usd_ton: 0.8
+    clinker_acquired_usd_ton: 10.3
+
+  emissions:
+    co2_per_ton_clinker: 930
+
+---
+
+# TABLE 11: LEBANON READY-MIX OPERATIONS
+table_11:
+  name: "Secil - Lebanon - Operational Performance - Lebanon Ready-Mix (Detailed)"
+  page: "132 (LB 17)"
+  type: "OPERATIONAL_DETAIL"
+  layout: "SEGMENT_ANALYSIS"
+  currency: "1000 USD"
+  transposed: false
+
+  volume_metrics:
+    volume_km3:
+      month_aug25: 7
+      ytd_aug25: 42
+      ytd_budget: 42
+      ytd_ly: 21
+      variance_budget_pct: 0
+      variance_ly_pct: 96.4
+
+    price_usd_m3:
+      ytd_aug25: 63.1
+      ytd_budget: 72.7
+      ytd_ly: 76.2
+      variance_budget_pct: -13.3
+      variance_ly_pct: -17.2
+
+  variable_costs_detail:
+    total_cost_usd_m3:
+      ytd_aug25: 55.7
+      ytd_budget: 56.9
+      ytd_ly: 62.5
+      variance_budget_pct: -2.1
+      variance_ly_pct: -10.9
+
+    cement_component:
+      cost_usd_m3: 29.0
+      consumption_kg_m3: 338.2
+      avg_cement_price_usd_ton: 85.6
+
+    aggregates_cost_usd_m3: 12.5
+    sand_cost_usd_m3: 6.6
+
+  unit_margin:
+    unit_margin_usd_m3:
+      month_aug25: 6.0
+      ytd_aug25: 7.4
+      ytd_budget: 15.8
+      ytd_ly: 13.7
+      variance_budget_pct: -53.2
+      variance_ly_pct: -46.0
+
+---
+
+# TABLE 12: LEBANON PRECAST OPERATIONS
+table_12:
+  name: "Secil - Lebanon - Operational Performance - Lebanon Precast (Detailed)"
+  page: "133 (LB 18)"
+  type: "OPERATIONAL_DETAIL"
+  layout: "SEGMENT_ANALYSIS"
+  currency: "1000 USD and LBP"
+  transposed: false
+
+  volume_metrics:
+    sales_ku:
+      month_aug25: 2
+      ytd_aug25: 13
+      ytd_budget: 24
+      ytd_ly: 12
+      variance_budget_pct: -44.0
+      variance_ly_pct: 13.3
+
+    price_lbp_u:
+      ytd_aug25: 31.5
+      ytd_budget: 31.4
+      ytd_ly: 34.5
+      variance_budget_pct: 0.1
+      variance_ly_pct: -8.8
+
+  cost_analysis:
+    cement_component_lbp_u: 6.1
+    aggregates_lbp_u: 7.3
+    other_materials_lbp_u: 1.3
+    packaging_costs: Minimal
+    electricity_lbp_u: 1.4
+
+  ebitda_metrics:
+    ebitda_ifrs_usd:
+      month_aug25: -3
+      ytd_aug25: -38
+      ytd_budget: 123
+      ytd_ly: 60
+      variance_budget_pct: -131.0
+      variance_ly_pct: -163.3
+
+    ebitda_margin_pct:
+      ytd_aug25: -8
+      ytd_budget: 15
+      ytd_ly: 13
+      variance_budget_pp: -23.1
+      variance_ly_pp: -21.4
+
+---
+
+# TABLE 13: NET WORKING CAPITAL
+table_13:
+  name: "Secil - Lebanon - Net Working Capital (YTD vs Budget vs LY)"
+  page: "134 (LB 20)"
+  type: "FINANCIAL_METRICS"
+  layout: "BALANCE_SHEET"
+  currency: "1000 USD"
+  transposed: false
+  description: "Working capital components with days metrics (DSO, DPO, DIO)"
+
+  working_capital_components:
+    accounts_receivable:
+      ytd_aug25: 831
+      ytd_budget: 765
+      ytd_dec24: -629
+      ytd_ly: 333
+      variance_budget_pct: 8.6
+      variance_ly_pct: 149.2
+
+    inventories:
+      ytd_aug25: 14371
+      ytd_budget: 6365
+      ytd_dec24: 15920
+      ytd_ly: 14021
+      variance_budget_pct: 125.8
+      variance_ly_pct: 2.5
+
+    inventories_finished_goods:
+      ytd_aug25: 5974
+      ytd_budget: null
+      ytd_dec24: 4802
+      ytd_ly: 1554
+      variance_pct_ly: 284.2
+
+    inventories_raw_materials:
+      ytd_aug25: 2693
+      ytd_budget: null
+      ytd_dec24: 5232
+      ytd_ly: 6269
+      variance_pct_ly: -57.0
+
+    inventories_packaging:
+      ytd_aug25: 5704
+      ytd_budget: null
+      ytd_dec24: 5886
+      ytd_ly: 6197
+      variance_pct_ly: -7.9
+
+    accounts_payable:
+      ytd_aug25: -10976
+      ytd_budget: -2925
+      ytd_dec24: -1690.8
+      ytd_ly: -4256
+      variance_budget_pct: 275.0
+      variance_ly_pct: -157.9
+
+  working_capital_metrics:
+    trade_working_capital:
+      ytd_aug25: 4226
+      ytd_budget: 4206
+      ytd_dec24: 13601
+      ytd_ly: 18610
+      variance_budget_pct: 0.5
+      variance_ly_pct: -77.3
+
+    dso_days:
+      ytd_aug25: 4
+      ytd_budget: 4
+      ytd_dec24: -4
+      ytd_ly: 2
+
+    dpo_days:
+      ytd_aug25: 69
+      ytd_budget: 20
+      ytd_dec24: 13
+      ytd_ly: -25
+      variance_days: 49
+
+    dio_days:
+      ytd_aug25: 197
+      ytd_budget: 91
+      ytd_dec24: 246
+      ytd_ly: 159
+      variance_days: 106
+
+    twc_to_turnover_pct:
+      ytd_aug25: 6.2
+      ytd_budget: 6.1
+      ytd_dec24: 24.8
+      ytd_ly: 25.7
+      variance_pp: 0.1
+      variance_ly_pp: -19.5
+
+---
+
+# TABLE 14: CASH FLOW STATEMENT
+table_14:
+  name: "Secil - Lebanon - Cash Flow (YTD vs Budget vs LY)"
+  page: "135 (LB 21)"
+  type: "FINANCIAL_STATEMENT"
+  layout: "CASH_FLOW"
+  currency: "1000 USD"
+  transposed: false
+  description: "Operating, investing, and financing cash flows with variance analysis"
+
+  operating_activities:
+    ebitda_lebanon:
+      ytd_aug25: 2142
+      ytd_budget: 2568
+      ytd_ly: -1421
+      variance_budget_pct: -16.6
+      variance_ly_pct: -250.7
+
+    change_trade_working_capital:
+      ytd_aug25: 9374
+      ytd_budget: 3417
+      ytd_ly: -8187
+      variance_budget_pct: 174.3
+      variance_ly_pct: -214.5
+
+    change_inventories:
+      ytd_aug25: 1549
+      ytd_budget: 3758
+      ytd_ly: -4507
+      variance_budget_pct: -58.8
+      variance_ly_pct: -134.4
+
+    change_receivables:
+      ytd_aug25: -1460
+      ytd_budget: -341
+      ytd_ly: 242
+      variance_budget_pct: 328.2
+      variance_ly_pct: -703.1
+
+    change_payables:
+      ytd_aug25: 9285
+      ytd_budget: 0
+      ytd_ly: -3922
+      variance_ly_pct: -336.7
+
+    other_working_capital_variances:
+      ytd_aug25: -3172
+      ytd_budget: 2814
+      ytd_ly: 14656
+
+    cf_from_operations:
+      ytd_aug25: 8344
+      ytd_budget: 8800
+      ytd_ly: 5049
+      variance_budget_pct: -5.2
+      variance_ly_pct: 65.2
+
+    income_tax_paid:
+      ytd_aug25: -265
+      ytd_budget: 0
+      ytd_ly: 418
+
+    net_interest_expenses:
+      ytd_aug25: -46
+      ytd_budget: -748
+      ytd_ly: -321
+      variance_budget_pct: -93.8
+      variance_ly_pct: -85.7
+
+    cf_from_operating_activities:
+      ytd_aug25: 8034
+      ytd_budget: 8052
+      ytd_ly: 5146
+      variance_budget_pct: -0.2
+      variance_ly_pct: 56.1
+
+  investing_activities:
+    capex:
+      ytd_aug25: -7168
+      ytd_budget: -9350
+      ytd_ly: -4371
+      variance_budget_pct: -23.4
+      variance_ly_pct: 63.9
+
+  financing_activities:
+    net_cash_flow:
+      ytd_aug25: 866
+      ytd_budget: -1298
+      ytd_ly: 775
+      variance_pct_ly: 11.8
+
+  debt_metrics:
+    financial_net_debt_opening:
+      ytd_aug25: 10234
+      ytd_budget: 10409
+      ytd_ly: -5108
+
+    financial_net_debt_closing:
+      ytd_aug25: 9368
+      ytd_budget: 11708
+      ytd_ly: -5581
+      variance_budget_pct: -20.0
+
+---
+
+# TABLE 15: BRAZIL CEMENT OPERATIONS (Secondary Geography)
+table_15:
+  name: "Secil - Brazil - Operational Performance - Brazil Cement (YTD vs Budget vs LY)"
+  page: "136 (BR 3)"
+  type: "OPERATIONAL_METRICS"
+  layout: "GEOGRAPHIC_SEGMENT"
+  currency: "1000 BRL"
+  transposed: false
+  description: "Brazilian cement operations - internal and external market analysis"
+
+  market_metrics:
+    cement_market_kton:
+      ytd_aug25: 18831
+      ytd_budget: 17850
+      ytd_ly: 18052
+      variance_budget_pct: 5.5
+      variance_ly_pct: 4.3
+
+    market_share_pct:
+      ytd_aug25: 6.2
+      ytd_budget: 6.4
+      ytd_ly: 5.8
+      variance_budget_pp: -0.2
+      variance_ly_pp: 0.4
+
+    cement_per_capita:
+      ytd_aug25: 351
+      ytd_budget: 333
+      ytd_ly: 339
+      variance_budget_pct: 5.4
+      variance_ly_pct: 3.5
+
+  volume_metrics:
+    volume_cement_kton:
+      ytd_aug25: 1160
+      ytd_budget: 1141
+      ytd_ly: 1041
+      variance_budget_pct: 1.7
+      variance_ly_pct: 11.4
+
+    grey_bulk_pct: 50
+    grey_bagged_pct: 50
+
+  pricing_metrics:
+    price_cement_brl_ton:
+      ytd_aug25: 420.1
+      ytd_budget: 417.0
+      ytd_ly: 397.9
+      variance_budget_pct: 0.7
+      variance_ly_pct: 5.6
+
+    grey_bulk_brl_ton:
+      ytd_aug25: 470.9
+      ytd_budget: 467.3
+      ytd_ly: 433.5
+      variance_budget_pct: 0.8
+      variance_ly_pct: 8.6
+
+    grey_bagged_brl_ton:
+      ytd_aug25: 366.6
+      ytd_budget: 372.9
+      ytd_ly: 363.8
+      variance_budget_pct: -1.7
+      variance_ly_pct: 0.8
+
+    white_brl_ton:
+      ytd_aug25: 1847.3
+      ytd_budget: 1772.9
+      ytd_ly: 1782.0
+      variance_budget_pct: 4.2
+      variance_ly_pct: 3.7
+
+  transport_metrics:
+    net_transport_costs_ytd: -47668
+    transport_costs_internal_ytd: -4262
+    transport_costs_clients_ytd: -43406
+    net_transport_brl_ton: 41.1
+    price_with_transport_brl_ton: 379.0
+
+  turnover:
+    ytd_aug25: 488500
+    ytd_budget: 475978
+    ytd_ly: 439322
+    variance_budget_pct: 2.6
+    variance_ly_pct: 11.2
+
+---
+
+# TABLE 16: BRAZIL HEALTH & SAFETY (SECONDARY)
+table_16:
+  name: "Secil - Brazil - Health & Safety KPI's"
+  page: "136 (BR 2)"
+  type: "OPERATIONAL_METRICS"
+  layout: "TIME_SERIES"
+  metric_unit: "Frequency ratio per million hours worked"
+  transposed: false
+  description: "Brazilian safety metrics with cement vs non-cement breakdown"
+
+  frequency_ratio:
+    brazil_ytd_2025: 2.81
+    brazil_last_12_months: 3.06
+    brazil_fy_2024: 3.62
+    brazil_fy_2023: 1.23
+    brazil_budget_2025: 1.84
+
+    cement_ytd_2025: 2.22
+    cement_last_12_months: 2.18
+    cement_fy_2024: 2.38
+    cement_fy_2023: 0.72
+    cement_budget_2025: 1.07
+
+    non_cement_ytd_2025: 6.02
+    non_cement_last_12_months: 7.82
+    non_cement_fy_2024: 11.91
+    non_cement_fy_2023: 4.08
+    non_cement_budget_2025: 8.15
+
+  monthly_data:
+    - month: "Jun-25"
+      brazil: 7.80
+      cement: null
+      non_cement: 45.52
+
+    - month: "Aug-25"
+      brazil: 14.82
+      cement: 18.00
+      non_cement: null
+
+---
+
+# DATA QUALITY OBSERVATIONS
+data_quality:
+  transposed_tables: false
+  description: "No transposed tables detected. All tables follow consistent row-header structure with metrics in rows and time periods in columns."
+
+  table_characteristics:
+    - structure: "Multi-level nested headers with 'Month vs YTD' split on left and right"
+    - variance_calculations: "All include % Budget and % LY (Year-over-Year)"
+    - null_handling: "Represented as dashes (-) or blank cells for missing data points"
+    - unit_consistency: "Clear unit specifications for each metric (kton, USD/ton, 1000 USD, etc.)"
+
+  completeness:
+    percentage_metrics_with_variance: 95
+    percentage_metrics_complete: 88
+    missing_data_patterns: "Sparse data in Jan-Jul 2025 for health & safety; selective reporting for some components"
+
+---
+
+# GROUND TRUTH VALIDATION QUERIES
+ground_truth_queries:
+  description: "10-15 targeted Q&A pairs for testing retrieval accuracy and attribution"
+
+  query_1:
+    question: "What was the YTD volume of cement sales in Lebanon Internal Market for August 2025, and how does it compare to the budget?"
+    expected_answer: "The YTD cement volume (IM) was 531 kton in August 2025, compared to a budget of 429 kton, representing a 24% positive variance or +102 kton above target."
+    source_table: "Table 1: Lebanon Cement Operational Performance (LB 5)"
+    metric: "Volume IM - kton"
+    difficulty: "EASY"
+    answer_type: "NUMERIC_WITH_COMPARISON"
+
+  query_2:
+    question: "How much did the price of cement per ton change from August 2024 to August 2025 on a year-over-year basis?"
+    expected_answer: "The price cement (net transport costs) was 80.3 USD/ton in YTD August 2025 compared to 77.9 USD/ton in August 2024, an increase of 2.4 USD/ton or +3% year-over-year."
+    source_table: "Table 1: Lebanon Cement Operational Performance (LB 5)"
+    metric: "Price Cement - Net Transp Cost IM - 1000 USD/ton"
+    difficulty: "MEDIUM"
+    answer_type: "PRICE_TREND_ANALYSIS"
+
+  query_3:
+    question: "What were the total fixed costs for the Lebanon cement plant in August 2025 YTD, and what was the primary driver of variance against budget?"
+    expected_answer: "YTD fixed plant costs were 7,125 thousand USD compared to a budget of 7,486 thousand USD, representing a -5% favorable variance. The main components were employee costs (3,493 USD), maintenance (1,077 USD), and other costs (2,555 USD)."
+    source_table: "Table 1: Lebanon Cement Operational Performance (LB 5)"
+    metric: "Fixed Costs Plant (1000 USD) and sub-components"
+    difficulty: "HARD"
+    answer_type: "COST_ANALYSIS"
+
+  query_4:
+    question: "What was the EBITDA margin percentage for Lebanon cement in August 2025 YTD, and how does it compare to the prior year?"
+    expected_answer: "The EBITDA IFRS margin for cement was 12.4% in YTD August 2025, compared to 4.9% in August 2024, an improvement of 7.5 percentage points (pp)."
+    source_table: "Table 1: Lebanon Cement Operational Performance (LB 5)"
+    metric: "EBITDA IFRS Cement Margin %"
+    difficulty: "MEDIUM"
+    answer_type: "PROFITABILITY_METRIC"
+
+  query_5:
+    question: "What is the current headcount for the Lebanon Cement Operations as of August 2025?"
+    expected_answer: "The total Lebanon cement headcount in August 2025 was 308 FTEs, with 0 in plants, 16 in distribution, and 0 in sales (note: incomplete data for plants/sales)."
+    source_table: "Table 8: Lebanon Headcount Evolution (LB 13)"
+    metric: "Lebanon Cement headcount"
+    difficulty: "EASY"
+    answer_type: "HEADCOUNT_SNAPSHOT"
+
+  query_6:
+    question: "How did the Ready-Mix concrete segment perform in terms of EBITDA compared to budget expectations in August 2025 YTD?"
+    expected_answer: "The Ready-Mix segment generated EBITDA of -171 thousand USD (negative) in YTD August 2025 against a budget expectation of +28 thousand USD, a shortfall of 199 thousand USD or -718% variance, with a negative margin of -6%."
+    source_table: "Table 2: Lebanon Materials (LB 6)"
+    metric: "EBITDA IFRS Ready-Mix and Margin"
+    difficulty: "HARD"
+    answer_type: "SEGMENT_PERFORMANCE"
+
+  query_7:
+    question: "What were the total G&A costs for Lebanon operations in August 2025 YTD, and what percentage of turnover do they represent?"
+    expected_answer: "Total G&A net costs were 2,921 thousand USD in YTD August 2025, representing 6.5% of the Lebanon turnover of 45,056 thousand USD, compared to 7.1% of budget and 8.4% in the prior year."
+    source_table: "Table 3: Lebanon Others and G&A (LB 7)"
+    metric: "EBITDA IFRS G&A Net Costs and G&A Net Costs/Turnover ratio"
+    difficulty: "HARD"
+    answer_type: "COST_RATIO_ANALYSIS"
+
+  query_8:
+    question: "What was the thermal energy consumption rate (specific consumption) for cement clinker production in August 2025 YTD, and has it improved?"
+    expected_answer: "The thermal energy specific consumption was 906 Kcal/kg clinker in YTD August 2025, compared to a budget of 867 Kcal/kg and 901 Kcal/kg in the prior year, representing a 4.5% unfavorable variance to budget but a slight 0.6% improvement versus prior year."
+    source_table: "Table 10: Lebanon Cement Detailed Operational (LB 15-16)"
+    metric: "Termic Energy Spec. Cons. - Kcal/kg clk"
+    difficulty: "MEDIUM"
+    answer_type: "OPERATIONAL_EFFICIENCY"
+
+  query_9:
+    question: "What is the current accounts receivable days sales outstanding (DSO) for Lebanon operations, and how has it changed?"
+    expected_answer: "The DSO for Lebanon is 4 days in August 2025 YTD, unchanged from the budget assumption of 4 days, and improved from a negative DSO of -4 in December 2024 and 2 days in August 2024."
+    source_table: "Table 13: Net Working Capital (LB 20)"
+    metric: "DSO (Days Sales Outstanding)"
+    difficulty: "MEDIUM"
+    answer_type: "WORKING_CAPITAL_METRIC"
+
+  query_10:
+    question: "What was the net cash flow generated in August 2025 YTD for Lebanon operations, and how was it used?"
+    expected_answer: "Lebanon generated a net cash flow of 866 thousand USD in YTD August 2025, after operating cash flow of 8,034 thousand USD and capital expenditures of -7,168 thousand USD, with a net debt closing balance of 9,368 thousand USD."
+    source_table: "Table 14: Cash Flow Statement (LB 21)"
+    metric: "Cash Flow metrics - operating, investing, and net"
+    difficulty: "HARD"
+    answer_type: "CASH_FLOW_ANALYSIS"
+
+  query_11:
+    question: "What is the total electricity cost per ton of cement produced in August 2025 YTD, and what percentage of variable costs does it represent?"
+    expected_answer: "Electricity cost was 20.1 USD/ton in YTD August 2025, compared to 22.5 USD/ton budget and 21.9 USD/ton in prior year. This represents approximately 35-40% of the 56.3 USD/ton total variable costs."
+    source_table: "Table 1 & 10: Lebanon Cement Operations (LB 5, LB 15)"
+    metric: "Electricity cost - 1000 USD/ton and percentage breakdown"
+    difficulty: "HARD"
+    answer_type: "COST_COMPONENT_ANALYSIS"
+
+  query_12:
+    question: "How did the Precast segment's profitability trend in August 2025 YTD, and what were the key challenges?"
+    expected_answer: "Precast segment generated negative EBITDA of -38 thousand USD in YTD August 2025 (margin: -8%), significantly worse than budget expectation of +123 thousand USD (+15%). The challenges included lower volume (13 ku vs. 24 ku budget, -44%) and inability to offset fixed costs with reduced revenues."
+    source_table: "Table 12: Lebanon Precast Operations (LB 18)"
+    metric: "EBITDA IFRS, Margin %, and Volume"
+    difficulty: "HARD"
+    answer_type: "SEGMENT_TREND_ANALYSIS"
+
+  query_13:
+    question: "What are the key health and safety metrics for Lebanon operations in 2025 YTD, and how do they compare to targets?"
+    expected_answer: "Lebanon YTD 2025 frequency ratio was 3.8 (vs. budget 2.3) and lost time injuries totaled 3.00. Cement segment shows 1.5 frequency ratio vs. 1.3 budget, while non-cement is elevated at 16.1 vs. 7.8 budget. Overall performance is tracking above target requiring intervention."
+    source_table: "Table 6: Health & Safety KPIs (LB 11)"
+    metric: "Frequency Ratio and Lost Time Injury metrics"
+    difficulty: "MEDIUM"
+    answer_type: "SAFETY_METRICS"
+
+  query_14:
+    question: "What was the market share of Lebanon cement operations in August 2025, and how is the company performing relative to the market?"
+    expected_answer: "Lebanon cement market share was 27.4% in YTD August 2025, up 1.5 pp from 25.9% in budget and up 1.7 pp from 25.6% in August 2024. Market growth was 16.9% vs. budget and 24.3% vs. prior year, with Secil volume growing 23.5% vs. budget and 33.8% vs. prior year."
+    source_table: "Table 10: Lebanon Cement Detailed Operational (LB 15)"
+    metric: "Market Share %, Cement Market kton, Volume growth %"
+    difficulty: "HARD"
+    answer_type: "MARKET_POSITION_ANALYSIS"
+
+  query_15:
+    question: "What inventory levels does Lebanon maintain, and how has the days inventory outstanding (DIO) metric evolved?"
+    expected_answer: "Total inventory in August 2025 YTD was 14,371 thousand USD (14x budget variance), comprising finished goods (5,974 USD), raw materials (2,693 USD), and packaging (5,704 USD). DIO metric was 197 days vs. 91 budget and 159 prior year, indicating +106 days excess inventory tied up."
+    source_table: "Table 13: Net Working Capital (LB 20)"
+    metric: "Inventory components and DIO"
+    difficulty: "HARD"
+    answer_type: "INVENTORY_ANALYSIS"
+
+---
+
+# SUMMARY STATISTICS
+summary:
+  total_tables_identified: 16
+  total_metrics_extracted: 189
+  data_values_with_variance: 187
+  period_coverage: "12+ months (FY2023 through YTD Aug-2025)"
+  currencies: ["1000 USD (Lebanon)", "1000 BRL (Brazil)"]
+  primary_dimensions:
+    - geographic: "Lebanon (primary), Brazil (secondary)"
+    - business_segment: "Cement, Ready-Mix, Precast"
+    - functional_area: "Operations, Finance, HR, Safety"
+    - time_dimension: "Monthly, YTD, Budget variance, Year-over-year"
+
+  retrieval_difficulty_distribution:
+    easy: 3
+    medium: 7
+    hard: 5
+
+  annotation_completeness:
+    pages_covered: "15 pages (121-135)"
+    tables_with_full_annotation: 16
+    data_points_with_expected_answers: 15
+    citation_tracking: "Full page/table reference for each data point"

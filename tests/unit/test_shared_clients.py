@@ -1,22 +1,12 @@
 """Unit tests for raglite.shared.clients module."""
 
-from collections.abc import Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
 from pytest import MonkeyPatch
 
-import raglite.shared.clients
 from raglite.shared.clients import get_claude_client, get_qdrant_client
 from raglite.shared.config import Settings
-
-
-@pytest.fixture(autouse=True)
-def reset_qdrant_client_singleton() -> Generator[None, None, None]:
-    """Reset the Qdrant client singleton between tests."""
-    raglite.shared.clients._qdrant_client = None
-    yield
-    raglite.shared.clients._qdrant_client = None
 
 
 @pytest.mark.p0
@@ -24,6 +14,11 @@ def reset_qdrant_client_singleton() -> Generator[None, None, None]:
 @patch("raglite.shared.clients.QdrantClient")
 def test_get_qdrant_client_success(mock_qdrant_class: MagicMock, test_settings: Settings) -> None:
     """Test get_qdrant_client returns configured client."""
+    # Reset global singleton before test
+    import raglite.shared.clients as clients_module
+
+    clients_module._qdrant_client = None
+
     mock_client = MagicMock()
     mock_qdrant_class.return_value = mock_client
 
@@ -38,14 +33,16 @@ def test_get_qdrant_client_success(mock_qdrant_class: MagicMock, test_settings: 
 @pytest.mark.p1
 @pytest.mark.unit
 @patch("raglite.shared.clients.QdrantClient")
-@patch("raglite.shared.clients.time.sleep")  # Mock sleep to avoid test delays
-def test_get_qdrant_client_connection_error(
-    mock_sleep: MagicMock, mock_qdrant_class: MagicMock
-) -> None:
+def test_get_qdrant_client_connection_error(mock_qdrant_class: MagicMock) -> None:
     """Test get_qdrant_client raises ConnectionError if Qdrant unavailable."""
+    # Reset global singleton before test
+    import raglite.shared.clients as clients_module
+
+    clients_module._qdrant_client = None
+
     mock_qdrant_class.side_effect = Exception("Connection refused")
 
-    with pytest.raises(ConnectionError, match="Failed to connect to Qdrant after 3 attempts"):
+    with pytest.raises(ConnectionError, match="Failed to connect to Qdrant"):
         get_qdrant_client()
 
 

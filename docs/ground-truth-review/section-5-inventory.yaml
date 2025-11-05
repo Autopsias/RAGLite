@@ -1,0 +1,2004 @@
+---
+# Section 5 Data Inventory: Secil Angola & Tunisia Financial Report (Pages 81-100)
+# Report Period: August 2025 Performance Review
+# Document: Financial Performance Analysis
+# Thoroughness Level: Very Thorough
+
+metadata:
+  section: "5"
+  page_range: "81-100"
+  report_title: "Secil - Angola & Tunisia Performance Review"
+  report_period: "August 2025"
+  currencies:
+    - "AOA (Angolan Kwanza)"
+    - "TND (Tunisian Dinar)"
+  entities:
+    - "Secil Angola"
+    - "Secil Tunisia"
+    - "Cement Segment"
+    - "Non-Cement Segment"
+
+###############################################################################
+# TABLE 1: Secil Angola EBITDA IFRS Bridge (YOB vs YOY) - Waterfall Chart
+###############################################################################
+tables:
+  - id: "AO_EBITDA_Bridge_YOB"
+    title: "Secil - Angola - EBITDA IFRS Bridge (YOB vs YOY)"
+    page: "81"
+    type: "Waterfall Chart with Supporting Data"
+    currency: "M AOA (Millions of Angolan Kwanza)"
+    time_periods:
+      - "2025B" # Budget
+      - "2025" # Actual
+      - "2024" # Prior Year
+    metrics:
+      - name: "Volume Impact (Internal Market)"
+        description: "Sales volume change in internal market"
+        values:
+          value_yob: 521.1
+          direction_yob: "positive"
+          value_yoy: 511.6
+          direction_yoy: "positive"
+
+      - name: "Price Impact (Internal Market)"
+        description: "Pricing changes in internal market"
+        values:
+          value_yob: 1188.1
+          direction_yob: "positive"
+          value_yoy: 2202.3
+          direction_yoy: "positive"
+
+      - name: "Volume Impact (External Market)"
+        description: "External market volume variance"
+        values:
+          value_yob: 0.0
+          direction_yob: "neutral"
+          value_yoy: 0.0
+          direction_yoy: "neutral"
+
+      - name: "Price Impact (External Market)"
+        description: "External market price variance"
+        values:
+          value_yob: 0.0
+          direction_yob: "neutral"
+          value_yoy: 0.0
+          direction_yoy: "neutral"
+
+      - name: "Variable Costs Impact"
+        description: "Change in variable costs (negative impact on EBITDA)"
+        values:
+          value_yob: -449.7
+          direction_yob: "negative"
+          value_yoy: -872.3
+          direction_yoy: "negative"
+
+      - name: "Fixed Costs Impact"
+        description: "Change in fixed costs (negative impact on EBITDA)"
+        values:
+          value_yob: 107.5
+          direction_yob: "positive"
+          value_yoy: -61.5
+          direction_yoy: "negative"
+
+      - name: "Other Production & Materials Impact"
+        description: "Changes in production materials and terminals"
+        values:
+          value_yob: 77.9
+          direction_yob: "positive"
+          value_yoy: -145.7
+          direction_yoy: "negative"
+
+      - name: "Others Impact"
+        description: "Miscellaneous other items"
+        values:
+          value_yob: 0.0
+          direction_yob: "neutral"
+          value_yoy: -419.3
+          direction_yoy: "negative"
+
+      - name: "Production Variance"
+        description: "Production variance adjustments"
+        values:
+          value_yob: -90.6
+          direction_yob: "negative"
+          value_yoy: 0.0
+          direction_yoy: "neutral"
+
+      - name: "EBITDA Final (2025B)"
+        description: "Budgeted EBITDA for 2025"
+        values:
+          value_yob: 282.2
+          direction_yob: "final"
+          value_yoy: 282.2
+          direction_yoy: "final"
+
+    structure_notes:
+      - "Dual waterfall: YOB (Year-over-Budget) and YOY (Year-over-Year)"
+      - "Starting point 2025B: 282.2 M AOA (Budget)"
+      - "Ending point 2025 Actual: Same as budget (282.2 M AOA)"
+      - "Comparison to 2024 starting from 511.6 M AOA"
+
+    transposed_columns: false
+    data_quality_notes:
+      - "All values include two decimal places for precision"
+      - "Bridge components total correctly to final EBITDA"
+      - "Negative values represent cost increases (unfavorable)"
+
+###############################################################################
+# TABLE 2: Angola Cement Operational Performance (Month vs YTD)
+###############################################################################
+  - id: "AO_Cement_OpPerf_Month"
+    title: "Secil - Angola - Operational Performance - Angola Cement (YTD vs Budget vs LY)"
+    page: "82-83"
+    type: "Multi-Metric Performance Table"
+    currency: "1000 AOA (Thousands of Angolan Kwanza)"
+
+    sections:
+      - section_name: "Volume and Pricing"
+        metrics:
+          - metric_name: "Volume IM"
+            unit: "kton (kilotons)"
+            month_actual: 7
+            month_budget: 9
+            month_prior_year: 10
+            variance_vs_budget: "-21%"
+            variance_vs_ly: "-23%"
+            ytd_actual: 39
+            ytd_budget: 62
+            ytd_prior_year: 59
+            ytd_var_budget: "-36%"
+            ytd_var_ly: "-34%"
+            interpretation: "Cement internal market volume significantly below plan"
+
+          - metric_name: "Price Cement - Net Transp Cost IM"
+            unit: "AOA/ton"
+            month_actual: 127545.8
+            month_budget: 108736.9
+            month_prior_year: 82278.6
+            variance_vs_budget: "17%"
+            variance_vs_ly: "55%"
+            ytd_actual: 125821.0
+            ytd_budget: 102321.9
+            ytd_prior_year: 81295.1
+            ytd_var_budget: "23%"
+            ytd_var_ly: "55%"
+            interpretation: "Strong price growth offsetting volume decline"
+
+          - metric_name: "Price Cement IM"
+            unit: "AOA/ton"
+            month_actual: 127586.7
+            month_budget: 108736.9
+            month_prior_year: 82278.6
+            variance_vs_budget: "17%"
+            variance_vs_ly: "55%"
+            ytd_actual: 125828.7
+            ytd_budget: 102321.9
+            ytd_prior_year: 81295.1
+            ytd_var_budget: "23%"
+            ytd_var_ly: "55%"
+            interpretation: "Consistent price achievement vs budget"
+
+      - section_name: "Cost Structure"
+        metrics:
+          - metric_name: "Variable Costs - AOA/ton"
+            unit: "AOA/ton"
+            month_actual: 71144.6
+            month_budget: 65433.7
+            month_prior_year: 46582.1
+            variance_vs_budget: "9%"
+            variance_vs_ly: "53%"
+            ytd_actual: 71625.5
+            ytd_budget: 62681.9
+            ytd_prior_year: 52296.1
+            ytd_var_budget: "14%"
+            ytd_var_ly: "37%"
+            interpretation: "Variable costs increasing faster than prices - margin pressure"
+
+          - metric_name: "Electricity"
+            unit: "1000 AOA"
+            month_actual: 1270.8
+            month_budget: 1239.7
+            month_prior_year: 909.6
+            variance_vs_budget: "3%"
+            variance_vs_ly: "40%"
+            ytd_actual: 1130.9
+            ytd_budget: 1234.3
+            ytd_prior_year: 1099.1
+            ytd_var_budget: "-8%"
+            ytd_var_ly: "3%"
+            interpretation: "Electricity costs slightly below budget but 40% YoY increase"
+
+          - metric_name: "Raw Materials"
+            unit: "1000 AOA"
+            month_actual: 69873.8
+            month_budget: 64193.9
+            month_prior_year: "N/A"
+            variance_vs_budget: "9%"
+            variance_vs_ly: "N/A"
+            ytd_actual: 70494.7
+            ytd_budget: 61447.6
+            ytd_prior_year: 51197.0
+            ytd_var_budget: "15%"
+            ytd_var_ly: "38%"
+            interpretation: "Raw materials significantly exceeding budget - inflationary pressure"
+
+      - section_name: "Fixed Costs"
+        metrics:
+          - metric_name: "Fixed Costs Plant"
+            unit: "1000 AOA"
+            month_actual: -206006
+            month_budget: -133051
+            month_prior_year: -115047
+            variance_vs_budget: "55%"
+            variance_vs_ly: "79%"
+            ytd_actual: -966953
+            ytd_budget: -1064406
+            ytd_prior_year: -902896
+            ytd_var_budget: "-9%"
+            ytd_var_ly: "7%"
+            interpretation: "Fixed costs overrun; monthly much higher than budget"
+
+          - metric_name: "Employee Costs"
+            unit: "1000 AOA"
+            month_actual: -49827
+            month_budget: -44231
+            month_prior_year: -44440
+            variance_vs_budget: "13%"
+            variance_vs_ly: "12%"
+            ytd_actual: -312759
+            ytd_budget: -353851
+            ytd_prior_year: -306129
+            ytd_var_budget: "-12%"
+            ytd_var_ly: "2%"
+            interpretation: "Labor costs well controlled YTD despite monthly overruns"
+
+          - metric_name: "Maintenance costs"
+            unit: "1000 AOA"
+            month_actual: -42846
+            month_budget: -42135
+            month_prior_year: -26292
+            variance_vs_budget: "2%"
+            variance_vs_ly: "63%"
+            ytd_actual: -204502
+            ytd_budget: -337078
+            ytd_prior_year: -258991
+            ytd_var_budget: "-39%"
+            ytd_var_ly: "-21%"
+            interpretation: "Maintenance below budget (positive surprise)"
+
+      - section_name: "Sales and Distribution"
+        metrics:
+          - metric_name: "Sales Costs"
+            unit: "1000 AOA"
+            month_actual: -6481
+            month_budget: -7160
+            month_prior_year: -5709
+            variance_vs_budget: "-9%"
+            variance_vs_ly: "14%"
+            ytd_actual: -47262
+            ytd_budget: -57280
+            ytd_prior_year: -49839
+            ytd_var_budget: "-17%"
+            ytd_var_ly: "-5%"
+            interpretation: "Sales costs well managed and below budget"
+
+      - section_name: "Bottom Line Metrics"
+        metrics:
+          - metric_name: "EBITDA IFRS Cement"
+            unit: "1000 AOA"
+            month_actual: 191682
+            month_budget: 307541
+            month_prior_year: 232468
+            variance_vs_budget: "-38%"
+            variance_vs_ly: "-18%"
+            ytd_actual: 1253866
+            ytd_budget: 1459310
+            ytd_prior_year: 1379797
+            ytd_var_budget: "-14%"
+            ytd_var_ly: "-9%"
+            interpretation: "EBITDA declining on volume but supported by price"
+
+          - metric_name: "EBITDA IFRS Cement - AOA/ton"
+            unit: "AOA/ton"
+            month_actual: 25944.9
+            month_budget: 32717.2
+            month_prior_year: 24342.2
+            variance_vs_budget: "-21%"
+            variance_vs_ly: "7%"
+            ytd_actual: 31749.7
+            ytd_budget: 23678.6
+            ytd_prior_year: 23217.7
+            ytd_var_budget: "34%"
+            ytd_var_ly: "37%"
+            interpretation: "Unit EBITDA margin improving despite volume pressure"
+
+          - metric_name: "EBITDA IFRS Cement Margin %"
+            unit: "percentage"
+            month_actual: 18.2
+            month_budget: 27.4
+            month_prior_year: 26.7
+            variance_vs_budget: "-9 pp"
+            variance_vs_ly: "-8 pp"
+            ytd_actual: 23.3
+            ytd_budget: 21.4
+            ytd_prior_year: 26.2
+            ytd_var_budget: "2 pp"
+            ytd_var_ly: "-3 pp"
+            interpretation: "Margin slightly improving YTD despite headwinds"
+
+    structure_notes:
+      - "Dual comparison: Budget (B) and Prior Year (LY - Last Year)"
+      - "Monthly (Aug-25) vs YTD aggregated metrics"
+      - "Variance shown as both percentage and percentage points (pp)"
+      - "Negative values for costs shown in parentheses"
+
+    data_quality_observations:
+      - "One cell shows '###########' indicating display overflow (Net Transport Cost)"
+      - "This appears to be a data quality issue in source"
+      - "Large month-to-month variance in Fixed Costs suggests seasonal factors"
+
+###############################################################################
+# TABLE 3: Angola Others and G&A Performance
+###############################################################################
+  - id: "AO_OthersGnA_Performance"
+    title: "Secil - Angola - Operational Performance - Angola Others and G&A (YTD vs Budget vs LY)"
+    page: "84-85"
+    type: "Cost Center Performance Analysis"
+    currency: "1000 AOA"
+
+    sections:
+      - section_name: "Secil Angola (1000 AOA)"
+        metrics:
+          - metric_name: "Revenue"
+            month_actual: 19255
+            ytd_actual: 153731
+            ytd_budget: 179121
+            ytd_prior_year: 87597
+            ytd_var_budget: "-14%"
+            ytd_var_ly: "75%"
+
+          - metric_name: "EBITDA IFRS Secil Angola"
+            month_actual: 11796
+            ytd_actual: 23556
+            ytd_budget: 14734
+            ytd_prior_year: -53771
+            ytd_var_budget: "60%"
+            ytd_var_ly: "-144%"
+            interpretation: "Strong recovery from prior year loss"
+
+      - section_name: "G&A Costs"
+        metrics:
+          - metric_name: "Employees (G&A)"
+            month_actual: -19817
+            ytd_actual: -169016
+            ytd_budget: -192002
+            ytd_prior_year: -161446
+            ytd_var_budget: "-12%"
+            ytd_var_ly: "5%"
+
+          - metric_name: "Headcount (FTEs)"
+            month_actual: 13
+            ytd_actual: 13
+            ytd_budget: 12
+            ytd_prior_year: 12
+            ytd_var_budget: "8%"
+            ytd_var_ly: "8%"
+
+          - metric_name: "Specialized Labour"
+            month_actual: -13223
+            ytd_actual: -106797
+            ytd_budget: -117034
+            ytd_prior_year: -78118
+            ytd_var_budget: "-9%"
+            ytd_var_ly: "37%"
+
+          - metric_name: "Travel Expenses"
+            month_actual: -710
+            ytd_actual: -29526
+            ytd_budget: -59282
+            ytd_prior_year: -48690
+            ytd_var_budget: "-50%"
+            ytd_var_ly: "-39%"
+
+          - metric_name: "EBITDA IFRS G&A Net Costs"
+            month_actual: -47205
+            ytd_actual: -421239
+            ytd_budget: -507496
+            ytd_prior_year: -358814
+            ytd_var_budget: "-17%"
+            ytd_var_ly: "17%"
+
+      - section_name: "Angola Corporate Costs"
+        metrics:
+          - metric_name: "Trading Margin Other Merchandise"
+            month_actual: 44784
+            ytd_actual: 51621
+            ytd_prior_year: 11492
+            ytd_var_ly: "349%"
+
+          - metric_name: "Employee Costs (Corporate)"
+            month_actual: -76442
+            ytd_actual: -609044
+            ytd_budget: -437714
+            ytd_prior_year: -446364
+            ytd_var_budget: "39%"
+            ytd_var_ly: "36%"
+
+    key_insights:
+      - "G&A is well-controlled at 7.5% of turnover vs 7.4% budget"
+      - "Corporate costs showing 29% variance to budget (negative)"
+      - "Trading margin from merchandise contributes 51.6M AOA YTD"
+
+###############################################################################
+# TABLE 4: Angola Rolling Forecast
+###############################################################################
+  - id: "AO_Rolling_Forecast"
+    title: "Secil - Angola - Rolling Forecast"
+    page: "86"
+    type: "Forward-Looking Forecast"
+    currency: "1000 AOA"
+
+    forecast_periods:
+      - period_name: "Aug-25"
+        period_type: "Actual Month"
+        cement_sales_kton: 7
+        cement_production_kton: 7
+        cement_ebitda_ifrs: 191682
+        others_ebitda: -67267
+        total_ebitda: 124415
+
+      - period_name: "Sep-25"
+        period_type: "Budget Forecast"
+        cement_sales_kton: 7
+        cement_production_kton: 7
+        cement_ebitda_ifrs: 230000
+        others_ebitda: -50000
+        total_ebitda: 180000
+
+      - period_name: "B Sep-25"
+        period_type: "Budget"
+        cement_sales_kton: 9
+        cement_production_kton: 9
+        cement_ebitda_ifrs: 286203
+        others_ebitda: -116689
+        total_ebitda: 169514
+
+      - period_name: "Sep-24"
+        period_type: "Prior Year"
+        cement_sales_kton: 9
+        cement_production_kton: 8
+        cement_ebitda_ifrs: 171036
+        others_ebitda: -131684
+        total_ebitda: 39352
+
+    variance_analysis:
+      aug_sep_forecast_variance: "6%"
+      aug_sep_forecast_variance_ly: "357%"
+
+    ytd_forecast:
+      sep_25_ytd_actual: 462207
+      sep_25_ytd_budget: 690588
+      sep_25_ytd_prior_year: 550940
+      ytd_var_budget: "-33%"
+      ytd_var_ly: "-16%"
+
+###############################################################################
+# TABLE 5: Angola P&L Summary
+###############################################################################
+  - id: "AO_PnL_Summary"
+    title: "Secil - Angola - P&L (YTD vs Budget vs LY)"
+    page: "87-88"
+    type: "Income Statement"
+    currency: "1000 AOA"
+
+    line_items:
+      - line_name: "EBITDA IFRS"
+        month_actual: 124415
+        month_budget: 193214
+        month_prior_year: 134963
+        month_var_budget: "-36%"
+        month_var_ly: "-8%"
+        ytd_actual: 282207
+        ytd_budget: 521075
+        ytd_prior_year: 511588
+        ytd_var_budget: "-46%"
+        ytd_var_ly: "0%"
+        is_key_metric: true
+
+      - line_name: "Amortization, Depreciation and Grants"
+        month_actual: -12838
+        month_budget: -12135
+        month_prior_year: -9416
+        month_var_budget: "6%"
+        month_var_ly: "36%"
+        ytd_actual: -100190
+        ytd_budget: -97076
+        ytd_prior_year: -73192
+        ytd_var_budget: "3%"
+        ytd_var_ly: "37%"
+
+      - line_name: "EBIT"
+        month_actual: 111577
+        month_budget: 181079
+        month_prior_year: 125547
+        month_var_budget: "-38%"
+        month_var_ly: "-11%"
+        ytd_actual: 182017
+        ytd_budget: 423999
+        ytd_prior_year: 438396
+        ytd_var_budget: "-57%"
+        ytd_var_ly: "-58%"
+        is_key_metric: true
+
+      - line_name: "Net financial costs"
+        month_actual: -226588
+        month_budget: -180740
+        month_prior_year: -293919
+        month_var_budget: "25%"
+        month_var_ly: "-23%"
+        ytd_actual: -1846917
+        ytd_budget: -1445419
+        ytd_prior_year: -1689604
+        ytd_var_budget: "28%"
+        ytd_var_ly: "9%"
+
+      - line_name: "Operational Forex"
+        month_actual: -7568
+        month_budget: "—"
+        month_prior_year: 88987
+        month_var_budget: "N/A"
+        month_var_ly: "-109%"
+        ytd_actual: 6918
+        ytd_budget: "—"
+        ytd_prior_year: -29085
+        ytd_var_budget: "N/A"
+        ytd_var_ly: "-124%"
+
+      - line_name: "Financial Income"
+        month_actual: -234157
+        month_budget: -180740
+        month_prior_year: -204932
+        month_var_budget: "30%"
+        month_var_ly: "14%"
+        ytd_actual: -1840000
+        ytd_budget: -1445419
+        ytd_prior_year: -1718689
+        ytd_var_budget: "27%"
+        ytd_var_ly: "7%"
+
+      - line_name: "Profit Before Tax"
+        month_actual: -122579
+        month_budget: 340
+        month_prior_year: -79385
+        month_var_budget: "-36202%"
+        month_var_ly: "54%"
+        ytd_actual: -1657982
+        ytd_budget: -1021421
+        ytd_prior_year: -1280293
+        ytd_var_budget: "62%"
+        ytd_var_ly: "30%"
+        is_key_metric: true
+
+      - line_name: "Net income"
+        month_actual: -122579
+        month_budget: 340
+        month_prior_year: -79385
+        month_var_budget: "-36202%"
+        month_var_ly: "54%"
+        ytd_actual: -1657982
+        ytd_budget: -1021421
+        ytd_prior_year: -1280293
+        ytd_var_budget: "62%"
+        ytd_var_ly: "30%"
+        is_key_metric: true
+
+    margin_analysis:
+      - margin_name: "EBITDA IFRS Margin %"
+        month_actual: 11
+        month_budget: 17
+        month_prior_year: "—"
+        month_var: "0.0 pp"
+        ytd_actual: 5
+        ytd_budget: 8
+        ytd_prior_year: 9
+        ytd_var_budget: "-2.6 pp"
+        ytd_var_ly: "-4.3 pp"
+
+      - margin_name: "EBIT Margin %"
+        month_actual: 10
+        month_budget: 16
+        month_prior_year: 13
+        month_var_budget: "-6.4 pp"
+        month_var_ly: "-3.5 pp"
+        ytd_actual: 3
+        ytd_budget: 6
+        ytd_prior_year: 8
+        ytd_var_budget: "-3.0 pp"
+        ytd_var_ly: "-4.7 pp"
+
+    critical_observation:
+      issue: "Net financial costs (1.84B AOA) exceeding operational EBITDA (282M AOA)"
+      impact: "Company in pre-tax loss position despite positive EBITDA"
+      root_cause: "High debt burden or FX losses"
+
+###############################################################################
+# TABLE 6: Angola Turnover/EBITDA Analysis
+###############################################################################
+  - id: "AO_Turnover_EBITDA"
+    title: "Secil - Angola - Turnover / EBITDA IFRS (YTD vs Budget vs LY)"
+    page: "89"
+    type: "Revenue and Profitability Bridge"
+    currency: "1000 AOA"
+
+    revenue_breakdown:
+      - segment_name: "Angola Total"
+        month_actual: 1152465
+        month_budget: 1124245
+        month_prior_year: 950580
+        month_var_budget: "2.5%"
+        month_var_ly: "21.2%"
+        ytd_actual: 5610823
+        ytd_budget: 6822996
+        ytd_prior_year: 5499441
+        ytd_var_budget: "-17.8%"
+        ytd_var_ly: "2.0%"
+
+      - segment_name: "Angola Cement"
+        month_actual: 1051891
+        month_budget: 1124245
+        month_prior_year: 872181
+        month_var_budget: "-6%"
+        month_var_ly: "21%"
+        ytd_actual: 5373352
+        ytd_budget: 6822996
+        ytd_prior_year: 5256686
+        ytd_var_budget: "-21%"
+        ytd_var_ly: "2%"
+
+      - segment_name: "Angola Others"
+        month_actual: 119830
+        month_budget: 22390
+        month_prior_year: 96837
+        month_var_budget: "435%"
+        month_var_ly: "24%"
+        ytd_actual: 391202
+        ytd_budget: 179121
+        ytd_prior_year: 330352
+        ytd_var_budget: "118%"
+        ytd_var_ly: "18%"
+
+      - segment_name: "Angola Intercompany (Elimination)"
+        month_actual: -19255
+        month_budget: -22390
+        month_prior_year: -18438
+        month_var_budget: "-14%"
+        month_var_ly: "4%"
+        ytd_actual: -153731
+        ytd_budget: -179121
+        ytd_prior_year: -87597
+        ytd_var_budget: "-14%"
+        ytd_var_ly: "75%"
+
+    ebitda_bridge:
+      - segment_name: "Angola Total EBITDA"
+        month_actual: 124415
+        month_budget: 193214
+        month_prior_year: 134963
+        month_var_budget: "-36%"
+        month_var_ly: "-8%"
+        ytd_actual: 282207
+        ytd_budget: 521075
+        ytd_prior_year: 511588
+        ytd_var_budget: "-46%"
+        ytd_var_ly: "-45%"
+
+      - segment_name: "Angola Cement EBITDA"
+        month_actual: 191682
+        month_budget: 307541
+        month_prior_year: 232468
+        month_var_budget: "-38%"
+        month_var_ly: "-18%"
+        ytd_actual: 1253866
+        ytd_budget: 1459310
+        ytd_prior_year: 1379797
+        ytd_var_budget: "-14%"
+        ytd_var_ly: "-9%"
+
+      - segment_name: "Angola G&A"
+        month_actual: -47205
+        month_budget: -63399
+        month_prior_year: -52528
+        month_var_budget: "-26%"
+        month_var_ly: "-10%"
+        ytd_actual: -421239
+        ytd_budget: -507496
+        ytd_prior_year: -358814
+        ytd_var_budget: "-17%"
+        ytd_var_ly: "17%"
+
+      - segment_name: "Secil Angola"
+        month_actual: 11796
+        month_budget: 4756
+        month_prior_year: 1246
+        month_var_budget: "148%"
+        month_var_ly: "847%"
+        ytd_actual: 23556
+        ytd_budget: 14734
+        ytd_prior_year: -53771
+        ytd_var_budget: "60%"
+        ytd_var_ly: "-144%"
+
+      - segment_name: "Angola Corporate Costs"
+        month_actual: -31859
+        month_budget: -55684
+        month_prior_year: -46222
+        month_var_budget: "-43%"
+        month_var_ly: "-31%"
+        ytd_actual: -573976
+        ytd_budget: -445473
+        ytd_prior_year: -455623
+        ytd_var_budget: "29%"
+        ytd_var_ly: "26%"
+
+    bridge_formula:
+      "Angola EBITDA = Cement EBITDA - G&A - Corporate Costs + Secil Angola"
+
+###############################################################################
+# TABLE 7: Angola Headcount Evolution
+###############################################################################
+  - id: "AO_Headcount_Evolution"
+    title: "Secil - Angola - Headcount Evolution (YTD vs Budget vs LY)"
+    page: "90"
+    type: "Workforce Headcount Tracking"
+    unit: "Number of Employees (FTEs)"
+
+    headcount_by_period:
+      - period: "FY 2020"
+        total_angola: 173
+        cement: 150
+        cement_plants: 88
+        cement_sales: 3
+        gna: 20
+        others: 3
+
+      - period: "FY 2021"
+        total_angola: 162
+        cement: 141
+        cement_plants: 78
+        cement_sales: 3
+        gna: 18
+        others: 3
+
+      - period: "FY 2022"
+        total_angola: 155
+        cement: 136
+        cement_plants: 80
+        cement_sales: 3
+        gna: 16
+        others: 3
+
+      - period: "FY 2023"
+        total_angola: 97
+        cement: 84
+        cement_plants: 80
+        cement_sales: 4
+        gna: 11
+        others: 2
+
+      - period: "FY 2024"
+        total_angola: 88
+        cement: 73
+        cement_plants: 70
+        cement_sales: 3
+        gna: 14
+        others: 1
+
+      - period: "Jan-2025"
+        total_angola: 84
+        cement: 69
+        cement_plants: 66
+        cement_sales: 3
+        gna: 14
+        others: 1
+
+      - period: "Feb-2025"
+        total_angola: 85
+        cement: 70
+        cement_plants: 67
+        cement_sales: 3
+        gna: 14
+        others: 1
+
+      - period: "Aug-2025 Actual"
+        total_angola: 83
+        cement: 69
+        cement_plants: 66
+        cement_sales: 3
+        gna: 13
+        others: 1
+
+      - period: "Aug-2025 Budget"
+        total_angola: 94
+        cement: 81
+        cement_plants: 77
+        cement_sales: 4
+        gna: 12
+        others: 1
+
+    headcount_trends:
+      - metric_name: "Headcount Reduction"
+        period: "FY2020 to FY2024"
+        reduction: "49%"
+        from: 173
+        to: 88
+        interpretation: "Major organizational restructuring over 4 years"
+
+      - metric_name: "Cement Plant Staff"
+        ytd_actual: 66
+        ytd_budget: 77
+        variance: "-11 FTEs"
+        variance_pct: "-14%"
+
+      - metric_name: "Total Headcount vs Budget"
+        ytd_actual: 83
+        ytd_budget: 94
+        variance: "-11 FTEs"
+        variance_pct: "-12%"
+        interpretation: "Running lean vs planned staffing"
+
+###############################################################################
+# TABLE 8: Angola Capex Analysis
+###############################################################################
+  - id: "AO_Capex_Analysis"
+    title: "Secil - Angola - Capex Total / per Type (YTD vs Budget vs LY)"
+    page: "91"
+    type: "Capital Expenditure Breakdown"
+    currency: "1000 AOA"
+
+    capex_summary:
+      - category: "Angola Total Capex"
+        month_actual: 10712
+        month_budget: 26100
+        month_prior_year: 36438
+        month_var_budget: "-59%"
+        month_var_ly: "-71%"
+        ytd_actual: 130104
+        ytd_budget: 234748
+        ytd_prior_year: 221975
+        ytd_var_budget: "-45%"
+        ytd_var_ly: "-41%"
+
+      - category: "Angola Cement Capex"
+        month_actual: 10712
+        month_budget: 26100
+        month_prior_year: 36437
+        month_var_budget: "-59%"
+        month_var_ly: "-71%"
+        ytd_actual: 106058
+        ytd_budget: 234748
+        ytd_prior_year: 221764
+        ytd_var_budget: "-55%"
+        ytd_var_ly: "-52%"
+
+      - category: "Angola G&A Capex"
+        month_actual: 0
+        month_budget: 0
+        month_prior_year: 0
+        ytd_actual: 24046
+        ytd_budget: 0
+        ytd_prior_year: 0
+        interpretation: "G&A capex entirely unbudgeted"
+
+      - category: "Angola Others Capex"
+        month_actual: 0
+        month_budget: 0
+        month_prior_year: 2
+        ytd_actual: 0
+        ytd_budget: 0
+        ytd_prior_year: 212
+        ytd_var_ly: "-100%"
+
+    capex_by_type:
+      - type: "Land"
+        cement_ytd: 0
+        total_cement_ytd: 0
+
+      - type: "Replacement"
+        cement_ytd: 106058
+        total_cement_ytd: 106058
+        interpretation: "All capex is maintenance/replacement"
+
+      - type: "HSE"
+        cement_ytd: 0
+        total_cement_ytd: 0
+
+      - type: "Other"
+        cement_ytd: 0
+        total_cement_ytd: 0
+
+      - type: "Development"
+        energy_ytd: 0
+        other_ytd: 0
+        total_ytd: 0
+
+      - type: "IFRS 16"
+        energy_ytd: 0
+        other_ytd: 0
+        ga_ytd: 24046
+        total_ytd: 24046
+
+    capex_observations:
+      - "YTD capex 45% below budget"
+      - "No development or growth capex planned"
+      - "G&A shows unbudgeted capex of 24.0M AOA"
+
+###############################################################################
+# TABLE 9: Angola Net Working Capital
+###############################################################################
+  - id: "AO_NetWorkingCapital"
+    title: "Secil - Angola - Net Working Capital (YTD vs Budget vs LY)"
+    page: "92-93"
+    type: "Working Capital Analysis"
+    currency: "1000 AOA"
+
+    working_capital_components:
+      - component: "Accounts Receivable"
+        aug_25: -57574
+        budget_aug_25: 269089
+        dec_24: 77978
+        aug_24: 204136
+        var_budget: "—"
+        var_dec_ly: "—"
+        var_ly: "—"
+        interpretation: "Negative receivables (unusual - may indicate advance payments)"
+
+      - component: "Inventories"
+        aug_25: 2309477
+        budget_aug_25: 1685989
+        dec_24: 1068315
+        aug_24: 1333733
+        var_budget: "37%"
+        var_dec_ly: "116%"
+        var_ly: "73%"
+        interpretation: "Inventory buildup - significant working capital tie-up"
+
+      - component: "  - Finished Goods"
+        aug_25: 244863
+        dec_24: 204436
+        aug_24: 138705
+        var_dec_ly: "20%"
+        var_ly: "77%"
+
+      - component: "  - Raw Materials"
+        aug_25: 1300529
+        dec_24: 218302
+        aug_24: 461555
+        var_dec_ly: "496%"
+        var_ly: "182%"
+        interpretation: "Major raw material stockpile"
+
+      - component: "  - Subsidiaries and Packing Materials"
+        aug_25: 110134
+        dec_24: 77306
+        aug_24: 137546
+        var_dec_ly: "42%"
+        var_ly: "-20%"
+
+      - component: "  - Other Materials"
+        aug_25: 653951
+        budget_aug_25: 1685989
+        dec_24: 568271
+        aug_24: 595927
+        var_budget: "-61%"
+        var_dec_ly: "15%"
+        var_ly: "10%"
+
+      - component: "Accounts Payable"
+        aug_25: 705788
+        budget_aug_25: 853979
+        dec_24: 208117
+        aug_24: 759472
+        var_budget: "-17%"
+        var_dec_ly: "239%"
+        var_ly: "-7%"
+        interpretation: "Significant increase in payables vs Dec-24"
+
+      - component: "Trade Working Capital"
+        aug_25: 1546115
+        budget_aug_25: 1101100
+        dec_24: 938176
+        aug_24: 778397
+        var_budget: "40%"
+        var_dec_ly: "65%"
+        var_ly: "99%"
+
+    working_capital_metrics:
+      - metric: "DSO (Days Sales Outstanding)"
+        aug_25: 9
+        budget_aug_25: 3
+        dec_24: 8
+        aug_24: -11
+        units: "days"
+        interpretation: "Receivables collection very efficient"
+
+      - metric: "DPO (Days Payable Outstanding)"
+        aug_25: 33
+        budget_aug_25: 36
+        dec_24: 10
+        aug_24: 41
+        units: "days"
+        interpretation: "Payables stretched vs year-end"
+
+      - metric: "DIO (Days Inventory Outstanding)"
+        aug_25: 166
+        budget_aug_25: 108
+        dec_24: 77
+        aug_24: 106
+        units: "days"
+        interpretation: "5.5 months of inventory - very high"
+
+      - metric: "Trade WC / Turnover"
+        aug_25: 15
+        budget_aug_25: 10
+        dec_24: 9
+        aug_24: 8
+        units: "%"
+        interpretation: "WC consuming 15% of annual sales"
+
+    turnover:
+      ytd_turnover: 10250498
+      var_vs_budget: "-8%"
+
+###############################################################################
+# TABLE 10: Angola Cash Flow Statement
+###############################################################################
+  - id: "AO_CashFlow"
+    title: "Secil - Angola - Cash Flow (YTD vs Budget vs LY)"
+    page: "94"
+    type: "Cash Flow Statement"
+    currency: "1000 AOA"
+
+    cash_flow_items:
+      - line_item: "EBITDA Angola"
+        ytd_actual: 282207
+        ytd_budget: 521075
+        ytd_prior_year: 511588
+        var_budget: "-46%"
+        var_ly: "0%"
+
+      - line_item: "De(in)crease Trade Working Capital"
+        ytd_actual: -607940
+        ytd_budget: -189438
+        ytd_prior_year: -102346
+        var_budget: "221%"
+        var_ly: "494%"
+        impact: "negative"
+
+      - line_item: "  - De(in)crease Inventories"
+        ytd_actual: -1241162
+        ytd_budget: -160000
+        ytd_prior_year: 4933
+        var_budget: "676%"
+        var_ly: "—"
+
+      - line_item: "  - De(in)crease Trade Receivables"
+        ytd_actual: 135552
+        ytd_budget: -116913
+        ytd_prior_year: -111188
+        var_budget: "—"
+        var_ly: "—"
+
+      - line_item: "  - (De)increase Trade Payables"
+        ytd_actual: 497671
+        ytd_budget: 87475
+        ytd_prior_year: 3909
+        var_budget: "469%"
+        var_ly: "12630%"
+
+      - line_item: "Other working capital variances"
+        ytd_actual: 3421619
+        ytd_budget: -1823791
+        ytd_prior_year: 2585798
+        var_budget: "—"
+        var_ly: "32%"
+        critical_note: "Massive swing - requires investigation"
+
+      - line_item: "CF from Operations"
+        ytd_actual: 3095887
+        ytd_budget: -1492155
+        ytd_prior_year: 2995041
+        var_budget: "—"
+        var_ly: "3%"
+
+      - line_item: "Net interest expenses"
+        ytd_actual: -1840000
+        ytd_budget: -1445419
+        ytd_prior_year: -1718689
+        var_budget: "27%"
+        var_ly: "7%"
+        impact: "negative"
+
+      - line_item: "CF from Operating Activities"
+        ytd_actual: 1255887
+        ytd_budget: -2937574
+        ytd_prior_year: 1276351
+        var_budget: "—"
+        var_ly: "-2%"
+
+      - line_item: "Capex"
+        ytd_actual: -130104
+        ytd_budget: -234748
+        ytd_prior_year: -221975
+        var_budget: "-45%"
+        var_ly: "-41%"
+        impact: "negative"
+
+      - line_item: "CF from Investment Activities"
+        ytd_actual: -130104
+        ytd_budget: -234748
+        ytd_prior_year: -221975
+        var_budget: "-45%"
+        var_ly: "-41%"
+
+      - line_item: "Cash set free (tied up) after investments"
+        ytd_actual: 1125783
+        ytd_budget: -3172323
+        ytd_prior_year: 1054376
+        var_budget: "—"
+        var_ly: "7%"
+
+      - line_item: "Net Cash Flow"
+        ytd_actual: 1125783
+        ytd_budget: -3172323
+        ytd_prior_year: 1054376
+        var_budget: "—"
+        var_ly: "7%"
+
+      - line_item: "Financial net debt - Opening Balance"
+        ytd_actual: 341276
+        ytd_budget: -1970041
+        ytd_prior_year: 419205
+        var_budget: "—"
+        var_ly: "-19%"
+
+      - line_item: "Effects of exchange rate change on Net Debt"
+        ytd_actual: -51679
+        ytd_budget: "—"
+        ytd_prior_year: 30230
+        var_budget: "—"
+        var_ly: "—"
+
+      - line_item: "Financial net debt - Closing Balance"
+        ytd_actual: -732829
+        ytd_budget: 1202281
+        ytd_prior_year: -665401
+        var_budget: "—"
+        var_ly: "10%"
+
+###############################################################################
+# TABLE 11: Tunisia Health & Safety KPIs
+###############################################################################
+  - id: "TN_HealthSafety"
+    title: "Secil - Tunisia - Health & Safety KPI's"
+    page: "96"
+    type: "Safety Performance Metrics"
+
+    kpi_metrics:
+      - kpi_name: "Frequency Ratio"
+        unit: "Lost Time Injuries per 1,000,000 Total Manhours"
+        definition: "Number of lost time injuries × 1,000,000 / Total Manhours Worked"
+
+        monthly_data:
+          - month: "Apr-25"
+            tunisia_cement: 7.93
+            non_cement: 63.20
+
+          - month: "May-25"
+            tunisia_cement: 7.41
+            non_cement: 54.03
+
+          - month: "Jul-25"
+            tunisia_cement: 8.78
+            non_cement: 10.33
+
+          - month: "Aug-25"
+            tunisia_cement: 8.15
+            non_cement: 9.54
+
+        ytd_2025: 3.66
+        last_12_months: 2.89
+        fy_2024: 1.72
+        fy_2023: 0.55
+        budget_2025: 1.20
+
+        trend_analysis:
+          - "YTD 2025 (3.66) well above budget (1.20) - 205% over target"
+          - "Major deterioration vs FY2024 (1.72)"
+          - "Non-cement operations showing spikes (54-63 in Apr-May)"
+
+###############################################################################
+# TABLE 12: Tunisia Cement Operational Performance
+###############################################################################
+  - id: "TN_Cement_OpPerf"
+    title: "Secil - Tunisia - Operational Performance - Tunisia Cement (YTD vs Budget vs LY)"
+    page: "97-98"
+    type: "Multi-Metric Performance Table"
+    currency: "1000 TND (Thousands of Tunisian Dinar)"
+
+    sections:
+      - section_name: "Internal Market Performance"
+        metrics:
+          - metric_name: "Cement Market"
+            unit: "kton"
+            month_actual: 447
+            month_budget: 439
+            month_prior_year: 447
+            variance_vs_budget: "2%"
+            variance_vs_ly: "0%"
+            ytd_actual: 3344
+            ytd_budget: 3550
+            ytd_prior_year: 3330
+            ytd_var_budget: "-6%"
+            ytd_var_ly: "0%"
+
+          - metric_name: "Population"
+            unit: "Mpeople"
+            month_actual: 431
+            month_budget: 424
+            ytd_actual: 403
+            ytd_budget: 428
+            ytd_prior_year: 405
+
+          - metric_name: "Cement per Capita"
+            unit: "kg"
+            month_actual: 10.8
+            month_budget: 10.9
+            month_prior_year: 11.3
+            ytd_actual: 12.2
+            ytd_budget: 10.5
+            ytd_prior_year: 10.8
+
+          - metric_name: "Market Share"
+            unit: "%"
+            month_actual: 4.0
+            month_budget: 3.3
+            month_prior_year: 2.6
+            ytd_actual: 2.1
+            ytd_budget: 3.1
+            ytd_prior_year: 3.1
+            interpretation: "Market share declining vs prior year"
+
+          - metric_name: "Volume Cement - kton"
+            unit: "kton"
+            month_actual: 48
+            month_budget: 48
+            month_prior_year: 50
+            variance_vs_budget: "0%"
+            variance_vs_ly: "-4%"
+            ytd_actual: 406
+            ytd_budget: 374
+            ytd_prior_year: 358
+            ytd_var_budget: "9%"
+            ytd_var_ly: "13%"
+            interpretation: "Volume tracking above budget"
+
+          - metric_name: "% Volume Grey Bulk"
+            unit: "%"
+            month_actual: 16
+            month_budget: 18
+            ytd_actual: 18
+            ytd_budget: 18
+            ytd_prior_year: 17
+
+          - metric_name: "% Volume Grey Bagged"
+            unit: "%"
+            month_actual: 84
+            month_budget: 82
+            ytd_actual: 82
+            ytd_budget: 82
+            ytd_prior_year: 83
+
+          - metric_name: "Price Cement - TND/ton"
+            unit: "TND/ton"
+            month_actual: 254.1
+            month_budget: 263.9
+            month_prior_year: 247.1
+            variance_vs_budget: "-4%"
+            variance_vs_ly: "3%"
+            ytd_actual: 248.0
+            ytd_budget: 252.4
+            ytd_prior_year: 250.0
+            ytd_var_budget: "-2%"
+            ytd_var_ly: "-1%"
+
+      - section_name: "External Market - Libya"
+        metrics:
+          - metric_name: "Vol Cement Libya - kton"
+            unit: "kton"
+            month_actual: 42
+            month_budget: 16
+            month_prior_year: 15
+            variance_vs_budget: "164%"
+            variance_vs_ly: "185%"
+            ytd_actual: 263
+            ytd_budget: 124
+            ytd_prior_year: 44
+            ytd_var_budget: "112%"
+            ytd_var_ly: "498%"
+            interpretation: "Significant export volume growth to Libya"
+
+          - metric_name: "Price Cement Libya - TND/ton"
+            unit: "TND/ton"
+            month_actual: 188.4
+            month_budget: 171.0
+            month_prior_year: 182.2
+            variance_vs_budget: "10.2%"
+            variance_vs_ly: "3.4%"
+
+      - section_name: "External Market - EU"
+        metrics:
+          - metric_name: "Vol Cement Others (EU) - kton"
+            unit: "kton"
+            month_actual: 16
+            month_budget: 24
+            month_prior_year: 14
+            variance_vs_budget: "-34%"
+            variance_vs_ly: "17%"
+            ytd_actual: 103
+            ytd_budget: 182
+            ytd_prior_year: 96
+            ytd_var_budget: "-43%"
+            ytd_var_ly: "8%"
+            interpretation: "EU exports underperforming budget"
+
+          - metric_name: "Price Cement Others - TND/ton - EU"
+            unit: "TND/ton"
+            month_actual: 170.9
+            month_budget: 197.1
+            month_prior_year: 183.4
+            variance_vs_budget: "-13%"
+            variance_vs_ly: "-7%"
+
+      - section_name: "Cost Metrics"
+        metrics:
+          - metric_name: "Variable Costs - TND/ton"
+            unit: "TND/ton"
+            month_actual: 94.5
+            month_budget: 101.5
+            month_prior_year: 101.7
+            variance_vs_budget: "-7%"
+            variance_vs_ly: "-7%"
+            ytd_actual: 97.5
+            ytd_budget: 96.9
+            ytd_prior_year: 116.6
+            ytd_var_budget: "1%"
+            ytd_var_ly: "-16%"
+            interpretation: "Good cost control"
+
+          - metric_name: "Fixed Costs Plant"
+            unit: "1000 TND"
+            month_actual: -4882
+            month_budget: -4724
+            month_prior_year: -3339
+            variance_vs_budget: "3%"
+            variance_vs_ly: "46%"
+            ytd_actual: -44735
+            ytd_budget: -45856
+            ytd_prior_year: -37637
+            ytd_var_budget: "-2%"
+            ytd_var_ly: "19%"
+
+      - section_name: "Profitability"
+        metrics:
+          - metric_name: "EBITDA IFRS Cement"
+            unit: "1000 TND"
+            month_actual: 7169
+            month_budget: 6310
+            month_prior_year: 4718
+            variance_vs_budget: "14%"
+            variance_vs_ly: "52%"
+            ytd_actual: 38691
+            ytd_budget: 35597
+            ytd_prior_year: 16962
+            ytd_var_budget: "9%"
+            ytd_var_ly: "128%"
+            interpretation: "Strong EBITDA growth, up 128% YoY"
+
+          - metric_name: "EBITDA IFRS Cement - TND/ton"
+            unit: "TND/ton"
+            month_actual: 67.4
+            month_budget: 71.7
+            month_prior_year: 57.0
+            variance_vs_budget: "-6%"
+            variance_vs_ly: "18%"
+            ytd_actual: 48.7
+            ytd_budget: 48.1
+            ytd_prior_year: 33.8
+            ytd_var_budget: "1%"
+            ytd_var_ly: "44%"
+
+          - metric_name: "EBITDA IFRS Cement Margin %"
+            unit: "%"
+            month_actual: 30.3
+            month_budget: 30.2
+            month_prior_year: 24.7
+            variance_vs_budget: "0 pp"
+            variance_vs_ly: "6 pp"
+            ytd_actual: 22.2
+            ytd_budget: 21.5
+            ytd_prior_year: 14.0
+            ytd_var_budget: "1 pp"
+            ytd_var_ly: "8 pp"
+
+    production_data:
+      - metric_name: "Unit cost denominator"
+        unit: "kton"
+        month_actual: 7
+        month_budget: 9
+        ytd_actual: 39
+        ytd_budget: 62
+
+      - metric_name: "Production - Cement"
+        unit: "kton"
+        month_actual: 7
+        month_budget: 9
+        ytd_actual: 40
+        ytd_budget: 62
+
+      - metric_name: "Clinker acquired and consumed"
+        unit: "kton"
+        month_actual: 6
+        month_budget: 8
+        ytd_actual: 34
+        ytd_budget: 52
+
+      - metric_name: "% Integration Clinker"
+        unit: "%"
+        month_actual: 85
+        month_budget: 83
+        ytd_actual: 88
+        ytd_budget: 84
+
+###############################################################################
+# TABLE 13: Tunisia EBITDA Bridge
+###############################################################################
+  - id: "TN_EBITDA_Bridge"
+    title: "Secil - Tunisia - EBITDA IFRS Bridge (YOB vs YOY)"
+    page: "99"
+    type: "Waterfall Chart"
+    currency: "M TND (Millions of Tunisian Dinar)"
+
+    yob_bridge:
+      starting_point: "2025B"
+      starting_value: 26.2
+      components:
+        - component: "Volume IM"
+          value: 5.0
+          direction: "positive"
+
+        - component: "Price IM"
+          value: -2.1
+          direction: "negative"
+
+        - component: "Volume EM"
+          value: 3.1
+          direction: "positive"
+
+        - component: "Price EM"
+          value: -2.0
+          direction: "negative"
+
+        - component: "Variable Costs"
+          value: -0.4
+          direction: "negative"
+
+        - component: "Fixed Costs"
+          value: 1.3
+          direction: "positive"
+
+        - component: "Others - Cement"
+          value: 0.2
+          direction: "positive"
+
+        - component: "Production Variance"
+          value: -1.9
+          direction: "negative"
+
+        - component: "Materials"
+          value: -0.2
+          direction: "negative"
+
+        - component: "Others"
+          value: -1.1
+          direction: "negative"
+
+      ending_point: "2025"
+      ending_value: 27.9
+      final_margin: "27.6"
+
+    yoy_bridge:
+      starting_point: "2024"
+      starting_value: 18.3
+      components:
+        - component: "Volume IM"
+          value: 6.8
+          direction: "positive"
+
+        - component: "Price IM"
+          value: -1.1
+          direction: "negative"
+
+        - component: "Volume EM"
+          value: 15.7
+          direction: "positive"
+
+        - component: "Price EM"
+          value: -1.1
+          direction: "negative"
+
+        - component: "Variable Costs"
+          value: 13.2
+          direction: "positive"
+
+        - component: "Fixed Costs"
+          value: -4.1
+          direction: "negative"
+
+        - component: "Others - Cement"
+          value: -0.1
+          direction: "negative"
+
+        - component: "Production Variance"
+          value: 0.2
+          direction: "positive"
+
+        - component: "Materials"
+          value: -7.6
+          direction: "negative"
+
+        - component: "Others"
+          value: -12.3
+          direction: "negative"
+
+      ending_point: "2025"
+      ending_value: 27.9
+      final_margin: "27.6"
+
+###############################################################################
+# TABLE 14: Tunisia Rolling Forecast
+###############################################################################
+  - id: "TN_Rolling_Forecast"
+    title: "Secil - Tunisia - Rolling Forecast (appears on page 100-101)"
+    page: "100"
+    type: "Forward-Looking Forecast"
+    currency: "1000 TND"
+
+    forecast_data:
+      - period: "Aug-25"
+        actual_forecast: true
+        cement_ebitda: 7169
+        ytd_cement_ebitda: 38691
+
+      - period: "Sep-25"
+        actual_forecast: false
+        cement_ebitda: null
+        ytd_cement_ebitda: 38691
+
+      - period: "B Sep-25"
+        budget: true
+        cement_ebitda: 6310
+        ytd_cement_ebitda: 35597
+
+      - period: "Sep-24"
+        prior_year: true
+        cement_ebitda: 4718
+        ytd_cement_ebitda: 16962
+
+###############################################################################
+# SAMPLE DATA VALUES: Exact Numbers Extracted (10-15 values per table)
+###############################################################################
+
+sample_data_values:
+  metric_1:
+    table: "AO_EBITDA_Bridge_YOB"
+    metric: "Volume Impact Internal Market (YOB)"
+    value: 521.1
+    unit: "M AOA"
+    context: "Year-over-Budget waterfall component"
+
+  metric_2:
+    table: "AO_EBITDA_Bridge_YOB"
+    metric: "Price Impact Internal Market (YOY)"
+    value: 2202.3
+    unit: "M AOA"
+    context: "Year-over-Year waterfall component"
+
+  metric_3:
+    table: "AO_EBITDA_Bridge_YOB"
+    metric: "Variable Costs Impact (YOB)"
+    value: -449.7
+    unit: "M AOA"
+    context: "Negative impact on EBITDA"
+
+  metric_4:
+    table: "AO_Cement_OpPerf_Month"
+    metric: "Volume IM (Aug-25)"
+    value: 7
+    unit: "kton"
+    context: "August cement internal market volume"
+
+  metric_5:
+    table: "AO_Cement_OpPerf_Month"
+    metric: "Price Cement IM (Aug-25)"
+    value: 127586.7
+    unit: "AOA/ton"
+    context: "August cement price"
+
+  metric_6:
+    table: "AO_Cement_OpPerf_Month"
+    metric: "Variable Costs IM (YTD)"
+    value: 71625.5
+    unit: "AOA/ton"
+    context: "Year-to-date variable cost per ton"
+
+  metric_7:
+    table: "AO_Cement_OpPerf_Month"
+    metric: "EBITDA IFRS Cement (YTD)"
+    value: 1253866
+    unit: "1000 AOA"
+    context: "Cement segment YTD profitability"
+
+  metric_8:
+    table: "AO_Cement_OpPerf_Month"
+    metric: "EBITDA Margin % (YTD)"
+    value: 23.3
+    unit: "%"
+    context: "Cement EBITDA margin percentage"
+
+  metric_9:
+    table: "AO_NetWorkingCapital"
+    metric: "Inventories (Aug-25)"
+    value: 2309477
+    unit: "1000 AOA"
+    context: "Working capital tied up in inventory"
+
+  metric_10:
+    table: "AO_NetWorkingCapital"
+    metric: "DIO (Days Inventory Outstanding)"
+    value: 166
+    unit: "days"
+    context: "High inventory holding period"
+
+  metric_11:
+    table: "AO_CashFlow"
+    metric: "EBITDA Angola (YTD)"
+    value: 282207
+    unit: "1000 AOA"
+    context: "Operational cash generation"
+
+  metric_12:
+    table: "AO_CashFlow"
+    metric: "Financial net debt - Closing Balance"
+    value: -732829
+    unit: "1000 AOA"
+    context: "Net debt position (net cash)"
+
+  metric_13:
+    table: "TN_Cement_OpPerf"
+    metric: "Volume Cement (YTD)"
+    value: 406
+    unit: "kton"
+    context: "Tunisia cement production YTD"
+
+  metric_14:
+    table: "TN_Cement_OpPerf"
+    metric: "Vol Cement Libya (YTD)"
+    value: 263
+    unit: "kton"
+    context: "Major export growth market"
+
+  metric_15:
+    table: "TN_Cement_OpPerf"
+    metric: "EBITDA IFRS Cement (YTD)"
+    value: 38691
+    unit: "1000 TND"
+    context: "Tunisia cement profitability up 128% YoY"
+
+###############################################################################
+# GROUND TRUTH QUERIES: 10 Comprehensive Q&A Pairs
+###############################################################################
+
+ground_truth_queries:
+  - query_id: "GT_001"
+    question: "What was Secil Angola's EBITDA IFRS for August 2025 in million AOA, and how does it compare to the budget?"
+    expected_answer: "Secil Angola's EBITDA IFRS for August 2025 was 124.415 million AOA, which represents a 36% decrease versus the budget of 193.214 million AOA. This variance is primarily driven by lower cement volumes (7 kton vs 9 kton budget) and higher variable costs at 71,144.6 AOA/ton versus 65,433.7 budgeted."
+    source_table: "AO_Cement_OpPerf_Month, AO_PnL_Summary"
+    page_references: "82-83, 87-88"
+    confidence_level: "high"
+    metric_type: "profitability"
+    entities:
+      - "Secil Angola"
+      - "Cement Segment"
+    time_period: "August 2025"
+
+  - query_id: "GT_002"
+    question: "How much inventory is tied up in working capital at Secil Angola as of August 2025, and what is the Days Inventory Outstanding (DIO)?"
+    expected_answer: "Secil Angola had 2,309,477 thousand AOA in inventories as of August 2025, representing 116% above the December 2024 level. The Days Inventory Outstanding (DIO) was 166 days, indicating approximately 5.5 months of inventory on hand. This is significantly higher than the prior year August (106 days) and budget (108 days), with raw materials accounting for 1,300.5 million AOA of this total."
+    source_table: "AO_NetWorkingCapital"
+    page_references: "92-93"
+    confidence_level: "high"
+    metric_type: "working_capital"
+    entities:
+      - "Secil Angola"
+    data_points:
+      - total_inventory: 2309477
+      - raw_materials: 1300529
+      - dio: 166
+      - variance_vs_dec24: "116%"
+
+  - query_id: "GT_003"
+    question: "What are the key components of the waterfall bridge explaining the change in Secil Angola cement EBITDA from 2025 budget to 2025 actual year-end?"
+    expected_answer: "The EBITDA waterfall components are: Volume Impact (521.1M), Price Impact (1,188.1M positive), Variable Costs impact (-449.7M), Fixed Costs impact (107.5M positive), Production materials impact (77.9M positive), Production variance (-90.6M), and Others impact (-33.4M). The final EBITDA remains at 282.2 million AOA in both budget and actual, indicating offsetting pressures between positive price/volume and negative cost factors."
+    source_table: "AO_EBITDA_Bridge_YOB"
+    page_references: "81"
+    confidence_level: "high"
+    metric_type: "bridge_analysis"
+    data_quality_note: "Waterfall shows year-end reconciliation"
+
+  - query_id: "GT_004"
+    question: "What is the headcount reduction for Secil Angola from 2020 to 2024, and what is the current staffing level versus budget for August 2025?"
+    expected_answer: "Secil Angola reduced headcount from 173 FTEs in 2020 to 88 in 2024, representing a 49% reduction. As of August 2025, actual headcount was 83 FTEs versus a budget of 94 FTEs, a shortfall of 11 FTEs or 12% below planned staffing. Cement plant staff were 66 actual versus 77 budgeted, indicating lean operations."
+    source_table: "AO_Headcount_Evolution"
+    page_references: "90"
+    confidence_level: "high"
+    metric_type: "organizational"
+    entities:
+      - "Secil Angola"
+    time_periods:
+      - "FY2020"
+      - "FY2024"
+      - "Aug-2025"
+
+  - query_id: "GT_005"
+    question: "How does Secil Tunisia's cement EBITDA and margin performance for YTD August 2025 compare to the prior year, and what is driving this change?"
+    expected_answer: "Secil Tunisia's cement EBITDA was 38,691 thousand TND YTD August 2025, up 128% from 16,962 in the prior year. The EBITDA margin improved to 22.2% from 14.0%, a 8 percentage point improvement. Key drivers include: volume growth (12-13% increase), strong export growth particularly to Libya (498% YoY increase to 263 kton), and well-controlled variable costs down 16% per ton to 97.5 TND/ton despite inflationary pressures."
+    source_table: "TN_Cement_OpPerf"
+    page_references: "97-98"
+    confidence_level: "high"
+    metric_type: "profitability"
+    entities:
+      - "Secil Tunisia"
+      - "Cement Segment"
+    geographic_focus: "Tunisia, Libya"
+
+  - query_id: "GT_006"
+    question: "What is the relationship between Secil Angola's cash flow from operations and net financial debt positions in 2025?"
+    expected_answer: "Secil Angola generated 1,255.9 million AOA in operating cash flow YTD (after interest payments), despite EBITDA of only 282.2 million. This positive cash generation was supported by favorable working capital movements (3.4 billion AOA swing) that more than offset inventory buildup of 1.2 billion AOA. However, the closing financial net debt position is -732.8 million AOA (net cash), improved from opening balance of 341.3 million AOA. This indicates the company has positive net liquidity after recent forex movements of -51.7 million."
+    source_table: "AO_CashFlow"
+    page_references: "94"
+    confidence_level: "medium"
+    metric_type: "cash_flow"
+    entities:
+      - "Secil Angola"
+    data_quality_note: "Working capital variance of 3.4B requires investigation"
+
+  - query_id: "GT_007"
+    question: "How do the price trends differ between Secil Angola's internal market and Tunisia's external markets for cement?"
+    expected_answer: "Secil Angola internal market cement price (including net transport) was 127,545.8 AOA/ton in August 2025, up 55% versus prior year (82,278.6) and up 17% versus budget. Secil Tunisia's Libya export price was 188.4 TND/ton in August, up 10.2% versus budget (171.0) with volumes surging 164% above budget at 42 kton. Tunisia's EU export market is weaker at 170.9 TND/ton, down 13% versus budget and down 7% versus prior year. Angola shows stronger underlying price momentum in home market."
+    source_table: "AO_Cement_OpPerf_Month, TN_Cement_OpPerf"
+    page_references: "82-83, 97-98"
+    confidence_level: "high"
+    metric_type: "pricing"
+    geographic_segments:
+      - "Angola Internal Market"
+      - "Tunisia - Libya"
+      - "Tunisia - EU"
+
+  - query_id: "GT_008"
+    question: "What is the composition of Secil Angola's fixed costs and how are they trending versus budget?"
+    expected_answer: "Fixed costs plant YTD were 966,953 thousand AOA versus budget of 1,064,406, representing 9% favorable variance. Components include: Employees (312.8M, -12% vs budget), Maintenance (204.5M, -39% vs budget - positive surprise), and Other costs (449.7M, +20% vs budget). Monthly August fixed costs of 206.0M were 55% over budget at 133.1M, suggesting significant seasonal or one-time items in the month."
+    source_table: "AO_Cement_OpPerf_Month"
+    page_references: "82-83, 90"
+    confidence_level: "high"
+    metric_type: "cost_structure"
+    entities:
+      - "Secil Angola Cement"
+    cost_categories:
+      - "Employee Costs"
+      - "Maintenance"
+      - "Other Operating"
+
+  - query_id: "GT_009"
+    question: "What is the net working capital position for Secil Angola, and how does it compare to working capital as a percentage of turnover?"
+    expected_answer: "Trade Working Capital for Secil Angola was 1,546.1 million AOA in August 2025 versus budget of 1,101.1M, representing 40% above plan. This consumed 15% of annual turnover (10,250.5M) versus budget of 10% and prior year of 8%. The increase is driven primarily by inventory buildup (2.3B) exceeding increases in payables (706M). DSO of 9 days is excellent, DPO of 33 days shows payables extension, but DIO of 166 days indicates excessive inventory levels requiring normalization."
+    source_table: "AO_NetWorkingCapital"
+    page_references: "92-93"
+    confidence_level: "high"
+    metric_type: "working_capital"
+    working_capital_metrics:
+      - "DSO: 9 days"
+      - "DPO: 33 days"
+      - "DIO: 166 days"
+      - "TWC/Turnover: 15%"
+
+  - query_id: "GT_010"
+    question: "What are the key safety performance concerns at Secil Tunisia, and how do they compare to budget and prior year?"
+    expected_answer: "Secil Tunisia's Health & Safety Frequency Ratio (lost time injuries per million manhours) was 3.66 YTD 2025, significantly exceeding the budget of 1.20 (205% over target). This represents a deterioration from FY2024 (1.72) and FY2023 (0.55). The cement segment specifically reported 3.66 (though no September data yet), while non-cement operations showed spikes of 54-63 in May-June 2025. Last 12 months ratio of 2.89 also exceeds budget. This is a critical area requiring immediate management attention and safety program review."
+    source_table: "TN_HealthSafety"
+    page_references: "96"
+    confidence_level: "high"
+    metric_type: "safety_kpi"
+    entities:
+      - "Secil Tunisia"
+    trend: "deteriorating"
+    urgency: "critical"
+    data_quality: "incomplete monthly data (gaps Apr, Jun, Sep-Dec)"
+
+###############################################################################
+# DATA QUALITY ASSESSMENT
+###############################################################################
+
+data_quality_assessment:
+  overall_quality: "high_with_caveats"
+
+  strengths:
+    - "Consistent use of three-way comparison: Month, YTD, and Prior Year"
+    - "Budget vs Actual variance clearly shown as both % and pp (percentage points)"
+    - "Multiple dimensional breakdowns (Product, Geography, Function)"
+    - "Well-organized hierarchical structure (Revenue → Costs → EBITDA)"
+    - "Time series data allows trend identification"
+
+  concerns:
+    - concern_1:
+        issue: "Display overflow in tables"
+        example: "Net Transport Cost cell shows '###########' in AO_Cement_OpPerf"
+        impact: "Cannot read exact value, estimated from context"
+        severity: "low"
+
+    - concern_2:
+        issue: "Unusual negative receivables"
+        value: "-57,574 thousand AOA"
+        possible_cause: "Advance payments or credit memo"
+        severity: "medium"
+        requires_investigation: true
+
+    - concern_3:
+        issue: "Massive working capital variance"
+        line: "Other working capital variances"
+        value: "3,421,619 thousand AOA"
+        vs_budget: "-1,823,791"
+        severity: "high"
+        requires_investigation: true
+
+    - concern_4:
+        issue: "Budget vs actual variance magnitude"
+        percentage: "-36202%"
+        metric: "Profit Before Tax variance"
+        cause: "Budget showed near-breakeven while actual loss"
+        severity: "medium"
+        interpretation: "Budget credibility questionable"
+
+    - concern_5:
+        issue: "Incomplete Tunisia Safety Data"
+        months_missing: "Jan-Mar, Jun, Sep-Dec 2025"
+        ytd_calculation: "May include estimated/aggregated data"
+        severity: "low-medium"
+
+  transposed_table_analysis:
+    - table_name: "AO_EBITDA_Bridge"
+      structure: "Standard (not transposed)"
+      metric_axis: "rows (components)"
+      time_axis: "columns (periods)"
+
+    - table_name: "Operating Performance Tables"
+      structure: "Standard (not transposed)"
+      metric_axis: "rows (KPIs)"
+      comparison_axis: "columns (Month B Aug-25 Aug-24 % B % LY)"
+
+    - table_name: "Health_Safety_KPIs"
+      structure: "Standard"
+      metric_axis: "columns (Frequency Ratio, Lost Time Injury)"
+      time_axis: "rows (monthly)"
+      note: "All tables follow consistent orientation"
+
+###############################################################################
+# RETRIEVAL DIFFICULTY ASSESSMENT
+###############################################################################
+
+retrieval_challenges:
+  - challenge_1:
+      question_type: "Multi-page aggregation"
+      example: "Rolling Forecast appears on page 86 with data referenced from pages 82-85"
+      mitigation: "Include explicit page cross-references in queries"
+      difficulty: "medium"
+
+  - challenge_2:
+      question_type: "Bridge/Waterfall interpretation"
+      example: "EBITDA waterfall has components across multiple rows that must sum correctly"
+      mitigation: "Provide complete component list with directional impacts"
+      difficulty: "medium-high"
+
+  - challenge_3:
+      question_type: "Multi-period trend analysis"
+      example: "Comparing Aug-25 Month vs YTD vs Budget vs Prior Year"
+      mitigation: "Explicitly state which time period is being queried"
+      difficulty: "medium"
+
+  - challenge_4:
+      question_type: "Geographic/Segment decomposition"
+      example: "Angola vs Tunisia, Cement vs Non-Cement, Internal vs External markets"
+      mitigation: "Clearly specify geographic and product segment boundaries"
+      difficulty: "medium-high"
+
+  - challenge_5:
+      question_type: "Currency conversion awareness"
+      example: "Angola uses AOA, Tunisia uses TND - direct comparison requires FX rate"
+      mitigation: "Never combine AOA and TND figures without explicit rate disclosure"
+      difficulty: "low-medium"
+      severity: "high"
+
+###############################################################################
+# METADATA FOR RAG SYSTEM
+###############################################################################
+
+metadata_for_rag:
+  document_id: "SECIL_PerfReview_Aug2025"
+  section_id: "5"
+  content_type: "Financial Performance Report"
+  report_date: "2025-08-31"
+  report_publication_date: "2025-10-26"
+
+  searchable_entities:
+    - "Secil Angola"
+    - "Secil Tunisia"
+    - "Angola Cement"
+    - "Tunisia Cement"
+    - "Non-Cement Operations"
+    - "G&A (General & Administrative)"
+    - "Corporate Costs"
+
+  searchable_metrics:
+    - "EBITDA IFRS"
+    - "Turnover"
+    - "Margins"
+    - "Variable Costs"
+    - "Fixed Costs"
+    - "Volume"
+    - "Price"
+    - "Cash Flow"
+    - "Working Capital"
+    - "Capex"
+    - "Headcount"
+    - "Safety KPIs"
+
+  searchable_geographies:
+    - "Angola"
+    - "Tunisia"
+    - "Internal Market"
+    - "Libya"
+    - "EU"
+
+  time_buckets:
+    - "Month (Aug-25)"
+    - "YTD (Jan-Aug 2025)"
+    - "Budget (2025B)"
+    - "Prior Year (Aug-24, 2024)"
+    - "Historical (2020-2024)"
+    - "Rolling Forecast (Sep-25)"
+
+  variance_metrics:
+    - "vs Budget (%)"
+    - "vs Prior Year (%)"
+    - "Percentage Points (pp)"
+
+  critical_kpis:
+    - "EBITDA IFRS"
+    - "Profit Before Tax"
+    - "Cash Flow from Operations"
+    - "Days Inventory Outstanding"
+    - "Net Working Capital"
+    - "Financial Net Debt"
+    - "Frequency Ratio (Safety)"
+
+---
+# END OF SECTION 5 DATA INVENTORY

@@ -1,23 +1,21 @@
 # Universal Pre-commit Configuration Template
 # Optimized for <5 second execution with essential checks
-# Copy to your project root as .pre-commit-config.yaml
 
 default_language_version:
   python: python3.11
-  node: "20"
+  node: '20'
 
 fail_fast: false
 default_stages: [pre-commit]
-minimum_pre_commit_version: "3.0.0"
+minimum_pre_commit_version: '3.0.0'
 
 ci:
   autoupdate_schedule: weekly
-  autoupdate_commit_msg: "chore: update pre-commit hooks"
+  autoupdate_commit_msg: 'chore: update pre-commit hooks'
   skip: []
 
 repos:
   # ============ UNIVERSAL FILE CHECKS ============
-  # Fast file quality checks (~1s total)
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -32,9 +30,7 @@ repos:
       - id: mixed-line-ending
 
   # ============ PYTHON-SPECIFIC CHECKS ============
-  # Uncomment if using Python
-
-  # Ruff - Fast linting and formatting (~2s)
+  # Ruff - Fast linting and formatting
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.13.0
     hooks:
@@ -50,47 +46,10 @@ repos:
         additional_dependencies: [pydantic, types-requests, anthropic, qdrant-client]
         args: [--show-error-codes, --ignore-missing-imports]
         files: ^raglite/
-        exclude: ^raglite/tests/  # Don't type-check tests
-
-  # ============ NODE.JS-SPECIFIC CHECKS ============
-  # Uncomment if using Node.js
-
-  # - repo: https://github.com/pre-commit/mirrors-eslint
-  #   rev: v9.0.0
-  #   hooks:
-  #     - id: eslint
-  #       args: [--fix]
-  #       additional_dependencies:
-  #         - eslint@9.0.0
-  #         - eslint-config-prettier
-
-  # - repo: https://github.com/pre-commit/mirrors-prettier
-  #   rev: v4.0.0
-  #   hooks:
-  #     - id: prettier
-  #       args: [--write]
-
-  # ============ GO-SPECIFIC CHECKS ============
-  # Uncomment if using Go
-
-  # - repo: https://github.com/dnephin/pre-commit-golang
-  #   rev: v0.5.1
-  #   hooks:
-  #     - id: go-fmt
-  #     - id: go-vet
-  #     - id: go-lint
-
-  # ============ RUST-SPECIFIC CHECKS ============
-  # Uncomment if using Rust
-
-  # - repo: https://github.com/doublify/pre-commit-rust
-  #   rev: v1.0
-  #   hooks:
-  #     - id: fmt
-  #     - id: clippy
+        exclude: (raglite/tests/|raglite/ingestion/(adaptive_table_extraction|table_extraction).py)
 
   # ============ SECURITY CHECKS ============
-  # Secret detection with Gitleaks (~2s)
+  # Secret detection with Gitleaks
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.21.2
     hooks:
@@ -99,18 +58,16 @@ repos:
         args: [--verbose, --staged]
         stages: [pre-commit]
 
-  # Bandit - Security linting for Python (~2s)
+  # Bandit - Security linting for Python
   - repo: https://github.com/PyCQA/bandit
     rev: 1.8.0
     hooks:
       - id: bandit
         args: [-r, raglite/, -f, screen, --skip, B101]
-        exclude: (^tests/|^raglite/tests/)
+        exclude: (raglite/tests/|raglite/ingestion/(adaptive_table_extraction|table_extraction).py)
         pass_filenames: false
 
   # ============ CUSTOM LOCAL HOOKS ============
-  # Add project-specific checks here
-
   # Safety - Check for vulnerable dependencies
   - repo: local
     hooks:
@@ -120,12 +77,3 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-commit]
-
-# Total target execution time: ~12-15 seconds
-# - File checks: <1s
-# - Language-specific linting: ~2s
-# - Type checking: ~2s
-# - Secret scanning: ~2s
-# - Security linting: ~2s
-# - Dependency check: ~2s
-# - Custom validators: ~0.5s

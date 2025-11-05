@@ -1,0 +1,1172 @@
+{
+  "total_queries": 25,
+  "correct": 1,
+  "incorrect": 24,
+  "by_category": {
+    "point": {
+      "total": 17,
+      "correct": 1
+    },
+    "comparison": {
+      "total": 3,
+      "correct": 0
+    },
+    "budget_variance": {
+      "total": 2,
+      "correct": 0
+    },
+    "calculation": {
+      "total": 1,
+      "correct": 0
+    },
+    "trend": {
+      "total": 1,
+      "correct": 0
+    },
+    "aggregation": {
+      "total": 1,
+      "correct": 0
+    }
+  },
+  "by_difficulty": {
+    "easy": {
+      "total": 13,
+      "correct": 1
+    },
+    "medium": {
+      "total": 8,
+      "correct": 0
+    },
+    "hard": {
+      "total": 4,
+      "correct": 0
+    }
+  },
+  "by_section": {
+    "1": {
+      "total": 4,
+      "correct": 1
+    },
+    "2": {
+      "total": 4,
+      "correct": 0
+    },
+    "3": {
+      "total": 2,
+      "correct": 0
+    },
+    "4": {
+      "total": 2,
+      "correct": 0
+    },
+    "5": {
+      "total": 3,
+      "correct": 0
+    },
+    "6": {
+      "total": 2,
+      "correct": 0
+    },
+    "7": {
+      "total": 3,
+      "correct": 0
+    },
+    "8": {
+      "total": 5,
+      "correct": 0
+    }
+  },
+  "errors": [],
+  "query_results": [
+    {
+      "query_id": "GT-001",
+      "query_text": "What is the Group EBITDA YTD in August 2025?",
+      "expected": {
+        "type": "numeric_with_unit",
+        "value": 128.8,
+        "unit": "M EUR",
+        "entity": "Group (Consolidated)",
+        "metric": "EBITDA",
+        "period": "YTD August 2025",
+        "text_format": "The Group EBITDA YTD in August 2025 is 128.8M EUR"
+      },
+      "system_answer": "The Group EBITDA YTD in August 2025 is 128.83 EUR.",
+      "validation": {
+        "query_id": "GT-001",
+        "query_text": "What is the Group EBITDA YTD in August 2025?",
+        "system_answer": "The Group EBITDA YTD in August 2025 is 128.83 EUR.",
+        "expected_answer": {
+          "type": "numeric_with_unit",
+          "value": 128.8,
+          "unit": "M EUR",
+          "entity": "Group (Consolidated)",
+          "metric": "EBITDA",
+          "period": "YTD August 2025",
+          "text_format": "The Group EBITDA YTD in August 2025 is 128.8M EUR"
+        },
+        "correct": false,
+        "value_match": true,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "Unit mismatch: got EUR, expected M EUR",
+          "Entity 'Group (Consolidated)' not found in answer",
+          "Period 'YTD August 2025' not found in answer"
+        ],
+        "score": 0.4
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-002",
+      "query_text": "What is the variable cost for Portugal Cement in August 2025?",
+      "expected": {
+        "type": "numeric_with_unit",
+        "value": -23.4,
+        "unit": "EUR/ton",
+        "entity": "Portugal",
+        "metric": "Variable Cost",
+        "period": "August 2025",
+        "text_format": "The variable cost for Portugal Cement in August 2025 is -23.4 EUR/ton"
+      },
+      "system_answer": "The variable cost for Portugal Cement in August 2025 is -23.40 EUR/ton (Chunk 1) and -20.40 EUR/ton (Chunk 2).",
+      "validation": {
+        "query_id": "GT-002",
+        "query_text": "What is the variable cost for Portugal Cement in August 2025?",
+        "system_answer": "The variable cost for Portugal Cement in August 2025 is -23.40 EUR/ton (Chunk 1) and -20.40 EUR/ton (Chunk 2).",
+        "expected_answer": {
+          "type": "numeric_with_unit",
+          "value": -23.4,
+          "unit": "EUR/ton",
+          "entity": "Portugal",
+          "metric": "Variable Cost",
+          "period": "August 2025",
+          "text_format": "The variable cost for Portugal Cement in August 2025 is -23.4 EUR/ton"
+        },
+        "correct": true,
+        "value_match": true,
+        "unit_match": false,
+        "entity_match": true,
+        "period_match": true,
+        "errors": [
+          "Unit mismatch: got EUR, expected EUR/ton"
+        ],
+        "score": 0.8
+      },
+      "correct": true
+    },
+    {
+      "query_id": "GT-003",
+      "query_text": "Compare the variable costs between Portugal and Tunisia in August 2025",
+      "expected": {
+        "type": "comparison",
+        "values": {
+          "portugal": {
+            "value": -23.4,
+            "unit": "EUR/ton"
+          },
+          "tunisia": {
+            "value": -29.1,
+            "unit": "EUR/ton"
+          }
+        },
+        "comparison": "Tunisia has 5.7 EUR/ton higher variable costs than Portugal",
+        "winner": "portugal",
+        "text_format": "Portugal: -23.4 EUR/ton, Tunisia: -29.1 EUR/ton. Tunisia has 5.7 EUR/ton higher costs."
+      },
+      "system_answer": "The provided context does not contain any information about Tunisia's variable costs. Therefore, a comparison cannot be made. The context only provides the following information for Portugal:\n\n- Variable Cost: -20.40 Eur/ton (B Aug-25)\n- Variable Cost: -23.40 Eur/ton (Aug-25)\n- Other Variable Costs: -9.60 Eur/ton (Aug-25)\n- Other Variable Costs: -10.00 Eur/ton (B Aug-25)\n- Variable Cost: -20.40 LCU/ton (B Aug-25)",
+      "validation": {
+        "query_id": "GT-003",
+        "query_text": "Compare the variable costs between Portugal and Tunisia in August 2025",
+        "system_answer": "The provided context does not contain any information about Tunisia's variable costs. Therefore, a comparison cannot be made. The context only provides the following information for Portugal:\n\n- Variable Cost: -20.40 Eur/ton (B Aug-25)\n- Variable Cost: -23.40 Eur/ton (Aug-25)\n- Other Variable Costs: -9.60 Eur/ton (Aug-25)\n- Other Variable Costs: -10.00 Eur/ton (B Aug-25)\n- Variable Cost: -20.40 LCU/ton (B Aug-25)",
+        "expected_answer": {
+          "type": "comparison",
+          "values": {
+            "portugal": {
+              "value": -23.4,
+              "unit": "EUR/ton"
+            },
+            "tunisia": {
+              "value": -29.1,
+              "unit": "EUR/ton"
+            }
+          },
+          "comparison": "Tunisia has 5.7 EUR/ton higher variable costs than Portugal",
+          "winner": "portugal",
+          "text_format": "Portugal: -23.4 EUR/ton, Tunisia: -29.1 EUR/ton. Tunisia has 5.7 EUR/ton higher costs."
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": true,
+        "period_match": false,
+        "errors": [
+          "Comparison not found in answer"
+        ],
+        "score": 0.4
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-004",
+      "query_text": "How did Portugal's variable costs in August 2025 compare to budget?",
+      "expected": {
+        "type": "budget_variance",
+        "actual": {
+          "value": -23.4,
+          "unit": "EUR/ton"
+        },
+        "budget": {
+          "value": -20.4,
+          "unit": "EUR/ton"
+        },
+        "variance": -3.0,
+        "variance_pct": -14.7,
+        "performance": "worse",
+        "text_format": "Actual: -23.4 EUR/ton, Budget: -20.4 EUR/ton. 3.0 EUR/ton worse than budget (14.7% unfavorable variance)"
+      },
+      "system_answer": "In August 2025, Portugal's variable costs were reported in two different units:\n\n1. In Euros per ton:\n   - Actual: -23.40 Eur/ton (Chunk 1)\n   - Budget: -20.40 Eur/ton (Chunk 2)\n\n2. In Local Currency Units per ton:\n   - Actual: -23.40 LCU/ton (Chunk 5)\n\nThe context does not provide a budget value for the variable cost in LCU/ton for comparison. Additionally, there are other variable costs reported:\n\n- Actual: -9.60 Eur/ton (Chunk 3)\n- Budget: -10.00 Eur/ton (Chunk 4)\n\nThe context does not specify the exact nature of these \"Other Variable Costs.\"",
+      "validation": {
+        "query_id": "GT-004",
+        "query_text": "How did Portugal's variable costs in August 2025 compare to budget?",
+        "system_answer": "In August 2025, Portugal's variable costs were reported in two different units:\n\n1. In Euros per ton:\n   - Actual: -23.40 Eur/ton (Chunk 1)\n   - Budget: -20.40 Eur/ton (Chunk 2)\n\n2. In Local Currency Units per ton:\n   - Actual: -23.40 LCU/ton (Chunk 5)\n\nThe context does not provide a budget value for the variable cost in LCU/ton for comparison. Additionally, there are other variable costs reported:\n\n- Actual: -9.60 Eur/ton (Chunk 3)\n- Budget: -10.00 Eur/ton (Chunk 4)\n\nThe context does not specify the exact nature of these \"Other Variable Costs.\"",
+        "expected_answer": {
+          "type": "budget_variance",
+          "actual": {
+            "value": -23.4,
+            "unit": "EUR/ton"
+          },
+          "budget": {
+            "value": -20.4,
+            "unit": "EUR/ton"
+          },
+          "variance": -3.0,
+          "variance_pct": -14.7,
+          "performance": "worse",
+          "text_format": "Actual: -23.4 EUR/ton, Budget: -20.4 EUR/ton. 3.0 EUR/ton worse than budget (14.7% unfavorable variance)"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "Value mismatch: got 1.0, expected None (\u00b10)"
+        ],
+        "score": 0.0
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-005",
+      "query_text": "What is the Group DSO (Days Sales Outstanding) in August 2025?",
+      "expected": {
+        "type": "numeric_with_unit",
+        "value": 42,
+        "unit": "days",
+        "entity": "Group (Consolidated)",
+        "metric": "DSO",
+        "period": "August 2025",
+        "text_format": "The Group DSO in August 2025 is 42 days"
+      },
+      "system_answer": "The Group DSO (Days Sales Outstanding) in August 2025 is 4 days.",
+      "validation": {
+        "query_id": "GT-005",
+        "query_text": "What is the Group DSO (Days Sales Outstanding) in August 2025?",
+        "system_answer": "The Group DSO (Days Sales Outstanding) in August 2025 is 4 days.",
+        "expected_answer": {
+          "type": "numeric_with_unit",
+          "value": 42,
+          "unit": "days",
+          "entity": "Group (Consolidated)",
+          "metric": "DSO",
+          "period": "August 2025",
+          "text_format": "The Group DSO in August 2025 is 42 days"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": true,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "Value mismatch: got 4.0, expected 42 (\u00b11)",
+          "Entity 'Group (Consolidated)' not found in answer"
+        ],
+        "score": 0.2
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-006",
+      "query_text": "What is the Portugal Cement unit EBITDA in August 2025?",
+      "expected": {
+        "type": "numeric_with_unit",
+        "value": 62.4,
+        "unit": "EUR/ton",
+        "entity": "Portugal Cement",
+        "metric": "Unit EBITDA",
+        "period": "August 2025",
+        "text_format": "The Portugal Cement unit EBITDA in August 2025 is 62.4 EUR/ton"
+      },
+      "system_answer": "The Portugal Cement Unit EBITDA for August 2025 is provided in multiple chunks with varying values and units:\n\n- 64.40 Eur/ton (Chunk 1)\n- 67.40 Eur/ton (Chunk 2)\n- 64.40 LCU/ton (Chunk 3)\n- 67.40 LCU/ton (Chunk 4)\n- 62.40 Eur/ton (Chunk 5)\n\nThe values and units differ across the chunks, so there is no single consistent value for the Portugal Cement Unit EBITDA in August 2025.",
+      "validation": {
+        "query_id": "GT-006",
+        "query_text": "What is the Portugal Cement unit EBITDA in August 2025?",
+        "system_answer": "The Portugal Cement Unit EBITDA for August 2025 is provided in multiple chunks with varying values and units:\n\n- 64.40 Eur/ton (Chunk 1)\n- 67.40 Eur/ton (Chunk 2)\n- 64.40 LCU/ton (Chunk 3)\n- 67.40 LCU/ton (Chunk 4)\n- 62.40 Eur/ton (Chunk 5)\n\nThe values and units differ across the chunks, so there is no single consistent value for the Portugal Cement Unit EBITDA in August 2025.",
+        "expected_answer": {
+          "type": "numeric_with_unit",
+          "value": 62.4,
+          "unit": "EUR/ton",
+          "entity": "Portugal Cement",
+          "metric": "Unit EBITDA",
+          "period": "August 2025",
+          "text_format": "The Portugal Cement unit EBITDA in August 2025 is 62.4 EUR/ton"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": true,
+        "period_match": false,
+        "errors": [
+          "Value mismatch: got 64.4, expected 62.4 (\u00b10.1)",
+          "Unit mismatch: got None, expected EUR/ton"
+        ],
+        "score": 0.2
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-007",
+      "query_text": "What is the Tunisia sales volume in August 2025?",
+      "expected": {
+        "type": "numeric_with_unit",
+        "value": 106,
+        "unit": "kton",
+        "entity": "Tunisia",
+        "metric": "Sales Volume",
+        "period": "August 2025",
+        "text_format": "The Tunisia sales volume in August 2025 is 106 kton"
+      },
+      "system_answer": "The Tunisia sales volume in August 2025 is 795.00 kton.",
+      "validation": {
+        "query_id": "GT-007",
+        "query_text": "What is the Tunisia sales volume in August 2025?",
+        "system_answer": "The Tunisia sales volume in August 2025 is 795.00 kton.",
+        "expected_answer": {
+          "type": "numeric_with_unit",
+          "value": 106,
+          "unit": "kton",
+          "entity": "Tunisia",
+          "metric": "Sales Volume",
+          "period": "August 2025",
+          "text_format": "The Tunisia sales volume in August 2025 is 106 kton"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": true,
+        "entity_match": true,
+        "period_match": false,
+        "errors": [
+          "Value mismatch: got 795.0, expected 106 (\u00b11)"
+        ],
+        "score": 0.4
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-008",
+      "query_text": "What is the EBITDA margin for Portugal Cement YTD in August 2025?",
+      "expected": {
+        "type": "calculated_percentage",
+        "ebitda": {
+          "value": 191.8,
+          "unit": "M EUR"
+        },
+        "turnover": {
+          "value": 379.2,
+          "unit": "M EUR"
+        },
+        "margin": 50.6,
+        "unit": "%",
+        "entity": "Portugal Cement",
+        "period": "YTD August 2025",
+        "text_format": "The Portugal Cement EBITDA margin YTD in August 2025 is 50.6% (191.8M EUR EBITDA / 379.2M EUR Turnover)"
+      },
+      "system_answer": "No relevant information found in the database.",
+      "validation": {
+        "query_id": "GT-008",
+        "query_text": "What is the EBITDA margin for Portugal Cement YTD in August 2025?",
+        "system_answer": "No relevant information found in the database.",
+        "expected_answer": {
+          "type": "calculated_percentage",
+          "ebitda": {
+            "value": 191.8,
+            "unit": "M EUR"
+          },
+          "turnover": {
+            "value": 379.2,
+            "unit": "M EUR"
+          },
+          "margin": 50.6,
+          "unit": "%",
+          "entity": "Portugal Cement",
+          "period": "YTD August 2025",
+          "text_format": "The Portugal Cement EBITDA margin YTD in August 2025 is 50.6% (191.8M EUR EBITDA / 379.2M EUR Turnover)"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "No numeric value found in answer"
+        ],
+        "score": 0.0
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-009",
+      "query_text": "What are the total personnel expenses for the Group in August 2025?",
+      "expected": {
+        "type": "numeric_with_unit",
+        "value": 10317,
+        "unit": "thousand EUR",
+        "entity": "Group (Consolidated)",
+        "metric": "Personnel Expenses",
+        "period": "August 2025",
+        "text_format": "The total personnel expenses for the Group in August 2025 are 10,317 thousand EUR"
+      },
+      "system_answer": "The information about total personnel expenses for the Group in August 2025 is not provided in the given context.",
+      "validation": {
+        "query_id": "GT-009",
+        "query_text": "What are the total personnel expenses for the Group in August 2025?",
+        "system_answer": "The information about total personnel expenses for the Group in August 2025 is not provided in the given context.",
+        "expected_answer": {
+          "type": "numeric_with_unit",
+          "value": 10317,
+          "unit": "thousand EUR",
+          "entity": "Group (Consolidated)",
+          "metric": "Personnel Expenses",
+          "period": "August 2025",
+          "text_format": "The total personnel expenses for the Group in August 2025 are 10,317 thousand EUR"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "No numeric value found in answer",
+          "Unit mismatch: got None, expected thousand EUR"
+        ],
+        "score": 0.0
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-010",
+      "query_text": "What is the Group headcount (FTEs) in August 2025?",
+      "expected": {
+        "type": "numeric",
+        "value": 1164,
+        "unit": "FTEs",
+        "entity": "Group (Consolidated)",
+        "metric": "Headcount",
+        "period": "August 2025",
+        "text_format": "The Group headcount in August 2025 is 1,164 FTEs"
+      },
+      "system_answer": "The Group headcount (FTEs) in August 2025 is not provided in the given context.",
+      "validation": {
+        "query_id": "GT-010",
+        "query_text": "What is the Group headcount (FTEs) in August 2025?",
+        "system_answer": "The Group headcount (FTEs) in August 2025 is not provided in the given context.",
+        "expected_answer": {
+          "type": "numeric",
+          "value": 1164,
+          "unit": "FTEs",
+          "entity": "Group (Consolidated)",
+          "metric": "Headcount",
+          "period": "August 2025",
+          "text_format": "The Group headcount in August 2025 is 1,164 FTEs"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": true,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "No numeric value found in answer"
+        ],
+        "score": 0.2
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-011",
+      "query_text": "Which Portugal Aggregates region has the highest EBITDA margin: North, Center, or South?",
+      "expected": {
+        "type": "ranking",
+        "ranking": [
+          {
+            "entity": "Center",
+            "value": 49,
+            "unit": "%"
+          },
+          {
+            "entity": "South",
+            "value": 40,
+            "unit": "%"
+          },
+          {
+            "entity": "North",
+            "value": 32,
+            "unit": "%"
+          }
+        ],
+        "winner": "Center",
+        "text_format": "Portugal Aggregates Center has the highest EBITDA margin at 49%, followed by South (40%) and North (32%)"
+      },
+      "system_answer": "The provided context does not contain specific EBITDA margin values for the Portugal Aggregates regions (North, Center, or South). Therefore, I cannot determine which region has the highest EBITDA margin based on the given information.",
+      "validation": {
+        "query_id": "GT-011",
+        "query_text": "Which Portugal Aggregates region has the highest EBITDA margin: North, Center, or South?",
+        "system_answer": "The provided context does not contain specific EBITDA margin values for the Portugal Aggregates regions (North, Center, or South). Therefore, I cannot determine which region has the highest EBITDA margin based on the given information.",
+        "expected_answer": {
+          "type": "ranking",
+          "ranking": [
+            {
+              "entity": "Center",
+              "value": 49,
+              "unit": "%"
+            },
+            {
+              "entity": "South",
+              "value": 40,
+              "unit": "%"
+            },
+            {
+              "entity": "North",
+              "value": 32,
+              "unit": "%"
+            }
+          ],
+          "winner": "Center",
+          "text_format": "Portugal Aggregates Center has the highest EBITDA margin at 49%, followed by South (40%) and North (32%)"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "No numeric value found in answer"
+        ],
+        "score": 0.0
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-012",
+      "query_text": "What is the market share of Terminal Madeira?",
+      "expected": {
+        "type": "percentage",
+        "value": 56,
+        "unit": "%",
+        "entity": "Terminal Madeira",
+        "metric": "Market Share",
+        "period": "August 2025",
+        "text_format": "The Terminal Madeira market share is 56%"
+      },
+      "system_answer": "The information about the market share of Terminal Madeira is not provided in the given context.",
+      "validation": {
+        "query_id": "GT-012",
+        "query_text": "What is the market share of Terminal Madeira?",
+        "system_answer": "The information about the market share of Terminal Madeira is not provided in the given context.",
+        "expected_answer": {
+          "type": "percentage",
+          "value": 56,
+          "unit": "%",
+          "entity": "Terminal Madeira",
+          "metric": "Market Share",
+          "period": "August 2025",
+          "text_format": "The Terminal Madeira market share is 56%"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "No numeric value found in answer",
+          "Unit mismatch: got None, expected %"
+        ],
+        "score": 0.0
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-013",
+      "query_text": "What is the Angola EBITDA in August 2025 in million AOA?",
+      "expected": {
+        "type": "numeric_with_unit",
+        "value": 1253.9,
+        "unit": "M AOA",
+        "entity": "Secil Angola",
+        "metric": "EBITDA",
+        "period": "August 2025",
+        "text_format": "The Angola EBITDA in August 2025 is 1,253.9M AOA"
+      },
+      "system_answer": "No relevant information found in the database.",
+      "validation": {
+        "query_id": "GT-013",
+        "query_text": "What is the Angola EBITDA in August 2025 in million AOA?",
+        "system_answer": "No relevant information found in the database.",
+        "expected_answer": {
+          "type": "numeric_with_unit",
+          "value": 1253.9,
+          "unit": "M AOA",
+          "entity": "Secil Angola",
+          "metric": "EBITDA",
+          "period": "August 2025",
+          "text_format": "The Angola EBITDA in August 2025 is 1,253.9M AOA"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "No numeric value found in answer",
+          "Unit mismatch: got None, expected M AOA",
+          "Entity 'Secil Angola' not found in answer"
+        ],
+        "score": 0.0
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-014",
+      "query_text": "What is the Angola inventory level (DIO - Days Inventory Outstanding)?",
+      "expected": {
+        "type": "numeric_with_unit",
+        "value": 166,
+        "unit": "days",
+        "entity": "Angola",
+        "metric": "DIO",
+        "period": "August 2025",
+        "text_format": "The Angola DIO (Days Inventory Outstanding) is 166 days"
+      },
+      "system_answer": "The provided context does not contain specific information about the Angola inventory level (DIO - Days Inventory Outstanding). Therefore, I cannot provide an answer to this question based on the given context.",
+      "validation": {
+        "query_id": "GT-014",
+        "query_text": "What is the Angola inventory level (DIO - Days Inventory Outstanding)?",
+        "system_answer": "The provided context does not contain specific information about the Angola inventory level (DIO - Days Inventory Outstanding). Therefore, I cannot provide an answer to this question based on the given context.",
+        "expected_answer": {
+          "type": "numeric_with_unit",
+          "value": 166,
+          "unit": "days",
+          "entity": "Angola",
+          "metric": "DIO",
+          "period": "August 2025",
+          "text_format": "The Angola DIO (Days Inventory Outstanding) is 166 days"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "No numeric value found in answer",
+          "Unit mismatch: got None, expected days"
+        ],
+        "score": 0.0
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-015",
+      "query_text": "What is the Tunisia EBITDA growth rate from August 2024 to August 2025?",
+      "expected": {
+        "type": "growth_rate",
+        "value_2024": 3.6,
+        "value_2025": 8.2,
+        "unit": "M EUR",
+        "growth_absolute": 4.6,
+        "growth_pct": 128,
+        "entity": "Tunisia",
+        "metric": "EBITDA",
+        "text_format": "Tunisia EBITDA grew from 3.6M EUR (Aug-24) to 8.2M EUR (Aug-25), a 128% increase (+4.6M EUR)"
+      },
+      "system_answer": "No relevant information found in the database.",
+      "validation": {
+        "query_id": "GT-015",
+        "query_text": "What is the Tunisia EBITDA growth rate from August 2024 to August 2025?",
+        "system_answer": "No relevant information found in the database.",
+        "expected_answer": {
+          "type": "growth_rate",
+          "value_2024": 3.6,
+          "value_2025": 8.2,
+          "unit": "M EUR",
+          "growth_absolute": 4.6,
+          "growth_pct": 128,
+          "entity": "Tunisia",
+          "metric": "EBITDA",
+          "text_format": "Tunisia EBITDA grew from 3.6M EUR (Aug-24) to 8.2M EUR (Aug-25), a 128% increase (+4.6M EUR)"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "No numeric value found in answer"
+        ],
+        "score": 0.0
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-016",
+      "query_text": "What is the Tunisia Cement EBITDA IFRS in August 2025?",
+      "expected": {
+        "type": "numeric_with_unit",
+        "value": 38691,
+        "unit": "1000 TND",
+        "entity": "Tunisia Cement",
+        "metric": "EBITDA IFRS",
+        "period": "August 2025",
+        "text_format": "The Tunisia Cement EBITDA IFRS in August 2025 is 38,691 thousand TND"
+      },
+      "system_answer": "The context provides two different EBITDA IFRS values for Tunisia in August 2025:\n\n1. EBITDA IFRS: 8.22, YTD Aug-25\n2. EBITDA IFRS: 7.19, B Aug-25\n\nThe units and specific entity names are not provided in the context. The time periods are YTD (Year-to-Date) Aug-25 and B (Month of) Aug-25.",
+      "validation": {
+        "query_id": "GT-016",
+        "query_text": "What is the Tunisia Cement EBITDA IFRS in August 2025?",
+        "system_answer": "The context provides two different EBITDA IFRS values for Tunisia in August 2025:\n\n1. EBITDA IFRS: 8.22, YTD Aug-25\n2. EBITDA IFRS: 7.19, B Aug-25\n\nThe units and specific entity names are not provided in the context. The time periods are YTD (Year-to-Date) Aug-25 and B (Month of) Aug-25.",
+        "expected_answer": {
+          "type": "numeric_with_unit",
+          "value": 38691,
+          "unit": "1000 TND",
+          "entity": "Tunisia Cement",
+          "metric": "EBITDA IFRS",
+          "period": "August 2025",
+          "text_format": "The Tunisia Cement EBITDA IFRS in August 2025 is 38,691 thousand TND"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "Value mismatch: got 1.0, expected 38691 (\u00b1100)",
+          "Unit mismatch: got None, expected 1000 TND"
+        ],
+        "score": 0.0
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-017",
+      "query_text": "What is Tunisia's market share?",
+      "expected": {
+        "type": "percentage",
+        "value": 12.2,
+        "unit": "%",
+        "entity": "Tunisia",
+        "metric": "Market Share",
+        "period": "August 2025",
+        "text_format": "Tunisia's market share is 12.2%"
+      },
+      "system_answer": "The provided context does not contain information about Tunisia's market share.",
+      "validation": {
+        "query_id": "GT-017",
+        "query_text": "What is Tunisia's market share?",
+        "system_answer": "The provided context does not contain information about Tunisia's market share.",
+        "expected_answer": {
+          "type": "percentage",
+          "value": 12.2,
+          "unit": "%",
+          "entity": "Tunisia",
+          "metric": "Market Share",
+          "period": "August 2025",
+          "text_format": "Tunisia's market share is 12.2%"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "No numeric value found in answer",
+          "Unit mismatch: got None, expected %"
+        ],
+        "score": 0.0
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-018",
+      "query_text": "What is the Lebanon Cement volume YTD in August 2025?",
+      "expected": {
+        "type": "numeric_with_unit",
+        "value": 531,
+        "unit": "kton",
+        "entity": "Lebanon Cement",
+        "metric": "Volume",
+        "period": "YTD August 2025",
+        "text_format": "The Lebanon Cement volume YTD in August 2025 is 531 kton"
+      },
+      "system_answer": "No relevant information found in the database.",
+      "validation": {
+        "query_id": "GT-018",
+        "query_text": "What is the Lebanon Cement volume YTD in August 2025?",
+        "system_answer": "No relevant information found in the database.",
+        "expected_answer": {
+          "type": "numeric_with_unit",
+          "value": 531,
+          "unit": "kton",
+          "entity": "Lebanon Cement",
+          "metric": "Volume",
+          "period": "YTD August 2025",
+          "text_format": "The Lebanon Cement volume YTD in August 2025 is 531 kton"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "No numeric value found in answer",
+          "Unit mismatch: got None, expected kton"
+        ],
+        "score": 0.0
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-019",
+      "query_text": "What is the Brazil Cement Safety Frequency Ratio?",
+      "expected": {
+        "type": "numeric",
+        "value": 2.54,
+        "unit": "ratio",
+        "entity": "Brazil Cement",
+        "metric": "Safety Frequency Ratio",
+        "period": "August 2025",
+        "text_format": "The Brazil Cement Safety Frequency Ratio is 2.54"
+      },
+      "system_answer": "The Brazil Cement Safety Frequency Ratio is 2,22 for YTD 2025.",
+      "validation": {
+        "query_id": "GT-019",
+        "query_text": "What is the Brazil Cement Safety Frequency Ratio?",
+        "system_answer": "The Brazil Cement Safety Frequency Ratio is 2,22 for YTD 2025.",
+        "expected_answer": {
+          "type": "numeric",
+          "value": 2.54,
+          "unit": "ratio",
+          "entity": "Brazil Cement",
+          "metric": "Safety Frequency Ratio",
+          "period": "August 2025",
+          "text_format": "The Brazil Cement Safety Frequency Ratio is 2.54"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "Value mismatch: got 222.0, expected 2.54 (\u00b10.1)"
+        ],
+        "score": 0.0
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-020",
+      "query_text": "Is Lebanon Ready-Mix performing above or below budget for EBITDA in August 2025?",
+      "expected": {
+        "type": "budget_variance",
+        "actual": {
+          "value": -171,
+          "unit": "k USD"
+        },
+        "budget": {
+          "value": 24,
+          "unit": "k USD"
+        },
+        "variance": -195,
+        "variance_pct": -813,
+        "performance": "worse",
+        "text_format": "Lebanon Ready-Mix EBITDA is -171k USD vs budget of 24k USD, performing 813% worse than budget (195k USD unfavorable variance)"
+      },
+      "system_answer": "The provided context does not contain information about Lebanon Ready-Mix's EBITDA performance or budget for August 2025. Therefore, I cannot determine if Lebanon Ready-Mix is performing above or below budget for EBITDA in August 2025 based on the given context.",
+      "validation": {
+        "query_id": "GT-020",
+        "query_text": "Is Lebanon Ready-Mix performing above or below budget for EBITDA in August 2025?",
+        "system_answer": "The provided context does not contain information about Lebanon Ready-Mix's EBITDA performance or budget for August 2025. Therefore, I cannot determine if Lebanon Ready-Mix is performing above or below budget for EBITDA in August 2025 based on the given context.",
+        "expected_answer": {
+          "type": "budget_variance",
+          "actual": {
+            "value": -171,
+            "unit": "k USD"
+          },
+          "budget": {
+            "value": 24,
+            "unit": "k USD"
+          },
+          "variance": -195,
+          "variance_pct": -813,
+          "performance": "worse",
+          "text_format": "Lebanon Ready-Mix EBITDA is -171k USD vs budget of 24k USD, performing 813% worse than budget (195k USD unfavorable variance)"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "Value mismatch: got 2025.0, expected None (\u00b10)"
+        ],
+        "score": 0.0
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-021",
+      "query_text": "What is the Brazil EBITDA in August 2025 in million BRL?",
+      "expected": {
+        "type": "numeric_with_unit",
+        "value": 183.7,
+        "unit": "M BRL",
+        "entity": "Brazil",
+        "metric": "EBITDA",
+        "period": "August 2025",
+        "text_format": "The Brazil EBITDA in August 2025 is 183.7M BRL"
+      },
+      "system_answer": "No relevant information found in the database.",
+      "validation": {
+        "query_id": "GT-021",
+        "query_text": "What is the Brazil EBITDA in August 2025 in million BRL?",
+        "system_answer": "No relevant information found in the database.",
+        "expected_answer": {
+          "type": "numeric_with_unit",
+          "value": 183.7,
+          "unit": "M BRL",
+          "entity": "Brazil",
+          "metric": "EBITDA",
+          "period": "August 2025",
+          "text_format": "The Brazil EBITDA in August 2025 is 183.7M BRL"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "No numeric value found in answer",
+          "Unit mismatch: got None, expected M BRL"
+        ],
+        "score": 0.0
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-022",
+      "query_text": "What is the Brazil Cement sales volume YTD in August 2025?",
+      "expected": {
+        "type": "numeric_with_unit",
+        "value": 1160,
+        "unit": "kton",
+        "entity": "Brazil Cement",
+        "metric": "Sales Volume",
+        "period": "YTD August 2025",
+        "text_format": "The Brazil Cement sales volume YTD in August 2025 is 1,160 kton"
+      },
+      "system_answer": "No relevant information found in the database.",
+      "validation": {
+        "query_id": "GT-022",
+        "query_text": "What is the Brazil Cement sales volume YTD in August 2025?",
+        "system_answer": "No relevant information found in the database.",
+        "expected_answer": {
+          "type": "numeric_with_unit",
+          "value": 1160,
+          "unit": "kton",
+          "entity": "Brazil Cement",
+          "metric": "Sales Volume",
+          "period": "YTD August 2025",
+          "text_format": "The Brazil Cement sales volume YTD in August 2025 is 1,160 kton"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "No numeric value found in answer",
+          "Unit mismatch: got None, expected kton"
+        ],
+        "score": 0.0
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-023",
+      "query_text": "Which Brazil plant has higher unit EBITDA: Adrianopolis or Pomerode?",
+      "expected": {
+        "type": "comparison",
+        "values": {
+          "adrianopolis": {
+            "value": 200.9,
+            "unit": "BRL/ton"
+          },
+          "pomerode": {
+            "value": 67.1,
+            "unit": "BRL/ton"
+          }
+        },
+        "comparison": "Adrianopolis has 133.8 BRL/ton higher unit EBITDA than Pomerode",
+        "winner": "Adrianopolis",
+        "text_format": "Adrianopolis: 200.9 BRL/ton, Pomerode: 67.1 BRL/ton. Adrianopolis has 133.8 BRL/ton higher unit EBITDA."
+      },
+      "system_answer": "The provided context does not contain specific information about the EBITDA of individual plants in Brazil, such as Adrianopolis or Pomerode. Therefore, it is not possible to determine which plant has a higher unit EBITDA based on the given data.",
+      "validation": {
+        "query_id": "GT-023",
+        "query_text": "Which Brazil plant has higher unit EBITDA: Adrianopolis or Pomerode?",
+        "system_answer": "The provided context does not contain specific information about the EBITDA of individual plants in Brazil, such as Adrianopolis or Pomerode. Therefore, it is not possible to determine which plant has a higher unit EBITDA based on the given data.",
+        "expected_answer": {
+          "type": "comparison",
+          "values": {
+            "adrianopolis": {
+              "value": 200.9,
+              "unit": "BRL/ton"
+            },
+            "pomerode": {
+              "value": 67.1,
+              "unit": "BRL/ton"
+            }
+          },
+          "comparison": "Adrianopolis has 133.8 BRL/ton higher unit EBITDA than Pomerode",
+          "winner": "Adrianopolis",
+          "text_format": "Adrianopolis: 200.9 BRL/ton, Pomerode: 67.1 BRL/ton. Adrianopolis has 133.8 BRL/ton higher unit EBITDA."
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": true,
+        "period_match": false,
+        "errors": [
+          "Comparison not found in answer"
+        ],
+        "score": 0.4
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-024",
+      "query_text": "What is the Brazil Trade Working Capital DSO (Days Sales Outstanding)?",
+      "expected": {
+        "type": "numeric_with_unit",
+        "value": 25,
+        "unit": "days",
+        "entity": "Brazil",
+        "metric": "DSO",
+        "period": "August 2025",
+        "text_format": "The Brazil Trade Working Capital DSO is 25 days"
+      },
+      "system_answer": "The Brazil Trade Working Capital DSO (Days Sales Outstanding) for August 2025 is 4 days.",
+      "validation": {
+        "query_id": "GT-024",
+        "query_text": "What is the Brazil Trade Working Capital DSO (Days Sales Outstanding)?",
+        "system_answer": "The Brazil Trade Working Capital DSO (Days Sales Outstanding) for August 2025 is 4 days.",
+        "expected_answer": {
+          "type": "numeric_with_unit",
+          "value": 25,
+          "unit": "days",
+          "entity": "Brazil",
+          "metric": "DSO",
+          "period": "August 2025",
+          "text_format": "The Brazil Trade Working Capital DSO is 25 days"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": true,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "Value mismatch: got 4.0, expected 25 (\u00b12)"
+        ],
+        "score": 0.2
+      },
+      "correct": false
+    },
+    {
+      "query_id": "GT-025",
+      "query_text": "What is the total Brazil working capital (sum of AR, AP, and Inventory)?",
+      "expected": {
+        "type": "aggregation",
+        "components": {
+          "ar": {
+            "value": 65,
+            "unit": "M BRL"
+          },
+          "ap": {
+            "value": -54,
+            "unit": "M BRL"
+          },
+          "inventory": {
+            "value": 78,
+            "unit": "M BRL"
+          }
+        },
+        "total": 89,
+        "unit": "M BRL",
+        "entity": "Brazil",
+        "text_format": "Brazil total working capital is 89M BRL (AR: 65M, AP: -54M, Inventory: 78M)"
+      },
+      "system_answer": "The provided context does not contain the exact values for Accounts Payable (AP) and Inventory for Brazil. Therefore, the total working capital (sum of Accounts Receivable, Accounts Payable, and Inventory) cannot be calculated.\n\nThe only available data point is:\n- Accounts receivable for Brazil: 68.86 (YTD, Page 159)\n\nThe values for Accounts Payable and Inventory are not explicitly stated in the provided context.",
+      "validation": {
+        "query_id": "GT-025",
+        "query_text": "What is the total Brazil working capital (sum of AR, AP, and Inventory)?",
+        "system_answer": "The provided context does not contain the exact values for Accounts Payable (AP) and Inventory for Brazil. Therefore, the total working capital (sum of Accounts Receivable, Accounts Payable, and Inventory) cannot be calculated.\n\nThe only available data point is:\n- Accounts receivable for Brazil: 68.86 (YTD, Page 159)\n\nThe values for Accounts Payable and Inventory are not explicitly stated in the provided context.",
+        "expected_answer": {
+          "type": "aggregation",
+          "components": {
+            "ar": {
+              "value": 65,
+              "unit": "M BRL"
+            },
+            "ap": {
+              "value": -54,
+              "unit": "M BRL"
+            },
+            "inventory": {
+              "value": 78,
+              "unit": "M BRL"
+            }
+          },
+          "total": 89,
+          "unit": "M BRL",
+          "entity": "Brazil",
+          "text_format": "Brazil total working capital is 89M BRL (AR: 65M, AP: -54M, Inventory: 78M)"
+        },
+        "correct": false,
+        "value_match": false,
+        "unit_match": false,
+        "entity_match": false,
+        "period_match": false,
+        "errors": [
+          "Value mismatch: got 68.86, expected None (\u00b12.0)"
+        ],
+        "score": 0.0
+      },
+      "correct": false
+    }
+  ],
+  "accuracy": 4.0,
+  "metadata": {
+    "timestamp": "2025-10-27T10:52:47.762795",
+    "ground_truth_version": "2.0",
+    "validation_type": "answer_quality"
+  }
+}

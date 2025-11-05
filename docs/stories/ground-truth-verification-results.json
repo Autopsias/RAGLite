@@ -1,0 +1,162 @@
+{
+  "summary": {
+    "total_verified": 10,
+    "passed": 0,
+    "wrong_page": 0,
+    "ambiguous": 10,
+    "no_results": 0,
+    "average_offset": null
+  },
+  "results": [
+    {
+      "question_id": 1,
+      "question": "What is the variable cost per ton for Portugal Cement in August 2025 YTD?",
+      "expected_page": 46,
+      "found_pages": [
+        42,
+        30,
+        17,
+        43,
+        15
+      ],
+      "top_score": 0.6790225145488206,
+      "status": "ambiguous",
+      "recommendation": "Manual review needed"
+    },
+    {
+      "question_id": 2,
+      "question": "What is the thermal energy cost per ton for Portugal Cement?",
+      "expected_page": 46,
+      "found_pages": [
+        31,
+        43,
+        17,
+        18,
+        19
+      ],
+      "top_score": 0.7102988855088372,
+      "status": "ambiguous",
+      "recommendation": "Manual review needed"
+    },
+    {
+      "question_id": 3,
+      "question": "What is the electricity cost per ton for Portugal Cement operations?",
+      "expected_page": 46,
+      "found_pages": [
+        31,
+        43,
+        17,
+        19,
+        18
+      ],
+      "top_score": 0.72637574073942,
+      "status": "ambiguous",
+      "recommendation": "Manual review needed"
+    },
+    {
+      "question_id": 4,
+      "question": "What are the raw materials costs per ton?",
+      "expected_page": 46,
+      "found_pages": [
+        156,
+        93,
+        7,
+        50,
+        155
+      ],
+      "top_score": 0.7405900264268771,
+      "status": "ambiguous",
+      "recommendation": "Manual review needed"
+    },
+    {
+      "question_id": 5,
+      "question": "What are the packaging costs per ton for cement?",
+      "expected_page": 46,
+      "found_pages": [
+        7,
+        119,
+        140,
+        130,
+        142
+      ],
+      "top_score": 0.7603639934006904,
+      "status": "ambiguous",
+      "recommendation": "Manual review needed"
+    },
+    {
+      "question_id": 6,
+      "question": "What is the alternative fuel rate percentage for Portugal Cement?",
+      "expected_page": 46,
+      "found_pages": [
+        43,
+        31,
+        18,
+        19,
+        43
+      ],
+      "top_score": 0.683729484324264,
+      "status": "ambiguous",
+      "recommendation": "Manual review needed"
+    },
+    {
+      "question_id": 7,
+      "question": "What are the maintenance costs per ton?",
+      "expected_page": 46,
+      "found_pages": [
+        7,
+        63,
+        156,
+        48,
+        50
+      ],
+      "top_score": 0.67300725549492,
+      "status": "ambiguous",
+      "recommendation": "Manual review needed"
+    },
+    {
+      "question_id": 8,
+      "question": "What is the electricity specific consumption for clinker grey production?",
+      "expected_page": 46,
+      "found_pages": [
+        43,
+        103,
+        156,
+        36,
+        124
+      ],
+      "top_score": 0.7632628620138848,
+      "status": "ambiguous",
+      "recommendation": "Manual review needed"
+    },
+    {
+      "question_id": 9,
+      "question": "What is the thermal energy specific consumption in Kcal/kg clinker?",
+      "expected_page": 46,
+      "found_pages": [
+        43,
+        156,
+        124,
+        47,
+        135
+      ],
+      "top_score": 0.6591123729086295,
+      "status": "ambiguous",
+      "recommendation": "Manual review needed"
+    },
+    {
+      "question_id": 10,
+      "question": "What is the external electricity price per MWh?",
+      "expected_page": 46,
+      "found_pages": [
+        109,
+        80,
+        98,
+        110,
+        44
+      ],
+      "top_score": 0.6120929747400409,
+      "status": "ambiguous",
+      "recommendation": "Manual review needed"
+    }
+  ]
+}

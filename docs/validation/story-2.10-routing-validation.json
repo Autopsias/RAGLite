@@ -1,0 +1,23 @@
+{
+  "routing_distribution": {
+    "sql_only": 6.0,
+    "vector_only": 4.0,
+    "hybrid": 90.0
+  },
+  "routing_counts": {
+    "sql_only": 3,
+    "vector_only": 2,
+    "hybrid": 45
+  },
+  "sql_fallback_rate": 0.0,
+  "sql_fallback_count": 0,
+  "latency_p50_ms": 810.7044696807861,
+  "latency_p95_ms": 2584.9705815315247,
+  "validation_passed": true,
+  "checks": {
+    "SQL_ONLY routing \u2264 8%": true,
+    "HYBRID routing \u2265 50%": true,
+    "SQL fallback rate < 5%": true,
+    "p95 latency < 15000ms": true
+  }
+}

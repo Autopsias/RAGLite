@@ -1,0 +1,115 @@
+{
+  "metadata": {
+    "epic": 4,
+    "story_prerequisites": [2.14, 3.3],
+    "name": "Epic 4 Ground Truth - Deferred from Story 2.14",
+    "description": "Tests deferred from Story 2.14 to Epic 4 (Story 4.6+ Trend Analysis & Proactive Insights). These require pattern recognition, anomaly detection, and intelligent handling of missing data.",
+    "total_queries": 4,
+    "expected_accuracy": "75%+",
+    "rationale": "Epic 2 literal retrieval cannot handle these; Epic 4's proactive insight generation will address them.",
+    "date_created": "2025-10-27"
+  },
+  "queries": [
+    {
+      "id": "GT-013-EPIC4",
+      "epic_2_status": "Failed - Revenue growth metric not extracted",
+      "requirement": "Story 4.6 Trend Analysis & Pattern Recognition",
+      "query": "What is the revenue growth rate for Angola vs baseline?",
+      "query_type": "trend_analysis",
+      "analysis_approach": "Story 4.6 will detect historical trends and growth patterns",
+      "conversion_for_epic_4": {
+        "original": "Calculate revenue growth (requires specific metric extraction)",
+        "converted_to": "Identify Angola revenue trends over available periods",
+        "system_capability": "Detect increasing/decreasing/flat trends in Angola revenue data"
+      },
+      "expected_result": "Trend classification with supporting data points",
+      "notes": "Revenue metric exists (516 rows) but specific growth calculation requires more sophisticated analysis",
+      "success_criteria": "Correctly identifies trend direction and magnitude"
+    },
+    {
+      "id": "GT-014-EPIC4",
+      "epic_2_status": "Failed - Budget data not in database",
+      "requirement": "Story 4.7 Proactive Insight Generation",
+      "query": "Budget vs actual comparison for August 2025",
+      "query_type": "proactive_insight",
+      "insight_conversion": {
+        "original": "Return budget comparison (data not available)",
+        "converted_to": "Proactively explain: 'Budget data unavailable. Only actual periods in database.'",
+        "system_capability": "Generate insight about data availability and implications"
+      },
+      "expected_response_type": "Proactive insight with data availability explanation",
+      "response_structure": {
+        "insight": "Budget vs actual comparison not possible",
+        "reason": "Budget period data not ingested from PDF",
+        "alternative": "Use actual period trends as proxy for performance",
+        "recommendation": "Consider extracting budget data in next PDF update"
+      },
+      "success_criteria": "System proactively explains limitation and suggests alternatives"
+    },
+    {
+      "id": "GT-015-EPIC4",
+      "epic_2_status": "Failed - Budget data not in database",
+      "requirement": "Story 4.7 Proactive Insight Generation",
+      "query": "Lebanon budget performance analysis",
+      "query_type": "proactive_insight",
+      "insight_conversion": {
+        "original": "Return Lebanon budget performance (data not available)",
+        "converted_to": "Proactively surface insights about Lebanon actual performance",
+        "system_capability": "Generate insights about operational performance with available data"
+      },
+      "expected_response_type": "Proactive insight pivoting to available data",
+      "response_structure": {
+        "insight": "Cannot compare to budget, but operational metrics show...",
+        "analysis": "Trend analysis of actual performance data available",
+        "data_points": "Lebanon EBITDA, costs, volumes, etc.",
+        "recommendation": "Data-driven insights on what IS measurable"
+      },
+      "success_criteria": "System gracefully pivots to available data and provides value"
+    },
+    {
+      "id": "GT-016-017-EPIC4",
+      "epic_2_status": "Failed - Only EUR in database",
+      "requirement": "Story 4.7 Proactive Insight Generation",
+      "query": "Financial metrics in alternative currencies (AOA, BRL)",
+      "query_type": "proactive_insight",
+      "insight_conversion": {
+        "original": "Return currency-converted values (not available)",
+        "converted_to": "Proactively explain multi-currency strategy",
+        "system_capability": "Generate insights about currency availability and standardization"
+      },
+      "queries_covered": [
+        "Angola EBITDA in million AOA",
+        "Brazil EBITDA in million BRL"
+      ],
+      "expected_response_structure": {
+        "insight": "System standardizes all reporting to EUR",
+        "reason": "Group consolidation in EUR for consistency",
+        "available_data": "All Angola and Brazil metrics in EUR",
+        "context": "Historical exchange rates on request",
+        "recommendation": "Use EUR for group-level analysis, local currency available via subsidiary reports"
+      },
+      "success_criteria": "System explains currency strategy and offers available alternatives"
+    }
+  ],
+  "implementation_notes": {
+    "dependencies": {
+      "story_2_14": "Literal retrieval baseline established",
+      "story_3_3": "Analysis Agent for supporting calculations",
+      "story_4_6": "Trend analysis and pattern recognition",
+      "story_4_7": "Proactive insight generation engine"
+    },
+    "philosophy": "Rather than fail on missing data, Epic 4 proactively explains limitations and offers value with available data",
+    "estimated_effort": "These tests will be built during Story 4.6-4.7 implementation",
+    "timeline": "Parallel development with Epic 3, validated in Epic 4"
+  },
+  "validation_strategy": {
+    "approach": "Qualitative assessment of insight quality",
+    "success_criteria": [
+      "System explains data availability clearly",
+      "Proactive suggestions are actionable",
+      "Fallback to available data is intelligent",
+      "User perceives value despite data gaps"
+    ],
+    "measurement": "User testing confirms insights are useful and transparent about limitations"
+  }
+}

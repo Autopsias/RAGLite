@@ -1,0 +1,662 @@
+{
+  "story": "2.5",
+  "acceptance_criteria": "AC1",
+  "timestamp": "2025-11-04 19:14:43",
+  "metrics": {
+    "retrieval_accuracy": 12.0,
+    "attribution_accuracy": 12.0,
+    "total_queries": 50,
+    "successful_queries": 6,
+    "failed_queries_count": 44,
+    "average_latency_ms": 1124.6406364440918,
+    "p50_latency_ms": 985.4850769042969,
+    "p95_latency_ms": 2322.0479488372803,
+    "p99_latency_ms": 2792.5238609313965
+  },
+  "failed_queries": [
+    {
+      "query_id": 1,
+      "question": "What is the variable cost per ton for Portugal Cement in August 2025 YTD?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [],
+      "top_score": 0.0,
+      "latency_ms": 1446.302890777588
+    },
+    {
+      "query_id": 2,
+      "question": "What is the thermal energy cost per ton for Portugal Cement?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "top_score": 0.009836065573770491,
+      "latency_ms": 1347.4419116973877
+    },
+    {
+      "query_id": 3,
+      "question": "What is the electricity cost per ton for Portugal Cement operations?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        43,
+        17,
+        19,
+        18,
+        43
+      ],
+      "top_score": 0.01570076194874163,
+      "latency_ms": 2792.5238609313965
+    },
+    {
+      "query_id": 4,
+      "question": "What are the raw materials costs per ton?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        93,
+        156,
+        7,
+        153,
+        63
+      ],
+      "top_score": 0.015223214285714284,
+      "latency_ms": 751.0199546813965
+    },
+    {
+      "query_id": 5,
+      "question": "What are the packaging costs per ton for cement?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        153,
+        119,
+        140,
+        7,
+        142
+      ],
+      "top_score": 0.014481897627965043,
+      "latency_ms": 947.9470252990723
+    },
+    {
+      "query_id": 6,
+      "question": "What is the alternative fuel rate percentage for Portugal Cement?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        43,
+        31,
+        18,
+        19,
+        43
+      ],
+      "top_score": 0.01602086438152012,
+      "latency_ms": 819.1640377044678
+    },
+    {
+      "query_id": 7,
+      "question": "What are the maintenance costs per ton?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        63,
+        7,
+        153,
+        93,
+        111
+      ],
+      "top_score": 0.014808743169398907,
+      "latency_ms": 1137.1819972991943
+    },
+    {
+      "query_id": 8,
+      "question": "What is the electricity specific consumption for clinker grey production?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        43,
+        132,
+        36,
+        103,
+        75
+      ],
+      "top_score": 0.01597782258064516,
+      "latency_ms": 1124.0618228912354
+    },
+    {
+      "query_id": 9,
+      "question": "What is the thermal energy specific consumption in Kcal/kg clinker?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        43,
+        156,
+        47,
+        20,
+        132
+      ],
+      "top_score": 0.015638148667601683,
+      "latency_ms": 896.7747688293457
+    },
+    {
+      "query_id": 10,
+      "question": "What is the external electricity price per MWh?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        110,
+        48,
+        50,
+        109,
+        80
+      ],
+      "top_score": 0.01378248974008208,
+      "latency_ms": 891.2997245788574
+    },
+    {
+      "query_id": 11,
+      "question": "How do total variable costs per ton compare across the three periods and what is the trend?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        60,
+        60,
+        60,
+        60,
+        60
+      ],
+      "top_score": 0.009836065573770491,
+      "latency_ms": 705.5652141571045
+    },
+    {
+      "query_id": 12,
+      "question": "What is the relationship between alternative fuel rate percentage and thermal energy costs per ton?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        156,
+        50,
+        132,
+        49,
+        132
+      ],
+      "top_score": 0.013888888888888888,
+      "latency_ms": 1205.0940990447998
+    },
+    {
+      "query_id": 13,
+      "question": "What is the EBITDA IFRS margin percentage for Portugal Cement?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        40,
+        23,
+        40,
+        17,
+        43
+      ],
+      "top_score": 0.009836065573770491,
+      "latency_ms": 972.7842807769775
+    },
+    {
+      "query_id": 14,
+      "question": "What is the EBITDA per ton for Portugal Cement?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "top_score": 0.009836065573770491,
+      "latency_ms": 1042.471170425415
+    },
+    {
+      "query_id": 15,
+      "question": "What is the unit variable margin per ton?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        153,
+        121,
+        142,
+        101,
+        143
+      ],
+      "top_score": 0.015642076502732243,
+      "latency_ms": 746.0570335388184
+    },
+    {
+      "query_id": 18,
+      "question": "What is the unit cement EBITDA for Out\u00e3o plant internal market?",
+      "expected_page": 47,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        84,
+        145,
+        124,
+        88,
+        158
+      ],
+      "top_score": 0.014203894616265748,
+      "latency_ms": 1513.7100219726562
+    },
+    {
+      "query_id": 19,
+      "question": "What are the fixed costs per ton for Pataias plant and how do they compare to other plants?",
+      "expected_page": 47,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        21,
+        21,
+        20,
+        20,
+        20
+      ],
+      "top_score": 0.009836065573770491,
+      "latency_ms": 1892.585039138794
+    },
+    {
+      "query_id": 20,
+      "question": "How does the EBITDA margin improvement from Aug-24 to Aug-25 YTD relate to variable and fixed cost changes?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        52,
+        52,
+        52,
+        52,
+        52
+      ],
+      "top_score": 0.009836065573770491,
+      "latency_ms": 1777.3640155792236
+    },
+    {
+      "query_id": 21,
+      "question": "What is the EBITDA for Portugal operations in Aug-25 YTD?",
+      "expected_page": 77,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        23
+      ],
+      "top_score": 1.0,
+      "latency_ms": 1318.2761669158936
+    },
+    {
+      "query_id": 23,
+      "question": "What are the capital expenditures (Capex) for the period?",
+      "expected_page": 77,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        160,
+        160,
+        160,
+        160,
+        160
+      ],
+      "top_score": 0.014945054945054943,
+      "latency_ms": 1240.3302192687988
+    },
+    {
+      "query_id": 24,
+      "question": "What is the financial net debt closing balance?",
+      "expected_page": 23,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        160,
+        160,
+        160,
+        160,
+        160
+      ],
+      "top_score": 0.015677655677655677,
+      "latency_ms": 757.7779293060303
+    },
+    {
+      "query_id": 25,
+      "question": "What is the change in trade working capital?",
+      "expected_page": 23,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        159,
+        160,
+        160,
+        160,
+        160
+      ],
+      "top_score": 0.014354066985645932,
+      "latency_ms": 699.0830898284912
+    },
+    {
+      "query_id": 27,
+      "question": "What are the net interest expenses?",
+      "expected_page": 23,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        160,
+        137,
+        160,
+        160,
+        160
+      ],
+      "top_score": 0.015320910973084885,
+      "latency_ms": 1881.4818859100342
+    },
+    {
+      "query_id": 28,
+      "question": "What is the cash set free or tied up after investments?",
+      "expected_page": 23,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        160,
+        137,
+        137,
+        160,
+        160
+      ],
+      "top_score": 0.015682382133995035,
+      "latency_ms": 994.147777557373
+    },
+    {
+      "query_id": 30,
+      "question": "What is the relationship between cash flow from operations and working capital changes?",
+      "expected_page": 23,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        160,
+        137,
+        120,
+        1,
+        116
+      ],
+      "top_score": 0.016237314597970336,
+      "latency_ms": 1140.0320529937744
+    },
+    {
+      "query_id": 31,
+      "question": "How many FTE employees work in Portugal Cement operations?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        23,
+        23,
+        21,
+        21,
+        21
+      ],
+      "top_score": 0.009836065573770491,
+      "latency_ms": 939.4609928131104
+    },
+    {
+      "query_id": 32,
+      "question": "What is the daily clinker production capacity?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        43,
+        132,
+        36,
+        18,
+        19
+      ],
+      "top_score": 0.016129032258064516,
+      "latency_ms": 991.5800094604492
+    },
+    {
+      "query_id": 33,
+      "question": "What is the reliability factor percentage for cement production?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        43,
+        141,
+        120,
+        31,
+        76
+      ],
+      "top_score": 0.016162909836065574,
+      "latency_ms": 948.5180377960205
+    },
+    {
+      "query_id": 34,
+      "question": "What is the utilization factor in tons for cement production?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        43,
+        141,
+        120,
+        31,
+        98
+      ],
+      "top_score": 0.01609079445145019,
+      "latency_ms": 1108.705997467041
+    },
+    {
+      "query_id": 35,
+      "question": "What is the performance factor percentage?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        43,
+        141,
+        98,
+        120,
+        76
+      ],
+      "top_score": 0.01605222734254992,
+      "latency_ms": 2580.687999725342
+    },
+    {
+      "query_id": 36,
+      "question": "What is the CO2 emissions per ton of clinker and how does it compare across periods?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        132,
+        36,
+        75,
+        33,
+        109
+      ],
+      "top_score": 0.015887174541947928,
+      "latency_ms": 2322.0479488372803
+    },
+    {
+      "query_id": 37,
+      "question": "What are the employee costs per ton for Portugal Cement?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "top_score": 0.009836065573770491,
+      "latency_ms": 955.5680751800537
+    },
+    {
+      "query_id": 38,
+      "question": "How many FTEs work in distribution for Portugal Cement?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        19,
+        17,
+        18,
+        43,
+        43
+      ],
+      "top_score": 0.015225409836065573,
+      "latency_ms": 30.807018280029297
+    },
+    {
+      "query_id": 39,
+      "question": "What is the total headcount for Tunisia operations in August 2025?",
+      "expected_page": 108,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [],
+      "top_score": 0.0,
+      "latency_ms": 985.4850769042969
+    },
+    {
+      "query_id": 40,
+      "question": "How many FTEs are in sales for Portugal Cement?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        43,
+        19,
+        17,
+        18,
+        43
+      ],
+      "top_score": 0.015133946421431427,
+      "latency_ms": 42.66190528869629
+    },
+    {
+      "query_id": 41,
+      "question": "What is the breakdown of Tunisia Cement employees by function?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        109,
+        98,
+        3,
+        107,
+        107
+      ],
+      "top_score": 0.015475409836065573,
+      "latency_ms": 925.3261089324951
+    },
+    {
+      "query_id": 43,
+      "question": "What are the other costs per ton for Portugal Cement operations?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "top_score": 0.013571428571428571,
+      "latency_ms": 910.5582237243652
+    },
+    {
+      "query_id": 44,
+      "question": "What are the distribution costs per ton?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "top_score": 0.009836065573770491,
+      "latency_ms": 904.1638374328613
+    },
+    {
+      "query_id": 45,
+      "question": "What are the sales costs per ton?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        21,
+        21,
+        21,
+        21,
+        21
+      ],
+      "top_score": 0.009836065573770491,
+      "latency_ms": 807.8958988189697
+    },
+    {
+      "query_id": 46,
+      "question": "What are the insurance costs?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        3,
+        1,
+        11,
+        11,
+        39
+      ],
+      "top_score": 0.01579861111111111,
+      "latency_ms": 896.7306613922119
+    },
+    {
+      "query_id": 47,
+      "question": "What are the rents and rentals costs?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        102,
+        123,
+        123,
+        73,
+        11
+      ],
+      "top_score": 0.015835777126099706,
+      "latency_ms": 1038.449764251709
+    },
+    {
+      "query_id": 48,
+      "question": "What are the production services costs?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        98,
+        122,
+        63,
+        111,
+        1
+      ],
+      "top_score": 0.013588709677419354,
+      "latency_ms": 830.6241035461426
+    },
+    {
+      "query_id": 49,
+      "question": "What are the specialized labour costs?",
+      "expected_page": 46,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        98,
+        123,
+        39,
+        123,
+        102
+      ],
+      "top_score": 0.013852813852813853,
+      "latency_ms": 791.3248538970947
+    },
+    {
+      "query_id": 50,
+      "question": "How do fixed costs break down into employee costs, maintenance, and other costs, and what is the efficiency trend?",
+      "expected_page": 59,
+      "expected_document": "2025-08 Performance Review CONSO_v2.pdf",
+      "retrieved_pages": [
+        102,
+        123,
+        112,
+        123,
+        136
+      ],
+      "top_score": 0.014904780411970462,
+      "latency_ms": 1279.5288562774658
+    }
+  ]
+}

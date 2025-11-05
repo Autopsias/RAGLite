@@ -1,0 +1,299 @@
+{
+  "metadata": {
+    "version": "1.0-ANALYTICAL",
+    "story": "2.14",
+    "pdf_source": "docs/sample pdf/160-page-financial-report.pdf",
+    "created_date": "2025-10-27",
+    "purpose": "Analytical ground truth for FULL 160-page PDF - tests retrieval quality + synthesis without brittle exact-matching",
+    "total_queries": 18,
+    "target_accuracy": "70%+",
+    "note": "Queries require meaningful retrieval work (aggregation, ranking, synthesis) but all data exists in PDF. Expected results are ranges/patterns, not exact values."
+  },
+  "test_queries": [
+    {
+      "id": "ANA-001",
+      "category": "AC1-Lookup",
+      "query": "What are Portugal's main cost drivers in August 2025?",
+      "expected_result_min": 5,
+      "expected_result_max": 15,
+      "expected_metrics": ["Variable Cost", "Cost", "Operating Expenses"],
+      "expected_entities": ["Portugal"],
+      "expected_period": "Aug-25",
+      "notes": "Tests entity lookup + metric retrieval + synthesis of multiple cost categories",
+      "validation_pattern": "Must find cost-related metrics for Portugal in Aug-25"
+    },
+    {
+      "id": "ANA-002",
+      "category": "AC1-Lookup",
+      "query": "Show the EBITDA metrics available for Tunisia",
+      "expected_result_min": 3,
+      "expected_result_max": 10,
+      "expected_metrics": ["EBITDA", "Cement Unit Ebitda"],
+      "expected_entities": ["Tunisia"],
+      "notes": "Tests metric-specific retrieval and metric name variations",
+      "validation_pattern": "Should retrieve both EBITDA and Cement Unit Ebitda variants"
+    },
+    {
+      "id": "ANA-003",
+      "category": "AC1-Lookup",
+      "query": "What financial data is available for Angola?",
+      "expected_result_min": 8,
+      "expected_result_max": 25,
+      "expected_metrics": ["EBITDA", "Cost", "Sales", "Variable Cost"],
+      "expected_entities": ["Angola"],
+      "notes": "Broad query testing overall retrieval for single entity",
+      "validation_pattern": "Should retrieve diverse metrics for Angola"
+    },
+    {
+      "id": "ANA-004",
+      "category": "AC2-Ranking",
+      "query": "Which market had the highest EBITDA in August 2025?",
+      "expected_result_min": 4,
+      "expected_result_max": 6,
+      "expected_metrics": ["EBITDA"],
+      "expected_entities": ["Portugal", "Tunisia", "Angola", "Brazil"],
+      "expected_period": "Aug-25",
+      "notes": "Tests multi-entity retrieval + ranking capability",
+      "validation_pattern": "Must retrieve EBITDA for 4+ entities to enable ranking"
+    },
+    {
+      "id": "ANA-005",
+      "category": "AC2-Ranking",
+      "query": "What were the top 3 cost drivers across all markets in August 2025?",
+      "expected_result_min": 12,
+      "expected_result_max": 30,
+      "expected_metrics": ["Cost", "Variable Cost", "Operating Expenses"],
+      "expected_entities": ["Portugal", "Tunisia", "Angola", "Brazil", "Lebanon"],
+      "expected_period": "Aug-25",
+      "notes": "Tests portfolio-level aggregation and ranking",
+      "validation_pattern": "Must find cost metrics across multiple entities"
+    },
+    {
+      "id": "ANA-006",
+      "category": "AC2-Comparison",
+      "query": "How did Portugal and Tunisia's EBITDA compare in August 2025?",
+      "expected_result_min": 6,
+      "expected_result_max": 12,
+      "expected_metrics": ["EBITDA", "Cement Unit Ebitda"],
+      "expected_entities": ["Portugal", "Tunisia"],
+      "expected_period": "Aug-25",
+      "notes": "Tests two-entity comparison and ranking",
+      "validation_pattern": "Should retrieve both entities' EBITDA for comparison"
+    },
+    {
+      "id": "ANA-007",
+      "category": "AC2-Comparison",
+      "query": "Compare the cost structure of Angola and Brazil in August 2025",
+      "expected_result_min": 10,
+      "expected_result_max": 25,
+      "expected_metrics": ["Cost", "Variable Cost", "Operating Expenses"],
+      "expected_entities": ["Angola", "Brazil"],
+      "expected_period": "Aug-25",
+      "notes": "Tests multi-metric comparison across entities",
+      "validation_pattern": "Must retrieve cost metrics for both entities"
+    },
+    {
+      "id": "ANA-008",
+      "category": "AC3-Aggregation",
+      "query": "What is the average EBITDA across all markets in August 2025?",
+      "expected_result_min": 4,
+      "expected_result_max": 8,
+      "expected_metrics": ["EBITDA"],
+      "expected_entities": ["Portugal", "Tunisia", "Angola", "Brazil", "Lebanon"],
+      "expected_period": "Aug-25",
+      "notes": "Tests portfolio-level aggregation (sum/average)",
+      "validation_pattern": "Must retrieve EBITDA for 4+ entities"
+    },
+    {
+      "id": "ANA-009",
+      "category": "AC3-Aggregation",
+      "query": "What are the total costs across Portugal and Tunisia operations?",
+      "expected_result_min": 8,
+      "expected_result_max": 18,
+      "expected_metrics": ["Cost", "Variable Cost", "Operating Expenses"],
+      "expected_entities": ["Portugal", "Tunisia"],
+      "notes": "Tests multi-metric aggregation for subset of entities",
+      "validation_pattern": "Must find and aggregate cost categories"
+    },
+    {
+      "id": "ANA-010",
+      "category": "AC3-Trend",
+      "query": "Show how Brazil's sales volumes changed from month to month in 2025",
+      "expected_result_min": 8,
+      "expected_result_max": 15,
+      "expected_metrics": ["Sales Volumes", "Sales"],
+      "expected_entities": ["Brazil"],
+      "notes": "Tests time-series retrieval for trend analysis",
+      "validation_pattern": "Must retrieve sales volumes across multiple periods"
+    },
+    {
+      "id": "ANA-011",
+      "category": "AC3-Trend",
+      "query": "How did Portugal's thermal energy costs evolve in 2025?",
+      "expected_result_min": 3,
+      "expected_result_max": 10,
+      "expected_metrics": ["Thermal Energy"],
+      "expected_entities": ["Portugal"],
+      "notes": "Tests specialized metric retrieval across time",
+      "validation_pattern": "Must find thermal energy data points over time"
+    },
+    {
+      "id": "ANA-012",
+      "category": "AC2-Filtering",
+      "query": "Which markets have high variable costs in August 2025?",
+      "expected_result_min": 4,
+      "expected_result_max": 8,
+      "expected_metrics": ["Variable Cost"],
+      "expected_entities": ["Portugal", "Tunisia", "Angola", "Brazil"],
+      "expected_period": "Aug-25",
+      "notes": "Tests filtering + ranking capability",
+      "validation_pattern": "Must retrieve Variable Cost for multiple entities"
+    },
+    {
+      "id": "ANA-013",
+      "category": "AC1-Lookup",
+      "query": "What were the EBITDA values for Tunisia in August 2025 YTD?",
+      "expected_result_min": 2,
+      "expected_result_max": 8,
+      "expected_metrics": ["EBITDA", "Cement Unit Ebitda"],
+      "expected_entities": ["Tunisia"],
+      "expected_period": "Aug-25 YTD",
+      "notes": "Tests period-specific retrieval with YTD variant",
+      "validation_pattern": "Must handle Aug-25 YTD period format correctly"
+    },
+    {
+      "id": "ANA-014",
+      "category": "AC2-Portfolio",
+      "query": "Summarize the financial performance of all markets in August 2025",
+      "expected_result_min": 20,
+      "expected_result_max": 50,
+      "expected_metrics": ["EBITDA", "Cost", "Sales Volumes"],
+      "expected_entities": ["Portugal", "Tunisia", "Angola", "Brazil", "Lebanon"],
+      "expected_period": "Aug-25",
+      "notes": "Tests broad portfolio-level retrieval",
+      "validation_pattern": "Must retrieve metrics across multiple entities"
+    },
+    {
+      "id": "ANA-015",
+      "category": "AC3-Calculated",
+      "query": "What is the cost efficiency (cost per unit of sales) for Portugal in August 2025?",
+      "expected_result_min": 8,
+      "expected_result_max": 20,
+      "expected_metrics": ["Cost", "Sales Volumes"],
+      "expected_entities": ["Portugal"],
+      "expected_period": "Aug-25",
+      "notes": "Tests retrieval of components for calculated metrics",
+      "validation_pattern": "Must retrieve both cost and sales volume"
+    },
+    {
+      "id": "ANA-016",
+      "category": "AC1-SingleEntity",
+      "query": "What operational metrics are reported for Lebanon?",
+      "expected_result_min": 3,
+      "expected_result_max": 12,
+      "expected_metrics": ["EBITDA", "Cost", "Sales", "Operating Expenses"],
+      "expected_entities": ["Lebanon"],
+      "notes": "Tests retrieval for less frequently mentioned entity",
+      "validation_pattern": "Should retrieve operational metrics for Lebanon"
+    },
+    {
+      "id": "ANA-017",
+      "category": "AC2-Comparison",
+      "query": "Which entities show the most variable cost volatility in 2025?",
+      "expected_result_min": 5,
+      "expected_result_max": 15,
+      "expected_metrics": ["Variable Cost"],
+      "expected_entities": ["Portugal", "Tunisia", "Angola", "Brazil"],
+      "notes": "Tests time-series retrieval for volatility analysis",
+      "validation_pattern": "Must retrieve Variable Cost across time periods"
+    },
+    {
+      "id": "ANA-018",
+      "category": "AC3-Synthesis",
+      "query": "Provide a comparative analysis of EBITDA margins across markets",
+      "expected_result_min": 6,
+      "expected_result_max": 16,
+      "expected_metrics": ["EBITDA", "Sales Volumes", "Cost"],
+      "expected_entities": ["Portugal", "Tunisia", "Angola", "Brazil"],
+      "notes": "Tests multi-metric retrieval for calculated analysis",
+      "validation_pattern": "Must retrieve EBITDA and sales for multiple entities"
+    }
+  ],
+  "category_breakdown": {
+    "AC1-Lookup": {
+      "count": 4,
+      "queries": ["ANA-001", "ANA-002", "ANA-003", "ANA-013", "ANA-016"],
+      "target": "80%+",
+      "description": "Single entity lookup with metric retrieval and synthesis"
+    },
+    "AC2-Comparison": {
+      "count": 4,
+      "queries": ["ANA-006", "ANA-007", "ANA-012", "ANA-017"],
+      "target": "75%+",
+      "description": "Multi-entity comparison and ranking"
+    },
+    "AC2-Portfolio": {
+      "count": 1,
+      "queries": ["ANA-014"],
+      "target": "70%+",
+      "description": "Portfolio-level aggregation"
+    },
+    "AC3-Aggregation": {
+      "count": 2,
+      "queries": ["ANA-008", "ANA-009"],
+      "target": "75%+",
+      "description": "Sum and average calculations"
+    },
+    "AC3-Trend": {
+      "count": 2,
+      "queries": ["ANA-010", "ANA-011"],
+      "target": "70%+",
+      "description": "Time-series and trend analysis"
+    },
+    "AC3-Calculated": {
+      "count": 1,
+      "queries": ["ANA-015"],
+      "target": "70%+",
+      "description": "Component retrieval for calculated metrics"
+    },
+    "AC2-Ranking": {
+      "count": 2,
+      "queries": ["ANA-004", "ANA-005"],
+      "target": "70%+",
+      "description": "Entity ranking and filtering"
+    },
+    "AC3-Synthesis": {
+      "count": 1,
+      "queries": ["ANA-018"],
+      "target": "70%+",
+      "description": "Multi-metric synthesis for analysis"
+    }
+  },
+  "validation_parameters": {
+    "pdf_source": "160-page financial report",
+    "result_tolerance": "±25% variance on expected result counts (allows for data density variations)",
+    "target_overall_accuracy": "70%+",
+    "minimum_pass_threshold": 13,
+    "decision_gate": {
+      "pass": "≥13/18 (72%+) - All implementation working correctly",
+      "investigate": "11-12/18 (61-67%) - Minor gaps in specific categories",
+      "fail": "<11/18 (<61%)"
+    },
+    "key_validation_principle": "Results are ranges/patterns, NOT exact values. Test validates retrieval quality + synthesis capability, not brittle lookup matching."
+  },
+  "data_assumptions": {
+    "entities_available": ["Portugal", "Tunisia", "Angola", "Brazil", "Lebanon"],
+    "metrics_available": ["Variable Cost", "EBITDA", "Cement Unit Ebitda", "Sales Volumes", "Thermal Energy", "Cost", "Operating Expenses"],
+    "periods_available": ["Aug-25", "Aug-25 YTD", "2025"],
+    "currencies": "EUR only"
+  },
+  "important_notes": {
+    "note_1": "This is ANALYTICAL ground truth - different from data-extraction ground truth",
+    "note_2": "All queries target data confirmed to exist in PDF",
+    "note_3": "Expected result ranges (±25%) account for variations in retrieval + synthesis",
+    "note_4": "Test validates QUALITY (relevance, synthesis, ranking) not exact matching",
+    "note_5": "Queries require work: aggregation, ranking, time-series analysis, or synthesis",
+    "note_6": "Success = meaningful results + correct synthesis, not brittle exact values",
+    "note_7": "If query fails, it indicates retrieval/synthesis issue, not test data issue"
+  }
+}

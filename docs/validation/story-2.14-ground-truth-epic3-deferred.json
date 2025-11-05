@@ -1,0 +1,141 @@
+{
+  "metadata": {
+    "epic": 3,
+    "story_prerequisites": [2.14],
+    "name": "Epic 3 Ground Truth - Deferred from Story 2.14",
+    "description": "Tests deferred from Story 2.14 to Epic 3 (Story 3.3: Analysis Agent). These require LLM-based interpretation, calculation, and reasoning over retrieved data.",
+    "total_queries": 4,
+    "expected_accuracy": "80%+",
+    "rationale": "Epic 2 can retrieve component data; Epic 3 Analysis Agent performs the calculation and interpretation.",
+    "date_created": "2025-10-27"
+  },
+  "queries": [
+    {
+      "id": "GT-011-FULL",
+      "epic_2_status": "Prerequisite GT-011-PART passed (components retrieved)",
+      "requirement": "Story 3.3 Analysis Agent",
+      "query": "What is the EBITDA margin for Portugal Cement?",
+      "query_type": "calculation",
+      "calculation_steps": [
+        {
+          "step": 1,
+          "name": "Retrieve components",
+          "action": "Call GT-011-PART to get EBITDA and Turnover"
+        },
+        {
+          "step": 2,
+          "name": "Perform calculation",
+          "action": "margin = (EBITDA / Turnover) * 100"
+        },
+        {
+          "step": 3,
+          "name": "Format response",
+          "action": "Return 'EBITDA margin: X%' with source attribution"
+        }
+      ],
+      "expected_result_format": "Percentage value with explanation",
+      "test_data": {
+        "ebitda_value": 64.40,
+        "turnover_value": "~150-200M EUR",
+        "expected_margin_range": "30-50%"
+      },
+      "success_criteria": "Returned margin within ±5pp of ground truth"
+    },
+    {
+      "id": "GT-012-FULL",
+      "epic_2_status": "Prerequisite GT-012-PART passed (components retrieved)",
+      "requirement": "Story 3.3 Analysis Agent",
+      "query": "Calculate total Brazil working capital",
+      "query_type": "summation",
+      "calculation_steps": [
+        {
+          "step": 1,
+          "name": "Retrieve components",
+          "action": "Call GT-012-PART to get AR + AP + Working Capital"
+        },
+        {
+          "step": 2,
+          "name": "Perform summation",
+          "action": "total_wc = AR + AP + Working Capital"
+        },
+        {
+          "step": 3,
+          "name": "Format response",
+          "action": "Return 'Total working capital: X M EUR' with source attribution"
+        }
+      ],
+      "expected_result_format": "Currency value with explanation",
+      "test_data": {
+        "components_count": 3,
+        "expected_value_order": "~10-50M EUR"
+      },
+      "success_criteria": "Correctly summed 3+ metrics with proper attribution"
+    },
+    {
+      "id": "GT-004-EPIC3",
+      "requirement": "Story 3.3 Analysis Agent + LLM period interpretation",
+      "query": "Brazil operational expenses in Q3 2025",
+      "query_type": "interpretation + retrieval",
+      "interpretation_steps": [
+        {
+          "step": 1,
+          "name": "Parse temporal reference",
+          "action": "LLM interprets 'Q3 2025' → likely Aug-25 or Sep-25"
+        },
+        {
+          "step": 2,
+          "name": "Retrieve with normalized period",
+          "action": "Query with Aug-25 YTD or matching period found"
+        },
+        {
+          "step": 3,
+          "name": "Return results",
+          "action": "Explain: 'Q3 corresponds to Aug-25 in our data'"
+        }
+      ],
+      "expected_result_format": "Data for matched period with explanation",
+      "notes": "Requires LLM to map quarterly periods to monthly/YTD data",
+      "success_criteria": "Returns correct data for interpreted period"
+    },
+    {
+      "id": "GT-013-EPIC3",
+      "requirement": "Story 3.3 Analysis Agent + multi-period retrieval",
+      "query": "Revenue growth rate Angola vs baseline",
+      "query_type": "time_series_analysis",
+      "analysis_steps": [
+        {
+          "step": 1,
+          "name": "Retrieve historical revenue",
+          "action": "Get Angola revenue for multiple periods (2024, 2025)"
+        },
+        {
+          "step": 2,
+          "name": "Calculate growth",
+          "action": "growth_rate = ((current - baseline) / baseline) * 100"
+        },
+        {
+          "step": 3,
+          "name": "Interpret trend",
+          "action": "Classify as positive, negative, or flat"
+        },
+        {
+          "step": 4,
+          "name": "Return result",
+          "action": "Growth rate with historical context"
+        }
+      ],
+      "expected_result_format": "Percentage growth with year-over-year comparison",
+      "notes": "Requires retrieval of multiple time periods and comparative analysis",
+      "success_criteria": "Correctly calculated YoY growth with proper baselines"
+    }
+  ],
+  "implementation_notes": {
+    "dependencies": {
+      "story_2_14": "Must pass all Epic 2 happy path tests first",
+      "story_3_1": "Agentic framework integration",
+      "story_3_3": "Analysis Agent implementation"
+    },
+    "async_processing": "These tests can run in parallel with Epic 2 completion",
+    "estimated_effort": "These tests will be built during Story 3.3 implementation"
+  }
+}

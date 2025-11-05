@@ -1,0 +1,22 @@
+{
+  "retrieval_accuracy": 22.0,
+  "attribution_accuracy": 74.0,
+  "correct_count": 11,
+  "total_queries": 50,
+  "latency_p50_ms": 8518.70059967041,
+  "latency_p95_ms": 17803.87568473816,
+  "decision": "escalate_phase2b",
+  "decision_checks": {
+    "Retrieval accuracy \u226570%": false,
+    "Attribution accuracy \u226595%": false,
+    "p95 latency <15000ms": false
+  },
+  "baseline_accuracy": 56.0,
+  "accuracy_improvement_pp": -34.0,
+  "phase2a_fixes": [
+    "Story 2.8: Table-aware chunking",
+    "Story 2.9: Ground truth page references",
+    "Story 2.10: Query routing fix",
+    "Story 2.11: Hybrid search RRF + BM25 tuning"
+  ]
+}

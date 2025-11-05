@@ -58,13 +58,18 @@ Before designing the architecture, you MUST execute a 1-2 week research spike to
 **Design for Graceful Degradation (NFR32):** System must operate with vector-only retrieval if KG fails, basic Q&A if agentic workflows fail, and without forecasting if models prove inaccurate.
 
 **Epic Structure for Implementation:**
-1. Foundation & Accurate Retrieval (3-4 weeks)
-2. Advanced Document Understanding (2-3 weeks, KG conditional on research spike)
-3. AI Intelligence & Orchestration (2-3 weeks)
-4. Forecasting & Proactive Insights (2-3 weeks)
-5. Production Readiness (2-3 weeks)
+1. ✅ Foundation & Accurate Retrieval (3-4 weeks) - COMPLETE
+2. ⏳ Advanced RAG Architecture Enhancement (2-3 weeks best case, 18 weeks worst case, staged with decision gates) - IN PROGRESS
+   - Phase 1: PDF Optimization (1-2 days) - pypdfium + parallelism → 1.7-2.5x speedup
+   - Phase 2A: Fixed Chunking + Metadata (1-2 weeks) - Target: 68-72% accuracy → Decision Gate @ T+17
+   - Phase 2B: Structured Multi-Index (3-4 weeks, IF Phase 2A <70%) - Contingency: 70-80% accuracy
+   - Phase 2C: Hybrid GraphRAG (6 weeks, IF Phase 2B <75%) - Contingency: 75-92% accuracy
+   - Phase 3: Agentic Coordination (2-16 weeks, IF Phase 2 <85%) - Optional: 90-95% accuracy
+3. AI Intelligence & Orchestration (2-3 weeks) - Requires Epic 2 ≥70% accuracy
+4. Forecasting & Proactive Insights (2-3 weeks) - Requires Epic 3 complete
+5. Production Readiness (2-3 weeks) - Requires Epic 4 complete
 
-**Timeline:** 10-12 weeks total (research spike + implementation)
+**Timeline:** 10-30 weeks total (Week 0 complete + Epic 1 complete + Epic 2 in progress + Epic 3-5 pending)
 
 **Output Required:** Complete architecture document including system design, data flow diagrams, technology stack, deployment architecture, schema design (if applicable), API specifications, and implementation guidance for dev team.
 

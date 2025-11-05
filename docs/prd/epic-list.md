@@ -3,8 +3,10 @@
 **Epic 1: Foundation & Accurate Retrieval**
 *Goal:* Deliver a working conversational financial Q&A system with 90%+ retrieval accuracy that enables users to ask natural language questions via MCP and receive accurate, source-attributed answers from company financial documents.
 
-**Epic 2: Advanced Document Understanding**
-*Goal:* Handle complex financial documents and multi-document synthesis with advanced table extraction and knowledge graph integration (if Architect approved), enabling queries that require relational reasoning and synthesis across multiple sources.
+**Epic 2: Advanced RAG Architecture Enhancement** 🔴 **CRITICAL** (IN PROGRESS)
+*Goal:* Achieve minimum 70% retrieval accuracy through staged RAG architecture enhancement. Following element-aware chunking catastrophic failure (42% accuracy, -14pp regression), implement PDF ingestion optimization (Phase 1: 1.7-2.5x speedup) followed by research-validated fixed 512-token chunking (Phase 2A: 68-72% expected accuracy), with contingency paths to Structured Multi-Index (Phase 2B: 70-80% accuracy) or Hybrid GraphRAG Architecture (Phase 2C: 75-92% accuracy) if decision gates require escalation.
+
+*Priority:* CRITICAL (blocks Epic 3-5) | *Status:* IN PROGRESS (Phase 1 starting) | *Timeline:* 2-3 weeks (best case, Phase 1+2A) to 18 weeks (worst case, all contingencies) | *Decision Gate:* T+17 (Week 3, Day 3 - AC3 validation: ≥70% required)
 
 **Epic 3: AI Intelligence & Orchestration**
 *Goal:* Enable multi-step reasoning and complex analytical workflows through agentic orchestration, allowing the system to autonomously execute analytical tasks requiring planning, tool use, and iterative reasoning.

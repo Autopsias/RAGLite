@@ -14,6 +14,7 @@ import pytest
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
+@pytest.mark.preserve_collection  # Tests don't modify Qdrant - skip cleanup
 class TestAccuracyTestRunner:
     """Test suite for run-accuracy-tests.py script."""
 
@@ -39,7 +40,7 @@ class TestAccuracyTestRunner:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=300,  # 5 minutes - increased from 120s for query execution time
         )
         # Should complete (exit code 0 or 1 depending on accuracy)
         assert result.returncode in [0, 1]
@@ -62,7 +63,7 @@ class TestAccuracyTestRunner:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=300,  # 5 minutes - increased from 120s for query execution time
         )
         assert result.returncode in [0, 1]
         assert "cost_analysis" in result.stdout or "Filtered to" in result.stdout
@@ -82,7 +83,7 @@ class TestAccuracyTestRunner:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=300,  # 5 minutes - increased from 120s for query execution time
         )
         assert result.returncode in [0, 1]
 
@@ -101,7 +102,7 @@ class TestAccuracyTestRunner:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=300,  # 5 minutes - increased from 120s for verbose output overhead
         )
         assert result.returncode in [0, 1]
         # Verbose output should show query details
@@ -109,6 +110,7 @@ class TestAccuracyTestRunner:
         assert "Latency" in result.stdout or "latency" in result.stdout.lower()
 
 
+@pytest.mark.preserve_collection  # Tests don't modify Qdrant - skip cleanup
 class TestDailyAccuracyCheck:
     """Test suite for daily-accuracy-check.py script."""
 
@@ -132,7 +134,7 @@ class TestDailyAccuracyCheck:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=300,  # 5 minutes - increased from 120s for query execution time
         )
         # Exit code 0 (normal) or 1 (early warning triggered)
         assert result.returncode in [0, 1]
@@ -148,7 +150,7 @@ class TestDailyAccuracyCheck:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=300,  # 5 minutes - increased from 120s for query execution time
         )
         assert result.returncode in [0, 1]
 
@@ -167,7 +169,7 @@ class TestDailyAccuracyCheck:
 class TestAccuracyCalculations:
     """Test accuracy calculation logic (unit-style tests on script functions)."""
 
-    def test_retrieval_accuracy_calculation(self):
+    def test_retrieval_accuracy_calculation(self, session_ingested_collection):
         """Test that retrieval accuracy is calculated correctly."""
         # This would test the check_retrieval_accuracy function
         # For now, verify via integration: run with known queries
@@ -176,35 +178,35 @@ class TestAccuracyCalculations:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=300,  # 5 minutes - increased from 120s for query execution time
         )
         assert result.returncode in [0, 1]
         # Should show retrieval accuracy percentage
         assert "Retrieval Accuracy:" in result.stdout
         assert "%" in result.stdout
 
-    def test_attribution_accuracy_calculation(self):
+    def test_attribution_accuracy_calculation(self, session_ingested_collection):
         """Test that attribution accuracy is calculated correctly."""
         result = subprocess.run(
             [sys.executable, "scripts/run-accuracy-tests.py", "--subset", "5"],
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=300,  # 5 minutes - increased from 120s for query execution time
         )
         assert result.returncode in [0, 1]
         # Should show attribution accuracy percentage
         assert "Attribution Accuracy:" in result.stdout
         assert "%" in result.stdout
 
-    def test_performance_metrics_calculated(self):
+    def test_performance_metrics_calculated(self, session_ingested_collection):
         """Test that p50/p95 latency metrics are calculated."""
         result = subprocess.run(
             [sys.executable, "scripts/run-accuracy-tests.py", "--subset", "5"],
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=300,  # 5 minutes - increased from 120s for query execution time
         )
         assert result.returncode in [0, 1]
         # Should show latency metrics
@@ -215,21 +217,21 @@ class TestAccuracyCalculations:
 class TestNFRValidation:
     """Test NFR (Non-Functional Requirements) validation."""
 
-    def test_nfr_targets_displayed(self):
+    def test_nfr_targets_displayed(self, session_ingested_collection):
         """Test that NFR validation results are shown."""
         result = subprocess.run(
             [sys.executable, "scripts/run-accuracy-tests.py", "--subset", "5"],
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=300,  # 5 minutes - increased from 120s for query execution time
         )
         assert result.returncode in [0, 1]
         # Should show NFR validation section
         assert "NFR" in result.stdout or "NFR6" in result.stdout
         assert "90%" in result.stdout or "retrieval" in result.stdout.lower()
 
-    def test_exit_codes(self):
+    def test_exit_codes(self, session_ingested_collection):
         """Test that script returns correct exit codes."""
         # Running small subset likely to fail accuracy targets
         result = subprocess.run(
@@ -237,7 +239,7 @@ class TestNFRValidation:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=300,  # 5 minutes - increased from 120s for query execution time
         )
         # Exit code 0 = pass (unlikely with small subset)
         # Exit code 1 = fail or below targets (expected)

@@ -66,12 +66,13 @@ def test_query_result_page_number_none_handling():
 
 @pytest.mark.unit
 def test_query_result_score_range():
-    """Validate score is float between 0.0-1.0 for QueryResult.
+    """Validate score validation for QueryResult.
 
-    Pydantic validation should enforce ge=0.0, le=1.0 constraints.
+    Story 2.1 (BM25 hybrid search): Negative scores are allowed since BM25 can produce
+    negative relevance scores. Only upper bound (le=1.0) is enforced.
     """
-    # Valid scores
-    valid_scores = [0.0, 0.5, 0.85, 1.0]
+    # Valid scores (including negative for BM25 hybrid search)
+    valid_scores = [-1.0, -0.1, 0.0, 0.5, 0.85, 1.0]
     for score in valid_scores:
         result = QueryResult(
             score=score,
@@ -81,10 +82,10 @@ def test_query_result_score_range():
             chunk_index=0,
             word_count=10,
         )
-        assert 0.0 <= result.score <= 1.0
+        assert result.score <= 1.0  # Only upper bound enforced
 
-    # Invalid scores (should raise ValidationError)
-    invalid_scores = [-0.1, 1.1, -1.0, 2.0]
+    # Invalid scores (> 1.0 should raise ValidationError)
+    invalid_scores = [1.1, 2.0, 10.5]
     for score in invalid_scores:
         with pytest.raises(ValidationError):
             QueryResult(

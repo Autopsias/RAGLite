@@ -10,9 +10,9 @@
 - FR5: System shall store document embeddings in vector database (Qdrant) with sub-5 second retrieval performance
 
 **Knowledge Graph & Entity Management**
-- FR6: System shall extract financial entities (companies, departments, metrics, KPIs, time periods) from documents *(PENDING RESEARCH SPIKE: May be descoped to vector-only if KG complexity outweighs value)*
-- FR7: System shall construct knowledge graph capturing relationships between financial entities (correlations, dependencies, hierarchies) *(PENDING RESEARCH SPIKE)*
-- FR8: System shall support hybrid retrieval combining vector similarity and graph traversal for relational queries *(PENDING RESEARCH SPIKE)*
+- FR6: System shall extract financial entities (companies, departments, metrics, KPIs, time periods) from documents *(CONDITIONAL: Phase 2C only - activated if Phase 2A accuracy <70% OR Phase 2B accuracy <75%. Probability: ~5% based on research-validated fixed chunking approach. See Epic 2 decision gates.)*
+- FR7: System shall construct knowledge graph capturing relationships between financial entities (correlations, dependencies, hierarchies) *(CONDITIONAL: Phase 2C only - see FR6)*
+- FR8: System shall support hybrid retrieval combining vector similarity and graph traversal for relational queries *(CONDITIONAL: Phase 2C only - see FR6)*
 
 **Query & Retrieval**
 - FR9: System shall accept natural language financial queries via MCP protocol from compatible LLM clients
@@ -63,6 +63,10 @@
 
 **Accuracy & Quality**
 - NFR6: Retrieval accuracy shall achieve 90%+ for diverse financial queries (measured against ground truth test set)
+  - **Epic 2 Minimum Milestone**: ≥70% accuracy (MANDATORY to proceed to Epic 3 - unblocks Epics 3-5)
+  - **Epic 2 Stretch Milestone**: ≥75% accuracy (enables skip to Epic 3 without Phase 2B-C contingencies)
+  - **Epic 3+ Target**: 90%+ accuracy (final production goal)
+  - **Decision Gates**: Phase 2A @ T+17 (≥70% required), Phase 2B @ T+35 (≥75% required), Phase 2C @ T+77 (≥80% required)
 - NFR7: Source attribution accuracy shall be 95%+ (correct document, page, section references)
 - NFR8: Hallucination rate shall be <5% (fabricated or incorrect information)
 - NFR9: Table extraction accuracy shall be 95%+ for financial tables with complex structures

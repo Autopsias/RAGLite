@@ -1,0 +1,1189 @@
+# Section 1: Pages 1-20 Data Inventory
+# SECIL Consolidated Performance Review - August 2025
+# Comprehensive ground truth creation inventory
+
+section_id: 1
+pages: [1, 20]
+reviewer: "Claude Code"
+review_date: "2025-10-26"
+status: "complete"
+report_period: "August 2025"
+report_title: "SECIL Consolidated Performance Review"
+
+# Table Inventory
+tables:
+  # PAGE 4: Health & Safety KPI's
+  - id: "table_1"
+    page: 4
+    type: "traditional"
+    caption: "Secil - Secil Group - Health & Safety KPI's (Frequency Ratio)"
+    row_count: 13
+    col_count: 6
+    metrics:
+      - name: "Frequency Ratio"
+        unit: "injuries per 1M hours"
+        format: "decimal"
+        definition: "Number of Lost Time Injuries × 1,000,000 / Total Manhours Worked"
+    entities:
+      - "Group"
+      - "Portugal"
+      - "Angola"
+      - "Tunisia"
+      - "Lebanon"
+      - "Brazil"
+    periods:
+      - "Jan-25"
+      - "Feb-25"
+      - "Mar-25"
+      - "Apr-25"
+      - "May-25"
+      - "Jun-25"
+      - "Jul-25"
+      - "Aug-25"
+      - "YTD 2025"
+      - "Last 12 Months"
+      - "FY 2024"
+      - "FY 2023"
+      - "Bdg 2025"
+    notes: "Safety metrics with monthly breakdown and full year comparisons"
+    structure_type: "monthly_time_series"
+
+  # PAGE 5: Currency Exchange Impact
+  - id: "table_2"
+    page: 5
+    type: "traditional"
+    caption: "Secil - Currency Exchange Impact (YTD vs Budget vs LY)"
+    row_count: 4
+    col_count: 28
+    metrics:
+      - name: "Turnover Impact"
+        unit: "M EUR"
+        format: "decimal"
+      - name: "EBITDA IFRS Impact"
+        unit: "M EUR"
+        format: "decimal"
+      - name: "Net Income Impact"
+        unit: "M EUR"
+        format: "decimal"
+      - name: "Net Debt Impact"
+        unit: "M EUR"
+        format: "decimal"
+    entities:
+      - "Portugal"
+      - "Angola"
+      - "Tunisia"
+      - "Lebanon"
+      - "Brazil"
+    periods:
+      - "YTD Aug-25"
+    notes: "Multi-currency exchange rate impacts on financial metrics. Includes exchange rates vs Real, Budget, LY"
+    structure_type: "complex_multi_column"
+
+  # PAGE 6-7: Main Financial Indicators
+  - id: "table_3"
+    page: 6
+    type: "traditional"
+    caption: "Secil - Main Financial Indicators (YTD vs Budget vs LY)"
+    row_count: 31
+    col_count: 8
+    metrics:
+      - name: "Turnover"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "EBITDA IFRS"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "EBIT"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "Net Income ATT sh"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "Net Debt Variation"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "Net Debt"
+        unit: "1000 EUR"
+        format: "integer"
+    entities:
+      - "Portugal"
+      - "Angola"
+      - "Tunisia"
+      - "Lebanon"
+      - "Brazil"
+      - "Other"
+      - "Intercompany Eliminations"
+      - "Group Total"
+    periods:
+      - "Aug-25 (Month)"
+      - "B Aug-25 (Budget)"
+      - "Aug-24 (LY)"
+      - "YTD Aug-25"
+      - "YTD Budget"
+      - "YTD LY"
+    notes: "Core financial metrics with monthly and YTD comparisons vs budget and last year"
+    structure_type: "hierarchical_geographic"
+
+  # PAGE 8: EBITDA Monthly Evolution
+  - id: "table_4"
+    page: 8
+    type: "traditional"
+    caption: "Secil - EBITDA IFRS - Monthly Evolution (YTD vs Budget vs LY)"
+    row_count: 12
+    col_count: 24
+    metrics:
+      - name: "EBITDA IFRS"
+        unit: "1000 EUR"
+        format: "integer"
+    entities:
+      - "Secil Group"
+      - "Portugal"
+      - "Angola"
+      - "Tunisia"
+      - "Lebanon"
+      - "Brazil"
+      - "Group Structure"
+      - "Others"
+    periods:
+      - "Jan"
+      - "Feb"
+      - "Mar"
+      - "Apr"
+      - "May"
+      - "Jun"
+      - "Jul"
+      - "Aug"
+      - "Sep"
+      - "Oct"
+      - "Nov"
+      - "Dec"
+      - "Total YTD Aug"
+      - "Total YTD +1"
+      - "Total FY"
+    tracking: "YTD, YTD+1, Full Year"
+    notes: "Monthly EBITDA evolution with YTD and full year forecasts across all business units"
+    structure_type: "monthly_evolution"
+
+  # PAGE 9-11: P&L Statement
+  - id: "table_5"
+    page: 9
+    type: "traditional"
+    caption: "Secil - P&L (YTD vs Budget vs LY)"
+    row_count: 32
+    col_count: 5
+    metrics:
+      - name: "EBITDA IFRS"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "Amortization and Depreciation"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "EBIT"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "Financial Result"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "Tax"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "Net Income attributable to Shareholders"
+        unit: "1000 EUR"
+        format: "integer"
+    entities:
+      - "Portugal"
+      - "Angola"
+      - "Tunisia"
+      - "Lebanon"
+      - "Brazil"
+      - "Group Structure"
+    periods:
+      - "Aug-25"
+      - "B Aug-25"
+      - "Aug-24"
+      - "YTD Aug-25"
+      - "YTD Budget"
+      - "YTD LY"
+    notes: "Full P&L from EBITDA through net income with geographic breakdown"
+    structure_type: "income_statement"
+
+  # PAGE 10: P&L Detail (Cost Breakdown)
+  - id: "table_6"
+    page: 10
+    type: "traditional"
+    caption: "Secil - P&L Detail (YTD vs Budget vs LY) - Cost Components"
+    row_count: 35
+    col_count: 5
+    metrics:
+      - name: "Turnover"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "COGS"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "Supplies & Services"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "Employee Costs"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "Other Operating Costs"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "Production Variance"
+        unit: "1000 EUR"
+        format: "integer"
+    entities:
+      - "Portugal"
+      - "Angola"
+      - "Tunisia"
+      - "Lebanon"
+      - "Brazil"
+      - "Group Structure"
+    periods:
+      - "Aug-25"
+      - "B Aug-25"
+      - "Aug-24"
+      - "YTD Aug-25"
+      - "YTD Budget"
+      - "YTD LY"
+    notes: "P&L with detailed cost components and operating metrics"
+    structure_type: "cost_analysis"
+
+  # PAGE 11: Cash Flow and Net Debt
+  - id: "table_7"
+    page: 11
+    type: "traditional"
+    caption: "Secil - Cash Flow - Net Debt Variation (YTD vs Budget vs LY)"
+    row_count: 10
+    col_count: 8
+    metrics:
+      - name: "All-in cost Bank Debt Contracted"
+        unit: "%"
+        format: "decimal"
+      - name: "All-in cost Bank Debt Used"
+        unit: "%"
+        format: "decimal"
+      - name: "Average Budget 2025"
+        unit: "M EUR"
+        format: "integer"
+      - name: "Net Debt/EBITDA Ratio"
+        unit: "ratio"
+        format: "decimal"
+    entities:
+      - "Portugal"
+      - "Tunisia"
+      - "Lebanon"
+      - "Angola"
+      - "Brazil"
+    periods:
+      - "Actual"
+      - "Budget"
+      - "Real 2024"
+    notes: "Debt facilities and financing costs with available liquidity tracking"
+    structure_type: "treasury"
+
+  # PAGE 13-14: Turnover Detail
+  - id: "table_8"
+    page: 14
+    type: "traditional"
+    caption: "Secil - Turnover (YTD vs Budget vs LY) - Business Segment Breakdown"
+    row_count: 45
+    col_count: 8
+    metrics:
+      - name: "Turnover"
+        unit: "1000 EUR"
+        format: "integer"
+    entities:
+      - "Portugal Cement"
+      - "Portugal Madeira"
+      - "Portugal Cape Verde"
+      - "Portugal Nederland"
+      - "Portugal Spain"
+      - "Portugal Ready Mix"
+      - "Portugal Aggregates"
+      - "Portugal Mortars"
+      - "Portugal Bags"
+      - "Angola Cement"
+      - "Tunisia Cement"
+      - "Tunisia Ready Mix"
+      - "Lebanon Cement"
+      - "Lebanon Ready Mix"
+      - "Lebanon Precast"
+      - "Brazil Cement"
+      - "Brazil Ready Mix"
+      - "Trading"
+      - "Group Structure"
+    periods:
+      - "Aug-25"
+      - "B Aug-25"
+      - "Aug-24"
+      - "YTD Aug-25"
+      - "YTD Budget"
+      - "YTD LY"
+    notes: "Detailed revenue by business segment and geography"
+    structure_type: "hierarchical_product"
+
+  # PAGE 15: EBITDA Detail
+  - id: "table_9"
+    page: 15
+    type: "traditional"
+    caption: "Secil - EBITDA IFRS (YTD vs Budget vs LY) - Business Segment Breakdown"
+    row_count: 50
+    col_count: 8
+    metrics:
+      - name: "EBITDA IFRS"
+        unit: "1000 EUR"
+        format: "integer"
+    entities:
+      - "Portugal Cement"
+      - "Portugal Ready Mix"
+      - "Portugal Aggregates"
+      - "Portugal Mortars"
+      - "Portugal Bags"
+      - "Angola Cement"
+      - "Tunisia Cement"
+      - "Tunisia Ready Mix"
+      - "Lebanon Cement"
+      - "Lebanon Ready Mix"
+      - "Lebanon Precast"
+      - "Brazil Cement"
+      - "Brazil Ready Mix"
+      - "Corporate Functions"
+      - "Trading"
+    periods:
+      - "Aug-25"
+      - "B Aug-25"
+      - "Aug-24"
+      - "YTD Aug-25"
+      - "YTD Budget"
+      - "YTD LY"
+    notes: "EBITDA by business segment with profitability analysis"
+    structure_type: "hierarchical_product"
+
+  # PAGE 16: Headcount Evolution
+  - id: "table_10"
+    page: 16
+    type: "traditional"
+    caption: "Secil - Headcount Evolution (YTD vs Budget vs LY)"
+    row_count: 50
+    col_count: 15
+    metrics:
+      - name: "Headcount"
+        unit: "employees"
+        format: "integer"
+    entities:
+      - "Portugal"
+      - "Angola"
+      - "Tunisia"
+      - "Lebanon"
+      - "Brazil"
+      - "Corporate"
+    periods:
+      - "FY 2020"
+      - "FY 2021"
+      - "FY 2022"
+      - "FY 2023"
+      - "FY 2024"
+      - "Jan-25"
+      - "Feb-25"
+      - "Mar-25"
+      - "Apr-25"
+      - "May-25"
+      - "Jun-25"
+      - "Jul-25"
+      - "Aug-25"
+      - "Aug Actual 2025"
+      - "Aug Dez Budget"
+    notes: "Historical headcount trends with 2025 monthly tracking"
+    structure_type: "personnel_tracking"
+
+  # PAGE 17-18: CAPEX Analysis
+  - id: "table_11"
+    page: 17
+    type: "traditional"
+    caption: "Secil - CAPEX TOTAL (YTD vs Budget vs LY)"
+    row_count: 35
+    col_count: 8
+    metrics:
+      - name: "CAPEX"
+        unit: "1000 EUR"
+        format: "integer"
+    entities:
+      - "Portugal"
+      - "Angola"
+      - "Tunisia"
+      - "Lebanon"
+      - "Brazil"
+    periods:
+      - "Aug-25"
+      - "B Aug-25"
+      - "Aug-24"
+      - "YTD Aug-25"
+      - "YTD Budget"
+      - "YTD LY"
+    notes: "Capital expenditure tracking by geography"
+    structure_type: "capex_analysis"
+
+  # PAGE 18-19: CAPEX by Type
+  - id: "table_12"
+    page: 18
+    type: "traditional"
+    caption: "Secil - CAPEX TOTAL (ACTUAL & BUDGET) PER TYPE - Sustaining vs Development"
+    row_count: 30
+    col_count: 4
+    metrics:
+      - name: "CAPEX Sustaining"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "CAPEX Development"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "CAPEX IFRS 16"
+        unit: "1000 EUR"
+        format: "integer"
+      - name: "CAPEX Total"
+        unit: "1000 EUR"
+        format: "integer"
+    entities:
+      - "Portugal"
+      - "Angola"
+      - "Tunisia"
+      - "Lebanon"
+      - "Brazil"
+    capex_types:
+      - "Sustaining Capital"
+      - "Development Capital"
+      - "IFRS 16 Leases"
+    notes: "Capital expenditure breakdown by strategic type"
+    structure_type: "capex_type_analysis"
+
+  # PAGE 20: Cost per Ton Analysis (TRANSPOSED TABLE)
+  - id: "table_13"
+    page: 20
+    type: "transposed"
+    caption: "Secil - Cost per ton (YTD vs Budget vs LY)"
+    row_count: 26
+    col_count: 12
+    metrics:
+      - name: "Sales Volumes"
+        unit: "kton"
+        format: "integer"
+        position: "row_label"
+      - name: "Sales Price-Transport Cost"
+        unit: "EUR/ton"
+        format: "decimal"
+        position: "row_label"
+      - name: "Variable Cost"
+        unit: "EUR/ton"
+        format: "decimal"
+        position: "row_label"
+      - name: "Thermal Energy"
+        unit: "EUR/ton"
+        format: "decimal"
+        position: "row_label"
+      - name: "Electrical Energy"
+        unit: "EUR/ton"
+        format: "decimal"
+        position: "row_label"
+      - name: "Fixed Costs"
+        unit: "EUR/ton"
+        format: "decimal"
+        position: "row_label"
+      - name: "Employee Costs"
+        unit: "EUR/ton"
+        format: "decimal"
+        position: "row_label"
+      - name: "Cement Unit EBITDA"
+        unit: "EUR/ton"
+        format: "decimal"
+        position: "row_label"
+    entities:
+      - "Portugal"
+      - "Tunisia"
+      - "Lebanon"
+      - "Brazil"
+    periods:
+      - "Aug-25"
+      - "B Aug-25"
+      - "Aug-24"
+    column_headers_are_entities: true
+    row_headers_are_metrics: true
+    notes: "TRANSPOSED TABLE: Metrics are row labels, entities are column headers. Data in EUR/ton and LCU/ton"
+    structure_type: "transposed_cost_analysis"
+    extraction_difficulty: "high"
+    phase_requirement: "Phase 2.7"
+
+# Sample Data Values (15 key values for ground truth validation)
+sample_values:
+  # Health & Safety
+  - id: "SV001"
+    entity: "Group"
+    metric: "Frequency Ratio"
+    period: "Aug-25"
+    value: 4.20
+    unit: "injuries per 1M hours"
+    page: 4
+    table_id: "table_1"
+    row_label: "Aug-25"
+    column_name: "Group"
+    source_cell: "B4"
+    extraction_confidence: "high"
+    notes: "YTD Group safety metric - main consolidation"
+
+  - id: "SV002"
+    entity: "Portugal"
+    metric: "Frequency Ratio"
+    period: "YTD 2025"
+    value: 8.55
+    unit: "injuries per 1M hours"
+    page: 4
+    table_id: "table_1"
+    row_label: "YTD 2025"
+    column_name: "Portugal"
+    source_cell: "B12"
+    extraction_confidence: "high"
+    notes: "Portugal YTD 2025 safety performance"
+
+  # Financial Metrics
+  - id: "SV003"
+    entity: "Portugal"
+    metric: "Turnover"
+    period: "Aug-25"
+    value: 312249
+    unit: "1000 EUR"
+    page: 6
+    table_id: "table_3"
+    row_label: "Portugal"
+    column_name: "YTD Aug-25"
+    source_cell: "C4"
+    extraction_confidence: "high"
+    notes: "Portugal YTD revenue 312.2 M EUR"
+
+  - id: "SV004"
+    entity: "Group"
+    metric: "EBITDA IFRS"
+    period: "Aug-25"
+    value: 128825
+    unit: "1000 EUR"
+    page: 6
+    table_id: "table_3"
+    row_label: "EBITDA IFRS (Group)"
+    column_name: "YTD Aug-25"
+    source_cell: "C16"
+    extraction_confidence: "high"
+    notes: "Consolidated EBITDA YTD 128.8 M EUR, +27.8% vs LY"
+
+  - id: "SV005"
+    entity: "Tunisia"
+    metric: "EBITDA IFRS"
+    period: "Aug-25"
+    value: 8220
+    unit: "1000 EUR"
+    page: 6
+    table_id: "table_3"
+    row_label: "Tunisia"
+    column_name: "YTD Aug-25"
+    source_cell: "C20"
+    extraction_confidence: "high"
+    notes: "Tunisia EBITDA 8.2 M EUR, +46% vs LY"
+
+  - id: "SV006"
+    entity: "Brazil"
+    metric: "Net Income ATT sh"
+    period: "Aug-25"
+    value: 4220
+    unit: "1000 EUR"
+    page: 9
+    table_id: "table_5"
+    row_label: "Brazil"
+    column_name: "YTD Aug-25"
+    source_cell: "C26"
+    extraction_confidence: "high"
+    notes: "Brazil net income 4.2 M EUR"
+
+  - id: "SV007"
+    entity: "Group"
+    metric: "Net Debt"
+    period: "Aug-25"
+    value: 344449
+    unit: "1000 EUR"
+    page: 6
+    table_id: "table_3"
+    row_label: "Net Debt"
+    column_name: "YTD Aug-25"
+    source_cell: "C31"
+    extraction_confidence: "high"
+    notes: "Consolidated net debt 344.4 M EUR, flat vs LY"
+
+  # Turnover Detail
+  - id: "SV008"
+    entity: "Portugal Cement"
+    metric: "Turnover"
+    period: "Aug-25"
+    value: 175948
+    unit: "1000 EUR"
+    page: 14
+    table_id: "table_8"
+    row_label: "Portugal Cement"
+    column_name: "YTD Aug-25"
+    source_cell: "C5"
+    extraction_confidence: "high"
+    notes: "Portugal Cement YTD revenue 175.9 M EUR, +1% vs LY"
+
+  - id: "SV009"
+    entity: "Lebanon Cement"
+    metric: "Turnover"
+    period: "Aug-25"
+    value: 38782
+    unit: "1000 EUR"
+    page: 14
+    table_id: "table_8"
+    row_label: "Lebanon Cement"
+    column_name: "YTD Aug-25"
+    source_cell: "C34"
+    extraction_confidence: "high"
+    notes: "Lebanon Cement revenue 38.8 M EUR, +32% vs LY"
+
+  # Cost per Ton (TRANSPOSED TABLE - Page 20)
+  - id: "SV010"
+    entity: "Portugal"
+    metric: "Sales Volumes"
+    period: "Aug-25"
+    value: 1381
+    unit: "kton"
+    page: 20
+    table_id: "table_13"
+    row_label: "Sales Volumes"
+    column_name: "Portugal Aug-25"
+    source_cell: "B1"
+    extraction_confidence: "high"
+    transposed_table: true
+    notes: "TRANSPOSED: Portugal cement sales 1,381 kton in Aug-25"
+
+  - id: "SV011"
+    entity: "Portugal"
+    metric: "Variable Cost"
+    period: "Aug-25"
+    value: -23.4
+    unit: "EUR/ton"
+    page: 20
+    table_id: "table_13"
+    row_label: "Variable Cost"
+    column_name: "Portugal Aug-25"
+    source_cell: "B6"
+    extraction_confidence: "high"
+    transposed_table: true
+    notes: "TRANSPOSED: Portugal variable cost EUR -23.4/ton (Aug-25 actual)"
+
+  - id: "SV012"
+    entity: "Tunisia"
+    metric: "Variable Cost"
+    period: "Aug-25"
+    value: -29.1
+    unit: "EUR/ton"
+    page: 20
+    table_id: "table_13"
+    row_label: "Variable Cost"
+    column_name: "Tunisia Aug-25"
+    source_cell: "C6"
+    extraction_confidence: "high"
+    transposed_table: true
+    notes: "TRANSPOSED: Tunisia variable cost EUR -29.1/ton (5.7 EUR/ton higher than Portugal)"
+
+  - id: "SV013"
+    entity: "Lebanon"
+    metric: "Thermal Energy"
+    period: "Aug-25"
+    value: -9.7
+    unit: "EUR/ton"
+    page: 20
+    table_id: "table_13"
+    row_label: "Thermal Energy"
+    column_name: "Lebanon Aug-25"
+    source_cell: "D9"
+    extraction_confidence: "high"
+    transposed_table: true
+    notes: "TRANSPOSED: Lebanon thermal energy cost EUR -9.7/ton"
+
+  - id: "SV014"
+    entity: "Brazil"
+    metric: "Cement Unit EBITDA"
+    period: "Aug-25"
+    value: 25.1
+    unit: "EUR/ton"
+    page: 20
+    table_id: "table_13"
+    row_label: "Cement Unit Ebitda"
+    column_name: "Brazil Aug-25"
+    source_cell: "E18"
+    extraction_confidence: "high"
+    transposed_table: true
+    notes: "TRANSPOSED: Brazil cement EBITDA EUR 25.1/ton"
+
+  - id: "SV015"
+    entity: "Tunisia"
+    metric: "Fixed Costs"
+    period: "Budget"
+    value: -16.6
+    unit: "EUR/ton"
+    page: 20
+    table_id: "table_13"
+    row_label: "Fixed Costs"
+    column_name: "Tunisia B Aug-25"
+    source_cell: "C11"
+    extraction_confidence: "high"
+    transposed_table: true
+    notes: "TRANSPOSED: Tunisia fixed cost budget EUR -16.6/ton"
+
+# Ground Truth Query Ideas (10 comprehensive queries)
+ground_truth_queries:
+  # Point Queries (Single Value Retrieval)
+  - id: "Q001"
+    category: "point"
+    difficulty: "easy"
+    query: "What is the YTD EBITDA for Portugal in August 2025?"
+    expected_answer:
+      type: "numeric_with_unit"
+      value: 104647
+      value_formatted: "104.6"
+      unit: "M EUR"
+      entity: "Portugal"
+      metric: "EBITDA IFRS"
+      period: "YTD August 2025"
+    expected_sources:
+      pages: [6]
+      tables: ["Main Financial Indicators"]
+    validation_criteria:
+      value_tolerance: 100  # ±100k EUR
+      require_unit: true
+      require_entity: true
+      require_period: true
+    common_errors:
+      - "Returning August month value (11.442) instead of YTD"
+      - "Returning budget value (108.942) instead of actual"
+      - "Confusing with other entities"
+    answer_quality_metric: "direct_numeric_answer_with_source"
+
+  - id: "Q002"
+    category: "point"
+    difficulty: "easy"
+    query: "What is the variable cost per ton for Tunisia in August 2025?"
+    expected_answer:
+      type: "numeric_with_unit"
+      value: -29.1
+      unit: "EUR/ton"
+      entity: "Tunisia"
+      metric: "Variable Cost"
+      period: "August 2025"
+    expected_sources:
+      pages: [20]
+      tables: ["Cost per ton (TRANSPOSED)"]
+    validation_criteria:
+      value_tolerance: 0.1  # ±0.1 EUR/ton
+      require_unit: true
+      require_entity: true
+    common_errors:
+      - "Wrong entity (Portugal -23.4 instead of Tunisia -29.1)"
+      - "Wrong row (fixed costs instead of variable costs)"
+      - "Confusing budget vs actual"
+      - "Not detecting transposed table structure"
+    answer_quality_metric: "metric_extraction_from_transposed"
+    phase_requirement: "Phase 2.7"
+
+  - id: "Q003"
+    category: "point"
+    difficulty: "medium"
+    query: "What is the Group frequency ratio for workplace safety in YTD 2025?"
+    expected_answer:
+      type: "numeric_with_unit"
+      value: 6.35
+      unit: "injuries per 1M hours"
+      entity: "Group"
+      metric: "Frequency Ratio"
+      period: "YTD 2025"
+    expected_sources:
+      pages: [4]
+      tables: ["Health & Safety KPI's"]
+    validation_criteria:
+      value_tolerance: 0.05
+      require_unit: true
+      require_context: "YTD vs month-only"
+    common_errors:
+      - "Returning August month value (4.20) instead of YTD"
+      - "Returning budget value (3.80) instead of YTD actual"
+      - "Misunderstanding the metric definition"
+
+  # Comparison Queries
+  - id: "Q004"
+    category: "comparison"
+    difficulty: "medium"
+    query: "Compare the variable costs between Portugal and Tunisia in August 2025"
+    expected_answer:
+      type: "comparison"
+      values:
+        portugal: {value: -23.4, unit: "EUR/ton"}
+        tunisia: {value: -29.1, unit: "EUR/ton"}
+      comparison: "Tunisia has 5.7 EUR/ton higher variable costs (worse performance) than Portugal"
+      delta: -5.7
+      delta_pct: -24.4
+      winner: "portugal"  # Lower costs = better
+    expected_sources:
+      pages: [20]
+      tables: ["Cost per ton (TRANSPOSED)"]
+    validation_criteria:
+      both_values_required: true
+      comparison_direction_required: true
+      require_interpretation: true
+    common_errors:
+      - "Reporting only one value instead of both"
+      - "Wrong comparison direction (Portugal worse than Tunisia)"
+      - "Confusing absolute vs relative values"
+      - "Extracting wrong period or row"
+    answer_quality_metric: "comparative_analysis"
+
+  - id: "Q005"
+    category: "comparison"
+    difficulty: "medium"
+    query: "Which geographic region had the highest EBITDA in August 2025? (Portugal, Angola, Tunisia, Lebanon, Brazil)"
+    expected_answer:
+      type: "comparison"
+      values:
+        portugal: {value: 104.6, unit: "M EUR"}
+        brazil: {value: 26.9, unit: "M EUR"}
+        tunisia: {value: 8.2, unit: "M EUR"}
+        lebanon: {value: 1.9, unit: "M EUR"}
+        angola: {value: 0.3, unit: "M EUR"}
+      ranking: ["Portugal (104.6)", "Brazil (26.9)", "Tunisia (8.2)", "Lebanon (1.9)", "Angola (0.3)"]
+      winner: "Portugal"
+    expected_sources:
+      pages: [6, 7]
+      tables: ["Main Financial Indicators"]
+    validation_criteria:
+      ranking_required: true
+      all_entities_required: true
+      correct_order: true
+    common_errors:
+      - "Incomplete ranking (missing entities)"
+      - "Using monthly instead of YTD data"
+      - "Confusing with other metrics (turnover, net income)"
+      - "Using budget data instead of actual"
+
+  # Budget vs Actual Queries
+  - id: "Q006"
+    category: "budget_variance"
+    difficulty: "medium"
+    query: "How did Portugal's YTD EBITDA in August 2025 compare to budget?"
+    expected_answer:
+      type: "budget_variance"
+      actual: {value: 104.6, unit: "M EUR"}
+      budget: {value: 108.9, unit: "M EUR"}
+      variance: -4.3  # Negative = worse than budget
+      variance_pct: -3.9
+      performance: "worse"  # worse | better | on_target
+      variance_direction: "unfavorable"
+    expected_sources:
+      pages: [6]
+      tables: ["Main Financial Indicators"]
+    validation_criteria:
+      actual_required: true
+      budget_required: true
+      variance_required: true
+      performance_assessment_required: true
+    common_errors:
+      - "Wrong variance sign"
+      - "Confusing absolute values"
+      - "Not understanding 'worse than budget' terminology"
+      - "Using wrong column (LY instead of Budget)"
+
+  - id: "Q007"
+    category: "budget_variance"
+    difficulty: "medium"
+    query: "What is the variance between actual and budgeted variable costs for Brazil per ton in August 2025?"
+    expected_answer:
+      type: "budget_variance"
+      actual: {value: -20.7, unit: "EUR/ton"}
+      budget: {value: -22.0, unit: "EUR/ton"}
+      variance: 1.3  # Positive = better (lower cost)
+      variance_pct: 5.9
+      performance: "better"
+    expected_sources:
+      pages: [20]
+      tables: ["Cost per ton (TRANSPOSED)"]
+    validation_criteria:
+      actual_budget_comparison: true
+      interpretation_required: true
+    common_errors:
+      - "Wrong row extraction"
+      - "Wrong entity"
+      - "Variance direction confusion"
+    phase_requirement: "Phase 2.7"
+
+  # Trend Queries
+  - id: "Q008"
+    category: "trend"
+    difficulty: "hard"
+    query: "What is the trend of Group EBITDA across August 2024, August 2025 actual, and August 2025 budget?"
+    expected_answer:
+      type: "trend_comparison"
+      values:
+        aug_2024_actual: {value: 11.818, unit: "M EUR"}
+        aug_2025_budget: {value: 14.918, unit: "M EUR"}
+        aug_2025_actual: {value: 15.693, unit: "M EUR"}
+      trend: "increasing"
+      growth_2024_to_2025: "32.8%"
+      performance_vs_budget: "beat by 5.2%"
+      interpretation: "Strong growth: YoY +33%, ahead of budget targets"
+    expected_sources:
+      pages: [6]
+      tables: ["Main Financial Indicators"]
+    validation_criteria:
+      three_point_comparison: true
+      growth_calculation: true
+      contextual_interpretation: true
+    common_errors:
+      - "Confusing month vs YTD"
+      - "Using wrong comparisons"
+      - "Incorrect percentage calculations"
+
+  - id: "Q009"
+    category: "calculation"
+    difficulty: "hard"
+    query: "What is the August 2025 EBITDA margin (EBITDA/Turnover %) for the Group?"
+    expected_answer:
+      type: "calculated_metric"
+      numerator: 15.693
+      denominator: 59.522
+      value: 26.4
+      unit: "%"
+      metric: "EBITDA Margin"
+      period: "August 2025"
+    expected_sources:
+      pages: [6, 7]
+      tables: ["Main Financial Indicators"]
+    validation_criteria:
+      calculation_required: true
+      value_tolerance: 0.1  # ±0.1 percentage point
+      formula_understanding: true
+    common_errors:
+      - "Confusing numerator/denominator"
+      - "Using YTD instead of monthly data"
+      - "Wrong data extraction"
+      - "Percentage calculation errors"
+
+  # Complex Multi-Table Query
+  - id: "Q010"
+    category: "multi_table_synthesis"
+    difficulty: "hard"
+    query: "Based on EBITDA and headcount data, which region has the best EBITDA per employee efficiency in August 2025?"
+    expected_answer:
+      type: "multi_metric_analysis"
+      calculations:
+        portugal: {ebitda: 11.442, headcount: 1164, ebitda_per_emp: "9.83 K EUR"}
+        brazil: {ebitda: 3.020, headcount: 577, ebitda_per_emp: "5.23 K EUR"}
+        tunisia: {ebitda: 1.642, headcount: 536, ebitda_per_emp: "3.06 K EUR"}
+        lebanon: {ebitda: 0.479, headcount: 437, ebitda_per_emp: "1.10 K EUR"}
+        angola: {ebitda: 0.120, headcount: 83, ebitda_per_emp: "1.45 K EUR"}
+      ranking: ["Portugal (9.83)", "Brazil (5.23)", "Tunisia (3.06)", "Angola (1.45)", "Lebanon (1.10)"]
+      winner: "Portugal"
+    expected_sources:
+      pages: [6, 16]
+      tables: ["Main Financial Indicators", "Headcount Evolution"]
+    validation_criteria:
+      multi_table_required: true
+      calculation_required: true
+      data_integration: true
+    common_errors:
+      - "Using only single metric without cross-reference"
+      - "Headcount from wrong period"
+      - "Calculation errors in ratios"
+      - "Missing or incomplete comparisons"
+    answer_quality_metric: "cross_metric_synthesis"
+
+# Section Insights & Patterns
+insights:
+  - type: "table_pattern"
+    observation: "Pages 1-19 use traditional tables (entities in rows, metrics in columns)"
+    impact: "Standard Phase 2.6 extraction logic should work correctly"
+    confidence: "high"
+
+  - type: "table_pattern"
+    observation: "Page 20 is TRANSPOSED table (metrics in rows, entities in columns)"
+    impact: "Requires Phase 2.7 transposed table detection and special handling"
+    confidence: "high"
+    critical: true
+
+  - type: "data_quality"
+    observation: "All tables have clear headers, consistent formatting, and hierarchical structure"
+    impact: "High extraction confidence expected for traditional tables"
+    confidence: "high"
+
+  - type: "metric_coverage"
+    observation: "Section covers Health & Safety, Financial Performance, Operational Metrics, and Cost Analysis"
+    impact: "Comprehensive coverage for diverse query types"
+    confidence: "high"
+
+  - type: "currency_complexity"
+    observation: "Multi-currency data with exchange rate impacts tracked (EUR, AOA, TND, USD, BRL)"
+    impact: "Must properly identify currency codes and understand conversion impacts"
+    confidence: "medium"
+
+  - type: "hierarchical_structure"
+    observation: "Entities organized hierarchically (Consolidated → Region → Business Unit → Segment)"
+    impact: "Requires understanding of parent-child relationships in queries"
+    confidence: "high"
+
+  - type: "time_period_variety"
+    observation: "Multiple time period representations: Month, YTD, Budget, Last Year, Full Year Forecast"
+    impact: "Critical to disambiguate period from context in queries"
+    confidence: "medium"
+
+# Data Quality Issues Identified
+data_quality_issues:
+  - page: 5
+    issue: "Complex multi-column currency exchange impact table with many sub-columns"
+    severity: "medium"
+    impact: "May require careful column header parsing"
+    workaround: "Ensure column grouping logic handles nested headers"
+
+  - page: 20
+    issue: "TRANSPOSED table structure - metrics as row labels, entities as column headers"
+    severity: "high"
+    impact: "Standard Phase 2.6 extraction treats this as regular table, causing incorrect mapping"
+    workaround: "Phase 2.7 transposed detection and special extraction logic required"
+    critical: true
+
+  - page: 13
+    issue: "Health & Safety KPI table includes months with no data (shown as dashes)"
+    severity: "low"
+    impact: "May cause extraction of null/empty values"
+    workaround: "Proper handling of missing data markers (dashes, blanks)"
+
+  - pages: [14, 15]
+    issue: "Very detailed hierarchical breakdown with many child rows and intercompany eliminations"
+    severity: "low"
+    impact: "Large table may cause chunking issues if not properly managed"
+    workaround: "Table-aware chunking from Story 2.8 should handle this"
+
+  - page: 20
+    issue: "Dual presentation: EUR/ton and LCU/ton - same metrics in both currencies"
+    severity: "medium"
+    impact: "Must correctly identify which currency version is being queried"
+    workaround: "Metadata should clearly tag currency in both table instances"
+
+# Coverage Analysis
+coverage:
+  financial_metrics:
+    - "Turnover / Revenue"
+    - "EBITDA IFRS"
+    - "EBIT"
+    - "Net Income"
+    - "Net Debt"
+    - "Free Cash Flow"
+  operational_metrics:
+    - "Sales Volumes (kton)"
+    - "Headcount"
+    - "Health & Safety KPI (Frequency Ratio)"
+  cost_metrics:
+    - "Variable Cost per ton"
+    - "Fixed Cost per ton"
+    - "Thermal Energy Cost"
+    - "Electrical Energy Cost"
+    - "Employee Cost per ton"
+  profit_metrics:
+    - "Unit EBITDA per ton"
+    - "Gross Margin"
+    - "EBITDA Margin"
+    - "Net Margin"
+  capital_metrics:
+    - "CAPEX (Sustaining & Development)"
+    - "CAPEX per type"
+  entities:
+    - "Consolidation (Group Total)"
+    - "Portugal (Cement, Ready-Mix, Aggregates, Mortars, Bags)"
+    - "Angola (Cement)"
+    - "Tunisia (Cement, Ready-Mix)"
+    - "Lebanon (Cement, Ready-Mix, Precast)"
+    - "Brazil (Cement, Ready-Mix)"
+    - "Trading"
+    - "Group Structure"
+  periods:
+    - "August 2024 (Last Year Actual)"
+    - "August 2025 (Current Month Actual)"
+    - "August 2025 Budget"
+    - "YTD August 2024"
+    - "YTD August 2025"
+    - "YTD August 2025 Budget"
+    - "Full Year 2025 Forecast"
+    - "Historical (FY 2020-2024)"
+
+# Recommended Query Types for Validation
+recommended_queries:
+  - type: "point"
+    count: 3
+    difficulty: "easy"
+    coverage: "Direct single-value lookups testing basic extraction"
+    examples:
+      - "What is Group EBITDA in August 2025?"
+      - "What is Portugal's YTD turnover?"
+      - "What is Brazil variable cost per ton?"
+
+  - type: "comparison"
+    count: 2
+    difficulty: "medium"
+    coverage: "Multi-entity comparisons testing entity disambiguation"
+    examples:
+      - "Compare EBITDA between top 3 regions"
+      - "Which region has highest cost per ton?"
+
+  - type: "budget_variance"
+    count: 2
+    difficulty: "medium"
+    coverage: "Budget vs actual analysis testing period understanding"
+    examples:
+      - "How did actual vs budget EBITDA compare?"
+      - "What is the variance from target costs?"
+
+  - type: "trend"
+    count: 1
+    difficulty: "hard"
+    coverage: "Multi-period analysis testing time series understanding"
+    examples:
+      - "What's the EBITDA trend from Aug-24 to Aug-25?"
+
+  - type: "calculation"
+    count: 1
+    difficulty: "hard"
+    coverage: "Derived metrics testing calculation capability"
+    examples:
+      - "What is the EBITDA margin percentage?"
+
+  - type: "transposed"
+    count: 1
+    difficulty: "hard"
+    coverage: "Transposed table extraction from page 20"
+    examples:
+      - "What is Portugal's variable cost per ton in August 2025?"
+
+# Next Steps
+next_steps:
+  - "Review Section 2 (pages 21-40) - continue inventory"
+  - "Validate sample values by manual extraction from PDF"
+  - "Test Phase 2.6 extraction on pages 1-19 (should succeed)"
+  - "Test Phase 2.7 transposed detection on page 20 (will likely fail without Phase 2.7)"
+  - "Create ground truth query validation set from recommended queries"
+  - "Document extraction patterns for each table type"
+  - "Establish baseline accuracy metrics before Phase 2A implementation"
+
+# Metadata
+metadata:
+  total_tables_identified: 13
+  transposed_tables_found: 1
+  sample_values_extracted: 15
+  ground_truth_queries_proposed: 10
+  estimated_coverage_pct: 85
+  critical_issues_identified: 1  # Page 20 transposed table
+  phase_readiness:
+    phase_2_6: "READY - All tables 1-12 are traditional"
+    phase_2_7: "REQUIRED - Table 13 (page 20) is transposed"
+    overall: "PHASE_2.6_READY_FOR_PAGES_1-19_ONLY"

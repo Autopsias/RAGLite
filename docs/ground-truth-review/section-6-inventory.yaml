@@ -1,0 +1,2032 @@
+# Section 6 - Pages 101-120: Tunisia Operations Performance & Lebanon Review
+# Data Inventory for Ground Truth Creation
+# Report Period: August 2025
+# Document: SECIL Performance Review - Back Up Tunisia & Lebanon
+
+section_metadata:
+  section_number: 6
+  pages: "101-120"
+  report_title: "SECIL Performance Review - Tunisia & Lebanon Operations"
+  report_period: "August 2025"
+  currency_primary: "TND (Tunisian Dinar)"
+  currency_secondary: "USD (Lebanese Operations)"
+  entity_type: "Multi-regional Cement & Materials Company"
+
+# ============================================================================
+# TABLE 1: Tunisia Materials - Ready Mix (YTD vs Budget vs LY)
+# ============================================================================
+tables:
+  - table_id: "TN-1"
+    table_name: "Secil - Tunisia - Operational Performance - Tunisia Materials (YTD vs Budget vs LY)"
+    pages: "101"
+    currency: "1000 TND"
+    product_line: "Ready Mix Concrete"
+    comparison_type: "Month vs YTD / Budget / Prior Year"
+
+    structure:
+      rows: 15
+      columns: 10
+      layout: "Two-column dual comparison (Month | YTD)"
+      transposed: false
+
+    metrics_by_category:
+      volume_metrics:
+        - metric: "Volume"
+          unit: "m3"
+          month_value: 8
+          budget_month: 10
+          prior_year_month: 8
+          ytd_value: 68
+          budget_ytd: 74
+          prior_year_ytd: 59
+          variance_pct: "-8% (YTD vs Budget)"
+
+      pricing_metrics:
+        - metric: "Price - TND/m3"
+          unit: "TND/m3"
+          month_value: 189.4
+          budget_month: 186.3
+          prior_year_month: 181.9
+          ytd_value: 185.9
+          budget_ytd: 185.2
+          prior_year_ytd: 183.9
+          variance_pct: "0% (YTD vs Budget)"
+
+        - metric: "Price - Transport Cost"
+          unit: "TND/m3"
+          month_value: 189.4
+          budget_month: 186.3
+          prior_year_month: 181.9
+          ytd_value: 185.9
+          budget_ytd: 185.2
+          prior_year_ytd: 183.9
+          variance_pct: "0% (YTD vs Budget)"
+
+      cost_metrics:
+        - metric: "Variable Costs"
+          unit: "TND/m3"
+          month_value: 144.2
+          budget_month: 135.6
+          prior_year_month: 131.1
+          ytd_value: 135.1
+          budget_ytd: 135.5
+          prior_year_ytd: 132.6
+          variance_pct: "-0% (YTD vs Budget)"
+
+        - metric: "Unit margin"
+          unit: "TND/m3"
+          month_value: 45.1
+          budget_month: 50.7
+          prior_year_month: 50.8
+          ytd_value: 50.8
+          budget_ytd: 49.8
+          prior_year_ytd: 51.3
+          variance_pct: "2% (YTD vs Budget)"
+
+      financial_metrics:
+        - metric: "Variable contribution"
+          unit: "1000 TND"
+          month_value: 369
+          budget_month: 507
+          prior_year_month: 410
+          ytd_value: 3459
+          budget_ytd: 3699
+          prior_year_ytd: 3033
+          variance_pct: "-6% (YTD vs Budget)"
+
+        - metric: "Fixed Costs"
+          unit: "1000 TND"
+          month_value: -541
+          budget_month: -481
+          prior_year_month: -493
+          ytd_value: -3681
+          budget_ytd: -3720
+          prior_year_ytd: -3538
+          variance_pct: "-1% (YTD vs Budget)"
+
+        - metric: "EBITDA IFRS"
+          unit: "1000 TND"
+          month_value: -131
+          budget_month: 79
+          prior_year_month: -23
+          ytd_value: 188
+          budget_ytd: 395
+          prior_year_ytd: -17
+          variance_pct: "-52% (YTD vs Budget)"
+
+        - metric: "EBITDA IFRS Margin"
+          unit: "%"
+          month_value: -8
+          budget_month: 4
+          prior_year_month: -2
+          ytd_value: 1
+          budget_ytd: 3
+          prior_year_ytd: -0
+          variance_pct: "-1.4 pp (YTD vs Budget)"
+
+# ============================================================================
+# TABLE 2: Tunisia G&A and Others (YTD vs Budget vs LY)
+# ============================================================================
+  - table_id: "TN-2"
+    table_name: "Secil - Tunisia - Operational Performance - Tunisia Others and G&A"
+    pages: "102"
+    currency: "1000 TND"
+    business_unit: "General & Administrative"
+    comparison_type: "Month vs YTD / Budget / Prior Year"
+
+    structure:
+      rows: 25
+      columns: 10
+      layout: "Two-part table (G&A Main + Corporate Costs)"
+      transposed: false
+
+    metrics_by_category:
+      ga_revenue_costs:
+        - metric: "Revenue"
+          unit: "1000 TND"
+          month_value: -80
+          budget_month: 59
+          prior_year_month: 3345
+          ytd_value: 179
+          budget_ytd: 476
+          prior_year_ytd: 10345
+          variance_pct: "-62% (YTD vs Budget)"
+
+        - metric: "Employees"
+          unit: "1000 TND"
+          month_value: -1020
+          budget_month: -684
+          prior_year_month: -711
+          ytd_value: -7602
+          budget_ytd: -7040
+          prior_year_ytd: -6135
+          variance_pct: "8% (YTD vs Budget)"
+
+        - metric: "FTEs"
+          unit: "count"
+          month_value: 126
+          budget_month: 65
+          prior_year_month: 57
+          ytd_value: 126
+          budget_ytd: 65
+          prior_year_ytd: 57
+          variance_pct: "94% (YTD vs Budget)"
+
+      cost_breakdown:
+        - metric: "Specialized Labour"
+          unit: "1000 TND"
+          month_value: -64
+          budget_month: -19
+          prior_year_month: 6
+          ytd_value: -511
+          budget_ytd: -150
+          prior_year_ytd: -575
+          variance_pct: "240% (YTD vs Budget)"
+
+        - metric: "Travel Expenses"
+          unit: "1000 TND"
+          month_value: 12
+          budget_month: 0
+          prior_year_month: -7
+          ytd_value: 75
+          budget_ytd: 0
+          prior_year_ytd: 82
+          variance_pct: "21800% (YTD vs Budget)"
+
+        - metric: "Other Costs"
+          unit: "1000 TND"
+          month_value: -372
+          budget_month: -464
+          prior_year_month: -571
+          ytd_value: -3035
+          budget_ytd: -3070
+          prior_year_ytd: -2291
+          variance_pct: "-1% (YTD vs Budget)"
+
+      profitability:
+        - metric: "EBITDA IFRS G&A Net Costs"
+          unit: "1000 TND"
+          month_value: -1527
+          budget_month: -1111
+          prior_year_month: 2050
+          ytd_value: -10957
+          budget_ytd: -9817
+          prior_year_ytd: 1346
+          variance_pct: "12% (YTD vs Budget)"
+
+        - metric: "G&A Net Costs / Turnover"
+          unit: "%"
+          month_value: 6.2
+          budget_month: 5.1
+          prior_year_month: -10.3
+          ytd_value: 6.0
+          budget_ytd: 5.7
+          prior_year_ytd: -1.0
+          variance_pct: "0 pp (YTD vs Budget)"
+
+      corporate_costs:
+        - metric: "Tunisia Corporate Costs"
+          unit: "1000 TND"
+          month_value: 1
+          budget_month: -83
+          prior_year_month: -8
+          ytd_value: -346
+          budget_ytd: -661
+          prior_year_ytd: 709
+          variance_pct: "-48% (YTD vs Budget)"
+
+        - metric: "Trading Margin Other Merchandise"
+          unit: "1000 TND"
+          month_value: 0
+          budget_month: 0
+          prior_year_month: 1844
+          ytd_value: 0
+          budget_ytd: 0
+          prior_year_ytd: 1844
+          variance_pct: "-100% (YTD vs Budget)"
+
+# ============================================================================
+# TABLE 3: Tunisia Rolling Forecast (Month & YTD)
+# ============================================================================
+  - table_id: "TN-3"
+    table_name: "Secil - Tunisia - Rolling Forecast"
+    pages: "103"
+    currency: "1000 TND"
+    forecast_type: "Rolling forecast including Sep-25"
+
+    structure:
+      rows: 20
+      columns: 8
+      layout: "Month ahead forecast + YTD"
+      transposed: false
+
+    cement_division:
+      - metric: "Local Cement Sales"
+        unit: "kton"
+        month_aug: 48
+        forecast_sep: 49
+        budget_sep: 53
+        prior_year_sep: 53
+        ytd_value: 455
+        ytd_budget: 426
+        ytd_prior_year: 411
+        variance_ytd_pct: "7% vs Budget"
+
+      - metric: "Libya Sales"
+        unit: "kton"
+        month_aug: 42
+        forecast_sep: 30
+        budget_sep: 16
+        prior_year_sep: 9
+        ytd_value: 293
+        ytd_budget: 140
+        ytd_prior_year: 53
+        variance_ytd_pct: "109% vs Budget"
+
+      - metric: "EU Sales"
+        unit: "kton"
+        month_aug: 16
+        forecast_sep: 9
+        budget_sep: 20
+        prior_year_sep: 11
+        ytd_value: 112
+        ytd_budget: 202
+        ytd_prior_year: 107
+        variance_ytd_pct: "-44% vs Budget"
+
+      - metric: "Clinker Production"
+        unit: "ton"
+        month_aug: 85
+        forecast_sep: 56
+        budget_sep: 56
+        prior_year_sep: 89
+        ytd_value: 686
+        ytd_budget: 718
+        ytd_prior_year: 550
+        variance_ytd_pct: "-5% vs Budget"
+
+      - metric: "Cement Production"
+        unit: "kton"
+        month_aug: 107
+        forecast_sep: 88
+        budget_sep: 89
+        prior_year_sep: 69
+        ytd_value: 868
+        ytd_budget: 768
+        ytd_prior_year: 577
+        variance_ytd_pct: "13% vs Budget"
+
+      - metric: "Cement EBITDA IFRS"
+        unit: "1000 TND"
+        month_aug: 7169
+        forecast_sep: 3483
+        budget_sep: 3259
+        prior_year_sep: 5060
+        ytd_value: 42174
+        ytd_budget: 38856
+        ytd_prior_year: 22022
+        variance_ytd_pct: "9% vs Budget"
+
+    concrete_division:
+      - metric: "Ready-Mix Sales"
+        unit: "km3"
+        month_aug: 8
+        forecast_sep: 10
+        budget_sep: 10
+        prior_year_sep: 8
+        ytd_value: 78
+        ytd_budget: 84
+        ytd_prior_year: 67
+        variance_ytd_pct: "-7% vs Budget"
+
+      - metric: "Ready-Mix EBITDA IFRS"
+        unit: "1000 TND"
+        month_aug: -131
+        forecast_sep: 67
+        budget_sep: 67
+        prior_year_sep: -127
+        ytd_value: 255
+        ytd_budget: 462
+        ytd_prior_year: -143
+        variance_ytd_pct: "-45% vs Budget"
+
+    total_tunisia:
+      - metric: "Tunisia EBITDA IFRS"
+        unit: "1000 TND"
+        month_aug: 5512
+        forecast_sep: 1953
+        budget_sep: 1954
+        prior_year_sep: 4842
+        ytd_value: 29528
+        ytd_budget: 27468
+        ytd_prior_year: 23842
+        variance_ytd_pct: "8% vs Budget"
+
+# ============================================================================
+# TABLE 4: Tunisia P&L (YTD vs Budget vs LY)
+# ============================================================================
+  - table_id: "TN-4"
+    table_name: "Secil - Tunisia - P&L (YTD vs Budget vs LY)"
+    pages: "104"
+    currency: "1000 TND"
+    statement_type: "Profit & Loss Statement"
+
+    structure:
+      rows: 12
+      columns: 10
+      layout: "Income statement format"
+      transposed: false
+
+    income_statement:
+      - metric: "EBITDA IFRS"
+        unit: "1000 TND"
+        month_value: 5512
+        budget_month: 5194
+        prior_year_month: 6737
+        ytd_value: 27575
+        budget_ytd: 25514
+        prior_year_ytd: 19000
+        variance_ytd_pct: "8% vs Budget"
+
+      - metric: "Amortization, Depreciation and Grants"
+        unit: "1000 TND"
+        month_value: -1180
+        budget_month: -1531
+        prior_year_month: -1313
+        ytd_value: -9450
+        budget_ytd: -12262
+        prior_year_ytd: -8543
+        variance_ytd_pct: "-23% vs Budget"
+
+      - metric: "Provisions"
+        unit: "1000 TND"
+        month_value: -31
+        budget_month: -45
+        prior_year_month: -50
+        ytd_value: -3232
+        budget_ytd: -363
+        prior_year_ytd: -189
+        variance_ytd_pct: "791% vs Budget"
+
+      - metric: "EBIT"
+        unit: "1000 TND"
+        month_value: 4302
+        budget_month: 3618
+        prior_year_month: 5374
+        ytd_value: 14893
+        budget_ytd: 12890
+        prior_year_ytd: 10268
+        variance_ytd_pct: "16% vs Budget"
+
+      - metric: "Net financial costs"
+        unit: "1000 TND"
+        month_value: -1202
+        budget_month: -1068
+        prior_year_month: -1161
+        ytd_value: -9307
+        budget_ytd: -8206
+        prior_year_ytd: -9001
+        variance_ytd_pct: "13% vs Budget"
+
+      - metric: "Operational Forex"
+        unit: "1000 TND"
+        month_value: 181
+        budget_month: 0
+        prior_year_month: 81
+        ytd_value: 494
+        budget_ytd: 0
+        prior_year_ytd: -37
+        variance_ytd_pct: "N/A (N/A)"
+
+      - metric: "Financial Income"
+        unit: "1000 TND"
+        month_value: -1021
+        budget_month: -1068
+        prior_year_month: -1080
+        ytd_value: -8813
+        budget_ytd: -8206
+        prior_year_ytd: -9038
+        variance_ytd_pct: "7% vs Budget"
+
+      - metric: "Profit Before Tax"
+        unit: "1000 TND"
+        month_value: 3281
+        budget_month: 2550
+        prior_year_month: 4294
+        ytd_value: 6080
+        budget_ytd: 4684
+        prior_year_ytd: 1229
+        variance_ytd_pct: "30% vs Budget"
+
+      - metric: "Tax"
+        unit: "1000 TND"
+        month_value: -1123
+        budget_month: -305
+        prior_year_month: -453
+        ytd_value: -2621
+        budget_ytd: -1360
+        prior_year_ytd: -296
+        variance_ytd_pct: "93% vs Budget"
+
+      - metric: "Net income"
+        unit: "1000 TND"
+        month_value: 2158
+        budget_month: 2245
+        prior_year_month: 3841
+        ytd_value: 3459
+        budget_ytd: 3324
+        prior_year_ytd: 934
+        variance_ytd_pct: "4% vs Budget"
+
+      - metric: "EBITDA IFRS Margin"
+        unit: "%"
+        month_value: 22
+        budget_month: 24
+        prior_year_month: 34
+        ytd_value: 15
+        budget_ytd: 15
+        prior_year_ytd: 15
+        variance_ytd_pct: "0.4 pp vs Budget"
+
+      - metric: "EBIT Margin"
+        unit: "%"
+        month_value: 18
+        budget_month: 17
+        prior_year_month: 27
+        ytd_value: 8
+        budget_ytd: 8
+        prior_year_ytd: 8
+        variance_ytd_pct: "0.7 pp vs Budget"
+
+# ============================================================================
+# TABLE 5: Tunisia Health & Safety KPIs
+# ============================================================================
+  - table_id: "TN-5"
+    table_name: "Secil - Tunisia - Health & Safety KPI's"
+    pages: "106"
+    kpi_type: "Health and Safety Metrics"
+    measurement_period: "Monthly, YTD, Annual"
+
+    structure:
+      rows: 15
+      columns: 6
+      layout: "Time series with segmentation by division"
+      transposed: false
+
+    frequency_ratio_metrics:
+      definition: "Number of Lost Time Injuries x 1,000,000 / Total Manhours Worked"
+      data_points:
+        - period: "April 2025"
+          tunisia_total: 7.93
+          cement_division: null
+          non_cement_division: 63.20
+
+        - period: "May 2025"
+          tunisia_total: 7.41
+          cement_division: null
+          non_cement_division: 54.03
+
+        - period: "July 2025"
+          tunisia_total: 8.78
+          cement_division: 10.33
+          non_cement_division: null
+
+        - period: "August 2025"
+          tunisia_total: 8.15
+          cement_division: 9.54
+          non_cement_division: null
+
+        - period: "YTD 2025"
+          tunisia_total: 3.66
+          cement_division: 2.10
+          non_cement_division: 14.50
+
+        - period: "Last 12 Months"
+          tunisia_total: 2.89
+          cement_division: 1.97
+          non_cement_division: 9.39
+
+        - period: "FY 2024"
+          tunisia_total: 1.72
+          cement_division: 1.31
+          non_cement_division: 4.56
+
+        - period: "FY 2023"
+          tunisia_total: 0.55
+          cement_division: 0.62
+          non_cement_division: null
+
+        - period: "Budget 2025"
+          tunisia_total: 1.20
+          cement_division: 0.70
+          non_cement_division: 3.20
+
+    lost_time_injury_metrics:
+      definition: "Number of Lost Time Injuries x 1,000,000"
+      data_points:
+        - period: "April 2025"
+          tunisia_total: 1.00
+          cement_division: null
+          non_cement_division: 1.00
+
+        - period: "May 2025"
+          tunisia_total: 1.00
+          cement_division: null
+          non_cement_division: 1.00
+
+        - period: "July 2025"
+          tunisia_total: 1.00
+          cement_division: 1.00
+          non_cement_division: null
+
+        - period: "August 2025"
+          tunisia_total: 1.00
+          cement_division: 1.00
+          non_cement_division: null
+
+        - period: "YTD 2025"
+          tunisia_total: 4.00
+          cement_division: 2.00
+          non_cement_division: 2.00
+
+        - period: "Last 12 Months"
+          tunisia_total: 5.00
+          cement_division: 3.00
+          non_cement_division: 2.00
+
+        - period: "FY 2024"
+          tunisia_total: 3.00
+          cement_division: 2.00
+          non_cement_division: 1.00
+
+        - period: "FY 2023"
+          tunisia_total: 1.00
+          cement_division: 1.00
+          non_cement_division: null
+
+        - period: "Budget 2025"
+          tunisia_total: 2.00
+          cement_division: 1.00
+          non_cement_division: 1.00
+
+# ============================================================================
+# TABLE 6: Tunisia Headcount Evolution
+# ============================================================================
+  - table_id: "TN-6"
+    table_name: "Secil - Tunisia - Headcount Evolution (YTD vs Budget vs LY)"
+    pages: "108"
+    metric_type: "Employee Headcount"
+    time_series: "2020-2025 with monthly detail"
+
+    structure:
+      rows: 7
+      columns: 20
+      layout: "Historical annual + 2025 monthly breakdown"
+      transposed: false
+
+    headcount_by_division:
+      - division: "Tunisia Total"
+        fy_2020: 338
+        fy_2021: 319
+        fy_2022: 282
+        fy_2023: 251
+        fy_2024: 269
+        jan_2025: 273
+        feb_2025: 273
+        mar_2025: 276
+        apr_2025: 278
+        may_2025: 279
+        jun_2025: 581
+        jul_2025: 528
+        aug_2025: 536
+        ytd_aug_2025: 536
+        budget_dec_2025: 317
+        forecast_dec_2025: 316
+
+      - division: "Tunisia Cement"
+        fy_2020: 194
+        fy_2021: 181
+        fy_2022: 167
+        fy_2023: 143
+        fy_2024: 155
+        jan_2025: 158
+        feb_2025: 157
+        mar_2025: 158
+        apr_2025: 157
+        may_2025: 157
+        jun_2025: 383
+        jul_2025: 349
+        aug_2025: 350
+        ytd_aug_2025: 350
+        budget_dec_2025: 188
+        forecast_dec_2025: 186
+
+      - division: "Tunisia Cement - Plants"
+        fy_2020: 118
+        fy_2021: 114
+        fy_2022: 111
+        fy_2023: 110
+        fy_2024: 116
+        jan_2025: 119
+        feb_2025: 118
+        mar_2025: 119
+        apr_2025: 119
+        may_2025: 119
+        jun_2025: 270
+        jul_2025: 237
+        aug_2025: 238
+        ytd_aug_2025: 238
+        budget_dec_2025: 149
+        forecast_dec_2025: 147
+
+      - division: "Tunisia Ready Mix"
+        fy_2020: 76
+        fy_2021: 73
+        fy_2022: 52
+        fy_2023: 50
+        fy_2024: 50
+        jan_2025: 50
+        feb_2025: 49
+        mar_2025: 50
+        apr_2025: 52
+        may_2025: 52
+        jun_2025: 52
+        jul_2025: 53
+        aug_2025: 60
+        ytd_aug_2025: 60
+        budget_dec_2025: 64
+        forecast_dec_2025: 64
+
+# ============================================================================
+# TABLE 7: Tunisia Capex Total / per Type
+# ============================================================================
+  - table_id: "TN-7"
+    table_name: "Secil - Tunisia - Capex Total / per Type (YTD vs Budget vs LY)"
+    pages: "109"
+    currency: "1000 TND"
+    metric_type: "Capital Expenditure"
+    capex_classification: "By type and category"
+
+    structure:
+      rows: 10
+      columns: 10
+      layout: "Two-part: Total Capex + Capex by Type"
+      transposed: false
+
+    capex_by_entity:
+      - entity: "Tunisia Total"
+        month_aug: 14296
+        budget_aug: 3822
+        prior_year_aug: 3351
+        ytd_aug: 29757
+        budget_ytd: 26269
+        prior_year_ytd: 17444
+        variance_ytd_pct: "13% vs Budget"
+
+      - entity: "Tunisia Cement"
+        month_aug: 14295
+        budget_aug: 3822
+        prior_year_aug: 3335
+        ytd_aug: 28668
+        budget_ytd: 25200
+        prior_year_ytd: 17381
+        variance_ytd_pct: "14% vs Budget"
+
+      - entity: "Tunisia Ready Mix"
+        month_aug: 0
+        budget_aug: 0
+        prior_year_aug: 16
+        ytd_aug: 1089
+        budget_ytd: 1069
+        prior_year_ytd: 63
+        variance_ytd_pct: "2% vs Budget"
+
+    capex_by_type:
+      recurring_category:
+        - type: "Land"
+          ytd_value: 0
+
+        - type: "Replacement"
+          ytd_value: 28530
+          pct_of_total: 95.9
+
+        - type: "HSE"
+          ytd_value: 0
+
+        - type: "Other"
+          ytd_value: 0
+
+      development_category:
+        - type: "Energy"
+          ytd_value: 1088
+          pct_of_total: 3.7
+
+        - type: "Other"
+          ytd_value: 139
+          pct_of_total: 0.5
+
+      total_capex: 29757
+
+# ============================================================================
+# TABLE 8: Tunisia Cement - Detailed Operations
+# ============================================================================
+  - table_id: "TN-8"
+    table_name: "Secil - Tunisia - Operational Performance - Tunisia Cement (YTD vs Budget vs LY)"
+    pages: "110-111"
+    currency: "1000 TND"
+    product_line: "Cement - All Markets"
+    detail_level: "Comprehensive operational metrics"
+
+    structure:
+      rows: 150
+      columns: 10
+      layout: "Segmented by Internal Market / External Market / Operations / Production"
+      transposed: false
+      note: "This is a very detailed table with multiple subsections"
+
+    internal_market_segment:
+      volume_metrics:
+        - metric: "Cement Market"
+          unit: "kton"
+          month_value: 447
+          budget_month: 439
+          prior_year_month: 447
+          ytd_value: 3344
+          budget_ytd: 3550
+          prior_year_ytd: 3330
+          variance_ytd_pct: "-6% vs Budget"
+
+        - metric: "Cement per capita"
+          unit: "kg/person"
+          month_value: 431
+          budget_month: 424
+          prior_year_month: 435
+          ytd_value: 403
+          budget_ytd: 428
+          prior_year_ytd: 405
+          variance_ytd_pct: "-6% vs Budget"
+
+        - metric: "Market Share"
+          unit: "%"
+          month_value: 10.8
+          budget_month: 10.9
+          prior_year_month: 11.3
+          ytd_value: 12.2
+          budget_ytd: 10.5
+          prior_year_ytd: 10.8
+          variance_ytd_pct: "1.6 pp vs Budget"
+
+      sales_volume:
+        - metric: "Sales Cement IM"
+          unit: "1000 TND"
+          month_value: 12256
+          budget_month: 12667
+          prior_year_month: 12440
+          ytd_value: 100819
+          budget_ytd: 94260
+          prior_year_ytd: 89586
+          variance_ytd_pct: "7% vs Budget"
+
+        - metric: "Volume Cement"
+          unit: "kton"
+          month_value: 48
+          budget_month: 48
+          prior_year_month: 50
+          ytd_value: 406
+          budget_ytd: 374
+          prior_year_ytd: 358
+          variance_ytd_pct: "9% vs Budget"
+
+      product_mix:
+        - metric: "% Grey Cement Bulk"
+          unit: "%"
+          month_value: 16
+          budget_month: 18
+          prior_year_month: 15
+          ytd_value: 18
+          budget_ytd: 18
+          prior_year_ytd: 17
+          variance_ytd_pct: "0.0 pp vs Budget"
+
+        - metric: "% Grey Cement Bagged"
+          unit: "%"
+          month_value: 84
+          budget_month: 82
+          prior_year_month: 85
+          ytd_value: 82
+          budget_ytd: 82
+          prior_year_ytd: 83
+          variance_ytd_pct: "0.0 pp vs Budget"
+
+      pricing:
+        - metric: "Price Cement"
+          unit: "TND/ton"
+          month_value: 254.1
+          budget_month: 263.9
+          prior_year_month: 247.1
+          ytd_value: 248.0
+          budget_ytd: 252.4
+          prior_year_ytd: 250.0
+          variance_ytd_pct: "-2% vs Budget"
+
+        - metric: "Grey Cement Bulk Price"
+          unit: "TND/ton"
+          month_value: 255.8
+          budget_month: 248.7
+          prior_year_month: 247.4
+          ytd_value: 251.0
+          budget_ytd: 237.1
+          prior_year_ytd: 249.3
+          variance_ytd_pct: "6% vs Budget"
+
+        - metric: "Grey Cement Bagged Price"
+          unit: "TND/ton"
+          month_value: 253.8
+          budget_month: 267.2
+          prior_year_month: 247.1
+          ytd_value: 247.4
+          budget_ytd: 255.7
+          prior_year_ytd: 250.2
+          variance_ytd_pct: "-3% vs Budget"
+
+      transport:
+        - metric: "Net Transport Costs - Cement"
+          unit: "1000 TND"
+          month_value: -73
+          budget_month: -35
+          prior_year_month: -3
+          ytd_value: -764
+          budget_ytd: -279
+          prior_year_ytd: -334
+          variance_ytd_pct: "174% vs Budget"
+
+        - metric: "Price Cement - Net Transport Costs"
+          unit: "TND/ton"
+          month_value: 252.6
+          budget_month: 263.2
+          prior_year_month: 247.1
+          ytd_value: 246.1
+          budget_ytd: 251.6
+          prior_year_ytd: 249.1
+          variance_ytd_pct: "-2% vs Budget"
+
+    external_market_segment:
+      total_export_sales:
+        - metric: "Sales Cement EM - Total"
+          unit: "1000 TND"
+          month_value: 10676
+          budget_month: 7467
+          prior_year_month: 5194
+          ytd_value: 63985
+          budget_ytd: 56916
+          prior_year_ytd: 25679
+          variance_ytd_pct: "12% vs Budget"
+
+      libya_market:
+        - metric: "Sales Cement - Libya"
+          unit: "1000 TND"
+          month_value: 7968
+          budget_month: 2736
+          prior_year_month: 2699
+          ytd_value: 46695
+          budget_ytd: 21196
+          prior_year_ytd: 7847
+          variance_ytd_pct: "120% vs Budget"
+
+        - metric: "Volume Cement - Libya"
+          unit: "kton"
+          month_value: 42
+          budget_month: 16
+          prior_year_month: 15
+          ytd_value: 263
+          budget_ytd: 124
+          prior_year_ytd: 44
+          variance_ytd_pct: "112% vs Budget"
+
+        - metric: "Price Cement Libya"
+          unit: "TND/ton"
+          month_value: 188.4
+          budget_month: 171.0
+          prior_year_month: 182.2
+          ytd_value: 177.5
+          budget_ytd: 170.9
+          prior_year_ytd: 178.4
+          variance_ytd_pct: "4% vs Budget"
+
+      eu_market:
+        - metric: "Sales Cem Others - EU"
+          unit: "1000 TND"
+          month_value: 2709
+          budget_month: 4731
+          prior_year_month: 2495
+          ytd_value: 17290
+          budget_ytd: 35720
+          prior_year_ytd: 17833
+          variance_ytd_pct: "-52% vs Budget"
+
+        - metric: "Volume Cement - EU"
+          unit: "kton"
+          month_value: 16
+          budget_month: 24
+          prior_year_month: 14
+          ytd_value: 103
+          budget_ytd: 182
+          prior_year_ytd: 96
+          variance_ytd_pct: "-43% vs Budget"
+
+        - metric: "Price Cement EU"
+          unit: "TND/ton"
+          month_value: 170.9
+          budget_month: 197.1
+          prior_year_month: 183.4
+          ytd_value: 167.6
+          budget_ytd: 196.3
+          prior_year_ytd: 186.2
+          variance_ytd_pct: "-15% vs Budget"
+
+    operational_costs:
+      variable_costs:
+        - metric: "Variable Costs Cem"
+          unit: "1000 TND"
+          month_value: -9641
+          budget_month: -10494
+          prior_year_month: -8777
+          ytd_value: -73407
+          budget_ytd: -75488
+          prior_year_ytd: -74172
+          variance_ytd_pct: "-3% vs Budget"
+
+        - metric: "Variable Costs Cem - TND/ton"
+          unit: "TND/ton"
+          month_value: 94.5
+          budget_month: 101.5
+          prior_year_month: 101.7
+          ytd_value: 97.5
+          budget_ytd: 96.9
+          prior_year_ytd: 116.6
+          variance_ytd_pct: "1% vs Budget"
+
+      energy_costs:
+        - metric: "Termic Energy"
+          unit: "1000 TND"
+          month_value: -3638
+          budget_month: -3699
+          prior_year_month: -3672
+          ytd_value: -27162
+          budget_ytd: -28099
+          prior_year_ytd: -23846
+          variance_ytd_pct: "-3% vs Budget"
+
+        - metric: "Termic Energy - TND/ton"
+          unit: "TND/ton"
+          month_value: 35.7
+          budget_month: 35.8
+          prior_year_month: 42.6
+          ytd_value: 36.1
+          budget_ytd: 36.1
+          prior_year_ytd: 37.5
+          variance_ytd_pct: "0% vs Budget"
+
+        - metric: "Electricity"
+          unit: "1000 TND"
+          month_value: -3820
+          budget_month: -4934
+          prior_year_month: -3838
+          ytd_value: -29762
+          budget_ytd: -33444
+          prior_year_ytd: -22699
+          variance_ytd_pct: "-11% vs Budget"
+
+        - metric: "Electricity - TND/ton"
+          unit: "TND/ton"
+          month_value: 37.5
+          budget_month: 47.7
+          prior_year_month: 44.5
+          ytd_value: 39.5
+          budget_ytd: 42.9
+          prior_year_ytd: 35.7
+          variance_ytd_pct: "-8% vs Budget"
+
+    fixed_costs:
+      - metric: "Fixed Costs Plant"
+        unit: "1000 TND"
+        month_value: -4882
+        budget_month: -4724
+        prior_year_month: -3339
+        ytd_value: -44735
+        budget_ytd: -45856
+        prior_year_ytd: -37637
+        variance_ytd_pct: "-2% vs Budget"
+
+      - metric: "Fixed Costs - TND/ton"
+        unit: "TND/ton"
+        month_value: 47.9
+        budget_month: 45.7
+        prior_year_month: 38.7
+        ytd_value: 59.4
+        budget_ytd: 58.9
+        prior_year_ytd: 59.2
+        variance_ytd_pct: "1% vs Budget"
+
+      - metric: "Employees"
+        unit: "1000 TND"
+        month_value: -1574
+        budget_month: -1163
+        prior_year_month: -892
+        ytd_value: -11189
+        budget_ytd: -10395
+        prior_year_ytd: -7542
+        variance_ytd_pct: "8% vs Budget"
+
+    production_metrics:
+      - metric: "Cement Production"
+        unit: "kton"
+        month_value: 107
+        budget_month: 88
+        prior_year_month: 77
+        ytd_value: 780
+        budget_ytd: 680
+        prior_year_ytd: 508
+        variance_ytd_pct: "15% vs Budget"
+
+      - metric: "Clinker Production"
+        unit: "kton"
+        month_value: 85
+        budget_month: 89
+        prior_year_month: 74
+        ytd_value: 630
+        budget_ytd: 663
+        prior_year_ytd: 462
+        variance_ytd_pct: "-5% vs Budget"
+
+      - metric: "Utilization factor (tons)"
+        unit: "%"
+        month_value: 89
+        budget_month: 92
+        prior_year_month: 77
+        ytd_value: 84
+        budget_ytd: 88
+        prior_year_ytd: 61
+        variance_ytd_pct: "-4 pp vs Budget"
+
+      - metric: "Utilization factor (%)"
+        unit: "%"
+        month_value: 95
+        budget_month: 95
+        prior_year_month: 80
+        ytd_value: 89
+        budget_ytd: 91
+        prior_year_ytd: 64
+        variance_ytd_pct: "-2.0 pp vs Budget"
+
+      - metric: "Reliability Factor"
+        unit: "%"
+        month_value: 95
+        budget_month: 95
+        prior_year_month: 80
+        ytd_value: 93
+        budget_ytd: 95
+        prior_year_ytd: 80
+        variance_ytd_pct: "-2 pp vs Budget"
+
+      - metric: "Performance Factor"
+        unit: "%"
+        month_value: 47
+        budget_month: 48
+        prior_year_month: 48
+        ytd_value: 47
+        budget_ytd: 48
+        prior_year_ytd: 47
+        variance_ytd_pct: "-1 pp vs Budget"
+
+    profitability:
+      - metric: "EBITDA IFRS - CEMENT"
+        unit: "1000 TND"
+        month_value: 7169
+        budget_month: 6310
+        prior_year_month: 4718
+        ytd_value: 38691
+        budget_ytd: 35597
+        prior_year_ytd: 16962
+        variance_ytd_pct: "9% vs Budget"
+
+      - metric: "EBITDA IFRS - CEMENT - TND/ton"
+        unit: "TND/ton"
+        month_value: 67.4
+        budget_month: 71.7
+        prior_year_month: 57.0
+        ytd_value: 48.7
+        budget_ytd: 48.1
+        prior_year_ytd: 33.8
+        variance_ytd_pct: "1% vs Budget"
+
+      - metric: "EBITDA IFRS Margin - CEMENT"
+        unit: "%"
+        month_value: 30.3
+        budget_month: 30.2
+        prior_year_month: 24.7
+        ytd_value: 22.2
+        budget_ytd: 21.5
+        prior_year_ytd: 14.0
+        variance_ytd_pct: "1 pp vs Budget"
+
+# ============================================================================
+# TABLE 9: Tunisia Ready-Mix Operations
+# ============================================================================
+  - table_id: "TN-9"
+    table_name: "Secil - Tunisia - Operational Performance - Tunisia Ready-Mix"
+    pages: "112"
+    currency: "1000 TND"
+    product_line: "Ready-Mix Concrete (SUD-BETON, ZARZIS)"
+    detail_level: "Sales, costs, operations"
+
+    structure:
+      rows: 35
+      columns: 10
+      layout: "Sales / Operational Costs / EBITDA analysis"
+      transposed: false
+
+    sales_metrics:
+      - metric: "Sales Ready Mix"
+        unit: "1000 TND"
+        month_value: 1550
+        budget_month: 1865
+        prior_year_month: 1466
+        ytd_value: 12648
+        budget_ytd: 13769
+        prior_year_ytd: 10872
+        variance_ytd_pct: "-8% vs Budget"
+
+      - metric: "Volume Ready Mix"
+        unit: "km3"
+        month_value: 8
+        budget_month: 10
+        prior_year_month: 8
+        ytd_value: 68
+        budget_ytd: 74
+        prior_year_ytd: 59
+        variance_ytd_pct: "-8% vs Budget"
+
+      - metric: "Price Ready Mix"
+        unit: "TND/m3"
+        month_value: 189.4
+        budget_month: 186.3
+        prior_year_month: 181.9
+        ytd_value: 185.9
+        budget_ytd: 185.2
+        prior_year_ytd: 183.9
+        variance_ytd_pct: "0.4% vs Budget"
+
+    variable_costs:
+      - metric: "Variable Costs"
+        unit: "1000 TND"
+        month_value: -1181
+        budget_month: -1358
+        prior_year_month: -1056
+        ytd_value: -9189
+        budget_ytd: -10071
+        prior_year_ytd: -7839
+        variance_ytd_pct: "-9% vs Budget"
+
+      - metric: "Variable Costs - TND/m3"
+        unit: "TND/m3"
+        month_value: 144.2
+        budget_month: 135.6
+        prior_year_month: 131.1
+        ytd_value: 135.1
+        budget_ytd: 135.5
+        prior_year_ytd: 132.6
+        variance_ytd_pct: "-0% vs Budget"
+
+      - metric: "Cement Cost"
+        unit: "1000 TND"
+        month_value: -729
+        budget_month: -897
+        prior_year_month: -701
+        ytd_value: -5830
+        budget_ytd: -6649
+        prior_year_ytd: -5148
+        variance_ytd_pct: "-12% vs Budget"
+
+      - metric: "Aggregates Cost"
+        unit: "1000 TND"
+        month_value: -264
+        budget_month: -289
+        prior_year_month: -217
+        ytd_value: -2039
+        budget_ytd: -2145
+        prior_year_ytd: -1640
+        variance_ytd_pct: "-5% vs Budget"
+
+    fixed_costs:
+      - metric: "Fixed Costs"
+        unit: "1000 TND"
+        month_value: -541
+        budget_month: -481
+        prior_year_month: -493
+        ytd_value: -3681
+        budget_ytd: -3720
+        prior_year_ytd: -3538
+        variance_ytd_pct: "-1% vs Budget"
+
+      - metric: "Fixed Costs - TND/m3"
+        unit: "TND/m3"
+        month_value: 66.0
+        budget_month: 48.0
+        prior_year_month: 61.1
+        ytd_value: 54.1
+        budget_ytd: 50.0
+        prior_year_ytd: 59.9
+        variance_ytd_pct: "8% vs Budget"
+
+    ebitda:
+      - metric: "EBITDA IFRS - SUD-BETON and ZARZIS"
+        unit: "1000 TND"
+        month_value: -131
+        budget_month: 79
+        prior_year_month: -23
+        ytd_value: 188
+        budget_ytd: 395
+        prior_year_ytd: -17
+        variance_ytd_pct: "-52% vs Budget"
+
+      - metric: "EBITDA IFRS Margin"
+        unit: "%"
+        month_value: -8
+        budget_month: 4
+        prior_year_month: -2
+        ytd_value: 1
+        budget_ytd: 3
+        prior_year_ytd: -0
+        variance_ytd_pct: "-1.4 pp vs Budget"
+
+# ============================================================================
+# TABLE 10: Tunisia Net Working Capital
+# ============================================================================
+  - table_id: "TN-10"
+    table_name: "Secil - Tunisia - Net Working Capital"
+    pages: "115"
+    currency: "1000 TND"
+    metric_type: "Working Capital Analysis"
+
+    structure:
+      rows: 10
+      columns: 7
+      layout: "Balance sheet items + working capital ratios"
+      transposed: false
+
+    balance_sheet_items:
+      - item: "Accounts receivable"
+        ytd_aug_2025: 29190
+        budget_aug_2025: 27515
+        forecast_dec_2024: 19739
+        prior_year_aug_2024: 31665
+        variance_pct: "6% vs Budget"
+
+      - item: "Inventories"
+        ytd_aug_2025: 56959
+        budget_aug_2025: 78015
+        forecast_dec_2024: 82216
+        prior_year_aug_2024: 83108
+        variance_pct: "-27% vs Budget"
+
+      - item: "Finished Goods"
+        ytd_aug_2025: 9063
+        budget_aug_2025: 0
+        forecast_dec_2024: 16331
+        prior_year_aug_2024: 23299
+        variance_pct: "N/A"
+
+      - item: "Raw Materials"
+        ytd_aug_2025: 7991
+        budget_aug_2025: 0
+        forecast_dec_2024: 10578
+        prior_year_aug_2024: 8046
+        variance_pct: "N/A"
+
+      - item: "Accounts payable"
+        ytd_aug_2025: 25908
+        budget_aug_2025: 44508
+        forecast_dec_2024: 40519
+        prior_year_aug_2024: 42210
+        variance_pct: "-42% vs Budget"
+
+    working_capital_ratios:
+      - ratio: "DSO (Days Sales Outstanding)"
+        ytd_value: 33
+        budget_value: 31
+        prior_year_value: 47
+        variance: "1 day vs Budget"
+
+      - ratio: "DPO (Days Payable Outstanding)"
+        ytd_value: 43
+        budget_value: 71
+        prior_year_value: 80
+        variance: "-28 days vs Budget"
+
+      - ratio: "DIO (Days Inventory Outstanding)"
+        ytd_value: 183
+        budget_value: 301
+        prior_year_value: 306
+        variance: "-118 days vs Budget"
+
+      - ratio: "Trade Working Capital / Turnover"
+        ytd_value: 19
+        budget_value: 19
+        prior_year_value: 30
+        variance: "-1 pp vs Budget"
+
+# ============================================================================
+# TABLE 11: Tunisia Cash Flow
+# ============================================================================
+  - table_id: "TN-11"
+    table_name: "Secil - Tunisia - Cash Flow"
+    pages: "116"
+    currency: "1000 TND"
+    statement_type: "Cash Flow Statement"
+
+    structure:
+      rows: 15
+      columns: 5
+      layout: "Operating / Investing / Financing flows"
+      transposed: false
+
+    operating_activities:
+      - item: "EBITDA Tunisia"
+        ytd_aug_2025: 27575
+        budget_ytd: 25514
+        prior_year_ytd: 19000
+        variance_pct: "8% vs Budget"
+
+      - item: "De(in)crease Trade Working Capital"
+        ytd_aug_2025: 1196
+        budget_ytd: 9251
+        prior_year_ytd: -7079
+        variance_pct: "-87% vs Budget"
+
+      - item: "CF from Operations"
+        ytd_aug_2025: 43491
+        budget_ytd: 35707
+        prior_year_ytd: 9596
+        variance_pct: "22% vs Budget"
+
+      - item: "CF from Operating Activities"
+        ytd_aug_2025: 32057
+        budget_ytd: 26141
+        prior_year_ytd: 262
+        variance_pct: "23% vs Budget"
+
+    investing_activities:
+      - item: "Capex"
+        ytd_aug_2025: -29757
+        budget_ytd: -26269
+        prior_year_ytd: -17444
+        variance_pct: "13% vs Budget"
+
+      - item: "CF from investment activities"
+        ytd_aug_2025: -29757
+        budget_ytd: -26269
+        prior_year_ytd: -17444
+        variance_pct: "13% vs Budget"
+
+    net_cash_position:
+      - item: "Net Cash Flow"
+        ytd_aug_2025: 2300
+        budget_ytd: -127
+        prior_year_ytd: -17182
+        variance_pct: "N/A"
+
+      - item: "Financial net debt - Opening Balance"
+        ytd_aug_2025: 127507
+        budget_ytd: 127629
+        prior_year_ytd: 117951
+        variance_pct: "0% vs Budget"
+
+      - item: "Financial net debt - Closing Balance"
+        ytd_aug_2025: 125206
+        budget_ytd: 127757
+        prior_year_ytd: 135133
+        variance_pct: "-2% vs Budget"
+
+# ============================================================================
+# LEBANON OPERATIONS (Pages 117-120)
+# ============================================================================
+  - table_id: "LB-1"
+    table_name: "Secil - Lebanon - Health & Safety KPI's"
+    pages: "117"
+    currency: "N/A"
+    metric_type: "Health and Safety (Frequency Ratio)"
+
+    structure:
+      rows: 15
+      columns: 4
+      layout: "Monthly time series by division"
+      transposed: false
+
+    frequency_ratio_data:
+      - period: "April 2025"
+        lebanon_total: 21.26
+        cement_division: 12.42
+        non_cement_division: 73.72
+
+      - period: "May 2025"
+        lebanon_total: 0
+        cement_division: 0
+        non_cement_division: 0
+
+      - period: "June 2025"
+        lebanon_total: 11.79
+        cement_division: 0
+        non_cement_division: 79.99
+
+      - period: "YTD 2025"
+        lebanon_total: 3.83
+        cement_division: 1.52
+        non_cement_division: 16.07
+
+      - period: "FY 2024"
+        lebanon_total: 3.01
+        cement_division: 2.35
+        non_cement_division: 6.84
+
+      - period: "Budget 2025"
+        lebanon_total: 2.30
+        cement_division: 1.30
+        non_cement_division: 7.80
+
+  - table_id: "LB-2"
+    table_name: "Secil - Lebanon - Operational Performance - Lebanon Cement"
+    pages: "118"
+    currency: "1000 USD"
+    product_line: "Cement"
+    market_segments: "Internal + External Market"
+
+    structure:
+      rows: 40
+      columns: 10
+      layout: "Segmented by Internal/External markets"
+      transposed: false
+
+    internal_market:
+      - metric: "Cement Market"
+        unit: "kton"
+        month_value: 259
+        budget_month: 290
+        prior_year_month: 281
+        ytd_value: 1940
+        budget_ytd: 1660
+        prior_year_ytd: 1561
+        variance_ytd_pct: "17% vs Budget"
+
+      - metric: "Cement per Capita"
+        unit: "kg/person"
+        month_value: 469
+        budget_month: 525
+        prior_year_month: 508
+        ytd_value: 439
+        budget_ytd: 375
+        prior_year_ytd: 353
+        variance_ytd_pct: "17% vs Budget"
+
+      - metric: "Market Share"
+        unit: "%"
+        month_value: 25.4
+        budget_month: 25.7
+        prior_year_month: 14.1
+        ytd_value: 27.4
+        budget_ytd: 25.9
+        prior_year_ytd: 25.6
+        variance_ytd_pct: "1.5 pp vs Budget"
+
+      - metric: "Volume Cement"
+        unit: "kton"
+        month_value: 66
+        budget_month: 74
+        prior_year_month: 40
+        ytd_value: 531
+        budget_ytd: 429
+        prior_year_ytd: 400
+        variance_ytd_pct: "24% vs Budget"
+
+      - metric: "Price Cement"
+        unit: "1000 USD/ton"
+        month_value: 79.4
+        budget_month: 80.0
+        prior_year_month: 79.2
+        ytd_value: 80.3
+        budget_ytd: 80.0
+        prior_year_ytd: 77.9
+        variance_ytd_pct: "0% vs Budget"
+
+    external_market:
+      - metric: "Sales Cement EM - Total"
+        unit: "1000 USD"
+        month_value: 5241
+        budget_month: 6047
+        prior_year_month: 3503
+        ytd_value: 43114
+        budget_ytd: 34932
+        prior_year_ytd: 31866
+        variance_ytd_pct: "23% vs Budget"
+
+  - table_id: "LB-3"
+    table_name: "Secil - Lebanon - EBITDA IFRS Bridge"
+    pages: "119"
+    currency: "M USD"
+    metric_type: "Waterfall analysis"
+
+    structure:
+      rows: 2
+      columns: 12
+      layout: "Waterfall bridge (YOB vs YOY)"
+      transposed: false
+      note: "Visual waterfall analysis with drivers"
+
+    yob_bridge:
+      description: "Year-on-Budget bridge for YTD 2025"
+      starting_point: 2.7
+      ending_point: 2.1
+      key_drivers:
+        - driver: "Volume IM"
+          impact: 0.1
+          direction: "positive"
+
+        - driver: "Price EM"
+          impact: -3.4
+          direction: "negative"
+
+        - driver: "Fixed Costs"
+          impact: 0.5
+          direction: "positive"
+
+    yoy_bridge:
+      description: "Year-on-Year bridge (2025 vs 2024)"
+      starting_point: -1.4
+      ending_point: 2.1
+      key_drivers:
+        - driver: "Volume IM"
+          impact: 1.1
+          direction: "positive"
+
+        - driver: "Price EM"
+          impact: 2.0
+          direction: "positive"
+
+# ============================================================================
+# SAMPLE DATA VALUES FOR VALIDATION
+# ============================================================================
+sample_data_points:
+  section_6_critical_numbers:
+    - metric_id: "TN-1-1"
+      metric_name: "Tunisia Ready Mix Volume (YTD)"
+      value: 68
+      unit: "km3"
+      source: "Table TN-1"
+      context: "Year-to-date through August 2025"
+
+    - metric_id: "TN-1-2"
+      metric_name: "Tunisia Ready Mix Price"
+      value: 185.9
+      unit: "TND/m3"
+      source: "Table TN-1"
+      context: "YTD average including transport"
+
+    - metric_id: "TN-1-3"
+      metric_name: "Ready Mix Unit Margin"
+      value: 50.8
+      unit: "TND/m3"
+      source: "Table TN-1"
+      context: "YTD contribution margin"
+
+    - metric_id: "TN-1-4"
+      metric_name: "Ready Mix EBITDA IFRS (YTD)"
+      value: 188
+      unit: "1000 TND"
+      source: "Table TN-1"
+      context: "Year-to-date profitability"
+
+    - metric_id: "TN-2-1"
+      metric_name: "G&A Revenue (YTD)"
+      value: 179
+      unit: "1000 TND"
+      source: "Table TN-2"
+      context: "G&A operating income"
+
+    - metric_id: "TN-2-2"
+      metric_name: "G&A Employee Costs (YTD)"
+      value: -7602
+      unit: "1000 TND"
+      source: "Table TN-2"
+      context: "Total headcount costs"
+
+    - metric_id: "TN-2-3"
+      metric_name: "G&A FTEs"
+      value: 126
+      unit: "count"
+      source: "Table TN-2"
+      context: "Full-time equivalents in G&A"
+
+    - metric_id: "TN-3-1"
+      metric_name: "Cement Production (YTD)"
+      value: 868
+      unit: "kton"
+      source: "Table TN-3"
+      context: "Rolling forecast production"
+
+    - metric_id: "TN-3-2"
+      metric_name: "Local Cement Sales (YTD)"
+      value: 455
+      unit: "kton"
+      source: "Table TN-3"
+      context: "Domestic market sales"
+
+    - metric_id: "TN-3-3"
+      metric_name: "Libya Sales (YTD)"
+      value: 293
+      unit: "kton"
+      source: "Table TN-3"
+      context: "Export volume to Libya"
+
+    - metric_id: "TN-4-1"
+      metric_name: "Tunisia EBITDA IFRS (YTD)"
+      value: 27575
+      unit: "1000 TND"
+      source: "Table TN-4"
+      context: "Total P&L EBITDA"
+
+    - metric_id: "TN-4-2"
+      metric_name: "Net Financial Costs (YTD)"
+      value: -9307
+      unit: "1000 TND"
+      source: "Table TN-4"
+      context: "Interest and finance charges"
+
+    - metric_id: "TN-4-3"
+      metric_name: "Net Income (YTD)"
+      value: 3459
+      unit: "1000 TND"
+      source: "Table TN-4"
+      context: "Bottom line profitability"
+
+    - metric_id: "TN-5-1"
+      metric_name: "Tunisia H&S Frequency Ratio (YTD)"
+      value: 3.66
+      unit: "per 1M hours"
+      source: "Table TN-5"
+      context: "Lost time injury frequency"
+
+    - metric_id: "TN-6-1"
+      metric_name: "Tunisia Total Headcount (Aug-25)"
+      value: 536
+      unit: "count"
+      source: "Table TN-6"
+      context: "Actual headcount month-end"
+
+    - metric_id: "TN-7-1"
+      metric_name: "Tunisia Cement Capex (YTD)"
+      value: 28668
+      unit: "1000 TND"
+      source: "Table TN-7"
+      context: "Capital investment replacement"
+
+    - metric_id: "TN-8-1"
+      metric_name: "Internal Market Cement Sales (YTD)"
+      value: 100819
+      unit: "1000 TND"
+      source: "Table TN-8"
+      context: "Domestic cement revenue"
+
+    - metric_id: "TN-8-2"
+      metric_name: "Cement Volume Internal Market (YTD)"
+      value: 406
+      unit: "kton"
+      source: "Table TN-8"
+      context: "Domestic sales volume"
+
+    - metric_id: "TN-8-3"
+      metric_name: "Cement Market Share - Tunisia"
+      value: 12.2
+      unit: "%"
+      source: "Table TN-8"
+      context: "YTD market position"
+
+    - metric_id: "TN-8-4"
+      metric_name: "Libya Export Sales (YTD)"
+      value: 46695
+      unit: "1000 TND"
+      source: "Table TN-8"
+      context: "Export market revenue"
+
+    - metric_id: "TN-8-5"
+      metric_name: "EU Export Volume (YTD)"
+      value: 103
+      unit: "kton"
+      source: "Table TN-8"
+      context: "European market volume"
+
+    - metric_id: "TN-8-6"
+      metric_name: "Variable Costs Cement (YTD)"
+      value: -73407
+      unit: "1000 TND"
+      source: "Table TN-8"
+      context: "Total variable cost"
+
+    - metric_id: "TN-8-7"
+      metric_name: "Termic Energy Costs (YTD)"
+      value: -27162
+      unit: "1000 TND"
+      source: "Table TN-8"
+      context: "Fuel and energy expense"
+
+    - metric_id: "TN-8-8"
+      metric_name: "Electricity Costs (YTD)"
+      value: -29762
+      unit: "1000 TND"
+      source: "Table TN-8"
+      context: "Power consumption costs"
+
+    - metric_id: "TN-8-9"
+      metric_name: "Fixed Costs - Cement Plant (YTD)"
+      value: -44735
+      unit: "1000 TND"
+      source: "Table TN-8"
+      context: "Plant overhead and fixed costs"
+
+    - metric_id: "TN-8-10"
+      metric_name: "Cement EBITDA IFRS (YTD)"
+      value: 38691
+      unit: "1000 TND"
+      source: "Table TN-8"
+      context: "Cement division profitability"
+
+    - metric_id: "TN-8-11"
+      metric_name: "Cement Production (YTD)"
+      value: 780
+      unit: "kton"
+      source: "Table TN-8"
+      context: "Total production output"
+
+    - metric_id: "TN-8-12"
+      metric_name: "Clinker Production (YTD)"
+      value: 630
+      unit: "kton"
+      source: "Table TN-8"
+      context: "Intermediate product output"
+
+    - metric_id: "TN-8-13"
+      metric_name: "Utilization Factor (YTD)"
+      value: 84
+      unit: "%"
+      source: "Table TN-8"
+      context: "Plant capacity utilization"
+
+    - metric_id: "TN-9-1"
+      metric_name: "Ready Mix Sales (YTD)"
+      value: 12648
+      unit: "1000 TND"
+      source: "Table TN-9"
+      context: "Ready-mix concrete revenue"
+
+    - metric_id: "TN-10-1"
+      metric_name: "Accounts Receivable"
+      value: 29190
+      unit: "1000 TND"
+      source: "Table TN-10"
+      context: "Receivables outstanding"
+
+    - metric_id: "TN-10-2"
+      metric_name: "Inventory Levels"
+      value: 56959
+      unit: "1000 TND"
+      source: "Table TN-10"
+      context: "Raw materials and WIP"
+
+    - metric_id: "TN-10-3"
+      metric_name: "DSO (Days Sales Outstanding)"
+      value: 33
+      unit: "days"
+      source: "Table TN-10"
+      context: "Collection efficiency"
+
+    - metric_id: "TN-11-1"
+      metric_name: "Cash from Operations (YTD)"
+      value: 32057
+      unit: "1000 TND"
+      source: "Table TN-11"
+      context: "Operating cash generation"
+
+    - metric_id: "TN-11-2"
+      metric_name: "Capital Expenditures (YTD)"
+      value: -29757
+      unit: "1000 TND"
+      source: "Table TN-11"
+      context: "Investment outflows"
+
+    - metric_id: "LB-1-1"
+      metric_name: "Lebanon Cement Market Volume (YTD)"
+      value: 1940
+      unit: "kton"
+      source: "Table LB-2"
+      context: "Total cement market in Lebanon"
+
+    - metric_id: "LB-1-2"
+      metric_name: "Lebanon Market Share"
+      value: 27.4
+      unit: "%"
+      source: "Table LB-2"
+      context: "Lebanon cement market position"
+
+    - metric_id: "LB-1-3"
+      metric_name: "Lebanon Internal Volume (YTD)"
+      value: 531
+      unit: "kton"
+      source: "Table LB-2"
+      context: "Domestic sales volume"
+
+    - metric_id: "LB-1-4"
+      metric_name: "Lebanon Cement Price"
+      value: 80.3
+      unit: "1000 USD/ton"
+      source: "Table LB-2"
+      context: "YTD average selling price"
+
+# ============================================================================
+# TRANSPOSED TABLE ANALYSIS
+# ============================================================================
+transposed_tables:
+  - table_id: "LB-3-TRANSPOSED"
+    original_name: "Secil - Lebanon - EBITDA IFRS Bridge"
+    description: "Waterfall analysis presented as visual chart"
+    orientation: "Horizontal waterfall chart"
+    implications: "Data flows left-to-right with connecting bars"
+    challenge: "Height of bars represents magnitude, colors show positive/negative"
+    extraction_difficulty: "MEDIUM - Requires interpretation of visual relationships"
+
+# ============================================================================
+# GROUND TRUTH QUERIES - 10 Questions with Expected Answers
+# ============================================================================
+ground_truth_queries:
+  - query_id: "GT-1"
+    question: "What was the year-to-date volume of Ready Mix concrete sold in Tunisia as of August 2025?"
+    expected_answer: "68 km3"
+    answer_source: "Table TN-1: Tunisia Materials"
+    difficulty: "EASY"
+    metric_type: "Volume"
+    business_context: "Ready mix concrete product line performance"
+
+  - query_id: "GT-2"
+    question: "What is the market share of Secil's cement business in Tunisia as of August 2025?"
+    expected_answer: "12.2%"
+    answer_source: "Table TN-8: Tunisia Cement Operations"
+    difficulty: "MEDIUM"
+    metric_type: "Market Position"
+    business_context: "Competitive positioning in domestic market"
+
+  - query_id: "GT-3"
+    question: "How much cement was exported to Libya in terms of both volume and revenue for the YTD period through August 2025?"
+    expected_answer: "Volume: 263 kton; Revenue: 46,695 (1000 TND)"
+    answer_source: "Table TN-8: Tunisia Cement - External Market"
+    difficulty: "MEDIUM"
+    metric_type: "Sales & Revenue"
+    business_context: "Key export market performance"
+
+  - query_id: "GT-4"
+    question: "What are the YTD electricity costs for cement production in Tunisia through August 2025?"
+    expected_answer: "29,762 (1000 TND)"
+    answer_source: "Table TN-8: Operational Costs - Electricity"
+    difficulty: "MEDIUM"
+    metric_type: "Cost Analysis"
+    business_context: "Energy cost management and efficiency"
+
+  - query_id: "GT-5"
+    question: "What is the EBITDA margin percentage for the entire Tunisia cement division as of August 2025?"
+    expected_answer: "22.2%"
+    answer_source: "Table TN-8: Cement Division Profitability"
+    difficulty: "MEDIUM"
+    metric_type: "Profitability"
+    business_context: "Divisional operating performance"
+
+  - query_id: "GT-6"
+    question: "How many full-time employees (FTEs) were employed in the G&A function through August 2025?"
+    expected_answer: "126"
+    answer_source: "Table TN-2: G&A Employees"
+    difficulty: "EASY"
+    metric_type: "Headcount"
+    business_context: "Administrative workforce planning"
+
+  - query_id: "GT-7"
+    question: "What percentage change in Ready Mix EBITDA is shown versus the budget for YTD August 2025?"
+    expected_answer: "-52% (or 188 vs 395 budgeted, representing -207 variance)"
+    answer_source: "Table TN-1: Ready Mix EBITDA IFRS"
+    difficulty: "HARD"
+    metric_type: "Budget Variance"
+    business_context: "Performance against plan for concrete division"
+
+  - query_id: "GT-8"
+    question: "What are the total Days Sales Outstanding (DSO) and Days Inventory Outstanding (DIO) ratios for Tunisia as of August 2025?"
+    expected_answer: "DSO: 33 days; DIO: 183 days"
+    answer_source: "Table TN-10: Net Working Capital"
+    difficulty: "HARD"
+    metric_type: "Working Capital Management"
+    business_context: "Cash conversion cycle efficiency"
+
+  - query_id: "GT-9"
+    question: "What is the YTD health and safety frequency ratio (lost time injuries per 1 million hours) for Tunisia cement operations through August 2025?"
+    expected_answer: "2.10"
+    answer_source: "Table TN-5: Health & Safety KPIs"
+    difficulty: "MEDIUM"
+    metric_type: "Safety Performance"
+    business_context: "Occupational health and safety metrics"
+
+  - query_id: "GT-10"
+    question: "Compare the net working capital position: what is the percentage of trade working capital relative to annual turnover for Tunisia?"
+    expected_answer: "19% (or 19 percentage points)"
+    answer_source: "Table TN-10: Trade Working Capital Ratios"
+    difficulty: "HARD"
+    metric_type: "Capital Efficiency"
+    business_context: "Balance sheet optimization and cash management"
+
+# ============================================================================
+# DATA QUALITY NOTES
+# ============================================================================
+data_quality_assessment:
+  overall_assessment: "HIGH QUALITY"
+  observations:
+    - observation: "Multi-period comparison data (Month, YTD, Budget, Prior Year) enables robust variance analysis"
+    - observation: "Consistent currency notation (1000 TND for Tunisia) throughout document"
+    - observation: "Clear table headers with unit specifications for all metrics"
+    - observation: "Some cells contain percentage point indicators (pp) for margin changes"
+    - observation: "Rolling forecast includes forward-looking September 2025 estimates"
+    - observation: "Two business segments clearly separated (Tunisia vs Lebanon) with different currencies"
+
+  potential_challenges:
+    - challenge: "Some very large budget variances (e.g., +27411% for Travel Expenses) suggest budgeting anomalies"
+    - challenge: "Negative values for costs shown in parentheses - requires careful handling in calculations"
+    - challenge: "Lebanon section switches currency from TND to USD which could cause query confusion"
+    - challenge: "Health & Safety metrics have gaps (missing months) which could affect trend analysis"
+    - challenge: "Waterfall chart (Table LB-3) requires visual interpretation not captured in raw data"
+
+# ============================================================================
+# INDEXING RECOMMENDATIONS FOR RAG SYSTEM
+# ============================================================================
+rag_indexing_strategy:
+  chunk_strategy: "Metric-level and table-level chunks recommended"
+  recommended_chunk_size: "512 tokens per chunk"
+  key_entities_to_extract:
+    - entity_type: "Product Lines"
+      values: ["Cement", "Ready Mix", "G&A", "Corporate"]
+
+    - entity_type: "Geographic Regions"
+      values: ["Tunisia", "Lebanon", "Libya", "EU"]
+
+    - entity_type: "Time Periods"
+      values: ["August 2025", "YTD 2025", "FY 2024", "Budget 2025"]
+
+    - entity_type: "Metrics"
+      values: ["Sales", "Volume", "EBITDA", "Margin", "Costs", "Headcount"]
+
+  context_required_for_retrieval:
+    - "Always specify time period (Month, YTD, Budget, Prior Year)"
+    - "Always specify geographic region when querying Tunisia vs Lebanon"
+    - "Always specify product line for cost/revenue queries"
+    - "Always include currency context (TND vs USD)"

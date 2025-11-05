@@ -1,0 +1,254 @@
+{
+  "metadata": {
+    "version": "1.0-ANALYTICAL-REVISED",
+    "story": "2.14",
+    "pdf_source": "docs/sample pdf/160-page-financial-report.pdf",
+    "created_date": "2025-10-27",
+    "purpose": "REVISED analytical ground truth - realistic queries achievable by current SQL generation capabilities",
+    "total_queries": 16,
+    "target_accuracy": "70%+",
+    "note": "Focused on single-entity lookups and simple two-entity comparisons that test retrieval quality without requiring advanced aggregation/ranking that needs Phase 2B."
+  },
+  "test_queries": [
+    {
+      "id": "ANA-R-001",
+      "category": "AC1-Lookup",
+      "query": "What are the main cost metrics available for Portugal in August 2025?",
+      "expected_result_min": 8,
+      "expected_result_max": 20,
+      "expected_metrics": ["Variable Cost", "Cost", "Operating Expenses"],
+      "expected_entities": ["Portugal"],
+      "expected_period": "Aug-25",
+      "notes": "Single-entity multi-metric lookup - tests entity matching + metric diversity",
+      "validation_pattern": "Must find 3+ cost-related metrics for Portugal in Aug-25"
+    },
+    {
+      "id": "ANA-R-002",
+      "category": "AC1-Lookup",
+      "query": "Show the EBITDA data available for Tunisia",
+      "expected_result_min": 3,
+      "expected_result_max": 10,
+      "expected_metrics": ["EBITDA", "Cement Unit Ebitda"],
+      "expected_entities": ["Tunisia"],
+      "notes": "Single-entity metric-specific lookup - tests metric name variations",
+      "validation_pattern": "Should find both EBITDA and its variants"
+    },
+    {
+      "id": "ANA-R-003",
+      "category": "AC1-Lookup",
+      "query": "What financial metrics are reported for Angola in 2025?",
+      "expected_result_min": 10,
+      "expected_result_max": 25,
+      "expected_metrics": ["EBITDA", "Cost", "Sales", "Variable Cost"],
+      "expected_entities": ["Angola"],
+      "expected_period": "2025",
+      "notes": "Broad single-entity query across year - tests period matching",
+      "validation_pattern": "Should retrieve diverse metrics for Angola across 2025"
+    },
+    {
+      "id": "ANA-R-004",
+      "category": "AC1-Lookup",
+      "query": "What are the EBITDA values available for Brazil in August 2025?",
+      "expected_result_min": 2,
+      "expected_result_max": 8,
+      "expected_metrics": ["EBITDA", "Cement Unit Ebitda"],
+      "expected_entities": ["Brazil"],
+      "expected_period": "Aug-25",
+      "notes": "Single-entity specific metric-period combination",
+      "validation_pattern": "Must find EBITDA data for Brazil in Aug-25"
+    },
+    {
+      "id": "ANA-R-005",
+      "category": "AC1-Lookup",
+      "query": "Show thermal energy data for Portugal",
+      "expected_result_min": 3,
+      "expected_result_max": 10,
+      "expected_metrics": ["Thermal Energy"],
+      "expected_entities": ["Portugal"],
+      "notes": "Specialized metric retrieval for single entity",
+      "validation_pattern": "Should find thermal energy metric for Portugal"
+    },
+    {
+      "id": "ANA-R-006",
+      "category": "AC1-Lookup",
+      "query": "What operational data is available for Lebanon?",
+      "expected_result_min": 3,
+      "expected_result_max": 12,
+      "expected_metrics": ["EBITDA", "Cost", "Sales"],
+      "expected_entities": ["Lebanon"],
+      "notes": "Tests retrieval for less common entity",
+      "validation_pattern": "Should find operational metrics for Lebanon"
+    },
+    {
+      "id": "ANA-R-007",
+      "category": "AC2-Comparison",
+      "query": "Compare EBITDA between Portugal and Tunisia",
+      "expected_result_min": 8,
+      "expected_result_max": 18,
+      "expected_metrics": ["EBITDA", "Cement Unit Ebitda"],
+      "expected_entities": ["Portugal", "Tunisia"],
+      "notes": "Two-entity comparison on single metric",
+      "validation_pattern": "Must retrieve EBITDA for both entities"
+    },
+    {
+      "id": "ANA-R-008",
+      "category": "AC2-Comparison",
+      "query": "Compare cost structure of Angola and Brazil",
+      "expected_result_min": 10,
+      "expected_result_max": 25,
+      "expected_metrics": ["Cost", "Variable Cost", "Operating Expenses"],
+      "expected_entities": ["Angola", "Brazil"],
+      "notes": "Two-entity multi-metric comparison",
+      "validation_pattern": "Should retrieve cost metrics for both entities"
+    },
+    {
+      "id": "ANA-R-009",
+      "category": "AC3-TimeRange",
+      "query": "Show Portugal's EBITDA across August 2025 and August 2025 YTD",
+      "expected_result_min": 4,
+      "expected_result_max": 12,
+      "expected_metrics": ["EBITDA"],
+      "expected_entities": ["Portugal"],
+      "expected_periods": ["Aug-25", "Aug-25 YTD"],
+      "notes": "Tests period-span retrieval for trend comparison",
+      "validation_pattern": "Must retrieve EBITDA for both period variants"
+    },
+    {
+      "id": "ANA-R-010",
+      "category": "AC3-TimeRange",
+      "query": "What were Brazil's variable costs across different reporting periods?",
+      "expected_result_min": 5,
+      "expected_result_max": 15,
+      "expected_metrics": ["Variable Cost"],
+      "expected_entities": ["Brazil"],
+      "notes": "Tests multi-period retrieval for same metric",
+      "validation_pattern": "Should find Variable Cost across multiple periods"
+    },
+    {
+      "id": "ANA-R-011",
+      "category": "AC2-Portfolio",
+      "query": "Summarize the EBITDA data available across all markets",
+      "expected_result_min": 15,
+      "expected_result_max": 40,
+      "expected_metrics": ["EBITDA"],
+      "expected_entities": ["Portugal", "Tunisia", "Angola", "Brazil", "Lebanon"],
+      "notes": "Portfolio-level metric retrieval across entities",
+      "validation_pattern": "Must retrieve EBITDA for multiple entities"
+    },
+    {
+      "id": "ANA-R-012",
+      "category": "AC3-Calculated",
+      "query": "Show cost and sales volume metrics for Portugal to enable efficiency calculation",
+      "expected_result_min": 10,
+      "expected_result_max": 25,
+      "expected_metrics": ["Cost", "Sales Volumes"],
+      "expected_entities": ["Portugal"],
+      "notes": "Tests component retrieval for calculated metrics",
+      "validation_pattern": "Must find both cost and sales metrics"
+    },
+    {
+      "id": "ANA-R-013",
+      "category": "AC3-Calculated",
+      "query": "Retrieve EBITDA and sales data for Angola to compare margins",
+      "expected_result_min": 10,
+      "expected_result_max": 25,
+      "expected_metrics": ["EBITDA", "Sales"],
+      "expected_entities": ["Angola"],
+      "notes": "Tests component retrieval for margin analysis",
+      "validation_pattern": "Should find EBITDA and sales for Angola"
+    },
+    {
+      "id": "ANA-R-014",
+      "category": "AC1-Lookup",
+      "query": "What cost metrics does Tunisia report?",
+      "expected_result_min": 5,
+      "expected_result_max": 15,
+      "expected_metrics": ["Cost", "Variable Cost", "Operating Expenses"],
+      "expected_entities": ["Tunisia"],
+      "notes": "Single-entity cost metric discovery",
+      "validation_pattern": "Should find multiple cost categories for Tunisia"
+    },
+    {
+      "id": "ANA-R-015",
+      "category": "AC2-Comparison",
+      "query": "Compare variable costs between Portugal, Tunisia, and Angola",
+      "expected_result_min": 12,
+      "expected_result_max": 30,
+      "expected_metrics": ["Variable Cost"],
+      "expected_entities": ["Portugal", "Tunisia", "Angola"],
+      "notes": "Three-entity comparison on single metric",
+      "validation_pattern": "Must retrieve Variable Cost for all three entities"
+    },
+    {
+      "id": "ANA-R-016",
+      "category": "AC2-Filtering",
+      "query": "Which cost metrics are reported in August 2025?",
+      "expected_result_min": 8,
+      "expected_result_max": 20,
+      "expected_metrics": ["Cost", "Variable Cost", "Operating Expenses"],
+      "expected_entities": ["Portugal", "Tunisia", "Angola", "Brazil"],
+      "expected_period": "Aug-25",
+      "notes": "Period-filtered metric discovery across entities",
+      "validation_pattern": "Should find cost metrics for Aug-25 period"
+    }
+  ],
+  "category_breakdown": {
+    "AC1-Lookup": {
+      "count": 6,
+      "target": "80%+",
+      "description": "Single-entity metric lookup and discovery"
+    },
+    "AC2-Comparison": {
+      "count": 4,
+      "target": "75%+",
+      "description": "Two and three-entity comparisons"
+    },
+    "AC2-Portfolio": {
+      "count": 1,
+      "target": "70%+",
+      "description": "Portfolio-level metric retrieval"
+    },
+    "AC2-Filtering": {
+      "count": 1,
+      "target": "70%+",
+      "description": "Period-based filtering"
+    },
+    "AC3-TimeRange": {
+      "count": 2,
+      "target": "70%+",
+      "description": "Multi-period retrieval"
+    },
+    "AC3-Calculated": {
+      "count": 2,
+      "target": "75%+",
+      "description": "Component retrieval for calculations"
+    }
+  },
+  "validation_parameters": {
+    "pdf_source": "160-page financial report",
+    "result_tolerance": "±25% variance on expected result counts",
+    "target_overall_accuracy": "70%+",
+    "minimum_pass_threshold": 11,
+    "decision_gate": {
+      "pass": "≥11/16 (69%+) - Retrieval quality validated",
+      "investigate": "9-10/16 (56-62%) - Minor gaps in specific categories",
+      "fail": "<9/16 (<56%)"
+    },
+    "key_validation_principle": "Tests single/multi-entity retrieval quality. Complex aggregations and ranking (for Phase 2B) are explicitly excluded."
+  },
+  "data_assumptions": {
+    "entities_available": ["Portugal", "Tunisia", "Angola", "Brazil", "Lebanon"],
+    "metrics_available": ["Variable Cost", "EBITDA", "Cement Unit Ebitda", "Sales Volumes", "Thermal Energy", "Cost", "Operating Expenses"],
+    "periods_available": ["Aug-25", "Aug-25 YTD", "2025"],
+    "currencies": "EUR only"
+  },
+  "important_notes": {
+    "note_1": "REVISED: Focused on retrieval quality achievable with current SQL generation",
+    "note_2": "Excludes advanced aggregations (average, sum) and ranking (highest, lowest) - scope for Phase 2B",
+    "note_3": "All queries use realistic entity/metric/period combinations from actual PDF",
+    "note_4": "Success = retrieving relevant data for entity/metric/period combinations",
+    "note_5": "Expected ranges (±25%) account for data density variations",
+    "note_6": "This is 'realistic aspirational' - tests what the system SHOULD do now",
+    "note_7": "If complex analytical queries needed sooner: requires Phase 2B (structured multi-index + cross-encoder)"
+  }
+}

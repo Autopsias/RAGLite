@@ -11,3 +11,16 @@ services:
       - QDRANT__SERVICE__HTTP_PORT=6333
       - QDRANT__SERVICE__GRPC_PORT=6334
     restart: unless-stopped
+
+  postgresql:
+    image: postgres:16
+    container_name: raglite-postgresql
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgresql_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=raglite
+      - POSTGRES_USER=raglite
+      - POSTGRES_PASSWORD=raglite
+    restart: unless-stopped

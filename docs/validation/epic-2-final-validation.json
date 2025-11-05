@@ -1,0 +1,980 @@
+{
+  "metadata": {
+    "timestamp": "2025-11-04 23:07:35",
+    "stories_tested": [
+      "2.11",
+      "2.14",
+      "2.15"
+    ],
+    "ground_truth_file": "tests/ground_truth_normalized.json",
+    "total_queries": 49
+  },
+  "metrics": {
+    "overall_accuracy": 77.55102040816327,
+    "passed_count": 38,
+    "failed_count": 11,
+    "latency_p50_ms": 2670.874834060669,
+    "latency_p95_ms": 4672.7635860443115
+  },
+  "category_breakdown": {
+    "cost_analysis": {
+      "accuracy": 83.33333333333334,
+      "passed": 10,
+      "total": 12
+    },
+    "margins": {
+      "accuracy": 62.5,
+      "passed": 5,
+      "total": 8
+    },
+    "financial_performance": {
+      "accuracy": 90.0,
+      "passed": 9,
+      "total": 10
+    },
+    "safety_metrics": {
+      "accuracy": 100.0,
+      "passed": 5,
+      "total": 5
+    },
+    "workforce": {
+      "accuracy": 83.33333333333334,
+      "passed": 5,
+      "total": 6
+    },
+    "operating_expenses": {
+      "accuracy": 50.0,
+      "passed": 4,
+      "total": 8
+    }
+  },
+  "decision_gate": {
+    "decision": "EPIC_2_COMPLETE",
+    "checks": {
+      "Retrieval accuracy \u226570%": true,
+      "p95 latency <15000ms": true
+    }
+  },
+  "individual_results": [
+    {
+      "query_id": 1,
+      "question": "What is the variable cost per ton for Portugal Cement in August 2025 YTD?",
+      "category": "cost_analysis",
+      "passed": false,
+      "expected_keywords": [
+        "variable costs",
+        "23.2",
+        "EUR/ton",
+        "20.3",
+        "29.4"
+      ],
+      "retrieved_keywords": [],
+      "latency_ms": 2227.790117263794,
+      "error": null
+    },
+    {
+      "query_id": 2,
+      "question": "What is the thermal energy cost per ton for Portugal Cement?",
+      "category": "cost_analysis",
+      "passed": true,
+      "expected_keywords": [
+        "termic energy",
+        "thermal energy",
+        "5.8",
+        "EUR/ton",
+        "8.3"
+      ],
+      "retrieved_keywords": [
+        "thermal energy",
+        "EUR/ton"
+      ],
+      "latency_ms": 7202.225923538208,
+      "error": null
+    },
+    {
+      "query_id": 3,
+      "question": "What is the electricity cost per ton for Portugal Cement operations?",
+      "category": "cost_analysis",
+      "passed": true,
+      "expected_keywords": [
+        "electricity",
+        "7.8",
+        "EUR/ton",
+        "4.4",
+        "9.6"
+      ],
+      "retrieved_keywords": [
+        "EUR/ton"
+      ],
+      "latency_ms": 2951.6990184783936,
+      "error": null
+    },
+    {
+      "query_id": 4,
+      "question": "What are the raw materials costs per ton?",
+      "category": "cost_analysis",
+      "passed": true,
+      "expected_keywords": [
+        "raw materials",
+        "3.5",
+        "EUR/ton",
+        "4.2",
+        "6.2"
+      ],
+      "retrieved_keywords": [
+        "raw materials",
+        "3.5",
+        "EUR/ton",
+        "4.2",
+        "6.2"
+      ],
+      "latency_ms": 2910.088062286377,
+      "error": null
+    },
+    {
+      "query_id": 5,
+      "question": "What are the packaging costs per ton for cement?",
+      "category": "cost_analysis",
+      "passed": true,
+      "expected_keywords": [
+        "packaging",
+        "3.7",
+        "EUR/ton",
+        "3.3"
+      ],
+      "retrieved_keywords": [
+        "3.7",
+        "EUR/ton"
+      ],
+      "latency_ms": 3234.663963317871,
+      "error": null
+    },
+    {
+      "query_id": 6,
+      "question": "What is the alternative fuel rate percentage for Portugal Cement?",
+      "category": "cost_analysis",
+      "passed": false,
+      "expected_keywords": [
+        "alternative fuel",
+        "50%",
+        "60%",
+        "42%"
+      ],
+      "retrieved_keywords": [],
+      "latency_ms": 2659.050703048706,
+      "error": null
+    },
+    {
+      "query_id": 7,
+      "question": "What are the maintenance costs per ton?",
+      "category": "cost_analysis",
+      "passed": true,
+      "expected_keywords": [
+        "maintenance costs",
+        "11.1",
+        "EUR/ton",
+        "9.5",
+        "12.2"
+      ],
+      "retrieved_keywords": [
+        "maintenance costs",
+        "11.1",
+        "EUR/ton",
+        "9.5"
+      ],
+      "latency_ms": 3070.190906524658,
+      "error": null
+    },
+    {
+      "query_id": 8,
+      "question": "What is the electricity specific consumption for clinker grey production?",
+      "category": "cost_analysis",
+      "passed": true,
+      "expected_keywords": [
+        "electricity spec",
+        "clinker grey",
+        "77",
+        "Kwh/ton",
+        "78"
+      ],
+      "retrieved_keywords": [
+        "77",
+        "78"
+      ],
+      "latency_ms": 3517.879009246826,
+      "error": null
+    },
+    {
+      "query_id": 9,
+      "question": "What is the thermal energy specific consumption in Kcal/kg clinker?",
+      "category": "cost_analysis",
+      "passed": true,
+      "expected_keywords": [
+        "termic energy spec",
+        "835",
+        "Kcal/kg",
+        "clk",
+        "847"
+      ],
+      "retrieved_keywords": [
+        "termic energy spec",
+        "Kcal/kg",
+        "clk"
+      ],
+      "latency_ms": 2909.1880321502686,
+      "error": null
+    },
+    {
+      "query_id": 10,
+      "question": "What is the external electricity price per MWh?",
+      "category": "cost_analysis",
+      "passed": true,
+      "expected_keywords": [
+        "external electricity",
+        "61.4",
+        "EUR/MWh",
+        "41.8",
+        "77.5"
+      ],
+      "retrieved_keywords": [
+        "61.4",
+        "EUR/MWh"
+      ],
+      "latency_ms": 3013.4100914001465,
+      "error": null
+    },
+    {
+      "query_id": 11,
+      "question": "How do total variable costs per ton compare across the three periods and what is the trend?",
+      "category": "cost_analysis",
+      "passed": true,
+      "expected_keywords": [
+        "variable costs",
+        "29.4",
+        "23.2",
+        "EUR/ton",
+        "21%",
+        "reduction"
+      ],
+      "retrieved_keywords": [
+        "variable costs",
+        "EUR/ton"
+      ],
+      "latency_ms": 2670.874834060669,
+      "error": null
+    },
+    {
+      "query_id": 12,
+      "question": "What is the relationship between alternative fuel rate percentage and thermal energy costs per ton?",
+      "category": "cost_analysis",
+      "passed": true,
+      "expected_keywords": [
+        "alternative fuel",
+        "50%",
+        "42%",
+        "termic energy",
+        "5.8",
+        "8.3",
+        "reduction"
+      ],
+      "retrieved_keywords": [
+        "alternative fuel",
+        "50%",
+        "42%",
+        "termic energy",
+        "8.3"
+      ],
+      "latency_ms": 2344.0029621124268,
+      "error": null
+    },
+    {
+      "query_id": 13,
+      "question": "What is the EBITDA IFRS margin percentage for Portugal Cement?",
+      "category": "margins",
+      "passed": false,
+      "expected_keywords": [
+        "EBITDA IFRS margin",
+        "50.6%",
+        "53.2%",
+        "40.6%"
+      ],
+      "retrieved_keywords": [],
+      "latency_ms": 2308.142900466919,
+      "error": null
+    },
+    {
+      "query_id": 14,
+      "question": "What is the EBITDA per ton for Portugal Cement?",
+      "category": "margins",
+      "passed": true,
+      "expected_keywords": [
+        "EBITDA",
+        "64.4",
+        "EUR/ton",
+        "67.4",
+        "49.5"
+      ],
+      "retrieved_keywords": [
+        "EBITDA",
+        "67.4"
+      ],
+      "latency_ms": 1860.6019020080566,
+      "error": null
+    },
+    {
+      "query_id": 15,
+      "question": "What is the unit variable margin per ton?",
+      "category": "margins",
+      "passed": true,
+      "expected_keywords": [
+        "unit variable margin",
+        "90.1",
+        "EUR/ton",
+        "92.0",
+        "78.2"
+      ],
+      "retrieved_keywords": [
+        "unit variable margin"
+      ],
+      "latency_ms": 2195.0178146362305,
+      "error": null
+    },
+    {
+      "query_id": 16,
+      "question": "What are the fixed costs per ton for Out\u00e3o plant?",
+      "category": "margins",
+      "passed": true,
+      "expected_keywords": [
+        "out\u00e3o",
+        "fixed costs",
+        "23.7",
+        "EUR/ton",
+        "21.6",
+        "26.5"
+      ],
+      "retrieved_keywords": [
+        "out\u00e3o",
+        "fixed costs",
+        "EUR/ton"
+      ],
+      "latency_ms": 2547.182083129883,
+      "error": null
+    },
+    {
+      "query_id": 17,
+      "question": "What are the fixed costs per ton for Maceira plant?",
+      "category": "margins",
+      "passed": true,
+      "expected_keywords": [
+        "maceira",
+        "fixed costs",
+        "26.8",
+        "EUR/ton",
+        "22.1",
+        "20.5"
+      ],
+      "retrieved_keywords": [
+        "maceira",
+        "fixed costs",
+        "EUR/ton"
+      ],
+      "latency_ms": 3016.2837505340576,
+      "error": null
+    },
+    {
+      "query_id": 18,
+      "question": "What is the unit cement EBITDA for Out\u00e3o plant internal market?",
+      "category": "margins",
+      "passed": false,
+      "expected_keywords": [
+        "out\u00e3o",
+        "unit cement ebitda",
+        "80.5",
+        "EUR/ton",
+        "81.9",
+        "65.0"
+      ],
+      "retrieved_keywords": [],
+      "latency_ms": 3115.5688762664795,
+      "error": null
+    },
+    {
+      "query_id": 19,
+      "question": "What are the fixed costs per ton for Pataias plant and how do they compare to other plants?",
+      "category": "margins",
+      "passed": true,
+      "expected_keywords": [
+        "pataias",
+        "fixed costs",
+        "59.8",
+        "EUR/ton",
+        "out\u00e3o",
+        "maceira"
+      ],
+      "retrieved_keywords": [
+        "fixed costs",
+        "EUR/ton"
+      ],
+      "latency_ms": 2818.568229675293,
+      "error": null
+    },
+    {
+      "query_id": 20,
+      "question": "How does the EBITDA margin improvement from Aug-24 to Aug-25 YTD relate to variable and fixed cost changes?",
+      "category": "margins",
+      "passed": false,
+      "expected_keywords": [
+        "EBITDA margin",
+        "50.6%",
+        "40.6%",
+        "10 pp",
+        "variable costs",
+        "fixed costs",
+        "efficiency"
+      ],
+      "retrieved_keywords": [],
+      "latency_ms": 4487.238168716431,
+      "error": null
+    },
+    {
+      "query_id": 21,
+      "question": "What is the EBITDA for Portugal operations in Aug-25 YTD?",
+      "category": "financial_performance",
+      "passed": false,
+      "expected_keywords": [
+        "EBITDA portugal",
+        "104,647",
+        "108,942",
+        "94,845",
+        "thousand EUR"
+      ],
+      "retrieved_keywords": [],
+      "latency_ms": 1199.260950088501,
+      "error": null
+    },
+    {
+      "query_id": 22,
+      "question": "What is the cash flow from operating activities?",
+      "category": "financial_performance",
+      "passed": true,
+      "expected_keywords": [
+        "CF from operating activities",
+        "7,208",
+        "35,616",
+        "7,136",
+        "thousand EUR"
+      ],
+      "retrieved_keywords": [
+        "CF from operating activities"
+      ],
+      "latency_ms": 2755.1610469818115,
+      "error": null
+    },
+    {
+      "query_id": 23,
+      "question": "What are the capital expenditures (Capex) for the period?",
+      "category": "financial_performance",
+      "passed": true,
+      "expected_keywords": [
+        "capex",
+        "33,059",
+        "52,506",
+        "32,456",
+        "thousand EUR"
+      ],
+      "retrieved_keywords": [
+        "capex"
+      ],
+      "latency_ms": 1497.3218441009521,
+      "error": null
+    },
+    {
+      "query_id": 24,
+      "question": "What is the financial net debt closing balance?",
+      "category": "financial_performance",
+      "passed": true,
+      "expected_keywords": [
+        "financial net debt",
+        "closing balance",
+        "244,709",
+        "258,679",
+        "233,686"
+      ],
+      "retrieved_keywords": [
+        "financial net debt",
+        "closing balance"
+      ],
+      "latency_ms": 1505.7520866394043,
+      "error": null
+    },
+    {
+      "query_id": 25,
+      "question": "What is the change in trade working capital?",
+      "category": "financial_performance",
+      "passed": true,
+      "expected_keywords": [
+        "trade working capital",
+        "30,913",
+        "5,862",
+        "7,623"
+      ],
+      "retrieved_keywords": [
+        "trade working capital"
+      ],
+      "latency_ms": 1379.7731399536133,
+      "error": null
+    },
+    {
+      "query_id": 26,
+      "question": "What are the income tax payments for the period?",
+      "category": "financial_performance",
+      "passed": true,
+      "expected_keywords": [
+        "income tax",
+        "11,801",
+        "16,051",
+        "7,187"
+      ],
+      "retrieved_keywords": [
+        "income tax"
+      ],
+      "latency_ms": 4858.289003372192,
+      "error": null
+    },
+    {
+      "query_id": 27,
+      "question": "What are the net interest expenses?",
+      "category": "financial_performance",
+      "passed": true,
+      "expected_keywords": [
+        "net interest expenses",
+        "6,853",
+        "5,699",
+        "4,994"
+      ],
+      "retrieved_keywords": [
+        "net interest expenses"
+      ],
+      "latency_ms": 2128.6799907684326,
+      "error": null
+    },
+    {
+      "query_id": 28,
+      "question": "What is the cash set free or tied up after investments?",
+      "category": "financial_performance",
+      "passed": true,
+      "expected_keywords": [
+        "cash set free",
+        "tied up",
+        "investments",
+        "25,851",
+        "16,889"
+      ],
+      "retrieved_keywords": [
+        "cash set free",
+        "tied up",
+        "investments"
+      ],
+      "latency_ms": 2249.591112136841,
+      "error": null
+    },
+    {
+      "query_id": 29,
+      "question": "How does the EBITDA Portugal plus Group Structure compare across periods and what is the growth rate?",
+      "category": "financial_performance",
+      "passed": true,
+      "expected_keywords": [
+        "EBITDA",
+        "group structure",
+        "91,438",
+        "77,992",
+        "17%",
+        "growth"
+      ],
+      "retrieved_keywords": [
+        "EBITDA"
+      ],
+      "latency_ms": 1885.4899406433105,
+      "error": null
+    },
+    {
+      "query_id": 30,
+      "question": "What is the relationship between cash flow from operations and working capital changes?",
+      "category": "financial_performance",
+      "passed": true,
+      "expected_keywords": [
+        "CF from operations",
+        "25,862",
+        "working capital",
+        "30,913",
+        "EBITDA"
+      ],
+      "retrieved_keywords": [
+        "CF from operations",
+        "working capital",
+        "EBITDA"
+      ],
+      "latency_ms": 3731.6012382507324,
+      "error": null
+    },
+    {
+      "query_id": 31,
+      "question": "How many FTE employees work in Portugal Cement operations?",
+      "category": "safety_metrics",
+      "passed": true,
+      "expected_keywords": [
+        "FTEs",
+        "232",
+        "287",
+        "222",
+        "employees"
+      ],
+      "retrieved_keywords": [
+        "222"
+      ],
+      "latency_ms": 1526.2060165405273,
+      "error": null
+    },
+    {
+      "query_id": 32,
+      "question": "What is the daily clinker production capacity?",
+      "category": "safety_metrics",
+      "passed": true,
+      "expected_keywords": [
+        "daily clinker production",
+        "1.9",
+        "kton",
+        "1.8",
+        "1.6"
+      ],
+      "retrieved_keywords": [
+        "daily clinker production",
+        "1.9",
+        "kton",
+        "1.8",
+        "1.6"
+      ],
+      "latency_ms": 4316.935300827026,
+      "error": null
+    },
+    {
+      "query_id": 33,
+      "question": "What is the reliability factor percentage for cement production?",
+      "category": "safety_metrics",
+      "passed": true,
+      "expected_keywords": [
+        "reliability factor",
+        "57%",
+        "66%",
+        "61%"
+      ],
+      "retrieved_keywords": [
+        "reliability factor"
+      ],
+      "latency_ms": 2887.309789657593,
+      "error": null
+    },
+    {
+      "query_id": 34,
+      "question": "What is the utilization factor in tons for cement production?",
+      "category": "safety_metrics",
+      "passed": true,
+      "expected_keywords": [
+        "utilization factor",
+        "tons",
+        "44%",
+        "59%"
+      ],
+      "retrieved_keywords": [
+        "utilization factor",
+        "tons"
+      ],
+      "latency_ms": 2957.7150344848633,
+      "error": null
+    },
+    {
+      "query_id": 35,
+      "question": "What is the performance factor percentage?",
+      "category": "safety_metrics",
+      "passed": true,
+      "expected_keywords": [
+        "performance factor",
+        "19%",
+        "21%",
+        "16%"
+      ],
+      "retrieved_keywords": [
+        "performance factor"
+      ],
+      "latency_ms": 3428.4517765045166,
+      "error": null
+    },
+    {
+      "query_id": 37,
+      "question": "What are the employee costs per ton for Portugal Cement?",
+      "category": "workforce",
+      "passed": true,
+      "expected_keywords": [
+        "employees",
+        "6.6",
+        "EUR/ton",
+        "6.0",
+        "5.6"
+      ],
+      "retrieved_keywords": [
+        "6.6",
+        "EUR/ton"
+      ],
+      "latency_ms": 2716.714859008789,
+      "error": null
+    },
+    {
+      "query_id": 38,
+      "question": "How many FTEs work in distribution for Portugal Cement?",
+      "category": "workforce",
+      "passed": true,
+      "expected_keywords": [
+        "distribution",
+        "FTEs",
+        "18",
+        "19"
+      ],
+      "retrieved_keywords": [
+        "18",
+        "19"
+      ],
+      "latency_ms": 28.645992279052734,
+      "error": null
+    },
+    {
+      "query_id": 39,
+      "question": "What is the total headcount for Tunisia operations in August 2025?",
+      "category": "workforce",
+      "passed": false,
+      "expected_keywords": [
+        "tunisia",
+        "headcount",
+        "536",
+        "350",
+        "employees"
+      ],
+      "retrieved_keywords": [],
+      "latency_ms": 1778.9702415466309,
+      "error": null
+    },
+    {
+      "query_id": 40,
+      "question": "How many FTEs are in sales for Portugal Cement?",
+      "category": "workforce",
+      "passed": true,
+      "expected_keywords": [
+        "sales",
+        "FTEs",
+        "16",
+        "15",
+        "7%"
+      ],
+      "retrieved_keywords": [
+        "sales",
+        "16",
+        "15",
+        "7%"
+      ],
+      "latency_ms": 60.17494201660156,
+      "error": null
+    },
+    {
+      "query_id": 41,
+      "question": "What is the breakdown of Tunisia Cement employees by function?",
+      "category": "workforce",
+      "passed": true,
+      "expected_keywords": [
+        "tunisia cement",
+        "350",
+        "plants",
+        "238",
+        "distribution",
+        "84",
+        "sales",
+        "28"
+      ],
+      "retrieved_keywords": [
+        "tunisia cement",
+        "sales",
+        "28"
+      ],
+      "latency_ms": 3585.5488777160645,
+      "error": null
+    },
+    {
+      "query_id": 42,
+      "question": "How does employee cost per ton efficiency compare across periods and what factors drive the changes?",
+      "category": "workforce",
+      "passed": true,
+      "expected_keywords": [
+        "employee costs",
+        "6.6",
+        "5.6",
+        "EUR/ton",
+        "FTEs",
+        "232",
+        "222",
+        "increase"
+      ],
+      "retrieved_keywords": [
+        "employee costs",
+        "6.6",
+        "5.6",
+        "EUR/ton",
+        "FTEs",
+        "232"
+      ],
+      "latency_ms": 3819.2410469055176,
+      "error": null
+    },
+    {
+      "query_id": 43,
+      "question": "What are the other costs per ton for Portugal Cement operations?",
+      "category": "operating_expenses",
+      "passed": false,
+      "expected_keywords": [
+        "other costs",
+        "9.8",
+        "EUR/ton",
+        "9.2",
+        "10.1"
+      ],
+      "retrieved_keywords": [],
+      "latency_ms": 2351.8221378326416,
+      "error": null
+    },
+    {
+      "query_id": 44,
+      "question": "What are the distribution costs per ton?",
+      "category": "operating_expenses",
+      "passed": false,
+      "expected_keywords": [
+        "distribution costs",
+        "1.7",
+        "EUR/ton",
+        "1.5"
+      ],
+      "retrieved_keywords": [],
+      "latency_ms": 1824.7029781341553,
+      "error": null
+    },
+    {
+      "query_id": 45,
+      "question": "What are the sales costs per ton?",
+      "category": "operating_expenses",
+      "passed": true,
+      "expected_keywords": [
+        "sales costs",
+        "1.2",
+        "EUR/ton",
+        "1.1"
+      ],
+      "retrieved_keywords": [
+        "EUR/ton"
+      ],
+      "latency_ms": 1841.3891792297363,
+      "error": null
+    },
+    {
+      "query_id": 46,
+      "question": "What are the insurance costs?",
+      "category": "operating_expenses",
+      "passed": false,
+      "expected_keywords": [
+        "insurance",
+        "1,072",
+        "1,413",
+        "1,255",
+        "thousand EUR"
+      ],
+      "retrieved_keywords": [],
+      "latency_ms": 2356.7280769348145,
+      "error": null
+    },
+    {
+      "query_id": 47,
+      "question": "What are the rents and rentals costs?",
+      "category": "operating_expenses",
+      "passed": true,
+      "expected_keywords": [
+        "rents",
+        "rentals",
+        "1,262",
+        "807",
+        "1,273"
+      ],
+      "retrieved_keywords": [
+        "rents",
+        "rentals"
+      ],
+      "latency_ms": 2636.6350650787354,
+      "error": null
+    },
+    {
+      "query_id": 48,
+      "question": "What are the production services costs?",
+      "category": "operating_expenses",
+      "passed": false,
+      "expected_keywords": [
+        "production services",
+        "5,713",
+        "5,863",
+        "5,723"
+      ],
+      "retrieved_keywords": [],
+      "latency_ms": 2443.682909011841,
+      "error": null
+    },
+    {
+      "query_id": 49,
+      "question": "What are the specialized labour costs?",
+      "category": "operating_expenses",
+      "passed": true,
+      "expected_keywords": [
+        "specialized labour",
+        "1,778",
+        "2,490",
+        "1,732"
+      ],
+      "retrieved_keywords": [
+        "specialized labour"
+      ],
+      "latency_ms": 3083.4078788757324,
+      "error": null
+    },
+    {
+      "query_id": 50,
+      "question": "How do fixed costs break down into employee costs, maintenance, and other costs, and what is the efficiency trend?",
+      "category": "operating_expenses",
+      "passed": true,
+      "expected_keywords": [
+        "fixed costs",
+        "27.4",
+        "employee costs",
+        "6.6",
+        "maintenance",
+        "11.1",
+        "other costs",
+        "9.8",
+        "FTEs",
+        "productivity"
+      ],
+      "retrieved_keywords": [
+        "fixed costs",
+        "employee costs",
+        "6.6",
+        "maintenance",
+        "other costs",
+        "9.8",
+        "FTEs"
+      ],
+      "latency_ms": 3069.8840618133545,
+      "error": null
+    }
+  ]
+}

@@ -1,0 +1,334 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.8</storyId>
+    <title>Table-Aware Chunking Strategy</title>
+    <status>Ready</status>
+    <generatedAt>2025-10-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/story-2.8.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a RAG ingestion pipeline</asA>
+    <iWant>table-aware chunking that preserves complete tables as single chunks</iWant>
+    <soThat>semantic coherence of tabular data is maintained and retrieval accuracy improves from 52% baseline</soThat>
+    <tasks>
+      <task id="1" effort="3h" goal="Table Detection and Preservation (AC1)">
+        <subtask id="1.1">Update pipeline.py to detect Docling table elements</subtask>
+        <subtask id="1.2">Implement single-chunk table creation</subtask>
+        <subtask id="1.3">Maintain existing 512-token chunking for non-table content</subtask>
+        <subtask id="1.4">Validate table detection on test PDF</subtask>
+      </task>
+      <task id="2" effort="2h" goal="Large Table Splitting Strategy (AC2)">
+        <subtask id="2.1">Implement table token counting</subtask>
+        <subtask id="2.2">Implement row-based table splitting</subtask>
+        <subtask id="2.3">Add table context prefixes</subtask>
+        <subtask id="2.4">Test large table splitting</subtask>
+      </task>
+      <task id="3" effort="2h" goal="Re-Ingestion and Validation (AC3)">
+        <subtask id="3.1">Create re-ingestion script</subtask>
+        <subtask id="3.2">Run full re-ingestion</subtask>
+        <subtask id="3.3">Validate chunk metrics</subtask>
+        <subtask id="3.4">Spot-check chunk quality</subtask>
+      </task>
+      <task id="4" effort="1h" goal="Accuracy Validation (AC4)">
+        <subtask id="4.1">Run accuracy test suite</subtask>
+        <subtask id="4.2">Analyze results by query category</subtask>
+        <subtask id="4.3">Document accuracy improvement</subtask>
+        <subtask id="4.4">Decision gate check</subtask>
+      </task>
+      <task id="5" effort="2h" goal="Semantic Dilution Detection (AC5)">
+        <subtask id="5.1">Create dilution analysis script</subtask>
+        <subtask id="5.2">Implement embedding quality metrics</subtask>
+        <subtask id="5.3">Run dilution detection analysis</subtask>
+        <subtask id="5.4">Evaluate dilution detection results</subtask>
+        <subtask id="5.5">Document dilution analysis findings</subtask>
+      </task>
+      <task id="6" effort="30min" goal="Documentation and Testing">
+        <subtask id="6.1">Update CLAUDE.md</subtask>
+        <subtask id="6.2">Create unit tests</subtask>
+        <subtask id="6.3">Update epic documentation</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" effort="3h" goal="Table Detection and Preservation">
+      <requirement>Detect Docling TableItem elements during ingestion</requirement>
+      <requirement>Create single chunks for tables &lt;4096 tokens</requirement>
+      <requirement>Preserve table metadata (page_number, section_type='Table')</requirement>
+      <requirement>Maintain existing 512-token chunking for non-table content</requirement>
+      <validation>100% of 171 tables detected correctly</validation>
+      <validation>Tables &lt;4096 tokens kept intact (single chunk each)</validation>
+      <validation>Non-table content uses existing 512-token strategy</validation>
+    </criterion>
+    <criterion id="AC2" effort="2h" goal="Large Table Splitting Strategy">
+      <requirement>Split tables &gt;4096 tokens by logical rows</requirement>
+      <requirement>Duplicate column headers in each chunk part</requirement>
+      <requirement>Add table context prefix: "Table {index} (Part {n} of {total}): {caption}"</requirement>
+      <validation>Large tables split by logical rows (no mid-row breaks)</validation>
+      <validation>Column headers duplicated in every chunk part</validation>
+      <validation>All chunks &lt;4096 tokens</validation>
+      <validation>Row data integrity preserved (no lost rows)</validation>
+    </criterion>
+    <criterion id="AC3" effort="2h" goal="Re-Ingestion and Validation">
+      <requirement>Clear existing PostgreSQL data and Qdrant collection</requirement>
+      <requirement>Re-ingest with table-aware chunking enabled</requirement>
+      <requirement>Validate chunk count reduction: 1,592 → 500-600</requirement>
+      <requirement>Validate chunks per table: 8.6 → 1.2 target</requirement>
+      <validation>Re-ingestion completes successfully (no errors)</validation>
+      <validation>Total chunks reduced by 60-70% (1,592 → 500-600)</validation>
+      <validation>Chunks per table ≤1.5 (target: 1.2, down from 8.6)</validation>
+      <validation>Metadata extraction success rate ≥90%</validation>
+      <validation>Qdrant vectors populated correctly (500-600 embeddings)</validation>
+    </criterion>
+    <criterion id="AC4" effort="1h" goal="Accuracy Validation - Expected +10-15pp Improvement">
+      <requirement>Run accuracy test suite with re-ingested data</requirement>
+      <requirement>Measure baseline comparison: Before 52% → After 62-67%</requirement>
+      <requirement>Analyze table-heavy queries specifically (20 queries)</requirement>
+      <validation>Overall accuracy ≥62% (conservative target, +10pp improvement)</validation>
+      <validation>Stretch goal: ≥67% (+15pp improvement)</validation>
+      <validation>Table query accuracy ≥70% (up from 40%)</validation>
+      <validation>Text query accuracy stable or improved (≥60%)</validation>
+      <validation>No category shows &gt;5pp regression</validation>
+      <blocker>If accuracy does NOT improve by ≥10pp, HALT and investigate before Stories 2.9-2.11</blocker>
+    </criterion>
+    <criterion id="AC5" effort="2h" goal="Semantic Dilution Detection &amp; Monitoring">
+      <requirement>Create diagnostic script to analyze chunk quality</requirement>
+      <requirement>Detect if large table chunks exhibit semantic dilution</requirement>
+      <requirement>Measure chunk size distribution, embedding quality, query performance</requirement>
+      <validation>Diagnostic script executes successfully</validation>
+      <validation>Large table accuracy within 15pp of small table accuracy</validation>
+      <validation>Embedding similarity &lt;0.7 for large tables</validation>
+      <validation>No single table size bucket shows &gt;20pp accuracy drop</validation>
+      <decisionGate>
+        <option result="NO_DILUTION">Keep 4096 token threshold, proceed to Story 2.9</option>
+        <option result="DILUTION_SUSPECTED">Document concern, proceed to 2.9 but plan Story 2.8.1</option>
+        <option result="DILUTION_CONFIRMED">HALT Story 2.8, reduce to 2048 tokens, re-ingest, re-validate</option>
+      </decisionGate>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2: Advanced RAG Architecture Enhancement</title>
+        <section>Phase 2A Course Correction</section>
+        <snippet>Epic 2 pivots to staged RAG enhancement with Phase 2A focus on fixed chunking (68-72% accuracy target). Course correction required after failed AC3 validation (52% vs ≥70%).</snippet>
+      </doc>
+      <doc>
+        <path>docs/phase2a-deep-dive-analysis.md</path>
+        <title>Phase 2A Deep Dive Analysis</title>
+        <section>Root Cause #1: Severe Table Fragmentation</section>
+        <snippet>Fixed 512-token chunking splits tables across 8.6 chunks on average, destroying semantic coherence. Total table chunks: 1,466 across 171 unique tables.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/6-complete-reference-implementation.md</path>
+        <title>Complete Reference Implementation</title>
+        <section>6.2 Table-Aware Chunking Strategy</section>
+        <snippet>Reference implementation for detecting Docling TableItem elements, preserving complete tables as semantic units, and splitting large tables by rows with headers.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack (Definitive)</title>
+        <section>Core Technologies</section>
+        <snippet>Docling 2.55.1 for PDF extraction (97.9% table accuracy), tiktoken for token counting, PostgreSQL for structured storage, Qdrant for vector search.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/3-repository-structure-monolithic.md</path>
+        <title>Repository Structure (Monolithic)</title>
+        <section>Ingestion Module</section>
+        <snippet>raglite/ingestion/ contains pipeline.py for document processing. Target: ~150 lines for ingestion logic.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/decisions/ADR-003-table-aware-chunking.md</path>
+        <title>ADR-003: Table-Aware Chunking</title>
+        <section>Decision Record</section>
+        <snippet>Architecture Decision Record documenting the table-aware chunking approach, rationale, and implementation strategy.</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Claude Code Development Guidelines</title>
+        <section>Anti-Over-Engineering Rules</section>
+        <snippet>KISS principle enforced. No abstractions, frameworks, or custom wrappers. Use SDKs exactly as documented. Target: 600-800 total lines of code.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>module</kind>
+        <symbol>ingest_document</symbol>
+        <lines>1-50</lines>
+        <reason>Main ingestion pipeline that needs table detection logic. Currently uses fixed 512-token chunking for all content.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>models</kind>
+        <symbol>Chunk, DocumentMetadata, ExtractedMetadata</symbol>
+        <lines>N/A</lines>
+        <reason>Pydantic models for chunk and metadata structures. Table chunks will use section_type='Table' metadata field.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/clients.py</path>
+        <kind>clients</kind>
+        <symbol>get_qdrant_client, get_embedding_model</symbol>
+        <lines>N/A</lines>
+        <reason>Client initialization for Qdrant vector DB. Table chunks will be embedded and stored using existing clients.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/tests/conftest.py</path>
+        <kind>test-fixtures</kind>
+        <symbol>pytest fixtures</symbol>
+        <lines>N/A</lines>
+        <reason>Shared test fixtures for pytest. Will be used for table chunking unit tests.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="docling" version="2.55.1" purpose="PDF extraction with TableItem detection"/>
+        <package name="tiktoken" version=">=0.5.1,&lt;1.0.0" purpose="Token counting for chunk size limits"/>
+        <package name="qdrant-client" version="1.15.1" purpose="Vector storage for table chunks"/>
+        <package name="psycopg2-binary" version=">=2.9,&lt;3.0" purpose="PostgreSQL for metadata storage"/>
+        <package name="sentence-transformers" version="5.1.1" purpose="Fin-E5 embeddings for table chunks"/>
+        <package name="mistralai" version=">=1.9.11" purpose="LLM metadata extraction (unchanged)"/>
+        <package name="pytest" version="8.4.2" purpose="Testing framework"/>
+        <package name="pytest-asyncio" version="1.2.0" purpose="Async test support"/>
+        <package name="pytest-cov" version="5.0.0" purpose="Code coverage reporting"/>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint category="simplicity">
+      <rule>KISS Principle: No custom table parsing library - use Docling built-in TableItem detection</rule>
+      <rule>No complex chunking algorithms - simple row accumulation for large tables</rule>
+      <rule>No ML-based table detection - use Docling element types directly</rule>
+      <rule>Direct implementation target: ~100 new lines of code in pipeline.py</rule>
+    </constraint>
+    <constraint category="anti-over-engineering">
+      <rule>NO table structure analysis beyond token counting</rule>
+      <rule>NO custom markdown table parser (use Docling export_to_markdown())</rule>
+      <rule>NO adaptive chunking (fixed 4096 token limit is sufficient)</rule>
+      <rule>NO table relationship modeling (defer to Phase 2B if needed)</rule>
+    </constraint>
+    <constraint category="technology-stack">
+      <rule>LOCKED: Only use libraries in docs/architecture/5-technology-stack-definitive.md</rule>
+      <rule>Use Docling TableItem type checking: element.type == 'Table'</rule>
+      <rule>Use tiktoken for token counting (cl100k_base encoding)</rule>
+      <rule>No new dependencies beyond approved tech stack</rule>
+    </constraint>
+    <constraint category="backward-compatibility">
+      <rule>Non-table content MUST continue using 512-token chunking (unchanged)</rule>
+      <rule>Existing pipeline logic unchanged for text/images</rule>
+      <rule>Metadata extraction unchanged (same Mistral API calls)</rule>
+      <rule>PostgreSQL schema unchanged (use existing section_type field)</rule>
+    </constraint>
+    <constraint category="course-correction">
+      <rule>This is Story 2.8, FIRST of four course correction stories (2.8-2.11)</rule>
+      <rule>Stories MUST be implemented in order: 2.8 → 2.9 → 2.10 → 2.11</rule>
+      <rule>Story 2.8 blocks Story 2.11 (requires re-ingestion for validation)</rule>
+      <rule>Combined expected result: 65-75% accuracy after all four stories</rule>
+    </constraint>
+    <constraint category="decision-gates">
+      <rule>AC4 Decision Gate: If accuracy &lt;62%, HALT before Stories 2.9-2.11</rule>
+      <rule>AC5 Decision Gate: If dilution confirmed (large table accuracy &lt;50%), reduce threshold to 2048 tokens</rule>
+      <rule>After Story 2.8+2.9: If ≥70% → Epic 2 COMPLETE; If 65-70% → proceed with 2.10-2.11; If &lt;65% → escalate to PM</rule>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>Docling TableItem Detection</name>
+      <kind>Library API</kind>
+      <signature>
+from docling_core.types.doc import TableItem
+for element in doc.elements:
+    if isinstance(element, TableItem):
+        # Table detected
+        table_markdown = element.export_to_markdown()
+      </signature>
+      <path>docs/architecture/6-complete-reference-implementation.md</path>
+    </interface>
+    <interface>
+      <name>Token Counting (tiktoken)</name>
+      <kind>Library API</kind>
+      <signature>
+import tiktoken
+encoding = tiktoken.get_encoding("cl100k_base")
+token_count = len(encoding.encode(text))
+      </signature>
+      <path>raglite/ingestion/pipeline.py</path>
+    </interface>
+    <interface>
+      <name>PostgreSQL Chunk Storage</name>
+      <kind>Database Schema</kind>
+      <signature>
+CREATE TABLE financial_chunks (
+    chunk_id TEXT PRIMARY KEY,
+    content TEXT NOT NULL,
+    page_number INTEGER,
+    section_type TEXT, -- 'Table', 'Text', etc.
+    metadata JSONB
+);
+      </signature>
+      <path>raglite/structured/table_retrieval.py</path>
+    </interface>
+    <interface>
+      <name>Qdrant Vector Storage</name>
+      <kind>Vector DB API</kind>
+      <signature>
+from qdrant_client import QdrantClient
+qdrant = QdrantClient(url=settings.qdrant_url)
+qdrant.upsert(
+    collection_name="financial_docs",
+    points=[PointStruct(id=chunk_id, vector=embedding, payload=metadata)]
+)
+      </signature>
+      <path>raglite/shared/clients.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+Testing framework: pytest 8.4.2 with pytest-asyncio 1.2.0 for async support. Target: 80%+ code coverage using pytest-cov. Unit tests in raglite/tests/unit/, integration tests in raglite/tests/integration/. Use Google-style docstrings for test documentation. Parallel execution with pytest-xdist (-n auto). Type hints required for all test functions. Mock external dependencies using pytest-mock.
+    </standards>
+    <locations>
+      <location>raglite/tests/unit/test_table_aware_chunking.py (new, ~100 lines)</location>
+      <location>raglite/tests/integration/test_reingest_table_aware.py (new, ~60 lines)</location>
+      <location>scripts/analyze-semantic-dilution.py (new, ~150 lines)</location>
+      <location>scripts/reingest-with-table-aware-chunking.py (new, ~80 lines)</location>
+    </locations>
+    <ideas>
+      <test ac="AC1" type="unit">
+        <description>Test table detection logic</description>
+        <approach>Mock Docling document with TableItem elements, verify detection accuracy</approach>
+      </test>
+      <test ac="AC1" type="unit">
+        <description>Test token counting accuracy</description>
+        <approach>Test tiktoken encoding on sample tables, verify count matches expected</approach>
+      </test>
+      <test ac="AC2" type="unit">
+        <description>Test large table splitting</description>
+        <approach>Create table >4096 tokens, verify row boundaries preserved and headers duplicated</approach>
+      </test>
+      <test ac="AC2" type="unit">
+        <description>Test edge cases</description>
+        <approach>Test single-row tables, header-only tables, empty tables</approach>
+      </test>
+      <test ac="AC3" type="integration">
+        <description>Test full re-ingestion pipeline</description>
+        <approach>Clear DB, re-ingest test PDF, verify chunk count reduction and metadata</approach>
+      </test>
+      <test ac="AC4" type="integration">
+        <description>Test accuracy improvement</description>
+        <approach>Run ground truth suite, compare before/after accuracy, validate +10-15pp gain</approach>
+      </test>
+      <test ac="AC5" type="integration">
+        <description>Test semantic dilution detection</description>
+        <approach>Run dilution analysis script, verify metrics calculation and decision gates</approach>
+      </test>
+    </ideas>
+  </tests>
+</story-context>

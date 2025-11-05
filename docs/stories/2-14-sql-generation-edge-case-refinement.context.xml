@@ -1,0 +1,411 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id="story-2.14-context" v="1.0">
+  <metadata>
+    <epicId>Epic 2</epicId>
+    <storyId>2.14</storyId>
+    <title>SQL Generation Edge Case Refinement + Backend Integration</title>
+    <status>Draft → IN PROGRESS (Scope Expanded)</status>
+    <generatedAt>2025-10-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/2-14-sql-generation-edge-case-refinement.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>RAG retrieval system</asA>
+    <iWant>SQL backend integration to reliably return results for financial queries AND text-to-SQL generation to handle entity variations, multi-entity queries, calculated metrics, budget periods, currency requests, and value extraction</iWant>
+    <soThat>retrieval accuracy improves from 4% baseline to ≥70% target and Epic 2 Phase 2A is complete</soThat>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC0">
+      <title>SQL Backend Integration &amp; Debugging (CRITICAL PRIORITY)</title>
+      <goal>Fix PostgreSQL financial_tables to reliably return results for SQL queries</goal>
+      <effort>2-3 days</effort>
+      <successCriteria>
+        <item>PostgreSQL financial_tables returning results (not 0 for all queries)</item>
+        <item>SQL queries execute without timeout or errors</item>
+        <item>Hybrid search receives both SQL + vector results for fusion</item>
+        <item>Data consistency verified (schema, entity names, periods)</item>
+        <item>Diagnostic script completed and results documented</item>
+      </successCriteria>
+      <blocker>true</blocker>
+      <notes>Vector-only search maxes at 22-28%. SQL backend fix unblocks all other AC improvements</notes>
+    </criterion>
+    <criterion id="AC1">
+      <title>Fuzzy Entity Matching</title>
+      <goal>SQL queries use approximate entity matching to find variations/aliases</goal>
+      <effort>2 days</effort>
+      <successCriteria>
+        <item>PostgreSQL pg_trgm extension enabled</item>
+        <item>similarity() function in WHERE clause template</item>
+        <item>GIN indexes on entity and entity_normalized columns</item>
+        <item>≥8/10 entity mismatch queries passing (80% accuracy)</item>
+      </successCriteria>
+      <expectedImpact>40% of failures (10/25 queries)</expectedImpact>
+    </criterion>
+    <criterion id="AC2">
+      <title>Multi-Entity Comparison Queries</title>
+      <goal>SQL queries retrieve multiple entities for comparison</goal>
+      <effort>2 days</effort>
+      <successCriteria>
+        <item>Comparison keyword detection (compare, vs, versus, between, which, higher, lower)</item>
+        <item>SQL IN clause generation for multiple entities</item>
+        <item>Answer synthesis formats comparison results with differences/rankings</item>
+        <item>≥4/5 multi-entity queries passing (80% accuracy)</item>
+      </successCriteria>
+      <expectedImpact>20% of failures (5/25 queries)</expectedImpact>
+    </criterion>
+    <criterion id="AC3">
+      <title>Calculated Metrics Support</title>
+      <goal>SQL queries retrieve component metrics for calculation</goal>
+      <effort>3 days</effort>
+      <successCriteria>
+        <item>Calculation keyword detection (margin, ratio, total, sum, growth, change, rate)</item>
+        <item>Component metric identification (e.g., EBITDA margin = EBITDA / Turnover)</item>
+        <item>Multi-metric SQL query generation</item>
+        <item>Post-SQL calculation logic with error handling (division by zero, missing components)</item>
+        <item>Answer synthesis shows calculation steps: "EBITDA margin = 191.8 / 379.2 = 50.6%"</item>
+        <item>≥2/3 calculated metric queries passing (66% accuracy)</item>
+      </successCriteria>
+      <expectedImpact>12% of failures (3/25 queries)</expectedImpact>
+    </criterion>
+    <criterion id="AC4">
+      <title>Budget Period Detection</title>
+      <goal>SQL queries recognize and label budget vs actual periods</goal>
+      <effort>1 day</effort>
+      <successCriteria>
+        <item>Budget keyword detection in query</item>
+        <item>Period pattern mapping: "B [Month]-[Year]" = Budget, "[Month]-[Year]" = Actual</item>
+        <item>SQL WHERE IN clause for both periods</item>
+        <item>Answer synthesis labels "Actual" vs "Budget" with variance calculation</item>
+        <item>2/2 budget queries passing (100% accuracy)</item>
+      </successCriteria>
+      <expectedImpact>8% of failures (2/25 queries)</expectedImpact>
+    </criterion>
+    <criterion id="AC5">
+      <title>Currency Conversion Handling</title>
+      <goal>SQL queries detect currency requests and provide explicit messages</goal>
+      <effort>1 day</effort>
+      <successCriteria>
+        <item>Currency code detection via regex (3-letter codes: AOA, BRL, USD, TND, EUR)</item>
+        <item>Check if data exists in requested currency</item>
+        <item>Explicit message if unavailable: "Data available in EUR only. Conversion to AOA not supported."</item>
+        <item>2/2 currency queries provide informative messages</item>
+      </successCriteria>
+      <expectedImpact>8% of failures (2/25 queries)</expectedImpact>
+    </criterion>
+    <criterion id="AC6">
+      <title>Value Extraction Validation</title>
+      <goal>Answer synthesis validates extracted values match query context</goal>
+      <effort>1 day</effort>
+      <successCriteria>
+        <item>Entity/period verification in answer synthesis</item>
+        <item>Compare extracted entity with query entity before finalizing answer</item>
+        <item>Compare extracted period with query period before finalizing answer</item>
+        <item>LLM re-extraction on mismatch with confidence scoring</item>
+        <item>≥3/4 value extraction queries passing (75% accuracy)</item>
+      </successCriteria>
+      <expectedImpact>16% of failures (4/25 queries)</expectedImpact>
+    </criterion>
+    <criterion id="AC8">
+      <title>Full Validation ≥70% Accuracy (DECISION GATE)</title>
+      <goal>Comprehensive validation on 25-query ground truth integrating Story 2.11 + Story 2.14</goal>
+      <effort>1 day</effort>
+      <successCriteria>
+        <item>Overall accuracy ≥70% (≥18/25 queries passing)</item>
+        <item>Entity matching ≥80% (≥8/10)</item>
+        <item>Multi-entity comparison ≥80% (≥4/5)</item>
+        <item>Calculated metrics ≥66% (≥2/3)</item>
+        <item>Budget detection 100% (2/2)</item>
+        <item>Currency handling 100% (2/2)</item>
+        <item>Value extraction ≥75% (≥3/4)</item>
+      </successCriteria>
+      <decisionGate>
+        <branch condition="≥70%">✅ Epic 2 Phase 2A COMPLETE → Proceed to Epic 3 planning</branch>
+        <branch condition="60-69%">⚠️ Investigate top 3 failures, allocate 1 day for iteration</branch>
+        <branch condition="&lt;60%">❌ Escalate to PM for Phase 2B (cross-encoder re-ranking) evaluation</branch>
+      </decisionGate>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2 PRD: Advanced RAG Architecture Enhancement</title>
+        <section>Phase 2A: Fixed Chunking + Metadata, Phase 2B: Structured Multi-Index, Phase 2C: Hybrid Architecture</section>
+        <snippet>Epic 2 aims to improve retrieval accuracy from 56% baseline to ≥85% final target. Phase 2A (70% target) combines fixed-512-token chunking, LLM contextual metadata, and SQL backend integration to handle structured financial data. Story 2.14 implements the SQL backend integration and edge case refinements that enable Phase 2A completion.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/story-2.11.md</path>
+        <title>Story 2.11: Hybrid Search Scoring Fixes</title>
+        <section>AC1: Score Normalization, AC3: BM25 Tuning, AC4: Validation</section>
+        <snippet>Story 2.11 fixed hybrid search scoring mechanics (AC1-AC3 complete). AC4 validation revealed SQL backend returning 0 results for all queries, blocking hybrid search fusion. Story 2.14 depends on Story 2.11 for correct scoring but must also fix the SQL backend to enable meaningful hybrid search results.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/story-2.13-sql-table-search-phase2a-revised.md</path>
+        <title>Story 2.13: SQL Table Search Implementation</title>
+        <section>AC1: Table Extraction, AC2: Text-to-SQL Generation, AC3: Hybrid Search Orchestration, AC4: Validation</section>
+        <snippet>Story 2.13 AC1-AC3 are production-ready (99.39% table extraction, valid SQL generation, hybrid orchestration). AC4 validation revealed only 4% accuracy (1/25 queries) due to: (1) SQL backend returning 0 results, (2) Edge case patterns in SQL generation. Story 2.14 addresses both issues to improve AC4 validation from 4% to ≥70%.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack: Locked Components</title>
+        <section>PDF Processing, Embeddings, Vector DB, MCP Server, LLM, Database, Testing</section>
+        <snippet>RAGLite uses: Docling (PDF), Fin-E5 (embeddings), Qdrant (vector), FastMCP (MCP), Claude 3.7 Sonnet (LLM), PostgreSQL (SQL backend - Story 2.6), pytest (testing). All Story 2.14 implementations use existing tech stack; no new dependencies required.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/6-complete-reference-implementation.md</path>
+        <title>Reference Implementation: Coding Patterns</title>
+        <section>Type Hints, Docstrings, Structured Logging, Error Handling, Async/Await, Pydantic Models</section>
+        <snippet>All RAGLite code follows: (1) Type hints on all functions, (2) Google-style docstrings, (3) Structured logging with extra={} context, (4) Specific exceptions with context, (5) Async/await for I/O, (6) Pydantic models for data structures. Story 2.14 implementations must follow these patterns.</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project Development Guidelines</title>
+        <section>Anti-Over-Engineering Rules, Technology Stack Lock, Coding Standards</section>
+        <snippet>CRITICAL: (1) No custom base classes, factories, builders, or abstract layers. (2) Use SDKs EXACTLY as documented - no custom wrappers. (3) Technology stack is LOCKED - no additions without user approval. (4) Direct SDK usage only - no "simplified interfaces". Story 2.14 must use PostgreSQL client and Mistral SDK directly without custom abstractions.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>raglite/retrieval/query_classifier.py</path>
+        <kind>service</kind>
+        <symbol>classify_query_metadata() → dict</symbol>
+        <lines>47-100</lines>
+        <reason>AC1-AC5: Add metadata extraction for fuzzy matching keywords, multi-entity detection, calculated metric patterns, budget period detection, and currency code detection. Updates SQL generation prompt to use similarity() function and detect comparison/calculation keywords.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/retrieval/sql_table_search.py</path>
+        <kind>service</kind>
+        <symbol>search_tables_sql() → list[QueryResult]</symbol>
+        <lines>27-100</lines>
+        <reason>AC0: Debug SQL backend returning 0 results. AC2-AC6: Update answer synthesis for comparison formatting, calculated metrics post-processing, budget period labeling, currency message handling, and entity/period verification. AC3: Implement post-SQL calculation logic for composite metrics.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>data_model</kind>
+        <symbol>QueryResult</symbol>
+        <lines>unknown</lines>
+        <reason>AC0-AC8: Validate QueryResult structure supports SQL search results with all required fields (text, score, page_number, table_caption, source). May need extension for calculation tracking (AC3) and confidence scores (AC6).</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/clients.py</path>
+        <kind>service</kind>
+        <symbol>get_postgresql_connection()</symbol>
+        <lines>unknown</lines>
+        <reason>AC0: Debug SQL backend connectivity and ensure get_postgresql_connection() properly initializes connection pool. Verify error handling for timeout/connection failures.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/tests/unit/test_query_classifier.py</path>
+        <kind>test</kind>
+        <symbol>test_*, TestQueryClassifier</symbol>
+        <lines>unknown</lines>
+        <reason>AC1-AC5: Extend unit tests to cover fuzzy matching keyword detection, multi-entity IN clause generation, calculated metric patterns, budget period detection, and currency code detection. Validate SQL generation prompt improvements.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <ecosystem name="python-core">
+        <package name="pydantic" version=">=2.0,<3.0" reason="Data validation for QueryRequest, QueryResult models. Required for all Story 2.14 implementations."/>
+        <package name="psycopg2-binary" version=">=2.9,<3.0" reason="PostgreSQL connection for AC0 SQL backend debugging and SQL execution. Critical for all SQL-related ACs."/>
+        <package name="mistralai" version=">=1.9.11" reason="Text-to-SQL generation via Mistral Small (FREE tier). Required for AC1-AC5 SQL prompt improvements."/>
+      </ecosystem>
+      <ecosystem name="database">
+        <package name="PostgreSQL" version="14+" reason="financial_tables storage. AC0 requires debugging and fixing backend connectivity. AC1 requires pg_trgm extension for fuzzy matching."/>
+      </ecosystem>
+      <ecosystem name="testing">
+        <package name="pytest" version="8.4.2" reason="Unit test framework for all AC implementations"/>
+        <package name="pytest-asyncio" version="1.2.0" reason="Async test support for async SQL queries"/>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint id="CONSTRAINT-1">
+      <rule>NO Custom Abstractions</rule>
+      <detail>Use PostgreSQL psycopg2 client and Mistral SDK DIRECTLY. Do NOT create QdrantManager, SQLExecutor, or custom wrapper classes. Direct function calls only.</detail>
+      <scope>AC0-AC8</scope>
+    </constraint>
+    <constraint id="CONSTRAINT-2">
+      <rule>Technology Stack is LOCKED</rule>
+      <detail>All dependencies are in tech stack table. NO new packages (e.g., SQLAlchemy, langchain, llamaindex). Use existing PostgreSQL + Mistral Small.</detail>
+      <scope>AC0-AC8</scope>
+    </constraint>
+    <constraint id="CONSTRAINT-3">
+      <rule>Type Hints Required</rule>
+      <detail>All functions must have type hints. Example: async def execute_sql_search(sql: str, top_k: int = 50) -> list[QueryResult]:</detail>
+      <scope>AC0-AC8</scope>
+    </constraint>
+    <constraint id="CONSTRAINT-4">
+      <rule>Structured Logging</rule>
+      <detail>Use logger.info(), logger.warning() with extra={} context. Example: logger.info("SQL query returned results", extra={"row_count": len(rows), "entity": entity})</detail>
+      <scope>AC0-AC8</scope>
+    </constraint>
+    <constraint id="CONSTRAINT-5">
+      <rule>Error Handling</rule>
+      <detail>Use specific exception classes with context. Example: raise SQLSearchError(f"Failed to execute query: {sql[:100]}: {e}")</detail>
+      <scope>AC0-AC8</scope>
+    </constraint>
+    <constraint id="CONSTRAINT-6">
+      <rule>SQL Prompt Refinement</rule>
+      <detail>AC1-AC5 require updating Mistral Small prompt in query_classifier.py. The prompt template must detect keywords for fuzzy matching, multi-entity, calculated metrics, budget periods, and currency codes. No LLM fine-tuning - prompt-only improvements.</detail>
+      <scope>AC1, AC2, AC3, AC4, AC5</scope>
+    </constraint>
+    <constraint id="CONSTRAINT-7">
+      <rule>Database Migration Required</rule>
+      <detail>AC1 requires enabling PostgreSQL pg_trgm extension and creating GIN indexes. Migration script: migrations/enable_pg_trgm.sql. Must run before fuzzy matching can work.</detail>
+      <scope>AC1</scope>
+    </constraint>
+    <constraint id="CONSTRAINT-8">
+      <rule>NO Full PDF Testing Without Approval</rule>
+      <detail>Story 2.14 Task 9 (Full PDF Validation) REQUIRES explicit user permission before running. Tasks 1-8 use 30-page excerpt (pages 18-50) for rapid iteration. Full PDF only after user approval.</detail>
+      <scope>AC8</scope>
+    </constraint>
+    <constraint id="CONSTRAINT-9">
+      <rule>Story 2.11 Integration</rule>
+      <detail>Story 2.14 AC8 validation INTEGRATES with Story 2.11 fixes. SQL backend improvements (Story 2.14) enable meaningful hybrid search fusion with Story 2.11's corrected scoring. Both stories work together to achieve 70%+ accuracy.</detail>
+      <scope>AC0, AC8</scope>
+    </constraint>
+    <constraint id="CONSTRAINT-10">
+      <rule>MVP Scope: ~600-800 Lines Total</rule>
+      <detail>Query classifier and sql_table_search updates must be minimal and direct. No framework abstractions, no extensive refactoring. Estimated: 100 lines in query_classifier.py, 150 lines in sql_table_search.py.</detail>
+      <scope>AC0-AC8</scope>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>classify_query_metadata()</name>
+      <kind>async function</kind>
+      <signature>async def classify_query_metadata(query: str) -> dict[str, str]</signature>
+      <path>raglite/retrieval/query_classifier.py:47</path>
+      <returns>Dictionary of metadata field filters extracted from natural language query. Empty dict if no metadata detected.</returns>
+      <usage>AC1-AC5: Used by hybrid search router to detect fuzzy matching keywords, multi-entity patterns, calculated metrics, budget periods, and currency codes to inform SQL generation.</usage>
+    </interface>
+    <interface>
+      <name>search_tables_sql()</name>
+      <kind>async function</kind>
+      <signature>async def search_tables_sql(sql_query: str, top_k: int = 50) -> list[QueryResult]</signature>
+      <path>raglite/retrieval/sql_table_search.py:27</path>
+      <returns>List of QueryResult objects with structured table data formatted as text. Score is 1.0 for SQL results (exact match semantics).</returns>
+      <usage>AC0-AC8: Core SQL search execution. Returns formatted results with entity, metric, value, period. AC2 extends with comparison formatting. AC3 with calculation results. AC4 with budget period labeling. AC6 with extraction confidence.</usage>
+    </interface>
+    <interface>
+      <name>generate_sql_query()</name>
+      <kind>async function (implied from AC1-AC5 modifications)</kind>
+      <signature>async def generate_sql_query(query: str, query_type: QueryType) -> str</signature>
+      <path>raglite/retrieval/query_classifier.py (inferred)</path>
+      <returns>PostgreSQL query string ready for execution</returns>
+      <usage>AC1-AC5: SQL generation prompt must be refined to use similarity() for fuzzy matching, IN clauses for multi-entity, multi-metric SELECT for calculated metrics, period pattern matching for budgets, and currency detection. Validation via SQL syntax check before execution (AC0).</usage>
+    </interface>
+    <interface>
+      <name>QueryResult</name>
+      <kind>Pydantic model</kind>
+      <signature>class QueryResult(BaseModel): text: str; score: float; page_number: int; metadata: dict[str, Any]</signature>
+      <path>raglite/shared/models.py (inferred)</path>
+      <usage>AC0-AC8: Standard result format for all search methods. SQL results populate with: entity, metric, value, period, budget_label (AC4), calculation_steps (AC3), extraction_confidence (AC6).</usage>
+    </interface>
+    <interface>
+      <name>PostgreSQL pg_trgm Extension</name>
+      <kind>database extension</kind>
+      <signature>CREATE EXTENSION pg_trgm; CREATE INDEX gin_entity ON financial_tables USING gin(entity gin_trgm_ops);</signature>
+      <path>migrations/enable_pg_trgm.sql (to be created)</path>
+      <usage>AC1: Required for fuzzy entity matching. similarity() function and GIN indexes enable fast trigram-based entity matching with tunable threshold (0.3 default).</usage>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      RAGLite follows pytest-based unit/integration testing. All tests use async fixtures, type hints, and structured assertions. Tests are co-located in raglite/tests/unit/ with coverage target 80%+. Story 2.14 testing strategy: (1) Unit tests per AC (fuzzy matching, multi-entity, calculated metrics, etc.), (2) Excerpt validation on 30-page PDF (15 queries, rapid iteration), (3) Full PDF validation on 160 pages (25 queries, final decision gate). Accuracy validation uses ground truth Q&A pairs in docs/stories/validation-data/. Each AC tested independently before combining in AC8 validation.
+    </standards>
+
+    <locations>
+      <location>raglite/tests/unit/test_query_classifier.py - Query classification and metadata extraction tests</location>
+      <location>raglite/tests/unit/test_fuzzy_entity_matching.py - AC1 fuzzy matching tests (new)</location>
+      <location>raglite/tests/unit/test_multi_entity_queries.py - AC2 multi-entity comparison tests (new)</location>
+      <location>raglite/tests/unit/test_calculated_metrics.py - AC3 calculated metric tests (new)</location>
+      <location>raglite/tests/unit/test_budget_period_detection.py - AC4 budget period tests (new)</location>
+      <location>raglite/tests/unit/test_currency_handling.py - AC5 currency detection tests (new)</location>
+      <location>raglite/tests/unit/test_value_extraction_validation.py - AC6 value extraction tests (new)</location>
+      <location>scripts/debug-sql-backend-integration.py - AC0 SQL backend debugging script (new)</location>
+      <location>scripts/validate-story-2.14-excerpt.py - Excerpt validation: 15 queries on 30-page PDF (new)</location>
+    </locations>
+
+    <ideas>
+      <idea acId="AC0">
+        <title>SQL Backend Debugging Tests</title>
+        <description>Test SQL connectivity, schema validation, data consistency, query execution with diagnostic logging. Verify PostgreSQL returning results, not 0 rows. Validate column names, data types match schema.</description>
+        <approach>Run debug script on 3-5 test queries: classify, generate SQL, execute, verify results, check table schema, perform raw table scan. Log all steps with timing information.</approach>
+      </idea>
+      <idea acId="AC1">
+        <title>Fuzzy Entity Matching Unit Tests</title>
+        <description>Test pg_trgm similarity() function, GIN index performance, similarity threshold tuning (0.3 default), exact match fallback, entity normalization caching.</description>
+        <approach>Mock PostgreSQL similarity() results. Test: "Group" matches "Currency (1000 EUR)" with similarity &gt; 0.3, "Tunisia" matches "Tunisia Cement", exact match fallback when similarity fails. Assert ≥5/7 entity queries pass on excerpt.</approach>
+      </idea>
+      <idea acId="AC2">
+        <title>Multi-Entity Comparison Query Tests</title>
+        <description>Test comparison keyword detection (compare, vs, versus, between, which, higher, lower), entity extraction from comparison queries, SQL IN clause generation, answer synthesis formatting with differences/rankings.</description>
+        <approach>Test queries: "Compare Portugal and Tunisia variable costs" (generates IN clause), "Which plant has higher EBITDA: Adrianopolis or Pomerode?" (ranks results). Assert SQL includes both entities, answer formatted with comparison. Assert ≥4/5 comparison queries pass on excerpt.</approach>
+      </idea>
+      <idea acId="AC3">
+        <title>Calculated Metrics Unit Tests</title>
+        <description>Test calculation keyword detection (margin, ratio, total, sum, growth), component metric identification, multi-metric SQL generation, post-SQL calculation logic, error handling (division by zero, missing components), answer synthesis showing calculation steps.</description>
+        <approach>Mock calculated metric queries: "EBITDA margin for Portugal Cement" (retrieves EBITDA + Turnover, calculates 50.6%), "Total Brazil working capital" (sums AR + AP + Inventory). Assert ≥2/3 calculated metric queries pass on excerpt.</approach>
+      </idea>
+      <idea acId="AC4">
+        <title>Budget Period Detection Tests</title>
+        <description>Test budget keyword detection, period pattern mapping (B [Month]-[Year] vs [Month]-[Year]), SQL WHERE IN clause generation, answer synthesis period labeling and variance calculation.</description>
+        <approach>Test queries: "Portugal variable costs vs budget?" (retrieves both actual and budget, labels, calculates variance), "Lebanon Ready-Mix above budget?" (compares actual vs budget, states performance). Assert 2/2 budget queries pass on excerpt.</approach>
+      </idea>
+      <idea acId="AC5">
+        <title>Currency Handling Tests</title>
+        <description>Test 3-letter currency code detection (AOA, BRL, USD, TND, EUR), currency availability check, explicit unavailability message formatting.</description>
+        <approach>Test queries: "Angola EBITDA in million AOA?" (detects AOA, data in EUR, returns message), "Brazil EBITDA in million BRL?" (detects BRL, data in EUR, returns message). Assert 2/2 currency queries provide informative messages without silent failures.</approach>
+      </idea>
+      <idea acId="AC6">
+        <title>Value Extraction Validation Tests</title>
+        <description>Test entity verification in answer synthesis, period verification, LLM re-extraction on mismatch, extraction confidence scoring and logging.</description>
+        <approach>Mock answer synthesis with mismatched entity/period. Test: "Group DSO in August 2025" verifies entity='Group' (via AC1 fuzzy matching), "Tunisia sales volume" verifies entity='Tunisia Cement' before extracting values. Assert ≥3/4 value extraction queries pass on excerpt.</approach>
+      </idea>
+      <idea acId="AC8">
+        <title>Full Validation: Integration Test (DECISION GATE)</title>
+        <description>Run comprehensive validation combining Story 2.11 fixes + Story 2.14 improvements on full 25-query ground truth. Measure accuracy by category (entity matching, multi-entity, calculated metrics, budget, currency, value extraction). Generate validation report with before/after comparison (4% baseline → ≥70% target).</description>
+        <approach>Run: python scripts/validate-story-2.13-v2.py --save. Save results to docs/validation/story-2.14-validation-results.md. Measure overall accuracy and per-category performance. Decision gate: ≥70% → Epic 2 complete, 60-69% → iterate 1 day, &lt;60% → escalate to PM for Phase 2B evaluation.</approach>
+      </idea>
+    </ideas>
+  </tests>
+
+  <implementation-notes>
+    <note id="NOTE-1">
+      <title>Critical Path: AC0 Unblocks All Others</title>
+      <detail>Story 2.14 scope expansion: SQL backend returning 0 results is the PRIMARY blocker. AC0 (SQL backend debugging) is critical priority (Days 1-3). Only after AC0 is fixed can AC1-AC7 improvements meaningfully improve accuracy. Without working SQL backend, vector-only maxes at 22-28% (insufficient for 70% target).</detail>
+    </note>
+    <note id="NOTE-2">
+      <title>Story 2.11 Integration: Hybrid Search Scoring</title>
+      <detail>Story 2.14 depends on Story 2.11 (hybrid search scoring fixes). Story 2.11 AC1-AC3 are complete and correct the scoring mechanics. Story 2.14 AC0 provides the DATA (SQL backend returning results). Together: AC0 (data) + Story 2.11 (scoring) → meaningful hybrid search fusion → 70%+ accuracy achievable.</detail>
+    </note>
+    <note id="NOTE-3">
+      <title>Iterative Testing: Excerpt First, Full PDF Only With Approval</title>
+      <detail>Story 2.14 Task 1 extracts pages 18-50 from 160-page PDF to create 30-page test excerpt. Tasks 2-8 use excerpt for rapid iteration (1-2 min per test cycle vs 5-6 min for full PDF). Task 9 (Full PDF Validation) is ONLY after user explicit approval. This minimizes iteration time and prevents expensive full PDF re-ingestion until all AC fixes are validated on excerpt.</detail>
+    </note>
+    <note id="NOTE-4">
+      <title>No Database Migrations Beyond pg_trgm</title>
+      <detail>AC1 requires PostgreSQL pg_trgm extension and GIN indexes. Other ACs (AC2-AC7) require NO database schema changes - only SQL prompt improvements and answer synthesis enhancements. Migration script: migrations/enable_pg_trgm.sql is the only database change needed.</detail>
+    </note>
+    <note id="NOTE-5">
+      <title>Mistral Small: FREE Tier, No Cost Increase</title>
+      <detail>All SQL generation improvements (AC1-AC5) use Mistral Small (FREE tier, temperature=0.0) - same as Story 2.13. No new LLM costs. Claude 3.7 Sonnet used only for answer synthesis (existing usage). LLM re-extraction on value mismatch (AC6) occurs &lt;5% of queries - minimal additional cost.</detail>
+    </note>
+    <note id="NOTE-6">
+      <title>Performance: Fuzzy Matching Overhead ~10-20ms per Query</title>
+      <detail>PostgreSQL similarity() with GIN indexes is fast. Expected fuzzy matching overhead: +10-20ms per query. Calculated metrics overhead (multi-metric SQL + post-processing): +50-100ms. Overall p50 latency remains &lt;2s (within NFR13 &lt;15s budget). Query timeout tunable via story-context if needed.</detail>
+    </note>
+    <note id="NOTE-7">
+      <title>Acceptance Criteria Mapping to Files</title>
+      <detail>AC0: raglite/retrieval/sql_table_search.py (debugging + backend fix), scripts/debug-sql-backend-integration.py (diagnostic). AC1: raglite/retrieval/query_classifier.py + migrations/enable_pg_trgm.sql. AC2-AC5: raglite/retrieval/query_classifier.py (SQL prompt). AC3,AC6: raglite/retrieval/sql_table_search.py (answer synthesis). AC6: raglite/retrieval/query_classifier.py + raglite/retrieval/sql_table_search.py (verification). AC8: scripts/validate-story-2.13-v2.py (validation runner), docs/validation/story-2.14-validation-results.md (results report).</detail>
+    </note>
+  </implementation-notes>
+
+</story-context>

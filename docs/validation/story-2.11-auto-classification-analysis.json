@@ -1,0 +1,65 @@
+{
+  "total_queries": 50,
+  "queries_with_metadata": 47,
+  "correct_extractions": 33,
+  "incorrect_extractions": 14,
+  "no_extraction": 3,
+  "accuracy_percent": 70.2127659574468,
+  "usage_percent": 94.0,
+  "decision": "DISABLE",
+  "recommendation": "DISABLE auto-classification (accuracy threshold)",
+  "extraction_examples": [
+    {
+      "query": "What is the alternative fuel rate percentage for Portugal Cement?",
+      "extracted": {
+        "metric_category": "Operating Expenses",
+        "company_name": "Portugal Cement",
+        "units": "Percentage"
+      },
+      "invalid_fields": [
+        "metric_category='Operating Expenses' (not in query)"
+      ]
+    },
+    {
+      "query": "What is the electricity specific consumption for clinker grey production?",
+      "extracted": {
+        "metric_category": "Operating Expenses",
+        "units": "MWh"
+      },
+      "invalid_fields": [
+        "metric_category='Operating Expenses' (not in query)"
+      ]
+    },
+    {
+      "query": "What is the thermal energy specific consumption in Kcal/kg clinker?",
+      "extracted": {
+        "metric_category": "Operating Expenses",
+        "units": "Kcal/kg"
+      },
+      "invalid_fields": [
+        "metric_category='Operating Expenses' (not in query)"
+      ]
+    },
+    {
+      "query": "What is the external electricity price per MWh?",
+      "extracted": {
+        "metric_category": "Operating Expenses",
+        "units": "USD/MWh"
+      },
+      "invalid_fields": [
+        "metric_category='Operating Expenses' (not in query)"
+      ]
+    },
+    {
+      "query": "What are the fixed costs per ton for Out\u00e3o plant?",
+      "extracted": {
+        "metric_category": "Operating Expenses",
+        "units": "EUR/ton",
+        "company_name": "Portugal Cement"
+      },
+      "invalid_fields": [
+        "company_name='Portugal Cement' (not in query)"
+      ]
+    }
+  ]
+}

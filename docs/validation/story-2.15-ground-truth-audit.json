@@ -1,0 +1,1111 @@
+{
+  "metadata": {
+    "total_queries": 50,
+    "status_counts": {
+      "AVAILABLE": 49,
+      "MISSING_METRIC": 1
+    },
+    "audit_date": "2025-11-04"
+  },
+  "results": [
+    {
+      "query_id": 1,
+      "question": "What is the variable cost per ton for Portugal Cement in August 2025 YTD?",
+      "parsed_intent": {
+        "entity": "Portugal",
+        "metric": "cost",
+        "period": "August 2025",
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": "Aug-25",
+        "actual_entity": "Portugal",
+        "available_metrics": [
+          "All-in cost  Bank Debt  Contracted",
+          "All-in cost  Bank Debt  Used",
+          "Average cost of consolidation Debt",
+          "Cost",
+          "Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 2,
+      "question": "What is the thermal energy cost per ton for Portugal Cement?",
+      "parsed_intent": {
+        "entity": "Portugal",
+        "metric": "cost",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Portugal",
+        "available_metrics": [
+          "All-in cost  Bank Debt  Contracted",
+          "All-in cost  Bank Debt  Used",
+          "Average cost of consolidation Debt",
+          "Cost",
+          "Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 3,
+      "question": "What is the electricity cost per ton for Portugal Cement operations?",
+      "parsed_intent": {
+        "entity": "Portugal",
+        "metric": "cost",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Portugal",
+        "available_metrics": [
+          "All-in cost  Bank Debt  Contracted",
+          "All-in cost  Bank Debt  Used",
+          "Average cost of consolidation Debt",
+          "Cost",
+          "Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 4,
+      "question": "What are the raw materials costs per ton?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 5,
+      "question": "What are the packaging costs per ton for cement?",
+      "parsed_intent": {
+        "entity": "cement",
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Cement",
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 6,
+      "question": "What is the alternative fuel rate percentage for Portugal Cement?",
+      "parsed_intent": {
+        "entity": "Portugal",
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Portugal",
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 7,
+      "question": "What are the maintenance costs per ton?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 8,
+      "question": "What is the electricity specific consumption for clinker grey production?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 9,
+      "question": "What is the thermal energy specific consumption in Kcal/kg clinker?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "thermal energy",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Thermal Energy"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 10,
+      "question": "What is the external electricity price per MWh?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 11,
+      "question": "How do total variable costs per ton compare across the three periods and what is the trend?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 12,
+      "question": "What is the relationship between alternative fuel rate percentage and thermal energy costs per ton?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 13,
+      "question": "What is the EBITDA IFRS margin percentage for Portugal Cement?",
+      "parsed_intent": {
+        "entity": "Portugal",
+        "metric": "ebitda",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Portugal",
+        "available_metrics": [
+          "Aggregates Unit Ebitda",
+          "Cement Unit Ebitda",
+          "EBITDA",
+          "EBITDA Angola + Group Structure",
+          "EBITDA Group Structure"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 14,
+      "question": "What is the EBITDA per ton for Portugal Cement?",
+      "parsed_intent": {
+        "entity": "Portugal",
+        "metric": "ebitda",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Portugal",
+        "available_metrics": [
+          "Aggregates Unit Ebitda",
+          "Cement Unit Ebitda",
+          "EBITDA",
+          "EBITDA Angola + Group Structure",
+          "EBITDA Group Structure"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 15,
+      "question": "What is the unit variable margin per ton?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 16,
+      "question": "What are the fixed costs per ton for Out\u00e3o plant?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 17,
+      "question": "What are the fixed costs per ton for Maceira plant?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 18,
+      "question": "What is the unit cement EBITDA for Out\u00e3o plant internal market?",
+      "parsed_intent": {
+        "entity": "cement",
+        "metric": "ebitda",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Cement",
+        "available_metrics": [
+          "Aggregates Unit Ebitda",
+          "Cement Unit Ebitda",
+          "EBITDA",
+          "EBITDA Angola + Group Structure",
+          "EBITDA Group Structure"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 19,
+      "question": "What are the fixed costs per ton for Pataias plant and how do they compare to other plants?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 20,
+      "question": "How does the EBITDA margin improvement from Aug-24 to Aug-25 YTD relate to variable and fixed cost changes?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "ebitda",
+        "period": "Aug-25",
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": "Aug-25",
+        "actual_entity": null,
+        "available_metrics": [
+          "Aggregates Unit Ebitda",
+          "Cement Unit Ebitda",
+          "EBITDA",
+          "EBITDA Angola + Group Structure",
+          "EBITDA Group Structure"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 21,
+      "question": "What is the EBITDA for Portugal operations in Aug-25 YTD?",
+      "parsed_intent": {
+        "entity": "Portugal",
+        "metric": "ebitda",
+        "period": "Aug-25",
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": "Aug-25",
+        "actual_entity": "Portugal",
+        "available_metrics": [
+          "Aggregates Unit Ebitda",
+          "Cement Unit Ebitda",
+          "EBITDA",
+          "EBITDA Angola + Group Structure",
+          "EBITDA Group Structure"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 22,
+      "question": "What is the cash flow from operating activities?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 23,
+      "question": "What are the capital expenditures (Capex) for the period?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 24,
+      "question": "What is the financial net debt closing balance?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 25,
+      "question": "What is the change in trade working capital?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 26,
+      "question": "What are the income tax payments for the period?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 27,
+      "question": "What are the net interest expenses?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "expenses",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Net interest expenses"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 28,
+      "question": "What is the cash set free or tied up after investments?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 29,
+      "question": "How does the EBITDA Portugal plus Group Structure compare across periods and what is the growth rate?",
+      "parsed_intent": {
+        "entity": "Portugal",
+        "metric": "ebitda",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Portugal",
+        "available_metrics": [
+          "Aggregates Unit Ebitda",
+          "Cement Unit Ebitda",
+          "EBITDA",
+          "EBITDA Angola + Group Structure",
+          "EBITDA Group Structure"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 30,
+      "question": "What is the relationship between cash flow from operations and working capital changes?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 31,
+      "question": "How many FTE employees work in Portugal Cement operations?",
+      "parsed_intent": {
+        "entity": "Portugal",
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Portugal",
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 32,
+      "question": "What is the daily clinker production capacity?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 33,
+      "question": "What is the reliability factor percentage for cement production?",
+      "parsed_intent": {
+        "entity": "cement",
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Cement",
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 34,
+      "question": "What is the utilization factor in tons for cement production?",
+      "parsed_intent": {
+        "entity": "cement",
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Cement",
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 35,
+      "question": "What is the performance factor percentage?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 36,
+      "question": "What is the CO2 emissions per ton of clinker and how does it compare across periods?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "co2 emissions",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "MISSING_METRIC",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": null,
+        "actual_currency": null,
+        "details": "Metric 'co2 emissions' not found in database"
+      },
+      "recommendation": "\u274c Remove query: Metric 'Metric 'co2 emissions' not found in database' not in database"
+    },
+    {
+      "query_id": 37,
+      "question": "What are the employee costs per ton for Portugal Cement?",
+      "parsed_intent": {
+        "entity": "Portugal",
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Portugal",
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 38,
+      "question": "How many FTEs work in distribution for Portugal Cement?",
+      "parsed_intent": {
+        "entity": "Portugal",
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Portugal",
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 39,
+      "question": "What is the total headcount for Tunisia operations in August 2025?",
+      "parsed_intent": {
+        "entity": "Tunisia",
+        "metric": null,
+        "period": "August 2025",
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": "Aug-25",
+        "actual_entity": "Tunisia",
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 40,
+      "question": "How many FTEs are in sales for Portugal Cement?",
+      "parsed_intent": {
+        "entity": "Portugal",
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Portugal",
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 41,
+      "question": "What is the breakdown of Tunisia Cement employees by function?",
+      "parsed_intent": {
+        "entity": "Tunisia",
+        "metric": null,
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Tunisia",
+        "available_metrics": null,
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 42,
+      "question": "How does employee cost per ton efficiency compare across periods and what factors drive the changes?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "cost",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "All-in cost  Bank Debt  Contracted",
+          "All-in cost  Bank Debt  Used",
+          "Average cost of consolidation Debt",
+          "Cost",
+          "Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 43,
+      "question": "What are the other costs per ton for Portugal Cement operations?",
+      "parsed_intent": {
+        "entity": "Portugal",
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": "Portugal",
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 44,
+      "question": "What are the distribution costs per ton?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 45,
+      "question": "What are the sales costs per ton?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 46,
+      "question": "What are the insurance costs?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 47,
+      "question": "What are the rents and rentals costs?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 48,
+      "question": "What are the production services costs?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 49,
+      "question": "What are the specialized labour costs?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    },
+    {
+      "query_id": 50,
+      "question": "How do fixed costs break down into employee costs, maintenance, and other costs, and what is the efficiency trend?",
+      "parsed_intent": {
+        "entity": null,
+        "metric": "costs",
+        "period": null,
+        "currency": null
+      },
+      "availability": {
+        "status": "AVAILABLE",
+        "actual_period": null,
+        "actual_entity": null,
+        "available_metrics": [
+          "Fixed Costs",
+          "Other costs/income",
+          "Other Variable Costs",
+          "Sales&Distribution Fixed Costs"
+        ],
+        "actual_currency": "EUR",
+        "details": "All query components found in database"
+      },
+      "recommendation": "\u2705 Keep as-is (data available)"
+    }
+  ]
+}

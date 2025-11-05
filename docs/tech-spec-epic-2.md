@@ -1,5 +1,28 @@
 # Technical Specification: Epic 2 - Advanced Document Understanding (GraphRAG)
 
+**⚠️ DEPRECATED DOCUMENT - DO NOT USE FOR IMPLEMENTATION**
+
+**Deprecation Date:** 2025-10-24
+**Reason:** Epic 2 Strategic Pivot - This document describes the original GraphRAG/Neo4j architecture which was superseded by the Phase 2A/2B/2C staged approach following element-aware chunking failure analysis.
+
+**🔗 Current Epic 2 Documentation (Canonical Source):**
+- **PRD:** `docs/prd/epic-2-advanced-rag-enhancements.md` (updated post-pivot)
+- **Tech Stack:** `docs/architecture/5-technology-stack-definitive.md` (Phase 2A/2B/2C conditional technologies)
+- **Implementation Strategy:** `docs/architecture/8-phased-implementation-strategy-v11-simplified.md`
+- **Pivot Analysis:** `story-2.2-pivot-analysis/` (complete strategic analysis and Sprint Change Proposal)
+
+**Current Epic 2 Architecture:**
+- **Phase 2A:** Fixed 512-token chunking + LLM contextual metadata (80% probability path)
+- **Phase 2B:** PostgreSQL multi-index + Qdrant (15% probability contingency) ✅ **IMPLEMENTED (Story 2.7)**
+- **Phase 2C:** Neo4j + PostgreSQL hybrid (5% probability contingency)
+- **Phase 3:** LangGraph agentic coordination (20% probability if Phase 2 <85%)
+
+**This document is retained for historical reference only.**
+
+---
+
+# ORIGINAL DOCUMENT (DEPRECATED - 2025-10-12)
+
 **Epic:** Epic 2 - Advanced Document Understanding
 **Phase:** Phase 2 (Weeks 5-8) - **CONDITIONAL**
 **Goal:** Handle complex tables, multi-document synthesis, and relational reasoning via Knowledge Graph

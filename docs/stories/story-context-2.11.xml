@@ -1,0 +1,284 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>11</storyId>
+    <title>Fix Hybrid Search Score Normalization &amp; Fusion</title>
+    <status>Ready</status>
+    <generatedAt>2025-10-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/story-2.11.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>hybrid search and multi-index retrieval system</asA>
+    <iWant>preserved raw fusion scores from BM25 + semantic search and tuned fusion weights</iWant>
+    <soThat>actual relevance ranking is visible for debugging, BM25 doesn't uprank wrong chunks, and hybrid search matches or exceeds semantic baseline accuracy</soThat>
+    <tasks>
+      Task 1: Investigate and Fix Score Normalization Bug (AC1) - 2 hours
+      Task 2: Tune BM25 Fusion Weights (AC2) - 1.5 hours
+      Task 3: Review and Optimize Auto-Classification (AC3) - 1 hour
+      Task 4: Combined Phase 2A Re-Validation (AC4) - 1 hour
+      Task 5: Testing and Documentation - 30 min
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" priority="critical">
+      <title>Investigate and Fix Score Normalization Bug</title>
+      <description>Find where scores are being set to 1.0 in hybrid search and preserve raw fusion scores. Create diagnostic script to compare semantic vs hybrid vs multi-index scores. Fix score normalization in merge_results() or result conversion logic. Validate scores have realistic variance (std &gt; 0.05) after fix.</description>
+      <effort>2 hours</effort>
+      <files>
+        <modify>raglite/retrieval/search.py (~15 lines)</modify>
+        <modify>raglite/retrieval/multi_index_search.py (~10 lines)</modify>
+        <create>scripts/debug-hybrid-search-scoring.py (~80 lines)</create>
+      </files>
+    </criterion>
+
+    <criterion id="AC2" priority="high">
+      <title>Tune BM25 Fusion Weights</title>
+      <description>Optimize alpha parameter (semantic vs BM25 weight) to prevent BM25 from upranking wrong chunks. Test alpha values [0.7, 0.75, 0.8, 0.85, 0.9] on ground truth queries. Select alpha with highest retrieval accuracy and update hybrid_search() default.</description>
+      <effort>1.5 hours</effort>
+      <files>
+        <modify>raglite/retrieval/search.py (~5 lines - add alpha parameter)</modify>
+        <create>scripts/tune-bm25-fusion-weights.py (~100 lines)</create>
+        <create>docs/validation/story-2.11-bm25-tuning.json (results)</create>
+      </files>
+    </criterion>
+
+    <criterion id="AC3" priority="medium">
+      <title>Review and Optimize Auto-Classification</title>
+      <description>Evaluate LLM-based metadata auto-classification accuracy. Measure extraction accuracy and usage frequency. Make disable/keep decision based on accuracy (&gt;80% threshold) and impact analysis.</description>
+      <effort>1 hour</effort>
+      <files>
+        <modify if="disabled">raglite/retrieval/search.py (~5 lines)</modify>
+        <modify if="disabled">raglite/retrieval/multi_index_search.py (~5 lines)</modify>
+        <create>scripts/analyze-auto-classification-accuracy.py (~100 lines)</create>
+        <create>docs/validation/story-2.11-auto-classification-analysis.json (results)</create>
+      </files>
+    </criterion>
+
+    <criterion id="AC4" priority="critical">
+      <title>Combined Phase 2A Re-Validation</title>
+      <description>Run full accuracy test suite with all Phase 2A fixes applied (Stories 2.8-2.11). Measure retrieval accuracy (target ≥70%), attribution accuracy (≥95%), and latency (p95 &lt;15s). Make Epic 2 decision: Complete (≥70%), Re-evaluate (65-70%), or Escalate (&lt;65%).</description>
+      <effort>1 hour</effort>
+      <files>
+        <create>scripts/run-phase2a-final-validation.py (~150 lines)</create>
+        <create>docs/validation/phase2a-final-validation.json (final results + decision)</create>
+      </files>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2 PRD - Advanced RAG Enhancements</title>
+        <section>Story 2.11 Specification</section>
+        <snippet>Story 2.11 is the FOURTH and FINAL course correction story for Epic 2 Phase 2A. Root cause: Hybrid search returns score=1.000 for all results, hiding actual relevance scores and masking ranking degradation from BM25 fusion. Expected impact: Fix scoring bug, tune BM25 fusion, validate combined 65-75% accuracy.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/phase2a-deep-dive-analysis.md</path>
+        <title>Phase 2A Deep Dive Analysis</title>
+        <section>Root Cause #4: Hybrid Search Score Normalization Bug</section>
+        <snippet>Comprehensive root cause analysis identified score normalization bug where hybrid_search() and multi_index_search() always return score=1.0. Pure semantic search returns realistic scores (0.802-0.872). This masks ranking degradation from BM25 fusion, preventing diagnosis of why hybrid search returned 46% accuracy vs 52% semantic baseline. Evidence shows different pages returned but all scores hidden at 1.0.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack - Definitive</title>
+        <section>Hybrid Search Components</section>
+        <snippet>BM25 (rank-bm25==0.2.2) for keyword-based retrieval. Fin-E5 for semantic embeddings. Qdrant 1.11+ for vector search. PostgreSQL for structured metadata. Hybrid fusion combines semantic + BM25 with configurable alpha weighting.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/architecture/6-complete-reference-implementation.md</path>
+        <title>Complete Reference Implementation</title>
+        <section>Hybrid Search Patterns</section>
+        <snippet>Reference implementation patterns for search functions: Type hints required, async/await for I/O operations, Pydantic models for data structures, structured logging with extra context, specific error handling. Direct SDK usage only - no custom wrappers or abstractions.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/architecture/8-phased-implementation-strategy-v11-simplified.md</path>
+        <title>Phased Implementation Strategy</title>
+        <section>Epic 2 Phase 2A - Decision Gate</section>
+        <snippet>Phase 2A Decision Gate at T+17 (Week 3 Day 3): IF ≥70% accuracy → Epic 2 COMPLETE. IF 65-70% → Re-evaluate Phase 2B. IF &lt;65% → Escalate to Phase 2B (Structured Multi-Index). Story 2.11 is final validation gate with all fixes applied.</snippet>
+      </doc>
+
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project Development Guidelines</title>
+        <section>KISS Principle &amp; Anti-Over-Engineering Rules</section>
+        <snippet>Critical constraints: NO custom wrappers, NO abstract base classes, NO configuration frameworks, NO custom decorators. Use Reciprocal Rank Fusion (RRF) for hybrid search - research-proven, simple algorithm. Direct SDK usage only. Forbidden: ML rank fusion, cross-encoder re-ranking (Phase 2B feature), custom scoring functions.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>raglite/retrieval/search.py</path>
+        <kind>service</kind>
+        <symbol>hybrid_search</symbol>
+        <lines>414-480</lines>
+        <reason>Core hybrid search function that combines semantic + BM25 retrieval. Currently has alpha=0.7 default. AC2 requires adding tunable alpha parameter and updating default based on tuning results.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/retrieval/multi_index_search.py</path>
+        <kind>service</kind>
+        <symbol>multi_index_search</symbol>
+        <lines>62-120</lines>
+        <reason>Multi-index search orchestration function. AC1 investigation target - may contain score normalization bug in result conversion or orchestration logic.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/retrieval/multi_index_search.py</path>
+        <kind>service</kind>
+        <symbol>merge_results</symbol>
+        <lines>336-400</lines>
+        <reason>Result fusion function combining vector and SQL results. PRIMARY SUSPECT for AC1 score normalization bug. Likely sets all scores to 1.0 after ranking. Must preserve raw fusion scores using RRF algorithm.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/retrieval/query_preprocessing.py</path>
+        <kind>service</kind>
+        <symbol>extract_metadata_from_query</symbol>
+        <lines>1-100</lines>
+        <reason>LLM-based metadata extraction for auto-classification. AC3 requires analyzing accuracy and deciding whether to keep or disable this feature based on &gt;80% accuracy threshold.</reason>
+      </artifact>
+
+      <artifact>
+        <path>tests/fixtures/ground_truth.py</path>
+        <kind>test-fixture</kind>
+        <symbol>GROUND_TRUTH_QA</symbol>
+        <lines>50-200</lines>
+        <reason>50 validated Q&amp;A pairs for accuracy testing. Used in AC2 (BM25 tuning), AC3 (auto-classification analysis), and AC4 (final validation). Contains expected_pages field added in Story 2.9.</reason>
+      </artifact>
+
+      <artifact>
+        <path>scripts/hybrid-search-diagnostics.py</path>
+        <kind>script</kind>
+        <symbol>main</symbol>
+        <lines>1-100</lines>
+        <reason>Existing diagnostic script for hybrid search analysis. Can be used as reference for AC1 diagnostic script structure and debugging patterns.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>model</kind>
+        <symbol>SearchResult</symbol>
+        <lines>1-50</lines>
+        <reason>Data model for search results including score field. AC1 fix must preserve score values in this model rather than normalizing to 1.0.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="pytest" version="8.4.2" category="dev">Testing framework for unit and integration tests</package>
+        <package name="pytest-asyncio" version="1.2.0" category="dev">Async test support for pytest</package>
+        <package name="rank-bm25" version="0.2.2" category="production">BM25 algorithm for keyword-based retrieval</package>
+        <package name="qdrant-client" version="1.15.1" category="production">Vector database client for semantic search</package>
+        <package name="sentence-transformers" version="5.1.1" category="production">Fin-E5 embeddings for semantic vectors</package>
+        <package name="psycopg2-binary" version="2.9+" category="production">PostgreSQL client for structured metadata</package>
+        <package name="anthropic" version="0.18.0+" category="production">Claude API client for LLM operations</package>
+        <package name="tiktoken" version="0.5.1+" category="production">Token counting for chunking validation</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint id="KISS-1" priority="critical">
+      <category>Simplicity</category>
+      <rule>NO custom wrappers, abstract base classes, or configuration frameworks. Use SDKs directly as documented in official documentation.</rule>
+    </constraint>
+
+    <constraint id="KISS-2" priority="critical">
+      <category>Algorithm Selection</category>
+      <rule>Use Reciprocal Rank Fusion (RRF) for hybrid search fusion - research-proven, simple algorithm (Cormack et al.). NO ML-based rank fusion, cross-encoder re-ranking (Phase 2B feature), or custom scoring functions.</rule>
+    </constraint>
+
+    <constraint id="ACCURACY-1" priority="critical">
+      <category>Quality Gate</category>
+      <rule>Combined Phase 2A accuracy target: ≥70% retrieval accuracy to complete Epic 2. If 65-70%, re-evaluate Phase 2B. If &lt;65%, escalate to Phase 2B implementation.</rule>
+    </constraint>
+
+    <constraint id="NFR-6" priority="high">
+      <category>Performance</category>
+      <rule>NFR6: Target 70-80% retrieval accuracy (Phase 2A goal). Story 2.11 contribution: Fix hybrid search scoring, optimize BM25 fusion to match or exceed semantic baseline (52%+).</rule>
+    </constraint>
+
+    <constraint id="NFR-13" priority="medium">
+      <category>Performance</category>
+      <rule>NFR13: &lt;15s p95 query latency. Current: p50=782ms, p95=2153ms (well under target). Score fix and BM25 tuning should have minimal performance impact.</rule>
+    </constraint>
+
+    <constraint id="TESTING-1" priority="high">
+      <category>Validation</category>
+      <rule>All fixes must be validated using ground truth test set (50 queries). Measure retrieval accuracy, attribution accuracy (≥95%), and latency before and after changes.</rule>
+    </constraint>
+
+    <constraint id="COURSE-CORRECTION" priority="critical">
+      <category>Context</category>
+      <rule>Story 2.11 is the FINAL story in 4-story course correction sequence (Stories 2.8-2.11). Must validate combined impact of all fixes: table chunking (2.8), page references (2.9), query routing (2.10), and hybrid scoring (2.11).</rule>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>hybrid_search</name>
+      <kind>async function</kind>
+      <signature>async def hybrid_search(query: str, top_k: int = 5, alpha: float = 0.7, filters: dict[str, str] | None = None, enable_hybrid: bool = True) -&gt; list[SearchResult]</signature>
+      <path>raglite/retrieval/search.py:414</path>
+      <notes>AC2 requires adding tunable alpha parameter and updating default based on tuning results (expected: alpha=0.85). AC1 requires preserving raw fusion scores instead of normalizing to 1.0.</notes>
+    </interface>
+
+    <interface>
+      <name>multi_index_search</name>
+      <kind>async function</kind>
+      <signature>async def multi_index_search(query: str, top_k: int = 5) -&gt; list[SearchResult]</signature>
+      <path>raglite/retrieval/multi_index_search.py:62</path>
+      <notes>AC1 investigation target for score normalization bug. May normalize scores in result conversion or orchestration logic.</notes>
+    </interface>
+
+    <interface>
+      <name>merge_results</name>
+      <kind>function</kind>
+      <signature>def merge_results(vector_results: list[SearchResult], sql_results: list[SearchResult], alpha: float = 0.6, top_k: int = 5) -&gt; list[SearchResult]</signature>
+      <path>raglite/retrieval/multi_index_search.py:336</path>
+      <notes>PRIMARY SUSPECT for AC1 score normalization bug. Must implement Reciprocal Rank Fusion (RRF) and preserve raw fusion scores. Expected bug pattern: result.score = 1.0 after sorting.</notes>
+    </interface>
+
+    <interface>
+      <name>extract_metadata_from_query</name>
+      <kind>async function</kind>
+      <signature>async def extract_metadata_from_query(query: str) -&gt; dict[str, str]</signature>
+      <path>raglite/retrieval/query_preprocessing.py</path>
+      <notes>LLM-based metadata extraction for auto-classification. AC3 requires measuring extraction accuracy (&gt;80% threshold) and deciding whether to keep or disable.</notes>
+    </interface>
+
+    <interface>
+      <name>SearchResult</name>
+      <kind>Pydantic model</kind>
+      <signature>class SearchResult(BaseModel): score: float, page: int, text: str, source_document: str, ...</signature>
+      <path>raglite/shared/models.py</path>
+      <notes>Data model for search results. AC1 fix must preserve score field values rather than normalizing to 1.0. Expected score range: 0.0-1.0 with variance (std &gt; 0.05).</notes>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Testing uses pytest + pytest-asyncio for async operations. Ground truth validation on 50 validated Q&amp;A pairs (tests/fixtures/ground_truth.py). Accuracy tests measure retrieval accuracy (% queries with correct page in top-5), attribution accuracy (% correct document references), and query latency (p50, p95). Target: ≥70% retrieval accuracy, ≥95% attribution accuracy, &lt;15s p95 latency. All validation scripts are standalone (not pytest) and save results to docs/validation/ as JSON.</standards>
+
+    <locations>
+      <location>tests/integration/ - Integration tests for multi-index search and hybrid search</location>
+      <location>tests/fixtures/ground_truth.py - 50 validated Q&amp;A pairs for accuracy testing</location>
+      <location>scripts/ - Validation and diagnostic scripts (run-accuracy-tests.py, hybrid-search-diagnostics.py, etc.)</location>
+      <location>docs/validation/ - JSON results from validation scripts</location>
+    </locations>
+
+    <ideas>
+      <idea ac="AC1">Create debug-hybrid-search-scoring.py to compare semantic vs hybrid vs multi-index scores on sample query. Verify bug exists (all hybrid scores = 1.0). After fix, verify realistic score variance (std &gt; 0.05).</idea>
+      <idea ac="AC2">Create tune-bm25-fusion-weights.py to test alpha values [0.7, 0.75, 0.8, 0.85, 0.9] on all 50 ground truth queries. Measure accuracy for each alpha. Select alpha with highest accuracy and document tuning rationale.</idea>
+      <idea ac="AC3">Create analyze-auto-classification-accuracy.py to measure extraction accuracy and usage frequency. Compare extracted metadata against query text. Make disable/keep decision based on &gt;80% accuracy threshold.</idea>
+      <idea ac="AC4">Create run-phase2a-final-validation.py to run all 50 ground truth queries with all fixes (Stories 2.8-2.11). Measure retrieval accuracy, attribution accuracy, latency. Evaluate decision gate criteria and make Epic 2 completion decision.</idea>
+    </ideas>
+  </tests>
+</story-context>

@@ -1,0 +1,671 @@
+{
+  "metadata": {
+    "description": "Ground truth test set from validated 50-query fixtures",
+    "document": "2025-08 Performance Review CONSO_v2.pdf",
+    "total_questions": 50,
+    "source": "tests/fixtures/ground_truth.py",
+    "validation_date": "2025-10-14",
+    "note": "Converted from Python fixtures for Story 2.15 AC1 audit"
+  },
+  "questions": [
+    {
+      "id": 1,
+      "question": "What is the variable cost per ton for Portugal Cement in August 2025 YTD?",
+      "expected_keywords": [
+        "variable costs",
+        "23.2",
+        "EUR/ton",
+        "20.3",
+        "29.4"
+      ],
+      "category": "cost_analysis",
+      "difficulty": "easy"
+    },
+    {
+      "id": 2,
+      "question": "What is the thermal energy cost per ton for Portugal Cement?",
+      "expected_keywords": [
+        "termic energy",
+        "thermal energy",
+        "5.8",
+        "EUR/ton",
+        "8.3"
+      ],
+      "category": "cost_analysis",
+      "difficulty": "easy"
+    },
+    {
+      "id": 3,
+      "question": "What is the electricity cost per ton for Portugal Cement operations?",
+      "expected_keywords": [
+        "electricity",
+        "7.8",
+        "EUR/ton",
+        "4.4",
+        "9.6"
+      ],
+      "category": "cost_analysis",
+      "difficulty": "easy"
+    },
+    {
+      "id": 4,
+      "question": "What are the raw materials costs per ton?",
+      "expected_keywords": [
+        "raw materials",
+        "3.5",
+        "EUR/ton",
+        "4.2",
+        "6.2"
+      ],
+      "category": "cost_analysis",
+      "difficulty": "easy"
+    },
+    {
+      "id": 5,
+      "question": "What are the packaging costs per ton for cement?",
+      "expected_keywords": [
+        "packaging",
+        "3.7",
+        "EUR/ton",
+        "3.3"
+      ],
+      "category": "cost_analysis",
+      "difficulty": "easy"
+    },
+    {
+      "id": 6,
+      "question": "What is the alternative fuel rate percentage for Portugal Cement?",
+      "expected_keywords": [
+        "alternative fuel",
+        "50%",
+        "60%",
+        "42%"
+      ],
+      "category": "cost_analysis",
+      "difficulty": "easy"
+    },
+    {
+      "id": 7,
+      "question": "What are the maintenance costs per ton?",
+      "expected_keywords": [
+        "maintenance costs",
+        "11.1",
+        "EUR/ton",
+        "9.5",
+        "12.2"
+      ],
+      "category": "cost_analysis",
+      "difficulty": "medium"
+    },
+    {
+      "id": 8,
+      "question": "What is the electricity specific consumption for clinker grey production?",
+      "expected_keywords": [
+        "electricity spec",
+        "clinker grey",
+        "77",
+        "Kwh/ton",
+        "78"
+      ],
+      "category": "cost_analysis",
+      "difficulty": "hard"
+    },
+    {
+      "id": 9,
+      "question": "What is the thermal energy specific consumption in Kcal/kg clinker?",
+      "expected_keywords": [
+        "termic energy spec",
+        "835",
+        "Kcal/kg",
+        "clk",
+        "847"
+      ],
+      "category": "cost_analysis",
+      "difficulty": "medium"
+    },
+    {
+      "id": 10,
+      "question": "What is the external electricity price per MWh?",
+      "expected_keywords": [
+        "external electricity",
+        "61.4",
+        "EUR/MWh",
+        "41.8",
+        "77.5"
+      ],
+      "category": "cost_analysis",
+      "difficulty": "medium"
+    },
+    {
+      "id": 11,
+      "question": "How do total variable costs per ton compare across the three periods and what is the trend?",
+      "expected_keywords": [
+        "variable costs",
+        "29.4",
+        "23.2",
+        "EUR/ton",
+        "21%",
+        "reduction"
+      ],
+      "category": "cost_analysis",
+      "difficulty": "hard"
+    },
+    {
+      "id": 12,
+      "question": "What is the relationship between alternative fuel rate percentage and thermal energy costs per ton?",
+      "expected_keywords": [
+        "alternative fuel",
+        "50%",
+        "42%",
+        "termic energy",
+        "5.8",
+        "8.3",
+        "reduction"
+      ],
+      "category": "cost_analysis",
+      "difficulty": "hard"
+    },
+    {
+      "id": 13,
+      "question": "What is the EBITDA IFRS margin percentage for Portugal Cement?",
+      "expected_keywords": [
+        "EBITDA IFRS margin",
+        "50.6%",
+        "53.2%",
+        "40.6%"
+      ],
+      "category": "margins",
+      "difficulty": "easy"
+    },
+    {
+      "id": 14,
+      "question": "What is the EBITDA per ton for Portugal Cement?",
+      "expected_keywords": [
+        "EBITDA",
+        "64.4",
+        "EUR/ton",
+        "67.4",
+        "49.5"
+      ],
+      "category": "margins",
+      "difficulty": "easy"
+    },
+    {
+      "id": 15,
+      "question": "What is the unit variable margin per ton?",
+      "expected_keywords": [
+        "unit variable margin",
+        "90.1",
+        "EUR/ton",
+        "92.0",
+        "78.2"
+      ],
+      "category": "margins",
+      "difficulty": "easy"
+    },
+    {
+      "id": 16,
+      "question": "What are the fixed costs per ton for Out\u00e3o plant?",
+      "expected_keywords": [
+        "out\u00e3o",
+        "fixed costs",
+        "23.7",
+        "EUR/ton",
+        "21.6",
+        "26.5"
+      ],
+      "category": "margins",
+      "difficulty": "medium"
+    },
+    {
+      "id": 17,
+      "question": "What are the fixed costs per ton for Maceira plant?",
+      "expected_keywords": [
+        "maceira",
+        "fixed costs",
+        "26.8",
+        "EUR/ton",
+        "22.1",
+        "20.5"
+      ],
+      "category": "margins",
+      "difficulty": "medium"
+    },
+    {
+      "id": 18,
+      "question": "What is the unit cement EBITDA for Out\u00e3o plant internal market?",
+      "expected_keywords": [
+        "out\u00e3o",
+        "unit cement ebitda",
+        "80.5",
+        "EUR/ton",
+        "81.9",
+        "65.0"
+      ],
+      "category": "margins",
+      "difficulty": "medium"
+    },
+    {
+      "id": 19,
+      "question": "What are the fixed costs per ton for Pataias plant and how do they compare to other plants?",
+      "expected_keywords": [
+        "pataias",
+        "fixed costs",
+        "59.8",
+        "EUR/ton",
+        "out\u00e3o",
+        "maceira"
+      ],
+      "category": "margins",
+      "difficulty": "medium"
+    },
+    {
+      "id": 20,
+      "question": "How does the EBITDA margin improvement from Aug-24 to Aug-25 YTD relate to variable and fixed cost changes?",
+      "expected_keywords": [
+        "EBITDA margin",
+        "50.6%",
+        "40.6%",
+        "10 pp",
+        "variable costs",
+        "fixed costs",
+        "efficiency"
+      ],
+      "category": "margins",
+      "difficulty": "hard"
+    },
+    {
+      "id": 21,
+      "question": "What is the EBITDA for Portugal operations in Aug-25 YTD?",
+      "expected_keywords": [
+        "EBITDA portugal",
+        "104,647",
+        "108,942",
+        "94,845",
+        "thousand EUR"
+      ],
+      "category": "financial_performance",
+      "difficulty": "easy"
+    },
+    {
+      "id": 22,
+      "question": "What is the cash flow from operating activities?",
+      "expected_keywords": [
+        "CF from operating activities",
+        "7,208",
+        "35,616",
+        "7,136",
+        "thousand EUR"
+      ],
+      "category": "financial_performance",
+      "difficulty": "easy"
+    },
+    {
+      "id": 23,
+      "question": "What are the capital expenditures (Capex) for the period?",
+      "expected_keywords": [
+        "capex",
+        "33,059",
+        "52,506",
+        "32,456",
+        "thousand EUR"
+      ],
+      "category": "financial_performance",
+      "difficulty": "easy"
+    },
+    {
+      "id": 24,
+      "question": "What is the financial net debt closing balance?",
+      "expected_keywords": [
+        "financial net debt",
+        "closing balance",
+        "244,709",
+        "258,679",
+        "233,686"
+      ],
+      "category": "financial_performance",
+      "difficulty": "easy"
+    },
+    {
+      "id": 25,
+      "question": "What is the change in trade working capital?",
+      "expected_keywords": [
+        "trade working capital",
+        "30,913",
+        "5,862",
+        "7,623"
+      ],
+      "category": "financial_performance",
+      "difficulty": "medium"
+    },
+    {
+      "id": 26,
+      "question": "What are the income tax payments for the period?",
+      "expected_keywords": [
+        "income tax",
+        "11,801",
+        "16,051",
+        "7,187"
+      ],
+      "category": "financial_performance",
+      "difficulty": "medium"
+    },
+    {
+      "id": 27,
+      "question": "What are the net interest expenses?",
+      "expected_keywords": [
+        "net interest expenses",
+        "6,853",
+        "5,699",
+        "4,994"
+      ],
+      "category": "financial_performance",
+      "difficulty": "hard"
+    },
+    {
+      "id": 28,
+      "question": "What is the cash set free or tied up after investments?",
+      "expected_keywords": [
+        "cash set free",
+        "tied up",
+        "investments",
+        "25,851",
+        "16,889"
+      ],
+      "category": "financial_performance",
+      "difficulty": "medium"
+    },
+    {
+      "id": 29,
+      "question": "How does the EBITDA Portugal plus Group Structure compare across periods and what is the growth rate?",
+      "expected_keywords": [
+        "EBITDA",
+        "group structure",
+        "91,438",
+        "77,992",
+        "17%",
+        "growth"
+      ],
+      "category": "financial_performance",
+      "difficulty": "hard"
+    },
+    {
+      "id": 30,
+      "question": "What is the relationship between cash flow from operations and working capital changes?",
+      "expected_keywords": [
+        "CF from operations",
+        "25,862",
+        "working capital",
+        "30,913",
+        "EBITDA"
+      ],
+      "category": "financial_performance",
+      "difficulty": "hard"
+    },
+    {
+      "id": 31,
+      "question": "How many FTE employees work in Portugal Cement operations?",
+      "expected_keywords": [
+        "FTEs",
+        "232",
+        "287",
+        "222",
+        "employees"
+      ],
+      "category": "safety_metrics",
+      "difficulty": "easy"
+    },
+    {
+      "id": 32,
+      "question": "What is the daily clinker production capacity?",
+      "expected_keywords": [
+        "daily clinker production",
+        "1.9",
+        "kton",
+        "1.8",
+        "1.6"
+      ],
+      "category": "safety_metrics",
+      "difficulty": "easy"
+    },
+    {
+      "id": 33,
+      "question": "What is the reliability factor percentage for cement production?",
+      "expected_keywords": [
+        "reliability factor",
+        "57%",
+        "66%",
+        "61%"
+      ],
+      "category": "safety_metrics",
+      "difficulty": "medium"
+    },
+    {
+      "id": 34,
+      "question": "What is the utilization factor in tons for cement production?",
+      "expected_keywords": [
+        "utilization factor",
+        "tons",
+        "44%",
+        "59%"
+      ],
+      "category": "safety_metrics",
+      "difficulty": "medium"
+    },
+    {
+      "id": 35,
+      "question": "What is the performance factor percentage?",
+      "expected_keywords": [
+        "performance factor",
+        "19%",
+        "21%",
+        "16%"
+      ],
+      "category": "safety_metrics",
+      "difficulty": "medium"
+    },
+    {
+      "id": 36,
+      "question": "What is the CO2 emissions per ton of clinker and how does it compare across periods?",
+      "expected_keywords": [
+        "emissions",
+        "CO2",
+        "763",
+        "kg",
+        "ton clinker",
+        "748",
+        "768"
+      ],
+      "category": "safety_metrics",
+      "difficulty": "hard"
+    },
+    {
+      "id": 37,
+      "question": "What are the employee costs per ton for Portugal Cement?",
+      "expected_keywords": [
+        "employees",
+        "6.6",
+        "EUR/ton",
+        "6.0",
+        "5.6"
+      ],
+      "category": "workforce",
+      "difficulty": "easy"
+    },
+    {
+      "id": 38,
+      "question": "How many FTEs work in distribution for Portugal Cement?",
+      "expected_keywords": [
+        "distribution",
+        "FTEs",
+        "18",
+        "19"
+      ],
+      "category": "workforce",
+      "difficulty": "easy"
+    },
+    {
+      "id": 39,
+      "question": "What is the total headcount for Tunisia operations in August 2025?",
+      "expected_keywords": [
+        "tunisia",
+        "headcount",
+        "536",
+        "350",
+        "employees"
+      ],
+      "category": "workforce",
+      "difficulty": "medium"
+    },
+    {
+      "id": 40,
+      "question": "How many FTEs are in sales for Portugal Cement?",
+      "expected_keywords": [
+        "sales",
+        "FTEs",
+        "16",
+        "15",
+        "7%"
+      ],
+      "category": "workforce",
+      "difficulty": "medium"
+    },
+    {
+      "id": 41,
+      "question": "What is the breakdown of Tunisia Cement employees by function?",
+      "expected_keywords": [
+        "tunisia cement",
+        "350",
+        "plants",
+        "238",
+        "distribution",
+        "84",
+        "sales",
+        "28"
+      ],
+      "category": "workforce",
+      "difficulty": "medium"
+    },
+    {
+      "id": 42,
+      "question": "How does employee cost per ton efficiency compare across periods and what factors drive the changes?",
+      "expected_keywords": [
+        "employee costs",
+        "6.6",
+        "5.6",
+        "EUR/ton",
+        "FTEs",
+        "232",
+        "222",
+        "increase"
+      ],
+      "category": "workforce",
+      "difficulty": "hard"
+    },
+    {
+      "id": 43,
+      "question": "What are the other costs per ton for Portugal Cement operations?",
+      "expected_keywords": [
+        "other costs",
+        "9.8",
+        "EUR/ton",
+        "9.2",
+        "10.1"
+      ],
+      "category": "operating_expenses",
+      "difficulty": "easy"
+    },
+    {
+      "id": 44,
+      "question": "What are the distribution costs per ton?",
+      "expected_keywords": [
+        "distribution costs",
+        "1.7",
+        "EUR/ton",
+        "1.5"
+      ],
+      "category": "operating_expenses",
+      "difficulty": "easy"
+    },
+    {
+      "id": 45,
+      "question": "What are the sales costs per ton?",
+      "expected_keywords": [
+        "sales costs",
+        "1.2",
+        "EUR/ton",
+        "1.1"
+      ],
+      "category": "operating_expenses",
+      "difficulty": "easy"
+    },
+    {
+      "id": 46,
+      "question": "What are the insurance costs?",
+      "expected_keywords": [
+        "insurance",
+        "1,072",
+        "1,413",
+        "1,255",
+        "thousand EUR"
+      ],
+      "category": "operating_expenses",
+      "difficulty": "medium"
+    },
+    {
+      "id": 47,
+      "question": "What are the rents and rentals costs?",
+      "expected_keywords": [
+        "rents",
+        "rentals",
+        "1,262",
+        "807",
+        "1,273"
+      ],
+      "category": "operating_expenses",
+      "difficulty": "medium"
+    },
+    {
+      "id": 48,
+      "question": "What are the production services costs?",
+      "expected_keywords": [
+        "production services",
+        "5,713",
+        "5,863",
+        "5,723"
+      ],
+      "category": "operating_expenses",
+      "difficulty": "medium"
+    },
+    {
+      "id": 49,
+      "question": "What are the specialized labour costs?",
+      "expected_keywords": [
+        "specialized labour",
+        "1,778",
+        "2,490",
+        "1,732"
+      ],
+      "category": "operating_expenses",
+      "difficulty": "medium"
+    },
+    {
+      "id": 50,
+      "question": "How do fixed costs break down into employee costs, maintenance, and other costs, and what is the efficiency trend?",
+      "expected_keywords": [
+        "fixed costs",
+        "27.4",
+        "employee costs",
+        "6.6",
+        "maintenance",
+        "11.1",
+        "other costs",
+        "9.8",
+        "FTEs",
+        "productivity"
+      ],
+      "category": "operating_expenses",
+      "difficulty": "hard"
+    }
+  ]
+}

@@ -53,3 +53,19 @@ htmlcov/
 .coverage
 .coverage.*
 docs/sample pdf/split/
+postgresql_data/
+BMAD-METHOD/
+
+# CI cache exports (Solution 2: ingestion data caching)
+.qdrant-export/
+.postgres-export/
+
+# Test backups (local development only)
+tests.backup.*/
+raglite/tests.backup.*/
+
+# BMAD Method files (not part of RAGLite)
+BMAD-METHOD/
+/bmad/
+.cursor/rules/bmad/
+docs/sample pdf/
