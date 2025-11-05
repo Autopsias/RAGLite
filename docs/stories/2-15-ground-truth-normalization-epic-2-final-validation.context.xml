@@ -1,0 +1,690 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context>
+  <metadata>
+    <epic_id>2</epic_id>
+    <story_id>15</story_id>
+    <story_key>2-15-ground-truth-normalization-epic-2-final-validation</story_key>
+    <story_title>Ground Truth Normalization + Period Mapping + Epic 2 Final Validation</story_title>
+    <status>ready-for-dev</status>
+    <priority>CRITICAL</priority>
+    <effort_estimate>9-13 days</effort_estimate>
+    <depends_on>
+      <story>2-11-fix-hybrid-search-scoring</story>
+      <story>2-14-sql-generation-edge-case-refinement</story>
+    </depends_on>
+  </metadata>
+
+  <user_story>
+    <as_a>RAG retrieval system validation framework</as_a>
+    <i_want>normalized ground truth aligned with actual database content, period format mapping, and integrated validation of Stories 2.11 + 2.14 fixes</i_want>
+    <so_that>retrieval accuracy improves from 12% baseline to ≥70% target and Epic 2 is validated complete</so_that>
+  </user_story>
+
+  <context_summary>
+    Story 2.14 validation revealed a critical insight: when ground truth matches actual database content, accuracy is 100% (excerpt validation), but when misaligned, accuracy is only 12% (generic validation). This story fixes the root cause (test data misalignment) by normalizing ground truth queries, implementing period format mapping (Q3 → Aug-25), and running integrated validation of Stories 2.11 + 2.14 + 2.15 combined. Expected improvement: 12% → 70%+ accuracy, achieving Epic 2 completion.
+  </context_summary>
+
+  <acceptance_criteria>
+    <criterion id="AC1" priority="CRITICAL">
+      <goal>Ground Truth Audit &amp; Data Alignment</goal>
+      <description>Audit existing 50 ground truth queries against actual database content, identify misalignments (period formats, missing metrics, currency mismatches), and create normalized ground truth with 45-50 queries aligned to actual data</description>
+      <effort>2-3 days</effort>
+      <success_criteria>
+        <item>Audit script created and executed on 50 queries</item>
+        <item>Data availability categorized for each query (AVAILABLE/MISSING)</item>
+        <item>Normalized ground truth created: tests/ground_truth_normalized.json</item>
+        <item>≥45/50 queries aligned with actual database content</item>
+        <item>Audit report saved: docs/validation/story-2.15-ground-truth-audit.json</item>
+      </success_criteria>
+      <files_created>
+        <file>scripts/audit-ground-truth-data-availability.py (~200 lines)</file>
+        <file>tests/ground_truth_normalized.json (45-50 aligned queries)</file>
+        <file>docs/validation/story-2.15-ground-truth-audit.json (audit results)</file>
+      </files_created>
+    </criterion>
+
+    <criterion id="AC2" priority="HIGH">
+      <goal>Period Format Normalization Layer</goal>
+      <description>Implement period format mapping to bridge query language (Q3 2025) and database format (Aug-25 YTD). Create raglite/retrieval/period_normalizer.py module with quarter, half-year, and fiscal year mappings</description>
+      <effort>2 days</effort>
+      <success_criteria>
+        <item>Period normalizer module created: raglite/retrieval/period_normalizer.py</item>
+        <item>Quarter mappings working (Q1/Q2/Q3/Q4 → month variants)</item>
+        <item>Month-year detection functional (August 2025 → Aug-25)</item>
+        <item>Integrated with SQL generation in query_classifier.py</item>
+        <item>Unit tests passing: tests/unit/test_period_normalizer.py</item>
+        <item>Query "Q3 2025" successfully finds "Aug-25 YTD" data</item>
+      </success_criteria>
+      <files_created>
+        <file>raglite/retrieval/period_normalizer.py (~150 lines)</file>
+        <file>tests/unit/test_period_normalizer.py (~50 lines - unit tests)</file>
+      </files_created>
+      <files_modified>
+        <file>raglite/retrieval/query_classifier.py (~30 lines - integrate period normalization)</file>
+      </files_modified>
+    </criterion>
+
+    <criterion id="AC3" priority="CRITICAL">
+      <goal>Integrated Validation - Stories 2.11 + 2.14 + 2.15 Combined</goal>
+      <description>Validate that ALL three stories work together with normalized ground truth. Test hybrid search scoring (2.11) + SQL backend (2.14) + period mapping (2.15) as integrated system. Target: ≥70% accuracy</description>
+      <effort>2 days</effort>
+      <success_criteria>
+        <item>Validation script created and executed</item>
+        <item>Overall accuracy measured on normalized ground truth</item>
+        <item>Category-level accuracy tracked (entity, multi-entity, period)</item>
+        <item>Latency within NFR13 (&lt;15s p95)</item>
+        <item>Decision gate evaluated: IF ≥70% → Epic 2 COMPLETE, IF 60-69% → PM decision, IF &lt;60% → Phase 2B</item>
+        <item>Results saved: docs/validation/epic-2-final-validation.json</item>
+      </success_criteria>
+      <files_created>
+        <file>scripts/validate-epic-2-final.py (~250 lines)</file>
+        <file>docs/validation/epic-2-final-validation.json (final results)</file>
+      </files_created>
+    </criterion>
+
+    <criterion id="AC4" priority="MEDIUM">
+      <goal>Root Cause Analysis (RCA) Report</goal>
+      <description>Document comprehensive analysis of why 12% vs 100% accuracy gap existed. Categorize all failure patterns, provide evidence, document lessons learned, and create decision brief for PM with three paths forward</description>
+      <effort>1 day</effort>
+      <success_criteria>
+        <item>RCA report created: docs/validation/epic-2-rca-report.md</item>
+        <item>All failure categories documented with evidence</item>
+        <item>Impact analysis quantified (12% → 70%+ expected)</item>
+        <item>Three decision paths presented for PM</item>
+        <item>Lessons learned documented for future epics</item>
+      </success_criteria>
+      <files_created>
+        <file>docs/validation/epic-2-rca-report.md (~1000 lines - comprehensive RCA)</file>
+      </files_created>
+    </criterion>
+
+    <criterion id="AC5" priority="LOW">
+      <goal>Iterative Refinement - Top 5 Failures (CONDITIONAL)</goal>
+      <description>ONLY if AC3 validation achieves 60-69% (not 70%+), analyze top 5 failure patterns and implement targeted fixes (SQL generation prompt refinement, additional entity aliases, enhanced error handling)</description>
+      <effort>2 days</effort>
+      <trigger>CONDITIONAL - Only if AC3 &lt; 70%</trigger>
+      <success_criteria>
+        <item>Top 5 failure patterns identified and ranked</item>
+        <item>Targeted fixes implemented for each pattern</item>
+        <item>Validation re-run after fixes</item>
+        <item>Accuracy improvement measured (before/after)</item>
+        <item>Decision: ≥70% achieved OR escalate to PM</item>
+      </success_criteria>
+      <files_modified>
+        <file>raglite/retrieval/query_classifier.py (prompt refinement - ~20 lines)</file>
+        <file>raglite/retrieval/sql_table_search.py (error handling - ~30 lines)</file>
+      </files_modified>
+      <files_created>
+        <file>scripts/analyze-top-failures.py (~150 lines)</file>
+      </files_created>
+    </criterion>
+  </acceptance_criteria>
+
+  <tasks>
+    <task id="1" ac="AC1" status="pending">
+      <description>Ground Truth Audit &amp; Normalization (AC1) - 2-3 days</description>
+      <subtasks>
+        <subtask id="1.1">Create ground truth audit script (4 hours) - Implement audit-ground-truth-data-availability.py</subtask>
+        <subtask id="1.2">Run audit on 50 ground truth queries (2 hours) - Execute and generate data availability report</subtask>
+        <subtask id="1.3">Analyze audit results (4 hours) - Count queries by availability category</subtask>
+        <subtask id="1.4">Normalize ground truth (1 day) - Create tests/ground_truth_normalized.json</subtask>
+        <subtask id="1.5">Validate normalized ground truth (2 hours) - Run quick validation on 10 sample queries</subtask>
+      </subtasks>
+    </task>
+
+    <task id="2" ac="AC2" status="pending">
+      <description>Period Format Normalization Layer (AC2) - 2 days</description>
+      <subtasks>
+        <subtask id="2.1">Create period normalizer module (1 day) - Implement raglite/retrieval/period_normalizer.py</subtask>
+        <subtask id="2.2">Integrate with SQL generation (4 hours) - Update query_classifier.py</subtask>
+        <subtask id="2.3">Unit tests for period normalization (3 hours) - Create test_period_normalizer.py</subtask>
+        <subtask id="2.4">Integration test (1 hour) - Query "Q3 2025" finds "Aug-25 YTD" data</subtask>
+      </subtasks>
+    </task>
+
+    <task id="3" ac="AC3" status="pending">
+      <description>Integrated Validation (AC3) - 2 days</description>
+      <subtasks>
+        <subtask id="3.1">Create final validation script (1 day) - Implement validate-epic-2-final.py</subtask>
+        <subtask id="3.2">Run validation on normalized ground truth (4 hours) - Execute on 45-50 queries</subtask>
+        <subtask id="3.3">Analyze validation results (2 hours) - Compare to Story 2.14 baseline</subtask>
+        <subtask id="3.4">Decision gate evaluation (1 hour) - Determine Epic 2 completion status</subtask>
+      </subtasks>
+    </task>
+
+    <task id="4" ac="AC4" status="pending">
+      <description>Root Cause Analysis Report (AC4) - 1 day</description>
+      <subtasks>
+        <subtask id="4.1">Document failure patterns (4 hours) - Categorize all 44 failures</subtask>
+        <subtask id="4.2">Create RCA document (3 hours) - Write epic-2-rca-report.md</subtask>
+        <subtask id="4.3">Generate decision brief (1 hour) - Three paths forward for PM</subtask>
+      </subtasks>
+    </task>
+
+    <task id="5" ac="AC5" status="pending">
+      <description>Iterative Refinement (AC5 - CONDITIONAL) - 2 days</description>
+      <subtasks>
+        <subtask id="5.1">Analyze top 5 failure patterns (4 hours) - ONLY if AC3 &lt; 70%</subtask>
+        <subtask id="5.2">Implement targeted fixes (1 day) - SQL prompt refinement, entity aliases</subtask>
+        <subtask id="5.3">Re-run validation (4 hours) - Measure accuracy improvement</subtask>
+      </subtasks>
+    </task>
+  </tasks>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2: Advanced RAG Architecture Enhancement</title>
+        <section>Epic Overview</section>
+        <snippet>Epic 2 goal: Achieve minimum 70% retrieval accuracy through staged RAG architecture enhancement. Success criteria: ≥70% retrieval accuracy (MANDATORY for Epic 3), ≥95% attribution accuracy, &lt;15s p95 query latency, all 50 AC3 ground truth queries validated.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2: Phase 2A - Fixed Chunking + Metadata</title>
+        <section>Story 2.5: AC3 Validation and Optimization</section>
+        <snippet>Story 2.5 achieved 52% accuracy (failed 70% target). Course correction through Stories 2.8-2.14 implemented table-aware chunking, query classification, hybrid search scoring, and SQL table search. Story 2.15 completes validation with normalized ground truth.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/stories/2-11-fix-hybrid-search-scoring.md</path>
+        <title>Story 2.11: Fix Hybrid Search Scoring</title>
+        <section>Completion Notes</section>
+        <snippet>Fixed hybrid search score normalization bug (max-score normalization now working). BM25 alpha parameter now functional. Hybrid search fusion operational. Needs integrated testing with Story 2.14 SQL backend in Story 2.15.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/stories/2-14-sql-generation-edge-case-refinement.md</path>
+        <title>Story 2.14: SQL Backend + Edge Case Refinement</title>
+        <section>Completion Notes</section>
+        <snippet>SQL backend validated (170K rows working). Fuzzy entity matching: 80% accuracy (AC1). Multi-entity queries: 100% accuracy (AC2). Generic ground truth: 12% (data misalignment). Excerpt ground truth: 100% (normalized data). Key finding: Implementation is correct, test data needs normalization.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/validation/story-2.14-completion-report.md</path>
+        <title>Story 2.14 Completion Report</title>
+        <section>Root Cause Analysis</section>
+        <snippet>57.1% accuracy baseline caused by: (1) Period format mismatches (Q3 vs Aug-25) - 40% of failures, (2) Missing metrics (headcount, G&A) - 20%, (3) Currency mismatches (AOA/BRL vs EUR) - 10%, (4) Budget period variants not extracted - 10%, (5) Entity aliases - 10%, (6) SQL edge cases - 10%. Recommendation: Normalize ground truth to match actual database content.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/validation/story-2.14-excerpt-ground-truth.json</path>
+        <title>Story 2.14 Excerpt Ground Truth (Normalized)</title>
+        <section>12 Normalized Test Queries</section>
+        <snippet>100% accuracy (12/12 queries passing) when ground truth matches actual database content. Validates that implementation is correct - only test data alignment was missing. Categories: AC1 (5/5), AC2 (3/3), AC3 (2/2), AC6 (2/2) all 100%.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/stories/AC1-ground-truth-results.json</path>
+        <title>Generic Ground Truth Results (Misaligned)</title>
+        <section>50 Query Validation</section>
+        <snippet>12% accuracy (6/50 queries) on generic ground truth. 44 failures caused by test data misalignment: period format mismatches (Q3 vs Aug-25), missing metrics (headcount, G&A), currency mismatches (AOA/BRL vs EUR only). Not an implementation failure - test data needs normalization.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/architecture/6-complete-reference-implementation.md</path>
+        <title>Complete Reference Implementation</title>
+        <section>Retrieval Patterns</section>
+        <snippet>SQL table search pattern: (1) Classify query → SQL or semantic, (2) Generate SQL with entity/period/metric extraction, (3) Execute on PostgreSQL financial_tables, (4) Synthesize answer with Claude, (5) Return with citations. Use Story 2.14 fuzzy matching and multi-entity patterns.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack</title>
+        <section>Approved Dependencies</section>
+        <snippet>Python 3.11+, pytest, PostgreSQL with pg_trgm extension, Qdrant 1.11+, Claude 3.7 Sonnet API, tiktoken. NO new dependencies for Story 2.15 - period normalizer is pure Python. Reuse existing patterns from Stories 2.11, 2.14.</snippet>
+      </doc>
+
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project Development Guidelines</title>
+        <section>Anti-Over-Engineering Rules</section>
+        <snippet>KISS principle: ~600-800 line MVP. NO custom wrappers, abstract base classes, or frameworks. Use SDKs directly. Story 2.15: Simple period mapping module (~150 lines), test data normalization (no production code), validation scripts only.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <file>
+        <path>raglite/retrieval/query_classifier.py</path>
+        <kind>service</kind>
+        <symbol>classify_query</symbol>
+        <lines>200-451</lines>
+        <reason>SQL query generation logic to be integrated with period normalizer. Add period detection and normalization before SQL generation (AC2).</reason>
+      </file>
+
+      <file>
+        <path>raglite/retrieval/sql_table_search.py</path>
+        <kind>service</kind>
+        <symbol>execute_sql_search</symbol>
+        <lines>50-150</lines>
+        <reason>SQL execution and answer synthesis. No changes needed for Story 2.15 - functionality already working from Story 2.14.</reason>
+      </file>
+
+      <file>
+        <path>raglite/retrieval/multi_index_search.py</path>
+        <kind>service</kind>
+        <symbol>multi_index_search</symbol>
+        <lines>100-250</lines>
+        <reason>Hybrid search orchestration (Story 2.11). No changes needed - will be tested in AC3 integrated validation.</reason>
+      </file>
+
+      <file>
+        <path>tests/ground_truth.json</path>
+        <kind>test-data</kind>
+        <symbol>ground_truth_queries</symbol>
+        <lines>1-500</lines>
+        <reason>Original 50 ground truth queries (12% accuracy). AC1 will audit these and create normalized version (tests/ground_truth_normalized.json).</reason>
+      </file>
+
+      <file>
+        <path>tests/unit/test_ac1_fuzzy_entity_matching.py</path>
+        <kind>test</kind>
+        <symbol>test_fuzzy_matching_*</symbol>
+        <lines>1-100</lines>
+        <reason>Story 2.14 AC1 tests (8 tests, all passing). Reference for period normalizer test patterns in AC2.</reason>
+      </file>
+
+      <file>
+        <path>tests/unit/test_ac2_multi_entity_queries.py</path>
+        <kind>test</kind>
+        <symbol>test_multi_entity_*</symbol>
+        <lines>1-80</lines>
+        <reason>Story 2.14 AC2 tests (6 tests, 5 passing). Reference for validation script patterns in AC3.</reason>
+      </file>
+
+      <file>
+        <path>scripts/validate-story-2.14-excerpt.py</path>
+        <kind>script</kind>
+        <symbol>validate_excerpt</symbol>
+        <lines>1-200</lines>
+        <reason>Achieved 100% accuracy on normalized excerpt ground truth. Reference pattern for AC3 integrated validation script.</reason>
+      </file>
+
+      <file>
+        <path>scripts/debug-sql-backend-integration.py</path>
+        <kind>script</kind>
+        <symbol>debug_sql_backend</symbol>
+        <lines>1-150</lines>
+        <reason>Story 2.14 AC0 diagnostic script. Reference for AC1 audit script patterns (PostgreSQL data availability checks).</reason>
+      </file>
+
+      <file>
+        <path>raglite/shared/clients.py</path>
+        <kind>service</kind>
+        <symbol>get_db_client</symbol>
+        <lines>50-80</lines>
+        <reason>PostgreSQL client for data availability checks in AC1 audit script.</reason>
+      </file>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="pytest" version="^8.0" />
+        <package name="pytest-asyncio" version="^0.23" />
+        <package name="psycopg" version="^3.1" />
+        <package name="pydantic" version="^2.0" />
+        <package name="anthropic" version="^0.42" />
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <interfaces>
+    <interface>
+      <name>period_normalizer.normalize_period</name>
+      <kind>function</kind>
+      <signature>def normalize_period(query_period: str) -> List[str]</signature>
+      <description>Expand query period to all database variants. Q3 2025 → ["Jul-25", "Aug-25", "Sep-25", "Aug-25 YTD", "Q3-25"]</description>
+      <path>raglite/retrieval/period_normalizer.py (to be created in AC2)</path>
+    </interface>
+
+    <interface>
+      <name>period_normalizer.detect_period_in_query</name>
+      <kind>function</kind>
+      <signature>def detect_period_in_query(query: str) -> str</signature>
+      <description>Extract period reference from natural language query using regex patterns for Q1-Q4, month-year, FY patterns</description>
+      <path>raglite/retrieval/period_normalizer.py (to be created in AC2)</path>
+    </interface>
+
+    <interface>
+      <name>audit_ground_truth_data_availability</name>
+      <kind>script</kind>
+      <signature>async def audit_ground_truth() -> dict</signature>
+      <description>Audit each of 50 ground truth queries against actual database content. Returns availability status (AVAILABLE/PERIOD_MISMATCH/MISSING_METRIC/etc) and normalization recommendations</description>
+      <path>scripts/audit-ground-truth-data-availability.py (to be created in AC1)</path>
+    </interface>
+
+    <interface>
+      <name>validate_epic_2_final</name>
+      <kind>script</kind>
+      <signature>async def validate_epic_2_final() -> tuple[str, float]</signature>
+      <description>Final Epic 2 validation with Stories 2.11 + 2.14 + 2.15 integrated. Returns decision (EPIC_2_COMPLETE/PARTIAL_SUCCESS/ESCALATE_PHASE_2B) and accuracy percentage</description>
+      <path>scripts/validate-epic-2-final.py (to be created in AC3)</path>
+    </interface>
+
+    <interface>
+      <name>PostgreSQL financial_tables</name>
+      <kind>database-table</kind>
+      <signature>Table: financial_tables (170,142 rows, 17 columns)</signature>
+      <description>Financial data extracted from PDFs. Columns: entity, metric, period, value, unit. Used for data availability checks in AC1 audit. Query via get_db_client() from raglite/shared/clients.py</description>
+      <path>PostgreSQL database (Story 2.13)</path>
+    </interface>
+  </interfaces>
+
+  <constraints>
+    <constraint>
+      <rule>NO new dependencies - period normalizer is pure Python with standard library only (re, typing)</rule>
+      <source>docs/architecture/5-technology-stack-definitive.md#Technology Approval</source>
+    </constraint>
+
+    <constraint>
+      <rule>Reuse existing patterns from Stories 2.11 (hybrid search) and 2.14 (SQL backend, fuzzy matching, multi-entity). Do NOT reimplement working components</rule>
+      <source>docs/stories/2-14-sql-generation-edge-case-refinement.md#Learnings</source>
+    </constraint>
+
+    <constraint>
+      <rule>KISS principle: Simple period mapping (~150 lines), test data normalization (no production code complexity), validation scripts only. Target: ~400-500 lines total new code</rule>
+      <source>CLAUDE.md#Anti-Over-Engineering Rules</source>
+    </constraint>
+
+    <constraint>
+      <rule>Ground truth normalization is TEST DATA cleanup - not production code changes. Remove queries for non-existent data (headcount, G&A, budget periods, non-EUR currencies)</rule>
+      <source>docs/validation/story-2.14-completion-report.md#Root Cause</source>
+    </constraint>
+
+    <constraint>
+      <rule>Period normalizer must handle: Q1-Q4 quarters, H1-H2 half-years, FY fiscal years, month-year formats (August 2025 → Aug-25). Return List[str] of database variants</rule>
+      <source>Story 2.15 AC2 Technical Specifications</source>
+    </constraint>
+
+    <constraint>
+      <rule>AC3 validation must test Stories 2.11 + 2.14 + 2.15 as INTEGRATED system. Use normalized ground truth from AC1. Measure category-level accuracy (entity, multi-entity, period)</rule>
+      <source>Story 2.15 AC3 Requirements</source>
+    </constraint>
+
+    <constraint>
+      <rule>Decision gate thresholds: ≥70% → Epic 2 COMPLETE, 60-69% → PM decision, &lt;60% → Escalate to Phase 2B (cross-encoder re-ranking)</rule>
+      <source>docs/prd/epic-2-advanced-rag-enhancements.md#Success Criteria</source>
+    </constraint>
+
+    <constraint>
+      <rule>Performance: Period normalization overhead must be &lt;10ms per query (negligible impact). Validation p95 latency must be &lt;15s (NFR13 compliance)</rule>
+      <source>Story 2.15 Dev Notes#Performance Constraints</source>
+    </constraint>
+
+    <constraint>
+      <rule>Type hints mandatory: All functions must have type annotations (def normalize_period(query_period: str) -> List[str])</rule>
+      <source>CLAUDE.md#Coding Standards</source>
+    </constraint>
+
+    <constraint>
+      <rule>Structured logging with context: logger.info("Period normalized", extra={"query_period": "Q3 2025", "database_variants": [...]})</rule>
+      <source>docs/architecture/6-complete-reference-implementation.md#Logging Patterns</source>
+    </constraint>
+  </constraints>
+
+  <tests>
+    <standards>
+      Testing framework: pytest with pytest-asyncio for async tests. Unit tests in tests/unit/ (no external dependencies), integration tests in tests/integration/ (requires PostgreSQL), validation scripts in scripts/. Type hints mandatory for all test functions. Structured test names: test_[component]_[scenario]_[expected_result]. Test coverage target: 80%+ for period normalizer module. Use Story 2.14 test patterns as reference (AC1: 8 tests all passing, AC2: 6 tests 5 passing).
+    </standards>
+
+    <locations>
+      <location>tests/unit/ - Unit tests (period normalizer, no database)</location>
+      <location>tests/integration/ - Integration tests (validation with PostgreSQL)</location>
+      <location>scripts/ - Validation and audit scripts</location>
+      <location>tests/ground_truth.json - Original 50 queries (12% baseline)</location>
+      <location>tests/ground_truth_normalized.json - Normalized queries (AC1 output)</location>
+    </locations>
+
+    <ideas>
+      <test ac="AC1" priority="HIGH">
+        <name>test_audit_ground_truth_data_availability</name>
+        <description>Test audit script on 5 sample queries: (1) Available query, (2) Period mismatch (Q3 vs Aug-25), (3) Missing metric (headcount), (4) Currency mismatch (AOA vs EUR), (5) Budget period variant. Verify correct categorization and recommendations.</description>
+      </test>
+
+      <test ac="AC1" priority="HIGH">
+        <name>test_normalize_ground_truth_query</name>
+        <description>Test normalization logic: "Q3 2025" → "Aug-25 YTD", "million AOA" → "million EUR", remove queries for missing metrics. Verify 45-50 queries retained in normalized ground truth.</description>
+      </test>
+
+      <test ac="AC2" priority="CRITICAL">
+        <name>test_normalize_period_q3_to_months</name>
+        <description>Test normalize_period("Q3 2025") returns ["Jul-25", "Aug-25", "Sep-25", "Jul-25 YTD", "Aug-25 YTD", "Q3-25"]. Verify all expected database variants included.</description>
+      </test>
+
+      <test ac="AC2" priority="CRITICAL">
+        <name>test_detect_period_in_query_quarter</name>
+        <description>Test detect_period_in_query("What is EBITDA for Q3 2025?") returns "Q3 2025". Test variations: "Q3", "3Q", "Q3 25", "third quarter 2025".</description>
+      </test>
+
+      <test ac="AC2" priority="HIGH">
+        <name>test_period_normalizer_month_year</name>
+        <description>Test normalize_period("August 2025") returns ["Aug-25", "Aug-25 YTD"]. Test variations: "Aug 2025", "Aug-25", "08-2025".</description>
+      </test>
+
+      <test ac="AC2" priority="HIGH">
+        <name>test_period_normalizer_fiscal_year</name>
+        <description>Test normalize_period("FY2025") returns ["Jan-25 YTD", "Dec-25 YTD", "2025"]. Test FY patterns: "FY 2025", "fiscal year 2025".</description>
+      </test>
+
+      <test ac="AC2" priority="MEDIUM">
+        <name>test_period_normalizer_edge_cases</name>
+        <description>Test edge cases: (1) Invalid period returns original, (2) Missing year defaults to current, (3) Half-year mappings (H1/H2), (4) Empty string returns empty list.</description>
+      </test>
+
+      <test ac="AC2" priority="HIGH">
+        <name>test_query_classifier_with_period_normalization</name>
+        <description>Integration test: Query "Q3 2025 EBITDA" generates SQL with period IN ('Jul-25', 'Aug-25', 'Sep-25', 'Aug-25 YTD'). Verify SQL execution finds Aug-25 YTD data.</description>
+      </test>
+
+      <test ac="AC3" priority="CRITICAL">
+        <name>test_epic_2_final_validation_accuracy</name>
+        <description>Test validate_epic_2_final() on normalized ground truth. Verify: (1) Stories 2.11 + 2.14 + 2.15 combined, (2) Category accuracy tracked, (3) Latency &lt;15s p95, (4) Decision gate evaluated correctly (≥70% → COMPLETE).</description>
+      </test>
+
+      <test ac="AC3" priority="HIGH">
+        <name>test_validation_category_breakdown</name>
+        <description>Test category-level accuracy: (1) Single entity queries, (2) Multi-entity comparisons, (3) Period-normalized queries, (4) Calculated metrics. Verify each category tracked separately.</description>
+      </test>
+
+      <test ac="AC3" priority="HIGH">
+        <name>test_decision_gate_thresholds</name>
+        <description>Test decision logic: (1) 70%+ → EPIC_2_COMPLETE, (2) 65% → PARTIAL_SUCCESS, (3) 55% → ESCALATE_PHASE_2B. Verify correct decision returned.</description>
+      </test>
+
+      <test ac="AC4" priority="MEDIUM">
+        <name>test_rca_report_generation</name>
+        <description>Test RCA report includes: (1) All 6 failure categories documented, (2) Evidence from Stories 2.11/2.14, (3) Impact analysis (12% → 70%+), (4) Three decision paths for PM. Verify markdown format correct.</description>
+      </test>
+
+      <test ac="AC5" priority="LOW">
+        <name>test_analyze_top_failures_conditional</name>
+        <description>Test top 5 failure analysis script: (1) Load validation results, (2) Categorize failures, (3) Rank by frequency, (4) Generate fix recommendations. Only run if AC3 &lt; 70%.</description>
+      </test>
+    </ideas>
+  </tests>
+
+  <learnings_from_previous_story>
+    <story_key>2-14-sql-generation-edge-case-refinement</story_key>
+    <status>done</status>
+
+    <new_services>
+      <service>
+        <name>Fuzzy Entity Matching (PostgreSQL pg_trgm)</name>
+        <path>raglite/retrieval/query_classifier.py + migrations/enable_pg_trgm.sql</path>
+        <description>80% accuracy on entity matching using similarity() function with thresholds 0.3-0.5. REUSE this pattern - do not recreate. Tests: tests/unit/test_ac1_fuzzy_entity_matching.py (8 tests, all passing).</description>
+      </service>
+
+      <service>
+        <name>Multi-Entity Comparison Queries</name>
+        <path>raglite/retrieval/query_classifier.py + raglite/retrieval/sql_table_search.py</path>
+        <description>100% accuracy on multi-entity queries using SQL IN clause generation. Handles keywords: vs, compare, which, between, higher, lower. REUSE this pattern. Tests: tests/unit/test_ac2_multi_entity_queries.py (6 tests, 5 passing).</description>
+      </service>
+
+      <service>
+        <name>Excerpt-Specific Ground Truth Validation</name>
+        <path>scripts/validate-story-2.14-excerpt.py + docs/validation/story-2.14-excerpt-ground-truth.json</path>
+        <description>100% accuracy (12/12 queries) when ground truth matches database. CRITICAL PATTERN for Story 2.15 AC1 normalization approach. Use this methodology to normalize all 50 queries.</description>
+      </service>
+    </new_services>
+
+    <architectural_decisions>
+      <decision>
+        <topic>Test Data Misalignment as Root Cause</topic>
+        <rationale>Story 2.14 proved implementation is correct (100% excerpt accuracy) but test data is misaligned (12% generic accuracy). Decision: Normalize test data to match database, not change implementation.</rationale>
+        <impact>Story 2.15 AC1 focuses on ground truth audit and normalization (no production code changes needed).</impact>
+      </decision>
+
+      <decision>
+        <topic>Period Format Normalization Required</topic>
+        <rationale>40% of failures caused by period format mismatches (Q3 vs Aug-25). Largest single failure category. Decision: Implement period mapping layer.</rationale>
+        <impact>Story 2.15 AC2 creates period_normalizer.py module with quarter/month/FY mappings.</impact>
+      </decision>
+
+      <decision>
+        <topic>SQL Backend is Production-Ready</topic>
+        <rationale>Story 2.14 AC0 validated PostgreSQL (170K rows, no connectivity issues). AC1-AC2 production-ready at 80-100%. Decision: No SQL backend changes needed.</rationale>
+        <impact>Story 2.15 reuses existing SQL infrastructure, focuses on validation and normalization only.</impact>
+      </decision>
+    </architectural_decisions>
+
+    <technical_debt>
+      <debt>
+        <description>Period normalization started in Story 2.14 but not completed</description>
+        <severity>HIGH</severity>
+        <address_in>Story 2.15 AC2 - Complete period_normalizer.py module</address_in>
+      </debt>
+
+      <debt>
+        <description>Stories 2.11 (hybrid scoring) and 2.14 (SQL backend) tested independently, not together</description>
+        <severity>MEDIUM</severity>
+        <address_in>Story 2.15 AC3 - Integrated validation of all three stories combined</address_in>
+      </debt>
+
+      <debt>
+        <description>Data availability constraints not documented (headcount, G&A, budget periods)</description>
+        <severity>MEDIUM</severity>
+        <address_in>Story 2.15 AC4 - RCA report documents all data constraints for future stories</address_in>
+      </debt>
+    </technical_debt>
+
+    <warnings_for_this_story>
+      <warning priority="CRITICAL">
+        Do NOT add new features or production code beyond period normalizer. Story 2.15 is validation and normalization ONLY. Reuse Stories 2.11 + 2.14 implementations as-is.
+      </warning>
+
+      <warning priority="HIGH">
+        Do NOT re-implement fuzzy matching (Story 2.14 AC1) or multi-entity queries (AC2). These are production-ready at 80-100%. Reference existing code only.
+      </warning>
+
+      <warning priority="HIGH">
+        Do NOT expect 100% on generic ground truth after normalization. Some data genuinely unavailable (headcount, G&A). Target is 70%+ on normalized subset (45-50 queries).
+      </warning>
+
+      <warning priority="MEDIUM">
+        Period normalizer must be simple (~150 lines pure Python). No complex NLP, no ML models, no external libraries. Use regex patterns and dictionary mappings only.
+      </warning>
+
+      <warning priority="MEDIUM">
+        AC5 (iterative refinement) is CONDITIONAL. Only execute if AC3 validation achieves 60-69% (not 70%+). Do not implement proactively.
+      </warning>
+    </warnings_for_this_story>
+
+    <pending_review_items>
+      <item>None - Story 2.14 review approved with recommendations (all addressed in Story 2.15 scope)</item>
+    </pending_review_items>
+  </learnings_from_previous_story>
+
+  <decision_gate>
+    <gate_id>Epic 2 Completion Gate</gate_id>
+    <trigger>AC3 validation complete</trigger>
+    <thresholds>
+      <threshold result="EPIC_2_COMPLETE">
+        <condition>Accuracy ≥70%</condition>
+        <action>Mark Epic 2 COMPLETE, proceed to Epic 3 (AI Intelligence &amp; Orchestration)</action>
+      </threshold>
+      <threshold result="PARTIAL_SUCCESS">
+        <condition>Accuracy 60-69%</condition>
+        <action>Escalate to PM for decision: Accept 60-69% OR invest in Phase 2B (cross-encoder +3-5pp)</action>
+      </threshold>
+      <threshold result="ESCALATE_PHASE_2B">
+        <condition>Accuracy &lt;60%</condition>
+        <action>Escalate to Phase 2B: Cross-encoder re-ranking (Story 2.12 reactivated), expected +3-5pp improvement → 75-80% total</action>
+      </threshold>
+    </thresholds>
+  </decision_gate>
+
+  <expected_outcomes>
+    <outcome>
+      <metric>Overall Retrieval Accuracy</metric>
+      <baseline>12% (6/50 queries on misaligned generic ground truth)</baseline>
+      <target>≥70% (≥35/50 queries on normalized ground truth)</target>
+      <improvement>+58 percentage points</improvement>
+    </outcome>
+
+    <outcome>
+      <metric>Period-Dependent Query Accuracy</metric>
+      <baseline>0% (all Q3/Q2/Q1 queries fail due to format mismatch)</baseline>
+      <target>90% (period normalization unlocks 18/20 queries)</target>
+      <improvement>+90 percentage points</improvement>
+    </outcome>
+
+    <outcome>
+      <metric>Single Entity Query Accuracy</metric>
+      <baseline>80% (Story 2.14 AC1 fuzzy matching)</baseline>
+      <target>85% (maintained + minor improvements)</target>
+      <improvement>+5 percentage points</improvement>
+    </outcome>
+
+    <outcome>
+      <metric>Multi-Entity Query Accuracy</metric>
+      <baseline>100% (Story 2.14 AC2)</baseline>
+      <target>100% (maintained)</target>
+      <improvement>Maintained at perfect score</improvement>
+    </outcome>
+
+    <outcome>
+      <metric>Epic 2 Completion Status</metric>
+      <baseline>INCOMPLETE (52% Story 2.5 → 57% Story 2.14 → 12% generic validation)</baseline>
+      <target>COMPLETE (≥70% achieves Epic 2 goal, unblocks Epic 3)</target>
+      <improvement>Epic 2 validated complete after 15 stories</improvement>
+    </outcome>
+  </expected_outcomes>
+
+  <files_to_create>
+    <file priority="CRITICAL">raglite/retrieval/period_normalizer.py (~150 lines - period mapping logic)</file>
+    <file priority="CRITICAL">tests/ground_truth_normalized.json (45-50 queries - aligned with database)</file>
+    <file priority="CRITICAL">scripts/audit-ground-truth-data-availability.py (~200 lines - audit script)</file>
+    <file priority="CRITICAL">scripts/validate-epic-2-final.py (~250 lines - final validation)</file>
+    <file priority="HIGH">tests/unit/test_period_normalizer.py (~50 lines - unit tests)</file>
+    <file priority="HIGH">docs/validation/story-2.15-ground-truth-audit.json (audit results)</file>
+    <file priority="HIGH">docs/validation/epic-2-final-validation.json (final results)</file>
+    <file priority="MEDIUM">docs/validation/epic-2-rca-report.md (~1000 lines - comprehensive RCA)</file>
+    <file priority="LOW">scripts/analyze-top-failures.py (~150 lines - conditional, only if AC3 &lt; 70%)</file>
+  </files_to_create>
+
+  <files_to_modify>
+    <file priority="HIGH">raglite/retrieval/query_classifier.py (~30 lines - integrate period normalization)</file>
+    <file priority="MEDIUM">raglite/retrieval/sql_table_search.py (CONDITIONAL - only if AC5 triggered, ~30 lines error handling)</file>
+  </files_to_modify>
+
+  <nfr_compliance>
+    <nfr id="NFR6" name="Retrieval Accuracy">
+      <target>70-80% retrieval accuracy</target>
+      <story_contribution>Story 2.15 validates Epic 2 completion with normalized ground truth. Expected: 12% → 70%+ (+58pp improvement)</story_contribution>
+      <validated_in>AC3 final validation</validated_in>
+    </nfr>
+
+    <nfr id="NFR13" name="Performance">
+      <target>&lt;15s p95 query latency</target>
+      <story_contribution>Period normalization adds &lt;10ms overhead (negligible). Current baseline: p50=782ms, p95=2153ms (well under target)</story_contribution>
+      <validated_in>AC3 latency measurement</validated_in>
+    </nfr>
+
+    <nfr id="NFR7" name="Attribution Accuracy">
+      <target>95%+ source attribution accuracy</target>
+      <story_contribution>No changes to attribution logic. Maintained from Stories 2.11, 2.14</story_contribution>
+      <validated_in>Inherited from previous stories</validated_in>
+    </nfr>
+  </nfr_compliance>
+</story-context>
