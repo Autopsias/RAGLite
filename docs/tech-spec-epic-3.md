@@ -9,25 +9,23 @@ Status: Draft
 
 ## Overview
 
-Epic 3 introduces agentic orchestration capabilities to RAGLite, enabling multi-step reasoning and complex analytical workflows through specialized agents. The system will autonomously decompose complex financial queries (e.g., "Calculate YoY revenue growth and explain variance"), orchestrate retrieval and analysis tasks across multiple agents, and synthesize comprehensive answers with full source attribution.
+Epic 3 introduces agentic orchestration capabilities to RAGLite, enabling multi-step reasoning and complex analytical workflows through specialized AI agents. The system will autonomously decompose complex financial queries (e.g., "Calculate YoY revenue growth and explain variance"), orchestrate retrieval and analysis tasks across multiple agents, and synthesize comprehensive answers with full source attribution.
 
 This epic builds upon the high-accuracy retrieval foundation established in Epic 1-2 (70%+ retrieval accuracy validated) and implements a lightweight agentic framework using either LangGraph or native Claude function calling. The architecture prioritizes simplicity, transparency, and graceful degradation—workflows that fail revert to Epic 1's basic retrieval without disrupting user experience.
 
-**Strategic Context:** Epic 3 is ONLY implemented if Epic 2 achieves <85% accuracy and multi-step reasoning is required to reach 90%+ accuracy (NFR6). Current Epic 2 completion at 70-80% accuracy triggers Epic 3 implementation. If Epic 2 achieves ≥85%, Epic 3 may be deferred to focus on Epic 4 (Forecasting).
-
 ## Objectives and Scope
 
-### In Scope
+###  In Scope
 
 **Agentic Framework Integration (Story 3.1):**
-- Implement agentic orchestration framework (LangGraph or native function calling)
+- Implement agentic orchestration framework (LangGraph or native function calling per Architecture decision)
 - Configure workflow execution engine with state management
 - Establish basic 2-step workflow validation (retrieve → synthesize)
 - Implement error handling and timeout mechanisms (NFR24, NFR26)
 
 **Specialized Agent Implementation (Stories 3.2-3.4):**
 - **Retrieval Agent:** Wrapper around Epic 1-2 retrieval logic, exposing search as agent tool
-- **Analysis Agent:** Financial calculations (YoY growth, variance, trends, percentages)
+- **Analysis Agent:** Financial calculations (YoY growth, variance analysis, trend detection, percentage calculations)
 - **Synthesis Agent:** Multi-source result aggregation with coherent narrative generation
 
 **Multi-Step Workflow Orchestration (Story 3.5):**
@@ -38,20 +36,20 @@ This epic builds upon the high-accuracy retrieval foundation established in Epic
 
 **MCP Integration (Story 3.6):**
 - New MCP tool: `analyze_financial_question()` exposing agentic workflows
-- Backward compatibility with `query_financial_documents()` (Epic 1)
+- Backward compatibility with `query_financial_documents()` (Epic 1 tool)
 - Transparent reasoning steps in MCP responses
 - Performance monitoring and execution time tracking
 
 **Graceful Degradation (Story 3.7):**
-- Workflow timeout handling (>30s triggers fallback)
-- Agent failure detection and logging
+- Workflow timeout handling (>30s triggers fallback to Epic 1)
+- Agent failure detection and structured logging
 - Fallback to Epic 1 basic retrieval when workflows fail
 - Partial result return with error explanations
 
 **Test Suite (Story 3.8):**
 - 15+ complex analytical test queries
 - Automated workflow success rate measurement (target: 80%+)
-- Performance validation (<30s p95 execution time)
+- Performance validation (<30s p95 execution time per NFR5)
 - Failure mode analysis and documentation
 
 ### Out of Scope
@@ -73,27 +71,28 @@ This epic builds upon the high-accuracy retrieval foundation established in Epic
 Epic 3 maintains RAGLite's **monolithic architecture** philosophy from Architecture v1.1, adding a lightweight orchestration layer within the existing `raglite/` package. No new services or databases are introduced—agents operate within the same Python process, sharing Qdrant and PostgreSQL connections established in Epic 1-2.
 
 **Alignment with Architecture Principles:**
-- **Simplicity First:** Agents are simple Python async functions, not complex frameworks
-- **Direct SDK Usage:** LangGraph (if selected) used as-is, no custom wrappers
+- **Simplicity First:** Agents are simple Python async functions (~50 lines each), not complex frameworks
+- **Direct SDK Usage:** LangGraph (if selected) used as-is per Technology Stack approval, no custom wrappers
 - **Stateless Execution:** Each workflow execution is independent, no persistent agent state
 - **Monolithic Deployment:** All agents run in single Docker container (raglite-server)
 
 **Component Integration:**
-- `raglite/orchestration/` module (~250 lines) added to existing structure
-- Agents call existing `retrieval/search.py`, `retrieval/synthesis.py` from Epic 1-2
-- MCP server (`main.py`) exposes new `analyze_financial_question()` tool
-- Shared logging, configuration, and error handling via `raglite/shared/`
+- `raglite/orchestration/` module (~280 lines total) added to existing monolithic structure
+- Agents call existing `retrieval/search.py`, `retrieval/synthesis.py` from Epic 1-2 (no duplication)
+- MCP server (`main.py`) exposes new `analyze_financial_question()` tool alongside existing tools
+- Shared logging, configuration, and error handling via `raglite/shared/` (no new infrastructure)
 
 **Technology Stack Alignment:**
-- **Conditional Framework:** LangGraph (if Phase 3 triggered per Epic 2 decision gate)
-- **Alternative:** Native Claude function calling (if simpler approach preferred)
+- **Conditional Framework:** LangGraph (per Technology Stack section 5: Phase 3 conditional approval)
+  - **Trigger:** Epic 2 achieved 70-80% accuracy (< 85% threshold) → LangGraph APPROVED
+  - **Alternative:** Native Claude function calling (if simpler approach preferred by Architect)
 - **No New Infrastructure:** Reuses Qdrant, PostgreSQL, Claude API, FastMCP from Epic 1-2
 - **Deployment:** Same Docker Compose setup, no additional containers
 
-**Phase 3 vs Phase 4 Context:**
-- Epic 3 is part of Phase 3 (Intelligence Features, Weeks 9-12 or 5-8 if Phase 2 skipped)
-- Phase 4 (Production Readiness) adds AWS deployment, monitoring, performance optimization
-- Epic 3 focuses on LOCAL development and validation; production scaling deferred to Phase 4
+**Repository Structure Alignment:**
+- Follows CLAUDE.md structure: 15-file monolithic target (~800 lines total across files)
+- Epic 3 adds: `orchestration/planner.py`, `orchestration/*_agent.py`, `orchestration/fallback.py`
+- Total new code: ~280 lines (within Phase 3 budget per Architecture section 8)
 
 ## Detailed Design
 
@@ -111,10 +110,10 @@ Epic 3 maintains RAGLite's **monolithic architecture** philosophy from Architect
 **Total New Code:** ~280 lines (within Epic 3 target of ~250-300 lines)
 
 **Module Dependencies:**
-- All agents import from `raglite/retrieval/` (Epic 1-2 logic)
-- All agents use `raglite/shared/clients.py` for Claude API access
-- All agents use `raglite/shared/logging.py` for structured logging
-- Planner imports agent modules, orchestrates execution flow
+- All agents import from `raglite/retrieval/` (Epic 1-2 logic - no code duplication)
+- All agents use `raglite/shared/clients.py` for Claude API access (shared connection pool)
+- All agents use `raglite/shared/logging.py` for structured logging (consistent format)
+- Planner imports agent modules, orchestrates execution flow via LangGraph or function calling
 
 ### Data Models and Contracts
 
@@ -183,14 +182,14 @@ class AnalyticalQueryResponse(BaseModel):
 ```
 
 **Entity Relationships:**
-- `WorkflowPlan` → contains multiple `AgentTask` objects
-- `AgentTask` → executed by agent, produces `AgentResult`
+- `WorkflowPlan` → contains multiple `AgentTask` objects (task decomposition)
+- `AgentTask` → executed by agent, produces `AgentResult` (1:1 mapping)
 - Multiple `AgentResult` objects → aggregated by Synthesis Agent → final `AnalyticalQueryResponse`
 
 **Database Schema Changes:**
-- **No new tables required** (agents operate stateless)
-- Existing `QueryResult` model from Epic 1 reused by Retrieval Agent
-- Workflow execution logs stored via structured logging (JSON to stdout)
+- **No new tables required** (agents operate stateless, no persistent storage)
+- Existing `QueryResult` model from Epic 1 reused by Retrieval Agent (no duplication)
+- Workflow execution logs stored via structured logging (JSON to stdout, CloudWatch ingestion)
 
 ### APIs and Interfaces
 
@@ -223,8 +222,8 @@ async def analyze_financial_question(request: AnalyticalQueryRequest) -> str:
         ...     timeout_seconds=30
         ... ))
         {
-          "answer": "Revenue grew 20% YoY...",
-          "reasoning_steps": ["1. Retrieved Q3 2023 revenue", ...],
+          "answer": "Revenue grew 20% YoY (Q3 2023: $10M → Q3 2024: $12M)...",
+          "reasoning_steps": ["1. Retrieved Q3 2023 revenue: $10M", ...],
           "sources": ["Q3_2023_Report.pdf (page 12)", ...],
           "workflow_status": "success",
           "execution_time_ms": 2850
@@ -263,7 +262,7 @@ async def analyze_financial_data(
     Perform financial calculations and reasoning.
 
     Args:
-        data: Financial data points (e.g., {"Q3_2023": 10.0, "Q3_2024": 12.0})
+        data: Financial data points (e.g., {"Q3_2023_revenue": 10.0, "Q3_2024_revenue": 12.0})
         analysis_type: Type of analysis to perform
         context: Optional contextual information for LLM reasoning
 
@@ -302,83 +301,35 @@ async def synthesize_answer(
 **Workflow Example: "Calculate YoY revenue growth and explain variance"**
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 1: Query Analysis (Planner)                                │
-│ Input: "Calculate YoY revenue growth and explain variance"      │
-│ Output: QueryComplexity.ANALYTICAL                              │
-│ Duration: 50ms                                                   │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 2: Task Decomposition (Planner)                            │
-│ Output: WorkflowPlan with 5 AgentTasks:                         │
-│   Task A: Retrieval - "Q3 2023 revenue" (no dependencies)       │
-│   Task B: Retrieval - "Q3 2024 revenue" (no dependencies)       │
-│   Task C: Analysis - "YoY growth calculation" (depends: A, B)   │
-│   Task D: Retrieval - "revenue variance drivers" (depends: C)   │
-│   Task E: Synthesis - "Aggregate results" (depends: A,B,C,D)    │
-│ Duration: 100ms                                                  │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 3: Parallel Execution (Tasks A & B)                        │
-│                                                                  │
-│ Task A (Retrieval Agent):                                       │
-│   Query: "Q3 2023 revenue"                                      │
-│   Result: "$10M" (source: Q3_2023_Report.pdf, page 12)         │
-│   Duration: 800ms                                                │
-│                                                                  │
-│ Task B (Retrieval Agent):                                       │
-│   Query: "Q3 2024 revenue"                                      │
-│   Result: "$12M" (source: Q3_2024_Report.pdf, page 12)         │
-│   Duration: 850ms                                                │
-│                                                                  │
-│ (Tasks executed concurrently, total duration: ~850ms)           │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 4: Sequential Execution (Task C)                           │
-│                                                                  │
-│ Task C (Analysis Agent):                                        │
-│   Input: {"Q3_2023_revenue": 10.0, "Q3_2024_revenue": 12.0}    │
-│   Analysis Type: "yoy_growth"                                   │
-│   Calculation: "(12M - 10M) / 10M = 0.20"                       │
-│   Result: AnalysisResult(value=0.20, formatted="+20%")          │
-│   Duration: 600ms (Claude API call for reasoning)               │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 5: Sequential Execution (Task D)                           │
-│                                                                  │
-│ Task D (Retrieval Agent):                                       │
-│   Query: "revenue variance drivers 2024" (context from Task C)  │
-│   Result: "30% increase in marketing spend" +                   │
-│           "Product X launch in Q2 2024"                         │
-│   Duration: 800ms                                                │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 6: Final Synthesis (Task E)                                │
-│                                                                  │
-│ Task E (Synthesis Agent):                                       │
-│   Inputs: AgentResults from A, B, C, D                          │
-│   Output: "Revenue grew 20% YoY (Q3 2023: $10M → Q3 2024:      │
-│            $12M). The variance is primarily due to 30%          │
-│            increase in marketing spend and launch of Product X  │
-│            in Q2 2024."                                          │
-│   Sources: Q3_2023_Report.pdf (p.12), Q3_2024_Report.pdf       │
-│            (p.12), Marketing_Budget_2024.xlsx (Q2-Q3)           │
-│   Duration: 900ms (Claude API call for synthesis)               │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 7: Response Formatting (MCP Tool)                          │
-│                                                                  │
-│ Output: AnalyticalQueryResponse                                 │
-│   workflow_status: "success"                                    │
-│   execution_time_ms: 3200 (total end-to-end)                   │
-│   reasoning_steps: ["1. Retrieved Q3 2023 revenue: $10M", ...] │
-└─────────────────────────────────────────────────────────────────┘
+Step 1: Query Analysis (Planner) → QueryComplexity.ANALYTICAL [50ms]
+    ↓
+Step 2: Task Decomposition (Planner) → WorkflowPlan with 5 tasks [100ms]
+    Task A: Retrieval - "Q3 2023 revenue" (no dependencies)
+    Task B: Retrieval - "Q3 2024 revenue" (no dependencies)
+    Task C: Analysis - "YoY growth calculation" (depends: A, B)
+    Task D: Retrieval - "revenue variance drivers" (depends: C)
+    Task E: Synthesis - "Aggregate results" (depends: A,B,C,D)
+    ↓
+Step 3: Parallel Execution (Tasks A & B concurrently) [~850ms]
+    Task A: "$10M" (source: Q3_2023_Report.pdf, page 12)
+    Task B: "$12M" (source: Q3_2024_Report.pdf, page 12)
+    ↓
+Step 4: Sequential Execution (Task C) [600ms]
+    Analysis: "(12M - 10M) / 10M = 0.20" → +20% YoY growth
+    ↓
+Step 5: Sequential Execution (Task D) [800ms]
+    Retrieval: "30% increase in marketing spend, Product X launch Q2 2024"
+    ↓
+Step 6: Final Synthesis (Task E) [900ms]
+    Output: "Revenue grew 20% YoY (Q3 2023: $10M → Q3 2024: $12M).
+             The variance is primarily due to 30% increase in marketing
+             spend and launch of Product X in Q2 2024."
+    Sources: Q3_2023_Report.pdf (p.12), Q3_2024_Report.pdf (p.12),
+             Marketing_Budget_2024.xlsx
+    ↓
+Step 7: Response Formatting → AnalyticalQueryResponse [total: 3200ms]
+    workflow_status: "success"
+    reasoning_steps: ["1. Retrieved Q3 2023 revenue: $10M", ...]
 ```
 
 **Total Execution Time:** ~3.2 seconds (well under 30s NFR5 target)
@@ -386,35 +337,24 @@ async def synthesize_answer(
 **Workflow Failure Scenario (Timeout):**
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 1-4: Normal execution (Tasks A, B, C completed)            │
-│ Duration: ~2.3 seconds                                           │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 5: Task D (Retrieval Agent) - TIMEOUT                      │
-│ Duration: 28 seconds (Qdrant search hanging, network issue)     │
-│ Total elapsed: 30.3 seconds > timeout_seconds (30s)             │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ Step 6: Fallback Handler Triggered                              │
-│                                                                  │
-│ Action: Cancel Task D and Task E                                │
-│ Fallback: Call query_financial_documents() from Epic 1          │
-│ Partial Results: Use completed Tasks A, B, C                    │
-│                                                                  │
-│ Output: AnalyticalQueryResponse                                 │
-│   workflow_status: "fallback"                                   │
-│   answer: "I found revenue data but couldn't complete the       │
-│            full analysis. Q3 2024 revenue was $12M (20%         │
-│            increase from Q3 2023), but I couldn't retrieve      │
-│            variance context due to timeout."                    │
-│   reasoning_steps: ["1. Workflow timeout after 30s",           │
-│                     "2. Fallback to partial results"]           │
-│   sources: [Q3_2023_Report.pdf (p.12), Q3_2024_Report.pdf]     │
-│   execution_time_ms: 30100                                      │
-└─────────────────────────────────────────────────────────────────┘
+Steps 1-4: Normal execution completed [~2.3s]
+    ↓
+Step 5: Task D (Retrieval Agent) - TIMEOUT [28s]
+    (Qdrant search hanging, network issue)
+    Total elapsed: 30.3s > timeout_seconds (30s)
+    ↓
+Step 6: Fallback Handler Triggered
+    - Cancel Task D and Task E
+    - Call query_financial_documents() from Epic 1
+    - Use partial results from Tasks A, B, C
+    ↓
+Output: AnalyticalQueryResponse
+    workflow_status: "fallback"
+    answer: "I found revenue data but couldn't complete the full
+             analysis. Q3 2024 revenue was $12M (20% increase from
+             Q3 2023), but I couldn't retrieve variance context due
+             to timeout."
+    execution_time_ms: 30100
 ```
 
 **Actor Interaction:**
@@ -448,7 +388,7 @@ async def synthesize_answer(
 - Timeout enforcement at 25 seconds (5s buffer for fallback response)
 
 **NFR13: Response Time Impact**
-- Epic 1 basic retrieval: <5s p50, <15s p95 (baseline)
+- Epic 1 basic retrieval: <5s p50, <15s p95 (baseline - no change)
 - Epic 3 analytical workflows: <10s p50, <30s p95 (acceptable for complex queries)
 - Simple queries routed to Epic 1 (no performance regression)
 
@@ -559,9 +499,10 @@ dependencies = [
 
 **⚠️ CRITICAL DEPENDENCY DECISION:**
 - **LangGraph:** Adds agentic orchestration framework (~500KB package size)
-  - **Use case:** If stateful multi-step workflows required (Phase 3 conditional per Epic 2)
-  - **Approval status:** ⚠️ CONDITIONAL (Tech Stack section 5: "Phase 3 (Conditional)")
-  - **Alternative:** Native Claude function calling (no new dependencies)
+  - **Use case:** Stateful multi-step workflows (Phase 3 conditional per Epic 2 decision gate)
+  - **Approval status:** ✅ CONDITIONALLY APPROVED (Tech Stack section 5: "Phase 3 Conditional")
+  - **Trigger:** Epic 2 achieved 70-80% accuracy (< 85% threshold) → LangGraph APPROVED
+  - **Alternative:** Native Claude function calling (no new dependencies, simpler implementation)
 
 **Decision Criteria:**
 - IF Epic 2 achieves <85% accuracy → LangGraph APPROVED for Epic 3
@@ -754,7 +695,7 @@ dependencies = [
 
 ### Assumptions
 
-1. **Epic 2 Completion:** Epic 3 assumes Epic 2 achieved 70-80% retrieval accuracy (VALIDATED: Epic 2 complete)
+1. **Epic 2 Completion:** Epic 3 assumes Epic 2 achieved 70-80% retrieval accuracy (✅ VALIDATED: Epic 2 complete)
 2. **Analytical Query Volume:** Analytical queries represent 20-30% of total queries (Simple queries routed to Epic 1)
 3. **LangGraph Stability:** LangGraph library is production-ready despite being pre-1.0 (Version 0.0.20+ stable)
 4. **Claude API Availability:** Claude API maintains 99.9% uptime (Historical Anthropic SLA)

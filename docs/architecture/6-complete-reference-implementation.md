@@ -38,6 +38,79 @@ Fixed 512-token chunking splits financial tables across multiple chunks (average
 - ✅ Table splitting by rows with headers preserved (>4096 tokens)
 - ✅ Hybrid approach: table-aware for tables, fixed 512-token for text
 
+### Table-Aware Chunking Flow Diagram
+
+```mermaid
+sequenceDiagram
+    participant Pipeline as Ingestion Pipeline
+    participant Docling as Docling Parser
+    participant Chunker as chunk_by_docling_items()
+    participant Splitter as split_large_table_by_rows()
+    participant Qdrant as Qdrant Vector DB
+
+    Pipeline->>Docling: Parse PDF (extract elements)
+    Docling-->>Pipeline: DoclingDocument (text, tables, images)
+
+    Pipeline->>Chunker: Process document elements
+
+    loop For each element
+        Chunker->>Chunker: Check element type
+
+        alt Element is TableItem
+            Chunker->>Chunker: Count table tokens
+
+            alt Table < 4096 tokens
+                Chunker->>Chunker: Keep table intact (single chunk)
+                Note over Chunker: metadata={'chunk_type':'table', 'table_preserved':True}
+            else Table >= 4096 tokens
+                Chunker->>Splitter: split_large_table_by_rows(table, max_tokens=4096)
+                Splitter->>Splitter: Extract column headers
+
+                loop For each row batch
+                    Splitter->>Splitter: Accumulate rows until 4096 tokens
+                    Splitter->>Splitter: Create chunk with headers + rows
+                    Note over Splitter: metadata={'chunk_type':'table_fragment', 'has_headers':True}
+                end
+
+                Splitter-->>Chunker: Return table chunks (with headers in each)
+            end
+
+        else Element is Text/Section
+            Chunker->>Chunker: Apply fixed 512-token chunking
+            Note over Chunker: Standard chunking (50-token overlap)
+        end
+
+        Chunker->>Chunker: Generate embeddings (Fin-E5)
+        Chunker->>Qdrant: Upsert chunk with metadata
+    end
+
+    Qdrant-->>Pipeline: Ingestion complete (chunk IDs)
+```
+
+**Key Flow Decisions:**
+
+1. **Element Type Detection** (line 3-4 in diagram):
+   - Docling identifies TableItem objects during parsing
+   - Type check routes to table-aware or text chunking logic
+
+2. **Token Threshold Check** (line 8-9):
+   - Tables <4096 tokens → Single chunk (semantic coherence preserved)
+   - Tables ≥4096 tokens → Row-based splitting with header duplication
+
+3. **Table Splitting Strategy** (line 12-17):
+   - Extract column headers once
+   - Iterate rows, accumulate until 4096-token limit
+   - Each chunk includes headers + row batch
+   - Table context prefix: "Table {index} (Part {n} of {total}): {caption}"
+
+4. **Metadata Preservation** (line 14, 18):
+   - Intact tables: `{'chunk_type': 'table', 'table_preserved': True}`
+   - Fragmented tables: `{'chunk_type': 'table_fragment', 'has_headers': True, 'chunk_index': n}`
+
+**Impact:**
+- **Fragmentation reduction:** 8.6 chunks/table → 1.2 chunks/table (-86%)
+- **Expected accuracy gain:** +10-15pp (52% → 62-67%)
+
 ### Problem Statement
 
 **Issue:**

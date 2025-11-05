@@ -618,6 +618,301 @@ IF Phase 2 <85% → Week 15-30: Phase 3 - Agentic Coordination (20% probability)
 
 **Microservices Decision (End of Week 16):**
 - Refactor to microservices ONLY IF proven scale problems exist
-- See "Evolution Path" section below for migration strategy
+- See "Monolithic → Microservices Migration Strategy" section below for detailed migration approach
+
+---
+
+## Monolithic → Microservices Migration Strategy
+
+**⚠️ IMPORTANT:** Only execute this migration IF Phase 4 production validation reveals actual scaling bottlenecks (independent service scaling needed, team size >3, or deployment frequency >10/week).
+
+### Migration Decision Criteria
+
+**Trigger Migration IF:**
+- ✅ Ingestion and retrieval need independent scaling (different load patterns validated)
+- ✅ Team size ≥3 developers (independent teams for separate services)
+- ✅ Deployment frequency >10/week (monolith deployment coupling becomes bottleneck)
+- ✅ Service-specific SLAs required (different availability/latency targets per component)
+
+**DO NOT Migrate IF:**
+- ❌ No proven scaling bottleneck (premature optimization)
+- ❌ Solo developer or 2-person team (coordination overhead outweighs benefits)
+- ❌ Deployment frequency <5/week (monolith deployment is manageable)
+- ❌ Similar resource usage across components (no independent scaling benefit)
+
+---
+
+### Migration Approach: Strangler Fig Pattern
+
+**Strategy:** Gradually extract services from the monolith while maintaining system functionality. Do NOT attempt "big bang" rewrite.
+
+**Timeline:** 4-8 weeks (staged extraction, one service at a time)
+
+---
+
+### Stage 1: API Gateway Introduction (Week 1)
+
+**Goal:** Add routing layer to enable gradual service extraction
+
+**Implementation:**
+
+1. **Deploy API Gateway (AWS API Gateway or Kong)**
+   - Route all MCP requests through gateway initially
+   - Gateway forwards 100% of traffic to existing monolith
+   - No application code changes required
+   - Validate: All existing functionality works through gateway
+
+2. **Update Client Configuration**
+   - MCP clients point to API Gateway URL instead of direct monolith
+   - Gateway URL: `https://api.raglite.com/v1/`
+   - Monolith runs behind gateway: `http://internal-monolith:5000/`
+
+3. **Add Request/Response Logging**
+   - Log all requests at gateway for traffic analysis
+   - Identify service boundaries based on real usage patterns
+
+**Success Criteria:**
+- ✅ Zero downtime migration to API Gateway
+- ✅ All MCP tools function correctly through gateway
+- ✅ Latency increase <50ms (gateway overhead)
+
+---
+
+### Stage 2: Data Partitioning (Week 2-3)
+
+**Goal:** Separate data stores to enable independent service deployment
+
+**Qdrant Collections:**
+- **Monolith (current):** Single collection `documents`
+- **Microservices (target):** Separate collections per document type or domain
+  - `financial_reports` - PDF ingestion service owns this
+  - `spreadsheets` - Excel ingestion service owns this
+  - Retrieval service reads from all collections
+
+**PostgreSQL/Neo4j (if Phase 2B/2C active):**
+- **Monolith:** Single database `raglite`
+- **Microservices:** Separate databases per service
+  - `ingestion_db` - Ingestion metadata (job status, document registry)
+  - `retrieval_db` - Query logs, cached results
+  - `graph_db` (Neo4j) - Shared graph, accessed via graph service only
+
+**Migration Steps:**
+
+1. **Create new Qdrant collections**
+   ```python
+   # Dual-write during migration
+   await qdrant.upsert(collection_name="documents", points=chunks)  # Old
+   await qdrant.upsert(collection_name="financial_reports", points=chunks)  # New
+   ```
+
+2. **Copy existing data to new collections**
+   - Background job migrates all chunks from `documents` → domain-specific collections
+   - Validate data integrity (chunk count, embedding dimensions)
+
+3. **Update monolith to read from new collections**
+   - Retrieval logic searches new collections: `["financial_reports", "spreadsheets"]`
+   - Validate: Query results unchanged after migration
+
+4. **Remove old collection (after validation window)**
+   - Wait 1 week for rollback safety
+   - Delete `documents` collection
+
+**Success Criteria:**
+- ✅ All data migrated to new collections with zero data loss
+- ✅ Query results identical before/after migration
+- ✅ Rollback plan validated (restore from backup)
+
+---
+
+### Stage 3: Service Extraction (Week 4-6)
+
+**Extraction Order:** Least coupled → Most coupled
+
+**Priority 1: Ingestion Service (Week 4)**
+
+**Why First?** Clear boundaries, asynchronous, no tight coupling to retrieval
+
+**Steps:**
+
+1. **Extract Code**
+   - Create new `ingestion-service/` repository
+   - Copy `raglite/ingestion/` → `ingestion-service/src/`
+   - Add service-specific dependencies (FastAPI, Celery if async jobs needed)
+   - Package as Docker container
+
+2. **Deploy Service**
+   - Deploy ingestion service to ECS: `ingestion-service:5001`
+   - Keep monolith running: `monolith:5000`
+   - API Gateway routes ingestion MCP tools → ingestion service
+   - API Gateway routes all other tools → monolith
+
+3. **Gateway Routing Rules**
+   ```yaml
+   routes:
+     - path: /v1/tools/ingest_financial_document
+       target: http://ingestion-service:5001
+     - path: /v1/tools/query_financial_documents
+       target: http://monolith:5000  # Still in monolith
+     - path: /v1/tools/*
+       target: http://monolith:5000  # Default to monolith
+   ```
+
+4. **Dark Launch (1 week)**
+   - Ingestion service deployed but receives 0% traffic
+   - Monolith still handles 100% of ingestion requests
+   - Test ingestion service independently (staging environment)
+
+5. **Gradual Traffic Shift**
+   - Week 1: 10% → ingestion service, 90% → monolith
+   - Week 2: 50% → ingestion service, 50% → monolith
+   - Week 3: 100% → ingestion service, monolith ingestion code removed
+
+**Success Criteria:**
+- ✅ Ingestion service independently deployable
+- ✅ Zero downtime during traffic shift
+- ✅ Ingestion latency unchanged (<5% variance)
+- ✅ Error rate unchanged
+
+---
+
+**Priority 2: Retrieval Service (Week 5)**
+
+**Why Second?** Core functionality, depends on ingestion data (loose coupling via Qdrant)
+
+**Steps:** Similar to Ingestion Service extraction
+
+**Gateway Routing:**
+```yaml
+routes:
+  - path: /v1/tools/query_financial_documents
+    target: http://retrieval-service:5002
+  - path: /v1/tools/ingest_financial_document
+    target: http://ingestion-service:5001
+  - path: /v1/tools/*
+    target: http://monolith:5000  # Remaining tools (forecasting, insights)
+```
+
+---
+
+**Priority 3: Forecasting Service (Week 6, optional)**
+
+**Why Third?** Phase 3 feature, lowest traffic, can remain in monolith if minimal usage
+
+**Decision Gate:** Extract ONLY if forecasting workload requires independent scaling
+
+---
+
+### Stage 4: Monolith Decommission (Week 7-8)
+
+**Goal:** Remove monolith after all services extracted
+
+**Steps:**
+
+1. **Verify all traffic routed to services**
+   - API Gateway logs show 0 requests to monolith
+   - Monolith logs show zero activity for 1 week
+
+2. **Decommission monolith**
+   - Stop monolith ECS task
+   - Delete monolith container image
+   - Remove monolith deployment from Terraform
+
+3. **Update Architecture Diagrams**
+   - Document final microservices architecture
+   - Update deployment docs: "Deployment Architecture (Microservices)"
+
+**Success Criteria:**
+- ✅ All services independently deployable
+- ✅ No monolith dependencies remaining
+- ✅ API Gateway routes 100% to microservices
+- ✅ Documentation updated
+
+---
+
+### Migration Rollback Strategy
+
+**At Each Stage:**
+
+1. **API Gateway Rollback (Stage 1)**
+   - Revert client configuration to direct monolith URL
+   - Remove API Gateway from request path
+   - Rollback time: <15 minutes
+
+2. **Data Partitioning Rollback (Stage 2)**
+   - Revert monolith to read from old `documents` collection
+   - New collections remain (no data loss)
+   - Rollback time: <30 minutes (config change + restart)
+
+3. **Service Extraction Rollback (Stage 3)**
+   - API Gateway shifts traffic back to monolith (0% → service, 100% → monolith)
+   - Service remains deployed (dark launch)
+   - Rollback time: <5 minutes (gateway config change)
+
+---
+
+### API Versioning Strategy
+
+**Problem:** Service extraction may require API changes (breaking changes to MCP tool signatures)
+
+**Solution:** API Gateway supports multiple versions simultaneously
+
+**Versioning Scheme:**
+
+- **v1:** Current monolith API (e.g., `ingest_financial_document(file_path: str)`)
+- **v2:** Microservices API (e.g., `ingest_financial_document(file_url: str, metadata: dict)`)
+
+**Gateway Routes:**
+```yaml
+routes:
+  # v1 API (legacy monolith)
+  - path: /v1/tools/ingest_financial_document
+    target: http://monolith:5000
+
+  # v2 API (microservices)
+  - path: /v2/tools/ingest_financial_document
+    target: http://ingestion-service:5001
+```
+
+**Deprecation Timeline:**
+- v1 supported for 6 months after v2 launch (grace period)
+- v1 deprecated warning added to responses (month 4-6)
+- v1 sunset date announced (month 6)
+- v1 removed (month 7)
+
+---
+
+### Cost Implications
+
+**Monolith (Current):**
+- 1 ECS task (2 vCPU, 4GB RAM): ~$60/month
+- 1 Qdrant instance: ~$100/month
+- **Total:** ~$160/month
+
+**Microservices (Post-Migration):**
+- API Gateway: ~$3.50/million requests + $0.09/GB data transfer
+- 3 ECS tasks (Ingestion, Retrieval, Forecasting): ~$180/month
+- 1 Qdrant instance (shared): ~$100/month
+- **Total:** ~$280/month + API Gateway usage
+
+**Cost Increase:** ~75% (+$120/month) for operational flexibility
+
+**Breakeven Analysis:**
+- Migration cost: 4-8 weeks development time (~$20k-40k)
+- Ongoing cost increase: $120/month (~$1,440/year)
+- **ROI:** Justified IF team size ≥3 (deployment flexibility) OR independent scaling validated
+
+---
+
+### Key Takeaways
+
+1. **Do NOT migrate unless you have proven scale problems** (solo dev = stay monolithic)
+2. **Use Strangler Fig pattern** (gradual extraction, not big bang rewrite)
+3. **API Gateway is critical** (enables traffic shifting and rollback)
+4. **Data partitioning first** (enables independent service deployment)
+5. **Extract least coupled services first** (Ingestion → Retrieval → Forecasting)
+6. **API versioning enables zero-downtime migration** (v1 and v2 coexist)
+7. **Cost increases 75%** (operational flexibility vs. infrastructure cost trade-off)
+
+**Recommended Decision:** Stay monolithic until Phase 4 production metrics prove scaling bottleneck (1-2 years for typical RAG workload).
 
 ---

@@ -1,0 +1,33 @@
+====================================================================================================
+OVERSIZED FILES REPORT - Epic 3 Prep (Story 3.0.1)
+====================================================================================================
+
+Module Size Constraints:
+  🎯 Target: 200-400 lines per module (optimal maintainability)
+  ⚠️  Warning: 800+ lines (plan refactoring)
+  ❌ Hard Limit: 1000+ lines (immediate refactor required)
+
+====================================================================================================
+
+❌ CRITICAL: Files Exceeding Hard Limit (>1000 lines)
+----------------------------------------------------------------------------------------------------
+File Path                                                    |  Lines |   Epic 3 | Priority
+----------------------------------------------------------------------------------------------------
+raglite/ingestion/adaptive_table_extraction.py               |   3109 |   MEDIUM |        1
+raglite/ingestion/pipeline.py                                |   2302 |   MEDIUM |        2
+----------------------------------------------------------------------------------------------------
+Total critical files: 2 (5,411 lines total)
+
+====================================================================================================
+SUMMARY
+====================================================================================================
+Critical files requiring refactoring: 2
+Files approaching limit (monitor): 0
+Total files scanned: 22
+
+📋 NEXT STEPS:
+  1. Review this report and prioritize by Epic 3 relevance
+  2. Define refactoring strategy for each critical file
+  3. Get Winston architecture approval
+  4. Execute refactoring with test validation
+====================================================================================================

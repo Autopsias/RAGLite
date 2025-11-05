@@ -8,6 +8,13 @@
 - Establish production-ready foundation for AI-powered financial intelligence platform
 - Prove measurable ROI through time savings and improved decision quality to justify team rollout
 
+## Project Classification
+
+**Project Type:** Level 3 - Complex Financial Domain
+**Complexity:** High (sophisticated RAG architecture, agentic workflows, forecasting)
+**Domain:** Financial Document Analysis & Intelligence
+**Innovation Level:** Medium-High (production RAG + AI intelligence features)
+
 ## Background Context
 
 Finance teams currently spend 40-60% of their time manually searching through PDFs and Excel spreadsheets to answer stakeholder questions about financial performance. This manual workflow creates decision latency (days to weeks for complex questions), limits strategic agility, and prevents proactive insight discovery. Traditional BI dashboards require predefined queries, while generic LLM tools lack persistent financial knowledge bases and domain optimization.

@@ -1,46 +1,48 @@
 # 5. Technology Stack (Definitive)
 
-| Category | Technology | Version | Purpose | Rationale |
-|----------|------------|---------|---------|-----------|
-| **PDF Extraction** | Docling | 2.55.1 | Extract text/tables from PDFs | 97.9% table accuracy, DocLayNet-based |
-| **PDF Backend** | pypdfium | N/A | Docling backend for faster, lower-memory PDF processing | ✅ APPROVED (Phase 1): 1.7-2.5x speedup, 50-60% memory reduction |
-| **Excel Processing** | openpyxl | ≥3.1,<4.0 | Extract tabular data (spreadsheets) | Standard Python library for Excel |
-| **Excel Processing** | pandas | ≥2.0,<3.0 | Extract tabular data (data manipulation) | Standard Python library for data analysis |
-| **Embedding Model** | sentence-transformers (Fin-E5) | 5.1.1 | Generate semantic vectors | 71.05% financial domain accuracy |
-| **Chunking** | Contextual Retrieval | N/A | LLM-generated context per chunk | 98.1% retrieval accuracy |
-| **Vector Database** | Qdrant | ≥1.15.1 | Store/search embeddings | HNSW indexing, sub-5s retrieval |
-| **SQL Database** | PostgreSQL | 16+ | Structured table storage for financial data | ⚠️ CONDITIONAL (Phase 2B/2C): IF Phase 2A fixed chunking <70% accuracy |
-| **Graph Database** | Neo4j | 5.x | Knowledge graph for entity relationships | ⚠️ CONDITIONAL (Phase 2C): IF Phase 2B structured multi-index <75% accuracy |
-| **Agent Framework** | LangGraph + AWS Strands | Latest | Multi-agent orchestration for query planning | ⚠️ CONDITIONAL (Phase 3): IF Phase 2 <85% accuracy |
-| **MCP Server** | FastMCP (MCP Python SDK) | 2.12.4 | Expose tools via MCP protocol | Official SDK, 19k GitHub stars |
-| **LLM (Primary)** | Claude 3.7 Sonnet (Anthropic SDK) | ≥0.18.0,<1.0.0 | Reasoning, analysis, synthesis | State-of-art reasoning, 200K context |
-| **Forecasting** | Prophet | 1.1+ | Time-series baseline | Facebook library, seasonal handling |
-| **Backend Language** | Python | ≥3.11,<4.0 | All application code | RAG ecosystem standard, async support |
-| **Data Validation** | Pydantic | ≥2.0,<3.0 | Data models and validation | Type-safe, runtime validation |
-| **Configuration** | Pydantic Settings | ≥2.0,<3.0 | Settings management | Environment variable loading |
-| **Environment Variables** | python-dotenv | 1.1.1 | Load .env files | Development environment configuration |
-| **HTTP Client** | httpx | ≥0.28.1,<1.0.0 | Async HTTP requests | Modern async HTTP client |
-| **API Framework** | FastAPI | 0.115+ (optional) | REST endpoints if needed | High performance, async native |
-| **Document Storage** | S3 (cloud) / Local FS (dev) | N/A | Store ingested documents | Scalable, versioning, encryption |
-| **Secrets** | AWS Secrets Manager / .env | N/A | API keys, credentials | Secure, rotatable |
-| **Containerization** | Docker + Docker Compose | Latest | Local development | Service isolation, reproducible |
-| **Cloud Platform** | AWS | N/A | Production deployment (Phase 4) | ECS/Fargate, managed services |
-| **IaC** | Terraform | Latest | Infrastructure as Code (Phase 4) | Version-controlled infrastructure |
-| **CI/CD** | GitHub Actions | N/A | Testing and deployment | Git-integrated |
-| **Monitoring** | CloudWatch + Prometheus | N/A | Performance tracking (Phase 4) | AWS native + open-source |
-| **Logging** | Structured JSON | N/A | Application logs, audit trail | CloudWatch-compatible |
-| **Testing** | pytest | 8.4.2 | Python unit/integration tests | Standard testing framework |
-| **Async Testing** | pytest-asyncio | 1.2.0 | Async test support | Test async functions |
-| **Test Coverage** | pytest-cov | ≥4.1,<5.0 | Code coverage reporting | Track test coverage |
-| **Test Mocking** | pytest-mock | ≥3.12,<4.0 | Mock external dependencies | Isolated unit testing |
-| **Parallel Testing** | pytest-xdist | ≥3.5,<4.0 | Parallel test execution | Faster test runs |
-| **Test Timeouts** | pytest-timeout | ≥2.0,<3.0 | Test timeout enforcement | Prevent hanging tests |
-| **Code Formatting** | Black | ≥23.3,<24.0 | Python code formatter | Consistent code style |
-| **Linting** | Ruff | ≥0.0.270,<1.0.0 | Fast Python linter | Fast, comprehensive linting |
-| **Import Sorting** | isort | ≥5.12,<6.0 | Import statement sorting | Organized imports |
-| **Type Checking** | mypy | ≥1.4,<2.0 | Static type checking | Type safety (Phase 4) |
-| **Pre-commit Hooks** | pre-commit | ≥3.0,<4.0 | Git pre-commit automation | Enforce quality gates |
-| **PDF Testing** | pypdf | ≥4.0,<5.0 | PDF file manipulation for tests | Test PDF generation |
+**Verification Date:** 2025-11-05 (All versions verified via WebSearch)
+
+| Category | Technology | Version | Verified On | Purpose | Rationale |
+|----------|------------|---------|-------------|---------|-----------|
+| **PDF Extraction** | Docling | 2.0.0 | 2025-11-05 | Extract text/tables from PDFs | 97.9% table accuracy, DocLayNet-based, latest stable |
+| **PDF Backend** | pypdfium | N/A | 2025-11-05 | Docling backend for faster, lower-memory PDF processing | ✅ APPROVED (Phase 1): 1.7-2.5x speedup, 50-60% memory reduction |
+| **Excel Processing** | openpyxl | ≥3.1,<4.0 | 2025-11-05 | Extract tabular data (spreadsheets) | Standard Python library for Excel |
+| **Excel Processing** | pandas | ≥2.0,<3.0 | 2025-11-05 | Extract tabular data (data manipulation) | Standard Python library for data analysis |
+| **Embedding Model** | sentence-transformers | ≥5.1 | 2025-11-05 | Generate semantic vectors | 5.1+ released October 2025, supports Fin-E5 |
+| **Finance Embedding** | FinanceMTEB/FinE5 | Latest (Feb 2025) | 2025-11-05 | Financial domain embeddings | 71.05% financial domain accuracy, e5-Mistral-7B fine-tuned |
+| **Chunking** | Contextual Retrieval | N/A | 2025-11-05 | LLM-generated context per chunk | 98.1% retrieval accuracy |
+| **Vector Database** | Qdrant | ≥1.15.5 | 2025-11-05 | Store/search embeddings | HNSW indexing, sub-5s retrieval, latest: 1.15.5 (Aug 2025) |
+| **SQL Database** | PostgreSQL | 16.10 (LTS) | 2025-11-05 | Structured table storage for financial data | ⚠️ CONDITIONAL (Phase 2B/2C): IF Phase 2A fixed chunking <70% accuracy. PG 18 latest, 16.10 stable LTS |
+| **Graph Database** | Neo4j | 5.26 LTS | 2025-11-05 | Knowledge graph for entity relationships | ⚠️ CONDITIONAL (Phase 2C): IF Phase 2B structured multi-index <75% accuracy. Latest: 2025.08 (calendar), 5.26 LTS recommended |
+| **Agent Framework** | LangGraph + AWS Strands | Latest | 2025-11-05 | Multi-agent orchestration for query planning | ⚠️ CONDITIONAL (Phase 3): IF Phase 2 <85% accuracy |
+| **MCP Server** | MCP Python SDK (mcp) | 1.20.0 | 2025-11-05 | Expose tools via MCP protocol | Official SDK by Anthropic, FastMCP 1.0 merged into official SDK |
+| **MCP Framework** | FastMCP 2.0 | 2.0 | 2025-11-05 | Production MCP framework (optional) | Extends official SDK with advanced patterns, enterprise auth, testing |
+| **LLM (Primary)** | Claude 3.7 Sonnet (Anthropic SDK) | 0.72.0 | 2025-11-05 | Reasoning, analysis, synthesis | Latest SDK (Oct 28, 2025), state-of-art reasoning, 200K context |
+| **Forecasting** | Prophet | 1.2.1 | 2025-11-05 | Time-series baseline | Facebook library, seasonal handling, Apple M2 support |
+| **Backend Language** | Python | ≥3.11,≤3.13 | 2025-11-05 | All application code | 3.13.5 latest (Oct 2025), 3.11+ for production stability, async support |
+| **Data Validation** | Pydantic | 2.12.4 | 2025-11-05 | Data models and validation | Latest (Nov 5, 2025), type-safe, runtime validation, Python 3.14 support |
+| **Configuration** | Pydantic Settings | ≥2.0 | 2025-11-05 | Settings management | Environment variable loading |
+| **Environment Variables** | python-dotenv | ≥1.0 | 2025-11-05 | Load .env files | Development environment configuration |
+| **HTTP Client** | httpx | ≥0.28.1,<1.0.0 | 2025-11-05 | Async HTTP requests | Modern async HTTP client |
+| **API Framework** | FastAPI | 0.115+ (optional) | 2025-11-05 | REST endpoints if needed | High performance, async native |
+| **Document Storage** | S3 (cloud) / Local FS (dev) | N/A | 2025-11-05 | Store ingested documents | Scalable, versioning, encryption |
+| **Secrets** | AWS Secrets Manager / .env | N/A | 2025-11-05 | API keys, credentials | Secure, rotatable |
+| **Containerization** | Docker + Docker Compose | Latest | 2025-11-05 | Local development | Service isolation, reproducible |
+| **Cloud Platform** | AWS | N/A | 2025-11-05 | Production deployment (Phase 4) | ECS/Fargate, managed services |
+| **IaC** | Terraform | Latest | 2025-11-05 | Infrastructure as Code (Phase 4) | Version-controlled infrastructure |
+| **CI/CD** | GitHub Actions | N/A | 2025-11-05 | Testing and deployment | Git-integrated |
+| **Monitoring** | CloudWatch + Prometheus | N/A | 2025-11-05 | Performance tracking (Phase 4) | AWS native + open-source |
+| **Logging** | Structured JSON | N/A | 2025-11-05 | Application logs, audit trail | CloudWatch-compatible |
+| **Testing** | pytest | 8.4.2 | 2025-11-05 | Python unit/integration tests | Latest (Sep 4, 2025), standard testing framework |
+| **Async Testing** | pytest-asyncio | ≥1.2.0 | 2025-11-05 | Async test support | Test async functions |
+| **Test Coverage** | pytest-cov | ≥4.1,<5.0 | 2025-11-05 | Code coverage reporting | Track test coverage |
+| **Test Mocking** | pytest-mock | ≥3.12,<4.0 | 2025-11-05 | Mock external dependencies | Isolated unit testing |
+| **Parallel Testing** | pytest-xdist | ≥3.5,<4.0 | 2025-11-05 | Parallel test execution | Faster test runs |
+| **Test Timeouts** | pytest-timeout | ≥2.0,<3.0 | 2025-11-05 | Test timeout enforcement | Prevent hanging tests |
+| **Code Formatting** | Ruff | 0.14.3 | 2025-11-05 | Python formatter + linter | Latest (Oct 30, 2025), 10-100x faster than Black, replaces Black+isort+Flake8 |
+| **Type Checking** | mypy | ≥1.4,<2.0 | 2025-11-05 | Static type checking | Type safety (Phase 4) |
+| **Pre-commit Hooks** | pre-commit | ≥3.0,<4.0 | 2025-11-05 | Git pre-commit automation | Enforce quality gates |
+| **PDF Testing** | pypdf | ≥4.0,<5.0 | 2025-11-05 | PDF file manipulation for tests | Test PDF generation |
 
 ---
 

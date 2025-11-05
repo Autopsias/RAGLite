@@ -31,12 +31,12 @@ workflow_path: "method-brownfield.yaml"
 workflow_status:
   # Phase 1: Planning
   prd: docs/prd/index.md
-  validate-prd: optional
+  validate-prd: docs/validation-improvements-summary.md
   create-design: docs/front-end-spec/index.md
 
   # Phase 2: Solutioning
   create-architecture: docs/architecture/index.md
-  validate-architecture: optional
+  validate-architecture: docs/architecture/validation-improvements-summary.md
   solutioning-gate-check: docs/implementation-readiness-report-2025-11-04.md
 
   # Phase 3: Implementation

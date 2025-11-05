@@ -1,0 +1,39 @@
+DEBUG: conftest.py loading...
+DEBUG: Checking service availability before imports...
+DEBUG: Qdrant available at localhost:6333
+DEBUG: PostgreSQL available at localhost:5432
+DEBUG: Services available, continuing with imports...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.3, pytest-8.4.2, pluggy-1.6.0
+benchmark: 4.0.0 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+rootdir: /Users/ricardocarvalho/DeveloperFolder/RAGLite
+configfile: pytest.ini
+testpaths: tests
+plugins: mock-3.15.1, cov-5.0.0, instafail-0.5.0, asyncio-1.2.0, anyio-4.11.0, xdist-3.8.0, timeout-2.4.0, Faker-18.13.0, sugar-1.1.1, benchmark-4.0.0, rerunfailures-16.1
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+timeout: 900.0s
+timeout method: signal
+timeout func_only: True
+collected 394 items / 12 deselected / 382 selected
+
+tests/unit/test_ac2_multi_entity_queries.py ......                       [  1%]
+tests/unit/test_docling_extraction.py .                                  [  1%]
+tests/unit/test_hybrid_search.py .............                           [  5%]
+tests/unit/test_ingestion.py .........................................   [ 15%]
+tests/unit/test_main.py ..............                                   [ 19%]
+tests/unit/test_merge_results_normalization.py ......                    [ 21%]
+tests/unit/test_metadata_extraction.py sssssss...                        [ 23%]
+tests/unit/test_page_extraction.py .....                                 [ 25%]
+tests/unit/test_period_normalizer.py ................................... [ 34%]
+.                                                                        [ 34%]
+tests/unit/test_pypdfium_backend.py ....                                 [ 35%]
+tests/unit/test_query_classifier.py ........                             [ 37%]
+tests/unit/test_response_formatting.py .........                         [ 40%]
+tests/unit/test_retrieval.py ...................                         [ 45%]
+tests/unit/test_shared_clients.py .....                                  [ 46%]
+tests/unit/test_shared_config.py ....                                    [ 47%]
+tests/unit/test_shared_models.py .....                                   [ 48%]
+tests/unit/test_sql_hybrid_search.py .......                             [ 50%]
+tests/unit/test_table_aware_chunking.py .......                          [ 52%]
+tests/unit/test_transposed_table_extraction.py ...........               [ 55%]
+tests/integration/test_ac1_fuzzy_entity_matching.py

@@ -1,0 +1,495 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.3, pytest-8.4.2, pluggy-1.6.0 -- /Users/ricardocarvalho/DeveloperFolder/RAGLite/.venv/bin/python3
+cachedir: .pytest_cache
+benchmark: 4.0.0 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+rootdir: /Users/ricardocarvalho/DeveloperFolder/RAGLite
+configfile: pytest.ini
+plugins: mock-3.15.1, cov-5.0.0, instafail-0.5.0, asyncio-1.2.0, anyio-4.11.0, xdist-3.8.0, timeout-2.4.0, Faker-18.13.0, sugar-1.1.1, benchmark-4.0.0, rerunfailures-16.1
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+timeout: 900.0s
+timeout method: signal
+timeout func_only: True
+collecting ... DEBUG: conftest.py loading...
+DEBUG: Checking service availability before imports...
+DEBUG: Qdrant available at localhost:6333
+DEBUG: PostgreSQL available at localhost:5432
+DEBUG: Services available, continuing with imports...
+collected 394 items / 12 deselected / 382 selected
+
+tests/unit/test_ac2_multi_entity_queries.py::test_multi_entity_comparison_portugal_vs_tunisia PASSED [  0%]
+tests/unit/test_ac2_multi_entity_queries.py::test_multi_entity_comparison_which_higher PASSED [  0%]
+tests/unit/test_ac2_multi_entity_queries.py::test_multi_entity_vs_keyword PASSED [  0%]
+tests/unit/test_ac2_multi_entity_queries.py::test_multi_entity_between_keyword PASSED [  1%]
+tests/unit/test_ac2_multi_entity_queries.py::test_multi_entity_higher_lower PASSED [  1%]
+tests/unit/test_ac2_multi_entity_queries.py::test_comparison_keyword_detection PASSED [  1%]
+tests/unit/test_docling_extraction.py::test_page_extraction PASSED       [  1%]
+tests/unit/test_hybrid_search.py::TestBM25IndexCreation::test_bm25_index_creation_success PASSED [  2%]
+tests/unit/test_hybrid_search.py::TestBM25IndexCreation::test_bm25_index_empty_chunks PASSED [  2%]
+tests/unit/test_hybrid_search.py::TestBM25IndexCreation::test_bm25_index_parameters PASSED [  2%]
+tests/unit/test_hybrid_search.py::TestBM25Query::test_bm25_query_scores PASSED [  2%]
+tests/unit/test_hybrid_search.py::TestBM25Query::test_bm25_query_relevant_ranking PASSED [  3%]
+tests/unit/test_hybrid_search.py::TestScoreFusion::test_score_fusion_weighted_sum PASSED [  3%]
+tests/unit/test_hybrid_search.py::TestScoreFusion::test_score_fusion_top_k PASSED [  3%]
+tests/unit/test_hybrid_search.py::TestScoreFusion::test_score_fusion_empty_semantic PASSED [  3%]
+tests/unit/test_hybrid_search.py::TestScoreFusion::test_score_fusion_empty_bm25 PASSED [  4%]
+tests/unit/test_hybrid_search.py::TestHybridSearchEndToEnd::test_hybrid_search_combines_results PASSED [  4%]
+tests/unit/test_hybrid_search.py::TestHybridSearchEndToEnd::test_hybrid_search_disabled_fallback PASSED [  4%]
+tests/unit/test_hybrid_search.py::TestHybridSearchEndToEnd::test_hybrid_search_bm25_unavailable_fallback PASSED [  4%]
+tests/unit/test_hybrid_search.py::TestHybridSearchEndToEnd::test_hybrid_search_improves_ranking PASSED [  5%]
+tests/unit/test_ingestion.py::TestIngestPDF::test_ingest_pdf_success PASSED [  5%]
+tests/unit/test_ingestion.py::TestIngestPDF::test_ingest_pdf_file_not_found PASSED [  5%]
+tests/unit/test_ingestion.py::TestIngestPDF::test_ingest_pdf_corrupted PASSED [  6%]
+tests/unit/test_ingestion.py::TestIngestPDF::test_ingest_pdf_page_numbers_extracted PASSED [  6%]
+tests/unit/test_ingestion.py::TestIngestPDF::test_ingest_pdf_no_page_metadata PASSED [  6%]
+tests/unit/test_ingestion.py::TestIngestPDF::test_ingest_pdf_docling_init_failure PASSED [  6%]
+tests/unit/test_ingestion.py::TestIngestPDF::test_ingest_pdf_logging PASSED [  7%]
+tests/unit/test_ingestion.py::TestExtractExcel::test_extract_excel_success PASSED [  7%]
+tests/unit/test_ingestion.py::TestExtractExcel::test_extract_excel_multi_sheet PASSED [  7%]
+tests/unit/test_ingestion.py::TestExtractExcel::test_extract_excel_numeric_formats PASSED [  7%]
+tests/unit/test_ingestion.py::TestExtractExcel::test_extract_excel_file_not_found PASSED [  8%]
+tests/unit/test_ingestion.py::TestExtractExcel::test_extract_excel_password_protected PASSED [  8%]
+tests/unit/test_ingestion.py::TestExtractExcel::test_extract_excel_corrupted PASSED [  8%]
+tests/unit/test_ingestion.py::TestExtractExcel::test_extract_excel_sheet_numbers PASSED [  8%]
+tests/unit/test_ingestion.py::TestExtractExcel::test_extract_excel_empty_workbook PASSED [  9%]
+tests/unit/test_ingestion.py::TestIngestDocument::test_ingest_document_pdf PASSED [  9%]
+tests/unit/test_ingestion.py::TestIngestDocument::test_ingest_document_excel PASSED [  9%]
+tests/unit/test_ingestion.py::TestIngestDocument::test_ingest_document_unsupported_format PASSED [  9%]
+tests/unit/test_ingestion.py::TestIngestDocument::test_ingest_document_file_not_found PASSED [ 10%]
+tests/unit/test_ingestion.py::TestChunkDocument::test_chunk_document_basic PASSED [ 10%]
+tests/unit/test_ingestion.py::TestChunkDocument::test_chunk_overlap PASSED [ 10%]
+tests/unit/test_ingestion.py::TestChunkDocument::test_chunk_page_numbers PASSED [ 10%]
+tests/unit/test_ingestion.py::TestChunkDocument::test_chunk_short_document PASSED [ 11%]
+tests/unit/test_ingestion.py::TestChunkDocument::test_chunk_empty_document PASSED [ 11%]
+tests/unit/test_ingestion.py::TestChunkDocument::test_chunk_invalid_parameters PASSED [ 11%]
+tests/unit/test_ingestion.py::TestGenerateEmbeddings::test_generate_embeddings_basic PASSED [ 12%]
+tests/unit/test_ingestion.py::TestGenerateEmbeddings::test_embedding_dimensions PASSED [ 12%]
+tests/unit/test_ingestion.py::TestGenerateEmbeddings::test_batch_processing PASSED [ 12%]
+tests/unit/test_ingestion.py::TestGenerateEmbeddings::test_empty_chunk_handling PASSED [ 12%]
+tests/unit/test_ingestion.py::TestGenerateEmbeddings::test_embeddings_not_none PASSED [ 13%]
+tests/unit/test_ingestion.py::TestGenerateEmbeddings::test_embedding_generation_error_handling PASSED [ 13%]
+tests/unit/test_ingestion.py::TestGenerateEmbeddings::test_get_embedding_model_singleton PASSED [ 13%]
+tests/unit/test_ingestion.py::TestGenerateEmbeddings::test_generate_embeddings_logging PASSED [ 13%]
+tests/unit/test_ingestion.py::TestQdrantStorage::test_create_collection_success PASSED [ 14%]
+tests/unit/test_ingestion.py::TestQdrantStorage::test_create_collection_idempotent PASSED [ 14%]
+tests/unit/test_ingestion.py::TestQdrantStorage::test_store_vectors_basic PASSED [ 14%]
+tests/unit/test_ingestion.py::TestQdrantStorage::test_batch_upload_processing PASSED [ 14%]
+tests/unit/test_ingestion.py::TestQdrantStorage::test_metadata_preservation PASSED [ 15%]
+tests/unit/test_ingestion.py::TestQdrantStorage::test_empty_chunks_handling PASSED [ 15%]
+tests/unit/test_ingestion.py::TestQdrantStorage::test_storage_error_handling PASSED [ 15%]
+tests/unit/test_ingestion.py::TestQdrantStorage::test_get_qdrant_client_singleton PASSED [ 15%]
+tests/unit/test_main.py::TestMCPServerInitialization::test_mcp_server_exists PASSED [ 16%]
+tests/unit/test_main.py::TestMCPServerInitialization::test_mcp_server_tools_registered PASSED [ 16%]
+tests/unit/test_main.py::TestIngestFinancialDocumentTool::test_ingest_tool_success PASSED [ 16%]
+tests/unit/test_main.py::TestIngestFinancialDocumentTool::test_ingest_tool_file_not_found PASSED [ 17%]
+tests/unit/test_main.py::TestIngestFinancialDocumentTool::test_ingest_tool_processing_error PASSED [ 17%]
+tests/unit/test_main.py::TestIngestFinancialDocumentTool::test_ingest_tool_structured_logging PASSED [ 17%]
+tests/unit/test_main.py::TestQueryFinancialDocumentsTool::test_query_tool_success PASSED [ 17%]
+tests/unit/test_main.py::TestQueryFinancialDocumentsTool::test_query_tool_empty_query PASSED [ 18%]
+tests/unit/test_main.py::TestQueryFinancialDocumentsTool::test_query_tool_whitespace_only_query PASSED [ 18%]
+tests/unit/test_main.py::TestQueryFinancialDocumentsTool::test_query_tool_search_error PASSED [ 18%]
+tests/unit/test_main.py::TestQueryFinancialDocumentsTool::test_query_tool_unexpected_error PASSED [ 18%]
+tests/unit/test_main.py::TestQueryFinancialDocumentsTool::test_query_tool_structured_logging PASSED [ 19%]
+tests/unit/test_main.py::TestDocumentProcessingError::test_exception_creation PASSED [ 19%]
+tests/unit/test_main.py::TestDocumentProcessingError::test_exception_inheritance PASSED [ 19%]
+tests/unit/test_merge_results_normalization.py::test_merge_results_empty_inputs PASSED [ 19%]
+tests/unit/test_merge_results_normalization.py::test_merge_results_score_normalization_basic PASSED [ 20%]
+tests/unit/test_merge_results_normalization.py::test_merge_results_alpha_sensitivity_after_normalization PASSED [ 20%]
+tests/unit/test_merge_results_normalization.py::test_merge_results_deduplication_with_normalization PASSED [ 20%]
+tests/unit/test_merge_results_normalization.py::test_merge_results_realistic_scenario PASSED [ 20%]
+tests/unit/test_merge_results_normalization.py::test_merge_results_no_sql_degradation PASSED [ 21%]
+tests/unit/test_metadata_extraction.py::TestExtractChunkMetadata::test_metadata_extraction_success SKIPPEDocks) [ 21%]
+tests/unit/test_metadata_extraction.py::TestExtractChunkMetadata::test_metadata_extraction_partial_fields SKIPPED [ 21%]
+tests/unit/test_metadata_extraction.py::TestExtractChunkMetadata::test_metadata_extraction_no_api_key SKIPPED [ 21%]
+tests/unit/test_metadata_extraction.py::TestExtractChunkMetadata::test_metadata_extraction_api_failure SKIPPED [ 22%]
+tests/unit/test_metadata_extraction.py::TestExtractChunkMetadata::test_metadata_caching_enabled SKIPPEDng) [ 22%]
+tests/unit/test_metadata_extraction.py::TestExtractChunkMetadata::test_metadata_caching_disabled SKIPPEDng) [ 22%]
+tests/unit/test_metadata_extraction.py::TestExtractChunkMetadata::test_text_truncation SKIPPED [ 23%]
+tests/unit/test_metadata_extraction.py::TestExtractedMetadataModel::test_extracted_metadata_all_fields PASSED [ 23%]
+tests/unit/test_metadata_extraction.py::TestExtractedMetadataModel::test_extracted_metadata_optional_fields PASSED [ 23%]
+tests/unit/test_metadata_extraction.py::TestExtractedMetadataModel::test_extracted_metadata_defaults PASSED [ 23%]
+tests/unit/test_page_extraction.py::TestChunkByDoclingItems::test_chunk_by_docling_items_extracts_page_numbers PASSED [ 24%]
+tests/unit/test_page_extraction.py::TestChunkByDoclingItems::test_chunk_by_docling_items_handles_missing_prov PASSED [ 24%]
+tests/unit/test_page_extraction.py::TestChunkByDoclingItems::test_chunk_by_docling_items_respects_page_boundaries PASSED [ 24%]
+tests/unit/test_page_extraction.py::TestChunkByDoclingItems::test_chunk_by_docling_items_maintains_chunk_size PASSED [ 24%]
+tests/unit/test_page_extraction.py::TestChunkByDoclingItems::test_chunk_by_docling_items_handles_table_items PASSED [ 25%]
+tests/unit/test_period_normalizer.py::TestNormalizePeriod::test_normalize_period_q1_to_months PASSED [ 25%]
+tests/unit/test_period_normalizer.py::TestNormalizePeriod::test_normalize_period_q2_to_months PASSED [ 25%]
+tests/unit/test_period_normalizer.py::TestNormalizePeriod::test_normalize_period_q3_to_months PASSED [ 25%]
+tests/unit/test_period_normalizer.py::TestNormalizePeriod::test_normalize_period_q4_to_months PASSED [ 26%]
+tests/unit/test_period_normalizer.py::TestNormalizePeriod::test_normalize_period_q3_short_year PASSED [ 26%]
+tests/unit/test_period_normalizer.py::TestNormalizePeriod::test_normalize_period_month_full_year PASSED [ 26%]
+tests/unit/test_period_normalizer.py::TestNormalizePeriod::test_normalize_period_month_short_year PASSED [ 26%]
+tests/unit/test_period_normalizer.py::TestNormalizePeriod::test_normalize_period_month_abbrev PASSED [ 27%]
+tests/unit/test_period_normalizer.py::TestNormalizePeriod::test_normalize_period_half_year_h1 PASSED [ 27%]
+tests/unit/test_period_normalizer.py::TestNormalizePeriod::test_normalize_period_half_year_h2 PASSED [ 27%]
+tests/unit/test_period_normalizer.py::TestNormalizePeriod::test_normalize_period_fiscal_year PASSED [ 28%]
+tests/unit/test_period_normalizer.py::TestNormalizePeriod::test_normalize_period_fiscal_year_spelled_out PASSED [ 28%]
+tests/unit/test_period_normalizer.py::TestNormalizePeriod::test_normalize_period_full_year PASSED [ 28%]
+tests/unit/test_period_normalizer.py::TestNormalizePeriod::test_normalize_period_unknown_format PASSED [ 28%]
+tests/unit/test_period_normalizer.py::TestNormalizePeriod::test_normalize_period_empty_string PASSED [ 29%]
+tests/unit/test_period_normalizer.py::TestNormalizeMonth::test_normalize_month_january_full PASSED [ 29%]
+tests/unit/test_period_normalizer.py::TestNormalizeMonth::test_normalize_month_january_abbrev PASSED [ 29%]
+tests/unit/test_period_normalizer.py::TestNormalizeMonth::test_normalize_month_august_lowercase PASSED [ 29%]
+tests/unit/test_period_normalizer.py::TestNormalizeMonth::test_normalize_month_december PASSED [ 30%]
+tests/unit/test_period_normalizer.py::TestNormalizeMonth::test_normalize_month_may PASSED [ 30%]
+tests/unit/test_period_normalizer.py::TestNormalizeMonth::test_normalize_month_unknown PASSED [ 30%]
+tests/unit/test_period_normalizer.py::TestDetectPeriodInQuery::test_detect_period_q3_2025 PASSED [ 30%]
+tests/unit/test_period_normalizer.py::TestDetectPeriodInQuery::test_detect_period_q2_short_year PASSED [ 31%]
+tests/unit/test_period_normalizer.py::TestDetectPeriodInQuery::test_detect_period_august_2025 PASSED [ 31%]
+tests/unit/test_period_normalizer.py::TestDetectPeriodInQuery::test_detect_period_aug_25 PASSED [ 31%]
+tests/unit/test_period_normalizer.py::TestDetectPeriodInQuery::test_detect_period_aug_25_ytd PASSED [ 31%]
+tests/unit/test_period_normalizer.py::TestDetectPeriodInQuery::test_detect_period_fiscal_year PASSED [ 32%]
+tests/unit/test_period_normalizer.py::TestDetectPeriodInQuery::test_detect_period_fy_short PASSED [ 32%]
+tests/unit/test_period_normalizer.py::TestDetectPeriodInQuery::test_detect_period_half_year_h1 PASSED [ 32%]
+tests/unit/test_period_normalizer.py::TestDetectPeriodInQuery::test_detect_period_half_year_h2 PASSED [ 32%]
+tests/unit/test_period_normalizer.py::TestDetectPeriodInQuery::test_detect_period_no_period PASSED [ 33%]
+tests/unit/test_period_normalizer.py::TestDetectPeriodInQuery::test_detect_period_case_insensitive PASSED [ 33%]
+tests/unit/test_period_normalizer.py::TestDetectPeriodInQuery::test_detect_period_multiple_periods_first_match PASSED [ 33%]
+tests/unit/test_period_normalizer.py::TestPeriodNormalizerIntegration::test_integration_q3_workflow PASSED [ 34%]
+tests/unit/test_period_normalizer.py::TestPeriodNormalizerIntegration::test_integration_august_workflow PASSED [ 34%]
+tests/unit/test_period_normalizer.py::TestPeriodNormalizerIntegration::test_integration_no_period_workflow PASSED [ 34%]
+tests/unit/test_pypdfium_backend.py::TestPypdfiumBackendConfiguration::test_backend_import_successful PASSED [ 34%]
+tests/unit/test_pypdfium_backend.py::TestPypdfiumBackendConfiguration::test_pipeline_options_configuration PASSED [ 35%]
+tests/unit/test_pypdfium_backend.py::TestPypdfiumBackendConfiguration::test_document_converter_accepts_pypdfium_backend PASSED [ 35%]
+tests/unit/test_pypdfium_backend.py::TestPypdfiumBackendConfiguration::test_backend_type_is_correct PASSED [ 35%]
+tests/unit/test_query_classifier.py::TestQueryClassification::test_sql_only_classification PASSED [ 35%]
+tests/unit/test_query_classifier.py::TestQueryClassification::test_vector_only_classification PASSED [ 36%]
+tests/unit/test_query_classifier.py::TestQueryClassification::test_hybrid_classification PASSED [ 36%]
+tests/unit/test_query_classifier.py::TestQueryClassification::test_overall_accuracy PASSED [ 36%]
+tests/unit/test_query_classifier.py::TestQueryClassification::test_classification_latency PASSED [ 36%]
+tests/unit/test_query_classifier.py::TestQueryClassification::test_empty_query PASSED [ 37%]
+tests/unit/test_query_classifier.py::TestQueryClassification::test_numeric_pattern_detection PASSED [ 37%]
+tests/unit/test_query_classifier.py::TestQueryClassification::test_semantic_keyword_detection PASSED [ 37%]
+tests/unit/test_response_formatting.py::test_query_result_metadata_completeness PASSED [ 37%]
+tests/unit/test_response_formatting.py::test_query_result_page_number_none_handling PASSED [ 38%]
+tests/unit/test_response_formatting.py::test_query_result_score_range PASSED [ 38%]
+tests/unit/test_response_formatting.py::test_query_response_serialization PASSED [ 38%]
+tests/unit/test_response_formatting.py::test_citation_format PASSED      [ 39%]
+tests/unit/test_response_formatting.py::test_empty_results_handling PASSED [ 39%]
+tests/unit/test_response_formatting.py::test_edge_case_metadata PASSED   [ 39%]
+tests/unit/test_response_formatting.py::test_metadata_completeness_validation PASSED [ 39%]
+tests/unit/test_response_formatting.py::test_query_request_validation PASSED [ 40%]
+tests/unit/test_retrieval.py::TestGenerateQueryEmbedding::test_generate_query_embedding_success PASSED [ 40%]
+tests/unit/test_retrieval.py::TestGenerateQueryEmbedding::test_generate_query_embedding_empty_query PASSED [ 40%]
+tests/unit/test_retrieval.py::TestGenerateQueryEmbedding::test_generate_query_embedding_model_failure PASSED [ 40%]
+tests/unit/test_retrieval.py::TestSearchDocuments::test_search_documents_basic PASSED [ 41%]
+tests/unit/test_retrieval.py::TestSearchDocuments::test_search_documents_custom_top_k PASSED [ 41%]
+tests/unit/test_retrieval.py::TestSearchDocuments::test_metadata_filtering_by_source_document PASSED [ 41%]
+tests/unit/test_retrieval.py::TestSearchDocuments::test_empty_query_handling PASSED [ 41%]
+tests/unit/test_retrieval.py::TestSearchDocuments::test_relevance_scoring_sorted_descending PASSED [ 42%]
+tests/unit/test_retrieval.py::TestSearchDocuments::test_connection_error_handling PASSED [ 42%]
+tests/unit/test_retrieval.py::TestSearchDocuments::test_metadata_validation_all_fields_present PASSED [ 42%]
+tests/unit/test_retrieval.py::TestSearchDocuments::test_metadata_validation_missing_page_number PASSED [ 42%]
+tests/unit/test_retrieval.py::TestGenerateCitations::test_generate_citations_basic PASSED [ 43%]
+tests/unit/test_retrieval.py::TestGenerateCitations::test_generate_citations_multi_source PASSED [ 43%]
+tests/unit/test_retrieval.py::TestGenerateCitations::test_citation_format PASSED [ 43%]
+tests/unit/test_retrieval.py::TestGenerateCitations::test_missing_page_number PASSED [ 43%]
+tests/unit/test_retrieval.py::TestGenerateCitations::test_missing_source_document PASSED [ 44%]
+tests/unit/test_retrieval.py::TestGenerateCitations::test_citation_appended_to_text PASSED [ 44%]
+tests/unit/test_retrieval.py::TestGenerateCitations::test_empty_results_list PASSED [ 44%]
+tests/unit/test_retrieval.py::TestGenerateCitations::test_citation_ordering PASSED [ 45%]
+tests/unit/test_shared_clients.py::test_get_qdrant_client_success PASSED [ 45%]
+tests/unit/test_shared_clients.py::test_get_qdrant_client_connection_error PASSED [ 45%]
+tests/unit/test_shared_clients.py::test_get_claude_client_success PASSED [ 45%]
+tests/unit/test_shared_clients.py::test_get_claude_client_missing_api_key PASSED [ 46%]
+tests/unit/test_shared_clients.py::test_get_claude_client_empty_api_key PASSED [ 46%]
+tests/unit/test_shared_config.py::test_settings_load_from_env PASSED     [ 46%]
+tests/unit/test_shared_config.py::test_settings_default_values PASSED    [ 46%]
+tests/unit/test_shared_config.py::test_settings_missing_api_key_optional PASSED [ 47%]
+tests/unit/test_shared_config.py::test_settings_type_validation PASSED   [ 47%]
+tests/unit/test_shared_models.py::test_document_metadata_creation PASSED [ 47%]
+tests/unit/test_shared_models.py::test_document_metadata_missing_required_field PASSED [ 47%]
+tests/unit/test_shared_models.py::test_chunk_creation PASSED             [ 48%]
+tests/unit/test_shared_models.py::test_chunk_default_embedding PASSED    [ 48%]
+tests/unit/test_shared_models.py::test_search_result_score_validation PASSED [ 48%]
+tests/unit/test_sql_hybrid_search.py::test_hybrid_search_single_entity_literal PASSED [ 48%]
+tests/unit/test_sql_hybrid_search.py::test_hybrid_search_fuzzy_entity_matching PASSED [ 49%]
+tests/unit/test_sql_hybrid_search.py::test_hybrid_search_multi_entity_comparison PASSED [ 49%]
+tests/unit/test_sql_hybrid_search.py::test_hybrid_search_keyword_detection PASSED [ 49%]
+tests/unit/test_sql_hybrid_search.py::test_hybrid_search_literal_metric_matching PASSED [ 50%]
+tests/unit/test_sql_hybrid_search.py::test_hybrid_search_empty_result_handling PASSED [ 50%]
+tests/unit/test_sql_hybrid_search.py::test_hybrid_search_sql_generation_success PASSED [ 50%]
+tests/unit/test_table_aware_chunking.py::test_split_large_table_small_table PASSED [ 50%]
+tests/unit/test_table_aware_chunking.py::test_split_large_table_by_rows_headers_preserved PASSED [ 51%]
+tests/unit/test_table_aware_chunking.py::test_split_large_table_context_prefix PASSED [ 51%]
+tests/unit/test_table_aware_chunking.py::test_split_large_table_edge_case_single_row PASSED [ 51%]
+tests/unit/test_table_aware_chunking.py::test_split_large_table_edge_case_empty_table PASSED [ 51%]
+tests/unit/test_table_aware_chunking.py::test_token_counting_accuracy PASSED [ 52%]
+tests/unit/test_table_aware_chunking.py::test_table_chunk_section_type PASSED [ 52%]
+tests/unit/test_transposed_table_extraction.py::TestTransposedTableDetection::test_detect_transposed_single_header PASSED [ 52%]
+tests/unit/test_transposed_table_extraction.py::TestTransposedTableDetection::test_detect_transposed_multi_header PASSED [ 52%]
+tests/unit/test_transposed_table_extraction.py::TestTransposedTableDetection::test_not_transposed_traditional_table PASSED [ 53%]
+tests/unit/test_transposed_table_extraction.py::TestTransposedTableDetection::test_not_transposed_insufficient_metrics_threshold PASSED [ 53%]
+tests/unit/test_transposed_table_extraction.py::TestTransposedTableDetection::test_not_transposed_insufficient_rows PASSED [ 53%]
+tests/unit/test_transposed_table_extraction.py::TestTransposedTableExtraction::test_extract_single_header_transposed PASSED [ 53%]
+tests/unit/test_transposed_table_extraction.py::TestTransposedTableExtraction::test_extract_multi_header_transposed PASSED [ 54%]
+tests/unit/test_transposed_table_extraction.py::TestTransposedTableExtraction::test_extract_handles_empty_cells PASSED [ 54%]
+tests/unit/test_transposed_table_extraction.py::TestTransposedTableExtraction::test_extract_metric_parsing PASSED [ 54%]
+tests/unit/test_transposed_table_extraction.py::TestTransposedTableExtraction::test_extract_column_name_generation PASSED [ 54%]
+tests/unit/test_transposed_table_extraction.py::TestTransposedTableExtraction::test_extract_metadata_fields PASSED [ 55%]
+tests/integration/test_ac1_fuzzy_entity_matching.py::test_fuzzy_matching_portugal_cement PASSED [ 55%]
+tests/integration/test_ac1_fuzzy_entity_matching.py::test_fuzzy_matching_tunisia_cement PASSED [ 55%]
+tests/integration/test_ac1_fuzzy_entity_matching.py::test_pg_trgm_extension_installed PASSED [ 56%]
+tests/integration/test_ac1_fuzzy_entity_matching.py::test_gin_indexes_exist PASSED [ 56%]
+tests/integration/test_ac1_fuzzy_entity_matching.py::test_similarity_function_works PASSED [ 56%]
+tests/integration/test_ac1_fuzzy_entity_matching.py::test_exact_match_fallback PASSED [ 56%]
+tests/integration/test_ac1_fuzzy_entity_matching.py::test_fuzzy_matching_thresholds PASSED [ 57%]
+tests/integration/test_ac1_fuzzy_entity_matching.py::test_case_insensitive_matching PASSED [ 57%]
+tests/integration/test_ac4_comprehensive.py::test_ac4_160page_doclingparse_baseline SKIPPED [ 57%]
+tests/integration/test_ac4_comprehensive.py::test_ac4_160page_pypdfium_optimized SKIPPED [ 57%]
+tests/integration/test_ac4_comprehensive.py::test_ac4_160page_comparison SKIPPED [ 58%]
+tests/integration/test_accuracy_validation.py::TestAccuracyTestRunner::test_cli_help PASSED [ 58%]
+tests/integration/test_accuracy_validation.py::TestAccuracyTestRunner::test_subset_option PASSED [ 58%]
+tests/integration/test_accuracy_validation.py::TestAccuracyTestRunner::test_category_filter PASSED [ 58%]
+tests/integration/test_accuracy_validation.py::TestAccuracyTestRunner::test_output_file_generation PASSED [ 59%]
+tests/integration/test_accuracy_validation.py::TestAccuracyTestRunner::test_verbose_output PASSED [ 59%]
+tests/integration/test_accuracy_validation.py::TestDailyAccuracyCheck::test_cli_help PASSED [ 59%]
+tests/integration/test_accuracy_validation.py::TestDailyAccuracyCheck::test_daily_check_execution PASSED [ 59%]
+tests/integration/test_accuracy_validation.py::TestDailyAccuracyCheck::test_tracking_log_created PASSED [ 60%]
+tests/integration/test_accuracy_validation.py::TestAccuracyCalculations::test_retrieval_accuracy_calculation PASSED [ 60%]
+tests/integration/test_accuracy_validation.py::TestAccuracyCalculations::test_attribution_accuracy_calculation PASSED [ 60%]
+tests/integration/test_accuracy_validation.py::TestAccuracyCalculations::test_performance_metrics_calculated PASSED [ 60%]
+tests/integration/test_accuracy_validation.py::TestNFRValidation::test_nfr_targets_displayed PASSED [ 61%]
+tests/integration/test_accuracy_validation.py::TestNFRValidation::test_exit_codes PASSED [ 61%]
+tests/integration/test_e2e_query_validation.py::test_financial_terminology_handling SKIPPEDunks with low semantic scores. Semantic search
+accuracy is 56% baseline, below the 70% target. This test requires
+element-based chunking (Story 2.2) to achieve the expected 0.7+ scores
+consistently. Will be re-enabled after Story 2.2 implementation.)        [ 61%]
+tests/integration/test_e2e_query_validation.py::test_metadata_completeness_validation SKIPPED [ 62%]
+tests/integration/test_e2e_query_validation.py::test_ground_truth_validation_subset SKIPPED [ 62%]
+tests/integration/test_e2e_query_validation.py::test_e2e_integration_flow PASSED [ 62%]
+tests/integration/test_e2e_query_validation.py::test_performance_measurement PASSED [ 62%]
+tests/integration/test_element_metadata.py::TestElementMetadataIntegration::test_element_metadata_stored_in_qdrant SKIPPEDing). Element metadata
+no longer exists. See story-2.2-pivot-analysis/ for details.)            [ 63%]
+tests/integration/test_element_metadata.py::TestElementMetadataIntegration::test_filter_chunks_by_element_type SKIPPEDng). Element metadata no
+longer exists. See story-2.2-pivot-analysis/ for details.)               [ 63%]
+tests/integration/test_element_metadata.py::TestElementMetadataIntegration::test_chunk_count_within_baseline_range SKIPPEDing). Element metadata
+no longer exists. See story-2.2-pivot-analysis/ for details.)            [ 63%]
+tests/integration/test_element_metadata.py::TestElementMetadataIntegration::test_section_context_propagated SKIPPEDng). Element metadata no
+longer exists. See story-2.2-pivot-analysis/ for details.)               [ 63%]
+tests/integration/test_epic2_regression.py::TestEpic2Regression::test_retrieval_accuracy_floor SKIPPED [ 64%]
+tests/integration/test_epic2_regression.py::TestEpic2Regression::test_attribution_accuracy_floor SKIPPED [ 64%]
+tests/integration/test_epic2_regression.py::TestEpic2Regression::test_latency_ceiling PASSED [ 64%]
+tests/integration/test_epic2_regression.py::TestEpic2Regression::test_hybrid_fusion_quality SKIPPED [ 64%]
+tests/integration/test_epic2_regression.py::TestEpic2IntegrationSanity::test_baseline_thresholds_defined PASSED [ 65%]
+tests/integration/test_epic2_regression.py::TestEpic2IntegrationSanity::test_ground_truth_available PASSED [ 65%]
+tests/integration/test_fixed_chunking.py::test_ac5_fast_chunk_count_validation PASSED [ 65%]
+tests/integration/test_fixed_chunking.py::test_ac6_fast_chunk_size_consistency PASSED [ 65%]
+tests/integration/test_hybrid_search_integration.py::TestHybridSearchIntegration::test_hybrid_search_exact_numbers SKIPPEDl_terms. Page 46
+fragmented table data not retrievable in top-20 by semantic search.
+Hybrid search cannot fix poor semantic baseline. Requires Story 2.2
+element-based chunking.)                                                 [ 66%]
+tests/integration/test_hybrid_search_integration.py::TestHybridSearchIntegration::test_hybrid_search_financial_terms SKIPPEDdata with poor
+semantic quality. Neither semantic nor hybrid search can retrieve it in
+top-20. Requires Story 2.2 (element-based chunking) to fix. BM25 index
+rebuilt successfully (1272 chunks). Root cause: Table extraction
+produces disconnected text fragments that rank poorly in semantic
+search.)                                                                 [ 66%]
+tests/integration/test_hybrid_search_integration.py::TestHybridSearchIntegration::test_hybrid_search_full_ground_truth SKIPPED [ 66%]
+tests/integration/test_hybrid_search_integration.py::TestHybridSearchIntegration::test_hybrid_vs_semantic_comparison SKIPPED. Hybrid (53.3%)
+worse than semantic (60.0%) on 15-query subset. Root cause: BM25 trained
+on fragmented table chunks produces poor keyword matches that lower
+semantic scores when fused. Requires Story 2.2 element-based chunking to
+create coherent chunks that BM25 can properly index.)                    [ 67%]
+tests/integration/test_ingestion_integration.py::TestPDFIngestionIntegration::test_ingest_financial_pdf_with_tables PASSED [ 67%]
+tests/integration/test_ingestion_integration.py::TestPDFIngestionIntegration::test_pdf_ingestion_stores_correct_page_numbers PASSED [ 67%]
+tests/integration/test_ingestion_integration.py::TestPDFIngestionIntegration::test_page_attribution_accuracy_sample SKIPPED [ 67%]
+tests/integration/test_ingestion_integration.py::TestExcelIngestionIntegration::test_extract_financial_excel_multi_sheet PASSED [ 68%]
+tests/integration/test_ingestion_integration.py::TestChunkingIntegration::test_page_number_flow_through_chunking_pipeline PASSED [ 68%]
+tests/integration/test_ingestion_integration.py::TestChunkingIntegration::test_chunking_performance_validation PASSED [ 68%]
+tests/integration/test_ingestion_integration.py::TestEmbeddingIntegration::test_embedding_generation_end_to_end PASSED [ 68%]
+tests/integration/test_ingestion_integration.py::TestEmbeddingIntegration::test_embedding_dimensions_validation_direct PASSED [ 69%]
+tests/integration/test_ingestion_integration.py::TestEmbeddingIntegration::test_empty_document_embedding_handling PASSED [ 69%]
+tests/integration/test_ingestion_integration.py::TestQdrantStorageIntegration::test_storage_end_to_end_validation PASSED [ 69%]
+tests/integration/test_ingestion_integration.py::TestQdrantStorageIntegration::test_storage_retrieval_roundtrip PASSED [ 69%]
+tests/integration/test_ingestion_integration.py::TestQdrantStorageIntegration::test_performance_validation_300_chunks PASSED [ 70%]
+tests/integration/test_ingestion_integration.py::TestQdrantStorageIntegration::test_metadata_preservation_end_to_end PASSED [ 70%]
+tests/integration/test_main_integration.py::TestMCPProtocolCompliance::test_mcp_server_initialization PASSED [ 70%]
+tests/integration/test_main_integration.py::TestMCPProtocolCompliance::test_mcp_tool_discovery PASSED [ 70%]
+tests/integration/test_main_integration.py::TestMCPProtocolCompliance::test_tool_schemas_valid PASSED [ 71%]
+tests/integration/test_main_integration.py::TestMCPEndToEnd::test_mcp_query_execution_real_qdrant SKIPPED) [ 71%]
+tests/integration/test_main_integration.py::TestMCPEndToEnd::test_mcp_ingest_then_query_flow SKIPPED) [ 71%]
+tests/integration/test_main_integration.py::TestMCPErrorHandling::test_query_empty_collection PASSED [ 71%]
+tests/integration/test_mcp_response_validation.py::test_e2e_metadata_completeness PASSED [ 72%]
+tests/integration/test_mcp_response_validation.py::test_e2e_citation_integration PASSED [ 72%]
+tests/integration/test_mcp_response_validation.py::test_e2e_llm_synthesis_compatibility PASSED [ 72%]
+tests/integration/test_mcp_response_validation.py::test_e2e_performance_validation PASSED [ 73%]
+tests/integration/test_mcp_response_validation.py::test_e2e_ground_truth_metadata PASSED [ 73%]
+tests/integration/test_mcp_response_validation.py::test_e2e_standard_mcp_pattern PASSED [ 73%]
+tests/integration/test_mcp_server.py::test_health_check PASSED           [ 73%]
+tests/integration/test_mcp_server.py::test_query_tool PASSED             [ 74%]
+tests/integration/test_mcp_server.py::test_multiple_queries PASSED       [ 74%]
+tests/integration/test_metadata_injection.py::TestMetadataInjection::test_metadata_injection_into_chunks SKIPPED [ 74%]
+tests/integration/test_metadata_injection.py::TestMetadataInjection::test_metadata_filtering SKIPPED [ 74%]
+tests/integration/test_metadata_injection.py::TestCostValidation::test_cost_tracking_single_document PASSED [ 75%]
+tests/integration/test_metadata_injection.py::TestCostValidation::test_cost_budget_compliance PASSED [ 75%]
+tests/integration/test_metadata_injection.py::TestBackwardCompatibility::test_chunks_without_metadata_fields PASSED [ 75%]
+tests/integration/test_metadata_injection.py::TestBackwardCompatibility::test_ingestion_without_openai_key SKIPPED [ 75%]
+tests/integration/test_metadata_injection.py::TestMetadataInjectionMocked::test_metadata_injection_mocked PASSED [ 76%]
+tests/integration/test_metadata_injection.py::TestMetadataInjectionMocked::test_metadata_filtering_mocked FAILED [ 76%]
+tests/integration/test_metadata_injection.py::TestCostValidationMocked::test_cost_tracking_mocked PASSED [ 76%]
+tests/integration/test_metadata_injection.py::TestCostValidationMocked::test_cost_budget_compliance_mocked PASSED [ 76%]
+tests/integration/test_multi_index_integration.py::TestMultiIndexIntegration::test_vector_only_query_routing PASSED [ 77%]
+tests/integration/test_multi_index_integration.py::TestMultiIndexIntegration::test_sql_only_query_routing PASSED [ 77%]
+tests/integration/test_multi_index_integration.py::TestMultiIndexIntegration::test_hybrid_query_routing PASSED [ 77%]
+tests/integration/test_multi_index_integration.py::TestMultiIndexIntegration::test_empty_query_error PASSED [ 78%]
+tests/integration/test_multi_index_integration.py::TestMultiIndexIntegration::test_result_fusion_vector_only PASSED [ 78%]
+tests/integration/test_multi_index_integration.py::TestMultiIndexIntegration::test_result_fusion_sql_only PASSED [ 78%]
+tests/integration/test_multi_index_integration.py::TestMultiIndexIntegration::test_result_fusion_hybrid PASSED [ 78%]
+tests/integration/test_multi_index_integration.py::TestMultiIndexIntegration::test_result_fusion_deduplication PASSED [ 79%]
+tests/integration/test_multi_index_integration.py::TestMultiIndexIntegration::test_result_fusion_top_k_limit PASSED [ 79%]
+tests/integration/test_pypdfium_ingestion.py::TestPypdfiumIngestionValidation::test_ingest_pdf_with_pypdfium_backend PASSED [ 79%]
+tests/integration/test_pypdfium_ingestion.py::TestPypdfiumTableAccuracy::test_table_accuracy_with_pypdfium_backend PASSED [ 79%]
+tests/integration/test_pypdfium_ingestion.py::TestPypdfiumTableAccuracy::test_table_accuracy_maintained_with_pypdfium SKIPPED [ 80%]
+tests/integration/test_retrieval_integration.py::TestRetrievalIntegration::test_search_integration_end_to_end PASSED [ 80%]
+tests/integration/test_retrieval_integration.py::TestRetrievalIntegration::test_retrieval_accuracy_ground_truth SKIPPEDfrom 56% baseline to
+42%. Requires fixed chunking strategy (Story 2.3 - Phase 2A). See:
+story-2.2-pivot-analysis/ for Strategic Pivot details. Re-enable after
+Story 2.3 implementation (target: 70%+ accuracy).)                       [ 80%]
+tests/integration/test_retrieval_integration.py::TestRetrievalIntegration::test_performance_p50_p95_latency PASSED [ 80%]
+tests/integration/test_retrieval_integration.py::TestRetrievalIntegration::test_metadata_preservation_integration PASSED [ 81%]
+tests/integration/test_retrieval_integration.py::TestRetrievalIntegration::test_metadata_filtering_integration PASSED [ 81%]
+tests/integration/test_retrieval_integration.py::TestRetrievalIntegration::test_citation_accuracy_integration PASSED [ 81%]
+tests/integration/test_sql_routing.py::TestSQLRouting::test_sql_only_routing PASSED [ 81%]
+tests/integration/test_sql_routing.py::TestSQLRouting::test_vector_only_routing PASSED [ 82%]
+tests/integration/test_sql_routing.py::TestSQLRouting::test_hybrid_routing PASSED [ 82%]
+tests/integration/test_sql_routing.py::TestSQLRouting::test_sql_routing_disabled PASSED [ 82%]
+tests/integration/test_sql_routing.py::TestSQLRouting::test_empty_results_handling PASSED [ 82%]
+tests/integration/test_sql_routing.py::TestSQLRouting::test_routing_with_filters PASSED [ 83%]
+tests/integration/test_sql_routing.py::TestSQLVectorFusion::test_fuse_sql_vector_both_results PASSED [ 83%]
+tests/integration/test_sql_routing.py::TestSQLVectorFusion::test_fuse_sql_only PASSED [ 83%]
+tests/integration/test_sql_routing.py::TestSQLVectorFusion::test_fuse_vector_only PASSED [ 84%]
+tests/integration/test_sql_routing.py::TestSQLVectorFusion::test_fuse_empty_results PASSED [ 84%]
+tests/integration/test_sql_routing.py::TestSQLVectorFusion::test_fuse_respects_top_k PASSED [ 84%]
+tests/integration/test_sql_routing.py::TestSQLVectorFusion::test_fuse_deduplicates_overlapping_results PASSED [ 84%]
+tests/integration/test_sql_routing.py::TestSQLRoutingErrorHandling::test_sql_generation_failure_fallback PASSED [ 85%]
+tests/integration/test_sql_routing.py::TestSQLRoutingErrorHandling::test_malformed_query_handling PASSED [ 85%]
+tests/integration/test_sql_routing.py::TestSQLRoutingErrorHandling::test_parameter_validation PASSED [ 85%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_excerpt_query[EXC-001] PASSED [ 85%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_excerpt_query[EXC-002] PASSED [ 86%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_excerpt_query[EXC-003] PASSED [ 86%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_excerpt_query[EXC-004] PASSED [ 86%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_excerpt_query[EXC-005] PASSED [ 86%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_excerpt_query[EXC-006] PASSED [ 87%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_excerpt_query[EXC-007] PASSED [ 87%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_excerpt_query[EXC-008] PASSED [ 87%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_excerpt_query[EXC-009] PASSED [ 87%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_excerpt_query[EXC-010] PASSED [ 88%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_excerpt_query[EXC-011] PASSED [ 88%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_excerpt_query[EXC-012] PASSED [ 88%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_excerpt_overall_accuracy PASSED [ 89%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_ac1_single_entity_accuracy PASSED [ 89%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_ac2_comparison_accuracy PASSED [ 89%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_ac3_metrics_accuracy PASSED [ 89%]
+tests/integration/test_story_2_14_excerpt_validation.py::TestStory214ExcerptValidation::test_ac6_extraction_accuracy PASSED [ 90%]
+tests/integration/test_table_retrieval.py::TestTableRetrieval::test_search_tables_basic PASSED [ 90%]
+tests/integration/test_table_retrieval.py::TestTableRetrieval::test_search_tables_with_table_content PASSED [ 90%]
+tests/integration/test_table_retrieval.py::TestTableRetrieval::test_search_tables_top_k_limit PASSED [ 90%]
+tests/integration/test_table_retrieval.py::TestTableRetrieval::test_search_tables_empty_query PASSED [ 91%]
+tests/integration/test_table_retrieval.py::TestTableRetrieval::test_search_tables_no_matches PASSED [ 91%]
+tests/integration/test_table_retrieval.py::TestTableRetrieval::test_search_tables_with_metadata_filter_basic PASSED [ 91%]
+tests/integration/test_table_retrieval.py::TestTableRetrieval::test_search_tables_with_multiple_filters PASSED [ 91%]
+tests/integration/test_table_retrieval.py::TestTableRetrieval::test_search_tables_score_ordering PASSED [ 92%]
+tests/integration/test_table_retrieval.py::TestTableRetrieval::test_search_tables_metadata_completeness PASSED [ 92%]
+tests/integration/test_table_retrieval.py::TestTableRetrievalErrorHandling::test_search_handles_database_unavailable PASSED [ 92%]
+tests/e2e/test_ground_truth.py::TestGroundTruthStructure::test_minimum_question_count PASSED [ 92%]
+tests/e2e/test_ground_truth.py::TestGroundTruthStructure::test_unique_question_ids PASSED [ 93%]
+tests/e2e/test_ground_truth.py::TestGroundTruthStructure::test_ids_are_sequential PASSED [ 93%]
+tests/e2e/test_ground_truth.py::TestGroundTruthStructure::test_all_required_fields_present PASSED [ 93%]
+tests/e2e/test_ground_truth.py::TestGroundTruthStructure::test_question_text_non_empty PASSED [ 93%]
+tests/e2e/test_ground_truth.py::TestGroundTruthStructure::test_expected_answer_non_empty PASSED [ 94%]
+tests/e2e/test_ground_truth.py::TestGroundTruthStructure::test_expected_keywords_non_empty PASSED [ 94%]
+tests/e2e/test_ground_truth.py::TestGroundTruthStructure::test_page_numbers_valid PASSED [ 94%]
+tests/e2e/test_ground_truth.py::TestGroundTruthStructure::test_expected_section_non_empty PASSED [ 95%]
+tests/e2e/test_ground_truth.py::TestGroundTruthStructure::test_source_document_consistent PASSED [ 95%]
+tests/e2e/test_ground_truth.py::TestCategoryDistribution::test_all_categories_present PASSED [ 95%]
+tests/e2e/test_ground_truth.py::TestCategoryDistribution::test_no_invalid_categories PASSED [ 95%]
+tests/e2e/test_ground_truth.py::TestCategoryDistribution::test_category_distribution PASSED [ 96%]
+tests/e2e/test_ground_truth.py::TestCategoryDistribution::test_category_distribution_tolerance PASSED [ 96%]
+tests/e2e/test_ground_truth.py::TestDifficultyDistribution::test_all_difficulties_present PASSED [ 96%]
+tests/e2e/test_ground_truth.py::TestDifficultyDistribution::test_no_invalid_difficulties PASSED [ 96%]
+tests/e2e/test_ground_truth.py::TestDifficultyDistribution::test_difficulty_distribution_exact PASSED [ 97%]
+tests/e2e/test_ground_truth.py::TestDifficultyDistribution::test_difficulty_percentages PASSED [ 97%]
+tests/e2e/test_ground_truth.py::TestImportAndAccessibility::test_import_ground_truth_qa PASSED [ 97%]
+tests/e2e/test_ground_truth.py::TestImportAndAccessibility::test_ground_truth_is_list_of_dicts PASSED [ 97%]
+tests/e2e/test_ground_truth.py::TestImportAndAccessibility::test_module_has_docstring PASSED [ 98%]
+tests/e2e/test_ground_truth.py::TestDataQuality::test_no_duplicate_questions PASSED [ 98%]
+tests/e2e/test_ground_truth.py::TestDataQuality::test_expected_keywords_are_relevant PASSED [ 98%]
+tests/e2e/test_ground_truth.py::TestDataQuality::test_page_numbers_within_reasonable_range PASSED [ 98%]
+tests/e2e/test_ground_truth.py::TestDataQuality::test_questions_are_actually_questions PASSED [ 99%]
+tests/e2e/test_ground_truth.py::TestSubsetSelection::test_random_subset_selection PASSED [ 99%]
+tests/e2e/test_ground_truth.py::TestSubsetSelection::test_category_balanced_subset PASSED [ 99%]
+tests/e2e/test_ground_truth.py::TestSubsetSelection::test_difficulty_balanced_subset PASSED [100%]
+
+=================================== FAILURES ===================================
+__________ TestMetadataInjectionMocked.test_metadata_filtering_mocked __________
+tests/integration/test_metadata_injection.py:442: in test_metadata_filtering_mocked
+    results = client.search(
+.venv/lib/python3.13/site-packages/qdrant_client/qdrant_client.py:376: in search
+    return self._client.search(
+.venv/lib/python3.13/site-packages/qdrant_client/qdrant_remote.py:523: in search
+    search_result = self.http.search_api.search_points(
+.venv/lib/python3.13/site-packages/qdrant_client/http/api/search_api.py:936: in search_points
+    return self._build_for_search_points(
+.venv/lib/python3.13/site-packages/qdrant_client/http/api/search_api.py:487: in _build_for_search_points
+    return self.api_client.request(
+.venv/lib/python3.13/site-packages/qdrant_client/http/api_client.py:95: in request
+    return self.send(request, type_)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/qdrant_client/http/api_client.py:130: in send
+    raise UnexpectedResponse.for_response(response)
+E   qdrant_client.http.exceptions.UnexpectedResponse: Unexpected Response: 400 (Bad Request)
+E   Raw response content:
+E   b'{"status":{"error":"Wrong input: Collection requires specified vector name in the request, available names: text-dense, text-sparse"},"time":0.000048875}'
+----------------------------- Captured stdout call -----------------------------
+
+✓ Testing Qdrant filter API with reporting_period=Aug-25 YTD
+=============================== warnings summary ===============================
+tests/integration/test_metadata_injection.py::TestMetadataInjectionMocked::test_metadata_filtering_mocked
+  /Users/ricardocarvalho/DeveloperFolder/RAGLite/tests/integration/test_metadata_injection.py:442: DeprecationWarning: `search` method is deprecated and will be removed in the future. Use `query_points` instead.
+    results = client.search(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 5 durations ==============================
+89.37s call     tests/integration/test_e2e_query_validation.py::test_performance_measurement
+76.02s setup    tests/integration/test_ac1_fuzzy_entity_matching.py::test_fuzzy_matching_portugal_cement
+74.20s teardown tests/integration/test_ingestion_integration.py::TestExcelIngestionIntegration::test_extract_financial_excel_multi_sheet
+73.40s teardown tests/integration/test_ingestion_integration.py::TestQdrantStorageIntegration::test_storage_end_to_end_validation
+45.87s call     tests/integration/test_accuracy_validation.py::TestNFRValidation::test_nfr_targets_displayed
+=========================== short test summary info ============================
+SKIPPED [1] tests/unit/test_metadata_extraction.py:94: Test needs updating for Mistral API - currently uses outdated OpenAI mocks
+SKIPPED [1] tests/unit/test_metadata_extraction.py:128: Test needs updating for Mistral API - caching removed in Story 2.4
+SKIPPED [1] tests/unit/test_metadata_extraction.py:133: Test needs updating for Mistral API - caching removed in Story 2.4
+SKIPPED [1] tests/unit/test_metadata_extraction.py:138: Test needs updating for Mistral API - caching removed in Story 2.4
+SKIPPED [1] tests/unit/test_metadata_extraction.py:143: Caching removed in Story 2.4 - per-chunk extraction doesn't use caching
+SKIPPED [1] tests/unit/test_metadata_extraction.py:148: Caching removed in Story 2.4 - per-chunk extraction doesn't use caching
+SKIPPED [1] tests/unit/test_metadata_extraction.py:153: Truncation removed in Story 2.3 - chunks are already 512 tokens
+SKIPPED [1] tests/integration/test_ac4_comprehensive.py:19: Requires full 160-page PDF. Run with: pytest --run-slow
+SKIPPED [1] tests/integration/test_ac4_comprehensive.py:110: Requires full 160-page PDF. Run with: pytest --run-slow
+SKIPPED [1] tests/integration/test_ac4_comprehensive.py:194: Requires full 160-page PDF. Run with: pytest --run-slow
+SKIPPED [1] tests/integration/test_e2e_query_validation.py:33: Story 2.2 dependency - Current chunking quality produces fragmented chunks with low semantic scores. Semantic search accuracy is 56% baseline, below the 70% target. This test requires element-based chunking (Story 2.2) to achieve the expected 0.7+ scores consistently. Will be re-enabled after Story 2.2 implementation.
+SKIPPED [1] tests/integration/test_e2e_query_validation.py:131: Requires full 160-page PDF. Run with: pytest --run-slow
+SKIPPED [1] tests/integration/test_e2e_query_validation.py:226: Requires full 160-page PDF. Run with: pytest --run-slow
+SKIPPED [1] tests/integration/test_element_metadata.py:33: Story 2.2 (element-aware chunking) replaced by Story 2.3 (fixed chunking). Element metadata no longer exists. See story-2.2-pivot-analysis/ for details.
+SKIPPED [1] tests/integration/test_element_metadata.py:128: Story 2.2 (element-aware chunking) replaced by Story 2.3 (fixed chunking). Element metadata no longer exists. See story-2.2-pivot-analysis/ for details.
+SKIPPED [1] tests/integration/test_element_metadata.py:192: Story 2.2 (element-aware chunking) replaced by Story 2.3 (fixed chunking). Element metadata no longer exists. See story-2.2-pivot-analysis/ for details.
+SKIPPED [1] tests/integration/test_element_metadata.py:275: Story 2.2 (element-aware chunking) replaced by Story 2.3 (fixed chunking). Element metadata no longer exists. See story-2.2-pivot-analysis/ for details.
+SKIPPED [1] tests/integration/test_epic2_regression.py:61: Requires full 160-page PDF. Run with: pytest --run-slow
+SKIPPED [1] tests/integration/test_epic2_regression.py:103: Requires full 160-page PDF. Run with: pytest --run-slow
+SKIPPED [1] tests/integration/test_epic2_regression.py:186: Requires full 160-page PDF. Run with: pytest --run-slow
+SKIPPED [1] tests/integration/test_hybrid_search_integration.py:55: Story 2.1 - Same chunking quality issue as test_hybrid_search_financial_terms. Page 46 fragmented table data not retrievable in top-20 by semantic search. Hybrid search cannot fix poor semantic baseline. Requires Story 2.2 element-based chunking.
+SKIPPED [1] tests/integration/test_hybrid_search_integration.py:134: Story 2.1 - Chunking quality issue: Page 46 contains fragmented table data with poor semantic quality. Neither semantic nor hybrid search can retrieve it in top-20. Requires Story 2.2 (element-based chunking) to fix. BM25 index rebuilt successfully (1272 chunks). Root cause: Table extraction produces disconnected text fragments that rank poorly in semantic search.
+SKIPPED [1] tests/integration/test_hybrid_search_integration.py:214: Requires full 160-page PDF. Run with: pytest --run-slow
+SKIPPED [1] tests/integration/test_hybrid_search_integration.py:398: Story 2.1 - BM25 fusion degrading results due to fragmented chunk data. Hybrid (53.3%) worse than semantic (60.0%) on 15-query subset. Root cause: BM25 trained on fragmented table chunks produces poor keyword matches that lower semantic scores when fused. Requires Story 2.2 element-based chunking to create coherent chunks that BM25 can properly index.
+SKIPPED [1] tests/integration/test_ingestion_integration.py:202: Not enough ground truth queries matching sample PDF page range (1-10)
+SKIPPED [1] tests/integration/test_main_integration.py:69: Requires real Qdrant with ingested data - run manually after ingestion
+SKIPPED [1] tests/integration/test_main_integration.py:112: Requires real Qdrant with ingested data - run manually after ingestion
+SKIPPED [1] tests/integration/test_metadata_injection.py:33: No test PDF found - skipping integration test
+SKIPPED [1] tests/integration/test_metadata_injection.py:99: No test PDF found - skipping integration test
+SKIPPED [1] tests/integration/test_metadata_injection.py:292: No test PDF found - skipping test
+SKIPPED [1] tests/integration/test_pypdfium_ingestion.py:171: Requires full 160-page PDF. Run with: pytest --run-slow
+SKIPPED [1] tests/integration/test_retrieval_integration.py:100: KNOWN REGRESSION: Element-aware chunking (Story 2.2) reduced accuracy from 56% baseline to 42%. Requires fixed chunking strategy (Story 2.3 - Phase 2A). See: story-2.2-pivot-analysis/ for Strategic Pivot details. Re-enable after Story 2.3 implementation (target: 70%+ accuracy).
+FAILED tests/integration/test_metadata_injection.py::TestMetadataInjectionMocked::test_metadata_filtering_mocked - qdrant_client.http.exceptions.UnexpectedResponse: Unexpected Response: 400 (Bad Request)
+Raw response content:
+b'{"status":{"error":"Wrong input: Collection requires specified vector name in the request, available names: text-dense, text-sparse"},"time":0.000048875}'
+= 1 failed, 349 passed, 32 skipped, 12 deselected, 1 warning in 676.52s (0:11:16) =

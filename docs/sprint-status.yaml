@@ -1,4 +1,4 @@
-# generated: 2025-11-04
+# generated: 2025-11-05
 # project: RAGLite
 # project_key: RAGLite
 # tracking_system: file-system
@@ -29,7 +29,7 @@
 # - SM typically drafts next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', SM reviews, then Dev moves to 'done'
 
-generated: 2025-11-04
+generated: 2025-11-05
 project: RAGLite
 project_key: RAGLite
 tracking_system: file-system
@@ -84,7 +84,7 @@ development_status:
   epic-3: contexted
 
   # Epic 3 Prep Stories (Technical Debt Reduction - Week 1-2)
-  3-0-1-refactor-modules-to-size-limits: drafted
+  3-0-1-refactor-modules-to-size-limits: in-progress
   3-0-2-create-epic-3-data-dictionary: drafted
   3-0-3-document-mcp-setup-guide: drafted
   3-0-4-create-uat-framework-templates: drafted
@@ -102,7 +102,7 @@ development_status:
   epic-3-retrospective: optional
 
   # Epic 4: Forecasting & Proactive Insights
-  epic-4: backlog
+  epic-4: contexted
   4-1-time-series-data-extraction: backlog
   4-2-forecasting-engine-implementation: backlog
   4-3-automated-forecast-updates: backlog
@@ -116,7 +116,7 @@ development_status:
   epic-4-retrospective: optional
 
   # Epic 5: Production Readiness & Real-Time Operations
-  epic-5: backlog
+  epic-5: contexted
   5-1-cloud-infrastructure-architecture: backlog
   5-2-containerization-cloud-deployment: backlog
   5-3-environment-configuration-secrets-management: backlog

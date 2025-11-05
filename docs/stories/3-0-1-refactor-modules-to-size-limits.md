@@ -1,10 +1,11 @@
 # Story 3.0.1: Refactor Modules to Size Limits
 
-**Status:** drafted
+**Status:** ready-for-dev
 **Epic:** Epic 3 - AI Intelligence & Orchestration (Prep Sprint)
 **Priority:** 🔴 CRITICAL (Blocks Epic 3 feature implementation)
 **Effort:** 2-3 days
 **Owner:** Charlie (Dev) + Winston (Architect Review)
+**Validated:** 2025-11-05 by Bob (Scrum Master) - All validation issues fixed
 
 ## Story
 
@@ -45,14 +46,22 @@ Ricardo (Project Lead) identified code quality debt: "Files exceeding 1000-1500 
 # Scan raglite/ directory for oversized files
 find raglite -name "*.py" -exec wc -l {} \; | sort -rn | head -20
 
-# Generate report
+# Generate report with standardized format
 python scripts/identify-oversized-files.py > docs/refactoring/oversized-files-report.txt
+```
+
+**Report Format:**
+```
+File Path | Line Count | Epic 3 Relevance | Priority
+raglite/retrieval/query_classifier.py | 1500 | HIGH | 1
+raglite/ingestion/pipeline.py | 1200 | MEDIUM | 2
 ```
 
 **Success Criteria:**
 - ✅ Complete list of files >1000 lines identified
 - ✅ Files prioritized by Epic 3 impact (e.g., retrieval/ modules critical)
 - ✅ Report saved: `docs/refactoring/oversized-files-report.txt`
+- ✅ **Validation:** Verify scan completeness with `find raglite -name "*.py" | wc -l` (compare to report total)
 
 ### AC2: Define Refactoring Strategy (2 hours)
 
@@ -80,6 +89,7 @@ THEN split into:
 - ✅ Refactoring plan documented for each oversized file
 - ✅ New module boundaries defined (single responsibility principle)
 - ✅ Winston architecture review approves strategy
+- ✅ **Validation:** Winston approval documented in `docs/refactoring/winston-approval-3.0.1.md` or as PR comment
 
 **Files Created:**
 - `docs/refactoring/refactoring-strategy.md` (refactoring plan)
@@ -112,8 +122,12 @@ THEN split into:
 **Success Criteria:**
 - ✅ All files <1000 lines
 - ✅ 100% test pass rate maintained (no regressions)
-- ✅ Test coverage maintained or improved
+- ✅ Test coverage maintained: `pytest --cov=raglite` ≥**[BASELINE: Run at story start to establish %]**
+- ✅ Integration tests pass: `pytest tests/integration/`
 - ✅ Code functionality unchanged (refactor only, no features)
+- ✅ **Test Failure Protocol:** If pytest fails → rollback last change, debug, retry
+  - Use `pytest --exitfirst` for immediate failure detection
+- ✅ **Performance Check (Optional):** Verify test suite runtime unchanged (within ±10% of baseline)
 
 **Files Modified:**
 - Oversized files split into focused modules
@@ -132,42 +146,54 @@ Winston reviews:
 4. Epic 3 readiness (clean codebase for agentic features)
 
 **Success Criteria:**
-- ✅ Winston architecture approval documented
+- ✅ Winston architecture approval documented in `docs/refactoring/winston-approval-3.0.1.md`
 - ✅ No files >1000 lines in `raglite/` directory
+- ✅ No circular dependencies introduced (verify with `pydeps raglite` if needed)
 - ✅ Epic 3 Stories 3.1+ unblocked
 
 ## Tasks / Subtasks
 
 ### Task 1: Identify Oversized Files (AC1) - 2 hours
 
-- [ ] **Subtask 1.1:** Scan `raglite/` directory for files >1000 lines
+- [x] **Subtask 1.0:** Create output directory
+  ```bash
+  mkdir -p docs/refactoring
+  ```
+
+- [x] **Subtask 1.1:** Scan `raglite/` directory for files >1000 lines
   ```bash
   find raglite -name "*.py" -exec wc -l {} \; | sort -rn | head -20
   ```
+  **Result:** 2 files identified (adaptive_table_extraction.py: 3109 lines, pipeline.py: 2302 lines)
 
-- [ ] **Subtask 1.2:** Create identification script
+- [x] **Subtask 1.2:** Create identification script
   - Script: `scripts/identify-oversized-files.py`
   - Output: List of files with line counts
   - Prioritize by Epic 3 impact
+  **Completed:** Script created with comprehensive reporting
 
-- [ ] **Subtask 1.3:** Generate report
+- [x] **Subtask 1.3:** Generate report
   - Save to: `docs/refactoring/oversized-files-report.txt`
   - Include: file path, line count, Epic 3 relevance
+  **Completed:** Report generated, shows 2 critical files (5,411 lines total)
 
 ### Task 2: Define Refactoring Strategy (AC2) - 2 hours
 
-- [ ] **Subtask 2.1:** Analyze each oversized file
+- [x] **Subtask 2.1:** Analyze each oversized file
   - Identify logical domain boundaries
   - Plan module split strategy
+  **Completed:** Comprehensive analysis done - 9 new focused modules planned
 
-- [ ] **Subtask 2.2:** Document refactoring plan
+- [x] **Subtask 2.2:** Document refactoring plan
   - Create: `docs/refactoring/refactoring-strategy.md`
   - For each file: old structure → new structure
   - Example module names and responsibilities
+  **Completed:** 9,600-word strategy document created with detailed refactoring plan
 
-- [ ] **Subtask 2.3:** Winston architecture review
+- [ ] **Subtask 2.3:** ⏸️ **BLOCKED - Winston architecture review**
   - Present refactoring strategy
   - Get approval before execution
+  **Status:** Awaiting Winston/Ricardo approval of `docs/refactoring/refactoring-strategy.md`
 
 ### Task 3: Execute Refactoring (AC3) - 1-2 days
 
@@ -250,11 +276,51 @@ Winston reviews:
 - [Epic 3 Prep Tech Spec](docs/tech-spec-epic-3-prep.md) - Refactoring strategy
 - [Action Item 2](docs/retrospectives/epic-2-retro-2025-11-05.md#action-item-2-code-quality-module-size-enforcement) - Module size enforcement
 
+## Definition of Done
+
+**This story is considered DONE when ALL of the following are complete:**
+
+### 1. Code Quality
+- [ ] All files in `raglite/` are <1000 lines (verified via script: `find raglite -name "*.py" -exec wc -l {} \; | sort -rn | head -1`)
+- [ ] No circular dependencies introduced (verify with `pydeps raglite` if needed)
+- [ ] Module boundaries follow single responsibility principle (Winston-approved)
+- [ ] No files >1000 lines remain in any directory
+
+### 2. Testing
+- [ ] 100% test pass rate: `uv run pytest` (all tests green)
+- [ ] Test coverage maintained: `uv run pytest --cov=raglite` (≥baseline % established at story start)
+- [ ] Integration tests pass: `uv run pytest tests/integration/`
+- [ ] No test runtime regression (within ±10% of baseline, optional check)
+
+### 3. Documentation
+- [ ] Refactoring strategy documented: `docs/refactoring/refactoring-strategy.md` exists and complete
+- [ ] Oversized files report generated: `docs/refactoring/oversized-files-report.txt` exists
+- [ ] Winston architecture approval documented: `docs/refactoring/winston-approval-3.0.1.md` or PR comment
+
+### 4. Version Control
+- [ ] All changes committed with meaningful messages (e.g., "refactor: split query_classifier into focused modules")
+- [ ] Each refactor committed separately (rollback safety maintained)
+- [ ] No uncommitted changes in working directory: `git status` shows clean
+- [ ] All commits follow conventional commit format
+
+### 5. Epic 3 Readiness
+- [ ] Winston signs off on module cohesion and Epic 3 readiness
+- [ ] Epic 3 Stories 3.1+ unblocked (no technical debt blocking start)
+- [ ] Story marked "done" in `sprint-status.yaml` (or equivalent tracking system)
+
+### 6. Quality Gates Passed
+- [ ] All acceptance criteria (AC1-AC4) completed and validated
+- [ ] All subtasks (Task 1-4) checked off and verified
+- [ ] No known bugs or regressions introduced by refactoring
+- [ ] Code review completed (if required by team process)
+
+**Story cannot be marked "done" until ALL checkboxes above are complete.**
+
 ## Dev Agent Record
 
 ### Context Reference
 
-<!-- Story Context XML path will be added here if generated -->
+- [Story Context XML](3-0-1-refactor-modules-to-size-limits.context.xml) - Generated 2025-11-05
 
 ### Agent Model Used
 
@@ -262,9 +328,57 @@ Claude 3.7 Sonnet (claude-sonnet-4-5-20250929)
 
 ### Debug Log References
 
+**Session 2025-11-05:**
+- Established pre-refactoring baseline (test results, dependencies, coverage - in progress)
+- Created identification script: `scripts/identify-oversized-files.py`
+- Generated oversized files report: 2 files identified (5,411 lines total)
+- Analyzed module boundaries and dependencies
+- Created comprehensive refactoring strategy (9,600 words)
+- **BLOCKED:** Awaiting Winston/Ricardo approval before proceeding to AC3 refactoring execution
+
 ### Completion Notes List
 
+**2025-11-05 - AC1 Complete:**
+✅ Identified 2 oversized files:
+- `adaptive_table_extraction.py`: 3109 lines (3x over 1000-line limit)
+- `pipeline.py`: 2302 lines (2.3x over limit)
+
+✅ Created comprehensive identification script with Epic 3 relevance prioritization
+
+**2025-11-05 - AC2 Complete (Pending Approval):**
+✅ Analyzed both files - identified 9 focused modules total:
+- **adaptive_table_extraction.py → 5 modules**: classification.py, multi_header.py, standard_layouts.py, unit_inference.py, core.py
+- **pipeline.py → 4 modules**: document_ingestion.py, chunking_strategy.py, embedding_generation.py, storage_operations.py
+
+✅ Created refactoring strategy document with:
+- Detailed module responsibilities and line count targets
+- Import dependency analysis (no circular dependencies)
+- Test impact assessment (34 imports from pipeline.py, 1 from adaptive_table_extraction.py)
+- Compatibility shim pattern to maintain test stability
+- Per-module refactoring protocol with validation gates
+
+**Baseline Establishment:**
+- Test results: Recording baseline (69% complete at checkpoint)
+- Test dependencies: Mapped 34 imports from pipeline.py, 1 from adaptive_table_extraction.py
+- Coverage baseline: Will be captured once tests complete
+- Git checkpoint: Refactoring docs and scripts staged
+
+**Next Step:**
+⏸️ BLOCKED - Awaiting Winston/Ricardo approval of `docs/refactoring/refactoring-strategy.md` before proceeding to AC3 execution
+
 ### File List
+
+**Created:**
+- `docs/refactoring/oversized-files-report.txt` - File identification report
+- `docs/refactoring/refactoring-strategy.md` - Comprehensive refactoring strategy (9,600 words)
+- `docs/refactoring/test_dependencies_pipeline.txt` - Pipeline test import mapping (34 imports)
+- `docs/refactoring/test_dependencies_table.txt` - Table extraction test mapping (1 import)
+- `docs/refactoring/baseline_test_results.txt` - Pre-refactoring test baseline (in progress)
+- `scripts/identify-oversized-files.py` - Automated file identification script
+
+**Modified:**
+- `docs/sprint-status.yaml` - Story status: ready-for-dev → in-progress
+- `docs/stories/3-0-1-refactor-modules-to-size-limits.md` - Task progress updates (this file)
 
 ---
 
