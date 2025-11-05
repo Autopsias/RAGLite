@@ -17,6 +17,14 @@ TODO: Update test imports to use new modules directly (can be deferred to separa
 
 from __future__ import annotations
 
+# Test compatibility imports - needed for test mocking
+import openpyxl  # noqa: F401
+
+from raglite.shared.clients import (  # noqa: F401
+    get_embedding_model,
+    get_qdrant_client,
+)
+
 # Chunking Strategy Module
 from .chunking_strategy import (
     chunk_by_docling_items,
@@ -72,4 +80,8 @@ __all__ = [
     "store_vectors_in_qdrant",
     "store_metadata_in_postgresql",
     "store_tables_in_postgresql",
+    # Test compatibility (for mocking)
+    "openpyxl",
+    "get_qdrant_client",
+    "get_embedding_model",
 ]
