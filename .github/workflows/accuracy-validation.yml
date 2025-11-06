@@ -240,14 +240,16 @@ jobs:
           docker logs raglite-postgresql --tail 50
           exit 1
 
-      - name: Initialize Qdrant collection
+      - name: Initialize Qdrant collection (if cache miss)
+        if: steps.cache-check.outputs.cache_hit != 'true'
         run: |
           source ci-venv/bin/activate
           echo "🔧 Initializing Qdrant collection (financial_docs)..."
           python scripts/init-qdrant.py
           echo "✅ Qdrant collection initialized"
 
-      - name: Initialize PostgreSQL schema
+      - name: Initialize PostgreSQL schema (if cache miss)
+        if: steps.cache-check.outputs.cache_hit != 'true'
         run: |
           source ci-venv/bin/activate
           echo "🔧 Initializing PostgreSQL schema (financial_chunks, financial_tables, entity_mappings)..."
