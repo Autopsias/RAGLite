@@ -365,6 +365,13 @@ jobs:
           docker logs raglite-postgresql --tail 50
           exit 1
 
+      - name: Initialize Qdrant collection
+        run: |
+          source ci-venv/bin/activate
+          echo "🔧 Initializing Qdrant collection (financial_docs)..."
+          python scripts/init-qdrant.py
+          echo "✅ Qdrant collection initialized"
+
       - name: Initialize PostgreSQL schema
         run: |
           source ci-venv/bin/activate
@@ -773,6 +780,13 @@ jobs:
             sleep 8
           fi
           echo "✅ PostgreSQL container refreshed"
+
+      - name: Initialize Qdrant collection
+        run: |
+          source ci-venv/bin/activate
+          echo "🔧 Initializing Qdrant collection (financial_docs)..."
+          python scripts/init-qdrant.py
+          echo "✅ Qdrant collection initialized"
 
       - name: Initialize PostgreSQL schema
         run: |

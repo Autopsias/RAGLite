@@ -240,12 +240,35 @@ jobs:
           docker logs raglite-postgresql --tail 50
           exit 1
 
+      - name: Initialize Qdrant collection
+        run: |
+          source ci-venv/bin/activate
+          echo "🔧 Initializing Qdrant collection (financial_docs)..."
+          python scripts/init-qdrant.py
+          echo "✅ Qdrant collection initialized"
+
       - name: Initialize PostgreSQL schema
         run: |
           source ci-venv/bin/activate
           echo "🔧 Initializing PostgreSQL schema (financial_chunks, financial_tables, entity_mappings)..."
           python scripts/init-postgresql.py
           echo "✅ Schema initialized successfully"
+
+      - name: Ingest PDF (if cache miss)
+        if: steps.cache-check.outputs.cache_hit != 'true'
+        env:
+          QDRANT_HOST: localhost
+          QDRANT_PORT: 6333
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: raglite
+          POSTGRES_USER: raglite
+          POSTGRES_PASSWORD: raglite
+        run: |
+          source ci-venv/bin/activate
+          echo "📄 Cache miss detected - performing full PDF ingestion (~13-15 minutes)..."
+          python scripts/ingest-for-validation.py
+          echo "✅ PDF ingestion complete"
 
       - name: Import cached data (if cache hit)
         if: steps.cache-check.outputs.cache_hit == 'true'
