@@ -91,6 +91,45 @@ def create_database_schema(
         )
         logger.info("✓ financial_chunks table created")
 
+        # Create financial_tables table (Story 2.8+)
+        logger.info("Creating financial_tables table...")
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS financial_tables (
+                document_id UUID NOT NULL,
+                page_number INTEGER NOT NULL,
+                table_index INTEGER NOT NULL,
+                table_caption TEXT,
+                entity VARCHAR(200),
+                metric VARCHAR(200),
+                period VARCHAR(100),
+                fiscal_year VARCHAR(50),
+                value TEXT,
+                unit VARCHAR(50),
+                row_index INTEGER,
+                column_name VARCHAR(200),
+                chunk_text TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """
+        )
+        logger.info("✓ financial_tables table created")
+
+        # Create entity_mappings table (Story 2.14)
+        logger.info("Creating entity_mappings table...")
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS entity_mappings (
+                canonical_name VARCHAR(200) PRIMARY KEY,
+                raw_mentions TEXT[],
+                entity_type VARCHAR(100),
+                section_context TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """
+        )
+        logger.info("✓ entity_mappings table created")
+
         # Create indexes for fast filtering
         logger.info("Creating indexes...")
 
@@ -130,30 +169,54 @@ def create_database_schema(
         )
         logger.info("✓ idx_section_type created")
 
-        # Verify schema creation
+        # Index 5: Entity search on financial_tables
         cursor.execute(
             """
-            SELECT column_name, data_type
-            FROM information_schema.columns
-            WHERE table_name = 'financial_chunks'
-            ORDER BY ordinal_position;
+            CREATE INDEX IF NOT EXISTS idx_entity_metric
+            ON financial_tables(entity, metric);
         """
         )
-        columns = cursor.fetchall()
-        logger.info(f"✓ Schema verification: {len(columns)} columns created")
+        logger.info("✓ idx_entity_metric created (entity, metric on financial_tables)")
 
-        # Verify indexes
+        # Index 6: Period filtering on financial_tables
         cursor.execute(
             """
-            SELECT indexname
+            CREATE INDEX IF NOT EXISTS idx_fiscal_year
+            ON financial_tables(fiscal_year);
+        """
+        )
+        logger.info("✓ idx_fiscal_year created")
+
+        # Verify schema creation for all tables
+        for table_name in ["financial_chunks", "financial_tables", "entity_mappings"]:
+            cursor.execute(
+                """
+                SELECT column_name, data_type
+                FROM information_schema.columns
+                WHERE table_name = %s
+                ORDER BY ordinal_position;
+            """,
+                (table_name,),
+            )
+            columns = cursor.fetchall()
+            logger.info(f"✓ {table_name}: {len(columns)} columns verified")
+
+        # Verify indexes (across all tables)
+        cursor.execute(
+            """
+            SELECT tablename, indexname
             FROM pg_indexes
-            WHERE tablename = 'financial_chunks';
+            WHERE tablename IN ('financial_chunks', 'financial_tables', 'entity_mappings')
+            ORDER BY tablename, indexname;
         """
         )
         indexes = cursor.fetchall()
-        logger.info(f"✓ Index verification: {len(indexes)} indexes created")
+        logger.info(f"✓ Index verification: {len(indexes)} total indexes created")
 
         logger.info("✅ PostgreSQL schema initialization complete!")
+        logger.info("   - financial_chunks (chunks with metadata)")
+        logger.info("   - financial_tables (structured table data)")
+        logger.info("   - entity_mappings (canonical entity names)")
 
     except psycopg2.Error as e:
         logger.error(f"❌ Database error: {e}")

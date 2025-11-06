@@ -240,6 +240,13 @@ jobs:
           docker logs raglite-postgresql --tail 50
           exit 1
 
+      - name: Initialize PostgreSQL schema
+        run: |
+          source ci-venv/bin/activate
+          echo "🔧 Initializing PostgreSQL schema (financial_chunks, financial_tables, entity_mappings)..."
+          python scripts/init-postgresql.py
+          echo "✅ Schema initialized successfully"
+
       - name: Import cached data (if cache hit)
         if: steps.cache-check.outputs.cache_hit == 'true'
         run: |

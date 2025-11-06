@@ -365,6 +365,13 @@ jobs:
           docker logs raglite-postgresql --tail 50
           exit 1
 
+      - name: Initialize PostgreSQL schema
+        run: |
+          source ci-venv/bin/activate
+          echo "🔧 Initializing PostgreSQL schema (financial_chunks, financial_tables, entity_mappings)..."
+          python scripts/init-postgresql.py
+          echo "✅ Schema initialized successfully"
+
       - name: Run integration tests (CI fast mode)
         env:
           QDRANT_HOST: localhost
@@ -766,6 +773,13 @@ jobs:
             sleep 8
           fi
           echo "✅ PostgreSQL container refreshed"
+
+      - name: Initialize PostgreSQL schema
+        run: |
+          source ci-venv/bin/activate
+          echo "🔧 Initializing PostgreSQL schema (financial_chunks, financial_tables, entity_mappings)..."
+          python scripts/init-postgresql.py
+          echo "✅ Schema initialized successfully"
 
       - name: Run burn-in loop (3 iterations)
         env:
