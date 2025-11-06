@@ -1,14 +1,16 @@
 name: Priority-Based Test Execution
 
+# WORKFLOW PURPOSE: Nightly full test runs and manual priority-based testing
+# NOTE: Epic/story branch CI is handled by ci.yml to avoid duplication
+# This workflow is for:
+#   1. Nightly full test runs (schedule)
+#   2. Manual on-demand testing (workflow_dispatch)
+#   3. Main branch validation after merge (push to main)
+
 on:
   push:
     branches:
-      - main
-      - epic-*/*
-      - story-*/*
-  pull_request:
-    branches:
-      - main
+      - main        # Only validate main branch after merge
   schedule:
     # Nightly full test run at 2 AM UTC
     - cron: '0 2 * * *'
