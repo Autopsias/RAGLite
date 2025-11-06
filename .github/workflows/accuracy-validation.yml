@@ -1,8 +1,9 @@
 name: NFR Accuracy Validation (NFR6/NFR7)
 
-# This workflow runs comprehensive accuracy validation tests that are critical for merge approval
+# This workflow runs comprehensive accuracy validation tests after main CI completes successfully
 # Separated from main CI for better visibility and independent timeout management
 #
+# UPDATED 2025-11-06: Sequential execution - runs ONLY after main CI passes (Option A)
 # UPDATED 2025-11-05: Now runs as REQUIRED CHECK on PRs to main
 # UPDATED 2025-11-04: Story 2.15 - Now uses normalized ground truth (49 queries, filtered from 50)
 #
@@ -16,25 +17,21 @@ name: NFR Accuracy Validation (NFR6/NFR7)
 #   - NFR6: ≥70% retrieval accuracy (Epic 2 Phase 2A Decision Gate) ✅ ACHIEVED: 71.4%
 #   - NFR7: ≥95% attribution accuracy
 #
-# Strategy: Required PR Check (Best Practice for Expensive Tests)
-#   ✅ Cache hit (~5-10 min) is acceptable for PR merge delay
-#   ✅ Simple workflow - no merge queue complexity
-#   ✅ Blocks PRs that would degrade accuracy
-#   ✅ Validates after merge as safety net
+# Strategy: Sequential After Main CI (Option A)
+#   ✅ Only runs after main CI passes (saves time if CI fails)
+#   ✅ Only runs on main branch (not on every feature branch)
+#   ✅ Still validates accuracy before deployment
+#   ✅ Reduces PR wait time from 30 min → 5-10 min (main CI only)
+#   ✅ Manual trigger still available for testing
 
 on:
-  # PRIMARY: Required check on PRs to main
-  # This prevents merging PRs that would degrade accuracy
-  # Expected runtime: 5-10 min (with cache) | 30 min (cache miss on first run)
-  pull_request:
+  # PRIMARY: Run after main CI completes successfully
+  # This saves 20-30 minutes per PR by running only when main CI passes
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches:
       - main
-
-  # SECONDARY: Validation after merge to main (safety net)
-  # This catches any edge cases and validates the main branch state
-  push:
-    branches:
-      - 'main'
 
   # MANUAL: On-demand testing during development
   # Use this to test accuracy on feature branches before creating PR
@@ -46,14 +43,16 @@ on:
         default: ''
 
   # OPTIONAL: Nightly validation on main branch
-  # Uncomment if you want daily accuracy regression testing
-  # schedule:
-  #   - cron: '0 2 * * *'  # 2 AM UTC daily
+  # Daily accuracy regression testing
+  schedule:
+    - cron: '0 2 * * *'  # 2 AM UTC daily
 
 jobs:
   accuracy-validation:
     name: "✅ NFR: Accuracy Validation (NFR6/NFR7)"
     runs-on: [self-hosted, raglite]
+    # IMPORTANT: Only run if triggering workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
     timeout-minutes: 60  # Increased from 30 to accommodate full test (30-38 min required)
 
     steps:

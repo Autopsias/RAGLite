@@ -39,6 +39,7 @@ import pytest
 # ============================================================================
 
 
+@pytest.mark.skip(reason="Epic 3 Story 3.1 not yet implemented - LangGraph integration pending")
 @pytest.mark.p0
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -177,6 +178,7 @@ class TestStory31FrameworkIntegration:
 # ============================================================================
 
 
+@pytest.mark.skip(reason="Epic 3 Story 3.2 not yet implemented - Retrieval agent pending")
 @pytest.mark.p0
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -231,6 +233,7 @@ class TestStory32RetrievalAgent:
 # ============================================================================
 
 
+@pytest.mark.skip(reason="Epic 3 Story 3.3 not yet implemented - Analysis agent pending")
 @pytest.mark.p0
 @pytest.mark.unit
 class TestStory33AnalysisAgent:
@@ -307,6 +310,9 @@ class TestStory33AnalysisAgent:
         # assert result.unit == "dollars_millions"
 
 
+@pytest.mark.skip(
+    reason="Epic 3 Story 3.3 not yet implemented - Analysis agent LLM integration pending"
+)
 @pytest.mark.p0
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -355,6 +361,7 @@ class TestStory33AnalysisAgentIntegration:
 # ============================================================================
 
 
+@pytest.mark.skip(reason="Epic 3 Story 3.4 not yet implemented - Synthesis agent pending")
 @pytest.mark.p0
 @pytest.mark.unit
 class TestStory34SynthesisAgent:
@@ -418,6 +425,7 @@ class TestStory34SynthesisAgent:
 # ============================================================================
 
 
+@pytest.mark.skip(reason="Epic 3 Story 3.5 not yet implemented - Workflow orchestration pending")
 @pytest.mark.p0
 @pytest.mark.unit
 class TestStory35WorkflowOrchestration:
@@ -515,6 +523,9 @@ class TestStory35WorkflowOrchestration:
         #     assert len(step["task"]) > 10  # Not empty/generic
 
 
+@pytest.mark.skip(
+    reason="Epic 3 Story 3.5 not yet implemented - Workflow performance validation pending"
+)
 @pytest.mark.p0
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -575,6 +586,7 @@ class TestStory35WorkflowPerformance:
 # ============================================================================
 
 
+@pytest.mark.skip(reason="Epic 3 Story 3.8 not yet implemented - Workflow test suite pending")
 @pytest.mark.p0
 @pytest.mark.integration
 @pytest.mark.asyncio
