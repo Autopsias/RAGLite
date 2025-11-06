@@ -446,22 +446,26 @@ class TestMetadataInjectionMocked:
         # Create a dummy query vector (1024 dimensions for Fin-E5)
         query_vector = np.random.rand(1024).tolist()
 
-        # Search with filter using the found metadata value
-        results = client.search(
+        # Search with filter using the found metadata value (using query_points with vector name)
+
+        results = client.query_points(
             collection_name=settings.qdrant_collection_name,
-            query_vector=query_vector,
+            query=query_vector,
+            using="text-dense",  # Specify vector name for named vectors
             query_filter=Filter(
                 must=[FieldCondition(key=test_field, match=MatchValue(value=test_value))]
             ),
             limit=5,
-        )
+        ).points
 
         # Verify all results match filter
         assert len(results) > 0, f"Filter should return results for {test_field}={test_value}"
         for result in results:
-            assert result.payload[test_field] == test_value, (
+            # query_points returns ScoredPoint objects with payload attribute
+            result_payload = result.payload if hasattr(result, "payload") else result
+            assert result_payload[test_field] == test_value, (
                 f"All results must match filter: expected '{test_value}', "
-                f"got '{result.payload.get(test_field)}'"
+                f"got '{result_payload.get(test_field)}'"
             )
 
         print(f"✓ Filter API validation passed: {len(results)} results matched filter")
@@ -502,8 +506,8 @@ class TestCostValidationMocked:
             mock_client.chat.complete_async = AsyncMock(return_value=mock_response)
             mock_client_class.return_value = mock_client
 
-            # Mock settings
-            with patch("raglite.ingestion.pipeline.settings") as mock_settings:
+            # Mock settings (correct path: embedding_generation imports settings from shared.config)
+            with patch("raglite.ingestion.embedding_generation.settings") as mock_settings:
                 mock_settings.mistral_api_key = "test-key-mocked"
                 mock_settings.metadata_extraction_model = "mistral-small-latest"
 
@@ -564,7 +568,7 @@ class TestCostValidationMocked:
             mock_client.chat.complete_async = AsyncMock(return_value=mock_response)
             mock_client_class.return_value = mock_client
 
-            with patch("raglite.ingestion.pipeline.settings") as mock_settings:
+            with patch("raglite.ingestion.embedding_generation.settings") as mock_settings:
                 mock_settings.mistral_api_key = "test-key-budget"
                 mock_settings.metadata_extraction_model = "mistral-small-latest"
 
