@@ -1,0 +1,238 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>0.3</storyId>
+    <title>Document MCP Setup Guide</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-06</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/3-0-3-document-mcp-setup-guide.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user or stakeholder</asA>
+    <iWant>clear documentation for connecting to the RAGLite MCP server</iWant>
+    <soThat>I can use the financial query tool in Claude Desktop without configuration confusion</soThat>
+    <tasks>
+### Task 1: Create Setup Guide (AC1) - 1 hour
+
+- [ ] **Subtask 1.1:** Write prerequisites section
+  - Claude Desktop, dependencies, services running
+
+- [ ] **Subtask 1.2:** Write configuration steps
+  - Locate mcp.json
+  - Add RAGLite configuration
+  - Platform-specific instructions (macOS/Linux/Windows)
+
+- [ ] **Subtask 1.3:** Write verification steps
+  - Check MCP connection
+  - Test queries
+  - Expected responses
+
+- [ ] **Subtask 1.4:** Write troubleshooting section
+  - Common issues and solutions
+  - Server logs, database checks
+
+- [ ] **Subtask 1.5:** Review and finalize
+  - Ensure clarity (non-technical users can follow)
+  - Test guide with fresh setup
+
+- [ ] **Subtask 1.6:** Testing - Validate guide clarity (Testing)
+  - Non-technical user review (clarity check)
+  - Verify prerequisites section completeness
+  - Confirm step numbering logical
+
+- [ ] **Subtask 1.7:** Testing - Verify OS instructions (Testing)
+  - Validate macOS paths and commands
+  - Validate Windows paths and commands
+  - Validate Linux paths and commands
+
+- [ ] **Subtask 1.8:** Testing - Troubleshooting completeness (Testing)
+  - Test each troubleshooting scenario
+  - Verify solutions are actionable
+  - Check error message coverage
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+### AC1: Create MCP Setup Guide (1 hour)
+
+**Goal:** Step-by-step guide for connecting Claude Desktop to RAGLite MCP server
+
+**Technical Approach:**
+
+Create comprehensive guide: `docs/setup/mcp-configuration.md`
+
+**Success Criteria:**
+- ✅ Setup guide created: `docs/setup/mcp-configuration.md`
+- ✅ Step-by-step instructions for macOS/Linux/Windows
+- ✅ Troubleshooting section with common issues
+- ✅ Ricardo can successfully connect using guide (validated in Story 3.0.5)
+
+**Files Created:**
+- `docs/setup/mcp-configuration.md` (~300 lines)
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/tech-spec-epic-3-prep.md</path>
+        <title>Epic 3 Prep Tech Spec</title>
+        <section>Story 3.0.3: Document MCP Setup Guide</section>
+        <snippet>Provides MCP setup guide specification including prerequisites (Claude Desktop, Qdrant, PostgreSQL), configuration steps for mcp.json, verification steps, and troubleshooting guidance. Story addresses documentation gap identified in Epic 2 retrospective.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/coding-standards.md</path>
+        <title>RAGLite Coding Standards</title>
+        <section>Testing Standards, Code Formatting</section>
+        <snippet>Defines markdown formatting standards, testing standards, and code formatting guidelines using Ruff. Establishes documentation quality expectations for project.</snippet>
+      </doc>
+      <doc>
+        <path>docs/retrospectives/epic-2-retro-2025-11-05.md</path>
+        <title>Epic 2 Retrospective</title>
+        <section>Documentation Gap Analysis</section>
+        <snippet>Identified documentation gap: MCP server exists but no user setup guide. Ricardo (Project Lead) unaware tool existed and couldn't connect. Impact: Built features but users can't access them.</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Claude Code Project Instructions</title>
+        <section>KISS Principles, Technology Stack</section>
+        <snippet>Defines KISS (Keep It Simple, Stupid) principles for RAGLite MVP. No over-engineering, locked technology stack including FastMCP for MCP server. Project overview describes natural language querying via MCP.</snippet>
+      </doc>
+      <doc>
+        <path>README.md</path>
+        <title>RAGLite Project README</title>
+        <section>Quick Start, Installation</section>
+        <snippet>Main project documentation covering prerequisites (Python 3.11+, Docker, uv), installation steps, and MCP server startup command: 'uv run python -m raglite.main'. Reference for user-facing documentation structure.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>raglite/main.py</path>
+        <kind>mcp_server</kind>
+        <symbol>FastMCP("RAGLite")</symbol>
+        <lines>1-80</lines>
+        <reason>MCP server implementation using FastMCP. Defines server name "RAGLite", exposes two tools (ingest_financial_document, query_financial_documents). Documentation guide references this server for Claude Desktop connection.</reason>
+      </artifact>
+      <artifact>
+        <path>.env.example</path>
+        <kind>config</kind>
+        <symbol>Environment Variables Template</symbol>
+        <lines>1-78</lines>
+        <reason>Environment configuration template showing required variables for MCP server: ANTHROPIC_API_KEY, QDRANT_HOST/PORT, POSTGRES credentials. Setup guide references these prerequisites.</reason>
+      </artifact>
+      <artifact>
+        <path>docker-compose.yml</path>
+        <kind>config</kind>
+        <symbol>Docker Services</symbol>
+        <lines>1-27</lines>
+        <reason>Docker Compose configuration for Qdrant (port 6333) and PostgreSQL (port 5432) services. Setup guide prerequisites reference these services and verification commands.</reason>
+      </artifact>
+      <artifact>
+        <path>scripts/setup-dev.sh</path>
+        <kind>script</kind>
+        <symbol>Development Setup Script</symbol>
+        <lines>all</lines>
+        <reason>Automated development environment setup. May provide reference for troubleshooting steps or prerequisite installation commands in setup guide.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <runtime>Python 3.11+</runtime>
+        <package_manager>uv (recommended, 10-100x faster than pip)</package_manager>
+        <core_dependencies>
+          <dependency name="fastmcp" version="2.12.4">MCP server framework</dependency>
+          <dependency name="anthropic" version=">=0.18.0,&lt;1.0.0">Claude API client</dependency>
+          <dependency name="qdrant-client" version="1.15.1">Vector database client</dependency>
+          <dependency name="psycopg2-binary" version=">=2.9,&lt;3.0">PostgreSQL client</dependency>
+          <dependency name="docling" version="2.55.1">PDF processing</dependency>
+          <dependency name="sentence-transformers" version="5.1.1">Fin-E5 embeddings</dependency>
+          <dependency name="pydantic" version=">=2.0,&lt;3.0">Data validation</dependency>
+          <dependency name="python-dotenv" version="1.1.1">Environment config</dependency>
+        </core_dependencies>
+      </python>
+      <docker>
+        <service name="qdrant" image="qdrant/qdrant:v1.15.0" ports="6333, 6334" />
+        <service name="postgresql" image="postgres:16" ports="5432" />
+      </docker>
+      <external_tools>
+        <tool name="Claude Desktop">Required for MCP client connection</tool>
+        <tool name="uv">Python package manager (recommended)</tool>
+        <tool name="Docker Compose">Service orchestration</tool>
+      </external_tools>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>Documentation must be user-facing for non-technical stakeholders (Ricardo, future users).</constraint>
+    <constraint>Follow KISS principle: No custom configuration scripts, direct JSON editing for mcp.json.</constraint>
+    <constraint>Cross-platform support required: macOS, Linux, and Windows with platform-specific instructions.</constraint>
+    <constraint>Use markdown format with clear hierarchical structure (H1 for title, H2 for sections).</constraint>
+    <constraint>Code blocks must specify language tags (json, bash) for proper rendering.</constraint>
+    <constraint>Absolute paths required for 'cwd' and 'PYTHONPATH' in mcp.json (not relative paths).</constraint>
+    <constraint>Documentation location: docs/setup/ directory (user-facing setup guides).</constraint>
+    <constraint>Include troubleshooting section with common issues and actionable solutions.</constraint>
+    <constraint>Testing validation required: Ricardo must successfully connect using guide (Story 3.0.5 UAT).</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>RAGLite MCP Server</name>
+      <kind>MCP Protocol (stdio transport)</kind>
+      <signature>FastMCP("RAGLite") - Server name in Claude Desktop MCP settings</signature>
+      <path>raglite/main.py</path>
+    </interface>
+    <interface>
+      <name>mcp.json Configuration</name>
+      <kind>Claude Desktop Config File</kind>
+      <signature>~/.claude/mcp.json - JSON configuration with mcpServers.raglite entry</signature>
+      <path>~/.claude/mcp.json (user system)</path>
+    </interface>
+    <interface>
+      <name>MCP Tools</name>
+      <kind>FastMCP Tool Decorators</kind>
+      <signature>@mcp.tool() ingest_financial_document(doc_path: str) -> DocumentMetadata</signature>
+      <path>raglite/main.py:50-78</path>
+    </interface>
+    <interface>
+      <name>MCP Tools</name>
+      <kind>FastMCP Tool Decorators</kind>
+      <signature>@mcp.tool() query_financial_documents(request: QueryRequest) -> QueryResponse</signature>
+      <path>raglite/main.py (continued after line 80)</path>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      Documentation testing follows manual validation approach per testing-strategy.md. This story requires user acceptance validation rather than automated tests. Testing approach:
+
+      1. **Manual Walkthrough Testing**: Non-technical user (Ricardo) follows guide step-by-step to verify clarity and completeness.
+      2. **Cross-Platform Validation**: Test instructions on macOS, Linux, and Windows to ensure path/command accuracy.
+      3. **Troubleshooting Verification**: Test each troubleshooting scenario to confirm solutions are actionable and effective.
+      4. **UAT Validation**: Story 3.0.5 (Epic 2 UAT) will serve as final validation - Ricardo must successfully connect using this guide.
+
+      Testing framework: pytest (for future automated documentation testing if needed)
+      Test locations: tests/unit/, tests/integration/, tests/e2e/
+      Pass criteria: Ricardo connects to MCP server without external help (Story 3.0.5)
+    </standards>
+    <locations>
+      <location>tests/unit/ - Unit tests (not applicable for documentation)</location>
+      <location>tests/integration/ - Integration tests (not applicable for documentation)</location>
+      <location>tests/e2e/ - End-to-end tests (Story 3.0.5 UAT validates guide)</location>
+      <location>Manual testing - User walkthrough of setup guide</location>
+    </locations>
+    <ideas>
+      <test_idea ac_id="AC1" category="manual">
+        **Guide Clarity Testing (Subtask 1.6)**: Non-technical user review to verify guide clarity. Check: Can user understand prerequisites? Is step numbering logical? Are instructions unambiguous?
+      </test_idea>
+      <test_idea ac_id="AC1" category="manual">
+        **OS Instructions Validation (Subtask 1.7)**: Verify platform-specific instructions for macOS, Linux, and Windows. Test: Path formats correct? Commands executable? File locations accurate?
+      </test_idea>
+      <test_idea ac_id="AC1" category="manual">
+        **Troubleshooting Completeness (Subtask 1.8)**: Test each troubleshooting scenario. Verify: Solutions are actionable? Error messages covered? Commands produce expected output?
+      </test_idea>
+      <test_idea ac_id="AC1" category="uat">
+        **User Acceptance Testing (Story 3.0.5)**: Ricardo follows guide to connect Claude Desktop to RAGLite MCP server. Success criteria: Connection established without external help, MCP server appears in Settings > MCP, test query returns accurate results.
+      </test_idea>
+    </ideas>
+  </tests>
+</story-context>

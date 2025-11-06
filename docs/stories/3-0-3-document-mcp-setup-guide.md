@@ -1,6 +1,6 @@
 # Story 3.0.3: Document MCP Setup Guide
 
-**Status:** drafted
+**Status:** ready-for-dev
 **Epic:** Epic 3 - AI Intelligence & Orchestration (Prep Sprint)
 **Priority:** 🟡 IMPORTANT (Enables user adoption)
 **Effort:** 1 hour
@@ -340,7 +340,58 @@ To remove RAGLite MCP server from Claude Desktop:
   - Ensure clarity (non-technical users can follow)
   - Test guide with fresh setup
 
+- [ ] **Subtask 1.6:** Testing - Validate guide clarity (Testing)
+  - Non-technical user review (clarity check)
+  - Verify prerequisites section completeness
+  - Confirm step numbering logical
+
+- [ ] **Subtask 1.7:** Testing - Verify OS instructions (Testing)
+  - Validate macOS paths and commands
+  - Validate Windows paths and commands
+  - Validate Linux paths and commands
+
+- [ ] **Subtask 1.8:** Testing - Troubleshooting completeness (Testing)
+  - Test each troubleshooting scenario
+  - Verify solutions are actionable
+  - Check error message coverage
+
 ## Dev Notes
+
+### Architecture Patterns and Constraints
+
+**Documentation Location:**
+- File: `docs/setup/mcp-configuration.md`
+- Directory structure: `docs/setup/` (user-facing setup guides)
+- Follows established pattern from architecture docs
+
+**Markdown Format Standards:**
+- Clear hierarchical structure (H1 for title, H2 for sections)
+- Code blocks with language tags (```json, ```bash)
+- Platform-specific instructions clearly labeled (macOS/Linux/Windows)
+- Inline warnings for critical steps (⚠️ prefix)
+- Cross-references to other documentation (README, architecture)
+
+**Cross-Platform Considerations:**
+- Absolute paths required for `cwd` and `PYTHONPATH` (not relative)
+- Path separators: Forward slashes `/` in JSON (even on Windows)
+- Command differences: `uv` vs `uv.exe`, `which` vs `where`
+- Line ending compatibility (LF preferred, CRLF acceptable)
+
+**User Audience:**
+- Non-technical stakeholders (Ricardo, future users)
+- Assume minimal command-line experience
+- Provide explanations for technical terms (MCP, Qdrant, PostgreSQL)
+- Include visual confirmation steps ("Check MCP Server List")
+
+**KISS Principle:**
+- ✅ No custom configuration scripts (direct JSON editing)
+- ✅ No installation automation (manual steps preferred for clarity)
+- ✅ Standard markdown (no custom doc frameworks)
+- ✅ Simple troubleshooting (command-line checks, no complex diagnostics)
+
+**References:**
+- [Source: Coding Standards](docs/architecture/coding-standards.md) - Markdown formatting guidelines
+- [Source: MCP Protocol Specification](https://modelcontextprotocol.io/) - Configuration schema
 
 ### Documentation Standards
 
@@ -359,12 +410,55 @@ To remove RAGLite MCP server from Claude Desktop:
 - If connection succeeds → Guide is clear
 - If connection fails → Guide needs improvement
 
+**Testing Standards Compliance:**
+- Per `testing-strategy.md`, documentation requires user acceptance validation
+- Manual testing approach (non-technical user walkthrough)
+- Testing subtasks (1.6-1.8) ensure guide clarity and OS coverage
+- Pass criteria: Ricardo successfully connects without external help
+
+### Learnings from Previous Story
+
+**From Story 3.0.2 (Create Epic 3 Data Dictionary):**
+
+Story 3.0.2 created comprehensive data validation infrastructure for Epic 3 analytical queries:
+
+**Files Created:**
+- `scripts/inspect_database_for_epic_3.py` - Database inspection script (165 lines)
+- `docs/data-dictionary-epic-3.json` - JSON catalog (28 metrics, 152 periods, 36 entities, 38 units)
+- `docs/data-dictionary-epic-3.md` - Comprehensive markdown dictionary (500 lines)
+
+**Key Achievements:**
+- Data-first approach prevented Epic 2's ground truth misalignment (12% → 77.6% accuracy gap)
+- 4-step validation process established (Metric → Period → Entity → Unit)
+- Winston Architecture Review: APPROVED
+- Epic 3 test creation UNBLOCKED
+
+**Architectural Decisions:**
+- Synchronous database inspection using `psycopg2` (not asyncpg)
+- Markdown + JSON dual format (human-readable + programmatic access)
+- KISS principle maintained (no ORMs, simple SELECT DISTINCT queries)
+
+**Relevance to Story 3.0.3:**
+- Data dictionary provides context for UAT test scenarios (Story 3.0.5)
+- UAT queries should validate against data dictionary (ensure realistic test data)
+- MCP setup guide enables UAT execution (Ricardo connects to test analytical queries)
+
+**Unresolved Items:**
+- ✅ NO blocking items (all advisory notes are informational)
+- ℹ️ Dataset size monitoring (low priority, not blocking)
+- ℹ️ Epic 3 test creation guidance (for future stories, not this one)
+
+**Reference:** [Story 3.0.2](docs/stories/3-0-2-create-epic-3-data-dictionary.md)
+
 ### References
 
 **Source Documents:**
+- [Epic 3 - AI Intelligence & Orchestration](docs/epics.md#epic-3-ai-intelligence--orchestration) - Epic goal: Multi-step reasoning and agentic orchestration
 - [Epic 2 Retrospective](docs/retrospectives/epic-2-retro-2025-11-05.md) - Documentation gap identified
 - [Epic 3 Prep Tech Spec](docs/tech-spec-epic-3-prep.md#story-303) - MCP setup guide spec
 - [Action Item 5](docs/retrospectives/epic-2-retro-2025-11-05.md#action-item-5-documentation-improvements) - Documentation improvements
+- [Testing Strategy](docs/architecture/testing-strategy.md) - Manual testing approach for documentation validation
+- [Coding Standards](docs/architecture/coding-standards.md) - Markdown formatting guidelines
 
 **MCP Protocol:**
 - [Model Context Protocol Docs](https://modelcontextprotocol.io/)
@@ -374,7 +468,7 @@ To remove RAGLite MCP server from Claude Desktop:
 
 ### Context Reference
 
-<!-- Story Context XML path will be added here if generated -->
+- **Story Context XML**: `docs/stories/3-0-3-document-mcp-setup-guide.context.xml` (Generated: 2025-11-06)
 
 ### Agent Model Used
 
@@ -386,8 +480,22 @@ Claude 3.7 Sonnet (claude-sonnet-4-5-20250929)
 
 ### File List
 
+### Change Log
+
+**2025-11-05:** Story created by Bob (Scrum Master) - Batch create from Epic 3 Prep tech spec
+
+**2025-11-06:** Story quality validation completed - Auto-improvements applied:
+- Added "Architecture patterns and constraints" subsection (documentation location, format standards, cross-platform considerations)
+- Added "Learnings from Previous Story" subsection (Story 3.0.2 data dictionary context)
+- Added Epic 3 citation to References (epics.md link)
+- Added testing-strategy.md and coding-standards.md citations to References
+- Added formal testing subtasks: 1.6 (guide clarity), 1.7 (OS instructions), 1.8 (troubleshooting)
+- Initialized Change Log section
+- **Validation Result:** All critical/major/minor issues resolved → Story ready for development
+
 ---
 
 **Story Created:** 2025-11-05
 **Created By:** Bob (Scrum Master) - Batch create from Epic 3 Prep tech spec
+**Last Updated:** 2025-11-06 (Auto-improved via story validation workflow)
 **Next Step:** Review story, then run `story-ready` or `story-context` to mark ready for dev

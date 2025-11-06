@@ -461,6 +461,76 @@ def create_sql_table_rows(count: int, **overrides: Any) -> list[dict[str, Any]]:
     return [create_sql_table_row(**overrides) for _ in range(count)]
 
 
+# Epic 3 Data Dictionary Factories
+def create_inspection_catalog(**overrides: Any) -> dict[str, Any]:
+    """Create sample database inspection catalog for Epic 3 tests.
+
+    Args:
+        **overrides: Override specific fields
+
+    Returns:
+        Dictionary representing inspection catalog structure
+
+    Example:
+        catalog = create_inspection_catalog()
+        catalog = create_inspection_catalog(total_rows=170142)
+    """
+    metrics = [
+        "EBITDA",
+        "Revenue",
+        "Variable Cost",
+        "Fixed Cost",
+        "Operating Margin",
+        "Cash Flow",
+    ]
+    periods = [
+        "Aug-25",
+        "Sep-25",
+        "Jul-25",
+        "Aug-25 YTD",
+        "Sep-25 YTD",
+        "Q3-25",
+    ]
+    entities = [
+        "Portugal Cement",
+        "Tunisia Cement",
+        "Secil Angola",
+        "Currency (1000 EUR)",
+        "Adrianopolis",
+        "Pomerode",
+    ]
+    currencies = ["EUR"]
+
+    defaults = {
+        "metrics": metrics,
+        "periods": periods,
+        "entities": entities,
+        "currencies": currencies,
+        "total_rows": fake.random_int(100000, 200000),
+    }
+    defaults.update(overrides)
+    return defaults
+
+
+def create_database_query_result(**overrides: Any) -> list[dict[str, Any]]:
+    """Create mock database query result for inspection tests.
+
+    Args:
+        **overrides: Override specific fields
+
+    Returns:
+        List of dictionaries representing database rows
+
+    Example:
+        # Mock metrics query result
+        result = create_database_query_result(field="metric", values=["EBITDA", "Revenue"])
+    """
+    field = overrides.get("field", "metric")
+    values = overrides.get("values", ["EBITDA", "Revenue", "Variable Cost"])
+
+    return [{field: value} for value in values]
+
+
 # Cleanup helper for integration tests
 def cleanup_test_data():
     """Clean up test data after integration tests.
