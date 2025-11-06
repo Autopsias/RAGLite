@@ -47,7 +47,7 @@ jobs:
           pip install -e ".[dev,test]"
 
       - name: Start Qdrant
-        run: docker-compose up -d qdrant
+        run: docker compose up -d qdrant
 
       - name: Wait for Qdrant
         run: |
@@ -92,7 +92,7 @@ jobs:
           pip install -e ".[dev,test]"
 
       - name: Start services (Qdrant, PostgreSQL)
-        run: docker-compose up -d
+        run: docker compose up -d
 
       - name: Wait for services
         run: |
@@ -156,7 +156,7 @@ jobs:
           pip install -e ".[dev,test]"
 
       - name: Start services (Qdrant, PostgreSQL)
-        run: docker-compose up -d
+        run: docker compose up -d
 
       - name: Wait for services
         run: |
