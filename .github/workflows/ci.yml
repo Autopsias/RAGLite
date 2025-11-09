@@ -178,11 +178,17 @@ jobs:
       - name: Run unit tests with coverage
         run: |
           source ci-venv/bin/activate
+
+          # FIX: Add project root and scripts to PYTHONPATH
+          # This matches local Test Explorer environment where scripts/ is importable
+          export PYTHONPATH="${PWD}:${PWD}/scripts:${PYTHONPATH}"
+
           echo "========================================="
           echo "CI MODE: Unit Tests with Coverage"
           echo "- Running ALL unit tests (including slow)"
           echo "- Parallel workers: 4 (safe parallelism, no shared state)"
           echo "- Target: <10 minutes"
+          echo "- PYTHONPATH: ${PYTHONPATH}"
           echo "========================================="
           pytest tests/unit/ \
             -n 4 \
@@ -391,6 +397,11 @@ jobs:
           TEST_USE_FULL_PDF: "false"
         run: |
           source ci-venv/bin/activate
+
+          # FIX: Add project root and scripts to PYTHONPATH
+          # Integration tests also import from scripts directory
+          export PYTHONPATH="${PWD}:${PWD}/scripts:${PYTHONPATH}"
+
           echo "========================================="
           echo "CI MODE: Fast Testing"
           echo "- Using 10-page sample PDF (~10-15s ingestion)"
@@ -398,6 +409,7 @@ jobs:
           echo "- Sequential execution (shared Qdrant collection prevents parallelism)"
           echo "- Module-level service checks to prevent hangs"
           echo "- Target: 45-50 minutes total (sequential due to shared state)"
+          echo "- PYTHONPATH: ${PYTHONPATH}"
           echo "========================================="
           if [ -d "tests/integration" ] && [ -n "$(find tests/integration -name 'test_*.py' -type f)" ]; then
             pytest tests/integration/ \
@@ -878,6 +890,11 @@ jobs:
           TEST_USE_FULL_PDF: "false"
         run: |
           source ci-venv/bin/activate
+
+          # FIX: Add project root and scripts to PYTHONPATH
+          # Burn-in runs full test suite which includes tests importing from scripts
+          export PYTHONPATH="${PWD}:${PWD}/scripts:${PYTHONPATH}"
+
           echo "========================================="
           echo "🔥 BURN-IN LOOP: Flaky Test Detection"
           echo "========================================="
@@ -885,6 +902,7 @@ jobs:
           echo "- Scope: Full test suite"
           echo "- Failure policy: ANY failure = FLAKY"
           echo "- Target: <20 minutes total"
+          echo "- PYTHONPATH: ${PYTHONPATH}"
           echo "========================================="
           echo ""
 
