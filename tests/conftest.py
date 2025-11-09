@@ -6,8 +6,14 @@ Performance Optimization:
 - Session-scoped fixtures for expensive operations (mock clients)
 - Module-scoped fixtures for shared test data
 - Function-scoped fixtures only when test isolation is required
+
+Test Isolation Enforcement:
+- Integration tests must have @pytest.mark.preserve_collection or
+  @pytest.mark.manages_collection_state to prevent expensive cleanup
+- This hook validates markers during test collection to prevent regressions
 """
 
+import logging
 from unittest.mock import MagicMock
 
 import pytest
@@ -15,6 +21,8 @@ from pytest import MonkeyPatch
 
 from raglite.shared.config import Settings
 from raglite.shared.models import Chunk, DocumentMetadata
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
@@ -269,7 +277,8 @@ LIMIT 50;""".strip()
 def pytest_addoption(parser):
     """Add custom command line options for pytest.
 
-    This allows us to control slow test execution and ingestion behavior via CLI flags.
+    This allows us to control slow test execution, ingestion behavior, and test isolation
+    enforcement via CLI flags.
     """
     parser.addoption(
         "--run-slow",
@@ -282,6 +291,13 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="Skip session fixture ingestion and use existing Qdrant/PostgreSQL data (saves ~25 min)",
+    )
+    parser.addoption(
+        "--enforce-isolation-markers",
+        action="store_true",
+        default=False,
+        help="Enforce @pytest.mark.preserve_collection or @pytest.mark.manages_collection_state "
+        "on all integration tests (prevents expensive cleanup regressions)",
     )
 
 
@@ -312,6 +328,8 @@ def pytest_collection_modifyitems(config, items):
     # Tests that already have @pytest.mark.xdist_group("embedding_model") keep it
     # Tests without any group get added to "embedding_model" to ensure all integration tests
     # run in the same worker (critical for session-scoped fixtures)
+    enforce_markers = config.getoption("--enforce-isolation-markers", default=False)
+
     for item in items:
         if "integration" in str(item.fspath):
             # Check if test already has xdist_group marker
@@ -319,6 +337,21 @@ def pytest_collection_modifyitems(config, items):
             if not existing_group:
                 # Add to embedding_model group to match existing integration test group
                 item.add_marker(pytest.mark.xdist_group(name="embedding_model"))
+
+            # Enforce test isolation markers (Phase 2 optimization)
+            # Integration tests must have @pytest.mark.preserve_collection or
+            # @pytest.mark.manages_collection_state to prevent expensive cleanup
+            has_preserve = item.get_closest_marker("preserve_collection")
+            has_manages = item.get_closest_marker("manages_collection_state")
+
+            if not (has_preserve or has_manages):
+                # Only error if enforcement is enabled
+                if enforce_markers:
+                    raise ValueError(
+                        f"{item.nodeid}: Integration test missing isolation marker. "
+                        "Add @pytest.mark.preserve_collection (read-only) or "
+                        "@pytest.mark.manages_collection_state (modifies data)."
+                    )
 
     # Sort tests: unit tests first, then integration, then e2e/slow
     def test_priority(item):
