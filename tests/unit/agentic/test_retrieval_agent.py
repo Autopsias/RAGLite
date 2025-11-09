@@ -6,6 +6,8 @@ to prevent external dependencies and validate agent interface/format/error handl
 Test execution time target: <100ms each (framework overhead only, no real DB/LLM calls)
 """
 
+# Check if strands is available
+import importlib.util
 import json
 from unittest.mock import AsyncMock, patch
 
@@ -14,10 +16,13 @@ import pytest
 from raglite.agentic.agents.retrieval_agent import retrieval_agent
 from raglite.retrieval.multi_index_search import SearchResult
 
+STRANDS_AVAILABLE = importlib.util.find_spec("strands") is not None
+
 
 class TestRetrievalAgentInterface:
     """Test suite for retrieval agent interface validation (AC1)."""
 
+    @pytest.mark.skipif(not STRANDS_AVAILABLE, reason="Strands not installed (deferred to Epic 3)")
     @pytest.mark.asyncio
     async def test_retrieval_agent_is_tool_decorated(self):
         """Verify @tool decorator applied to retrieval_agent function.

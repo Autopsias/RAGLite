@@ -5,12 +5,17 @@ Tests AC3: Basic 2-step workflow execution tested
 """
 
 import asyncio
+
+# Check if strands is available
+import importlib.util
 from unittest.mock import Mock
 
 import pytest
 
 from raglite.agentic.orchestrator import StrandsOrchestrator
 from raglite.agentic.state import AgentState, DocumentChunk
+
+STRANDS_AVAILABLE = importlib.util.find_spec("strands") is not None
 
 
 class TestOrchestrationInitialization:
@@ -43,6 +48,7 @@ class TestOrchestrationInitialization:
 class TestAgentCreation:
     """Test agent creation through orchestrator."""
 
+    @pytest.mark.skipif(not STRANDS_AVAILABLE, reason="Strands not installed (deferred to Epic 3)")
     @pytest.mark.asyncio
     async def test_create_agent_basic(self) -> None:
         """Test creating a basic agent.
@@ -59,6 +65,7 @@ class TestAgentCreation:
         assert agent is not None
         assert hasattr(agent, "name") or agent is not None
 
+    @pytest.mark.skipif(not STRANDS_AVAILABLE, reason="Strands not installed (deferred to Epic 3)")
     @pytest.mark.asyncio
     async def test_create_agent_with_tools(self) -> None:
         """Test creating an agent with tools."""
@@ -76,6 +83,7 @@ class TestAgentCreation:
 
         assert agent is not None
 
+    @pytest.mark.skipif(not STRANDS_AVAILABLE, reason="Strands not installed (deferred to Epic 3)")
     @pytest.mark.asyncio
     async def test_create_agent_invalid_fails(self) -> None:
         """Test that invalid agent configuration raises error."""

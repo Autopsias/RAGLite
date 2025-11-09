@@ -4,9 +4,20 @@ Provides singleton client instances for Qdrant, Claude API, PostgreSQL, and Mist
 """
 
 import time
+from typing import Any
 
-import psycopg2
-import psycopg2.extras
+try:
+    import psycopg2
+    import psycopg2.extras
+
+    # Register UUID adapter for psycopg2 (Story 2.6 AC4)
+    psycopg2.extras.register_uuid()
+    PSYCOPG2_AVAILABLE = True
+except ImportError:
+    # PostgreSQL support optional for unit tests
+    PSYCOPG2_AVAILABLE = False
+    psycopg2 = None
+
 from anthropic import Anthropic
 from mistralai import Mistral
 from qdrant_client import QdrantClient
@@ -15,16 +26,13 @@ from sentence_transformers import SentenceTransformer
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 
-# Register UUID adapter for psycopg2 (Story 2.6 AC4)
-psycopg2.extras.register_uuid()
-
 logger = get_logger(__name__)
 
 
 # Module-level singletons (connection pooling and model caching)
 _qdrant_client: QdrantClient | None = None
 _embedding_model: SentenceTransformer | None = None
-_postgresql_connection: "psycopg2.extensions.connection | None" = None
+_postgresql_connection: Any | None = None  # psycopg2.extensions.connection when available
 _mistral_client: Mistral | None = None
 
 
@@ -193,7 +201,7 @@ def get_embedding_model() -> SentenceTransformer:
     return _embedding_model
 
 
-def get_postgresql_connection() -> "psycopg2.extensions.connection":
+def get_postgresql_connection() -> Any:
     """Lazy-load PostgreSQL connection (singleton pattern with connection pooling).
 
     Creates connection on first call and caches it for reuse. Provides connection
@@ -218,6 +226,7 @@ def get_postgresql_connection() -> "psycopg2.extensions.connection":
 
     Raises:
         ConnectionError: If PostgreSQL connection fails
+        ImportError: If psycopg2 is not installed
 
     Note:
         Connection parameters from settings:
@@ -235,6 +244,9 @@ def get_postgresql_connection() -> "psycopg2.extensions.connection":
         >>> same_conn = get_postgresql_connection()
         >>> assert conn is same_conn
     """
+    if not PSYCOPG2_AVAILABLE:
+        raise ImportError("psycopg2 not installed - PostgreSQL support unavailable")
+
     global _postgresql_connection
 
     if _postgresql_connection is None or _postgresql_connection.closed:
