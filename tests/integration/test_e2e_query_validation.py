@@ -36,7 +36,7 @@ from tests.fixtures.ground_truth import GROUND_TRUTH_QA
 @pytest.mark.priority("P0")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
-async def test_financial_terminology_handling():
+async def test_financial_terminology_handling(session_ingested_collection):
     """Test query tool with financial domain terminology.
 
     Validates AC4: Query embedding handles financial terminology correctly

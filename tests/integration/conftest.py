@@ -91,7 +91,7 @@ _session_snapshot_name = None  # Track snapshot for fast restoration
 _session_postgresql_row_count = None  # Track PostgreSQL baseline for restoration
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def warmup_embedding_model(request):
     """Pre-warm embedding model before any tests run.
 
@@ -105,6 +105,10 @@ def warmup_embedding_model(request):
     The model singleton persists across all tests in the session.
 
     DISCOVERY OPTIMIZATION: Skips expensive model loading during test discovery phase.
+
+    NOTE (2025-11-09): autouse=True removed for performance optimization.
+    Only tests that need embeddings should explicitly request this fixture.
+    SQL-only tests (fuzzy matching, etc.) don't need embeddings and run in <5s without this.
     """
     # Skip during test collection/discovery phase
     if request.config.option.collectonly:
@@ -124,8 +128,8 @@ def warmup_embedding_model(request):
     # Model singleton persists for entire session
 
 
-@pytest.fixture(scope="session", autouse=True)
-def session_ingested_collection(request):
+@pytest.fixture(scope="session")
+def session_ingested_collection(request, warmup_embedding_model):
     """Session-scoped fixture: Ingest test PDFs ONCE for entire test session.
 
     PRODUCTION PATTERN: Matches Django/FastAPI/pandas best practices.
@@ -155,8 +159,12 @@ def session_ingested_collection(request):
 
     DISCOVERY OPTIMIZATION: Skips expensive PDF ingestion during test discovery phase.
 
-    NOTE: Depends on warmup_embedding_model to ensure embedding model is loaded
-    before PDF ingestion starts.
+    NOTE (2025-11-09): autouse=True removed for performance optimization.
+    Tests that need vector search or ingested PDFs must explicitly request this fixture.
+    SQL-only tests (fuzzy matching, etc.) don't need it and run in <5s without ingestion overhead.
+
+    Dependencies:
+        - warmup_embedding_model: Pre-loads Fin-E5 model (60-70s) before ingestion
     """
     global _session_sample_pdf_chunk_count
 

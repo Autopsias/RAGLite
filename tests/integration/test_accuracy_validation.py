@@ -37,7 +37,7 @@ class TestAccuracyTestRunner:
         assert "--output" in result.stdout
 
     @pytest.mark.priority("P1")
-    def test_subset_option(self):
+    def test_subset_option(self, session_ingested_collection):
         """Test --subset N option runs N queries."""
         result = subprocess.run(
             [sys.executable, "scripts/run-accuracy-tests.py", "--subset", "3"],
@@ -54,7 +54,7 @@ class TestAccuracyTestRunner:
         )
 
     @pytest.mark.priority("P1")
-    def test_category_filter(self):
+    def test_category_filter(self, session_ingested_collection):
         """Test --category option filters queries by category."""
         result = subprocess.run(
             [
@@ -75,7 +75,7 @@ class TestAccuracyTestRunner:
 
     @pytest.mark.priority("P1")
     @pytest.mark.timeout(0)  # Disable pytest-timeout - subprocess has its own 300s timeout
-    def test_output_file_generation(self, tmp_path):
+    def test_output_file_generation(self, tmp_path, session_ingested_collection):
         """Test --output FILE option saves results to JSON."""
         output_file = tmp_path / "test_results.json"
         result = subprocess.run(
@@ -103,7 +103,7 @@ class TestAccuracyTestRunner:
             assert "timestamp" in data
 
     @pytest.mark.priority("P1")
-    def test_verbose_output(self):
+    def test_verbose_output(self, session_ingested_collection):
         """Test --verbose option shows detailed query output."""
         result = subprocess.run(
             [sys.executable, "scripts/run-accuracy-tests.py", "--subset", "2", "--verbose"],
@@ -137,7 +137,7 @@ class TestDailyAccuracyCheck:
         assert "--show-trend" in result.stdout
 
     @pytest.mark.priority("P1")
-    def test_daily_check_execution(self):
+    def test_daily_check_execution(self, session_ingested_collection):
         """Test daily check runs with default subset."""
         result = subprocess.run(
             [sys.executable, "scripts/daily-accuracy-check.py", "--subset", "5"],
@@ -152,7 +152,7 @@ class TestDailyAccuracyCheck:
         assert "Retrieval Accuracy" in result.stdout
 
     @pytest.mark.priority("P1")
-    def test_tracking_log_created(self):
+    def test_tracking_log_created(self, session_ingested_collection):
         """Test that tracking log file is created after daily check."""
         tracking_log = PROJECT_ROOT / "docs" / "accuracy-tracking-log.jsonl"
 

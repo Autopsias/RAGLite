@@ -39,7 +39,7 @@ class TestPDFIngestionIntegration:
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(10)  # Fast test - no ingestion, just validation
-    async def test_ingest_financial_pdf_with_tables(self) -> None:
+    async def test_ingest_financial_pdf_with_tables(self, session_ingested_collection) -> None:
         """Integration test validating session-scoped PDF ingestion with tables.
 
         Uses session_ingested_collection fixture (PDF already ingested once).
@@ -104,7 +104,9 @@ class TestPDFIngestionIntegration:
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(10)  # Fast test - uses session fixture
-    async def test_pdf_ingestion_stores_correct_page_numbers(self) -> None:
+    async def test_pdf_ingestion_stores_correct_page_numbers(
+        self, session_ingested_collection
+    ) -> None:
         """Integration test validating page numbers extracted from Docling provenance (Story 1.13).
 
         Verifies that page numbers stored in Qdrant come from actual Docling provenance
