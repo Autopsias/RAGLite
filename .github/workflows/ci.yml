@@ -833,8 +833,8 @@ jobs:
     name: "🔥 Quality Gate: Burn-In Loop (3 iterations)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 60
-    # Only run on PRs to main/develop branches
-    if: github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'develop')
+    # Only run on PRs to main branch (not on feature branches or develop)
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
     needs: [test-unit, test-integration, test-e2e]
 
     steps:

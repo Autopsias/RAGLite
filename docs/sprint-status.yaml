@@ -94,7 +94,7 @@ development_status:
   3-0-8-agentic-framework-architecture-spike: done  # ✅ ALL ACs COMPLETE: AWS Strands selected, architecture designed, patterns documented (2025-11-07)
 
   # Epic 3 Feature Stories (Agentic Orchestration - Week 3+)
-  3-1-agentic-framework-integration: backlog
+  3-1-agentic-framework-integration: done
   3-2-retrieval-agent-implementation: backlog
   3-3-analysis-agent-implementation: backlog
   3-4-synthesis-agent-implementation: backlog

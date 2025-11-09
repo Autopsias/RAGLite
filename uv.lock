@@ -2947,7 +2947,7 @@ requires-dist = [
     { name = "qdrant-client", specifier = "==1.15.1" },
     { name = "rank-bm25", specifier = "==0.2.2" },
     { name = "sentence-transformers", specifier = "==5.1.1" },
-    { name = "strands-agents", specifier = ">=1.10.0,<2.0.0" },
+    { name = "strands-agents", specifier = ">=1.15.0,<2.0.0" },
     { name = "tiktoken", specifier = ">=0.5.1,<1.0.0" },
 ]
 
