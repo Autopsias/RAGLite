@@ -133,18 +133,105 @@ def mock_mistral_client():
     """Mock Mistral API client for SQL generation tests.
 
     Prevents real API calls in CI when MISTRAL_API_KEY is not set.
+    Returns query-aware mock that generates SQL with WHERE clauses based on query content.
+
     Fixture returns (mock_client_instance, mock_class) tuple for flexibility.
 
     Usage:
         @pytest.mark.asyncio
         async def test_sql_generation(mock_mistral_client):
             mock_client, mock_class = mock_mistral_client
-            # Configure mock response
-            mock_client.chat.complete.return_value.choices[0].message.content = "SELECT ..."
-            # Now call function under test
-            sql = await generate_sql_query(query)
+            # Mock automatically generates query-specific SQL
+            sql = await generate_sql_query("What is revenue for Portugal?")
+            # SQL will contain: WHERE entity ILIKE '%Portugal%' AND metric ILIKE '%Revenue%'
     """
     from unittest.mock import MagicMock, patch
+
+    def generate_query_aware_sql(messages, **kwargs):
+        """Generate query-specific SQL based on natural language query content.
+
+        This mock inspects the query to extract entity, metric, and period filters,
+        then generates realistic SQL with appropriate WHERE clauses.
+
+        Args:
+            messages: List of message dicts with 'content' containing the natural language query
+
+        Returns:
+            Mock response object with SQL query string in choices[0].message.content
+        """
+        # Extract query from messages (last user message)
+        query_text = ""
+        if messages and len(messages) > 0:
+            # Handle both dict and object message formats
+            last_msg = messages[-1]
+            if isinstance(last_msg, dict):
+                query_text = last_msg.get("content", "")
+            else:
+                query_text = getattr(last_msg, "content", "")
+
+        query_lower = query_text.lower()
+
+        # Build WHERE clause filters based on query content
+        where_conditions = []
+
+        # Entity filters (country names) - handle multiple entities for comparison queries
+        entities = []
+        if "portugal" in query_lower:
+            entities.append("entity ILIKE '%Portugal%'")
+        if "tunisia" in query_lower:
+            entities.append("entity ILIKE '%Tunisia%'")
+        if "angola" in query_lower:
+            entities.append("entity ILIKE '%Angola%'")
+        if "brazil" in query_lower:
+            entities.append("entity ILIKE '%Brazil%'")
+
+        # Add entity filter (OR if multiple entities for comparison)
+        if entities:
+            if len(entities) == 1:
+                where_conditions.append(entities[0])
+            else:
+                where_conditions.append("(" + " OR ".join(entities) + ")")
+
+        # Metric filters - handle multiple metrics with OR
+        metrics = []
+        if "ebitda" in query_lower:
+            metrics.append("metric ILIKE '%EBITDA%'")
+        if "revenue" in query_lower or "turnover" in query_lower:
+            metrics.append("metric ILIKE '%Revenue%'")
+        if "currency" in query_lower:
+            metrics.append("metric ILIKE '%Currency%'")
+
+        # Add metric filter (OR if multiple metrics)
+        if metrics:
+            if len(metrics) == 1:
+                where_conditions.append(metrics[0])
+            else:
+                where_conditions.append("(" + " OR ".join(metrics) + ")")
+
+        # Period filters (month/year)
+        if "august" in query_lower or "aug" in query_lower:
+            where_conditions.append("period ILIKE '%Aug%'")
+        if "2025" in query_lower:
+            where_conditions.append("fiscal_year = 2025")
+
+        # Construct WHERE clause
+        where_clause = ""
+        if where_conditions:
+            where_clause = "\nWHERE " + " AND ".join(where_conditions)
+
+        # Generate SQL query
+        sql = f"""SELECT entity, metric, value, unit, period, fiscal_year, page_number
+FROM financial_tables{where_clause}
+ORDER BY page_number DESC
+LIMIT 50;""".strip()
+
+        # Create mock response structure matching mistralai SDK
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message = MagicMock()
+        mock_response.choices[0].message.content = sql
+
+        return mock_response
 
     # CRITICAL: Patch where the function is USED, not where it's DEFINED
     # query_classifier does: from raglite.shared.clients import get_mistral_client
@@ -153,21 +240,8 @@ def mock_mistral_client():
         # Create mock client instance
         mock_client = MagicMock()
 
-        # Mock the response structure matching mistralai SDK
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message = MagicMock()
-
-        # Default SQL response (valid SELECT query for financial_tables)
-        mock_response.choices[0].message.content = """
-SELECT entity, metric, value, unit, period, fiscal_year, page_number
-FROM financial_tables
-ORDER BY page_number DESC
-LIMIT 50;
-        """.strip()
-
-        # Configure mock to return this response
-        mock_client.chat.complete.return_value = mock_response
+        # Configure mock to use query-aware SQL generation
+        mock_client.chat.complete.side_effect = generate_query_aware_sql
         mock_get_client.return_value = mock_client
 
         yield mock_client, mock_get_client
