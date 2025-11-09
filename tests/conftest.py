@@ -146,7 +146,10 @@ def mock_mistral_client():
     """
     from unittest.mock import MagicMock, patch
 
-    with patch("raglite.shared.clients.get_mistral_client") as mock_get_client:
+    # CRITICAL: Patch where the function is USED, not where it's DEFINED
+    # query_classifier does: from raglite.shared.clients import get_mistral_client
+    # So we must patch: raglite.retrieval.query_classifier.get_mistral_client
+    with patch("raglite.retrieval.query_classifier.get_mistral_client") as mock_get_client:
         # Create mock client instance
         mock_client = MagicMock()
 
