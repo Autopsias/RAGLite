@@ -18,8 +18,11 @@ pytestmark = pytest.mark.integration
 @pytest.mark.priority("P2")
 @pytest.mark.timeout(30)  # Prevent event loop blocking from sync DB operations
 @pytest.mark.asyncio
-async def test_fuzzy_matching_portugal_cement(mock_mistral_client):
-    """Test AC1: Fuzzy entity matching for Portugal Cement variations."""
+async def test_fuzzy_matching_portugal_cement(mock_mistral_client, session_ingested_collection):
+    """Test AC1: Fuzzy entity matching for Portugal Cement variations.
+
+    Requires session_ingested_collection to populate PostgreSQL with table data.
+    """
     # Configure mock to return SQL with ILIKE matching
     mock_client, _ = mock_mistral_client
     mock_response = mock_client.chat.complete.return_value
@@ -48,8 +51,11 @@ LIMIT 50;
 @pytest.mark.priority("P2")
 @pytest.mark.timeout(30)  # Prevent event loop blocking from sync DB operations
 @pytest.mark.asyncio
-async def test_fuzzy_matching_tunisia_cement(mock_mistral_client):
-    """Test AC1: Fuzzy entity matching for Tunisia Cement."""
+async def test_fuzzy_matching_tunisia_cement(mock_mistral_client, session_ingested_collection):
+    """Test AC1: Fuzzy entity matching for Tunisia Cement.
+
+    Requires session_ingested_collection to populate PostgreSQL with table data.
+    """
     # Configure mock to return SQL with ILIKE matching for Tunisia
     mock_client, _ = mock_mistral_client
     mock_response = mock_client.chat.complete.return_value
@@ -133,8 +139,11 @@ async def test_similarity_function_works():
 @pytest.mark.priority("P2")
 @pytest.mark.timeout(30)  # Prevent event loop blocking from sync DB operations
 @pytest.mark.asyncio
-async def test_fuzzy_matching_thresholds(mock_mistral_client):
-    """Test AC1: Fuzzy matching uses correct thresholds."""
+async def test_fuzzy_matching_thresholds(mock_mistral_client, session_ingested_collection):
+    """Test AC1: Fuzzy matching uses correct thresholds.
+
+    Requires session_ingested_collection to populate PostgreSQL with table data.
+    """
     # Configure mock
     mock_client, _ = mock_mistral_client
     mock_response = mock_client.chat.complete.return_value
@@ -163,8 +172,11 @@ LIMIT 50;
 @pytest.mark.priority("P2")
 @pytest.mark.timeout(30)  # Prevent event loop blocking from sync DB operations
 @pytest.mark.asyncio
-async def test_case_insensitive_matching(mock_mistral_client):
-    """Test AC1: Entity matching is case-insensitive."""
+async def test_case_insensitive_matching(mock_mistral_client, session_ingested_collection):
+    """Test AC1: Entity matching is case-insensitive.
+
+    Requires session_ingested_collection to populate PostgreSQL with table data.
+    """
     # Test case-insensitive matching with uppercase query
     # Query-aware mock in conftest.py now handles "frequency" metric keyword
     # Database has "Portugal" + "Frequency Ratio" in mixed case
