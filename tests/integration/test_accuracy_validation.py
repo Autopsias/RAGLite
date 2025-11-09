@@ -74,6 +74,7 @@ class TestAccuracyTestRunner:
         assert "cost_analysis" in result.stdout or "Filtered to" in result.stdout
 
     @pytest.mark.priority("P1")
+    @pytest.mark.timeout(0)  # Disable pytest-timeout - subprocess has its own 300s timeout
     def test_output_file_generation(self, tmp_path):
         """Test --output FILE option saves results to JSON."""
         output_file = tmp_path / "test_results.json"
@@ -180,6 +181,8 @@ class TestAccuracyCalculations:
     """Test accuracy calculation logic (unit-style tests on script functions)."""
 
     @pytest.mark.priority("P1")
+    @pytest.mark.slow  # Marks as slow test - takes 5+ minutes to run
+    @pytest.mark.timeout(0)  # Disable pytest-timeout - subprocess has its own 600s timeout
     def test_retrieval_accuracy_calculation(self, session_ingested_collection):
         """Test that retrieval accuracy is calculated correctly."""
         # This would test the check_retrieval_accuracy function
@@ -189,7 +192,7 @@ class TestAccuracyCalculations:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minutes - increased from 120s for query execution time
+            timeout=600,  # 10 minutes - 5 queries can take 5-8 minutes
         )
         assert result.returncode in [0, 1]
         # Should show retrieval accuracy percentage
@@ -197,6 +200,8 @@ class TestAccuracyCalculations:
         assert "%" in result.stdout
 
     @pytest.mark.priority("P2")
+    @pytest.mark.slow  # Marks as slow test - takes 5+ minutes to run
+    @pytest.mark.timeout(0)  # Disable pytest-timeout - subprocess has its own 600s timeout
     def test_attribution_accuracy_calculation(self, session_ingested_collection):
         """Test that attribution accuracy is calculated correctly."""
         result = subprocess.run(
@@ -204,7 +209,7 @@ class TestAccuracyCalculations:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minutes - increased from 120s for query execution time
+            timeout=600,  # 10 minutes - 5 queries can take 5-8 minutes
         )
         assert result.returncode in [0, 1]
         # Should show attribution accuracy percentage
