@@ -236,6 +236,7 @@ class TestNFRValidation:
     """Test NFR (Non-Functional Requirements) validation."""
 
     @pytest.mark.priority("P0")
+    @pytest.mark.timeout(600)  # 10 minutes - subprocess needs 5 min + overhead
     def test_nfr_targets_displayed(self, session_ingested_collection):
         """Test that NFR validation results are shown."""
         result = subprocess.run(
@@ -251,6 +252,7 @@ class TestNFRValidation:
         assert "90%" in result.stdout or "retrieval" in result.stdout.lower()
 
     @pytest.mark.priority("P1")
+    @pytest.mark.timeout(600)  # 10 minutes - subprocess needs 5 min + overhead
     def test_exit_codes(self, session_ingested_collection):
         """Test that script returns correct exit codes."""
         # Running small subset likely to fail accuracy targets
