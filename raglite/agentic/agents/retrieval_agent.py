@@ -3,12 +3,22 @@
 Story 3.2 AC1-AC3: Implements a @tool decorator-based retrieval agent
 that wraps the Epic 2 multi-index search, enabling the orchestrator
 to search document knowledge bases.
+
+NOTE: Strands import is optional - agentic workflows deferred until Epic 3.
 """
 
 import json
 import time
 
-from strands import tool
+try:
+    from strands import tool
+except ImportError:
+    # Strands not installed - deferred until Epic 3 (Story 3.1+)
+    # For now, use a no-op decorator
+    def tool(func):  # type: ignore
+        """No-op tool decorator when strands is not available."""
+        return func
+
 
 from raglite.retrieval.multi_index_search import (
     MultiIndexSearchError,

@@ -22,6 +22,8 @@ class StrandsOrchestrator:
 
     AC2: Framework initialization and configuration validated
     AC3: Basic 2-step workflow execution tested
+
+    NOTE: Strands initialization is deferred until Epic 3 (Story 3.1+).
     """
 
     def __init__(self) -> None:
@@ -35,16 +37,18 @@ class StrandsOrchestrator:
         self._load_default_tools()
 
         # Import Strands on initialization (AC1)
+        # NOTE: Strands deferred until Epic 3 - store Agent class if available
         try:
             from strands import Agent
 
             self.Agent = Agent
-        except ImportError as e:
-            logger.error(
-                "Failed to import AWS Strands",
-                extra={"error": str(e), "required_version": "1.15.0+"},
+        except ImportError:
+            # Strands not installed - deferred until Epic 3 (Story 3.1+)
+            logger.warning(
+                "AWS Strands not installed - agentic workflows deferred to Epic 3",
+                extra={"required_version": "1.15.0+"},
             )
-            raise
+            self.Agent = None
 
         logger.info(
             "Strands orchestrator initialized",

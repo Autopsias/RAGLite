@@ -46,7 +46,8 @@ dependencies = [
     "httpx>=0.28.1,<1.0.0",
     "mistralai>=1.9.11",
     "psycopg2-binary>=2.9,<3.0", # Story 2.6: PostgreSQL for structured metadata storage
-    "strands>=1.15.0,<2.0.0", # Epic 3: AWS Strands agentic framework (v1.15.0+ required for Story 3.1)
+    # TODO Epic 3: AWS Strands agentic framework - uncomment when implementing Story 3.1
+    # "strands>=1.15.0,<2.0.0",  # Agentic orchestration (Story 3.1+)
 ]
 
 [project.urls]

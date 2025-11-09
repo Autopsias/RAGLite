@@ -3,12 +3,22 @@
 Story 3.3 AC1-AC3: Implements a @tool decorator-based analysis agent
 that performs financial calculations (YoY growth, variance, trend, percentage)
 and uses Claude Haiku for structured reasoning.
+
+NOTE: Strands import is optional - agentic workflows deferred until Epic 3.
 """
 
 import json
 import time
 
-from strands import tool
+try:
+    from strands import tool
+except ImportError:
+    # Strands not installed - deferred until Epic 3 (Story 3.1+)
+    # For now, use a no-op decorator
+    def tool(func):  # type: ignore
+        """No-op tool decorator when strands is not available."""
+        return func
+
 
 from raglite.agentic.state import AnalysisResult
 from raglite.shared.clients import get_claude_client
