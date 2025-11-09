@@ -11,9 +11,14 @@ Test Isolation Enforcement:
 - Integration tests must have @pytest.mark.preserve_collection or
   @pytest.mark.manages_collection_state to prevent expensive cleanup
 - This hook validates markers during test collection to prevent regressions
+
+Fixture Timing (Phase 2.4):
+- Session fixtures log start/completion time to identify bottlenecks
+- Useful for diagnosing test performance issues
 """
 
 import logging
+import time
 from unittest.mock import MagicMock
 
 import pytest
@@ -23,6 +28,21 @@ from raglite.shared.config import Settings
 from raglite.shared.models import Chunk, DocumentMetadata
 
 logger = logging.getLogger(__name__)
+
+
+def _timed_fixture(fixture_name: str, func, start_time: float) -> None:
+    """Log fixture execution time (Phase 2.4 instrumentation).
+
+    Args:
+        fixture_name: Name of the fixture for logging
+        func: Fixture function (for documentation)
+        start_time: Start time from time.time()
+    """
+    elapsed = time.time() - start_time
+    logger.info(
+        f"Fixture '{fixture_name}' completed",
+        extra={"elapsed_seconds": f"{elapsed:.2f}", "fixture": fixture_name},
+    )
 
 
 @pytest.fixture(scope="session")
@@ -37,13 +57,19 @@ def session_test_settings() -> Settings:
     """
     import os
 
+    start_time = time.time()
+    logger.info("Fixture 'session_test_settings' starting")
+
     # Set environment variables once for the entire session
     os.environ["QDRANT_HOST"] = "localhost"
     os.environ["QDRANT_PORT"] = "6333"
     os.environ["ANTHROPIC_API_KEY"] = "test-api-key-12345"
     os.environ["EMBEDDING_MODEL"] = "intfloat/e5-large-v2"
     os.environ["EMBEDDING_DIMENSION"] = "1024"
-    return Settings()
+    settings = Settings()
+
+    _timed_fixture("session_test_settings", session_test_settings, start_time)
+    return settings
 
 
 @pytest.fixture
@@ -77,10 +103,15 @@ def mock_qdrant_client() -> MagicMock:
     Returns:
         MagicMock instance configured with typical Qdrant methods
     """
+    start_time = time.time()
+    logger.info("Fixture 'mock_qdrant_client' starting")
+
     mock_client = MagicMock()
     mock_client.get_collections.return_value = []
     mock_client.search.return_value = []
     mock_client.query_points.return_value.points = []
+
+    _timed_fixture("mock_qdrant_client", mock_qdrant_client, start_time)
     return mock_client
 
 
@@ -93,7 +124,12 @@ def mock_claude_client() -> MagicMock:
     Returns:
         MagicMock instance configured with typical Claude API methods
     """
+    start_time = time.time()
+    logger.info("Fixture 'mock_claude_client' starting")
+
     mock_client = MagicMock()
+
+    _timed_fixture("mock_claude_client", mock_claude_client, start_time)
     return mock_client
 
 
@@ -106,13 +142,19 @@ def sample_document_metadata() -> DocumentMetadata:
     Returns:
         DocumentMetadata instance with test data
     """
-    return DocumentMetadata(
+    start_time = time.time()
+    logger.info("Fixture 'sample_document_metadata' starting")
+
+    metadata = DocumentMetadata(
         filename="test_financial_report.pdf",
         doc_type="PDF",
         ingestion_timestamp="2025-10-04T12:00:00Z",
         page_count=10,
         source_path="/tmp/test_financial_report.pdf",
     )
+
+    _timed_fixture("sample_document_metadata", sample_document_metadata, start_time)
+    return metadata
 
 
 @pytest.fixture
