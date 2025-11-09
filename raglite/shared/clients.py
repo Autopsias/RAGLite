@@ -254,6 +254,8 @@ def get_postgresql_connection() -> "psycopg2.extensions.connection":
                 dbname=settings.postgres_db,
                 user=settings.postgres_user,
                 password=settings.postgres_password,
+                connect_timeout=10,  # Connection timeout (seconds)
+                options="-c statement_timeout=30s",  # Query execution timeout
             )
             logger.info(
                 "PostgreSQL connection established",
@@ -261,6 +263,8 @@ def get_postgresql_connection() -> "psycopg2.extensions.connection":
                     "host": settings.postgres_host,
                     "port": settings.postgres_port,
                     "database": settings.postgres_db,
+                    "connect_timeout": 10,
+                    "statement_timeout": "30s",
                 },
             )
         except psycopg2.Error as e:

@@ -16,6 +16,7 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.mark.priority("P2")
+@pytest.mark.timeout(30)  # Prevent event loop blocking from sync DB operations
 @pytest.mark.asyncio
 async def test_fuzzy_matching_portugal_cement(mock_mistral_client):
     """Test AC1: Fuzzy entity matching for Portugal Cement variations."""
@@ -45,6 +46,7 @@ LIMIT 50;
 
 
 @pytest.mark.priority("P2")
+@pytest.mark.timeout(30)  # Prevent event loop blocking from sync DB operations
 @pytest.mark.asyncio
 async def test_fuzzy_matching_tunisia_cement(mock_mistral_client):
     """Test AC1: Fuzzy entity matching for Tunisia Cement."""
@@ -67,6 +69,7 @@ LIMIT 50;
 
 
 @pytest.mark.priority("P2")
+@pytest.mark.timeout(30)  # Prevent event loop blocking from sync DB operations
 @pytest.mark.asyncio
 @pytest.mark.preserve_collection  # SQL-only test - no vector data needed
 async def test_pg_trgm_extension_installed():
@@ -82,6 +85,7 @@ async def test_pg_trgm_extension_installed():
 
 
 @pytest.mark.priority("P2")
+@pytest.mark.timeout(30)  # Prevent event loop blocking from sync DB operations
 @pytest.mark.asyncio
 @pytest.mark.preserve_collection  # SQL-only test - no vector data needed
 async def test_gin_indexes_exist():
@@ -102,6 +106,7 @@ async def test_gin_indexes_exist():
 
 
 @pytest.mark.priority("P1")
+@pytest.mark.timeout(30)  # Prevent event loop blocking from sync DB operations
 @pytest.mark.asyncio
 @pytest.mark.preserve_collection  # SQL-only test - no vector data needed
 async def test_similarity_function_works():
@@ -126,6 +131,7 @@ async def test_similarity_function_works():
 
 
 @pytest.mark.priority("P2")
+@pytest.mark.timeout(30)  # Prevent event loop blocking from sync DB operations
 @pytest.mark.asyncio
 async def test_fuzzy_matching_thresholds(mock_mistral_client):
     """Test AC1: Fuzzy matching uses correct thresholds."""
@@ -155,6 +161,7 @@ LIMIT 50;
 
 
 @pytest.mark.priority("P2")
+@pytest.mark.timeout(30)  # Prevent event loop blocking from sync DB operations
 @pytest.mark.asyncio
 async def test_case_insensitive_matching(mock_mistral_client):
     """Test AC1: Entity matching is case-insensitive."""

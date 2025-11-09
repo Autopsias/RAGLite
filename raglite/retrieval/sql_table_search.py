@@ -9,6 +9,7 @@ Production Validation:
     - Bloomberg NLP: SQL search reduces hallucinations by 40%
 """
 
+import asyncio
 import time
 
 from raglite.shared.clients import get_postgresql_connection
@@ -22,6 +23,39 @@ class SQLSearchError(Exception):
     """Exception raised when SQL table search fails."""
 
     pass
+
+
+def _execute_sql_query_sync(sql_query: str) -> tuple[list[tuple], list[str]]:
+    """Execute SQL query synchronously (called via asyncio.to_thread).
+
+    Helper function that wraps synchronous psycopg2 operations to prevent
+    event loop blocking in async contexts.
+
+    Args:
+        sql_query: PostgreSQL query string
+
+    Returns:
+        Tuple of (rows, column_names)
+
+    Raises:
+        Exception: If SQL execution fails
+    """
+    conn = get_postgresql_connection()
+    cursor = conn.cursor()
+
+    # Log full SQL query for debugging
+    logger.debug("Full SQL query to execute", extra={"full_sql": sql_query})
+
+    # Execute SQL query (synchronous blocking operation)
+    cursor.execute(sql_query)
+
+    # Fetch results (synchronous blocking operation)
+    rows = cursor.fetchall()
+    column_names = [desc[0] for desc in cursor.description]
+
+    cursor.close()
+
+    return rows, column_names
 
 
 async def search_tables_sql(sql_query: str, top_k: int = 50) -> list[QueryResult]:
@@ -56,18 +90,9 @@ async def search_tables_sql(sql_query: str, top_k: int = 50) -> list[QueryResult
     start_time = time.time()
 
     try:
-        conn = get_postgresql_connection()
-        cursor = conn.cursor()
-
-        # Log full SQL query for debugging
-        logger.debug("Full SQL query to execute", extra={"full_sql": sql_query})
-
-        # Execute SQL query
-        cursor.execute(sql_query)
-
-        # Fetch results (respect LIMIT in SQL query)
-        rows = cursor.fetchall()
-        column_names = [desc[0] for desc in cursor.description]
+        # Execute SQL query in thread pool to prevent event loop blocking
+        # (psycopg2 is synchronous, asyncio.to_thread prevents hanging in async tests)
+        rows, column_names = await asyncio.to_thread(_execute_sql_query_sync, sql_query)
 
         # FORCE VISIBLE OUTPUT FOR DEBUGGING
         print(f"[SQL_TABLE_SEARCH DEBUG] Row count: {len(rows)}", flush=True)
@@ -91,8 +116,6 @@ async def search_tables_sql(sql_query: str, top_k: int = 50) -> list[QueryResult
                 flush=True,
             )
             logger.debug("First row sample", extra={"first_row": first_row_dict})
-
-        cursor.close()
 
         if not rows:
             logger.warning(
@@ -147,8 +170,12 @@ async def search_tables_sql(sql_query: str, top_k: int = 50) -> list[QueryResult
     except Exception as e:
         # Rollback transaction to prevent "transaction is aborted" errors
         try:
-            conn = get_postgresql_connection()
-            conn.rollback()
+
+            def _rollback_sync() -> None:
+                conn = get_postgresql_connection()
+                conn.rollback()
+
+            await asyncio.to_thread(_rollback_sync)
             logger.debug("Rolled back PostgreSQL transaction after SQL error")
         except Exception as rollback_error:
             logger.warning(f"Failed to rollback transaction: {rollback_error}")
