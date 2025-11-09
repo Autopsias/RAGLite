@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from docling.document_converter import (
         ConversionResult,
+        DocumentConverter,
     )
     from docling_core.types.doc import TableItem
 
@@ -35,35 +36,44 @@ class TableExtractor:
     - unit (measurement unit from cells)
     """
 
-    def __init__(self) -> None:
-        """Initialize table extractor with Docling converter.
+    def __init__(self, converter: DocumentConverter | None = None) -> None:
+        """Initialize table extractor with optional Docling converter.
+
+        Args:
+            converter: Optional DocumentConverter instance. If None, creates a new one
+                      with production settings (pypdfium backend, 8 threads, CPU device).
+                      Passing a converter is useful for testing with mocked converters.
 
         IMPORTANT: Docling imports are lazy-loaded to prevent pytest collection hangs
         when Docling initializes PyTorch/CUDA. See commit 9bcc6b4.
         """
-        # Lazy import to avoid Docling PyTorch initialization at module load time
-        from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
-        from docling.datamodel.accelerator_options import AcceleratorOptions
-        from docling.datamodel.base_models import InputFormat
-        from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
-        from docling.document_converter import DocumentConverter, PdfFormatOption
+        if converter is not None:
+            # Use provided converter (e.g., for testing with mocks)
+            self.converter = converter
+        else:
+            # Create production converter with lazy imports
+            from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
+            from docling.datamodel.accelerator_options import AcceleratorOptions
+            from docling.datamodel.base_models import InputFormat
+            from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
+            from docling.document_converter import DocumentConverter, PdfFormatOption
 
-        # Configure Docling with pypdfium backend (Story 2.1)
-        pipeline_options = PdfPipelineOptions()
-        pipeline_options.accelerator_options = AcceleratorOptions(
-            num_threads=8,  # Story 2.2: Page-level parallelism
-            device="cpu",
-        )
-        pipeline_options.table_structure_options.mode = TableFormerMode.ACCURATE
+            # Configure Docling with pypdfium backend (Story 2.1)
+            pipeline_options = PdfPipelineOptions()
+            pipeline_options.accelerator_options = AcceleratorOptions(
+                num_threads=8,  # Story 2.2: Page-level parallelism
+                device="cpu",
+            )
+            pipeline_options.table_structure_options.mode = TableFormerMode.ACCURATE
 
-        self.converter = DocumentConverter(
-            format_options={
-                InputFormat.PDF: PdfFormatOption(
-                    pipeline_options=pipeline_options,
-                    backend=PyPdfiumDocumentBackend,  # Story 2.1: pypdfium backend
-                )
-            }
-        )
+            self.converter = DocumentConverter(
+                format_options={
+                    InputFormat.PDF: PdfFormatOption(
+                        pipeline_options=pipeline_options,
+                        backend=PyPdfiumDocumentBackend,  # Story 2.1: pypdfium backend
+                    )
+                }
+            )
 
     async def extract_tables(self, doc_path: str) -> list[dict[str, Any]]:
         """Extract and parse all tables from document.

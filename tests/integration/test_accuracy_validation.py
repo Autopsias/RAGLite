@@ -37,6 +37,7 @@ class TestAccuracyTestRunner:
         assert "--output" in result.stdout
 
     @pytest.mark.priority("P1")
+    @pytest.mark.timeout(600)  # 10 minutes - subprocess needs 9 min + overhead
     def test_subset_option(self, session_ingested_collection):
         """Test --subset N option runs N queries."""
         result = subprocess.run(
@@ -44,7 +45,7 @@ class TestAccuracyTestRunner:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minutes - increased from 120s for query execution time
+            timeout=540,  # 9 minutes - 3 queries can take 6-8 min (cold start + full pipeline)
         )
         # Should complete (exit code 0 or 1 depending on accuracy)
         assert result.returncode in [0, 1]
@@ -54,6 +55,7 @@ class TestAccuracyTestRunner:
         )
 
     @pytest.mark.priority("P1")
+    @pytest.mark.timeout(900)  # 15 minutes - subprocess needs 14 min + overhead
     def test_category_filter(self, session_ingested_collection):
         """Test --category option filters queries by category."""
         result = subprocess.run(
@@ -68,7 +70,7 @@ class TestAccuracyTestRunner:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minutes - increased from 120s for query execution time
+            timeout=840,  # 14 minutes - 5 queries can take 10-12 min (cold start + full pipeline)
         )
         assert result.returncode in [0, 1]
         assert "cost_analysis" in result.stdout or "Filtered to" in result.stdout
@@ -103,6 +105,7 @@ class TestAccuracyTestRunner:
             assert "timestamp" in data
 
     @pytest.mark.priority("P1")
+    @pytest.mark.timeout(480)  # 8 minutes - subprocess needs 6 min + overhead
     def test_verbose_output(self, session_ingested_collection):
         """Test --verbose option shows detailed query output."""
         result = subprocess.run(
@@ -110,7 +113,7 @@ class TestAccuracyTestRunner:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minutes - increased from 120s for verbose output overhead
+            timeout=420,  # 7 minutes - 2 queries can take 4-6 min (cold start + full pipeline)
         )
         assert result.returncode in [0, 1]
         # Verbose output should show query details
@@ -137,6 +140,7 @@ class TestDailyAccuracyCheck:
         assert "--show-trend" in result.stdout
 
     @pytest.mark.priority("P1")
+    @pytest.mark.timeout(900)  # 15 minutes - subprocess needs 14 min + overhead
     def test_daily_check_execution(self, session_ingested_collection):
         """Test daily check runs with default subset."""
         result = subprocess.run(
@@ -144,7 +148,7 @@ class TestDailyAccuracyCheck:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minutes - increased from 120s for query execution time
+            timeout=840,  # 14 minutes - 5 queries can take 10-12 min (cold start + full pipeline)
         )
         # Exit code 0 (normal) or 1 (early warning triggered)
         assert result.returncode in [0, 1]
@@ -152,6 +156,7 @@ class TestDailyAccuracyCheck:
         assert "Retrieval Accuracy" in result.stdout
 
     @pytest.mark.priority("P1")
+    @pytest.mark.timeout(600)  # 10 minutes - subprocess needs 9 min + overhead
     def test_tracking_log_created(self, session_ingested_collection):
         """Test that tracking log file is created after daily check."""
         tracking_log = PROJECT_ROOT / "docs" / "accuracy-tracking-log.jsonl"
@@ -161,7 +166,7 @@ class TestDailyAccuracyCheck:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minutes - increased from 120s for query execution time
+            timeout=540,  # 9 minutes - 3 queries can take 6-8 min (cold start + full pipeline)
         )
         assert result.returncode in [0, 1]
 
@@ -217,6 +222,7 @@ class TestAccuracyCalculations:
         assert "%" in result.stdout
 
     @pytest.mark.priority("P0")
+    @pytest.mark.timeout(900)  # 15 minutes - subprocess needs 14 min + overhead
     def test_performance_metrics_calculated(self, session_ingested_collection):
         """Test that p50/p95 latency metrics are calculated."""
         result = subprocess.run(
@@ -224,7 +230,7 @@ class TestAccuracyCalculations:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minutes - increased from 120s for query execution time
+            timeout=840,  # 14 minutes - 5 queries can take 10-12 min (cold start + full pipeline)
         )
         assert result.returncode in [0, 1]
         # Should show latency metrics
@@ -236,7 +242,7 @@ class TestNFRValidation:
     """Test NFR (Non-Functional Requirements) validation."""
 
     @pytest.mark.priority("P0")
-    @pytest.mark.timeout(600)  # 10 minutes - subprocess needs 5 min + overhead
+    @pytest.mark.timeout(900)  # 15 minutes - subprocess needs 9 min + overhead
     def test_nfr_targets_displayed(self, session_ingested_collection):
         """Test that NFR validation results are shown."""
         result = subprocess.run(
@@ -244,7 +250,7 @@ class TestNFRValidation:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minutes - increased from 120s for query execution time
+            timeout=840,  # 14 minutes - 5 queries can take 10-12 min (cold start + full pipeline)
         )
         assert result.returncode in [0, 1]
         # Should show NFR validation section
@@ -261,7 +267,7 @@ class TestNFRValidation:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minutes - increased from 120s for query execution time
+            timeout=540,  # 9 minutes - 3 queries can take 6-8 min (cold start + full pipeline)
         )
         # Exit code 0 = pass (unlikely with small subset)
         # Exit code 1 = fail or below targets (expected)

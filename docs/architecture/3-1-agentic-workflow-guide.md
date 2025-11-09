@@ -192,6 +192,70 @@ tools = orchestrator.get_available_tools()
 # Tools list includes retrieval_agent for use with Strands agents
 ```
 
+**Analysis Agent Tool (Story 3.3):**
+
+The `analysis_agent` tool performs financial calculations with Claude Haiku reasoning:
+
+```python
+from raglite.agentic.agents.analysis_agent import analysis_agent
+
+# analysis_agent can be called directly with financial data:
+result = await analysis_agent(
+    data={"Q3_2023": 10.0, "Q3_2024": 12.0},
+    analysis_type="yoy_growth",
+    context="Q3 is typically the strongest quarter"
+)
+# Returns JSON string with:
+# {
+#   "calculation": "(12.0 - 10.0) / 10.0 = 0.20",
+#   "value": 0.20,
+#   "formatted_value": "+20.0%",
+#   "reasoning": "Revenue grew 20% YoY from $10M to $12M",
+#   "data_points_used": {"Q3_2023": 10.0, "Q3_2024": 12.0}
+# }
+
+# Supported analysis types:
+# - "yoy_growth": Year-over-year percentage change
+# - "variance": Budget vs actual difference (requires "budget" and "actual" keys)
+# - "trend": Trend detection (increasing/decreasing/stable) from 2+ data points
+# - "percentage": Part-to-whole percentage (requires "part" and "whole" keys)
+
+# Example variance analysis:
+result = await analysis_agent(
+    data={"budget": 100.0, "actual": 85.0},
+    analysis_type="variance"
+)
+# Returns formatted_value="-15.0%" with business interpretation
+
+# Or used via orchestrator:
+orchestrator = StrandsOrchestrator()
+tools = orchestrator.get_available_tools()
+# Tools list includes both retrieval_agent and analysis_agent
+```
+
+### 3-Agent Workflow: Retrieval → Analysis → Synthesis
+
+```python
+# Workflow combining retrieval, analysis, and synthesis:
+async def analysis_workflow(query: str) -> str:
+    orchestrator = StrandsOrchestrator()
+
+    # Step 1: Retrieve relevant documents
+    retrieval_result = await retrieval_agent(query, top_k=5)
+
+    # Step 2: Analyze retrieved data
+    analysis_result = await analysis_agent(
+        data={"current": 12.0, "previous": 10.0},
+        analysis_type="yoy_growth",
+        context=f"Based on retrieved documents"
+    )
+
+    # Step 3: Synthesize final answer with analysis insights
+    # (Synthesis agent not yet implemented in Story 3.4)
+
+    return analysis_result
+```
+
 ## State Management Best Practices
 
 ### Validating State Between Agents

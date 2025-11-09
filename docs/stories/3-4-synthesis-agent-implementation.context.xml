@@ -1,0 +1,307 @@
+<story-context id="3-4-synthesis-agent-implementation" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>4</storyId>
+    <title>Synthesis Agent Implementation</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-09</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/3-4-synthesis-agent-implementation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>specialized synthesis agent that combines retrieval and analysis results into coherent answers</iWant>
+    <soThat>multi-step workflows produce natural language responses with proper source attribution</soThat>
+    <tasks>
+      <task id="1" ac="AC1,AC2">Implement synthesis_agent function with @tool decorator (4 hours)
+        - Create raglite/agentic/agents/synthesis_agent.py file
+        - Implement @tool async def synthesis_agent(retrieval_results, analysis_results, query) with AWS Strands decorator
+        - Define SynthesisResult Pydantic model in raglite/agentic/state.py (answer, reasoning_steps, sources, metadata)
+        - Implement multi-source aggregation logic (combine retrieval + analysis results)
+        - Add error handling for invalid inputs or missing data (return error metadata)
+      </task>
+      <task id="2" ac="AC3">Integrate Claude Sonnet for high-quality synthesis (3 hours)
+        - Import Claude client from raglite/shared/clients.py
+        - Create structured prompt templates for synthesis tasks
+        - Implement LLM synthesis call with Claude Sonnet model
+        - Parse LLM response and extract reasoning steps + citations
+        - Add retry logic for Claude API errors (429/500 status codes)
+        - Validate citation preservation and factual accuracy
+      </task>
+      <task id="3" ac="AC4">Create unit tests for synthesis agent (3 hours)
+        - Create tests/unit/agentic/test_synthesis_agent.py
+        - Mock Claude API to return synthetic synthesis results
+        - Test synthesis of retrieval results only (basic summary)
+        - Test synthesis of retrieval + analysis results (complex workflow)
+        - Test source citation preservation from all upstream agents
+        - Test handling of conflicting information from multiple sources
+        - Test error handling (invalid inputs, missing data, LLM API failure)
+        - Validate test execution time &lt;100ms (no real LLM calls)
+      </task>
+      <task id="4" ac="AC5">Create integration test for complete 3-agent workflow (4 hours)
+        - Update tests/integration/test_analysis_agent_workflow.py to use real synthesis_agent
+        - Implement full Retrieval → Analysis → Synthesis workflow test
+        - Use real Qdrant instance (requires docker-compose up -d)
+        - Use real Claude Sonnet for synthesis (budget LLM calls)
+        - Remove MockSynthesisAgent usage from existing tests
+        - Test complete workflow coordination via AWS Strands orchestrator
+        - Validate workflow execution time &lt;8s
+        - Validate all source citations preserved in final output
+      </task>
+      <task id="5" ac="AC1">Update orchestrator configuration (1 hour)
+        - Add synthesis_agent to orchestrator tools list in raglite/agentic/orchestrator.py
+        - Update orchestrator system prompt to include synthesis_agent usage
+        - Test orchestrator can discover and call synthesis_agent
+        - Validate orchestrator logs show synthesis_agent execution
+      </task>
+      <task id="6" ac="AC1">Document agent usage and integration (1 hour)
+        - Update docs/architecture/3-1-agentic-workflow-guide.md with synthesis_agent example
+        - Document synthesis_agent signature and SynthesisResult format
+        - Add code example showing complete 3-agent workflow
+        - Document multi-source aggregation patterns and best practices
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Synthesis agent defined with @tool decorator per AWS Strands framework
+      - Agent decorated with @tool decorator from AWS Strands
+      - Agent signature follows Strands tool conventions
+      - Agent registered with orchestrator as callable tool
+      - Agent accepts List[AgentResult] from upstream agents (retrieval + analysis)
+    </criterion>
+    <criterion id="AC2">Agent aggregates multi-source results into natural language summary
+      - Input: retrieval_results (List[DocumentChunk]), analysis_results (List[AnalysisResult]), original_query (str)
+      - Output: JSON-serialized final answer with reasoning steps and citations
+      - Maintains semantic coherence across multiple information sources
+      - Preserves source attribution from both retrieval and analysis agents
+    </criterion>
+    <criterion id="AC3">Agent uses Claude Sonnet for high-quality synthesis with structured prompts
+      - Calls Claude Sonnet via shared client from raglite/shared/clients.py
+      - Structured prompts ensure factual accuracy and citation preservation
+      - Reasoning includes explanation of how sources were combined
+      - Error handling for LLM API failures (return error metadata)
+    </criterion>
+    <criterion id="AC4">Agent tested with multi-source inputs (unit tests)
+      - Unit test validates synthesis of retrieval + analysis results
+      - Unit test validates source citation formatting and preservation
+      - Unit test validates consistency with original query intent
+      - Unit test validates handling of conflicting information from sources
+      - Mocked Claude API prevents external dependencies
+      - Test execution time &lt;100ms (framework overhead only)
+    </criterion>
+    <criterion id="AC5">Agent integrates in complete 3-agent workflow (integration test)
+      - Integration test executes Retrieval → Analysis → Synthesis full workflow
+      - Test uses real Qdrant instance (requires docker-compose up)
+      - Test validates complete workflow produces coherent final answer
+      - Test validates execution time &lt;8s for full 3-agent workflow
+      - Test validates all source citations preserved in final output
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-3-ai-intelligence-orchestration.md</path>
+        <title>Epic 3 PRD: AI Intelligence &amp; Orchestration</title>
+        <section>Story 3.4: Synthesis Agent Implementation</section>
+        <snippet>Synthesis agent defined to aggregate and summarize results from other agents. Agent produces natural language summary with source citations. Agent maintains consistency with original query intent.</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec-epic-3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Synthesis Agent (Agent 3)</section>
+        <snippet>Module: raglite/agentic/agents/synthesis_agent.py (~60-80 lines). Accepts sub-task results (List[AgentResult]), original query (str). Returns final answer (str) with reasoning steps. Uses Claude Sonnet for quality synthesis (900-1200ms budget). Performance: &lt;1.2s p50, &lt;2s p95 target.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-orchestration-design.md</path>
+        <title>Epic 3 Orchestration Design</title>
+        <section>Agent 3: Synthesis Agent</section>
+        <snippet>Multi-source result aggregation with coherent narrative generation and citations. Integrates retrieval agent outputs (DocumentChunk list) with analysis agent outputs (AnalysisResult). Claude Sonnet provides high-quality narrative synthesis.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-agent-patterns.md</path>
+        <title>Epic 3 Agent Patterns</title>
+        <section>Pattern 3: Aggregation Pattern</section>
+        <snippet>Synthesis agents aggregate results from multiple upstream agents. Pattern includes multi-source conflict resolution, citation preservation, and coherent narrative generation with LLM prompts.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/3-1-agentic-workflow-guide.md</path>
+        <title>Agentic Workflow Development Guide</title>
+        <section>Agent Creation Guide, 3-Agent Workflow Patterns</section>
+        <snippet>Documents AWS Strands @tool decorator pattern, agent interfaces, and workflow coordination. Includes examples of retrieval_agent and analysis_agent usage. Story 3.4 will complete the 3-agent chain with synthesis_agent.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/3-3-analysis-agent-implementation.md</path>
+        <title>Previous Story: Analysis Agent Implementation</title>
+        <section>Learnings from Previous Story</section>
+        <snippet>Analysis Agent (363 lines) established @tool decorator pattern. MockSynthesisAgent placeholders exist and should be replaced with real implementation. Tool registration mechanism in orchestrator.py validated. Claude API client usage patterns established in raglite/shared/clients.py.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>raglite/agentic/state.py</path>
+        <kind>model</kind>
+        <symbol>AgentState, DocumentChunk, AnalysisResult</symbol>
+        <lines>1-105</lines>
+        <reason>Defines AgentState model for workflow state management. DocumentChunk model (lines 12-21) used by retrieval agent. AnalysisResult model (lines 23-35) used by analysis agent. Story 3.4 will add SynthesisResult model following same pattern.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/orchestrator.py</path>
+        <kind>orchestrator</kind>
+        <symbol>StrandsOrchestrator, _load_default_tools()</symbol>
+        <lines>58-95</lines>
+        <reason>Tool registration mechanism. Lines 64-78 register retrieval_agent, lines 80-94 register analysis_agent. Story 3.4 will add synthesis_agent registration following same pattern at lines 95+.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/agents/retrieval_agent.py</path>
+        <kind>agent</kind>
+        <symbol>retrieval_agent</symbol>
+        <lines>all</lines>
+        <reason>Reference implementation for @tool decorator pattern. Shows how to define agent with AWS Strands, return JSON-serialized output, and integrate with orchestrator. Story 3.4 will follow same structure.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/agents/analysis_agent.py</path>
+        <kind>agent</kind>
+        <symbol>analysis_agent</symbol>
+        <lines>all</lines>
+        <reason>Most recent agent implementation (Story 3.3). Shows Claude Haiku integration, structured prompts, error handling, and logging patterns. Story 3.4 will use Claude Sonnet instead of Haiku but follow same integration pattern.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/agents/mock_synthesis.py</path>
+        <kind>mock_agent</kind>
+        <symbol>MockSynthesisAgent</symbol>
+        <lines>all</lines>
+        <reason>Placeholder synthesis agent used in existing tests. Story 3.4 will replace this with real implementation. Existing integration tests will be updated to use real synthesis_agent instead of mock.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/error_handler.py</path>
+        <kind>utility</kind>
+        <symbol>WorkflowErrorHandler</symbol>
+        <lines>all</lines>
+        <reason>Error handling patterns for agent failures, timeouts, and graceful degradation. Story 3.4 synthesis agent should follow same error handling patterns (catch exceptions, return error metadata).</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/clients.py</path>
+        <kind>client</kind>
+        <symbol>get_claude_client()</symbol>
+        <lines>all</lines>
+        <reason>Shared Claude API client used by analysis agent. Story 3.4 synthesis agent will import and use same client for Claude Sonnet calls (no new client creation).</reason>
+      </artifact>
+      <artifact>
+        <path>tests/unit/agentic/test_analysis_agent.py</path>
+        <kind>test</kind>
+        <symbol>test_yoy_growth_calculation, test_analysis_agent_interface</symbol>
+        <lines>all</lines>
+        <reason>Unit test patterns for agents. Shows how to mock Claude API, test JSON serialization, validate execution time &lt;100ms. Story 3.4 will create tests/unit/agentic/test_synthesis_agent.py following same patterns.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/integration/test_analysis_agent_workflow.py</path>
+        <kind>test</kind>
+        <symbol>test_retrieval_analysis_synthesis_workflow</symbol>
+        <lines>all</lines>
+        <reason>Integration test patterns for 3-agent workflows. Currently uses MockSynthesisAgent. Story 3.4 will update this file to use real synthesis_agent, removing mock usage.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="strands" version=">=1.15.0,&lt;2.0.0" purpose="AWS Strands agentic framework - @tool decorator for agent definitions"/>
+        <package name="anthropic" version=">=0.18.0,&lt;1.0.0" purpose="Claude API client - Claude Sonnet for synthesis LLM calls"/>
+        <package name="pydantic" version=">=2.0,&lt;3.0" purpose="Data validation - SynthesisResult model definition"/>
+        <package name="pytest" version="8.4.2" purpose="Testing framework - unit and integration tests"/>
+        <package name="pytest-asyncio" version="1.2.0" purpose="Async testing support - async agent functions"/>
+        <package name="pytest-mock" version=">=3.12,&lt;4.0" purpose="Mocking support - mock Claude API in unit tests"/>
+        <package name="httpx" version=">=0.28.1,&lt;1.0.0" purpose="HTTP client - used by Claude API client"/>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architectural">Follow AWS Strands @tool decorator pattern established in Stories 3.1-3.3. Agent must be async function returning JSON-serialized output.</constraint>
+    <constraint type="integration">Use shared Claude client from raglite/shared/clients.py. Do NOT create new client instances - import get_claude_client() and call existing client.</constraint>
+    <constraint type="model">Use Claude Sonnet (claude-3-5-sonnet-20241022) for synthesis, NOT Claude Haiku. Quality > speed trade-off justified for final synthesis.</constraint>
+    <constraint type="naming">File must be raglite/agentic/agents/synthesis_agent.py. Model must be SynthesisResult in raglite/agentic/state.py. Follow established naming conventions.</constraint>
+    <constraint type="testing">Unit tests must execute &lt;100ms (mocked Claude API). Integration tests budget ~$0.15 per run (real Claude Sonnet calls). Target 8 unit tests.</constraint>
+    <constraint type="performance">Agent execution time: &lt;1.2s p50, &lt;2.0s p95 (per NFR5). Full 3-agent workflow: &lt;8s total (validated in integration tests).</constraint>
+    <constraint type="error-handling">Follow error_handler.py patterns. Catch exceptions, return error metadata (don't crash). Support graceful degradation (NFR24).</constraint>
+    <constraint type="logging">Use structured logging with logger.info("Synthesis agent called", extra={...}). Include agent_type, query, execution_time_ms in metadata.</constraint>
+    <constraint type="loc">Target ~60-80 lines in synthesis_agent.py. ~15 lines for SynthesisResult model in state.py. Keep implementation concise.</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>synthesis_agent</name>
+      <kind>AWS Strands @tool function</kind>
+      <signature>@tool
+async def synthesis_agent(
+    retrieval_results: List[dict],  # List[DocumentChunk] serialized
+    analysis_results: List[dict],   # List[AnalysisResult] serialized
+    query: str,
+    context: Optional[str] = None
+) -> str:  # JSON string with SynthesisResult
+      </signature>
+      <path>raglite/agentic/agents/synthesis_agent.py</path>
+      <notes>Must accept JSON dicts (Strands requirement) and return JSON string. Deserialize inputs to Pydantic models internally. Serialize SynthesisResult to JSON for return.</notes>
+    </interface>
+    <interface>
+      <name>SynthesisResult</name>
+      <kind>Pydantic model</kind>
+      <signature>class SynthesisResult(BaseModel):
+    answer: str  # Final natural language answer
+    reasoning_steps: List[str]  # Steps taken to synthesize answer
+    sources: List[str]  # Aggregated citations from all agents
+    metadata: Dict[str, Any]  # Execution metadata (confidence, agent_count, etc.)
+      </signature>
+      <path>raglite/agentic/state.py</path>
+      <notes>Add after AnalysisResult model (lines 23-35). Follow same structure and documentation style.</notes>
+    </interface>
+    <interface>
+      <name>get_claude_client</name>
+      <kind>Shared client factory</kind>
+      <signature>def get_claude_client() -> anthropic.Anthropic</signature>
+      <path>raglite/shared/clients.py</path>
+      <notes>Import and call to get Claude API client. Do NOT create new Anthropic() instances - use shared client for connection pooling.</notes>
+    </interface>
+    <interface>
+      <name>StrandsOrchestrator._load_default_tools</name>
+      <kind>Tool registration</kind>
+      <signature>def _load_default_tools(self) -> None</signature>
+      <path>raglite/agentic/orchestrator.py</path>
+      <notes>Add synthesis_agent registration after analysis_agent (lines 95+). Follow pattern: try/except block, import synthesis_agent, append to _registered_tools, log registration.</notes>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      - Testing framework: pytest with pytest-asyncio for async functions
+      - Unit tests: Mock Claude API using pytest-mock (no external dependencies)
+      - Integration tests: Real Qdrant + real Claude Sonnet (budget LLM costs)
+      - Test execution: Unit tests &lt;100ms per test, integration tests &lt;8s per workflow
+      - Coverage target: 80%+ for synthesis_agent.py
+      - Test file structure: tests/unit/agentic/test_synthesis_agent.py for unit, update tests/integration/test_analysis_agent_workflow.py for integration
+    </standards>
+    <locations>
+      - Unit tests: tests/unit/agentic/
+      - Integration tests: tests/integration/
+      - Fixtures: tests/conftest.py (shared Qdrant fixture, Claude mock fixtures)
+      - Test data: tests/fixtures/ (sample DocumentChunk, AnalysisResult data)
+    </locations>
+    <ideas>
+      <test ac="AC1,AC2">test_synthesis_agent_interface - Validate @tool decorator applied, async signature correct, returns JSON string</test>
+      <test ac="AC2">test_synthesis_retrieval_only - Input: List[DocumentChunk] only. Expected: Natural language summary with preserved citations</test>
+      <test ac="AC2">test_synthesis_retrieval_analysis - Input: List[DocumentChunk] + List[AnalysisResult]. Expected: Answer integrating calculations with document context</test>
+      <test ac="AC2">test_synthesis_citation_preservation - Input: Multiple DocumentChunk objects. Expected: All citations preserved in SynthesisResult.sources</test>
+      <test ac="AC2">test_synthesis_conflict_resolution - Input: Conflicting DocumentChunk data. Expected: Balanced presentation citing both sources</test>
+      <test ac="AC3,AC4">test_synthesis_agent_error_handling - Test empty inputs, invalid JSON, Claude API failure. Expected: Error metadata returned</test>
+      <test ac="AC4">test_synthesis_agent_json_serialization - Validate SynthesisResult serializes to JSON correctly</test>
+      <test ac="AC4">test_synthesis_optional_context - Test with/without context parameter</test>
+      <test ac="AC5">test_retrieval_analysis_synthesis_workflow - Full 3-agent workflow. Real Qdrant + real Claude. Validate answer quality, execution time &lt;8s, citations preserved</test>
+      <test ac="AC5">test_synthesis_agent_coordination - Orchestrator calls synthesis_agent via Strands. Validate state capture, logging</test>
+      <test ac="AC5">test_synthesis_error_recovery - Simulate analysis agent failure. Validate synthesis still succeeds with retrieval-only</test>
+      <test ac="AC5">test_synthesis_agent_performance - Execute 10 synthesis calls. Measure p50/p95 latency. Assert &lt;1.2s p50, &lt;2.0s p95</test>
+    </ideas>
+  </tests>
+</story-context>

@@ -1,0 +1,359 @@
+<story-context id="3-3-analysis-agent-implementation" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3</storyId>
+    <title>Analysis Agent Implementation</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-09</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/3-3-analysis-agent-implementation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>specialized analysis agent that can perform calculations and reasoning over retrieved data</iWant>
+    <soThat>analytical questions can be answered autonomously</soThat>
+    <tasks>
+      - Task 1: Implement analysis_agent function with @tool decorator (AC1, AC2) - 4 hours
+        - 1.1: Create raglite/agentic/agents/analysis_agent.py file
+        - 1.2: Implement @tool async def analysis_agent(data, analysis_type, context) with AWS Strands decorator
+        - 1.3: Define AnalysisResult Pydantic model in raglite/agentic/state.py
+        - 1.4: Implement 4 analysis type handlers: yoy_growth, variance, trend, percentage
+        - 1.5: Add error handling for invalid data or analysis types
+
+      - Task 2: Integrate Claude Haiku for numerical reasoning (AC3) - 3 hours
+        - 2.1: Import Claude client from raglite/shared/clients.py
+        - 2.2: Create structured prompt templates for each analysis type
+        - 2.3: Implement LLM reasoning call with Claude Haiku model
+        - 2.4: Parse LLM response and extract reasoning explanation
+        - 2.5: Add retry logic for Claude API errors (429/500 status codes)
+        - 2.6: Validate numerical accuracy of LLM-generated formulas
+
+      - Task 3: Create unit tests for analysis agent (AC4) - 3 hours
+        - 3.1: Create tests/unit/agentic/test_analysis_agent.py
+        - 3.2: Mock Claude API to return synthetic reasoning
+        - 3.3: Test YoY growth calculation: {"Q3_2023": 10.0, "Q3_2024": 12.0} → +20%
+        - 3.4: Test variance analysis: {"budget": 100.0, "actual": 85.0} → -15% under budget
+        - 3.5: Test trend detection: {"Q1": 10, "Q2": 12, "Q3": 14} → increasing trend
+        - 3.6: Test percentage calculation: {"part": 25.0, "whole": 100.0} → 25%
+        - 3.7: Test error handling (invalid data, missing keys, LLM API failure)
+        - 3.8: Validate test execution time <100ms (no real LLM calls)
+
+      - Task 4: Create integration test for 3-agent workflow (AC5) - 4 hours
+        - 4.1: Create tests/integration/test_retrieval_analysis_synthesis_workflow.py
+        - 4.2: Implement 3-agent workflow test: Retrieval → Analysis → Synthesis
+        - 4.3: Use real Qdrant instance (requires docker-compose up -d)
+        - 4.4: Use real Claude Haiku for analysis reasoning (budget LLM calls)
+        - 4.5: Use MockSynthesisAgent from Story 3.1
+        - 4.6: Test agent coordination via AWS Strands orchestrator
+        - 4.7: Validate workflow execution time <8s
+        - 4.8: Validate analysis results passed correctly to synthesis agent
+
+      - Task 5: Update orchestrator configuration (AC1) - 1 hour
+        - 5.1: Add analysis_agent to orchestrator tools list in raglite/agentic/orchestrator.py
+        - 5.2: Update orchestrator system prompt to include analysis_agent usage
+        - 5.3: Test orchestrator can discover and call analysis_agent
+        - 5.4: Validate orchestrator logs show analysis_agent execution
+
+      - Task 6: Document agent usage and integration (AC1) - 1 hour
+        - 6.1: Update docs/architecture/3-1-agentic-workflow-guide.md with analysis_agent example
+        - 6.2: Document analysis_agent signature and AnalysisResult format
+        - 6.3: Add code example showing orchestrator calling analysis_agent
+        - 6.4: Document 4 supported analysis types with usage examples
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    AC1: Analysis agent defined with @tool decorator per AWS Strands framework
+      - Agent decorated with @tool decorator from AWS Strands
+      - Agent signature follows Strands tool conventions
+      - Agent registered with orchestrator as callable tool
+      - Agent supports 4 analysis types: YoY growth, variance, trend detection, percentages
+
+    AC2: Agent accepts financial data and analysis instruction, returns AnalysisResult
+      - Input: Financial data points (Dict[str, float]), analysis_type (str), optional context (str)
+      - Output: JSON-serialized AnalysisResult with calculation, value, formatted_value, reasoning, data_points_used
+      - Supports analysis types: "yoy_growth", "variance", "trend", "percentage"
+      - Returns structured calculation formulas (e.g., "(12M - 10M) / 10M = 0.20")
+
+    AC3: Agent uses Claude Haiku for numerical reasoning with structured prompts
+      - Calls Claude Haiku via shared client from raglite/shared/clients.py
+      - Structured prompts ensure numerical accuracy (formula validation)
+      - Reasoning explains calculation logic and business interpretation
+      - Error handling for LLM API failures (return error metadata)
+
+    AC4: Agent tested with sample analytical tasks (unit tests)
+      - Unit test validates YoY growth calculation accuracy
+      - Unit test validates variance analysis (budget vs actual)
+      - Unit test validates trend detection (increasing/decreasing/stable)
+      - Unit test validates percentage calculations
+      - Mocked Claude API prevents external dependencies
+      - Test execution time <100ms (framework overhead only)
+
+    AC5: Agent integrates with Retrieval Agent for data access (integration test)
+      - Integration test executes Retrieval → Analysis → Synthesis 3-agent workflow
+      - Test uses real Qdrant instance (requires docker-compose up)
+      - Test validates agent coordination via AWS Strands orchestrator
+      - Test validates analysis results passed correctly to synthesis agent
+      - Test execution time <8s (includes real search + LLM latency)
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <!-- PRD -->
+      <artifact>
+        <path>docs/prd/epic-3-ai-intelligence-orchestration.md</path>
+        <title>Epic 3 PRD - Story 3.3</title>
+        <section>Story 3.3: Analysis Agent Implementation</section>
+        <snippet>Analysis agent with capabilities: calculate percentages, trends, variances, comparisons. Uses LLM for reasoning with structured prompts for numerical accuracy. Integrates with retrieval agent for data access.</snippet>
+      </artifact>
+
+      <!-- Tech Spec -->
+      <artifact>
+        <path>docs/tech-spec-epic-3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Agent 2: Analysis Agent</section>
+        <snippet>Analysis Agent (~50 lines) handles financial calculations (YoY, variance, trends), numerical reasoning with LLM. Uses Claude Haiku for speed (5x faster than Sonnet). Returns AnalysisResult with calculation, value, formatted_value, reasoning.</snippet>
+      </artifact>
+
+      <!-- Architecture -->
+      <artifact>
+        <path>docs/architecture/epic-3-orchestration-design.md</path>
+        <title>Epic 3 Orchestration Design</title>
+        <section>Agent 2: Analysis Agent</section>
+        <snippet>Analysis Agent performs financial calculations using structured LLM prompts. Supports 4 analysis types: YoY growth, variance, trend detection, percentage calculations. Target latency: 600-800ms with Claude Haiku.</snippet>
+      </artifact>
+
+      <artifact>
+        <path>docs/architecture/epic-3-agent-patterns.md</path>
+        <title>Epic 3 Agent Patterns</title>
+        <section>Pattern 2: Data Transformation</section>
+        <snippet>Analysis Agent pattern: Accepts structured data, performs calculations, returns transformed results with reasoning. Code example shows @tool decorator usage, error handling, and AnalysisResult model structure.</snippet>
+      </artifact>
+
+      <artifact>
+        <path>docs/architecture/3-1-agentic-workflow-guide.md</path>
+        <title>Agentic Workflow Guide (Story 3.1)</title>
+        <section>Agent Development Guide</section>
+        <snippet>AWS Strands @tool decorator pattern for agent definitions. Agents are async functions returning JSON-serialized output. Orchestrator coordinates via Mistral Small. Example patterns from Story 3.2 retrieval_agent.</snippet>
+      </artifact>
+
+      <artifact>
+        <path>docs/architecture/epic-3-framework-selection.md</path>
+        <title>Epic 3 Framework Selection ADR</title>
+        <section>AWS Strands Decision</section>
+        <snippet>AWS Strands v1.15.0 selected (84.5% weighted score). Model-driven orchestration with @tool decorators. Mistral Small for orchestration. No AWS infrastructure required - standalone library.</snippet>
+      </artifact>
+    </docs>
+
+    <code>
+      <!-- Existing Agents -->
+      <artifact>
+        <path>raglite/agentic/agents/retrieval_agent.py</path>
+        <kind>agent</kind>
+        <symbol>retrieval_agent</symbol>
+        <lines>1-159</lines>
+        <reason>Story 3.2 retrieval agent - template for @tool decorator pattern, error handling, JSON serialization. Shows integration with orchestrator and Epic 2 multi_index_search().</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/agentic/agents/mock_synthesis.py</path>
+        <kind>agent</kind>
+        <symbol>MockSynthesisAgent</symbol>
+        <lines>1-50</lines>
+        <reason>Mock synthesis agent from Story 3.1 - use for integration tests in Task 4 (Story 3.4 not ready yet). Simulates synthesis without real LLM calls.</reason>
+      </artifact>
+
+      <!-- Orchestrator & State -->
+      <artifact>
+        <path>raglite/agentic/orchestrator.py</path>
+        <kind>orchestrator</kind>
+        <symbol>Orchestrator._load_default_tools, register_tools</symbol>
+        <lines>27-35, 59-112, 119</lines>
+        <reason>Tool registration mechanism for adding analysis_agent to orchestrator (Task 5). Shows _load_default_tools(), get_available_tools(), and register_tools() methods.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/agentic/state.py</path>
+        <kind>model</kind>
+        <symbol>AgentState, AgentResult</symbol>
+        <lines>1-100</lines>
+        <reason>State management models. Add AnalysisResult model here (Task 1.3). Existing models show structure: calculation, value, formatted_value, reasoning, data_points_used fields.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/agentic/error_handler.py</path>
+        <kind>handler</kind>
+        <symbol>handle_agent_error, with_timeout</symbol>
+        <lines>1-80</lines>
+        <reason>Error handling patterns for agent failures (Task 1.5, 2.5). Shows timeout enforcement (15s), retry logic, graceful degradation, structured logging.</reason>
+      </artifact>
+
+      <!-- Shared Services -->
+      <artifact>
+        <path>raglite/shared/clients.py</path>
+        <kind>client</kind>
+        <symbol>get_claude_client</symbol>
+        <lines>1-150</lines>
+        <reason>Claude API client for Haiku model (Task 2.1). Shared client instance, connection pooling, API key management. Import via get_claude_client() - do NOT create new client.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/shared/logging.py</path>
+        <kind>logging</kind>
+        <symbol>logger</symbol>
+        <lines>1-50</lines>
+        <reason>Structured logging with extra context. Use logger.info("Analysis agent called", extra={...}) for agent execution logging (Task 5.4).</reason>
+      </artifact>
+
+      <!-- Testing -->
+      <artifact>
+        <path>tests/unit/agentic/test_retrieval_agent.py</path>
+        <kind>test</kind>
+        <symbol>test_retrieval_agent_*</symbol>
+        <lines>1-502</lines>
+        <reason>Unit test patterns from Story 3.2 (16 tests). Shows mocking Claude API, testing @tool interface, validating JSON serialization, error handling patterns. Template for Task 3.</reason>
+      </artifact>
+
+      <artifact>
+        <path>tests/integration/test_retrieval_synthesis_workflow.py</path>
+        <kind>test</kind>
+        <symbol>test_retrieval_synthesis_workflow</symbol>
+        <lines>1-341</lines>
+        <reason>Integration test patterns from Story 3.2 (11 tests). Shows 2-agent workflow testing with real Qdrant, orchestrator coordination validation. Extend to 3-agent workflow for Task 4.</reason>
+      </artifact>
+
+      <artifact>
+        <path>tests/conftest.py</path>
+        <kind>fixture</kind>
+        <symbol>qdrant_fixture, mock_claude_client</symbol>
+        <lines>1-200</lines>
+        <reason>Shared pytest fixtures for Qdrant initialization, Claude API mocking. Reuse for Task 3 (unit tests) and Task 4 (integration tests).</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="strands" version=">=1.15.0,&lt;2.0.0" note="AWS Strands agentic framework - @tool decorator for agent definitions"/>
+        <package name="anthropic" version=">=0.18.0,&lt;1.0.0" note="Claude API client - use Haiku model for analysis reasoning"/>
+        <package name="mistralai" version=">=1.9.11" note="Mistral API for orchestrator (optional, Strands integrates directly)"/>
+        <package name="pydantic" version=">=2.0,&lt;3.0" note="AnalysisResult model validation and JSON serialization"/>
+        <package name="pytest" version="==8.4.2" note="Testing framework for unit and integration tests"/>
+        <package name="pytest-asyncio" version="==1.2.0" note="Async test support for async agent functions"/>
+        <package name="pytest-mock" version=">=3.12,&lt;4.0" note="Mock Claude API in unit tests (Task 3.2)"/>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - Use AWS Strands @tool decorator pattern (established in Story 3.1-3.2)
+    - Return JSON-serialized output (Strands framework requirement)
+    - Claude Haiku model for analysis reasoning (5x faster than Sonnet, 10x cheaper)
+    - Analysis agent budget: &lt;800ms p50, &lt;1.2s p95 execution time (NFR5 performance constraint)
+    - Individual agent timeout: 15s max (NFR26 - enforced by error_handler.py)
+    - Import Claude client from raglite/shared/clients.py (no new client creation)
+    - Add agent to orchestrator tools list via register_tools() method
+    - Follow error handling patterns from error_handler.py (timeout, retry, graceful degradation)
+    - Use structured logging with logger.info(extra={...}) for agent execution tracking
+    - Mock Claude API in unit tests (no real LLM calls, prevent API costs)
+    - Use real Claude Haiku in integration tests (budget ~$0.10 per test run)
+    - Use MockSynthesisAgent for integration tests (Story 3.4 not ready yet)
+    - Test execution time: Unit tests &lt;100ms, Integration tests &lt;8s
+    - 4 supported analysis types: yoy_growth, variance, trend, percentage
+    - Formula validation: Ensure calculated values match formula strings
+    - Error metadata: Return structured error info on failures (no hard crashes)
+  </constraints>
+
+  <interfaces>
+    <!-- Agent Interface -->
+    <interface>
+      <name>analysis_agent</name>
+      <kind>AWS Strands @tool decorated async function</kind>
+      <signature>
+        @tool
+        async def analysis_agent(
+            data: Dict[str, float],
+            analysis_type: str,
+            context: Optional[str] = None
+        ) -> str:
+            """Analysis Agent: Perform financial calculations and reasoning.
+
+            Returns JSON string with AnalysisResult model:
+            {
+              "calculation": "(12.0 - 10.0) / 10.0 = 0.20",
+              "value": 0.20,
+              "formatted_value": "+20%",
+              "reasoning": "Revenue grew 20% YoY from $10M to $12M",
+              "data_points_used": {"Q3_2023_revenue": 10.0, "Q3_2024_revenue": 12.0}
+            }
+            """
+      </signature>
+      <path>raglite/agentic/agents/analysis_agent.py</path>
+    </interface>
+
+    <!-- AnalysisResult Model -->
+    <interface>
+      <name>AnalysisResult</name>
+      <kind>Pydantic BaseModel</kind>
+      <signature>
+        class AnalysisResult(BaseModel):
+            calculation: str  # Formula string (e.g., "(12M - 10M) / 10M = 0.20")
+            value: float  # Numerical result (e.g., 0.20)
+            formatted_value: str  # Human-readable format (e.g., "+20%")
+            reasoning: str  # LLM-generated explanation
+            data_points_used: Dict[str, float]  # Original data dictionary
+      </signature>
+      <path>raglite/agentic/state.py</path>
+    </interface>
+
+    <!-- Claude API Integration -->
+    <interface>
+      <name>get_claude_client</name>
+      <kind>Shared client factory</kind>
+      <signature>
+        def get_claude_client() -> anthropic.Anthropic:
+            """Returns shared Claude API client instance.
+
+            Use model="claude-3-5-haiku-20241022" for analysis agent.
+            """
+      </signature>
+      <path>raglite/shared/clients.py</path>
+    </interface>
+
+    <!-- Orchestrator Tool Registration -->
+    <interface>
+      <name>Orchestrator.register_tools</name>
+      <kind>Method</kind>
+      <signature>
+        def register_tools(self, tools: List[Callable]) -> None:
+            """Register custom tools with orchestrator.
+
+            Usage:
+                from raglite.agentic.agents.analysis_agent import analysis_agent
+                orchestrator.register_tools([analysis_agent])
+            """
+      </signature>
+      <path>raglite/agentic/orchestrator.py (lines 119-130)</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      All tests use pytest framework with async support (pytest-asyncio). Unit tests mock external dependencies (Claude API, Qdrant) to ensure fast execution (&lt;100ms) and prevent API costs. Integration tests use real Qdrant instance and real Claude Haiku API (budget ~$0.10 per run). Tests follow existing patterns from Story 3.2 retrieval_agent tests. Code coverage target: 80%+ for raglite/agentic/ module. Test naming convention: test_{component}_{scenario} (e.g., test_analysis_agent_yoy_growth_calculation).
+    </standards>
+
+    <locations>
+      - tests/unit/agentic/ (unit tests for agents)
+      - tests/integration/ (integration tests for workflows)
+      - tests/conftest.py (shared fixtures)
+    </locations>
+
+    <ideas>
+      AC1: Test @tool decorator applied, agent registered with orchestrator
+      AC2: Test all 4 analysis types (YoY, variance, trend, percentage), test AnalysisResult JSON serialization, test formula string generation
+      AC3: Test Claude Haiku integration (mocked in unit tests, real in integration), test structured prompts, test error handling for LLM API failures
+      AC4: Test YoY growth calculation ({"Q3_2023": 10.0, "Q3_2024": 12.0} → +20%), test variance analysis ({"budget": 100.0, "actual": 85.0} → -15%), test trend detection ({"Q1": 10, "Q2": 12, "Q3": 14} → increasing), test percentage ({"part": 25.0, "whole": 100.0} → 25%), test invalid data handling, test execution time &lt;100ms
+      AC5: Test 3-agent workflow (Retrieval → Analysis → Synthesis), test orchestrator coordination, test analysis results passed to synthesis agent, test workflow execution time &lt;8s, test error recovery
+    </ideas>
+  </tests>
+</story-context>

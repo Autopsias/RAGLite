@@ -20,6 +20,20 @@ class DocumentChunk(BaseModel):
     metadata: dict[str, Any] = {}
 
 
+class AnalysisResult(BaseModel):
+    """Result from financial analysis operation (Story 3.3 AC2).
+
+    Captures the calculation, numerical result, formatted display,
+    and LLM-generated reasoning for financial analysis types.
+    """
+
+    calculation: str  # Formula string (e.g., "(12.0 - 10.0) / 10.0 = 0.20")
+    value: float  # Numerical result (e.g., 0.20)
+    formatted_value: str  # Human-readable format (e.g., "+20%")
+    reasoning: str  # LLM-generated explanation
+    data_points_used: dict[str, float]  # Original data dictionary
+
+
 class AnalysisOutput(BaseModel):
     """Output from the Analysis Agent."""
 

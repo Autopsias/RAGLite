@@ -57,9 +57,9 @@ class StrandsOrchestrator:
         )
 
     def _load_default_tools(self) -> None:
-        """Load default agent tools (Story 3.2 AC1: retrieval_agent registration).
+        """Load default agent tools (Story 3.2-3.3 AC1: agent registration).
 
-        Registers retrieval_agent and other core tools available to orchestrator.
+        Registers retrieval_agent, analysis_agent, and other core tools available to orchestrator.
         Tools are @tool decorated functions from AWS Strands.
         """
         try:
@@ -75,6 +75,22 @@ class StrandsOrchestrator:
         except ImportError as e:
             logger.warning(
                 "Failed to load retrieval_agent tool",
+                extra={"error": str(e)},
+            )
+
+        try:
+            # Import analysis_agent (Story 3.3 AC1)
+            from raglite.agentic.agents.analysis_agent import analysis_agent
+
+            self._registered_tools.append(analysis_agent)
+            logger.info(
+                "Registered analysis_agent tool",
+                extra={"tool_name": "analysis_agent"},
+            )
+
+        except ImportError as e:
+            logger.warning(
+                "Failed to load analysis_agent tool",
                 extra={"error": str(e)},
             )
 

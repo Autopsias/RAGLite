@@ -314,7 +314,9 @@ async def ingest_pdf(
 
     try:
         if not skip_table_extraction:
-            extractor = TableExtractor()
+            # Reuse existing converter to avoid duplicate initialization (more efficient)
+            # and to enable test mocking (tests can mock converter once, used by both stages)
+            extractor = TableExtractor(converter=converter)
             # Milestone 1: Async table extraction with 10x speedup (62 min → 6 min)
             # FIX: Use pdf_path.name (with extension) for consistency with Qdrant document IDs
             table_rows = await extractor.extract_tables_from_result(result, pdf_path.name)
