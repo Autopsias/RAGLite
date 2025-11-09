@@ -20,6 +20,9 @@ from pathlib import Path
 
 import pytest
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 # Add scripts directory to path for import
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
 
@@ -29,10 +32,11 @@ from inspect_database_for_epic_3 import inspect_database  # noqa: E402
 @pytest.mark.priority("P0")
 @pytest.mark.integration
 @pytest.mark.xdist_group(name="database")
+@pytest.mark.preserve_collection  # Prevents cleanup between test files - maintains PostgreSQL state
 class TestInspectDatabaseIntegration:
     """Integration tests for database inspection against real PostgreSQL."""
 
-    def test_inspect_database_against_real_db(self, tmp_path: Path):
+    def test_inspect_database_against_real_db(self, session_ingested_collection, tmp_path: Path):
         """GIVEN PostgreSQL with financial_tables rows
         WHEN running inspect_database
         THEN should return complete catalog with all data"""
@@ -69,7 +73,7 @@ class TestInspectDatabaseIntegration:
             loaded_catalog = json.load(f)
         assert loaded_catalog == catalog, "Saved catalog should match returned catalog"
 
-    def test_inspect_database_metrics_completeness(self):
+    def test_inspect_database_metrics_completeness(self, session_ingested_collection):
         """GIVEN PostgreSQL financial_tables
         WHEN inspecting metrics
         THEN should return all unique metrics from database"""
@@ -90,7 +94,7 @@ class TestInspectDatabaseIntegration:
         )
         assert has_financial_metrics, "Should have at least one financial metric"
 
-    def test_inspect_database_period_formats(self):
+    def test_inspect_database_period_formats(self, session_ingested_collection):
         """GIVEN PostgreSQL financial_tables
         WHEN inspecting periods
         THEN should return period formats (Month-Year expected)"""
@@ -105,7 +109,7 @@ class TestInspectDatabaseIntegration:
         well_formed_periods = [p for p in periods if p and "-" in str(p) and len(str(p)) < 15]
         assert len(well_formed_periods) > 0, "Should have at least one Month-Year format period"
 
-    def test_inspect_database_entity_aliases(self):
+    def test_inspect_database_entity_aliases(self, session_ingested_collection):
         """GIVEN PostgreSQL financial_tables
         WHEN inspecting entities
         THEN should return all entities"""
@@ -124,7 +128,7 @@ class TestInspectDatabaseIntegration:
             f"Should have at least one expected entity from {expected_base}"
         )
 
-    def test_inspect_database_json_file_creation(self, tmp_path: Path):
+    def test_inspect_database_json_file_creation(self, session_ingested_collection, tmp_path: Path):
         """GIVEN successful inspection
         WHEN saving to JSON file
         THEN should create valid JSON at specified path"""
@@ -144,7 +148,7 @@ class TestInspectDatabaseIntegration:
         assert "total_rows" in loaded_catalog
         assert loaded_catalog["total_rows"] > 0, "Should have rows in database"
 
-    def test_inspect_database_handles_schema_correctly(self):
+    def test_inspect_database_handles_schema_correctly(self, session_ingested_collection):
         """GIVEN financial_tables schema
         WHEN running inspection
         THEN should handle actual schema (unit, not currency)"""
@@ -164,6 +168,7 @@ class TestInspectDatabaseIntegration:
 @pytest.mark.integration
 @pytest.mark.xdist_group(name="database")
 @pytest.mark.slow
+@pytest.mark.preserve_collection  # Prevents cleanup between test files - maintains PostgreSQL state
 class TestDataDictionaryValidation:
     """Validate data dictionary creation meets Story 3.0.2 AC2 requirements."""
 

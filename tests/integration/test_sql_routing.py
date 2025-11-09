@@ -13,6 +13,9 @@ import pytest
 from raglite.retrieval.search import fuse_sql_vector_results, hybrid_search
 from raglite.shared.models import QueryResult
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.preserve_collection  # Read-only query tests - no data modification
 class TestSQLRouting:
@@ -20,6 +23,7 @@ class TestSQLRouting:
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_sql_only_routing(self):
         """Test SQL_ONLY query routes to SQL search only."""
         # Table query that should route to SQL
@@ -38,6 +42,7 @@ class TestSQLRouting:
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_vector_only_routing(self):
         """Test VECTOR_ONLY query routes to semantic + BM25 search."""
         # Text query that should route to vector search
@@ -56,6 +61,7 @@ class TestSQLRouting:
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_hybrid_routing(self):
         """Test HYBRID query routes to SQL + Vector fusion."""
         # Query that should trigger hybrid routing
@@ -74,6 +80,7 @@ class TestSQLRouting:
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_sql_routing_disabled(self):
         """Test fallback to vector search when SQL routing disabled."""
         # Table query with SQL routing disabled
@@ -90,6 +97,7 @@ class TestSQLRouting:
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_empty_results_handling(self):
         """Test graceful handling of empty SQL results."""
         # Query that may return no SQL results
@@ -102,6 +110,7 @@ class TestSQLRouting:
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_routing_with_filters(self):
         """Test SQL routing works with metadata filters."""
         query = "What are the costs for Portugal?"
@@ -283,11 +292,13 @@ class TestSQLVectorFusion:
         assert fused[0].text == "Shared chunk"
 
 
+@pytest.mark.preserve_collection  # Read-only query tests - no data modification
 class TestSQLRoutingErrorHandling:
     """Test error handling in SQL routing."""
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_sql_generation_failure_fallback(self):
         """Test fallback to vector search when SQL generation fails."""
         # Query that might cause SQL generation to fail
@@ -301,6 +312,7 @@ class TestSQLRoutingErrorHandling:
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_malformed_query_handling(self):
         """Test handling of edge case queries."""
         # Empty query
@@ -314,6 +326,7 @@ class TestSQLRoutingErrorHandling:
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_parameter_validation(self):
         """Test parameter validation in hybrid_search()."""
         query = "What is the cost?"

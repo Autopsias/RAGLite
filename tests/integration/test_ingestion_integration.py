@@ -332,7 +332,6 @@ class TestExcelIngestionIntegration:
         print("  ✅ End-to-end Excel ingestion (AC 9)")
 
 
-@pytest.mark.manages_collection_state  # Tests call ingest_pdf() - skip re-ingest cleanup
 class TestChunkingIntegration:
     """Integration tests for Story 1.4: Document chunking with page number preservation.
 

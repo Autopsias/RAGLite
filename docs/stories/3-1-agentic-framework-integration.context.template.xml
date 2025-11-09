@@ -1,0 +1,634 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Story Context Template for Story 3.1: Agentic Framework Integration
+This template should be used by the Scrum Master when drafting Story 3.1
+
+INSTRUCTIONS FOR USE:
+1. Copy this file to: 3-1-agentic-framework-integration.context.xml
+2. Fill in the [TODO: ...] placeholders with actual implementation details
+3. Update references to reflect actual file paths and code locations
+4. Add specific implementation notes based on Story 3.0.8 decisions
+5. Update status metadata as story progresses
+
+NOTE: This is a TEMPLATE - do not use directly. Create actual context file when drafting Story 3.1.
+-->
+
+<storyContext>
+  <metadata>
+    <epicId>3.0</epicId>
+    <epicTitle>AI Intelligence &amp; Orchestration</epicTitle>
+    <storyId>3.1</storyId>
+    <storyTitle>Agentic Framework Integration</storyTitle>
+    <status>backlog</status>
+    <createdDate>[TODO: Date when actual story is drafted]</createdDate>
+    <lastUpdated>[TODO: Update as story progresses]</lastUpdated>
+    <dependencies>
+      <dependency storyId="3.0.8" status="done">Agentic Framework Architecture Spike</dependency>
+      <dependency epicId="2" status="done">Epic 2 Advanced RAG Architecture (70%+ accuracy foundation)</dependency>
+    </dependencies>
+  </metadata>
+
+  <storyOverview>
+    <userStory>
+      As a system, I want agentic orchestration framework integrated per Story 3.0.8 decisions,
+      so that multi-step analytical workflows can be planned and executed using AWS Strands.
+    </userStory>
+
+    <technicalSummary>
+      Story 3.1 implements the AWS Strands agentic framework foundation for Epic 3, establishing
+      the orchestration layer that will coordinate Retrieval, Analysis, and Synthesis agents in
+      Stories 3.2-3.4. This story focuses on framework setup, basic 2-step workflow validation,
+      and state management infrastructure.
+
+      Key Implementation: Initialize AWS Strands orchestrator with MistralModel, implement basic
+      @tool decorator pattern, validate 2-step workflow execution (Retrieve → Synthesize).
+    </technicalSummary>
+
+    <scopeBoundaries>
+      <inScope>
+        - AWS Strands v1.15.0 initialization with MistralModel
+        - Basic orchestrator setup in raglite/orchestration/orchestrator.py
+        - 2-step workflow validation (minimal agents for testing)
+        - State management infrastructure (AgentTask, AgentResult models)
+        - Error handling foundation (timeout, failure detection)
+        - Integration test proving framework execution
+        - Developer documentation for @tool pattern usage
+      </inScope>
+
+      <outOfScope>
+        - Complete agent implementations (Stories 3.2-3.4)
+        - Multi-step complex workflows (Story 3.5)
+        - MCP tool integration (Story 3.6)
+        - Production-level error handling (Story 3.7)
+        - Comprehensive test suite (Story 3.8)
+      </outOfScope>
+    </scopeBoundaries>
+  </storyOverview>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">
+      <description>AWS Strands framework integrated per Story 3.0.8 decision</description>
+      <testMethod>
+        - Verify strands-agents v1.15.0 installed via pyproject.toml
+        - Verify MistralModel initialization with settings.mistral_api_key
+        - Verify orchestrator.py imports strands.Agent, strands.tool decorator
+        - Run basic framework smoke test
+      </testMethod>
+      <successMetrics>
+        - pyproject.toml contains strands-agents>=1.10.0,&lt;2.0.0
+        - MistralModel successfully authenticates with Mistral API
+        - orchestrator.py module loads without import errors
+        - Basic Agent invocation succeeds (strands_poc.py pattern works)
+      </successMetrics>
+      <acceptanceEvidence>
+        [TODO: Add evidence when AC is validated]
+        - Unit test: tests/unit/test_orchestrator_initialization.py
+        - Integration test: tests/integration/test_strands_framework.py
+      </acceptanceEvidence>
+    </criterion>
+
+    <criterion id="AC2">
+      <description>Framework configuration and initialization validated</description>
+      <testMethod>
+        - Verify Pydantic models for WorkflowPlan, AgentTask, AgentResult
+        - Verify orchestrator can be instantiated with custom system prompt
+        - Verify tools can be registered via @tool decorator
+        - Test configuration loading from settings
+      </testMethod>
+      <successMetrics>
+        - All data models defined in raglite/orchestration/models.py
+        - Orchestrator accepts model, tools, system_prompt parameters
+        - @tool decorator functions properly register as Strands tools
+        - settings.mistral_api_key, settings.metadata_extraction_model accessible
+      </successMetrics>
+      <acceptanceEvidence>
+        [TODO: Add evidence when AC is validated]
+        - Unit test: tests/unit/test_orchestration_models.py
+        - Unit test: tests/unit/test_tool_registration.py
+      </acceptanceEvidence>
+    </criterion>
+
+    <criterion id="AC3">
+      <description>Basic 2-step workflow tested (Retrieve → Synthesize)</description>
+      <testMethod>
+        - Create minimal retrieval agent (@tool) returning mock documents
+        - Create minimal synthesis agent (@tool) aggregating results
+        - Execute 2-step workflow via orchestrator.invoke_async()
+        - Verify agent 1 output passed to agent 2 input (state management)
+      </testMethod>
+      <successMetrics>
+        - Workflow completes successfully end-to-end
+        - Agent 2 receives Agent 1 output correctly
+        - Result extracted via str(result) returns synthesized answer
+        - Execution time logged for performance tracking
+      </successMetrics>
+      <acceptanceEvidence>
+        [TODO: Add evidence when AC is validated]
+        - Integration test: tests/integration/test_basic_workflow.py::test_retrieve_synthesize
+        - Execution log showing 2-step trace
+      </acceptanceEvidence>
+    </criterion>
+
+    <criterion id="AC4">
+      <description>State management functional for multi-step workflows</description>
+      <testMethod>
+        - Verify AgentTask model supports depends_on field (task dependencies)
+        - Verify AgentResult model captures task_id, success, result, execution_time
+        - Test passing AgentResult from one agent as input to next agent
+        - Verify workflow state tracked across agent executions
+      </testMethod>
+      <successMetrics>
+        - AgentTask.depends_on properly enforces execution order
+        - AgentResult serializes/deserializes correctly (Pydantic validation)
+        - Orchestrator maintains state between agent calls
+        - Failed agent results don't corrupt workflow state
+      </successMetrics>
+      <acceptanceEvidence>
+        [TODO: Add evidence when AC is validated]
+        - Unit test: tests/unit/test_state_management.py
+        - Integration test with 3+ agent calls showing state preservation
+      </acceptanceEvidence>
+    </criterion>
+
+    <criterion id="AC5">
+      <description>Error handling implemented for workflow failures (NFR24, NFR26)</description>
+      <testMethod>
+        - Test agent timeout handling (&gt;10s single agent execution)
+        - Test workflow timeout handling (&gt;30s total execution)
+        - Test agent exception handling (LLM API error, invalid response)
+        - Verify structured logging for all errors
+      </testMethod>
+      <successMetrics>
+        - Timeouts trigger fallback without crashing orchestrator
+        - Exceptions logged with agent_type, task_id, error_message
+        - Workflow returns partial results when agent fails
+        - All errors include structured context (JSON logs)
+      </successMetrics>
+      <acceptanceEvidence>
+        [TODO: Add evidence when AC is validated]
+        - Unit test: tests/unit/test_error_handling.py
+        - Integration test: tests/integration/test_workflow_failures.py
+      </acceptanceEvidence>
+    </criterion>
+
+    <criterion id="AC6">
+      <description>Integration test validates framework execution</description>
+      <testMethod>
+        - Create integration test suite in tests/integration/test_orchestration_framework.py
+        - Test end-to-end workflow with real Mistral API calls (mocked agents)
+        - Verify CI/CD pipeline runs integration tests successfully
+        - Validate test coverage &gt;80% for orchestration module
+      </testMethod>
+      <successMetrics>
+        - Integration test passes consistently (no flakiness)
+        - Test execution time &lt;30 seconds
+        - Coverage report shows 80%+ for raglite/orchestration/
+        - CI workflow (GitHub Actions) succeeds
+      </successMetrics>
+      <acceptanceEvidence>
+        [TODO: Add evidence when AC is validated]
+        - Test file: tests/integration/test_orchestration_framework.py
+        - Coverage report: htmlcov/index.html (orchestration module)
+        - CI logs showing test success
+      </acceptanceEvidence>
+    </criterion>
+
+    <criterion id="AC7">
+      <description>Documentation includes workflow development guide</description>
+      <testMethod>
+        - Create docs/guides/agentic-workflow-development.md
+        - Document @tool decorator usage with code examples
+        - Document orchestrator initialization pattern
+        - Document error handling best practices
+        - Include quickstart guide for future agent implementations
+      </testMethod>
+      <successMetrics>
+        - Guide covers all 7 acceptance criteria implementation
+        - Code examples runnable and tested
+        - Guide references architecture docs (epic-3-orchestration-design.md)
+        - Quickstart enables developer to create new agent in &lt;30 min
+      </successMetrics>
+      <acceptanceEvidence>
+        [TODO: Add evidence when AC is validated]
+        - Documentation file: docs/guides/agentic-workflow-development.md
+        - Peer review confirming guide clarity
+        - Developer testing of quickstart steps
+      </acceptanceEvidence>
+    </criterion>
+  </acceptanceCriteria>
+
+  <architectureDecisions>
+    <decision id="ARCH-3.1-1">
+      <title>AWS Strands Framework Confirmed</title>
+      <rationale>
+        Story 3.0.8 evaluated 3 frameworks and selected AWS Strands (84.5% weighted score).
+        No changes to framework selection - Story 3.1 implements the approved decision.
+      </rationale>
+      <reference>docs/architecture/epic-3-framework-selection.md</reference>
+      <impact>
+        - Use strands.Agent, strands.tool imports throughout orchestration module
+        - MistralModel integration (no AWS Bedrock dependencies)
+        - @tool decorator pattern for all agent definitions
+      </impact>
+    </decision>
+
+    <decision id="ARCH-3.1-2">
+      <title>Orchestration Module Structure</title>
+      <rationale>
+        Follow Sequential Chain pattern (Pattern 1) from epic-3-agent-patterns.md.
+        Simple linear workflow for initial implementation, parallelism deferred to Story 3.5.
+      </rationale>
+      <reference>docs/architecture/epic-3-agent-patterns.md - Pattern 1</reference>
+      <impact>
+        - orchestrator.py: Main Agent initialization and workflow execution
+        - models.py: Pydantic models for AgentTask, AgentResult, WorkflowPlan
+        - fallback.py: Error handling foundation (expanded in Story 3.7)
+        - *_agent.py files: Individual agent implementations (Stories 3.2-3.4)
+      </impact>
+    </decision>
+
+    <decision id="ARCH-3.1-3">
+      <title>Model Selection for Orchestration</title>
+      <rationale>
+        Use Mistral Small (mistral-small-latest) for orchestrator decisions.
+        Tunable to Claude Sonnet in future if performance issues arise.
+        Ricardo confirmed Mistral works without AWS Bedrock in Story 3.0.8.
+      </rationale>
+      <reference>docs/stories/3-0-8-agentic-framework-architecture-spike.context.xml</reference>
+      <impact>
+        - MistralModel(api_key=settings.mistral_api_key, model_id="mistral-small-latest")
+        - Expected orchestration overhead: 3-5 seconds per workflow
+        - Cost-effective compared to Claude Sonnet ($0.25/MTok vs $3/MTok)
+      </impact>
+    </decision>
+  </architectureDecisions>
+
+  <implementationGuidance>
+    <module name="raglite/orchestration/orchestrator.py">
+      <purpose>Main orchestration coordinator using AWS Strands Agent</purpose>
+      <estimatedLOC>100</estimatedLOC>
+      <keyPatterns>
+        - Import: from strands import Agent, tool
+        - Import: from strands.models.mistral import MistralModel
+        - Initialize MistralModel with settings
+        - Create Agent with model, tools, system_prompt
+        - Implement invoke_workflow() using orchestrator.invoke_async()
+        - Extract result via str(result)
+      </keyPatterns>
+      <codeSnippet>
+        <![CDATA[
+# Example pattern from strands_poc.py
+from strands import Agent, tool
+from strands.models.mistral import MistralModel
+from raglite.shared.config import settings
+
+@tool
+async def retrieval_agent(query: str) -> str:
+    """Minimal retrieval agent for AC3 testing."""
+    # TODO: Implement in Story 3.2
+    return f"Retrieved documents for: {query}"
+
+@tool
+async def synthesis_agent(retrieval_results: str) -> str:
+    """Minimal synthesis agent for AC3 testing."""
+    # TODO: Implement in Story 3.4
+    return f"Synthesized answer from: {retrieval_results}"
+
+# Initialize orchestrator
+mistral = MistralModel(
+    api_key=settings.mistral_api_key,
+    model_id="mistral-small-latest"
+)
+
+orchestrator = Agent(
+    model=mistral,
+    tools=[retrieval_agent, synthesis_agent],
+    system_prompt="You are an orchestrator for financial analysis workflows."
+)
+
+# Execute workflow
+async def run_workflow(query: str) -> str:
+    result = await orchestrator.invoke_async(query)
+    return str(result)  # Extract text from AgentResult
+        ]]>
+      </codeSnippet>
+      <testingNotes>
+        - Unit test: Mock MistralModel to avoid API costs
+        - Integration test: Use real Mistral API with minimal test query
+        - Performance test: Measure orchestration overhead (target &lt;5s)
+      </testingNotes>
+    </module>
+
+    <module name="raglite/orchestration/models.py">
+      <purpose>Pydantic models for workflow state management</purpose>
+      <estimatedLOC>50</estimatedLOC>
+      <keyPatterns>
+        - AgentTask: task_id, agent_type, instruction, depends_on
+        - AgentResult: task_id, agent_type, success, result, execution_time_ms, error
+        - WorkflowPlan: query, complexity, tasks, estimated_duration_ms
+        - QueryComplexity enum: SIMPLE, ANALYTICAL
+        - AgentType enum: RETRIEVAL, ANALYSIS, SYNTHESIS
+      </keyPatterns>
+      <codeSnippet>
+        <![CDATA[
+from pydantic import BaseModel, Field
+from typing import List, Dict, Any, Optional
+from enum import Enum
+
+class QueryComplexity(str, Enum):
+    SIMPLE = "simple"
+    ANALYTICAL = "analytical"
+
+class AgentType(str, Enum):
+    RETRIEVAL = "retrieval"
+    ANALYSIS = "analysis"
+    SYNTHESIS = "synthesis"
+
+class AgentTask(BaseModel):
+    task_id: str
+    agent_type: AgentType
+    instruction: str
+    depends_on: Optional[List[str]] = None
+
+class AgentResult(BaseModel):
+    task_id: str
+    agent_type: AgentType
+    success: bool
+    result: Any
+    execution_time_ms: int
+    error: Optional[str] = None
+
+class WorkflowPlan(BaseModel):
+    query: str
+    complexity: QueryComplexity
+    tasks: List[AgentTask]
+    estimated_duration_ms: int
+        ]]>
+      </codeSnippet>
+      <testingNotes>
+        - Unit test: Pydantic model validation (required fields, types)
+        - Unit test: Serialization/deserialization (model_dump(), model_validate())
+      </testingNotes>
+    </module>
+
+    <module name="raglite/orchestration/fallback.py">
+      <purpose>Basic error handling and graceful degradation foundation</purpose>
+      <estimatedLOC>20</estimatedLOC>
+      <keyPatterns>
+        - Timeout detection and handling
+        - Exception catching and logging
+        - Partial result extraction
+        - Basic fallback to Epic 2 retrieval (full implementation in Story 3.7)
+      </keyPatterns>
+      <codeSnippet>
+        <![CDATA[
+import logging
+from typing import Optional
+from raglite.orchestration.models import AgentResult
+
+logger = logging.getLogger(__name__)
+
+class WorkflowTimeoutError(Exception):
+    """Raised when workflow exceeds timeout threshold."""
+    pass
+
+class AgentExecutionError(Exception):
+    """Raised when agent fails during execution."""
+    pass
+
+async def handle_workflow_failure(
+    error: Exception,
+    partial_results: Optional[List[AgentResult]] = None
+) -> str:
+    """
+    Handle workflow failure with graceful degradation.
+
+    Full implementation in Story 3.7. Basic version for AC5.
+    """
+    logger.error(
+        "Workflow failed",
+        extra={
+            "error_type": type(error).__name__,
+            "error_message": str(error),
+            "partial_results_count": len(partial_results) if partial_results else 0
+        }
+    )
+
+    if partial_results:
+        return f"Workflow partially completed. {len(partial_results)} agents succeeded."
+    else:
+        return "Workflow failed. Please try a simpler query."
+        ]]>
+      </codeSnippet>
+      <testingNotes>
+        - Unit test: Test timeout detection logic
+        - Unit test: Test partial result handling
+        - Integration test: Simulate agent failure, verify fallback behavior
+      </testingNotes>
+    </module>
+  </implementationGuidance>
+
+  <testStrategy>
+    <unitTests>
+      <testFile path="tests/unit/test_orchestrator_initialization.py">
+        - test_mistral_model_initialization()
+        - test_orchestrator_creation()
+        - test_tool_registration()
+        - test_invalid_configuration_handling()
+      </testFile>
+
+      <testFile path="tests/unit/test_orchestration_models.py">
+        - test_agent_task_validation()
+        - test_agent_result_validation()
+        - test_workflow_plan_validation()
+        - test_enum_values()
+      </testFile>
+
+      <testFile path="tests/unit/test_error_handling.py">
+        - test_timeout_detection()
+        - test_exception_logging()
+        - test_partial_result_extraction()
+      </testFile>
+    </unitTests>
+
+    <integrationTests>
+      <testFile path="tests/integration/test_basic_workflow.py">
+        - test_retrieve_synthesize_workflow() [AC3]
+        - test_workflow_state_management() [AC4]
+        - test_workflow_timeout_handling() [AC5]
+      </testFile>
+
+      <testFile path="tests/integration/test_orchestration_framework.py">
+        - test_strands_framework_integration() [AC1, AC6]
+        - test_real_mistral_api_call()
+        - test_agent_failure_recovery() [AC5]
+      </testFile>
+    </integrationTests>
+
+    <coverageTarget>
+      Target: 80%+ for raglite/orchestration/ module
+      Focus: orchestrator.py, models.py, fallback.py (core foundation)
+    </coverageTarget>
+  </testStrategy>
+
+  <artifacts>
+    <architectureDocs>
+      <doc>
+        <path>docs/architecture/epic-3-index.md</path>
+        <relevance>Navigation guide to all Epic 3 architecture documentation</relevance>
+      </doc>
+
+      <doc>
+        <path>docs/architecture/epic-3-framework-selection.md</path>
+        <relevance>Framework selection decision (AWS Strands 84.5% score)</relevance>
+        <keySection>Section: AWS Strands Evaluation - Implementation pattern</keySection>
+      </doc>
+
+      <doc>
+        <path>docs/architecture/epic-3-orchestration-design.md</path>
+        <relevance>Complete 3-agent system architecture and C4 diagrams</relevance>
+        <keySection>Section: Agent Specifications - Orchestrator (100 LOC estimate)</keySection>
+      </doc>
+
+      <doc>
+        <path>docs/architecture/epic-3-agent-patterns.md</path>
+        <relevance>Pattern 1: Sequential Chain - primary workflow pattern for Story 3.1</relevance>
+        <keySection>Pattern 1 code example with @tool decorator usage</keySection>
+      </doc>
+    </architectureDocs>
+
+    <storyContexts>
+      <context>
+        <path>docs/stories/3-0-8-agentic-framework-architecture-spike.context.xml</path>
+        <relevance>Story 3.0.8 decisions that Story 3.1 implements</relevance>
+        <keyDecisions>
+          - Framework: AWS Strands (no LangGraph)
+          - Model: Mistral Small for orchestration
+          - Pattern: @tool decorator for agent definitions
+          - POC: strands_poc.py validation code
+        </keyDecisions>
+      </context>
+    </storyContexts>
+
+    <codeReferences>
+      <file>
+        <path>strands_poc.py</path>
+        <relevance>Working POC code validating AWS Strands + Mistral integration</relevance>
+        <keyPatterns>
+          - MistralModel initialization
+          - @tool decorator usage
+          - Agent.invoke_async() method
+          - Result extraction via str(result)
+        </keyPatterns>
+      </file>
+
+      <file>
+        <path>raglite/shared/config.py</path>
+        <relevance>Settings for mistral_api_key and metadata_extraction_model</relevance>
+      </file>
+
+      <file>
+        <path>raglite/shared/logging.py</path>
+        <relevance>Structured logging utilities for agent execution tracking</relevance>
+      </file>
+    </codeReferences>
+
+    <dependencies>
+      <dependency>
+        <name>strands-agents</name>
+        <version>&gt;=1.10.0,&lt;2.0.0</version>
+        <status>Installed in Story 3.0.8</status>
+        <validation>pyproject.toml, uv sync completed</validation>
+      </dependency>
+    </dependencies>
+  </artifacts>
+
+  <risks>
+    <risk id="RISK-3.1-1" severity="medium">
+      <description>Strands API changes or instability (pre-1.0 library)</description>
+      <mitigation>
+        - Locked to v1.15.0 (tested in POC)
+        - Fallback pattern documented: Simple Function Calling (71.5% score, 105 LOC)
+        - Monitor Strands GitHub for breaking changes
+      </mitigation>
+    </risk>
+
+    <risk id="RISK-3.1-2" severity="low">
+      <description>Mistral API performance issues (3.4s orchestration overhead in POC)</description>
+      <mitigation>
+        - Performance budget allows 3-5s orchestration overhead
+        - Tunable to Claude Sonnet if Mistral proves too slow
+        - Story 3.8 will validate actual p95 performance
+      </mitigation>
+    </risk>
+
+    <risk id="RISK-3.1-3" severity="low">
+      <description>State management complexity for multi-agent workflows</description>
+      <mitigation>
+        - AC4 explicitly validates state management
+        - Sequential Chain pattern (Pattern 1) simplifies state flow
+        - Pydantic models enforce type safety for state objects
+      </mitigation>
+    </risk>
+  </risks>
+
+  <nextSteps>
+    <step priority="1">
+      <description>Draft Story 3.1 markdown file using this context as reference</description>
+      <owner>Scrum Master</owner>
+    </step>
+
+    <step priority="2">
+      <description>Copy this template to 3-1-agentic-framework-integration.context.xml and fill TODOs</description>
+      <owner>Scrum Master</owner>
+    </step>
+
+    <step priority="3">
+      <description>Developer reviews architecture docs before implementation</description>
+      <owner>Dev</owner>
+      <readingList>
+        - epic-3-index.md (navigation)
+        - epic-3-framework-selection.md (framework decision)
+        - epic-3-agent-patterns.md (Pattern 1 code example)
+        - strands_poc.py (working code)
+      </readingList>
+    </step>
+
+    <step priority="4">
+      <description>Implement orchestrator.py, models.py, fallback.py per guidance above</description>
+      <owner>Dev</owner>
+      <estimatedEffort>2-3 days</estimatedEffort>
+    </step>
+
+    <step priority="5">
+      <description>Validate all 7 acceptance criteria with tests</description>
+      <owner>Dev + QA</owner>
+    </step>
+
+    <step priority="6">
+      <description>Create workflow development guide (AC7)</description>
+      <owner>Dev</owner>
+    </step>
+  </nextSteps>
+
+  <notes>
+    <note type="template-usage">
+      This is a TEMPLATE file. When drafting Story 3.1:
+      1. Copy to 3-1-agentic-framework-integration.context.xml
+      2. Remove this notes section
+      3. Fill in all [TODO: ...] placeholders
+      4. Update references to actual file paths
+      5. Add implementation notes as development progresses
+    </note>
+
+    <note type="architecture-foundation">
+      Story 3.1 is the foundation story for Epic 3. Success here unblocks Stories 3.2-3.8.
+      Key deliverable: Working AWS Strands orchestrator with 2-step workflow validation.
+    </note>
+
+    <note type="code-reuse">
+      strands_poc.py provides working patterns. Copy liberally but don't duplicate -
+      extract reusable patterns into orchestrator.py for production use.
+    </note>
+  </notes>
+</storyContext>

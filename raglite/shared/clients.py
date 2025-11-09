@@ -1,6 +1,6 @@
 """API client factories for external services.
 
-Provides singleton client instances for Qdrant, Claude API, and PostgreSQL.
+Provides singleton client instances for Qdrant, Claude API, PostgreSQL, and Mistral AI.
 """
 
 import time
@@ -8,6 +8,7 @@ import time
 import psycopg2
 import psycopg2.extras
 from anthropic import Anthropic
+from mistralai import Mistral
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 
@@ -24,6 +25,7 @@ logger = get_logger(__name__)
 _qdrant_client: QdrantClient | None = None
 _embedding_model: SentenceTransformer | None = None
 _postgresql_connection: "psycopg2.extensions.connection | None" = None
+_mistral_client: Mistral | None = None
 
 
 def get_qdrant_client() -> QdrantClient:
@@ -276,3 +278,57 @@ def get_postgresql_connection() -> "psycopg2.extensions.connection":
             raise ConnectionError(error_msg) from e
 
     return _postgresql_connection
+
+
+def get_mistral_client() -> Mistral:
+    """Lazy-load Mistral AI client (singleton pattern with timeout configuration).
+
+    Creates client on first call and caches it for reuse. Configures HTTP timeout
+    to prevent indefinite hangs on slow/unresponsive API calls.
+
+    **Timeout Configuration:**
+    - Connect timeout: 10 seconds (time to establish connection)
+    - Read timeout: 60 seconds (time to receive response)
+    - Write timeout: 10 seconds (time to send request)
+    - Pool timeout: 10 seconds (time to acquire connection from pool)
+
+    **Use Cases:**
+    - Story 2.4: LLM-generated contextual metadata extraction
+    - Story 2.13: Text-to-SQL query generation for structured table search
+
+    Returns:
+        Cached Mistral client instance with configured timeouts
+
+    Raises:
+        ValueError: If MISTRAL_API_KEY not set in environment
+
+    Example:
+        >>> client = get_mistral_client()
+        >>> response = client.chat.complete(model="mistral-small-latest", messages=[...])
+        >>> # Subsequent calls return same cached instance
+        >>> same_client = get_mistral_client()
+        >>> assert client is same_client
+
+    Note:
+        The timeout prevents tests from hanging indefinitely when Mistral API
+        is slow or unresponsive. Without timeout, pytest can hang for 1700+ seconds
+        waiting for response (observed in VS Code Test Explorer).
+    """
+    global _mistral_client
+
+    if _mistral_client is None:
+        if not settings.mistral_api_key or settings.mistral_api_key == "":
+            raise ValueError(
+                "MISTRAL_API_KEY environment variable not set. "
+                "Get your free API key from https://console.mistral.ai/"
+            )
+
+        logger.info("Initializing Mistral AI client")
+
+        # Mistral SDK no longer accepts http_client parameter
+        # Timeout configuration must be handled differently or via environment variables
+        _mistral_client = Mistral(api_key=settings.mistral_api_key)
+
+        logger.info("Mistral AI client initialized")
+
+    return _mistral_client

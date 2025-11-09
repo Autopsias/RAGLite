@@ -1,0 +1,175 @@
+<story-context id="3-0-5-execute-epic-2-uat" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>0.5</storyId>
+    <title>Execute Epic 2 UAT</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-07</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/3-0-5-execute-epic-2-uat.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>project lead</asA>
+    <iWant>to execute user acceptance testing on Epic 2's MCP query tool</iWant>
+    <soThat>Epic 2 is officially validated complete before building Epic 3 on top of it</soThat>
+    <tasks>
+      <task id="1" ac="AC1">MCP Server Setup (10 minutes)
+        <subtask id="1.1">Follow Story 3.0.3 setup guide - Edit ~/.claude/mcp.json, Add RAGLite configuration, Use absolute path</subtask>
+        <subtask id="1.2">Restart Claude Desktop - Quit completely, Reopen and wait</subtask>
+        <subtask id="1.3">Verify connection - Check Settings > MCP, Confirm "RAGLite" appears</subtask>
+        <subtask id="1.4">Troubleshoot if needed - Use troubleshooting section from Story 3.0.3, Fix any connection issues</subtask>
+      </task>
+      <task id="2" ac="AC2">Execute UAT Script (30-60 minutes)
+        <subtask id="2.1">Open UAT script - File: docs/uat/epic-2-financial-queries-uat.md</subtask>
+        <subtask id="2.2">Verify prerequisites - Qdrant running, PostgreSQL running, MCP connected</subtask>
+        <subtask id="2.3">Execute Test 1 (Simple Metric Query) - Ask query in Claude Desktop, Record actual result, Mark pass/fail</subtask>
+        <subtask id="2.4">Execute Tests 2-10 - Repeat for each test scenario, Note usability issues</subtask>
+        <subtask id="2.5">Complete results summary - Count passes/fails, Calculate pass rate, Overall result</subtask>
+      </task>
+      <task id="3" ac="AC3">UAT Results Review (30 minutes)
+        <subtask id="3.1">Present results to team - Share completed UAT script, Discuss findings</subtask>
+        <subtask id="3.2">Team decision - Evaluate pass rate, Decide: PASS / PARTIAL / FAIL</subtask>
+        <subtask id="3.3">Update Epic 2 status - If PASS: Mark Epic 2 officially complete, If PARTIAL/FAIL: Create action items</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">MCP Server Setup (10 minutes)
+      <goal>Connect Claude Desktop to RAGLite MCP server</goal>
+      <technicalApproach>
+        - Use Story 3.0.3's setup guide (docs/setup/mcp-configuration.md)
+        - Add MCP configuration to ~/.claude/mcp.json
+        - Use absolute path to RAGLite project
+        - Restart Claude Desktop and verify connection
+      </technicalApproach>
+      <successCriteria>
+        - MCP server configured (using Story 3.0.3 guide)
+        - Claude Desktop shows "RAGLite" in connected servers
+        - No connection errors in logs
+      </successCriteria>
+      <validation>Ricardo successfully connects (validates Story 3.0.3 guide clarity). If connection fails, Story 3.0.3 guide needs improvement.</validation>
+    </criterion>
+    <criterion id="AC2">Execute UAT Script (30-60 minutes)
+      <goal>Test all 10 Epic 2 scenarios and record results</goal>
+      <technicalApproach>
+        - Open UAT script: docs/uat/epic-2-financial-queries-uat.md
+        - Verify prerequisites: Qdrant, PostgreSQL, MCP server connected
+        - Execute 10 test scenarios (Simple Metric Query, Period Normalization, Multi-Entity Comparison, Fuzzy Entity Matching, Hybrid Search, Table-Aware Chunking, Currency Limitation Handling, Budget vs Actual Detection, Source Attribution Accuracy, Response Time)
+        - Record actual result for each test, mark pass/fail, note usability issues
+        - Complete results summary
+      </technicalApproach>
+      <successCriteria>
+        - All 10 test scenarios executed
+        - Actual results recorded for each test
+        - Pass/fail marked for each test
+        - Results summary completed
+        - Usability feedback documented
+      </successCriteria>
+      <filesModified>docs/uat/epic-2-financial-queries-uat.md</filesModified>
+    </criterion>
+    <criterion id="AC3">UAT Results Review (30 minutes)
+      <goal>Team reviews results and decides Epic 2 status</goal>
+      <decisionCriteria>
+        - ≥80% pass rate → PASS: Epic 2 officially complete, proceed to Epic 3
+        - 60-79% pass rate → PARTIAL: Create UX improvement stories, schedule follow-up UAT
+        - &lt;60% pass rate → FAIL: Epic 2 NOT complete, fix issues, re-run UAT
+      </decisionCriteria>
+      <successCriteria>
+        - Team reviews UAT results
+        - Decision made: PASS / PARTIAL / FAIL
+        - Epic 2 status updated accordingly
+        - Action items created (if needed)
+      </successCriteria>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/process/uat-framework.md" title="UAT Framework" section="UAT Workflow">
+        Defines 4-phase UAT workflow: Readiness, Script Creation, Execution, Review. Decision criteria: ≥80% PASS, 60-79% PARTIAL, &lt;60% FAIL. Created in Story 3.0.4.
+      </doc>
+      <doc path="docs/templates/uat-script-template.md" title="UAT Script Template" section="Template Structure">
+        Reusable template for UAT scripts with sections: Prerequisites, Test Scenarios, Results Summary, UAT Sign-Off. Created in Story 3.0.4.
+      </doc>
+      <doc path="docs/setup/mcp-configuration.md" title="MCP Setup Guide" section="Configuration">
+        Step-by-step guide for connecting Claude Desktop to RAGLite MCP server. Created in Story 3.0.3. Prerequisite for AC1.
+      </doc>
+      <doc path="docs/uat/epic-2-financial-queries-uat.md" title="Epic 2 UAT Script" section="Test Scenarios">
+        10 test scenarios for Epic 2 MCP query tool validation: metrics, period normalization, entity matching, hybrid search, table-aware chunking, attribution, response time.
+      </doc>
+      <doc path="docs/tech-spec-epic-3-prep.md" title="Epic 3 Prep Tech Spec" section="Story 3.0.5">
+        Technical specification for Epic 2 UAT execution. Lines 274-309 define approach, acceptance criteria, and files.
+      </doc>
+      <doc path="docs/retrospectives/epic-2-retro-2025-11-05.md" title="Epic 2 Retrospective" section="Action Item 3">
+        Identified UAT framework gap and mandated UAT execution for all future epics. Ricardo's feedback: "We should execute user tests iteratively."
+      </doc>
+      <doc path="docs/prd/epic-3-ai-intelligence-orchestration.md" title="Epic 3 PRD" section="Overview">
+        Epic 3 goals and stories. UAT validation of Epic 2 is prerequisite for Epic 3 feature implementation.
+      </doc>
+    </docs>
+    <code>
+      <artifact path="raglite/main.py" kind="mcp-server" symbol="FastMCP" lines="1-200" reason="MCP server implementation - exposes query_financial_documents tool for UAT testing" />
+      <artifact path="raglite/retrieval/search.py" kind="service" symbol="retrieve_documents" lines="1-150" reason="Retrieval logic tested through MCP queries during UAT" />
+      <artifact path="raglite/ingestion/pipeline.py" kind="service" symbol="ingest_document" lines="1-300" reason="Ingestion pipeline that processed Epic 2 documents - results validated in UAT" />
+      <artifact path="tests/ground_truth.json" kind="test-data" symbol="ground_truth_queries" reason="50+ Q&A pairs - subset used for UAT test scenarios" />
+      <artifact path="docker-compose.yml" kind="config" symbol="services" reason="Defines Qdrant and PostgreSQL services - prerequisites for UAT execution" />
+    </code>
+    <dependencies>
+      <python>
+        <package name="fastmcp" version="latest" reason="MCP server framework - tested during UAT" />
+        <package name="qdrant-client" version="1.11+" reason="Vector database client - must be running for UAT" />
+        <package name="psycopg2" version="latest" reason="PostgreSQL client - SQL table search tested in UAT" />
+        <package name="docling" version="latest" reason="PDF processing - ingested documents tested in UAT" />
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="manual-execution">This is a MANUAL UAT story executed by Ricardo (Project Lead), not a development story. No code changes required.</constraint>
+    <constraint type="prerequisite">Story 3.0.3 (MCP Setup Guide) must be complete - Ricardo needs setup instructions to connect.</constraint>
+    <constraint type="prerequisite">Story 3.0.4 (UAT Framework Templates) must be complete - UAT framework and templates required for execution.</constraint>
+    <constraint type="environment">Requires Qdrant and PostgreSQL running via docker-compose before UAT execution.</constraint>
+    <constraint type="decision-gate">Epic 2 status depends on UAT pass rate: ≥80% = complete, 60-79% = needs improvement, &lt;60% = not complete.</constraint>
+    <constraint type="documentation">All UAT results must be documented in docs/uat/epic-2-financial-queries-uat.md with actual results, pass/fail marks, and usability feedback.</constraint>
+    <constraint type="team-review">Team decision required after UAT execution - not a solo activity. Bob (SM), Murat (Test Architect), Winston (Architect) should participate.</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="MCP Server Connection" kind="configuration">
+      <signature>~/.claude/mcp.json configuration with RAGLite server definition</signature>
+      <path>docs/setup/mcp-configuration.md</path>
+      <description>Claude Desktop MCP configuration - tested in AC1</description>
+    </interface>
+    <interface name="query_financial_documents" kind="mcp-tool">
+      <signature>query_financial_documents(query: str, top_k: int = 5) -> str</signature>
+      <path>raglite/main.py</path>
+      <description>Main MCP tool tested during UAT - accepts natural language queries, returns answers with citations</description>
+    </interface>
+    <interface name="UAT Script Format" kind="document-structure">
+      <signature>Prerequisites → Test Scenarios (10 tests) → Results Summary → UAT Sign-Off</signature>
+      <path>docs/templates/uat-script-template.md</path>
+      <description>Standard UAT script structure - followed in Epic 2 UAT script</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      This story uses MANUAL UAT (User Acceptance Testing) per testing-strategy.md for user-facing feature validation. No automated tests required. UAT framework defined in docs/process/uat-framework.md. Success measured by pass rate: ≥80% PASS (Epic 2 complete), 60-79% PARTIAL (needs improvement), &lt;60% FAIL (not complete). Ricardo executes 10 test scenarios, records actual results, marks pass/fail, documents usability feedback.
+    </standards>
+    <locations>
+      - UAT Script: docs/uat/epic-2-financial-queries-uat.md
+      - UAT Framework: docs/process/uat-framework.md
+      - UAT Template: docs/templates/uat-script-template.md
+      - Ground Truth Data: tests/ground_truth.json (reference for test scenarios)
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test 1: MCP Connection Validation - Verify Claude Desktop shows "RAGLite" server after configuration. Test pass criteria: Server visible in Settings > MCP, no connection errors.</idea>
+      <idea ac="AC1">Test 2: Setup Guide Clarity - Ricardo follows Story 3.0.3 guide without assistance. Test pass criteria: Connection successful within 15 minutes, no confusion or unclear steps reported.</idea>
+      <idea ac="AC2">Test 3-12: 10 Epic 2 Test Scenarios - Execute all scenarios from UAT script (metrics, periods, entities, hybrid search, tables, attribution, response time). Test pass criteria: Each test marked pass/fail based on expected vs actual results.</idea>
+      <idea ac="AC2">Test 13: Usability Feedback Collection - Ricardo documents usability issues during testing. Test pass criteria: Feedback section completed with specific observations (not just "works fine").</idea>
+      <idea ac="AC3">Test 14: Team Review Process - Team reviews results and makes decision. Test pass criteria: Decision documented (PASS/PARTIAL/FAIL), sprint-status.yaml updated if PASS, action items created if PARTIAL/FAIL.</idea>
+    </ideas>
+  </tests>
+</story-context>

@@ -1,0 +1,251 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "raglite"
+version = "1.1.0"
+description = "AI-powered financial document analysis using Retrieval-Augmented Generation (RAG)"
+readme = "README.md"
+requires-python = ">=3.11,<4.0"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "you@example.com"},
+]
+keywords = [
+    "rag",
+    "financial-analysis",
+    "mcp",
+    "ai",
+    "llm",
+    "vector-search",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3.11",
+]
+
+# Production dependencies
+dependencies = [
+    "docling==2.55.1",
+    "sentence-transformers==5.1.1",
+    "qdrant-client==1.15.1",
+    "fastmcp==2.12.4",
+    "anthropic>=0.18.0,<1.0.0",
+    "openai>=1.0.0,<2.0.0", # Story 2.4: GPT-5 nano for metadata extraction
+    "pydantic>=2.0,<3.0",
+    "pydantic-settings>=2.0,<3.0",
+    "openpyxl>=3.1,<4.0",
+    "pandas>=2.0,<3.0",
+    "rank-bm25==0.2.2", # Epic 2: BM25 hybrid search (Story 2.1)
+    "tiktoken>=0.5.1,<1.0.0", # Story 2.2: Token counting for element-aware chunking
+    "python-dotenv==1.1.1",
+    "asyncio>=3.4.3,<4.0.0",
+    "httpx>=0.28.1,<1.0.0",
+    "mistralai>=1.9.11",
+    "psycopg2-binary>=2.9,<3.0", # Story 2.6: PostgreSQL for structured metadata storage
+    "strands-agents>=1.10.0,<2.0.0", # Epic 3: AWS Strands agentic framework
+]
+
+[project.urls]
+homepage = "https://github.com/YOUR_USERNAME/RAGLite"
+repository = "https://github.com/YOUR_USERNAME/RAGLite"
+
+[project.scripts]
+raglite-server = "raglite.main:main"
+raglite-ingest = "scripts.init_qdrant:main"
+
+[dependency-groups]
+dev = [
+    "pytest==8.4.2",
+    "pytest-asyncio==1.2.0",
+    "pytest-cov==5.0.0", # Locked to 5.0.0 - works with xdist parallel execution
+    "pytest-mock>=3.12,<4.0",
+    "pytest-xdist>=3.5,<4.0",
+    "pytest-timeout>=2.0,<3.0",
+    "pytest-rerunfailures>=16.0,<17.0", # Automatic retry for flaky tests
+    # Performance monitoring and reporting
+    "pytest-instafail>=0.5,<1.0", # Show failures instantly
+    "pytest-sugar>=1.0,<2.0", # Better progress output
+    "pytest-benchmark>=4.0,<5.0", # Performance benchmarking
+    # Code quality
+    "black>=23.3,<24.0",
+    "ruff>=0.0.270,<1.0.0",
+    "isort>=5.12,<6.0",
+    "mypy>=1.4,<2.0",
+    "pre-commit>=3.0,<4.0",
+    "pypdf>=4.0,<5.0",
+    "pytest-ordering>=0.6",
+]
+test = [
+    "faker>=18.0,<19.0",
+    "freezegun>=1.2,<2.0",
+]
+
+# ============================================================================
+# BLACK CONFIGURATION (Code Formatter)
+# ============================================================================
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # Directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+# ============================================================================
+# RUFF CONFIGURATION (Linter)
+# ============================================================================
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+# Exclude directories
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+# Enable specific rule sets
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+
+# Ignore specific rules
+ignore = [
+    "E501",  # Line too long (black handles this)
+    "B008",  # Do not perform function calls in argument defaults
+    "C901",  # Too complex (will address in Phase 4 refactoring)
+]
+
+
+# ============================================================================
+# ISORT CONFIGURATION (Import Sorting)
+# ============================================================================
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+
+# ============================================================================
+# PYTEST CONFIGURATION
+# ============================================================================
+# NOTE: Pytest configuration is in pytest.ini for better compatibility
+# with pytest plugins and VSCode Test Explorer.
+# See pytest.ini for full test configuration including:
+# - Parallel execution settings (pytest-xdist)
+# - Performance monitoring (--durations)
+# - Test markers (unit, integration, slow, e2e)
+# - Load balancing (--dist loadfile)
+
+[tool.pytest.ini_options]
+# Minimal config here - full config in pytest.ini
+asyncio_mode = "auto"
+
+# ============================================================================
+# COVERAGE CONFIGURATION
+# ============================================================================
+[tool.coverage.run]
+source = ["raglite"]
+# Disable parallel mode to fix VS Code Test Explorer compatibility
+# When running with pytest-xdist (-n auto), coverage handles parallel automatically
+parallel = false
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
+precision = 2
+show_missing = true
+
+# ============================================================================
+# MYPY CONFIGURATION (Type Checking - Phase 4)
+# ============================================================================
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "docling.*",
+    "sentence_transformers.*",
+    "qdrant_client.*",
+    "openpyxl.*",
+    "pandas.*",
+    "rank_bm25.*",
+]
+ignore_missing_imports = true
+
+# ============================================================================
+# BANDIT CONFIGURATION (Security Linting)
+# ============================================================================
+[tool.bandit]
+exclude_dirs = [
+    "tests/",
+    ".venv/",
+    "venv/",
+    "build/",
+    "dist/",
+]
+skips = ["B101"]  # Allow assert statements (used in tests)

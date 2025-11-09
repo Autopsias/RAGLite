@@ -1,9 +1,9 @@
 # Epic Technical Specification: AI Intelligence & Orchestration
 
-Date: 2025-11-05
+Date: 2025-11-05 (Updated: 2025-11-07)
 Author: Ricardo
 Epic ID: 3
-Status: Draft
+Status: Ready for Implementation (Architecture Complete)
 
 ---
 
@@ -11,7 +11,27 @@ Status: Draft
 
 Epic 3 introduces agentic orchestration capabilities to RAGLite, enabling multi-step reasoning and complex analytical workflows through specialized AI agents. The system will autonomously decompose complex financial queries (e.g., "Calculate YoY revenue growth and explain variance"), orchestrate retrieval and analysis tasks across multiple agents, and synthesize comprehensive answers with full source attribution.
 
-This epic builds upon the high-accuracy retrieval foundation established in Epic 1-2 (70%+ retrieval accuracy validated) and implements a lightweight agentic framework using either LangGraph or native Claude function calling. The architecture prioritizes simplicity, transparency, and graceful degradation—workflows that fail revert to Epic 1's basic retrieval without disrupting user experience.
+This epic builds upon the high-accuracy retrieval foundation established in Epic 1-2 (70%+ retrieval accuracy validated) and implements a lightweight agentic framework using AWS Strands (v1.15.0) with Mistral model integration. The architecture prioritizes simplicity, transparency, and graceful degradation—workflows that fail revert to Epic 1's basic retrieval without disrupting user experience.
+
+## Architecture Documentation
+
+**Complete architecture documentation created during Story 3.0.8:**
+
+1. **[Architecture Index](./architecture/epic-3-index.md)** - Navigation guide to all Epic 3 architecture docs
+2. **[Framework Selection ADR](./architecture/epic-3-framework-selection.md)** - AWS Strands decision (84.5% weighted score)
+3. **[Orchestration Design](./architecture/epic-3-orchestration-design.md)** - 3-agent system architecture
+4. **[Agent Workflow Patterns](./architecture/epic-3-agent-patterns.md)** - 5 reusable workflow patterns
+5. **[Story 3.0.8 Context](./stories/3-0-8-agentic-framework-architecture-spike.context.xml)** - Implementation guidance
+
+**Key Decisions:**
+- **Framework:** AWS Strands (Apache 2.0, standalone, no AWS infrastructure required)
+- **Model:** Mistral Small for orchestration (tunable to Claude)
+- **Architecture:** 3-agent sequential chain (Retrieval → Analysis → Synthesis)
+- **LOC:** 350 total (within 600-800 budget)
+- **Performance:** <10s p50, <20s p95 target
+- **Approved By:** Ricardo (2025-11-07)
+
+**For implementation details, see the Architecture Index above.**
 
 ## Objectives and Scope
 
@@ -70,33 +90,47 @@ This epic builds upon the high-accuracy retrieval foundation established in Epic
 
 Epic 3 maintains RAGLite's **monolithic architecture** philosophy from Architecture v1.1, adding a lightweight orchestration layer within the existing `raglite/` package. No new services or databases are introduced—agents operate within the same Python process, sharing Qdrant and PostgreSQL connections established in Epic 1-2.
 
+**📚 Reference:** See [epic-3-orchestration-design.md](./architecture/epic-3-orchestration-design.md) for complete system architecture, C4 diagrams, and agent specifications.
+
 **Alignment with Architecture Principles:**
 - **Simplicity First:** Agents are simple Python async functions (~50 lines each), not complex frameworks
-- **Direct SDK Usage:** LangGraph (if selected) used as-is per Technology Stack approval, no custom wrappers
+- **Direct SDK Usage:** AWS Strands used as-is with `@tool` decorator pattern, no custom wrappers
 - **Stateless Execution:** Each workflow execution is independent, no persistent agent state
 - **Monolithic Deployment:** All agents run in single Docker container (raglite-server)
+- **Event-Driven:** Strands' model-driven orchestration with automatic task routing
 
 **Component Integration:**
-- `raglite/orchestration/` module (~280 lines total) added to existing monolithic structure
+- `raglite/orchestration/` module (~350 lines total) added to existing monolithic structure
 - Agents call existing `retrieval/search.py`, `retrieval/synthesis.py` from Epic 1-2 (no duplication)
 - MCP server (`main.py`) exposes new `analyze_financial_question()` tool alongside existing tools
 - Shared logging, configuration, and error handling via `raglite/shared/` (no new infrastructure)
 
 **Technology Stack Alignment:**
-- **Conditional Framework:** LangGraph (per Technology Stack section 5: Phase 3 conditional approval)
-  - **Trigger:** Epic 2 achieved 70-80% accuracy (< 85% threshold) → LangGraph APPROVED
-  - **Alternative:** Native Claude function calling (if simpler approach preferred by Architect)
-- **No New Infrastructure:** Reuses Qdrant, PostgreSQL, Claude API, FastMCP from Epic 1-2
+- **Framework:** AWS Strands v1.15.0 (Apache 2.0, standalone)
+  - **Decision:** Per [epic-3-framework-selection.md](./architecture/epic-3-framework-selection.md) - 84.5% weighted score
+  - **Approval:** Ricardo (2025-11-07) via Story 3.0.8
+  - **Model:** Mistral Small (mistral-small-latest) for orchestration
+  - **Integration:** MistralModel with `settings.mistral_api_key` (no AWS Bedrock required)
+- **No New Infrastructure:** Reuses Qdrant, PostgreSQL, Mistral API, FastMCP from Epic 1-2
 - **Deployment:** Same Docker Compose setup, no additional containers
 
 **Repository Structure Alignment:**
 - Follows CLAUDE.md structure: 15-file monolithic target (~800 lines total across files)
-- Epic 3 adds: `orchestration/planner.py`, `orchestration/*_agent.py`, `orchestration/fallback.py`
-- Total new code: ~280 lines (within Phase 3 budget per Architecture section 8)
+- Epic 3 adds: `orchestration/orchestrator.py`, `orchestration/*_agent.py` (3 agents), `orchestration/fallback.py`
+- Total new code: ~350 lines (within 600-800 budget per Architecture section 8)
+
+**📚 Reference:** See [epic-3-agent-patterns.md](./architecture/epic-3-agent-patterns.md) for 5 reusable workflow patterns with production-ready code examples.
 
 ## Detailed Design
 
+**📚 Architecture Reference:** For complete agent specifications, C4 diagrams, and workflow patterns, see:
+- [epic-3-orchestration-design.md](./architecture/epic-3-orchestration-design.md) - System architecture
+- [epic-3-agent-patterns.md](./architecture/epic-3-agent-patterns.md) - Reusable patterns with code
+
 ### Services and Modules
+
+**Implementation Overview:**
+Epic 3 uses AWS Strands' `@tool` decorator pattern for agent definitions. The orchestrator (Strands Agent with MistralModel) coordinates 3 specialized agents in a sequential chain workflow.
 
 | Module | File | Lines | Responsibilities | Inputs | Outputs | Owner |
 |--------|------|-------|-----------------|--------|---------|-------|
@@ -487,27 +521,31 @@ dependencies = [
     "sentence-transformers==5.1.1",
     "qdrant-client==1.15.1",
     "fastmcp==2.12.4",
-    "anthropic>=0.18.0,<1.0.0",  # Claude API for Analysis and Synthesis agents
+    "anthropic>=0.18.0,<1.0.0",  # Claude API (optional for Analysis/Synthesis agents)
     "pydantic>=2.0,<3.0",
     "pydantic-settings>=2.0,<3.0",
     "httpx>=0.28.1,<1.0.0",
 
-    # NEW: Epic 3 agentic orchestration (CONDITIONAL)
-    "langgraph>=0.0.20,<1.0.0",  # ONLY if LangGraph selected (Architecture decision pending)
+    # NEW: Epic 3 agentic orchestration (✅ APPROVED)
+    "strands-agents>=1.10.0,<2.0.0",  # AWS Strands agentic framework (v1.15.0)
+    # Note: No LangGraph required - AWS Strands selected as primary framework
 ]
 ```
 
-**⚠️ CRITICAL DEPENDENCY DECISION:**
-- **LangGraph:** Adds agentic orchestration framework (~500KB package size)
-  - **Use case:** Stateful multi-step workflows (Phase 3 conditional per Epic 2 decision gate)
-  - **Approval status:** ✅ CONDITIONALLY APPROVED (Tech Stack section 5: "Phase 3 Conditional")
-  - **Trigger:** Epic 2 achieved 70-80% accuracy (< 85% threshold) → LangGraph APPROVED
-  - **Alternative:** Native Claude function calling (no new dependencies, simpler implementation)
+**✅ DEPENDENCY DECISION COMPLETE:**
+- **AWS Strands:** Agentic orchestration framework (Apache 2.0, standalone)
+  - **Version:** v1.15.0 (installed via `strands-agents>=1.10.0,<2.0.0`)
+  - **Package size:** ~2MB + 15 dependencies
+  - **Decision:** Per [epic-3-framework-selection.md](./architecture/epic-3-framework-selection.md) - 84.5% weighted score
+  - **Approval:** ✅ Ricardo (2025-11-07) via Story 3.0.8
+  - **POC Validation:** Mistral integration validated in `strands_poc.py`
+  - **No AWS Infrastructure Required:** Standalone library, uses `settings.mistral_api_key`
+  - **Fallback:** Simple Function Calling pattern (71.5% score, 105 LOC) available if Strands issues arise
 
-**Decision Criteria:**
-- IF Epic 2 achieves <85% accuracy → LangGraph APPROVED for Epic 3
-- IF Epic 2 achieves ≥85% accuracy → Epic 3 may be deferred or simplified (native function calling)
-- **Current Status:** Epic 2 completed at 70-80% accuracy → **LangGraph TRIGGERED**
+**Installation:**
+```bash
+uv sync  # Installs strands-agents v1.15.0 + dependencies
+```
 
 **Integration Points:**
 
@@ -705,14 +743,16 @@ dependencies = [
 
 ### Open Questions
 
-**Question 1: LangGraph vs Native Function Calling?**
-- **Context:** Architecture decision pending (Tech Stack section 5)
-- **Decision Required:** Which orchestration approach? (LangGraph stateful workflows vs native Claude function calling)
-- **Decision Criteria:**
-  - LangGraph: Better for complex multi-step workflows with branching logic
-  - Function Calling: Simpler, no external dependencies, faster execution
-- **Timeline:** Decision required before Epic 3 Story 3.1 starts
-- **Owner:** Architect (with user approval)
+**Question 1: LangGraph vs Native Function Calling? ✅ RESOLVED**
+- **Context:** Architecture decision completed during Story 3.0.8
+- **Decision:** AWS Strands selected as primary framework
+  - **Score:** 84.5% weighted (vs 71.5% for Simple Functions, 35% for Pydantic AI)
+  - **Rationale:** 47% code reduction, native MCP integration, production-validated, built-in observability
+  - **Model:** Mistral Small for orchestration (no AWS Bedrock required)
+  - **Fallback:** Simple Function Calling pattern available if issues arise
+- **Documentation:** See [epic-3-framework-selection.md](./architecture/epic-3-framework-selection.md)
+- **Approval:** Ricardo (2025-11-07)
+- **Status:** ✅ RESOLVED - Ready for Story 3.1 implementation
 
 **Question 2: Analytical Test Query Set Coverage?**
 - **Context:** Story 3.8 requires 15+ test queries
@@ -906,7 +946,15 @@ test = [
 ---
 
 **Epic 3 Tech Spec Complete**
-**Total Lines:** ~280 lines of new code
+**Total Lines:** ~350 lines of new code
 **Timeline:** 4 weeks (Stories 3.1-3.8)
-**Dependencies:** Epic 1-2 complete (✅), LangGraph decision pending (⚠️)
-**Status:** Ready for implementation (Architecture decision required first)
+**Dependencies:** Epic 1-2 complete (✅), AWS Strands approved (✅)
+**Status:** ✅ Ready for implementation - Story 3.1 can begin
+
+**📚 Complete Architecture Documentation:**
+- **[Architecture Index](./architecture/epic-3-index.md)** - Start here for Epic 3 architecture
+- **[Framework Selection](./architecture/epic-3-framework-selection.md)** - AWS Strands decision (ADR)
+- **[Orchestration Design](./architecture/epic-3-orchestration-design.md)** - 3-agent system architecture
+- **[Agent Patterns](./architecture/epic-3-agent-patterns.md)** - 5 reusable workflow patterns
+- **[Story 3.0.8 Context](./stories/3-0-8-agentic-framework-architecture-spike.context.xml)** - Implementation guidance
+- **[POC Code](../strands_poc.py)** - Working validation code

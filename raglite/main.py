@@ -57,6 +57,22 @@ async def ingest_financial_document(doc_path: str) -> DocumentMetadata:
       3. Generate embeddings (Fin-E5 model)
       4. Store vectors in Qdrant with metadata
 
+    **Performance & Timeout Considerations:**
+      - Small files (<10 pages): ~2-5 minutes (MCP timeout safe)
+      - Large files (>10 pages): May timeout in MCP clients
+      - Processing time: ~20-30 seconds per page (Docling + embedding generation)
+
+    **For Large Files:** Use CLI ingestion to avoid MCP timeouts:
+        ```bash
+        cd /path/to/RAGLite
+        uv run python -c "
+        import asyncio
+        from raglite.ingestion.pipeline import ingest_document
+        asyncio.run(ingest_document('/path/to/large.pdf'))
+        "
+        ```
+        Then query via MCP after ingestion completes.
+
     Args:
         doc_path: Absolute or relative path to document file (.pdf, .xlsx, .xls)
 
@@ -75,6 +91,10 @@ async def ingest_financial_document(doc_path: str) -> DocumentMetadata:
     Example:
         >>> metadata = await ingest_financial_document("/data/Q3_2023_Report.pdf")
         >>> print(f"Ingested {metadata.chunk_count} chunks from {metadata.filename}")
+
+    Note:
+        Epic 4 (Production Readiness) will add async job queue for large file ingestion
+        with progress tracking. See docs/future-enhancements.md for research roadmap.
     """
     logger.info("Ingesting document", extra={"path": doc_path})
 
@@ -255,4 +275,4 @@ if __name__ == "__main__":
             "collection": settings.qdrant_collection_name,
         },
     )
-    mcp.run()
+    mcp.run(show_banner=False)

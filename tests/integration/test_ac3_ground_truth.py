@@ -31,6 +31,9 @@ import pytest
 from raglite.retrieval.search import hybrid_search
 from tests.fixtures.ground_truth import GROUND_TRUTH_QA, GroundTruthQuestion
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 
 @dataclass
 class QueryValidationResult:

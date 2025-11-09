@@ -9,6 +9,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 from raglite.ingestion.pipeline import ingest_pdf
 from raglite.shared.clients import get_qdrant_client
 from raglite.shared.config import settings
@@ -142,7 +145,7 @@ class TestCostValidation:
         if not os.getenv("MISTRAL_API_KEY"):
             pytest.skip("MISTRAL_API_KEY not set - skipping cost validation test")
 
-        from raglite.ingestion.pipeline import extract_chunk_metadata
+        from raglite.ingestion.embedding_generation import extract_chunk_metadata
 
         # Sample chunk text (representative of 512-token chunk from fixed chunking)
         sample_text = (
@@ -159,19 +162,29 @@ class TestCostValidation:
         )
 
         # Extract metadata and track cost (Story 2.4 REVISION: per-chunk, not per-document)
-        result = await extract_chunk_metadata(sample_text, "test_cost_chunk_1")
+        # Create Mistral client within async context to ensure proper cleanup
+        from mistralai import Mistral
 
-        # Verify metadata extracted
-        assert result is not None
+        client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
 
-        # Story 2.4 REVISION: Mistral Small 3.2 is FREE - cost should be $0.00
-        # Check logs for cost tracking (should show $0.00)
-        cost_logs = [record for record in caplog.records if "estimated_cost_usd" in str(record)]
+        try:
+            result = await extract_chunk_metadata(sample_text, "test_cost_chunk_1", client=client)
 
-        if cost_logs:
-            # Verify cost is logged as $0.00 (Mistral Small 3.2 is free)
-            for log in cost_logs:
-                assert "0.0" in str(log)  # Cost should be $0.00
+            # Verify metadata extracted
+            assert result is not None
+
+            # Story 2.4 REVISION: Mistral Small 3.2 is FREE - cost should be $0.00
+            # Check logs for cost tracking (should show $0.00)
+            cost_logs = [record for record in caplog.records if "estimated_cost_usd" in str(record)]
+
+            if cost_logs:
+                # Verify cost is logged as $0.00 (Mistral Small 3.2 is free)
+                for log in cost_logs:
+                    assert "0.0" in str(log)  # Cost should be $0.00
+        finally:
+            # Ensure Mistral client is properly closed before event loop closes
+            if hasattr(client, "_client") and hasattr(client._client, "aclose"):
+                await client._client.aclose()
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
@@ -183,16 +196,21 @@ class TestCostValidation:
 
         from unittest.mock import patch
 
-        from raglite.ingestion.pipeline import extract_chunk_metadata
+        from raglite.ingestion.embedding_generation import extract_chunk_metadata
 
         # Track cost via mocked Mistral response (Story 2.4 REVISION: per-chunk extraction)
         sample_text = "Financial Report Q3 2024 ACME Corporation Finance Department" * 10
 
         # Mock to control cost calculation (Story 2.4 REVISION: Mistral API)
-        with patch("mistralai.Mistral") as mock_client_class:
+        # Use patch on get_mistral_client to avoid creating real async HTTP client
+        with patch("raglite.ingestion.embedding_generation.get_mistral_client") as mock_get_client:
             import json
 
             mock_client = AsyncMock()
+
+            # Mock _client attribute to prevent real httpx client creation
+            mock_client._client = AsyncMock()
+            mock_client._client.aclose = AsyncMock()
 
             # Simulate Mistral Small 3.2 response (FREE - no usage tracking needed)
             # Story 2.4 REVISION: Response uses 15-field rich schema
@@ -211,9 +229,9 @@ class TestCostValidation:
             )
 
             mock_client.chat.complete_async = AsyncMock(return_value=mock_response)
-            mock_client_class.return_value = mock_client
+            mock_get_client.return_value = mock_client
 
-            with patch("raglite.shared.config.settings") as mock_settings:
+            with patch("raglite.ingestion.embedding_generation.settings") as mock_settings:
                 mock_settings.mistral_api_key = "test-key"
                 mock_settings.metadata_extraction_model = "mistral-small-latest"
 
@@ -480,13 +498,18 @@ class TestCostValidationMocked:
         """Test AC5: Cost tracking with mocked Mistral response (CI/CD friendly, Story 2.4 REVISION: FREE)."""
         import json
 
-        from raglite.ingestion.pipeline import extract_chunk_metadata
+        from raglite.ingestion.embedding_generation import extract_chunk_metadata
 
         sample_text = """Financial Report Q3 2024 ACME Corporation Finance Department""" * 10
 
         # Mock Mistral client to simulate cost tracking (Story 2.4 REVISION: Mistral Small 3.2 FREE)
-        with patch("mistralai.Mistral") as mock_client_class:
+        # Use patch on get_mistral_client to avoid creating real async HTTP client
+        with patch("raglite.ingestion.embedding_generation.get_mistral_client") as mock_get_client:
             mock_client = AsyncMock()
+
+            # Mock _client attribute to prevent real httpx client creation
+            mock_client._client = AsyncMock()
+            mock_client._client.aclose = AsyncMock()
 
             # Create realistic mock response (Story 2.4 REVISION: 15-field rich schema)
             mock_response = AsyncMock()
@@ -504,7 +527,7 @@ class TestCostValidationMocked:
             )
 
             mock_client.chat.complete_async = AsyncMock(return_value=mock_response)
-            mock_client_class.return_value = mock_client
+            mock_get_client.return_value = mock_client
 
             # Mock settings (correct path: embedding_generation imports settings from shared.config)
             with patch("raglite.ingestion.embedding_generation.settings") as mock_settings:
@@ -544,13 +567,18 @@ class TestCostValidationMocked:
         """Test AC5: Cost is $0.00 with mocked response (CI/CD friendly, Story 2.4 REVISION: FREE)."""
         import json
 
-        from raglite.ingestion.pipeline import extract_chunk_metadata
+        from raglite.ingestion.embedding_generation import extract_chunk_metadata
 
         sample_text = "Financial Report Q3 2024 ACME Corporation" * 10
 
         # Mock Mistral client (Story 2.4 REVISION: Mistral Small 3.2 FREE)
-        with patch("mistralai.Mistral") as mock_client_class:
+        # Use patch on get_mistral_client to avoid creating real async HTTP client
+        with patch("raglite.ingestion.embedding_generation.get_mistral_client") as mock_get_client:
             mock_client = AsyncMock()
+
+            # Mock _client attribute to prevent real httpx client creation
+            mock_client._client = AsyncMock()
+            mock_client._client.aclose = AsyncMock()
 
             # Mock response with 15-field rich schema (Story 2.4 REVISION)
             mock_response = AsyncMock()
@@ -566,7 +594,7 @@ class TestCostValidationMocked:
             )
 
             mock_client.chat.complete_async = AsyncMock(return_value=mock_response)
-            mock_client_class.return_value = mock_client
+            mock_get_client.return_value = mock_client
 
             with patch("raglite.ingestion.embedding_generation.settings") as mock_settings:
                 mock_settings.mistral_api_key = "test-key-budget"

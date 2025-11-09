@@ -21,6 +21,9 @@ from pathlib import Path
 
 import pytest
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 # Skip Story 2.2 tests - obsolete after strategic pivot to Story 2.3
 SKIP_STORY_2_2_TESTS = os.getenv("RUN_STORY_2_2_TESTS") != "1"
 

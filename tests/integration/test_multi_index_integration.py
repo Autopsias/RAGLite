@@ -17,6 +17,9 @@ from raglite.retrieval.multi_index_search import (
 )
 from raglite.retrieval.query_classifier import QueryType, classify_query
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 
 class TestMultiIndexIntegration:
     """Integration tests for multi-index search pipeline."""

@@ -32,6 +32,9 @@ import time
 import pytest
 
 from raglite.retrieval.attribution import generate_citations
+
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
 from raglite.retrieval.search import search_documents
 from scripts.accuracy_utils import (
     NFR13_P95_TARGET_MS,

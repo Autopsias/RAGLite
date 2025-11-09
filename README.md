@@ -71,6 +71,8 @@ uv run python -m raglite.main
 - ✅ **LLM Synthesis:** Claude 3.7 Sonnet for natural language answers
 - ✅ **MCP Server:** FastMCP-based server for Claude Desktop integration
 
+**Known Limitation:** Large file ingestion (>10 pages) may timeout via MCP. Use CLI ingestion for large files (see [Large File Ingestion](#large-file-ingestion) below). Async job queue support planned for Epic 4.
+
 ### Phase 2 (Conditional - Weeks 5-8)
 
 - 🔄 **GraphRAG:** Neo4j knowledge graph for multi-hop queries (only if Phase 1 accuracy <80%)
@@ -148,6 +150,67 @@ raglite/
 - **[Epic 1: Foundation & Accurate Retrieval](docs/prd/epic-1-foundation-accurate-retrieval.md)** - Current phase
 - **[Week 0 Spike Report](docs/week-0-spike-report.md)** - Technology validation results
 - **[QA Gates](docs/qa/gates/)** - Quality assurance checkpoints
+
+---
+
+## 💻 Usage
+
+### MCP Integration (Claude Desktop)
+
+**Prerequisites:** Configure Claude Desktop with RAGLite MCP server (see [MCP Setup Guide](docs/setup/mcp-configuration.md))
+
+**Small File Ingestion (<10 pages):**
+
+In Claude Desktop, use natural language:
+```
+Ingest this document: /path/to/small-document.pdf
+```
+
+**Querying Documents:**
+
+```
+Query the financial documents: What was the EBITDA from Portugal?
+```
+
+### Large File Ingestion
+
+**⚠️ Known Limitation:** Files >10 pages may timeout via MCP (~30-60 second timeout)
+
+**Workaround:** Use CLI ingestion for large files (30+ minutes for 100+ page PDFs):
+
+```bash
+cd /path/to/RAGLite
+
+# Method 1: Direct Python call
+uv run python -c "
+import asyncio
+from raglite.ingestion.pipeline import ingest_document
+
+async def ingest():
+    print('Starting ingestion...')
+    result = await ingest_document('/path/to/large-document.pdf')
+    print(f'✅ Ingested {result.page_count} pages, {result.chunk_count} chunks')
+
+asyncio.run(ingest())
+"
+
+# Method 2: Using script (if available)
+uv run python scripts/ingest_large_file.py /path/to/large-document.pdf
+```
+
+**Expected Performance:**
+- Processing time: ~20-30 seconds per page
+- 50-page PDF: ~20-25 minutes
+- 100-page PDF: ~40-50 minutes
+
+**After Ingestion Completes:**
+
+Query via Claude Desktop MCP as normal:
+```
+Use query_financial_documents to search: "What was the EBITDA from Portugal?"
+```
+
+**Future Enhancement:** Async job queue with progress tracking planned for Epic 4 (Production Readiness). See [docs/future-enhancements.md](docs/future-enhancements.md) for research roadmap.
 
 ---
 

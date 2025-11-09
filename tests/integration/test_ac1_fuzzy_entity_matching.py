@@ -10,6 +10,10 @@ from raglite.retrieval.query_classifier import generate_sql_query
 from raglite.retrieval.sql_table_search import search_tables_sql
 from raglite.shared.clients import get_postgresql_connection
 
+# Mark all tests in this module as integration tests
+# NOTE: Order marker removed (2025-11-08) - tests don't use excerpt fixture
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.priority("P2")
 @pytest.mark.asyncio
@@ -117,29 +121,8 @@ async def test_similarity_function_works():
     )
 
 
-@pytest.mark.priority("P2")
-@pytest.mark.asyncio
-async def test_exact_match_fallback(mock_mistral_client):
-    """Test AC1: Verify exact match fallback when similarity fails."""
-    # Configure mock
-    mock_client, _ = mock_mistral_client
-    mock_response = mock_client.chat.complete.return_value
-    mock_response.choices[0].message.content = """
-SELECT entity, metric, value, unit, period, fiscal_year, page_number
-FROM financial_tables
-WHERE entity ILIKE '%Portugal%'
-ORDER BY page_number DESC
-LIMIT 50;
-    """.strip()
-
-    test_query = "Show variable costs for Portugal"
-    sql = await generate_sql_query(test_query)
-
-    assert sql is not None
-    results = await search_tables_sql(sql)
-
-    # Should get results via either fuzzy or exact match
-    assert len(results) > 0, "Should return results via exact or fuzzy match fallback"
+# NOTE: test_exact_match_fallback moved to test_story_2_14_excerpt_validation.py
+# to group with other tests using ingested_excerpt_pdf fixture (performance optimization)
 
 
 @pytest.mark.priority("P2")

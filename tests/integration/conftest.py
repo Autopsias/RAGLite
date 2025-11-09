@@ -87,10 +87,12 @@ from pathlib import Path  # noqa: E402
 
 # Track session-level expected Qdrant state for test isolation
 _session_sample_pdf_chunk_count = None
+_session_snapshot_name = None  # Track snapshot for fast restoration
+_session_postgresql_row_count = None  # Track PostgreSQL baseline for restoration
 
 
 @pytest.fixture(scope="session", autouse=True)
-def warmup_embedding_model():
+def warmup_embedding_model(request):
     """Pre-warm embedding model before any tests run.
 
     CRITICAL PERFORMANCE FIX: Fin-E5 model takes 60-70s to load from cold start.
@@ -101,7 +103,14 @@ def warmup_embedding_model():
     Expected savings: 60-70s per test session (reduces session fixture from 86s → 12-15s).
 
     The model singleton persists across all tests in the session.
+
+    DISCOVERY OPTIMIZATION: Skips expensive model loading during test discovery phase.
     """
+    # Skip during test collection/discovery phase
+    if request.config.option.collectonly:
+        yield
+        return
+
     print("\n🔥 PRE-WARMING EMBEDDING MODEL (60-70s one-time load)...", file=sys.stderr)
 
     from raglite.shared.clients import get_embedding_model
@@ -144,10 +153,17 @@ def session_ingested_collection(request):
     PERFORMANCE OPTIMIZATION: This fixture runs EXACTLY ONCE per test session.
     All integration tests share the same ingested PDF collection for maximum speed.
 
+    DISCOVERY OPTIMIZATION: Skips expensive PDF ingestion during test discovery phase.
+
     NOTE: Depends on warmup_embedding_model to ensure embedding model is loaded
     before PDF ingestion starts.
     """
     global _session_sample_pdf_chunk_count
+
+    # Skip during test collection/discovery phase
+    if request.config.option.collectonly:
+        yield
+        return
 
     # Lazy import (module-level checks already confirmed services are available)
     import os
@@ -325,10 +341,30 @@ def session_ingested_collection(request):
         except Exception as e:
             print(f"   ℹ️  PostgreSQL cleanup skipped: {e}", file=sys.stderr)
 
-        # Wait for deletion to complete (Qdrant async operation)
+        # CRITICAL FIX: Wait for Qdrant async deletion to complete
+        # Qdrant deletion is async - verify collection is truly gone before recreating
         import time
 
-        time.sleep(0.5)
+        print("   ⏳ Waiting for Qdrant deletion to complete...", file=sys.stderr)
+        for attempt in range(20):  # Max 4 seconds wait
+            try:
+                collections = qdrant.get_collections().collections
+                existing = [c.name for c in collections]
+                if settings.qdrant_collection_name not in existing:
+                    print(
+                        f"   ✓ Collection deletion confirmed (attempt {attempt + 1})",
+                        file=sys.stderr,
+                    )
+                    break
+            except Exception:
+                # Collection might not exist yet - safe to proceed
+                break
+            time.sleep(0.2)
+        else:
+            # Still exists after 4 seconds - force proceed but warn
+            print(
+                "   ⚠️  Collection still exists after 4s wait, forcing recreation", file=sys.stderr
+            )
 
         create_collection(
             collection_name=settings.qdrant_collection_name,
@@ -337,6 +373,7 @@ def session_ingested_collection(request):
         print(f"   ✓ Collection created: {settings.qdrant_collection_name}")
 
         # CRITICAL FIX: Verify collection is empty after creation
+        # If stale data exists, it means create_collection found old collection before deletion completed
         initial_count = qdrant.count(collection_name=settings.qdrant_collection_name)
         if initial_count.count > 0:
             error_msg = f"Collection {settings.qdrant_collection_name} has {initial_count.count} chunks after creation (expected 0). Stale data detected!"
@@ -372,6 +409,77 @@ def session_ingested_collection(request):
         time.sleep(0.2)
 
     _session_sample_pdf_chunk_count = count_after.count
+
+    # CRITICAL FIX: Verify PostgreSQL is FULLY populated with expected data
+    # This ensures database inspection tests have complete data to work with
+    print("\n⚙️  Verifying PostgreSQL population...")
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+
+        conn_str = f"postgresql://{settings.postgres_user}:{settings.postgres_password}@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+        conn = psycopg2.connect(conn_str)
+
+        # CRITICAL: Set autocommit to ensure visibility of committed data
+        conn.autocommit = True
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Wait for PostgreSQL to be FULLY populated (increased timeout from 2s to 5s)
+        pg_count = 0
+        expected_min_rows = 10 if not use_full_pdf else 100  # Adjust based on PDF size
+
+        for attempt in range(25):  # Increased from 10 to 25 attempts (5 seconds total)
+            cursor.execute("SELECT COUNT(*) FROM financial_tables")
+            pg_count = cursor.fetchone()["count"]
+
+            if pg_count >= expected_min_rows:
+                break
+
+            if attempt % 5 == 0:  # Log every second
+                print(
+                    f"   ⏳ Waiting for PostgreSQL: {pg_count}/{expected_min_rows} rows (attempt {attempt + 1}/25)"
+                )
+            time.sleep(0.2)
+
+        # Get detailed counts for validation
+        cursor.execute("SELECT COUNT(*) FROM financial_chunks")
+        chunk_count = cursor.fetchone()["count"]
+
+        cursor.execute(
+            "SELECT COUNT(DISTINCT entity) FROM financial_tables WHERE entity IS NOT NULL"
+        )
+        entity_count = cursor.fetchone()["count"]
+
+        cursor.execute(
+            "SELECT COUNT(DISTINCT metric) FROM financial_tables WHERE metric IS NOT NULL"
+        )
+        metric_count = cursor.fetchone()["count"]
+
+        cursor.close()
+        conn.close()
+
+        print(f"   ✓ PostgreSQL populated: {pg_count} table rows, {chunk_count} chunk rows")
+        print(f"   ✓ Data diversity: {entity_count} entities, {metric_count} metrics")
+
+        # CRITICAL: Store PostgreSQL baseline for test isolation restoration
+        global _session_postgresql_row_count
+        _session_postgresql_row_count = pg_count
+        print(f"   ✓ PostgreSQL baseline stored: {_session_postgresql_row_count} rows")
+
+        # CRITICAL: Fail fast if PostgreSQL is not properly populated
+        # This prevents cascading failures in database-dependent tests
+        if pg_count < expected_min_rows:
+            error_msg = (
+                f"PostgreSQL has only {pg_count} rows, expected at least {expected_min_rows}"
+            )
+            print(f"   ❌ ERROR: {error_msg}")
+            pytest.fail(error_msg)
+
+    except Exception as e:
+        error_msg = f"PostgreSQL verification failed: {e}"
+        print(f"   ❌ ERROR: {error_msg}")
+        pytest.fail(error_msg)  # Fail fast - don't continue if PostgreSQL isn't ready
+
     print("\n✅ Session fixture complete:")
     print(f"   PDF: {result.filename} ({result.page_count} pages)")
     print(f"   Path: {sample_pdf}")
@@ -387,13 +495,36 @@ def session_ingested_collection(request):
     if use_full_pdf:
         expected_range = (150, 220)  # 160-page PDF
     else:
-        expected_range = (10, 50)  # 10-page PDF
+        # Updated range for table-aware chunking (Story 2.8) - tables kept intact up to 4096 tokens
+        # Increased from (10, 50) to (10, 60) to accommodate larger table chunks
+        expected_range = (10, 60)  # 10-page PDF
 
     if not (expected_range[0] <= count_after.count <= expected_range[1]):
         error_msg = f"CRITICAL: Chunk count {count_after.count} not in expected range {expected_range} for {pdf_description}"
         print(f"\n❌ {error_msg}", file=sys.stderr)
         print("   This suggests chunking bug or wrong PDF ingested!", file=sys.stderr)
         pytest.fail(error_msg)
+
+    # PERFORMANCE OPTIMIZATION: Create snapshot for fast test isolation
+    # Instead of re-ingesting PDF (10-15s), we restore from snapshot (<1s)
+    global _session_snapshot_name
+    print("\n⚡ Creating Qdrant snapshot for fast test isolation...")
+    snapshot_start = time.time()
+    try:
+        snapshot_info = qdrant.create_snapshot(
+            collection_name=settings.qdrant_collection_name, wait=True
+        )
+        _session_snapshot_name = snapshot_info.name
+        snapshot_duration = time.time() - snapshot_start
+        print(f"   ✓ Snapshot created: {_session_snapshot_name}")
+        print(f"   ✓ Snapshot time: {snapshot_duration:.2f}s")
+        print(
+            f"   ✓ Restoration will be ~10-15x faster than re-ingestion (<1s vs {estimated_time})"
+        )
+    except Exception as e:
+        print(f"   ⚠️  Snapshot creation failed: {e}")
+        print("   ⚠️  Falling back to re-ingestion for test isolation")
+        _session_snapshot_name = None
 
     # Cleanup at session end
     yield
@@ -427,8 +558,17 @@ def ensure_qdrant_test_isolation(request):
     NOTE: This fixture lives in tests/integration/conftest.py, so it ONLY applies to
     integration tests. No need to detect test type via inspect - this conftest isn't
     loaded by unit tests.
+
+    PERFORMANCE FIX (2025-11-08): Skip during test discovery to avoid Test Explorer overhead
     """
     global _session_sample_pdf_chunk_count
+    global _session_snapshot_name
+    global _session_postgresql_row_count
+
+    # PERFORMANCE: Skip during test collection/discovery phase (Test Explorer optimization)
+    if request.config.option.collectonly:
+        yield
+        return
 
     # Check if test is marked with preserve_collection or manages_collection_state (skip expensive cleanup)
     if "preserve_collection" in request.keywords or "manages_collection_state" in request.keywords:
@@ -439,13 +579,15 @@ def ensure_qdrant_test_isolation(request):
     from raglite.shared.clients import get_qdrant_client
     from raglite.shared.config import settings
 
-    qdrant = get_qdrant_client()
+    # PERFORMANCE: Cache Qdrant client at session level to avoid reconnection overhead
+    if not hasattr(request.session, "_cached_qdrant_client"):
+        request.session._cached_qdrant_client = get_qdrant_client()
 
-    # Record state before test
-    try:
-        initial_count = qdrant.count(collection_name=settings.qdrant_collection_name).count
-    except Exception:
-        initial_count = 0
+    qdrant = request.session._cached_qdrant_client
+
+    # PERFORMANCE: Only check state for tests that don't have markers (assumed read-only)
+    # Most tests are read-only and won't modify data, so skip the pre-check
+    # We'll only verify AFTER the test if restoration is needed
 
     yield  # Test runs here
 
@@ -463,39 +605,151 @@ def ensure_qdrant_test_isolation(request):
         if should_restore:
             # Test modified Qdrant collection - restore to clean state
             print(
-                f"\n🔄 Restoring Qdrant ({initial_count} → {final_count} chunks, baseline: {_session_sample_pdf_chunk_count})"
+                f"\n🔄 Restoring Qdrant (current: {final_count} chunks, baseline: {_session_sample_pdf_chunk_count})"
             )
 
-            from raglite.ingestion.pipeline import create_collection, ingest_pdf
+            # PERFORMANCE OPTIMIZATION: Use snapshot recovery instead of re-ingestion
+            # Snapshot restore: <1s vs PDF re-ingestion: 10-15s (10-15x faster!)
+            if _session_snapshot_name:
+                # FAST PATH: Restore from snapshot
+                import time
 
-            sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
+                print(f"   ⚡ Using snapshot: {_session_snapshot_name}")
+                restore_start = time.time()
 
-            # Clear collection
-            try:
-                qdrant.delete_collection(collection_name=settings.qdrant_collection_name)
-            except Exception:
-                pass
+                try:
+                    # Delete collection first
+                    try:
+                        qdrant.delete_collection(collection_name=settings.qdrant_collection_name)
+                    except Exception:
+                        pass
 
-            # Recreate with sample PDF data
-            create_collection(
-                collection_name=settings.qdrant_collection_name,
-                vector_size=settings.embedding_dimension,
-            )
+                    # Recover from snapshot stored on Qdrant server
+                    # Construct snapshot URL from Qdrant host
+                    qdrant_host = settings.qdrant_url.rstrip("/")
+                    snapshot_url = f"{qdrant_host}/collections/{settings.qdrant_collection_name}/snapshots/{_session_snapshot_name}"
 
-            asyncio.run(ingest_pdf(str(sample_pdf)))
+                    qdrant.recover_snapshot(
+                        collection_name=settings.qdrant_collection_name,
+                        location=snapshot_url,
+                        priority="snapshot",  # Prioritize snapshot data
+                        wait=True,
+                    )
 
-            # CRITICAL: Wait for Qdrant to commit the restoration
-            # Qdrant processes async operations - verify data is actually there
-            import time
+                    restore_duration = time.time() - restore_start
 
-            restored_count = 0
-            for _attempt in range(10):  # Max 2 seconds wait (10 × 0.2s)
-                restored_count = qdrant.count(collection_name=settings.qdrant_collection_name).count
-                if restored_count == _session_sample_pdf_chunk_count:
-                    break
-                time.sleep(0.2)  # Wait for Qdrant to commit
+                    # Verify restoration
+                    restored_count = 0
+                    for _attempt in range(10):  # Max 2 seconds wait
+                        restored_count = qdrant.count(
+                            collection_name=settings.qdrant_collection_name
+                        ).count
+                        if restored_count == _session_sample_pdf_chunk_count:
+                            break
+                        time.sleep(0.2)
 
-            print(f"   ✓ Restored ({restored_count} chunks)")
+                    print(f"   ✓ Restored ({restored_count} chunks) in {restore_duration:.2f}s")
+
+                except Exception as e:
+                    print(f"   ⚠️  Snapshot recovery failed: {e}")
+                    print("   ⚠️  Falling back to PDF re-ingestion")
+                    # Fall through to re-ingestion below
+                    _session_snapshot_name = None
+
+            if not _session_snapshot_name:
+                # SLOW PATH: Re-ingest PDF (fallback if snapshot failed)
+                print("   🐌 Using PDF re-ingestion (slow path)")
+                from raglite.ingestion.pipeline import create_collection, ingest_pdf
+
+                sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
+
+                # Clear collection
+                try:
+                    qdrant.delete_collection(collection_name=settings.qdrant_collection_name)
+                except Exception:
+                    pass
+
+                # Recreate with sample PDF data
+                create_collection(
+                    collection_name=settings.qdrant_collection_name,
+                    vector_size=settings.embedding_dimension,
+                )
+
+                asyncio.run(ingest_pdf(str(sample_pdf)))
+
+                # CRITICAL: Wait for Qdrant to commit the restoration
+                import time
+
+                restored_count = 0
+                for _attempt in range(10):  # Max 2 seconds wait
+                    restored_count = qdrant.count(
+                        collection_name=settings.qdrant_collection_name
+                    ).count
+                    if restored_count == _session_sample_pdf_chunk_count:
+                        break
+                    time.sleep(0.2)
+
+                print(f"   ✓ Restored ({restored_count} chunks)")
+
+            # CRITICAL FIX: Also restore PostgreSQL data (symmetric database lifecycle)
+            # PostgreSQL must be restored when Qdrant is restored to prevent test isolation failures
+            # Root cause: Tests with clear_collection=True delete PostgreSQL, but only Qdrant was being restored
+            if _session_postgresql_row_count:
+                print(
+                    f"\n🔄 Checking PostgreSQL state (baseline: {_session_postgresql_row_count} rows)..."
+                )
+
+                try:
+                    import psycopg2
+                    from psycopg2.extras import RealDictCursor
+
+                    conn_str = f"postgresql://{settings.postgres_user}:{settings.postgres_password}@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+                    conn = psycopg2.connect(conn_str)
+                    conn.autocommit = True
+                    cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+                    # Check current PostgreSQL state
+                    cursor.execute("SELECT COUNT(*) FROM financial_tables")
+                    current_pg_count = cursor.fetchone()["count"]
+
+                    # If PostgreSQL was cleared, restore it
+                    if current_pg_count < _session_postgresql_row_count:
+                        print(
+                            f"   ⚠️  PostgreSQL depleted: {current_pg_count} rows (expected {_session_postgresql_row_count})"
+                        )
+                        print("   🔄 Re-ingesting PDF to restore PostgreSQL data...")
+
+                        # Re-ingest the session PDF to restore PostgreSQL
+                        # This triggers table extraction which populates financial_tables
+                        from raglite.ingestion.pipeline import ingest_pdf
+
+                        sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
+                        if sample_pdf.exists():
+                            # Ingest with clear_collection=False to preserve the Qdrant data we just restored
+                            asyncio.run(ingest_pdf(str(sample_pdf), clear_collection=False))
+
+                            # Verify PostgreSQL restoration
+                            cursor.execute("SELECT COUNT(*) FROM financial_tables")
+                            restored_pg_count = cursor.fetchone()["count"]
+
+                            print(f"   ✓ PostgreSQL restored: {restored_pg_count} rows")
+
+                            if (
+                                restored_pg_count < _session_postgresql_row_count * 0.9
+                            ):  # Allow 10% tolerance
+                                print(
+                                    f"   ⚠️  PostgreSQL restoration incomplete: {restored_pg_count}/{_session_postgresql_row_count} rows"
+                                )
+                        else:
+                            print(f"   ⚠️  Cannot restore PostgreSQL: {sample_pdf} not found")
+                    else:
+                        print(f"   ✓ PostgreSQL intact: {current_pg_count} rows")
+
+                    cursor.close()
+                    conn.close()
+
+                except Exception as pg_error:
+                    print(f"   ⚠️  PostgreSQL restoration failed: {pg_error}")
 
     except Exception as e:
         # Cleanup failed - not critical, next test will handle it
@@ -503,47 +757,9 @@ def ensure_qdrant_test_isolation(request):
         pass
 
 
-@pytest.fixture(scope="module")
-async def shared_ingested_sample_pdf():
-    """Module-scoped fixture for tests that need a fresh ingested PDF.
-
-    OPTIMIZATION: Ingests sample PDF ONCE per test module and reuses across all
-    tests in that module. This avoids the 75-85 second per-test ingestion cost.
-
-    Usage:
-        @pytest.mark.asyncio
-        @pytest.mark.preserve_collection
-        async def test_something(shared_ingested_sample_pdf):
-            # PDF is already ingested, use it
-            client = get_qdrant_client()
-            # ... test logic here ...
-
-    IMPORTANT: Mark tests with @pytest.mark.preserve_collection to skip the
-    expensive Qdrant isolation cleanup that normally happens between tests.
-
-    This fixture is especially helpful for these test modules:
-    - test_ingestion_integration.py (multiple ingest_pdf tests)
-    - test_pypdfium_ingestion.py (Story 2.1 validation)
-    - test_fixed_chunking.py (chunking validation)
-    - test_metadata_injection.py (metadata tests)
-    - test_element_metadata.py (element metadata tests)
-    """
-    from raglite.ingestion.pipeline import ingest_pdf
-
-    sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
-    if not sample_pdf.exists():
-        pytest.skip(f"Sample PDF not found: {sample_pdf}")
-
-    print("\n⚙️  Ingesting sample PDF (shared fixture - runs once per module)...")
-
-    # Ingest the sample PDF with clear_collection=True to start fresh for this module
-    result = await ingest_pdf(str(sample_pdf), clear_collection=True)
-
-    print(f"✓ Sample PDF ingested: {result.chunk_count} chunks ({result.page_count} pages)")
-
-    yield result
-
-    # No cleanup - let next module handle it
+# NOTE: shared_ingested_sample_pdf fixture removed (2025-11-08)
+# Reason: Not used by any tests - dead code
+# Tests use session_ingested_collection instead
 
 
 @pytest.fixture(scope="module")
@@ -580,3 +796,111 @@ async def ingested_160_page_pdf():
     yield metadata, client
 
     # No cleanup - let next test use the data or clean it up themselves
+
+
+@pytest.fixture(scope="module")
+async def ingested_excerpt_pdf():
+    """Module-scoped fixture for Story 2.14 excerpt PDF (pages 18-50).
+
+    This fixture ingests the 33-page excerpt PDF ONCE per test module for Story 2.14
+    validation tests. The excerpt contains specific test data:
+    - Pages: 18-50 (33 pages)
+    - Entities: Portugal, Tunisia, Angola, Brazil, Lebanon
+    - Metrics: Variable Cost, EBITDA, Sales Volumes, Thermal Energy, etc.
+    - Periods: Aug-25, Aug-25 YTD, 2025
+
+    Usage:
+        @pytest.mark.asyncio
+        @pytest.mark.preserve_collection
+        async def test_excerpt_query(ingested_excerpt_pdf):
+            # Excerpt PDF is already ingested with PostgreSQL tables populated
+            # ... test logic here ...
+
+    Returns:
+        tuple: (metadata, qdrant_client) - Ingestion metadata and Qdrant client
+    """
+    from raglite.ingestion.pipeline import ingest_pdf
+    from raglite.shared.clients import get_qdrant_client
+
+    # Use absolute path from project root
+    project_root = Path(__file__).parent.parent.parent
+    pdf_path = project_root / "docs" / "sample pdf" / "test-pages-18-50.pdf"
+    if not pdf_path.exists():
+        pytest.skip(f"Story 2.14 excerpt PDF not found: {pdf_path}")
+
+    print("\n⚙️  Ingesting Story 2.14 excerpt PDF (pages 18-50, 33 pages)...")
+    metadata = await ingest_pdf(str(pdf_path), clear_collection=True)
+    client = get_qdrant_client()
+
+    print(f"✓ Excerpt PDF ingested: {metadata.chunk_count} chunks ({metadata.page_count} pages)")
+
+    # Verify PostgreSQL has data
+    try:
+        import psycopg2
+
+        from raglite.shared.config import settings
+
+        conn_str = f"postgresql://{settings.postgres_user}:{settings.postgres_password}@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+        conn = psycopg2.connect(conn_str)
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT COUNT(*) FROM financial_tables")
+        table_count = cursor.fetchone()[0]
+
+        cursor.execute("SELECT MIN(page_number), MAX(page_number) FROM financial_tables")
+        page_range = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        print(
+            f"✓ PostgreSQL financial_tables: {table_count} rows, pages {page_range[0]}-{page_range[1]}"
+        )
+
+        if table_count == 0:
+            pytest.skip("Excerpt PDF ingestion did not populate PostgreSQL tables")
+
+    except Exception as e:
+        print(f"⚠️  PostgreSQL verification failed: {e}")
+
+    yield metadata, client
+
+    # CRITICAL: Restore session fixture state after module ends
+    # This prevents excerpt data from polluting subsequent tests
+    print("\n🔄 Restoring session fixture state (excerpt module cleanup)...")
+
+    global _session_snapshot_name
+    if _session_snapshot_name:
+        # FAST PATH: Restore from snapshot (<1s)
+        try:
+            from raglite.shared.config import settings
+
+            # Delete excerpt collection
+            try:
+                client.delete_collection(collection_name=settings.qdrant_collection_name)
+            except Exception:
+                pass
+
+            # Recover from snapshot
+            qdrant_host = settings.qdrant_url.rstrip("/")
+            snapshot_url = f"{qdrant_host}/collections/{settings.qdrant_collection_name}/snapshots/{_session_snapshot_name}"
+
+            client.recover_snapshot(
+                collection_name=settings.qdrant_collection_name,
+                location=snapshot_url,
+                priority="snapshot",
+                wait=True,
+            )
+
+            # Verify restoration
+            count_after = client.count(collection_name=settings.qdrant_collection_name)
+            print(f"   ✓ Session state restored: {count_after.count} chunks (snapshot recovery)")
+        except Exception as e:
+            print(f"   ⚠️  Snapshot recovery failed: {e}, falling back to re-ingestion")
+            # Fallback: trigger session fixture re-ingestion by clearing and relying on autouse fixture
+            try:
+                client.delete_collection(collection_name=settings.qdrant_collection_name)
+            except Exception:
+                pass
+    else:
+        print("   ⚠️  No snapshot available, session state NOT restored (tests may fail!)")

@@ -33,7 +33,7 @@ from raglite.ingestion.storage_operations import (
     store_vectors_in_qdrant,
 )
 from raglite.ingestion.table_extraction import TableExtractor
-from raglite.shared.clients import get_qdrant_client
+from raglite.shared.clients import get_mistral_client, get_qdrant_client
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 from raglite.shared.models import Chunk, DocumentMetadata, ExtractedMetadata
@@ -288,7 +288,7 @@ async def ingest_pdf(
         )
         result = converter.convert(str(pdf_path))
         print(
-            f"CHECKPOINT: Docling conversion complete - {result.document.num_pages} pages",
+            f"CHECKPOINT: Docling conversion complete - {result.document.num_pages()} pages",
             file=sys.stderr,
             flush=True,
         )
@@ -428,9 +428,8 @@ async def ingest_pdf(
 
         # Story 2.6 AC6 FIX: Create single Mistral client for reuse (client pooling)
         # This eliminates per-request connection overhead (10-15x speedup)
-        from mistralai import Mistral
-
-        mistral_client = Mistral(api_key=settings.mistral_api_key)
+        # Now uses shared client factory with timeout configuration
+        mistral_client = get_mistral_client()
 
         # Extract metadata for each chunk with rate limiting (Story 2.4 FIX + Story 2.5 OPTIMIZATION)
         # Semaphore limits concurrent API calls to respect Mistral rate limits

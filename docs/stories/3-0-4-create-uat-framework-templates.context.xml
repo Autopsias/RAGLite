@@ -1,0 +1,194 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3.0</epicId>
+    <storyId>3.0.4</storyId>
+    <title>Create UAT Framework Templates</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-07</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/3-0-4-create-uat-framework-templates.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>project team</asA>
+    <iWant>standardized UAT templates and workflow documentation</iWant>
+    <soThat>user acceptance testing is repeatable across all epics and usability issues are caught early</soThat>
+    <tasks>
+      <task id="1" ac="AC1">
+        <description>UAT Workflow Documentation (AC1) - 1 hour</description>
+        <subtasks>
+          <subtask id="1.1">Define 4 phases (Readiness, Script Creation, Execution, Review)</subtask>
+          <subtask id="1.2">Define decision criteria (≥80% PASS, 60-79% PARTIAL, &lt;60% FAIL)</subtask>
+          <subtask id="1.3">Document integration (Sprint status, story context)</subtask>
+          <subtask id="1.4">Add examples (Epic 2, Epic 3 UAT scenarios)</subtask>
+          <subtask id="1.5" type="testing">Testing - Validate UAT workflow completeness (Review with Bob + Murat)</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="AC2">
+        <description>UAT Script Template (AC2) - 1 hour</description>
+        <subtasks>
+          <subtask id="2.1">Create template structure (Prerequisites, Test Scenarios, Results, Sign-Off)</subtask>
+          <subtask id="2.2">Add placeholders ({{Epic N}}, {{test scenarios}}, {{criteria}})</subtask>
+          <subtask id="2.3">Include examples (Good vs bad test scenario)</subtask>
+          <subtask id="2.4" type="testing">Testing - Validate UAT script template usability (Apply to Epic 2 UAT draft - Story 3.0.5)</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">
+      <description>UAT Workflow Documentation (1 hour)</description>
+      <goal>Define standard UAT process for all epics</goal>
+      <successCriteria>
+        <item>✅ UAT workflow documented: docs/process/uat-framework.md</item>
+        <item>✅ 4 phases clearly defined (Readiness, Script Creation, Execution, Review)</item>
+        <item>✅ Decision criteria table (≥80% PASS, 60-79% PARTIAL, &lt;60% FAIL)</item>
+        <item>✅ Integration with sprint workflow</item>
+      </successCriteria>
+      <filesCreated>
+        <file>docs/process/uat-framework.md (~400 lines)</file>
+      </filesCreated>
+    </criterion>
+    <criterion id="AC2">
+      <description>Create UAT Script Template (30 minutes)</description>
+      <goal>Reusable template for all future UAT scripts</goal>
+      <successCriteria>
+        <item>✅ UAT script template created: docs/templates/uat-script-template.md</item>
+        <item>✅ Reusable for all future epics</item>
+        <item>✅ Includes all required sections (Prerequisites, Test Scenarios, Results, Sign-Off)</item>
+      </successCriteria>
+      <filesCreated>
+        <file>docs/templates/uat-script-template.md (~200 lines)</file>
+      </filesCreated>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/tech-spec-epic-3-prep.md</path>
+        <title>Epic 3 Prep - Technical Specification</title>
+        <section>Story 3.0.4: Create UAT Framework Templates</section>
+        <snippet>UAT framework definition addressing Epic 2 retrospective finding: "No UAT framework despite working MCP tool". Defines 4-phase workflow (Readiness, Script Creation, Execution, Review) with pass/fail criteria (≥80% PASS, 60-79% PARTIAL, &lt;60% FAIL). Templates enable repeatable user acceptance testing across all epics.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>RAGLite - Epic and Story Breakdown</title>
+        <section>Epic 3: AI Intelligence & Orchestration</section>
+        <snippet>Epic goal: Enable multi-step reasoning and complex analytical workflows through agentic orchestration. Prep Sprint (Stories 3.0.1-3.0.5) addresses technical debt before feature implementation. UAT framework (Story 3.0.4) ensures usability validation before marking epics complete.</snippet>
+      </doc>
+      <doc>
+        <path>docs/retrospectives/epic-2-retro-2025-11-05.md</path>
+        <title>Epic 2 Retrospective - Advanced RAG Architecture Enhancement</title>
+        <section>Action Item 3: User Acceptance Testing (UAT) Framework</section>
+        <snippet>Root cause: MCP server working since Epic 1 but no user-facing documentation or UAT process. Ricardo (Project Lead) unaware tool existed. Impact: Features built but not validated with real users. Decision: Create UAT framework for all epics with Ricardo as tester going forward.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/testing-strategy.md</path>
+        <title>Testing Strategy</title>
+        <section>Testing Pyramid</section>
+        <snippet>E2E Tests (5% - Accuracy validation), Integration Tests (15% - Service integration), Unit Tests (80% - Code coverage). UAT complements automated testing by validating user-facing features manually. Testing standards define manual testing approach for documentation and user acceptance validation.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/coding-standards.md</path>
+        <title>RAGLite Coding Standards</title>
+        <section>Markdown Documentation Standards</section>
+        <snippet>Documentation follows PEP 8 principles with specific requirements for markdown: Clear hierarchical structure (H1 for title, H2 for sections), code blocks with language tags (```markdown, ```bash), proper cross-references to other documentation. Templates should follow these formatting guidelines for consistency.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/3-0-3-document-mcp-setup-guide.md</path>
+        <title>Story 3.0.3: Document MCP Setup Guide</title>
+        <section>Learnings from Previous Story</section>
+        <snippet>Created comprehensive MCP setup guide (docs/setup/mcp-configuration.md, 258 lines) enabling Ricardo to connect Claude Desktop to RAGLite. KISS principle maintained (no custom scripts, direct JSON editing). Advisory notes: GitHub URL placeholder (LOW priority), screenshots for Settings>MCP (future enhancement). MCP guide enables UAT execution (Story 3.0.5).</snippet>
+      </doc>
+    </docs>
+    <code>
+      <!-- No existing code artifacts - this story creates new documentation files -->
+      <note>Story creates new documentation templates. No existing code artifacts to reference. Files will be created in docs/process/ and docs/templates/ directories.</note>
+    </code>
+    <dependencies>
+      <python version="3.11+">
+        <package name="pytest" version="8.4.2" purpose="Automated testing framework (UAT complements pytest with manual validation)"/>
+        <package name="black" version="23.3-24.0" purpose="Code formatter (for any Python scripts created)"/>
+      </python>
+      <markdown>
+        <standard>GitHub Flavored Markdown (GFM)</standard>
+        <tools>Standard markdown editors (VS Code, Obsidian, etc.)</tools>
+      </markdown>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">
+      <description>KISS Principle</description>
+      <details>Standard markdown templates (no custom frameworks), simple text-based test scenarios (no complex tooling), manual UAT execution (appropriate for user-facing features). No abstractions or automation for MVP.</details>
+    </constraint>
+    <constraint type="documentation">
+      <description>Markdown Format Standards</description>
+      <details>Clear hierarchical structure (H1 for title, H2 for sections), code blocks with language tags, placeholder format: {{variable_name}}, proper cross-references to other documentation. Templates follow coding-standards.md formatting guidelines.</details>
+    </constraint>
+    <constraint type="user-audience">
+      <description>Team Members + Future Stakeholders</description>
+      <details>Templates designed for Bob (SM), Murat (Test Architect), Ricardo (UAT Tester), and future QA testers. Assume familiarity with testing concepts but provide clear structure. User-centric language for non-technical stakeholders.</details>
+    </constraint>
+    <constraint type="workflow">
+      <description>UAT Integration with Sprint Workflow</description>
+      <details>Epic marked "done" only after UAT PASS (≥80%). If UAT FAIL, epic status remains "in-progress". UAT findings inform next epic's story creation. UX issues documented as lessons learned.</details>
+    </constraint>
+    <constraint type="testing">
+      <description>Manual Testing Approach</description>
+      <details>UAT focuses on user-facing validation (manual acceptance testing), complementing automated testing (pytest). Test scenarios require clear action, clear expectation, measurable pass/fail criteria, real user workflow.</details>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <!-- No programmatic interfaces - documentation-only story -->
+    <note>Story creates documentation templates (markdown files). No REST endpoints, GraphQL schemas, or code interfaces. Templates provide human-readable structure for UAT workflows and scripts.</note>
+  </interfaces>
+
+  <tests>
+    <standards>
+      <framework>Manual validation per testing-strategy.md</framework>
+      <approach>Templates reviewed by team (Bob + Murat + Winston). Usability validated by applying to Epic 2 UAT (Story 3.0.5 prerequisite). Template review ensures completeness (all required sections), clarity (placeholders are clear), and reusability (works for any epic).</approach>
+      <location>Testing subtasks embedded in story tasks (Subtask 1.5, Subtask 2.4)</location>
+    </standards>
+    <locations>
+      <pattern>docs/process/uat-framework.md (to be created)</pattern>
+      <pattern>docs/templates/uat-script-template.md (to be created)</pattern>
+      <pattern>Story 3.0.5 will apply templates to Epic 2 UAT (validation through use)</pattern>
+    </locations>
+    <ideas>
+      <test ac="AC1" type="manual">
+        <description>Validate UAT workflow completeness</description>
+        <steps>
+          <step>Verify 4 phases clearly defined (Readiness, Script Creation, Execution, Review)</step>
+          <step>Confirm decision criteria table present and correct (≥80% PASS, 60-79% PARTIAL, &lt;60% FAIL)</step>
+          <step>Check integration with sprint workflow documented</step>
+          <step>Review with Bob + Murat for clarity and completeness</step>
+        </steps>
+        <passCriteria>All 4 phases documented, decision criteria table accurate, sprint integration clear, team approval obtained</passCriteria>
+      </test>
+      <test ac="AC2" type="manual">
+        <description>Validate UAT script template usability</description>
+        <steps>
+          <step>Template review with Bob + Murat (team validation)</step>
+          <step>Apply template to Epic 2 UAT draft (Story 3.0.5 prerequisite)</step>
+          <step>Confirm all required sections present (Prerequisites, Test Scenarios, Results, Sign-Off)</step>
+          <step>Verify placeholders are clear and complete</step>
+        </steps>
+        <passCriteria>Template structure complete, placeholders clear, successfully applied to Epic 2 UAT draft, team approval obtained</passCriteria>
+      </test>
+      <test type="integration">
+        <description>Story 3.0.5 validation (Epic 2 UAT)</description>
+        <steps>
+          <step>Use UAT workflow doc (AC1 output) to guide Epic 2 UAT process</step>
+          <step>Use UAT script template (AC2 output) to create Epic 2 test scenarios</step>
+          <step>Ricardo executes UAT following the framework</step>
+          <step>Measure UAT effectiveness (did templates enable successful testing?)</step>
+        </steps>
+        <passCriteria>Epic 2 UAT completed successfully using templates, Ricardo able to follow workflow without external help, templates enable 10 test scenarios, UAT pass/fail decision made using criteria</passCriteria>
+      </test>
+    </ideas>
+  </tests>
+</story-context>

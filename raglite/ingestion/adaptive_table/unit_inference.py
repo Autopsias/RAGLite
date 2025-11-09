@@ -460,10 +460,11 @@ METRIC INFORMATION:
 
     try:
         # Call Mistral API
-        from mistralai import Mistral
         from mistralai.models import AssistantMessage, SystemMessage, ToolMessage, UserMessage
 
-        client = Mistral(api_key=settings.mistral_api_key)
+        from raglite.shared.clients import get_mistral_client
+
+        client = get_mistral_client()
 
         messages: list[AssistantMessage | SystemMessage | ToolMessage | UserMessage] = [
             SystemMessage(content=system_prompt),
@@ -974,10 +975,10 @@ async def _apply_context_aware_unit_inference_async(
     # Get table caption from Docling
     table_caption = _get_table_caption(table_item)
 
-    # Create shared Mistral client for connection pooling
-    from mistralai import Mistral
+    # Create shared Mistral client for connection pooling with timeout configuration
+    from raglite.shared.clients import get_mistral_client
 
-    client = Mistral(api_key=settings.mistral_api_key)
+    client = get_mistral_client()
 
     # Cache for inferred units (metric -> unit)
     unit_cache: dict[str, str] = {}

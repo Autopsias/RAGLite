@@ -10,6 +10,10 @@ from pathlib import Path
 
 import pytest
 import tiktoken
+
+# Mark all tests in this module as integration tests
+# Order 21: Run 160-page PDF tests together (after excerpt tests)
+pytestmark = [pytest.mark.integration, pytest.mark.order(21)]
 from qdrant_client import QdrantClient
 
 from raglite.ingestion.pipeline import ingest_pdf

@@ -62,7 +62,7 @@ development_status:
   epic-1-retrospective: completed
 
   # Epic 2: Advanced RAG Architecture Enhancement
-  epic-2: contexted
+  epic-2: done  # ✅ UAT PASSED 90% (2025-11-07) - Epic 2 officially complete
   2-1-implement-pypdfium-backend-for-docling: done
   2-2-implement-page-level-parallelism: done
   2-3-refactor-chunking-strategy-to-fixed-512-token-approach: done
@@ -86,11 +86,12 @@ development_status:
   # Epic 3 Prep Stories (Technical Debt Reduction - Week 1-2)
   3-0-1-refactor-modules-to-size-limits: done
   3-0-2-create-epic-3-data-dictionary: done
-  3-0-3-document-mcp-setup-guide: ready-for-dev
-  3-0-4-create-uat-framework-templates: drafted
-  3-0-5-execute-epic-2-uat: drafted
+  3-0-3-document-mcp-setup-guide: done
+  3-0-4-create-uat-framework-templates: done
+  3-0-5-execute-epic-2-uat: done  # ✅ UAT executed, 90% pass rate (2025-11-07)
   3-0-6-test-id-traceability-system: done
   3-0-7-priority-classification-system: done
+  3-0-8-agentic-framework-architecture-spike: done  # ✅ ALL ACs COMPLETE: AWS Strands selected, architecture designed, patterns documented (2025-11-07)
 
   # Epic 3 Feature Stories (Agentic Orchestration - Week 3+)
   3-1-agentic-framework-integration: backlog

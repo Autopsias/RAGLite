@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from mistralai import Mistral
 
-from raglite.shared.clients import get_embedding_model
+from raglite.shared.clients import get_embedding_model, get_mistral_client
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 from raglite.shared.models import Chunk, ExtractedMetadata
@@ -192,13 +192,12 @@ async def extract_chunk_metadata(
 
     try:
         # Import dependencies (lazy import to avoid startup overhead)
-        from mistralai import Mistral
         from mistralai.models import AssistantMessage, SystemMessage, ToolMessage, UserMessage
 
         # Story 2.6 AC6 FIX: Client pooling - accept pre-created client or create new one
         # This enables caller to reuse single client instance across all chunks (10-15x speedup)
         if client is None:
-            client = Mistral(api_key=settings.mistral_api_key)
+            client = get_mistral_client()
 
         # NO TRUNCATION NEEDED: Chunks are already fixed at ~512 tokens (Story 2.3)
         # This is the perfect size for metadata extraction

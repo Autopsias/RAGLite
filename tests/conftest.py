@@ -146,7 +146,7 @@ def mock_mistral_client():
     """
     from unittest.mock import MagicMock, patch
 
-    with patch("raglite.retrieval.query_classifier.Mistral") as mock_class:
+    with patch("raglite.shared.clients.get_mistral_client") as mock_get_client:
         # Create mock client instance
         mock_client = MagicMock()
 
@@ -165,9 +165,9 @@ LIMIT 50;
 
         # Configure mock to return this response
         mock_client.chat.complete.return_value = mock_response
-        mock_class.return_value = mock_client
+        mock_get_client.return_value = mock_client
 
-        yield mock_client, mock_class
+        yield mock_client, mock_get_client
 
 
 # pytest-xdist parallel execution hooks

@@ -1,0 +1,284 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3.0</epicId>
+    <storyId>3.0.8</storyId>
+    <title>Agentic Framework Architecture Spike</title>
+    <status>done</status>
+    <generatedAt>2025-11-07</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/3-0-8-agentic-framework-architecture-spike.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>development team</asA>
+    <iWant>to research and select the optimal agentic framework and design the orchestration architecture</iWant>
+    <soThat>Epic 3 Story 3.1 can be implemented with confidence and avoid costly mid-epic refactoring</soThat>
+    <tasks>
+      <task id="1" ac="AC1">
+        <description>Framework Selection Complete (8 hours)</description>
+        <subtasks>
+          <subtask id="1.1">Evaluate 3 frameworks (Pydantic AI, Simple Function Calling, AWS Strands)</subtask>
+          <subtask id="1.2">Create weighted decision matrix with 7 criteria</subtask>
+          <subtask id="1.3">MCP-assisted deep research using Exa, Perplexity, GitHub search</subtask>
+          <subtask id="1.4">POC validation: Install Strands, test 2-agent workflow, validate Mistral integration</subtask>
+          <subtask id="1.5">Team recommendation and Ricardo approval</subtask>
+          <subtask id="1.6" type="testing">Document decision in epic-3-framework-selection.md</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="AC2">
+        <description>Orchestration Architecture Designed (16 hours)</description>
+        <subtasks>
+          <subtask id="2.1">Define 3 agent specifications (Retrieval, Analysis, Synthesis)</subtask>
+          <subtask id="2.2">Design event-driven coordination patterns</subtask>
+          <subtask id="2.3">Create C4 architecture diagrams (Context, Container, Sequence)</subtask>
+          <subtask id="2.4">Document error handling (4-tier graceful degradation)</subtask>
+          <subtask id="2.5">Design observability strategy (OpenTelemetry)</subtask>
+          <subtask id="2.6" type="testing">Team review and approval</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="AC3">
+        <description>Workflow Pattern Examples Documented (8 hours)</description>
+        <subtasks>
+          <subtask id="3.1">Pattern 1: Sequential Chain (Retrieval → Analysis → Synthesis)</subtask>
+          <subtask id="3.2">Pattern 2: Parallel Execution (multi-backend retrieval)</subtask>
+          <subtask id="3.3">Pattern 3: Conditional Routing (complexity-based)</subtask>
+          <subtask id="3.4">Pattern 4: Error Fallback (4-tier graceful degradation)</subtask>
+          <subtask id="3.5">Pattern 5: Hierarchical Orchestration (Epic 4 future)</subtask>
+          <subtask id="3.6" type="testing">Code examples with AWS Strands implementation</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">
+      <description>Framework Selection Complete (8 hours)</description>
+      <goal>Choose optimal agentic framework for Epic 3</goal>
+      <successCriteria>
+        <item>✅ 3 frameworks evaluated (Pydantic AI, Simple Function Calling, AWS Strands)</item>
+        <item>✅ Pros/cons documented with weighted decision matrix (84.5% Strands vs 71.5% Simple)</item>
+        <item>✅ Team recommendation: AWS Strands with Simple Function Calling fallback</item>
+        <item>✅ Ricardo (Project Lead) approved decision</item>
+        <item>✅ POC validated: Mistral integration works, 2-agent workflow successful</item>
+        <item>✅ Decision documented in: docs/architecture/epic-3-framework-selection.md</item>
+      </successCriteria>
+      <filesCreated>
+        <file>docs/architecture/epic-3-framework-selection.md (~800 lines)</file>
+        <file>strands_poc.py (~250 lines POC validation code)</file>
+        <file>pyproject.toml (updated with strands-agents>=1.10.0)</file>
+      </filesCreated>
+    </criterion>
+    <criterion id="AC2">
+      <description>Orchestration Architecture Designed (16 hours)</description>
+      <goal>Complete architecture design for 3-agent orchestration</goal>
+      <successCriteria>
+        <item>✅ Agent types defined: Retrieval, Analysis, Synthesis (with Pydantic models)</item>
+        <item>✅ Communication patterns documented (sequential, parallel, conditional)</item>
+        <item>✅ State management: Stateless agents with tool argument passing</item>
+        <item>✅ Error handling: 4-tier graceful degradation strategy</item>
+        <item>✅ Architecture diagrams: C4 Context, Container, Sequence diagrams</item>
+        <item>✅ Design reviewed by team and approved (unanimous)</item>
+        <item>✅ Architecture documented in: docs/architecture/epic-3-orchestration-design.md</item>
+      </successCriteria>
+      <filesCreated>
+        <file>docs/architecture/epic-3-orchestration-design.md (~800 lines)</file>
+      </filesCreated>
+    </criterion>
+    <criterion id="AC3">
+      <description>Workflow Pattern Examples Documented (8 hours)</description>
+      <goal>Document 5 reusable workflow patterns with code examples</goal>
+      <successCriteria>
+        <item>✅ 5 workflow patterns documented with complete code examples</item>
+        <item>✅ Pattern applicability documented (when to use each)</item>
+        <item>✅ AWS Strands integration shown (production-ready code)</item>
+        <item>✅ Examples reviewed by team</item>
+        <item>✅ Patterns documented in: docs/architecture/epic-3-agent-patterns.md</item>
+      </successCriteria>
+      <filesCreated>
+        <file>docs/architecture/epic-3-agent-patterns.md (~1000 lines)</file>
+      </filesCreated>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/architecture/epic-3-framework-selection.md</path>
+        <title>Epic 3 Framework Selection Decision (ADR)</title>
+        <section>Framework Comparison + POC Validation</section>
+        <snippet>**DECISION: AWS Strands approved by Ricardo (2025-11-07)**. Comprehensive evaluation of 3 frameworks using MCP-assisted research. Weighted scoring: Strands 84.5% vs Simple Functions 71.5%. POC validated Mistral integration (3.4s orchestration overhead, acceptable). Key findings: Zero AWS/Bedrock dependencies confirmed, native MCP support, 47% LOC reduction (50 vs 105 lines), OpenTelemetry observability built-in. Dependency: strands-agents>=1.10.0,<2.0.0 added to pyproject.toml. Fallback: Simple Function Calling if Strands blocks implementation.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-orchestration-design.md</path>
+        <title>Epic 3 Orchestration Architecture Design</title>
+        <section>Agent Specifications + Orchestration Flow + Error Handling</section>
+        <snippet>**3-Agent Architecture:** Retrieval Agent (wraps multi_index_search from Epic 2), Analysis Agent (LLM-powered interpretation), Synthesis Agent (answer generation + citations). **Event-Driven Coordination:** AWS Strands orchestrator coordinates sequential chain (Retrieval → Analysis → Synthesis). **State Management:** Stateless agents, context passed via tool arguments. **Error Handling:** 4-tier graceful degradation (Full → Partial Analysis → Retrieval Only → Epic 2 Fallback). **Observability:** OpenTelemetry automatic tracing + structured logging. **Performance Budget:** <12s p50 total (3s orchestration + 9s agents). **LOC Estimate:** ~350 lines total (orchestrator 50 + retrieval 80 + analysis 120 + synthesis 100). **Repository Structure:** raglite/orchestration/ module with agents/ subdirectory.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-agent-patterns.md</path>
+        <title>Epic 3 Workflow Patterns</title>
+        <section>5 Patterns with AWS Strands Code Examples</section>
+        <snippet>**Pattern 1: Sequential Chain (Primary)** - Retrieval → Analysis → Synthesis linear flow. Use for standard analytical queries (80% of use cases). ~12s latency. Production-ready code with @tool decorators. **Pattern 4: Error Fallback (Required)** - 4-tier graceful degradation for production reliability. Implements Tier 1 (full), Tier 2 (partial analysis), Tier 3 (retrieval only), Tier 4 (Epic 2 fallback). 99.9%+ availability target. **Pattern 2: Parallel Execution (Optimization)** - Multi-backend retrieval (vector || SQL) saves ~2-3s. Epic 3.5. **Pattern 3: Conditional Routing (Enhancement)** - Query complexity classifier routes simple queries to Epic 2 (42% latency improvement). Story 3.6. **Pattern 5: Hierarchical (Epic 4 Future)** - Master orchestrator with sub-orchestrators for multi-domain workflows.</snippet>
+      </doc>
+      <doc>
+        <path>docs/prd/epic-3-ai-intelligence-orchestration.md</path>
+        <title>Epic 3 PRD - AI Intelligence & Orchestration</title>
+        <section>Epic Goals + Stories 3.1-3.8</section>
+        <snippet>Epic 3 implements multi-agent analytical query system using agentic orchestration. Goal: Enable multi-step reasoning and complex analytical workflows beyond Epic 2's simple retrieval. Stories 3.1-3.8 implement 3-agent architecture (Retrieval, Analysis, Synthesis) with graceful degradation. Prerequisites: Story 3.0.8 spike complete (framework selected, architecture designed). Target: <10s p50 query latency, 90%+ analytical accuracy.</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec-epic-3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Technical Architecture + Implementation Strategy</section>
+        <snippet>Epic 3 adds raglite/orchestration/ module (~350 LOC) using AWS Strands framework. Architecture designed in Story 3.0.8 spike. Implements Pattern 1 (Sequential Chain) and Pattern 4 (Error Fallback) as primary patterns. Integrates with Epic 2 multi-index search (raglite/retrieval/) and citation generation (raglite/retrieval/attribution). MCP tool: analytical_query_financial_documents() exposes orchestrated workflow. Dependencies: strands-agents>=1.10.0, uses existing Mistral API for orchestration.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/3-0-8-agentic-framework-architecture-spike.md</path>
+        <title>Story 3.0.8 - Agentic Framework Architecture Spike</title>
+        <section>Complete Story with AC1/AC2/AC3</section>
+        <snippet>**Status: DONE (2025-11-07)**. Research spike to select agentic framework and design orchestration architecture. Evaluated 3 frameworks, selected AWS Strands with 84.5% weighted score. POC validated Mistral integration (no AWS/Bedrock required). Designed 3-agent architecture with 4-tier graceful degradation. Documented 5 workflow patterns. Deliverables: 3 architecture documents (~2600 lines), POC code (250 lines), framework decision approved by Ricardo. Unblocks Stories 3.1-3.8 implementation.</snippet>
+      </doc>
+      <doc>
+        <path>docs/retrospectives/epic-2-retro-2025-11-07-post-uat.md</path>
+        <title>Epic 2 Retrospective (Post-UAT)</title>
+        <section>Epic 3 Preparation Findings</section>
+        <snippet>Epic 2 retrospective identified need for Story 3.0.8 architecture spike. Risk: Picking wrong agentic framework mid-Epic 3 → 2 weeks refactoring. Decision: Invest 3 days upfront research vs 2 weeks mid-epic rework. Led to creation of Story 3.0.8 (framework selection + architecture design). Result: Epic 3 unblocked with clear architecture and framework decision.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <file>
+        <path>strands_poc.py</path>
+        <description>POC validation code - 2-agent workflow (Retrieval → Synthesis) with AWS Strands + Mistral integration. Validates event-driven coordination, Pydantic models, async patterns. Successfully executed with 3.4s orchestration overhead. Reference implementation for Story 3.1.</description>
+        <keyPatterns>
+          <pattern>@tool decorator pattern for agent definitions</pattern>
+          <pattern>MistralModel initialization with settings.mistral_api_key</pattern>
+          <pattern>Agent orchestrator setup with tools list</pattern>
+          <pattern>orchestrator.invoke_async(query) execution pattern</pattern>
+          <pattern>AgentResult handling (str(result) for text output)</pattern>
+        </keyPatterns>
+      </file>
+      <file>
+        <path>raglite/retrieval/multi_index_search.py</path>
+        <description>Epic 2 multi-index search - will be wrapped by Retrieval Agent in Story 3.2</description>
+      </file>
+      <file>
+        <path>raglite/retrieval/attribution.py</path>
+        <description>Epic 2 citation generation - will be used by Synthesis Agent in Story 3.4</description>
+      </file>
+      <file>
+        <path>raglite/shared/config.py</path>
+        <description>Settings with mistral_api_key and metadata_extraction_model for orchestration</description>
+      </file>
+      <file>
+        <path>pyproject.toml</path>
+        <description>Dependencies updated with strands-agents>=1.10.0,<2.0.0 (Story 3.0.8)</description>
+      </file>
+    </code>
+
+    <tests>
+      <testFile>
+        <path>tests/unit/orchestration/ (to be created in Story 3.8)</path>
+        <description>Unit tests for orchestrator and agent definitions</description>
+      </testFile>
+      <testFile>
+        <path>tests/integration/test_orchestration_flow.py (to be created in Story 3.8)</path>
+        <description>Integration tests for full orchestration workflow</description>
+      </testFile>
+    </tests>
+  </artifacts>
+
+  <decisions>
+    <decision id="1">
+      <title>Framework Selection: AWS Strands</title>
+      <date>2025-11-07</date>
+      <status>approved</status>
+      <rationale>Weighted decision matrix scored AWS Strands 84.5% vs Simple Function Calling 71.5%. Key factors: 47% LOC reduction (50 vs 105 lines), native MCP integration, OpenTelemetry observability, production validation (AWS Q Developer). POC confirmed zero AWS/Bedrock dependencies. Performance overhead (3.4s) acceptable and tunable. Ricardo approved with Simple Function Calling as explicit fallback.</rationale>
+      <alternatives>
+        <alternative>Pydantic AI - Rejected (35/100 score, 240+ LOC overhead, violates minimalism)</alternative>
+        <alternative>Simple Function Calling - Fallback option (85/100 score, 105 LOC, zero dependencies)</alternative>
+      </alternatives>
+      <consequences>
+        <consequence>New dependency: strands-agents>=1.10.0 (~15 packages, 13MB)</consequence>
+        <consequence>Team learning curve: 4-6 hours for event-driven patterns</consequence>
+        <consequence>Performance overhead: 3-5s orchestration (tunable via model choice)</consequence>
+        <consequence>Built-in observability: OpenTelemetry automatic tracing</consequence>
+      </consequences>
+    </decision>
+    <decision id="2">
+      <title>Agent Architecture: 3-Agent Sequential Chain</title>
+      <date>2025-11-07</date>
+      <status>approved</status>
+      <rationale>3-agent pipeline (Retrieval → Analysis → Synthesis) provides clear separation of concerns. Retrieval reuses Epic 2 multi-index search (proven 90% accuracy). Analysis adds LLM-powered interpretation. Synthesis generates final answer with Epic 2 citation generation. Sequential chain (Pattern 1) is simplest pattern, sufficient for Epic 3 MVP. Parallel optimization deferred to Epic 3.5.</rationale>
+      <consequences>
+        <consequence>Sequential latency: ~12s p50 (sum of agents)</consequence>
+        <consequence>Clear debugging: Linear execution trace</consequence>
+        <consequence>Easy testing: Each agent independently testable</consequence>
+        <consequence>~350 LOC total: Within 600-800 LOC budget</consequence>
+      </consequences>
+    </decision>
+    <decision id="3">
+      <title>Error Handling: 4-Tier Graceful Degradation</title>
+      <date>2025-11-07</date>
+      <status>approved</status>
+      <rationale>Production reliability requires graceful degradation. 4 tiers: Full orchestration (best), Partial analysis (good), Retrieval only (acceptable), Epic 2 fallback (last resort). Ensures 99.9%+ availability even if Epic 3 agents fail. Explicit degradation metadata helps users understand response quality.</rationale>
+      <consequences>
+        <consequence>Complex error handling: ~200 LOC</consequence>
+        <consequence>High availability: 99.9%+ target</consequence>
+        <consequence>User transparency: Tier metadata in responses</consequence>
+        <consequence>Monitoring: Track degradation rates per tier</consequence>
+      </consequences>
+    </decision>
+  </decisions>
+
+  <implementation>
+    <modules>
+      <module>
+        <name>raglite/orchestration/</name>
+        <purpose>New module for Epic 3 agent orchestration</purpose>
+        <files>
+          <file>orchestrator.py (~50 lines) - Main orchestrator setup</file>
+          <file>agents/retrieval.py (~80 lines) - Retrieval Agent</file>
+          <file>agents/analysis.py (~120 lines) - Analysis Agent</file>
+          <file>agents/synthesis.py (~100 lines) - Synthesis Agent</file>
+        </files>
+      </module>
+    </modules>
+    <integrationPoints>
+      <point>raglite/main.py - Add analytical_query_financial_documents() MCP tool</point>
+      <point>raglite/retrieval/multi_index_search.py - Wrapped by Retrieval Agent</point>
+      <point>raglite/retrieval/attribution.py - Used by Synthesis Agent</point>
+      <point>raglite/shared/config.py - Provides mistral_api_key and model settings</point>
+    </integrationPoints>
+  </implementation>
+
+  <nextSteps>
+    <step priority="high">Story 3.1: Agentic Framework Integration - Implement orchestrator setup (Pattern 1 + Pattern 4)</step>
+    <step priority="high">Story 3.2: Retrieval Agent Implementation - Wrap multi_index_search</step>
+    <step priority="high">Story 3.3: Analysis Agent Implementation - LLM-powered analysis</step>
+    <step priority="high">Story 3.4: Synthesis Agent Implementation - Answer generation + citations</step>
+    <step priority="medium">Story 3.5: Multi-Step Workflow Orchestration - End-to-end integration</step>
+    <step priority="low">Story 3.6: Conditional Routing (Optional) - If latency becomes issue</step>
+  </nextSteps>
+
+  <risks>
+    <risk id="1">
+      <description>Performance overhead exceeds budget</description>
+      <probability>Medium</probability>
+      <impact>Medium</impact>
+      <mitigation>POC showed 3.4s overhead. Can optimize by using Claude for orchestration (expect ~2s). Monitor p50/p95 in Story 3.1. Fallback to Simple Function Calling if >5s overhead.</mitigation>
+    </risk>
+    <risk id="2">
+      <description>Event-driven orchestrator doesn't guarantee parallelism</description>
+      <probability>Low</probability>
+      <impact>Medium</impact>
+      <mitigation>Strands may execute tools sequentially despite "parallel" instructions. For Pattern 2 (Parallel Execution), use manual asyncio.gather() if needed. Defer to Epic 3.5.</mitigation>
+    </risk>
+    <risk id="3">
+      <description>Team learning curve slows Story 3.1 velocity</description>
+      <probability>Low</probability>
+      <impact>Low</impact>
+      <mitigation>POC code provides reference implementation. Pattern examples are production-ready. Amelia familiar with @tool decorator pattern. Estimate +1 day for learning curve in Story 3.1.</mitigation>
+    </risk>
+  </risks>
+</story-context>
