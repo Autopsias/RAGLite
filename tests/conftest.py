@@ -165,9 +165,25 @@ def mock_mistral_client():
             # Handle both dict and object message formats
             last_msg = messages[-1]
             if isinstance(last_msg, dict):
-                query_text = last_msg.get("content", "")
+                full_content = last_msg.get("content", "")
             else:
-                query_text = getattr(last_msg, "content", "")
+                full_content = getattr(last_msg, "content", "")
+
+            # For SQL generation, extract actual query from the prompt template
+            # The prompt contains: "**USER QUERY:**\n{query}\n\n**INSTRUCTIONS:**"
+            if "**USER QUERY:**" in full_content:
+                # Extract text after "**USER QUERY:**" and before "**INSTRUCTIONS:**"
+                start_marker = "**USER QUERY:**"
+                end_marker = "**INSTRUCTIONS:**"
+                start_idx = full_content.find(start_marker) + len(start_marker)
+                end_idx = full_content.find(end_marker)
+                if end_idx > start_idx:
+                    query_text = full_content[start_idx:end_idx].strip()
+                else:
+                    query_text = full_content[start_idx:].strip()
+            else:
+                # Fallback: use full content for non-SQL generation calls
+                query_text = full_content
 
         query_lower = query_text.lower()
 
@@ -200,6 +216,8 @@ def mock_mistral_client():
             metrics.append("metric ILIKE '%Revenue%'")
         if "currency" in query_lower:
             metrics.append("metric ILIKE '%Currency%'")
+        if "frequency" in query_lower:
+            metrics.append("metric ILIKE '%frequency%'")
 
         # Add metric filter (OR if multiple metrics)
         if metrics:

@@ -158,25 +158,17 @@ LIMIT 50;
 @pytest.mark.asyncio
 async def test_case_insensitive_matching(mock_mistral_client):
     """Test AC1: Entity matching is case-insensitive."""
-    # Configure mock to return SQL query matching ACTUAL test data
-    # Test database has Portugal + "Frequency Ratio" data (not "variable cost")
-    mock_client, _ = mock_mistral_client
-    mock_response = mock_client.chat.complete.return_value
-    mock_response.choices[0].message.content = """
-SELECT entity, metric, value, unit, period, fiscal_year, page_number
-FROM financial_tables
-WHERE entity ILIKE '%Portugal%'
-  AND metric ILIKE '%frequency%'
-ORDER BY page_number DESC
-LIMIT 50;
-    """.strip()
-
     # Test case-insensitive matching with uppercase query
+    # Query-aware mock in conftest.py now handles "frequency" metric keyword
     # Database has "Portugal" + "Frequency Ratio" in mixed case
     test_query = "PORTUGAL frequency ratio"
     sql = await generate_sql_query(test_query)
 
     assert sql is not None
+    # Should contain Portugal and frequency in the SQL (case-insensitive)
+    assert "portugal" in sql.lower() or "Portugal" in sql, "SQL should filter by Portugal"
+    assert "frequency" in sql.lower(), "SQL should filter by frequency metric"
+
     results = await search_tables_sql(sql)
 
     # Should match Portugal + Frequency Ratio regardless of case
