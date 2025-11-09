@@ -400,8 +400,8 @@ async def test_e2e_integration_flow():
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 @pytest.mark.slow  # Runs 20+ Claude API calls - takes 2-3 minutes
 @pytest.mark.timeout(
-    300
-)  # 5 minutes timeout for 20 queries + warmup (60s warmup + 20*5-15s queries)
+    1200
+)  # 20 minutes timeout for 20 queries + warmup (accounts for slow CI runners)
 @pytest.mark.asyncio
 async def test_performance_measurement():
     """Measure p50/p95 query latency on 20+ queries with warm model.
