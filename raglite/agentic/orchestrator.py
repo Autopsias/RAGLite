@@ -2,6 +2,8 @@
 
 Provides the orchestration engine for coordinating multi-step workflows
 using AWS Strands agents (Story 3.1: AC2, AC3).
+
+Story 3.2: Includes retrieval_agent as registered tool for agent workflows.
 """
 
 import asyncio
@@ -28,6 +30,10 @@ class StrandsOrchestrator:
         self.agent_timeout = settings.strands_agent_timeout_seconds
         self.enable_observability = settings.strands_enable_opentelemetry
 
+        # Initialize registered tools list (Story 3.2 AC1: retrieval_agent registration)
+        self._registered_tools: list[Callable] = []
+        self._load_default_tools()
+
         # Import Strands on initialization (AC1)
         try:
             from strands import Agent
@@ -46,23 +52,83 @@ class StrandsOrchestrator:
                 "model": self.orchestration_model,
                 "timeout_seconds": self.agent_timeout,
                 "observability_enabled": self.enable_observability,
+                "registered_tools": len(self._registered_tools),
             },
         )
+
+    def _load_default_tools(self) -> None:
+        """Load default agent tools (Story 3.2 AC1: retrieval_agent registration).
+
+        Registers retrieval_agent and other core tools available to orchestrator.
+        Tools are @tool decorated functions from AWS Strands.
+        """
+        try:
+            # Import retrieval_agent (Story 3.2)
+            from raglite.agentic.agents.retrieval_agent import retrieval_agent
+
+            self._registered_tools.append(retrieval_agent)
+            logger.info(
+                "Registered retrieval_agent tool",
+                extra={"tool_name": "retrieval_agent"},
+            )
+
+        except ImportError as e:
+            logger.warning(
+                "Failed to load retrieval_agent tool",
+                extra={"error": str(e)},
+            )
+
+    def get_available_tools(self) -> list[Callable]:
+        """Get list of all registered tools available to agents.
+
+        Story 3.2 AC1: Returns available tools for agent creation
+        Includes retrieval_agent and other @tool decorated functions.
+
+        Returns:
+            List of callable tools registered with the orchestrator
+        """
+        return self._registered_tools.copy()
+
+    def register_tools(self, tools: list[Callable]) -> None:
+        """Register additional tools with the orchestrator.
+
+        Story 3.2 AC1: Allows dynamic tool registration
+        Tools should be @tool decorated functions from AWS Strands.
+
+        Args:
+            tools: List of callable tools to register
+        """
+        for tool in tools:
+            if callable(tool):
+                self._registered_tools.append(tool)
+                logger.info(
+                    "Tool registered with orchestrator",
+                    extra={"tool_name": getattr(tool, "__name__", str(tool))},
+                )
+            else:
+                logger.warning(
+                    "Attempted to register non-callable tool",
+                    extra={"tool": str(tool)},
+                )
 
     async def create_agent(
         self,
         name: str,
         tools: list[Callable] | None = None,
         system_prompt: str | None = None,
+        use_registered_tools: bool = True,
     ) -> Any:
         """Create a Strands Agent for a specific orchestration task.
 
         AC2: Strands Agent class instantiable with basic config
+        Story 3.2 AC1: Agent can use registered tools (retrieval_agent, etc.)
 
         Args:
             name: Agent name/identifier
             tools: Optional list of tool functions available to agent
+                If None and use_registered_tools=True, uses orchestrator's registered tools
             system_prompt: Optional system prompt for agent behavior
+            use_registered_tools: If True and tools=None, includes registered tools
 
         Returns:
             Configured Strands Agent instance
@@ -72,7 +138,11 @@ class StrandsOrchestrator:
         """
         try:
             if tools is None:
-                tools = []
+                # Use registered tools if available and requested (Story 3.2 AC1)
+                if use_registered_tools:
+                    tools = self.get_available_tools()
+                else:
+                    tools = []
 
             if system_prompt is None:
                 system_prompt = f"You are {name}, an agent in the RAGLite orchestration system."

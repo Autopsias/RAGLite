@@ -1,0 +1,303 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3.2</storyId>
+    <title>Retrieval Agent Implementation</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-09</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/3-2-retrieval-agent-implementation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>specialized retrieval agent that can search financial knowledge base</iWant>
+    <soThat>agentic workflows can access document information as a tool</soThat>
+    <tasks>
+      <task id="1" status="pending">Implement retrieval_agent function with @tool decorator (AC1, AC2) - 3 hours
+        <subtask id="1.1">Create raglite/agentic/agents/retrieval_agent.py file</subtask>
+        <subtask id="1.2">Implement @tool async def retrieval_agent(query, top_k) with AWS Strands decorator</subtask>
+        <subtask id="1.3">Import and call multi_index_search() from Epic 2</subtask>
+        <subtask id="1.4">Format search results as JSON-serializable DocumentChunk list</subtask>
+        <subtask id="1.5">Add error handling for search failures (return empty results with error metadata)</subtask>
+      </task>
+      <task id="2" status="pending">Integrate with existing multi-index search (AC3) - 2 hours
+        <subtask id="2.1">Import multi_index_search from raglite.retrieval.multi_index_search</subtask>
+        <subtask id="2.2">Pass query and top_k parameters to multi_index_search()</subtask>
+        <subtask id="2.3">Validate integration preserves Epic 2 query classification (simple/table/analytical)</subtask>
+        <subtask id="2.4">Confirm no code duplication—direct function calls only</subtask>
+        <subtask id="2.5">Test with sample queries to verify 90%+ retrieval accuracy maintained</subtask>
+      </task>
+      <task id="3" status="pending">Create unit tests for retrieval agent (AC4) - 2 hours
+        <subtask id="3.1">Create tests/unit/agentic/test_retrieval_agent.py</subtask>
+        <subtask id="3.2">Mock multi_index_search() to return synthetic results</subtask>
+        <subtask id="3.3">Test agent input validation (query string, top_k integer)</subtask>
+        <subtask id="3.4">Test agent output format (JSON-serialized DocumentChunk list)</subtask>
+        <subtask id="3.5">Test error handling (search failure returns empty results)</subtask>
+        <subtask id="3.6">Validate test execution time <100ms (no real LLM/DB calls)</subtask>
+      </task>
+      <task id="4" status="pending">Create integration test for simple workflow (AC5) - 3 hours
+        <subtask id="4.1">Create tests/integration/test_retrieval_synthesis_workflow.py</subtask>
+        <subtask id="4.2">Implement 2-agent workflow test: Retrieval → Synthesis</subtask>
+        <subtask id="4.3">Use real Qdrant instance (requires docker-compose up -d)</subtask>
+        <subtask id="4.4">Use MockSynthesisAgent from Story 3.1 (no real synthesis needed yet)</subtask>
+        <subtask id="4.5">Test agent coordination via AWS Strands orchestrator</subtask>
+        <subtask id="4.6">Validate workflow execution time <5s</subtask>
+        <subtask id="4.7">Validate retrieval results passed correctly to synthesis agent</subtask>
+      </task>
+      <task id="5" status="pending">Update orchestrator configuration (AC1) - 1 hour
+        <subtask id="5.1">Add retrieval_agent to orchestrator tools list in raglite/agentic/orchestrator.py</subtask>
+        <subtask id="5.2">Update orchestrator system prompt to include retrieval_agent usage</subtask>
+        <subtask id="5.3">Test orchestrator can discover and call retrieval_agent</subtask>
+        <subtask id="5.4">Validate orchestrator logs show retrieval_agent execution</subtask>
+      </task>
+      <task id="6" status="pending">Document agent usage and integration (AC1) - 1 hour
+        <subtask id="6.1">Update docs/architecture/3-1-agentic-workflow-guide.md with retrieval_agent example</subtask>
+        <subtask id="6.2">Document retrieval_agent signature and return format</subtask>
+        <subtask id="6.3">Add code example showing orchestrator calling retrieval_agent</subtask>
+        <subtask id="6.4">Document integration with Epic 2 multi-index search</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Retrieval agent defined with tool interface per AWS Strands agentic framework
+      - Agent decorated with @tool decorator from AWS Strands
+      - Agent signature follows Strands tool conventions
+      - Agent registered with orchestrator as callable tool
+    </criterion>
+    <criterion id="AC2">Agent accepts query and returns relevant document chunks with citations
+      - Input: Natural language query string, optional top_k parameter
+      - Output: JSON-serialized list of DocumentChunk objects with metadata
+      - Citations include page numbers, document IDs, scores, section types
+    </criterion>
+    <criterion id="AC3">Agent integrates with existing retrieval logic from Epic 1-2
+      - Wraps multi_index_search() from raglite.retrieval.multi_index_search
+      - Leverages existing query classification logic (simple/table/analytical)
+      - Reuses Epic 2 multi-index architecture (Qdrant + PostgreSQL)
+      - No code duplication—direct function calls to existing modules
+    </criterion>
+    <criterion id="AC4">Agent tested in isolation (unit test)
+      - Unit test validates agent interface and return format
+      - Mocked multi_index_search() prevents external dependencies
+      - Test execution time <100ms (framework overhead only)
+      - Test validates JSON serialization of results
+    </criterion>
+    <criterion id="AC5">Agent tested within simple workflow (integration test)
+      - Integration test executes Retrieval → Synthesis 2-agent workflow
+      - Test uses real Qdrant instance (requires docker-compose up)
+      - Test validates agent coordination via AWS Strands orchestrator
+      - Test execution time <5s (includes real search latency)
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/tech-spec-epic-3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Agent 1: Retrieval Agent</section>
+        <snippet>Retrieval Agent wraps Epic 1-2 retrieval logic, exposing search as agent tool. Input: query (str), top_k (int). Output: RetrievalOutput with chunks (DocumentChunk list) and search metadata. Performance target: <3s p50, <8s p95.</snippet>
+      </doc>
+      <doc>
+        <path>docs/prd/epic-3-ai-intelligence-orchestration.md</path>
+        <title>Epic 3 PRD</title>
+        <section>Story 3.2: Retrieval Agent Implementation</section>
+        <snippet>Retrieval agent defined with tool interface, accepts query and returns relevant document chunks with citations, integrates with existing retrieval logic from Epic 1. AC: Agent tested in isolation and within simple workflow.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-orchestration-design.md</path>
+        <title>Epic 3 Orchestration Design</title>
+        <section>Agent Specifications - Agent 1: Retrieval Agent</section>
+        <snippet>Purpose: Query RAGLite's multi-index search system. Wraps existing multi_index_search() from raglite.retrieval.multi_index_search. Uses Pydantic models: RetrievalInput, RetrievalOutput, DocumentChunk, SearchMetadata. Error handling: If search fails → return empty result with error metadata.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-agent-patterns.md</path>
+        <title>Epic 3 Agent Workflow Patterns</title>
+        <section>Pattern 1: Sequential Chain Pattern - Code Example</section>
+        <snippet>Production-ready code example showing @tool decorator usage, retrieval_agent implementation calling multi_index_search(), JSON serialization of results, and orchestrator setup with Agent(model, tools, system_prompt).</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/3-1-agentic-workflow-guide.md</path>
+        <title>Agentic Workflow Development Guide</title>
+        <section>Agent Creation Patterns</section>
+        <snippet>Guide from Story 3.1 on workflow patterns, agent creation, debugging with OpenTelemetry, and common patterns (sequential, parallel, conditional). Examples include MockRetrievalAgent and MockSynthesisAgent templates.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/3-1-agentic-framework-integration.md</path>
+        <title>Story 3.1: Agentic Framework Integration (COMPLETE)</title>
+        <section>Completion Notes</section>
+        <snippet>AWS Strands v1.15.0 installed. Orchestrator operational. AgentState model functional. Error handler with 15s timeout and graceful degradation ready. Mock agents available as templates. 53 tests passing (97.1% pass rate).</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-framework-selection.md</path>
+        <title>Epic 3 Framework Selection ADR</title>
+        <section>Decision: AWS Strands</section>
+        <snippet>AWS Strands selected (84.5% weighted score). Event-driven orchestration, 50 LOC for 3-agent pipeline (47% code reduction), native MCP integration, production-validated (AWS Q Developer). Approved 2025-11-07.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>raglite/agentic/orchestrator.py</path>
+        <kind>module</kind>
+        <symbol>create_orchestrator</symbol>
+        <lines>24-48</lines>
+        <reason>Orchestrator setup function. Add retrieval_agent to tools list here. Uses MistralModel and Agent from AWS Strands with system prompt.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/state.py</path>
+        <kind>module</kind>
+        <symbol>AgentState</symbol>
+        <lines>32-93</lines>
+        <reason>AgentState Pydantic model for state management. Validates required fields (query, agent_type, success, result). Use validate_required_fields() method.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/error_handler.py</path>
+        <kind>module</kind>
+        <symbol>handle_agent_timeout, handle_agent_error</symbol>
+        <lines>60-247</lines>
+        <reason>Error handling patterns from Story 3.1. Implements 15s timeout (NFR26), graceful degradation (NFR24), structured logging. Reference for retrieval_agent error handling.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/agents/mock_retrieval.py</path>
+        <kind>agent</kind>
+        <symbol>mock_retrieval_agent</symbol>
+        <lines>1-50</lines>
+        <reason>Template for retrieval_agent structure. Shows @tool decorator usage, async function signature, JSON return format, error handling pattern. Use as starting point.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/agents/mock_synthesis.py</path>
+        <kind>agent</kind>
+        <symbol>mock_synthesis_agent</symbol>
+        <lines>1-40</lines>
+        <reason>MockSynthesisAgent for integration tests. Use in Task 4 (test_retrieval_synthesis_workflow.py) to avoid real LLM calls during testing.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/retrieval/multi_index_search.py</path>
+        <kind>module</kind>
+        <symbol>multi_index_search</symbol>
+        <lines>1-300</lines>
+        <reason>INTEGRATION POINT: Epic 2 multi-index search function. Retrieval agent wraps this directly. Returns QueryResult with chunks, metadata, and search backend used. DO NOT DUPLICATE - call directly.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/config.py</path>
+        <kind>module</kind>
+        <symbol>Settings</symbol>
+        <lines>40-43</lines>
+        <reason>Strands configuration (Mistral API key, model selection). Used by orchestrator. Settings available via settings instance.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/logging.py</path>
+        <kind>module</kind>
+        <symbol>logger</symbol>
+        <lines>1-50</lines>
+        <reason>Structured logging with extra={} metadata. Use logger.info("Retrieval agent called", extra={"query": query, "top_k": top_k}) for agent execution tracking.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/unit/agentic/test_mock_agents.py</path>
+        <kind>test</kind>
+        <symbol>test_mock_retrieval_agent_interface</symbol>
+        <lines>1-100</lines>
+        <reason>Testing pattern from Story 3.1. Shows how to test @tool decorator, async function signature, JSON serialization, mocking strategies. Follow this pattern for test_retrieval_agent.py.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/integration/test_agentic_framework.py</path>
+        <kind>test</kind>
+        <symbol>test_end_to_end_mock_workflow</symbol>
+        <lines>50-100</lines>
+        <reason>Integration test pattern. Shows orchestrator coordination test with 2-agent workflow (Retrieval → Synthesis). Use as template for test_retrieval_synthesis_workflow.py.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/conftest.py</path>
+        <kind>fixture</kind>
+        <symbol>qdrant_fixture, sample_docs_fixture</symbol>
+        <lines>1-200</lines>
+        <reason>Shared pytest fixtures. Qdrant fixture provides initialized instance with sample docs. Reuse for integration tests (Task 4).</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python ecosystem="pyproject.toml">
+        <package name="strands" version=">=1.15.0,<2.0.0" scope="production">AWS Strands agentic framework (Story 3.1)</package>
+        <package name="mistralai" version=">=1.9.11" scope="production">Mistral API for orchestration LLM</package>
+        <package name="anthropic" version=">=0.18.0,<1.0.0" scope="production">Claude API (optional for analysis/synthesis agents)</package>
+        <package name="pydantic" version=">=2.0,<3.0" scope="production">Data models (AgentState, DocumentChunk)</package>
+        <package name="qdrant-client" version="==1.15.1" scope="production">Vector DB for retrieval (Epic 2 integration)</package>
+        <package name="psycopg2-binary" version=">=2.9,<3.0" scope="production">PostgreSQL for SQL search (Epic 2 integration)</package>
+        <package name="fastmcp" version="==2.12.4" scope="production">MCP server framework</package>
+        <package name="pytest" version="==8.4.2" scope="dev">Testing framework</package>
+        <package name="pytest-asyncio" version="==1.2.0" scope="dev">Async test support</package>
+        <package name="pytest-mock" version=">=3.12,<4.0" scope="dev">Mocking for unit tests</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint id="C1" category="architecture">KISS Principle: This is a ~50 line wrapper function. No abstractions, no custom base classes. Direct function calls only to multi_index_search().</constraint>
+    <constraint id="C2" category="integration">Wrapper Pattern: Must wrap raglite.retrieval.multi_index_search directly. NO code duplication. Preserve Epic 2 query classification (simple/table/analytical).</constraint>
+    <constraint id="C3" category="framework">AWS Strands @tool Decorator: Use @tool decorator from strands package. Function must be async and return JSON-serializable string (not Pydantic model directly).</constraint>
+    <constraint id="C4" category="error_handling">Graceful Degradation (NFR24): If search fails → return empty results with error metadata. If timeout (>15s per NFR26) → return partial results. User always receives response.</constraint>
+    <constraint id="C5" category="performance">Performance Target (NFR5): <3s p50, <8s p95 latency. Log execution time via AgentState.execution_time_ms for monitoring.</constraint>
+    <constraint id="C6" category="testing">Test Isolation: Unit tests must mock multi_index_search() (no Qdrant dependency). Integration tests use real Qdrant but MockSynthesisAgent (no LLM API calls).</constraint>
+    <constraint id="C7" category="logging">Structured Logging: Use logger.info() with extra={} for all agent executions. Include: query, top_k, execution_time_ms, success, results_count.</constraint>
+    <constraint id="C8" category="code_style">Type Hints Required: All function signatures must have type annotations. Follow existing codebase patterns from Story 3.1.</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>retrieval_agent</name>
+      <kind>AWS Strands @tool function</kind>
+      <signature>@tool async def retrieval_agent(query: str, top_k: int = 5) -> str</signature>
+      <path>raglite/agentic/agents/retrieval_agent.py (NEW FILE)</path>
+      <description>Retrieval Agent tool interface. Accepts natural language query, calls multi_index_search(), returns JSON-serialized DocumentChunk list with metadata.</description>
+    </interface>
+    <interface>
+      <name>multi_index_search</name>
+      <kind>async function</kind>
+      <signature>async def multi_index_search(query: str, top_k: int = 5, search_mode: str = "auto") -> QueryResult</signature>
+      <path>raglite/retrieval/multi_index_search.py</path>
+      <description>Epic 2 multi-index search (90% accuracy). Returns QueryResult with chunks (List[DocumentChunk]), search_metadata (classification, backend used, latency). INTEGRATION POINT - wrap directly.</description>
+    </interface>
+    <interface>
+      <name>AgentState</name>
+      <kind>Pydantic model</kind>
+      <signature>class AgentState(BaseModel)</signature>
+      <path>raglite/agentic/state.py</path>
+      <description>State management model from Story 3.1. Fields: query, agent_type, success, result, execution_time_ms. Use validate_required_fields() before passing to orchestrator.</description>
+    </interface>
+    <interface>
+      <name>create_orchestrator</name>
+      <kind>function</kind>
+      <signature>def create_orchestrator(tools: List[Callable]) -> Agent</signature>
+      <path>raglite/agentic/orchestrator.py</path>
+      <description>Orchestrator factory from Story 3.1. Add retrieval_agent to tools list here. Returns Strands Agent with MistralModel and system prompt.</description>
+    </interface>
+    <interface>
+      <name>MockSynthesisAgent</name>
+      <kind>mock agent</kind>
+      <signature>@tool async def mock_synthesis_agent(analysis_results: str, original_query: str) -> str</signature>
+      <path>raglite/agentic/agents/mock_synthesis.py</path>
+      <description>Mock synthesis agent from Story 3.1. Use in integration tests (Task 4) to avoid real LLM API calls. Returns hardcoded synthesis for testing.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing framework: pytest with pytest-asyncio for async support. Unit tests mock all external dependencies (multi_index_search, Qdrant, PostgreSQL). Integration tests use real Qdrant instance (docker-compose up -d required) but mock LLM calls (use MockSynthesisAgent). Test execution time targets: Unit tests <100ms each, Integration tests <5s each. Follow patterns from tests/unit/agentic/test_mock_agents.py and tests/integration/test_agentic_framework.py. Use pytest.mark.asyncio for async tests. Assert on execution time with pytest-timeout.
+    </standards>
+    <locations>
+      <location>tests/unit/agentic/test_retrieval_agent.py (NEW FILE - 5 tests)</location>
+      <location>tests/integration/test_retrieval_synthesis_workflow.py (NEW FILE - 3 tests)</location>
+      <location>tests/conftest.py (reuse qdrant_fixture, sample_docs_fixture)</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test @tool decorator application: Verify function decorated, callable by orchestrator, registered in tools list</idea>
+      <idea ac="AC2">Test JSON serialization: Mock multi_index_search, validate JSON output structure (chunks, query, total_retrieved, search_metadata)</idea>
+      <idea ac="AC3">Test multi-index integration: Mock multi_index_search, assert called with (query, top_k, search_mode="auto"), validate QueryResult preserved</idea>
+      <idea ac="AC4">Test error handling: Mock multi_index_search to raise exception, validate empty results returned with error metadata, validate structured logging</idea>
+      <idea ac="AC4">Test execution time: Unit tests assert <100ms (no real DB/LLM calls)</idea>
+      <idea ac="AC5">Test 2-agent workflow: Retrieval → MockSynthesis, validate orchestrator coordination, assert workflow time <5s, validate state passing between agents</idea>
+      <idea ac="AC5">Test Qdrant integration: Use real Qdrant fixture, validate 90%+ retrieval accuracy maintained (sample from ground_truth.json)</idea>
+      <idea ac="ALL">Test citations preservation: Validate page numbers, doc_ids, scores, section_types present in output (NFR7: 95%+ attribution accuracy)</idea>
+    </ideas>
+  </tests>
+</story-context>

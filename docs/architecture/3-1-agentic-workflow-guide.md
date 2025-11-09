@@ -143,24 +143,53 @@ class MyCustomAgent:
         return f"Processed: {query}"
 ```
 
-### Using a Strands Agent
+### Using a Strands Agent with Tools
+
+**Story 3.2:** The orchestrator includes registered tools (like `retrieval_agent`) that can be passed to Strands agents:
 
 ```python
 from raglite.agentic.orchestrator import StrandsOrchestrator
 
 orchestrator = StrandsOrchestrator()
 
-# Create a Strands agent with tools and system prompt
+# Get available tools from orchestrator (includes retrieval_agent)
+tools = orchestrator.get_available_tools()
+
+# Create a Strands agent with registered tools
 agent = await orchestrator.create_agent(
     name="AnalysisAgent",
-    system_prompt="You are a financial analyst. Analyze the provided data.",
-    tools=[],  # Add tool functions here
+    system_prompt="You are a financial analyst. Use the retrieval_agent tool to search documents, then analyze the results.",
+    # tools parameter is optional - if None, uses registered tools by default
+    use_registered_tools=True,  # Use orchestrator's registered tools
 )
 
-async def analysis_step(_, state: AgentState) -> AgentState:
+async def analysis_step(strands_agent, state: AgentState) -> AgentState:
     """Use Strands agent for analysis."""
-    # Agent would process state
+    # Strands agent has access to retrieval_agent and other tools
     return state
+```
+
+**Retrieval Agent Tool (Story 3.2):**
+
+The `retrieval_agent` tool is automatically registered and available to Strands agents:
+
+```python
+from raglite.agentic.agents.retrieval_agent import retrieval_agent
+
+# retrieval_agent can be called directly:
+result = await retrieval_agent(query="What is the annual revenue?", top_k=5)
+# Returns JSON string with:
+# {
+#   "chunks": [DocumentChunk dicts with citations],
+#   "query": "What is the annual revenue?",
+#   "total_retrieved": 5,
+#   "search_metadata": {"success": True, "latency_ms": 234, "backend": "vector"}
+# }
+
+# Or used via orchestrator:
+orchestrator = StrandsOrchestrator()
+tools = orchestrator.get_available_tools()
+# Tools list includes retrieval_agent for use with Strands agents
 ```
 
 ## State Management Best Practices
@@ -367,12 +396,31 @@ When fallback is triggered:
 - **Mock Agents:** `raglite/agentic/agents/` - Mock agent implementations for testing
 - **Tests:** `tests/unit/agentic/` & `tests/integration/test_agentic_framework.py` - Comprehensive test examples
 
+## Implemented Agents
+
+### Story 3.2: Retrieval Agent ✅
+
+The `retrieval_agent` wraps Epic 2's multi-index search to enable agentic document retrieval:
+
+- **Location:** `raglite/agentic/agents/retrieval_agent.py`
+- **Interface:** `@tool async def retrieval_agent(query: str, top_k: int = 5) -> str`
+- **Returns:** JSON string with chunks, query, total_retrieved, and search_metadata
+- **Integration:** Automatically registered with orchestrator, available to Strands agents
+- **Performance:** <3s p50, <8s p95 latency (validated in integration tests)
+- **Accuracy:** Maintains 90%+ retrieval accuracy from Epic 2
+
+Usage:
+```python
+result = await retrieval_agent("What is the revenue?", top_k=5)
+parsed = json.loads(result)
+chunks = parsed["chunks"]  # List of DocumentChunk dicts with citations
+```
+
 ## Next Steps
 
-After this story (3.1), the following stories implement actual agents:
+After Story 3.2 (Retrieval Agent), the following stories implement additional agents:
 
-- **Story 3.2:** Retrieval Agent - Integrates with `multi_index_search` for document retrieval
 - **Story 3.3:** Analysis Agent - Processes retrieved data for insights
 - **Story 3.4:** Synthesis Agent - Generates final answers from analysis
 
-These agents will be plugged into the orchestration framework created in this story using the patterns documented above.
+These agents will be plugged into the orchestration framework using the patterns documented above.
