@@ -235,26 +235,88 @@ tools = orchestrator.get_available_tools()
 
 ### 3-Agent Workflow: Retrieval → Analysis → Synthesis
 
+**Story 3.4 Implementation:** Full 3-agent workflow with real synthesis agent (Story 3.4 AC5)
+
 ```python
+import json
+from raglite.agentic.agents.retrieval_agent import retrieval_agent
+from raglite.agentic.agents.analysis_agent import analysis_agent
+from raglite.agentic.agents.synthesis_agent import synthesis_agent
+from raglite.agentic.orchestrator import StrandsOrchestrator
+from raglite.agentic.state import SynthesisResult
+
 # Workflow combining retrieval, analysis, and synthesis:
-async def analysis_workflow(query: str) -> str:
+async def analysis_workflow(query: str) -> SynthesisResult:
+    """Complete 3-agent workflow: Retrieval → Analysis → Synthesis.
+
+    Args:
+        query: User query (e.g., "Calculate YoY revenue growth")
+
+    Returns:
+        SynthesisResult with final answer, reasoning steps, and citations
+    """
     orchestrator = StrandsOrchestrator()
 
     # Step 1: Retrieve relevant documents
-    retrieval_result = await retrieval_agent(query, top_k=5)
+    retrieval_result_json = await retrieval_agent(query, top_k=5)
+    retrieval_result = json.loads(retrieval_result_json)
+
+    # Extract chunks from retrieval
+    chunks = retrieval_result.get("chunks", [])
 
     # Step 2: Analyze retrieved data
-    analysis_result = await analysis_agent(
+    analysis_result_json = await analysis_agent(
         data={"current": 12.0, "previous": 10.0},
         analysis_type="yoy_growth",
-        context=f"Based on retrieved documents"
+        context=f"Based on {len(chunks)} retrieved document(s)"
+    )
+    analysis_result = json.loads(analysis_result_json)
+
+    # Step 3: Synthesize final answer with retrieval + analysis insights (Story 3.4 AC5)
+    # Prepare inputs for synthesis agent
+    retrieval_inputs = [
+        {
+            "id": chunk.get("id", f"chunk_{i}"),
+            "content": chunk.get("content", ""),
+            "source": chunk.get("source", "unknown"),
+            "page_number": chunk.get("page_number"),
+        }
+        for i, chunk in enumerate(chunks)
+    ]
+
+    analysis_inputs = [
+        {
+            "calculation": analysis_result.get("calculation", ""),
+            "value": analysis_result.get("value", ""),
+            "formatted_value": analysis_result.get("formatted_value", ""),
+            "reasoning": analysis_result.get("reasoning", ""),
+        }
+    ]
+
+    synthesis_result_json = await synthesis_agent(
+        retrieval_results=retrieval_inputs,
+        analysis_results=analysis_inputs,
+        query=query,
+        context=f"Integrating analysis from {len(chunks)} documents"
     )
 
-    # Step 3: Synthesize final answer with analysis insights
-    # (Synthesis agent not yet implemented in Story 3.4)
+    # Parse and return synthesis result
+    synthesis_result = SynthesisResult.model_validate_json(synthesis_result_json)
+    return synthesis_result
 
-    return analysis_result
+# Example usage:
+# result = await analysis_workflow("What was the YoY revenue growth?")
+# print(result.answer)  # "Revenue grew 20% YoY from $10M to $12M..."
+# print(result.sources)  # ["Q3_2024_Report.pdf", "Q3_2023_Report.pdf"]
 ```
+
+**Key Points:**
+- Step 1 retrieves documents matching the query (Retrieval Agent - Story 3.2)
+- Step 2 performs financial calculations on extracted data (Analysis Agent - Story 3.3)
+- Step 3 synthesizes retrieval + analysis into natural language answer with citations (Synthesis Agent - Story 3.4)
+- All agents return JSON strings serialized from Pydantic models
+- Synthesis agent uses Claude Sonnet for high-quality narrative generation
+- Complete workflow execution target: <8s (per NFR5)
 
 ## State Management Best Practices
 
