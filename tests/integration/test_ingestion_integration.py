@@ -570,6 +570,7 @@ class TestEmbeddingIntegration:
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(180)  # 3 minutes timeout for model download + embedding generation
+    @pytest.mark.usefixtures("warmup_embedding_model")
     async def test_embedding_generation_end_to_end(self) -> None:
         """Integration test: Validate end-to-end embedding generation with real Fin-E5 model.
 
@@ -737,6 +738,7 @@ class TestEmbeddingIntegration:
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(180)
+    @pytest.mark.usefixtures("warmup_embedding_model")
     async def test_embedding_dimensions_validation_direct(self) -> None:
         """Integration test: Validate Fin-E5 model generates exactly 1024-dimensional embeddings.
 
@@ -787,6 +789,7 @@ class TestEmbeddingIntegration:
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(10)
+    @pytest.mark.usefixtures("warmup_embedding_model")
     async def test_empty_document_embedding_handling(self) -> None:
         """Integration test: Validate graceful handling of empty chunk lists.
 
@@ -816,6 +819,7 @@ class TestQdrantStorageIntegration:
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(60)
+    @pytest.mark.usefixtures("warmup_embedding_model")
     async def test_storage_end_to_end_validation(self) -> None:
         """Integration test: End-to-end storage validation with real Qdrant.
 
@@ -905,6 +909,7 @@ class TestQdrantStorageIntegration:
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(60)
+    @pytest.mark.usefixtures("warmup_embedding_model")
     async def test_storage_retrieval_roundtrip(self) -> None:
         """Integration test: Storage + retrieval round-trip validation.
 
@@ -1067,6 +1072,7 @@ class TestQdrantStorageIntegration:
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(60)
+    @pytest.mark.usefixtures("warmup_embedding_model")
     async def test_metadata_preservation_end_to_end(self) -> None:
         """Integration test: Metadata preservation validation (page_number != None).
 

@@ -2,7 +2,9 @@
 
 Story 3.3 AC5: Tests analysis_agent within a 3-agent workflow
 (Retrieval → Analysis → Synthesis) using real Qdrant instance, real Claude Haiku,
-and MockSynthesisAgent.
+and real SynthesisAgent.
+
+Story 3.4 AC5: Updates workflow to use real synthesis_agent instead of mock.
 
 Validates agent coordination via AWS Strands orchestrator (AC5).
 Requires: docker-compose up -d (Qdrant instance)
@@ -16,7 +18,8 @@ import pytest
 
 from raglite.agentic.agents.analysis_agent import analysis_agent
 from raglite.agentic.agents.retrieval_agent import retrieval_agent
-from raglite.agentic.state import AnalysisResult
+from raglite.agentic.agents.synthesis_agent import synthesis_agent
+from raglite.agentic.state import AnalysisResult, SynthesisResult
 
 
 class TestAnalysisAgentWorkflow:
@@ -200,16 +203,46 @@ class TestAnalysisAgentWorkflow:
         assert analysis_result.value == pytest.approx(0.20, abs=0.01)
         assert analysis_result.formatted_value == "+20.0%"
 
-        # Step 3: Mock Synthesis Agent - would synthesize final answer
-        # For now, just verify analysis output is JSON-serializable for downstream agent
-        synthesis_input = {
-            "documents": chunks,
-            "analysis": json.loads(analysis_result_json),
-        }
+        # Step 3: Synthesis Agent - synthesize final answer
+        synthesis_start = time.time()
 
-        # Should be serializable for agent framework
-        synthesis_json = json.dumps(synthesis_input)
-        assert synthesis_json is not None
+        # Prepare synthesis inputs
+        retrieval_results = [
+            {
+                "id": chunk.get("id", f"chunk_{i}"),
+                "content": chunk.get("content", ""),
+                "source": chunk.get("source", "unknown"),
+                "page_number": chunk.get("page_number"),
+            }
+            for i, chunk in enumerate(chunks)
+        ]
+
+        analysis_results = [
+            {
+                "calculation": analysis_result.calculation,
+                "value": analysis_result.value,
+                "formatted_value": analysis_result.formatted_value,
+                "reasoning": analysis_result.reasoning,
+                "data_points_used": analysis_result.data_points_used,
+            }
+        ]
+
+        synthesis_result_json = await synthesis_agent(
+            retrieval_results=retrieval_results,
+            analysis_results=analysis_results,
+            query="What was the revenue growth?",
+            context=f"Based on {len(chunks)} document(s) and financial analysis",
+        )
+
+        synthesis_result = SynthesisResult.model_validate_json(synthesis_result_json)
+        synthesis_time = time.time() - synthesis_start
+
+        # Verify synthesis results structure
+        assert synthesis_result.answer is not None
+        assert len(synthesis_result.answer) > 0
+        assert len(synthesis_result.reasoning_steps) > 0
+        # Sources should include at least the retrieval sources
+        assert len(synthesis_result.sources) > 0
 
         # Verify total workflow execution time
         total_time = time.time() - start_time
@@ -217,10 +250,11 @@ class TestAnalysisAgentWorkflow:
         logger = __import__("logging").getLogger(__name__)
         logger.info(
             f"3-agent workflow timings: retrieval={retrieval_time:.2f}s, "
-            f"analysis={analysis_time:.2f}s, total={total_time:.2f}s"
+            f"analysis={analysis_time:.2f}s, synthesis={synthesis_time:.2f}s, "
+            f"total={total_time:.2f}s"
         )
 
-        # Total should be <8s (retrieval <3s + analysis <1.2s + synthesis overhead)
+        # Total should be <8s (retrieval <3s + analysis <1.2s + synthesis <1.2s)
         assert total_time < 8.0, f"Workflow took {total_time:.2f}s, expected <8s"
 
     @pytest.mark.asyncio

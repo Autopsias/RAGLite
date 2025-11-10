@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id="story-3-5-multi-step-workflow-orchestration" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>5</storyId>
+    <title>Multi-Step Workflow Orchestration</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-10</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/3-5-multi-step-workflow-orchestration.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a system</asA>
+    <iWant>to orchestrate agentic workflows for complex analytical queries</iWant>
+    <soThat>questions requiring planning and multiple steps can be answered autonomously</soThat>
+    <tasks>
+      <task>Implement query complexity classifier (simple vs analytical)</task>
+      <task>Implement workflow planner with task decomposition and dependency graph</task>
+      <task>Implement workflow executor with agent routing and parallel/sequential execution</task>
+      <task>Implement workflow timeout and graceful degradation fallback</task>
+      <task>Create integration tests for complete workflow orchestration</task>
+      <task>Update MCP tool and orchestrator integration</task>
+      <task>Document workflow orchestration patterns and API</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Query complexity classifier distinguishes simple vs multi-step analytical queries (accuracy >90%)</criterion>
+    <criterion id="AC2">Workflow planner decomposes complex queries into sub-tasks with dependencies (WorkflowPlan with AgentTask list)</criterion>
+    <criterion id="AC3">Sub-tasks routed to appropriate specialized agents (retrieval, analysis, synthesis) with >90% accuracy</criterion>
+    <criterion id="AC4">Agent outputs passed between agents as inputs to subsequent steps via AgentState model</criterion>
+    <criterion id="AC5">Workflow execution completes in &lt;30 seconds for typical analytical queries (NFR5); &lt;5s p50, &lt;15s p95</criterion>
+    <criterion id="AC6">Example workflow tested: "Calculate YoY revenue growth and explain variance" with complete 5-task pipeline</criterion>
+    <criterion id="AC7">Workflow success rate >80% on complex test queries (15+ queries from ground truth)</criterion>
+    <criterion id="AC8">Failed workflows fall back gracefully to simpler retrieval (NFR17, NFR32) with timeout handling (NFR26)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-3-ai-intelligence-orchestration.md</path>
+        <title>Epic 3 PRD: AI Intelligence &amp; Orchestration</title>
+        <section>Story 3.5: Multi-Step Workflow Orchestration</section>
+        <snippet>Workflow planner decomposes complex queries into sub-tasks, sub-tasks routed to appropriate agents, agent outputs passed as inputs, execution &lt;30s, success rate >80%</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec-epic-3.md</path>
+        <title>Epic Technical Specification: AI Intelligence &amp; Orchestration</title>
+        <section>Workflow Planner Module, Services and Modules Table, Data Models and Contracts, APIs and Interfaces, Workflows and Sequencing</section>
+        <snippet>Workflow planner (~80 lines) decomposes queries into task DAGs; AgentTask, WorkflowPlan, AnalysisResult, AnalyticalQueryRequest/Response models; QueryComplexity enum (SIMPLE, ANALYTICAL)</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-orchestration-design.md</path>
+        <title>Epic 3 Orchestration Architecture Design</title>
+        <section>Workflow Execution Architecture, Multi-Agent Coordination, Error Handling Strategy</section>
+        <snippet>AWS Strands v1.15.0 event-driven orchestration; Mistral Small for orchestration decisions; target latency &lt;10s p50, &lt;20s p95; graceful degradation to Epic 2 on failures</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-agent-patterns.md</path>
+        <title>Epic 3 Agent Workflow Patterns</title>
+        <section>Pattern 1: Sequential Workflow, Pattern 2: Parallel Task Execution, Pattern 3: Error Recovery</section>
+        <snippet>5 reusable workflow patterns with production-ready code examples for query decomposition, task routing, parallel/sequential execution, dependency handling</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/3-1-agentic-workflow-guide.md</path>
+        <title>Agentic Workflow Guide (Story 3.1)</title>
+        <section>Complete workflows, orchestrator initialization, agent registration</section>
+        <snippet>Strands framework initialization pattern, @tool decorator usage, agent registration in orchestrator, error handler integration</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/3-2-retrieval-agent-implementation.md</path>
+        <title>Story 3.2: Retrieval Agent Implementation (Reference)</title>
+        <section>Dev Notes, Architecture Context, References</section>
+        <snippet>Retrieval Agent wraps Epic 2 multi_index_search(), returns JSON-serializable DocumentChunk list, registered with orchestrator</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/3-3-analysis-agent-implementation.md</path>
+        <title>Story 3.3: Analysis Agent Implementation (Reference)</title>
+        <section>Dev Notes, Learnings from Previous Story</section>
+        <snippet>Analysis Agent performs financial calculations with Claude Haiku, returns AnalysisResult with formula/value/reasoning, integrates with orchestrator</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/3-4-synthesis-agent-implementation.md</path>
+        <title>Story 3.4: Synthesis Agent Implementation (Reference)</title>
+        <section>Dev Notes, Learnings from Previous Story</section>
+        <snippet>Synthesis Agent aggregates multi-source results using Claude Sonnet, returns JSON-serializable answer with reasoning steps and citations</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>raglite/agentic/orchestrator.py</path>
+        <kind>service</kind>
+        <symbol>StrandsOrchestrator</symbol>
+        <lines>1-150</lines>
+        <reason>Core orchestration class - manages tool registration, agent creation, workflow execution; Story 3.1 foundation that Story 3.5 extends</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/state.py</path>
+        <kind>models</kind>
+        <symbol>AgentState, DocumentChunk, AnalysisResult, SynthesisResult</symbol>
+        <lines>1-100</lines>
+        <reason>State management models for multi-step workflows; Story 3.5 will add AgentTask, WorkflowPlan, QueryComplexity models</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/error_handler.py</path>
+        <kind>service</kind>
+        <symbol>ErrorHandler, graceful_degradation</symbol>
+        <reason>Error handling patterns for timeout management and fallback to Epic 1 retrieval; Story 3.5 uses this for AC8</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/agents/retrieval_agent.py</path>
+        <kind>agent</kind>
+        <symbol>retrieval_agent</symbol>
+        <reason>Story 3.2 agent - wraps Epic 2 multi_index_search(); Story 3.5 workflow executor will route "retrieve" tasks to this agent</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/agents/analysis_agent.py</path>
+        <kind>agent</kind>
+        <symbol>analysis_agent</symbol>
+        <reason>Story 3.3 agent - performs financial calculations; Story 3.5 workflow executor will route "analyze" tasks to this agent</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/agents/synthesis_agent.py</path>
+        <kind>agent</kind>
+        <symbol>synthesis_agent</symbol>
+        <reason>Story 3.4 agent - aggregates results into natural language; Story 3.5 workflow executor will route "synthesize" tasks to this agent</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/retrieval/multi_index_search.py</path>
+        <kind>service</kind>
+        <symbol>multi_index_search</symbol>
+        <reason>Epic 2 search interface - called by Retrieval Agent; Story 3.5 workflow will use this for document retrieval tasks</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/main.py</path>
+        <kind>controller</kind>
+        <symbol>query_financial_documents</symbol>
+        <lines>related to MCP tool definition</lines>
+        <reason>Existing MCP tool - Story 3.5 will add analyze_financial_question() tool and route simple queries to this, complex queries to orchestrator</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/logging.py</path>
+        <kind>utility</kind>
+        <symbol>get_logger</symbol>
+        <reason>Structured logging utility - Story 3.5 uses for task execution logging with extra={} context</reason>
+      </artifact>
+      <artifact>
+        <path>tests/integration/test_analysis_agent_workflow.py</path>
+        <kind>test</kind>
+        <symbol>test_retrieval_analysis_synthesis_workflow</symbol>
+        <lines>related to 3-agent workflow</lines>
+        <reason>Integration test pattern from Story 3.4 - Story 3.5 will create similar tests for workflow orchestration</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <ecosystem name="python">
+        <package name="strands">
+          <description>AWS Strands v1.15.0 - event-driven agent orchestration framework</description>
+          <purpose>@tool decorator for agent definitions, Agent class for orchestration</purpose>
+          <usage>from strands import tool, Agent; @tool decorator for planner, executor functions</usage>
+        </package>
+        <package name="pydantic">
+          <description>Data validation and serialization</description>
+          <purpose>Pydantic models for QueryComplexity, AgentTask, WorkflowPlan, AgentResult, AnalyticalQueryRequest/Response</purpose>
+          <usage>from pydantic import BaseModel, Field; class QueryComplexity(str, Enum)</usage>
+        </package>
+        <package name="asyncio">
+          <description>Async I/O coordination</description>
+          <purpose>Parallel task execution via asyncio.gather(), timeout handling via asyncio.wait_for()</purpose>
+          <usage>asyncio.gather() for parallel retrievals, asyncio.wait_for(agent_call, timeout=15s) for timeout</usage>
+        </package>
+        <package name="mistral-sdk">
+          <description>Mistral API client (for orchestration model if using Mistral Small)</description>
+          <purpose>LLM for query decomposition and task routing (tunable to Claude)</purpose>
+          <usage>from raglite.shared.clients import get_mistral_client()</usage>
+        </package>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint id="C1">Query complexity classifier must use keyword matching (no ML required) for &lt;50ms latency</constraint>
+    <constraint id="C2">Workflow planner maximum 8 tasks per decomposition (manageable complexity)</constraint>
+    <constraint id="C3">Per-agent timeout maximum 15s (NFR26); workflow timeout 30s (NFR5)</constraint>
+    <constraint id="C4">Task dependencies represented as DAG with no circular dependencies; validates before execution</constraint>
+    <constraint id="C5">Agent routing uses keyword-based matching: "retrieve"→Retrieval, "calculate"→Analysis, "synthesize"→Synthesis</constraint>
+    <constraint id="C6">Inter-agent data passing via AgentState model; all agent outputs must be JSON-serializable (Strands requirement)</constraint>
+    <constraint id="C7">Fallback to Epic 1 query_financial_documents() on any agent timeout/exception (graceful degradation)</constraint>
+    <constraint id="C8">Monolithic architecture: all agents run in single Python process, no external services added</constraint>
+    <constraint id="C9">Use shared logging pattern: logger.info("...", extra={...}) with task_id, agent_type, execution_time_ms</constraint>
+    <constraint id="C10">No custom wrappers or abstractions; use AWS Strands @tool decorator as-is</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>classify_query_complexity(query: str) → QueryComplexity</name>
+      <kind>async function</kind>
+      <signature>async def classify_query_complexity(query: str) → QueryComplexity: ...</signature>
+      <description>Classify incoming query as SIMPLE or ANALYTICAL based on keyword matching</description>
+      <path>raglite/agentic/planner.py (new file)</path>
+      <ac_mapping>AC1</ac_mapping>
+    </interface>
+    <interface>
+      <name>decompose_query(query: str, complexity: QueryComplexity) → WorkflowPlan</name>
+      <kind>async function</kind>
+      <signature>async def decompose_query(query: str, complexity: QueryComplexity) → WorkflowPlan: ...</signature>
+      <description>Break complex query into list of AgentTask objects with dependency graph</description>
+      <path>raglite/agentic/planner.py (new file)</path>
+      <ac_mapping>AC2</ac_mapping>
+    </interface>
+    <interface>
+      <name>execute_workflow(plan: WorkflowPlan) → List[AgentResult]</name>
+      <kind>async method on WorkflowExecutor class</kind>
+      <signature>async def execute_workflow(plan: WorkflowPlan) → List[AgentResult]: ...</signature>
+      <description>Execute workflow plan: route tasks to agents, handle parallel/sequential execution, inter-agent data passing</description>
+      <path>raglite/agentic/orchestrator.py (new WorkflowExecutor class)</path>
+      <ac_mapping>AC3, AC4, AC5</ac_mapping>
+    </interface>
+    <interface>
+      <name>analyze_financial_question(request: AnalyticalQueryRequest) → str</name>
+      <kind>MCP tool</kind>
+      <signature>@mcp.tool() async def analyze_financial_question(request: AnalyticalQueryRequest) → str: ...</signature>
+      <description>New MCP tool for analytical queries; routes to workflow orchestrator or falls back to basic retrieval</description>
+      <path>raglite/main.py (new tool method)</path>
+      <ac_mapping>AC1-AC8 (all)</ac_mapping>
+    </interface>
+    <interface>
+      <name>QueryComplexity (enum)</name>
+      <kind>enum</kind>
+      <signature>class QueryComplexity(str, Enum): SIMPLE = "simple"; ANALYTICAL = "analytical"</signature>
+      <description>Query type classification for routing</description>
+      <path>raglite/agentic/state.py (new enum)</path>
+      <ac_mapping>AC1</ac_mapping>
+    </interface>
+    <interface>
+      <name>AgentTask (model)</name>
+      <kind>pydantic model</kind>
+      <signature>class AgentTask(BaseModel): task_id: str; agent_type: AgentType; instruction: str; depends_on: Optional[List[str]] = None</signature>
+      <description>Individual sub-task within a workflow</description>
+      <path>raglite/agentic/state.py (new model)</path>
+      <ac_mapping>AC2, AC3</ac_mapping>
+    </interface>
+    <interface>
+      <name>WorkflowPlan (model)</name>
+      <kind>pydantic model</kind>
+      <signature>class WorkflowPlan(BaseModel): query: str; complexity: QueryComplexity; tasks: List[AgentTask]; estimated_duration_ms: int</signature>
+      <description>Complete workflow execution plan with tasks and dependencies</description>
+      <path>raglite/agentic/state.py (new model)</path>
+      <ac_mapping>AC2</ac_mapping>
+    </interface>
+    <interface>
+      <name>AgentResult (model)</name>
+      <kind>pydantic model</kind>
+      <signature>class AgentResult(BaseModel): task_id: str; agent_type: AgentType; success: bool; result: Any; execution_time_ms: int; error: Optional[str] = None</signature>
+      <description>Result from single agent execution; propagated to subsequent agents via AgentState</description>
+      <path>raglite/agentic/state.py (updated)</path>
+      <ac_mapping>AC4</ac_mapping>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Follow pytest patterns from Epic 1-2: unit tests in tests/unit/, integration tests in tests/integration/ with @pytest.mark.slow decorator. Use asyncio for async testing. Mock Strands orchestrator if needed; use real agents + Qdrant for integration tests. Target &lt;1s for unit tests (no external dependencies), &lt;60s for integration tests (real services). Measure execution timing (p50, p95) for performance validation.
+    </standards>
+    <locations>
+      tests/unit/agentic/test_planner.py (classifier, decomposition)
+      tests/unit/agentic/test_workflow_executor.py (routing, parallel/sequential)
+      tests/integration/test_workflow_orchestration.py (complete workflows)
+      tests/fixtures/story_3_5_complex_queries.json (15+ test queries)
+    </locations>
+    <ideas>
+      <idea ac="AC1">Unit: classify_query_complexity("What is revenue?") → SIMPLE; classify_query_complexity("Calculate YoY growth") → ANALYTICAL</idea>
+      <idea ac="AC2">Unit: decompose_query("Calculate YoY growth and explain variance") → WorkflowPlan with 5 tasks (2 retrieve parallel, 1 analyze, 1 retrieve drivers, 1 synthesize)</idea>
+      <idea ac="AC3">Unit: route task with instruction "retrieve Q3 revenue" → retrieval_agent; "calculate growth" → analysis_agent; "synthesize results" → synthesis_agent</idea>
+      <idea ac="AC4">Unit: AgentState propagates DocumentChunk list from retrieval_agent to analysis_agent; AnalysisResult propagates to synthesis_agent</idea>
+      <idea ac="AC5">Integration: execute "YoY growth" workflow end-to-end; measure execution time &lt;5s p50, assert &lt;15s p95</idea>
+      <idea ac="AC6">Integration: test_yoy_growth_workflow executes complete 5-step workflow; validates answer includes calculation + context + sources</idea>
+      <idea ac="AC7">Integration: test_workflow_success_rate executes 15+ analytical queries; counts successes; asserts ≥80% success rate</idea>
+      <idea ac="AC8">Integration: test_agent_timeout_fallback simulates agent timeout; verifies fallback to query_financial_documents(); validates partial results preserved</idea>
+    </ideas>
+  </tests>
+
+</story-context>

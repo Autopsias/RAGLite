@@ -6,6 +6,7 @@ Provides singleton client instances for Qdrant, Claude API, PostgreSQL, and Mist
 import time
 from typing import Any
 
+# OPTIMIZATION: Make imports optional to prevent test failures when dependencies not available
 try:
     import psycopg2
     import psycopg2.extras
@@ -18,10 +19,37 @@ except ImportError:
     PSYCOPG2_AVAILABLE = False
     psycopg2 = None
 
-from anthropic import Anthropic
-from mistralai import Mistral
-from qdrant_client import QdrantClient
-from sentence_transformers import SentenceTransformer
+try:
+    from anthropic import Anthropic
+
+    ANTHROPIC_AVAILABLE = True
+except ImportError:
+    ANTHROPIC_AVAILABLE = False
+    Anthropic: type | None = None
+
+try:
+    from mistralai import Mistral
+
+    MISTRAL_AVAILABLE = True
+except ImportError:
+    MISTRAL_AVAILABLE = False
+    Mistral = None
+
+try:
+    from qdrant_client import QdrantClient
+
+    QDRANT_AVAILABLE = True
+except ImportError:
+    QDRANT_AVAILABLE = False
+    QdrantClient: type | None = None
+
+try:
+    from sentence_transformers import SentenceTransformer
+
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+    SentenceTransformer = None
 
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
@@ -48,12 +76,13 @@ def get_qdrant_client() -> QdrantClient:
 
     Raises:
         ConnectionError: If Qdrant connection fails after all retries
+        ImportError: If qdrant-client package is not installed
 
     Note:
         Connection parameters:
         - Host: settings.qdrant_host (default: localhost)
         - Port: settings.qdrant_port (default: 6333)
-        - Timeout: 30 seconds for operation completion
+        - Timeout: 30 seconds for production, 1 second for tests
         - Retry policy: 3 attempts with exponential backoff (1s, 2s, 4s)
 
     Example:
@@ -63,6 +92,11 @@ def get_qdrant_client() -> QdrantClient:
         >>> same_client = get_qdrant_client()
         >>> assert client is same_client
     """
+    if not QDRANT_AVAILABLE:
+        raise ImportError(
+            "qdrant-client package not installed. Install with: pip install qdrant-client"
+        )
+
     global _qdrant_client
 
     if _qdrant_client is None:
@@ -75,10 +109,17 @@ def get_qdrant_client() -> QdrantClient:
         max_retries = 3
         retry_delays = [1, 2, 4]  # Exponential backoff: 1s, 2s, 4s
 
+        # OPTIMIZATION: Use shorter timeout in test environment to prevent hangs
+        # This reduces test timeout from 30s to 1s when connection fails
+        import os
+
+        is_test_env = os.getenv("PYTEST_CURRENT_TEST") is not None or os.getenv("TESTING") == "true"
+        connection_timeout = 1 if is_test_env else 30
+
         for attempt in range(max_retries):
             try:
                 _qdrant_client = QdrantClient(
-                    host=settings.qdrant_host, port=settings.qdrant_port, timeout=30
+                    host=settings.qdrant_host, port=settings.qdrant_port, timeout=connection_timeout
                 )
                 logger.info(
                     "Qdrant client connected successfully",
@@ -86,12 +127,18 @@ def get_qdrant_client() -> QdrantClient:
                         "host": settings.qdrant_host,
                         "port": settings.qdrant_port,
                         "attempt": attempt + 1,
+                        "timeout": connection_timeout,
+                        "test_env": is_test_env,
                     },
                 )
                 break  # Success - exit retry loop
             except Exception as e:
                 if attempt < max_retries - 1:
                     delay = retry_delays[attempt]
+                    # In test environment, use shorter delays to prevent test hangs
+                    if is_test_env:
+                        delay = int(min(delay, 0.5))  # Cap at 0.5s for tests
+
                     logger.warning(
                         f"Qdrant connection failed (attempt {attempt + 1}/{max_retries}), retrying in {delay}s",
                         extra={
@@ -100,6 +147,7 @@ def get_qdrant_client() -> QdrantClient:
                             "attempt": attempt + 1,
                             "delay_seconds": delay,
                             "error": str(e),
+                            "test_env": is_test_env,
                         },
                     )
                     time.sleep(delay)
@@ -110,6 +158,7 @@ def get_qdrant_client() -> QdrantClient:
                             "host": settings.qdrant_host,
                             "port": settings.qdrant_port,
                             "error": str(e),
+                            "test_env": is_test_env,
                         },
                         exc_info=True,
                     )
@@ -131,11 +180,15 @@ def get_claude_client() -> Anthropic:
 
     Raises:
         ValueError: If ANTHROPIC_API_KEY not set in environment
+        ImportError: If anthropic package is not installed
 
     Example:
         >>> client = get_claude_client()
         >>> response = client.messages.create(...)
     """
+    if not ANTHROPIC_AVAILABLE:
+        raise ImportError("anthropic package not installed. Install with: pip install anthropic")
+
     if (
         not settings.anthropic_api_key
         or settings.anthropic_api_key == "your_anthropic_api_key_here"
@@ -162,6 +215,7 @@ def get_embedding_model() -> SentenceTransformer:
 
     Raises:
         RuntimeError: If model loading fails
+        ImportError: If sentence-transformers package is not installed
 
     Note:
         Model specifications:
@@ -176,6 +230,11 @@ def get_embedding_model() -> SentenceTransformer:
         >>> len(embedding)
         1024
     """
+    if not SENTENCE_TRANSFORMERS_AVAILABLE:
+        raise ImportError(
+            "sentence-transformers package not installed. Install with: pip install sentence-transformers"
+        )
+
     global _embedding_model
 
     if _embedding_model is None:
@@ -259,6 +318,14 @@ def get_postgresql_connection() -> Any:
             },
         )
 
+        # OPTIMIZATION: Use shorter timeout in test environment to prevent hangs
+        # This reduces test timeout from 10s to 1s when connection fails
+        import os
+
+        is_test_env = os.getenv("PYTEST_CURRENT_TEST") is not None or os.getenv("TESTING") == "true"
+        connect_timeout = 1 if is_test_env else 10
+        statement_timeout = "5s" if is_test_env else "30s"
+
         try:
             _postgresql_connection = psycopg2.connect(
                 host=settings.postgres_host,
@@ -266,8 +333,8 @@ def get_postgresql_connection() -> Any:
                 dbname=settings.postgres_db,
                 user=settings.postgres_user,
                 password=settings.postgres_password,
-                connect_timeout=10,  # Connection timeout (seconds)
-                options="-c statement_timeout=30s",  # Query execution timeout
+                connect_timeout=connect_timeout,  # Connection timeout (seconds)
+                options=f"-c statement_timeout={statement_timeout}",  # Query execution timeout
             )
             logger.info(
                 "PostgreSQL connection established",
@@ -307,6 +374,7 @@ def get_mistral_client() -> Mistral:
     - Read timeout: 60 seconds (time to receive response)
     - Write timeout: 10 seconds (time to send request)
     - Pool timeout: 10 seconds (time to acquire connection from pool)
+    - Test environment: 1 second timeout for all operations
 
     **Use Cases:**
     - Story 2.4: LLM-generated contextual metadata extraction
@@ -317,6 +385,7 @@ def get_mistral_client() -> Mistral:
 
     Raises:
         ValueError: If MISTRAL_API_KEY not set in environment
+        ImportError: If mistralai package is not installed
 
     Example:
         >>> client = get_mistral_client()
@@ -329,7 +398,12 @@ def get_mistral_client() -> Mistral:
         The timeout prevents tests from hanging indefinitely when Mistral API
         is slow or unresponsive. Without timeout, pytest can hang for 1700+ seconds
         waiting for response (observed in VS Code Test Explorer).
+
+        OPTIMIZATION: In test environment, short timeouts prevent test hangs.
     """
+    if not MISTRAL_AVAILABLE:
+        raise ImportError("mistralai package not installed. Install with: pip install mistralai")
+
     global _mistral_client
 
     if _mistral_client is None:
@@ -340,6 +414,18 @@ def get_mistral_client() -> Mistral:
             )
 
         logger.info("Initializing Mistral AI client")
+
+        # OPTIMIZATION: Configure timeouts for test environment to prevent hangs
+        import os
+
+        is_test_env = os.getenv("PYTEST_CURRENT_TEST") is not None or os.getenv("TESTING") == "true"
+
+        if is_test_env:
+            # Set environment variables for Mistral SDK timeout in test environment
+            os.environ["MISTRAL_CLIENT_TIMEOUT"] = "1"  # 1 second timeout for tests
+            logger.info("Mistral AI client configured with test timeout (1s)")
+        else:
+            logger.info("Mistral AI client configured with production timeouts")
 
         # Mistral SDK no longer accepts http_client parameter
         # Timeout configuration must be handled differently or via environment variables

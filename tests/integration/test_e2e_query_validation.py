@@ -135,7 +135,7 @@ async def test_financial_terminology_handling(session_ingested_collection):
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
 )
 @pytest.mark.priority("P0")
-async def test_metadata_completeness_validation():
+async def test_metadata_completeness_validation(session_ingested_collection):
     """Test metadata completeness in query results.
 
     Validates AC3: Response includes retrieved chunks with complete metadata
@@ -231,7 +231,7 @@ async def test_metadata_completeness_validation():
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
 )
 @pytest.mark.priority("P0")
-async def test_ground_truth_validation_subset():
+async def test_ground_truth_validation_subset(session_ingested_collection):
     """Validate query tool accuracy on ground truth test set subset.
 
     Validates AC8: 10+ sample queries from ground truth test set validated
@@ -328,7 +328,7 @@ async def test_ground_truth_validation_subset():
 @pytest.mark.priority("P0")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
-async def test_e2e_integration_flow():
+async def test_e2e_integration_flow(session_ingested_collection):
     """Test end-to-end integration flow from query to response.
 
     Validates AC9 (CRITICAL): All Stories 1.2-1.9 components work together
@@ -403,7 +403,7 @@ async def test_e2e_integration_flow():
     1200
 )  # 20 minutes timeout for 20 queries + warmup (accounts for slow CI runners)
 @pytest.mark.asyncio
-async def test_performance_measurement():
+async def test_performance_measurement(session_ingested_collection):
     """Measure p50/p95 query latency on 20+ queries with warm model.
 
     Validates NFR13: Query response time targets for steady-state performance.

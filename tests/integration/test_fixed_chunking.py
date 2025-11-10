@@ -92,7 +92,7 @@ async def test_ac4_collection_recreation_and_reingest(test_pdf_path):
 @pytest.mark.slow
 @pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_collection=True) - skip re-ingest cleanup
 @pytest.mark.timeout(900)  # 15 minutes - medium test (actual: ~6-8 minutes)
-async def test_ac4_fast_40page():
+async def test_ac4_fast_40page(session_ingested_collection):
     """AC4 Fast Validation: 40-page PDF for quick CI/CD validation.
 
     This test validates the same functionality as test_ac4_collection_recreation_and_reingest

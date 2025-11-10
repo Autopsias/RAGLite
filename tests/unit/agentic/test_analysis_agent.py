@@ -5,7 +5,7 @@ Mocks Claude API to prevent LLM costs and ensure fast execution (<100ms).
 """
 
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -17,14 +17,11 @@ from raglite.agentic.state import AnalysisResult
 async def test_analysis_agent_yoy_growth_calculation():
     """Test YoY growth calculation: {"Q3_2023": 10.0, "Q3_2024": 12.0} → +20%."""
     with patch("raglite.agentic.agents.analysis_agent.get_claude_client") as mock_client:
-        mock_client.return_value.messages.create.return_value.content = [
-            AsyncMock(text="Revenue grew 20% YoY from $10M to $12M")
-        ]
-        mock_client.return_value.messages.create = AsyncMock(
-            return_value=type(
-                "Response", (), {"content": [type("Content", (), {"text": "Revenue grew 20% YoY"})]}
-            )()
-        )
+        # Create a proper mock response object
+        mock_response = type(
+            "Response", (), {"content": [type("Content", (), {"text": "Revenue grew 20% YoY"})()]}
+        )()
+        mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
             data={"Q3_2023": 10.0, "Q3_2024": 12.0},
@@ -43,13 +40,12 @@ async def test_analysis_agent_yoy_growth_calculation():
 async def test_analysis_agent_variance_analysis():
     """Test variance analysis: {"budget": 100.0, "actual": 85.0} → -15% under budget."""
     with patch("raglite.agentic.agents.analysis_agent.get_claude_client") as mock_client:
-        mock_client.return_value.messages.create = AsyncMock(
-            return_value=type(
-                "Response",
-                (),
-                {"content": [type("Content", (), {"text": "Budget variance explanation"})()]},
-            )
-        )
+        mock_response = type(
+            "Response",
+            (),
+            {"content": [type("Content", (), {"text": "Budget variance explanation"})()]},
+        )()
+        mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
             data={"budget": 100.0, "actual": 85.0},
@@ -67,13 +63,12 @@ async def test_analysis_agent_variance_analysis():
 async def test_analysis_agent_trend_detection():
     """Test trend detection: {"Q1": 10, "Q2": 12, "Q3": 14} → increasing trend."""
     with patch("raglite.agentic.agents.analysis_agent.get_claude_client") as mock_client:
-        mock_client.return_value.messages.create = AsyncMock(
-            return_value=type(
-                "Response",
-                (),
-                {"content": [type("Content", (), {"text": "Consistent upward trend"})()]},
-            )
-        )
+        mock_response = type(
+            "Response",
+            (),
+            {"content": [type("Content", (), {"text": "Consistent upward trend"})()]},
+        )()
+        mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
             data={"Q1": 10.0, "Q2": 12.0, "Q3": 14.0},
@@ -90,13 +85,12 @@ async def test_analysis_agent_trend_detection():
 async def test_analysis_agent_percentage_calculation():
     """Test percentage calculation: {"part": 25.0, "whole": 100.0} → 25%."""
     with patch("raglite.agentic.agents.analysis_agent.get_claude_client") as mock_client:
-        mock_client.return_value.messages.create = AsyncMock(
-            return_value=type(
-                "Response",
-                (),
-                {"content": [type("Content", (), {"text": "Percentage explanation"})()]},
-            )
-        )
+        mock_response = type(
+            "Response",
+            (),
+            {"content": [type("Content", (), {"text": "Percentage explanation"})()]},
+        )()
+        mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
             data={"part": 25.0, "whole": 100.0},
@@ -156,11 +150,10 @@ async def test_analysis_agent_error_zero_denominator():
 async def test_analysis_agent_json_serialization():
     """Test that AnalysisResult model serializes correctly to JSON."""
     with patch("raglite.agentic.agents.analysis_agent.get_claude_client") as mock_client:
-        mock_client.return_value.messages.create = AsyncMock(
-            return_value=type(
-                "Response", (), {"content": [type("Content", (), {"text": "Test reasoning"})()]}
-            )
-        )
+        mock_response = type(
+            "Response", (), {"content": [type("Content", (), {"text": "Test reasoning"})()]}
+        )()
+        mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
             data={"part": 50.0, "whole": 200.0},
@@ -181,13 +174,12 @@ async def test_analysis_agent_json_serialization():
 async def test_analysis_agent_with_context():
     """Test analysis agent with optional context parameter."""
     with patch("raglite.agentic.agents.analysis_agent.get_claude_client") as mock_client:
-        mock_client.return_value.messages.create = AsyncMock(
-            return_value=type(
-                "Response",
-                (),
-                {"content": [type("Content", (), {"text": "Context-aware reasoning"})()]},
-            )
-        )
+        mock_response = type(
+            "Response",
+            (),
+            {"content": [type("Content", (), {"text": "Context-aware reasoning"})()]},
+        )()
+        mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
             data={"Q3_2023": 10.0, "Q3_2024": 12.0},
@@ -205,11 +197,10 @@ async def test_analysis_agent_with_context():
 async def test_analysis_agent_negative_variance():
     """Test variance with negative (over budget) result."""
     with patch("raglite.agentic.agents.analysis_agent.get_claude_client") as mock_client:
-        mock_client.return_value.messages.create = AsyncMock(
-            return_value=type(
-                "Response", (), {"content": [type("Content", (), {"text": "Over budget"})()]}
-            )
-        )
+        mock_response = type(
+            "Response", (), {"content": [type("Content", (), {"text": "Over budget"})()]}
+        )()
+        mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
             data={"budget": 100.0, "actual": 120.0},
@@ -226,11 +217,10 @@ async def test_analysis_agent_negative_variance():
 async def test_analysis_agent_trend_decreasing():
     """Test trend detection for decreasing pattern."""
     with patch("raglite.agentic.agents.analysis_agent.get_claude_client") as mock_client:
-        mock_client.return_value.messages.create = AsyncMock(
-            return_value=type(
-                "Response", (), {"content": [type("Content", (), {"text": "Downward trend"})()]}
-            )
-        )
+        mock_response = type(
+            "Response", (), {"content": [type("Content", (), {"text": "Downward trend"})()]}
+        )()
+        mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
             data={"Q1": 14.0, "Q2": 12.0, "Q3": 10.0},
@@ -246,11 +236,10 @@ async def test_analysis_agent_trend_decreasing():
 async def test_analysis_agent_trend_stable():
     """Test trend detection for stable pattern."""
     with patch("raglite.agentic.agents.analysis_agent.get_claude_client") as mock_client:
-        mock_client.return_value.messages.create = AsyncMock(
-            return_value=type(
-                "Response", (), {"content": [type("Content", (), {"text": "Stable trend"})()]}
-            )
-        )
+        mock_response = type(
+            "Response", (), {"content": [type("Content", (), {"text": "Stable trend"})()]}
+        )()
+        mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
             data={"Q1": 10.0, "Q2": 10.0, "Q3": 10.0},

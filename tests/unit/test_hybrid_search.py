@@ -418,10 +418,12 @@ class TestHybridSearchEndToEnd:
         # Act: Perform hybrid search
         results = await hybrid_search("What is the margin?", top_k=2, alpha=0.7)
 
-        # Assert: Verify search called with wider net
+        # Assert: Verify search called with optimized moderate net
         mock_search_docs.assert_called_once()
         call_kwargs = mock_search_docs.call_args[1]
-        assert call_kwargs["top_k"] >= 20  # Casts wider net
+        # Performance optimization: moderate net (max(top_k * 2, 10)) instead of wider net (>=20)
+        # For top_k=2, this becomes max(2*2, 10) = 10
+        assert call_kwargs["top_k"] == 10  # Optimized moderate net: max(2*2, 10) = 10
 
         # Verify BM25 index loaded and scores computed
         mock_load_bm25.assert_called_once()
@@ -457,12 +459,20 @@ class TestHybridSearchEndToEnd:
 
         assert len(results) == 1
 
+    @patch("raglite.retrieval.search.classify_query")
     @patch("raglite.retrieval.search.search_documents")
     @patch("raglite.retrieval.search.load_bm25_index")
     @pytest.mark.priority("P1")
-    async def test_hybrid_search_bm25_unavailable_fallback(self, mock_load_bm25, mock_search_docs):
+    async def test_hybrid_search_bm25_unavailable_fallback(
+        self, mock_load_bm25, mock_search_docs, mock_classify
+    ):
         """Test hybrid search falls back if BM25 index unavailable."""
-        # Arrange: Semantic search succeeds, BM25 index missing
+        # Arrange: Mock query classifier to return VECTOR_ONLY (skip SQL routing)
+        from raglite.retrieval.query_classifier import QueryType
+
+        mock_classify.return_value = QueryType.VECTOR_ONLY
+
+        # Mock semantic search to return 1 result
         mock_search_docs.return_value = [
             QueryResult(
                 score=0.9,
@@ -475,8 +485,8 @@ class TestHybridSearchEndToEnd:
         ]
         mock_load_bm25.side_effect = FileNotFoundError("BM25 index not found")
 
-        # Act: Hybrid search with missing BM25 index
-        results = await hybrid_search("Test query", top_k=5)
+        # Act: Hybrid search with missing BM25 index (SQL disabled by VECTOR_ONLY routing)
+        results = await hybrid_search("Test query", top_k=5, enable_sql_tables=True)
 
         # Assert: Returns semantic results (fallback)
         assert len(results) == 1

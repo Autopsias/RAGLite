@@ -687,7 +687,8 @@ async def hybrid_search(
 
     try:
         # Step 1: Retrieve semantic results WITHOUT hard filtering (for soft boosting)
-        semantic_top_k = max(top_k * 4, 20)  # Cast wider net (minimum 20)
+        # Optimized: Cast moderate net for better performance
+        semantic_top_k = max(top_k * 2, 10)  # Moderate net (minimum 10, not 20)
         # NOTE: Explicitly pass filters=None for soft boosting approach (no hard filtering)
         semantic_results = await search_documents(query, top_k=semantic_top_k, filters=filters)
 

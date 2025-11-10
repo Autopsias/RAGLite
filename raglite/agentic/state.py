@@ -34,6 +34,19 @@ class AnalysisResult(BaseModel):
     data_points_used: dict[str, float]  # Original data dictionary
 
 
+class SynthesisResult(BaseModel):
+    """Result from synthesis operation (Story 3.4 AC2).
+
+    Captures the natural language answer, reasoning steps, sources,
+    and metadata from multi-source synthesis operations.
+    """
+
+    answer: str  # Final natural language answer
+    reasoning_steps: list[str]  # Steps taken to synthesize answer
+    sources: list[str]  # Aggregated citations from all agents
+    metadata: dict[str, Any]  # Execution metadata (confidence, agent_count, etc.)
+
+
 class AnalysisOutput(BaseModel):
     """Output from the Analysis Agent."""
 

@@ -36,7 +36,7 @@ class TestRetrievalIntegration:
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_search_integration_end_to_end(self) -> None:
+    async def test_search_integration_end_to_end(self, session_ingested_collection) -> None:
         """Integration test: End-to-end search validation with real Qdrant.
 
         Validates:
@@ -47,7 +47,7 @@ class TestRetrievalIntegration:
 
         Requires:
         - Qdrant running (docker-compose up -d)
-        - Collection exists with stored chunks
+        - Collection exists with stored chunks (via session_ingested_collection fixture)
         """
         # Lazy imports to avoid test discovery overhead
         from raglite.retrieval.search import search_documents
@@ -107,7 +107,7 @@ class TestRetrievalIntegration:
         "Re-enable after Story 2.3 implementation (target: 70%+ accuracy)."
     )
     @pytest.mark.priority("P0")
-    async def test_retrieval_accuracy_ground_truth(self) -> None:
+    async def test_retrieval_accuracy_ground_truth(self, session_ingested_collection) -> None:
         """Integration test: Retrieval accuracy on ground truth query set.
 
         **KNOWN ISSUE**: Element-aware chunking (Story 2.2) caused accuracy regression:
@@ -201,7 +201,7 @@ class TestRetrievalIntegration:
     @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_performance_p50_p95_latency(self) -> None:
+    async def test_performance_p50_p95_latency(self, session_ingested_collection) -> None:
         """Integration test: Performance validation (p50 <5s, p95 <15s).
 
         Validates:
@@ -277,7 +277,7 @@ class TestRetrievalIntegration:
     @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_metadata_preservation_integration(self) -> None:
+    async def test_metadata_preservation_integration(self, session_ingested_collection) -> None:
         """Integration test: Metadata preservation validation.
 
         Validates:
@@ -354,7 +354,7 @@ class TestRetrievalIntegration:
     @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_metadata_filtering_integration(self) -> None:
+    async def test_metadata_filtering_integration(self, session_ingested_collection) -> None:
         """Integration test: Metadata filtering with real Qdrant.
 
         Validates:
@@ -414,7 +414,7 @@ class TestRetrievalIntegration:
     @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_citation_accuracy_integration(self) -> None:
+    async def test_citation_accuracy_integration(self, session_ingested_collection) -> None:
         """Integration test: Citation accuracy validation (Story 1.8).
 
         Validates:

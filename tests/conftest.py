@@ -18,6 +18,7 @@ Fixture Timing (Phase 2.4):
 """
 
 import logging
+import os
 import time
 from unittest.mock import MagicMock
 
@@ -28,6 +29,27 @@ from raglite.shared.config import Settings
 from raglite.shared.models import Chunk, DocumentMetadata
 
 logger = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def configure_test_environment():
+    """Configure test environment variables for all tests.
+
+    OPTIMIZATION: Sets TESTING=true to enable test-specific optimizations
+    in client connections, reducing timeouts and preventing test hangs.
+
+    This fixture runs once per test session and applies to all tests.
+    """
+    # Set test environment flag for connection timeout optimizations
+    os.environ["TESTING"] = "true"
+    logger.info("Test environment configured: TESTING=true (enables connection timeouts)")
+
+    yield
+
+    # Clean up environment variable after session
+    if "TESTING" in os.environ:
+        del os.environ["TESTING"]
+        logger.info("Test environment cleaned up: TESTING=false")
 
 
 def _timed_fixture(fixture_name: str, func, start_time: float) -> None:

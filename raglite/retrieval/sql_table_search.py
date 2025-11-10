@@ -94,17 +94,16 @@ async def search_tables_sql(sql_query: str, top_k: int = 50) -> list[QueryResult
         # (psycopg2 is synchronous, asyncio.to_thread prevents hanging in async tests)
         rows, column_names = await asyncio.to_thread(_execute_sql_query_sync, sql_query)
 
-        # FORCE VISIBLE OUTPUT FOR DEBUGGING
-        print(f"[SQL_TABLE_SEARCH DEBUG] Row count: {len(rows)}", flush=True)
-        print(f"[SQL_TABLE_SEARCH DEBUG] SQL preview: {sql_query[:150]}", flush=True)
-
         # Log execution details
+        execution_ms = (time.time() - start_time) * 1000
         logger.info(
             "SQL query executed successfully",
             extra={
                 "row_count": len(rows),
                 "columns": column_names,
                 "sql_preview": sql_query[:200],
+                "execution_ms": round(execution_ms, 2),
+                "thread_pool_used": True,
             },
         )
 

@@ -90,19 +90,23 @@ async def multi_index_search(query: str, top_k: int = 5) -> list[SearchResult]:
     if not query or not query.strip():
         raise MultiIndexSearchError("Query cannot be empty")
 
-    # FORCE VISIBLE DEBUG OUTPUT
-    print(f"[MULTI_INDEX_SEARCH DEBUG] Function called with query: {query[:80]}", flush=True)
-    print(f"[MULTI_INDEX_SEARCH DEBUG] top_k={top_k}", flush=True)
-
     logger.info("Multi-index search started", extra={"query": query[:100], "top_k": top_k})
     start_time = time.time()
 
     try:
         # Step 1: Classify query type (AC1)
+        classify_start = time.time()
         query_type = classify_query(query)
+        classify_ms = (time.time() - classify_start) * 1000
 
-        # FORCE VISIBLE DEBUG OUTPUT
-        print(f"[MULTI_INDEX_SEARCH DEBUG] Query classified as: {query_type.value}", flush=True)
+        logger.debug(
+            "Query classification complete",
+            extra={
+                "query": query[:100],
+                "query_type": query_type.value,
+                "classification_ms": round(classify_ms, 2),
+            },
+        )
 
         # NEW (Story 2.10 AC3): Log routing decision with metrics
         logger.info(
@@ -117,23 +121,20 @@ async def multi_index_search(query: str, top_k: int = 5) -> list[SearchResult]:
         # Step 2: Route to appropriate index(es) (AC2)
         if query_type == QueryType.SQL_ONLY:
             # SQL-only: PostgreSQL table search
-            print("[MULTI_INDEX_SEARCH DEBUG] Routing to SQL_ONLY", flush=True)
             results = await _execute_sql_search(query, top_k)
 
         elif query_type == QueryType.VECTOR_ONLY:
             # Vector-only: Qdrant semantic search
-            print("[MULTI_INDEX_SEARCH DEBUG] Routing to VECTOR_ONLY", flush=True)
-            results = await _execute_vector_search(query, top_k)
+            results = await _execute_vector_search(query, top_k, disable_sql_routing=True)
 
         elif query_type == QueryType.HYBRID:
             # Hybrid: Both indexes in parallel (AC2)
-            print("[MULTI_INDEX_SEARCH DEBUG] Routing to HYBRID", flush=True)
             results = await _execute_hybrid_search(query, top_k)
 
         else:
             # Fallback to vector search (safe default)
             logger.warning(f"Unknown query type {query_type}, defaulting to vector search")
-            results = await _execute_vector_search(query, top_k)
+            results = await _execute_vector_search(query, top_k, disable_sql_routing=True)
 
         elapsed_ms = (time.time() - start_time) * 1000
         logger.info(
@@ -161,7 +162,9 @@ async def multi_index_search(query: str, top_k: int = 5) -> list[SearchResult]:
         raise MultiIndexSearchError(f"Multi-index search failed: {e}") from e
 
 
-async def _execute_vector_search(query: str, top_k: int) -> list[SearchResult]:
+async def _execute_vector_search(
+    query: str, top_k: int, disable_sql_routing: bool = False
+) -> list[SearchResult]:
     """Execute vector search using Qdrant semantic search.
 
     Args:
@@ -177,8 +180,10 @@ async def _execute_vector_search(query: str, top_k: int) -> list[SearchResult]:
     try:
         logger.debug("Executing vector search", extra={"query": query[:100]})
 
-        # Call existing hybrid_search from search.py (Story 2.1)
-        vector_results = await hybrid_search(query, top_k=top_k, enable_hybrid=True)
+        # Call existing hybrid_search from search.py with SQL routing disabled
+        vector_results = await hybrid_search(
+            query, top_k=top_k, enable_hybrid=True, enable_sql_tables=not disable_sql_routing
+        )
 
         # Convert QueryResult to SearchResult
         results = [
@@ -223,15 +228,11 @@ async def _execute_sql_search(query: str, top_k: int) -> list[SearchResult]:
         MultiIndexSearchError: If SQL search fails
     """
     try:
-        # FORCE VISIBLE DEBUG OUTPUT
-        print(f"[SQL_SEARCH DEBUG] _execute_sql_search called with query: {query[:80]}", flush=True)
-
         logger.debug(
             "Executing SQL search via text-to-SQL generation", extra={"query": query[:100]}
         )
 
         # Step 1: Generate SQL query using text-to-SQL (Story 2.13 AC1)
-        print("[SQL_SEARCH DEBUG] Generating SQL query from natural language...", flush=True)
         sql_query = await generate_sql_query(query)
 
         if not sql_query:
@@ -239,25 +240,15 @@ async def _execute_sql_search(query: str, top_k: int) -> list[SearchResult]:
                 "SQL generation returned None - falling back to vector search",
                 extra={"query": query[:100]},
             )
-            print(
-                "[SQL_SEARCH DEBUG] SQL generation failed, falling back to vector search",
-                flush=True,
-            )
-            return await _execute_vector_search(query, top_k)
+            # SQL generation failed - falling back to vector search
+            return await _execute_vector_search(query, top_k, disable_sql_routing=True)
 
-        # FORCE VISIBLE DEBUG OUTPUT
-        print(f"[SQL_SEARCH DEBUG] Generated SQL: {sql_query[:150]}", flush=True)
         logger.debug("SQL query generated", extra={"sql_preview": sql_query[:200]})
 
         # Step 2: Execute SQL against financial_tables (Story 2.13 AC2)
-        print("[SQL_SEARCH DEBUG] Executing SQL against financial_tables...", flush=True)
         query_results = await search_tables_sql(sql_query, top_k=top_k)
 
-        # FORCE VISIBLE DEBUG OUTPUT
-        print(
-            f"[SQL_SEARCH DEBUG] SQL execution complete - rows returned: {len(query_results)}",
-            flush=True,
-        )
+        # SQL execution complete
 
         # Step 3: Convert QueryResult objects to SearchResult objects
         results = [
@@ -289,10 +280,8 @@ async def _execute_sql_search(query: str, top_k: int) -> list[SearchResult]:
                     "sql_preview": sql_query[:150] if sql_query else "None",
                 },
             )
-            print(
-                "[SQL_SEARCH DEBUG] 0 results from SQL, falling back to vector search", flush=True
-            )
-            return await _execute_vector_search(query, top_k)
+            # 0 results from SQL - falling back to vector search
+            return await _execute_vector_search(query, top_k, disable_sql_routing=True)
 
         return results
 
@@ -302,8 +291,8 @@ async def _execute_sql_search(query: str, top_k: int) -> list[SearchResult]:
             "SQL execution failed, falling back to vector search",
             extra={"error": str(e), "query": query[:100]},
         )
-        print(f"[SQL_SEARCH DEBUG] SQLSearchError: {str(e)[:150]}", flush=True)
-        return await _execute_vector_search(query, top_k)
+        # SQLSearchError occurred
+        return await _execute_vector_search(query, top_k, disable_sql_routing=True)
 
     except TableRetrievalError as e:
         # AC6: PostgreSQL unavailable → Fallback to vector search
@@ -311,15 +300,15 @@ async def _execute_sql_search(query: str, top_k: int) -> list[SearchResult]:
             "PostgreSQL connection failed, falling back to vector-only mode",
             extra={"error": str(e)},
         )
-        print(f"[SQL_SEARCH DEBUG] TableRetrievalError: {str(e)[:150]}", flush=True)
-        return await _execute_vector_search(query, top_k)
+        # TableRetrievalError occurred
+        return await _execute_vector_search(query, top_k, disable_sql_routing=True)
 
     except Exception as e:
         logger.error("SQL search failed unexpectedly", extra={"error": str(e)}, exc_info=True)
         # AC6: Fallback to vector search on any SQL error
         logger.warning("SQL search failed, falling back to vector search")
-        print(f"[SQL_SEARCH DEBUG] Unexpected error: {str(e)[:150]}", flush=True)
-        return await _execute_vector_search(query, top_k)
+        # Unexpected SQL error occurred
+        return await _execute_vector_search(query, top_k, disable_sql_routing=True)
 
 
 async def _execute_hybrid_search(query: str, top_k: int) -> list[SearchResult]:
@@ -340,31 +329,41 @@ async def _execute_hybrid_search(query: str, top_k: int) -> list[SearchResult]:
     """
     logger.debug("Executing hybrid search (parallel)", extra={"query": query[:100]})
 
-    # FORCE VISIBLE DEBUG OUTPUT
-    print("[HYBRID_SEARCH DEBUG] Starting parallel search", flush=True)
+    # Starting parallel hybrid search
 
+    hybrid_start = time.time()
     try:
-        # AC2: Parallel execution using asyncio.gather
-        # Set timeout for fusion (5s per AC6)
-        vector_task = _execute_vector_search(query, top_k=top_k * 2)  # Cast wider net
-        sql_task = _execute_sql_search(query, top_k=top_k * 2)
+        # AC2: Parallel execution using asyncio.gather with optimized timeouts
+        # Use moderate result set to balance quality vs performance
+        vector_task = _execute_vector_search(query, top_k=min(top_k + 2, 10))  # Slightly wider net
+        sql_task = _execute_sql_search(query, top_k=min(top_k + 1, 8))
 
-        # Execute in parallel with 5s timeout (AC6)
+        # Execute in parallel with 8s timeout (more reasonable for real queries)
+        logger.debug(
+            "Starting parallel hybrid search",
+            extra={
+                "query": query[:100],
+                "timeout_seconds": 8.0,
+                "vector_top_k": min(top_k + 2, 10),
+                "sql_top_k": min(top_k + 1, 8),
+            },
+        )
+
         vector_results, sql_results = await asyncio.wait_for(
-            asyncio.gather(vector_task, sql_task), timeout=5.0
+            asyncio.gather(vector_task, sql_task), timeout=8.0
         )
 
-        # FORCE VISIBLE DEBUG OUTPUT
-        print(
-            f"[HYBRID_SEARCH DEBUG] Parallel searches complete - vector: {len(vector_results)}, sql: {len(sql_results)}",
-            flush=True,
-        )
+        hybrid_ms = (time.time() - hybrid_start) * 1000
+
+        # Parallel searches complete
 
         logger.debug(
             "Parallel searches complete",
             extra={
                 "vector_count": len(vector_results),
                 "sql_count": len(sql_results),
+                "hybrid_duration_ms": round(hybrid_ms, 2),
+                "within_timeout": hybrid_ms < 8000,
             },
         )
 
@@ -374,15 +373,24 @@ async def _execute_hybrid_search(query: str, top_k: int) -> list[SearchResult]:
         return fused_results
 
     except TimeoutError:
-        # AC6: Fusion timeout → Return whichever completed first
-        logger.warning("Hybrid search timeout (5s), falling back to vector search only")
-        return await _execute_vector_search(query, top_k)
+        # AC6: Fusion timeout → Return vector search only for performance
+        timeout_ms = (time.time() - hybrid_start) * 1000
+        logger.warning(
+            "Hybrid search timeout exceeded",
+            extra={
+                "query": query[:100],
+                "timeout_duration_ms": round(timeout_ms, 2),
+                "timeout_seconds": 8.0,
+                "fallback_strategy": "vector_only",
+            },
+        )
+        return await _execute_vector_search(query, top_k, disable_sql_routing=True)
 
     except Exception as e:
         logger.error("Hybrid search failed", extra={"error": str(e)}, exc_info=True)
         # Fallback to vector search
         logger.warning("Hybrid search failed, falling back to vector search")
-        return await _execute_vector_search(query, top_k)
+        return await _execute_vector_search(query, top_k, disable_sql_routing=True)
 
 
 def merge_results(

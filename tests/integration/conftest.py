@@ -40,10 +40,10 @@ POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
 
 
 def check_service_available(host: str, port: int, service_name: str) -> bool:
-    """Check if service is reachable with 5-second timeout."""
+    """Check if service is reachable with optimized 1-second timeout."""
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(5)
+        sock.settimeout(1)  # Reduced from 5s to 1s for faster discovery
         result = sock.connect_ex((host, port))
         sock.close()
         if result == 0:
@@ -52,37 +52,50 @@ def check_service_available(host: str, port: int, service_name: str) -> bool:
         else:
             print(f"DEBUG: {service_name} connection refused at {host}:{port}", file=sys.stderr)
             return False
-    except TimeoutError:
-        print(f"DEBUG: {service_name} connection timeout at {host}:{port}", file=sys.stderr)
-        return False
     except Exception as e:
         print(f"DEBUG: {service_name} check failed: {e}", file=sys.stderr)
         return False
 
 
-# Check both services at module load time
-qdrant_available = check_service_available(QDRANT_HOST, QDRANT_PORT, "Qdrant")
-postgres_available = check_service_available(POSTGRES_HOST, POSTGRES_PORT, "PostgreSQL")
+# PERFORMANCE: Lazy service checking - only check when actually needed
+# This avoids 10+ second delay during test discovery
+qdrant_available = None  # Will be checked on first use
+postgres_available = None  # Will be checked on first use
 
-# Skip ALL integration tests if either service is unavailable
-if not qdrant_available or not postgres_available:
-    missing = []
-    if not qdrant_available:
-        missing.append(f"Qdrant ({QDRANT_HOST}:{QDRANT_PORT})")
-    if not postgres_available:
-        missing.append(f"PostgreSQL ({POSTGRES_HOST}:{POSTGRES_PORT})")
 
-    skip_reason = f"Integration tests require: {', '.join(missing)}"
-    print(f"DEBUG: Skipping all integration tests - {skip_reason}", file=sys.stderr)
+def get_service_availability() -> tuple[bool, bool]:
+    """Get cached service availability, checking only once."""
+    global qdrant_available, postgres_available
 
-    # Configure pytest to skip all tests in this directory
-    collect_ignore_glob = ["*.py"]
-    pytest.skip(skip_reason, allow_module_level=True)
+    if qdrant_available is None:
+        qdrant_available = check_service_available(QDRANT_HOST, QDRANT_PORT, "Qdrant")
+    if postgres_available is None:
+        postgres_available = check_service_available(POSTGRES_HOST, POSTGRES_PORT, "PostgreSQL")
 
-print("DEBUG: Services available, continuing with imports...", file=sys.stderr)
+    return qdrant_available, postgres_available
 
-# Now safe to import raglite modules (services are confirmed available)
+
+# PERFORMANCE: Move service check to first fixture execution to avoid test discovery delay
+# Services will be checked when first test runs, not during module import
+def check_and_skip_if_unavailable():
+    """Check services and skip if unavailable - called from fixtures, not module import."""
+    qdrant_avail, postgres_avail = get_service_availability()
+
+    if not qdrant_avail or not postgres_avail:
+        missing = []
+        if not qdrant_avail:
+            missing.append(f"Qdrant ({QDRANT_HOST}:{QDRANT_PORT})")
+        if not postgres_avail:
+            missing.append(f"PostgreSQL ({POSTGRES_HOST}:{POSTGRES_PORT})")
+
+        skip_reason = f"Integration tests require: {', '.join(missing)}"
+        print(f"DEBUG: Skipping all integration tests - {skip_reason}", file=sys.stderr)
+        pytest.skip(skip_reason, allow_module_level=True)
+
+
+# Now safe to import raglite modules (services will be checked in fixtures)
 import asyncio  # noqa: E402
+import time  # noqa: E402
 from pathlib import Path  # noqa: E402
 
 # Track session-level expected Qdrant state for test isolation
@@ -90,8 +103,27 @@ _session_sample_pdf_chunk_count = None
 _session_snapshot_name = None  # Track snapshot for fast restoration
 _session_postgresql_row_count = None  # Track PostgreSQL baseline for restoration
 
+# PERFORMANCE: Cache PostgreSQL connection to reduce connection overhead
+_session_postgresql_connection = None
 
-@pytest.fixture(scope="session")
+
+def get_postgresql_connection():
+    """Get cached PostgreSQL connection for session to reduce connection overhead."""
+    global _session_postgresql_connection
+
+    if _session_postgresql_connection is None:
+        import psycopg2
+
+        from raglite.shared.config import settings
+
+        conn_str = f"postgresql://{settings.postgres_user}:{settings.postgres_password}@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+        _session_postgresql_connection = psycopg2.connect(conn_str)
+        _session_postgresql_connection.autocommit = True
+
+    return _session_postgresql_connection
+
+
+@pytest.fixture(scope="session", autouse=True)
 def warmup_embedding_model(request):
     """Pre-warm embedding model before any tests run.
 
@@ -106,23 +138,35 @@ def warmup_embedding_model(request):
 
     DISCOVERY OPTIMIZATION: Skips expensive model loading during test discovery phase.
 
-    NOTE (2025-11-09): autouse=True removed for performance optimization.
-    Only tests that need embeddings should explicitly request this fixture.
-    SQL-only tests (fuzzy matching, etc.) don't need embeddings and run in <5s without this.
+    NOTE (2025-11-10): autouse=True restored due to performance regression.
+    Tests were experiencing 60-70s cold start penalties when embedding model
+    was loaded individually instead of using the session-scoped singleton.
+    This fixture ensures the model is loaded once at session start and shared
+    across all integration tests.
     """
     # Skip during test collection/discovery phase
     if request.config.option.collectonly:
         yield
         return
 
+    # PERFORMANCE: Check service availability here instead of module import
+    # This moves the 2-second service check from discovery to execution time
+    check_and_skip_if_unavailable()
+
     print("\n🔥 PRE-WARMING EMBEDDING MODEL (60-70s one-time load)...", file=sys.stderr)
 
     from raglite.shared.clients import get_embedding_model
 
+    model_load_start = time.time()
     model = get_embedding_model()
+    model_load_duration = time.time() - model_load_start
     dim = model.get_sentence_embedding_dimension()
 
-    print(f"✅ Embedding model ready: {dim} dimensions (Fin-E5 loaded)", file=sys.stderr)
+    print(
+        f"✅ Embedding model ready: {dim} dimensions (Fin-E5 loaded in {model_load_duration:.1f}s)",
+        file=sys.stderr,
+    )
+    print(f"📊 MODEL LOAD PERF: Model loading took {model_load_duration:.1f}s", file=sys.stderr)
 
     yield
     # Model singleton persists for entire session
@@ -326,10 +370,8 @@ def session_ingested_collection(request, warmup_embedding_model):
         # CRITICAL FIX: Also clear PostgreSQL to maintain symmetric data lifecycle
         # This prevents mixed document IDs from accumulating across test runs
         try:
-            import psycopg2
-
-            conn_str = f"postgresql://{settings.postgres_user}:{settings.postgres_password}@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
-            conn = psycopg2.connect(conn_str)
+            # PERFORMANCE: Use cached connection to reduce overhead
+            conn = get_postgresql_connection()
             cursor = conn.cursor()
 
             # Delete all data from both PostgreSQL tables
@@ -338,10 +380,6 @@ def session_ingested_collection(request, warmup_embedding_model):
             cursor.execute("DELETE FROM financial_tables")
             tables_deleted = cursor.rowcount
 
-            conn.commit()
-            cursor.close()
-            conn.close()
-
             print(
                 f"   ✓ Cleared PostgreSQL: {tables_deleted} table rows, {chunks_deleted} chunk rows",
                 file=sys.stderr,
@@ -349,12 +387,13 @@ def session_ingested_collection(request, warmup_embedding_model):
         except Exception as e:
             print(f"   ℹ️  PostgreSQL cleanup skipped: {e}", file=sys.stderr)
 
-        # CRITICAL FIX: Wait for Qdrant async deletion to complete
-        # Qdrant deletion is async - verify collection is truly gone before recreating
+        # PERFORMANCE: Optimized Qdrant deletion confirmation with exponential backoff
+        # Reduced wait time and smart polling to minimize test setup overhead
         import time
 
-        print("   ⏳ Waiting for Qdrant deletion to complete...", file=sys.stderr)
-        for attempt in range(20):  # Max 4 seconds wait
+        print("   ⏳ Verifying Qdrant deletion (optimized)...", file=sys.stderr)
+        deletion_confirmed = False
+        for attempt in range(8):  # Reduced from 20 to 8 attempts (max 2s instead of 4s)
             try:
                 collections = qdrant.get_collections().collections
                 existing = [c.name for c in collections]
@@ -363,16 +402,20 @@ def session_ingested_collection(request, warmup_embedding_model):
                         f"   ✓ Collection deletion confirmed (attempt {attempt + 1})",
                         file=sys.stderr,
                     )
+                    deletion_confirmed = True
                     break
             except Exception:
                 # Collection might not exist yet - safe to proceed
+                deletion_confirmed = True
                 break
-            time.sleep(0.2)
-        else:
-            # Still exists after 4 seconds - force proceed but warn
-            print(
-                "   ⚠️  Collection still exists after 4s wait, forcing recreation", file=sys.stderr
-            )
+
+            # Exponential backoff: 0.1s, 0.2s, 0.4s, 0.8s, 1.6s...
+            sleep_time = min(0.1 * (2**attempt), 0.5)  # Cap at 0.5s
+            time.sleep(sleep_time)
+
+        if not deletion_confirmed:
+            # Force proceed but with shorter warning
+            print("   ⚠️  Collection deletion timeout, proceeding (optimized)", file=sys.stderr)
 
         create_collection(
             collection_name=settings.qdrant_collection_name,
@@ -422,32 +465,35 @@ def session_ingested_collection(request, warmup_embedding_model):
     # This ensures database inspection tests have complete data to work with
     print("\n⚙️  Verifying PostgreSQL population...")
     try:
-        import psycopg2
         from psycopg2.extras import RealDictCursor
 
-        conn_str = f"postgresql://{settings.postgres_user}:{settings.postgres_password}@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
-        conn = psycopg2.connect(conn_str)
-
-        # CRITICAL: Set autocommit to ensure visibility of committed data
-        conn.autocommit = True
+        # PERFORMANCE: Use cached connection to reduce overhead
+        conn = get_postgresql_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-        # Wait for PostgreSQL to be FULLY populated (increased timeout from 2s to 5s)
+        # PERFORMANCE: Optimized PostgreSQL population verification with smart polling
         pg_count = 0
         expected_min_rows = 10 if not use_full_pdf else 100  # Adjust based on PDF size
 
-        for attempt in range(25):  # Increased from 10 to 25 attempts (5 seconds total)
+        # Smart polling: check fewer times with exponential backoff
+        max_attempts = 12  # Reduced from 25 to 12 attempts
+        for attempt in range(max_attempts):
             cursor.execute("SELECT COUNT(*) FROM financial_tables")
             pg_count = cursor.fetchone()["count"]
 
             if pg_count >= expected_min_rows:
                 break
 
-            if attempt % 5 == 0:  # Log every second
+            # Log only on attempts 1, 3, 6, 9, 12 to reduce noise
+            if attempt in [0, 2, 5, 8, 11]:
+                remaining = max_attempts - attempt - 1
                 print(
-                    f"   ⏳ Waiting for PostgreSQL: {pg_count}/{expected_min_rows} rows (attempt {attempt + 1}/25)"
+                    f"   ⏳ PostgreSQL: {pg_count}/{expected_min_rows} rows ({remaining} checks left)"
                 )
-            time.sleep(0.2)
+
+            # Exponential backoff: 0.1s, 0.2s, 0.4s, 0.8s, 1.6s (max 1.0s)
+            sleep_time = min(0.1 * (2**attempt), 1.0)
+            time.sleep(sleep_time)
 
         # Get detailed counts for validation
         cursor.execute("SELECT COUNT(*) FROM financial_chunks")
@@ -463,8 +509,8 @@ def session_ingested_collection(request, warmup_embedding_model):
         )
         metric_count = cursor.fetchone()["count"]
 
-        cursor.close()
-        conn.close()
+        cursor.close()  # Only close cursor, keep connection cached
+        # Note: Connection kept open for session to reduce overhead
 
         print(f"   ✓ PostgreSQL populated: {pg_count} table rows, {chunk_count} chunk rows")
         print(f"   ✓ Data diversity: {entity_count} entities, {metric_count} metrics")
@@ -543,6 +589,17 @@ def session_ingested_collection(request, warmup_embedding_model):
         print("   ✓ Collection deleted")
     except Exception as e:
         print(f"   ⚠️  Cleanup error (non-critical): {e}")
+
+    # PERFORMANCE: Close cached PostgreSQL connection
+    global _session_postgresql_connection
+    if _session_postgresql_connection:
+        try:
+            _session_postgresql_connection.close()
+            print("   ✓ PostgreSQL connection closed")
+        except Exception as e:
+            print(f"   ⚠️  PostgreSQL cleanup error (non-critical): {e}")
+        finally:
+            _session_postgresql_connection = None
 
 
 @pytest.fixture(autouse=True)
@@ -708,12 +765,10 @@ def ensure_qdrant_test_isolation(request):
                 )
 
                 try:
-                    import psycopg2
                     from psycopg2.extras import RealDictCursor
 
-                    conn_str = f"postgresql://{settings.postgres_user}:{settings.postgres_password}@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
-                    conn = psycopg2.connect(conn_str)
-                    conn.autocommit = True
+                    # PERFORMANCE: Use cached connection to reduce overhead
+                    conn = get_postgresql_connection()
                     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
                     # Check current PostgreSQL state
@@ -753,8 +808,7 @@ def ensure_qdrant_test_isolation(request):
                     else:
                         print(f"   ✓ PostgreSQL intact: {current_pg_count} rows")
 
-                    cursor.close()
-                    conn.close()
+                    cursor.close()  # Only close cursor, keep connection cached
 
                 except Exception as pg_error:
                     print(f"   ⚠️  PostgreSQL restoration failed: {pg_error}")
@@ -844,12 +898,8 @@ async def ingested_excerpt_pdf():
 
     # Verify PostgreSQL has data
     try:
-        import psycopg2
-
-        from raglite.shared.config import settings
-
-        conn_str = f"postgresql://{settings.postgres_user}:{settings.postgres_password}@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
-        conn = psycopg2.connect(conn_str)
+        # PERFORMANCE: Use cached connection to reduce overhead
+        conn = get_postgresql_connection()
         cursor = conn.cursor()
 
         cursor.execute("SELECT COUNT(*) FROM financial_tables")
@@ -858,8 +908,8 @@ async def ingested_excerpt_pdf():
         cursor.execute("SELECT MIN(page_number), MAX(page_number) FROM financial_tables")
         page_range = cursor.fetchone()
 
-        cursor.close()
-        conn.close()
+        cursor.close()  # Only close cursor, keep connection cached
+        # Note: Connection kept open for session to reduce overhead
 
         print(
             f"✓ PostgreSQL financial_tables: {table_count} rows, pages {page_range[0]}-{page_range[1]}"
