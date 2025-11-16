@@ -3,6 +3,8 @@
 Defines core data structures used across ingestion and retrieval modules.
 """
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -209,6 +211,31 @@ class QueryResponse(BaseModel):
     results: list[QueryResult] = Field(..., description="Retrieved chunks sorted by relevance")
     query: str = Field(..., description="Original query string")
     retrieval_time_ms: float = Field(..., description="Retrieval time in milliseconds")
+
+
+class AnalyticalQueryRequest(BaseModel):
+    """Analytical query request for multi-step workflow orchestration (Story 3.5 AC7)."""
+
+    query: str = Field(..., description="Natural language analytical query string")
+    top_k: int = Field(default=5, ge=1, le=50, description="Number of results per retrieval step")
+
+
+class AnalyticalQueryResponse(BaseModel):
+    """Analytical query response with workflow orchestration metadata (Story 3.5 AC7)."""
+
+    answer: str = Field(..., description="Synthesized natural language answer")
+    complexity: str = Field(..., description="Query complexity: 'simple' or 'analytical'")
+    workflow_metadata: dict[str, Any] = Field(
+        ...,
+        description=(
+            "Workflow execution metadata including task_count, execution_time_ms, "
+            "workflow_pattern, and fallback_tier"
+        ),
+    )
+    confidence: str = Field(..., description="Answer confidence: 'high', 'medium', or 'low'")
+    limitations: list[str] = Field(
+        default_factory=list, description="Limitations or caveats about the answer"
+    )
 
 
 # Type alias for job identifiers (used in ingestion pipeline)

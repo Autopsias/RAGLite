@@ -170,7 +170,7 @@ async def search_documents(
 
             if conditions:
                 # Cast to list union type for mypy compatibility
-                qdrant_filter = Filter(must=conditions)  # type: ignore[arg-type]
+                qdrant_filter = Filter(must=conditions)
 
         # Perform vector search
         search_result = qdrant.query_points(

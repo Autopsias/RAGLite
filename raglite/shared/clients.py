@@ -25,7 +25,7 @@ try:
     ANTHROPIC_AVAILABLE = True
 except ImportError:
     ANTHROPIC_AVAILABLE = False
-    Anthropic: type | None = None
+    Anthropic = None
 
 try:
     from mistralai import Mistral
@@ -41,7 +41,7 @@ try:
     QDRANT_AVAILABLE = True
 except ImportError:
     QDRANT_AVAILABLE = False
-    QdrantClient: type | None = None
+    QdrantClient = None
 
 try:
     from sentence_transformers import SentenceTransformer
@@ -134,10 +134,10 @@ def get_qdrant_client() -> QdrantClient:
                 break  # Success - exit retry loop
             except Exception as e:
                 if attempt < max_retries - 1:
-                    delay = retry_delays[attempt]
+                    delay: float = retry_delays[attempt]
                     # In test environment, use shorter delays to prevent test hangs
                     if is_test_env:
-                        delay = int(min(delay, 0.5))  # Cap at 0.5s for tests
+                        delay = min(delay, 0.5)  # Cap at 0.5s for tests
 
                     logger.warning(
                         f"Qdrant connection failed (attempt {attempt + 1}/{max_retries}), retrying in {delay}s",

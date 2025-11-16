@@ -241,8 +241,17 @@ module = [
     "openpyxl.*",
     "pandas.*",
     "rank_bm25.*",
+    "torch.*",
+    "transformers.*",
+    "anthropic.*",
+    "mistralai.*",
+    "psycopg2.*",
+    "PIL.*",
+    "jinja2.*",
+    "strands.*",
 ]
 ignore_missing_imports = true
+follow_imports = "skip"
 
 # ============================================================================
 # BANDIT CONFIGURATION (Security Linting)

@@ -104,8 +104,8 @@ jobs:
       - name: Run mypy on raglite/ package
         run: |
           source ci-venv/bin/activate
-          mypy raglite/ --show-error-codes --ignore-missing-imports
-        continue-on-error: true
+          mypy raglite/ --show-error-codes
+        continue-on-error: false
 
   # ============================================================================
   # JOB 3: Security Scanning
