@@ -76,6 +76,8 @@ dev = [
     "ruff>=0.0.270,<1.0.0",
     "isort>=5.12,<6.0",
     "mypy>=1.4,<2.0",
+    "types-requests>=2.0,<3.0",
+    "types-setuptools>=65.0,<70.0",
     "pre-commit>=3.0,<4.0",
     "pypdf>=4.0,<5.0",
     "pytest-ordering>=0.6",
@@ -249,6 +251,8 @@ module = [
     "PIL.*",
     "jinja2.*",
     "strands.*",
+    "tiktoken.*",
+    "fastmcp.*",
 ]
 ignore_missing_imports = true
 follow_imports = "skip"

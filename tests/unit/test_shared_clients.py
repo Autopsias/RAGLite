@@ -6,6 +6,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pytest import MonkeyPatch
 
+from raglite.shared.clients import get_claude_client, get_qdrant_client
+from raglite.shared.config import Settings
+
 # Mock dependencies to prevent import errors during unit testing
 # IMPORTANT: Mock only for unit test scope to avoid affecting integration tests
 # We will use scoped patches instead of global sys.modules mocking
@@ -15,9 +18,6 @@ sys.modules["qdrant_client"] = MagicMock()
 
 # NOTE: We do NOT mock mistralai here because integration tests need the real module
 # Instead, we mock it specifically in the unit tests that need it
-
-from raglite.shared.clients import get_claude_client, get_qdrant_client
-from raglite.shared.config import Settings
 
 
 @pytest.mark.priority("P0")

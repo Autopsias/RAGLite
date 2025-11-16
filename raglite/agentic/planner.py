@@ -234,6 +234,7 @@ async def decompose_query(query: str, complexity: QueryComplexity) -> WorkflowPl
 
     # Analytical queries - pattern detection
     query_lower = query.lower()
+    tasks = []  # Initialize tasks list for analytical queries
 
     # Pattern 1: YoY Growth Workflow
     # Keywords: "yoy", "year-over-year", "growth", "calculate"
