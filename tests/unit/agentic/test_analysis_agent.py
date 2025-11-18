@@ -24,8 +24,8 @@ async def test_analysis_agent_yoy_growth_calculation():
         mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
-            data={"Q3_2023": 10.0, "Q3_2024": 12.0},
-            analysis_type="yoy_growth",
+            instruction="Calculate YoY growth for Q3 2023 vs Q3 2024",
+            context={"data": {"Q3_2023": 10.0, "Q3_2024": 12.0}},
         )
 
         result = AnalysisResult.model_validate_json(result_json)
@@ -48,8 +48,8 @@ async def test_analysis_agent_variance_analysis():
         mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
-            data={"budget": 100.0, "actual": 85.0},
-            analysis_type="variance",
+            instruction="Calculate variance between budget and actual",
+            context={"data": {"budget": 100.0, "actual": 85.0}},
         )
 
         result = AnalysisResult.model_validate_json(result_json)
@@ -71,8 +71,8 @@ async def test_analysis_agent_trend_detection():
         mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
-            data={"Q1": 10.0, "Q2": 12.0, "Q3": 14.0},
-            analysis_type="trend",
+            instruction="Detect trend in quarterly data",
+            context={"data": {"Q1": 10.0, "Q2": 12.0, "Q3": 14.0}},
         )
 
         result = AnalysisResult.model_validate_json(result_json)
@@ -93,8 +93,8 @@ async def test_analysis_agent_percentage_calculation():
         mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
-            data={"part": 25.0, "whole": 100.0},
-            analysis_type="percentage",
+            instruction="Calculate percentage of part to whole",
+            context={"data": {"part": 25.0, "whole": 100.0}},
         )
 
         result = AnalysisResult.model_validate_json(result_json)
@@ -105,25 +105,25 @@ async def test_analysis_agent_percentage_calculation():
 
 @pytest.mark.asyncio
 async def test_analysis_agent_error_invalid_type():
-    """Test error handling for invalid analysis_type."""
+    """Test error handling when no data is provided (no analysis can be performed)."""
+    # Test with no context data - should error with "No financial data available"
     result_json = await analysis_agent(
-        data={"Q1": 10.0, "Q2": 12.0},
-        analysis_type="invalid_type",
+        instruction="Calculate some analysis",
+        context=None,  # No data provided
     )
 
     result = json.loads(result_json)
 
     assert result["success"] is False
-    assert "Invalid analysis_type" in result["error"]
-    assert result["analysis_type"] == "invalid_type"
+    assert "No financial data available" in result["error"]
 
 
 @pytest.mark.asyncio
 async def test_analysis_agent_error_missing_data_keys():
     """Test error handling for missing required data keys."""
     result_json = await analysis_agent(
-        data={"only_one_value": 10.0},
-        analysis_type="yoy_growth",
+        instruction="Calculate YoY growth",
+        context={"data": {"only_one_value": 10.0}},
     )
 
     result = json.loads(result_json)
@@ -136,8 +136,8 @@ async def test_analysis_agent_error_missing_data_keys():
 async def test_analysis_agent_error_zero_denominator():
     """Test error handling for division by zero."""
     result_json = await analysis_agent(
-        data={"budget": 0.0, "actual": 100.0},
-        analysis_type="variance",
+        instruction="Calculate variance between budget and actual",
+        context={"data": {"budget": 0.0, "actual": 100.0}},
     )
 
     result = json.loads(result_json)
@@ -156,8 +156,8 @@ async def test_analysis_agent_json_serialization():
         mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
-            data={"part": 50.0, "whole": 200.0},
-            analysis_type="percentage",
+            instruction="Calculate percentage",
+            context={"data": {"part": 50.0, "whole": 200.0}},
         )
 
         # Verify it's valid JSON
@@ -182,9 +182,8 @@ async def test_analysis_agent_with_context():
         mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
-            data={"Q3_2023": 10.0, "Q3_2024": 12.0},
-            analysis_type="yoy_growth",
-            context="Q3 is typically the strongest quarter due to seasonal demand",
+            instruction="Calculate YoY growth for Q3 2023 vs Q3 2024. Q3 is typically the strongest quarter due to seasonal demand",
+            context={"data": {"Q3_2023": 10.0, "Q3_2024": 12.0}},
         )
 
         result = AnalysisResult.model_validate_json(result_json)
@@ -203,8 +202,8 @@ async def test_analysis_agent_negative_variance():
         mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
-            data={"budget": 100.0, "actual": 120.0},
-            analysis_type="variance",
+            instruction="Calculate variance between budget and actual",
+            context={"data": {"budget": 100.0, "actual": 120.0}},
         )
 
         result = AnalysisResult.model_validate_json(result_json)
@@ -223,8 +222,8 @@ async def test_analysis_agent_trend_decreasing():
         mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
-            data={"Q1": 14.0, "Q2": 12.0, "Q3": 10.0},
-            analysis_type="trend",
+            instruction="Detect trend in quarterly data",
+            context={"data": {"Q1": 14.0, "Q2": 12.0, "Q3": 10.0}},
         )
 
         result = AnalysisResult.model_validate_json(result_json)
@@ -242,8 +241,8 @@ async def test_analysis_agent_trend_stable():
         mock_client.return_value.messages.create.return_value = mock_response
 
         result_json = await analysis_agent(
-            data={"Q1": 10.0, "Q2": 10.0, "Q3": 10.0},
-            analysis_type="trend",
+            instruction="Detect trend in quarterly data",
+            context={"data": {"Q1": 10.0, "Q2": 10.0, "Q3": 10.0}},
         )
 
         result = AnalysisResult.model_validate_json(result_json)
@@ -258,8 +257,8 @@ async def test_analysis_agent_claude_api_failure_fallback():
         mock_client.return_value.messages.create.side_effect = Exception("Claude API unavailable")
 
         result_json = await analysis_agent(
-            data={"Q3_2023": 10.0, "Q3_2024": 12.0},
-            analysis_type="yoy_growth",
+            instruction="Calculate YoY growth for Q3 2023 vs Q3 2024",
+            context={"data": {"Q3_2023": 10.0, "Q3_2024": 12.0}},
         )
 
         result = AnalysisResult.model_validate_json(result_json)

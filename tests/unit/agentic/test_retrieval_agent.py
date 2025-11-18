@@ -51,11 +51,11 @@ class TestRetrievalAgentInterface:
         # Verify parameters (use the decorated function's signature)
         sig = inspect.signature(retrieval_agent)
         params = list(sig.parameters.keys())
-        assert "query" in params, "retrieval_agent must accept 'query' parameter"
-        assert "top_k" in params, "retrieval_agent must accept 'top_k' parameter"
+        assert "instruction" in params, "retrieval_agent must accept 'instruction' parameter"
+        assert "context" in params, "retrieval_agent must accept 'context' parameter"
 
-        # Verify default value for top_k
-        assert sig.parameters["top_k"].default == 5, "top_k default must be 5"
+        # Verify default value for context
+        assert sig.parameters["context"].default is None, "context default must be None"
 
     @pytest.mark.asyncio
     async def test_retrieval_agent_returns_json_string(self):
@@ -69,7 +69,7 @@ class TestRetrievalAgentInterface:
         ) as mock_search:
             mock_search.return_value = []
 
-            result = await retrieval_agent("test query", top_k=5)
+            result = await retrieval_agent(instruction="test query", context={"top_k": 5})
 
             # Verify return type is string
             assert isinstance(result, str), f"Expected str, got {type(result)}"
@@ -112,7 +112,7 @@ class TestRetrievalAgentReturnFormat:
         ) as mock_search:
             mock_search.return_value = mock_results
 
-            result = await retrieval_agent("revenue query", top_k=5)
+            result = await retrieval_agent(instruction="revenue query", context={"top_k": 5})
             parsed = json.loads(result)
 
             # Verify top-level structure
@@ -149,7 +149,7 @@ class TestRetrievalAgentReturnFormat:
         ) as mock_search:
             mock_search.return_value = mock_results
 
-            result = await retrieval_agent("profit query", top_k=5)
+            result = await retrieval_agent(instruction="profit query", context={"top_k": 5})
             parsed = json.loads(result)
 
             chunk = parsed["chunks"][0]
@@ -195,7 +195,7 @@ class TestRetrievalAgentReturnFormat:
         ) as mock_search:
             mock_search.return_value = mock_results
 
-            result = await retrieval_agent("capex query", top_k=5)
+            result = await retrieval_agent(instruction="capex query", context={"top_k": 5})
             parsed = json.loads(result)
 
             metadata = parsed["search_metadata"]
@@ -224,7 +224,7 @@ class TestRetrievalAgentMultiIndexIntegration:
         ) as mock_search:
             mock_search.return_value = []
 
-            await retrieval_agent("test query", top_k=7)
+            await retrieval_agent(instruction="test query", context={"top_k": 7})
 
             # Verify multi_index_search was called exactly once
             mock_search.assert_called_once()
@@ -240,7 +240,7 @@ class TestRetrievalAgentMultiIndexIntegration:
         ) as mock_search:
             mock_search.return_value = []
 
-            await retrieval_agent("revenue in Q3", top_k=10)
+            await retrieval_agent(instruction="revenue in Q3", context={"top_k": 10})
 
             # Verify parameters passed correctly
             mock_search.assert_called_once_with("revenue in Q3", top_k=10)
@@ -276,7 +276,7 @@ class TestRetrievalAgentMultiIndexIntegration:
         ) as mock_search:
             mock_search.return_value = mock_results
 
-            result = await retrieval_agent("mixed query", top_k=5)
+            result = await retrieval_agent(instruction="mixed query", context={"top_k": 5})
             parsed = json.loads(result)
 
             # Verify both results returned (no duplication, direct pass-through)
@@ -302,7 +302,7 @@ class TestRetrievalAgentErrorHandling:
         ) as mock_search:
             mock_search.side_effect = MultiIndexSearchError("Database connection failed")
 
-            result = await retrieval_agent("test query", top_k=5)
+            result = await retrieval_agent(instruction="test query", context={"top_k": 5})
             parsed = json.loads(result)
 
             # Verify graceful degradation
@@ -323,7 +323,7 @@ class TestRetrievalAgentErrorHandling:
         ) as mock_search:
             mock_search.side_effect = RuntimeError("Unexpected error: out of memory")
 
-            result = await retrieval_agent("test query", top_k=5)
+            result = await retrieval_agent(instruction="test query", context={"top_k": 5})
             parsed = json.loads(result)
 
             # Verify graceful degradation
@@ -343,7 +343,7 @@ class TestRetrievalAgentErrorHandling:
         ) as mock_search:
             mock_search.side_effect = ValueError("Invalid input")
 
-            result = await retrieval_agent("test", top_k=5)
+            result = await retrieval_agent(instruction="test", context={"top_k": 5})
 
             # Should be parseable JSON even on error
             parsed = json.loads(result)
@@ -377,7 +377,7 @@ class TestRetrievalAgentJSONSerialization:
         ) as mock_search:
             mock_search.return_value = mock_results
 
-            result = await retrieval_agent("CEO statement", top_k=5)
+            result = await retrieval_agent(instruction="CEO statement", context={"top_k": 5})
 
             # Should be valid JSON
             parsed = json.loads(result)
@@ -412,7 +412,7 @@ class TestRetrievalAgentJSONSerialization:
         ) as mock_search:
             mock_search.return_value = mock_results
 
-            result = await retrieval_agent("large text", top_k=5)
+            result = await retrieval_agent(instruction="large text", context={"top_k": 5})
             parsed = json.loads(result)
 
             chunk = parsed["chunks"][0]
@@ -439,7 +439,7 @@ class TestRetrievalAgentPerformance:
             mock_search.return_value = []
 
             start = time.time()
-            await retrieval_agent("test query", top_k=5)
+            await retrieval_agent(instruction="test query", context={"top_k": 5})
             elapsed_ms = (time.time() - start) * 1000
 
             # Unit test must complete in <100ms (no real searches)
@@ -463,7 +463,7 @@ class TestRetrievalAgentPerformance:
 
             mock_search.side_effect = delayed_search
 
-            result = await retrieval_agent("test query", top_k=5)
+            result = await retrieval_agent(instruction="test query", context={"top_k": 5})
             parsed = json.loads(result)
 
             # Latency should be recorded

@@ -341,6 +341,20 @@ async def analytical_query_financial_documents(
         >>> print(response.answer)
         "Q3 operating expenses increased by $12M (8.5%)..."
 
+    Example - Comparative Analysis:
+        >>> request = AnalyticalQueryRequest(
+        ...     query="Compare Q3 2023 revenue with Q3 2024 revenue"
+        ... )
+        >>> response = await analytical_query_financial_documents(request)
+        >>> print(response.answer)
+        "Q3 2024 revenue was $283M compared to $245M in Q3 2023..."
+        >>> print(response.reasoning_steps)
+        ["1. Classified query as analytical (comparative pattern)",
+         "2. Retrieved Q3 2023 financial documents",
+         "3. Retrieved Q3 2024 financial documents",
+         "4. Performed comparative analysis",
+         "5. Synthesized final answer from 4 workflow tasks"]
+
     Note - Graceful Degradation (AC8):
         If the workflow fails (timeout, agent error), the system automatically
         falls back to Epic 1 basic retrieval, ensuring users always get a response.
@@ -374,6 +388,68 @@ async def analytical_query_financial_documents(
             extra={"query": request.query, "complexity": complexity},
         )
 
+        # Story 3.6 AC3: Conditional routing - simple queries to Epic 2, analytical to Epic 3
+        if complexity == QueryComplexity.SIMPLE:
+            logger.info(
+                "Routing simple query to Epic 2 basic retrieval",
+                extra={"query": request.query, "complexity": complexity},
+            )
+
+            # Route to Epic 2 basic retrieval tool
+            basic_request = QueryRequest(query=request.query, top_k=request.top_k)
+            basic_response = await query_financial_documents.fn(basic_request)
+
+            workflow_duration_ms = (time.perf_counter() - workflow_start_time) * 1000
+
+            # Story 3.6 AC4: Build reasoning steps for transparency
+            reasoning_steps = [
+                "1. Classified query as simple (direct retrieval)",
+                f"2. Retrieved {len(basic_response.results)} relevant documents via vector search",
+                "3. Ranked results by similarity score",
+            ]
+
+            # Story 3.6 AC6: Extract source citations from results
+            sources = [
+                f"{r.source_document} (page {r.page_number})"
+                if r.page_number is not None
+                else r.source_document
+                for r in basic_response.results
+            ]
+
+            logger.info(
+                "Simple query complete (Epic 2 routing)",
+                extra={
+                    "query": request.query,
+                    "results_count": len(basic_response.results),
+                    "duration_ms": f"{workflow_duration_ms:.2f}",
+                    "routing": "epic2_basic_retrieval",
+                },
+            )
+
+            # Convert QueryResponse to AnalyticalQueryResponse format
+            # Synthesize answer from top results
+            answer_parts = ["Based on the retrieved documents:\n"]
+            for i, result in enumerate(basic_response.results[:3], 1):
+                # Truncate long results for summary
+                text_preview = result.text[:200] + "..." if len(result.text) > 200 else result.text
+                answer_parts.append(f"{i}. {text_preview}")
+
+            return AnalyticalQueryResponse(
+                answer="\n".join(answer_parts),
+                complexity=complexity.value,
+                workflow_metadata={
+                    "task_count": 1,
+                    "execution_time_ms": int(workflow_duration_ms),
+                    "workflow_pattern": "simple_retrieval",
+                    "fallback_tier": "epic2_routing",
+                },
+                confidence="high",
+                limitations=[],
+                reasoning_steps=reasoning_steps,
+                sources=sources,
+            )
+
+        # Analytical queries continue with Epic 3 workflow orchestration
         # Step 2: Decompose query into workflow plan (AC2)
         plan = await decompose_query(request.query, complexity)
 
@@ -405,6 +481,59 @@ async def analytical_query_financial_documents(
             confidence = "high"
             limitations: list[str] = []
 
+            # Story 3.6 AC4: Build reasoning steps from workflow execution
+            reasoning_steps = []
+            pattern = plan.metadata.get("pattern", "unknown")
+            reasoning_steps.append(f"1. Classified query as analytical ({pattern} pattern)")
+
+            # Add retrieval steps
+            retrieval_results = [r for r in results if r.agent_type == "retrieval" and r.success]
+            for i, r in enumerate(retrieval_results, start=2):
+                task_desc = next(
+                    (t.instruction for t in plan.tasks if t.task_id == r.task_id), "retrieval task"
+                )
+                # Extract document count if available in result
+                doc_count = len(r.result) if isinstance(r.result, list) else "relevant"
+                reasoning_steps.append(f"{i}. Retrieved {doc_count} documents: {task_desc}")
+
+            # Add analysis steps
+            analysis_results = [r for r in results if r.agent_type == "analysis" and r.success]
+            step_num = len(reasoning_steps) + 1
+            for r in analysis_results:
+                task_desc = next(
+                    (t.instruction for t in plan.tasks if t.task_id == r.task_id), "analysis task"
+                )
+                reasoning_steps.append(f"{step_num}. Performed analysis: {task_desc}")
+                step_num += 1
+
+            # Add synthesis step
+            task_count = len(results)
+            reasoning_steps.append(
+                f"{step_num}. Synthesized final answer from {task_count} workflow tasks"
+            )
+
+            # Story 3.6 AC6: Extract source citations from retrieval results
+            sources = []
+            for r in retrieval_results:
+                if isinstance(r.result, list):
+                    # Extract sources from retrieval results (SearchResult or QueryResult objects)
+                    for doc in r.result:
+                        if hasattr(doc, "document_id"):
+                            # SearchResult from multi_index_search
+                            has_page = hasattr(doc, "page_number") and doc.page_number is not None
+                            page_ref = f" (page {doc.page_number})" if has_page else ""
+                            source = f"{doc.document_id}{page_ref}"
+                        elif hasattr(doc, "source_document"):
+                            # QueryResult from query_financial_documents
+                            has_page_num = doc.page_number is not None
+                            page_ref = f" (page {doc.page_number})" if has_page_num else ""
+                            source = f"{doc.source_document}{page_ref}"
+                        else:
+                            continue
+
+                        if source not in sources:  # Deduplicate
+                            sources.append(source)
+
             logger.info(
                 "Analytical query complete",
                 extra={
@@ -413,6 +542,7 @@ async def analytical_query_financial_documents(
                     "success_count": sum(1 for r in results if r.success),
                     "duration_ms": f"{workflow_duration_ms:.2f}",
                     "fallback_tier": fallback_tier,
+                    "sources_count": len(sources),
                 },
             )
 
@@ -427,6 +557,8 @@ async def analytical_query_financial_documents(
                 },
                 confidence=confidence,
                 limitations=limitations,
+                reasoning_steps=reasoning_steps,
+                sources=sources,
             )
 
         else:
@@ -472,6 +604,26 @@ async def analytical_query_financial_documents(
             },
         )
 
+        # Story 3.6 AC4: Build reasoning steps for fallback
+        fallback_reasoning = [
+            "1. Classified query as analytical",
+            f"2. Attempted multi-step workflow ({len(partial_results)} tasks started)",
+            f"3. Workflow failed: {str(e)[:100]}...",
+            f"4. Gracefully degraded to {fallback_response.tier.value} tier",
+        ]
+
+        # Story 3.6 AC6: Extract sources from fallback response if available
+        fallback_sources = []
+        if hasattr(fallback_response, "sources"):
+            fallback_sources = fallback_response.sources
+        elif hasattr(fallback_response, "results"):
+            # Extract from Epic 1 fallback results
+            for result in fallback_response.results[:5]:
+                if hasattr(result, "source_document"):
+                    has_page = result.page_number is not None
+                    page_ref = f" (page {result.page_number})" if has_page else ""
+                    fallback_sources.append(f"{result.source_document}{page_ref}")
+
         # Return fallback response
         return AnalyticalQueryResponse(
             answer=fallback_response.answer,
@@ -484,6 +636,8 @@ async def analytical_query_financial_documents(
             },
             confidence=fallback_response.confidence,
             limitations=fallback_response.limitations,
+            reasoning_steps=fallback_reasoning,
+            sources=fallback_sources,
         )
 
 

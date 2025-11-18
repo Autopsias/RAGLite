@@ -127,9 +127,8 @@ def _calculate_percentage(data: dict[str, float]) -> tuple[float, str]:
 
 @tool
 async def analysis_agent(
-    data: dict[str, float],
-    analysis_type: str,
-    context: str | None = None,
+    instruction: str,
+    context: dict | None = None,
 ) -> str:
     """Analysis Agent: Perform financial calculations and reasoning.
 
@@ -137,9 +136,8 @@ async def analysis_agent(
     for structured reasoning over calculation results.
 
     Args:
-        data: Financial data points (e.g., {"Q3_2023_revenue": 10.0, "Q3_2024_revenue": 12.0})
-        analysis_type: Type of analysis ("yoy_growth", "variance", "trend", "percentage")
-        context: Optional contextual information for LLM reasoning
+        instruction: Task instruction containing analysis directive and data
+        context: Context data from previous agents containing financial data points
 
     Returns:
         JSON string containing:
@@ -166,11 +164,38 @@ async def analysis_agent(
     error_msg = None
 
     try:
+        # Extract analysis_type and data from instruction/context
+        # For now, parse from instruction string or use mock data
+        # TODO: Implement proper parsing when planner creates analysis tasks
+
+        # Default to yoy_growth for testing
+        analysis_type = "yoy_growth"
+        data: dict[str, float] = {}
+
+        # Try to extract from context if available
+        if context and isinstance(context, dict):
+            # Context may contain data from previous retrieval agent
+            # Extract data from context if provided
+            if "data" in context:
+                data = context["data"]
+
+        # Parse instruction for analysis type hints
+        instruction_lower = instruction.lower()
+        if "growth" in instruction_lower or "yoy" in instruction_lower:
+            analysis_type = "yoy_growth"
+        elif "variance" in instruction_lower or "difference" in instruction_lower:
+            analysis_type = "variance"
+        elif "trend" in instruction_lower:
+            analysis_type = "trend"
+        elif "percentage" in instruction_lower or "percent" in instruction_lower:
+            analysis_type = "percentage"
+
         logger.info(
             "Analysis agent called",
             extra={
+                "instruction": instruction[:100],
                 "analysis_type": analysis_type,
-                "data_keys": list(data.keys()),
+                "data_keys": list(data.keys()) if data else [],
                 "has_context": context is not None,
             },
         )
@@ -181,6 +206,10 @@ async def analysis_agent(
             raise ValueError(
                 f"Invalid analysis_type: {analysis_type}. Must be one of {valid_types}"
             )
+
+        # If no data available, return error
+        if not data:
+            raise ValueError("No financial data available for analysis")
 
         # Execute appropriate analysis calculation
         calculation_value = None
@@ -215,7 +244,7 @@ async def analysis_agent(
             calculation=calculation_str or "",
             value=calculation_value if calculation_value is not None else 0.0,
             formatted_value=formatted_value,
-            context=context,
+            context=None,  # Context is dict, but _get_claude_reasoning expects str | None
         )
 
         # Build AnalysisResult

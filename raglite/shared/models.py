@@ -216,12 +216,21 @@ class QueryResponse(BaseModel):
 class AnalyticalQueryRequest(BaseModel):
     """Analytical query request for multi-step workflow orchestration (Story 3.5 AC7)."""
 
-    query: str = Field(..., description="Natural language analytical query string")
+    query: str = Field(
+        ...,
+        max_length=1000,
+        description="Natural language analytical query string (max 1000 characters)",
+    )
     top_k: int = Field(default=5, ge=1, le=50, description="Number of results per retrieval step")
 
 
 class AnalyticalQueryResponse(BaseModel):
-    """Analytical query response with workflow orchestration metadata (Story 3.5 AC7)."""
+    """Analytical query response with workflow orchestration metadata (Story 3.5 AC7).
+
+    Story 3.6 EXTENSION (AC4, AC6):
+    - reasoning_steps: Transparent workflow steps showing what the system did
+    - sources: Source documents with citations for answer verification
+    """
 
     answer: str = Field(..., description="Synthesized natural language answer")
     complexity: str = Field(..., description="Query complexity: 'simple' or 'analytical'")
@@ -235,6 +244,21 @@ class AnalyticalQueryResponse(BaseModel):
     confidence: str = Field(..., description="Answer confidence: 'high', 'medium', or 'low'")
     limitations: list[str] = Field(
         default_factory=list, description="Limitations or caveats about the answer"
+    )
+
+    # Story 3.6 AC4: Reasoning steps for transparency
+    reasoning_steps: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Transparent workflow steps taken (e.g., '1. Retrieved 5 documents...', "
+            "'2. Analysis Agent calculated 20% YoY growth...', '3. Synthesized answer...')"
+        ),
+    )
+
+    # Story 3.6 AC6: Source citations for verification
+    sources: list[str] = Field(
+        default_factory=list,
+        description="Source documents with page references (e.g., 'Q3_2023_Report.pdf (page 12)')",
     )
 
 

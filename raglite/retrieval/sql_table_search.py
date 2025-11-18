@@ -110,11 +110,16 @@ async def search_tables_sql(sql_query: str, top_k: int = 50) -> list[QueryResult
         # Log first row sample if results exist
         if rows:
             first_row_dict = dict(zip(column_names, rows[0], strict=False))
-            print(
-                f"[SQL_TABLE_SEARCH DEBUG] First row: entity={first_row_dict.get('entity')}, metric={first_row_dict.get('metric')}, value={first_row_dict.get('value')}",
-                flush=True,
+            # Use logger only - print() pollutes stdout and breaks MCP JSON parsing
+            logger.debug(
+                "SQL table search first row sample",
+                extra={
+                    "first_row": first_row_dict,
+                    "entity": first_row_dict.get("entity"),
+                    "metric": first_row_dict.get("metric"),
+                    "value": first_row_dict.get("value"),
+                },
             )
-            logger.debug("First row sample", extra={"first_row": first_row_dict})
 
         if not rows:
             logger.warning(

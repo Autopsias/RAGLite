@@ -34,7 +34,7 @@ class TestRetrievalSynthesisWorkflow:
         # Simple query that should retrieve results
         query = "What is the annual revenue?"
 
-        result = await retrieval_agent(query, top_k=5)
+        result = await retrieval_agent(instruction=query, context={"top_k": 5})
         parsed = json.loads(result)
 
         # Verify results retrieved from Qdrant
@@ -69,7 +69,7 @@ class TestRetrievalSynthesisWorkflow:
         query = sample_ground_truth["query"]
         expected_docs = set(sample_ground_truth.get("expected_documents", []))
 
-        result = await retrieval_agent(query, top_k=5)
+        result = await retrieval_agent(instruction=query, context={"top_k": 5})
         parsed = json.loads(result)
 
         if parsed["total_retrieved"] == 0:
@@ -96,7 +96,7 @@ class TestRetrievalSynthesisWorkflow:
             pytest.skip("Qdrant fixture not available")
 
         start = time.time()
-        result = await retrieval_agent("revenue test", top_k=5)
+        result = await retrieval_agent(instruction="revenue test", context={"top_k": 5})
         elapsed_s = time.time() - start
 
         parsed = json.loads(result)
@@ -121,7 +121,7 @@ class TestRetrievalSynthesisWorkflow:
         if not qdrant_with_sample_docs:
             pytest.skip("Qdrant fixture not available")
 
-        result = await retrieval_agent("analysis query", top_k=3)
+        result = await retrieval_agent(instruction="analysis query", context={"top_k": 3})
         parsed = json.loads(result)
 
         # Verify output structure compatible with AgentState consumption
@@ -156,7 +156,7 @@ class TestRetrievalSynthesisWorkflow:
         ]
 
         for query_type, query in queries:
-            result = await retrieval_agent(query, top_k=3)
+            result = await retrieval_agent(instruction=query, context={"top_k": 3})
             parsed = json.loads(result)
 
             # Each query type should return results
@@ -179,7 +179,7 @@ class TestRetrievalSynthesisWorkflow:
             pytest.skip("Qdrant fixture not available")
 
         # Empty query should fail gracefully
-        result = await retrieval_agent("", top_k=5)
+        result = await retrieval_agent(instruction="", context={"top_k": 5})
         parsed = json.loads(result)
 
         # Should return valid JSON with error
@@ -202,7 +202,7 @@ class TestRetrievalSynthesisWorkflow:
             pytest.skip("Qdrant fixture not available")
 
         query = "financial data"
-        result = await retrieval_agent(query, top_k=5)
+        result = await retrieval_agent(instruction=query, context={"top_k": 5})
         parsed = json.loads(result)
 
         if parsed["total_retrieved"] == 0:
@@ -230,7 +230,7 @@ class TestRetrievalSynthesisWorkflow:
 
         # Test with different top_k values
         for top_k in [1, 3, 5, 10]:
-            result = await retrieval_agent(query, top_k=top_k)
+            result = await retrieval_agent(instruction=query, context={"top_k": top_k})
             parsed = json.loads(result)
 
             # Should not exceed requested top_k
@@ -249,7 +249,7 @@ class TestRetrievalAgentOrchestration:
         AC1: Agent registered with orchestrator as callable tool
         """
         # Retrieve and execute agent directly
-        result = await retrieval_agent("test query", top_k=5)
+        result = await retrieval_agent(instruction="test query", context={"top_k": 5})
 
         # Should return valid JSON for Strands
         parsed = json.loads(result)
@@ -270,7 +270,7 @@ class TestRetrievalAgentOrchestration:
 
         # Step 1: Retrieval agent searches
         query = "What is the revenue?"
-        retrieval_result = await retrieval_agent(query, top_k=5)
+        retrieval_result = await retrieval_agent(instruction=query, context={"top_k": 5})
         retrieval_parsed = json.loads(retrieval_result)
 
         # Step 2: Pass to synthesis agent (mock)
@@ -298,7 +298,7 @@ class TestRetrievalAgentOrchestration:
             pytest.skip("Qdrant fixture not available")
 
         query = "test query"
-        result = await retrieval_agent(query, top_k=3)
+        result = await retrieval_agent(instruction=query, context={"top_k": 3})
         parsed = json.loads(result)
 
         # Create AgentState for next agent

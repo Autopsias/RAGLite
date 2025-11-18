@@ -30,7 +30,7 @@ logger = get_logger(__name__)
 
 
 @tool
-async def retrieval_agent(query: str, top_k: int = 5) -> str:
+async def retrieval_agent(instruction: str, context: dict | None = None) -> str:
     """Retrieval Agent: Search financial document knowledge base.
 
     Story 3.2 AC1-AC3: Wraps Epic 2 multi-index search to enable
@@ -40,8 +40,8 @@ async def retrieval_agent(query: str, top_k: int = 5) -> str:
     Returns JSON-serialized DocumentChunk list with citations and metadata.
 
     Args:
-        query: Natural language search query (required)
-        top_k: Number of document chunks to retrieve (default: 5)
+        instruction: Task instruction containing the search query
+        context: Optional context data from previous agents (unused for retrieval)
 
     Returns:
         JSON string containing:
@@ -80,9 +80,52 @@ async def retrieval_agent(query: str, top_k: int = 5) -> str:
     backend = None
 
     try:
+        # Extract query from instruction (orchestrator passes task instruction as string)
+        query = instruction
+        top_k = 5  # Default top_k
+
+        # Check if context contains top_k parameter
+        if context and isinstance(context, dict):
+            top_k = context.get("top_k", 5)
+
+        # Query reformulation: Remove instruction prefixes and simplify comparative questions
+        # FIX: Prevents semantic mismatch between questions and document embeddings
+        original_query = query
+
+        # Remove common instruction prefixes from planner
+        if query.startswith("Retrieve relevant financial data for:"):
+            query = query.replace("Retrieve relevant financial data for:", "").strip()
+        if query.startswith("Search for:"):
+            query = query.replace("Search for:", "").strip()
+
+        # Simplify comparative questions to improve embedding match
+        # "Which region performed better - Tunisia or Lebanon?" -> "Tunisia Lebanon region performance"
+        import re
+
+        if re.search(
+            r"\b(which|what|who)\b.*(better|worse|strongest|highest|lowest|best|worst)\b",
+            query.lower(),
+        ):
+            # Extract key entities and concepts, remove question words
+            query = re.sub(
+                r"\b(which|what|who|how|where|when|why|does|did|is|are|was|were|the|a|an)\b",
+                "",
+                query,
+                flags=re.IGNORECASE,
+            )
+            query = re.sub(r"[?]", "", query)  # Remove question marks
+            query = re.sub(r"\s+", " ", query).strip()  # Collapse whitespace
+            logger.debug(f"Reformulated comparative query: '{original_query}' -> '{query}'")
+
         logger.info(
             "Retrieval agent called",
-            extra={"query": query[:100], "top_k": top_k},
+            extra={
+                "instruction": instruction[:100],
+                "original_query": original_query[:100],
+                "reformulated_query": query[:100],
+                "top_k": top_k,
+                "reformulated": query != original_query,
+            },
         )
 
         # Call Epic 2 multi-index search (AC3: direct function call, no duplication)

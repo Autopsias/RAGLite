@@ -99,9 +99,9 @@ development_status:
   3-3-analysis-agent-implementation: done
   3-4-synthesis-agent-implementation: done
   3-5-multi-step-workflow-orchestration: done
-  3-6-analytical-query-tool-mcp: backlog
-  3-7-graceful-degradation-for-workflow-failures: backlog
-  3-8-agentic-workflow-test-suite: backlog
+  3-6-analytical-query-tool-mcp: done
+  3-7-graceful-degradation-for-workflow-failures: drafted
+  3-8-agentic-workflow-test-suite: drafted
   epic-3-retrospective: optional
 
   # Epic 4: Forecasting & Proactive Insights

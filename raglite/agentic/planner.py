@@ -129,12 +129,64 @@ async def classify_query_complexity(query: str) -> QueryComplexity:
         "ratio",
         "margin",
         "rate",
+        # Superlative keywords (implicit analytical intent)
+        "highest",
+        "lowest",
+        "strongest",
+        "weakest",
+        "best",
+        "worst",
+        "greatest",
+        "least",
+        "most",
+        "fewest",
+        "largest",
+        "smallest",
+        "maximum",
+        "minimum",
+        # Ranking keywords (implicit analytical intent)
+        "top",
+        "bottom",
+        "rank",
+        "ranking",
+        "ranked",
+        "leading",
+        "trailing",
+        "first",
+        "last",
+        # Comparative keywords (implicit analytical intent)
+        "better",
+        "worse",
+        "higher",
+        "lower",
+        "more than",
+        "less than",
+        "greater than",
+        "smaller than",
+        "relative to",
+        "compared to",
+        "outperform",
+        "underperform",
     }
 
     query_lower = query.lower()
 
     # Check if any analytical keyword is present in the query
     if any(keyword in query_lower for keyword in analytical_keywords):
+        return QueryComplexity.ANALYTICAL
+
+    # Pattern detection: Superlative questions (implicit analytical intent)
+    # Matches: "which X had the strongest Y", "what's the highest Z", "who performed best"
+    superlative_question_pattern = r"\b(which|what|who|show|list|identify)\b.*(strongest|highest|lowest|best|worst|top|most|least|greatest|largest|smallest)\b"
+    if re.search(superlative_question_pattern, query_lower):
+        logger.debug(f"Query classified as ANALYTICAL via superlative pattern: '{query[:50]}...'")
+        return QueryComplexity.ANALYTICAL
+
+    # Pattern detection: Top-N queries (implicit analytical intent)
+    # Matches: "top 3 regions", "bottom 5 products", "rank the divisions"
+    top_n_pattern = r"\b(top|bottom)\s+\d+\b|rank(ed|ing)?\s+(the\s+)?[a-z]+"
+    if re.search(top_n_pattern, query_lower):
+        logger.debug(f"Query classified as ANALYTICAL via top-N/ranking pattern: '{query[:50]}...'")
         return QueryComplexity.ANALYTICAL
 
     return QueryComplexity.SIMPLE
@@ -472,6 +524,7 @@ async def decompose_query(query: str, complexity: QueryComplexity) -> WorkflowPl
         metadata={
             "task_count": len(tasks),
             "estimated_time_ms": len(tasks) * 1500,  # Rough estimate: 1.5s per task
+            "pattern": "generic_analytical",  # FIX: Add pattern field (was missing, caused "unknown")
         },
     )
 

@@ -34,8 +34,8 @@ class TestAnalysisAgentWorkflow:
         with structured financial data input.
         """
         result_json = await analysis_agent(
-            data={"Q3_2023_revenue": 10.0, "Q3_2024_revenue": 12.0},
-            analysis_type="yoy_growth",
+            instruction="Calculate yoy_growth analysis",
+            context={"data": {"Q3_2023_revenue": 10.0, "Q3_2024_revenue": 12.0}},
         )
 
         result = AnalysisResult.model_validate_json(result_json)
@@ -55,8 +55,8 @@ class TestAnalysisAgentWorkflow:
         (budget ~$0.10 per run, includes actual LLM latency)
         """
         result_json = await analysis_agent(
-            data={"budget": 100.0, "actual": 85.0},
-            analysis_type="variance",
+            instruction="Calculate variance analysis",
+            context={"data": {"budget": 100.0, "actual": 85.0}},
         )
 
         result = AnalysisResult.model_validate_json(result_json)
@@ -83,8 +83,8 @@ class TestAnalysisAgentWorkflow:
 
         for analysis_type, data, _expected_format in test_cases:
             result_json = await analysis_agent(
-                data=data,
-                analysis_type=analysis_type,
+                instruction=f"Calculate {analysis_type} analysis",
+                context={"data": data},
             )
 
             result = AnalysisResult.model_validate_json(result_json)
@@ -104,8 +104,8 @@ class TestAnalysisAgentWorkflow:
         start = time.time()
 
         result_json = await analysis_agent(
-            data={"Q3_2023": 10.0, "Q3_2024": 12.0},
-            analysis_type="yoy_growth",
+            instruction="Calculate yoy_growth analysis",
+            context={"data": {"Q3_2023": 10.0, "Q3_2024": 12.0}},
         )
 
         elapsed_s = time.time() - start
@@ -127,24 +127,24 @@ class TestAnalysisAgentWorkflow:
         """
         # Increasing trend
         result_json = await analysis_agent(
-            data={"Q1": 10.0, "Q2": 12.0, "Q3": 14.0},
-            analysis_type="trend",
+            instruction="Calculate trend analysis",
+            context={"data": {"Q1": 10.0, "Q2": 12.0, "Q3": 14.0}},
         )
         result = AnalysisResult.model_validate_json(result_json)
         assert result.formatted_value == "increasing"
 
         # Decreasing trend
         result_json = await analysis_agent(
-            data={"Q1": 14.0, "Q2": 12.0, "Q3": 10.0},
-            analysis_type="trend",
+            instruction="Calculate trend analysis",
+            context={"data": {"Q1": 14.0, "Q2": 12.0, "Q3": 10.0}},
         )
         result = AnalysisResult.model_validate_json(result_json)
         assert result.formatted_value == "decreasing"
 
         # Stable trend
         result_json = await analysis_agent(
-            data={"Q1": 10.0, "Q2": 10.0, "Q3": 10.0},
-            analysis_type="trend",
+            instruction="Calculate trend analysis",
+            context={"data": {"Q1": 10.0, "Q2": 10.0, "Q3": 10.0}},
         )
         result = AnalysisResult.model_validate_json(result_json)
         assert result.formatted_value == "stable"
@@ -269,8 +269,8 @@ class TestAnalysisAgentWorkflow:
         """
         # Invalid data (missing budget key)
         result_json = await analysis_agent(
-            data={"actual": 100.0},  # Missing 'budget' key for variance
-            analysis_type="variance",
+            instruction="Calculate variance between budget and actual",
+            context={"data": {"actual": 100.0}},  # Missing 'budget' key for variance
         )
 
         result_obj = json.loads(result_json)
@@ -278,7 +278,6 @@ class TestAnalysisAgentWorkflow:
         # Should return error metadata, not crash
         assert isinstance(result_obj, dict)
         assert "error" in result_obj
-        assert "analysis_type" in result_obj
         assert result_obj.get("success") is False
 
     @pytest.mark.asyncio
@@ -293,11 +292,13 @@ class TestAnalysisAgentWorkflow:
 
         for i in range(3):
             result_json = await analysis_agent(
-                data={
-                    "value_1": 10.0 + i,
-                    "value_2": 12.0 + i,
+                instruction="Calculate yoy_growth analysis",
+                context={
+                    "data": {
+                        "value_1": 10.0 + i,
+                        "value_2": 12.0 + i,
+                    }
                 },
-                analysis_type="yoy_growth",
             )
 
             result = AnalysisResult.model_validate_json(result_json)
