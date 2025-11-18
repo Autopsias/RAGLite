@@ -153,6 +153,9 @@ Format your response as JSON with the following structure:
 
     # Parse Mistral's response
     response_text = response.choices[0].message.content if response.choices else ""
+    # Ensure response_text is not None for type checker
+    if response_text is None:
+        response_text = ""
 
     try:
         # Try to parse as JSON
@@ -257,6 +260,9 @@ Format your response as JSON with the following structure:
 
     # Parse OpenAI's response
     response_text = response.choices[0].message.content if response.choices else ""
+    # Ensure response_text is not None for type checker
+    if response_text is None:
+        response_text = ""
 
     try:
         # Try to parse as JSON
