@@ -365,82 +365,471 @@ Query → Classifier → Simple Query? → Direct Answer (Epic 2)
 
 ## Error Handling Strategy
 
-### Error Classification
+**Story 3.7 Enhancement:** Production-grade error handling with graceful degradation, user-friendly messaging, and comprehensive metrics tracking.
 
-**Level 1: Agent Execution Errors**
-- Retrieval Agent fails (Qdrant timeout, connection error)
-- Analysis Agent fails (LLM API error)
-- Synthesis Agent fails (citation generation error)
+### Timeout Handling (AC1 - NFR5, NFR26)
 
-**Level 2: Orchestrator Errors**
-- Orchestrator LLM fails to decide next agent
-- Orchestrator exceeds token limit
-- Orchestrator times out (>30s)
+**Workflow-Level Timeout (30s):**
+```python
+from raglite.agentic.fallback import execute_workflow_with_timeout
 
-**Level 3: System Errors**
-- MCP server crash
-- Database connection failures
-- Memory exhaustion
+async def analytical_query_financial_documents(query: str) -> QueryResponse:
+    """Execute analytical query with 30s workflow timeout (NFR5)."""
+    try:
+        result = await execute_workflow_with_timeout(
+            orchestrate_query,
+            query=query,
+            timeout_seconds=30.0
+        )
+        return result
+    except asyncio.TimeoutError:
+        # Immediate Tier 4 fallback - no partial results available
+        return await handle_workflow_failure(
+            query=query,
+            complexity=QueryComplexity.ANALYTICAL,
+            partial_results=[],
+            error=asyncio.TimeoutError("Workflow exceeded 30s timeout"),
+            total_time_ms=30000
+        )
+```
 
-### Graceful Degradation Strategy
+**Per-Agent Timeout (15s):**
+```python
+from raglite.agentic.fallback import execute_with_timeout
 
-**Tier 1: Full Orchestration (Best)**
-- All 3 agents execute successfully
-- Return synthesized answer with citations
-- Confidence: HIGH
+async def retrieval_agent(query: str) -> RetrievalOutput:
+    """Retrieval agent with 15s timeout (NFR26)."""
+    try:
+        result = await execute_with_timeout(
+            agent_fn=_execute_retrieval,
+            instruction=query,
+            context={},
+            timeout_seconds=15.0
+        )
+        return result
+    except asyncio.TimeoutError:
+        # Trigger Tier 2 or Tier 4 depending on partial results
+        raise RetrievalError("Retrieval agent timeout after 15s")
+```
 
-**Tier 2: Partial Orchestration (Good)**
-- Retrieval + Analysis succeed, Synthesis fails
-- Return analysis facts with basic formatting
-- Confidence: MEDIUM
+**Timeout Hierarchy:**
+- **Individual Agent:** 15s timeout → Tier 2 partial workflow
+- **Workflow Total:** 30s timeout → Tier 4 Epic 1/2 fallback
 
-**Tier 3: Retrieval Only (Acceptable)**
-- Only Retrieval succeeds
-- Return raw chunks (Epic 2 behavior)
-- Confidence: LOW
+### Error Classification (AC2)
 
-**Tier 4: Complete Failure (Fallback)**
-- All agents fail
-- Return error message with fallback to Epic 2 simple search
-- Confidence: NONE
+**Error Type Taxonomy:**
+```python
+from raglite.agentic.fallback import ErrorType, classify_error
 
-### Error Handling Code Pattern
+class ErrorType(str, Enum):
+    """Production error classification for graceful degradation."""
+    TIMEOUT = "timeout"              # Agent/workflow timeout
+    CONNECTION_ERROR = "connection"  # Qdrant, database unavailable
+    API_FAILURE = "api_failure"      # Claude, Mistral API errors
+    UNEXPECTED = "unexpected"        # All other errors
+
+# Automatic error classification
+def classify_error(error: Exception) -> ErrorType:
+    """Classify error by type for structured logging and fallback routing."""
+    error_name = type(error).__name__
+    error_str = str(error).lower()
+
+    # Timeout detection
+    if isinstance(error, (TimeoutError, asyncio.TimeoutError)):
+        return ErrorType.TIMEOUT
+
+    # Connection error detection
+    if isinstance(error, ConnectionError) or any(
+        keyword in error_str for keyword in ["connection", "qdrant", "postgres"]
+    ):
+        return ErrorType.CONNECTION_ERROR
+
+    # API failure detection (Claude, Mistral, OpenAI)
+    if any(keyword in error_str for keyword in ["api", "http", "anthropic", "mistral"]) or \
+       error_name in ("HTTPError", "APIError", "RateLimitError"):
+        return ErrorType.API_FAILURE
+
+    return ErrorType.UNEXPECTED
+```
+
+**Error Severity Mapping:**
+
+| Error Type | Severity | Typical Cause | Fallback Tier |
+|------------|----------|---------------|---------------|
+| TIMEOUT | Medium | Slow LLM inference, large document set | Tier 2 (partial) |
+| CONNECTION_ERROR | High | Qdrant down, network issues | Tier 4 (Epic 1) |
+| API_FAILURE | High | Claude/Mistral outage, rate limits | Tier 2 or Tier 4 |
+| UNEXPECTED | Critical | Code bugs, data corruption | Tier 4 (Epic 1) |
+
+### Graceful Degradation Strategy (4-Tier Model)
+
+**Tier 1: Full Orchestration (Best) ✅**
+- **Condition:** All 3 agents execute successfully
+- **Response:** Synthesized answer with citations
+- **Confidence:** `high`
+- **Limitations:** None
+- **User Experience:** Full analytical response with reasoning steps
+
+**Tier 2: Partial Workflow (Good) ⚠️**
+- **Condition:** Retrieval + Analysis succeed, Synthesis fails
+- **Response:** Analysis facts with basic formatting (no synthesis)
+- **Confidence:** `medium`
+- **Limitations:** "Answer lacks full synthesis due to processing delays"
+- **User Experience:** Structured facts from analysis, partial results preserved
+
+**Tier 3: Retrieval Only (Acceptable) ⚠️**
+- **Condition:** Only Retrieval succeeds
+- **Response:** Raw document chunks (Epic 2 behavior)
+- **Confidence:** `low`
+- **Limitations:** "Unable to provide analysis, showing raw documents"
+- **User Experience:** Basic search results without AI reasoning
+
+**Tier 4: Epic 1/2 Fallback (Minimal) ❌**
+- **Condition:** All agents fail (connection error, workflow timeout)
+- **Response:** Fallback to Epic 1/2 simple search or error message
+- **Confidence:** `none`
+- **Limitations:** "Advanced analysis unavailable, using basic search"
+- **User Experience:** Graceful error message with alternative query suggestion
+
+**Fallback Decision Tree:**
+```
+Agent Failure
+    ↓
+Classify Error Type → TIMEOUT | CONNECTION_ERROR | API_FAILURE | UNEXPECTED
+    ↓
+Check Partial Results
+    ↓
+    ├─ Some agents succeeded? → Tier 2 (Partial Workflow)
+    │   └─ Return partial results + user-friendly error message
+    │
+    └─ All agents failed? → Tier 4 (Epic 1 Fallback)
+        └─ Return basic search + alternative query suggestion
+```
+
+### User-Friendly Error Messages (AC4)
+
+**Design Principle:** No technical jargon, helpful context, actionable guidance
+
+**Error Message Templates:**
+```python
+from raglite.agentic.fallback import create_user_friendly_error_message
+
+def create_user_friendly_error_message(
+    error_type: ErrorType,
+    tier: FallbackTier
+) -> str:
+    """Generate user-friendly error message (no technical jargon)."""
+
+    # TIMEOUT errors
+    if error_type == ErrorType.TIMEOUT:
+        if tier == FallbackTier.PARTIAL_WORKFLOW:
+            return "Our analysis system is experiencing delays, but we found some results."
+        elif tier == FallbackTier.EPIC1_FALLBACK:
+            return "Our advanced analysis system is taking longer than usual. Here are basic search results."
+
+    # API_FAILURE errors
+    elif error_type == ErrorType.API_FAILURE:
+        if tier == FallbackTier.PARTIAL_WORKFLOW:
+            return "Our AI service is temporarily unavailable. We've provided partial results based on available data."
+        elif tier == FallbackTier.EPIC1_FALLBACK:
+            return "Our AI analysis service is currently unavailable. Here are the documents we found."
+
+    # CONNECTION_ERROR errors
+    elif error_type == ErrorType.CONNECTION_ERROR:
+        if tier == FallbackTier.PARTIAL_WORKFLOW:
+            return "We're experiencing database connectivity issues, but retrieved some results."
+        elif tier == FallbackTier.EPIC1_FALLBACK:
+            return "Our document database is currently unavailable. Using backup search."
+
+    # UNEXPECTED errors
+    elif error_type == ErrorType.UNEXPECTED:
+        if tier == FallbackTier.PARTIAL_WORKFLOW:
+            return "We encountered an unexpected issue during analysis. Here are the partial results we gathered."
+        elif tier == FallbackTier.EPIC1_FALLBACK:
+            return "We encountered an unexpected issue. Please try a simpler query or contact support."
+
+    return "We encountered an issue processing your query. Please try again."
+```
+
+**User-Facing Error Examples:**
+
+| Technical Error | User-Friendly Message |
+|-----------------|----------------------|
+| `asyncio.TimeoutError: Agent timeout after 15s` | "Our analysis system is experiencing delays, but we found some results." |
+| `ConnectionError: Qdrant unreachable` | "Our document database is currently unavailable. Using backup search." |
+| `HTTPError: Anthropic API 503` | "Our AI service is temporarily unavailable. We've provided partial results." |
+| `ValueError: Invalid chunk metadata` | "We encountered an unexpected issue during analysis. Here are the partial results we gathered." |
+
+### Alternative Query Suggestions (AC4)
+
+**Smart Query Reformulation:**
+```python
+from raglite.agentic.fallback import suggest_alternative_query
+
+def suggest_alternative_query(query: str, error_type: ErrorType) -> str | None:
+    """Suggest alternative query based on failure type."""
+
+    if error_type == ErrorType.TIMEOUT:
+        # Query too complex - suggest simplification
+        return "Try a simpler query like 'What was Q3 revenue?' or break into smaller questions"
+
+    elif error_type in (ErrorType.API_FAILURE, ErrorType.CONNECTION_ERROR):
+        # Transient error - suggest retry
+        return "Please wait a moment and try again, or rephrase your question"
+
+    elif error_type == ErrorType.UNEXPECTED:
+        # No specific suggestion for unexpected errors
+        return None
+```
+
+**Example User Experience:**
+```
+User Query: "Calculate YoY revenue growth from Q3 2023 to Q3 2024 with variance explanation"
+
+[TIMEOUT after 15s]
+
+Response:
+  Answer: "Our analysis system is experiencing delays, but we found 5 documents
+           mentioning Q3 revenue data from 2023-2024."
+
+  Limitations:
+    - "Unable to complete full analysis due to processing delays"
+
+  Alternative Query Suggestion:
+    - "Try a simpler query like 'What was Q3 revenue?' or break into smaller questions"
+
+  Confidence: medium
+  Tier: partial_workflow
+```
+
+### Metrics Tracking (AC5)
+
+**Workflow Metrics Model:**
+```python
+from raglite.shared.models import WorkflowMetrics
+
+class WorkflowMetrics(BaseModel):
+    """Workflow execution metrics for degradation monitoring (Story 3.7)."""
+    query_id: str                    # Unique query identifier
+    query: str                       # Original user query
+    tier: str                        # "full_orchestration" | "partial_analysis" | "retrieval_only" | "epic1_fallback"
+    confidence: str                  # "high" | "medium" | "low" | "none"
+    execution_time_ms: int           # Total workflow time
+    agents_invoked: list[str]        # ["retrieval", "analysis", "synthesis"]
+    agents_failed: list[str]         # ["synthesis"] for Tier 2
+    error_type: str | None           # "timeout" | "connection" | "api_failure" | "unexpected"
+    timestamp: str                   # ISO 8601 timestamp
+```
+
+**Metrics Logging:**
+```python
+from raglite.agentic.fallback import log_workflow_metrics
+
+# Log workflow completion
+log_workflow_metrics(
+    query_id="abc-123",
+    query="What was Q3 revenue?",
+    tier=FallbackTier.PARTIAL_WORKFLOW,
+    confidence="medium",
+    execution_time_ms=18000,
+    agents_invoked=["retrieval", "analysis"],
+    agents_failed=["synthesis"],
+    error_type=ErrorType.TIMEOUT
+)
+```
+
+**Aggregated Metrics (for CloudWatch/DataDog):**
+```python
+from raglite.agentic.fallback import calculate_tier_rates
+
+# Calculate tier success rates from workflow logs
+workflow_logs = [
+    {"tier": "full", "timestamp": "..."},
+    {"tier": "full", "timestamp": "..."},
+    {"tier": "partial", "timestamp": "..."},
+    {"tier": "epic1_fallback", "timestamp": "..."},
+]
+
+rates = calculate_tier_rates(workflow_logs)
+# Returns:
+# {
+#     "tier_1_success_rate": 50.0,    # 2/4 queries
+#     "tier_2_fallback_rate": 25.0,   # 1/4 queries
+#     "tier_4_epic1_rate": 25.0       # 1/4 queries
+# }
+```
+
+**Target Metrics (Production - Epic 5):**
+
+| Metric | Target | Alert Threshold | Notes |
+|--------|--------|-----------------|-------|
+| Tier 1 Success Rate | ≥95% | <90% | Primary quality indicator |
+| Tier 2 Fallback Rate | <5% | >10% | Partial workflow degradation |
+| Tier 4 Epic 1 Rate | <0.1% | >1% | Complete failure rate |
+| Mean Execution Time | <12s | >20s | Total workflow latency |
+| Timeout Error Rate | <2% | >5% | Agent/workflow timeouts |
+| API Failure Rate | <1% | >3% | Claude/Mistral API errors |
+
+### Production Observability (AC5)
+
+**Structured Logging Example:**
+```python
+# Tier 2 degradation logging
+logger.warning(
+    "Workflow degraded to Tier 2 - synthesis failed",
+    extra={
+        "query_id": "abc-123",
+        "tier": "partial_workflow",
+        "confidence": "medium",
+        "agents_invoked": ["retrieval", "analysis"],
+        "agents_failed": ["synthesis"],
+        "error_type": "timeout",
+        "execution_time_ms": 18000,
+        "user_friendly_error": "Our analysis system is experiencing delays..."
+    }
+)
+```
+
+**CloudWatch Dashboard (Epic 5):**
+- Tier 1/2/3/4 success rate trends (line graph)
+- Error type distribution (pie chart)
+- Agent failure breakdown (bar chart)
+- Execution time distribution by tier (histogram)
+- Degradation event count (counter)
+
+**Alerting Rules (Epic 5):**
+```yaml
+# CloudWatch Alarm - Tier 1 Success Rate
+MetricName: tier_1_success_rate
+Threshold: 90%
+EvaluationPeriods: 3
+TreatMissingData: notBreaching
+Actions:
+  - SNS: arn:aws:sns:us-east-1:123456789012:raglite-alerts
+
+# CloudWatch Alarm - Tier 4 Epic 1 Rate
+MetricName: tier_4_epic1_rate
+Threshold: 1%
+EvaluationPeriods: 2
+TreatMissingData: notBreaching
+Actions:
+  - SNS: arn:aws:sns:us-east-1:123456789012:raglite-critical-alerts
+```
+
+### Error Handling Code Pattern (Updated)
 
 ```python
+from raglite.agentic.fallback import (
+    handle_workflow_failure,
+    execute_workflow_with_timeout,
+    classify_error,
+    log_workflow_metrics,
+)
+from raglite.agentic.planner import QueryComplexity
+
 @mcp.tool()
 async def analytical_query_financial_documents(query: str) -> QueryResponse:
-    """Analytical query with graceful degradation."""
+    """Analytical query with production-grade graceful degradation (Story 3.7)."""
+
+    query_id = generate_query_id()
+    start_time = time.time()
+    partial_results = []
 
     try:
-        # Tier 1: Full orchestration
-        result = await orchestrator.invoke_async(query)
-        return QueryResponse(
-            answer=str(result),
-            confidence="high",
-            tier="full_orchestration"
+        # Execute workflow with 30s timeout (NFR5)
+        result = await execute_workflow_with_timeout(
+            orchestrate_analytical_query,
+            query=query,
+            timeout_seconds=30.0
         )
 
-    except RetrievalError as e:
-        # Tier 4: Fallback to Epic 2
-        logger.warning("Retrieval failed, falling back to Epic 2", extra={"error": str(e)})
-        return await simple_query_financial_documents(query)
+        # Tier 1: Full orchestration success
+        log_workflow_metrics(
+            query_id=query_id,
+            query=query,
+            tier=FallbackTier.FULL_WORKFLOW,
+            confidence="high",
+            execution_time_ms=int((time.time() - start_time) * 1000),
+            agents_invoked=["retrieval", "analysis", "synthesis"],
+            agents_failed=[],
+            error_type=None
+        )
 
-    except AnalysisError as e:
-        # Tier 3: Return raw chunks
-        logger.warning("Analysis failed, returning raw chunks", extra={"error": str(e)})
-        chunks = await multi_index_search(query)
-        return format_chunks_as_response(chunks, confidence="low")
-
-    except SynthesisError as e:
-        # Tier 2: Return analysis without synthesis
-        logger.warning("Synthesis failed, returning analysis", extra={"error": str(e)})
-        analysis = e.partial_analysis
-        return format_analysis_as_response(analysis, confidence="medium")
+        return QueryResponse(
+            answer=result.answer,
+            confidence="high",
+            tier="full_orchestration",
+            limitations=[],
+            sources=result.sources
+        )
 
     except Exception as e:
-        # Tier 4: Unexpected failure
-        logger.error("Orchestration failed", extra={"error": str(e)})
-        return await simple_query_financial_documents(query)
+        # Classify error and trigger graceful degradation
+        error_type = classify_error(e)
+        execution_time_ms = int((time.time() - start_time) * 1000)
+
+        # Determine complexity for fallback routing
+        complexity = QueryComplexity.ANALYTICAL
+
+        # Handle workflow failure with graceful degradation
+        fallback_response = await handle_workflow_failure(
+            query=query,
+            complexity=complexity,
+            partial_results=partial_results,
+            error=e,
+            total_time_ms=execution_time_ms
+        )
+
+        # Log degradation metrics
+        log_workflow_metrics(
+            query_id=query_id,
+            query=query,
+            tier=fallback_response.tier,
+            confidence=fallback_response.confidence,
+            execution_time_ms=execution_time_ms,
+            agents_invoked=[r.agent_type for r in fallback_response.partial_results if r.success],
+            agents_failed=[r.agent_type for r in fallback_response.partial_results if not r.success],
+            error_type=error_type
+        )
+
+        return QueryResponse(
+            answer=fallback_response.answer,
+            confidence=fallback_response.confidence,
+            tier=fallback_response.tier.value,
+            limitations=fallback_response.limitations,
+            error_summary=fallback_response.error_summary,
+            alternative_query=fallback_response.alternative_query,
+            sources=fallback_response.sources if hasattr(fallback_response, 'sources') else []
+        )
+```
+
+### Testing Strategy (AC6)
+
+**Unit Tests (31 tests):**
+- `tests/unit/test_fallback_story_3_7.py`
+- Error classification logic
+- User-friendly message generation
+- Alternative query suggestions
+- Metrics tracking and aggregation
+
+**Integration Tests (12 tests - @pytest.mark.slow):**
+- `tests/integration/test_graceful_degradation_story_3_7.py`
+- Agent timeout scenarios
+- LLM API failure scenarios
+- Workflow timeout (30s) scenarios
+- Qdrant connection failure
+- Partial success (Tier 2) scenarios
+- All 4 degradation tiers validation
+- Error message quality validation
+
+**Test Coverage:**
+```bash
+# Run Story 3.7 tests
+uv run pytest tests/unit/test_fallback_story_3_7.py -v
+uv run pytest tests/integration/test_graceful_degradation_story_3_7.py -v -m slow
+
+# Expected: 43/43 tests passing
 ```
 
 ---

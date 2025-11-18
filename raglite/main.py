@@ -355,13 +355,112 @@ async def analytical_query_financial_documents(
          "4. Performed comparative analysis",
          "5. Synthesized final answer from 4 workflow tasks"]
 
-    Note - Graceful Degradation (AC8):
-        If the workflow fails (timeout, agent error), the system automatically
-        falls back to Epic 1 basic retrieval, ensuring users always get a response.
-        The fallback_tier field indicates the quality level:
-        - "full": All agents succeeded
-        - "partial": Some agents succeeded, partial answer provided
-        - "epic1_fallback": Workflow failed, basic search results returned
+    Graceful Degradation (Story 3.7):
+        RAGLite's workflow orchestration includes production-grade error handling
+        that ensures users ALWAYS receive a response, even during system issues.
+
+        **4-Tier Degradation System:**
+
+        1. **Tier 1 - Full Orchestration (Best):**
+           - All 3 agents succeed (Retrieval → Analysis → Synthesis)
+           - Synthesized answer with citations
+           - Confidence: "high"
+           - Example: "Revenue grew 15.3% YoY from $245M in 2022 to $283M in 2023..."
+
+        2. **Tier 2 - Partial Workflow (Good):**
+           - Some agents succeed, others fail
+           - Partial results with user-friendly error message
+           - Confidence: "medium"
+           - Example: "We found Q3 revenue data but experienced delays during analysis.
+                      Based on retrieved documents: Q3 2024 revenue was $283M..."
+
+        3. **Tier 3 - Retrieval Only (Acceptable):**
+           - Only retrieval succeeds, no analysis
+           - Raw document excerpts returned
+           - Confidence: "low"
+           - Example: "Found 5 relevant documents: [document excerpts...]"
+
+        4. **Tier 4 - Epic 1/2 Fallback (Minimal):**
+           - All agents fail, fallback to basic search
+           - User-friendly error message with alternative query suggestion
+           - Confidence: "none"
+           - Example: "Our advanced analysis system is experiencing issues.
+                      Here are the documents we found..."
+
+        **Timeout Handling:**
+        - Workflow-level timeout: 30 seconds (NFR5)
+        - Per-agent timeout: 15 seconds (NFR26)
+        - Timeouts trigger automatic tier degradation
+
+        **Error Classification & User-Friendly Messages:**
+
+        RAGLite automatically classifies errors and provides user-friendly messages
+        (no technical jargon like "asyncio.TimeoutError"):
+
+        | Technical Error | User-Friendly Message | Fallback Tier |
+        |-----------------|----------------------|---------------|
+        | Agent timeout (>15s) | "Our analysis system is experiencing delays, but we found some results." | Tier 2 |
+        | Workflow timeout (>30s) | "Our advanced analysis system is taking longer than usual. Here are basic search results." | Tier 4 |
+        | Claude/Mistral API 503 | "Our AI service is temporarily unavailable. We've provided partial results based on available data." | Tier 2 |
+        | Qdrant connection error | "We're experiencing database connectivity issues, but retrieved some results." | Tier 4 |
+        | Unexpected error | "We encountered an unexpected issue during analysis. Here are the partial results we gathered." | Tier 2/4 |
+
+        **Alternative Query Suggestions:**
+
+        When degradation occurs, RAGLite suggests alternative queries:
+        - Timeout errors: "Try a simpler query like 'What was Q3 revenue?' or break into smaller questions"
+        - API failures: "Please wait a moment and try again, or rephrase your question"
+        - Connection errors: "Please wait a moment and try again"
+
+        **Example - Timeout Degradation:**
+        ```
+        >>> request = AnalyticalQueryRequest(
+        ...     query="Calculate YoY revenue growth with variance explanation and trend analysis"
+        ... )
+        >>> response = await analytical_query_financial_documents(request)
+        >>> print(response.answer)
+        "Our analysis system is experiencing delays, but we found 5 documents
+         mentioning revenue data from 2022-2024."
+        >>> print(response.confidence)
+        "medium"
+        >>> print(response.workflow_metadata["fallback_tier"])
+        "partial"
+        >>> print(response.limitations)
+        ["Unable to complete full analysis due to processing delays"]
+        >>> # Alternative query suggestion provided in response
+        "Try a simpler query like 'What was 2024 revenue?' or break into smaller questions"
+        ```
+
+        **Example - API Failure Degradation:**
+        ```
+        >>> request = AnalyticalQueryRequest(
+        ...     query="Compare Q3 and Q4 EBITDA with variance drivers"
+        ... )
+        >>> response = await analytical_query_financial_documents(request)
+        >>> print(response.answer)
+        "Our AI service is temporarily unavailable. Here are the documents we found:
+         - Q3_2024_Report.pdf
+         - Q4_2024_Report.pdf"
+        >>> print(response.confidence)
+        "low"
+        >>> print(response.workflow_metadata["fallback_tier"])
+        "epic1_fallback"
+        ```
+
+        **Observability & Metrics:**
+
+        All degradation events are logged with structured metadata:
+        - Degradation tier (full, partial, epic1_fallback)
+        - Error type (timeout, connection, api_failure, unexpected)
+        - Agents invoked and agents failed
+        - Execution time and query details
+
+        Target metrics (Epic 5 production monitoring):
+        - Tier 1 success rate: ≥95%
+        - Tier 2 fallback rate: <5%
+        - Tier 4 Epic 1 rate: <0.1%
+
+        See docs/user-guide-graceful-degradation.md for end-user documentation.
     """
     logger.info(
         "Analytical query received",

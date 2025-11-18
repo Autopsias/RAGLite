@@ -1,2 +1,2 @@
-# Context XML files with story keys (not secrets)
-docs/stories/*.context.xml
+# Story keys are not API keys - they follow pattern: epic-story-kebab-case-title
+3-7-graceful-degradation-for-workflow-failures

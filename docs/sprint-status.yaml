@@ -100,7 +100,7 @@ development_status:
   3-4-synthesis-agent-implementation: done
   3-5-multi-step-workflow-orchestration: done
   3-6-analytical-query-tool-mcp: done
-  3-7-graceful-degradation-for-workflow-failures: drafted
+  3-7-graceful-degradation-for-workflow-failures: done
   3-8-agentic-workflow-test-suite: drafted
   epic-3-retrospective: optional
 

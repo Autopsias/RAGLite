@@ -262,5 +262,40 @@ class AnalyticalQueryResponse(BaseModel):
     )
 
 
+# Story 3.7: AC5 - Workflow metrics tracking for degradation monitoring
+class WorkflowMetrics(BaseModel):
+    """Workflow execution metrics for degradation tier tracking (AC5).
+
+    These metrics enable monitoring dashboards (Epic 5) and workflow optimization.
+    Target rates: Tier 1 ≥95%, Tier 2 <5%, Tier 3 <1%, Tier 4 <0.1%
+    """
+
+    query_id: str = Field(..., description="Unique query identifier for correlation")
+    query: str = Field(..., description="Original user query (for debugging)")
+    tier: str = Field(
+        ...,
+        description=(
+            "Fallback tier: 'full_orchestration', 'partial_analysis', "
+            "'retrieval_only', or 'epic1_fallback'"
+        ),
+    )
+    confidence: str = Field(
+        ..., description="Answer confidence: 'high', 'medium', 'low', or 'none'"
+    )
+    execution_time_ms: int = Field(..., description="Total workflow execution time in milliseconds")
+    agents_invoked: list[str] = Field(
+        default_factory=list, description="List of agents invoked (e.g., ['retrieval', 'analysis'])"
+    )
+    agents_failed: list[str] = Field(
+        default_factory=list,
+        description="List of agents that failed (e.g., ['synthesis'] for Tier 2)",
+    )
+    error_type: str | None = Field(
+        default=None,
+        description="Error type if workflow failed: 'timeout', 'connection', 'api_failure', or 'unexpected'",
+    )
+    timestamp: str = Field(..., description="Timestamp of workflow execution (ISO 8601 format)")
+
+
 # Type alias for job identifiers (used in ingestion pipeline)
 JobID = str

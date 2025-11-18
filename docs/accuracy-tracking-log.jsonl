@@ -437,3 +437,5 @@
 {"timestamp": "2025-11-18T01:48:03.638283", "subset_size": 3, "retrieval_accuracy": 0.0, "attribution_accuracy": 0.0, "p50_latency_ms": 45.551792019978166, "p95_latency_ms": 3325.12916601263, "errors": 0, "query_ids": [14, 20, 29]}
 {"timestamp": "2025-11-18T09:13:35.173304", "subset_size": 5, "retrieval_accuracy": 20.0, "attribution_accuracy": 0.0, "p50_latency_ms": 42.46591601986438, "p95_latency_ms": 4188.428917026613, "errors": 0, "query_ids": [5, 45, 4, 25, 30]}
 {"timestamp": "2025-11-18T09:13:43.804728", "subset_size": 3, "retrieval_accuracy": 0.0, "attribution_accuracy": 0.0, "p50_latency_ms": 43.50812500342727, "p95_latency_ms": 2889.115500031039, "errors": 0, "query_ids": [22, 27, 12]}
+{"timestamp": "2025-11-18T17:05:14.094959", "subset_size": 5, "retrieval_accuracy": 20.0, "attribution_accuracy": 0.0, "p50_latency_ms": 54.02979103382677, "p95_latency_ms": 3964.0857079648413, "errors": 0, "query_ids": [44, 24, 3, 9, 42]}
+{"timestamp": "2025-11-18T17:05:23.429330", "subset_size": 3, "retrieval_accuracy": 0.0, "attribution_accuracy": 0.0, "p50_latency_ms": 53.266874980181456, "p95_latency_ms": 3466.479708964471, "errors": 0, "query_ids": [21, 30, 8]}

@@ -1,0 +1,268 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3.7</storyId>
+    <title>Graceful Degradation for Workflow Failures</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-18</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-7-graceful-degradation-for-workflow-failures.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>to handle agentic workflow failures gracefully</iWant>
+    <soThat>users receive useful responses even when complex workflows fail</soThat>
+    <tasks>
+- Task 1: Enhance timeout handling and failure detection (AC1, AC2) - 3 hours
+  - 1.1: Review existing timeout implementation in raglite/agentic/fallback.py
+  - 1.2: Add workflow-level timeout (30s) wrapping entire orchestration
+  - 1.3: Add per-agent timeout (15s) for each agent invocation (already in Story 3.5)
+  - 1.4: Enhance error detection: classify errors by type (timeout, connection, API, unexpected)
+  - 1.5: Add structured logging for each failure type with context
+  - 1.6: Create unit tests for error classification logic
+
+- Task 2: Implement user-friendly error messages and alternative query suggestions (AC4) - 2 hours
+  - 2.1: Create error message templates for each failure type
+  - 2.2: Add alternative query suggestion logic based on failure type
+  - 2.3: Format partial results when available (show what succeeded)
+  - 2.4: Create FallbackResponseFormatter class for consistent user messaging
+  - 2.5: Add unit tests for error message formatting
+  - 2.6: Add examples to docstrings (timeout, API failure, partial success)
+
+- Task 3: Add metrics tracking for workflow degradation (AC5) - 2 hours
+  - 3.1: Create WorkflowMetrics model with tier success rates
+  - 3.2: Add metrics logging after each workflow execution
+  - 3.3: Log degradation events with structured metadata (tier, query_id, error_type)
+  - 3.4: Add metrics aggregation helper function for analysis
+  - 3.5: Create unit tests for metrics tracking logic
+
+- Task 4: Create integration tests for graceful degradation scenarios (AC6) - 4 hours
+  - 4.1: Create tests/integration/test_graceful_degradation.py
+  - 4.2: Test scenario: Agent timeout (simulate with mock delay)
+  - 4.3: Test scenario: LLM API failure (simulate with mock exception)
+  - 4.4: Test scenario: Workflow timeout (30s)
+  - 4.5: Test scenario: Qdrant connection failure
+  - 4.6: Test scenario: Partial success (retrieval + analysis succeed, synthesis fails)
+  - 4.7: Validate fallback response format for each scenario
+  - 4.8: Validate partial results preserved when available
+  - 4.9: Validate user-friendly error messages included
+  - 4.10: Mark tests as @pytest.mark.slow for CI/CD
+
+- Task 5: Document graceful degradation behavior and failure handling (AC1-AC6) - 2 hours
+  - 5.1: Add "Error Handling" section to docs/architecture/epic-3-orchestration-design.md
+  - 5.2: Document 4-tier degradation strategy with examples
+  - 5.3: Document failure types and corresponding fallback behaviors
+  - 5.4: Document metrics tracked and alerting thresholds
+  - 5.5: Add user-facing documentation on what happens when workflows fail
+  - 5.6: Update MCP tool docstring with failure handling examples
+
+- Task 6: Add monitoring hooks for production observability (AC5) - 2 hours
+  - 6.1: Add OpenTelemetry span attributes for degradation tier
+  - 6.2: Add custom metrics for Tier 1/2/3/4 rates (CloudWatch-ready format)
+  - 6.3: Add log aggregation tags for error trend analysis
+  - 6.4: Document metrics export format for Epic 5 monitoring setup
+  - 6.5: Create example CloudWatch dashboard JSON (for future Epic 5 deployment)
+</tasks>
+  </story>
+
+  <acceptanceCriteria>
+AC1: Workflow timeout handling (>30 seconds triggers fallback)
+- Per-workflow timeout: 30s max (NFR5)
+- Per-agent timeout: 15s max (NFR26)
+- Timeout detected via asyncio.wait_for() in workflow executor
+- Timeout triggers fallback to basic retrieval (Epic 1/2)
+- Timeout logged with structured metadata (query, tier, timeout_ms)
+
+AC2: Agent failure detection and logging
+- Agent execution errors caught: connection errors, LLM API failures, timeout errors
+- Structured logging for each failure type with error context
+- Failure metadata includes: agent_name, task_id, error_type, error_message, stack_trace (if available)
+- Failures logged at WARNING level (not ERROR - graceful degradation is expected)
+- Log aggregation enables failure trend analysis
+
+AC3: Fallback to basic retrieval when workflow fails (NFR17, NFR32)
+- Fallback triggered on: any agent timeout, any agent exception, workflow timeout
+- Fallback path: Call query_financial_documents() from Epic 1/2
+- Fallback response includes: partial results (if available), error context, suggested alternative query
+- Fallback always returns a response (never complete failure)
+- Fallback tier indicated in response metadata: "epic1_fallback"
+
+AC4: User receives partial results or error message with suggested alternative query
+- Partial results preserved when available (e.g., retrieval succeeded but analysis failed)
+- Error message explains what happened without technical jargon
+- Suggested alternative query provided when possible (e.g., "Try a simpler query like 'What was Q3 revenue?'")
+- Response format: answer (partial or fallback), limitations (list of what failed), error_summary (user-friendly)
+- User experience: always helpful, never "error 500"
+
+AC5: Error rates logged for workflow improvement
+- Metrics tracked: tier_1_success_rate, tier_2_fallback_rate, tier_3_fallback_rate, tier_4_epic1_rate
+- Metrics logged to structured logs with query_id for correlation
+- Target rates: Tier 1 ≥95%, Tier 2 <5%, Tier 3 <1%, Tier 4 <0.1%
+- Metrics enable monitoring dashboards (Epic 5)
+- Metrics enable A/B testing and workflow optimization
+
+AC6: Integration test validates fallback behavior
+- Test scenarios: agent timeout, agent LLM API failure, workflow timeout, Qdrant connection failure
+- Each scenario validates: fallback triggered, partial results preserved, user-friendly error message
+- Test coverage: all 4 degradation tiers (full, partial, retrieval-only, epic1-fallback)
+- Success criteria: ≥90% of failure scenarios handled gracefully
+- Integration tests marked @pytest.mark.slow for CI/CD
+</acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-3-ai-intelligence-orchestration.md</path>
+        <title>Epic 3 PRD - Story 3.7</title>
+        <section>Story 3.7: Graceful Degradation for Workflow Failures</section>
+        <snippet>As a system, I want to handle agentic workflow failures gracefully, so that users receive useful responses even when complex workflows fail. Acceptance criteria include workflow timeout handling, agent failure detection, fallback to basic retrieval (NFR17, NFR32), user-friendly error messages, and error rate logging.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-orchestration-design.md</path>
+        <title>Epic 3 Orchestration Architecture - Error Handling Strategy</title>
+        <section>Error Handling Strategy (Graceful Degradation)</section>
+        <snippet>4-Tier Graceful Degradation: (1) Tier 1 (Best): All 3 agents succeed, return synthesized answer with citations, Confidence: HIGH. (2) Tier 2 (Good): Retrieval + Analysis succeed, Synthesis fails, return analysis facts with basic formatting, Confidence: MEDIUM. (3) Tier 3 (Acceptable): Only Retrieval succeeds, return raw chunks (Epic 2 behavior), Confidence: LOW. (4) Tier 4 (Fallback): All agents fail, return error message with fallback to Epic 2 simple search, Confidence: NONE.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-agent-patterns.md</path>
+        <title>Epic 3 Agent Patterns - Pattern 4: Error Fallback Pattern</title>
+        <section>Pattern 4: Error Fallback Pattern</section>
+        <snippet>The Error Fallback Pattern implements graceful degradation when agents fail, ensuring the system always returns *something* useful to the user rather than complete failure. Flow: Try Full Orchestration → Fail? → Try Partial → Fail? → Fallback to Baseline. RAGLite Use Case: 4-Tier Graceful Degradation with 99.9% availability target (even if Epic 3 agents fail, Epic 2 fallback works).</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/testing-strategy.md</path>
+        <title>Testing Strategy</title>
+        <section>Testing Pyramid</section>
+        <snippet>Testing pyramid: 80% unit tests (code coverage), 15% integration tests (service integration), 5% E2E tests (accuracy validation). Unit tests mock external dependencies (Qdrant, Neo4j, Claude API) with fast execution (<5 min for full suite).</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/6-complete-reference-implementation.md</path>
+        <title>Complete Reference Implementation - Error Handling Patterns</title>
+        <section>6.1 MCP Server Error Handling</section>
+        <snippet>Demonstrates structured logging with context (extra={}), error handling with specific exceptions, type hints for all functions, Google-style docstrings, and async patterns for I/O operations. Key pattern: try-except blocks with specific exception types, structured logging at appropriate levels (WARNING for graceful degradation, ERROR for unexpected failures).</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <file>
+        <path>raglite/agentic/fallback.py</path>
+        <kind>module</kind>
+        <symbol>execute_with_timeout, fallback_to_basic_retrieval, FallbackResponse, FallbackTier</symbol>
+        <lines>1-100+</lines>
+        <reason>Story 3.5 baseline - Core fallback logic and timeout handling. This module implements the existing graceful degradation infrastructure that Story 3.7 will enhance with user-friendly messaging and metrics tracking.</reason>
+      </file>
+      <file>
+        <path>raglite/agentic/orchestrator.py</path>
+        <kind>module</kind>
+        <symbol>StrandsOrchestrator</symbol>
+        <lines>1-80+</lines>
+        <reason>AWS Strands orchestrator coordinating multi-agent workflows. Story 3.7 will add workflow-level timeout (30s) wrapping the orchestration logic here.</reason>
+      </file>
+      <file>
+        <path>raglite/shared/models.py</path>
+        <kind>module</kind>
+        <symbol>QueryResponse, BaseModel</symbol>
+        <lines>N/A</lines>
+        <reason>Response models for MCP tools. Story 3.7 will extend with WorkflowMetrics model, error_summary, and alternative_query fields.</reason>
+      </file>
+      <file>
+        <path>tests/unit/test_workflow_timeout.py</path>
+        <kind>test</kind>
+        <symbol>test_agent_timeout, test_fallback_scenarios</symbol>
+        <lines>N/A</lines>
+        <reason>Existing timeout testing patterns (401 lines, 14 tests from Story 3.5). Story 3.7 will follow these patterns when creating integration tests for graceful degradation scenarios.</reason>
+      </file>
+      <file>
+        <path>raglite/main.py</path>
+        <kind>module</kind>
+        <symbol>analytical_query_financial_documents</symbol>
+        <lines>N/A</lines>
+        <reason>MCP tool entry point for analytical queries (Story 3.6). Story 3.7 will enhance this tool's error handling to return user-friendly error messages and alternative query suggestions.</reason>
+      </file>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="asyncio" version=">=3.4.3,<4.0.0">Async timeout handling via asyncio.wait_for()</package>
+        <package name="pydantic" version=">=2.0,<3.0">WorkflowMetrics model, FallbackResponse model</package>
+        <package name="anthropic" version=">=0.18.0,<1.0.0">Claude API calls (may fail, need error handling)</package>
+        <package name="mistralai" version=">=1.9.11">Mistral API calls for orchestration (may timeout)</package>
+        <package name="qdrant-client" version="==1.15.1">Qdrant connection errors to test</package>
+        <package name="pytest" version="==8.4.2">Integration test framework</package>
+        <package name="pytest-asyncio" version="==1.2.0">Async test support</package>
+        <package name="pytest-mock" version=">=3.12,<4.0">Mock external dependencies for failure simulation</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>Production-grade error handling required: Never expose technical stack traces or jargon to users</constraint>
+    <constraint>4-Tier Graceful Degradation Pattern (from epic-3-agent-patterns.md): Tier 1 (Full) → Tier 2 (Partial) → Tier 3 (Retrieval Only) → Tier 4 (Epic 1/2 Fallback)</constraint>
+    <constraint>User-friendly error messages: Use templates like "Our analysis system is experiencing delays. Here are the raw documents we found: [chunks]. For faster results, try asking 'What was Q3 revenue?'"</constraint>
+    <constraint>Structured logging: Use logger.warning() for graceful degradation (not ERROR), include context via extra={} dict with query_id, tier, error_type fields</constraint>
+    <constraint>Timeout Strategy: Per-agent timeout 15s (NFR26), workflow timeout 30s (NFR5), timeouts cascade through degradation tiers</constraint>
+    <constraint>Metrics tracking mandatory: Log tier rates after EVERY workflow execution for CloudWatch/DataDog aggregation</constraint>
+    <constraint>Alert thresholds: Tier 1 <90% or Tier 4 >1% indicates systemic failure requiring investigation</constraint>
+    <constraint>Integration tests must be marked @pytest.mark.slow to exclude from fast test suite (CI/CD optimization)</constraint>
+    <constraint>No custom exceptions beyond what's in reference implementation: Reuse existing error types from raglite.shared.exceptions if available</constraint>
+    <constraint>OpenTelemetry hooks: Add span attributes for degradation tier (future CloudWatch X-Ray tracing in Epic 5)</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>execute_with_timeout</name>
+      <kind>async function</kind>
+      <signature>async def execute_with_timeout(agent_fn: Any, instruction: str, context: dict[str, Any], timeout_seconds: float = 15.0) -> Any</signature>
+      <path>raglite/agentic/fallback.py</path>
+    </interface>
+    <interface>
+      <name>fallback_to_basic_retrieval</name>
+      <kind>async function</kind>
+      <signature>async def fallback_to_basic_retrieval(query: str) -> str</signature>
+      <path>raglite/agentic/fallback.py</path>
+    </interface>
+    <interface>
+      <name>FallbackResponse</name>
+      <kind>Pydantic model</kind>
+      <signature>class FallbackResponse(BaseModel): answer: str, tier: FallbackTier, confidence: str, limitations: list[str], partial_results: list[AgentResult], error_details: str | None, execution_time_ms: int</signature>
+      <path>raglite/agentic/fallback.py</path>
+    </interface>
+    <interface>
+      <name>FallbackTier</name>
+      <kind>Enum</kind>
+      <signature>class FallbackTier(str, Enum): FULL_WORKFLOW = "full", PARTIAL_WORKFLOW = "partial", EPIC1_FALLBACK = "epic1_fallback"</signature>
+      <path>raglite/agentic/fallback.py</path>
+    </interface>
+    <interface>
+      <name>analytical_query_financial_documents (MCP Tool)</name>
+      <kind>MCP tool (FastMCP @mcp.tool decorator)</kind>
+      <signature>@mcp.tool() async def analytical_query_financial_documents(query: str) -> QueryResponse</signature>
+      <path>raglite/main.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+Testing framework: pytest with pytest-asyncio for async support. Unit tests (<2 min, no external dependencies) mock all I/O. Integration tests (5-10 min, @pytest.mark.slow) use real Qdrant/PostgreSQL but mock LLM APIs. Follow existing patterns from test_workflow_timeout.py (Story 3.5). Use pytest-mock for simulating failures. Structured assertions: assert response.tier == expected_tier, assert "user-friendly message" in response.answer.</standards>
+
+    <locations>
+      <location>tests/unit/test_fallback_response_formatter.py</location>
+      <location>tests/integration/test_graceful_degradation.py</location>
+      <location>tests/unit/test_workflow_metrics.py</location>
+    </locations>
+
+    <ideas>
+      <idea ac="AC1">Unit test: test_workflow_timeout_30s - Simulate slow workflow exceeding 30s, verify workflow timeout triggers, verify immediate fallback to Tier 4 epic1_fallback</idea>
+      <idea ac="AC2">Unit test: test_error_classification - Test each error type (timeout, connection, API, unexpected), verify correct structured logging with error_type field</idea>
+      <idea ac="AC3">Integration test: test_tier4_fallback_to_epic2 - Mock all Epic 3 agents to fail, verify fallback_to_basic_retrieval() called, verify response contains Epic 2 search results</idea>
+      <idea ac="AC4">Unit test: test_user_friendly_error_message_timeout - Simulate timeout error, verify response.error_summary contains no technical jargon, verify alternative_query suggestion present</idea>
+      <idea ac="AC4">Unit test: test_partial_results_preserved - Simulate retrieval success + analysis failure, verify retrieval results included in response.partial_results</idea>
+      <idea ac="AC5">Unit test: test_metrics_logged_tier_rates - Execute workflow, verify metrics logged with tier_1_success_rate, tier_2_fallback_rate, etc.</idea>
+      <idea ac="AC6">Integration test: test_agent_timeout_scenario - Mock agent delay >15s, verify fallback triggered, verify user-friendly error message</idea>
+      <idea ac="AC6">Integration test: test_llm_api_failure_scenario - Mock Anthropic/Mistral HTTPError, verify fallback to next tier, verify error message explains issue</idea>
+      <idea ac="AC6">Integration test: test_qdrant_connection_failure - Mock Qdrant ConnectionError, verify Tier 4 epic1_fallback, verify Epic 2 search results returned</idea>
+      <idea ac="AC6">Integration test: test_partial_success_tier2 - Mock synthesis agent failure only, verify Tier 2 response (retrieval + analysis preserved), verify analysis facts formatted in response</idea>
+    </ideas>
+  </tests>
+</story-context>
