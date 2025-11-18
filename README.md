@@ -256,6 +256,47 @@ uv run python scripts/daily-accuracy-check.py --show-trend
 uv run python scripts/generate-final-validation-report.py
 ```
 
+**Agentic Workflow Test Suite (Story 3.8 - Epic 3):**
+
+```bash
+# Run full agentic workflow test suite (22 analytical queries)
+uv run pytest tests/integration/test_agentic_workflow_suite.py -m "slow" -v
+
+# Run with JSON reporting for failure analysis
+uv run pytest tests/integration/test_agentic_workflow_suite.py \
+    -m "slow" \
+    --json-report \
+    --json-report-file=test-reports/agentic_workflow_results.json
+
+# Generate failure analysis report with actionable insights
+python scripts/generate_failure_report.py \
+    test-reports/agentic_workflow_results.json \
+    test-reports/agentic_workflow_failures.json
+
+# Run specific edge case tests
+uv run pytest tests/integration/test_agentic_workflow_suite.py::test_edge_case_missing_data -v
+uv run pytest tests/integration/test_agentic_workflow_suite.py::test_edge_case_ambiguous_query -v
+```
+
+**Test Suite Metrics:**
+- **Total Queries:** 22 (17 analytical + 5 edge cases)
+- **Success Rate Target:** 80%+ (per FR16 interpretation)
+- **Performance Target:** p50 <12s, p95 <20s (per NFR5)
+- **Test Set:** `tests/fixtures/agentic_workflow_test_set.json`
+
+**Workflow Patterns Tested:**
+1. **YoY Growth** (3 queries) - Year-over-year percentage calculations
+2. **Variance Analysis** (3 queries) - Actual vs budget/forecast comparisons
+3. **Trend Analysis** (3 queries) - Multi-period trend detection
+4. **Generic Analytical** (8 queries) - Comparative analysis, percentages
+
+**Edge Cases Tested:**
+1. **Missing Data** - Graceful handling of unavailable data
+2. **Ambiguous Queries** - Best-effort responses for vague queries
+3. **Out-of-Domain** - Appropriate rejection of non-financial queries
+4. **Complex Multi-Document** - 4+ document reasoning workflows
+5. **Conflicting Information** - Multi-source reconciliation
+
 **Interpreting Results:**
 
 - **Retrieval Accuracy:** % of queries returning correct information (target: ≥90%)

@@ -566,6 +566,147 @@ jobs:
           retention-days: 30
 
   # ============================================================================
+  # JOB 8: Agentic Workflow Test Suite (Story 3.8)
+  # ============================================================================
+  test-agentic-workflows:
+    name: "🤖 Tests: Agentic Workflow Suite (Story 3.8)"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 120  # 22 queries × ~30s max + overhead
+    needs: [test-integration]  # Requires Qdrant/PostgreSQL setup
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies with uv
+        run: |
+          uv venv ci-venv
+          source ci-venv/bin/activate
+          uv pip install -e .
+          uv pip install \
+            pytest==8.4.2 \
+            pytest-asyncio==1.2.0 \
+            "pytest-xdist>=3.5,<4.0" \
+            "pytest-timeout>=2.0,<3.0" \
+            pytest-mock>=3.15 \
+            pytest-json-report \
+            numpy
+
+      - name: Verify Qdrant is available
+        run: |
+          echo "Checking persistent Qdrant instance..."
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if curl -sf http://localhost:6333/collections > /dev/null 2>&1; then
+              echo "✅ Qdrant is available at localhost:6333"
+              exit 0
+            fi
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Waiting for Qdrant... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            sleep 1
+          done
+          echo "❌ Qdrant not available after ${MAX_RETRIES}s"
+          exit 1
+
+      - name: Verify PostgreSQL is available
+        run: |
+          echo "Checking persistent PostgreSQL instance..."
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if docker exec raglite-postgresql psql -U raglite -d raglite -c "SELECT 1" > /dev/null 2>&1; then
+              echo "✅ PostgreSQL is available"
+              exit 0
+            fi
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Waiting for PostgreSQL... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            sleep 1
+          done
+          echo "❌ PostgreSQL not available after ${MAX_RETRIES}s"
+          exit 1
+
+      - name: Run agentic workflow test suite
+        env:
+          QDRANT_HOST: localhost
+          QDRANT_PORT: 6333
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: raglite
+          POSTGRES_USER: raglite
+          POSTGRES_PASSWORD: raglite
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          source ci-venv/bin/activate
+
+          export PYTHONPATH="${PWD}:${PWD}/scripts:${PYTHONPATH}"
+
+          echo "========================================="
+          echo "Agentic Workflow Test Suite (Story 3.8)"
+          echo "========================================="
+          echo "- Test Queries: 22 (17 analytical + 5 edge cases)"
+          echo "- Success Rate Target: 80%+"
+          echo "- Performance: p50 <12s, p95 <20s"
+          echo "- Test Set: tests/fixtures/agentic_workflow_test_set.json"
+          echo "========================================="
+
+          pytest tests/integration/test_agentic_workflow_suite.py \
+            -n 1 \
+            -m "slow" \
+            -v \
+            --json-report \
+            --json-report-file=test-reports/agentic_workflow_results.json \
+            --junitxml=test-reports/agentic_workflow_junit.xml
+        continue-on-error: true  # Don't block CI on test failures
+
+      - name: Generate failure analysis report
+        if: always()
+        run: |
+          source ci-venv/bin/activate
+
+          echo "Generating failure analysis report..."
+          if [ -f "test-reports/agentic_workflow_results.json" ]; then
+            python scripts/generate_failure_report.py \
+              test-reports/agentic_workflow_results.json \
+              test-reports/agentic_workflow_failures.json || true
+          else
+            echo "⚠️  No test results found, skipping failure report"
+          fi
+
+      - name: Upload agentic workflow test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agentic-workflow-test-results
+          path: |
+            test-reports/agentic_workflow_results.json
+            test-reports/agentic_workflow_failures.json
+            test-reports/agentic_workflow_junit.xml
+          retention-days: 30
+
+      - name: Display test summary
+        if: always()
+        run: |
+          if [ -f "test-reports/agentic_workflow_failures.json" ]; then
+            echo "========================================="
+            echo "📊 AGENTIC WORKFLOW TEST SUMMARY"
+            echo "========================================="
+            cat test-reports/agentic_workflow_failures.json | jq -r '
+              "Total Queries: \(.total_queries)",
+              "Successes: \(.successes)",
+              "Failures: \(.failures)",
+              "Success Rate: \(.success_rate * 100 | round)%",
+              "",
+              "Top Recommendation:",
+              "  \(.summary.recommendation[:100])..."
+            '
+            echo "========================================="
+          fi
+
+  # ============================================================================
   # JOB 9: Test Count Validation
   # ============================================================================
   test-count-validation:
@@ -1006,7 +1147,7 @@ jobs:
   build-summary:
     name: "📊 CI Pipeline: Summary"
     runs-on: [self-hosted, raglite]
-    needs: [lint, type-check, security, test-unit, test-integration, test-e2e, test-performance, test-count-validation, docs-validation, burn-in]
+    needs: [lint, type-check, security, test-unit, test-integration, test-e2e, test-performance, test-agentic-workflows, test-count-validation, docs-validation, burn-in]
     if: always()
 
     steps:
@@ -1025,6 +1166,9 @@ jobs:
           echo "  Unit Tests:        ${{ needs.test-unit.result }} (~236 tests)"
           echo "  Integration:       ${{ needs.test-integration.result }} (~115 tests)"
           echo "  E2E Tests:         ${{ needs.test-e2e.result }} (~28 tests)"
+          echo ""
+          echo "🤖 AGENTIC WORKFLOW TESTS (Epic 3):"
+          echo "  Workflow Suite:    ${{ needs.test-agentic-workflows.result }} (22 analytical queries)"
           echo ""
           echo "✅ NFR VALIDATION:"
           echo "  Performance (NFR13):   ${{ needs.test-performance.result }}"

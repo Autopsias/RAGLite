@@ -1,0 +1,455 @@
+{
+  "metadata": {
+    "description": "Agentic workflow test suite for Story 3.8",
+    "total_queries": 22,
+    "analytical_queries": 17,
+    "edge_cases": 5,
+    "target_success_rate": 0.80,
+    "performance_targets": {
+      "p50_latency_ms": 12000,
+      "p95_latency_ms": 20000,
+      "max_latency_ms": 30000
+    },
+    "validation_date": "2025-11-18"
+  },
+  "test_queries": [
+    {
+      "id": "yoy_growth_1",
+      "query": "Calculate year-over-year revenue growth between Q3 2023 and Q3 2024",
+      "expected_pattern": "yoy_growth",
+      "expected_workflow": {
+        "task_count": 5,
+        "agents": ["retrieval", "retrieval", "analysis", "retrieval", "synthesis"]
+      },
+      "expected_answer_contains": ["20%", "growth", "Q3 2023", "Q3 2024"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P1",
+      "complexity": "medium"
+    },
+    {
+      "id": "yoy_growth_2",
+      "query": "How much did net income increase from Q3 2023 to Q3 2024?",
+      "expected_pattern": "yoy_growth",
+      "expected_workflow": {
+        "task_count": 5,
+        "agents": ["retrieval", "retrieval", "analysis", "retrieval", "synthesis"]
+      },
+      "expected_answer_contains": ["increased", "46.7%", "net income"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P1",
+      "complexity": "medium"
+    },
+    {
+      "id": "yoy_growth_3",
+      "query": "Calculate the year-over-year growth in total assets from 2023 to 2024",
+      "expected_pattern": "yoy_growth",
+      "expected_workflow": {
+        "task_count": 5,
+        "agents": ["retrieval", "retrieval", "analysis", "retrieval", "synthesis"]
+      },
+      "expected_answer_contains": ["15.6%", "growth", "total assets"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P2",
+      "complexity": "low"
+    },
+    {
+      "id": "variance_1",
+      "query": "What is the variance between actual Q3 2024 revenue and the forecasted amount?",
+      "expected_pattern": "variance",
+      "expected_workflow": {
+        "task_count": 5,
+        "agents": ["retrieval", "retrieval", "analysis", "retrieval", "synthesis"]
+      },
+      "expected_answer_contains": ["variance", "unfavorable", "actual", "forecast"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P1",
+      "complexity": "medium"
+    },
+    {
+      "id": "variance_2",
+      "query": "Calculate the variance between Q3 2024 operating expenses and the budgeted amount",
+      "expected_pattern": "variance",
+      "expected_workflow": {
+        "task_count": 5,
+        "agents": ["retrieval", "retrieval", "analysis", "retrieval", "synthesis"]
+      },
+      "expected_answer_contains": ["unfavorable", "over budget", "operating expenses"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P1",
+      "complexity": "medium"
+    },
+    {
+      "id": "variance_3",
+      "query": "Calculate the variance between actual and budgeted gross profit for Q3 2024",
+      "expected_pattern": "variance",
+      "expected_workflow": {
+        "task_count": 5,
+        "agents": ["retrieval", "retrieval", "analysis", "retrieval", "synthesis"]
+      },
+      "expected_answer_contains": ["favorable", "above budget", "gross profit"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P2",
+      "complexity": "medium"
+    },
+    {
+      "id": "trend_1",
+      "query": "Analyze the trend in operating expenses over the past 3 quarters",
+      "expected_pattern": "trend",
+      "expected_workflow": {
+        "task_count": 6,
+        "agents": ["retrieval", "retrieval", "retrieval", "retrieval", "analysis", "synthesis"]
+      },
+      "expected_answer_contains": ["increasing", "trend", "operating expenses"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P1",
+      "complexity": "high"
+    },
+    {
+      "id": "trend_2",
+      "query": "What is the trend in customer acquisition costs over the past year?",
+      "expected_pattern": "trend",
+      "expected_workflow": {
+        "task_count": 6,
+        "agents": ["retrieval", "retrieval", "retrieval", "retrieval", "analysis", "synthesis"]
+      },
+      "expected_answer_contains": ["declining", "trend", "customer acquisition"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P1",
+      "complexity": "high"
+    },
+    {
+      "id": "trend_3",
+      "query": "Analyze the trend in gross margin percentage over the past 4 quarters",
+      "expected_pattern": "trend",
+      "expected_workflow": {
+        "task_count": 6,
+        "agents": ["retrieval", "retrieval", "retrieval", "retrieval", "analysis", "synthesis"]
+      },
+      "expected_answer_contains": ["improving", "trend", "gross margin"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P2",
+      "complexity": "high"
+    },
+    {
+      "id": "generic_analytical_1",
+      "query": "Compare gross profit margins between Q3 2023 and Q3 2024",
+      "expected_pattern": "generic_analytical",
+      "expected_workflow": {
+        "task_count": 4,
+        "agents": ["retrieval", "retrieval", "analysis", "synthesis"]
+      },
+      "expected_answer_contains": ["improved", "margin", "Q3 2023", "Q3 2024"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P1",
+      "complexity": "medium"
+    },
+    {
+      "id": "generic_analytical_2",
+      "query": "Compare R&D spending as a percentage of revenue between Q3 2023 and Q3 2024",
+      "expected_pattern": "generic_analytical",
+      "expected_workflow": {
+        "task_count": 5,
+        "agents": ["retrieval", "retrieval", "analysis", "retrieval", "synthesis"]
+      },
+      "expected_answer_contains": ["R&D", "percentage", "revenue"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P1",
+      "complexity": "high"
+    },
+    {
+      "id": "generic_analytical_3",
+      "query": "Compare operating cash flow between Q3 2023 and Q3 2024",
+      "expected_pattern": "generic_analytical",
+      "expected_workflow": {
+        "task_count": 4,
+        "agents": ["retrieval", "retrieval", "analysis", "synthesis"]
+      },
+      "expected_answer_contains": ["increased", "cash flow", "Q3 2023", "Q3 2024"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P2",
+      "complexity": "medium"
+    },
+    {
+      "id": "generic_analytical_4",
+      "query": "Compare EBITDA margins between Q3 2023 and Q3 2024",
+      "expected_pattern": "generic_analytical",
+      "expected_workflow": {
+        "task_count": 4,
+        "agents": ["retrieval", "retrieval", "analysis", "synthesis"]
+      },
+      "expected_answer_contains": ["improved", "EBITDA", "margin"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P2",
+      "complexity": "medium"
+    },
+    {
+      "id": "generic_analytical_5",
+      "query": "What percentage of total revenue came from product sales in Q3 2024?",
+      "expected_pattern": "generic_analytical",
+      "expected_workflow": {
+        "task_count": 4,
+        "agents": ["retrieval", "retrieval", "analysis", "synthesis"]
+      },
+      "expected_answer_contains": ["percentage", "product sales", "revenue"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P2",
+      "complexity": "low"
+    },
+    {
+      "id": "generic_analytical_6",
+      "query": "What percentage of total operating expenses were marketing costs in Q3 2024?",
+      "expected_pattern": "generic_analytical",
+      "expected_workflow": {
+        "task_count": 4,
+        "agents": ["retrieval", "retrieval", "analysis", "synthesis"]
+      },
+      "expected_answer_contains": ["percentage", "marketing", "operating expenses"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P2",
+      "complexity": "low"
+    },
+    {
+      "id": "generic_analytical_7",
+      "query": "What percentage of Q3 2024 revenue was recurring revenue?",
+      "expected_pattern": "generic_analytical",
+      "expected_workflow": {
+        "task_count": 4,
+        "agents": ["retrieval", "retrieval", "analysis", "synthesis"]
+      },
+      "expected_answer_contains": ["percentage", "recurring", "revenue"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P2",
+      "complexity": "low"
+    },
+    {
+      "id": "generic_analytical_8",
+      "query": "How much did employee headcount grow from 2023 to 2024?",
+      "expected_pattern": "generic_analytical",
+      "expected_workflow": {
+        "task_count": 4,
+        "agents": ["retrieval", "retrieval", "analysis", "synthesis"]
+      },
+      "expected_answer_contains": ["growth", "employees", "headcount"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 50,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": false,
+      "priority": "P2",
+      "complexity": "low"
+    },
+    {
+      "id": "edge_missing_data",
+      "query": "What was Q5 2025 revenue?",
+      "expected_pattern": "retrieval_only",
+      "expected_workflow": {
+        "task_count": 1,
+        "agents": ["retrieval"]
+      },
+      "expected_answer_contains": ["not found", "unavailable", "no data"],
+      "success_criteria": {
+        "graceful_failure": true,
+        "answer_non_empty": true,
+        "workflow_tier": ["epic1_fallback", "basic_retrieval"]
+      },
+      "edge_case": true,
+      "edge_case_type": "missing_data",
+      "priority": "P1",
+      "complexity": "low"
+    },
+    {
+      "id": "edge_ambiguous",
+      "query": "What is revenue?",
+      "expected_pattern": "retrieval_only",
+      "expected_workflow": {
+        "task_count": 1,
+        "agents": ["retrieval"]
+      },
+      "expected_answer_contains": ["revenue", "Q3"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "best_effort_response": true,
+        "workflow_tier": ["epic1_fallback", "basic_retrieval", "full_orchestration"]
+      },
+      "edge_case": true,
+      "edge_case_type": "ambiguous_query",
+      "priority": "P1",
+      "complexity": "low"
+    },
+    {
+      "id": "edge_complex_multi_document",
+      "query": "Compare Q1, Q2, Q3, Q4 2023 revenue and identify trends",
+      "expected_pattern": "trend",
+      "expected_workflow": {
+        "task_count": 6,
+        "agents": ["retrieval", "retrieval", "retrieval", "retrieval", "analysis", "synthesis"]
+      },
+      "expected_answer_contains": ["Q1", "Q2", "Q3", "Q4", "trend", "revenue"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "execution_time_max_ms": 30000,
+        "answer_min_length": 100,
+        "workflow_tier": ["full_orchestration", "partial_analysis"]
+      },
+      "edge_case": true,
+      "edge_case_type": "complex_multi_document",
+      "priority": "P1",
+      "complexity": "high"
+    },
+    {
+      "id": "edge_out_of_domain",
+      "query": "What is the weather forecast for tomorrow?",
+      "expected_pattern": "retrieval_only",
+      "expected_workflow": {
+        "task_count": 1,
+        "agents": ["retrieval"]
+      },
+      "expected_answer_contains": ["not applicable", "financial", "scope"],
+      "success_criteria": {
+        "graceful_failure": true,
+        "answer_non_empty": true,
+        "workflow_tier": ["epic1_fallback", "basic_retrieval"]
+      },
+      "edge_case": true,
+      "edge_case_type": "out_of_domain",
+      "priority": "P1",
+      "complexity": "low"
+    },
+    {
+      "id": "edge_conflicting_information",
+      "query": "What was Q3 2023 revenue according to all available sources?",
+      "expected_pattern": "retrieval_only",
+      "expected_workflow": {
+        "task_count": 2,
+        "agents": ["retrieval", "synthesis"]
+      },
+      "expected_answer_contains": ["Q3 2023", "revenue"],
+      "success_criteria": {
+        "answer_non_empty": true,
+        "citations_present": true,
+        "multiple_sources_acknowledged": true,
+        "workflow_tier": ["full_orchestration", "basic_retrieval"]
+      },
+      "edge_case": true,
+      "edge_case_type": "conflicting_information",
+      "priority": "P2",
+      "complexity": "medium"
+    }
+  ]
+}
