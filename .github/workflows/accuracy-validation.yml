@@ -129,7 +129,7 @@ jobs:
           MAX_RETRIES=30
           RETRY_COUNT=0
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            if curl -sf http://localhost:6333/collections > /dev/null 2>&1; then
+            if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
               echo "✅ Qdrant available for accuracy tests"
               # Check for 500 errors and restart if needed
               ERROR_500_COUNT=$(curl -sf http://localhost:6333/telemetry 2>/dev/null | python3 -c "import sys, json; data=json.load(sys.stdin); print(sum(endpoint.get('500', {}).get('count', 0) for endpoint in data['result']['requests']['rest']['responses'].values()))" 2>/dev/null || echo "0")

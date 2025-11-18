@@ -263,7 +263,7 @@ jobs:
           RETRY_COUNT=0
 
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            if curl -sf http://localhost:6333/collections > /dev/null 2>&1; then
+            if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
               echo "✅ Qdrant is available at localhost:6333"
 
               # Additional health check: verify cluster status
@@ -601,7 +601,7 @@ jobs:
           MAX_RETRIES=30
           RETRY_COUNT=0
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            if curl -sf http://localhost:6333/collections > /dev/null 2>&1; then
+            if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
               echo "✅ Qdrant is available at localhost:6333"
               exit 0
             fi
@@ -789,7 +789,7 @@ jobs:
           echo "Ensuring Qdrant is available for test collection..."
 
           # Check if Qdrant is already running
-          if curl -sf http://localhost:6333/collections > /dev/null 2>&1; then
+          if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
             echo "✅ Qdrant already running at localhost:6333"
           else
             # Check if container exists but is stopped
@@ -811,7 +811,7 @@ jobs:
             MAX_RETRIES=20
             RETRY_COUNT=0
             while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-              if curl -sf http://localhost:6333/collections > /dev/null 2>&1; then
+              if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
                 echo "✅ Qdrant is ready"
                 break
               fi
@@ -1004,7 +1004,7 @@ jobs:
           MAX_RETRIES=30
           RETRY_COUNT=0
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            if curl -sf http://localhost:6333/collections > /dev/null 2>&1; then
+            if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
               echo "✅ Qdrant is available at localhost:6333"
               exit 0
             fi

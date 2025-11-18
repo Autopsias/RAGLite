@@ -27,6 +27,9 @@ import pytest
 from raglite.main import analytical_query_financial_documents
 from raglite.shared.models import AnalyticalQueryRequest, AnalyticalQueryResponse
 
+# Access underlying function from FastMCP FunctionTool wrapper
+analytical_query_fn = analytical_query_financial_documents.fn
+
 # Load test query set
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 TEST_SET_PATH = FIXTURES_DIR / "agentic_workflow_test_set.json"
@@ -198,7 +201,7 @@ async def test_analytical_workflow_query(test_query: dict):
     # Execute workflow
     start_time = time.time()
     request = AnalyticalQueryRequest(query=query_text, top_k=5)
-    response = await analytical_query_financial_documents(request)
+    response = await analytical_query_fn(request)
     execution_time_ms = (time.time() - start_time) * 1000
 
     # Validate success criteria
@@ -330,7 +333,7 @@ async def test_edge_case_missing_data():
     """
     query = "What was Q5 2025 revenue?"
     request = AnalyticalQueryRequest(query=query)
-    response = await analytical_query_financial_documents(request)
+    response = await analytical_query_fn(request)
 
     # Should return answer explaining data not found
     assert response.answer
@@ -350,7 +353,7 @@ async def test_edge_case_ambiguous_query():
     """
     query = "What is revenue?"
     request = AnalyticalQueryRequest(query=query)
-    response = await analytical_query_financial_documents(request)
+    response = await analytical_query_fn(request)
 
     # Should return answer with some revenue data (best effort)
     assert response.answer
@@ -367,7 +370,7 @@ async def test_edge_case_out_of_domain():
     """
     query = "What is the weather forecast for tomorrow?"
     request = AnalyticalQueryRequest(query=query)
-    response = await analytical_query_financial_documents(request)
+    response = await analytical_query_fn(request)
 
     # Should explain scope limitation
     assert response.answer
@@ -388,7 +391,7 @@ async def test_edge_case_complex_multi_document():
     request = AnalyticalQueryRequest(query=query)
 
     start_time = time.time()
-    response = await analytical_query_financial_documents(request)
+    response = await analytical_query_fn(request)
     execution_time_ms = (time.time() - start_time) * 1000
 
     # Should complete within timeout

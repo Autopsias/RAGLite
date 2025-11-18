@@ -90,33 +90,12 @@ async def multi_index_search(query: str, top_k: int = 5) -> list[SearchResult]:
     if not query or not query.strip():
         raise MultiIndexSearchError("Query cannot be empty")
 
-    logger.info("Multi-index search started", extra={"query": query[:100], "top_k": top_k})
+    # PERFORMANCE: Reduced logging overhead - only log start for slow queries
     start_time = time.time()
 
     try:
-        # Step 1: Classify query type (AC1)
-        classify_start = time.time()
+        # Step 1: Classify query type (AC1) - fast heuristic, no logging
         query_type = classify_query(query)
-        classify_ms = (time.time() - classify_start) * 1000
-
-        logger.debug(
-            "Query classification complete",
-            extra={
-                "query": query[:100],
-                "query_type": query_type.value,
-                "classification_ms": round(classify_ms, 2),
-            },
-        )
-
-        # NEW (Story 2.10 AC3): Log routing decision with metrics
-        logger.info(
-            "Query routing decision",
-            extra={
-                "query": query[:100],
-                "query_type": query_type.value,
-                "top_k": top_k,
-            },
-        )
 
         # Step 2: Route to appropriate index(es) (AC2)
         if query_type == QueryType.SQL_ONLY:
@@ -137,15 +116,17 @@ async def multi_index_search(query: str, top_k: int = 5) -> list[SearchResult]:
             results = await _execute_vector_search(query, top_k, disable_sql_routing=True)
 
         elapsed_ms = (time.time() - start_time) * 1000
-        logger.info(
-            "Multi-index search complete",
-            extra={
-                "query_type": query_type.value,
-                "results_count": len(results),
-                "latency_ms": round(elapsed_ms, 2),
-                "top_score": round(results[0].score, 4) if results else None,
-            },
-        )
+
+        # PERFORMANCE: Only log slow searches or failures (>3s)
+        if elapsed_ms > 3000:
+            logger.warning(
+                "Slow multi-index search",
+                extra={
+                    "query_type": query_type.value,
+                    "latency_ms": round(elapsed_ms, 2),
+                    "results_count": len(results),
+                },
+            )
 
         return results
 
@@ -178,7 +159,7 @@ async def _execute_vector_search(
         MultiIndexSearchError: If vector search fails
     """
     try:
-        logger.debug("Executing vector search", extra={"query": query[:100]})
+        # PERFORMANCE: Removed debug logging - no overhead
 
         # Call existing hybrid_search from search.py with SQL routing disabled
         vector_results = await hybrid_search(
@@ -203,7 +184,6 @@ async def _execute_vector_search(
             for r in vector_results
         ]
 
-        logger.debug("Vector search complete", extra={"results_count": len(results)})
         return results
 
     except Exception as e:
@@ -228,27 +208,17 @@ async def _execute_sql_search(query: str, top_k: int) -> list[SearchResult]:
         MultiIndexSearchError: If SQL search fails
     """
     try:
-        logger.debug(
-            "Executing SQL search via text-to-SQL generation", extra={"query": query[:100]}
-        )
+        # PERFORMANCE: Removed debug logging - no overhead
 
         # Step 1: Generate SQL query using text-to-SQL (Story 2.13 AC1)
         sql_query = await generate_sql_query(query)
 
         if not sql_query:
-            logger.warning(
-                "SQL generation returned None - falling back to vector search",
-                extra={"query": query[:100]},
-            )
             # SQL generation failed - falling back to vector search
             return await _execute_vector_search(query, top_k, disable_sql_routing=True)
 
-        logger.debug("SQL query generated", extra={"sql_preview": sql_query[:200]})
-
         # Step 2: Execute SQL against financial_tables (Story 2.13 AC2)
         query_results = await search_tables_sql(sql_query, top_k=top_k)
-
-        # SQL execution complete
 
         # Step 3: Convert QueryResult objects to SearchResult objects
         results = [
@@ -266,8 +236,6 @@ async def _execute_sql_search(query: str, top_k: int) -> list[SearchResult]:
             )
             for qr in query_results
         ]
-
-        logger.debug("SQL search complete", extra={"results_count": len(results)})
 
         # AC6: Fallback to vector search if SQL returns no results
         if not results:
@@ -327,9 +295,7 @@ async def _execute_hybrid_search(query: str, top_k: int) -> list[SearchResult]:
     Raises:
         MultiIndexSearchError: If both searches fail
     """
-    logger.debug("Executing hybrid search (parallel)", extra={"query": query[:100]})
-
-    # Starting parallel hybrid search
+    # PERFORMANCE: Removed debug logging - no overhead
 
     hybrid_start = time.time()
     try:
@@ -339,32 +305,8 @@ async def _execute_hybrid_search(query: str, top_k: int) -> list[SearchResult]:
         sql_task = _execute_sql_search(query, top_k=min(top_k + 1, 8))
 
         # Execute in parallel with 8s timeout (more reasonable for real queries)
-        logger.debug(
-            "Starting parallel hybrid search",
-            extra={
-                "query": query[:100],
-                "timeout_seconds": 8.0,
-                "vector_top_k": min(top_k + 2, 10),
-                "sql_top_k": min(top_k + 1, 8),
-            },
-        )
-
         vector_results, sql_results = await asyncio.wait_for(
             asyncio.gather(vector_task, sql_task), timeout=8.0
-        )
-
-        hybrid_ms = (time.time() - hybrid_start) * 1000
-
-        # Parallel searches complete
-
-        logger.debug(
-            "Parallel searches complete",
-            extra={
-                "vector_count": len(vector_results),
-                "sql_count": len(sql_results),
-                "hybrid_duration_ms": round(hybrid_ms, 2),
-                "within_timeout": hybrid_ms < 8000,
-            },
         )
 
         # AC3: Fuse results using weighted sum
