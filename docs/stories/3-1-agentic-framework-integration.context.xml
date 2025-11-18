@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context version="6.0">
+  <metadata>
+    <story-id>3.1</story-id>
+    <story-key>3-1-agentic-framework-integration</story-key>
+    <epic-id>3</epic-id>
+    <story-title>Agentic Framework Integration</story-title>
+    <status>ready-for-dev</status>
+    <generated>2025-11-09</generated>
+  </metadata>
+
+  <user-story>
+    <as-a>system</as-a>
+    <i-want>agentic orchestration framework integrated per Architect's selection</i-want>
+    <so-that>multi-step analytical workflows can be planned and executed</so-that>
+  </user-story>
+
+  <acceptance-criteria>
+    <criterion id="AC1">
+      AWS Strands framework (v1.15.0) installed and configured in RAGLite
+      - Package added to pyproject.toml dependencies
+      - Import verification test passes
+      - Version pinned to v1.15.0+ (Apache 2.0 licensed)
+    </criterion>
+    <criterion id="AC2">
+      Framework initialization and configuration validated
+      - Strands Agent class instantiable with basic config
+      - Mistral Small configured as orchestration LLM (tunable to Claude)
+      - OpenTelemetry observability configured (optional, can defer to Story 3.5)
+    </criterion>
+    <criterion id="AC3">
+      Basic 2-step workflow execution tested
+      - Test workflow: Retrieval Agent → Synthesis Agent (simple pipeline)
+      - Workflow accepts query input and returns structured output
+      - State passes correctly between agents (query → retrieval results → synthesis)
+    </criterion>
+    <criterion id="AC4">
+      State management functional for multi-step workflows
+      - Agent execution state captured and propagated
+      - Context passes between sequential agents
+      - State validation confirms data integrity across agent boundaries
+    </criterion>
+    <criterion id="AC5">
+      Error handling implemented for workflow failures (NFR24, NFR26)
+      - Agent timeout handling (max 15s per agent, per NFR26)
+      - Graceful degradation on agent failures (fallback to Epic 2 simple search)
+      - Error logging with structured metadata (agent ID, failure reason, timestamp)
+    </criterion>
+    <criterion id="AC6">
+      Integration test validates framework execution
+      - End-to-end test with mock agents (no real LLM calls)
+      - Test validates agent coordination and state flow
+      - Test execution time &lt;1s (framework overhead only, no LLM latency)
+    </criterion>
+    <criterion id="AC7">
+      Documentation includes workflow development guide
+      - Workflow pattern examples documented
+      - Agent creation guide (how to add new agents)
+      - Debugging guide (OpenTelemetry traces, logs)
+      - Code examples for common patterns
+    </criterion>
+  </acceptance-criteria>
+
+  <tasks>
+    <task id="T1" acs="AC1,AC2" estimate="4h">
+      Install and configure AWS Strands
+      <subtask>Add strands package to pyproject.toml (pinned to v1.15.0+)</subtask>
+      <subtask>Run uv sync to install dependencies</subtask>
+      <subtask>Create basic import test (tests/unit/test_strands_import.py)</subtask>
+      <subtask>Configure Mistral Small as orchestration LLM in raglite/shared/config.py</subtask>
+      <subtask>Add Strands configuration to settings (API keys, model selection)</subtask>
+    </task>
+    <task id="T2" acs="AC3" estimate="6h">
+      Implement basic agent wrappers
+      <subtask>Create raglite/agentic/ module directory</subtask>
+      <subtask>Implement MockRetrievalAgent (returns hardcoded chunks for testing)</subtask>
+      <subtask>Implement MockSynthesisAgent (returns hardcoded synthesis for testing)</subtask>
+      <subtask>Create orchestrator.py with basic Strands Agent setup</subtask>
+      <subtask>Test 2-agent workflow execution (retrieve → synthesize)</subtask>
+    </task>
+    <task id="T3" acs="AC4" estimate="4h">
+      Implement state management
+      <subtask>Define state schema (AgentState Pydantic model)</subtask>
+      <subtask>Implement state passing between agents</subtask>
+      <subtask>Add state validation logic (ensure required fields present)</subtask>
+      <subtask>Test state propagation with assertion checks</subtask>
+    </task>
+    <task id="T4" acs="AC5" estimate="5h">
+      Implement error handling and graceful degradation
+      <subtask>Add timeout handling for agent execution (15s max per NFR26)</subtask>
+      <subtask>Implement fallback mechanism (degrade to Epic 2 simple search on failures)</subtask>
+      <subtask>Add structured error logging (JSON format with agent metadata)</subtask>
+      <subtask>Test timeout scenarios (mock slow agent)</subtask>
+      <subtask>Test fallback scenarios (mock agent failure)</subtask>
+    </task>
+    <task id="T5" acs="AC6" estimate="4h">
+      Create integration tests
+      <subtask>Create tests/integration/test_agentic_framework.py</subtask>
+      <subtask>Test end-to-end workflow with mock agents (no real LLM)</subtask>
+      <subtask>Test state management across agent boundaries</subtask>
+      <subtask>Test error handling and timeout scenarios</subtask>
+      <subtask>Validate test execution time &lt;1s (framework overhead only)</subtask>
+    </task>
+    <task id="T6" acs="AC7" estimate="3h">
+      Document workflow patterns and usage
+      <subtask>Create docs/architecture/agentic-workflow-guide.md</subtask>
+      <subtask>Document agent creation pattern (how to add new agents)</subtask>
+      <subtask>Document common workflow patterns (sequential, parallel, conditional)</subtask>
+      <subtask>Add debugging guide (OpenTelemetry, logs, troubleshooting)</subtask>
+      <subtask>Add code examples for each pattern</subtask>
+    </task>
+    <task id="T7" acs="AC1" estimate="2h">
+      Update project structure and dependencies
+      <subtask>Update pyproject.toml with Strands dependency</subtask>
+      <subtask>Update README.md with Epic 3 agentic capabilities</subtask>
+      <subtask>Update test count in CI workflow (expect +5-8 new tests)</subtask>
+      <subtask>Run full test suite to validate no regressions</subtask>
+    </task>
+  </tasks>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-3-ai-intelligence-orchestration.md</path>
+        <title>Epic 3 PRD - AI Intelligence &amp; Orchestration</title>
+        <section>Story 3.1: Agentic Framework Integration</section>
+        <snippet>Requirements for integrating agentic orchestration framework, basic workflow execution, state management, error handling, and documentation.</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec-epic-3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Agentic Framework Integration (Story 3.1)</section>
+        <snippet>Technical details for implementing agentic orchestration framework (LangGraph or native function calling per Architecture decision), workflow execution engine with state management, basic 2-step workflow validation, error handling and timeout mechanisms (NFR24, NFR26).</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-framework-selection.md</path>
+        <title>Epic 3 Framework Selection Decision (ADR)</title>
+        <section>AWS Strands Selection</section>
+        <snippet>CRITICAL: AWS Strands v1.15.0 selected as primary framework (84.5% score). Event-driven orchestration, 50 LOC for 3-agent pipeline, native MCP integration, production-validated. Fallback: Simple Function Calling if blockers on Day 1.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-orchestration-design.md</path>
+        <title>Epic 3 Orchestration Architecture Design</title>
+        <section>3-Agent Pipeline Specification</section>
+        <snippet>CRITICAL: Architecture design for Retrieval Agent, Analysis Agent, and Synthesis Agent. Event-driven orchestration using AWS Strands. Target performance: &lt;10s p50, &lt;20s p95 total latency, 3-5s orchestration overhead.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-agent-patterns.md</path>
+        <title>Epic 3 Agent Workflow Patterns</title>
+        <section>Pattern Examples</section>
+        <snippet>CRITICAL: Workflow patterns for sequential chains, parallel execution, conditional routing, error fallback, hierarchical orchestration. Integration with AWS Strands.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/coding-standards.md</path>
+        <title>RAGLite Coding Standards</title>
+        <section>General Standards</section>
+        <snippet>Type hints required for all functions, Google-style docstrings, structured logging with extra={}, error handling with specific exceptions, async/await for I/O, Pydantic models for data structures.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/tech-stack.md</path>
+        <title>RAGLite Technology Stack</title>
+        <section>Dependencies</section>
+        <snippet>Tech stack is LOCKED - requires user approval for new dependencies. AWS Strands v1.15.0 approved (from Story 3-0-8 spike). Python 3.11+, Pydantic, async/await patterns.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/testing-strategy.md</path>
+        <title>RAGLite Testing Strategy</title>
+        <section>Test Organization</section>
+        <snippet>Unit tests in tests/unit/, integration tests in tests/integration/, e2e tests in tests/e2e/. Target 80%+ coverage. Use pytest, pytest-asyncio, pytest-xdist for parallelism.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/3-0-8-agentic-framework-architecture-spike.md</path>
+        <title>Previous Story: Architecture Spike</title>
+        <section>Spike Deliverables</section>
+        <snippet>Framework selection complete (AWS Strands), orchestration architecture designed, workflow patterns documented. All 3 critical architecture docs created. Story 3.1 unblocked with confidence.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>raglite/shared/config.py</path>
+        <kind>configuration</kind>
+        <symbol>Settings</symbol>
+        <lines>1-50</lines>
+        <reason>Existing settings class where Strands configuration (API keys, model selection) should be added</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/logging.py</path>
+        <kind>utility</kind>
+        <symbol>get_logger</symbol>
+        <lines>1-30</lines>
+        <reason>Existing structured logging utility to use for agent error logging with extra={} metadata</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/retrieval/multi_index_search.py</path>
+        <kind>service</kind>
+        <symbol>multi_index_search</symbol>
+        <lines>1-200</lines>
+        <reason>Existing search function that Retrieval Agent will wrap in Story 3.2 - understanding interface is helpful</reason>
+      </artifact>
+      <artifact>
+        <path>tests/conftest.py</path>
+        <kind>test-fixture</kind>
+        <symbol>pytest fixtures</symbol>
+        <lines>1-100</lines>
+        <reason>Existing test fixtures and configuration patterns to follow for agentic framework tests</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="strands" version="&gt;=1.15.0" source="new">AWS Strands agentic framework (Apache 2.0 licensed)</package>
+        <package name="pydantic" version="existing">Data validation for AgentState models</package>
+        <package name="pytest" version="existing">Unit testing framework</package>
+        <package name="pytest-asyncio" version="existing">Async test support</package>
+        <package name="pytest-xdist" version="existing">Parallel test execution</package>
+        <package name="opentelemetry-api" version="optional">Observability (can defer to Story 3.5)</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <interfaces>
+    <interface>
+      <name>AgentState</name>
+      <kind>Pydantic Model</kind>
+      <signature>class AgentState(BaseModel):
+    query: str
+    retrieval_results: Optional[List[DocumentChunk]]
+    analysis_results: Optional[AnalysisOutput]
+    synthesis_result: Optional[str]
+    metadata: Dict[str, Any]</signature>
+      <path>raglite/agentic/state.py</path>
+    </interface>
+    <interface>
+      <name>Agent (Strands)</name>
+      <kind>AWS Strands Agent Class</kind>
+      <signature>from strands import Agent, tool
+
+@tool
+def retrieval_agent(query: str) -> str:
+    agent = Agent(tools=[qdrant_search, sql_search])
+    return str(agent(f"Retrieve docs for: {query}"))
+
+orchestrator = Agent(
+    tools=[retrieval_agent, synthesis_agent],
+    system_prompt="Coordinate RAG pipeline"
+)
+result = orchestrator(query)</signature>
+      <path>docs/architecture/epic-3-framework-selection.md</path>
+    </interface>
+  </interfaces>
+
+  <constraints>
+    <constraint type="architecture">
+      KISS Principle: Keep It Simple, Stupid - No custom base classes, factories, or abstractions beyond what Strands provides
+    </constraint>
+    <constraint type="architecture">
+      Target: 50 LOC for orchestration (per framework selection doc) - Stay within code budget
+    </constraint>
+    <constraint type="architecture">
+      Event-driven pattern: Use Strands' agents-as-tools pattern, not imperative orchestration
+    </constraint>
+    <constraint type="performance">
+      NFR26: Agent timeout 15s max per agent. Total workflow &lt;20s p95 to match Epic 2 baseline
+    </constraint>
+    <constraint type="performance">
+      Orchestration overhead budget: 3-5s (validated in POC during Story 3-0-8)
+    </constraint>
+    <constraint type="reliability">
+      NFR24: Graceful degradation required - fallback to Epic 2 simple search on agentic workflow failures
+    </constraint>
+    <constraint type="testing">
+      Use mock agents for testing (no real LLM calls) - Real LLM integration in Stories 3.2-3.4
+    </constraint>
+    <constraint type="testing">
+      Framework overhead test must execute &lt;1s (measures framework only, no LLM latency)
+    </constraint>
+    <constraint type="dependencies">
+      Tech stack is LOCKED - AWS Strands v1.15.0 already approved in Story 3-0-8, but any additional dependencies require user approval
+    </constraint>
+  </constraints>
+
+  <tests>
+    <standards>
+      Follow existing RAGLite testing patterns: Unit tests in tests/unit/agentic/, integration tests in tests/integration/. Use pytest with pytest-asyncio for async tests. Mock external dependencies (LLM calls) using pytest-mock. Target 80%+ coverage. Parallel execution with pytest-xdist where safe (no shared state). Test discovery validates all tests found by pytest.
+    </standards>
+    <locations>
+      <location>tests/unit/agentic/</location>
+      <location>tests/integration/test_agentic_framework.py</location>
+    </locations>
+    <ideas>
+      <idea acs="AC1">test_strands_import_success: Verify AWS Strands package imports correctly</idea>
+      <idea acs="AC1">test_strands_version_pinned: Verify version &gt;=1.15.0</idea>
+      <idea acs="AC2">test_agent_initialization: Verify Strands Agent class instantiation</idea>
+      <idea acs="AC2">test_llm_configuration: Verify Mistral Small configured as orchestration LLM</idea>
+      <idea acs="AC3">test_basic_two_step_workflow: MockRetrieval → MockSynthesis pipeline execution</idea>
+      <idea acs="AC4">test_state_propagation: Verify state passes correctly between agents</idea>
+      <idea acs="AC4">test_state_validation: Verify state schema validation catches missing fields</idea>
+      <idea acs="AC5">test_agent_timeout_handling: Mock slow agent, verify 15s timeout enforced</idea>
+      <idea acs="AC5">test_graceful_degradation_on_failure: Mock agent failure, verify fallback to Epic 2 search</idea>
+      <idea acs="AC5">test_structured_error_logging: Verify error logs contain agent metadata</idea>
+      <idea acs="AC6">test_end_to_end_mock_workflow: Full workflow with mock agents, no real LLM</idea>
+      <idea acs="AC6">test_framework_overhead_performance: Verify test execution &lt;1s (framework only)</idea>
+    </ideas>
+  </tests>
+
+  <dev-notes>
+    <note type="architecture">
+      This story implements the foundation for Epic 3's agentic orchestration based on Story 3-0-8 spike findings. Framework selected: AWS Strands v1.15.0. Architecture designed: 3-agent pipeline (Retrieval → Analysis → Synthesis). Fallback strategy: Simple Function Calling if AWS Strands has blockers on Day 1.
+    </note>
+    <note type="implementation">
+      New module structure: raglite/agentic/ containing orchestrator.py, agents/ directory with mock agents for testing, and state.py for AgentState Pydantic model. Mock agents used in this story - real agent implementations in Stories 3.2-3.4.
+    </note>
+    <note type="performance">
+      Performance targets: Total query latency &lt;10s p50, &lt;20s p95. Orchestration overhead: 3-5s. Individual agent timeout: 15s max (NFR26). Framework overhead test must execute &lt;1s without LLM calls.
+    </note>
+    <note type="testing">
+      Testing isolation: Use mock agents to avoid LLM API costs and latency. Real LLM integration tested in Stories 3.2-3.4 when implementing actual Retrieval, Analysis, and Synthesis agents. Focus on framework mechanics and state management in this story.
+    </note>
+    <note type="fallback">
+      Graceful degradation (NFR24): If agentic workflow fails (timeout, agent error, framework issue), fallback to Epic 2 simple search (raglite.retrieval.multi_index_search). Log failure with structured metadata for debugging.
+    </note>
+  </dev-notes>
+</story-context>

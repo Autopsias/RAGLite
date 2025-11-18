@@ -23,6 +23,7 @@ import pytest
 SKIP_SLOW_TESTS = os.getenv("RUN_SLOW_TESTS") != "1"
 
 
+@pytest.mark.preserve_collection  # Prevents cleanup between test files - maintains session fixture state
 class TestPypdfiumIngestionValidation:
     """Integration tests for pypdfium backend ingestion validation (Story 2.1).
 
@@ -32,6 +33,7 @@ class TestPypdfiumIngestionValidation:
     re-ingesting independently. This reduces test suite runtime from 40+ minutes to ~90 seconds.
     """
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.preserve_collection  # Uses session-scoped fixture, read-only
@@ -75,7 +77,7 @@ class TestPypdfiumIngestionValidation:
         assert count.count > 0, "Session fixture should have ingested chunks"
 
         # Environment-aware expectations:
-        # - LOCAL (10-page PDF): ~10-25 chunks
+        # - LOCAL (10-page PDF): ~10-30 chunks (table-aware chunking)
         # - CI (160-page PDF): ~100-300 chunks
         use_full_pdf = os.getenv("TEST_USE_FULL_PDF", "false").lower() == "true"
 
@@ -86,8 +88,10 @@ class TestPypdfiumIngestionValidation:
             pdf_type = "160-page full PDF (CI mode)"
         else:
             # LOCAL mode: 10-page sample PDF
+            # Updated range to account for table-aware chunking (Story 2.8)
+            # Tables kept intact can result in more chunks than basic fixed chunking
             expected_min_chunks = 10
-            expected_max_chunks = 25
+            expected_max_chunks = 30
             pdf_type = "10-page sample PDF (LOCAL mode)"
 
         assert expected_min_chunks <= count.count <= expected_max_chunks, (
@@ -104,9 +108,11 @@ class TestPypdfiumIngestionValidation:
         print("  Optimization: Reused session-scoped ingestion instead of re-ingesting")
 
 
+@pytest.mark.preserve_collection  # Prevents cleanup between test files - maintains session fixture state
 class TestPypdfiumTableAccuracy:
     """Integration tests for table extraction accuracy with pypdfium (Story 2.1 AC3)."""
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(300)
@@ -174,6 +180,7 @@ class TestPypdfiumTableAccuracy:
     @pytest.mark.skipif(
         not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
     )
+    @pytest.mark.priority("P0")
     async def test_table_accuracy_maintained_with_pypdfium(self) -> None:
         """Test AC3: Table extraction accuracy ≥97.9% with pypdfium backend.
 
@@ -247,6 +254,7 @@ class TestPypdfiumTableAccuracy:
         assert successful_queries > 0, "At least some table queries should succeed"
 
 
+@pytest.mark.preserve_collection  # Prevents cleanup between test files - maintains session fixture state
 class TestPypdfiumMemoryReduction:
     """Integration tests for memory reduction with pypdfium (Story 2.1 AC4)."""
 
@@ -257,6 +265,7 @@ class TestPypdfiumMemoryReduction:
         SKIP_SLOW_TESTS,
         reason="Slow test (2+ min) - memory profiling with full ingestion pipeline. Run with: RUN_SLOW_TESTS=1",
     )
+    @pytest.mark.priority("P0")
     @pytest.mark.timeout(300)
     async def test_memory_reduction_validation(self) -> None:
         """Test AC4: Measure peak memory usage with pypdfium backend.

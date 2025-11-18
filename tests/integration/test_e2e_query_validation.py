@@ -33,9 +33,10 @@ from tests.fixtures.ground_truth import GROUND_TRUTH_QA
 @pytest.mark.skip(
     reason="Story 2.2 dependency - Current chunking quality produces fragmented chunks with low semantic scores. Semantic search accuracy is 56% baseline, below the 70% target. This test requires element-based chunking (Story 2.2) to achieve the expected 0.7+ scores consistently. Will be re-enabled after Story 2.2 implementation."
 )
+@pytest.mark.priority("P0")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
-async def test_financial_terminology_handling():
+async def test_financial_terminology_handling(session_ingested_collection):
     """Test query tool with financial domain terminology.
 
     Validates AC4: Query embedding handles financial terminology correctly
@@ -133,7 +134,8 @@ async def test_financial_terminology_handling():
 @pytest.mark.skipif(
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
 )
-async def test_metadata_completeness_validation():
+@pytest.mark.priority("P0")
+async def test_metadata_completeness_validation(session_ingested_collection):
     """Test metadata completeness in query results.
 
     Validates AC3: Response includes retrieved chunks with complete metadata
@@ -228,7 +230,8 @@ async def test_metadata_completeness_validation():
 @pytest.mark.skipif(
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
 )
-async def test_ground_truth_validation_subset():
+@pytest.mark.priority("P0")
+async def test_ground_truth_validation_subset(session_ingested_collection):
     """Validate query tool accuracy on ground truth test set subset.
 
     Validates AC8: 10+ sample queries from ground truth test set validated
@@ -322,9 +325,10 @@ async def test_ground_truth_validation_subset():
     print(f"\n   ✅ PASS: Accuracy {accuracy:.1f}% meets Week 2 target (≥70%)")
 
 
+@pytest.mark.priority("P0")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
-async def test_e2e_integration_flow():
+async def test_e2e_integration_flow(session_ingested_collection):
     """Test end-to-end integration flow from query to response.
 
     Validates AC9 (CRITICAL): All Stories 1.2-1.9 components work together
@@ -391,9 +395,15 @@ async def test_e2e_integration_flow():
     )
 
 
+@pytest.mark.priority("P0")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
-async def test_performance_measurement():
+@pytest.mark.slow  # Runs 20+ Claude API calls - takes 2-3 minutes
+@pytest.mark.timeout(
+    1200
+)  # 20 minutes timeout for 20 queries + warmup (accounts for slow CI runners)
+@pytest.mark.asyncio
+async def test_performance_measurement(session_ingested_collection):
     """Measure p50/p95 query latency on 20+ queries with warm model.
 
     Validates NFR13: Query response time targets for steady-state performance.

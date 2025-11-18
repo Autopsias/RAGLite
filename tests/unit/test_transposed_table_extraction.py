@@ -66,6 +66,7 @@ def create_table_cell(
 class TestTransposedTableDetection:
     """Test transposed table pattern detection."""
 
+    @pytest.mark.priority("P2")
     def test_detect_transposed_single_header(self):
         """Test detection of transposed table with single header row."""
         # Create transposed pattern:
@@ -97,6 +98,7 @@ class TestTransposedTableDetection:
         assert metadata["metric_location"] == "first_column"
         assert metadata["first_col_metric_ratio"] >= 0.5
 
+    @pytest.mark.priority("P2")
     def test_detect_transposed_multi_header(self):
         """Test detection of transposed table with multi-level headers (entity + period)."""
         # Create transposed pattern with 2 header rows:
@@ -128,6 +130,7 @@ class TestTransposedTableDetection:
         assert metadata["transposed_pattern"] is True
         assert metadata["period_location"] == "multi_header"
 
+    @pytest.mark.priority("P2")
     def test_not_transposed_traditional_table(self):
         """Test that traditional tables (metrics in headers) are NOT detected as transposed."""
         # Traditional pattern:
@@ -153,6 +156,7 @@ class TestTransposedTableDetection:
         assert layout != TableLayout.TRANSPOSED_ENTITY_COLS_METRIC_ROW_LABELS
         assert metadata.get("transposed_pattern", False) is False
 
+    @pytest.mark.priority("P2")
     def test_not_transposed_insufficient_metrics_threshold(self):
         """Test that tables with <50% metrics in first column are NOT detected as transposed."""
         # Borderline case: Only 40% of first column is metrics
@@ -173,6 +177,7 @@ class TestTransposedTableDetection:
         # Should NOT detect as transposed (metric ratio <50%)
         assert layout != TableLayout.TRANSPOSED_ENTITY_COLS_METRIC_ROW_LABELS
 
+    @pytest.mark.priority("P2")
     def test_not_transposed_insufficient_rows(self):
         """Test that tables with <3 data rows are NOT detected as transposed."""
         # Only 2 data rows (below minimum threshold)
@@ -194,6 +199,7 @@ class TestTransposedTableDetection:
 class TestTransposedTableExtraction:
     """Test transposed table data extraction."""
 
+    @pytest.mark.priority("P2")
     def test_extract_single_header_transposed(self, mock_table_item, mock_result):
         """Test extraction from transposed table with single header row."""
         # Pattern (transposed):
@@ -255,6 +261,7 @@ class TestTransposedTableExtraction:
         ][0]
         assert lebanon_var_cost["value"] == -50.9
 
+    @pytest.mark.priority("P2")
     def test_extract_multi_header_transposed(self, mock_table_item, mock_result):
         """Test extraction from transposed table with entity + period headers."""
         # Pattern:
@@ -311,6 +318,7 @@ class TestTransposedTableExtraction:
         assert len(aug_rows) >= 2
         assert len(budget_rows) >= 2
 
+    @pytest.mark.priority("P2")
     def test_extract_handles_empty_cells(self, mock_table_item, mock_result):
         """Test that extraction handles empty/None cell values gracefully."""
         table_cells = [
@@ -341,6 +349,7 @@ class TestTransposedTableExtraction:
         assert len(rows) == 1
         assert rows[0]["value"] == -23.4
 
+    @pytest.mark.priority("P2")
     def test_extract_metric_parsing(self, mock_table_item, mock_result):
         """Test that metrics are correctly parsed from row labels."""
         table_cells = [
@@ -377,6 +386,7 @@ class TestTransposedTableExtraction:
         assert "Variable Cost Eur/ton" in metrics or "Variable Cost" in str(metrics)
         assert "Thermal Energy GJ/ton" in metrics or "Thermal Energy" in str(metrics)
 
+    @pytest.mark.priority("P2")
     def test_extract_column_name_generation(self, mock_table_item, mock_result):
         """Test that column names are generated correctly."""
         # Pattern with entity + period headers:
@@ -416,6 +426,7 @@ class TestTransposedTableExtraction:
         assert "Portugal" in col_name
         assert "Aug-25" in col_name or "Aug_25" in col_name
 
+    @pytest.mark.priority("P2")
     def test_extract_metadata_fields(self, mock_table_item, mock_result):
         """Test that all required metadata fields are present."""
         table_cells = [

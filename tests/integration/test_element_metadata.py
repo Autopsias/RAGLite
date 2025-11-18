@@ -21,6 +21,9 @@ from pathlib import Path
 
 import pytest
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 # Skip Story 2.2 tests - obsolete after strategic pivot to Story 2.3
 SKIP_STORY_2_2_TESTS = os.getenv("RUN_STORY_2_2_TESTS") != "1"
 
@@ -37,6 +40,7 @@ class TestElementMetadataIntegration:
         SKIP_STORY_2_2_TESTS,
         reason="Story 2.2 (element-aware chunking) replaced by Story 2.3 (fixed chunking). Element metadata no longer exists. See story-2.2-pivot-analysis/ for details.",
     )
+    @pytest.mark.priority("P2")
     async def test_element_metadata_stored_in_qdrant(self) -> None:
         """Test that element_type and section_title are stored in Qdrant (AC2).
 
@@ -132,6 +136,7 @@ class TestElementMetadataIntegration:
         SKIP_STORY_2_2_TESTS,
         reason="Story 2.2 (element-aware chunking) replaced by Story 2.3 (fixed chunking). Element metadata no longer exists. See story-2.2-pivot-analysis/ for details.",
     )
+    @pytest.mark.priority("P1")
     async def test_filter_chunks_by_element_type(self) -> None:
         """Test that chunks can be filtered by element_type in Qdrant.
 
@@ -196,6 +201,7 @@ class TestElementMetadataIntegration:
         SKIP_STORY_2_2_TESTS,
         reason="Story 2.2 (element-aware chunking) replaced by Story 2.3 (fixed chunking). Element metadata no longer exists. See story-2.2-pivot-analysis/ for details.",
     )
+    @pytest.mark.priority("P0")
     async def test_chunk_count_within_baseline_range(self) -> None:
         """Test that element-aware chunking produces reasonable chunk count (AC4).
 
@@ -279,6 +285,7 @@ class TestElementMetadataIntegration:
         SKIP_STORY_2_2_TESTS,
         reason="Story 2.2 (element-aware chunking) replaced by Story 2.3 (fixed chunking). Element metadata no longer exists. See story-2.2-pivot-analysis/ for details.",
     )
+    @pytest.mark.priority("P0")
     async def test_section_context_propagated(self) -> None:
         """Test that section_title is propagated to child elements.
 

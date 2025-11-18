@@ -37,6 +37,13 @@ class Settings(BaseSettings):
         "mistral-small-latest"  # Mistral model for chunk metadata extraction
     )
 
+    # AWS Strands Agentic Framework (Story 3.1: Epic 3 orchestration)
+    strands_orchestration_model: str = (
+        "mistral-small-latest"  # Orchestration LLM (tunable to claude-3-5-sonnet-20241022)
+    )
+    strands_agent_timeout_seconds: int = 15  # Per NFR26: 15s max per agent
+    strands_enable_opentelemetry: bool = False  # Optional: can defer detailed setup to Story 3.5
+
     # Embedding Model Configuration
     embedding_model: str = "intfloat/e5-large-v2"
     embedding_dimension: int = 1024

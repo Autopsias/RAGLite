@@ -6,6 +6,9 @@ Requires PostgreSQL to be running and populated with data from Story 2.6.
 
 import pytest
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 from raglite.structured.table_retrieval import (
     TableRetrievalError,
     search_tables,
@@ -17,6 +20,7 @@ from raglite.structured.table_retrieval import (
 class TestTableRetrieval:
     """Integration tests for PostgreSQL table search."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_search_tables_basic(self) -> None:
         """Test basic table search returns results."""
@@ -37,6 +41,7 @@ class TestTableRetrieval:
                 assert isinstance(result["score"], float)
                 assert 0.0 <= result["score"] <= 1.0
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_search_tables_with_table_content(self) -> None:
         """Test that search prioritizes table-formatted content."""
@@ -48,6 +53,7 @@ class TestTableRetrieval:
             for result in results:
                 assert result["metadata"].get("section_type") == "Table"
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_search_tables_top_k_limit(self) -> None:
         """Test that top_k limit is respected."""
@@ -59,6 +65,7 @@ class TestTableRetrieval:
         # Should not exceed top_k
         assert len(results) <= top_k
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_search_tables_empty_query(self) -> None:
         """Test that empty query returns empty results."""
@@ -69,6 +76,7 @@ class TestTableRetrieval:
         assert isinstance(results, list)
         # Empty query won't match anything in full-text search
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_search_tables_no_matches(self) -> None:
         """Test that query with no matches returns empty list."""
@@ -79,6 +87,7 @@ class TestTableRetrieval:
         assert isinstance(results, list)
         assert len(results) == 0
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_search_tables_with_metadata_filter_basic(self) -> None:
         """Test metadata filtering basic functionality."""
@@ -96,6 +105,7 @@ class TestTableRetrieval:
                 # Results matching filter should have correct metadata
                 assert "metric_category" in result["metadata"]
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_search_tables_with_multiple_filters(self) -> None:
         """Test multiple metadata filters."""
@@ -114,6 +124,7 @@ class TestTableRetrieval:
                 # Note: Filters may reduce results to 0 if no matches
                 assert isinstance(metadata, dict)
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_search_tables_score_ordering(self) -> None:
         """Test that results are ordered by relevance score (descending)."""
@@ -125,6 +136,7 @@ class TestTableRetrieval:
             scores = [r["score"] for r in results]
             assert scores == sorted(scores, reverse=True), "Results not ordered by score"
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_search_tables_metadata_completeness(self) -> None:
         """Test that returned results have complete metadata."""
@@ -153,6 +165,7 @@ class TestTableRetrieval:
 class TestTableRetrievalErrorHandling:
     """Test error handling for PostgreSQL table retrieval."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_search_handles_database_unavailable(self) -> None:
         """Test graceful handling when PostgreSQL is unavailable."""

@@ -3,6 +3,8 @@
 Defines core data structures used across ingestion and retrieval modules.
 """
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -209,6 +211,90 @@ class QueryResponse(BaseModel):
     results: list[QueryResult] = Field(..., description="Retrieved chunks sorted by relevance")
     query: str = Field(..., description="Original query string")
     retrieval_time_ms: float = Field(..., description="Retrieval time in milliseconds")
+
+
+class AnalyticalQueryRequest(BaseModel):
+    """Analytical query request for multi-step workflow orchestration (Story 3.5 AC7)."""
+
+    query: str = Field(
+        ...,
+        max_length=1000,
+        description="Natural language analytical query string (max 1000 characters)",
+    )
+    top_k: int = Field(default=5, ge=1, le=50, description="Number of results per retrieval step")
+
+
+class AnalyticalQueryResponse(BaseModel):
+    """Analytical query response with workflow orchestration metadata (Story 3.5 AC7).
+
+    Story 3.6 EXTENSION (AC4, AC6):
+    - reasoning_steps: Transparent workflow steps showing what the system did
+    - sources: Source documents with citations for answer verification
+    """
+
+    answer: str = Field(..., description="Synthesized natural language answer")
+    complexity: str = Field(..., description="Query complexity: 'simple' or 'analytical'")
+    workflow_metadata: dict[str, Any] = Field(
+        ...,
+        description=(
+            "Workflow execution metadata including task_count, execution_time_ms, "
+            "workflow_pattern, and fallback_tier"
+        ),
+    )
+    confidence: str = Field(..., description="Answer confidence: 'high', 'medium', or 'low'")
+    limitations: list[str] = Field(
+        default_factory=list, description="Limitations or caveats about the answer"
+    )
+
+    # Story 3.6 AC4: Reasoning steps for transparency
+    reasoning_steps: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Transparent workflow steps taken (e.g., '1. Retrieved 5 documents...', "
+            "'2. Analysis Agent calculated 20% YoY growth...', '3. Synthesized answer...')"
+        ),
+    )
+
+    # Story 3.6 AC6: Source citations for verification
+    sources: list[str] = Field(
+        default_factory=list,
+        description="Source documents with page references (e.g., 'Q3_2023_Report.pdf (page 12)')",
+    )
+
+
+# Story 3.7: AC5 - Workflow metrics tracking for degradation monitoring
+class WorkflowMetrics(BaseModel):
+    """Workflow execution metrics for degradation tier tracking (AC5).
+
+    These metrics enable monitoring dashboards (Epic 5) and workflow optimization.
+    Target rates: Tier 1 ≥95%, Tier 2 <5%, Tier 3 <1%, Tier 4 <0.1%
+    """
+
+    query_id: str = Field(..., description="Unique query identifier for correlation")
+    query: str = Field(..., description="Original user query (for debugging)")
+    tier: str = Field(
+        ...,
+        description=(
+            "Fallback tier: 'full_orchestration', 'partial_analysis', "
+            "'retrieval_only', or 'epic1_fallback'"
+        ),
+    )
+    confidence: str = Field(
+        ..., description="Answer confidence: 'high', 'medium', 'low', or 'none'"
+    )
+    execution_time_ms: int = Field(..., description="Total workflow execution time in milliseconds")
+    agents_invoked: list[str] = Field(
+        default_factory=list, description="List of agents invoked (e.g., ['retrieval', 'analysis'])"
+    )
+    agents_failed: list[str] = Field(
+        default_factory=list,
+        description="List of agents that failed (e.g., ['synthesis'] for Tier 2)",
+    )
+    error_type: str | None = Field(
+        default=None,
+        description="Error type if workflow failed: 'timeout', 'connection', 'api_failure', or 'unexpected'",
+    )
+    timestamp: str = Field(..., description="Timestamp of workflow execution (ISO 8601 format)")
 
 
 # Type alias for job identifiers (used in ingestion pipeline)

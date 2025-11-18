@@ -16,9 +16,10 @@ from raglite.shared.models import QueryResponse
 from tests.fixtures.ground_truth import GROUND_TRUTH_QA
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
-async def test_e2e_metadata_completeness():
+async def test_e2e_metadata_completeness(session_ingested_collection):
     """Validate metadata completeness from ingestion to response.
 
     End-to-end test: search_documents → generate_citations → validate metadata.
@@ -92,9 +93,10 @@ async def test_e2e_metadata_completeness():
     )
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
-async def test_e2e_citation_integration():
+async def test_e2e_citation_integration(session_ingested_collection):
     """Validate citations from Story 1.8 work correctly in end-to-end flow.
 
     Tests:
@@ -132,9 +134,10 @@ async def test_e2e_citation_integration():
         assert result.text.rstrip().endswith(")"), "Citation should be at end of text"
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
-async def test_e2e_llm_synthesis_compatibility():
+async def test_e2e_llm_synthesis_compatibility(session_ingested_collection):
     """Simulate LLM client processing QueryResponse.
 
     Validates that QueryResponse structure is optimized for LLM synthesis:
@@ -178,9 +181,10 @@ async def test_e2e_llm_synthesis_compatibility():
     print("\n✅ QueryResponse structure is LLM-compatible")
 
 
+@pytest.mark.priority("P0")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
-async def test_e2e_performance_validation():
+async def test_e2e_performance_validation(session_ingested_collection):
     """Measure p50/p95 latency on multiple queries.
 
     Validates performance meets NFR13 query response time targets.
@@ -254,9 +258,10 @@ async def test_e2e_performance_validation():
     print(f"   p95: {p95_latency:.2f}ms < 15000ms (NFR13 p95 target)")
 
 
+@pytest.mark.priority("P0")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
-async def test_e2e_ground_truth_metadata():
+async def test_e2e_ground_truth_metadata(session_ingested_collection):
     """Validate metadata completeness on ground truth test set.
 
     Uses 50+ ground truth Q&A pairs from Story 1.12A.
@@ -332,9 +337,10 @@ async def test_e2e_ground_truth_metadata():
     print(f"   100% metadata completeness on {len(test_subset)} ground truth queries")
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
-async def test_e2e_standard_mcp_pattern():
+async def test_e2e_standard_mcp_pattern(session_ingested_collection):
     """Validate standard MCP pattern: RAGLite returns raw chunks, no synthesis.
 
     Confirms AC10: Standard MCP architecture where:

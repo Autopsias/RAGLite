@@ -7,7 +7,7 @@ from pytest import MonkeyPatch
 from raglite.shared.config import Settings
 
 
-@pytest.mark.p0
+@pytest.mark.priority("P0")
 @pytest.mark.unit
 def test_settings_load_from_env(monkeypatch: MonkeyPatch) -> None:
     """Test Settings loads from environment variables."""
@@ -21,7 +21,7 @@ def test_settings_load_from_env(monkeypatch: MonkeyPatch) -> None:
     assert settings.anthropic_api_key == "test-key-abc123"
 
 
-@pytest.mark.p1
+@pytest.mark.priority("P1")
 @pytest.mark.unit
 def test_settings_default_values(monkeypatch: MonkeyPatch) -> None:
     """Test Settings uses default values when env vars not set."""
@@ -34,7 +34,7 @@ def test_settings_default_values(monkeypatch: MonkeyPatch) -> None:
     assert settings.embedding_dimension == 1024
 
 
-@pytest.mark.p0
+@pytest.mark.priority("P0")
 @pytest.mark.unit
 def test_settings_missing_api_key_optional(monkeypatch: MonkeyPatch) -> None:
     """Test Settings allows missing ANTHROPIC_API_KEY (optional until Story 1.11)."""
@@ -44,7 +44,7 @@ def test_settings_missing_api_key_optional(monkeypatch: MonkeyPatch) -> None:
     assert settings.anthropic_api_key is None  # Optional field, defaults to None
 
 
-@pytest.mark.p0
+@pytest.mark.priority("P0")
 @pytest.mark.unit
 def test_settings_type_validation(monkeypatch: MonkeyPatch) -> None:
     """Test Settings validates port as integer."""

@@ -15,6 +15,9 @@ from pathlib import Path
 
 import pytest
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.asyncio
 @pytest.mark.integration
@@ -22,6 +25,7 @@ import pytest
 @pytest.mark.skipif(
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
 )
+@pytest.mark.priority("P0")
 @pytest.mark.timeout(900)  # 15-minute timeout per test
 async def test_ac4_160page_doclingparse_baseline():
     """AC4 Baseline: Measure peak memory with DoclingParse backend (160-page PDF).
@@ -113,6 +117,7 @@ async def test_ac4_160page_doclingparse_baseline():
 @pytest.mark.skipif(
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
 )
+@pytest.mark.priority("P0")
 @pytest.mark.timeout(900)  # 15-minute timeout per test
 async def test_ac4_160page_pypdfium_optimized():
     """AC4 Optimized: Measure peak memory with PyPdfium backend (160-page PDF).
@@ -194,6 +199,7 @@ async def test_ac4_160page_pypdfium_optimized():
 @pytest.mark.skipif(
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
 )
+@pytest.mark.priority("P0")
 def test_ac4_160page_comparison():
     """Final comparison: Calculate reduction percentage from test results.
 

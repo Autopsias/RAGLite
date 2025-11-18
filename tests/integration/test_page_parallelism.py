@@ -10,6 +10,9 @@ from pathlib import Path
 
 import pytest
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 # Skip slow tests unless RUN_SLOW_TESTS=1 environment variable is set
 SKIP_SLOW_TESTS = os.getenv("RUN_SLOW_TESTS") != "1"
 
@@ -22,6 +25,7 @@ def get_ingestion_module():
     return pipeline
 
 
+@pytest.mark.priority("P0")
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
@@ -77,6 +81,7 @@ async def test_ac2_parallel_ingestion_4_threads():
     # This test documents the parallel time for comparison
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
@@ -121,6 +126,7 @@ async def test_ac2_parallel_ingestion_8_threads():
     assert result.page_count == 160, f"Expected 160 pages, got {result.page_count}"
 
 
+@pytest.mark.priority("P0")
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow

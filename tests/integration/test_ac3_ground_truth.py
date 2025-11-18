@@ -31,6 +31,9 @@ import pytest
 from raglite.retrieval.search import hybrid_search
 from tests.fixtures.ground_truth import GROUND_TRUTH_QA, GroundTruthQuestion
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 
 @dataclass
 class QueryValidationResult:
@@ -86,6 +89,7 @@ class AccuracyMetrics:
     p99_latency_ms: float
 
 
+@pytest.mark.priority("P0")
 @pytest.mark.slow
 @pytest.mark.skipif(
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
@@ -299,6 +303,7 @@ async def test_ac1_full_ground_truth_execution() -> AccuracyMetrics:
     return metrics
 
 
+@pytest.mark.priority("P0")
 @pytest.mark.slow
 @pytest.mark.skipif(
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
@@ -394,6 +399,7 @@ async def test_ac2_decision_gate_validation():
     )
 
 
+@pytest.mark.priority("P0")
 @pytest.mark.slow
 @pytest.mark.skipif(
     not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"

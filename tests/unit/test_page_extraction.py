@@ -15,6 +15,7 @@ from raglite.shared.models import DocumentMetadata
 class TestChunkByDoclingItems:
     """Test suite for Docling-based chunking with provenance extraction."""
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_chunk_by_docling_items_extracts_page_numbers(self):
         """Test that chunk_by_docling_items extracts actual page numbers from provenance.
@@ -91,6 +92,7 @@ class TestChunkByDoclingItems:
         # Verify first chunk starts with page from first element
         assert chunks[0].page_number == 43, "First chunk should use page number from first element"
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_chunk_by_docling_items_handles_missing_prov(self):
         """Test that missing provenance defaults to page 1.
@@ -168,6 +170,7 @@ class TestChunkByDoclingItems:
                 f"Page number should be from provenance (50, 51) or default (1), got {chunk.page_number}"
             )
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_chunk_by_docling_items_respects_page_boundaries(self):
         """Test that element-aware chunking preserves page numbers from provenance.
@@ -231,6 +234,7 @@ class TestChunkByDoclingItems:
         assert "page10_word" in all_content, "Page 10 content should be present"
         assert "page11_word" in all_content, "Page 11 content should be present"
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_chunk_by_docling_items_maintains_chunk_size(self):
         """Test that large pages are split into multiple chunks respecting size limit.
@@ -294,6 +298,7 @@ class TestChunkByDoclingItems:
             overlap_words = chunk1_words & chunk2_words
             assert len(overlap_words) > 0, "Chunks should have some overlap"
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_chunk_by_docling_items_handles_table_items(self):
         """Test that TableItem objects are processed via export_to_markdown() (Story 1.15).

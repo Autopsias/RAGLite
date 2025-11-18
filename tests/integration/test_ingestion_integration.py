@@ -35,10 +35,11 @@ class TestPDFIngestionIntegration:
     start, eliminating 90-120s of redundant processing per test.
     """
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(10)  # Fast test - no ingestion, just validation
-    async def test_ingest_financial_pdf_with_tables(self) -> None:
+    async def test_ingest_financial_pdf_with_tables(self, session_ingested_collection) -> None:
         """Integration test validating session-scoped PDF ingestion with tables.
 
         Uses session_ingested_collection fixture (PDF already ingested once).
@@ -99,10 +100,13 @@ class TestPDFIngestionIntegration:
         )
         print("  Status: ✅ PASS (using session fixture, zero ingestion overhead)")
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(10)  # Fast test - uses session fixture
-    async def test_pdf_ingestion_stores_correct_page_numbers(self) -> None:
+    async def test_pdf_ingestion_stores_correct_page_numbers(
+        self, session_ingested_collection
+    ) -> None:
         """Integration test validating page numbers extracted from Docling provenance (Story 1.13).
 
         Verifies that page numbers stored in Qdrant come from actual Docling provenance
@@ -171,6 +175,7 @@ class TestPDFIngestionIntegration:
         print(f"  Expected range: 1-{expected_page_count}")
         print("  Status: ✅ PASS - Page numbers from provenance (session fixture)")
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(30)  # Fast test - uses session fixture, only runs queries
@@ -250,6 +255,7 @@ class TestExcelIngestionIntegration:
     Validates openpyxl + pandas integration, sheet extraction, and numeric formatting.
     """
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(120)
@@ -328,7 +334,6 @@ class TestExcelIngestionIntegration:
         print("  ✅ End-to-end Excel ingestion (AC 9)")
 
 
-@pytest.mark.manages_collection_state  # Tests call ingest_pdf() - skip re-ingest cleanup
 class TestChunkingIntegration:
     """Integration tests for Story 1.4: Document chunking with page number preservation.
 
@@ -336,6 +341,7 @@ class TestChunkingIntegration:
     Tests AC8 (page number != None) and AC9 (page numbers flow through pipeline).
     """
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(45)
@@ -475,6 +481,7 @@ class TestChunkingIntegration:
         print(f"\n  ✅ AC8 PASS: All {result.chunk_count} chunks have page_number != None")
         print("  ✅ AC9 PASS: Page numbers preserved through ingestion → chunking pipeline")
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(45)
@@ -559,9 +566,11 @@ class TestEmbeddingIntegration:
     to avoid multiple model loads during parallel execution.
     """
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(180)  # 3 minutes timeout for model download + embedding generation
+    @pytest.mark.usefixtures("warmup_embedding_model")
     async def test_embedding_generation_end_to_end(self) -> None:
         """Integration test: Validate end-to-end embedding generation with real Fin-E5 model.
 
@@ -725,9 +734,11 @@ class TestEmbeddingIntegration:
             print("  Model: intfloat/e5-large-v2 (1024 dimensions)")
             print("  Note: Docling PDF processing mocked to isolate embedding performance")
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(180)
+    @pytest.mark.usefixtures("warmup_embedding_model")
     async def test_embedding_dimensions_validation_direct(self) -> None:
         """Integration test: Validate Fin-E5 model generates exactly 1024-dimensional embeddings.
 
@@ -774,9 +785,11 @@ class TestEmbeddingIntegration:
             f"\n  ✅ All {len(result_chunks)} embeddings validated: 1024 dimensions (Fin-E5 model)"
         )
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(10)
+    @pytest.mark.usefixtures("warmup_embedding_model")
     async def test_empty_document_embedding_handling(self) -> None:
         """Integration test: Validate graceful handling of empty chunk lists.
 
@@ -802,9 +815,11 @@ class TestQdrantStorageIntegration:
     to avoid multiple model loads during parallel execution.
     """
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(60)
+    @pytest.mark.usefixtures("warmup_embedding_model")
     async def test_storage_end_to_end_validation(self) -> None:
         """Integration test: End-to-end storage validation with real Qdrant.
 
@@ -890,9 +905,11 @@ class TestQdrantStorageIntegration:
             except Exception as e:
                 print(f"  ⚠️  Failed to clean up collection: {e}")
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(60)
+    @pytest.mark.usefixtures("warmup_embedding_model")
     async def test_storage_retrieval_roundtrip(self) -> None:
         """Integration test: Storage + retrieval round-trip validation.
 
@@ -973,6 +990,7 @@ class TestQdrantStorageIntegration:
             except Exception as e:
                 print(f"  ⚠️  Failed to clean up collection: {e}")
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(120)
@@ -1050,9 +1068,11 @@ class TestQdrantStorageIntegration:
             except Exception as e:
                 print(f"  ⚠️  Failed to clean up collection: {e}")
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.timeout(60)
+    @pytest.mark.usefixtures("warmup_embedding_model")
     async def test_metadata_preservation_end_to_end(self) -> None:
         """Integration test: Metadata preservation validation (page_number != None).
 

@@ -1,0 +1,284 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>0.2</storyId>
+    <title>Create Epic 3 Data Dictionary</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-06</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/3-0-2-create-epic-3-data-dictionary.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>test architect preparing for Epic 3</asA>
+    <iWant>a data dictionary documenting available analytical query data</iWant>
+    <soThat>ground truth tests align with actual database content and we avoid Epic 2's 12% → 77.6% issue</soThat>
+    <tasks>
+      **Task 1: Database Inspection (AC1) - 4 hours**
+      - Subtask 1.1: Create inspection script (scripts/inspect-database-for-epic-3.py)
+      - Subtask 1.2: Execute inspection against PostgreSQL financial_tables
+      - Subtask 1.3: Generate JSON catalog (docs/data-dictionary-epic-3.json)
+      - Subtask 1.4: Validate inspection results (cross-check with Epic 2 ground truth)
+
+      **Task 2: Create Data Dictionary (AC2) - 2 hours**
+      - Subtask 2.1: Write markdown documentation (docs/data-dictionary-epic-3.md)
+      - Subtask 2.2: Add examples and counts for all metrics, periods, entities
+      - Subtask 2.3: Document validation rules
+      - Subtask 2.4: Test data dictionary completeness (validate against ground_truth.json)
+
+      **Task 3: Architecture Review (AC3) - 30 minutes**
+      - Subtask 3.1: Winston reviews dictionary for completeness
+      - Subtask 3.2: Winston approval and Epic 3 test creation unblock
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    **AC1: Database Inspection (4 hours)**
+    Goal: Query database and catalog all available data for analytical queries
+    Success Criteria:
+    - All unique metrics cataloged (EBITDA, Variable Cost, Revenue, etc.)
+    - All unique periods cataloged (Aug-25, Sep-25, YTD variants, etc.)
+    - All unique entities cataloged (Portugal, Tunisia, Angola, Brazil, Group, etc.)
+    - Currency limitations documented (EUR only)
+    - JSON catalog saved: docs/data-dictionary-epic-3.json
+
+    **AC2: Create Data Dictionary Document (2 hours)**
+    Goal: Human-readable markdown documentation of available data
+    Success Criteria:
+    - Data dictionary created: docs/data-dictionary-epic-3.md
+    - All sections complete (metrics, periods, entities, currencies, limitations)
+    - Test query validation rules documented
+    - Examples and counts included
+
+    **AC3: Winston Architecture Review (30 minutes)**
+    Goal: Verify data dictionary completeness and Epic 3 readiness
+    Success Criteria:
+    - Winston architecture approval documented
+    - Data dictionary approved for Epic 3 test creation
+    - Epic 3 test queries blocked until dictionary validated
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/tech-spec-epic-3-prep.md</path>
+        <title>Epic 3 Prep - Technical Specification</title>
+        <section>Story 3.0.2: Create Epic 3 Data Dictionary</section>
+        <snippet>Data dictionary creation (Day 2 - 6 hours) with database inspection script querying PostgreSQL financial_tables for all unique metrics, periods, entities. Comprehensive markdown documentation with validation rules. Winston architectural review for completeness before Epic 3 test creation.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/epics.md</path>
+        <title>RAGLite - Epic and Story Breakdown</title>
+        <section>Epic 3: AI Intelligence & Orchestration</section>
+        <snippet>Enable multi-step reasoning and complex analytical workflows through agentic orchestration. Prep stories (3.0.1-3.0.7) address technical debt reduction including data dictionary creation to prevent ground truth misalignment issues from Epic 2.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/retrospectives/epic-2-retro-2025-11-05.md</path>
+        <title>Epic 2 Retrospective</title>
+        <section>Ground Truth Misalignment Issue</section>
+        <snippet>Ground truth created from requirements, not database inspection. Queries asked for non-existent data ("Q3 2025" vs "Aug-25 YTD"). Test misalignment caused 12% accuracy (66pp below implementation's actual 77.6%). Action Item 1: Data-first approach - inspect database BEFORE creating test queries.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/stories/2-14-sql-generation-edge-case-refinement.md</path>
+        <title>Story 2.14: SQL Generation Edge Case Refinement</title>
+        <section>AC1: Fuzzy Entity Matching</section>
+        <snippet>Entity alias mapping: "Group" → "Currency (1000 EUR)", "Angola" → "Secil Angola", "Brazil" → "Adrianopolis" OR "Pomerode". Implemented in query_classifier.py using fuzzy string matching with 80% threshold.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/stories/2-15-ground-truth-normalization-epic-2-final-validation.md</path>
+        <title>Story 2.15: Ground Truth Normalization Epic 2 Final Validation</title>
+        <section>AC1: Period Normalization</section>
+        <snippet>Period mappings: Q3 2025 → [Jul-25, Aug-25, Sep-25, Aug-25 YTD], Q2 2025 → [Apr-25, May-25, Jun-25, Jun-25 YTD]. Implemented in period_normalizer.py to handle quarter-to-month conversions for database queries.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/stories/3-0-1-refactor-modules-to-size-limits.md</path>
+        <title>Story 3.0.1: Refactor Modules to Size Limits (Previous Story)</title>
+        <section>Completion Notes</section>
+        <snippet>9 new focused modules created from 2 oversized files. Database client location confirmed: raglite.shared.clients.get_db_client(). No import path changes affecting database access patterns. Clean module structure unblocks Epic 3 development.</snippet>
+      </doc>
+
+      <doc>
+        <path>tests/ground_truth.json</path>
+        <title>Ground Truth Test Set</title>
+        <section>Epic 2 Validation Queries</section>
+        <snippet>50+ question-answer pairs for accuracy validation. Contains queries referencing metrics (EBITDA, Revenue), periods (Q3 2025, Aug-25), entities (Portugal, Tunisia). Critical reference for validating data dictionary completeness (AC2 Subtask 2.4).</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>raglite/shared/clients.py</path>
+        <kind>service</kind>
+        <symbol>get_db_client()</symbol>
+        <lines>Various</lines>
+        <reason>Primary interface for PostgreSQL database access. Use this function to get database client for inspection queries. Established in Story 2.6, confirmed available after Story 3.0.1 refactoring.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>model</kind>
+        <symbol>financial_tables schema</symbol>
+        <lines>Various</lines>
+        <reason>PostgreSQL schema definition for financial_tables. Contains columns: metric, period, entity, currency, value. 170,142 rows. Critical reference for understanding database structure during inspection.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/retrieval/query_classifier.py</path>
+        <kind>service</kind>
+        <symbol>Entity fuzzy matching logic</symbol>
+        <lines>Story 2.14 implementation</lines>
+        <reason>Reference for entity alias mappings. Contains fuzzy matching algorithm (80% threshold) used to map "Group" → "Currency (1000 EUR)", "Angola" → "Secil Angola". Data dictionary should document these aliases.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/retrieval/period_normalizer.py</path>
+        <kind>service</kind>
+        <symbol>Period mapping logic</symbol>
+        <lines>Story 2.15 implementation</lines>
+        <reason>Reference for period normalization mappings. Contains quarter-to-month conversions (Q3 2025 → Jul-25, Aug-25, Sep-25, Aug-25 YTD). Data dictionary should document these mappings in Available Periods section.</reason>
+      </artifact>
+
+      <artifact>
+        <path>scripts/inspect-qdrant.py</path>
+        <kind>script</kind>
+        <symbol>inspection_pattern_reference</symbol>
+        <lines>Full file</lines>
+        <reason>Reference pattern for database inspection scripts. Shows async structure, collection querying, result formatting. Can serve as template for inspect-database-for-epic-3.py structure.</reason>
+      </artifact>
+
+      <artifact>
+        <path>tests/integration/test_inspect_database_epic_3_integration.py</path>
+        <kind>test</kind>
+        <symbol>Database inspection integration tests</symbol>
+        <lines>Full file</lines>
+        <reason>Existing integration tests for this exact story. Validates database inspection functionality, JSON catalog generation, data dictionary completeness. Reference for AC validation approach.</reason>
+      </artifact>
+
+      <artifact>
+        <path>tests/conftest.py</path>
+        <kind>config</kind>
+        <symbol>pytest fixtures</symbol>
+        <lines>Full file</lines>
+        <reason>Pytest configuration and shared fixtures. Contains database fixtures, test data setup. Reference for adding new test fixtures if needed for validation subtasks.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="asyncpg" version=">=0.28.0">PostgreSQL async driver - already in use for database queries</package>
+        <package name="pydantic" version=">=2.0.0">Data validation - use for JSON catalog schema if needed</package>
+        <package name="pytest" version=">=7.4.0">Testing framework - for integration tests</package>
+        <package name="pytest-asyncio" version=">=0.21.0">Async test support - for async database inspection tests</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    **KISS Principle Compliance:**
+    - NO new dependencies (use existing asyncpg client from Story 2.6)
+    - Simple SELECT DISTINCT queries only (no ORMs, no query builders, no aggregations)
+    - NO custom data catalog frameworks (markdown + JSON sufficient)
+    - Direct SQL queries via existing get_db_client() helper
+
+    **Database Access Pattern:**
+    - Use get_db_client() from raglite.shared.clients for PostgreSQL access
+    - Follow async pattern: async def inspect_database()
+    - Query financial_tables schema with standard SELECT DISTINCT queries
+    - No complex joins or aggregations required
+
+    **Data Dictionary Format:**
+    - Markdown tables for human readability (version-controlled in docs/)
+    - JSON catalog (optional) for programmatic access by test scripts
+    - Standard structure: Metrics → Periods → Entities → Currencies → Limitations
+
+    **Module Boundaries (from Story 3.0.1):**
+    - Database clients in: raglite.shared.clients (use existing, don't modify)
+    - Inspection script standalone: scripts/inspect-database-for-epic-3.py
+    - No new abstractions or wrappers around database access
+
+    **Testing Requirements:**
+    - Cross-validation with Epic 2 ground truth (Subtask 1.4)
+    - Completeness testing against ground_truth.json (Subtask 2.4)
+    - Integration test already exists: tests/integration/test_inspect_database_epic_3_integration.py
+
+    **Documentation Standards:**
+    - Test query validation rules documented in dictionary
+    - Period mappings from Story 2.15 included
+    - Entity aliases from Story 2.14 included
+    - Limitations explicitly stated (no hidden assumptions)
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>get_db_client()</name>
+      <kind>function</kind>
+      <signature>async def get_db_client() -> AsyncConnection</signature>
+      <path>raglite/shared/clients.py</path>
+      <description>Returns PostgreSQL database client using asyncpg. Primary interface for all database queries. Established in Story 2.6, confirmed available after Story 3.0.1 refactoring.</description>
+    </interface>
+
+    <interface>
+      <name>financial_tables</name>
+      <kind>database_schema</kind>
+      <signature>
+        Table: financial_tables
+        Columns: metric (TEXT), period (TEXT), entity (TEXT), currency (TEXT), value (NUMERIC)
+        Rows: 170,142
+      </signature>
+      <path>raglite/shared/models.py</path>
+      <description>PostgreSQL table containing all financial data. Source for data dictionary inspection. Query with SELECT DISTINCT to catalog unique values.</description>
+    </interface>
+
+    <interface>
+      <name>Data Dictionary Output Format</name>
+      <kind>file_format</kind>
+      <signature>
+        Markdown: docs/data-dictionary-epic-3.md (human-readable tables)
+        JSON: docs/data-dictionary-epic-3.json (programmatic access, optional)
+      </signature>
+      <path>docs/</path>
+      <description>Output format specification. Markdown for developers/testers, JSON for test scripts. Both version-controlled in docs/ directory.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      **Testing Framework:** pytest with pytest-asyncio for async tests
+      **Integration Tests:** tests/integration/ directory
+      **Existing Test:** test_inspect_database_epic_3_integration.py validates database inspection functionality
+      **Validation Approach:** Cross-check inspection results against Epic 2 ground_truth.json (50+ queries)
+      **Coverage Target:** 80%+ (project standard per CLAUDE.md)
+      **Async Pattern:** All database tests use async fixtures and pytest-asyncio
+    </standards>
+
+    <locations>
+      tests/integration/ - Integration tests requiring PostgreSQL
+      tests/unit/ - Unit tests with mocked database
+      tests/fixtures/ - Test data and fixtures
+      tests/conftest.py - Shared pytest configuration
+    </locations>
+
+    <ideas>
+      **AC1 Validation Tests:**
+      - test_inspect_database_returns_all_metrics() - Verify metrics catalog completeness
+      - test_inspect_database_returns_all_periods() - Verify periods catalog (including YTD variants)
+      - test_inspect_database_returns_all_entities() - Verify entities catalog (including aliases)
+      - test_inspect_database_json_output_valid() - Validate JSON catalog schema
+
+      **AC2 Validation Tests:**
+      - test_data_dictionary_markdown_format() - Verify markdown structure (sections, tables)
+      - test_data_dictionary_completeness_against_ground_truth() - Validate all ground_truth.json queries reference valid data
+      - test_data_dictionary_period_mappings() - Verify Story 2.15 period mappings documented
+      - test_data_dictionary_entity_aliases() - Verify Story 2.14 entity aliases documented
+
+      **AC3 Validation Tests:**
+      - test_data_dictionary_validation_rules_present() - Verify test query validation rules section exists
+      - test_data_dictionary_limitations_documented() - Verify limitations section complete (missing metrics, currencies, etc.)
+    </ideas>
+  </tests>
+</story-context>

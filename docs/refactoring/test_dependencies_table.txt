@@ -1,0 +1,1 @@
+tests/unit/test_transposed_table_extraction.py:from raglite.ingestion.adaptive_table_extraction import (

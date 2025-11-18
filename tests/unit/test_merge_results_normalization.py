@@ -9,6 +9,7 @@ import pytest
 from raglite.retrieval.multi_index_search import SearchResult, merge_results
 
 
+@pytest.mark.priority("P1")
 def test_merge_results_empty_inputs():
     """Test merge_results with empty inputs."""
     # Both empty
@@ -31,6 +32,7 @@ def test_merge_results_empty_inputs():
     assert merge_results([], sql) == sql[:5]
 
 
+@pytest.mark.priority("P1")
 def test_merge_results_score_normalization_basic():
     """Test that scores are normalized before fusion."""
     # Vector results with RRF scores (typical range: 0.001-0.03)
@@ -86,6 +88,7 @@ def test_merge_results_score_normalization_basic():
     assert round(doc1_result.score, 2) == 1.0  # Should be equally weighted
 
 
+@pytest.mark.priority("P1")
 def test_merge_results_alpha_sensitivity_after_normalization():
     """Test that alpha parameter now has visible effect after normalization."""
     # Vector results with RRF scores (very small)
@@ -123,6 +126,7 @@ def test_merge_results_alpha_sensitivity_after_normalization():
     # For separate docs, both end up with score=0.6 or 0.85 depending on alpha
 
 
+@pytest.mark.priority("P1")
 def test_merge_results_deduplication_with_normalization():
     """Test deduplication works correctly with normalized scores."""
     # Same document in both indexes
@@ -166,6 +170,7 @@ def test_merge_results_deduplication_with_normalization():
     assert "vec" in fused[0].metadata and "sql" in fused[0].metadata
 
 
+@pytest.mark.priority("P1")
 def test_merge_results_realistic_scenario():
     """Test realistic scenario with mixed RRF and SQL scores."""
     # Realistic vector results (RRF: 0.001-0.03 range)
@@ -211,6 +216,7 @@ def test_merge_results_realistic_scenario():
         )
 
 
+@pytest.mark.priority("P1")
 def test_merge_results_no_sql_degradation():
     """Test that SQL-only results get reasonable scores after normalization."""
     sql_results = [

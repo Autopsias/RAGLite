@@ -1,9 +1,10 @@
 """RAGLite MCP Server - Model Context Protocol entry point.
 
 This module implements the FastMCP server that exposes RAGLite capabilities
-to MCP clients (Claude Desktop, etc.). Provides two core tools:
+to MCP clients (Claude Desktop, etc.). Provides three core tools:
   1. ingest_financial_document - Ingest PDF/Excel documents
-  2. query_financial_documents - Query documents using natural language
+  2. query_financial_documents - Query documents using natural language (Epic 1-2)
+  3. analytical_query_financial_documents - Advanced multi-step analytical queries (Epic 3)
 
 The server follows standard MCP pattern: tools return raw data (chunks with metadata),
 and the LLM client (Claude) synthesizes natural language answers.
@@ -21,13 +22,22 @@ import time
 
 from fastmcp import FastMCP
 
+from raglite.agentic.fallback import FallbackResponse, handle_workflow_failure
+from raglite.agentic.orchestrator import WorkflowExecutor
+from raglite.agentic.planner import QueryComplexity, classify_query_complexity, decompose_query
 from raglite.ingestion.pipeline import ingest_document
 from raglite.retrieval.attribution import generate_citations
 from raglite.retrieval.multi_index_search import MultiIndexSearchError, multi_index_search
 from raglite.retrieval.search import QueryError
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
-from raglite.shared.models import DocumentMetadata, QueryRequest, QueryResponse
+from raglite.shared.models import (
+    AnalyticalQueryRequest,
+    AnalyticalQueryResponse,
+    DocumentMetadata,
+    QueryRequest,
+    QueryResponse,
+)
 
 # Initialize structured logger
 logger = get_logger(__name__)
@@ -57,6 +67,22 @@ async def ingest_financial_document(doc_path: str) -> DocumentMetadata:
       3. Generate embeddings (Fin-E5 model)
       4. Store vectors in Qdrant with metadata
 
+    **Performance & Timeout Considerations:**
+      - Small files (<10 pages): ~2-5 minutes (MCP timeout safe)
+      - Large files (>10 pages): May timeout in MCP clients
+      - Processing time: ~20-30 seconds per page (Docling + embedding generation)
+
+    **For Large Files:** Use CLI ingestion to avoid MCP timeouts:
+        ```bash
+        cd /path/to/RAGLite
+        uv run python -c "
+        import asyncio
+        from raglite.ingestion.pipeline import ingest_document
+        asyncio.run(ingest_document('/path/to/large.pdf'))
+        "
+        ```
+        Then query via MCP after ingestion completes.
+
     Args:
         doc_path: Absolute or relative path to document file (.pdf, .xlsx, .xls)
 
@@ -75,6 +101,10 @@ async def ingest_financial_document(doc_path: str) -> DocumentMetadata:
     Example:
         >>> metadata = await ingest_financial_document("/data/Q3_2023_Report.pdf")
         >>> print(f"Ingested {metadata.chunk_count} chunks from {metadata.filename}")
+
+    Note:
+        Epic 4 (Production Readiness) will add async job queue for large file ingestion
+        with progress tracking. See docs/future-enhancements.md for research roadmap.
     """
     logger.info("Ingesting document", extra={"path": doc_path})
 
@@ -245,6 +275,471 @@ async def query_financial_documents(request: QueryRequest) -> QueryResponse:
         raise QueryError(f"Query failed: {e}") from e
 
 
+@mcp.tool()
+async def analytical_query_financial_documents(
+    request: AnalyticalQueryRequest,
+) -> AnalyticalQueryResponse:
+    """Query financial documents using multi-step agentic workflow orchestration.
+
+    Story 3.5 AC7: Advanced analytical queries using workflow decomposition and
+    specialized agent coordination (Retrieval → Analysis → Synthesis).
+
+    This tool handles complex analytical queries that require multi-step reasoning:
+    - YoY/QoQ growth calculations
+    - Variance analysis and driver identification
+    - Trend analysis over multiple periods
+    - Comparative financial analysis
+
+    Workflow pipeline:
+      1. Classify query complexity (simple vs analytical)
+      2. Decompose analytical queries into sub-tasks with dependencies
+      3. Execute workflow with specialized agents (retrieval, analysis, synthesis)
+      4. Synthesize final answer with workflow metadata
+      5. Graceful degradation to basic search if workflow fails (AC8)
+
+    Args:
+        request: Analytical query parameters containing:
+          - query: Natural language analytical query
+          - top_k: Number of results per retrieval step (default: 5)
+
+    Returns:
+        AnalyticalQueryResponse containing:
+          - answer: Synthesized natural language answer
+          - complexity: Query complexity classification ("simple" or "analytical")
+          - workflow_metadata: Execution details:
+              * task_count: Number of workflow tasks executed
+              * execution_time_ms: Total workflow execution time
+              * workflow_pattern: Pattern used (yoy_growth, variance_analysis, etc.)
+              * fallback_tier: Quality tier ("full", "partial", "epic1_fallback")
+          - confidence: Answer confidence level ("high", "medium", "low")
+          - limitations: List of caveats or limitations (empty for full workflow)
+
+    Raises:
+        QueryError: If query is empty or invalid
+
+    Example - YoY Growth Analysis:
+        >>> request = AnalyticalQueryRequest(
+        ...     query="Calculate YoY revenue growth from 2022 to 2023",
+        ...     top_k=5
+        ... )
+        >>> response = await analytical_query_financial_documents(request)
+        >>> print(response.answer)
+        "Revenue grew 15.3% year-over-year from $245M in 2022 to $283M in 2023..."
+        >>> print(response.workflow_metadata)
+        {
+            "task_count": 4,
+            "execution_time_ms": 2847,
+            "workflow_pattern": "yoy_growth",
+            "fallback_tier": "full"
+        }
+
+    Example - Variance Analysis:
+        >>> request = AnalyticalQueryRequest(
+        ...     query="Explain the variance in Q3 operating expenses"
+        ... )
+        >>> response = await analytical_query_financial_documents(request)
+        >>> print(response.answer)
+        "Q3 operating expenses increased by $12M (8.5%)..."
+
+    Example - Comparative Analysis:
+        >>> request = AnalyticalQueryRequest(
+        ...     query="Compare Q3 2023 revenue with Q3 2024 revenue"
+        ... )
+        >>> response = await analytical_query_financial_documents(request)
+        >>> print(response.answer)
+        "Q3 2024 revenue was $283M compared to $245M in Q3 2023..."
+        >>> print(response.reasoning_steps)
+        ["1. Classified query as analytical (comparative pattern)",
+         "2. Retrieved Q3 2023 financial documents",
+         "3. Retrieved Q3 2024 financial documents",
+         "4. Performed comparative analysis",
+         "5. Synthesized final answer from 4 workflow tasks"]
+
+    Graceful Degradation (Story 3.7):
+        RAGLite's workflow orchestration includes production-grade error handling
+        that ensures users ALWAYS receive a response, even during system issues.
+
+        **4-Tier Degradation System:**
+
+        1. **Tier 1 - Full Orchestration (Best):**
+           - All 3 agents succeed (Retrieval → Analysis → Synthesis)
+           - Synthesized answer with citations
+           - Confidence: "high"
+           - Example: "Revenue grew 15.3% YoY from $245M in 2022 to $283M in 2023..."
+
+        2. **Tier 2 - Partial Workflow (Good):**
+           - Some agents succeed, others fail
+           - Partial results with user-friendly error message
+           - Confidence: "medium"
+           - Example: "We found Q3 revenue data but experienced delays during analysis.
+                      Based on retrieved documents: Q3 2024 revenue was $283M..."
+
+        3. **Tier 3 - Retrieval Only (Acceptable):**
+           - Only retrieval succeeds, no analysis
+           - Raw document excerpts returned
+           - Confidence: "low"
+           - Example: "Found 5 relevant documents: [document excerpts...]"
+
+        4. **Tier 4 - Epic 1/2 Fallback (Minimal):**
+           - All agents fail, fallback to basic search
+           - User-friendly error message with alternative query suggestion
+           - Confidence: "none"
+           - Example: "Our advanced analysis system is experiencing issues.
+                      Here are the documents we found..."
+
+        **Timeout Handling:**
+        - Workflow-level timeout: 30 seconds (NFR5)
+        - Per-agent timeout: 15 seconds (NFR26)
+        - Timeouts trigger automatic tier degradation
+
+        **Error Classification & User-Friendly Messages:**
+
+        RAGLite automatically classifies errors and provides user-friendly messages
+        (no technical jargon like "asyncio.TimeoutError"):
+
+        | Technical Error | User-Friendly Message | Fallback Tier |
+        |-----------------|----------------------|---------------|
+        | Agent timeout (>15s) | "Our analysis system is experiencing delays, but we found some results." | Tier 2 |
+        | Workflow timeout (>30s) | "Our advanced analysis system is taking longer than usual. Here are basic search results." | Tier 4 |
+        | Claude/Mistral API 503 | "Our AI service is temporarily unavailable. We've provided partial results based on available data." | Tier 2 |
+        | Qdrant connection error | "We're experiencing database connectivity issues, but retrieved some results." | Tier 4 |
+        | Unexpected error | "We encountered an unexpected issue during analysis. Here are the partial results we gathered." | Tier 2/4 |
+
+        **Alternative Query Suggestions:**
+
+        When degradation occurs, RAGLite suggests alternative queries:
+        - Timeout errors: "Try a simpler query like 'What was Q3 revenue?' or break into smaller questions"
+        - API failures: "Please wait a moment and try again, or rephrase your question"
+        - Connection errors: "Please wait a moment and try again"
+
+        **Example - Timeout Degradation:**
+        ```
+        >>> request = AnalyticalQueryRequest(
+        ...     query="Calculate YoY revenue growth with variance explanation and trend analysis"
+        ... )
+        >>> response = await analytical_query_financial_documents(request)
+        >>> print(response.answer)
+        "Our analysis system is experiencing delays, but we found 5 documents
+         mentioning revenue data from 2022-2024."
+        >>> print(response.confidence)
+        "medium"
+        >>> print(response.workflow_metadata["fallback_tier"])
+        "partial"
+        >>> print(response.limitations)
+        ["Unable to complete full analysis due to processing delays"]
+        >>> # Alternative query suggestion provided in response
+        "Try a simpler query like 'What was 2024 revenue?' or break into smaller questions"
+        ```
+
+        **Example - API Failure Degradation:**
+        ```
+        >>> request = AnalyticalQueryRequest(
+        ...     query="Compare Q3 and Q4 EBITDA with variance drivers"
+        ... )
+        >>> response = await analytical_query_financial_documents(request)
+        >>> print(response.answer)
+        "Our AI service is temporarily unavailable. Here are the documents we found:
+         - Q3_2024_Report.pdf
+         - Q4_2024_Report.pdf"
+        >>> print(response.confidence)
+        "low"
+        >>> print(response.workflow_metadata["fallback_tier"])
+        "epic1_fallback"
+        ```
+
+        **Observability & Metrics:**
+
+        All degradation events are logged with structured metadata:
+        - Degradation tier (full, partial, epic1_fallback)
+        - Error type (timeout, connection, api_failure, unexpected)
+        - Agents invoked and agents failed
+        - Execution time and query details
+
+        Target metrics (Epic 5 production monitoring):
+        - Tier 1 success rate: ≥95%
+        - Tier 2 fallback rate: <5%
+        - Tier 4 Epic 1 rate: <0.1%
+
+        See docs/user-guide-graceful-degradation.md for end-user documentation.
+    """
+    logger.info(
+        "Analytical query received",
+        extra={
+            "query": request.query,
+            "top_k": request.top_k,
+        },
+    )
+
+    # Validate query
+    if not request.query or not request.query.strip():
+        error_msg = "Query cannot be empty"
+        logger.warning("Empty analytical query rejected", extra={"query": request.query})
+        raise QueryError(error_msg)
+
+    workflow_start_time = time.perf_counter()
+
+    try:
+        # Step 1: Classify query complexity (AC1)
+        complexity = await classify_query_complexity(request.query)
+
+        logger.info(
+            "Query classified",
+            extra={"query": request.query, "complexity": complexity},
+        )
+
+        # Story 3.6 AC3: Conditional routing - simple queries to Epic 2, analytical to Epic 3
+        if complexity == QueryComplexity.SIMPLE:
+            logger.info(
+                "Routing simple query to Epic 2 basic retrieval",
+                extra={"query": request.query, "complexity": complexity},
+            )
+
+            # Route to Epic 2 basic retrieval tool
+            basic_request = QueryRequest(query=request.query, top_k=request.top_k)
+            basic_response = await query_financial_documents.fn(basic_request)
+
+            workflow_duration_ms = (time.perf_counter() - workflow_start_time) * 1000
+
+            # Story 3.6 AC4: Build reasoning steps for transparency
+            reasoning_steps = [
+                "1. Classified query as simple (direct retrieval)",
+                f"2. Retrieved {len(basic_response.results)} relevant documents via vector search",
+                "3. Ranked results by similarity score",
+            ]
+
+            # Story 3.6 AC6: Extract source citations from results
+            sources = [
+                f"{r.source_document} (page {r.page_number})"
+                if r.page_number is not None
+                else r.source_document
+                for r in basic_response.results
+            ]
+
+            logger.info(
+                "Simple query complete (Epic 2 routing)",
+                extra={
+                    "query": request.query,
+                    "results_count": len(basic_response.results),
+                    "duration_ms": f"{workflow_duration_ms:.2f}",
+                    "routing": "epic2_basic_retrieval",
+                },
+            )
+
+            # Convert QueryResponse to AnalyticalQueryResponse format
+            # Synthesize answer from top results
+            answer_parts = ["Based on the retrieved documents:\n"]
+            for i, result in enumerate(basic_response.results[:3], 1):
+                # Truncate long results for summary
+                text_preview = result.text[:200] + "..." if len(result.text) > 200 else result.text
+                answer_parts.append(f"{i}. {text_preview}")
+
+            return AnalyticalQueryResponse(
+                answer="\n".join(answer_parts),
+                complexity=complexity.value,
+                workflow_metadata={
+                    "task_count": 1,
+                    "execution_time_ms": int(workflow_duration_ms),
+                    "workflow_pattern": "simple_retrieval",
+                    "fallback_tier": "epic2_routing",
+                },
+                confidence="high",
+                limitations=[],
+                reasoning_steps=reasoning_steps,
+                sources=sources,
+            )
+
+        # Analytical queries continue with Epic 3 workflow orchestration
+        # Step 2: Decompose query into workflow plan (AC2)
+        plan = await decompose_query(request.query, complexity)
+
+        logger.info(
+            "Query decomposed",
+            extra={
+                "query": request.query,
+                "task_count": len(plan.tasks),
+                "pattern": plan.metadata.get("pattern", "unknown"),
+            },
+        )
+
+        # Step 3: Execute workflow with specialized agents (AC3, AC4, AC5)
+        executor = WorkflowExecutor()
+        results = await executor.execute_workflow(plan)
+
+        workflow_duration_ms = (time.perf_counter() - workflow_start_time) * 1000
+
+        # Step 4: Extract final synthesis result
+        synthesis_result = next(
+            (r for r in reversed(results) if r.success and r.agent_type == "synthesis"),
+            None,
+        )
+
+        if synthesis_result:
+            # Full workflow succeeded
+            answer = str(synthesis_result.result)
+            fallback_tier = "full"
+            confidence = "high"
+            limitations: list[str] = []
+
+            # Story 3.6 AC4: Build reasoning steps from workflow execution
+            reasoning_steps = []
+            pattern = plan.metadata.get("pattern", "unknown")
+            reasoning_steps.append(f"1. Classified query as analytical ({pattern} pattern)")
+
+            # Add retrieval steps
+            retrieval_results = [r for r in results if r.agent_type == "retrieval" and r.success]
+            for i, r in enumerate(retrieval_results, start=2):
+                task_desc = next(
+                    (t.instruction for t in plan.tasks if t.task_id == r.task_id), "retrieval task"
+                )
+                # Extract document count if available in result
+                doc_count = len(r.result) if isinstance(r.result, list) else "relevant"
+                reasoning_steps.append(f"{i}. Retrieved {doc_count} documents: {task_desc}")
+
+            # Add analysis steps
+            analysis_results = [r for r in results if r.agent_type == "analysis" and r.success]
+            step_num = len(reasoning_steps) + 1
+            for r in analysis_results:
+                task_desc = next(
+                    (t.instruction for t in plan.tasks if t.task_id == r.task_id), "analysis task"
+                )
+                reasoning_steps.append(f"{step_num}. Performed analysis: {task_desc}")
+                step_num += 1
+
+            # Add synthesis step
+            task_count = len(results)
+            reasoning_steps.append(
+                f"{step_num}. Synthesized final answer from {task_count} workflow tasks"
+            )
+
+            # Story 3.6 AC6: Extract source citations from retrieval results
+            sources = []
+            for r in retrieval_results:
+                if isinstance(r.result, list):
+                    # Extract sources from retrieval results (SearchResult or QueryResult objects)
+                    for doc in r.result:
+                        if hasattr(doc, "document_id"):
+                            # SearchResult from multi_index_search
+                            has_page = hasattr(doc, "page_number") and doc.page_number is not None
+                            page_ref = f" (page {doc.page_number})" if has_page else ""
+                            source = f"{doc.document_id}{page_ref}"
+                        elif hasattr(doc, "source_document"):
+                            # QueryResult from query_financial_documents
+                            has_page_num = doc.page_number is not None
+                            page_ref = f" (page {doc.page_number})" if has_page_num else ""
+                            source = f"{doc.source_document}{page_ref}"
+                        else:
+                            continue
+
+                        if source not in sources:  # Deduplicate
+                            sources.append(source)
+
+            logger.info(
+                "Analytical query complete",
+                extra={
+                    "query": request.query,
+                    "task_count": len(results),
+                    "success_count": sum(1 for r in results if r.success),
+                    "duration_ms": f"{workflow_duration_ms:.2f}",
+                    "fallback_tier": fallback_tier,
+                    "sources_count": len(sources),
+                },
+            )
+
+            return AnalyticalQueryResponse(
+                answer=answer,
+                complexity=complexity.value,
+                workflow_metadata={
+                    "task_count": len(results),
+                    "execution_time_ms": int(workflow_duration_ms),
+                    "workflow_pattern": plan.metadata.get("pattern", "unknown"),
+                    "fallback_tier": fallback_tier,
+                },
+                confidence=confidence,
+                limitations=limitations,
+                reasoning_steps=reasoning_steps,
+                sources=sources,
+            )
+
+        else:
+            # No synthesis result - partial failure
+            # AC8: Graceful degradation
+            raise RuntimeError("No synthesis result available from workflow")
+
+    except Exception as e:
+        # AC8: Graceful degradation - handle workflow failure
+        workflow_duration_ms = (time.perf_counter() - workflow_start_time) * 1000
+
+        logger.warning(
+            "Analytical workflow failed - initiating graceful degradation",
+            extra={
+                "query": request.query,
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "duration_ms": f"{workflow_duration_ms:.2f}",
+            },
+        )
+
+        # Get partial results if available
+        partial_results = []
+        if "results" in locals():
+            partial_results = results
+
+        # Call fallback handler (AC8: Task 4.2, 4.3, 4.4)
+        fallback_response: FallbackResponse = await handle_workflow_failure(
+            query=request.query,
+            complexity=complexity if "complexity" in locals() else QueryComplexity.ANALYTICAL,
+            partial_results=partial_results,
+            error=e,
+            total_time_ms=int(workflow_duration_ms),
+        )
+
+        logger.info(
+            "Graceful degradation complete",
+            extra={
+                "query": request.query,
+                "fallback_tier": fallback_response.tier.value,
+                "confidence": fallback_response.confidence,
+                "duration_ms": f"{workflow_duration_ms:.2f}",
+            },
+        )
+
+        # Story 3.6 AC4: Build reasoning steps for fallback
+        fallback_reasoning = [
+            "1. Classified query as analytical",
+            f"2. Attempted multi-step workflow ({len(partial_results)} tasks started)",
+            f"3. Workflow failed: {str(e)[:100]}...",
+            f"4. Gracefully degraded to {fallback_response.tier.value} tier",
+        ]
+
+        # Story 3.6 AC6: Extract sources from fallback response if available
+        fallback_sources = []
+        if hasattr(fallback_response, "sources"):
+            fallback_sources = fallback_response.sources
+        elif hasattr(fallback_response, "results"):
+            # Extract from Epic 1 fallback results
+            for result in fallback_response.results[:5]:
+                if hasattr(result, "source_document"):
+                    has_page = result.page_number is not None
+                    page_ref = f" (page {result.page_number})" if has_page else ""
+                    fallback_sources.append(f"{result.source_document}{page_ref}")
+
+        # Return fallback response
+        return AnalyticalQueryResponse(
+            answer=fallback_response.answer,
+            complexity=complexity.value if "complexity" in locals() else "analytical",
+            workflow_metadata={
+                "task_count": len(partial_results),
+                "execution_time_ms": fallback_response.execution_time_ms,
+                "workflow_pattern": "fallback",
+                "fallback_tier": fallback_response.tier.value,
+            },
+            confidence=fallback_response.confidence,
+            limitations=fallback_response.limitations,
+            reasoning_steps=fallback_reasoning,
+            sources=fallback_sources,
+        )
+
+
 # Module-level execution for direct startup
 if __name__ == "__main__":
     logger.info(
@@ -255,4 +750,4 @@ if __name__ == "__main__":
             "collection": settings.qdrant_collection_name,
         },
     )
-    mcp.run()
+    mcp.run(show_banner=False)

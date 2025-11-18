@@ -11,6 +11,7 @@ import pytest
 class TestPypdfiumBackendConfiguration:
     """Unit tests for pypdfium backend configuration (Story 2.1 AC1)."""
 
+    @pytest.mark.priority("P2")
     def test_backend_import_successful(self) -> None:
         """Verify PyPdfiumDocumentBackend can be imported successfully.
 
@@ -23,6 +24,7 @@ class TestPypdfiumBackendConfiguration:
         assert PyPdfiumDocumentBackend is not None
         assert hasattr(PyPdfiumDocumentBackend, "__name__")
 
+    @pytest.mark.priority("P2")
     def test_pipeline_options_configuration(self) -> None:
         """Verify PdfPipelineOptions is configured correctly for pypdfium.
 
@@ -42,6 +44,7 @@ class TestPypdfiumBackendConfiguration:
         assert pipeline_options.do_table_structure is True
         assert pipeline_options.table_structure_options.mode == TableFormerMode.ACCURATE
 
+    @pytest.mark.priority("P2")
     def test_document_converter_accepts_pypdfium_backend(self) -> None:
         """Verify DocumentConverter accepts PyPdfiumDocumentBackend in PdfFormatOption.
 
@@ -73,6 +76,7 @@ class TestPypdfiumBackendConfiguration:
         except Exception as e:
             pytest.fail(f"DocumentConverter initialization failed with pypdfium backend: {e}")
 
+    @pytest.mark.priority("P2")
     def test_backend_type_is_correct(self) -> None:
         """Verify PyPdfiumDocumentBackend is a valid backend type.
 

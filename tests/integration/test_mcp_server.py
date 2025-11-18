@@ -13,12 +13,16 @@ from pathlib import Path
 import pytest
 
 # Add spike directory to path for importing spike modules
+
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
 spike_dir = Path(__file__).parent.parent.parent / "spike"
 sys.path.insert(0, str(spike_dir))
 
 from mcp_server import QueryRequest, check_health, execute_query  # noqa: E402
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.preserve_collection  # Read-only query test - no data modification
 @pytest.mark.asyncio
 async def test_health_check() -> bool:
@@ -46,6 +50,7 @@ async def test_health_check() -> bool:
         return False
 
 
+@pytest.mark.priority("P1")
 @pytest.mark.preserve_collection  # Read-only query test - no data modification
 @pytest.mark.asyncio
 async def test_query_tool() -> bool:
@@ -85,6 +90,7 @@ async def test_query_tool() -> bool:
         return False
 
 
+@pytest.mark.priority("P2")
 @pytest.mark.preserve_collection  # Read-only query test - no data modification
 @pytest.mark.asyncio
 async def test_multiple_queries() -> bool:

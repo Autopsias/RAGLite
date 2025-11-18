@@ -46,6 +46,7 @@ def doc_metadata():
     )
 
 
+@pytest.mark.priority("P2")
 def test_split_large_table_small_table(encoding, mock_table_item, mock_result):
     """Test that small tables (<4096 tokens) are kept intact."""
     # Small table markdown (< 4096 tokens)
@@ -72,6 +73,7 @@ def test_split_large_table_small_table(encoding, mock_table_item, mock_result):
     assert chunks[0][0] == small_table_content
 
 
+@pytest.mark.priority("P2")
 def test_split_large_table_by_rows_headers_preserved(encoding, mock_table_item, mock_result):
     """Test that large tables are split by rows with headers duplicated."""
     # Create a large table that exceeds 4096 tokens
@@ -110,6 +112,7 @@ def test_split_large_table_by_rows_headers_preserved(encoding, mock_table_item, 
         assert token_count < 4096, f"Chunk should be <4096 tokens, got {token_count}"
 
 
+@pytest.mark.priority("P2")
 def test_split_large_table_context_prefix(encoding, mock_table_item, mock_result):
     """Test that table context prefix is added correctly."""
     # Create table content with caption
@@ -139,6 +142,7 @@ def test_split_large_table_context_prefix(encoding, mock_table_item, mock_result
     assert "Table 3:" in chunk_content or "Variable Costs Summary" in chunk_content
 
 
+@pytest.mark.priority("P2")
 def test_split_large_table_edge_case_single_row(encoding, mock_table_item, mock_result):
     """Test edge case: table with only header and one data row."""
     single_row_table = """
@@ -163,6 +167,7 @@ def test_split_large_table_edge_case_single_row(encoding, mock_table_item, mock_
     assert "| Data 1" in chunks[0][0]
 
 
+@pytest.mark.priority("P2")
 def test_split_large_table_edge_case_empty_table(encoding, mock_table_item, mock_result):
     """Test edge case: table with only headers, no data rows."""
     header_only_table = """
@@ -185,6 +190,7 @@ def test_split_large_table_edge_case_empty_table(encoding, mock_table_item, mock
     assert len(chunks) == 1
 
 
+@pytest.mark.priority("P2")
 def test_token_counting_accuracy(encoding):
     """Test that token counting is accurate."""
     test_text = "This is a test sentence for token counting."
@@ -198,6 +204,7 @@ def test_token_counting_accuracy(encoding):
     assert len(encoding.encode(test_text)) == token_count  # Same result twice
 
 
+@pytest.mark.priority("P2")
 def test_table_chunk_section_type():
     """Test that table chunks are marked with section_type='Table'.
 

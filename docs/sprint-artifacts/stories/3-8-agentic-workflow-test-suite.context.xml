@@ -1,0 +1,335 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>8</storyId>
+    <title>Agentic Workflow Test Suite</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-18</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-8-agentic-workflow-test-suite.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>validate agentic workflows against test scenarios</iWant>
+    <soThat>workflow reliability and accuracy are measured objectively</soThat>
+    <tasks>
+      - Task 1: Create comprehensive test query set (AC1) - 3 hours
+        - 1.1: Analyze ground truth set for analytical queries
+        - 1.2: Select 15+ queries covering all 4 workflow patterns
+        - 1.3: Add expected answers and source citations to test data
+        - 1.4: Create `tests/fixtures/agentic_workflow_test_set.json`
+        - 1.5: Structure test data: {query, expected_pattern, expected_sources, success_criteria}
+        - 1.6: Add edge case queries (5+): missing data, ambiguous, conflicting, complex, out-of-domain
+
+      - Task 2: Implement automated test suite (AC2) - 4 hours
+        - 2.1: Create `tests/integration/test_agentic_workflow_suite.py`
+        - 2.2: Load test queries from `agentic_workflow_test_set.json`
+        - 2.3: Implement parameterized test: `@pytest.mark.parametrize` for each query
+        - 2.4: Execute each query via `analytical_query_financial_documents()` MCP tool
+        - 2.5: Validate response: answer non-empty, citations present, workflow_metadata included
+        - 2.6: Log execution time and workflow metadata for each query
+        - 2.7: Mark tests as `@pytest.mark.slow` for CI/CD
+        - 2.8: Add test summary reporting (success rate, failures, performance)
+
+      - Task 3: Add success rate measurement and reporting (AC3) - 2 hours
+        - 3.1: Calculate success rate: `successes / total_queries`
+        - 3.2: Define success criteria: workflow completes, answer produced, <30s, citations present
+        - 3.3: Log success rate in test summary
+        - 3.4: Assert success rate ≥80% (13 of 15+)
+        - 3.5: Categorize failures by reason (timeout, agent failure, accuracy)
+        - 3.6: Add structured logging for success/failure events
+
+      - Task 4: Add performance measurement and validation (AC4) - 2 hours
+        - 4.1: Track per-query latency (start → end timestamp)
+        - 4.2: Calculate p50, p95, max latency across all queries
+        - 4.3: Validate performance budget: p50 <12s, p95 <20s
+        - 4.4: Breakdown latency by workflow pattern (YoY, Variance, Trend, Generic)
+        - 4.5: Log performance metrics in structured format
+        - 4.6: Add performance regression detection (alert if p95 >25s)
+
+      - Task 5: Implement failure analysis and reporting (AC5) - 3 hours
+        - 5.1: Create failure report structure: {query, pattern, reason, agent_failed, stack_trace}
+        - 5.2: Capture detailed error context for each failure
+        - 5.3: Categorize failures: timeout, LLM API error, retrieval failure, accuracy issue
+        - 5.4: Generate failure report JSON: `test-reports/agentic_workflow_failures.json`
+        - 5.5: Add actionable insights for each failure type
+        - 5.6: Create failure trend analysis helper function
+
+      - Task 6: Add edge case testing (AC6) - 3 hours
+        - 6.1: Test edge case: Missing data query → validate graceful failure
+        - 6.2: Test edge case: Ambiguous query → validate best-effort response
+        - 6.3: Test edge case: Conflicting information → validate conflict identification
+        - 6.4: Test edge case: Complex multi-document reasoning → validate full workflow
+        - 6.5: Test edge case: Out-of-domain query → validate graceful refusal
+        - 6.6: Document expected behavior for each edge case
+
+      - Task 7: Documentation and CI/CD integration (AC1-AC6) - 2 hours
+        - 7.1: Document test suite in README: how to run, what it validates
+        - 7.2: Add test data schema documentation
+        - 7.3: Update CI/CD workflow to run agentic test suite
+        - 7.4: Configure test summary reporting in CI
+        - 7.5: Add failure report artifact upload to CI
+        - 7.6: Document how to analyze failure trends
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    AC1: Test set includes 15+ multi-step analytical queries
+    - Test queries cover all 4 workflow patterns: YoY growth, variance analysis, trend analysis, generic analytical
+    - Test queries represent real user scenarios from ground truth set
+    - Test queries include expected answers with source citations
+    - Test data stored in `tests/fixtures/agentic_workflow_test_set.json`
+    - Test queries range from simple 2-step to complex 5-step workflows
+
+    AC2: Automated test suite executes workflows and validates results
+    - Integration test suite in `tests/integration/test_agentic_workflow_suite.py`
+    - Each test query executed end-to-end via `analytical_query_financial_documents()` MCP tool
+    - Validation checks: answer non-empty, citations present, execution time logged
+    - Test suite runs in CI/CD pipeline automatically
+    - Test failures logged with detailed error context
+
+    AC3: Success rate measured (target: 80%+ per FR16 interpretation)
+    - Success = workflow completes, final answer produced, <30s execution, citations present
+    - Success rate calculated: `successes / total_queries`
+    - Target: ≥80% (13 of 15+ queries succeed)
+    - Success rate logged in test summary report
+    - Failures categorized by reason (timeout, agent failure, accuracy issue)
+
+    AC4: Performance measured (workflow execution time)
+    - Per-query latency tracked: p50, p95, max
+    - Performance budget validated: p50 <12s, p95 <20s (NFR5)
+    - Latency breakdown by workflow pattern (YoY vs Variance vs Trend)
+    - Performance regression detection: alert if p95 >25s
+    - Performance metrics logged in structured format
+
+    AC5: Failure analysis documents reasons for unsuccessful workflows
+    - Each failure documented with: query, workflow pattern, failure reason, agent failed, stack trace
+    - Failure reasons categorized: timeout, LLM API error, retrieval failure, accuracy issue, other
+    - Failure report generated after test run: `test-reports/agentic_workflow_failures.json`
+    - Failure trends analyzed over time (enable optimization)
+    - Actionable insights provided for each failure
+
+    AC6: Test suite covers edge cases (missing data, ambiguous queries, conflicting information)
+    - Edge case: Missing data (query for data not in documents) → graceful failure expected
+    - Edge case: Ambiguous query ("revenue" without time period) → agent clarification or best-effort response
+    - Edge case: Conflicting information (2 sources with different numbers) → synthesis identifies conflict
+    - Edge case: Complex multi-document reasoning (requires 5+ chunks) → full workflow execution
+    - Edge case: Out-of-domain query (non-financial question) → graceful degradation or refusal
+    - All edge cases validated in integration tests
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-3-ai-intelligence-orchestration.md</path>
+        <title>Epic 3 PRD - Story 3.8 Requirements</title>
+        <section>Story 3.8: Agentic Workflow Test Suite</section>
+        <snippet>Story 3.8 defines requirements for validating agentic workflows through a comprehensive test suite measuring workflow reliability (>80% success rate), performance (<30s p95), and failure categorization. Test set must include 15+ multi-step analytical queries covering YoY growth, variance analysis, trend detection, and edge cases.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/tech-spec-epic-3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Test Strategy Summary</section>
+        <snippet>Epic 3 test strategy defines test pyramid: ~40 unit tests (<2 min), ~20 integration tests (5-10 min), ~5 E2E tests (10-15 min). Story 3.8 focuses on E2E performance and accuracy validation with 15+ analytical queries from ground_truth_analytical.json. Target: 80%+ success rate, <30s p95 execution time.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/test-design-epic-3.md</path>
+        <title>Test Design Epic 3 - Story 3.8 Coverage Plan</title>
+        <section>Story 3.8: Agentic Workflow Test Suite Coverage</section>
+        <snippet>Test coverage plan for Story 3.8 includes 25 E2E tests validating workflow success rate, performance budget, and failure analysis. Test execution: 15+ parameterized query tests, 1 success rate aggregate test, 1 performance budget test, 6 edge case tests, 1 failure analysis test. Estimated effort: 37.5 hours (~5 days). Test data: tests/fixtures/epic3_complex_queries.json.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/architecture/epic-3-index.md</path>
+        <title>Epic 3 Architecture Index</title>
+        <section>Workflow Patterns Reference</section>
+        <snippet>Epic 3 implements 5 reusable workflow patterns: Sequential Chain (primary for Stories 3.1-3.4), Parallel Execution (optimization), Conditional Routing (complexity-based branching), Error Fallback (4-tier degradation), and Hierarchical Orchestration (future Epic 4). Story 3.8 tests validate all patterns end-to-end with real workflows.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/architecture/testing-strategy.md</path>
+        <title>Architecture Testing Strategy</title>
+        <section>Testing Pyramid</section>
+        <snippet>Testing pyramid defines 80% unit tests (code coverage), 15% integration tests (service integration), and 5% E2E tests (accuracy validation). Story 3.8 focuses on E2E accuracy validation tier, complementing unit and integration tests from Stories 3.1-3.7.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>raglite/main.py</path>
+        <kind>MCP Server</kind>
+        <symbol>analytical_query_financial_documents</symbol>
+        <lines>1-100</lines>
+        <reason>MCP tool entry point for analytical queries - Story 3.8 test suite will invoke this tool end-to-end to validate workflows</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/agentic/planner.py</path>
+        <kind>Workflow Planner</kind>
+        <symbol>classify_query_complexity, decompose_query, WorkflowPlan</symbol>
+        <lines>1-100</lines>
+        <reason>Query complexity classifier and workflow decomposition engine tested by Story 3.8 - validates correct routing to analytical vs simple paths</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/agentic/orchestrator.py</path>
+        <kind>Workflow Executor</kind>
+        <symbol>WorkflowExecutor</symbol>
+        <lines>N/A</lines>
+        <reason>Orchestrates multi-agent workflow execution - Story 3.8 validates end-to-end orchestration reliability and performance</reason>
+      </artifact>
+
+      <artifact>
+        <path>tests/integration/test_workflow_orchestration.py</path>
+        <kind>Integration Test Pattern</kind>
+        <symbol>TestEndToEndWorkflowOrchestration</symbol>
+        <lines>1-100</lines>
+        <reason>Reference pattern for Story 3.8 integration tests - demonstrates mock agent setup, workflow execution, and result validation</reason>
+      </artifact>
+
+      <artifact>
+        <path>tests/ground_truth.json</path>
+        <kind>Test Data</kind>
+        <symbol>N/A</symbol>
+        <lines>N/A</lines>
+        <reason>Ground truth dataset from Epic 1-2 - Story 3.8 will extract analytical query subset for workflow validation</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package>pytest==8.4.2</package>
+        <package>pytest-asyncio==1.2.0</package>
+        <package>pytest-mock>=3.12,&lt;4.0</package>
+        <package>pytest-timeout>=2.0,&lt;3.0</package>
+        <package>numpy>=1.24,&lt;2.0</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - Test suite must NOT mock Epic 3 workflow components (Retrieval, Analysis, Synthesis agents) - integration tests require real agent implementations
+    - Test queries must be real analytical scenarios from ground truth dataset or realistic financial query patterns
+    - Success criteria (AC3) requires 80%+ success rate - if <80% on first run, investigate and fix workflow issues before marking story complete
+    - Performance budget (AC4) requires p50 <12s, p95 <20s - tests must fail if performance targets not met
+    - Test data file `tests/fixtures/agentic_workflow_test_set.json` follows schema: {query, expected_pattern, expected_workflow: {task_count, agents}, expected_sources, success_criteria}
+    - Failure analysis report (AC5) must be generated automatically after test run - not manual post-test analysis
+    - Edge case tests (AC6) must validate graceful degradation behavior from Story 3.7 (4-tier fallback strategy)
+    - All tests marked with `@pytest.mark.slow` to exclude from fast CI runs - full suite runs in nightly/PR merge CI
+    - Test execution time: ~5 minutes for 15+ queries (avg ~20s per query including orchestration overhead)
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>analytical_query_financial_documents</name>
+      <kind>MCP Tool</kind>
+      <signature>async def analytical_query_financial_documents(request: AnalyticalQueryRequest) -> str</signature>
+      <path>raglite/main.py</path>
+    </interface>
+
+    <interface>
+      <name>AnalyticalQueryResponse</name>
+      <kind>Pydantic Model</kind>
+      <signature>class AnalyticalQueryResponse(BaseModel): answer, reasoning_steps, sources, workflow_status, execution_time_ms</signature>
+      <path>raglite/shared/models.py</path>
+    </interface>
+
+    <interface>
+      <name>WorkflowPlan</name>
+      <kind>Pydantic Model</kind>
+      <signature>class WorkflowPlan(BaseModel): query, complexity, tasks, metadata</signature>
+      <path>raglite/agentic/planner.py</path>
+    </interface>
+
+    <interface>
+      <name>AgentResult</name>
+      <kind>Pydantic Model</kind>
+      <signature>class AgentResult(BaseModel): task_id, agent_type, success, result, execution_time_ms, error_message</signature>
+      <path>raglite/agentic/planner.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards for Epic 3 follow RAGLite conventions:
+      - Use pytest with pytest-asyncio for async test support
+      - Integration tests require real Qdrant + Claude/Mistral API (no mocking of external dependencies in integration tier)
+      - Parameterized tests use `@pytest.mark.parametrize` for data-driven test execution
+      - Slow tests marked with `@pytest.mark.slow` to exclude from fast CI runs
+      - Structured logging validated in tests (logger.info calls with extra={} context)
+      - Test data fixtures stored in tests/fixtures/ directory
+      - Performance assertions use time.time() for latency measurement, np.percentile() for p50/p95 calculation
+      - Test coverage target: 80%+ for raglite/agentic/ module (validated in CI)
+    </standards>
+
+    <locations>
+      - tests/integration/test_agentic_workflow_suite.py (NEW - Story 3.8 primary test file)
+      - tests/fixtures/agentic_workflow_test_set.json (NEW - test query dataset)
+      - test-reports/agentic_workflow_failures.json (GENERATED - failure analysis report)
+      - tests/integration/test_workflow_orchestration.py (EXISTING - reference pattern from Story 3.5)
+      - tests/ground_truth.json (EXISTING - source for analytical query extraction)
+    </locations>
+
+    <ideas>
+      Test Case 1 (AC1): Validate test query set covers 4 workflow patterns
+      - Load agentic_workflow_test_set.json
+      - Count queries by expected_pattern: yoy_growth, variance, trend, generic
+      - Assert at least 3 queries per pattern (total 15+)
+      - Validate each query has expected_sources, success_criteria
+
+      Test Case 2 (AC2): Parameterized test executes all queries via MCP tool
+      - @pytest.mark.parametrize with queries from test set
+      - Call analytical_query_financial_documents() for each query
+      - Validate response structure: answer, sources, workflow_metadata
+      - Log execution time and workflow_status for each query
+
+      Test Case 3 (AC3): Success rate calculation and assertion
+      - Define is_successful(response) helper: checks answer non-empty, citations present, <30s, workflow_status not 'fallback'
+      - Calculate success_rate = successes / total_queries
+      - Assert success_rate >= 0.80
+      - Log categorized failures (timeout, agent_failure, accuracy_issue)
+
+      Test Case 4 (AC4): Performance budget validation
+      - Collect execution_time_ms from all query responses
+      - Calculate p50 = np.percentile(latencies, 50), p95 = np.percentile(latencies, 95)
+      - Assert p50 < 12000ms, p95 < 20000ms
+      - Breakdown latency by workflow pattern (group by expected_pattern)
+
+      Test Case 5 (AC5): Failure analysis report generation
+      - After test run, collect all failed queries
+      - For each failure: extract query, expected_pattern, error_message, workflow_metadata.tier
+      - Categorize failure_reason (timeout if execution_time_ms > 30000, agent_failure if workflow_status='error', accuracy_issue if answer incorrect)
+      - Write failure report JSON to test-reports/agentic_workflow_failures.json
+      - Validate report structure matches schema
+
+      Test Case 6 (AC6): Edge case - Missing data graceful failure
+      - Query: "What was Q5 2025 revenue?" (future quarter not in documents)
+      - Expected: workflow_status='degraded' or 'fallback', answer contains "not found" or "unavailable"
+      - Validate graceful degradation (no exceptions thrown)
+
+      Test Case 7 (AC6): Edge case - Ambiguous query handling
+      - Query: "What is revenue?" (no time period specified)
+      - Expected: Best-effort response with most recent revenue OR clarification request
+      - Validate answer provides context (e.g., "Most recent revenue: Q3 2024 $12M")
+
+      Test Case 8 (AC6): Edge case - Conflicting information detection
+      - Setup: Mock 2 documents with different Q3 2023 revenue values
+      - Query: "What was Q3 2023 revenue?"
+      - Expected: Synthesis agent identifies conflict, reports both values with sources
+      - Validate answer mentions "conflicting sources" or shows both values
+
+      Test Case 9 (AC6): Edge case - Complex multi-document reasoning
+      - Query: "Compare Q1, Q2, Q3, Q4 2023 revenue and identify trends"
+      - Expected: Full workflow with 4+ retrievals + analysis + synthesis, <30s execution
+      - Validate answer includes all 4 quarters, trend identified (increasing/stable/decreasing)
+
+      Test Case 10 (AC6): Edge case - Out-of-domain query refusal
+      - Query: "What is the weather forecast for tomorrow?"
+      - Expected: Graceful refusal or "not applicable to financial documents"
+      - Validate answer explains scope limitation, suggests financial query instead
+    </ideas>
+  </tests>
+</story-context>

@@ -1,8 +1,9 @@
 name: NFR Accuracy Validation (NFR6/NFR7)
 
-# This workflow runs comprehensive accuracy validation tests that are critical for merge approval
+# This workflow runs comprehensive accuracy validation tests after main CI completes successfully
 # Separated from main CI for better visibility and independent timeout management
 #
+# UPDATED 2025-11-06: Sequential execution - runs ONLY after main CI passes (Option A)
 # UPDATED 2025-11-05: Now runs as REQUIRED CHECK on PRs to main
 # UPDATED 2025-11-04: Story 2.15 - Now uses normalized ground truth (49 queries, filtered from 50)
 #
@@ -16,25 +17,21 @@ name: NFR Accuracy Validation (NFR6/NFR7)
 #   - NFR6: ≥70% retrieval accuracy (Epic 2 Phase 2A Decision Gate) ✅ ACHIEVED: 71.4%
 #   - NFR7: ≥95% attribution accuracy
 #
-# Strategy: Required PR Check (Best Practice for Expensive Tests)
-#   ✅ Cache hit (~5-10 min) is acceptable for PR merge delay
-#   ✅ Simple workflow - no merge queue complexity
-#   ✅ Blocks PRs that would degrade accuracy
-#   ✅ Validates after merge as safety net
+# Strategy: Sequential After Main CI (Option A)
+#   ✅ Only runs after main CI passes (saves time if CI fails)
+#   ✅ Only runs on main branch (not on every feature branch)
+#   ✅ Still validates accuracy before deployment
+#   ✅ Reduces PR wait time from 30 min → 5-10 min (main CI only)
+#   ✅ Manual trigger still available for testing
 
 on:
-  # PRIMARY: Required check on PRs to main
-  # This prevents merging PRs that would degrade accuracy
-  # Expected runtime: 5-10 min (with cache) | 30 min (cache miss on first run)
-  pull_request:
+  # PRIMARY: Run after main CI completes successfully
+  # This saves 20-30 minutes per PR by running only when main CI passes
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches:
       - main
-
-  # SECONDARY: Validation after merge to main (safety net)
-  # This catches any edge cases and validates the main branch state
-  push:
-    branches:
-      - 'main'
 
   # MANUAL: On-demand testing during development
   # Use this to test accuracy on feature branches before creating PR
@@ -46,14 +43,16 @@ on:
         default: ''
 
   # OPTIONAL: Nightly validation on main branch
-  # Uncomment if you want daily accuracy regression testing
-  # schedule:
-  #   - cron: '0 2 * * *'  # 2 AM UTC daily
+  # Daily accuracy regression testing
+  schedule:
+    - cron: '0 2 * * *'  # 2 AM UTC daily
 
 jobs:
   accuracy-validation:
     name: "✅ NFR: Accuracy Validation (NFR6/NFR7)"
     runs-on: [self-hosted, raglite]
+    # IMPORTANT: Only run if triggering workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
     timeout-minutes: 60  # Increased from 30 to accommodate full test (30-38 min required)
 
     steps:
@@ -150,6 +149,128 @@ jobs:
           echo "❌ Qdrant not available after ${MAX_RETRIES}s"
           exit 1
 
+      - name: Start and verify PostgreSQL
+        run: |
+          echo "Ensuring fresh PostgreSQL container..."
+
+          # Check if container exists
+          if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+            echo "PostgreSQL container exists - restarting to ensure fresh state..."
+
+            # CRITICAL: Always restart to prevent zombie/hung state
+            # Container may show as "running" but be unresponsive (seen 4-day old logs)
+            docker restart raglite-postgresql
+            echo "Waiting for restart to complete..."
+            sleep 5
+          else
+            echo "Creating new PostgreSQL container..."
+            docker run -d \
+              -p 5432:5432 \
+              -e POSTGRES_DB=raglite \
+              -e POSTGRES_USER=raglite \
+              -e POSTGRES_PASSWORD=raglite \
+              --name raglite-postgresql \
+              postgres:16
+            echo "Waiting for initial startup..."
+            sleep 8
+          fi
+
+          echo "✅ PostgreSQL container refreshed"
+
+          # Wait for PostgreSQL to be ready (max 30 seconds)
+          echo "Waiting for PostgreSQL to be ready..."
+
+          # Debug: Check if psql is available
+          if ! command -v psql &> /dev/null; then
+            echo "⚠️  WARNING: psql command not found! Attempting to use docker exec instead..."
+            USE_DOCKER_EXEC=true
+          else
+            echo "✓ psql command available"
+            USE_DOCKER_EXEC=false
+          fi
+
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            # Try to connect using docker exec if psql not available
+            if [ "$USE_DOCKER_EXEC" = true ]; then
+              if docker exec raglite-postgresql psql -U raglite -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+                echo "✅ PostgreSQL is available (via docker exec)"
+
+                # Create raglite database if missing
+                docker exec raglite-postgresql psql -U raglite -d postgres -c "SELECT 1 FROM pg_database WHERE datname='raglite'" | grep -q 1 || \
+                  docker exec raglite-postgresql psql -U raglite -d postgres -c "CREATE DATABASE raglite" > /dev/null 2>&1
+
+                echo "✅ Database 'raglite' ready"
+                exit 0
+              fi
+            else
+              # Try to connect using local psql
+              if PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+                echo "✅ PostgreSQL is available at localhost:5432"
+
+                # Verify raglite database exists, create if missing
+                if PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d raglite -c "SELECT 1" > /dev/null 2>&1; then
+                  echo "✅ Database 'raglite' is accessible"
+                  exit 0
+                else
+                  echo "⚠️  Creating database 'raglite'..."
+                  PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d postgres -c "CREATE DATABASE raglite" 2>&1 | grep -v "already exists" || true
+                  sleep 1
+                fi
+              fi
+            fi
+
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $((RETRY_COUNT % 5)) -eq 0 ]; then
+              echo "Waiting for PostgreSQL... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            fi
+            sleep 1
+          done
+
+          echo "❌ PostgreSQL not available after ${MAX_RETRIES}s"
+          echo ""
+          echo "Debug information:"
+          echo "- Container status: $(docker ps -a --filter name=raglite-postgresql --format '{{.Status}}')"
+          echo "- psql available: $(command -v psql &> /dev/null && echo 'yes' || echo 'no')"
+          echo ""
+          echo "Container logs (last 50 lines):"
+          docker logs raglite-postgresql --tail 50
+          exit 1
+
+      - name: Initialize Qdrant collection (if cache miss)
+        if: steps.cache-check.outputs.cache_hit != 'true'
+        run: |
+          source ci-venv/bin/activate
+          echo "🔧 Initializing Qdrant collection (financial_docs)..."
+          python scripts/init-qdrant.py
+          echo "✅ Qdrant collection initialized"
+
+      - name: Initialize PostgreSQL schema (if cache miss)
+        if: steps.cache-check.outputs.cache_hit != 'true'
+        run: |
+          source ci-venv/bin/activate
+          echo "🔧 Initializing PostgreSQL schema (financial_chunks, financial_tables, entity_mappings)..."
+          python scripts/init-postgresql.py
+          echo "✅ Schema initialized successfully"
+
+      - name: Ingest PDF (if cache miss)
+        if: steps.cache-check.outputs.cache_hit != 'true'
+        env:
+          QDRANT_HOST: localhost
+          QDRANT_PORT: 6333
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: raglite
+          POSTGRES_USER: raglite
+          POSTGRES_PASSWORD: raglite
+        run: |
+          source ci-venv/bin/activate
+          echo "📄 Cache miss detected - performing full PDF ingestion (~13-15 minutes)..."
+          python scripts/ingest-for-validation.py
+          echo "✅ PDF ingestion complete"
+
       - name: Import cached data (if cache hit)
         if: steps.cache-check.outputs.cache_hit == 'true'
         run: |
@@ -165,6 +286,8 @@ jobs:
 
       - name: Verify data integrity (if cache hit)
         if: steps.cache-check.outputs.cache_hit == 'true'
+        continue-on-error: true
+        id: cache-verify
         run: |
           source ci-venv/bin/activate
 
@@ -205,6 +328,35 @@ jobs:
           cursor.close()
           conn.close()
           "
+
+      - name: Handle corrupt cache - trigger ingestion fallback
+        if: steps.cache-check.outputs.cache_hit == 'true' && steps.cache-verify.outcome == 'failure'
+        env:
+          QDRANT_HOST: localhost
+          QDRANT_PORT: 6333
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: raglite
+          POSTGRES_USER: raglite
+          POSTGRES_PASSWORD: raglite
+        run: |
+          source ci-venv/bin/activate
+          echo "⚠️  Cache verification failed - falling back to fresh ingestion"
+          echo "This indicates cache is corrupt or incomplete"
+
+          # Reinitialize empty Qdrant collection (clears corrupt data)
+          echo "🔧 Reinitializing Qdrant collection..."
+          python scripts/init-qdrant.py
+
+          # Reinitialize PostgreSQL schema (clears corrupt data)
+          echo "🔧 Reinitializing PostgreSQL schema..."
+          python scripts/init-postgresql.py
+
+          # Run full PDF ingestion
+          echo "📄 Starting full PDF ingestion (~13-15 minutes)..."
+          python scripts/ingest-for-validation.py
+
+          echo "✅ Fresh ingestion complete - workflow can proceed"
 
       - name: Run Epic 2 Final Validation (Story 2.15)
         env:

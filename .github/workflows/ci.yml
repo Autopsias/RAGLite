@@ -99,13 +99,13 @@ jobs:
           uv venv ci-venv
           source ci-venv/bin/activate
           uv pip install -e .
-          uv pip install mypy types-requests
+          uv pip install mypy types-requests types-setuptools
 
       - name: Run mypy on raglite/ package
         run: |
           source ci-venv/bin/activate
-          mypy raglite/ --show-error-codes --ignore-missing-imports
-        continue-on-error: true
+          mypy raglite/ --show-error-codes
+        continue-on-error: false
 
   # ============================================================================
   # JOB 3: Security Scanning
@@ -173,16 +173,29 @@ jobs:
           uv venv ci-venv
           source ci-venv/bin/activate
           uv pip install -e .
-          uv pip install pytest pytest-cov pytest-asyncio pytest-xdist pytest-timeout
+          # FIX: Install pytest-mock (was missing) and pin versions to match local environment
+          uv pip install \
+            pytest==8.4.2 \
+            pytest-cov==5.0.0 \
+            pytest-asyncio==1.2.0 \
+            "pytest-xdist>=3.5,<4.0" \
+            "pytest-timeout>=2.0,<3.0" \
+            pytest-mock>=3.15
 
       - name: Run unit tests with coverage
         run: |
           source ci-venv/bin/activate
+
+          # FIX: Add project root and scripts to PYTHONPATH
+          # This matches local Test Explorer environment where scripts/ is importable
+          export PYTHONPATH="${PWD}:${PWD}/scripts:${PYTHONPATH}"
+
           echo "========================================="
           echo "CI MODE: Unit Tests with Coverage"
           echo "- Running ALL unit tests (including slow)"
           echo "- Parallel workers: 4 (safe parallelism, no shared state)"
           echo "- Target: <10 minutes"
+          echo "- PYTHONPATH: ${PYTHONPATH}"
           echo "========================================="
           pytest tests/unit/ \
             -n 4 \
@@ -234,7 +247,12 @@ jobs:
           uv venv ci-venv
           source ci-venv/bin/activate
           uv pip install -e .
-          uv pip install pytest pytest-asyncio pytest-xdist pytest-timeout
+          uv pip install \
+            pytest==8.4.2 \
+            pytest-asyncio==1.2.0 \
+            "pytest-xdist>=3.5,<4.0" \
+            "pytest-timeout>=2.0,<3.0" \
+            pytest-mock>=3.15
 
       - name: Verify Qdrant is available
         run: |
@@ -365,6 +383,20 @@ jobs:
           docker logs raglite-postgresql --tail 50
           exit 1
 
+      - name: Initialize Qdrant collection
+        run: |
+          source ci-venv/bin/activate
+          echo "🔧 Initializing Qdrant collection (financial_docs)..."
+          python scripts/init-qdrant.py
+          echo "✅ Qdrant collection initialized"
+
+      - name: Initialize PostgreSQL schema
+        run: |
+          source ci-venv/bin/activate
+          echo "🔧 Initializing PostgreSQL schema (financial_chunks, financial_tables, entity_mappings)..."
+          python scripts/init-postgresql.py
+          echo "✅ Schema initialized successfully"
+
       - name: Run integration tests (CI fast mode)
         env:
           QDRANT_HOST: localhost
@@ -377,6 +409,11 @@ jobs:
           TEST_USE_FULL_PDF: "false"
         run: |
           source ci-venv/bin/activate
+
+          # FIX: Add project root and scripts to PYTHONPATH
+          # Integration tests also import from scripts directory
+          export PYTHONPATH="${PWD}:${PWD}/scripts:${PYTHONPATH}"
+
           echo "========================================="
           echo "CI MODE: Fast Testing"
           echo "- Using 10-page sample PDF (~10-15s ingestion)"
@@ -384,6 +421,7 @@ jobs:
           echo "- Sequential execution (shared Qdrant collection prevents parallelism)"
           echo "- Module-level service checks to prevent hangs"
           echo "- Target: 45-50 minutes total (sequential due to shared state)"
+          echo "- PYTHONPATH: ${PYTHONPATH}"
           echo "========================================="
           if [ -d "tests/integration" ] && [ -n "$(find tests/integration -name 'test_*.py' -type f)" ]; then
             pytest tests/integration/ \
@@ -425,7 +463,12 @@ jobs:
           uv venv ci-venv
           source ci-venv/bin/activate
           uv pip install -e .
-          uv pip install pytest pytest-asyncio pytest-xdist pytest-timeout
+          uv pip install \
+            pytest==8.4.2 \
+            pytest-asyncio==1.2.0 \
+            "pytest-xdist>=3.5,<4.0" \
+            "pytest-timeout>=2.0,<3.0" \
+            pytest-mock>=3.15
 
       - name: Run E2E tests
         run: |
@@ -486,7 +529,11 @@ jobs:
           uv venv ci-venv
           source ci-venv/bin/activate
           uv pip install -e .
-          uv pip install pytest pytest-asyncio pytest-benchmark
+          uv pip install \
+            pytest==8.4.2 \
+            pytest-asyncio==1.2.0 \
+            pytest-benchmark \
+            pytest-mock>=3.15
 
       - name: Run performance tests
         env:
@@ -517,6 +564,147 @@ jobs:
           name: performance-validation-results
           path: pytest-performance-report.xml
           retention-days: 30
+
+  # ============================================================================
+  # JOB 8: Agentic Workflow Test Suite (Story 3.8)
+  # ============================================================================
+  test-agentic-workflows:
+    name: "🤖 Tests: Agentic Workflow Suite (Story 3.8)"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 120  # 22 queries × ~30s max + overhead
+    needs: [test-integration]  # Requires Qdrant/PostgreSQL setup
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies with uv
+        run: |
+          uv venv ci-venv
+          source ci-venv/bin/activate
+          uv pip install -e .
+          uv pip install \
+            pytest==8.4.2 \
+            pytest-asyncio==1.2.0 \
+            "pytest-xdist>=3.5,<4.0" \
+            "pytest-timeout>=2.0,<3.0" \
+            pytest-mock>=3.15 \
+            pytest-json-report \
+            numpy
+
+      - name: Verify Qdrant is available
+        run: |
+          echo "Checking persistent Qdrant instance..."
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if curl -sf http://localhost:6333/collections > /dev/null 2>&1; then
+              echo "✅ Qdrant is available at localhost:6333"
+              exit 0
+            fi
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Waiting for Qdrant... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            sleep 1
+          done
+          echo "❌ Qdrant not available after ${MAX_RETRIES}s"
+          exit 1
+
+      - name: Verify PostgreSQL is available
+        run: |
+          echo "Checking persistent PostgreSQL instance..."
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if docker exec raglite-postgresql psql -U raglite -d raglite -c "SELECT 1" > /dev/null 2>&1; then
+              echo "✅ PostgreSQL is available"
+              exit 0
+            fi
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Waiting for PostgreSQL... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            sleep 1
+          done
+          echo "❌ PostgreSQL not available after ${MAX_RETRIES}s"
+          exit 1
+
+      - name: Run agentic workflow test suite
+        env:
+          QDRANT_HOST: localhost
+          QDRANT_PORT: 6333
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: raglite
+          POSTGRES_USER: raglite
+          POSTGRES_PASSWORD: raglite
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          source ci-venv/bin/activate
+
+          export PYTHONPATH="${PWD}:${PWD}/scripts:${PYTHONPATH}"
+
+          echo "========================================="
+          echo "Agentic Workflow Test Suite (Story 3.8)"
+          echo "========================================="
+          echo "- Test Queries: 22 (17 analytical + 5 edge cases)"
+          echo "- Success Rate Target: 80%+"
+          echo "- Performance: p50 <12s, p95 <20s"
+          echo "- Test Set: tests/fixtures/agentic_workflow_test_set.json"
+          echo "========================================="
+
+          pytest tests/integration/test_agentic_workflow_suite.py \
+            -n 1 \
+            -m "slow" \
+            -v \
+            --json-report \
+            --json-report-file=test-reports/agentic_workflow_results.json \
+            --junitxml=test-reports/agentic_workflow_junit.xml
+        continue-on-error: true  # Don't block CI on test failures
+
+      - name: Generate failure analysis report
+        if: always()
+        run: |
+          source ci-venv/bin/activate
+
+          echo "Generating failure analysis report..."
+          if [ -f "test-reports/agentic_workflow_results.json" ]; then
+            python scripts/generate_failure_report.py \
+              test-reports/agentic_workflow_results.json \
+              test-reports/agentic_workflow_failures.json || true
+          else
+            echo "⚠️  No test results found, skipping failure report"
+          fi
+
+      - name: Upload agentic workflow test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agentic-workflow-test-results
+          path: |
+            test-reports/agentic_workflow_results.json
+            test-reports/agentic_workflow_failures.json
+            test-reports/agentic_workflow_junit.xml
+          retention-days: 30
+
+      - name: Display test summary
+        if: always()
+        run: |
+          if [ -f "test-reports/agentic_workflow_failures.json" ]; then
+            echo "========================================="
+            echo "📊 AGENTIC WORKFLOW TEST SUMMARY"
+            echo "========================================="
+            cat test-reports/agentic_workflow_failures.json | jq -r '
+              "Total Queries: \(.total_queries)",
+              "Successes: \(.successes)",
+              "Failures: \(.failures)",
+              "Success Rate: \(.success_rate * 100 | round)%",
+              "",
+              "Top Recommendation:",
+              "  \(.summary.recommendation[:100])..."
+            '
+            echo "========================================="
+          fi
 
   # ============================================================================
   # JOB 9: Test Count Validation
@@ -558,7 +746,12 @@ jobs:
           # Install ALL test dependencies from dependency-groups
           # CRITICAL: pytest-asyncio, pytest-xdist, pytest-timeout required for test collection
           echo "Installing test dependencies..."
-          uv pip install pytest pytest-asyncio pytest-xdist pytest-timeout pytest-mock || {
+          uv pip install \
+            pytest==8.4.2 \
+            pytest-asyncio==1.2.0 \
+            "pytest-xdist>=3.5,<4.0" \
+            "pytest-timeout>=2.0,<3.0" \
+            pytest-mock>=3.15 pytest-mock || {
             echo "❌ Failed to install test dependencies"
             exit 1
           }
@@ -590,6 +783,77 @@ jobs:
 
           echo "✅ All dependencies installed successfully"
           echo ""
+
+      - name: Start Qdrant for test discovery
+        run: |
+          echo "Ensuring Qdrant is available for test collection..."
+
+          # Check if Qdrant is already running
+          if curl -sf http://localhost:6333/collections > /dev/null 2>&1; then
+            echo "✅ Qdrant already running at localhost:6333"
+          else
+            # Check if container exists but is stopped
+            if docker ps -a --format '{{.Names}}' | grep -q "^raglite-qdrant$"; then
+              echo "Qdrant container exists - starting..."
+              docker start raglite-qdrant
+            else
+              echo "Creating new Qdrant container..."
+              docker run -d \
+                -p 6333:6333 \
+                --name raglite-qdrant \
+                qdrant/qdrant:v1.15.0
+            fi
+
+            # Wait for Qdrant to be ready
+            echo "Waiting for Qdrant to be ready..."
+            sleep 5
+
+            MAX_RETRIES=20
+            RETRY_COUNT=0
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              if curl -sf http://localhost:6333/collections > /dev/null 2>&1; then
+                echo "✅ Qdrant is ready"
+                break
+              fi
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              sleep 1
+            done
+
+            if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+              echo "⚠️  Qdrant not ready after 20s, continuing anyway..."
+            fi
+          fi
+
+      - name: Start PostgreSQL for test discovery
+        run: |
+          echo "Ensuring PostgreSQL is available for test collection..."
+
+          # Check if container exists
+          if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+            echo "PostgreSQL container exists - ensuring it's running..."
+
+            # Check if it's actually running
+            if docker ps --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+              echo "✅ PostgreSQL already running"
+            else
+              echo "Starting PostgreSQL container..."
+              docker start raglite-postgresql
+              sleep 5
+            fi
+          else
+            echo "Creating new PostgreSQL container..."
+            docker run -d \
+              -p 5432:5432 \
+              -e POSTGRES_DB=raglite \
+              -e POSTGRES_USER=raglite \
+              -e POSTGRES_PASSWORD=raglite \
+              --name raglite-postgresql \
+              postgres:16
+            echo "Waiting for PostgreSQL startup..."
+            sleep 8
+          fi
+
+          echo "✅ PostgreSQL container ready"
 
       - name: Validate test count
         run: |
@@ -704,12 +968,186 @@ jobs:
           fi
 
   # ============================================================================
-  # JOB 11: Build Summary
+  # JOB 11: Burn-In Loop (Flaky Test Detection)
+  # ============================================================================
+  burn-in:
+    name: "🔥 Quality Gate: Burn-In Loop (3 iterations)"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 60
+    # Only run on main branch post-merge (direct pushes to main)
+    # Skip on: PRs to main, feature branches, develop branch
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test-unit, test-integration, test-e2e]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies with uv
+        run: |
+          uv venv ci-venv
+          source ci-venv/bin/activate
+          uv pip install -e .
+          uv pip install \
+            pytest==8.4.2 \
+            pytest-asyncio==1.2.0 \
+            "pytest-xdist>=3.5,<4.0" \
+            "pytest-timeout>=2.0,<3.0" \
+            pytest-mock>=3.15
+
+      - name: Verify Qdrant is available
+        run: |
+          echo "Checking persistent Qdrant instance..."
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if curl -sf http://localhost:6333/collections > /dev/null 2>&1; then
+              echo "✅ Qdrant is available at localhost:6333"
+              exit 0
+            fi
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Waiting for Qdrant... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            sleep 1
+          done
+          echo "❌ Qdrant not available after ${MAX_RETRIES}s"
+          exit 1
+
+      - name: Start and verify PostgreSQL
+        run: |
+          echo "Ensuring fresh PostgreSQL container..."
+          if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+            echo "PostgreSQL container exists - restarting to ensure fresh state..."
+            docker restart raglite-postgresql
+            echo "Waiting for restart to complete..."
+            sleep 5
+          else
+            echo "Creating new PostgreSQL container..."
+            docker run -d \
+              -p 5432:5432 \
+              -e POSTGRES_DB=raglite \
+              -e POSTGRES_USER=raglite \
+              -e POSTGRES_PASSWORD=raglite \
+              --name raglite-postgresql \
+              postgres:16
+            echo "Waiting for initial startup..."
+            sleep 8
+          fi
+          echo "✅ PostgreSQL container refreshed"
+
+      - name: Initialize Qdrant collection
+        run: |
+          source ci-venv/bin/activate
+          echo "🔧 Initializing Qdrant collection (financial_docs)..."
+          python scripts/init-qdrant.py
+          echo "✅ Qdrant collection initialized"
+
+      - name: Initialize PostgreSQL schema
+        run: |
+          source ci-venv/bin/activate
+          echo "🔧 Initializing PostgreSQL schema (financial_chunks, financial_tables, entity_mappings)..."
+          python scripts/init-postgresql.py
+          echo "✅ Schema initialized successfully"
+
+      - name: Run burn-in loop (3 iterations)
+        env:
+          QDRANT_HOST: localhost
+          QDRANT_PORT: 6333
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: raglite
+          POSTGRES_USER: raglite
+          POSTGRES_PASSWORD: raglite
+          TEST_USE_FULL_PDF: "false"
+        run: |
+          source ci-venv/bin/activate
+
+          # FIX: Add project root and scripts to PYTHONPATH
+          # Burn-in runs full test suite which includes tests importing from scripts
+          export PYTHONPATH="${PWD}:${PWD}/scripts:${PYTHONPATH}"
+
+          echo "========================================="
+          echo "🔥 BURN-IN LOOP: Flaky Test Detection"
+          echo "========================================="
+          echo "- Iterations: 3 (quick feedback)"
+          echo "- Scope: Full test suite"
+          echo "- Failure policy: ANY failure = FLAKY"
+          echo "- Target: <20 minutes total"
+          echo "- PYTHONPATH: ${PYTHONPATH}"
+          echo "========================================="
+          echo ""
+
+          # Track failures across iterations
+          FAILED_ITERATIONS=0
+
+          for i in {1..3}; do
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "🔥 Burn-in iteration $i/3"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+
+            # Run full suite (fast tests only - skip slow)
+            if pytest tests/ \
+              -n 1 \
+              -m "not slow" \
+              -v \
+              --junitxml=burn-in-iteration-$i.xml 2>&1 | tee burn-in-iteration-$i.log; then
+              echo "✅ Iteration $i PASSED"
+            else
+              echo "❌ Iteration $i FAILED"
+              FAILED_ITERATIONS=$((FAILED_ITERATIONS + 1))
+
+              # Continue to run remaining iterations to collect all failures
+              echo "⚠️  Continuing to iteration $((i + 1)) to collect failure patterns..."
+            fi
+            echo ""
+          done
+
+          echo ""
+          echo "========================================="
+          echo "🔥 BURN-IN RESULTS"
+          echo "========================================="
+          echo "Total iterations: 3"
+          echo "Failed iterations: $FAILED_ITERATIONS"
+          echo ""
+
+          if [ $FAILED_ITERATIONS -gt 0 ]; then
+            echo "❌ FLAKY TESTS DETECTED!"
+            echo ""
+            echo "⚠️  $FAILED_ITERATIONS out of 3 iterations failed."
+            echo "This indicates non-deterministic test behavior."
+            echo ""
+            echo "Next steps:"
+            echo "1. Review burn-in artifacts (logs + XML reports)"
+            echo "2. Identify failing tests across iterations"
+            echo "3. Fix flaky tests before merging"
+            echo ""
+            exit 1
+          else
+            echo "✅ ALL ITERATIONS PASSED"
+            echo "No flaky tests detected - safe to merge!"
+          fi
+
+      - name: Upload burn-in artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: burn-in-failure-artifacts
+          path: |
+            burn-in-iteration-*.xml
+            burn-in-iteration-*.log
+          retention-days: 30
+
+  # ============================================================================
+  # JOB 12: Build Summary
   # ============================================================================
   build-summary:
     name: "📊 CI Pipeline: Summary"
     runs-on: [self-hosted, raglite]
-    needs: [lint, type-check, security, test-unit, test-integration, test-e2e, test-performance, test-count-validation, docs-validation]
+    needs: [lint, type-check, security, test-unit, test-integration, test-e2e, test-performance, test-agentic-workflows, test-count-validation, docs-validation, burn-in]
     if: always()
 
     steps:
@@ -729,12 +1167,18 @@ jobs:
           echo "  Integration:       ${{ needs.test-integration.result }} (~115 tests)"
           echo "  E2E Tests:         ${{ needs.test-e2e.result }} (~28 tests)"
           echo ""
+          echo "🤖 AGENTIC WORKFLOW TESTS (Epic 3):"
+          echo "  Workflow Suite:    ${{ needs.test-agentic-workflows.result }} (22 analytical queries)"
+          echo ""
           echo "✅ NFR VALIDATION:"
           echo "  Performance (NFR13):   ${{ needs.test-performance.result }}"
           echo "  Test Discovery:        ${{ needs.test-count-validation.result }}"
           echo ""
           echo "  NOTE: NFR6/NFR7 (Accuracy) runs in PARALLEL as required PR check:"
           echo "        .github/workflows/accuracy-validation.yml (~5-10 min with cache)"
+          echo ""
+          echo "🔥 QUALITY GATES:"
+          echo "  Burn-In Loop:      ${{ needs.burn-in.result }} (3 iterations)"
           echo ""
           echo "📚 DOCUMENTATION:"
           echo "  Validation:        ${{ needs.docs-validation.result }}"
@@ -787,6 +1231,12 @@ jobs:
           if [[ "${{ needs.test-performance.result }}" == "failure" ]]; then
             echo "⚠️  Performance test issues detected (non-blocking)"
             echo "   Review NFR13 compliance"
+          fi
+
+          if [[ "${{ needs.burn-in.result }}" == "failure" ]]; then
+            echo "⚠️  Burn-in loop detected flaky tests (non-blocking)"
+            echo "   Review burn-in artifacts to identify non-deterministic tests"
+            echo "   Strongly recommended to fix before merging"
           fi
 
           echo ""

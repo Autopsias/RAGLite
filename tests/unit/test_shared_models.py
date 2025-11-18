@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from raglite.shared.models import Chunk, DocumentMetadata, SearchResult
 
 
-@pytest.mark.p0
+@pytest.mark.priority("P0")
 @pytest.mark.unit
 def test_document_metadata_creation() -> None:
     """Test DocumentMetadata model creates successfully with required fields."""
@@ -22,7 +22,7 @@ def test_document_metadata_creation() -> None:
     assert metadata.page_count == 5
 
 
-@pytest.mark.p0
+@pytest.mark.priority("P0")
 @pytest.mark.unit
 def test_document_metadata_missing_required_field() -> None:
     """Test DocumentMetadata raises ValidationError if required field missing."""
@@ -33,7 +33,7 @@ def test_document_metadata_missing_required_field() -> None:
         )  # type: ignore[call-arg]
 
 
-@pytest.mark.p1
+@pytest.mark.priority("P1")
 @pytest.mark.unit
 def test_chunk_creation(sample_document_metadata: DocumentMetadata) -> None:
     """Test Chunk model creates successfully."""
@@ -51,7 +51,7 @@ def test_chunk_creation(sample_document_metadata: DocumentMetadata) -> None:
     assert len(chunk.embedding) == 1024
 
 
-@pytest.mark.p1
+@pytest.mark.priority("P1")
 @pytest.mark.unit
 def test_chunk_default_embedding(sample_document_metadata: DocumentMetadata) -> None:
     """Test Chunk uses empty list as default for embedding field."""
@@ -60,7 +60,7 @@ def test_chunk_default_embedding(sample_document_metadata: DocumentMetadata) -> 
     assert chunk.embedding == []
 
 
-@pytest.mark.p1
+@pytest.mark.priority("P1")
 @pytest.mark.unit
 def test_search_result_score_validation(sample_chunk: Chunk) -> None:
     """Test SearchResult validates score is between 0 and 1."""

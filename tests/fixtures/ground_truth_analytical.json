@@ -1,0 +1,293 @@
+[
+  {
+    "id": "analytical-001",
+    "category": "yoy_growth",
+    "query": "Calculate year-over-year revenue growth between Q3 2023 and Q3 2024",
+    "expected_answer": "Revenue grew from $100M in Q3 2023 to $120M in Q3 2024, representing a 20% year-over-year growth.",
+    "expected_keywords": ["20%", "growth", "$100M", "$120M", "Q3 2023", "Q3 2024"],
+    "expected_metrics": {
+      "yoy_growth_percentage": 20.0,
+      "current_value": 120000000,
+      "previous_value": 100000000
+    },
+    "complexity": "medium",
+    "workflow_steps": ["retrieve_q3_2023", "retrieve_q3_2024", "calculate_yoy", "synthesize"]
+  },
+  {
+    "id": "analytical-002",
+    "category": "variance_analysis",
+    "query": "What is the variance between actual Q3 2024 revenue and the forecasted amount?",
+    "expected_answer": "Q3 2024 actual revenue was $120M, compared to a forecast of $125M, resulting in an unfavorable variance of -$5M (-4%).",
+    "expected_keywords": ["variance", "unfavorable", "$5M", "-4%", "actual", "forecast"],
+    "expected_metrics": {
+      "variance_dollars": -5000000,
+      "variance_percentage": -4.0,
+      "actual": 120000000,
+      "forecast": 125000000
+    },
+    "complexity": "medium",
+    "workflow_steps": ["retrieve_actual", "retrieve_forecast", "calculate_variance", "synthesize"]
+  },
+  {
+    "id": "analytical-003",
+    "category": "trend_detection",
+    "query": "Analyze the trend in operating expenses over the past 3 quarters",
+    "expected_answer": "Operating expenses show an increasing trend: Q1 2024 ($30M), Q2 2024 ($32M), Q3 2024 ($35M), representing a 16.7% total increase.",
+    "expected_keywords": ["increasing", "trend", "$30M", "$32M", "$35M", "16.7%"],
+    "expected_metrics": {
+      "trend_direction": "increasing",
+      "total_increase_percentage": 16.7,
+      "q1_value": 30000000,
+      "q3_value": 35000000
+    },
+    "complexity": "high",
+    "workflow_steps": ["retrieve_q1_opex", "retrieve_q2_opex", "retrieve_q3_opex", "analyze_trend", "synthesize"]
+  },
+  {
+    "id": "analytical-004",
+    "category": "comparative_analysis",
+    "query": "Compare gross profit margins between Q3 2023 and Q3 2024",
+    "expected_answer": "Gross profit margin improved from 68% in Q3 2023 to 71% in Q3 2024, an expansion of 3 percentage points.",
+    "expected_keywords": ["improved", "68%", "71%", "3 percentage points", "margin expansion"],
+    "expected_metrics": {
+      "q3_2023_margin": 68.0,
+      "q3_2024_margin": 71.0,
+      "margin_expansion": 3.0
+    },
+    "complexity": "medium",
+    "workflow_steps": ["retrieve_q3_2023_margins", "retrieve_q3_2024_margins", "compare", "synthesize"]
+  },
+  {
+    "id": "analytical-005",
+    "category": "percentage_calculation",
+    "query": "What percentage of total revenue came from product sales in Q3 2024?",
+    "expected_answer": "Product sales generated $84M out of total revenue of $120M in Q3 2024, representing 70% of total revenue.",
+    "expected_keywords": ["70%", "$84M", "$120M", "product sales", "total revenue"],
+    "expected_metrics": {
+      "product_sales": 84000000,
+      "total_revenue": 120000000,
+      "percentage": 70.0
+    },
+    "complexity": "low",
+    "workflow_steps": ["retrieve_product_sales", "retrieve_total_revenue", "calculate_percentage", "synthesize"]
+  },
+  {
+    "id": "analytical-006",
+    "category": "yoy_growth",
+    "query": "How much did net income increase from Q3 2023 to Q3 2024?",
+    "expected_answer": "Net income increased from $15M in Q3 2023 to $22M in Q3 2024, a growth of $7M or 46.7%.",
+    "expected_keywords": ["increased", "$7M", "46.7%", "$15M", "$22M", "net income"],
+    "expected_metrics": {
+      "absolute_increase": 7000000,
+      "percentage_increase": 46.7,
+      "q3_2023_net_income": 15000000,
+      "q3_2024_net_income": 22000000
+    },
+    "complexity": "medium",
+    "workflow_steps": ["retrieve_q3_2023_net_income", "retrieve_q3_2024_net_income", "calculate_growth", "synthesize"]
+  },
+  {
+    "id": "analytical-007",
+    "category": "variance_analysis",
+    "query": "Calculate the variance between Q3 2024 operating expenses and the budgeted amount",
+    "expected_answer": "Q3 2024 operating expenses were $35M against a budget of $33M, resulting in an unfavorable variance of $2M (6.1% over budget).",
+    "expected_keywords": ["unfavorable", "$2M", "6.1%", "over budget", "$35M", "$33M"],
+    "expected_metrics": {
+      "variance_dollars": 2000000,
+      "variance_percentage": 6.1,
+      "actual": 35000000,
+      "budget": 33000000
+    },
+    "complexity": "medium",
+    "workflow_steps": ["retrieve_actual_opex", "retrieve_budget_opex", "calculate_variance", "synthesize"]
+  },
+  {
+    "id": "analytical-008",
+    "category": "trend_detection",
+    "query": "What is the trend in customer acquisition costs over the past year?",
+    "expected_answer": "Customer acquisition costs show a declining trend: Q3 2023 ($850), Q4 2023 ($820), Q1 2024 ($780), Q2 2024 ($750), Q3 2024 ($720), representing a 15.3% total decrease.",
+    "expected_keywords": ["declining", "trend", "$850", "$720", "15.3%", "decrease"],
+    "expected_metrics": {
+      "trend_direction": "declining",
+      "total_decrease_percentage": 15.3,
+      "q3_2023_value": 850,
+      "q3_2024_value": 720
+    },
+    "complexity": "high",
+    "workflow_steps": ["retrieve_cac_q3_2023", "retrieve_cac_q4_2023", "retrieve_cac_q1_2024", "retrieve_cac_q2_2024", "retrieve_cac_q3_2024", "analyze_trend", "synthesize"]
+  },
+  {
+    "id": "analytical-009",
+    "category": "comparative_analysis",
+    "query": "Compare R&D spending as a percentage of revenue between Q3 2023 and Q3 2024",
+    "expected_answer": "R&D spending was 18% of revenue in Q3 2023 ($18M / $100M) and 15% of revenue in Q3 2024 ($18M / $120M), a decrease of 3 percentage points.",
+    "expected_keywords": ["18%", "15%", "3 percentage points", "decrease", "R&D spending"],
+    "expected_metrics": {
+      "q3_2023_rd_percentage": 18.0,
+      "q3_2024_rd_percentage": 15.0,
+      "percentage_point_change": -3.0
+    },
+    "complexity": "high",
+    "workflow_steps": ["retrieve_q3_2023_rd", "retrieve_q3_2023_revenue", "retrieve_q3_2024_rd", "retrieve_q3_2024_revenue", "calculate_percentages", "compare", "synthesize"]
+  },
+  {
+    "id": "analytical-010",
+    "category": "percentage_calculation",
+    "query": "What percentage of total operating expenses were marketing costs in Q3 2024?",
+    "expected_answer": "Marketing costs were $10.5M out of total operating expenses of $35M in Q3 2024, representing 30% of total operating expenses.",
+    "expected_keywords": ["30%", "$10.5M", "$35M", "marketing costs", "operating expenses"],
+    "expected_metrics": {
+      "marketing_costs": 10500000,
+      "total_opex": 35000000,
+      "percentage": 30.0
+    },
+    "complexity": "low",
+    "workflow_steps": ["retrieve_marketing_costs", "retrieve_total_opex", "calculate_percentage", "synthesize"]
+  },
+  {
+    "id": "analytical-011",
+    "category": "yoy_growth",
+    "query": "Calculate the year-over-year growth in total assets from 2023 to 2024",
+    "expected_answer": "Total assets grew from $450M in 2023 to $520M in 2024, representing a 15.6% year-over-year growth.",
+    "expected_keywords": ["15.6%", "growth", "$450M", "$520M", "total assets"],
+    "expected_metrics": {
+      "yoy_growth_percentage": 15.6,
+      "assets_2023": 450000000,
+      "assets_2024": 520000000
+    },
+    "complexity": "low",
+    "workflow_steps": ["retrieve_2023_assets", "retrieve_2024_assets", "calculate_yoy", "synthesize"]
+  },
+  {
+    "id": "analytical-012",
+    "category": "variance_analysis",
+    "query": "What is the variance between Q3 2024 subscription revenue and the Q2 2024 amount?",
+    "expected_answer": "Subscription revenue was $72M in Q3 2024 compared to $68M in Q2 2024, a favorable variance of $4M (5.9% increase).",
+    "expected_keywords": ["favorable", "$4M", "5.9%", "increase", "$72M", "$68M"],
+    "expected_metrics": {
+      "variance_dollars": 4000000,
+      "variance_percentage": 5.9,
+      "q3_2024": 72000000,
+      "q2_2024": 68000000
+    },
+    "complexity": "low",
+    "workflow_steps": ["retrieve_q3_subscription", "retrieve_q2_subscription", "calculate_variance", "synthesize"]
+  },
+  {
+    "id": "analytical-013",
+    "category": "trend_detection",
+    "query": "Analyze the trend in gross margin percentage over the past 4 quarters",
+    "expected_answer": "Gross margin shows an improving trend: Q4 2023 (65%), Q1 2024 (67%), Q2 2024 (69%), Q3 2024 (71%), representing consistent expansion of 6 percentage points total.",
+    "expected_keywords": ["improving", "trend", "65%", "71%", "6 percentage points", "expansion"],
+    "expected_metrics": {
+      "trend_direction": "improving",
+      "total_expansion_points": 6.0,
+      "q4_2023_margin": 65.0,
+      "q3_2024_margin": 71.0
+    },
+    "complexity": "high",
+    "workflow_steps": ["retrieve_q4_2023_margin", "retrieve_q1_2024_margin", "retrieve_q2_2024_margin", "retrieve_q3_2024_margin", "analyze_trend", "synthesize"]
+  },
+  {
+    "id": "analytical-014",
+    "category": "comparative_analysis",
+    "query": "Compare operating cash flow between Q3 2023 and Q3 2024",
+    "expected_answer": "Operating cash flow increased from $25M in Q3 2023 to $35M in Q3 2024, representing a $10M improvement (40% growth).",
+    "expected_keywords": ["increased", "$10M", "40%", "improvement", "$25M", "$35M"],
+    "expected_metrics": {
+      "q3_2023_cash_flow": 25000000,
+      "q3_2024_cash_flow": 35000000,
+      "absolute_increase": 10000000,
+      "percentage_increase": 40.0
+    },
+    "complexity": "medium",
+    "workflow_steps": ["retrieve_q3_2023_cash_flow", "retrieve_q3_2024_cash_flow", "compare", "synthesize"]
+  },
+  {
+    "id": "analytical-015",
+    "category": "percentage_calculation",
+    "query": "What percentage of Q3 2024 revenue was recurring revenue?",
+    "expected_answer": "Recurring revenue was $96M out of total revenue of $120M in Q3 2024, representing 80% of total revenue.",
+    "expected_keywords": ["80%", "$96M", "$120M", "recurring revenue", "total revenue"],
+    "expected_metrics": {
+      "recurring_revenue": 96000000,
+      "total_revenue": 120000000,
+      "percentage": 80.0
+    },
+    "complexity": "low",
+    "workflow_steps": ["retrieve_recurring_revenue", "retrieve_total_revenue", "calculate_percentage", "synthesize"]
+  },
+  {
+    "id": "analytical-016",
+    "category": "yoy_growth",
+    "query": "How much did employee headcount grow from 2023 to 2024?",
+    "expected_answer": "Employee headcount grew from 850 employees in 2023 to 1020 employees in 2024, representing a 20% year-over-year growth (170 new hires).",
+    "expected_keywords": ["20%", "growth", "850", "1020", "170", "employees"],
+    "expected_metrics": {
+      "yoy_growth_percentage": 20.0,
+      "absolute_increase": 170,
+      "headcount_2023": 850,
+      "headcount_2024": 1020
+    },
+    "complexity": "low",
+    "workflow_steps": ["retrieve_2023_headcount", "retrieve_2024_headcount", "calculate_growth", "synthesize"]
+  },
+  {
+    "id": "analytical-017",
+    "category": "variance_analysis",
+    "query": "Calculate the variance between actual and budgeted gross profit for Q3 2024",
+    "expected_answer": "Q3 2024 gross profit was $85.2M against a budget of $82M, resulting in a favorable variance of $3.2M (3.9% above budget).",
+    "expected_keywords": ["favorable", "$3.2M", "3.9%", "above budget", "$85.2M", "$82M"],
+    "expected_metrics": {
+      "variance_dollars": 3200000,
+      "variance_percentage": 3.9,
+      "actual": 85200000,
+      "budget": 82000000
+    },
+    "complexity": "medium",
+    "workflow_steps": ["retrieve_actual_gross_profit", "retrieve_budget_gross_profit", "calculate_variance", "synthesize"]
+  },
+  {
+    "id": "analytical-018",
+    "category": "trend_detection",
+    "query": "What is the trend in average deal size over the past 3 quarters?",
+    "expected_answer": "Average deal size shows an increasing trend: Q1 2024 ($45K), Q2 2024 ($52K), Q3 2024 ($58K), representing a 28.9% total increase.",
+    "expected_keywords": ["increasing", "trend", "$45K", "$52K", "$58K", "28.9%"],
+    "expected_metrics": {
+      "trend_direction": "increasing",
+      "total_increase_percentage": 28.9,
+      "q1_value": 45000,
+      "q3_value": 58000
+    },
+    "complexity": "medium",
+    "workflow_steps": ["retrieve_q1_deal_size", "retrieve_q2_deal_size", "retrieve_q3_deal_size", "analyze_trend", "synthesize"]
+  },
+  {
+    "id": "analytical-019",
+    "category": "comparative_analysis",
+    "query": "Compare EBITDA margins between Q3 2023 and Q3 2024",
+    "expected_answer": "EBITDA margin improved from 22% in Q3 2023 to 28% in Q3 2024, an expansion of 6 percentage points.",
+    "expected_keywords": ["improved", "22%", "28%", "6 percentage points", "EBITDA margin", "expansion"],
+    "expected_metrics": {
+      "q3_2023_ebitda_margin": 22.0,
+      "q3_2024_ebitda_margin": 28.0,
+      "margin_expansion": 6.0
+    },
+    "complexity": "medium",
+    "workflow_steps": ["retrieve_q3_2023_ebitda", "retrieve_q3_2024_ebitda", "compare", "synthesize"]
+  },
+  {
+    "id": "analytical-020",
+    "category": "percentage_calculation",
+    "query": "What percentage of Q3 2024 customers were from enterprise segment?",
+    "expected_answer": "Enterprise customers numbered 85 out of 340 total customers in Q3 2024, representing 25% of the customer base.",
+    "expected_keywords": ["25%", "85", "340", "enterprise", "customers"],
+    "expected_metrics": {
+      "enterprise_customers": 85,
+      "total_customers": 340,
+      "percentage": 25.0
+    },
+    "complexity": "low",
+    "workflow_steps": ["retrieve_enterprise_customers", "retrieve_total_customers", "calculate_percentage", "synthesize"]
+  }
+]

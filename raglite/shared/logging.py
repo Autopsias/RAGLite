@@ -24,7 +24,8 @@ def get_logger(name: str) -> logging.Logger:
 
     # Only configure if not already configured
     if not logger.handlers:
-        handler = logging.StreamHandler(sys.stdout)
+        # MCP servers MUST write logs to stderr (stdout is reserved for JSON-RPC)
+        handler = logging.StreamHandler(sys.stderr)
         formatter = logging.Formatter(
             fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",

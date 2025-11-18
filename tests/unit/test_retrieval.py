@@ -16,6 +16,7 @@ from raglite.shared.models import QueryResult
 class TestGenerateQueryEmbedding:
     """Test suite for query embedding generation."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_generate_query_embedding_success(self):
         """Test successful query embedding generation with mocked model.
@@ -39,6 +40,7 @@ class TestGenerateQueryEmbedding:
             assert all(isinstance(x, float) for x in embedding)
             mock_model.encode.assert_called_once_with([query])
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_generate_query_embedding_empty_query(self):
         """Test that QueryError is raised for empty query string.
@@ -51,6 +53,7 @@ class TestGenerateQueryEmbedding:
         with pytest.raises(QueryError, match="Query cannot be empty"):
             await generate_query_embedding("   ")  # Whitespace only
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_generate_query_embedding_model_failure(self):
         """Test error handling when embedding model fails.
@@ -71,6 +74,7 @@ class TestGenerateQueryEmbedding:
 class TestSearchDocuments:
     """Test suite for vector similarity search."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_search_documents_basic(self):
         """Test basic search returns 5 chunks with scores.
@@ -127,6 +131,7 @@ class TestSearchDocuments:
             assert results[0].page_number == 5
             mock_qdrant.query_points.assert_called_once()
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_search_documents_custom_top_k(self):
         """Test that custom top_k parameter returns correct number of results.
@@ -170,6 +175,7 @@ class TestSearchDocuments:
             results = await search_documents(query, top_k=3)
             assert len(results) == 3
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_metadata_filtering_by_source_document(self):
         """Test metadata filtering by source_document.
@@ -214,6 +220,7 @@ class TestSearchDocuments:
             call_args = mock_qdrant.query_points.call_args
             assert call_args.kwargs["query_filter"] is not None
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_empty_query_handling(self):
         """Test that empty query raises QueryError.
@@ -227,6 +234,7 @@ class TestSearchDocuments:
         with pytest.raises(QueryError, match="Query cannot be empty"):
             await search_documents("   ", top_k=5)
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_relevance_scoring_sorted_descending(self):
         """Test that results have scores in 0-1 range and sorted descending.
@@ -274,6 +282,7 @@ class TestSearchDocuments:
             result_scores = [r.score for r in results]
             assert result_scores == scores  # Qdrant returns in order it receives
 
+    @pytest.mark.priority("P3")
     @pytest.mark.asyncio
     async def test_connection_error_handling(self):
         """Test that QueryError is raised on Qdrant connection failures.
@@ -294,6 +303,7 @@ class TestSearchDocuments:
             with pytest.raises(QueryError, match="Vector search failed"):
                 await search_documents(query, top_k=5)
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_metadata_validation_all_fields_present(self):
         """Test that all QueryResult objects have required metadata fields.
@@ -343,6 +353,7 @@ class TestSearchDocuments:
             assert result.word_count > 0
             assert result.word_count == 6
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_metadata_validation_missing_page_number(self):
         """Test warning logged when page_number is missing.
@@ -386,6 +397,7 @@ class TestSearchDocuments:
 class TestGenerateCitations:
     """Test suite for citation generation and source attribution."""
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_generate_citations_basic(self):
         """Test that single QueryResult gets citation appended to text.
@@ -411,6 +423,7 @@ class TestGenerateCitations:
         assert cited_results[0].text.startswith("Q3 revenue was $50M")
         assert cited_results[0].text.endswith("(Source: Q3_Report.pdf, page 5, chunk 0)")
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_generate_citations_multi_source(self):
         """Test that multiple QueryResult objects get unique citations.
@@ -457,6 +470,7 @@ class TestGenerateCitations:
         assert cited_results[1].score == 0.75
         assert cited_results[2].score == 0.65
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_citation_format(self):
         """Test that citation format matches specification.
@@ -478,6 +492,7 @@ class TestGenerateCitations:
         expected_citation = "(Source: Financial_Report.pdf, page 42, chunk 17)"
         assert expected_citation in cited_results[0].text
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_missing_page_number(self):
         """Test graceful degradation when page_number is None.
@@ -500,6 +515,7 @@ class TestGenerateCitations:
         assert len(cited_results) == 1
         assert "(Source: report.pdf, page N/A, chunk 0)" in cited_results[0].text
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_missing_source_document(self):
         """Test that CitationError is raised when source_document is missing.
@@ -524,6 +540,7 @@ class TestGenerateCitations:
         with pytest.raises(CitationError, match="Missing source_document"):
             await generate_citations([result])
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_citation_appended_to_text(self):
         """Test that original chunk text is preserved and citation appended.
@@ -549,6 +566,7 @@ class TestGenerateCitations:
         assert "\n\n(Source:" in cited_results[0].text
         assert cited_results[0].text.count("\n\n") == 1  # Exactly one double newline
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_empty_results_list(self):
         """Test that empty results list is handled gracefully.
@@ -561,6 +579,7 @@ class TestGenerateCitations:
         assert cited_results == []
         assert len(cited_results) == 0
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_citation_ordering(self):
         """Test that citations match QueryResult order.

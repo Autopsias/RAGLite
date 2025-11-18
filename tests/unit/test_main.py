@@ -22,11 +22,13 @@ from raglite.shared.models import DocumentMetadata, QueryRequest, QueryResponse,
 class TestMCPServerInitialization:
     """Test MCP server initialization and configuration."""
 
+    @pytest.mark.priority("P1")
     def test_mcp_server_exists(self):
         """Test MCP server instance exists with correct name."""
         assert mcp is not None
         assert mcp.name == "RAGLite"
 
+    @pytest.mark.priority("P1")
     def test_mcp_server_tools_registered(self):
         """Test both MCP tools are registered."""
         # FastMCP registers tools as FunctionTool objects with .fn attribute
@@ -39,6 +41,7 @@ class TestMCPServerInitialization:
 class TestIngestFinancialDocumentTool:
     """Test ingest_financial_document MCP tool."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_ingest_tool_success(self):
         """Test successful document ingestion returns DocumentMetadata."""
@@ -63,6 +66,7 @@ class TestIngestFinancialDocumentTool:
             assert result.page_count == 10
             mock_ingest.assert_called_once_with("/data/Q3_2023_Report.pdf")
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_ingest_tool_file_not_found(self):
         """Test ingestion with missing file raises DocumentProcessingError."""
@@ -74,6 +78,7 @@ class TestIngestFinancialDocumentTool:
 
             assert "not found" in str(exc_info.value).lower()
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_ingest_tool_processing_error(self):
         """Test ingestion with processing error raises DocumentProcessingError."""
@@ -85,6 +90,7 @@ class TestIngestFinancialDocumentTool:
 
             assert "Failed to ingest" in str(exc_info.value)
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_ingest_tool_structured_logging(self, caplog):
         """Test ingestion tool logs with structured extra context."""
@@ -110,6 +116,7 @@ class TestIngestFinancialDocumentTool:
 class TestQueryFinancialDocumentsTool:
     """Test query_financial_documents MCP tool."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_query_tool_success(self):
         """Test successful query returns QueryResponse with cited results."""
@@ -185,6 +192,7 @@ class TestQueryFinancialDocumentsTool:
             # Verify conversion to QueryResult and citation generation
             assert mock_citations.call_count == 1
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_query_tool_empty_query(self):
         """Test query with empty string raises QueryError."""
@@ -195,6 +203,7 @@ class TestQueryFinancialDocumentsTool:
 
         assert "empty" in str(exc_info.value).lower()
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_query_tool_whitespace_only_query(self):
         """Test query with whitespace-only string raises QueryError."""
@@ -205,6 +214,7 @@ class TestQueryFinancialDocumentsTool:
 
         assert "empty" in str(exc_info.value).lower()
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_query_tool_search_error(self):
         """Test query with multi-index search failure re-raises QueryError."""
@@ -218,6 +228,7 @@ class TestQueryFinancialDocumentsTool:
 
             assert "Multi-index search failed" in str(exc_info.value)
 
+    @pytest.mark.priority("P2")
     @pytest.mark.asyncio
     async def test_query_tool_unexpected_error(self):
         """Test query with unexpected error wraps in QueryError."""
@@ -231,6 +242,7 @@ class TestQueryFinancialDocumentsTool:
 
             assert "Query failed" in str(exc_info.value)
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_query_tool_structured_logging(self, caplog):
         """Test query tool logs with structured extra context."""
@@ -283,6 +295,7 @@ class TestQueryFinancialDocumentsTool:
 class TestDocumentProcessingError:
     """Test custom DocumentProcessingError exception."""
 
+    @pytest.mark.priority("P2")
     def test_exception_creation(self):
         """Test DocumentProcessingError can be raised with message."""
         with pytest.raises(DocumentProcessingError) as exc_info:
@@ -290,6 +303,7 @@ class TestDocumentProcessingError:
 
         assert "Test error message" in str(exc_info.value)
 
+    @pytest.mark.priority("P2")
     def test_exception_inheritance(self):
         """Test DocumentProcessingError inherits from Exception."""
         assert issubclass(DocumentProcessingError, Exception)

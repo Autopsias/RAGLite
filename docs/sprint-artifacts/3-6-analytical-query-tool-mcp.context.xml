@@ -1,0 +1,354 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>6</storyId>
+    <title>Analytical Query Tool (MCP)</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-17</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-6-analytical-query-tool-mcp.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to ask complex analytical financial questions via MCP</iWant>
+    <soThat>I can get answers requiring multi-step reasoning without manual decomposition</soThat>
+    <tasks>
+- [ ] **Task 1:** Create MCP tool integration and request/response models (AC1, AC2) - 3 hours
+  - [ ] 1.1: Define `AnalyticalQueryRequest` Pydantic model in `raglite/shared/models.py`
+  - [ ] 1.2: Define `AnalyticalQueryResponse` Pydantic model with reasoning_steps, workflow_metadata fields
+  - [ ] 1.3: Add `analytical_query_financial_documents()` function to `raglite/main.py`
+  - [ ] 1.4: Register tool with `@mcp.tool()` decorator (FastMCP integration)
+  - [ ] 1.5: Add input validation: query max 1000 chars, top_k range 1-20
+  - [ ] 1.6: Add docstring with 3 usage examples (simple, analytical, comparative)
+  - [ ] 1.7: Create unit tests for model validation (`tests/unit/test_mcp_analytical_tool.py`)
+
+- [ ] **Task 2:** Implement query complexity routing (AC3) - 2 hours
+  - [ ] 2.1: Import `classify_query_complexity()` from `raglite.agentic.planner`
+  - [ ] 2.2: Add routing logic: classify query → route to simple or complex path
+  - [ ] 2.3: Simple path: call `query_financial_documents()` and return directly
+  - [ ] 2.4: Complex path: orchestrate workflow via `WorkflowExecutor.execute_workflow()`
+  - [ ] 2.5: Add structured logging for routing decisions
+  - [ ] 2.6: Create unit tests for routing logic (mock classifier)
+
+- [ ] **Task 3:** Add reasoning steps and transparency metadata (AC4) - 2 hours
+  - [ ] 3.1: Capture workflow execution steps from `WorkflowExecutor`
+  - [ ] 3.2: Format reasoning steps as user-friendly list: ["1. Retrieved 5 documents...", "2. Analyzed data...", "3. Synthesized answer..."]
+  - [ ] 3.3: Add workflow_metadata to response: task_count, execution_time_ms, workflow_pattern
+  - [ ] 3.4: Include agent names invoked in reasoning steps (e.g., "Retrieval Agent", "Analysis Agent")
+  - [ ] 3.5: Add unit tests for reasoning step formatting
+
+- [ ] **Task 4:** Create integration test suite for analytical queries (AC5, AC6) - 4 hours
+  - [ ] 4.1: Create test query set: `tests/fixtures/story_3_6_analytical_queries.json` (10+ queries)
+  - [ ] 4.2: Create `tests/integration/test_analytical_query_tool.py`
+  - [ ] 4.3: Test YoY growth queries (3 tests)
+  - [ ] 4.4: Test variance analysis queries (3 tests)
+  - [ ] 4.5: Test trend analysis queries (2 tests)
+  - [ ] 4.6: Test comparative queries (2 tests)
+  - [ ] 4.7: Validate response format: answer, reasoning_steps, sources, metadata
+  - [ ] 4.8: Validate success rate ≥80% (8 of 10+ queries succeed)
+  - [ ] 4.9: Mark slow tests with `@pytest.mark.slow` for CI/CD
+
+- [ ] **Task 5:** Manual testing via Claude Desktop (AC6) - 2 hours
+  - [ ] 5.1: Start MCP server locally: `uv run python -m raglite.main`
+  - [ ] 5.2: Connect Claude Desktop MCP client to local server
+  - [ ] 5.3: Test simple query: "What was Q3 revenue?" (verify fallback to Epic 2)
+  - [ ] 5.4: Test analytical query: "Calculate YoY revenue growth from Q3 2023 to Q3 2024"
+  - [ ] 5.5: Test complex query: "Compare Q3 and Q4 revenue and explain the variance"
+  - [ ] 5.6: Validate answer quality, citations, reasoning steps visibility
+  - [ ] 5.7: Measure response time (target: &lt;15s p95)
+  - [ ] 5.8: Document findings in completion notes
+
+- [ ] **Task 6:** Documentation and cleanup (AC1-AC6) - 1 hour
+  - [ ] 6.1: Update MCP tool docstring with comprehensive examples
+  - [ ] 6.2: Document routing logic in function comments
+  - [ ] 6.3: Add README section on analytical query tool usage
+  - [ ] 6.4: Update sprint status: mark story as "drafted" → "done"
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. **AC1:** MCP tool defined: "analytical_query_financial_documents" triggering agentic workflow
+   - Tool registered in FastMCP server with `@mcp.tool()` decorator
+   - Tool accepts `AnalyticalQueryRequest` (query: str, top_k: int = 5)
+   - Tool returns `AnalyticalQueryResponse` with answer, reasoning_steps, sources, workflow_metadata
+   - Tool integrated into `raglite/main.py` alongside existing `query_financial_documents()` from Epic 1/2
+
+2. **AC2:** Tool accepts natural language analytical queries
+   - Input validation: query string max 1000 characters
+   - Query types supported: YoY growth, variance analysis, trend analysis, comparative queries
+   - Pydantic model `AnalyticalQueryRequest` with field validation
+   - Examples validated: "Calculate YoY revenue growth", "Compare Q3 vs Q4 revenue", "Explain variance in operating expenses"
+
+3. **AC3:** Tool routes simple queries to basic retrieval, complex queries to agentic workflow
+   - Uses `classify_query_complexity()` from Story 3.5 planner module
+   - Simple queries (SIMPLE complexity) → call `query_financial_documents()` (Epic 1/2 tool)
+   - Analytical/comparative queries → orchestrate full workflow via `WorkflowExecutor` from Story 3.5
+   - Routing decision logged with structured metadata
+
+4. **AC4:** Responses include reasoning steps taken (transparency)
+   - Response model includes `reasoning_steps: List[str]` field
+   - Each workflow step documented: "1. Retrieved documents", "2. Analyzed data", "3. Synthesized answer"
+   - Workflow metadata includes: task_count, execution_time_ms, workflow_pattern used
+   - User can see which agents were invoked and in what order
+
+5. **AC5:** Test queries validated: trend analysis, variance explanation, correlation discovery
+   - Test set: 10+ analytical queries from ground truth (complex queries subset)
+   - Coverage: YoY growth (3 queries), variance analysis (3 queries), trend analysis (2 queries), comparative (2 queries)
+   - Success criteria: ≥80% of test queries return valid answers with proper citations
+   - Integration test validates each query type end-to-end
+
+6. **AC6:** User testing via Claude Desktop confirms usability
+   - Manual testing via Claude Desktop MCP client
+   - Test scenarios: Simple query, analytical query, complex multi-step query
+   - User validates: Answer quality, citation accuracy, response time &lt;15s p95
+   - Feedback documented in story completion notes
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-3-ai-intelligence-orchestration.md</path>
+        <title>Epic 3: AI Intelligence &amp; Orchestration PRD</title>
+        <section>Story 3.6: Analytical Query Tool (MCP)</section>
+        <snippet>MCP tool defined: "analyze_financial_question" triggering agentic workflow. Tool accepts natural language analytical queries. Tool routes simple queries to basic retrieval, complex queries to agentic workflow. Responses include reasoning steps taken (transparency).</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-orchestration-design.md</path>
+        <title>Epic 3 Orchestration Architecture Design</title>
+        <section>MCP Tool Integration</section>
+        <snippet>New MCP Tool: analytical_query_financial_documents(query, orchestration=True). Workflow: 1. Classify query complexity 2. IF simple → simple_search_path 3. IF analytical/comparative → complex_orchestration_path. Latency targets: Simple path 4.7s p50, Analytical path 12s p50.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-agent-patterns.md</path>
+        <title>Epic 3 Agent Workflow Patterns</title>
+        <section>Pattern 3: Conditional Routing Pattern</section>
+        <snippet>Conditional Routing Pattern routes queries to different agent workflows based on query characteristics. Simple Queries (70% of traffic): Route to Epic 2 simple search (4.7s). Complex Queries (30%): Route to Epic 3 orchestration (12s). Average latency improvement: 70% × 4.7s + 30% × 12s = 6.9s (42% improvement over always using Epic 3).</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-agent-patterns.md</path>
+        <title>Epic 3 Agent Workflow Patterns</title>
+        <section>Pattern 3 Code Example - Routing Orchestrator</section>
+        <snippet>classify_query_complexity() classifier returns SIMPLE, ANALYTICAL, or COMPARATIVE. simple_search_path() for fast Epic 2 retrieval. complex_orchestration_path() for full Epic 3 multi-agent reasoning. Routing orchestrator delegates based on classification results.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/3-repository-structure-monolithic.md</path>
+        <title>Repository Structure (Monolithic)</title>
+        <section>Main Package Structure</section>
+        <snippet>raglite/main.py (~200 lines) - MCP server entrypoint. raglite/agentic/ - Epic 3 orchestration module (planner, orchestrator, fallback, agents). raglite/shared/models.py - Pydantic data models. Total target: 600-800 lines across 15 files.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack (Definitive)</title>
+        <section>MCP &amp; Agent Framework</section>
+        <snippet>MCP Python SDK (mcp) 1.20.0 - Official SDK by Anthropic. FastMCP 2.0 - Production MCP framework extending official SDK. AWS Strands - CONDITIONAL (Phase 3): IF Phase 2 &lt;85% accuracy. LangGraph - CONDITIONAL (Phase 3): IF Phase 2 &lt;85% accuracy.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>raglite/main.py</path>
+        <kind>MCP server</kind>
+        <symbol>query_financial_documents</symbol>
+        <lines>105-179</lines>
+        <reason>Reference pattern for MCP tool definition with @mcp.tool() decorator. Shows how to implement tool with QueryRequest/QueryResponse models, structured logging, and error handling. Story 3.6 will add analytical_query_financial_documents() following same pattern.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/planner.py</path>
+        <kind>module</kind>
+        <symbol>classify_query_complexity</symbol>
+        <lines>58-130</lines>
+        <reason>Query complexity classifier (AC3). Returns QueryComplexity.SIMPLE or QueryComplexity.ANALYTICAL. Story 3.6 uses this for routing decision: SIMPLE → Epic 2 path, ANALYTICAL → Epic 3 orchestration.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/planner.py</path>
+        <kind>module</kind>
+        <symbol>decompose_query</symbol>
+        <lines>150-280</lines>
+        <reason>Query decomposition engine (AC3). Generates WorkflowPlan with tasks for retrieval, analysis, synthesis agents. Used by WorkflowExecutor in Epic 3 orchestration path.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/orchestrator.py</path>
+        <kind>module</kind>
+        <symbol>WorkflowExecutor</symbol>
+        <lines>1-400</lines>
+        <reason>Workflow orchestration engine (AC3, AC4). execute_workflow() method coordinates retrieval, analysis, synthesis agents. Returns execution results with task metadata for reasoning steps (AC4).</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/agentic/fallback.py</path>
+        <kind>module</kind>
+        <symbol>handle_workflow_failure</symbol>
+        <lines>1-280</lines>
+        <reason>Graceful degradation handler (AC3). Implements 4-tier fallback: Full orchestration → Partial analysis → Retrieval only → Epic 2 fallback. Used when Epic 3 workflow fails.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>module</kind>
+        <symbol>AnalyticalQueryRequest</symbol>
+        <lines>216-221</lines>
+        <reason>Existing request model from Story 3.5 (AC1, AC2). Defines query: str and top_k: int fields. Story 3.6 may extend this or use as-is. Note: Needs reasoning_steps and sources fields added to AnalyticalQueryResponse (AC4, AC6).</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/models.py</path>
+        <kind>module</kind>
+        <symbol>AnalyticalQueryResponse</symbol>
+        <lines>223-239</lines>
+        <reason>Existing response model from Story 3.5 (AC1, AC4). Has answer, complexity, workflow_metadata, confidence, limitations fields. Story 3.6 MUST ADD: reasoning_steps: List[str] field (AC4) and sources field for citations (AC6).</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/retrieval/attribution.py</path>
+        <kind>module</kind>
+        <symbol>generate_citations</symbol>
+        <lines>1-150</lines>
+        <reason>Citation generation engine (AC6). Generates source attributions with page numbers and document references. Used in synthesis agent and Epic 2 simple search. Story 3.6 needs citations in AnalyticalQueryResponse.sources field.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="fastmcp" version="2.0" description="MCP server framework (AC1)" />
+        <package name="mcp" version="1.20.0" description="Official MCP Python SDK (AC1)" />
+        <package name="pydantic" version="2.12.4" description="Data validation for request/response models (AC1, AC2)" />
+        <package name="anthropic" version="0.72.0" description="Claude API for LLM reasoning/synthesis (AC3, AC4)" />
+        <package name="pytest" version="8.4.2" description="Testing framework (AC5)" />
+        <package name="pytest-asyncio" version="≥1.2.0" description="Async test support (AC5)" />
+        <package name="pytest-mock" version="≥3.12" description="Mocking for unit tests (AC5)" />
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+- **SIMPLICITY FIRST:** No abstractions, no frameworks beyond approved tech stack. Direct SDK usage only.
+- **Tech Stack LOCKED:** Only use libraries from docs/architecture/5-technology-stack-definitive.md. NO additions without user approval.
+- **Model Extension Required:** AnalyticalQueryResponse model MUST be extended with reasoning_steps: List[str] and sources fields (AC4, AC6).
+- **Routing Overhead Acceptable:** Classification adds ~500ms overhead, but saves 3-5s+ on simple queries (70% of traffic).
+- **MCP Tool Pattern:** Follow existing query_financial_documents() pattern in raglite/main.py for consistency.
+- **Structured Logging:** All routing decisions logged with extra={} metadata for observability.
+- **Performance Targets:** Simple path &lt;5s p50, Analytical path &lt;15s p95 (AC6).
+- **Error Handling:** Workflow failures handled by handle_workflow_failure() from Story 3.5 - no new error handling needed.
+- **No New Files:** Story 3.6 ONLY modifies existing files (main.py, models.py) + adds tests. Total: ~575 new lines.
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>analytical_query_financial_documents (MCP Tool)</name>
+      <kind>FastMCP tool (@mcp.tool() decorator)</kind>
+      <signature>
+async def analytical_query_financial_documents(
+    request: AnalyticalQueryRequest
+) -> AnalyticalQueryResponse
+      </signature>
+      <path>raglite/main.py</path>
+      <description>New MCP tool for Story 3.6 (AC1). Accepts AnalyticalQueryRequest, classifies query complexity, routes to Epic 2 (simple) or Epic 3 (analytical) path, returns AnalyticalQueryResponse with answer, reasoning_steps, sources, workflow_metadata.</description>
+    </interface>
+    <interface>
+      <name>classify_query_complexity (Planner Module)</name>
+      <kind>Async function</kind>
+      <signature>
+async def classify_query_complexity(query: str) -> QueryComplexity
+      </signature>
+      <path>raglite/agentic/planner.py</path>
+      <description>Story 3.5 classifier (AC3). Returns QueryComplexity.SIMPLE or QueryComplexity.ANALYTICAL. Used by Story 3.6 routing logic to determine Epic 2 vs Epic 3 path.</description>
+    </interface>
+    <interface>
+      <name>WorkflowExecutor.execute_workflow (Orchestrator Module)</name>
+      <kind>Async method</kind>
+      <signature>
+async def execute_workflow(
+    self, workflow_plan: WorkflowPlan
+) -> WorkflowResult
+      </signature>
+      <path>raglite/agentic/orchestrator.py</path>
+      <description>Story 3.5 orchestrator (AC3, AC4). Executes multi-agent workflow (retrieval → analysis → synthesis). Returns WorkflowResult with task execution metadata for reasoning steps (AC4).</description>
+    </interface>
+    <interface>
+      <name>query_financial_documents (Existing MCP Tool)</name>
+      <kind>FastMCP tool (@mcp.tool() decorator)</kind>
+      <signature>
+async def query_financial_documents(
+    request: QueryRequest
+) -> QueryResponse
+      </signature>
+      <path>raglite/main.py</path>
+      <description>Existing Epic 1/2 tool (AC3). Simple retrieval path for SIMPLE queries. Story 3.6 routes 70% of traffic here (4.7s latency). No modifications needed - reuse as-is.</description>
+    </interface>
+    <interface>
+      <name>AnalyticalQueryRequest (Pydantic Model)</name>
+      <kind>Request model</kind>
+      <signature>
+class AnalyticalQueryRequest(BaseModel):
+    query: str
+    top_k: int = 5
+      </signature>
+      <path>raglite/shared/models.py</path>
+      <description>Existing model from Story 3.5 (AC1, AC2). Input validation: query max 1000 chars, top_k range 1-50. Story 3.6 may need to add max_length=1000 constraint (AC2).</description>
+    </interface>
+    <interface>
+      <name>AnalyticalQueryResponse (Pydantic Model - NEEDS EXTENSION)</name>
+      <kind>Response model</kind>
+      <signature>
+class AnalyticalQueryResponse(BaseModel):
+    answer: str
+    complexity: str
+    workflow_metadata: dict[str, Any]
+    confidence: str
+    limitations: list[str]
+    # MISSING (Story 3.6 AC4, AC6):
+    # reasoning_steps: list[str]
+    # sources: list[str]
+      </signature>
+      <path>raglite/shared/models.py</path>
+      <description>Existing model from Story 3.5. Story 3.6 MUST ADD: reasoning_steps: List[str] field (AC4) for transparency, and sources field (AC6) for citation display. These are CRITICAL for AC4 and AC6 validation.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+- **Framework:** pytest + pytest-asyncio for async functions
+- **Coverage:** 80%+ unit test coverage enforced in CI
+- **Location:** tests/unit/ for unit tests, tests/integration/ for integration tests
+- **Slow Tests:** Mark with @pytest.mark.slow for CI exclusion (tests/integration/ typically slow)
+- **Fixtures:** Reuse existing fixtures from tests/fixtures/ (ground_truth.json, sample PDFs)
+- **Structured Logging:** Validate logging calls with extra={} metadata in unit tests
+- **Mocking:** Use pytest-mock for external dependencies (LLM APIs, database calls)
+    </standards>
+    <locations>
+- tests/unit/test_mcp_analytical_tool.py (NEW - Story 3.6)
+- tests/integration/test_analytical_query_tool.py (NEW - Story 3.6)
+- tests/fixtures/story_3_6_analytical_queries.json (NEW - Story 3.6)
+- tests/integration/test_workflow_orchestration.py (EXISTS - Story 3.5 reference)
+- tests/fixtures/story_3_5_complex_queries.json (EXISTS - Story 3.5 reference)
+    </locations>
+    <ideas>
+**Unit Tests (Task 1.7, 2.6, 3.5) - 8 tests total:**
+1. test_analytical_query_request_validation_max_length - AC2 (query max 1000 chars)
+2. test_analytical_query_request_validation_top_k_range - AC2 (top_k 1-20)
+3. test_analytical_query_response_has_reasoning_steps - AC4 (reasoning_steps field exists)
+4. test_analytical_query_response_has_sources - AC6 (sources field exists)
+5. test_routing_simple_query_to_epic2 - AC3 (SIMPLE → Epic 2 path)
+6. test_routing_analytical_query_to_epic3 - AC3 (ANALYTICAL → Epic 3 path)
+7. test_reasoning_steps_formatting_from_workflow - AC4 (format task results as user-friendly steps)
+8. test_mcp_tool_registered_with_decorator - AC1 (tool registered in FastMCP server)
+
+**Integration Tests (Task 4.2-4.8) - 10+ tests:**
+1. test_yoy_growth_query_1 - AC5 ("Calculate YoY revenue growth Q3 2023 to Q3 2024")
+2. test_yoy_growth_query_2 - AC5 ("What is the YoY percentage change in operating expenses?")
+3. test_yoy_growth_query_3 - AC5 ("Compare annual revenue 2022 vs 2023 and calculate growth rate")
+4. test_variance_analysis_query_1 - AC5 ("Why did operating expenses increase in Q3 2024?")
+5. test_variance_analysis_query_2 - AC5 ("Explain the variance between projected and actual revenue for Q4")
+6. test_variance_analysis_query_3 - AC5 ("What caused the revenue decline from Q2 to Q3?")
+7. test_trend_analysis_query_1 - AC5 ("What is the revenue trend over the last 4 quarters?")
+8. test_trend_analysis_query_2 - AC5 ("Analyze the quarterly expense trend for 2023")
+9. test_comparative_query_1 - AC5 ("Compare Q3 2023 revenue with Q3 2024 revenue")
+10. test_comparative_query_2 - AC5 ("How do 2023 operating margins compare to 2022?")
+11. test_response_format_validation - AC5 (answer, reasoning_steps, sources, metadata present)
+12. test_success_rate_threshold - AC5 (≥80% of 10+ queries succeed)
+
+**Manual Testing (Task 5.1-5.8) - AC6:**
+- Test via Claude Desktop MCP client
+- Validate simple query routing (Epic 2 fallback)
+- Validate analytical query orchestration (Epic 3 full workflow)
+- Validate response time &lt;15s p95
+- Validate answer quality, citations, reasoning steps visibility
+- Document findings in story completion notes
+    </ideas>
+  </tests>
+</story-context>

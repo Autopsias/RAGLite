@@ -9,6 +9,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 from raglite.ingestion.pipeline import ingest_pdf
 from raglite.shared.clients import get_qdrant_client
 from raglite.shared.config import settings
@@ -18,6 +21,7 @@ from raglite.shared.config import settings
 class TestMetadataInjection:
     """Integration tests for AC3: Metadata injection into Qdrant."""
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     async def test_metadata_injection_into_chunks(self, tmp_path):
         """Test that extracted metadata is injected into all chunks."""
@@ -72,6 +76,7 @@ class TestMetadataInjection:
             assert "table_name" in payload
             assert "statistical_summary" in payload
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     async def test_metadata_filtering(self, tmp_path):
         """Test AC3: Metadata accessible via Qdrant filter API."""
@@ -132,6 +137,7 @@ class TestMetadataInjection:
 class TestCostValidation:
     """Integration tests for AC5: Cost validation and tracking."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_cost_tracking_single_document(self, caplog):
         """Test AC5: Measure Mistral Small 3.2 API token usage and cost (Story 2.4 REVISION: FREE)."""
@@ -139,7 +145,7 @@ class TestCostValidation:
         if not os.getenv("MISTRAL_API_KEY"):
             pytest.skip("MISTRAL_API_KEY not set - skipping cost validation test")
 
-        from raglite.ingestion.pipeline import extract_chunk_metadata
+        from raglite.ingestion.embedding_generation import extract_chunk_metadata
 
         # Sample chunk text (representative of 512-token chunk from fixed chunking)
         sample_text = (
@@ -156,20 +162,31 @@ class TestCostValidation:
         )
 
         # Extract metadata and track cost (Story 2.4 REVISION: per-chunk, not per-document)
-        result = await extract_chunk_metadata(sample_text, "test_cost_chunk_1")
+        # Create Mistral client within async context to ensure proper cleanup
+        from mistralai import Mistral
 
-        # Verify metadata extracted
-        assert result is not None
+        client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
 
-        # Story 2.4 REVISION: Mistral Small 3.2 is FREE - cost should be $0.00
-        # Check logs for cost tracking (should show $0.00)
-        cost_logs = [record for record in caplog.records if "estimated_cost_usd" in str(record)]
+        try:
+            result = await extract_chunk_metadata(sample_text, "test_cost_chunk_1", client=client)
 
-        if cost_logs:
-            # Verify cost is logged as $0.00 (Mistral Small 3.2 is free)
-            for log in cost_logs:
-                assert "0.0" in str(log)  # Cost should be $0.00
+            # Verify metadata extracted
+            assert result is not None
 
+            # Story 2.4 REVISION: Mistral Small 3.2 is FREE - cost should be $0.00
+            # Check logs for cost tracking (should show $0.00)
+            cost_logs = [record for record in caplog.records if "estimated_cost_usd" in str(record)]
+
+            if cost_logs:
+                # Verify cost is logged as $0.00 (Mistral Small 3.2 is free)
+                for log in cost_logs:
+                    assert "0.0" in str(log)  # Cost should be $0.00
+        finally:
+            # Ensure Mistral client is properly closed before event loop closes
+            if hasattr(client, "_client") and hasattr(client._client, "aclose"):
+                await client._client.aclose()
+
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_cost_budget_compliance(self):
         """Test AC5: Verify cost is $0.00 per chunk (Story 2.4 REVISION: Mistral Small 3.2 is FREE)."""
@@ -179,16 +196,21 @@ class TestCostValidation:
 
         from unittest.mock import patch
 
-        from raglite.ingestion.pipeline import extract_chunk_metadata
+        from raglite.ingestion.embedding_generation import extract_chunk_metadata
 
         # Track cost via mocked Mistral response (Story 2.4 REVISION: per-chunk extraction)
         sample_text = "Financial Report Q3 2024 ACME Corporation Finance Department" * 10
 
         # Mock to control cost calculation (Story 2.4 REVISION: Mistral API)
-        with patch("mistralai.Mistral") as mock_client_class:
+        # Use patch on get_mistral_client to avoid creating real async HTTP client
+        with patch("raglite.ingestion.embedding_generation.get_mistral_client") as mock_get_client:
             import json
 
             mock_client = AsyncMock()
+
+            # Mock _client attribute to prevent real httpx client creation
+            mock_client._client = AsyncMock()
+            mock_client._client.aclose = AsyncMock()
 
             # Simulate Mistral Small 3.2 response (FREE - no usage tracking needed)
             # Story 2.4 REVISION: Response uses 15-field rich schema
@@ -207,9 +229,9 @@ class TestCostValidation:
             )
 
             mock_client.chat.complete_async = AsyncMock(return_value=mock_response)
-            mock_client_class.return_value = mock_client
+            mock_get_client.return_value = mock_client
 
-            with patch("raglite.shared.config.settings") as mock_settings:
+            with patch("raglite.ingestion.embedding_generation.settings") as mock_settings:
                 mock_settings.mistral_api_key = "test-key"
                 mock_settings.metadata_extraction_model = "mistral-small-latest"
 
@@ -225,6 +247,7 @@ class TestCostValidation:
 class TestBackwardCompatibility:
     """Test AC2: Backward compatibility with existing chunks."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_chunks_without_metadata_fields(self):
         """Test that chunks without metadata fields still work (backward compatible)."""
@@ -267,6 +290,7 @@ class TestBackwardCompatibility:
         assert chunk.table_name is None
         assert chunk.statistical_summary is None
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     async def test_ingestion_without_openai_key(self, tmp_path):
         """Test that ingestion works when OpenAI key not configured (graceful degradation)."""
@@ -312,6 +336,7 @@ class TestMetadataInjectionMocked:
     instead of re-ingesting. This fixes hanging tests and improves performance.
     """
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     @pytest.mark.preserve_collection  # This test relies on session fixture, don't need double-ingest
     async def test_metadata_injection_mocked(self):
@@ -383,6 +408,7 @@ class TestMetadataInjectionMocked:
             "(expected at least 50% coverage)"
         )
 
+    @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     @pytest.mark.preserve_collection  # This test relies on session fixture
     async def test_metadata_filtering_mocked(self):
@@ -438,22 +464,26 @@ class TestMetadataInjectionMocked:
         # Create a dummy query vector (1024 dimensions for Fin-E5)
         query_vector = np.random.rand(1024).tolist()
 
-        # Search with filter using the found metadata value
-        results = client.search(
+        # Search with filter using the found metadata value (using query_points with vector name)
+
+        results = client.query_points(
             collection_name=settings.qdrant_collection_name,
-            query_vector=query_vector,
+            query=query_vector,
+            using="text-dense",  # Specify vector name for named vectors
             query_filter=Filter(
                 must=[FieldCondition(key=test_field, match=MatchValue(value=test_value))]
             ),
             limit=5,
-        )
+        ).points
 
         # Verify all results match filter
         assert len(results) > 0, f"Filter should return results for {test_field}={test_value}"
         for result in results:
-            assert result.payload[test_field] == test_value, (
+            # query_points returns ScoredPoint objects with payload attribute
+            result_payload = result.payload if hasattr(result, "payload") else result
+            assert result_payload[test_field] == test_value, (
                 f"All results must match filter: expected '{test_value}', "
-                f"got '{result.payload.get(test_field)}'"
+                f"got '{result_payload.get(test_field)}'"
             )
 
         print(f"✓ Filter API validation passed: {len(results)} results matched filter")
@@ -462,18 +492,24 @@ class TestMetadataInjectionMocked:
 class TestCostValidationMocked:
     """Mocked integration tests for AC5 - No API key required for CI/CD."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_cost_tracking_mocked(self, caplog):
         """Test AC5: Cost tracking with mocked Mistral response (CI/CD friendly, Story 2.4 REVISION: FREE)."""
         import json
 
-        from raglite.ingestion.pipeline import extract_chunk_metadata
+        from raglite.ingestion.embedding_generation import extract_chunk_metadata
 
         sample_text = """Financial Report Q3 2024 ACME Corporation Finance Department""" * 10
 
         # Mock Mistral client to simulate cost tracking (Story 2.4 REVISION: Mistral Small 3.2 FREE)
-        with patch("mistralai.Mistral") as mock_client_class:
+        # Use patch on get_mistral_client to avoid creating real async HTTP client
+        with patch("raglite.ingestion.embedding_generation.get_mistral_client") as mock_get_client:
             mock_client = AsyncMock()
+
+            # Mock _client attribute to prevent real httpx client creation
+            mock_client._client = AsyncMock()
+            mock_client._client.aclose = AsyncMock()
 
             # Create realistic mock response (Story 2.4 REVISION: 15-field rich schema)
             mock_response = AsyncMock()
@@ -491,10 +527,10 @@ class TestCostValidationMocked:
             )
 
             mock_client.chat.complete_async = AsyncMock(return_value=mock_response)
-            mock_client_class.return_value = mock_client
+            mock_get_client.return_value = mock_client
 
-            # Mock settings
-            with patch("raglite.ingestion.pipeline.settings") as mock_settings:
+            # Mock settings (correct path: embedding_generation imports settings from shared.config)
+            with patch("raglite.ingestion.embedding_generation.settings") as mock_settings:
                 mock_settings.mistral_api_key = "test-key-mocked"
                 mock_settings.metadata_extraction_model = "mistral-small-latest"
 
@@ -525,18 +561,24 @@ class TestCostValidationMocked:
                         # If no cost field, that's also acceptable (free API doesn't need cost tracking)
                         pass
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_cost_budget_compliance_mocked(self):
         """Test AC5: Cost is $0.00 with mocked response (CI/CD friendly, Story 2.4 REVISION: FREE)."""
         import json
 
-        from raglite.ingestion.pipeline import extract_chunk_metadata
+        from raglite.ingestion.embedding_generation import extract_chunk_metadata
 
         sample_text = "Financial Report Q3 2024 ACME Corporation" * 10
 
         # Mock Mistral client (Story 2.4 REVISION: Mistral Small 3.2 FREE)
-        with patch("mistralai.Mistral") as mock_client_class:
+        # Use patch on get_mistral_client to avoid creating real async HTTP client
+        with patch("raglite.ingestion.embedding_generation.get_mistral_client") as mock_get_client:
             mock_client = AsyncMock()
+
+            # Mock _client attribute to prevent real httpx client creation
+            mock_client._client = AsyncMock()
+            mock_client._client.aclose = AsyncMock()
 
             # Mock response with 15-field rich schema (Story 2.4 REVISION)
             mock_response = AsyncMock()
@@ -552,9 +594,9 @@ class TestCostValidationMocked:
             )
 
             mock_client.chat.complete_async = AsyncMock(return_value=mock_response)
-            mock_client_class.return_value = mock_client
+            mock_get_client.return_value = mock_client
 
-            with patch("raglite.ingestion.pipeline.settings") as mock_settings:
+            with patch("raglite.ingestion.embedding_generation.settings") as mock_settings:
                 mock_settings.mistral_api_key = "test-key-budget"
                 mock_settings.metadata_extraction_model = "mistral-small-latest"
 

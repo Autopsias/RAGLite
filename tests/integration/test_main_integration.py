@@ -15,12 +15,14 @@ from raglite.shared.models import DocumentMetadata, QueryRequest, QueryResponse
 class TestMCPProtocolCompliance:
     """Test MCP protocol compliance and tool discovery."""
 
+    @pytest.mark.priority("P1")
     def test_mcp_server_initialization(self):
         """Test MCP server initializes with correct configuration."""
         assert mcp is not None
         assert mcp.name == "RAGLite"
         assert isinstance(mcp.name, str)
 
+    @pytest.mark.priority("P1")
     def test_mcp_tool_discovery(self):
         """Test MCP client can discover both tools."""
         # FastMCP registers tools as FunctionTool objects with .fn attribute
@@ -34,6 +36,7 @@ class TestMCPProtocolCompliance:
         assert ingest_financial_document.name == "ingest_financial_document"
         assert query_financial_documents.name == "query_financial_documents"
 
+    @pytest.mark.priority("P1")
     def test_tool_schemas_valid(self):
         """Test tool schemas have proper Pydantic model types."""
         # Verify ingest tool has correct signature
@@ -66,6 +69,7 @@ class TestMCPEndToEnd:
     Run manually with: pytest tests/integration/test_main_integration.py::TestMCPEndToEnd -v -s --no-skip
     """
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_mcp_query_execution_real_qdrant(self):
         """Test MCP client executes query with real Qdrant connection.
@@ -109,6 +113,7 @@ class TestMCPEndToEnd:
             print(f"  Page: {result.page_number}")
             print(f"  Text: {result.text[:150]}...")
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_mcp_ingest_then_query_flow(self, tmp_path):
         """Test complete MCP flow: ingest document then query.
@@ -155,6 +160,7 @@ class TestMCPEndToEnd:
 class TestMCPErrorHandling:
     """Test MCP error handling with integration scenarios."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_query_empty_collection(self):
         """Test query behavior when Qdrant collection is empty.

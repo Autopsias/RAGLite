@@ -13,12 +13,17 @@ import pytest
 from raglite.retrieval.search import fuse_sql_vector_results, hybrid_search
 from raglite.shared.models import QueryResult
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.preserve_collection  # Read-only query tests - no data modification
 class TestSQLRouting:
     """Test SQL routing integration in hybrid_search()."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_sql_only_routing(self):
         """Test SQL_ONLY query routes to SQL search only."""
         # Table query that should route to SQL
@@ -35,7 +40,9 @@ class TestSQLRouting:
             assert hasattr(result, "text")
             assert hasattr(result, "page_number")
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_vector_only_routing(self):
         """Test VECTOR_ONLY query routes to semantic + BM25 search."""
         # Text query that should route to vector search
@@ -52,7 +59,9 @@ class TestSQLRouting:
             assert isinstance(result, QueryResult)
             assert 0.0 <= result.score <= 1.0
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_hybrid_routing(self):
         """Test HYBRID query routes to SQL + Vector fusion."""
         # Query that should trigger hybrid routing
@@ -69,7 +78,9 @@ class TestSQLRouting:
             assert isinstance(result, QueryResult)
             assert hasattr(result, "score")
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_sql_routing_disabled(self):
         """Test fallback to vector search when SQL routing disabled."""
         # Table query with SQL routing disabled
@@ -84,7 +95,9 @@ class TestSQLRouting:
         for result in results:
             assert isinstance(result, QueryResult)
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_empty_results_handling(self):
         """Test graceful handling of empty SQL results."""
         # Query that may return no SQL results
@@ -95,7 +108,9 @@ class TestSQLRouting:
         # Should not crash, may return empty or vector fallback results
         assert isinstance(results, list)
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_routing_with_filters(self):
         """Test SQL routing works with metadata filters."""
         query = "What are the costs for Portugal?"
@@ -110,6 +125,7 @@ class TestSQLRouting:
 class TestSQLVectorFusion:
     """Test SQL + Vector result fusion logic."""
 
+    @pytest.mark.priority("P1")
     def test_fuse_sql_vector_both_results(self):
         """Test fusion with both SQL and vector results."""
         # Create mock SQL results (score=1.0)
@@ -162,6 +178,7 @@ class TestSQLVectorFusion:
         for result in fused:
             assert 0.0 <= result.score <= 1.0
 
+    @pytest.mark.priority("P1")
     def test_fuse_sql_only(self):
         """Test fusion with only SQL results."""
         sql_results = [
@@ -181,6 +198,7 @@ class TestSQLVectorFusion:
         assert len(fused) == 1
         assert fused[0].text == "SQL result"
 
+    @pytest.mark.priority("P1")
     def test_fuse_vector_only(self):
         """Test fusion with only vector results."""
         vector_results = [
@@ -200,6 +218,7 @@ class TestSQLVectorFusion:
         assert len(fused) == 1
         assert fused[0].text == "Vector result"
 
+    @pytest.mark.priority("P1")
     def test_fuse_empty_results(self):
         """Test fusion with no results."""
         fused = fuse_sql_vector_results([], [], top_k=5)
@@ -207,6 +226,7 @@ class TestSQLVectorFusion:
         # Should return empty list
         assert len(fused) == 0
 
+    @pytest.mark.priority("P1")
     def test_fuse_respects_top_k(self):
         """Test fusion respects top_k limit."""
         sql_results = [
@@ -238,6 +258,7 @@ class TestSQLVectorFusion:
         # Should return exactly top_k results
         assert len(fused) == 5
 
+    @pytest.mark.priority("P1")
     def test_fuse_deduplicates_overlapping_results(self):
         """Test fusion handles duplicate chunks from SQL and vector."""
         # Same chunk appears in both SQL and vector results
@@ -271,10 +292,13 @@ class TestSQLVectorFusion:
         assert fused[0].text == "Shared chunk"
 
 
+@pytest.mark.preserve_collection  # Read-only query tests - no data modification
 class TestSQLRoutingErrorHandling:
     """Test error handling in SQL routing."""
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_sql_generation_failure_fallback(self):
         """Test fallback to vector search when SQL generation fails."""
         # Query that might cause SQL generation to fail
@@ -286,7 +310,9 @@ class TestSQLRoutingErrorHandling:
         assert isinstance(results, list)
         # May be empty or have vector results
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_malformed_query_handling(self):
         """Test handling of edge case queries."""
         # Empty query
@@ -298,7 +324,9 @@ class TestSQLRoutingErrorHandling:
             # Should raise QueryError for empty query
             assert "Query cannot be empty" in str(e) or "empty" in str(e).lower()
 
+    @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
     async def test_parameter_validation(self):
         """Test parameter validation in hybrid_search()."""
         query = "What is the cost?"

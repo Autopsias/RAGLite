@@ -59,7 +59,7 @@
 ## Story 3.5: Multi-Step Workflow Orchestration
 
 **As a** system,
-**I want** to orchestrate multi-agent workflows for complex analytical queries,
+**I want** to orchestrate agentic workflows for complex analytical queries,
 **so that** questions requiring planning and multiple steps can be answered autonomously.
 
 **Acceptance Criteria:**

@@ -13,27 +13,33 @@ Test Coverage:
     - AC7: Module is importable and documented
 """
 
+import pytest
+
 from tests.fixtures.ground_truth import GROUND_TRUTH_QA, GroundTruthQuestion
 
 
 class TestGroundTruthStructure:
     """Test ground truth data structure and basic validation."""
 
+    @pytest.mark.priority("P0")
     def test_minimum_question_count(self) -> None:
         """Verify GROUND_TRUTH_QA contains at least 50 questions (AC1)."""
         assert len(GROUND_TRUTH_QA) >= 50, f"Expected ≥50 questions, got {len(GROUND_TRUTH_QA)}"
 
+    @pytest.mark.priority("P0")
     def test_unique_question_ids(self) -> None:
         """Verify all question IDs are unique (AC1)."""
         ids = [qa["id"] for qa in GROUND_TRUTH_QA]
         assert len(ids) == len(set(ids)), "Question IDs must be unique"
 
+    @pytest.mark.priority("P0")
     def test_ids_are_sequential(self) -> None:
         """Verify question IDs are sequential starting from 1."""
         ids: list[int] = sorted([qa["id"] for qa in GROUND_TRUTH_QA])
         expected_ids = list(range(1, len(GROUND_TRUTH_QA) + 1))
         assert ids == expected_ids, "Question IDs should be sequential 1, 2, 3, ..."
 
+    @pytest.mark.priority("P0")
     def test_all_required_fields_present(self) -> None:
         """Verify all required fields present in each question (AC5)."""
         required_fields = [
@@ -52,18 +58,21 @@ class TestGroundTruthStructure:
             missing_fields = [field for field in required_fields if field not in qa]
             assert not missing_fields, f"Question {qa.get('id')} missing fields: {missing_fields}"
 
+    @pytest.mark.priority("P0")
     def test_question_text_non_empty(self) -> None:
         """Verify all questions have non-empty text."""
         for qa in GROUND_TRUTH_QA:
             question: str = qa["question"]
             assert question.strip(), f"Question {qa['id']} has empty question text"
 
+    @pytest.mark.priority("P0")
     def test_expected_answer_non_empty(self) -> None:
         """Verify all questions have non-empty expected answers (AC5)."""
         for qa in GROUND_TRUTH_QA:
             answer: str = qa["expected_answer"]
             assert answer.strip(), f"Question {qa['id']} has empty expected_answer"
 
+    @pytest.mark.priority("P0")
     def test_expected_keywords_non_empty(self) -> None:
         """Verify all questions have non-empty keyword lists (AC5)."""
         for qa in GROUND_TRUTH_QA:
@@ -77,6 +86,7 @@ class TestGroundTruthStructure:
                 f"Question {qa['id']} has empty keyword strings"
             )
 
+    @pytest.mark.priority("P0")
     def test_page_numbers_valid(self) -> None:
         """Verify expected_page_number is valid integer for all questions (AC5)."""
         for qa in GROUND_TRUTH_QA:
@@ -84,12 +94,14 @@ class TestGroundTruthStructure:
             assert isinstance(page, int), f"Question {qa['id']} page number must be integer"
             assert page > 0, f"Question {qa['id']} page number must be positive"
 
+    @pytest.mark.priority("P0")
     def test_expected_section_non_empty(self) -> None:
         """Verify all questions have non-empty section identifiers (AC5)."""
         for qa in GROUND_TRUTH_QA:
             section: str = qa["expected_section"]
             assert section.strip(), f"Question {qa['id']} has empty expected_section"
 
+    @pytest.mark.priority("P0")
     def test_source_document_consistent(self) -> None:
         """Verify all questions reference the same source document (AC5)."""
         expected_doc = "2025-08 Performance Review CONSO_v2.pdf"
@@ -111,6 +123,7 @@ class TestCategoryDistribution:
         "operating_expenses": 8,
     }
 
+    @pytest.mark.priority("P0")
     def test_all_categories_present(self) -> None:
         """Verify all 6 categories are represented in data set (AC2)."""
         actual_categories: set[str] = {qa["category"] for qa in GROUND_TRUTH_QA}
@@ -119,6 +132,7 @@ class TestCategoryDistribution:
             f"Missing categories: {expected_categories - actual_categories}"
         )
 
+    @pytest.mark.priority("P0")
     def test_no_invalid_categories(self) -> None:
         """Verify no invalid category values present."""
         valid_categories: set[str] = set(self.EXPECTED_CATEGORIES.keys())
@@ -127,6 +141,7 @@ class TestCategoryDistribution:
                 f"Question {qa['id']} has invalid category: {qa['category']}"
             )
 
+    @pytest.mark.priority("P0")
     def test_category_distribution(self) -> None:
         """Verify category distribution matches target percentages (AC2)."""
         category_counts: dict[str, int] = {}
@@ -140,6 +155,7 @@ class TestCategoryDistribution:
                 f"Category {cat}: expected {expected_count}, got {actual_count}"
             )
 
+    @pytest.mark.priority("P0")
     def test_category_distribution_tolerance(self) -> None:
         """Verify category distribution is within ±1 question tolerance."""
         category_counts: dict[str, int] = {}
@@ -165,6 +181,7 @@ class TestDifficultyDistribution:
         "hard": 10,  # 20%
     }
 
+    @pytest.mark.priority("P0")
     def test_all_difficulties_present(self) -> None:
         """Verify all 3 difficulty levels are present."""
         actual_difficulties: set[str] = {qa["difficulty"] for qa in GROUND_TRUTH_QA}
@@ -173,6 +190,7 @@ class TestDifficultyDistribution:
             f"Missing difficulties: {expected_difficulties - actual_difficulties}"
         )
 
+    @pytest.mark.priority("P0")
     def test_no_invalid_difficulties(self) -> None:
         """Verify no invalid difficulty values present."""
         valid_difficulties: set[str] = set(self.EXPECTED_DIFFICULTIES.keys())
@@ -181,6 +199,7 @@ class TestDifficultyDistribution:
                 f"Question {qa['id']} has invalid difficulty: {qa['difficulty']}"
             )
 
+    @pytest.mark.priority("P0")
     def test_difficulty_distribution_exact(self) -> None:
         """Verify difficulty distribution is exactly 40/40/20 (AC3)."""
         difficulty_counts: dict[str, int] = {}
@@ -194,6 +213,7 @@ class TestDifficultyDistribution:
                 f"Difficulty {diff}: expected {expected_count}, got {actual_count}"
             )
 
+    @pytest.mark.priority("P0")
     def test_difficulty_percentages(self) -> None:
         """Verify difficulty percentages match 40/40/20 target (AC3)."""
         difficulty_counts: dict[str, int] = {}
@@ -216,6 +236,7 @@ class TestDifficultyDistribution:
 class TestImportAndAccessibility:
     """Test module import and data accessibility (AC4, AC7)."""
 
+    @pytest.mark.priority("P0")
     def test_import_ground_truth_qa(self) -> None:
         """Import test: Verify GROUND_TRUTH_QA can be imported (AC4)."""
         from tests.fixtures.ground_truth import GROUND_TRUTH_QA as imported_qa
@@ -224,12 +245,14 @@ class TestImportAndAccessibility:
         assert isinstance(imported_qa, list)
         assert len(imported_qa) >= 50
 
+    @pytest.mark.priority("P0")
     def test_ground_truth_is_list_of_dicts(self) -> None:
         """Verify ground truth is a list of dictionaries (AC4)."""
         assert isinstance(GROUND_TRUTH_QA, list), "GROUND_TRUTH_QA must be a list"
         for qa in GROUND_TRUTH_QA:
             assert isinstance(qa, dict), f"Question {qa.get('id')} must be a dict"
 
+    @pytest.mark.priority("P0")
     def test_module_has_docstring(self) -> None:
         """Verify module docstring explains usage and maintenance (AC7)."""
         import tests.fixtures.ground_truth as gt_module
@@ -247,11 +270,13 @@ class TestImportAndAccessibility:
 class TestDataQuality:
     """Test data quality and consistency."""
 
+    @pytest.mark.priority("P0")
     def test_no_duplicate_questions(self) -> None:
         """Verify no duplicate question text."""
         questions: list[str] = [qa["question"].lower().strip() for qa in GROUND_TRUTH_QA]
         assert len(questions) == len(set(questions)), "Duplicate questions found"
 
+    @pytest.mark.priority("P0")
     def test_expected_keywords_are_relevant(self) -> None:
         """Verify expected_keywords appear in question or expected_answer."""
         for qa in GROUND_TRUTH_QA:
@@ -269,6 +294,7 @@ class TestDataQuality:
                 f"Question {qa['id']}: Expected keywords not sufficiently relevant to question/answer"
             )
 
+    @pytest.mark.priority("P0")
     def test_page_numbers_within_reasonable_range(self) -> None:
         """Verify page numbers are within reasonable range for a 160-page document."""
         max_expected_page = 160  # Based on test document specs
@@ -278,6 +304,7 @@ class TestDataQuality:
                 f"Question {qa['id']} has page number {page} outside valid range 1-{max_expected_page}"
             )
 
+    @pytest.mark.priority("P0")
     def test_questions_are_actually_questions(self) -> None:
         """Verify most question texts are formatted as questions (end with ?)."""
         question_count = sum(
@@ -294,6 +321,7 @@ class TestDataQuality:
 class TestSubsetSelection:
     """Test subset selection for daily tracking (AC7)."""
 
+    @pytest.mark.priority("P0")
     def test_random_subset_selection(self) -> None:
         """Verify random subset selection works for daily tracking."""
         import random
@@ -304,6 +332,7 @@ class TestSubsetSelection:
         assert len(subset) == subset_size
         assert all(q in GROUND_TRUTH_QA for q in subset)
 
+    @pytest.mark.priority("P0")
     def test_category_balanced_subset(self) -> None:
         """Verify subset can be selected with balanced categories."""
         # Select 2-3 questions from each category for balanced daily tracking
@@ -326,6 +355,7 @@ class TestSubsetSelection:
         assert len(subset) == 12  # 6 categories × 2 questions
         assert len({q["category"] for q in subset}) == 6  # All categories represented
 
+    @pytest.mark.priority("P0")
     def test_difficulty_balanced_subset(self) -> None:
         """Verify subset can be selected with balanced difficulty."""
         # Select subset with 40/40/20 difficulty distribution

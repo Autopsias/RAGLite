@@ -1,0 +1,596 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>0.1</storyId>
+    <title>Refactor Modules to Size Limits</title>
+    <status>ready</status>
+    <generatedAt>2025-11-05</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/stories/3-0-1-refactor-modules-to-size-limits.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer preparing for Epic 3</asA>
+    <iWant>all Python files refactored to <1000 lines</iWant>
+    <soThat>Epic 3 agentic orchestration code is maintainable and debuggable</soThat>
+    <tasks>
+      <task id="1" duration="2 hours">
+        <title>Identify Oversized Files (AC1)</title>
+        <subtasks>
+          <subtask id="1.0">Create output directory: mkdir -p docs/refactoring</subtask>
+          <subtask id="1.1">Scan raglite/ directory for files >1000 lines</subtask>
+          <subtask id="1.2">Create identification script: scripts/identify-oversized-files.py</subtask>
+          <subtask id="1.3">Generate report: docs/refactoring/oversized-files-report.txt</subtask>
+        </subtasks>
+      </task>
+      <task id="2" duration="2 hours">
+        <title>Define Refactoring Strategy (AC2)</title>
+        <subtasks>
+          <subtask id="2.1">Analyze each oversized file - identify logical domain boundaries</subtask>
+          <subtask id="2.2">Document refactoring plan: docs/refactoring/refactoring-strategy.md</subtask>
+          <subtask id="2.3">Winston architecture review - get approval before execution</subtask>
+        </subtasks>
+      </task>
+      <task id="3" duration="1-2 days">
+        <title>Execute Refactoring (AC3)</title>
+        <subtasks>
+          <subtask id="3.1">Create new module directories if needed</subtask>
+          <subtask id="3.2">Refactor File 1 (highest priority) - create modules, move code, update imports, run pytest</subtask>
+          <subtask id="3.3">Refactor File 2 - repeat process, commit after success</subtask>
+          <subtask id="3.4">Refactor File N - continue until all files <1000 lines</subtask>
+          <subtask id="3.5">Final validation - full test suite, coverage check, verify no file >1000 lines</subtask>
+        </subtasks>
+      </task>
+      <task id="4" duration="1 hour">
+        <title>Architecture Review (AC4)</title>
+        <subtasks>
+          <subtask id="4.1">Winston reviews refactored codebase - module cohesion, import dependencies, test coverage</subtask>
+          <subtask id="4.2">Document approval - Winston signs off, Epic 3 Stories 3.1+ unblocked</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" duration="2 hours">
+      <title>Identify Oversized Files</title>
+      <goal>Scan codebase and identify all files >1000 lines</goal>
+      <technicalApproach>
+        - Use find command to scan raglite/ directory for .py files
+        - Create script: scripts/identify-oversized-files.py with standardized report format
+        - Report format: File Path | Line Count | Epic 3 Relevance | Priority
+      </technicalApproach>
+      <successCriteria>
+        - Complete list of files >1000 lines identified
+        - Files prioritized by Epic 3 impact (retrieval/ modules critical)
+        - Report saved: docs/refactoring/oversized-files-report.txt
+        - Validation: Verify scan completeness with file count comparison
+      </successCriteria>
+    </criterion>
+
+    <criterion id="AC2" duration="2 hours">
+      <title>Define Refactoring Strategy</title>
+      <goal>Plan how to split oversized modules by domain/responsibility</goal>
+      <technicalApproach>
+        - For each oversized file: identify logical boundaries (domain separation)
+        - Define new module names (maintain single responsibility)
+        - Plan import updates
+        - Example: Split 1500-line query_classifier into entity_matching, period_mapping, sql_generation, classifier modules
+      </technicalApproach>
+      <successCriteria>
+        - Refactoring plan documented for each oversized file
+        - New module boundaries defined (single responsibility principle)
+        - Winston architecture review approves strategy
+        - Validation: Winston approval documented in docs/refactoring/winston-approval-3.0.1.md
+        - Files Created: docs/refactoring/refactoring-strategy.md
+      </successCriteria>
+    </criterion>
+
+    <criterion id="AC3" duration="1-2 days">
+      <title>Execute Refactoring</title>
+      <goal>Split oversized modules and maintain 100% test coverage</goal>
+      <technicalApproach>
+        - For each file: create new focused modules, move functions/classes, update imports
+        - Safety protocol: one file at a time, full test suite after each refactor, commit after success
+        - Refactoring checklist per file: create modules, move code, update imports, run pytest, check coverage
+      </technicalApproach>
+      <successCriteria>
+        - All files <1000 lines
+        - 100% test pass rate maintained (no regressions)
+        - Test coverage maintained: pytest --cov=raglite ≥ baseline established at story start
+        - Integration tests pass: pytest tests/integration/
+        - Code functionality unchanged (refactor only, no features)
+        - Test Failure Protocol: If pytest fails → rollback, debug, retry using pytest --exitfirst
+        - Performance Check (Optional): Test suite runtime unchanged (within ±10% of baseline)
+      </successCriteria>
+    </criterion>
+
+    <criterion id="AC4" duration="1 hour">
+      <title>Architecture Review & Approval</title>
+      <goal>Winston verifies module cohesion and Epic 3 readiness</goal>
+      <technicalApproach>
+        Winston reviews: module boundaries (single responsibility), import dependencies (no circular deps), test coverage (no gaps), Epic 3 readiness
+      </technicalApproach>
+      <successCriteria>
+        - Winston architecture approval documented in docs/refactoring/winston-approval-3.0.1.md
+        - No files >1000 lines in raglite/ directory
+        - No circular dependencies introduced (verify with pydeps raglite if needed)
+        - Epic 3 Stories 3.1+ unblocked
+      </successCriteria>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-3-ai-intelligence-orchestration.md</path>
+        <title>Epic 3: AI Intelligence & Orchestration</title>
+        <section>Epic Overview</section>
+        <snippet>Epic goal: Enable multi-step reasoning and complex analytical workflows through agentic orchestration. This epic builds on Epic 1-2's retrieval foundation and requires clean, maintainable codebase for agentic features.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/tech-spec-epic-3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>System Architecture Alignment</section>
+        <snippet>Epic 3 adds orchestration layer (~280 lines) to monolithic structure. Agents are simple Python async functions (~50 lines each), maintaining simplicity-first philosophy. Clean module boundaries enable multi-agent coordination.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/architecture/coding-standards.md</path>
+        <title>RAGLite Coding Standards</title>
+        <section>Module Organization and Naming</section>
+        <snippet>MANDATORY: Type hints, Google-style docstrings, structured logging, async/await for I/O. Module size enforcement: ⚠️ Warning at 800 lines, ❌ Error at 1000 lines, 🎯 Target 200-400 lines per file.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/architecture/3-repository-structure-monolithic.md</path>
+        <title>Repository Structure (Monolithic)</title>
+        <section>Module Organization</section>
+        <snippet>Target: ~600-800 lines total across 15 files. Each module focused on single responsibility: ingestion (~150 lines), retrieval (~150 lines), shared (~100 lines). Maintainability through focused modules.</snippet>
+      </doc>
+
+      <doc>
+        <path>docs/retrospectives/epic-2-retro-2025-11-05.md</path>
+        <title>Epic 2 Retrospective</title>
+        <section>Action Items - Code Quality</section>
+        <snippet>Action Item 2: Ricardo identified files exceeding 1000-1500 lines as technical debt. Proposal: Enforce module size limits (hard stop at 1000 lines) in architecture review checklist to prevent future violations.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <!-- CRITICAL: Files Exceeding 1000 Lines (Priority for Refactoring) -->
+      <artifact>
+        <path>raglite/ingestion/adaptive_table_extraction.py</path>
+        <kind>module</kind>
+        <symbol>Multiple table extraction functions</symbol>
+        <lines>3109 lines total</lines>
+        <reason>CRITICAL: 3x over 1000-line limit. Contains table detection, extraction, conversion logic. High Epic 3 relevance (agentic workflows will process tables). Priority 1 for refactoring.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>module</kind>
+        <symbol>ingest_document, chunk_by_docling_items, split_large_table_by_rows</symbol>
+        <lines>2302 lines total</lines>
+        <reason>CRITICAL: 2.3x over limit. Main ingestion pipeline with table-aware chunking (Story 2.8). Contains 30+ functions. Medium Epic 3 relevance. Priority 2 for refactoring. ⚠️ TEST IMPACT: 12 test files depend on this module (9 import ingest_pdf, 5 import chunk_document). Requires comprehensive test refactoring strategy.</reason>
+      </artifact>
+
+      <artifact>
+        <path>tests/unit/test_ingestion.py</path>
+        <kind>test</kind>
+        <symbol>Multiple tests importing from pipeline.py</symbol>
+        <lines>N/A</lines>
+        <reason>Primary unit test file for pipeline.py. Will need import updates when pipeline.py is split. Contains tests for core ingestion functions.</reason>
+      </artifact>
+
+      <artifact>
+        <path>tests/integration/test_ingestion_integration.py</path>
+        <kind>test</kind>
+        <symbol>Full pipeline integration tests</symbol>
+        <lines>N/A</lines>
+        <reason>Integration tests using multiple pipeline.py functions. Critical for validating refactoring doesn't break end-to-end flows.</reason>
+      </artifact>
+
+      <!-- Files Approaching Warning Threshold (800 lines) -->
+      <artifact>
+        <path>raglite/retrieval/search.py</path>
+        <kind>module</kind>
+        <symbol>hybrid_search, multi_index_search, search_documents</symbol>
+        <lines>769 lines</lines>
+        <reason>WARNING: Near 800-line threshold. Core retrieval logic for Epic 1-2. High Epic 3 relevance (agentic retrieval agent will call these functions). Monitor during refactoring.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/retrieval/query_classifier.py</path>
+        <kind>module</kind>
+        <symbol>classify_query_type, extract_entities, map_period_references</symbol>
+        <lines>664 lines</lines>
+        <reason>Medium size but complex logic. Query classification for SQL vs semantic search routing. High Epic 3 relevance (agentic workflows need query understanding). Consider refactoring if approaching 800 lines.</reason>
+      </artifact>
+
+      <!-- Supporting Modules -->
+      <artifact>
+        <path>raglite/retrieval/multi_index_search.py</path>
+        <kind>module</kind>
+        <symbol>search_multiple_indexes, merge_results</symbol>
+        <lines>534 lines</lines>
+        <reason>Multi-index search coordination. Epic 2 Phase 2B implementation. Medium Epic 3 relevance.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/shared/bm25.py</path>
+        <kind>module</kind>
+        <symbol>BM25Index class</symbol>
+        <lines>386 lines</lines>
+        <reason>BM25 hybrid search implementation (Story 2.1). Low Epic 3 relevance but demonstrates good module size.</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/shared/clients.py</path>
+        <kind>module</kind>
+        <symbol>get_qdrant_client, get_postgres_client, get_embedding_model</symbol>
+        <lines>278 lines</lines>
+        <reason>Client initialization for Qdrant, PostgreSQL, embedding models. Used by all modules. Good size example (within target).</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python version=">=3.11,<4.0">
+        <!-- Core Dependencies -->
+        <package name="docling" version="2.55.1">PDF/table extraction</package>
+        <package name="sentence-transformers" version="5.1.1">Fin-E5 embeddings</package>
+        <package name="qdrant-client" version="1.15.1">Vector database</package>
+        <package name="fastmcp" version="2.12.4">MCP server framework</package>
+        <package name="anthropic" version=">=0.18.0,<1.0.0">Claude API</package>
+        <package name="pydantic" version=">=2.0,<3.0">Data validation</package>
+        <package name="psycopg2-binary" version=">=2.9,<3.0">PostgreSQL client</package>
+        <package name="pandas" version=">=2.0,<3.0">Data processing</package>
+
+        <!-- Testing -->
+        <package name="pytest" version=">=8.0">Test framework</package>
+        <package name="pytest-asyncio">Async test support</package>
+        <package name="pytest-cov">Coverage reporting</package>
+        <package name="pytest-xdist">Parallel test execution</package>
+
+        <!-- Code Quality -->
+        <package name="ruff">Linting and formatting (replaces Black/isort)</package>
+        <package name="mypy">Type checking</package>
+      </python>
+
+      <external>
+        <service name="Qdrant" version="1.11+">Vector database (Docker)</service>
+        <service name="PostgreSQL" version=">=14">Structured metadata storage (Docker)</service>
+      </external>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="module-size">
+      <rule>Hard limit: No file >1000 lines (architecture violation)</rule>
+      <rule>Warning threshold: 800 lines (plan refactoring)</rule>
+      <rule>Target size: 200-400 lines per module (optimal maintainability)</rule>
+      <enforcement>Enforced via architecture review checklist (AC4)</enforcement>
+    </constraint>
+
+    <constraint type="refactoring-safety">
+      <rule>REFACTOR ONLY: No functionality changes, no new features</rule>
+      <rule>One file at a time: Minimize risk, commit after each success</rule>
+      <rule>Test-driven: Run full test suite after every module split</rule>
+      <rule>Rollback safety: Git commit after each successful refactor</rule>
+    </constraint>
+
+    <constraint type="epic-3-readiness">
+      <rule>Prioritize retrieval/ modules: High Epic 3 relevance (agentic workflows)</rule>
+      <rule>Maintain Epic 1-2 functionality: No regressions in retrieval accuracy</rule>
+      <rule>Clean module boundaries: Enable multi-agent coordination in Epic 3</rule>
+    </constraint>
+
+    <constraint type="coding-standards">
+      <rule>Maintain: Type hints, Google-style docstrings, structured logging</rule>
+      <rule>Preserve: Async/await patterns, Pydantic models, error handling</rule>
+      <rule>Follow: PEP 8, single responsibility principle</rule>
+      <reference>docs/architecture/coding-standards.md</reference>
+    </constraint>
+
+    <constraint type="testing">
+      <rule>100% test pass rate: No test failures tolerated</rule>
+      <rule>Coverage maintained: Baseline established at story start</rule>
+      <rule>Integration tests: Must pass after refactoring</rule>
+      <rule>Test failure protocol: Rollback → Debug → Retry (pytest --exitfirst)</rule>
+    </constraint>
+
+    <constraint type="test-refactoring" priority="CRITICAL">
+      <rule>Test dependencies MUST be managed: 12 test files depend on pipeline.py</rule>
+      <rule>Compatibility shims required: Original modules must re-export functions during transition</rule>
+      <rule>Pre-refactoring baseline: Record test results, coverage, timing BEFORE any changes</rule>
+      <rule>Import update automation: Use scripts/update_test_imports.py to update test imports</rule>
+      <rule>Test file reorganization: Mirror new module structure (can be deferred to separate PR)</rule>
+      <rule>Fixture management: Verify conftest.py fixtures still work after module splits</rule>
+      <rule>Test discovery validation: Run pytest --collect-only after each module split</rule>
+      <rule>NO manual import updates: Too error-prone, use automated scripts</rule>
+      <reference>Deep analysis: 12 test files import from pipeline.py, 1 from adaptive_table_extraction.py</reference>
+    </constraint>
+
+    <constraint type="architecture-approval">
+      <rule>Winston approval required: Module boundaries and Epic 3 readiness</rule>
+      <rule>No circular dependencies: Verify with pydeps raglite if needed</rule>
+      <rule>Single responsibility: Each new module has clear, focused purpose</rule>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>Refactoring Module Pattern</name>
+      <kind>code organization</kind>
+      <signature>
+        # Split large module into focused sub-modules
+        original_module/
+          large_file.py (2300 lines) →
+
+        original_module/
+          core.py (400 lines - orchestrator)
+          domain_a.py (300 lines - focused logic)
+          domain_b.py (500 lines - focused logic)
+          utils.py (200 lines - helpers)
+      </signature>
+      <path>docs/architecture/3-repository-structure-monolithic.md</path>
+    </interface>
+
+    <interface>
+      <name>Import Update Pattern</name>
+      <kind>refactoring safety</kind>
+      <signature>
+        # After splitting modules, update imports across codebase
+        # Old: from raglite.ingestion.pipeline import function_x
+        # New: from raglite.ingestion.core import function_x
+
+        # Use IDE refactoring tools or grep to find all references
+        grep -r "from raglite.ingestion.pipeline import" raglite/
+      </signature>
+      <path>Story 3.0.1 AC3</path>
+    </interface>
+
+    <interface>
+      <name>Test Validation Pattern</name>
+      <kind>refactoring safety protocol</kind>
+      <signature>
+        # After each refactor:
+        1. Run pytest (verify all tests pass)
+        2. Run pytest --cov (verify coverage maintained)
+        3. Run pytest tests/integration/ (verify integration tests pass)
+        4. Commit changes (rollback safety)
+      </signature>
+      <path>Story 3.0.1 AC3</path>
+    </interface>
+
+    <interface>
+      <name>Test Import Update Pattern</name>
+      <kind>test refactoring protocol</kind>
+      <signature>
+        # Automated import update workflow:
+
+        # Step 1: Create import mapping (before refactoring)
+        import_mapping = {
+            "from raglite.ingestion.pipeline import ingest_pdf":
+                "from raglite.ingestion.pdf_ingestion import ingest_pdf",
+            "from raglite.ingestion.pipeline import chunk_document":
+                "from raglite.ingestion.chunking import chunk_document",
+            # ... map all imports
+        }
+
+        # Step 2: Use compatibility shim during transition
+        # raglite/ingestion/pipeline.py (temporary)
+        from .pdf_ingestion import ingest_pdf
+        from .chunking import chunk_document
+        __all__ = ['ingest_pdf', 'chunk_document', ...]
+
+        # Step 3: Run automated import update script
+        python scripts/update_test_imports.py --dry-run  # Preview
+        python scripts/update_test_imports.py --apply    # Apply
+
+        # Step 4: Verify imports
+        pytest tests/ --collect-only  # Test discovery works
+        pytest tests/ -x              # Run tests, stop on first failure
+      </signature>
+      <path>Deep analysis findings - Test management protocol</path>
+    </interface>
+
+    <interface>
+      <name>Pre-Refactoring Baseline Pattern</name>
+      <kind>test baseline establishment</kind>
+      <signature>
+        # CRITICAL: Run BEFORE any refactoring begins
+
+        # 1. Record baseline test results
+        pytest tests/ -v --tb=short > baseline_test_results.txt
+
+        # 2. Record baseline coverage
+        pytest --cov=raglite --cov-report=term > baseline_coverage.txt
+
+        # 3. Record test execution time
+        time pytest tests/ | tee baseline_timing.txt
+
+        # 4. Create test dependency mapping
+        grep -r "from raglite.ingestion.pipeline import" tests/ > test_dependencies_pipeline.txt
+        grep -r "from raglite.ingestion.adaptive_table_extraction import" tests/ > test_dependencies_table.txt
+
+        # 5. Git checkpoint
+        git add -A
+        git commit -m "checkpoint: pre-refactoring baseline"
+      </signature>
+      <path>Enhanced AC3 - Pre-refactoring checklist</path>
+    </interface>
+
+    <interface>
+      <name>Module Split with Test Safety Pattern</name>
+      <kind>per-module refactoring protocol</kind>
+      <signature>
+        # For EACH oversized module being split:
+
+        # Phase 1: Split module CODE (keep compatibility)
+        1. Create new focused modules (e.g., pdf_ingestion.py, chunking.py)
+        2. Move functions to appropriate modules
+        3. Add re-exports to original module (compatibility shim):
+           from .pdf_ingestion import ingest_pdf
+           __all__ = ['ingest_pdf', ...]
+
+        # Phase 2: Verify compatibility shim works
+        4. Run affected unit tests: pytest tests/unit/test_ingestion.py -v
+        5. Run affected integration tests: pytest tests/integration/ -k ingestion
+        6. STOP if any failures - fix before continuing
+
+        # Phase 3: Update test imports (optional, can defer)
+        7. Update test files to import from new modules directly
+        8. Run import update script: python scripts/update_test_imports.py --module pipeline
+        9. Verify: pytest tests/ --collect-only (test discovery)
+
+        # Phase 4: Full validation
+        10. Run full suite: pytest tests/
+        11. Check coverage: pytest --cov=raglite.ingestion
+        12. Compare to baseline (no regression)
+
+        # Phase 5: Commit
+        13. git add -A
+        14. git commit -m "refactor: split pipeline.py into focused modules"
+      </signature>
+      <path>Enhanced AC3 - Per-module safety protocol</path>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      All refactoring changes must maintain 100% test pass rate. Testing framework: pytest with pytest-asyncio for async functions. Test organization follows consolidated structure in tests/ directory (unit/, integration/, e2e/). Coverage target: maintain baseline established at story start (use pytest --cov=raglite). Test naming: test_&lt;module&gt;_&lt;function&gt;_&lt;scenario&gt;.py. Run tests after EVERY module split using: uv run pytest (fast tests), uv run pytest tests/integration/ (integration validation). Use pytest --exitfirst for immediate failure detection during refactoring.
+
+      CRITICAL TEST MANAGEMENT REQUIREMENTS:
+      - 12 test files depend on pipeline.py (9 import ingest_pdf, 5 import chunk_document)
+      - 1 test file depends on adaptive_table_extraction.py
+      - MUST establish baseline BEFORE refactoring (test results, coverage, timing, dependencies)
+      - MUST use compatibility shims (re-export pattern) to avoid breaking tests during transition
+      - MUST use automated import update scripts (NO manual updates - too error-prone)
+      - Test discovery validation required after each module split (pytest --collect-only)
+      - Per-module validation gates: run affected tests before full suite
+      - Fixture compatibility verification (tests/conftest.py may need updates)
+      - Final validation: 100% test pass (358/358), coverage ≥ baseline, timing within ±10%
+    </standards>
+
+    <locations>
+      tests/unit/ - Unit tests for all modules (~200 tests, no external dependencies)
+      tests/integration/ - Integration tests with Qdrant/PostgreSQL (~115 tests)
+      tests/e2e/ - End-to-end tests (~28 tests)
+      tests/conftest.py - Shared pytest fixtures
+      tests/ground_truth.json - Accuracy validation test set (50+ Q&amp;A pairs)
+    </locations>
+
+    <ideas>
+      <test-idea ac="PRE-AC1" priority="CRITICAL">
+        <description>Establish pre-refactoring baseline</description>
+        <approach>MUST RUN BEFORE ANY REFACTORING:
+          1. pytest tests/ -v --tb=short &gt; baseline_test_results.txt
+          2. pytest --cov=raglite --cov-report=term &gt; baseline_coverage.txt
+          3. time pytest tests/ | tee baseline_timing.txt
+          4. grep -r "from raglite.ingestion.pipeline import" tests/ &gt; test_dependencies_pipeline.txt
+          5. grep -r "from raglite.ingestion.adaptive_table_extraction import" tests/ &gt; test_dependencies_table.txt
+          6. git commit -m "checkpoint: pre-refactoring baseline"
+        </approach>
+      </test-idea>
+
+      <test-idea ac="AC1">
+        <description>Validate oversized file identification script</description>
+        <approach>Test scripts/identify-oversized-files.py output format and accuracy. Mock file system with known files &gt;1000 lines. Verify report includes file path, line count, priority.</approach>
+      </test-idea>
+
+      <test-idea ac="AC2" priority="CRITICAL">
+        <description>Create test import mapping</description>
+        <approach>For each oversized module being split, create comprehensive import mapping:
+          - Map old imports to new module locations
+          - Document which test files need updates
+          - Create scripts/import_mapping.json with complete mapping
+          - Validate mapping covers all 12 test files for pipeline.py
+        </approach>
+      </test-idea>
+
+      <test-idea ac="AC3" priority="CRITICAL">
+        <description>Implement compatibility shim pattern</description>
+        <approach>For each split module, create re-export compatibility layer:
+          - Original module (e.g., pipeline.py) becomes re-export shim
+          - Import all functions from new modules
+          - Use __all__ to explicitly list exports
+          - Run pytest tests/ to verify shim works
+          - Keep shim until all tests updated (can defer removal)
+        </approach>
+      </test-idea>
+
+      <test-idea ac="AC3" priority="CRITICAL">
+        <description>Automated test import updates</description>
+        <approach>Create and run scripts/update_test_imports.py:
+          1. Dry run: python scripts/update_test_imports.py --dry-run
+          2. Review changes for accuracy
+          3. Apply: python scripts/update_test_imports.py --apply
+          4. Verify: pytest tests/ --collect-only (test discovery)
+          5. Run tests: pytest tests/ -x (stop on first failure)
+        </approach>
+      </test-idea>
+
+      <test-idea ac="AC3">
+        <description>Per-module test validation gate</description>
+        <approach>After EACH module split:
+          1. Run affected unit tests first: pytest tests/unit/test_[module].py -v
+          2. Run affected integration tests: pytest tests/integration/ -k [module]
+          3. STOP if failures, fix before continuing
+          4. Run full suite: pytest tests/
+          5. Check coverage: pytest --cov=raglite.[module_path]
+          6. Compare to baseline (no regression allowed)
+        </approach>
+      </test-idea>
+
+      <test-idea ac="AC3">
+        <description>Test discovery validation</description>
+        <approach>After import updates, verify test discovery:
+          - pytest --collect-only (should find all 358 tests)
+          - pytest --collect-only tests/unit/ (verify unit tests discovered)
+          - pytest --collect-only tests/integration/ (verify integration tests discovered)
+          - No "import errors" or "collection errors" allowed
+        </approach>
+      </test-idea>
+
+      <test-idea ac="AC3">
+        <description>Test coverage regression check</description>
+        <approach>Establish baseline coverage before refactoring: pytest --cov=raglite --cov-report=term &gt; baseline_coverage.txt. After each refactor: pytest --cov=raglite --cov-report=term &gt; current_coverage.txt. Compare coverage percentages - should not decrease. Pay special attention to ingestion module coverage.</approach>
+      </test-idea>
+
+      <test-idea ac="AC3">
+        <description>Integration test validation (Epic 1-2 functionality preserved)</description>
+        <approach>Run full integration suite after each major refactor: pytest tests/integration/ -v. Critical tests: test_ac3_ground_truth.py (77.6% accuracy maintained), test_sql_routing.py (SQL table search functional), test_hybrid_search.py (BM25 + semantic search working), test_ingestion_integration.py (full pipeline works).</approach>
+      </test-idea>
+
+      <test-idea ac="AC3">
+        <description>Fixture compatibility validation</description>
+        <approach>Verify shared fixtures still work after module splits:
+          - Check tests/conftest.py for fixtures using refactored modules
+          - Run tests using those fixtures: pytest tests/ -v -k fixture_name
+          - Update fixture imports if needed (rare, most fixtures are in conftest.py)
+        </approach>
+      </test-idea>
+
+      <test-idea ac="AC4">
+        <description>Circular dependency detection</description>
+        <approach>Optional but recommended: Install pydeps (pip install pydeps), run pydeps raglite --max-bacon=2 to generate dependency graph. Verify no circular imports between newly created modules.</approach>
+      </test-idea>
+
+      <test-idea ac="AC4">
+        <description>Module size validation script</description>
+        <approach>Create validation script: scripts/validate-module-sizes.py. Run after refactoring complete. Script checks: no file &gt;1000 lines (hard fail), files near 800 lines flagged as warnings. Exit code 1 if violations found.</approach>
+      </test-idea>
+
+      <test-idea ac="POST-AC4" priority="CRITICAL">
+        <description>Final baseline comparison</description>
+        <approach>Compare final results to pre-refactoring baseline:
+          - Test pass rate: Must be 100% (358/358 tests passing)
+          - Coverage: Must be ≥ baseline percentage
+          - Timing: Should be within ±10% of baseline
+          - All import errors resolved
+          - No test discovery issues
+          - Document any acceptable deviations
+        </approach>
+      </test-idea>
+    </ideas>
+  </tests>
+</story-context>

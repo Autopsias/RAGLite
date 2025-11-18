@@ -23,9 +23,8 @@ import re
 import time
 from enum import Enum
 
-from mistralai import Mistral
-
 from raglite.retrieval.period_normalizer import detect_period_in_query, normalize_period
+from raglite.shared.clients import get_mistral_client
 from raglite.shared.config import settings
 
 logger = logging.getLogger(__name__)
@@ -76,8 +75,8 @@ async def classify_query_metadata(query: str) -> dict[str, str]:
     start_time = time.time()
 
     try:
-        # Initialize Mistral client
-        client = Mistral(api_key=settings.mistral_api_key)
+        # Initialize Mistral client with timeout configuration
+        client = get_mistral_client()
 
         # Query classification prompt (optimized for financial document metadata)
         from typing import Any
@@ -247,8 +246,8 @@ async def generate_sql_query(query: str) -> str | None:
                 },
             )
 
-        # Initialize Mistral client
-        client = Mistral(api_key=settings.mistral_api_key)
+        # Initialize Mistral client with timeout configuration
+        client = get_mistral_client()
 
         # SQL generation prompt with schema (prompt template for LLM, not SQL construction)
         sql_prompt = f"""You are a SQL expert
