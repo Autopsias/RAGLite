@@ -43,9 +43,9 @@ on:
         default: ''
 
   # OPTIONAL: Nightly validation on main branch
-  # Daily accuracy regression testing
+  # Daily accuracy regression testing (staggered 30 min after Priority Test workflow)
   schedule:
-    - cron: '0 2 * * *'  # 2 AM UTC daily
+    - cron: '30 2 * * *'  # 2:30 AM UTC daily (avoids concurrent execution)
 
 jobs:
   accuracy-validation:
@@ -55,11 +55,41 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
     timeout-minutes: 60  # Increased from 30 to accommodate full test (30-38 min required)
 
+    # Prevent concurrent accuracy validation runs (queue instead of cancel)
+    concurrency:
+      group: nfr-accuracy-${{ github.ref }}
+      cancel-in-progress: false
+
     steps:
+      - name: Pre-flight runner health check
+        run: |
+          echo "🏥 Runner Health Check"
+          LOAD_AVG=$(uptime | awk -F'load average:' '{print $2}' | awk '{print $1}' | tr -d ',')
+          echo "Load average (1 min): $LOAD_AVG"
+
+          # Fail fast if load > 10 on 12-core system (83% threshold)
+          if (( $(echo "$LOAD_AVG > 10" | bc -l) )); then
+            echo "❌ System overloaded (load: $LOAD_AVG > 10.0)"
+            echo "Deferring workflow to prevent runner starvation"
+            exit 1
+          fi
+          echo "✅ System healthy (load: $LOAD_AVG)"
+
       - name: Checkout code
         uses: actions/checkout@v4
+        timeout-minutes: 5  # Fast-fail on hung checkout (prevents 50-min hangs)
         with:
           ref: ${{ github.event.inputs.branch || github.ref }}
+          fetch-depth: 1  # Shallow clone for faster checkout (116 MB → ~10 MB)
+
+      - name: Post-checkout diagnostics
+        if: always()  # Run even if checkout fails
+        run: |
+          echo "📊 Checkout Telemetry"
+          echo "Duration: $SECONDS seconds"
+          echo "Repo size: $(du -sh .git 2>/dev/null || echo 'N/A')"
+          echo "Load avg: $(uptime | awk -F'load average:' '{print $2}')"
+          echo "Memory usage: $(vm_stat | grep 'Pages active' || echo 'N/A')"
 
       - name: Calculate cache key (PDF + Ground Truth hash)
         id: pdf-hash

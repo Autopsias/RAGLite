@@ -55,7 +55,7 @@ jobs:
         run: |
           echo "Waiting for Qdrant to initialize..."
           sleep 5
-          timeout 30 bash -c 'until curl -f http://localhost:6333/health; do sleep 2; done'
+          timeout 30 bash -c 'until curl -sf http://localhost:6333/healthz > /dev/null; do sleep 2; done'
           echo "✅ Qdrant is ready"
 
       - name: Run P0 smoke tests
@@ -103,7 +103,7 @@ jobs:
         run: |
           echo "Waiting for Qdrant to initialize..."
           sleep 5
-          timeout 30 bash -c 'until curl -f http://localhost:6333/health; do sleep 2; done'
+          timeout 30 bash -c 'until curl -sf http://localhost:6333/healthz > /dev/null; do sleep 2; done'
           echo "✅ Qdrant is ready"
           timeout 30 bash -c 'until pg_isready -h localhost -p 5432 -U postgres; do sleep 2; done' || true
 
@@ -170,7 +170,7 @@ jobs:
         run: |
           echo "Waiting for Qdrant to initialize..."
           sleep 5
-          timeout 30 bash -c 'until curl -f http://localhost:6333/health; do sleep 2; done'
+          timeout 30 bash -c 'until curl -sf http://localhost:6333/healthz > /dev/null; do sleep 2; done'
           echo "✅ Qdrant is ready"
           timeout 30 bash -c 'until pg_isready -h localhost -p 5432 -U postgres; do sleep 2; done' || true
 
