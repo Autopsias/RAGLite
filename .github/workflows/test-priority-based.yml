@@ -70,7 +70,7 @@ jobs:
             --cov-report=xml \
             --cov-report=term-missing \
             -m "not slow" \
-            -k "priority and P0"
+            -k "P0"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -126,7 +126,7 @@ jobs:
             -n auto \
             --dist loadfile \
             -m "not slow" \
-            -k "priority and (P0 or P1)"
+            -k "P0 or P1"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
