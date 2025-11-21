@@ -13,6 +13,9 @@ import asyncio
 
 import pytest
 
+# Mark all tests in this module as integration tests that preserve collection state
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+
 from raglite.agentic.fallback import (
     ErrorType,
     FallbackTier,

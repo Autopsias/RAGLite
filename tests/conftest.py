@@ -17,8 +17,15 @@ Fixture Timing (Phase 2.4):
 - Useful for diagnosing test performance issues
 """
 
-import logging
+# CRITICAL: Set APP_ENV=test BEFORE any raglite imports
+# This ensures the Settings singleton uses test database ports (6335, 5433)
+# Must be at module level before imports to take effect during module initialization
 import os
+
+os.environ["APP_ENV"] = "test"
+os.environ["TESTING"] = "true"
+
+import logging
 import time
 from unittest.mock import MagicMock
 
@@ -35,18 +42,27 @@ logger = logging.getLogger(__name__)
 def configure_test_environment():
     """Configure test environment variables for all tests.
 
-    OPTIMIZATION: Sets TESTING=true to enable test-specific optimizations
-    in client connections, reducing timeouts and preventing test hangs.
+    NOTE (2025-11-19): Environment variables are now set at module level (lines 24-25)
+    BEFORE any imports to ensure the Settings singleton uses test database ports.
+    This fixture now only logs the configuration and handles cleanup.
 
-    This fixture runs once per test session and applies to all tests.
+    Test databases run on separate ports:
+    - Qdrant: localhost:6335 (production uses 6333)
+    - PostgreSQL: localhost:5433 (production uses 5432)
+
+    OPTIMIZATION: TESTING=true enables test-specific optimizations
+    in client connections, reducing timeouts and preventing test hangs.
     """
-    # Set test environment flag for connection timeout optimizations
-    os.environ["TESTING"] = "true"
-    logger.info("Test environment configured: TESTING=true (enables connection timeouts)")
+    # Environment already set at module level - just log it
+    logger.info("Test environment confirmed: APP_ENV=test (uses Qdrant:6335, PostgreSQL:5433)")
+    logger.info("Test environment confirmed: TESTING=true (enables connection timeouts)")
 
     yield
 
-    # Clean up environment variable after session
+    # Clean up environment variables after session
+    if "APP_ENV" in os.environ:
+        del os.environ["APP_ENV"]
+        logger.info("Test environment cleaned up: APP_ENV removed")
     if "TESTING" in os.environ:
         del os.environ["TESTING"]
         logger.info("Test environment cleaned up: TESTING=false")
@@ -74,6 +90,9 @@ def session_test_settings() -> Settings:
     Session-scoped to avoid recreating settings for every test.
     Use this for read-only settings access.
 
+    NOTE: Relies on configure_test_environment fixture (autouse=True) to set APP_ENV=test,
+    which automatically configures test database ports via Settings.adjust_for_environment().
+
     Returns:
         Settings instance with test configuration
     """
@@ -83,8 +102,9 @@ def session_test_settings() -> Settings:
     logger.info("Fixture 'session_test_settings' starting")
 
     # Set environment variables once for the entire session
+    # NOTE: QDRANT_PORT is NOT set here - it's automatically determined by APP_ENV=test
+    # via the configure_test_environment fixture and Settings.adjust_for_environment()
     os.environ["QDRANT_HOST"] = "localhost"
-    os.environ["QDRANT_PORT"] = "6333"
     os.environ["ANTHROPIC_API_KEY"] = "test-api-key-12345"
     os.environ["EMBEDDING_MODEL"] = "intfloat/e5-large-v2"
     os.environ["EMBEDDING_DIMENSION"] = "1024"
@@ -101,14 +121,18 @@ def test_settings(monkeypatch: MonkeyPatch) -> Settings:
     Overrides environment variables to prevent tests from using production values.
     Use this when tests need to modify settings.
 
+    NOTE: Relies on configure_test_environment fixture (autouse=True) to set APP_ENV=test,
+    which automatically configures test database ports via Settings.adjust_for_environment().
+
     Args:
         monkeypatch: pytest monkeypatch fixture
 
     Returns:
         Settings instance with test configuration
     """
+    # NOTE: QDRANT_PORT is NOT set here - it's automatically determined by APP_ENV=test
+    # via the configure_test_environment fixture and Settings.adjust_for_environment()
     monkeypatch.setenv("QDRANT_HOST", "localhost")
-    monkeypatch.setenv("QDRANT_PORT", "6333")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-api-key-12345")
     monkeypatch.setenv("EMBEDDING_MODEL", "intfloat/e5-large-v2")
     monkeypatch.setenv("EMBEDDING_DIMENSION", "1024")
@@ -388,19 +412,27 @@ def pytest_collection_modifyitems(config, items):
     """
 
     # Force ALL integration tests into the EXISTING "embedding_model" xdist worker group
-    # This prevents race conditions on shared Qdrant database AND avoids reloading embedding model
-    # Tests that already have @pytest.mark.xdist_group("embedding_model") keep it
-    # Tests without any group get added to "embedding_model" to ensure all integration tests
-    # run in the same worker (critical for session-scoped fixtures)
+    # CRITICAL (2025-11-21): MUST force override ALL xdist groups to "embedding_model"
+    # - pytest-xdist creates separate PROCESS per xdist group
+    # - Session-scoped fixtures run ONCE PER PROCESS (not once globally)
+    # - Split groups = duplicate session fixture runs = 2x slowdown (50s × N workers)
+    # - Database tests previously used xdist_group(name="database") creating 2nd worker
+    # - Result: Session fixture ran TWICE (1600s total vs 600s expected)
     enforce_markers = config.getoption("--enforce-isolation-markers", default=False)
 
     for item in items:
         if "integration" in str(item.fspath):
-            # Check if test already has xdist_group marker
+            # FORCE all integration tests into embedding_model group (override any existing)
+            # This ensures session-scoped fixtures run ONCE, not once per worker
             existing_group = item.get_closest_marker("xdist_group")
-            if not existing_group:
-                # Add to embedding_model group to match existing integration test group
-                item.add_marker(pytest.mark.xdist_group(name="embedding_model"))
+
+            # Remove any existing xdist_group marker (including "database")
+            if existing_group:
+                # Remove from markers list (keywords dict is immutable in pytest 8.x)
+                item.own_markers = [m for m in item.own_markers if m.name != "xdist_group"]
+
+            # Force embedding_model group (single worker for all integration tests)
+            item.add_marker(pytest.mark.xdist_group(name="embedding_model"))
 
             # Enforce test isolation markers (Phase 2 optimization)
             # Integration tests must have @pytest.mark.preserve_collection or

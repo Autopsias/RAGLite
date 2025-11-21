@@ -16,6 +16,9 @@ import time
 
 import pytest
 
+# Mark all tests in this module as integration tests that preserve collection state
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+
 from raglite.agentic.agents.analysis_agent import analysis_agent
 from raglite.agentic.agents.retrieval_agent import retrieval_agent
 from raglite.agentic.agents.synthesis_agent import synthesis_agent

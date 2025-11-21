@@ -33,10 +33,13 @@ print("DEBUG: conftest.py loading...", file=sys.stderr)
 print("DEBUG: Checking service availability before imports...", file=sys.stderr)
 
 # Get connection settings from environment (same as shared.config.Settings)
+# CRITICAL FIX (2025-11-19): Integration tests MUST use TEST database ports
+# Production: Qdrant 6333, PostgreSQL 5432
+# Test: Qdrant 6335, PostgreSQL 5433 (Story 4.0.5 database separation)
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
-QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
+QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6335"))  # TEST port (was 6333)
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
-POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
+POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5433"))  # TEST port (was 5432)
 
 
 def check_service_available(host: str, port: int, service_name: str) -> bool:
@@ -124,6 +127,84 @@ def get_postgresql_connection():
 
 
 @pytest.fixture(scope="session", autouse=True)
+def ensure_test_database_schema(request):
+    """Ensure PostgreSQL test database schema is initialized before any tests run.
+
+    CRITICAL FIX (2025-11-19): Test database (raglite_test) needs schema initialization
+    before integration tests can run. This fixture creates the required tables if they
+    don't exist.
+
+    Story 4.0.5: Database separation - ensures test database has proper schema.
+
+    This runs ONCE per test session, before any tests execute.
+    """
+    # Skip during test collection/discovery phase
+    if request.config.option.collectonly:
+        yield
+        return
+
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # PERFORMANCE: Check service availability first
+    check_and_skip_if_unavailable()
+
+    logger.info("🔧 Ensuring test database schema exists...")
+
+    try:
+        # PERFORMANCE: Use cached connection to reduce overhead
+        conn = get_postgresql_connection()
+        cursor = conn.cursor()
+
+        # Check if financial_chunks table exists
+        cursor.execute(
+            """
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables
+                WHERE table_schema = 'public'
+                AND table_name = 'financial_chunks'
+            );
+            """
+        )
+        table_exists = cursor.fetchone()[0]
+
+        if not table_exists:
+            logger.warning(
+                "⚠️  Test database schema not found - initializing (this should only happen once)"
+            )
+
+            # Run schema initialization script
+            import subprocess
+
+            result = subprocess.run(
+                ["uv", "run", "python", "scripts/init-test-postgresql.py"],
+                capture_output=True,
+                text=True,
+            )
+
+            if result.returncode != 0:
+                error_msg = f"Failed to initialize test database schema:\n{result.stderr}"
+                logger.error(f"❌ {error_msg}")
+                pytest.fail(error_msg)
+
+            logger.info("✅ Test database schema initialized successfully")
+        else:
+            logger.info("✅ Test database schema already exists")
+
+        cursor.close()  # Only close cursor, keep connection cached
+
+    except Exception as e:
+        error_msg = f"Failed to verify/initialize test database schema: {e}"
+        logger.error(f"❌ {error_msg}")
+        pytest.fail(error_msg)
+
+    yield
+
+    # No cleanup - schema persists for all tests
+
+
+@pytest.fixture(scope="session", autouse=True)
 def warmup_embedding_model(request):
     """Pre-warm embedding model before any tests run.
 
@@ -172,7 +253,7 @@ def warmup_embedding_model(request):
     # Model singleton persists for entire session
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def session_ingested_collection(request, warmup_embedding_model):
     """Session-scoped fixture: Ingest test PDFs ONCE for entire test session.
 
@@ -203,9 +284,10 @@ def session_ingested_collection(request, warmup_embedding_model):
 
     DISCOVERY OPTIMIZATION: Skips expensive PDF ingestion during test discovery phase.
 
-    NOTE (2025-11-09): autouse=True removed for performance optimization.
-    Tests that need vector search or ingested PDFs must explicitly request this fixture.
-    SQL-only tests (fuzzy matching, etc.) don't need it and run in <5s without ingestion overhead.
+    CRITICAL FIX (2025-11-21): Restored autouse=True for proper session fixture sharing.
+    Removing autouse=True on 2025-11-09 caused 6x performance regression (600s → 3600s).
+    With autouse=True: Fixture runs ONCE per session (50s total overhead).
+    Without autouse=True: Fixture runs per test file (50s × N files = massive overhead).
 
     Dependencies:
         - warmup_embedding_model: Pre-loads Fin-E5 model (60-70s) before ingestion
@@ -317,22 +399,22 @@ def session_ingested_collection(request, warmup_embedding_model):
         print(f"DEBUG: No existing collection found ({e}) - safe to create", file=sys.stderr)
 
     # Environment-based PDF selection:
-    # - LOCAL (VS Code): 10-page sample PDF (fast ~10-15 seconds ingestion)
+    # - LOCAL (VS Code): 4-page test PDF (fast ~5-10 seconds ingestion - Story 4.0.5)
     # - CI: 160-page full PDF (comprehensive ~150 seconds ingestion)
     use_full_pdf = os.getenv("TEST_USE_FULL_PDF", "false").lower() == "true"
 
     print(f"DEBUG: TEST_USE_FULL_PDF={use_full_pdf}", file=sys.stderr)
 
     if use_full_pdf:
-        # CI: Use full 160-page PDF for comprehensive testing
+        # CI: Use full 160-page PDF for comprehensive testing (--run-slow flag)
         sample_pdf = Path("docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf")
         pdf_description = "160-page full PDF (CI comprehensive mode)"
         estimated_time = "150-180 seconds"
     else:
-        # LOCAL: Use small 10-page PDF for fast iteration
-        sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
-        pdf_description = "10-page sample PDF (local fast mode)"
-        estimated_time = "10-15 seconds"
+        # DEFAULT: Use small 4-page PDF for fast testing (Story 4.0.5 AC2)
+        sample_pdf = Path("tests/fixtures/sample-small-3-pages.pdf")
+        pdf_description = "4-page test PDF (fast mode - Story 4.0.5)"
+        estimated_time = "5-10 seconds"
 
     print(f"DEBUG: PDF selection complete - checking {sample_pdf}", file=sys.stderr)
 
@@ -439,11 +521,25 @@ def session_ingested_collection(request, warmup_embedding_model):
     print(f"⚙️  Ingesting {sample_pdf.name}...")
     print(f"   Estimated time: {estimated_time} (Docling + embeddings + Qdrant)")
 
+    # PERFORMANCE OPTIMIZATION: Skip metadata extraction in LOCAL mode (4-page PDF)
+    # - Metadata extraction uses Mistral API (~7s per chunk with network latency)
+    # - For 7 chunks: 7 × 7s = 49s overhead (10x slowdown!)
+    # - Most integration tests don't need LLM-extracted metadata
+    # - CI mode still extracts metadata for comprehensive testing
+    skip_metadata_extraction = not use_full_pdf  # LOCAL: skip, CI: extract
+
+    if skip_metadata_extraction:
+        print("   ⚡ PERFORMANCE: Skipping metadata extraction (LOCAL mode - saves ~40s)")
+
     # Ingest with clear_collection=False (collection already fresh)
     print("DEBUG: Starting asyncio.run(ingest_pdf)...", file=sys.stderr)
     start_ingest = time.time()
     try:
-        result = asyncio.run(ingest_pdf(str(sample_pdf), clear_collection=False))
+        result = asyncio.run(
+            ingest_pdf(
+                str(sample_pdf), clear_collection=False, skip_metadata=skip_metadata_extraction
+            )
+        )
         ingest_duration = time.time() - start_ingest
         print(f"DEBUG: ingest_pdf completed in {ingest_duration:.1f}s", file=sys.stderr)
     except Exception as e:
@@ -549,9 +645,13 @@ def session_ingested_collection(request, warmup_embedding_model):
     if use_full_pdf:
         expected_range = (150, 220)  # 160-page PDF
     else:
-        # Updated range for table-aware chunking (Story 2.8) - tables kept intact up to 4096 tokens
-        # Increased from (10, 50) to (10, 60) to accommodate larger table chunks
-        expected_range = (10, 60)  # 10-page PDF
+        # Updated range for 4-page table-heavy test PDF (Story 4.0.5 AC2)
+        # With table-aware chunking (Story 2.8) and 512-token fixed chunking:
+        # - Text chunks: ~7 (512-token fixed chunking - minimum expected)
+        # - Table chunks: ~0-14 (4096-token table-aware chunking, 1016 table rows - varies)
+        # - Total: 7-25 chunks expected (varies by table extraction success)
+        # - Observed range: 7-21 chunks across multiple test runs (flaky table extraction)
+        expected_range = (5, 30)  # 4-page table-heavy test PDF (Story 4.0.5)
 
     if not (expected_range[0] <= count_after.count <= expected_range[1]):
         error_msg = f"CRITICAL: Chunk count {count_after.count} not in expected range {expected_range} for {pdf_description}"
@@ -759,6 +859,8 @@ def ensure_qdrant_test_isolation(request):
             # CRITICAL FIX: Also restore PostgreSQL data (symmetric database lifecycle)
             # PostgreSQL must be restored when Qdrant is restored to prevent test isolation failures
             # Root cause: Tests with clear_collection=True delete PostgreSQL, but only Qdrant was being restored
+            # PERFORMANCE: All tests now have proper markers (preserve_collection or manages_collection_state)
+            # This restoration only triggers for tests that actually modify collections
             if _session_postgresql_row_count:
                 print(
                     f"\n🔄 Checking PostgreSQL state (baseline: {_session_postgresql_row_count} rows)..."
@@ -784,9 +886,19 @@ def ensure_qdrant_test_isolation(request):
 
                         # Re-ingest the session PDF to restore PostgreSQL
                         # This triggers table extraction which populates financial_tables
+                        import os
+
                         from raglite.ingestion.pipeline import ingest_pdf
 
-                        sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
+                        # Use the same PDF that was ingested in session_ingested_collection fixture
+                        use_full_pdf = os.getenv("TEST_USE_FULL_PDF", "false").lower() == "true"
+                        if use_full_pdf:
+                            sample_pdf = Path(
+                                "docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf"
+                            )
+                        else:
+                            sample_pdf = Path("tests/fixtures/sample-small-3-pages.pdf")
+
                         if sample_pdf.exists():
                             # Ingest with clear_collection=False to preserve the Qdrant data we just restored
                             asyncio.run(ingest_pdf(str(sample_pdf), clear_collection=False))

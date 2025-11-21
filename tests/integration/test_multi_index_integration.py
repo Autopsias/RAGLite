@@ -9,6 +9,9 @@ Tests the end-to-end multi-index search pipeline including:
 
 import pytest
 
+# Mark all tests in this module as integration tests that preserve collection state
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+
 from raglite.retrieval.multi_index_search import (
     MultiIndexSearchError,
     SearchResult,

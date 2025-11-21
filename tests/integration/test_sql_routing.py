@@ -24,7 +24,7 @@ class TestSQLRouting:
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
-    async def test_sql_only_routing(self):
+    async def test_sql_only_routing(self, session_ingested_collection):
         """Test SQL_ONLY query routes to SQL search only."""
         # Table query that should route to SQL
         query = "What is the variable cost for Portugal Cement in August 2025?"
@@ -43,7 +43,7 @@ class TestSQLRouting:
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
-    async def test_vector_only_routing(self):
+    async def test_vector_only_routing(self, session_ingested_collection):
         """Test VECTOR_ONLY query routes to semantic + BM25 search."""
         # Text query that should route to vector search
         query = "What are the main sustainability initiatives mentioned in the report?"
@@ -62,7 +62,7 @@ class TestSQLRouting:
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
-    async def test_hybrid_routing(self):
+    async def test_hybrid_routing(self, session_ingested_collection):
         """Test HYBRID query routes to SQL + Vector fusion."""
         # Query that should trigger hybrid routing
         query = "Compare EBITDA margins between Portugal and Spain cement divisions"
@@ -81,7 +81,7 @@ class TestSQLRouting:
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
-    async def test_sql_routing_disabled(self):
+    async def test_sql_routing_disabled(self, session_ingested_collection):
         """Test fallback to vector search when SQL routing disabled."""
         # Table query with SQL routing disabled
         query = "What is the variable cost for Portugal Cement?"
@@ -98,7 +98,7 @@ class TestSQLRouting:
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
-    async def test_empty_results_handling(self):
+    async def test_empty_results_handling(self, session_ingested_collection):
         """Test graceful handling of empty SQL results."""
         # Query that may return no SQL results
         query = "What is the XYZ metric for nonexistent entity?"
@@ -111,7 +111,7 @@ class TestSQLRouting:
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
-    async def test_routing_with_filters(self):
+    async def test_routing_with_filters(self, session_ingested_collection):
         """Test SQL routing works with metadata filters."""
         query = "What are the costs for Portugal?"
         filters = {"company_name": "Portugal Cement"}
@@ -299,7 +299,7 @@ class TestSQLRoutingErrorHandling:
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
-    async def test_sql_generation_failure_fallback(self):
+    async def test_sql_generation_failure_fallback(self, session_ingested_collection):
         """Test fallback to vector search when SQL generation fails."""
         # Query that might cause SQL generation to fail
         query = "Invalid query !@#$%^&*()"
@@ -327,7 +327,7 @@ class TestSQLRoutingErrorHandling:
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.preserve_collection  # Ensure marker is on test method for isolation
-    async def test_parameter_validation(self):
+    async def test_parameter_validation(self, session_ingested_collection):
         """Test parameter validation in hybrid_search()."""
         query = "What is the cost?"
 

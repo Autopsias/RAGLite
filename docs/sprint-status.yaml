@@ -112,7 +112,7 @@ development_status:
   4-0-2-definition-of-done-update: backlog  # 🟢 PROCESS - Action Item 2 (30 min, Bob/SM)
   4-0-3-fix-mcp-ingestion-timeout: backlog  # 🔴 CRITICAL IMMEDIATE - Action Item 3 (3-6 hours, Charlie)
   4-0-4-document-segregation-architecture: backlog  # 🟡 MEDIUM-HIGH - Action Item 4 (2-3 hours, Winston/Charlie)
-  4-0-5-test-prod-database-separation: backlog  # 🟡 MEDIUM - Action Item 5 (4-6 hours, Charlie/Dana)
+  4-0-5-test-prod-database-separation: done  # ✅ COMPLETE - Action Item 5 (10 hours actual, Ricardo, 2025-11-19)
 
   # Epic 4 Feature Stories (Start after prep stories complete)
   4-1-time-series-data-extraction: backlog

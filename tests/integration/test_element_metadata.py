@@ -21,6 +21,9 @@ from pathlib import Path
 
 import pytest
 
+# Mark all tests in this module as integration tests that preserve collection state
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
 

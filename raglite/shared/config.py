@@ -2,8 +2,20 @@
 
 This module provides type-safe configuration management loaded from environment
 variables via .env file.
+
+Environment-based configuration:
+- APP_ENV=production (default): Uses production databases (ports 6333, 5432)
+- APP_ENV=test: Automatically uses test databases (ports 6335, 5433)
+- APP_ENV=development: Uses development settings (same as production for now)
+
+All settings can be overridden by environment variables.
 """
 
+from __future__ import annotations
+
+from typing import Self
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,7 +24,14 @@ class Settings(BaseSettings):
 
     All settings can be overridden via environment variables or .env file.
     Required settings will raise validation errors if not provided.
+
+    APP_ENV determines which database instances to use:
+    - production: localhost:6333 (Qdrant), localhost:5432 (PostgreSQL)
+    - test: localhost:6335 (Qdrant), localhost:5433 (PostgreSQL)
     """
+
+    # Environment Configuration (NEW)
+    app_env: str = "production"  # Options: production, test, development
 
     # Qdrant Vector Database
     qdrant_host: str = "localhost"
@@ -53,6 +72,50 @@ class Settings(BaseSettings):
 
     # PDF Processing Configuration (Story 2.2)
     pdf_processing_threads: int = 8  # Parallel page processing threads (default 8, range 1-16)
+
+    @model_validator(mode="after")
+    def adjust_for_environment(self) -> Self:
+        """Automatically adjust database settings based on APP_ENV and CI detection.
+
+        This ensures test environments use separate database instances without
+        requiring explicit environment variable overrides for every setting.
+
+        Environment routing (Story 4.0.5):
+        - Production (default): Qdrant:6333, PostgreSQL:5432, collection: financial_docs
+        - Test (APP_ENV=test): Qdrant:6335, PostgreSQL:5433, collection: financial_docs_test
+        - CI (APP_ENV=test + CI=true): Same as test but collection: financial_docs_ci
+
+        CI detection: Checks GITHUB_ACTIONS, CI, or CONTINUOUS_INTEGRATION environment variables
+        """
+        import os
+
+        # Detect if running in CI environment
+        is_ci = (
+            os.getenv("GITHUB_ACTIONS") == "true"
+            or os.getenv("CI") == "true"
+            or os.getenv("CONTINUOUS_INTEGRATION") == "true"
+        )
+
+        if self.app_env == "test":
+            # Only override if using default values (allows env var overrides)
+            if self.qdrant_port == 6333:
+                self.qdrant_port = 6335
+            if self.qdrant_collection_name == "financial_docs":
+                # Story 4.0.5 AC4: Separate CI collection to avoid conflicts with local tests
+                collection_suffix = "_ci" if is_ci else "_test"
+                self.qdrant_collection_name = f"financial_docs{collection_suffix}"
+            if self.postgres_port == 5432:
+                self.postgres_port = 5433
+            if self.postgres_db == "raglite":
+                db_suffix = "_ci" if is_ci else "_test"
+                self.postgres_db = f"raglite{db_suffix}"
+            if self.postgres_user == "raglite":
+                user_suffix = "_ci" if is_ci else "_test"
+                self.postgres_user = f"raglite{user_suffix}"
+            if self.postgres_password == "raglite":
+                pass_suffix = "_ci" if is_ci else "_test"
+                self.postgres_password = f"raglite{pass_suffix}"
+        return self
 
     # Pydantic 2.x configuration using SettingsConfigDict
     model_config = SettingsConfigDict(

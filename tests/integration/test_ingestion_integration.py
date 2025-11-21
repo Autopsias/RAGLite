@@ -67,10 +67,10 @@ class TestPDFIngestionIntegration:
         # Assertions - validate session fixture ingested PDF successfully
         assert collection_info.points_count > 0, "Session fixture should have ingested sample PDF"
 
-        # For 10-page sample PDF, expect 10-50 chunks (depends on content density)
-        expected_range = (10, 50)
+        # For 4-page test PDF (Story 4.0.5), expect 4-10 chunks (depends on content density)
+        expected_range = (4, 10)
         assert expected_range[0] <= collection_info.points_count <= expected_range[1], (
-            f"Expected {expected_range[0]}-{expected_range[1]} chunks for 10-page PDF, "
+            f"Expected {expected_range[0]}-{expected_range[1]} chunks for 4-page test PDF, "
             f"got {collection_info.points_count}"
         )
 
@@ -131,14 +131,15 @@ class TestPDFIngestionIntegration:
         # Scroll through all points in collection
         points, _ = qdrant_client.scroll(
             collection_name=settings.qdrant_collection_name,
-            limit=100,  # Should be enough for 10-page PDF
+            limit=100,  # Should be enough for 4-page test PDF (Story 4.0.5)
         )
 
         # Filter points for the sample document
+        # Story 4.0.5: Session fixture uses sample-small-3-pages.pdf (4-page test PDF)
         doc_points = [
             p
             for p in points
-            if p.payload and p.payload.get("source_document") == "sample_financial_report.pdf"
+            if p.payload and p.payload.get("source_document") == "sample-small-3-pages.pdf"
         ]
 
         assert len(doc_points) > 0, "Should have chunks from session fixture ingestion"
@@ -152,16 +153,16 @@ class TestPDFIngestionIntegration:
         )
         assert all(page_num > 0 for page_num in page_numbers), "All page numbers must be positive"
 
-        # Page numbers should be in valid range for 10-page document
+        # Page numbers should be in valid range for 4-page document (Story 4.0.5)
         min_page = min(page_numbers)
         max_page = max(page_numbers)
 
         assert min_page >= 1, f"Min page {min_page} should be >= 1 (PDF pages are 1-indexed)"
-        assert max_page <= 10, f"Max page {max_page} should be <= 10 (document has 10 pages)"
+        assert max_page <= 4, f"Max page {max_page} should be <= 4 (document has 4 pages)"
 
-        # No impossible estimates (old bug would create page numbers like 156 for 10-page doc)
-        # Document has 10 pages based on sample PDF fixture
-        expected_page_count = 10
+        # No impossible estimates (old bug would create page numbers like 156 for 4-page doc)
+        # Document has 4 pages based on sample PDF fixture (Story 4.0.5)
+        expected_page_count = 4
         assert max_page <= expected_page_count, (
             f"Max page number {max_page} exceeds document page count {expected_page_count} "
             "(indicates estimation bug)"
@@ -169,7 +170,7 @@ class TestPDFIngestionIntegration:
 
         # Log validation results
         print("\n\nPage Number Validation (Story 1.13):")
-        print("  Document: sample_financial_report.pdf")
+        print("  Document: sample-small-3-pages.pdf (Story 4.0.5)")
         print(f"  Chunks stored: {len(doc_points)}")
         print(f"  Page range: {min_page}-{max_page}")
         print(f"  Expected range: 1-{expected_page_count}")

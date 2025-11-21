@@ -11,17 +11,30 @@ help: ## Show this help message
 install-dev: ## Install development dependencies with performance plugins
 	uv sync --group dev --group test
 
-test: ## Run all tests with parallel execution (default)
-	uv run pytest -n auto --dist loadfile
+test: test-optimized ## Run optimized test suite (default) - FASTEST
 
-test-fast: ## Run unit tests only (fastest feedback)
-	uv run pytest -n auto --dist loadfile -m unit -x --tb=short
+test-optimized: ## Run tests with optimal parallelization strategy (<12 min target)
+	@echo "🚀 RAGLite Optimized Test Suite"
+	@echo "================================"
+	@echo "Phase 1: Unit tests (483 tests, parallel -n auto)"
+	@time uv run pytest tests/unit -n auto --dist loadfile --tb=line
+	@echo ""
+	@echo "Phase 2: Integration tests (220 tests, single worker for shared fixture)"
+	@time uv run pytest tests/integration -n 1 --dist loadfile --tb=line
+	@echo ""
+	@echo "✅ Test suite complete!"
+
+test-fast: ## Run unit tests only (fastest feedback <2 min)
+	@echo "⚡ Running unit tests in parallel..."
+	uv run pytest tests/unit -n auto --dist loadfile -x --tb=short
 
 test-unit: ## Run unit tests with coverage
-	uv run pytest -n auto --dist loadfile -m unit --cov=raglite --cov-report=term-missing
+	@echo "📊 Running unit tests with coverage..."
+	uv run pytest tests/unit -n auto --dist loadfile --cov=raglite --cov-report=term-missing
 
-test-integration: ## Run integration tests (requires Qdrant)
-	uv run pytest -n auto --dist loadfile -m integration
+test-integration: ## Run integration tests with optimal settings (requires Qdrant)
+	@echo "🔗 Running integration tests (single worker for session fixture)..."
+	uv run pytest tests/integration -n 1 --dist loadfile --tb=short
 
 test-slow: ## Run slow/e2e tests only
 	uv run pytest -n auto --dist loadfile -m "slow or e2e"

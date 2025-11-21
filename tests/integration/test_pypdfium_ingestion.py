@@ -38,7 +38,7 @@ class TestPypdfiumIngestionValidation:
     @pytest.mark.integration
     @pytest.mark.preserve_collection  # Uses session-scoped fixture, read-only
     @pytest.mark.timeout(10)  # Fast validation, no ingestion
-    async def test_ingest_pdf_with_pypdfium_backend(self) -> None:
+    async def test_ingest_pdf_with_pypdfium_backend(self, session_ingested_collection) -> None:
         """Test AC2: Validate session-ingested PDF with pypdfium backend.
 
         OPTIMIZATION: This test now validates the session fixture's ingestion result
@@ -77,7 +77,7 @@ class TestPypdfiumIngestionValidation:
         assert count.count > 0, "Session fixture should have ingested chunks"
 
         # Environment-aware expectations:
-        # - LOCAL (10-page PDF): ~10-30 chunks (table-aware chunking)
+        # - LOCAL (4-page table-heavy PDF): ~10-20 chunks (table-aware + fixed chunking, Story 4.0.5)
         # - CI (160-page PDF): ~100-300 chunks
         use_full_pdf = os.getenv("TEST_USE_FULL_PDF", "false").lower() == "true"
 
@@ -87,12 +87,15 @@ class TestPypdfiumIngestionValidation:
             expected_max_chunks = 300
             pdf_type = "160-page full PDF (CI mode)"
         else:
-            # LOCAL mode: 10-page sample PDF
-            # Updated range to account for table-aware chunking (Story 2.8)
-            # Tables kept intact can result in more chunks than basic fixed chunking
-            expected_min_chunks = 10
+            # LOCAL mode: 4-page table-heavy sample PDF (Story 4.0.5 AC2)
+            # Updated range for table-heavy PDF (Story 2.8 + Story 4.0.5):
+            # - Text chunks: ~7 (512-token fixed chunking - minimum expected)
+            # - Table chunks: ~0-14 (4096-token table-aware chunking, 1016 table rows - varies)
+            # - Total: 7-25 chunks (varies by table extraction success)
+            # - Observed range: 7-21 chunks across multiple test runs (flaky table extraction)
+            expected_min_chunks = 5
             expected_max_chunks = 30
-            pdf_type = "10-page sample PDF (LOCAL mode)"
+            pdf_type = "4-page table-heavy test PDF (LOCAL mode - Story 4.0.5)"
 
         assert expected_min_chunks <= count.count <= expected_max_chunks, (
             f"Expected {expected_min_chunks}-{expected_max_chunks} chunks for {pdf_type}, "

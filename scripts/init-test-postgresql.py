@@ -1,0 +1,310 @@
+"""Initialize PostgreSQL TEST database schema for integration testing.
+
+This script creates the required tables in the raglite_test database (port 5433).
+
+Story 4.0.5: Database separation - ensures test database has proper schema
+before running integration tests.
+
+Usage:
+    python scripts/init-test-postgresql.py
+"""
+
+import logging
+import sys
+
+import psycopg2
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+
+def create_test_database_schema(
+    host: str = "localhost",
+    port: int = 5433,  # TEST database port
+    dbname: str = "raglite_test",  # TEST database name
+    user: str = "raglite_test",  # TEST user
+    password: str = "raglite_test",  # TEST password
+) -> None:
+    """Create the financial_chunks and financial_tables tables in TEST database.
+
+    Args:
+        host: PostgreSQL host
+        port: PostgreSQL port (5433 for test)
+        dbname: Database name (raglite_test)
+        user: Database user (raglite_test)
+        password: Database password (raglite_test)
+
+    Raises:
+        psycopg2.Error: If database connection or schema creation fails
+    """
+    conn = None
+    cursor = None
+
+    try:
+        # Connect to TEST PostgreSQL
+        logger.info(f"Connecting to TEST PostgreSQL at {host}:{port}/{dbname}")
+        conn = psycopg2.connect(host=host, port=port, dbname=dbname, user=user, password=password)
+        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        cursor = conn.cursor()
+
+        # Create financial_chunks table
+        logger.info("Creating financial_chunks table...")
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS financial_chunks (
+                -- Core fields
+                chunk_id UUID PRIMARY KEY,
+                document_id UUID NOT NULL,
+                page_number INTEGER NOT NULL,
+                chunk_index INTEGER NOT NULL,
+                content TEXT NOT NULL,
+
+                -- Document-Level Metadata (7 fields - from ExtractedMetadata model)
+                document_type VARCHAR(100),           -- Income Statement, Balance Sheet, etc.
+                reporting_period VARCHAR(50),         -- Q1 2024, Aug-25 YTD, FY 2023
+                time_granularity VARCHAR(50),         -- Daily, Weekly, Monthly, Quarterly, YTD
+                company_name VARCHAR(100),            -- Portugal Cement, CIMPOR, etc.
+                geographic_jurisdiction VARCHAR(50),  -- Portugal, EU, APAC, Americas, Global
+                data_source_type VARCHAR(50),         -- Audited, Internal Report, etc.
+                version_date VARCHAR(50),             -- 2025-08-15, 2024-Q3-Final
+
+                -- Chunk/Section-Level Metadata (5 fields)
+                section_type VARCHAR(50),             -- Narrative, Table, Footnote, etc.
+                metric_category VARCHAR(100),         -- Revenue, EBITDA, Operating Expenses, etc.
+                units VARCHAR(50),                    -- EUR, USD, EUR/ton, Percentage, etc.
+                department_scope VARCHAR(100),        -- Operations, Finance, Production, etc.
+
+                -- Table-Specific Metadata (3 fields)
+                table_context TEXT,                   -- LLM description of table purpose
+                table_name VARCHAR(200),              -- Actual table title from document
+                statistical_summary TEXT,             -- Mean, Min, Max, Trend stats
+
+                -- Search optimization
+                content_tsv TSVECTOR,                 -- Full-text search vector
+                embedding_id VARCHAR(100),            -- Link to Qdrant vector ID
+
+                -- Timestamps
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+        """
+        )
+        logger.info("✓ financial_chunks table created")
+
+        # Create financial_tables table (Story 2.8+)
+        # NOTE: Schema matches migrations/002_create_financial_tables.sql exactly
+        logger.info("Creating financial_tables table...")
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS financial_tables (
+                -- Primary key
+                id SERIAL PRIMARY KEY,
+
+                -- Document metadata
+                document_id VARCHAR(255) NOT NULL,
+                page_number INT NOT NULL,
+                table_index INT NOT NULL,
+                table_caption TEXT,
+
+                -- Structured columns for querying
+                entity VARCHAR(255),           -- e.g., "Portugal Cement", "Spain Ready-Mix"
+                metric VARCHAR(255),            -- e.g., "variable costs", "thermal energy"
+                period VARCHAR(100),            -- e.g., "Aug-25 YTD", "Q2 2025"
+                fiscal_year INT,                -- e.g., 2025
+                value DECIMAL(15,2),            -- Numeric value
+                unit VARCHAR(50),               -- e.g., "EUR/ton", "GJ/ton"
+
+                -- Additional metadata
+                row_index INT,
+                column_name VARCHAR(255),
+                section_type VARCHAR(100) DEFAULT 'Table',
+                created_at TIMESTAMP DEFAULT NOW(),
+
+                -- Full context for attribution and fallback
+                chunk_text TEXT                 -- Original table chunk text for context
+            );
+        """
+        )
+        logger.info("✓ financial_tables table created")
+
+        # Create entity_mappings table (Story 2.14)
+        logger.info("Creating entity_mappings table...")
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS entity_mappings (
+                canonical_name VARCHAR(200) PRIMARY KEY,
+                raw_mentions TEXT[],
+                entity_type VARCHAR(100),
+                section_context TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """
+        )
+        logger.info("✓ entity_mappings table created")
+
+        # Create indexes for fast filtering
+        logger.info("Creating indexes...")
+
+        # Index 1: Composite index for company + metric queries
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_company_metric
+            ON financial_chunks(company_name, metric_category);
+        """
+        )
+        logger.info("✓ idx_company_metric created (company_name, metric_category)")
+
+        # Index 2: Time period filtering
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_reporting_period
+            ON financial_chunks(reporting_period);
+        """
+        )
+        logger.info("✓ idx_reporting_period created")
+
+        # Index 3: Full-text search using GIN index
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_content_tsv
+            ON financial_chunks USING GIN(content_tsv);
+        """
+        )
+        logger.info("✓ idx_content_tsv created (GIN index for full-text search)")
+
+        # Index 4: Section type filtering (table vs narrative)
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_section_type
+            ON financial_chunks(section_type);
+        """
+        )
+        logger.info("✓ idx_section_type created")
+
+        # Index 5: Entity search on financial_tables (matches migration 002)
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_entity
+            ON financial_tables(entity);
+        """
+        )
+        logger.info("✓ idx_entity created (entity on financial_tables)")
+
+        # Index 6: Metric search on financial_tables (matches migration 002)
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_metric
+            ON financial_tables(metric);
+        """
+        )
+        logger.info("✓ idx_metric created (metric on financial_tables)")
+
+        # Index 7: Period filtering on financial_tables (matches migration 002)
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_period
+            ON financial_tables(period);
+        """
+        )
+        logger.info("✓ idx_period created (period on financial_tables)")
+
+        # Index 8: Fiscal year filtering on financial_tables (matches migration 002)
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_fiscal_year
+            ON financial_tables(fiscal_year);
+        """
+        )
+        logger.info("✓ idx_fiscal_year created")
+
+        # Index 9: Document+page composite index (matches migration 002)
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_document_page
+            ON financial_tables(document_id, page_number);
+        """
+        )
+        logger.info("✓ idx_document_page created (document_id, page_number)")
+
+        # Install pg_trgm extension for fuzzy matching (Story 2.14)
+        logger.info("Installing pg_trgm extension for fuzzy matching...")
+        cursor.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
+        logger.info("✓ pg_trgm extension installed")
+
+        # Create GIN trigram indexes for fast ILIKE queries (Migration 003)
+        logger.info("Creating GIN trigram indexes for fuzzy matching...")
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_financial_tables_entity_trgm
+            ON financial_tables USING gin(entity gin_trgm_ops);
+        """
+        )
+        logger.info("✓ idx_financial_tables_entity_trgm created (fuzzy entity search)")
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_financial_tables_metric_trgm
+            ON financial_tables USING gin(metric gin_trgm_ops);
+        """
+        )
+        logger.info("✓ idx_financial_tables_metric_trgm created (fuzzy metric search)")
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_financial_tables_period_trgm
+            ON financial_tables USING gin(period gin_trgm_ops);
+        """
+        )
+        logger.info("✓ idx_financial_tables_period_trgm created (fuzzy period search)")
+
+        # Verify schema creation for all tables
+        for table_name in ["financial_chunks", "financial_tables", "entity_mappings"]:
+            cursor.execute(
+                """
+                SELECT column_name, data_type
+                FROM information_schema.columns
+                WHERE table_name = %s
+                ORDER BY ordinal_position;
+            """,
+                (table_name,),
+            )
+            columns = cursor.fetchall()
+            logger.info(f"✓ {table_name}: {len(columns)} columns verified")
+
+        # Verify indexes (across all tables)
+        cursor.execute(
+            """
+            SELECT tablename, indexname
+            FROM pg_indexes
+            WHERE tablename IN ('financial_chunks', 'financial_tables', 'entity_mappings')
+            ORDER BY tablename, indexname;
+        """
+        )
+        indexes = cursor.fetchall()
+        logger.info(f"✓ Index verification: {len(indexes)} total indexes created")
+
+        logger.info("✅ TEST PostgreSQL schema initialization complete!")
+        logger.info("   - Database: raglite_test (port 5433)")
+        logger.info("   - financial_chunks (chunks with metadata)")
+        logger.info("   - financial_tables (structured table data)")
+        logger.info("   - entity_mappings (canonical entity names)")
+
+    except psycopg2.Error as e:
+        logger.error(f"❌ Database error: {e}")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"❌ Unexpected error: {e}")
+        sys.exit(1)
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+            logger.info("Database connection closed")
+
+
+if __name__ == "__main__":
+    create_test_database_schema()

@@ -155,6 +155,7 @@ class TestStory214ExcerptValidation:
         ids=lambda x: x["id"],
     )
     @pytest.mark.priority("P1")
+    @pytest.mark.preserve_collection  # Read-only SQL test - prevents 80-90s teardown restoration per test
     async def test_excerpt_query(
         self, test_query, excerpt_ground_truth, mock_mistral_client, session_ingested_collection
     ):

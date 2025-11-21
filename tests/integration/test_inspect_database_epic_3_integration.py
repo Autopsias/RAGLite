@@ -31,7 +31,8 @@ from inspect_database_for_epic_3 import inspect_database  # noqa: E402
 
 @pytest.mark.priority("P0")
 @pytest.mark.integration
-@pytest.mark.xdist_group(name="database")
+# NOTE: xdist_group removed - conftest.py now forces ALL integration tests to "embedding_model"
+# This ensures session fixture runs ONCE per session, not once per worker group
 @pytest.mark.preserve_collection  # Prevents cleanup between test files - maintains PostgreSQL state
 class TestInspectDatabaseIntegration:
     """Integration tests for database inspection against real PostgreSQL."""
@@ -166,7 +167,7 @@ class TestInspectDatabaseIntegration:
 
 @pytest.mark.priority("P1")
 @pytest.mark.integration
-@pytest.mark.xdist_group(name="database")
+# NOTE: xdist_group removed - conftest.py now forces ALL integration tests to "embedding_model"
 @pytest.mark.slow
 @pytest.mark.preserve_collection  # Prevents cleanup between test files - maintains PostgreSQL state
 class TestDataDictionaryValidation:
