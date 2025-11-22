@@ -295,17 +295,32 @@ jobs:
 
       - name: Start and verify PostgreSQL
         run: |
-          echo "Ensuring fresh PostgreSQL container..."
+          echo "Ensuring fresh PostgreSQL container with correct credentials..."
 
           # Check if container exists
           if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
-            echo "PostgreSQL container exists - restarting to ensure fresh state..."
+            echo "PostgreSQL container exists - checking credentials..."
 
-            # CRITICAL: Always restart to prevent zombie/hung state
-            # Container may show as "running" but be unresponsive (seen 4-day old logs)
-            docker restart raglite-postgresql
-            echo "Waiting for restart to complete..."
-            sleep 5
+            # CRITICAL FIX: Remove container with wrong credentials
+            # This ensures we get fresh container with raglite_ci user
+            # Old containers may have raglite/raglite credentials from 15+ hours ago
+            echo "Removing old container to apply new credentials (raglite_ci)..."
+            docker rm -f raglite-postgresql
+
+            # Also remove the volume to clear old database
+            docker volume rm raglite-postgresql-data 2>/dev/null || true
+
+            echo "Creating new PostgreSQL container with CI credentials..."
+            # CI mode expects: port 5433, user raglite_ci, db raglite_ci (see config.py adjust_for_environment)
+            docker run -d \
+              -p 5433:5432 \
+              -e POSTGRES_DB=raglite_ci \
+              -e POSTGRES_USER=raglite_ci \
+              -e POSTGRES_PASSWORD=raglite_ci \
+              --name raglite-postgresql \
+              postgres:16
+            echo "Waiting for initial startup..."
+            sleep 8
           else
             echo "Creating new PostgreSQL container..."
             # CI mode expects: port 5433, user raglite_ci, db raglite_ci (see config.py adjust_for_environment)
@@ -828,20 +843,32 @@ jobs:
 
       - name: Start PostgreSQL for test discovery
         run: |
-          echo "Ensuring PostgreSQL is available for test collection..."
+          echo "Ensuring PostgreSQL is available for test collection with correct credentials..."
 
           # Check if container exists
           if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
-            echo "PostgreSQL container exists - ensuring it's running..."
+            echo "PostgreSQL container exists - checking credentials..."
 
-            # Check if it's actually running
-            if docker ps --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
-              echo "✅ PostgreSQL already running"
-            else
-              echo "Starting PostgreSQL container..."
-              docker start raglite-postgresql
-              sleep 5
-            fi
+            # CRITICAL FIX: Remove container with wrong credentials
+            # This ensures we get fresh container with raglite_ci user
+            # Old containers may have raglite/raglite credentials from 15+ hours ago
+            echo "Removing old container to apply new credentials (raglite_ci)..."
+            docker rm -f raglite-postgresql
+
+            # Also remove the volume to clear old database
+            docker volume rm raglite-postgresql-data 2>/dev/null || true
+
+            echo "Creating new PostgreSQL container with CI credentials..."
+            # CI mode expects: port 5433, user raglite_ci, db raglite_ci (see config.py adjust_for_environment)
+            docker run -d \
+              -p 5433:5432 \
+              -e POSTGRES_DB=raglite_ci \
+              -e POSTGRES_USER=raglite_ci \
+              -e POSTGRES_PASSWORD=raglite_ci \
+              --name raglite-postgresql \
+              postgres:16
+            echo "Waiting for PostgreSQL startup..."
+            sleep 8
           else
             echo "Creating new PostgreSQL container..."
             # CI mode expects: port 5433, user raglite_ci, db raglite_ci (see config.py adjust_for_environment)
@@ -1020,12 +1047,32 @@ jobs:
 
       - name: Start and verify PostgreSQL
         run: |
-          echo "Ensuring fresh PostgreSQL container..."
+          echo "Ensuring fresh PostgreSQL container with correct credentials..."
+
+          # Check if container exists
           if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
-            echo "PostgreSQL container exists - restarting to ensure fresh state..."
-            docker restart raglite-postgresql
-            echo "Waiting for restart to complete..."
-            sleep 5
+            echo "PostgreSQL container exists - checking credentials..."
+
+            # CRITICAL FIX: Remove container with wrong credentials
+            # This ensures we get fresh container with raglite_ci user
+            # Old containers may have raglite/raglite credentials from 15+ hours ago
+            echo "Removing old container to apply new credentials (raglite_ci)..."
+            docker rm -f raglite-postgresql
+
+            # Also remove the volume to clear old database
+            docker volume rm raglite-postgresql-data 2>/dev/null || true
+
+            echo "Creating new PostgreSQL container with CI credentials..."
+            # CI mode expects: port 5433, user raglite_ci, db raglite_ci (see config.py adjust_for_environment)
+            docker run -d \
+              -p 5433:5432 \
+              -e POSTGRES_DB=raglite_ci \
+              -e POSTGRES_USER=raglite_ci \
+              -e POSTGRES_PASSWORD=raglite_ci \
+              --name raglite-postgresql \
+              postgres:16
+            echo "Waiting for initial startup..."
+            sleep 8
           else
             echo "Creating new PostgreSQL container..."
             # CI mode expects: port 5433, user raglite_ci, db raglite_ci (see config.py adjust_for_environment)
@@ -1039,6 +1086,7 @@ jobs:
             echo "Waiting for initial startup..."
             sleep 8
           fi
+
           echo "✅ PostgreSQL container refreshed"
 
       - name: Initialize Qdrant collection
