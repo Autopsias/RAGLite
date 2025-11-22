@@ -308,11 +308,12 @@ jobs:
             sleep 5
           else
             echo "Creating new PostgreSQL container..."
+            # CI mode expects: port 5433, user raglite_ci, db raglite_ci (see config.py adjust_for_environment)
             docker run -d \
-              -p 5432:5432 \
-              -e POSTGRES_DB=raglite \
-              -e POSTGRES_USER=raglite \
-              -e POSTGRES_PASSWORD=raglite \
+              -p 5433:5432 \
+              -e POSTGRES_DB=raglite_ci \
+              -e POSTGRES_USER=raglite_ci \
+              -e POSTGRES_PASSWORD=raglite_ci \
               --name raglite-postgresql \
               postgres:16
             echo "Waiting for initial startup..."
@@ -337,30 +338,30 @@ jobs:
           RETRY_COUNT=0
 
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            # Try to connect using docker exec if psql not available
+            # Try to connect using docker exec if psql not available (CI mode: user raglite_ci)
             if [ "$USE_DOCKER_EXEC" = true ]; then
-              if docker exec raglite-postgresql psql -U raglite -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+              if docker exec raglite-postgresql psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
                 echo "✅ PostgreSQL is available (via docker exec)"
 
-                # Create raglite database if missing
-                docker exec raglite-postgresql psql -U raglite -d postgres -c "SELECT 1 FROM pg_database WHERE datname='raglite'" | grep -q 1 || \
-                  docker exec raglite-postgresql psql -U raglite -d postgres -c "CREATE DATABASE raglite" > /dev/null 2>&1
+                # Create raglite_ci database if missing
+                docker exec raglite-postgresql psql -U raglite_ci -d postgres -c "SELECT 1 FROM pg_database WHERE datname='raglite_ci'" | grep -q 1 || \
+                  docker exec raglite-postgresql psql -U raglite_ci -d postgres -c "CREATE DATABASE raglite_ci" > /dev/null 2>&1
 
-                echo "✅ Database 'raglite' ready"
+                echo "✅ Database 'raglite_ci' ready"
                 exit 0
               fi
             else
-              # Try to connect using local psql
-              if PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d postgres -c "SELECT 1" > /dev/null 2>&1; then
-                echo "✅ PostgreSQL is available at localhost:5432"
+              # Try to connect using local psql (CI mode: port 5433, user raglite_ci)
+              if PGPASSWORD=raglite_ci psql -h localhost -p 5433 -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+                echo "✅ PostgreSQL is available at localhost:5433"
 
-                # Verify raglite database exists, create if missing
-                if PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d raglite -c "SELECT 1" > /dev/null 2>&1; then
-                  echo "✅ Database 'raglite' is accessible"
+                # Verify raglite_ci database exists, create if missing
+                if PGPASSWORD=raglite_ci psql -h localhost -p 5433 -U raglite_ci -d raglite_ci -c "SELECT 1" > /dev/null 2>&1; then
+                  echo "✅ Database 'raglite_ci' is accessible"
                   exit 0
                 else
-                  echo "⚠️  Creating database 'raglite'..."
-                  PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d postgres -c "CREATE DATABASE raglite" 2>&1 | grep -v "already exists" || true
+                  echo "⚠️  Creating database 'raglite_ci'..."
+                  PGPASSWORD=raglite_ci psql -h localhost -p 5433 -U raglite_ci -d postgres -c "CREATE DATABASE raglite_ci" 2>&1 | grep -v "already exists" || true
                   sleep 1
                 fi
               fi
@@ -402,10 +403,10 @@ jobs:
           QDRANT_HOST: localhost
           QDRANT_PORT: 6333
           POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DB: raglite
-          POSTGRES_USER: raglite
-          POSTGRES_PASSWORD: raglite
+          POSTGRES_PORT: 5433
+          POSTGRES_DB: raglite_ci
+          POSTGRES_USER: raglite_ci
+          POSTGRES_PASSWORD: raglite_ci
           TEST_USE_FULL_PDF: "false"
         run: |
           source ci-venv/bin/activate
@@ -618,7 +619,8 @@ jobs:
           MAX_RETRIES=30
           RETRY_COUNT=0
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            if docker exec raglite-postgresql psql -U raglite -d raglite -c "SELECT 1" > /dev/null 2>&1; then
+            # CI mode expects: user raglite_ci, db raglite_ci
+            if docker exec raglite-postgresql psql -U raglite_ci -d raglite_ci -c "SELECT 1" > /dev/null 2>&1; then
               echo "✅ PostgreSQL is available"
               exit 0
             fi
@@ -634,10 +636,10 @@ jobs:
           QDRANT_HOST: localhost
           QDRANT_PORT: 6333
           POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DB: raglite
-          POSTGRES_USER: raglite
-          POSTGRES_PASSWORD: raglite
+          POSTGRES_PORT: 5433
+          POSTGRES_DB: raglite_ci
+          POSTGRES_USER: raglite_ci
+          POSTGRES_PASSWORD: raglite_ci
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           source ci-venv/bin/activate
@@ -842,11 +844,12 @@ jobs:
             fi
           else
             echo "Creating new PostgreSQL container..."
+            # CI mode expects: port 5433, user raglite_ci, db raglite_ci (see config.py adjust_for_environment)
             docker run -d \
-              -p 5432:5432 \
-              -e POSTGRES_DB=raglite \
-              -e POSTGRES_USER=raglite \
-              -e POSTGRES_PASSWORD=raglite \
+              -p 5433:5432 \
+              -e POSTGRES_DB=raglite_ci \
+              -e POSTGRES_USER=raglite_ci \
+              -e POSTGRES_PASSWORD=raglite_ci \
               --name raglite-postgresql \
               postgres:16
             echo "Waiting for PostgreSQL startup..."
@@ -1025,11 +1028,12 @@ jobs:
             sleep 5
           else
             echo "Creating new PostgreSQL container..."
+            # CI mode expects: port 5433, user raglite_ci, db raglite_ci (see config.py adjust_for_environment)
             docker run -d \
-              -p 5432:5432 \
-              -e POSTGRES_DB=raglite \
-              -e POSTGRES_USER=raglite \
-              -e POSTGRES_PASSWORD=raglite \
+              -p 5433:5432 \
+              -e POSTGRES_DB=raglite_ci \
+              -e POSTGRES_USER=raglite_ci \
+              -e POSTGRES_PASSWORD=raglite_ci \
               --name raglite-postgresql \
               postgres:16
             echo "Waiting for initial startup..."
@@ -1056,10 +1060,10 @@ jobs:
           QDRANT_HOST: localhost
           QDRANT_PORT: 6333
           POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DB: raglite
-          POSTGRES_USER: raglite
-          POSTGRES_PASSWORD: raglite
+          POSTGRES_PORT: 5433
+          POSTGRES_DB: raglite_ci
+          POSTGRES_USER: raglite_ci
+          POSTGRES_PASSWORD: raglite_ci
           TEST_USE_FULL_PDF: "false"
         run: |
           source ci-venv/bin/activate
