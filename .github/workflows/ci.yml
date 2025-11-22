@@ -322,26 +322,17 @@ jobs:
               docker volume rm raglite-postgresql-data 2>/dev/null || true
 
               # CRITICAL FIX: Wait for Docker to release port binding (timing issue fix)
-              echo "Waiting for port 5433 to be released..."
-              sleep 3
+              # Docker takes several seconds to fully release port bindings after container removal
+              echo "Waiting for Docker networking cleanup (port 5433)..."
+              sleep 10
 
-              # Verify port is actually free (lsof may not be available in GitHub runners)
-              MAX_PORT_RETRIES=5
-              PORT_RETRY_COUNT=0
-              while [ $PORT_RETRY_COUNT -lt $MAX_PORT_RETRIES ]; do
-                if lsof -i:5433 >/dev/null 2>&1; then
-                  echo "Port 5433 still in use (attempt $((PORT_RETRY_COUNT + 1))/$MAX_PORT_RETRIES), waiting..."
-                  sleep 2
-                  PORT_RETRY_COUNT=$((PORT_RETRY_COUNT + 1))
-                else
-                  echo "✅ Port 5433 is free, proceeding with container creation"
-                  break
-                fi
-              done
-
-              if [ $PORT_RETRY_COUNT -eq $MAX_PORT_RETRIES ]; then
-                echo "⚠️  Port check completed, attempting creation..."
+              # Double-check container is truly gone
+              if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+                echo "⚠️  Container still exists after removal, waiting 5 more seconds..."
+                sleep 5
               fi
+
+              echo "✅ Ready to create new container"
 
               docker run -d \
                 -p 5433:5432 \
@@ -897,26 +888,17 @@ jobs:
               docker volume rm raglite-postgresql-data 2>/dev/null || true
 
               # CRITICAL FIX: Wait for Docker to release port binding (timing issue fix)
-              echo "Waiting for port 5433 to be released..."
-              sleep 3
+              # Docker takes several seconds to fully release port bindings after container removal
+              echo "Waiting for Docker networking cleanup (port 5433)..."
+              sleep 10
 
-              # Verify port is actually free (lsof may not be available in GitHub runners)
-              MAX_PORT_RETRIES=5
-              PORT_RETRY_COUNT=0
-              while [ $PORT_RETRY_COUNT -lt $MAX_PORT_RETRIES ]; do
-                if lsof -i:5433 >/dev/null 2>&1; then
-                  echo "Port 5433 still in use (attempt $((PORT_RETRY_COUNT + 1))/$MAX_PORT_RETRIES), waiting..."
-                  sleep 2
-                  PORT_RETRY_COUNT=$((PORT_RETRY_COUNT + 1))
-                else
-                  echo "✅ Port 5433 is free, proceeding with container creation"
-                  break
-                fi
-              done
-
-              if [ $PORT_RETRY_COUNT -eq $MAX_PORT_RETRIES ]; then
-                echo "⚠️  Port check completed, attempting creation..."
+              # Double-check container is truly gone
+              if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+                echo "⚠️  Container still exists after removal, waiting 5 more seconds..."
+                sleep 5
               fi
+
+              echo "✅ Ready to create new container"
 
               docker run -d \
                 -p 5433:5432 \
@@ -1128,26 +1110,17 @@ jobs:
               docker volume rm raglite-postgresql-data 2>/dev/null || true
 
               # CRITICAL FIX: Wait for Docker to release port binding (timing issue fix)
-              echo "Waiting for port 5433 to be released..."
-              sleep 3
+              # Docker takes several seconds to fully release port bindings after container removal
+              echo "Waiting for Docker networking cleanup (port 5433)..."
+              sleep 10
 
-              # Verify port is actually free (lsof may not be available in GitHub runners)
-              MAX_PORT_RETRIES=5
-              PORT_RETRY_COUNT=0
-              while [ $PORT_RETRY_COUNT -lt $MAX_PORT_RETRIES ]; do
-                if lsof -i:5433 >/dev/null 2>&1; then
-                  echo "Port 5433 still in use (attempt $((PORT_RETRY_COUNT + 1))/$MAX_PORT_RETRIES), waiting..."
-                  sleep 2
-                  PORT_RETRY_COUNT=$((PORT_RETRY_COUNT + 1))
-                else
-                  echo "✅ Port 5433 is free, proceeding with container creation"
-                  break
-                fi
-              done
-
-              if [ $PORT_RETRY_COUNT -eq $MAX_PORT_RETRIES ]; then
-                echo "⚠️  Port check completed, attempting creation..."
+              # Double-check container is truly gone
+              if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+                echo "⚠️  Container still exists after removal, waiting 5 more seconds..."
+                sleep 5
               fi
+
+              echo "✅ Ready to create new container"
 
               docker run -d \
                 -p 5433:5432 \
