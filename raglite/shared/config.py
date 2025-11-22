@@ -112,7 +112,7 @@ class Settings(BaseSettings):
             if self.postgres_user == "raglite":
                 user_suffix = "_ci" if is_ci else "_test"
                 self.postgres_user = f"raglite{user_suffix}"
-            if self.postgres_password == "raglite":
+            if self.postgres_password == "raglite":  # nosec B105
                 pass_suffix = "_ci" if is_ci else "_test"
                 self.postgres_password = f"raglite{pass_suffix}"
         return self

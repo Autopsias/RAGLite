@@ -274,44 +274,29 @@ LIMIT 50;"""
         ].message.content = '{"metric_category": "Revenue", "time_period": "Q3 2025"}'
         return mock_response
 
-    # Patch ALL possible import paths where get_mistral_client is used
-    # This ensures comprehensive protection across the entire codebase
-    patches = [
-        patch("raglite.shared.clients.get_mistral_client"),
-        patch("raglite.retrieval.query_classifier.get_mistral_client"),
-        patch("raglite.ingestion.document_ingestion.get_mistral_client"),
-        patch("raglite.ingestion.contextual.get_mistral_client"),
-        patch("raglite.agentic.agents.synthesis_agent.get_mistral_client"),
-    ]
+    # CRITICAL APPROACH CHANGE (2025-11-22):
+    # Instead of patching get_mistral_client() everywhere, patch the Mistral class itself.
+    # This allows test-specific mocks to override while still preventing real API calls.
+    #
+    # Why this works better:
+    # 1. Tests can mock raglite.shared.clients.Mistral for specific behavior
+    # 2. Session mock catches ANY instantiation of Mistral class
+    # 3. No conflict between session-scoped and test-scoped mocks
 
-    # Start all patches
-    started_patches = []
-    for p in patches:
-        try:
-            started_patches.append(p)
-            p.start()
-        except Exception:
-            # Module may not exist yet - safe to skip
-            pass
+    # Import AsyncMock for async Mistral client methods
+    from unittest.mock import AsyncMock
 
-    # Configure all mocks with realistic responses
-    for _p in started_patches:
-        try:
-            mock_client = MagicMock()
-            # Use generate_mock_sql as default (most common use case)
-            mock_client.chat.complete.side_effect = generate_mock_sql
-            # Note: If we need different behavior for metadata, tests can override
-        except Exception:
-            pass
+    # Create a single shared mock client with both sync and async methods configured
+    mock_client_instance = MagicMock()
+    # Sync method for SQL generation (query classifier)
+    mock_client_instance.chat.complete.side_effect = generate_mock_sql
+    # Async method for metadata extraction (embedding generation)
+    mock_client_instance.chat.complete_async = AsyncMock(side_effect=generate_mock_metadata)
 
-    yield
-
-    # Cleanup all patches at session end
-    for _p in started_patches:
-        try:
-            p.stop()
-        except Exception:
-            pass
+    # Patch the Mistral class constructor to return our mock
+    with patch("raglite.shared.clients.Mistral") as mock_mistral_class:
+        mock_mistral_class.return_value = mock_client_instance
+        yield
 
 
 @pytest.fixture
