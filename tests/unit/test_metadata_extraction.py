@@ -96,9 +96,8 @@ class TestExtractChunkMetadata:
     async def test_metadata_extraction_success(self):
         """Test successful metadata extraction using session mock.
 
-        SIMPLIFIED FIX: Removed conflicting test-specific mocks that were fighting with
-        session-scoped mock_mistral_api_globally. Session mock prevents real API calls
-        and returns realistic metadata structure.
+        FIXED: Patch individual settings attributes (not entire object) to pass truthiness check.
+        Session mock prevents real API calls and returns realistic metadata structure.
         """
         test_text = """
         Financial Report Q3 2024
@@ -108,11 +107,17 @@ class TestExtractChunkMetadata:
         This report covers the third quarter of fiscal year 2024...
         """
 
-        # Patch only settings to provide API key (session mock handles client creation)
-        with patch("raglite.ingestion.embedding_generation.settings") as mock_settings:
-            mock_settings.mistral_api_key = "test-key-123"
-            mock_settings.metadata_extraction_model = "mistral-small-latest"
-
+        # Patch settings attributes directly (not the entire settings object)
+        # This ensures `if not settings.mistral_api_key:` truthiness check works correctly
+        with (
+            patch(
+                "raglite.ingestion.embedding_generation.settings.mistral_api_key", "test-key-123"
+            ),
+            patch(
+                "raglite.ingestion.embedding_generation.settings.metadata_extraction_model",
+                "mistral-small-latest",
+            ),
+        ):
             # Session mock is already active (autouse=True) and prevents real API calls
             # It returns: {"metric_category": "Revenue", "time_period": "Q3 2025"}
             result = await extract_chunk_metadata(test_text, "test_chunk_0")
