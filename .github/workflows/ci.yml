@@ -295,35 +295,40 @@ jobs:
 
       - name: Start and verify PostgreSQL
         run: |
-          echo "Ensuring fresh PostgreSQL container with correct credentials..."
+          echo "Ensuring PostgreSQL container with correct credentials..."
 
           # Check if container exists
           if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
-            echo "PostgreSQL container exists - checking credentials..."
+            echo "PostgreSQL container exists - verifying credentials..."
 
-            # CRITICAL FIX: Remove container with wrong credentials
-            # This ensures we get fresh container with raglite_ci user
-            # Old containers may have raglite/raglite credentials from 15+ hours ago
-            echo "Removing old container to apply new credentials (raglite_ci)..."
-            docker rm -f raglite-postgresql
+            # Check if container has correct user (raglite_ci)
+            # Try connecting with raglite_ci credentials
+            if docker exec raglite-postgresql psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+              echo "✅ Container has correct credentials (raglite_ci) - reusing existing container"
 
-            # Also remove the volume to clear old database
-            docker volume rm raglite-postgresql-data 2>/dev/null || true
+              # Ensure it's running
+              if ! docker ps --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+                echo "Container stopped - starting it..."
+                docker start raglite-postgresql
+                sleep 5
+              fi
+            else
+              echo "⚠️  Container has wrong credentials - recreating with raglite_ci..."
+              docker rm -f raglite-postgresql
+              docker volume rm raglite-postgresql-data 2>/dev/null || true
 
-            echo "Creating new PostgreSQL container with CI credentials..."
-            # CI mode expects: port 5433, user raglite_ci, db raglite_ci (see config.py adjust_for_environment)
-            docker run -d \
-              -p 5433:5432 \
-              -e POSTGRES_DB=raglite_ci \
-              -e POSTGRES_USER=raglite_ci \
-              -e POSTGRES_PASSWORD=raglite_ci \
-              --name raglite-postgresql \
-              postgres:16
-            echo "Waiting for initial startup..."
-            sleep 8
+              docker run -d \
+                -p 5433:5432 \
+                -e POSTGRES_DB=raglite_ci \
+                -e POSTGRES_USER=raglite_ci \
+                -e POSTGRES_PASSWORD=raglite_ci \
+                --name raglite-postgresql \
+                postgres:16
+              echo "Waiting for initial startup..."
+              sleep 8
+            fi
           else
             echo "Creating new PostgreSQL container..."
-            # CI mode expects: port 5433, user raglite_ci, db raglite_ci (see config.py adjust_for_environment)
             docker run -d \
               -p 5433:5432 \
               -e POSTGRES_DB=raglite_ci \
@@ -335,7 +340,7 @@ jobs:
             sleep 8
           fi
 
-          echo "✅ PostgreSQL container refreshed"
+          echo "✅ PostgreSQL container ready"
 
           # Wait for PostgreSQL to be ready (max 30 seconds)
           echo "Waiting for PostgreSQL to be ready..."
@@ -843,35 +848,40 @@ jobs:
 
       - name: Start PostgreSQL for test discovery
         run: |
-          echo "Ensuring PostgreSQL is available for test collection with correct credentials..."
+          echo "Ensuring PostgreSQL container with correct credentials..."
 
           # Check if container exists
           if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
-            echo "PostgreSQL container exists - checking credentials..."
+            echo "PostgreSQL container exists - verifying credentials..."
 
-            # CRITICAL FIX: Remove container with wrong credentials
-            # This ensures we get fresh container with raglite_ci user
-            # Old containers may have raglite/raglite credentials from 15+ hours ago
-            echo "Removing old container to apply new credentials (raglite_ci)..."
-            docker rm -f raglite-postgresql
+            # Check if container has correct user (raglite_ci)
+            # Try connecting with raglite_ci credentials
+            if docker exec raglite-postgresql psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+              echo "✅ Container has correct credentials (raglite_ci) - reusing existing container"
 
-            # Also remove the volume to clear old database
-            docker volume rm raglite-postgresql-data 2>/dev/null || true
+              # Ensure it's running
+              if ! docker ps --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+                echo "Container stopped - starting it..."
+                docker start raglite-postgresql
+                sleep 5
+              fi
+            else
+              echo "⚠️  Container has wrong credentials - recreating with raglite_ci..."
+              docker rm -f raglite-postgresql
+              docker volume rm raglite-postgresql-data 2>/dev/null || true
 
-            echo "Creating new PostgreSQL container with CI credentials..."
-            # CI mode expects: port 5433, user raglite_ci, db raglite_ci (see config.py adjust_for_environment)
-            docker run -d \
-              -p 5433:5432 \
-              -e POSTGRES_DB=raglite_ci \
-              -e POSTGRES_USER=raglite_ci \
-              -e POSTGRES_PASSWORD=raglite_ci \
-              --name raglite-postgresql \
-              postgres:16
-            echo "Waiting for PostgreSQL startup..."
-            sleep 8
+              docker run -d \
+                -p 5433:5432 \
+                -e POSTGRES_DB=raglite_ci \
+                -e POSTGRES_USER=raglite_ci \
+                -e POSTGRES_PASSWORD=raglite_ci \
+                --name raglite-postgresql \
+                postgres:16
+              echo "Waiting for PostgreSQL startup..."
+              sleep 8
+            fi
           else
             echo "Creating new PostgreSQL container..."
-            # CI mode expects: port 5433, user raglite_ci, db raglite_ci (see config.py adjust_for_environment)
             docker run -d \
               -p 5433:5432 \
               -e POSTGRES_DB=raglite_ci \
@@ -1047,35 +1057,40 @@ jobs:
 
       - name: Start and verify PostgreSQL
         run: |
-          echo "Ensuring fresh PostgreSQL container with correct credentials..."
+          echo "Ensuring PostgreSQL container with correct credentials..."
 
           # Check if container exists
           if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
-            echo "PostgreSQL container exists - checking credentials..."
+            echo "PostgreSQL container exists - verifying credentials..."
 
-            # CRITICAL FIX: Remove container with wrong credentials
-            # This ensures we get fresh container with raglite_ci user
-            # Old containers may have raglite/raglite credentials from 15+ hours ago
-            echo "Removing old container to apply new credentials (raglite_ci)..."
-            docker rm -f raglite-postgresql
+            # Check if container has correct user (raglite_ci)
+            # Try connecting with raglite_ci credentials
+            if docker exec raglite-postgresql psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+              echo "✅ Container has correct credentials (raglite_ci) - reusing existing container"
 
-            # Also remove the volume to clear old database
-            docker volume rm raglite-postgresql-data 2>/dev/null || true
+              # Ensure it's running
+              if ! docker ps --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+                echo "Container stopped - starting it..."
+                docker start raglite-postgresql
+                sleep 5
+              fi
+            else
+              echo "⚠️  Container has wrong credentials - recreating with raglite_ci..."
+              docker rm -f raglite-postgresql
+              docker volume rm raglite-postgresql-data 2>/dev/null || true
 
-            echo "Creating new PostgreSQL container with CI credentials..."
-            # CI mode expects: port 5433, user raglite_ci, db raglite_ci (see config.py adjust_for_environment)
-            docker run -d \
-              -p 5433:5432 \
-              -e POSTGRES_DB=raglite_ci \
-              -e POSTGRES_USER=raglite_ci \
-              -e POSTGRES_PASSWORD=raglite_ci \
-              --name raglite-postgresql \
-              postgres:16
-            echo "Waiting for initial startup..."
-            sleep 8
+              docker run -d \
+                -p 5433:5432 \
+                -e POSTGRES_DB=raglite_ci \
+                -e POSTGRES_USER=raglite_ci \
+                -e POSTGRES_PASSWORD=raglite_ci \
+                --name raglite-postgresql \
+                postgres:16
+              echo "Waiting for initial startup..."
+              sleep 8
+            fi
           else
             echo "Creating new PostgreSQL container..."
-            # CI mode expects: port 5433, user raglite_ci, db raglite_ci (see config.py adjust_for_environment)
             docker run -d \
               -p 5433:5432 \
               -e POSTGRES_DB=raglite_ci \
@@ -1087,7 +1102,7 @@ jobs:
             sleep 8
           fi
 
-          echo "✅ PostgreSQL container refreshed"
+          echo "✅ PostgreSQL container ready"
 
       - name: Initialize Qdrant collection
         run: |
