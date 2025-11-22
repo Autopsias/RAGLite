@@ -297,49 +297,44 @@ jobs:
           echo "To start: docker run -d -p 6333:6333 --name raglite-qdrant qdrant/qdrant:v1.15.0"
           exit 1
 
-      - name: Start and verify PostgreSQL
+      - name: Start and verify PostgreSQL (Integration)
         run: |
-          echo "Ensuring PostgreSQL container with correct credentials..."
+          # ROOT CAUSE #3 FIX: Use unique container name per job to avoid parallel job race condition
+          # Integration Tests: raglite-postgresql-integration on port 5433
+          CONTAINER_NAME="raglite-postgresql-integration"
+          CONTAINER_PORT="5433"
+
+          echo "Ensuring PostgreSQL container '$CONTAINER_NAME' with correct credentials..."
 
           # Check if container exists
-          if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+          if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
             echo "PostgreSQL container exists - verifying credentials..."
 
             # Check if container has correct user (raglite_ci)
-            # Try connecting with raglite_ci credentials
-            if docker exec raglite-postgresql psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+            if docker exec $CONTAINER_NAME psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
               echo "✅ Container has correct credentials (raglite_ci) - reusing existing container"
 
               # Ensure it's running
-              if ! docker ps --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+              if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
                 echo "Container stopped - starting it..."
-                docker start raglite-postgresql
+                docker start $CONTAINER_NAME
                 sleep 5
               fi
             else
               echo "⚠️  Container has wrong credentials - recreating with raglite_ci..."
-              docker rm -f raglite-postgresql
-              docker volume rm raglite-postgresql-data 2>/dev/null || true
+              docker rm -f $CONTAINER_NAME
+              docker volume rm ${CONTAINER_NAME}-data 2>/dev/null || true
 
-              # CRITICAL FIX: Wait for Docker to release port binding (timing issue fix)
-              # Docker takes several seconds to fully release port bindings after container removal
-              echo "Waiting for Docker networking cleanup (port 5433)..."
-              sleep 10
-
-              # Double-check container is truly gone
-              if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
-                echo "⚠️  Container still exists after removal, waiting 5 more seconds..."
-                sleep 5
-              fi
-
-              echo "✅ Ready to create new container"
+              # Wait for Docker to release port binding
+              echo "Waiting for Docker networking cleanup (port $CONTAINER_PORT)..."
+              sleep 5
 
               docker run -d \
-                -p 5433:5432 \
+                -p ${CONTAINER_PORT}:5432 \
                 -e POSTGRES_DB=raglite_ci \
                 -e POSTGRES_USER=raglite_ci \
                 -e POSTGRES_PASSWORD=raglite_ci \
-                --name raglite-postgresql \
+                --name $CONTAINER_NAME \
                 postgres:16
               echo "Waiting for initial startup..."
               sleep 8
@@ -347,11 +342,11 @@ jobs:
           else
             echo "Creating new PostgreSQL container..."
             docker run -d \
-              -p 5433:5432 \
+              -p ${CONTAINER_PORT}:5432 \
               -e POSTGRES_DB=raglite_ci \
               -e POSTGRES_USER=raglite_ci \
               -e POSTGRES_PASSWORD=raglite_ci \
-              --name raglite-postgresql \
+              --name $CONTAINER_NAME \
               postgres:16
             echo "Waiting for initial startup..."
             sleep 8
@@ -375,30 +370,30 @@ jobs:
           RETRY_COUNT=0
 
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            # Try to connect using docker exec if psql not available (CI mode: user raglite_ci)
+            # Try to connect using docker exec if psql not available
             if [ "$USE_DOCKER_EXEC" = true ]; then
-              if docker exec raglite-postgresql psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+              if docker exec $CONTAINER_NAME psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
                 echo "✅ PostgreSQL is available (via docker exec)"
 
                 # Create raglite_ci database if missing
-                docker exec raglite-postgresql psql -U raglite_ci -d postgres -c "SELECT 1 FROM pg_database WHERE datname='raglite_ci'" | grep -q 1 || \
-                  docker exec raglite-postgresql psql -U raglite_ci -d postgres -c "CREATE DATABASE raglite_ci" > /dev/null 2>&1
+                docker exec $CONTAINER_NAME psql -U raglite_ci -d postgres -c "SELECT 1 FROM pg_database WHERE datname='raglite_ci'" | grep -q 1 || \
+                  docker exec $CONTAINER_NAME psql -U raglite_ci -d postgres -c "CREATE DATABASE raglite_ci" > /dev/null 2>&1
 
                 echo "✅ Database 'raglite_ci' ready"
                 exit 0
               fi
             else
-              # Try to connect using local psql (CI mode: port 5433, user raglite_ci)
-              if PGPASSWORD=raglite_ci psql -h localhost -p 5433 -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
-                echo "✅ PostgreSQL is available at localhost:5433"
+              # Try to connect using local psql
+              if PGPASSWORD=raglite_ci psql -h localhost -p $CONTAINER_PORT -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+                echo "✅ PostgreSQL is available at localhost:$CONTAINER_PORT"
 
                 # Verify raglite_ci database exists, create if missing
-                if PGPASSWORD=raglite_ci psql -h localhost -p 5433 -U raglite_ci -d raglite_ci -c "SELECT 1" > /dev/null 2>&1; then
+                if PGPASSWORD=raglite_ci psql -h localhost -p $CONTAINER_PORT -U raglite_ci -d raglite_ci -c "SELECT 1" > /dev/null 2>&1; then
                   echo "✅ Database 'raglite_ci' is accessible"
                   exit 0
                 else
                   echo "⚠️  Creating database 'raglite_ci'..."
-                  PGPASSWORD=raglite_ci psql -h localhost -p 5433 -U raglite_ci -d postgres -c "CREATE DATABASE raglite_ci" 2>&1 | grep -v "already exists" || true
+                  PGPASSWORD=raglite_ci psql -h localhost -p $CONTAINER_PORT -U raglite_ci -d postgres -c "CREATE DATABASE raglite_ci" 2>&1 | grep -v "already exists" || true
                   sleep 1
                 fi
               fi
@@ -414,11 +409,11 @@ jobs:
           echo "❌ PostgreSQL not available after ${MAX_RETRIES}s"
           echo ""
           echo "Debug information:"
-          echo "- Container status: $(docker ps -a --filter name=raglite-postgresql --format '{{.Status}}')"
+          echo "- Container status: $(docker ps -a --filter name=$CONTAINER_NAME --format '{{.Status}}')"
           echo "- psql available: $(command -v psql &> /dev/null && echo 'yes' || echo 'no')"
           echo ""
           echo "Container logs (last 50 lines):"
-          docker logs raglite-postgresql --tail 50
+          docker logs $CONTAINER_NAME --tail 50
           exit 1
 
       - name: Initialize Qdrant collection
@@ -652,12 +647,15 @@ jobs:
 
       - name: Verify PostgreSQL is available
         run: |
-          echo "Checking persistent PostgreSQL instance..."
+          # Use same container as Integration Tests job
+          CONTAINER_NAME="raglite-postgresql-integration"
+
+          echo "Checking PostgreSQL instance ($CONTAINER_NAME)..."
           MAX_RETRIES=30
           RETRY_COUNT=0
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             # CI mode expects: user raglite_ci, db raglite_ci
-            if docker exec raglite-postgresql psql -U raglite_ci -d raglite_ci -c "SELECT 1" > /dev/null 2>&1; then
+            if docker exec $CONTAINER_NAME psql -U raglite_ci -d raglite_ci -c "SELECT 1" > /dev/null 2>&1; then
               echo "✅ PostgreSQL is available"
               exit 0
             fi
@@ -865,47 +863,42 @@ jobs:
 
       - name: Start PostgreSQL for test discovery
         run: |
-          echo "Ensuring PostgreSQL container with correct credentials..."
+          # ROOT CAUSE #3 FIX: Use unique container name per job to avoid parallel job race condition
+          # Test Discovery: raglite-postgresql-discovery on port 5434
+          CONTAINER_NAME="raglite-postgresql-discovery"
+          CONTAINER_PORT="5434"
+
+          echo "Ensuring PostgreSQL container '$CONTAINER_NAME' with correct credentials..."
 
           # Check if container exists
-          if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+          if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
             echo "PostgreSQL container exists - verifying credentials..."
 
             # Check if container has correct user (raglite_ci)
-            # Try connecting with raglite_ci credentials
-            if docker exec raglite-postgresql psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+            if docker exec $CONTAINER_NAME psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
               echo "✅ Container has correct credentials (raglite_ci) - reusing existing container"
 
               # Ensure it's running
-              if ! docker ps --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+              if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
                 echo "Container stopped - starting it..."
-                docker start raglite-postgresql
+                docker start $CONTAINER_NAME
                 sleep 5
               fi
             else
               echo "⚠️  Container has wrong credentials - recreating with raglite_ci..."
-              docker rm -f raglite-postgresql
-              docker volume rm raglite-postgresql-data 2>/dev/null || true
+              docker rm -f $CONTAINER_NAME
+              docker volume rm ${CONTAINER_NAME}-data 2>/dev/null || true
 
-              # CRITICAL FIX: Wait for Docker to release port binding (timing issue fix)
-              # Docker takes several seconds to fully release port bindings after container removal
-              echo "Waiting for Docker networking cleanup (port 5433)..."
-              sleep 10
-
-              # Double-check container is truly gone
-              if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
-                echo "⚠️  Container still exists after removal, waiting 5 more seconds..."
-                sleep 5
-              fi
-
-              echo "✅ Ready to create new container"
+              # Wait for Docker to release port binding
+              echo "Waiting for Docker networking cleanup (port $CONTAINER_PORT)..."
+              sleep 5
 
               docker run -d \
-                -p 5433:5432 \
+                -p ${CONTAINER_PORT}:5432 \
                 -e POSTGRES_DB=raglite_ci \
                 -e POSTGRES_USER=raglite_ci \
                 -e POSTGRES_PASSWORD=raglite_ci \
-                --name raglite-postgresql \
+                --name $CONTAINER_NAME \
                 postgres:16
               echo "Waiting for PostgreSQL startup..."
               sleep 8
@@ -913,11 +906,11 @@ jobs:
           else
             echo "Creating new PostgreSQL container..."
             docker run -d \
-              -p 5433:5432 \
+              -p ${CONTAINER_PORT}:5432 \
               -e POSTGRES_DB=raglite_ci \
               -e POSTGRES_USER=raglite_ci \
               -e POSTGRES_PASSWORD=raglite_ci \
-              --name raglite-postgresql \
+              --name $CONTAINER_NAME \
               postgres:16
             echo "Waiting for PostgreSQL startup..."
             sleep 8
@@ -1085,49 +1078,44 @@ jobs:
           echo "❌ Qdrant not available after ${MAX_RETRIES}s"
           exit 1
 
-      - name: Start and verify PostgreSQL
+      - name: Start and verify PostgreSQL (Burn-in)
         run: |
-          echo "Ensuring PostgreSQL container with correct credentials..."
+          # ROOT CAUSE #3 FIX: Use unique container name per job to avoid parallel job race condition
+          # Burn-in Tests: raglite-postgresql-burnin on port 5435
+          CONTAINER_NAME="raglite-postgresql-burnin"
+          CONTAINER_PORT="5435"
+
+          echo "Ensuring PostgreSQL container '$CONTAINER_NAME' with correct credentials..."
 
           # Check if container exists
-          if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+          if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
             echo "PostgreSQL container exists - verifying credentials..."
 
             # Check if container has correct user (raglite_ci)
-            # Try connecting with raglite_ci credentials
-            if docker exec raglite-postgresql psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+            if docker exec $CONTAINER_NAME psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
               echo "✅ Container has correct credentials (raglite_ci) - reusing existing container"
 
               # Ensure it's running
-              if ! docker ps --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
+              if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
                 echo "Container stopped - starting it..."
-                docker start raglite-postgresql
+                docker start $CONTAINER_NAME
                 sleep 5
               fi
             else
               echo "⚠️  Container has wrong credentials - recreating with raglite_ci..."
-              docker rm -f raglite-postgresql
-              docker volume rm raglite-postgresql-data 2>/dev/null || true
+              docker rm -f $CONTAINER_NAME
+              docker volume rm ${CONTAINER_NAME}-data 2>/dev/null || true
 
-              # CRITICAL FIX: Wait for Docker to release port binding (timing issue fix)
-              # Docker takes several seconds to fully release port bindings after container removal
-              echo "Waiting for Docker networking cleanup (port 5433)..."
-              sleep 10
-
-              # Double-check container is truly gone
-              if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
-                echo "⚠️  Container still exists after removal, waiting 5 more seconds..."
-                sleep 5
-              fi
-
-              echo "✅ Ready to create new container"
+              # Wait for Docker to release port binding
+              echo "Waiting for Docker networking cleanup (port $CONTAINER_PORT)..."
+              sleep 5
 
               docker run -d \
-                -p 5433:5432 \
+                -p ${CONTAINER_PORT}:5432 \
                 -e POSTGRES_DB=raglite_ci \
                 -e POSTGRES_USER=raglite_ci \
                 -e POSTGRES_PASSWORD=raglite_ci \
-                --name raglite-postgresql \
+                --name $CONTAINER_NAME \
                 postgres:16
               echo "Waiting for initial startup..."
               sleep 8
@@ -1135,11 +1123,11 @@ jobs:
           else
             echo "Creating new PostgreSQL container..."
             docker run -d \
-              -p 5433:5432 \
+              -p ${CONTAINER_PORT}:5432 \
               -e POSTGRES_DB=raglite_ci \
               -e POSTGRES_USER=raglite_ci \
               -e POSTGRES_PASSWORD=raglite_ci \
-              --name raglite-postgresql \
+              --name $CONTAINER_NAME \
               postgres:16
             echo "Waiting for initial startup..."
             sleep 8
@@ -1166,7 +1154,7 @@ jobs:
           QDRANT_HOST: localhost
           QDRANT_PORT: 6333
           POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5433
+          POSTGRES_PORT: 5435  # Burn-in uses unique port to avoid race condition
           POSTGRES_DB: raglite_ci
           POSTGRES_USER: raglite_ci
           POSTGRES_PASSWORD: raglite_ci
