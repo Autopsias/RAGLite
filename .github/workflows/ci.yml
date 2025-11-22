@@ -321,6 +321,28 @@ jobs:
               docker rm -f raglite-postgresql
               docker volume rm raglite-postgresql-data 2>/dev/null || true
 
+              # CRITICAL FIX: Wait for Docker to release port binding (timing issue fix)
+              echo "Waiting for port 5433 to be released..."
+              sleep 3
+
+              # Verify port is actually free (lsof may not be available in GitHub runners)
+              MAX_PORT_RETRIES=5
+              PORT_RETRY_COUNT=0
+              while [ $PORT_RETRY_COUNT -lt $MAX_PORT_RETRIES ]; do
+                if lsof -i:5433 >/dev/null 2>&1; then
+                  echo "Port 5433 still in use (attempt $((PORT_RETRY_COUNT + 1))/$MAX_PORT_RETRIES), waiting..."
+                  sleep 2
+                  PORT_RETRY_COUNT=$((PORT_RETRY_COUNT + 1))
+                else
+                  echo "✅ Port 5433 is free, proceeding with container creation"
+                  break
+                fi
+              done
+
+              if [ $PORT_RETRY_COUNT -eq $MAX_PORT_RETRIES ]; then
+                echo "⚠️  Port check completed, attempting creation..."
+              fi
+
               docker run -d \
                 -p 5433:5432 \
                 -e POSTGRES_DB=raglite_ci \
@@ -874,6 +896,28 @@ jobs:
               docker rm -f raglite-postgresql
               docker volume rm raglite-postgresql-data 2>/dev/null || true
 
+              # CRITICAL FIX: Wait for Docker to release port binding (timing issue fix)
+              echo "Waiting for port 5433 to be released..."
+              sleep 3
+
+              # Verify port is actually free (lsof may not be available in GitHub runners)
+              MAX_PORT_RETRIES=5
+              PORT_RETRY_COUNT=0
+              while [ $PORT_RETRY_COUNT -lt $MAX_PORT_RETRIES ]; do
+                if lsof -i:5433 >/dev/null 2>&1; then
+                  echo "Port 5433 still in use (attempt $((PORT_RETRY_COUNT + 1))/$MAX_PORT_RETRIES), waiting..."
+                  sleep 2
+                  PORT_RETRY_COUNT=$((PORT_RETRY_COUNT + 1))
+                else
+                  echo "✅ Port 5433 is free, proceeding with container creation"
+                  break
+                fi
+              done
+
+              if [ $PORT_RETRY_COUNT -eq $MAX_PORT_RETRIES ]; then
+                echo "⚠️  Port check completed, attempting creation..."
+              fi
+
               docker run -d \
                 -p 5433:5432 \
                 -e POSTGRES_DB=raglite_ci \
@@ -1082,6 +1126,28 @@ jobs:
               echo "⚠️  Container has wrong credentials - recreating with raglite_ci..."
               docker rm -f raglite-postgresql
               docker volume rm raglite-postgresql-data 2>/dev/null || true
+
+              # CRITICAL FIX: Wait for Docker to release port binding (timing issue fix)
+              echo "Waiting for port 5433 to be released..."
+              sleep 3
+
+              # Verify port is actually free (lsof may not be available in GitHub runners)
+              MAX_PORT_RETRIES=5
+              PORT_RETRY_COUNT=0
+              while [ $PORT_RETRY_COUNT -lt $MAX_PORT_RETRIES ]; do
+                if lsof -i:5433 >/dev/null 2>&1; then
+                  echo "Port 5433 still in use (attempt $((PORT_RETRY_COUNT + 1))/$MAX_PORT_RETRIES), waiting..."
+                  sleep 2
+                  PORT_RETRY_COUNT=$((PORT_RETRY_COUNT + 1))
+                else
+                  echo "✅ Port 5433 is free, proceeding with container creation"
+                  break
+                fi
+              done
+
+              if [ $PORT_RETRY_COUNT -eq $MAX_PORT_RETRIES ]; then
+                echo "⚠️  Port check completed, attempting creation..."
+              fi
 
               docker run -d \
                 -p 5433:5432 \
