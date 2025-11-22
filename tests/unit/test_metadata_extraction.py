@@ -18,8 +18,13 @@ from raglite.shared.models import ExtractedMetadata
 def clear_metadata_cache():
     """Clear metadata cache before each test."""
     _metadata_cache.clear()
+    # Also clear Mistral client cache to ensure fresh mocks in each test
+    import raglite.shared.clients as clients_module
+
+    clients_module._mistral_client = None
     yield
     _metadata_cache.clear()
+    clients_module._mistral_client = None
 
 
 @pytest.fixture
@@ -92,7 +97,6 @@ class TestExtractChunkMetadata:
     @pytest.mark.asyncio
     async def test_metadata_extraction_success(self, mock_mistral_response):
         """Test successful metadata extraction with all fields populated."""
-        pytest.skip("Test needs updating for Mistral API - currently uses outdated OpenAI mocks")
         test_text = """
         Financial Report Q3 2024
         ACME Corporation
@@ -101,13 +105,17 @@ class TestExtractChunkMetadata:
         This report covers the third quarter of fiscal year 2024...
         """
 
-        with patch("raglite.ingestion.pipeline.settings") as mock_settings:
+        with patch("raglite.ingestion.embedding_generation.settings") as mock_settings:
             mock_settings.mistral_api_key = "test-key-123"
             mock_settings.metadata_extraction_model = "mistral-small-latest"
 
-            with patch("mistralai.Mistral") as mock_client_class:
+            with patch("raglite.shared.clients.Mistral") as mock_client_class:
+                # Create mock client with properly mocked chat.complete_async
+                mock_chat = AsyncMock()
+                mock_chat.complete_async = AsyncMock(return_value=mock_mistral_response())
+
                 mock_client = AsyncMock()
-                mock_client.chat.complete_async = AsyncMock(return_value=mock_mistral_response())
+                mock_client.chat = mock_chat
                 mock_client_class.return_value = mock_client
 
                 result = await extract_chunk_metadata(test_text, "test_chunk_0")
@@ -118,46 +126,10 @@ class TestExtractChunkMetadata:
                 assert result.department_scope == "Finance"
 
                 # Verify API was called with correct parameters
-                mock_client.chat.complete_async.assert_called_once()
-                call_kwargs = mock_client.chat.complete_async.call_args.kwargs
+                mock_chat.complete_async.assert_called_once()
+                call_kwargs = mock_chat.complete_async.call_args.kwargs
                 assert call_kwargs["model"] == "mistral-small-latest"
                 assert call_kwargs["temperature"] == 0
-
-    @pytest.mark.priority("P2")
-    @pytest.mark.asyncio
-    async def test_metadata_extraction_partial_fields(self):
-        """Test extraction with some fields missing (null values)."""
-        pytest.skip("Test needs updating for Mistral API - caching removed in Story 2.4")
-
-    @pytest.mark.priority("P2")
-    @pytest.mark.asyncio
-    async def test_metadata_extraction_no_api_key(self):
-        """Test that extraction fails gracefully when API key not configured."""
-        pytest.skip("Test needs updating for Mistral API - caching removed in Story 2.4")
-
-    @pytest.mark.priority("P0")
-    @pytest.mark.asyncio
-    async def test_metadata_extraction_api_failure(self):
-        """Test handling of API failures."""
-        pytest.skip("Test needs updating for Mistral API - caching removed in Story 2.4")
-
-    @pytest.mark.priority("P0")
-    @pytest.mark.asyncio
-    async def test_metadata_caching_enabled(self):
-        """Test AC4: Metadata caching works correctly (cache hit)."""
-        pytest.skip("Caching removed in Story 2.4 - per-chunk extraction doesn't use caching")
-
-    @pytest.mark.priority("P0")
-    @pytest.mark.asyncio
-    async def test_metadata_caching_disabled(self):
-        """Test AC4: Caching can be disabled when needed."""
-        pytest.skip("Caching removed in Story 2.4 - per-chunk extraction doesn't use caching")
-
-    @pytest.mark.priority("P2")
-    @pytest.mark.asyncio
-    async def test_text_truncation(self):
-        """Test that long documents are truncated to 2000 tokens."""
-        pytest.skip("Truncation removed in Story 2.3 - chunks are already 512 tokens")
 
 
 class TestExtractedMetadataModel:

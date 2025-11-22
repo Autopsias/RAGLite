@@ -13,11 +13,11 @@ Story Reference: docs/sprint-artifacts/3-6-analytical-query-tool-mcp.md
 
 import pytest
 
+from raglite.main import analytical_query_financial_documents
+from raglite.shared.models import AnalyticalQueryRequest, AnalyticalQueryResponse
+
 # Mark all tests in this module as integration tests that preserve collection state
 pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
-
-from raglite.main import analytical_query_financial_documents
-from raglite.shared.models import AnalyticalQueryRequest
 
 # Access underlying function from FastMCP FunctionTool wrapper
 analytical_query_fn = analytical_query_financial_documents.fn
@@ -45,7 +45,6 @@ class TestMCPToolCompliance:
 
     def test_analytical_query_response_model_has_required_fields(self):
         """Verify AnalyticalQueryResponse model has all Story 3.6 fields (AC2, AC4, AC6)."""
-        from raglite.shared.models import AnalyticalQueryResponse
 
         # AC2: Response model must have core fields
         response = AnalyticalQueryResponse(
@@ -76,15 +75,11 @@ class TestMCPToolCompliance:
 
 @pytest.mark.integration
 @pytest.mark.priority("P0")
-@pytest.mark.skipif(
-    True,
-    reason="Requires Qdrant with ingested data - run manually after ingestion with --no-skip",
-)
 class TestConditionalRouting:
     """Test AC3: Conditional routing - simple queries to Epic 2, analytical to Epic 3."""
 
     @pytest.mark.asyncio
-    async def test_simple_query_routes_to_epic2(self):
+    async def test_simple_query_routes_to_epic2(self, session_ingested_collection):
         """Simple query should route to Epic 2 basic retrieval.
 
         AC3: Verify simple queries are routed to query_financial_documents()
@@ -111,7 +106,7 @@ class TestConditionalRouting:
         assert len(response.sources) > 0
 
     @pytest.mark.asyncio
-    async def test_analytical_query_routes_to_epic3(self):
+    async def test_analytical_query_routes_to_epic3(self, session_ingested_collection):
         """Analytical query should route to Epic 3 workflow orchestration.
 
         AC3: Verify analytical queries trigger full multi-step workflow.
@@ -144,15 +139,11 @@ class TestConditionalRouting:
 
 @pytest.mark.integration
 @pytest.mark.priority("P0")
-@pytest.mark.skipif(
-    True,
-    reason="Requires Qdrant with ingested data - run manually after ingestion with --no-skip",
-)
 class TestReasoningTransparency:
     """Test AC4: Reasoning steps and transparency metadata."""
 
     @pytest.mark.asyncio
-    async def test_reasoning_steps_present_for_simple_query(self):
+    async def test_reasoning_steps_present_for_simple_query(self, session_ingested_collection):
         """Simple query responses must include reasoning steps (AC4)."""
         request = AnalyticalQueryRequest(query="What is total revenue?", top_k=5)
 
@@ -171,7 +162,7 @@ class TestReasoningTransparency:
         assert "classified" in steps_text or "retrieval" in steps_text
 
     @pytest.mark.asyncio
-    async def test_reasoning_steps_present_for_analytical_query(self):
+    async def test_reasoning_steps_present_for_analytical_query(self, session_ingested_collection):
         """Analytical query responses must include detailed reasoning steps (AC4)."""
         request = AnalyticalQueryRequest(
             query="Explain the variance in operating expenses", top_k=5
@@ -192,7 +183,7 @@ class TestReasoningTransparency:
         assert "analytical" in steps_text or "workflow" in steps_text
 
     @pytest.mark.asyncio
-    async def test_workflow_metadata_transparency(self):
+    async def test_workflow_metadata_transparency(self, session_ingested_collection):
         """Workflow metadata must provide execution details (AC4)."""
         request = AnalyticalQueryRequest(
             query="Calculate revenue growth and analyze trends", top_k=5
@@ -221,15 +212,11 @@ class TestReasoningTransparency:
 
 @pytest.mark.integration
 @pytest.mark.priority("P1")
-@pytest.mark.skipif(
-    True,
-    reason="Requires Qdrant with ingested data - run manually after ingestion with --no-skip",
-)
 class TestSourceCitations:
     """Test AC6: Source citations and verification."""
 
     @pytest.mark.asyncio
-    async def test_sources_present_for_simple_query(self):
+    async def test_sources_present_for_simple_query(self, session_ingested_collection):
         """Simple query responses must include source citations (AC6)."""
         request = AnalyticalQueryRequest(query="What is EBITDA?", top_k=5)
 
@@ -246,7 +233,7 @@ class TestSourceCitations:
                 assert len(source) > 0
 
     @pytest.mark.asyncio
-    async def test_sources_present_for_analytical_query(self):
+    async def test_sources_present_for_analytical_query(self, session_ingested_collection):
         """Analytical query responses must include source citations (AC6)."""
         request = AnalyticalQueryRequest(query="Calculate YoY revenue growth", top_k=5)
 
@@ -257,7 +244,7 @@ class TestSourceCitations:
         # Sources may be empty if no documents found or workflow failed
 
     @pytest.mark.asyncio
-    async def test_source_deduplication(self):
+    async def test_source_deduplication(self, session_ingested_collection):
         """Sources should be deduplicated to avoid redundancy (AC6)."""
         request = AnalyticalQueryRequest(
             query="Analyze revenue trends over multiple periods", top_k=10
@@ -272,15 +259,11 @@ class TestSourceCitations:
 
 @pytest.mark.integration
 @pytest.mark.priority("P1")
-@pytest.mark.skipif(
-    True,
-    reason="Requires Qdrant with ingested data - run manually after ingestion with --no-skip",
-)
 class TestQueryTypes:
     """Test AC5: Diverse query types (trend analysis, variance, YoY)."""
 
     @pytest.mark.asyncio
-    async def test_yoy_comparison_query(self):
+    async def test_yoy_comparison_query(self, session_ingested_collection):
         """Test YoY comparison analytical query (AC5)."""
         request = AnalyticalQueryRequest(
             query="Compare Q3 2023 revenue to Q3 2022 and calculate year-over-year growth",
@@ -302,7 +285,7 @@ class TestQueryTypes:
         assert response.confidence in ["high", "medium", "low"]
 
     @pytest.mark.asyncio
-    async def test_variance_analysis_query(self):
+    async def test_variance_analysis_query(self, session_ingested_collection):
         """Test variance analysis query (AC5)."""
         request = AnalyticalQueryRequest(
             query="Explain why operating expenses increased in Q3 compared to budget", top_k=5
@@ -322,7 +305,7 @@ class TestQueryTypes:
         assert len(response.reasoning_steps) >= 2
 
     @pytest.mark.asyncio
-    async def test_trend_analysis_query(self):
+    async def test_trend_analysis_query(self, session_ingested_collection):
         """Test trend analysis query (AC5)."""
         request = AnalyticalQueryRequest(
             query="Analyze revenue trends over the past 4 quarters", top_k=5
@@ -342,7 +325,7 @@ class TestQueryTypes:
         assert len(response.reasoning_steps) >= 2
 
     @pytest.mark.asyncio
-    async def test_yoy_growth_percentage_change(self):
+    async def test_yoy_growth_percentage_change(self, session_ingested_collection):
         """Test YoY percentage change analytical query (AC5 - additional coverage)."""
         request = AnalyticalQueryRequest(
             query="What is the YoY percentage change in operating expenses from 2022 to 2023?",
@@ -364,7 +347,7 @@ class TestQueryTypes:
         assert response.confidence in ["high", "medium", "low"]
 
     @pytest.mark.asyncio
-    async def test_yoy_annual_revenue_growth(self):
+    async def test_yoy_annual_revenue_growth(self, session_ingested_collection):
         """Test YoY annual revenue growth calculation (AC5 - additional coverage)."""
         request = AnalyticalQueryRequest(
             query="Compare annual revenue 2022 vs 2023 and calculate growth rate",
@@ -386,7 +369,7 @@ class TestQueryTypes:
         assert response.confidence in ["high", "medium", "low"]
 
     @pytest.mark.asyncio
-    async def test_variance_budget_vs_actual(self):
+    async def test_variance_budget_vs_actual(self, session_ingested_collection):
         """Test variance analysis for budget vs actual (AC5 - additional coverage)."""
         request = AnalyticalQueryRequest(
             query="Explain the variance between projected and actual revenue for Q4", top_k=5
@@ -406,7 +389,7 @@ class TestQueryTypes:
         assert len(response.reasoning_steps) >= 2
 
     @pytest.mark.asyncio
-    async def test_variance_revenue_decline(self):
+    async def test_variance_revenue_decline(self, session_ingested_collection):
         """Test variance analysis for revenue decline (AC5 - additional coverage)."""
         request = AnalyticalQueryRequest(
             query="What caused the revenue decline from Q2 to Q3?", top_k=5
@@ -426,7 +409,7 @@ class TestQueryTypes:
         assert len(response.reasoning_steps) >= 2
 
     @pytest.mark.asyncio
-    async def test_trend_quarterly_expenses(self):
+    async def test_trend_quarterly_expenses(self, session_ingested_collection):
         """Test trend analysis for quarterly expenses (AC5 - additional coverage)."""
         request = AnalyticalQueryRequest(
             query="Analyze the quarterly expense trend for 2023", top_k=5
@@ -446,7 +429,7 @@ class TestQueryTypes:
         assert len(response.reasoning_steps) >= 2
 
     @pytest.mark.asyncio
-    async def test_comparative_quarterly_revenue(self):
+    async def test_comparative_quarterly_revenue(self, session_ingested_collection):
         """Test comparative query for quarterly revenue (AC5 - NEW comparative test)."""
         request = AnalyticalQueryRequest(
             query="Compare Q3 2023 revenue with Q3 2024 revenue", top_k=5
@@ -467,7 +450,7 @@ class TestQueryTypes:
         assert response.confidence in ["high", "medium", "low"]
 
     @pytest.mark.asyncio
-    async def test_comparative_operating_margins(self):
+    async def test_comparative_operating_margins(self, session_ingested_collection):
         """Test comparative query for operating margins (AC5 - NEW comparative test)."""
         request = AnalyticalQueryRequest(
             query="How do 2023 operating margins compare to 2022?", top_k=5
@@ -488,7 +471,7 @@ class TestQueryTypes:
         assert len(response.reasoning_steps) >= 2
 
     @pytest.mark.asyncio
-    async def test_simple_factual_query(self):
+    async def test_simple_factual_query(self, session_ingested_collection):
         """Test simple factual query routed to Epic 2 (AC5)."""
         request = AnalyticalQueryRequest(query="What is the company's total debt?", top_k=5)
 
@@ -505,15 +488,11 @@ class TestQueryTypes:
 
 @pytest.mark.integration
 @pytest.mark.priority("P0")
-@pytest.mark.skipif(
-    True,
-    reason="Requires Qdrant with ingested data - run manually after ingestion with --no-skip",
-)
 class TestSuccessRateValidation:
     """Test AC5: Automated success rate validation (≥80% threshold)."""
 
     @pytest.mark.asyncio
-    async def test_analytical_query_success_rate(self):
+    async def test_analytical_query_success_rate(self, session_ingested_collection):
         """Test that ≥80% of diverse analytical queries succeed (AC5 - Task 4.8)."""
         # Test set of 10+ analytical queries covering all types (AC5)
         test_queries = [
@@ -567,15 +546,11 @@ class TestSuccessRateValidation:
 
 @pytest.mark.integration
 @pytest.mark.priority("P1")
-@pytest.mark.skipif(
-    True,
-    reason="Requires Qdrant with ingested data - run manually after ingestion with --no-skip",
-)
 class TestGracefulDegradation:
     """Test graceful degradation with reasoning steps and sources (Story 3.6 extension)."""
 
     @pytest.mark.asyncio
-    async def test_fallback_includes_reasoning_steps(self):
+    async def test_fallback_includes_reasoning_steps(self, session_ingested_collection):
         """Fallback responses must include reasoning steps explaining degradation."""
         # Query that might trigger fallback (very complex or edge case)
         request = AnalyticalQueryRequest(
@@ -599,7 +574,7 @@ class TestGracefulDegradation:
         ]
 
     @pytest.mark.asyncio
-    async def test_fallback_includes_sources(self):
+    async def test_fallback_includes_sources(self, session_ingested_collection):
         """Fallback responses must include sources if available."""
         # Query that might trigger fallback
         request = AnalyticalQueryRequest(
@@ -615,15 +590,11 @@ class TestGracefulDegradation:
 
 @pytest.mark.integration
 @pytest.mark.priority("P2")
-@pytest.mark.skipif(
-    True,
-    reason="Requires Qdrant with ingested data - run manually after ingestion with --no-skip",
-)
 class TestResponseConsistency:
     """Test response model consistency across all code paths."""
 
     @pytest.mark.asyncio
-    async def test_response_model_fields_always_present(self):
+    async def test_response_model_fields_always_present(self, session_ingested_collection):
         """All required fields must be present in every response."""
         test_queries = [
             "What is revenue?",  # Simple

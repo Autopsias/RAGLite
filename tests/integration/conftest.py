@@ -322,31 +322,43 @@ def session_ingested_collection(request, warmup_embedding_model):
             count = qdrant.count(collection_name=settings.qdrant_collection_name).count
 
             if count == 0:
-                error_msg = (
-                    "❌ ERROR: --skip-ingestion requires existing data, but Qdrant collection is empty!\n"
-                    "   Please ingest data first:\n"
-                    "   python scripts/ingest-full-pdf-ac3.py"
+                # GRACEFUL FALLBACK: Instead of failing, fall back to ingestion
+                # This allows tests to run even when --skip-ingestion is used but no data exists
+                warning_msg = (
+                    "\n" + "=" * 80 + "\n"
+                    "⚠️  WARNING: --skip-ingestion specified but Qdrant collection is empty!\n"
+                    "\n"
+                    "Falling back to full ingestion instead of failing.\n"
+                    "To avoid this warning and save time, ingest data first:\n"
+                    "  python scripts/ingest-test-data.py\n"
+                    "\n"
+                    "Proceeding with ingestion...\n" + "=" * 80 + "\n"
                 )
-                print(f"\n{error_msg}", file=sys.stderr)
-                pytest.fail(error_msg)
+                print(warning_msg, file=sys.stderr)
+                # Don't return - fall through to normal ingestion flow below
+            else:
+                # Data exists - use it!
+                # Store chunk count for test isolation
+                _session_sample_pdf_chunk_count = count
 
-            # Store chunk count for test isolation
-            _session_sample_pdf_chunk_count = count
+                print(f"\n✅ Using existing collection: {settings.qdrant_collection_name}")
+                print(f"   Chunks: {count}")
+                print("   Time saved: ~25 minutes")
+                print("   All tests will share this existing data\n")
+                print("=" * 80 + "\n")
 
-            print(f"\n✅ Using existing collection: {settings.qdrant_collection_name}")
-            print(f"   Chunks: {count}")
-            print("   Time saved: ~25 minutes")
-            print("   All tests will share this existing data\n")
-            print("=" * 80 + "\n")
-
-            # Yield without cleanup - data is managed externally
-            yield
-            return
+                # Yield without cleanup - data is managed externally
+                yield
+                return
 
         except Exception as e:
-            error_msg = f"❌ ERROR: Failed to verify existing data: {e}"
-            print(f"\n{error_msg}", file=sys.stderr)
-            pytest.fail(error_msg)
+            # Collection doesn't exist - fall back to ingestion
+            warning_msg = (
+                f"\n⚠️  WARNING: --skip-ingestion specified but collection doesn't exist: {e}\n"
+                f"Falling back to full ingestion...\n"
+            )
+            print(warning_msg, file=sys.stderr)
+            # Fall through to normal ingestion flow below
 
     print("\nDEBUG: Proceeding with full ingestion (--skip-ingestion not set)", file=sys.stderr)
 
@@ -411,10 +423,13 @@ def session_ingested_collection(request, warmup_embedding_model):
         pdf_description = "160-page full PDF (CI comprehensive mode)"
         estimated_time = "150-180 seconds"
     else:
-        # DEFAULT: Use small 4-page PDF for fast testing (Story 4.0.5 AC2)
-        sample_pdf = Path("tests/fixtures/sample-small-3-pages.pdf")
-        pdf_description = "4-page test PDF (fast mode - Story 4.0.5)"
-        estimated_time = "5-10 seconds"
+        # DEFAULT: Use 10-page sample PDF for testing (Story 2.14 ground truth alignment)
+        # Changed from 4-page sample-small-3-pages.pdf to 10-page sample_financial_report.pdf
+        # to match Story 2.14 ground truth expectations (v2.0-10PAGE) which expects Portugal
+        # Currency data on pages 9-10 (50 rows)
+        sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
+        pdf_description = "10-page sample PDF (Story 2.14 ground truth aligned)"
+        estimated_time = "8-12 seconds"
 
     print(f"DEBUG: PDF selection complete - checking {sample_pdf}", file=sys.stderr)
 
@@ -645,13 +660,14 @@ def session_ingested_collection(request, warmup_embedding_model):
     if use_full_pdf:
         expected_range = (150, 220)  # 160-page PDF
     else:
-        # Updated range for 4-page table-heavy test PDF (Story 4.0.5 AC2)
+        # Updated range for 10-page sample_financial_report.pdf (Story 2.14 ground truth alignment)
         # With table-aware chunking (Story 2.8) and 512-token fixed chunking:
-        # - Text chunks: ~7 (512-token fixed chunking - minimum expected)
-        # - Table chunks: ~0-14 (4096-token table-aware chunking, 1016 table rows - varies)
-        # - Total: 7-25 chunks expected (varies by table extraction success)
-        # - Observed range: 7-21 chunks across multiple test runs (flaky table extraction)
-        expected_range = (5, 30)  # 4-page table-heavy test PDF (Story 4.0.5)
+        # - This PDF is table-heavy (47 tables extracted, 1548 table rows)
+        # - Table-aware chunking keeps large tables intact (fewer, larger chunks)
+        # - Observed: 14 chunks from 10 pages (mostly large financial tables)
+        # - Text chunks are minimal because PDF is dominated by structured tables
+        # - Acceptable range: 10-30 chunks (table-heavy PDFs produce fewer, larger chunks)
+        expected_range = (10, 30)  # 10-page sample_financial_report.pdf (Story 2.14, table-heavy)
 
     if not (expected_range[0] <= count_after.count <= expected_range[1]):
         error_msg = f"CRITICAL: Chunk count {count_after.count} not in expected range {expected_range} for {pdf_description}"

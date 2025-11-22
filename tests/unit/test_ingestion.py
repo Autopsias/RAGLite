@@ -87,6 +87,10 @@ class TestIngestPDF:
                 "raglite.ingestion.document_ingestion.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
+            patch(
+                "raglite.ingestion.storage_operations.get_qdrant_client",
+                return_value=mock_qdrant_client,
+            ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
                 "raglite.ingestion.storage_operations.store_metadata_in_postgresql",
@@ -211,6 +215,10 @@ class TestIngestPDF:
                 "raglite.ingestion.document_ingestion.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
+            patch(
+                "raglite.ingestion.storage_operations.get_qdrant_client",
+                return_value=mock_qdrant_client,
+            ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
                 "raglite.ingestion.storage_operations.store_metadata_in_postgresql",
@@ -279,6 +287,10 @@ class TestIngestPDF:
             patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
             patch(
                 "raglite.ingestion.document_ingestion.get_qdrant_client",
+                return_value=mock_qdrant_client,
+            ),
+            patch(
+                "raglite.ingestion.storage_operations.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
@@ -381,6 +393,10 @@ class TestIngestPDF:
                 "raglite.ingestion.document_ingestion.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
+            patch(
+                "raglite.ingestion.storage_operations.get_qdrant_client",
+                return_value=mock_qdrant_client,
+            ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
                 "raglite.ingestion.storage_operations.store_metadata_in_postgresql",
@@ -481,6 +497,10 @@ class TestExtractExcel:
                 "raglite.ingestion.document_ingestion.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
+            patch(
+                "raglite.ingestion.storage_operations.get_qdrant_client",
+                return_value=mock_qdrant_client,
+            ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
                 "raglite.ingestion.storage_operations.store_metadata_in_postgresql",
@@ -559,6 +579,10 @@ class TestExtractExcel:
                 "raglite.ingestion.document_ingestion.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
+            patch(
+                "raglite.ingestion.storage_operations.get_qdrant_client",
+                return_value=mock_qdrant_client,
+            ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
                 "raglite.ingestion.storage_operations.store_metadata_in_postgresql",
@@ -619,6 +643,10 @@ class TestExtractExcel:
             patch("raglite.ingestion.document_ingestion.openpyxl.load_workbook") as mock_load,
             patch(
                 "raglite.ingestion.document_ingestion.get_qdrant_client",
+                return_value=mock_qdrant_client,
+            ),
+            patch(
+                "raglite.ingestion.storage_operations.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
@@ -739,6 +767,10 @@ class TestExtractExcel:
             patch("raglite.ingestion.document_ingestion.openpyxl.load_workbook") as mock_load,
             patch(
                 "raglite.ingestion.document_ingestion.get_qdrant_client",
+                return_value=mock_qdrant_client,
+            ),
+            patch(
+                "raglite.ingestion.storage_operations.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
