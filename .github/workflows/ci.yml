@@ -35,6 +35,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Global environment variables (inherited by ALL jobs)
+env:
+  APP_ENV: test
+
 jobs:
   # ============================================================================
   # CODE QUALITY CHECKS
