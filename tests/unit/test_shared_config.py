@@ -1,5 +1,8 @@
 """Unit tests for raglite.shared.config module."""
 
+import os
+from unittest.mock import patch
+
 import pytest
 from pydantic import ValidationError
 from pytest import MonkeyPatch
@@ -98,7 +101,7 @@ def test_adjust_for_environment_production_default(monkeypatch: MonkeyPatch) -> 
 
 @pytest.mark.priority("P0")
 @pytest.mark.unit
-def test_adjust_for_environment_test_mode(monkeypatch: MonkeyPatch) -> None:
+def test_adjust_for_environment_test_mode() -> None:
     """Test adjust_for_environment() switches to test databases when APP_ENV=test.
 
     Story 4.0.5 AC1: Test environment should use separate ports and collections.
@@ -106,34 +109,41 @@ def test_adjust_for_environment_test_mode(monkeypatch: MonkeyPatch) -> None:
     UPDATED (2025-11-23): PostgreSQL settings NO LONGER auto-adjust in validator.
     PostgreSQL settings come ONLY from explicit environment variables.
     Qdrant settings STILL auto-adjust (port 6335, collection _test suffix).
+
+    PYTEST-XDIST FIX: Use patch.dict instead of monkeypatch for pytest-xdist compatibility.
     """
-    monkeypatch.setenv("APP_ENV", "test")
-    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
-    monkeypatch.delenv("CI", raising=False)
-    monkeypatch.delenv("CONTINUOUS_INTEGRATION", raising=False)
-    # Set explicit PostgreSQL settings for test environment
-    monkeypatch.setenv("POSTGRES_PORT", "5433")
-    monkeypatch.setenv("POSTGRES_DB", "raglite_test")
-    monkeypatch.setenv("POSTGRES_USER", "raglite_test")
-    monkeypatch.setenv("POSTGRES_PASSWORD", "raglite_test")
+    with patch.dict(
+        os.environ,
+        {
+            "APP_ENV": "test",
+            "POSTGRES_PORT": "5433",
+            "POSTGRES_DB": "raglite_test",
+            "POSTGRES_USER": "raglite_test",
+            "POSTGRES_PASSWORD": "raglite_test",
+        },
+        clear=False,
+    ):
+        # Remove CI env vars to ensure test mode (not CI mode)
+        with patch.dict(
+            os.environ, {"GITHUB_ACTIONS": "", "CI": "", "CONTINUOUS_INTEGRATION": ""}, clear=False
+        ):
+            settings = Settings()
 
-    settings = Settings()
-
-    # Verify test settings
-    assert settings.app_env == "test"
-    # Qdrant auto-adjusts (STILL works)
-    assert settings.qdrant_port == 6335
-    assert settings.qdrant_collection_name == "financial_docs_test"
-    # PostgreSQL uses explicit env vars (NEW behavior)
-    assert settings.postgres_port == 5433
-    assert settings.postgres_db == "raglite_test"
-    assert settings.postgres_user == "raglite_test"
-    assert settings.postgres_password == "raglite_test"
+            # Verify test settings
+            assert settings.app_env == "test"
+            # Qdrant auto-adjusts (STILL works)
+            assert settings.qdrant_port == 6335
+            assert settings.qdrant_collection_name == "financial_docs_test"
+            # PostgreSQL uses explicit env vars (NEW behavior)
+            assert settings.postgres_port == 5433
+            assert settings.postgres_db == "raglite_test"
+            assert settings.postgres_user == "raglite_test"
+            assert settings.postgres_password == "raglite_test"
 
 
 @pytest.mark.priority("P0")
 @pytest.mark.unit
-def test_adjust_for_environment_ci_github_actions(monkeypatch: MonkeyPatch) -> None:
+def test_adjust_for_environment_ci_github_actions() -> None:
     """Test adjust_for_environment() detects GitHub Actions CI environment.
 
     Story 4.0.5 AC4: CI environment should use separate collection to avoid conflicts.
@@ -141,28 +151,34 @@ def test_adjust_for_environment_ci_github_actions(monkeypatch: MonkeyPatch) -> N
     UPDATED (2025-11-23): PostgreSQL settings NO LONGER auto-adjust in validator.
     PostgreSQL settings come ONLY from explicit environment variables (set by CI workflow).
     Qdrant settings STILL auto-adjust (collection _ci suffix in CI).
+
+    PYTEST-XDIST FIX: Use patch.dict instead of monkeypatch for pytest-xdist compatibility.
     """
-    monkeypatch.setenv("APP_ENV", "test")
-    monkeypatch.setenv("GITHUB_ACTIONS", "true")
-    # Set explicit PostgreSQL settings as CI workflow would
-    monkeypatch.setenv("POSTGRES_DB", "raglite_ci")
-    monkeypatch.setenv("POSTGRES_USER", "raglite_ci")
-    monkeypatch.setenv("POSTGRES_PASSWORD", "raglite_ci")
+    with patch.dict(
+        os.environ,
+        {
+            "APP_ENV": "test",
+            "GITHUB_ACTIONS": "true",
+            "POSTGRES_DB": "raglite_ci",
+            "POSTGRES_USER": "raglite_ci",
+            "POSTGRES_PASSWORD": "raglite_ci",
+        },
+        clear=False,
+    ):
+        settings = Settings()
 
-    settings = Settings()
-
-    # Verify CI-specific collection name (Qdrant auto-adjusts)
-    assert settings.app_env == "test"
-    assert settings.qdrant_collection_name == "financial_docs_ci"
-    # PostgreSQL uses explicit env vars (NEW behavior)
-    assert settings.postgres_db == "raglite_ci"
-    assert settings.postgres_user == "raglite_ci"
-    assert settings.postgres_password == "raglite_ci"
+        # Verify CI-specific collection name (Qdrant auto-adjusts)
+        assert settings.app_env == "test"
+        assert settings.qdrant_collection_name == "financial_docs_ci"
+        # PostgreSQL uses explicit env vars (NEW behavior)
+        assert settings.postgres_db == "raglite_ci"
+        assert settings.postgres_user == "raglite_ci"
+        assert settings.postgres_password == "raglite_ci"
 
 
 @pytest.mark.priority("P0")
 @pytest.mark.unit
-def test_adjust_for_environment_ci_generic(monkeypatch: MonkeyPatch) -> None:
+def test_adjust_for_environment_ci_generic() -> None:
     """Test adjust_for_environment() detects generic CI environment variable.
 
     Story 4.0.5 AC4: Should detect CI=true as CI environment.
@@ -170,24 +186,25 @@ def test_adjust_for_environment_ci_generic(monkeypatch: MonkeyPatch) -> None:
     UPDATED (2025-11-23): PostgreSQL settings NO LONGER auto-adjust in validator.
     PostgreSQL settings come ONLY from explicit environment variables.
     Qdrant settings STILL auto-adjust (collection _ci suffix in CI).
+
+    PYTEST-XDIST FIX: Use patch.dict instead of monkeypatch for pytest-xdist compatibility.
     """
-    monkeypatch.setenv("APP_ENV", "test")
-    monkeypatch.setenv("CI", "true")
-    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
-    # Set explicit PostgreSQL settings as CI would
-    monkeypatch.setenv("POSTGRES_DB", "raglite_ci")
+    with patch.dict(
+        os.environ,
+        {"APP_ENV": "test", "CI": "true", "GITHUB_ACTIONS": "", "POSTGRES_DB": "raglite_ci"},
+        clear=False,
+    ):
+        settings = Settings()
 
-    settings = Settings()
-
-    # Verify CI-specific collection name (Qdrant auto-adjusts)
-    assert settings.qdrant_collection_name == "financial_docs_ci"
-    # PostgreSQL uses explicit env vars (NEW behavior)
-    assert settings.postgres_db == "raglite_ci"
+        # Verify CI-specific collection name (Qdrant auto-adjusts)
+        assert settings.qdrant_collection_name == "financial_docs_ci"
+        # PostgreSQL uses explicit env vars (NEW behavior)
+        assert settings.postgres_db == "raglite_ci"
 
 
 @pytest.mark.priority("P0")
 @pytest.mark.unit
-def test_adjust_for_environment_ci_continuous_integration(monkeypatch: MonkeyPatch) -> None:
+def test_adjust_for_environment_ci_continuous_integration() -> None:
     """Test adjust_for_environment() detects CONTINUOUS_INTEGRATION variable.
 
     Story 4.0.5 AC4: Should detect CONTINUOUS_INTEGRATION=true as CI environment.
@@ -195,25 +212,31 @@ def test_adjust_for_environment_ci_continuous_integration(monkeypatch: MonkeyPat
     UPDATED (2025-11-23): PostgreSQL settings NO LONGER auto-adjust in validator.
     PostgreSQL settings come ONLY from explicit environment variables.
     Qdrant settings STILL auto-adjust (collection _ci suffix in CI).
+
+    PYTEST-XDIST FIX: Use patch.dict instead of monkeypatch for pytest-xdist compatibility.
     """
-    monkeypatch.setenv("APP_ENV", "test")
-    monkeypatch.setenv("CONTINUOUS_INTEGRATION", "true")
-    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
-    monkeypatch.delenv("CI", raising=False)
-    # Set explicit PostgreSQL settings as CI would
-    monkeypatch.setenv("POSTGRES_DB", "raglite_ci")
+    with patch.dict(
+        os.environ,
+        {
+            "APP_ENV": "test",
+            "CONTINUOUS_INTEGRATION": "true",
+            "GITHUB_ACTIONS": "",
+            "CI": "",
+            "POSTGRES_DB": "raglite_ci",
+        },
+        clear=False,
+    ):
+        settings = Settings()
 
-    settings = Settings()
-
-    # Verify CI-specific collection name (Qdrant auto-adjusts)
-    assert settings.qdrant_collection_name == "financial_docs_ci"
-    # PostgreSQL uses explicit env vars (NEW behavior)
-    assert settings.postgres_db == "raglite_ci"
+        # Verify CI-specific collection name (Qdrant auto-adjusts)
+        assert settings.qdrant_collection_name == "financial_docs_ci"
+        # PostgreSQL uses explicit env vars (NEW behavior)
+        assert settings.postgres_db == "raglite_ci"
 
 
 @pytest.mark.priority("P1")
 @pytest.mark.unit
-def test_adjust_for_environment_respects_explicit_overrides(monkeypatch: MonkeyPatch) -> None:
+def test_adjust_for_environment_respects_explicit_overrides() -> None:
     """Test adjust_for_environment() respects explicit environment variable overrides.
 
     Story 4.0.5: Environment-based adjustment should only apply to default values,
@@ -221,22 +244,29 @@ def test_adjust_for_environment_respects_explicit_overrides(monkeypatch: MonkeyP
 
     UPDATED (2025-11-23): PostgreSQL settings NO LONGER auto-adjust in validator.
     Only Qdrant settings auto-adjust, and explicit overrides are still respected.
+
+    PYTEST-XDIST FIX: Use patch.dict instead of monkeypatch for pytest-xdist compatibility.
     """
-    monkeypatch.setenv("APP_ENV", "test")
-    monkeypatch.setenv("QDRANT_PORT", "7777")  # Explicit override
-    monkeypatch.setenv("QDRANT_COLLECTION_NAME", "custom_collection")  # Explicit override
-    monkeypatch.setenv("POSTGRES_PORT", "9999")  # Explicit override
+    with patch.dict(
+        os.environ,
+        {
+            "APP_ENV": "test",
+            "QDRANT_PORT": "7777",
+            "QDRANT_COLLECTION_NAME": "custom_collection",
+            "POSTGRES_PORT": "9999",
+        },
+        clear=False,
+    ):
+        settings = Settings()
 
-    settings = Settings()
+        # Verify explicit overrides are respected
+        assert settings.qdrant_port == 7777  # Should NOT be changed to 6335
+        assert (
+            settings.qdrant_collection_name == "custom_collection"
+        )  # Should NOT be changed to financial_docs_test
 
-    # Verify explicit overrides are respected
-    assert settings.qdrant_port == 7777  # Should NOT be changed to 6335
-    assert (
-        settings.qdrant_collection_name == "custom_collection"
-    )  # Should NOT be changed to financial_docs_test
-
-    # PostgreSQL uses explicit env vars (NEW behavior - no auto-adjustment)
-    assert settings.postgres_port == 9999  # Uses explicit override
+        # PostgreSQL uses explicit env vars (NEW behavior - no auto-adjustment)
+        assert settings.postgres_port == 9999  # Uses explicit override
 
 
 @pytest.mark.priority("P1")

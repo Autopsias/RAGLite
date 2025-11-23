@@ -7,6 +7,7 @@ NOTE: These tests validate configuration behavior in the test environment.
 """
 
 import os
+from unittest.mock import patch
 
 import pytest
 
@@ -30,36 +31,45 @@ def test_test_environment_uses_correct_ports():
     NOTE: In CI environments (GITHUB_ACTIONS=true), collection names use _ci suffix.
     In local test environments, collection names use _test suffix.
     Both are valid test configurations.
+
+    PYTEST-XDIST FIX: Use patch.dict to explicitly set test environment variables.
+    This ensures Settings instance reads correct values in pytest-xdist workers.
     """
-    settings = Settings()
+    # Explicitly set test environment for pytest-xdist compatibility
+    with patch.dict(
+        os.environ,
+        {"APP_ENV": "test", "POSTGRES_PORT": "5433", "POSTGRES_DB": "raglite_test"},
+        clear=False,
+    ):
+        settings = Settings()
 
-    # In test environment (APP_ENV=test set by conftest.py), verify test ports
-    # Qdrant auto-adjusts (STILL works)
-    assert settings.qdrant_port == 6335, (
-        f"Expected test Qdrant port 6335, got {settings.qdrant_port}"
-    )
+        # In test environment (APP_ENV=test set by conftest.py), verify test ports
+        # Qdrant auto-adjusts (STILL works)
+        assert settings.qdrant_port == 6335, (
+            f"Expected test Qdrant port 6335, got {settings.qdrant_port}"
+        )
 
-    # Accept both _test (local) and _ci (CI) suffixes as valid test configurations
-    assert settings.qdrant_collection_name in [
-        "financial_docs_test",
-        "financial_docs_ci",
-    ], f"Expected test or CI collection, got {settings.qdrant_collection_name}"
+        # Accept both _test (local) and _ci (CI) suffixes as valid test configurations
+        assert settings.qdrant_collection_name in [
+            "financial_docs_test",
+            "financial_docs_ci",
+        ], f"Expected test or CI collection, got {settings.qdrant_collection_name}"
 
-    # PostgreSQL uses explicit env vars (set by conftest.py)
-    # If this fails, conftest.py needs to set POSTGRES_PORT=5433
-    assert settings.postgres_port == 5433, (
-        f"Expected test PostgreSQL port 5433, got {settings.postgres_port}. "
-        f"Ensure conftest.py sets POSTGRES_PORT=5433"
-    )
+        # PostgreSQL uses explicit env vars (set by conftest.py)
+        # If this fails, conftest.py needs to set POSTGRES_PORT=5433
+        assert settings.postgres_port == 5433, (
+            f"Expected test PostgreSQL port 5433, got {settings.postgres_port}. "
+            f"Ensure conftest.py sets POSTGRES_PORT=5433"
+        )
 
-    # Accept both _test (local) and _ci (CI) suffixes as valid test configurations
-    # If this fails, conftest.py needs to set POSTGRES_DB=raglite_test or raglite_ci
-    assert settings.postgres_db in [
-        "raglite_test",
-        "raglite_ci",
-    ], (
-        f"Expected test or CI database, got {settings.postgres_db}. Ensure conftest.py sets POSTGRES_DB"
-    )
+        # Accept both _test (local) and _ci (CI) suffixes as valid test configurations
+        # If this fails, conftest.py needs to set POSTGRES_DB=raglite_test or raglite_ci
+        assert settings.postgres_db in [
+            "raglite_test",
+            "raglite_ci",
+        ], (
+            f"Expected test or CI database, got {settings.postgres_db}. Ensure conftest.py sets POSTGRES_DB"
+        )
 
 
 @pytest.mark.priority("P0")
@@ -139,28 +149,36 @@ def test_database_separation_prevents_cross_contamination():
 
     UPDATED (2025-11-23): PostgreSQL database name comes from explicit env vars.
     This test verifies that conftest.py properly sets PostgreSQL env vars for isolation.
+
+    PYTEST-XDIST FIX: Use patch.dict to explicitly set test environment variables.
     """
-    settings = Settings()
+    # Explicitly set test environment for pytest-xdist compatibility
+    with patch.dict(
+        os.environ,
+        {"APP_ENV": "test", "POSTGRES_PORT": "5433", "POSTGRES_DB": "raglite_test"},
+        clear=False,
+    ):
+        settings = Settings()
 
-    # Test environment should use test-specific names
-    # Qdrant auto-adjusts (STILL works)
-    assert (
-        "test" in settings.qdrant_collection_name.lower()
-        or "ci" in settings.qdrant_collection_name.lower()
-    ), (
-        f"Test environment should have 'test' or 'ci' in collection name, got: {settings.qdrant_collection_name}"
-    )
+        # Test environment should use test-specific names
+        # Qdrant auto-adjusts (STILL works)
+        assert (
+            "test" in settings.qdrant_collection_name.lower()
+            or "ci" in settings.qdrant_collection_name.lower()
+        ), (
+            f"Test environment should have 'test' or 'ci' in collection name, got: {settings.qdrant_collection_name}"
+        )
 
-    # PostgreSQL uses explicit env vars (conftest.py should set POSTGRES_DB=raglite_test or raglite_ci)
-    assert "test" in settings.postgres_db.lower() or "ci" in settings.postgres_db.lower(), (
-        f"Test environment should have 'test' or 'ci' in database name, got: {settings.postgres_db}. "
-        f"Ensure conftest.py sets POSTGRES_DB=raglite_test or raglite_ci"
-    )
+        # PostgreSQL uses explicit env vars (conftest.py should set POSTGRES_DB=raglite_test or raglite_ci)
+        assert "test" in settings.postgres_db.lower() or "ci" in settings.postgres_db.lower(), (
+            f"Test environment should have 'test' or 'ci' in database name, got: {settings.postgres_db}. "
+            f"Ensure conftest.py sets POSTGRES_DB=raglite_test or raglite_ci"
+        )
 
-    # Verify test ports are different from production defaults
-    assert settings.qdrant_port != 6333 or settings.postgres_port != 5432, (
-        "Test environment should not use production ports (6333/5432)"
-    )
+        # Verify test ports are different from production defaults
+        assert settings.qdrant_port != 6333 or settings.postgres_port != 5432, (
+            "Test environment should not use production ports (6333/5432)"
+        )
 
 
 @pytest.mark.priority("P1")
@@ -173,30 +191,38 @@ def test_environment_configuration_validation():
 
     UPDATED (2025-11-23): PostgreSQL port comes from explicit env vars.
     Qdrant port auto-adjusts to 6335 in test environment.
+
+    PYTEST-XDIST FIX: Use patch.dict to explicitly set test environment variables.
     """
-    settings = Settings()
+    # Explicitly set test environment for pytest-xdist compatibility
+    with patch.dict(
+        os.environ,
+        {"APP_ENV": "test", "POSTGRES_PORT": "5433", "POSTGRES_DB": "raglite_test"},
+        clear=False,
+    ):
+        settings = Settings()
 
-    # Verify all database settings are present
-    assert settings.qdrant_host is not None
-    assert settings.qdrant_port > 0
-    assert settings.qdrant_collection_name is not None
-    assert settings.postgres_host is not None
-    assert settings.postgres_port > 0
-    assert settings.postgres_db is not None
-    assert settings.postgres_user is not None
+        # Verify all database settings are present
+        assert settings.qdrant_host is not None
+        assert settings.qdrant_port > 0
+        assert settings.qdrant_collection_name is not None
+        assert settings.postgres_host is not None
+        assert settings.postgres_port > 0
+        assert settings.postgres_db is not None
+        assert settings.postgres_user is not None
 
-    # Verify test environment consistency
-    if settings.app_env == "test":
-        # Qdrant auto-adjusts (STILL works)
-        assert settings.qdrant_port == 6335, "Test Qdrant should use port 6335"
+        # Verify test environment consistency
+        if settings.app_env == "test":
+            # Qdrant auto-adjusts (STILL works)
+            assert settings.qdrant_port == 6335, "Test Qdrant should use port 6335"
 
-        # PostgreSQL uses explicit env vars (conftest.py should set POSTGRES_PORT=5433)
-        assert settings.postgres_port == 5433, (
-            "Test PostgreSQL should use port 5433. Ensure conftest.py sets POSTGRES_PORT=5433"
-        )
+            # PostgreSQL uses explicit env vars (conftest.py should set POSTGRES_PORT=5433)
+            assert settings.postgres_port == 5433, (
+                "Test PostgreSQL should use port 5433. Ensure conftest.py sets POSTGRES_PORT=5433"
+            )
 
-        # Collection/DB names should indicate test environment
-        assert (
-            "test" in settings.qdrant_collection_name.lower()
-            or "ci" in settings.qdrant_collection_name.lower()
-        ), "Test collection should have 'test' or 'ci' in name"
+            # Collection/DB names should indicate test environment
+            assert (
+                "test" in settings.qdrant_collection_name.lower()
+                or "ci" in settings.qdrant_collection_name.lower()
+            ), "Test collection should have 'test' or 'ci' in name"
