@@ -329,9 +329,9 @@ class TestPypdfiumMemoryReduction:
             # Full validation requires before/after comparison
 
             # Soft assertion - memory should be reasonable for 10-page PDF
-            assert peak_mb < max_expected_mb, (
-                f"Memory usage too high: {peak_mb:.1f} MB (expected <{max_expected_mb} MB)"
-            )
+            assert (
+                peak_mb < max_expected_mb
+            ), f"Memory usage too high: {peak_mb:.1f} MB (expected <{max_expected_mb} MB)"
 
             print("  Status: ✅ PASS - Memory usage within expected range")
             print(

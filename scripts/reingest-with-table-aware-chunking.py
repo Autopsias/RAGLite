@@ -141,7 +141,9 @@ async def reingest_with_table_aware_chunking():
         if chunks_per_table <= 1.5:
             logger.info(f"✅ AC3 Target MET: Chunks per table = {chunks_per_table:.2f} (≤1.5)")
         else:
-            logger.warning(f"⚠️ AC3 Target MISSED: Chunks per table = {chunks_per_table:.2f} (>1.5)")
+            logger.warning(
+                f"⚠️ AC3 Target MISSED: Chunks per table = {chunks_per_table:.2f} (>1.5)"
+            )
 
     # Analyze chunk sizes
     import tiktoken

@@ -13,9 +13,6 @@ import asyncio
 
 import pytest
 
-# Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
-
 from raglite.agentic.fallback import (
     ErrorType,
     FallbackTier,
@@ -23,6 +20,9 @@ from raglite.agentic.fallback import (
     handle_workflow_failure,
 )
 from raglite.agentic.planner import AgentResult, QueryComplexity
+
+# Mark all tests in this module as integration tests that preserve collection state
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
 
 
 class TestAgentTimeoutScenario:

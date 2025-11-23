@@ -183,7 +183,9 @@ class TestStory214ExcerptValidation:
         # Special handling for specific queries if needed
         if test_query["id"] == "EXC-003":
             # Angola query expects 10-30 results
-            mock_response.choices[0].message.content = """
+            mock_response.choices[
+                0
+            ].message.content = """
 SELECT entity, metric, value, unit, period, fiscal_year, page_number
 FROM financial_tables
 WHERE entity ILIKE '%Angola%' AND (metric ILIKE '%EBITDA%' OR metric ILIKE '%Revenue%')
@@ -192,7 +194,9 @@ LIMIT 50;
             """.strip()
         elif test_query["id"] == "EXC-005":
             # Portugal currency query expects 45-50 results (50 rows in database)
-            mock_response.choices[0].message.content = """
+            mock_response.choices[
+                0
+            ].message.content = """
 SELECT entity, metric, value, unit, period, fiscal_year, page_number
 FROM financial_tables
 WHERE entity ILIKE '%Portugal%' AND metric ILIKE '%Currency%'
@@ -234,7 +238,9 @@ LIMIT 50;
             if where_conditions:
                 where_clause = "\nWHERE " + " AND ".join(where_conditions)
 
-            mock_response.choices[0].message.content = f"""
+            mock_response.choices[
+                0
+            ].message.content = f"""
 SELECT entity, metric, value, unit, period, fiscal_year, page_number
 FROM financial_tables{where_clause}
 ORDER BY page_number DESC
@@ -287,7 +293,9 @@ LIMIT 50;
         # Configure mock
         mock_client, _ = mock_mistral_client
         mock_response = mock_client.chat.complete.return_value
-        mock_response.choices[0].message.content = """
+        mock_response.choices[
+            0
+        ].message.content = """
 SELECT entity, metric, value, unit, period, fiscal_year, page_number
 FROM financial_tables
 ORDER BY page_number DESC
@@ -346,7 +354,9 @@ LIMIT 50;
         # Configure mock
         mock_client, _ = mock_mistral_client
         mock_response = mock_client.chat.complete.return_value
-        mock_response.choices[0].message.content = """
+        mock_response.choices[
+            0
+        ].message.content = """
 SELECT entity, metric, value, unit, period, fiscal_year, page_number
 FROM financial_tables
 ORDER BY page_number DESC
@@ -368,9 +378,9 @@ LIMIT 50;
 
         # Updated (2025-11-08): Ground truth calibrated for 10-page PDF
         # Raised from 70% to 80% - realistic for 10-page PDF (4/5 queries passing)
-        assert pct >= 80.0, (
-            f"AC1 accuracy {pct:.1f}% below 80% threshold (calibrated for 10-page PDF)"
-        )
+        assert (
+            pct >= 80.0
+        ), f"AC1 accuracy {pct:.1f}% below 80% threshold (calibrated for 10-page PDF)"
         print(f"\nAC1-SingleEntity: {total_passed}/{total} ({pct:.1f}%)")
 
     @pytest.mark.priority("P2")
@@ -391,7 +401,9 @@ LIMIT 50;
         # Configure mock
         mock_client, _ = mock_mistral_client
         mock_response = mock_client.chat.complete.return_value
-        mock_response.choices[0].message.content = """
+        mock_response.choices[
+            0
+        ].message.content = """
 SELECT entity, metric, value, unit, period, fiscal_year, page_number
 FROM financial_tables
 ORDER BY page_number DESC
@@ -414,9 +426,9 @@ LIMIT 50;
         # Updated (Story 2.10): ILIKE-based SQL generation is less accurate for comparison queries
         # Updated (2025-11-08): Ground truth calibrated for 10-page PDF
         # Raised from 30% to 90% now that expectations match actual PDF content
-        assert pct >= 90.0, (
-            f"AC2 accuracy {pct:.1f}% below 90% threshold (calibrated for 10-page PDF)"
-        )
+        assert (
+            pct >= 90.0
+        ), f"AC2 accuracy {pct:.1f}% below 90% threshold (calibrated for 10-page PDF)"
         print(f"\nAC2-Comparison: {total_passed}/{total} ({pct:.1f}%)")
 
     @pytest.mark.priority("P0")
@@ -437,7 +449,9 @@ LIMIT 50;
         # Configure mock
         mock_client, _ = mock_mistral_client
         mock_response = mock_client.chat.complete.return_value
-        mock_response.choices[0].message.content = """
+        mock_response.choices[
+            0
+        ].message.content = """
 SELECT entity, metric, value, unit, period, fiscal_year, page_number
 FROM financial_tables
 ORDER BY page_number DESC
@@ -459,9 +473,9 @@ LIMIT 50;
 
         # Updated (2025-11-08): Ground truth calibrated for 10-page PDF
         # Raised from 65% to 90% now that expectations match actual PDF content
-        assert pct >= 90.0, (
-            f"AC3 accuracy {pct:.1f}% below 90% threshold (calibrated for 10-page PDF)"
-        )
+        assert (
+            pct >= 90.0
+        ), f"AC3 accuracy {pct:.1f}% below 90% threshold (calibrated for 10-page PDF)"
         print(f"\nAC3-Metrics: {total_passed}/{total} ({pct:.1f}%)")
 
     @pytest.mark.priority("P1")
@@ -482,7 +496,9 @@ LIMIT 50;
         # Configure mock
         mock_client, _ = mock_mistral_client
         mock_response = mock_client.chat.complete.return_value
-        mock_response.choices[0].message.content = """
+        mock_response.choices[
+            0
+        ].message.content = """
 SELECT entity, metric, value, unit, period, fiscal_year, page_number
 FROM financial_tables
 ORDER BY page_number DESC
@@ -504,9 +520,9 @@ LIMIT 50;
 
         # Updated (2025-11-08): Ground truth calibrated for 10-page PDF
         # Raised from 65% to 90% now that expectations match actual PDF content
-        assert pct >= 90.0, (
-            f"AC6 accuracy {pct:.1f}% below 90% threshold (calibrated for 10-page PDF)"
-        )
+        assert (
+            pct >= 90.0
+        ), f"AC6 accuracy {pct:.1f}% below 90% threshold (calibrated for 10-page PDF)"
         print(f"\nAC6-Extraction: {total_passed}/{total} ({pct:.1f}%)")
 
     @pytest.mark.priority("P2")
@@ -529,7 +545,9 @@ LIMIT 50;
         # EBITDA is confirmed in ground truth as available in 10-page PDF
         mock_client, _ = mock_mistral_client
         mock_response = mock_client.chat.complete.return_value
-        mock_response.choices[0].message.content = """
+        mock_response.choices[
+            0
+        ].message.content = """
 SELECT entity, metric, value, unit, period, fiscal_year, page_number
 FROM financial_tables
 WHERE entity ILIKE '%Portugal%' AND metric ILIKE '%EBITDA%'

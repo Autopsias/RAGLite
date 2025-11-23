@@ -125,9 +125,9 @@ class TestInspectDatabaseIntegration:
         entities_lower = [str(e).lower() if e else "" for e in entities]
         expected_base = ["group", "portugal", "angola", "tunisia", "brazil"]
         found_entities = [e for e in expected_base if any(e in ent for ent in entities_lower)]
-        assert len(found_entities) > 0, (
-            f"Should have at least one expected entity from {expected_base}"
-        )
+        assert (
+            len(found_entities) > 0
+        ), f"Should have at least one expected entity from {expected_base}"
 
     def test_inspect_database_json_file_creation(self, session_ingested_collection, tmp_path: Path):
         """GIVEN successful inspection

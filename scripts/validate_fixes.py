@@ -29,9 +29,9 @@ def test_port_configuration():
 
     assert settings.qdrant_port == 6335, f"Wrong Qdrant port: {settings.qdrant_port}"
     assert settings.postgres_port == 5433, f"Wrong PostgreSQL port: {settings.postgres_port}"
-    assert settings.qdrant_collection_name == "financial_docs_test", (
-        f"Wrong collection: {settings.qdrant_collection_name}"
-    )
+    assert (
+        settings.qdrant_collection_name == "financial_docs_test"
+    ), f"Wrong collection: {settings.qdrant_collection_name}"
     assert settings.postgres_db == "raglite_test", f"Wrong DB: {settings.postgres_db}"
 
     print("✅ Port configuration correct!")

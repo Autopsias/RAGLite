@@ -175,9 +175,7 @@ async def validate_epic2():
     print(
         f"\n✅ Happy Path: {happy_passed}/{len(happy_path)} passed ({100 * happy_passed // len(happy_path)}%)"
     )
-    print(
-        f"✅ Sad Path: {sad_passed}/{len(sad_path)} passed ({100 * sad_passed // len(sad_path)}%)"
-    )
+    print(f"✅ Sad Path: {sad_passed}/{len(sad_path)} passed ({100 * sad_passed // len(sad_path)}%)")
     print(
         f"\n📊 OVERALL: {happy_passed + sad_passed}/{len(results)} tests passed ({100 * (happy_passed + sad_passed) // len(results)}%)"
     )

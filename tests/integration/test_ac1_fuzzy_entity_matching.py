@@ -26,7 +26,9 @@ async def test_fuzzy_matching_portugal_cement(mock_mistral_client, session_inges
     # Configure mock to return SQL with ILIKE matching
     mock_client, _ = mock_mistral_client
     mock_response = mock_client.chat.complete.return_value
-    mock_response.choices[0].message.content = """
+    mock_response.choices[
+        0
+    ].message.content = """
 SELECT entity, metric, value, unit, period, fiscal_year, page_number
 FROM financial_tables
 WHERE entity ILIKE '%Portugal%'
@@ -43,9 +45,9 @@ LIMIT 50;
     assert sql is not None, "SQL generation should succeed"
     # Accept either fuzzy matching approach (similarity() or ILIKE)
     # similarity() requires pg_trgm extension, ILIKE works with base PostgreSQL
-    assert "similarity(" in sql.lower() or "ilike" in sql.lower() or "like" in sql.lower(), (
-        "SQL should use fuzzy matching (similarity, ILIKE, or LIKE)"
-    )
+    assert (
+        "similarity(" in sql.lower() or "ilike" in sql.lower() or "like" in sql.lower()
+    ), "SQL should use fuzzy matching (similarity, ILIKE, or LIKE)"
 
 
 @pytest.mark.priority("P2")
@@ -60,7 +62,9 @@ async def test_fuzzy_matching_tunisia_cement(mock_mistral_client, session_ingest
     # Configure mock to return SQL with ILIKE matching for Tunisia
     mock_client, _ = mock_mistral_client
     mock_response = mock_client.chat.complete.return_value
-    mock_response.choices[0].message.content = """
+    mock_response.choices[
+        0
+    ].message.content = """
 SELECT entity, metric, value, unit, period, fiscal_year, page_number
 FROM financial_tables
 WHERE entity ILIKE '%Tunisia%'
@@ -128,9 +132,9 @@ async def test_similarity_function_works(session_ingested_collection):
 
     assert similarity_score is not None, "similarity() function should return a score"
     assert 0 <= similarity_score <= 1, "Similarity score should be between 0 and 1"
-    assert similarity_score > 0.3, (
-        "Similarity between 'Portugal' and 'Portugal Cement' should be > 0.3"
-    )
+    assert (
+        similarity_score > 0.3
+    ), "Similarity between 'Portugal' and 'Portugal Cement' should be > 0.3"
 
 
 # NOTE: test_exact_match_fallback moved to test_story_2_14_excerpt_validation.py
@@ -148,7 +152,9 @@ async def test_fuzzy_matching_thresholds(mock_mistral_client, session_ingested_c
     # Configure mock
     mock_client, _ = mock_mistral_client
     mock_response = mock_client.chat.complete.return_value
-    mock_response.choices[0].message.content = """
+    mock_response.choices[
+        0
+    ].message.content = """
 SELECT entity, metric, value, unit, period, fiscal_year, page_number
 FROM financial_tables
 WHERE entity ILIKE '%Angola%'
@@ -182,7 +188,9 @@ async def test_case_insensitive_matching(mock_mistral_client):
     # Configure mock to return SQL with ILIKE for case-insensitive matching
     mock_client, _ = mock_mistral_client
     mock_response = mock_client.chat.complete.return_value
-    mock_response.choices[0].message.content = """
+    mock_response.choices[
+        0
+    ].message.content = """
 SELECT entity, metric, value, unit, period, fiscal_year, page_number
 FROM financial_tables
 WHERE entity ILIKE '%Portugal%'

@@ -93,9 +93,9 @@ async def test_financial_terminology_handling(session_ingested_collection):
 
         # Check top result score
         top_score = response.results[0].score
-        assert top_score >= test_case["min_score"], (
-            f"Top score {top_score:.3f} below threshold {test_case['min_score']} for query: {test_case['query']}"
-        )
+        assert (
+            top_score >= test_case["min_score"]
+        ), f"Top score {top_score:.3f} below threshold {test_case['min_score']} for query: {test_case['query']}"
 
         # Check if expected keywords present in top results (lenient: any keyword in top 5)
         # For semantic search, we check if ANY keyword appears (not ALL)
@@ -124,9 +124,9 @@ async def test_financial_terminology_handling(session_ingested_collection):
     print(f"   - All keywords found: {all(r['keywords_found'] for r in results_summary)}")
 
     # Validate meets Week 0 baseline (0.84 avg semantic score)
-    assert avg_score >= 0.70, (
-        f"Avg score {avg_score:.3f} below Week 0 baseline (0.84 target, 0.70 minimum)"
-    )
+    assert (
+        avg_score >= 0.70
+    ), f"Avg score {avg_score:.3f} below Week 0 baseline (0.84 target, 0.70 minimum)"
 
 
 @pytest.mark.integration
@@ -217,12 +217,12 @@ async def test_metadata_completeness_validation(session_ingested_collection):
 
     # Validate targets
     assert metadata_complete_count == total_results, "Not all results have complete metadata"
-    assert page_number_completeness >= 95.0, (
-        f"Page number completeness {page_number_completeness:.1f}% below target 95%"
-    )
-    assert citation_completeness >= 95.0, (
-        f"Citation completeness {citation_completeness:.1f}% below target 95%"
-    )
+    assert (
+        page_number_completeness >= 95.0
+    ), f"Page number completeness {page_number_completeness:.1f}% below target 95%"
+    assert (
+        citation_completeness >= 95.0
+    ), f"Citation completeness {citation_completeness:.1f}% below target 95%"
 
 
 @pytest.mark.integration
@@ -457,11 +457,11 @@ async def test_performance_measurement(session_ingested_collection):
 
     # Validate targets (NFR13: p50 <5s, p95 <15s for warm queries)
     # Note: Cold-start excluded per industry best practices
-    assert p50_ms < NFR13_P50_TARGET_MS, (
-        f"p50 latency {p50_ms:.2f}ms exceeds NFR13 p50 target ({NFR13_P50_TARGET_MS}ms)"
-    )
-    assert p95_ms < NFR13_P95_TARGET_MS, (
-        f"p95 latency {p95_ms:.2f}ms exceeds NFR13 p95 target ({NFR13_P95_TARGET_MS}ms)"
-    )
+    assert (
+        p50_ms < NFR13_P50_TARGET_MS
+    ), f"p50 latency {p50_ms:.2f}ms exceeds NFR13 p50 target ({NFR13_P50_TARGET_MS}ms)"
+    assert (
+        p95_ms < NFR13_P95_TARGET_MS
+    ), f"p95 latency {p95_ms:.2f}ms exceeds NFR13 p95 target ({NFR13_P95_TARGET_MS}ms)"
 
     print("\n   ✅ PASS: Latency metrics meet NFR13 targets")

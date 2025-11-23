@@ -74,14 +74,14 @@ async def test_ac4_collection_recreation_and_reingest(test_pdf_path):
     # - Expected: 48k-96k / 462 = 104-208 text chunks + ~10-20 table chunks = 180-220 total
     # - Original 250-350 range was based on incorrect element-aware assumptions
     chunk_count = collection_info.points_count
-    assert 180 <= chunk_count <= 220, (
-        f"Chunk count {chunk_count} not in expected range 180-220 (fixed chunking with 512-token chunks)"
-    )
+    assert (
+        180 <= chunk_count <= 220
+    ), f"Chunk count {chunk_count} not in expected range 180-220 (fixed chunking with 512-token chunks)"
 
     # Verify metadata chunk count matches Qdrant
-    assert metadata.chunk_count == chunk_count, (
-        f"Metadata chunk count {metadata.chunk_count} != Qdrant {chunk_count}"
-    )
+    assert (
+        metadata.chunk_count == chunk_count
+    ), f"Metadata chunk count {metadata.chunk_count} != Qdrant {chunk_count}"
 
     print(f"\n✅ AC4 PASS: Collection recreated, {chunk_count} chunks ingested (180-220 expected)")
 
@@ -125,15 +125,15 @@ async def test_ac4_fast_40page(session_ingested_collection):
     # - 512-token chunks with 50-token overlap = 462-token stride
     # - Expected: 12k-24k / 462 = 26-52 text chunks + ~3-5 table chunks = 45-55 total
     chunk_count = collection_info.points_count
-    assert 45 <= chunk_count <= 55, (
-        f"Chunk count {chunk_count} not in expected range 45-55 for 40-page PDF"
-    )
+    assert (
+        45 <= chunk_count <= 55
+    ), f"Chunk count {chunk_count} not in expected range 45-55 for 40-page PDF"
 
     # Verify metadata
     assert metadata.page_count == 40, f"Expected 40 pages, got {metadata.page_count}"
-    assert metadata.chunk_count == chunk_count, (
-        f"Metadata chunk count {metadata.chunk_count} != Qdrant {chunk_count}"
-    )
+    assert (
+        metadata.chunk_count == chunk_count
+    ), f"Metadata chunk count {metadata.chunk_count} != Qdrant {chunk_count}"
 
     print(f"\n✅ AC4 FAST PASS: 40-page PDF, {chunk_count} chunks ingested (45-55 expected)")
 
@@ -199,9 +199,9 @@ async def test_ac5_fast_chunk_count_validation(session_ingested_collection, enco
     #   * Tables <4096 tokens kept intact
     #   * Table-heavy 3-page PDF typically has 1016+ table rows
     # - Total: 5-20 chunks (observed range: 7-14 chunks, allowing headroom for variation)
-    assert 5 <= chunk_count <= 20, (
-        f"Chunk count {chunk_count} not in expected range 5-20 for 3-page table-heavy test PDF (sample-small-3-pages.pdf)"
-    )
+    assert (
+        5 <= chunk_count <= 20
+    ), f"Chunk count {chunk_count} not in expected range 5-20 for 3-page table-heavy test PDF (sample-small-3-pages.pdf)"
 
     # AC5.2: Separate table chunks from text chunks
     text_token_counts = []
@@ -232,13 +232,13 @@ async def test_ac5_fast_chunk_count_validation(session_ingested_collection, enco
             # Story 2.3 AC6 FIX: After merging tiny chunks, mean should be close to 512 target
             # Observed mean: ~497 tokens (excellent - very close to 512 target)
             # Acceptable range: 400-562 tokens (same as 160-page PDF, accommodates sentence boundaries)
-            assert 400 <= text_mean <= 562, (
-                f"Mean TEXT chunk size {text_mean:.1f} not in range 400-562 (target: 512, adjusted for sentence trimming)"
-            )
+            assert (
+                400 <= text_mean <= 562
+            ), f"Mean TEXT chunk size {text_mean:.1f} not in range 400-562 (target: 512, adjusted for sentence trimming)"
             # Verify std deviation within acceptable bounds (<160 after tiny chunk merging)
-            assert text_std < 160, (
-                f"TEXT chunk std deviation {text_std:.1f} exceeds 160-token limit (after tiny chunk merging)"
-            )
+            assert (
+                text_std < 160
+            ), f"TEXT chunk std deviation {text_std:.1f} exceeds 160-token limit (after tiny chunk merging)"
 
             # AC5.4: Document chunk count and size distribution
             print("\n✅ AC5 FAST PASS: Chunk Count Validation (3-page table-heavy PDF)")
@@ -332,12 +332,12 @@ async def test_ac5_chunk_count_validation(ingested_160_page_pdf, encoding):
     # Range adjusted to 400-562 to account for AC2 sentence boundary preservation
     # (sentence trimming can reduce chunks by ~10-12% from 512 target)
     # Std deviation adjusted to <160 based on actual variance from sentence boundaries
-    assert 400 <= text_mean <= 562, (
-        f"Mean TEXT chunk size {text_mean:.1f} not in range 400-562 (target: 512, adjusted for sentence trimming)"
-    )
-    assert text_std < 160, (
-        f"TEXT chunk std deviation {text_std:.1f} exceeds 160-token limit (adjusted for sentence variance)"
-    )
+    assert (
+        400 <= text_mean <= 562
+    ), f"Mean TEXT chunk size {text_mean:.1f} not in range 400-562 (target: 512, adjusted for sentence trimming)"
+    assert (
+        text_std < 160
+    ), f"TEXT chunk std deviation {text_std:.1f} exceeds 160-token limit (adjusted for sentence variance)"
 
     # AC5.4: Document chunk count and size distribution
     print("\n✅ AC5 SLOW PASS: Chunk Count Validation (160-page PDF)")
@@ -419,18 +419,18 @@ async def test_ac6_fast_chunk_size_consistency(session_ingested_collection, enco
         # Story 2.3 AC6 FIX: After merging tiny chunks, mean should match 160-page PDF
         # Acceptable range: 400-562 tokens (accommodates sentence boundary trimming)
         text_mean = sum(text_token_counts) / len(text_token_counts)
-        assert 400 <= text_mean <= 562, (
-            f"Mean TEXT chunk size {text_mean:.1f} not within 400-562 (target: 512, adjusted for sentence trimming)"
-        )
+        assert (
+            400 <= text_mean <= 562
+        ), f"Mean TEXT chunk size {text_mean:.1f} not within 400-562 (target: 512, adjusted for sentence trimming)"
 
         # AC6.3: Verify standard deviation for TEXT chunks (<160 after tiny chunk merging)
         text_variance = sum((x - text_mean) ** 2 for x in text_token_counts) / len(
             text_token_counts
         )
         text_std = text_variance**0.5
-        assert text_std < 160, (
-            f"TEXT chunk std deviation {text_std:.1f} exceeds 160-token limit (after tiny chunk merging)"
-        )
+        assert (
+            text_std < 160
+        ), f"TEXT chunk std deviation {text_std:.1f} exceeds 160-token limit (after tiny chunk merging)"
 
         # AC6.4: Verify 95% of TEXT chunks within range (same limit as slow test)
         # Note: 95th percentile can reach 512 for properly chunked text despite lower mean
@@ -438,9 +438,9 @@ async def test_ac6_fast_chunk_size_consistency(session_ingested_collection, enco
         text_sorted = sorted(text_token_counts)
         percentile_95_idx = int(len(text_sorted) * 0.95)
         percentile_95 = text_sorted[percentile_95_idx] if text_sorted else 0
-        assert percentile_95 <= 562, (
-            f"95th percentile of TEXT chunks {percentile_95} exceeds 562-token limit"
-        )
+        assert (
+            percentile_95 <= 562
+        ), f"95th percentile of TEXT chunks {percentile_95} exceeds 562-token limit"
 
         # Count TEXT chunks within target range
         in_range_count = sum(1 for tc in text_token_counts if 462 <= tc <= 562)
@@ -518,9 +518,9 @@ async def test_ac6_chunk_size_consistency(ingested_160_page_pdf, encoding):
     # Option A: Calculate metrics for text chunks only (Decision Gate 2025-10-21)
     # Range adjusted to 400-562 to account for AC2 sentence boundary preservation
     text_mean = sum(text_token_counts) / len(text_token_counts) if text_token_counts else 0
-    assert 400 <= text_mean <= 562, (
-        f"Mean TEXT chunk size {text_mean:.1f} not within 400-562 (target: 512, adjusted for sentence trimming)"
-    )
+    assert (
+        400 <= text_mean <= 562
+    ), f"Mean TEXT chunk size {text_mean:.1f} not within 400-562 (target: 512, adjusted for sentence trimming)"
 
     # AC6.3: Verify standard deviation for TEXT chunks
     # Adjusted to <160 based on actual variance from sentence boundary preservation
@@ -530,17 +530,17 @@ async def test_ac6_chunk_size_consistency(ingested_160_page_pdf, encoding):
         else 0
     )
     text_std = text_variance**0.5
-    assert text_std < 160, (
-        f"TEXT chunk std deviation {text_std:.1f} exceeds 160-token limit (adjusted for sentence variance)"
-    )
+    assert (
+        text_std < 160
+    ), f"TEXT chunk std deviation {text_std:.1f} exceeds 160-token limit (adjusted for sentence variance)"
 
     # AC6.4: Verify 95% of TEXT chunks within 462-562 token range
     text_sorted = sorted(text_token_counts)
     percentile_95_idx = int(len(text_sorted) * 0.95)
     percentile_95 = text_sorted[percentile_95_idx] if text_sorted else 0
-    assert percentile_95 <= 562, (
-        f"95th percentile of TEXT chunks {percentile_95} exceeds 562-token limit"
-    )
+    assert (
+        percentile_95 <= 562
+    ), f"95th percentile of TEXT chunks {percentile_95} exceeds 562-token limit"
 
     # Count TEXT chunks within target range
     in_range_count = sum(1 for tc in text_token_counts if 462 <= tc <= 562)
@@ -615,9 +615,9 @@ async def test_table_boundary_preservation(test_pdf_path, encoding):
 
         # Verify no partial rows (all table lines should be complete)
         for line in table_lines:
-            assert line.strip().endswith("|"), (
-                f"Table row incomplete (mid-row split): {line[:50]}..."
-            )
+            assert line.strip().endswith(
+                "|"
+            ), f"Table row incomplete (mid-row split): {line[:50]}..."
 
     # Count tables >512 tokens (exception to 512-token rule)
     large_tables = [tc for _, tc in table_chunks if tc > 512]

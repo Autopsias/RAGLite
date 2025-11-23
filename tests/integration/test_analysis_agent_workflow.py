@@ -16,13 +16,13 @@ import time
 
 import pytest
 
-# Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
-
 from raglite.agentic.agents.analysis_agent import analysis_agent
 from raglite.agentic.agents.retrieval_agent import retrieval_agent
 from raglite.agentic.agents.synthesis_agent import synthesis_agent
 from raglite.agentic.state import AnalysisResult, SynthesisResult
+
+# Mark all tests in this module as integration tests that preserve collection state
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
 
 
 class TestAnalysisAgentWorkflow:
@@ -117,9 +117,9 @@ class TestAnalysisAgentWorkflow:
         assert result.value == pytest.approx(0.20, abs=0.01)
 
         # Claude Haiku latency typically 600-800ms, with overhead <1.2s p95
-        assert elapsed_s < 5.0, (
-            f"Analysis agent took {elapsed_s:.2f}s, expected <5s (allowing for network latency)"
-        )
+        assert (
+            elapsed_s < 5.0
+        ), f"Analysis agent took {elapsed_s:.2f}s, expected <5s (allowing for network latency)"
 
     @pytest.mark.asyncio
     @pytest.mark.integration

@@ -135,9 +135,9 @@ class TestMetadataInjection:
             # Verify all results match the filter
             assert len(results) > 0, "Filter should return results"
             for result in results:
-                assert result.payload["reporting_period"] == "Q3 2024", (
-                    f"All results must match filter: expected 'Q3 2024', got '{result.payload.get('reporting_period')}'"
-                )
+                assert (
+                    result.payload["reporting_period"] == "Q3 2024"
+                ), f"All results must match filter: expected 'Q3 2024', got '{result.payload.get('reporting_period')}'"
 
 
 class TestCostValidation:

@@ -249,9 +249,9 @@ async def test_e2e_performance_validation(session_ingested_collection):
     # Validate NFR13 targets
     # NFR13: p50 <5000ms (5s), p95 <15000ms (15s including cold-start)
     assert p50_latency < 5000, f"p50 latency {p50_latency:.2f}ms exceeds NFR13 p50 target (5000ms)"
-    assert p95_latency < 15000, (
-        f"p95 latency {p95_latency:.2f}ms exceeds NFR13 p95 target (15000ms)"
-    )
+    assert (
+        p95_latency < 15000
+    ), f"p95 latency {p95_latency:.2f}ms exceeds NFR13 p95 target (15000ms)"
 
     print("\n✅ Performance meets NFR13 targets")
     print(f"   p50: {p50_latency:.2f}ms < 5000ms (NFR13 p50 target)")
@@ -384,9 +384,9 @@ async def test_e2e_standard_mcp_pattern(session_ingested_collection):
         ]
         text_lower = result.text.lower()
         for phrase in synthesized_phrases:
-            assert not text_lower.startswith(phrase.lower()), (
-                f"Text should be raw chunk, not synthesized answer starting with '{phrase}'"
-            )
+            assert not text_lower.startswith(
+                phrase.lower()
+            ), f"Text should be raw chunk, not synthesized answer starting with '{phrase}'"
 
     print("\n✅ Standard MCP pattern confirmed")
     print("   RAGLite returns raw chunks with citations")

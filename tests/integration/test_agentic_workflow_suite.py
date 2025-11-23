@@ -24,11 +24,11 @@ from typing import Any
 import numpy as np
 import pytest
 
-# Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
-
 from raglite.main import analytical_query_financial_documents
 from raglite.shared.models import AnalyticalQueryRequest, AnalyticalQueryResponse
+
+# Mark all tests in this module as integration tests that preserve collection state
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
 
 # Access underlying function from FastMCP FunctionTool wrapper
 analytical_query_fn = analytical_query_financial_documents.fn
@@ -315,15 +315,15 @@ def test_performance_budget():
     print(f"\n{'=' * 80}\n")
 
     # Assert performance targets
-    assert perf["p50_latency_ms"] < P50_TARGET_MS, (
-        f"p50 latency {perf['p50_latency_ms']:.0f}ms exceeds {P50_TARGET_MS}ms budget"
-    )
-    assert perf["p95_latency_ms"] < P95_TARGET_MS, (
-        f"p95 latency {perf['p95_latency_ms']:.0f}ms exceeds {P95_TARGET_MS}ms budget"
-    )
-    assert perf["max_latency_ms"] < MAX_TARGET_MS, (
-        f"Max latency {perf['max_latency_ms']:.0f}ms exceeds {MAX_TARGET_MS}ms timeout"
-    )
+    assert (
+        perf["p50_latency_ms"] < P50_TARGET_MS
+    ), f"p50 latency {perf['p50_latency_ms']:.0f}ms exceeds {P50_TARGET_MS}ms budget"
+    assert (
+        perf["p95_latency_ms"] < P95_TARGET_MS
+    ), f"p95 latency {perf['p95_latency_ms']:.0f}ms exceeds {P95_TARGET_MS}ms budget"
+    assert (
+        perf["max_latency_ms"] < MAX_TARGET_MS
+    ), f"Max latency {perf['max_latency_ms']:.0f}ms exceeds {MAX_TARGET_MS}ms timeout"
 
 
 # Edge case specific tests (AC6)
@@ -398,9 +398,9 @@ async def test_edge_case_complex_multi_document():
     execution_time_ms = (time.time() - start_time) * 1000
 
     # Should complete within timeout
-    assert execution_time_ms < 30000, (
-        f"Complex query exceeded 30s timeout: {execution_time_ms:.0f}ms"
-    )
+    assert (
+        execution_time_ms < 30000
+    ), f"Complex query exceeded 30s timeout: {execution_time_ms:.0f}ms"
 
     # Should include all quarters
     assert "Q1" in response.answer or "q1" in response.answer.lower()

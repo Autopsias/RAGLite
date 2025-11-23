@@ -22,9 +22,8 @@ def add_p2_marker_simple(filepath, test_ids_with_justifications):
             f'@pytest.mark.test_id("{test_id}")' in content
             and "@pytest.mark.priority"
             not in content[
-                content.find(f'@pytest.mark.test_id("{test_id}")') - 100 : content.find(
-                    f'@pytest.mark.test_id("{test_id}")'
-                )
+                content.find(f'@pytest.mark.test_id("{test_id}")')
+                - 100 : content.find(f'@pytest.mark.test_id("{test_id}")')
                 + 200
             ]
         ):

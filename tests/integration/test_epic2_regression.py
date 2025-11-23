@@ -100,9 +100,9 @@ class TestEpic2Regression:
         metrics = calculate_performance_metrics(results)
 
         # Assert retrieval accuracy >= baseline floor
-        assert metrics["retrieval_accuracy"] >= BASELINE_RETRIEVAL_FLOOR, (
-            f"Retrieval accuracy regressed to {metrics['retrieval_accuracy']:.1f}% (below {BASELINE_RETRIEVAL_FLOOR}% floor)"
-        )
+        assert (
+            metrics["retrieval_accuracy"] >= BASELINE_RETRIEVAL_FLOOR
+        ), f"Retrieval accuracy regressed to {metrics['retrieval_accuracy']:.1f}% (below {BASELINE_RETRIEVAL_FLOOR}% floor)"
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -143,9 +143,9 @@ class TestEpic2Regression:
         metrics = calculate_performance_metrics(results)
 
         # Assert attribution accuracy >= baseline floor
-        assert metrics["attribution_accuracy"] >= BASELINE_ATTRIBUTION_FLOOR, (
-            f"Attribution accuracy regressed to {metrics['attribution_accuracy']:.1f}% (below {BASELINE_ATTRIBUTION_FLOOR}% floor)"
-        )
+        assert (
+            metrics["attribution_accuracy"] >= BASELINE_ATTRIBUTION_FLOOR
+        ), f"Attribution accuracy regressed to {metrics['attribution_accuracy']:.1f}% (below {BASELINE_ATTRIBUTION_FLOOR}% floor)"
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
@@ -225,9 +225,9 @@ class TestEpic2Regression:
                         successful_queries += 1
 
             # Assert hybrid search returns valid results for majority of queries
-            assert successful_queries >= len(test_queries) * 0.7, (
-                f"Hybrid search only succeeded on {successful_queries}/{len(test_queries)} queries (expected ≥70%)"
-            )
+            assert (
+                successful_queries >= len(test_queries) * 0.7
+            ), f"Hybrid search only succeeded on {successful_queries}/{len(test_queries)} queries (expected ≥70%)"
 
             print(
                 f"\n✓ Hybrid search quality check passed: {successful_queries}/{len(test_queries)} queries successful"
@@ -248,21 +248,21 @@ class TestEpic2IntegrationSanity:
     def test_baseline_thresholds_defined(self):
         """Test that baseline regression thresholds are correctly defined."""
         assert BASELINE_RETRIEVAL_FLOOR == 56.0, "Retrieval floor should be 56% (Epic 1 baseline)"
-        assert BASELINE_ATTRIBUTION_FLOOR == 32.0, (
-            "Attribution floor should be 32% (Epic 1 baseline)"
-        )
+        assert (
+            BASELINE_ATTRIBUTION_FLOOR == 32.0
+        ), "Attribution floor should be 32% (Epic 1 baseline)"
         assert LATENCY_CEILING_P95 == 15000.0, "p95 latency ceiling should be 15s (NFR13)"
 
     @pytest.mark.priority("P0")
     def test_ground_truth_available(self):
         """Test that ground truth data is loaded and available."""
         assert len(GROUND_TRUTH_QA) == 50, "Ground truth should have 50 queries"
-        assert all("question" in qa for qa in GROUND_TRUTH_QA), (
-            "All queries should have 'question' field"
-        )
-        assert all("expected_keywords" in qa for qa in GROUND_TRUTH_QA), (
-            "All queries should have 'expected_keywords'"
-        )
-        assert all("expected_page_number" in qa for qa in GROUND_TRUTH_QA), (
-            "All queries should have 'expected_page_number'"
-        )
+        assert all(
+            "question" in qa for qa in GROUND_TRUTH_QA
+        ), "All queries should have 'question' field"
+        assert all(
+            "expected_keywords" in qa for qa in GROUND_TRUTH_QA
+        ), "All queries should have 'expected_keywords'"
+        assert all(
+            "expected_page_number" in qa for qa in GROUND_TRUTH_QA
+        ), "All queries should have 'expected_page_number'"
