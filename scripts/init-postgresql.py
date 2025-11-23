@@ -60,6 +60,11 @@ def create_database_schema(
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cursor = conn.cursor()
 
+        # Create pg_trgm extension (required for fuzzy entity matching - Story 2.14)
+        logger.info("Creating pg_trgm extension...")
+        cursor.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
+        logger.info("✓ pg_trgm extension created")
+
         # Create financial_chunks table
         logger.info("Creating financial_chunks table...")
         cursor.execute(
@@ -116,7 +121,7 @@ def create_database_schema(
                 entity VARCHAR(200),
                 metric VARCHAR(200),
                 period VARCHAR(100),
-                fiscal_year VARCHAR(50),
+                fiscal_year INTEGER,
                 value TEXT,
                 unit VARCHAR(50),
                 row_index INTEGER,
@@ -199,6 +204,24 @@ def create_database_schema(
         """
         )
         logger.info("✓ idx_fiscal_year created")
+
+        # Index 7: GIN index for fuzzy entity matching (Story 2.14)
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_entity_trgm
+            ON financial_tables USING GIN(entity gin_trgm_ops);
+        """
+        )
+        logger.info("✓ idx_entity_trgm created (GIN index for fuzzy entity matching)")
+
+        # Index 8: GIN index for fuzzy metric matching (Story 2.14)
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_metric_trgm
+            ON financial_tables USING GIN(metric gin_trgm_ops);
+        """
+        )
+        logger.info("✓ idx_metric_trgm created (GIN index for fuzzy metric matching)")
 
         # Verify schema creation for all tables
         for table_name in ["financial_chunks", "financial_tables", "entity_mappings"]:
