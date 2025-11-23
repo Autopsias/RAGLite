@@ -25,6 +25,14 @@ import os
 os.environ["APP_ENV"] = "test"
 os.environ["TESTING"] = "true"
 
+# CRITICAL (2025-11-23): PostgreSQL settings NO LONGER auto-adjust in validator
+# Must set PostgreSQL environment variables explicitly for test environment
+# Qdrant settings STILL auto-adjust (port 6335, collection _test/_ci suffix)
+os.environ["POSTGRES_PORT"] = "5433"
+os.environ["POSTGRES_DB"] = "raglite_test"
+os.environ["POSTGRES_USER"] = "raglite_test"
+os.environ["POSTGRES_PASSWORD"] = "raglite_test"
+
 import logging
 import time
 from unittest.mock import MagicMock
@@ -42,13 +50,17 @@ logger = logging.getLogger(__name__)
 def configure_test_environment():
     """Configure test environment variables for all tests.
 
-    NOTE (2025-11-19): Environment variables are now set at module level (lines 24-25)
+    NOTE (2025-11-19): Environment variables are now set at module level (lines 25-34)
     BEFORE any imports to ensure the Settings singleton uses test database ports.
     This fixture now only logs the configuration and handles cleanup.
 
+    CRITICAL (2025-11-23): PostgreSQL settings NO LONGER auto-adjust in validator.
+    PostgreSQL env vars (POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD)
+    must be set EXPLICITLY at module level.
+
     Test databases run on separate ports:
-    - Qdrant: localhost:6335 (production uses 6333)
-    - PostgreSQL: localhost:5433 (production uses 5432)
+    - Qdrant: localhost:6335 (auto-adjusted by Settings validator)
+    - PostgreSQL: localhost:5433 (set explicitly via POSTGRES_PORT env var)
 
     OPTIMIZATION: TESTING=true enables test-specific optimizations
     in client connections, reducing timeouts and preventing test hangs.
@@ -56,6 +68,7 @@ def configure_test_environment():
     # Environment already set at module level - just log it
     logger.info("Test environment confirmed: APP_ENV=test (uses Qdrant:6335, PostgreSQL:5433)")
     logger.info("Test environment confirmed: TESTING=true (enables connection timeouts)")
+    logger.info("Test PostgreSQL settings: POSTGRES_PORT=5433, POSTGRES_DB=raglite_test")
 
     yield
 
@@ -66,6 +79,10 @@ def configure_test_environment():
     if "TESTING" in os.environ:
         del os.environ["TESTING"]
         logger.info("Test environment cleaned up: TESTING=false")
+    # Clean up PostgreSQL env vars
+    for key in ["POSTGRES_PORT", "POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD"]:
+        if key in os.environ:
+            del os.environ[key]
 
 
 def _timed_fixture(fixture_name: str, func, start_time: float) -> None:
@@ -90,8 +107,9 @@ def session_test_settings() -> Settings:
     Session-scoped to avoid recreating settings for every test.
     Use this for read-only settings access.
 
-    NOTE: Relies on configure_test_environment fixture (autouse=True) to set APP_ENV=test,
-    which automatically configures test database ports via Settings.adjust_for_environment().
+    NOTE (2025-11-23): PostgreSQL settings NO LONGER auto-adjust in validator.
+    PostgreSQL env vars (POSTGRES_PORT, POSTGRES_DB, etc) are set at module level (lines 31-34).
+    Qdrant settings STILL auto-adjust via Settings.adjust_for_environment() (port 6335).
 
     Returns:
         Settings instance with test configuration
@@ -103,7 +121,8 @@ def session_test_settings() -> Settings:
 
     # Set environment variables once for the entire session
     # NOTE: QDRANT_PORT is NOT set here - it's automatically determined by APP_ENV=test
-    # via the configure_test_environment fixture and Settings.adjust_for_environment()
+    # via Settings.adjust_for_environment() (auto-adjusts to 6335)
+    # PostgreSQL settings (POSTGRES_PORT, POSTGRES_DB, etc) are set at module level
     os.environ["QDRANT_HOST"] = "localhost"
     os.environ["ANTHROPIC_API_KEY"] = "test-api-key-12345"
     os.environ["EMBEDDING_MODEL"] = "intfloat/e5-large-v2"
@@ -121,8 +140,9 @@ def test_settings(monkeypatch: MonkeyPatch) -> Settings:
     Overrides environment variables to prevent tests from using production values.
     Use this when tests need to modify settings.
 
-    NOTE: Relies on configure_test_environment fixture (autouse=True) to set APP_ENV=test,
-    which automatically configures test database ports via Settings.adjust_for_environment().
+    NOTE (2025-11-23): PostgreSQL settings NO LONGER auto-adjust in validator.
+    PostgreSQL env vars (POSTGRES_PORT, POSTGRES_DB, etc) are set at module level (lines 31-34).
+    Qdrant settings STILL auto-adjust via Settings.adjust_for_environment() (port 6335).
 
     Args:
         monkeypatch: pytest monkeypatch fixture
@@ -131,7 +151,8 @@ def test_settings(monkeypatch: MonkeyPatch) -> Settings:
         Settings instance with test configuration
     """
     # NOTE: QDRANT_PORT is NOT set here - it's automatically determined by APP_ENV=test
-    # via the configure_test_environment fixture and Settings.adjust_for_environment()
+    # via Settings.adjust_for_environment() (auto-adjusts to 6335)
+    # PostgreSQL settings (POSTGRES_PORT, POSTGRES_DB, etc) are set at module level
     monkeypatch.setenv("QDRANT_HOST", "localhost")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-api-key-12345")
     monkeypatch.setenv("EMBEDDING_MODEL", "intfloat/e5-large-v2")

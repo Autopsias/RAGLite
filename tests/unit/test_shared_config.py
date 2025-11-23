@@ -67,19 +67,29 @@ def test_adjust_for_environment_production_default(monkeypatch: MonkeyPatch) -> 
     """Test adjust_for_environment() uses production settings by default.
 
     Story 4.0.5 AC1: Production environment should use default ports and collections.
+
+    UPDATED (2025-11-23): Must clear PostgreSQL env vars set by conftest.py to test
+    production defaults. PostgreSQL settings come ONLY from explicit env vars.
     """
     # Clean environment - no APP_ENV set
     monkeypatch.delenv("APP_ENV", raising=False)
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     monkeypatch.delenv("CI", raising=False)
     monkeypatch.delenv("CONTINUOUS_INTEGRATION", raising=False)
+    # Clear PostgreSQL env vars set by conftest.py to get true production defaults
+    monkeypatch.delenv("POSTGRES_PORT", raising=False)
+    monkeypatch.delenv("POSTGRES_DB", raising=False)
+    monkeypatch.delenv("POSTGRES_USER", raising=False)
+    monkeypatch.delenv("POSTGRES_PASSWORD", raising=False)
 
     settings = Settings()
 
     # Verify production settings (defaults)
     assert settings.app_env == "production"
+    # Qdrant uses production defaults (no auto-adjustment when APP_ENV != test)
     assert settings.qdrant_port == 6333
     assert settings.qdrant_collection_name == "financial_docs"
+    # PostgreSQL uses class defaults (no env vars set)
     assert settings.postgres_port == 5432
     assert settings.postgres_db == "raglite"
     assert settings.postgres_user == "raglite"
@@ -92,18 +102,29 @@ def test_adjust_for_environment_test_mode(monkeypatch: MonkeyPatch) -> None:
     """Test adjust_for_environment() switches to test databases when APP_ENV=test.
 
     Story 4.0.5 AC1: Test environment should use separate ports and collections.
+
+    UPDATED (2025-11-23): PostgreSQL settings NO LONGER auto-adjust in validator.
+    PostgreSQL settings come ONLY from explicit environment variables.
+    Qdrant settings STILL auto-adjust (port 6335, collection _test suffix).
     """
     monkeypatch.setenv("APP_ENV", "test")
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     monkeypatch.delenv("CI", raising=False)
     monkeypatch.delenv("CONTINUOUS_INTEGRATION", raising=False)
+    # Set explicit PostgreSQL settings for test environment
+    monkeypatch.setenv("POSTGRES_PORT", "5433")
+    monkeypatch.setenv("POSTGRES_DB", "raglite_test")
+    monkeypatch.setenv("POSTGRES_USER", "raglite_test")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "raglite_test")
 
     settings = Settings()
 
     # Verify test settings
     assert settings.app_env == "test"
+    # Qdrant auto-adjusts (STILL works)
     assert settings.qdrant_port == 6335
     assert settings.qdrant_collection_name == "financial_docs_test"
+    # PostgreSQL uses explicit env vars (NEW behavior)
     assert settings.postgres_port == 5433
     assert settings.postgres_db == "raglite_test"
     assert settings.postgres_user == "raglite_test"
@@ -116,15 +137,24 @@ def test_adjust_for_environment_ci_github_actions(monkeypatch: MonkeyPatch) -> N
     """Test adjust_for_environment() detects GitHub Actions CI environment.
 
     Story 4.0.5 AC4: CI environment should use separate collection to avoid conflicts.
+
+    UPDATED (2025-11-23): PostgreSQL settings NO LONGER auto-adjust in validator.
+    PostgreSQL settings come ONLY from explicit environment variables (set by CI workflow).
+    Qdrant settings STILL auto-adjust (collection _ci suffix in CI).
     """
     monkeypatch.setenv("APP_ENV", "test")
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    # Set explicit PostgreSQL settings as CI workflow would
+    monkeypatch.setenv("POSTGRES_DB", "raglite_ci")
+    monkeypatch.setenv("POSTGRES_USER", "raglite_ci")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "raglite_ci")
 
     settings = Settings()
 
-    # Verify CI-specific collection name
+    # Verify CI-specific collection name (Qdrant auto-adjusts)
     assert settings.app_env == "test"
     assert settings.qdrant_collection_name == "financial_docs_ci"
+    # PostgreSQL uses explicit env vars (NEW behavior)
     assert settings.postgres_db == "raglite_ci"
     assert settings.postgres_user == "raglite_ci"
     assert settings.postgres_password == "raglite_ci"
@@ -136,15 +166,22 @@ def test_adjust_for_environment_ci_generic(monkeypatch: MonkeyPatch) -> None:
     """Test adjust_for_environment() detects generic CI environment variable.
 
     Story 4.0.5 AC4: Should detect CI=true as CI environment.
+
+    UPDATED (2025-11-23): PostgreSQL settings NO LONGER auto-adjust in validator.
+    PostgreSQL settings come ONLY from explicit environment variables.
+    Qdrant settings STILL auto-adjust (collection _ci suffix in CI).
     """
     monkeypatch.setenv("APP_ENV", "test")
     monkeypatch.setenv("CI", "true")
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    # Set explicit PostgreSQL settings as CI would
+    monkeypatch.setenv("POSTGRES_DB", "raglite_ci")
 
     settings = Settings()
 
-    # Verify CI-specific collection name
+    # Verify CI-specific collection name (Qdrant auto-adjusts)
     assert settings.qdrant_collection_name == "financial_docs_ci"
+    # PostgreSQL uses explicit env vars (NEW behavior)
     assert settings.postgres_db == "raglite_ci"
 
 
@@ -154,16 +191,23 @@ def test_adjust_for_environment_ci_continuous_integration(monkeypatch: MonkeyPat
     """Test adjust_for_environment() detects CONTINUOUS_INTEGRATION variable.
 
     Story 4.0.5 AC4: Should detect CONTINUOUS_INTEGRATION=true as CI environment.
+
+    UPDATED (2025-11-23): PostgreSQL settings NO LONGER auto-adjust in validator.
+    PostgreSQL settings come ONLY from explicit environment variables.
+    Qdrant settings STILL auto-adjust (collection _ci suffix in CI).
     """
     monkeypatch.setenv("APP_ENV", "test")
     monkeypatch.setenv("CONTINUOUS_INTEGRATION", "true")
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     monkeypatch.delenv("CI", raising=False)
+    # Set explicit PostgreSQL settings as CI would
+    monkeypatch.setenv("POSTGRES_DB", "raglite_ci")
 
     settings = Settings()
 
-    # Verify CI-specific collection name
+    # Verify CI-specific collection name (Qdrant auto-adjusts)
     assert settings.qdrant_collection_name == "financial_docs_ci"
+    # PostgreSQL uses explicit env vars (NEW behavior)
     assert settings.postgres_db == "raglite_ci"
 
 
@@ -174,10 +218,14 @@ def test_adjust_for_environment_respects_explicit_overrides(monkeypatch: MonkeyP
 
     Story 4.0.5: Environment-based adjustment should only apply to default values,
     allowing explicit overrides via environment variables.
+
+    UPDATED (2025-11-23): PostgreSQL settings NO LONGER auto-adjust in validator.
+    Only Qdrant settings auto-adjust, and explicit overrides are still respected.
     """
     monkeypatch.setenv("APP_ENV", "test")
     monkeypatch.setenv("QDRANT_PORT", "7777")  # Explicit override
     monkeypatch.setenv("QDRANT_COLLECTION_NAME", "custom_collection")  # Explicit override
+    monkeypatch.setenv("POSTGRES_PORT", "9999")  # Explicit override
 
     settings = Settings()
 
@@ -187,8 +235,8 @@ def test_adjust_for_environment_respects_explicit_overrides(monkeypatch: MonkeyP
         settings.qdrant_collection_name == "custom_collection"
     )  # Should NOT be changed to financial_docs_test
 
-    # But other defaults should still be adjusted for test environment
-    assert settings.postgres_port == 5433  # This should still be adjusted
+    # PostgreSQL uses explicit env vars (NEW behavior - no auto-adjustment)
+    assert settings.postgres_port == 9999  # Uses explicit override
 
 
 @pytest.mark.priority("P1")
