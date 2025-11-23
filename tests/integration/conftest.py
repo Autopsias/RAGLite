@@ -106,24 +106,20 @@ _session_sample_pdf_chunk_count = None
 _session_snapshot_name = None  # Track snapshot for fast restoration
 _session_postgresql_row_count = None  # Track PostgreSQL baseline for restoration
 
-# PERFORMANCE: Cache PostgreSQL connection to reduce connection overhead
-_session_postgresql_connection = None
-
-
-def get_postgresql_connection():
-    """Get cached PostgreSQL connection for session to reduce connection overhead."""
-    global _session_postgresql_connection
-
-    if _session_postgresql_connection is None:
-        import psycopg2
-
-        from raglite.shared.config import settings
-
-        conn_str = f"postgresql://{settings.postgres_user}:{settings.postgres_password}@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
-        _session_postgresql_connection = psycopg2.connect(conn_str)
-        _session_postgresql_connection.autocommit = True
-
-    return _session_postgresql_connection
+# CRITICAL FIX (2025-11-23): Use shared PostgreSQL connection from raglite.shared.clients
+# instead of creating a separate fixture connection. This prevents connection isolation
+# issues where the fixture can't see data committed by the ingestion pipeline.
+#
+# ROOT CAUSE: The fixture was creating its own PostgreSQL connection instance which was
+# completely separate from the connection used by store_tables_in_postgresql().
+# This caused a race condition where:
+#   1. Ingestion writes data using raglite.shared.clients.get_postgresql_connection()
+#   2. Fixture reads data using tests.integration.conftest.get_postgresql_connection()
+#   3. Two different connections = fixture can't see ingestion's committed data!
+#
+# SOLUTION: Import and use the shared connection factory from raglite.shared.clients
+# so both ingestion and fixture use the SAME connection instance.
+from raglite.shared.clients import get_postgresql_connection  # noqa: E402
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -706,16 +702,9 @@ def session_ingested_collection(request, warmup_embedding_model):
     except Exception as e:
         print(f"   ⚠️  Cleanup error (non-critical): {e}")
 
-    # PERFORMANCE: Close cached PostgreSQL connection
-    global _session_postgresql_connection
-    if _session_postgresql_connection:
-        try:
-            _session_postgresql_connection.close()
-            print("   ✓ PostgreSQL connection closed")
-        except Exception as e:
-            print(f"   ⚠️  PostgreSQL cleanup error (non-critical): {e}")
-        finally:
-            _session_postgresql_connection = None
+    # NOTE (2025-11-23): PostgreSQL connection cleanup removed
+    # We now use the shared singleton from raglite.shared.clients.get_postgresql_connection()
+    # which manages its own lifecycle. The connection will be closed when the process exits.
 
 
 @pytest.fixture(autouse=True)
