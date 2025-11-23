@@ -306,6 +306,11 @@ jobs:
 
           echo "Ensuring PostgreSQL container '$CONTAINER_NAME' with correct credentials..."
 
+          # CLEANUP: Remove ANY container using port 5433 (including old raglite-postgresql-test)
+          echo "Cleaning up any containers using port $CONTAINER_PORT..."
+          docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":${CONTAINER_PORT}->" | awk '{print $1}' | xargs -r docker rm -f || true
+          sleep 2
+
           # Check if container exists
           if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
             echo "PostgreSQL container exists - verifying credentials..."
@@ -870,6 +875,11 @@ jobs:
 
           echo "Ensuring PostgreSQL container '$CONTAINER_NAME' with correct credentials..."
 
+          # CLEANUP: Remove ANY container using port 5434
+          echo "Cleaning up any containers using port $CONTAINER_PORT..."
+          docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":${CONTAINER_PORT}->" | awk '{print $1}' | xargs -r docker rm -f || true
+          sleep 2
+
           # Check if container exists
           if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
             echo "PostgreSQL container exists - verifying credentials..."
@@ -1086,6 +1096,11 @@ jobs:
           CONTAINER_PORT="5435"
 
           echo "Ensuring PostgreSQL container '$CONTAINER_NAME' with correct credentials..."
+
+          # CLEANUP: Remove ANY container using port 5435
+          echo "Cleaning up any containers using port $CONTAINER_PORT..."
+          docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":${CONTAINER_PORT}->" | awk '{print $1}' | xargs -r docker rm -f || true
+          sleep 2
 
           # Check if container exists
           if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
