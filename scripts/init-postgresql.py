@@ -13,17 +13,19 @@ import sys
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
+from raglite.shared.config import settings
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
 def create_database_schema(
-    host: str = "localhost",
-    port: int = 5432,
-    dbname: str = "raglite",
-    user: str = "raglite",
-    password: str = "raglite",
+    host: str | None = None,
+    port: int | None = None,
+    dbname: str | None = None,
+    user: str | None = None,
+    password: str | None = None,
 ) -> None:
     """Create the financial_chunks table with metadata fields and indexes.
 
@@ -37,6 +39,13 @@ def create_database_schema(
     Raises:
         psycopg2.Error: If database connection or schema creation fails
     """
+    # Use settings if parameters not provided (allows CI/test environment auto-configuration)
+    host = host or settings.postgres_host
+    port = port or settings.postgres_port
+    dbname = dbname or settings.postgres_db
+    user = user or settings.postgres_user
+    password = password or settings.postgres_password
+
     conn = None
     cursor = None
 
