@@ -27,6 +27,26 @@ import pytest
 # Debug: Track module load
 print("DEBUG: conftest.py loading...", file=sys.stderr)
 
+# CRITICAL FIX (2025-11-23): Set test environment variables BEFORE any raglite imports
+# This ensures the Settings singleton uses test database settings when it's created.
+# Root cause: tests/conftest.py sets env vars, but tests/integration/conftest.py is loaded
+# BEFORE parent conftest completes, so Settings singleton was created with production defaults.
+# Solution: Set env vars in BOTH conftest files to ensure they're available at import time.
+if "APP_ENV" not in os.environ:
+    os.environ["APP_ENV"] = "test"
+if "TESTING" not in os.environ:
+    os.environ["TESTING"] = "true"
+if "POSTGRES_PORT" not in os.environ:
+    os.environ["POSTGRES_PORT"] = "5433"
+if "POSTGRES_DB" not in os.environ:
+    os.environ["POSTGRES_DB"] = "raglite_ci"
+if "POSTGRES_USER" not in os.environ:
+    os.environ["POSTGRES_USER"] = "raglite_ci"
+if "POSTGRES_PASSWORD" not in os.environ:
+    os.environ["POSTGRES_PASSWORD"] = "raglite_ci"
+
+print("DEBUG: Test environment variables set before raglite imports", file=sys.stderr)
+
 # CRITICAL: Check service availability BEFORE importing any raglite modules
 # Test modules import raglite code which may try to connect at import time
 # This prevents collection-time hangs when services are unavailable
@@ -119,7 +139,16 @@ _session_postgresql_row_count = None  # Track PostgreSQL baseline for restoratio
 #
 # SOLUTION: Import and use the shared connection factory from raglite.shared.clients
 # so both ingestion and fixture use the SAME connection instance.
+import raglite.shared.config  # noqa: E402
 from raglite.shared.clients import get_postgresql_connection  # noqa: E402
+
+# CRITICAL FIX (2025-11-23): Force reload of settings singleton after env vars are set
+# The Settings class creates a singleton at module import time (config.py line 135).
+# If config.py was imported before this conftest set test env vars, we need to recreate it.
+# This ensures integration tests use PostgreSQL port 5433 (test database).
+from raglite.shared.config import Settings  # noqa: E402
+
+raglite.shared.config.settings = Settings()  # Recreate singleton with test env vars
 
 
 @pytest.fixture(scope="session", autouse=True)

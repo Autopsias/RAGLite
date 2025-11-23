@@ -1,51 +1,69 @@
 """Initialize PostgreSQL TEST database schema for integration testing.
 
-This script creates the required tables in the raglite_test database (port 5433).
+This script creates the required tables in the test database (port 5433).
 
 Story 4.0.5: Database separation - ensures test database has proper schema
 before running integration tests.
+
+CRITICAL (2025-11-23): Uses Settings from environment to get database credentials.
+This ensures the script works correctly in both local and CI environments.
 
 Usage:
     python scripts/init-test-postgresql.py
 """
 
 import logging
+import os
 import sys
 
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+# Set test environment BEFORE importing Settings
+os.environ["APP_ENV"] = "test"
+os.environ["TESTING"] = "true"
+
+# Import Settings after setting environment
+from raglite.shared.config import Settings
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
-def create_test_database_schema(
-    host: str = "localhost",
-    port: int = 5433,  # TEST database port
-    dbname: str = "raglite_test",  # TEST database name
-    user: str = "raglite_test",  # TEST user
-    password: str = "raglite_test",  # TEST password
-) -> None:
+def create_test_database_schema() -> None:
     """Create the financial_chunks and financial_tables tables in TEST database.
 
-    Args:
-        host: PostgreSQL host
-        port: PostgreSQL port (5433 for test)
-        dbname: Database name (raglite_test)
-        user: Database user (raglite_test)
-        password: Database password (raglite_test)
+    Uses Settings from environment to determine connection parameters.
+    This ensures the script works correctly in both local and CI environments.
+
+    CRITICAL (2025-11-23): Settings loaded from environment variables:
+    - POSTGRES_PORT (default: 5433 in test mode)
+    - POSTGRES_DB (e.g., raglite_ci in CI, raglite_test locally)
+    - POSTGRES_USER (e.g., raglite_ci in CI, raglite_test locally)
+    - POSTGRES_PASSWORD (e.g., raglite_ci in CI, raglite_test locally)
 
     Raises:
         psycopg2.Error: If database connection or schema creation fails
     """
+    # Get settings from environment
+    settings = Settings()
+
     conn = None
     cursor = None
 
     try:
         # Connect to TEST PostgreSQL
-        logger.info(f"Connecting to TEST PostgreSQL at {host}:{port}/{dbname}")
-        conn = psycopg2.connect(host=host, port=port, dbname=dbname, user=user, password=password)
+        logger.info(
+            f"Connecting to TEST PostgreSQL at {settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+        )
+        conn = psycopg2.connect(
+            host=settings.postgres_host,
+            port=settings.postgres_port,
+            dbname=settings.postgres_db,
+            user=settings.postgres_user,
+            password=settings.postgres_password,
+        )
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cursor = conn.cursor()
 
@@ -287,7 +305,7 @@ def create_test_database_schema(
         logger.info(f"✓ Index verification: {len(indexes)} total indexes created")
 
         logger.info("✅ TEST PostgreSQL schema initialization complete!")
-        logger.info("   - Database: raglite_test (port 5433)")
+        logger.info(f"   - Database: {settings.postgres_db} (port {settings.postgres_port})")
         logger.info("   - financial_chunks (chunks with metadata)")
         logger.info("   - financial_tables (structured table data)")
         logger.info("   - entity_mappings (canonical entity names)")

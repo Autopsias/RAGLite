@@ -28,10 +28,11 @@ os.environ["TESTING"] = "true"
 # CRITICAL (2025-11-23): PostgreSQL settings NO LONGER auto-adjust in validator
 # Must set PostgreSQL environment variables explicitly for test environment
 # Qdrant settings STILL auto-adjust (port 6335, collection _test/_ci suffix)
+# NOTE: PostgreSQL test container (port 5433) uses raglite_ci credentials, not raglite_test
 os.environ["POSTGRES_PORT"] = "5433"
-os.environ["POSTGRES_DB"] = "raglite_test"
-os.environ["POSTGRES_USER"] = "raglite_test"
-os.environ["POSTGRES_PASSWORD"] = "raglite_test"
+os.environ["POSTGRES_DB"] = "raglite_ci"
+os.environ["POSTGRES_USER"] = "raglite_ci"
+os.environ["POSTGRES_PASSWORD"] = "raglite_ci"
 
 import logging
 import time
@@ -40,8 +41,14 @@ from unittest.mock import MagicMock
 import pytest
 from pytest import MonkeyPatch
 
+# CRITICAL FIX (2025-11-23): Force reload of settings singleton after env vars are set
+# The Settings class creates a singleton at module import time (config.py line 135).
+# If config.py was imported before conftest.py set test env vars, we need to recreate it.
+import raglite.shared.config
 from raglite.shared.config import Settings
 from raglite.shared.models import Chunk, DocumentMetadata
+
+raglite.shared.config.settings = Settings()  # Recreate singleton with test env vars
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +57,7 @@ logger = logging.getLogger(__name__)
 def configure_test_environment():
     """Configure test environment variables for all tests.
 
-    NOTE (2025-11-19): Environment variables are now set at module level (lines 25-34)
+    NOTE (2025-11-19): Environment variables are now set at module level (lines 25-35)
     BEFORE any imports to ensure the Settings singleton uses test database ports.
     This fixture now only logs the configuration and handles cleanup.
 
@@ -58,17 +65,23 @@ def configure_test_environment():
     PostgreSQL env vars (POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD)
     must be set EXPLICITLY at module level.
 
+    CRITICAL FIX (2025-11-23): Settings singleton is forcibly reloaded after env vars
+    are set (line 50) to ensure test database configuration takes effect even if
+    config.py was imported before conftest.py ran.
+
     Test databases run on separate ports:
     - Qdrant: localhost:6335 (auto-adjusted by Settings validator)
-    - PostgreSQL: localhost:5433 (set explicitly via POSTGRES_PORT env var)
+    - PostgreSQL: localhost:5433 with raglite_ci credentials (set explicitly)
 
     OPTIMIZATION: TESTING=true enables test-specific optimizations
     in client connections, reducing timeouts and preventing test hangs.
     """
     # Environment already set at module level - just log it
-    logger.info("Test environment confirmed: APP_ENV=test (uses Qdrant:6335, PostgreSQL:5433)")
+    logger.info(
+        "Test environment confirmed: APP_ENV=test (uses Qdrant:6335, PostgreSQL:5433 raglite_ci)"
+    )
     logger.info("Test environment confirmed: TESTING=true (enables connection timeouts)")
-    logger.info("Test PostgreSQL settings: POSTGRES_PORT=5433, POSTGRES_DB=raglite_test")
+    logger.info("Test PostgreSQL settings: POSTGRES_PORT=5433, POSTGRES_DB=raglite_ci")
 
     yield
 
