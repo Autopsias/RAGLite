@@ -410,7 +410,7 @@ async def store_metadata_in_postgresql(
             # Use chunk.chunk_id as STRING for embedding_id (link to Qdrant vector)
             record = (
                 uuid.uuid4(),  # chunk_id: NEW UUID for PostgreSQL primary key
-                uuid.uuid4(),  # document_id: placeholder (could be derived from filename in future)
+                chunk.metadata.filename,  # document_id: use source document filename
                 chunk.page_number,
                 chunk.chunk_index,
                 chunk.content,

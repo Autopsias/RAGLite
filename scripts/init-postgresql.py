@@ -67,7 +67,7 @@ def create_database_schema(
             CREATE TABLE IF NOT EXISTS financial_chunks (
                 -- Core fields
                 chunk_id UUID PRIMARY KEY,
-                document_id UUID NOT NULL,
+                document_id TEXT NOT NULL,
                 page_number INTEGER NOT NULL,
                 chunk_index INTEGER NOT NULL,
                 content TEXT NOT NULL,
@@ -109,7 +109,7 @@ def create_database_schema(
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS financial_tables (
-                document_id UUID NOT NULL,
+                document_id TEXT NOT NULL,
                 page_number INTEGER NOT NULL,
                 table_index INTEGER NOT NULL,
                 table_caption TEXT,
