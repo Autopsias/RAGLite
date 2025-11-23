@@ -429,6 +429,13 @@ jobs:
           echo "✅ Qdrant collection initialized"
 
       - name: Initialize PostgreSQL schema
+        env:
+          APP_ENV: test
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5433
+          POSTGRES_DB: raglite_ci
+          POSTGRES_USER: raglite_ci
+          POSTGRES_PASSWORD: raglite_ci
         run: |
           source ci-venv/bin/activate
           echo "🔧 Initializing PostgreSQL schema (financial_chunks, financial_tables, entity_mappings)..."
@@ -1158,6 +1165,13 @@ jobs:
           echo "✅ Qdrant collection initialized"
 
       - name: Initialize PostgreSQL schema
+        env:
+          APP_ENV: test
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5435
+          POSTGRES_DB: raglite_ci
+          POSTGRES_USER: raglite_ci
+          POSTGRES_PASSWORD: raglite_ci
         run: |
           source ci-venv/bin/activate
           echo "🔧 Initializing PostgreSQL schema (financial_chunks, financial_tables, entity_mappings)..."
