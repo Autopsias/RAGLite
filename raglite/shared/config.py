@@ -13,6 +13,8 @@ All settings can be overridden by environment variables.
 
 from __future__ import annotations
 
+import logging
+import os
 from typing import Self
 
 from pydantic import model_validator
@@ -75,15 +77,21 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def adjust_for_environment(self) -> Self:
-        """Automatically adjust database settings based on APP_ENV and CI detection.
+        """Automatically adjust database settings based on APP_ENV.
 
-        This ensures test environments use separate database instances without
-        requiring explicit environment variable overrides for every setting.
+        CRITICAL FIX (2025-11-23): Removed PostgreSQL auto-adjustment to eliminate
+        configuration race condition in CI. PostgreSQL settings now come ONLY from
+        explicit environment variables set by CI workflow.
+
+        Root cause: The validator runs at Settings instantiation (module import time),
+        which happens BEFORE GitHub Actions sets CI=true. This caused Settings to use
+        "raglite_test" instead of "raglite_ci", creating a database mismatch where
+        ingestion wrote to one database and tests read from another.
 
         Environment routing (Story 4.0.5):
-        - Production (default): Qdrant:6333, PostgreSQL:5432, collection: financial_docs
-        - Test (APP_ENV=test): Qdrant:6335, PostgreSQL:5433, collection: financial_docs_test
-        - CI (APP_ENV=test + CI=true): Same as test but collection: financial_docs_ci
+        - Production (default): Qdrant:6333, collection: financial_docs
+        - Test (APP_ENV=test): Qdrant:6335, collection: financial_docs_test
+        - CI: Uses explicit env vars (POSTGRES_DB=raglite_ci, etc.)
 
         CI detection: Checks GITHUB_ACTIONS, CI, or CONTINUOUS_INTEGRATION environment variables
         """
@@ -97,24 +105,21 @@ class Settings(BaseSettings):
         )
 
         if self.app_env == "test":
-            # Only override if using default values (allows env var overrides)
+            # Qdrant adjustments (non-critical, useful for test isolation)
             if self.qdrant_port == 6333:
                 self.qdrant_port = 6335
             if self.qdrant_collection_name == "financial_docs":
                 # Story 4.0.5 AC4: Separate CI collection to avoid conflicts with local tests
                 collection_suffix = "_ci" if is_ci else "_test"
                 self.qdrant_collection_name = f"financial_docs{collection_suffix}"
-            if self.postgres_port == 5432:
-                self.postgres_port = 5433
-            if self.postgres_db == "raglite":
-                db_suffix = "_ci" if is_ci else "_test"
-                self.postgres_db = f"raglite{db_suffix}"
-            if self.postgres_user == "raglite":
-                user_suffix = "_ci" if is_ci else "_test"
-                self.postgres_user = f"raglite{user_suffix}"
-            if self.postgres_password == "raglite":  # nosec B105
-                pass_suffix = "_ci" if is_ci else "_test"
-                self.postgres_password = f"raglite{pass_suffix}"
+
+            # REMOVED: PostgreSQL auto-adjustment (causes CI race condition)
+            # PostgreSQL settings now come ONLY from explicit environment variables:
+            #   - CI: POSTGRES_DB=raglite_ci (set by .github/workflows/ci.yml)
+            #   - Local tests: POSTGRES_DB=raglite_test (set by local .env.test)
+            # This ensures Settings use the correct database name regardless of
+            # when CI=true environment variable is set.
+
         return self
 
     # Pydantic 2.x configuration using SettingsConfigDict
@@ -128,3 +133,19 @@ class Settings(BaseSettings):
 
 # Singleton instance - import this in other modules
 settings = Settings()
+
+# Diagnostic logging for Settings initialization (helps debug CI configuration issues)
+logger = logging.getLogger(__name__)
+logger.info(
+    "Settings initialized",
+    extra={
+        "postgres_db": settings.postgres_db,
+        "postgres_port": settings.postgres_port,
+        "postgres_user": settings.postgres_user,
+        "qdrant_collection": settings.qdrant_collection_name,
+        "qdrant_port": settings.qdrant_port,
+        "app_env": settings.app_env,
+        "ci_detected": os.getenv("CI") == "true",
+        "github_actions": os.getenv("GITHUB_ACTIONS") == "true",
+    },
+)
