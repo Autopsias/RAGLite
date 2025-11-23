@@ -13,7 +13,11 @@ import sys
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-from raglite.shared.config import settings
+from raglite.shared import config
+
+# Force Settings reload after environment variables are set
+# This is critical for CI compatibility where env vars are set AFTER import time
+config.settings = config.Settings()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -40,11 +44,11 @@ def create_database_schema(
         psycopg2.Error: If database connection or schema creation fails
     """
     # Use settings if parameters not provided (allows CI/test environment auto-configuration)
-    host = host or settings.postgres_host
-    port = port or settings.postgres_port
-    dbname = dbname or settings.postgres_db
-    user = user or settings.postgres_user
-    password = password or settings.postgres_password
+    host = host or config.settings.postgres_host
+    port = port or config.settings.postgres_port
+    dbname = dbname or config.settings.postgres_db
+    user = user or config.settings.postgres_user
+    password = password or config.settings.postgres_password
 
     conn = None
     cursor = None
