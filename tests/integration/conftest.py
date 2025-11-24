@@ -599,9 +599,13 @@ def session_ingested_collection(request, warmup_embedding_model):
 
     # CRITICAL FIX: Verify PostgreSQL is FULLY populated with expected data
     # This ensures database inspection tests have complete data to work with
-    print("\n⚙️  Verifying PostgreSQL population...")
+    print("\n⚙️  Verifying PostgreSQL population WITH TRANSACTION VISIBILITY...")
     try:
+        import logging
+
         from psycopg2.extras import RealDictCursor
+
+        logger = logging.getLogger(__name__)
 
         # PERFORMANCE: Use cached connection to reduce overhead
         conn = get_postgresql_connection()
@@ -611,25 +615,58 @@ def session_ingested_collection(request, warmup_embedding_model):
         pg_count = 0
         expected_min_rows = 10 if not use_full_pdf else 100  # Adjust based on PDF size
 
-        # Smart polling: check fewer times with exponential backoff
-        max_attempts = 12  # Reduced from 25 to 12 attempts
+        # Smart polling: check with transaction visibility fix for CI environments
+        max_attempts = 20  # Increased from 12 to 20 for CI slowness
         for attempt in range(max_attempts):
+            # CRITICAL FIX: Force new transaction to see committed data
+            # This handles CI transaction isolation issues where ingested data
+            # may not be visible in the current transaction (READ COMMITTED isolation)
+            if not conn.autocommit:
+                conn.rollback()  # Abandon old transaction, start fresh
+
             cursor.execute("SELECT COUNT(*) FROM financial_tables")
             pg_count = cursor.fetchone()["count"]
 
             if pg_count >= expected_min_rows:
+                logger.info(
+                    "PostgreSQL data visible",
+                    extra={
+                        "rows": pg_count,
+                        "attempt": attempt + 1,
+                        "max_attempts": max_attempts,
+                        "expected_min": expected_min_rows,
+                    },
+                )
                 break
 
-            # Log only on attempts 1, 3, 6, 9, 12 to reduce noise
-            if attempt in [0, 2, 5, 8, 11]:
-                remaining = max_attempts - attempt - 1
+            # Exponential backoff: 0.2s, 0.4s, 0.8s, 1.6s, 2.0s (capped) for CI environments
+            sleep_time = min(0.2 * (2**attempt), 2.0)
+
+            # Log only on attempts 1, 3, 6, 9, 12, 15, 18 to reduce noise
+            if attempt in [0, 2, 5, 8, 11, 14, 17]:
                 print(
-                    f"   ⏳ PostgreSQL: {pg_count}/{expected_min_rows} rows ({remaining} checks left)"
+                    f"   ⏳ PostgreSQL: {pg_count}/{expected_min_rows} rows (attempt {attempt + 1}/{max_attempts}, wait {sleep_time:.1f}s)"
                 )
 
-            # Exponential backoff: 0.1s, 0.2s, 0.4s, 0.8s, 1.6s (max 1.0s)
-            sleep_time = min(0.1 * (2**attempt), 1.0)
+            logger.debug(
+                "PostgreSQL polling attempt",
+                extra={
+                    "attempt": attempt + 1,
+                    "max_attempts": max_attempts,
+                    "current_count": pg_count,
+                    "expected_min": expected_min_rows,
+                    "sleep_time": sleep_time,
+                },
+            )
             time.sleep(sleep_time)
+        else:
+            # Max attempts exceeded without reaching expected_min_rows
+            error_msg = (
+                f"PostgreSQL data not visible after {max_attempts} attempts: "
+                f"{pg_count}/{expected_min_rows} rows. Transaction isolation issue."
+            )
+            print(f"   ❌ ERROR: {error_msg}")
+            pytest.fail(error_msg)
 
         # Get detailed counts for validation
         cursor.execute("SELECT COUNT(*) FROM financial_chunks")
