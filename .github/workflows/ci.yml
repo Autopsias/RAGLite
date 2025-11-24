@@ -756,7 +756,159 @@ jobs:
           fi
 
   # ============================================================================
-  # JOB 9: Test Count Validation
+  # JOB 9: Test Coverage Enforcement
+  # ============================================================================
+  test-coverage-enforcement:
+    name: "📊 Coverage Gates (AC3-AC5)"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 15
+    needs: [test-unit, test-integration]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for git diff
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies with uv
+        run: |
+          set -e
+          set -o pipefail
+
+          uv venv ci-venv
+          source ci-venv/bin/activate
+
+          echo "========================================="
+          echo "Installing dependencies for coverage..."
+          echo "========================================="
+
+          uv pip install -e .
+          uv pip install \
+            pytest==8.4.2 \
+            pytest-cov==6.0.0 \
+            pytest-asyncio==0.24.0 \
+            pytest-xdist==3.6.1 \
+            pytest-timeout==2.3.1
+
+      - name: Run tests with coverage
+        run: |
+          source ci-venv/bin/activate
+
+          echo "========================================="
+          echo "Running tests with coverage tracking..."
+          echo "========================================="
+
+          pytest \
+            --cov=raglite \
+            --cov=scripts \
+            --cov-report=json:.coverage.json \
+            --cov-report=html:htmlcov \
+            --cov-report=term \
+            tests/
+
+      - name: Download baseline coverage from main
+        id: download-baseline
+        continue-on-error: true
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: ci.yml
+          branch: main
+          name: coverage-baseline
+          path: .
+          if_no_artifact_found: warn
+
+      - name: Check coverage diff (AC3 - new code ≥80%)
+        run: |
+          source ci-venv/bin/activate
+
+          echo "========================================="
+          echo "AC3: Coverage Gate (New Code ≥80%)"
+          echo "========================================="
+
+          if [ -f ".coverage-baseline.json" ]; then
+            python scripts/check_coverage_diff.py \
+              --current=.coverage.json \
+              --baseline=.coverage-baseline.json \
+              --threshold=80
+          else
+            echo "⚠️  No baseline coverage found - skipping diff check"
+            echo "   This is expected for first PR or main branch builds"
+            python scripts/check_coverage_diff.py \
+              --current=.coverage.json \
+              --threshold=80
+          fi
+
+      - name: Check coverage ratchet (AC4 - no regression)
+        run: |
+          source ci-venv/bin/activate
+
+          echo "========================================="
+          echo "AC4: Coverage Ratchet (No Regression)"
+          echo "========================================="
+
+          if [ -f ".coverage-baseline.json" ]; then
+            python scripts/check_coverage_ratchet.py \
+              --current=.coverage.json \
+              --baseline=.coverage-baseline.json
+          else
+            echo "⚠️  No baseline coverage found - skipping ratchet check"
+            echo "   This is expected for first PR or main branch builds"
+          fi
+
+      - name: Post coverage comment to PR (AC5)
+        if: github.event_name == 'pull_request'
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          MINIMUM_GREEN: 80
+          MINIMUM_ORANGE: 60
+          ANNOTATE_MISSING_LINES: true
+          ANNOTATION_TYPE: warning
+
+      - name: Upload coverage report (HTML)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report-html
+          path: htmlcov/
+          retention-days: 30
+
+      - name: Upload coverage baseline (for main branch)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-baseline
+          path: .coverage.json
+          retention-days: 90
+
+      - name: Display coverage summary
+        if: always()
+        run: |
+          source ci-venv/bin/activate
+
+          echo "========================================="
+          echo "📊 COVERAGE SUMMARY"
+          echo "========================================="
+
+          if [ -f ".coverage.json" ]; then
+            python3 -c '
+          import json
+          with open(".coverage.json") as f:
+              data = json.load(f)
+              total = data["totals"]
+              print(f"Overall Coverage: {total[\"percent_covered\"]:.2f}%")
+              print(f"Covered Lines: {total[\"covered_lines\"]}/{total[\"num_statements\"]}")
+              print(f"Missing Lines: {total[\"missing_lines\"]}")
+          '
+          fi
+
+          echo "========================================="
+
+  # ============================================================================
+  # JOB 10: Test Count Validation
   # ============================================================================
   test-count-validation:
     name: "🔢 NFR: Test Discovery Validation"
@@ -1007,7 +1159,7 @@ jobs:
   # ============================================================================
 
   # ============================================================================
-  # JOB 10: Documentation Validation
+  # JOB 11: Documentation Validation
   # ============================================================================
   docs-validation:
     name: "📚 Documentation: Validation"
@@ -1048,7 +1200,7 @@ jobs:
           fi
 
   # ============================================================================
-  # JOB 11: Burn-In Loop (Flaky Test Detection)
+  # JOB 12: Burn-In Loop (Flaky Test Detection)
   # ============================================================================
   burn-in:
     name: "🔥 Quality Gate: Burn-In Loop (3 iterations)"
@@ -1269,12 +1421,12 @@ jobs:
           retention-days: 30
 
   # ============================================================================
-  # JOB 12: Build Summary
+  # JOB 13: Build Summary
   # ============================================================================
   build-summary:
     name: "📊 CI Pipeline: Summary"
     runs-on: [self-hosted, raglite]
-    needs: [lint, type-check, security, test-unit, test-integration, test-e2e, test-performance, test-agentic-workflows, test-count-validation, docs-validation, burn-in]
+    needs: [lint, type-check, security, test-unit, test-integration, test-e2e, test-performance, test-agentic-workflows, test-coverage-enforcement, test-count-validation, docs-validation, burn-in]
     if: always()
 
     steps:

@@ -1,2 +1,4 @@
-# Story keys are not API keys - they follow pattern: epic-story-kebab-case-title
-3-7-graceful-degradation-for-workflow-failures
+# Story context XML files - story-key tags are not secrets
+docs/sprint-artifacts/*.context.xml:generic-api-key:12
+docs/sprint-artifacts/4-0-1-test-coverage-backfill-ci-cd-gates.context.xml:generic-api-key:12
+docs/sprint-artifacts/4-0-3-fix-mcp-ingestion-timeout.context.xml:generic-api-key:12

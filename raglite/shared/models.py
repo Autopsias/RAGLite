@@ -299,3 +299,57 @@ class WorkflowMetrics(BaseModel):
 
 # Type alias for job identifiers (used in ingestion pipeline)
 JobID = str
+
+
+# Story 4.0.3: Async ingestion models for large document processing
+class AsyncIngestionRequest(BaseModel):
+    """Request parameters for async document ingestion.
+
+    Story 4.0.3 AC5: Async ingestion for large documents (150-200 pages).
+    Returns immediately with job ID instead of blocking.
+    """
+
+    doc_path: str = Field(..., description="Absolute or relative path to document file")
+
+
+class AsyncIngestionResponse(BaseModel):
+    """Response from async document ingestion initiation.
+
+    Story 4.0.3 AC5: Immediate response with job ID for status polling.
+    """
+
+    job_id: str = Field(..., description="Unique job identifier for status polling")
+    status: str = Field(default="started", description="Initial job status ('started')")
+    message: str = Field(
+        ...,
+        description="User-friendly message (e.g., 'Ingestion started for large-file.pdf. Use get_ingestion_status to check progress.')",
+    )
+    estimated_time_s: int | None = Field(
+        default=None, description="Estimated completion time in seconds (based on page count)"
+    )
+
+
+class IngestionJobStatus(BaseModel):
+    """Status response for async ingestion job polling.
+
+    Story 4.0.3 AC5: Status polling for async ingestion jobs.
+    """
+
+    job_id: str = Field(..., description="Unique job identifier")
+    status: str = Field(
+        ...,
+        description="Job status: 'pending', 'in_progress', 'completed', or 'failed'",
+    )
+    progress: int | None = Field(
+        default=None, description="Progress percentage (0-100) if available"
+    )
+    result: DocumentMetadata | None = Field(
+        default=None, description="Ingestion result (only when status='completed')"
+    )
+    error: str | None = Field(default=None, description="Error message (only when status='failed')")
+    started_at: str | None = Field(
+        default=None, description="Job start timestamp (ISO 8601 format)"
+    )
+    completed_at: str | None = Field(
+        default=None, description="Job completion timestamp (ISO 8601 format, only when done)"
+    )

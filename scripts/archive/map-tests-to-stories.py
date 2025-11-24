@@ -147,9 +147,7 @@ def main():
         story_map.keys(),
         key=lambda x: (
             # Sort by epic.story number
-            float(x)
-            if "." in x and x.replace(".", "").isdigit()
-            else 999
+            float(x) if "." in x and x.replace(".", "").isdigit() else 999
         ),
     ):
         files = story_map[story]

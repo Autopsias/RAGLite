@@ -1,10 +1,12 @@
 """RAGLite MCP Server - Model Context Protocol entry point.
 
 This module implements the FastMCP server that exposes RAGLite capabilities
-to MCP clients (Claude Desktop, etc.). Provides three core tools:
-  1. ingest_financial_document - Ingest PDF/Excel documents
-  2. query_financial_documents - Query documents using natural language (Epic 1-2)
-  3. analytical_query_financial_documents - Advanced multi-step analytical queries (Epic 3)
+to MCP clients (Claude Desktop, etc.). Provides five core tools:
+  1. ingest_financial_document - Ingest PDF/Excel documents (sync, <50 pages)
+  2. ingest_financial_document_async - Async ingestion for large documents (>50 pages, Story 4.0.3)
+  3. get_ingestion_status - Poll async ingestion job status (Story 4.0.3)
+  4. query_financial_documents - Query documents using natural language (Epic 1-2)
+  5. analytical_query_financial_documents - Advanced multi-step analytical queries (Epic 3)
 
 The server follows standard MCP pattern: tools return raw data (chunks with metadata),
 and the LLM client (Claude) synthesizes natural language answers.
@@ -25,6 +27,7 @@ from fastmcp import FastMCP
 from raglite.agentic.fallback import FallbackResponse, handle_workflow_failure
 from raglite.agentic.orchestrator import WorkflowExecutor
 from raglite.agentic.planner import QueryComplexity, classify_query_complexity, decompose_query
+from raglite.ingestion.job_tracker import create_job, get_job_status, start_background_job
 from raglite.ingestion.pipeline import ingest_document
 from raglite.retrieval.attribution import generate_citations
 from raglite.retrieval.multi_index_search import MultiIndexSearchError, multi_index_search
@@ -34,7 +37,9 @@ from raglite.shared.logging import get_logger
 from raglite.shared.models import (
     AnalyticalQueryRequest,
     AnalyticalQueryResponse,
+    AsyncIngestionResponse,
     DocumentMetadata,
+    IngestionJobStatus,
     QueryRequest,
     QueryResponse,
 )
@@ -141,6 +146,184 @@ async def ingest_financial_document(doc_path: str) -> DocumentMetadata:
             exc_info=True,
         )
         raise DocumentProcessingError(f"Failed to ingest {doc_path}: {e}") from e
+
+
+@mcp.tool()
+async def ingest_financial_document_async(doc_path: str) -> AsyncIngestionResponse:
+    """Ingest large financial documents asynchronously to avoid MCP timeout.
+
+    Story 4.0.3 AC5: Async ingestion for large documents (150-200 pages).
+
+    **When to Use:**
+    - Documents >50 pages (estimated time >6 minutes)
+    - Any document where sync ingestion previously timed out
+    - Large quarterly/annual reports (150-200 pages)
+
+    **How It Works:**
+    1. Returns immediately with job ID (no blocking)
+    2. Ingestion runs in background
+    3. Poll status with `get_ingestion_status(job_id)`
+    4. Query document normally after completion
+
+    **Performance Guidance:**
+    - Small docs (<10 pages): ~30-60s → Use `ingest_financial_document` (sync)
+    - Medium docs (10-50 pages): ~1-6 min → Use `ingest_financial_document` (sync, may timeout)
+    - Large docs (>50 pages): 6-30+ min → Use THIS TOOL (async, no timeout)
+
+    Args:
+        doc_path: Absolute or relative path to document file (.pdf, .xlsx, .xls)
+
+    Returns:
+        AsyncIngestionResponse with:
+          - job_id: Unique identifier for status polling
+          - status: Initial status ("started")
+          - message: User-friendly instructions
+          - estimated_time_s: Estimated completion time (based on page count if available)
+
+    Raises:
+        DocumentProcessingError: If file doesn't exist or path is invalid
+
+    Example - Async Ingestion Workflow:
+        >>> # Step 1: Start async ingestion
+        >>> response = await ingest_financial_document_async("/data/Annual_Report_2024.pdf")
+        >>> print(response.message)
+        "Ingestion started for Annual_Report_2024.pdf. Use get_ingestion_status to check progress."
+        >>> print(response.job_id)
+        "a3f8b2c1-4d5e-6f7g-8h9i-0j1k2l3m4n5o"
+        >>> print(response.estimated_time_s)
+        1458  # ~24 minutes for 200-page PDF
+
+        >>> # Step 2: Poll status (wait ~1-2 minutes between polls)
+        >>> import time
+        >>> while True:
+        ...     status = await get_ingestion_status(response.job_id)
+        ...     print(f"Status: {status.status}, Progress: {status.progress}%")
+        ...     if status.status in ["completed", "failed"]:
+        ...         break
+        ...     time.sleep(60)  # Check every minute
+        "Status: in_progress, Progress: 10%"
+        "Status: in_progress, Progress: 10%"
+        ... (multiple polls) ...
+        "Status: completed, Progress: 100%"
+
+        >>> # Step 3: Query document after completion
+        >>> if status.status == "completed":
+        ...     query_resp = await query_financial_documents(
+        ...         QueryRequest(query="What was Q3 revenue?")
+        ...     )
+        ...     print(query_resp.results[0].text)
+
+    Note:
+        Jobs are stored in-memory only (MVP). Jobs lost on server restart.
+        Epic 5 (Production) will add persistent job storage with Redis.
+    """
+    from pathlib import Path
+
+    logger.info("Async ingestion requested", extra={"path": doc_path})
+
+    # Validate file exists before creating job
+    doc_file = Path(doc_path).resolve()
+    if not doc_file.exists():
+        error_msg = f"Document not found: {doc_path}"
+        logger.error(
+            "Async ingestion failed - file not found",
+            extra={"path": str(doc_file), "error": error_msg},
+        )
+        raise DocumentProcessingError(error_msg)
+
+    # Create job
+    job_id = create_job(str(doc_file))
+
+    # Start background ingestion (fire-and-forget)
+    start_background_job(job_id, str(doc_file))
+
+    # Estimate completion time (7.29s/page from Task 1 investigation)
+    # For now, use conservative estimate without knowing page count
+    estimated_time_s = None  # Will be updated after first progress check
+
+    message = (
+        f"Ingestion started for {doc_file.name}. "
+        f"Use get_ingestion_status('{job_id}') to check progress. "
+        f"Large documents (150-200 pages) may take 15-30 minutes."
+    )
+
+    logger.info(
+        "Async ingestion job started",
+        extra={"job_id": job_id, "doc_path": str(doc_file)},
+    )
+
+    return AsyncIngestionResponse(
+        job_id=job_id,
+        status="started",
+        message=message,
+        estimated_time_s=estimated_time_s,
+    )
+
+
+@mcp.tool()
+async def get_ingestion_status(job_id: str) -> IngestionJobStatus:
+    """Check status of async document ingestion job.
+
+    Story 4.0.3 AC5: Status polling for async ingestion jobs.
+
+    Poll this endpoint periodically to check job progress. Recommended polling interval:
+    - Every 30-60 seconds for large documents (150-200 pages)
+    - Every 10-15 seconds for medium documents (50-100 pages)
+
+    Args:
+        job_id: Unique job identifier from `ingest_financial_document_async`
+
+    Returns:
+        IngestionJobStatus with:
+          - job_id: Job identifier
+          - status: "pending", "in_progress", "completed", or "failed"
+          - progress: Progress percentage (0-100) if available
+          - result: DocumentMetadata (only when status="completed")
+          - error: Error message (only when status="failed")
+          - started_at: Job start timestamp (ISO 8601)
+          - completed_at: Completion timestamp (ISO 8601, only when done)
+
+    Raises:
+        ValueError: If job_id not found (invalid or expired)
+
+    Example:
+        >>> status = await get_ingestion_status("a3f8b2c1-4d5e-6f7g-8h9i...")
+        >>> print(status.status)
+        "in_progress"
+        >>> print(status.progress)
+        10
+
+        >>> # Poll until complete
+        >>> while status.status == "in_progress":
+        ...     await asyncio.sleep(60)  # Wait 1 minute
+        ...     status = await get_ingestion_status(job_id)
+        >>> print(status.status)
+        "completed"
+        >>> print(status.result.chunk_count)
+        1247
+
+    Note:
+        Jobs are stored in-memory only (MVP). Jobs lost on server restart.
+    """
+    logger.info("Checking job status", extra={"job_id": job_id})
+
+    job_status = get_job_status(job_id)
+
+    if job_status is None:
+        error_msg = f"Job not found: {job_id}. Job may have expired or server restarted."
+        logger.warning("Job status check failed - job not found", extra={"job_id": job_id})
+        raise ValueError(error_msg)
+
+    logger.info(
+        "Job status retrieved",
+        extra={
+            "job_id": job_id,
+            "status": job_status.status,
+            "progress": job_status.progress,
+        },
+    )
+
+    return job_status
 
 
 @mcp.tool()

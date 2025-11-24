@@ -1,0 +1,183 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4.0</epicId>
+    <storyId>4.0.3</storyId>
+    <title>Fix MCP Ingestion Timeout</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-23</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-0-3-fix-mcp-ingestion-timeout.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>MCP document ingestion to complete without timing out</iWant>
+    <soThat>users can ingest financial PDFs via the MCP interface without errors</soThat>
+    <tasks>
+      - Task 1: Investigate current MCP ingestion timeout (measure times, identify bottlenecks, check config)
+      - Task 2: Optimize ingestion performance (enable pypdfium, parallelism, batch embeddings)
+      - Task 3: Implement async ingestion for large documents (REQUIRED for 150-200 page PDFs)
+      - Task 4: Create end-to-end validation test (sync and async ingestion paths)
+      - Task 5: Update MCP documentation (timeout config, ingestion times, troubleshooting)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    AC1: PDF ingestion completes within MCP timeout (60-120s) for typical documents (up to ~50 pages). Large PDFs (150-200 pages) handled via async ingestion (AC5).
+    AC2: Optimize ingestion performance using pypdfium backend (Story 2.1) and page-level parallelism (Story 2.2). Target: &lt;60s for 20-30 pages.
+    AC3: Integration test validates MCP ingestion → query flow without timeout.
+    AC4: MCP timeout configuration documented with expected ingestion times table.
+    AC5: Async ingestion for large documents (150-200 pages) - REQUIRED. Support both sync (small docs) and async (large docs) ingestion modes.
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/epic-3-retrospective-2025-11-18.md</path>
+        <title>Epic 3 Retrospective</title>
+        <section>ACTION ITEM 3: Investigate & Fix MCP Ingestion Timeout</section>
+        <snippet>MCP ingestion tool times out during document processing. Root cause: Large PDF ingestion (Docling + embedding generation) exceeds 60-120s MCP timeout. 160-page PDF takes 3-5+ minutes. Fix options: optimize performance, async ingestion pattern.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/4-0-5-test-prod-database-separation.md</path>
+        <title>Story 4.0.5 - Test vs Production Database Separation</title>
+        <section>Dev Agent Record - Completion Notes</section>
+        <snippet>Small test fixture available: tests/fixtures/sample-small-3-pages.pdf (4 pages, 228 KB). Integration tests configured to use small fixture by default (15-18x speedup). Environment-based configuration pattern established via Settings.app_env.</snippet>
+      </doc>
+      <doc>
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2 - Advanced RAG Architecture Enhancement</title>
+        <section>Story 2.1 - Implement pypdfium Backend</section>
+        <snippet>pypdfium backend provides 1.7-2.5x speedup and 50-60% memory reduction for Docling PDF processing. Story 2.2 implements page-level parallelism for concurrent page processing.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack</title>
+        <section>PDF Processing</section>
+        <snippet>Docling with pypdfium backend (97.9% table accuracy, 1.7-2.5x speedup). FastMCP (MCP Python SDK) exposes tools via MCP protocol. Fin-E5 embeddings for semantic vectors.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/6-complete-reference-implementation.md</path>
+        <title>Complete Reference Implementation</title>
+        <section>MCP Tool Pattern</section>
+        <snippet>FastMCP tool pattern: @mcp.tool() decorator, Pydantic models for request/response, structured logging with extra={}, async/await for I/O operations.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>raglite/main.py</path>
+        <kind>mcp-server</kind>
+        <symbol>ingest_financial_document</symbol>
+        <lines>61-120</lines>
+        <reason>Current MCP ingestion tool implementation. Documents timeout issue for large files (lines 71-84). Need to add async variant.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>ingestion-pipeline</kind>
+        <symbol>ingest_document</symbol>
+        <lines>1-100</lines>
+        <reason>Core ingestion pipeline: Docling processing, chunking, embedding generation, Qdrant storage. Bottleneck to optimize.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/config.py</path>
+        <kind>config</kind>
+        <symbol>Settings</symbol>
+        <lines>31-100</lines>
+        <reason>Settings model with environment-based configuration (Story 4.0.5 pattern). May need timeout configuration fields.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/conftest.py</path>
+        <kind>test-fixture</kind>
+        <symbol>configure_test_environment</symbol>
+        <lines>34-68</lines>
+        <reason>pytest session fixture that configures test environment (APP_ENV=test). Use for MCP ingestion tests.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/fixtures/sample-small-3-pages.pdf</path>
+        <kind>test-fixture</kind>
+        <symbol>N/A</symbol>
+        <lines>N/A</lines>
+        <reason>Small test fixture (4 pages, 228 KB) from Story 4.0.5. Use for fast MCP ingestion validation tests (15-18x speedup).</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        fastmcp: "Latest" (MCP Python SDK)
+        docling: "Latest" (PDF processing with pypdfium backend)
+        qdrant-client: "1.11+" (Vector storage)
+        pydantic: "2.x" (Data validation and settings)
+        pytest: "Latest" (Testing framework)
+        pytest-asyncio: "Latest" (Async test support)
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - MCP has default timeout limits (60-120 seconds for synchronous operations)
+    - Large PDFs (150-200 pages) are typical production use case - MUST be supported
+    - Cannot increase timeout beyond ~120s without poor UX (user waiting too long)
+    - Must maintain 97.9% table accuracy from Docling (no quality regression)
+    - Async ingestion requires job tracking (in-memory OK for MVP, no persistence needed)
+    - Test environment uses small fixtures (sample-small-3-pages.pdf) for fast validation
+    - Production database separation established (Story 4.0.5) - tests use port 6335/5433
+    - All I/O operations must be async/await
+    - Use structured logging with extra={} for context
+    - Type hints and Google-style docstrings required
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>ingest_financial_document</name>
+      <kind>mcp-tool</kind>
+      <signature>@mcp.tool() async def ingest_financial_document(doc_path: str) -> DocumentMetadata</signature>
+      <path>raglite/main.py</path>
+      <notes>Current sync ingestion MCP tool. Need to add async variant: ingest_financial_document_async.</notes>
+    </interface>
+    <interface>
+      <name>ingest_financial_document_async</name>
+      <kind>mcp-tool</kind>
+      <signature>@mcp.tool() async def ingest_financial_document_async(doc_path: str) -> AsyncJobResponse (job_id, status="started")</signature>
+      <path>raglite/main.py</path>
+      <notes>NEW - To be implemented. Returns immediately with job ID for status polling.</notes>
+    </interface>
+    <interface>
+      <name>get_ingestion_status</name>
+      <kind>mcp-tool</kind>
+      <signature>@mcp.tool() async def get_ingestion_status(job_id: str) -> AsyncJobStatus (job_id, status, progress, result, error)</signature>
+      <path>raglite/main.py</path>
+      <notes>NEW - To be implemented. Polls ingestion job status. Status values: "pending", "in_progress", "completed", "failed".</notes>
+    </interface>
+    <interface>
+      <name>ingest_document</name>
+      <kind>function</kind>
+      <signature>async def ingest_document(doc_path: str) -> DocumentMetadata</signature>
+      <path>raglite/ingestion/pipeline.py</path>
+      <notes>Core ingestion pipeline. Called by MCP tools. Optimize for performance (pypdfium, parallelism, batch embeddings).</notes>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest with pytest-asyncio for async tests. Test fixtures in tests/fixtures/. Use small fixture (sample-small-3-pages.pdf) for fast unit/integration tests. Test environment auto-configured via conftest.py (APP_ENV=test, ports 6335/5433). Integration tests validate end-to-end MCP → ingestion → query flow. Measure and validate performance improvements (baseline vs optimized). Test both sync and async ingestion paths. Type hints and structured logging required.
+    </standards>
+
+    <locations>
+      tests/unit/ - Unit tests for ingestion pipeline components
+      tests/integration/ - End-to-end MCP ingestion tests
+      tests/fixtures/ - Test fixtures (sample-small-3-pages.pdf)
+    </locations>
+
+    <ideas>
+      AC1: Test sync ingestion completes within timeout (10-page: &lt;30s, 30-page: &lt;90s)
+      AC2: Test pypdfium backend enabled, page-level parallelism working
+      AC3: Integration test: ingest 10-page PDF via MCP, verify chunks stored, query returns results
+      AC3: Integration test: async ingestion with 150-page PDF (verify status polling, eventual completion)
+      AC4: Validate MCP timeout configuration documented
+      AC5: Test async job tracking (create job, poll status, retrieve result)
+      Performance: Measure baseline vs optimized ingestion times (assert improvement)
+      Error handling: Test timeout scenarios, file not found, invalid PDF
+    </ideas>
+  </tests>
+</story-context>
