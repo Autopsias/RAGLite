@@ -216,6 +216,19 @@ async def search_tables_sql(sql_query: str, top_k: int = 50) -> list[QueryResult
             source_document = row_dict.get("document_id", "unknown")
             page_number = row_dict.get("page_number")
 
+            # EXC-006: Log warning if document_id is missing
+            if source_document == "unknown":
+                logger.warning(
+                    "SQL result missing document_id - source attribution will fail",
+                    extra={
+                        "row_index": row_idx,
+                        "columns_available": column_names,
+                        "entity": row_dict.get("entity"),
+                        "metric": row_dict.get("metric"),
+                        "row_sample": str(row_dict)[:200],
+                    },
+                )
+
             # Create QueryResult
             # Note: SQL results use score=1.0 (exact match semantics)
             # chunk_index uses row_idx for ordering

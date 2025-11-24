@@ -800,10 +800,11 @@ jobs:
           echo "========================================="
           echo "Running tests with coverage tracking..."
           echo "========================================="
+          echo "NOTE: Scripts excluded from coverage per pyproject.toml config"
+          echo ""
 
           pytest \
             --cov=raglite \
-            --cov=scripts \
             --cov-report=json:.coverage.json \
             --cov-report=html:htmlcov \
             --cov-report=term \

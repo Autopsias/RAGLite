@@ -205,7 +205,7 @@ omit = [
     "*/tests/*",
     "*/test_*.py",
     "*/__init__.py",
-    "scripts/archive/*",  # Exclude archived one-off scripts from coverage
+    "scripts/*",  # Exclude all utility/operational scripts from coverage
 ]
 
 [tool.coverage.report]

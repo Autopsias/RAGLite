@@ -566,9 +566,27 @@ async def store_tables_in_postgresql(
 
         # Prepare records for batch insert
         records = []
+        skipped_no_document_id = 0
         for row in valid_rows:
+            # CRITICAL FIX (EXC-006): Validate document_id is present
+            # Some table extraction paths may not set document_id, causing
+            # source attribution to fail with source_document='unknown'
+            document_id = row.get("document_id")
+            if not document_id:
+                skipped_no_document_id += 1
+                logger.warning(
+                    "Skipping table row with missing document_id",
+                    extra={
+                        "row_index": row.get("row_index"),
+                        "table_index": row.get("table_index"),
+                        "entity": row.get("entity"),
+                        "metric": row.get("metric"),
+                    },
+                )
+                continue
+
             record = (
-                row.get("document_id"),
+                document_id,
                 row.get("page_number"),
                 row.get("table_index"),
                 row.get("table_caption"),
@@ -620,8 +638,9 @@ async def store_tables_in_postgresql(
         logger.info(
             "PostgreSQL table storage complete",
             extra={
-                "records_stored": len(valid_rows),
+                "records_stored": len(records),
                 "records_skipped": skipped_count,
+                "records_skipped_no_document_id": skipped_no_document_id,
                 "duration_ms": duration_ms,
                 "records_per_second": (
                     round(len(valid_rows) / (duration_ms / 1000), 2) if duration_ms > 0 else 0
@@ -629,7 +648,9 @@ async def store_tables_in_postgresql(
             },
         )
 
-        return (len(valid_rows), skipped_count)
+        # Return actual records stored (may be less than valid_rows if some had no document_id)
+        total_skipped = skipped_count + skipped_no_document_id
+        return (len(records), total_skipped)
 
     except Exception as e:
         logger.error(
