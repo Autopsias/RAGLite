@@ -243,7 +243,7 @@ class TestModuleFunctionality:
     def test_module_imports_successfully(self):
         """Test that verify_venv module can be imported."""
         try:
-            import verify_venv  # noqa: F401
+            from scripts import verify_venv  # noqa: F401
 
             assert True
         except ImportError as e:
@@ -251,21 +251,21 @@ class TestModuleFunctionality:
 
     def test_main_function_exists(self):
         """Test that main() function is defined."""
-        import verify_venv
+        from scripts import verify_venv
 
         assert hasattr(verify_venv, "main")
         assert callable(verify_venv.main)
 
     def test_module_has_docstring(self):
         """Test that module has documentation."""
-        import verify_venv
+        from scripts import verify_venv
 
         assert verify_venv.__doc__ is not None
         assert len(verify_venv.__doc__) > 0
 
     def test_module_uses_pathlib(self):
         """Test that module imports pathlib.Path."""
-        import verify_venv
+        from scripts import verify_venv
 
         # Module should use Path from pathlib
         assert "Path" in verify_venv.__dict__ or "Path" in dir(verify_venv)
