@@ -3,6 +3,7 @@
 Defines core data structures used across ingestion and retrieval modules.
 """
 
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -299,6 +300,47 @@ class WorkflowMetrics(BaseModel):
 
 # Type alias for job identifiers (used in ingestion pipeline)
 JobID = str
+
+
+# Story 4.1: Time-series data extraction models for forecasting
+class TimeSeriesPoint(BaseModel):
+    """Single data point in a time series.
+
+    Story 4.1 AC2: Data points extracted with timestamps and metric labels.
+
+    Attributes:
+        date: Datetime of the data point
+        value: Numeric value for the metric
+        label: Optional label like "Q3 2024" or "Jan 2024"
+    """
+
+    date: datetime = Field(..., description="Datetime of the data point")
+    value: float = Field(..., description="Numeric value for the metric")
+    label: str | None = Field(default=None, description="Optional label like 'Q3 2024'")
+
+
+class TimeSeriesData(BaseModel):
+    """Time series data for a financial metric.
+
+    Story 4.1 AC1-AC4: Collection of time series data points with metadata.
+
+    Attributes:
+        metric_name: Name of the metric (revenue, expenses, ebitda, etc.)
+        points: List of TimeSeriesPoint objects sorted by date
+        interval: Time interval: "raw", "monthly", "quarterly", "yearly"
+        source_documents: List of source document filenames
+    """
+
+    metric_name: str = Field(..., description="Name of the financial metric")
+    points: list[TimeSeriesPoint] = Field(
+        default_factory=list, description="Data points sorted by date"
+    )
+    interval: str = Field(
+        default="raw", description="Time interval: 'raw', 'monthly', 'quarterly', 'yearly'"
+    )
+    source_documents: list[str] = Field(
+        default_factory=list, description="Source document filenames"
+    )
 
 
 # Story 4.0.3: Async ingestion models for large document processing

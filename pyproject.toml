@@ -39,6 +39,7 @@ dependencies = [
     "pydantic-settings>=2.0,<3.0",
     "openpyxl>=3.1,<4.0",
     "pandas>=2.0,<3.0",
+    "python-dateutil>=2.8,<3.0",  # Story 4.1: Fiscal date parsing for time-series extraction
     "rank-bm25==0.2.2", # Epic 2: BM25 hybrid search (Story 2.1)
     "tiktoken>=0.5.1,<1.0.0", # Story 2.2: Token counting for element-aware chunking
     "python-dotenv==1.1.1",
@@ -81,6 +82,7 @@ dev = [
     "pre-commit>=3.0,<4.0",
     "pypdf>=4.0,<5.0",
     "pytest-ordering>=0.6",
+    "types-python-dateutil>=2.9.0.20251115",
 ]
 test = [
     "faker>=18.0,<19.0",
@@ -252,6 +254,7 @@ module = [
     "PIL.*",
     "jinja2.*",
     "strands.*",
+    "dateutil.*",
     "tiktoken.*",
     "fastmcp.*",
 ]

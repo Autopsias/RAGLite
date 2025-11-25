@@ -115,7 +115,7 @@ development_status:
   4-0-5-test-prod-database-separation: done  # ✅ COMPLETE - Action Item 5 (10 hours actual, Ricardo, 2025-11-19)
 
   # Epic 4 Feature Stories (Start after prep stories complete)
-  4-1-time-series-data-extraction: done  # ✅ APPROVED (2025-11-25) - All ACs verified, 88.89% coverage
+  4-1-time-series-data-extraction: backlog
   4-2-forecasting-engine-implementation: backlog
   4-3-automated-forecast-updates: backlog
   4-4-forecast-query-tool-mcp: backlog
