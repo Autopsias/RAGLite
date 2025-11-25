@@ -376,10 +376,11 @@ uv run pre-commit install
 
 1. **Read coding standards:** [docs/architecture/coding-standards.md](docs/architecture/coding-standards.md)
 2. **Follow tech stack:** Only use approved libraries in [tech-stack.md](docs/architecture/tech-stack.md)
-3. **Write tests:** 50%+ coverage for critical paths
-4. **Type hints required:** All functions must have type annotations
-5. **Structured logging:** Use `logger` with `extra={}` context
-6. **No over-engineering:** Keep it simple (600-800 lines target)
+3. **Definition of Done:** Check [docs/process/definition-of-done.md](docs/process/definition-of-done.md) before marking stories complete
+4. **Write tests:** New code requires ≥80% coverage (CI/CD enforced)
+5. **Type hints required:** All functions must have type annotations
+6. **Structured logging:** Use `logger` with `extra={}` context
+7. **No over-engineering:** Keep it simple (600-800 lines target)
 
 ### Pull Request Process
 
