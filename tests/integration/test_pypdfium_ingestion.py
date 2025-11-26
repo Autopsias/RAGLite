@@ -213,7 +213,7 @@ class TestPypdfiumTableAccuracy:
 
         # Ingest PDF (this will use pypdfium backend)
         try:
-            await ingest_pdf(str(sample_pdf), clear_collection=True)
+            await ingest_pdf(str(sample_pdf), clear_existing=True)
         except Exception as e:
             if "Connection refused" in str(e) or "Qdrant" in str(e):
                 pytest.skip(f"Qdrant not available: {e}")
@@ -303,7 +303,7 @@ class TestPypdfiumMemoryReduction:
         try:
             # Ingest PDF with memory tracking
             # Note: Using existing collection to avoid clearing data for subsequent tests
-            result = await ingest_pdf(str(sample_pdf), clear_collection=False)
+            result = await ingest_pdf(str(sample_pdf), clear_existing=False)
 
             # Get peak memory usage
             current, peak = tracemalloc.get_traced_memory()
@@ -329,9 +329,9 @@ class TestPypdfiumMemoryReduction:
             # Full validation requires before/after comparison
 
             # Soft assertion - memory should be reasonable for 10-page PDF
-            assert (
-                peak_mb < max_expected_mb
-            ), f"Memory usage too high: {peak_mb:.1f} MB (expected <{max_expected_mb} MB)"
+            assert peak_mb < max_expected_mb, (
+                f"Memory usage too high: {peak_mb:.1f} MB (expected <{max_expected_mb} MB)"
+            )
 
             print("  Status: ✅ PASS - Memory usage within expected range")
             print(

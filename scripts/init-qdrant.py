@@ -18,6 +18,7 @@ from qdrant_client.models import Distance  # noqa: E402
 
 from raglite.ingestion.storage_operations import create_collection  # noqa: E402
 from raglite.shared.config import settings  # noqa: E402
+from raglite.shared.safety import SafetyGuard  # noqa: E402
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -36,6 +37,10 @@ def initialize_qdrant_collection() -> None:
     Raises:
         SystemExit: If initialization fails
     """
+    # Story 4.0.6 AC4: Display environment banner before database modifications
+    guard = SafetyGuard()
+    guard.display_environment_banner()
+
     try:
         logger.info("=" * 60)
         logger.info("QDRANT COLLECTION INITIALIZATION")

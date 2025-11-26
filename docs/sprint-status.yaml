@@ -113,10 +113,12 @@ development_status:
   4-0-3-fix-mcp-ingestion-timeout: done  # ✅ COMPLETE - Action Item 3 (6 hours actual, Amelia/Dev, 2025-11-23)
   4-0-4-document-segregation-architecture: done  # ✅ COMPLETE - Action Item 4, APPROVED (2-3 hours, Amelia/Dev, 2025-11-25)
   4-0-5-test-prod-database-separation: done  # ✅ COMPLETE - Action Item 5 (10 hours actual, Ricardo, 2025-11-19)
+  4-0-6-production-database-protection: done  # ✅ APPROVED (2025-11-25) - All 6 ACs verified, 22 unit tests, Senior Dev Review passed
+  4-0-7-mcp-base64-ingestion: done  # ✅ APPROVED (2025-11-25) - All 8 ACs verified, 34 unit tests, Senior Dev Review passed
 
   # Epic 4 Feature Stories (Start after prep stories complete)
   4-1-time-series-data-extraction: done  # ✅ APPROVED (2025-11-25) - All ACs verified, 88.89% coverage
-  4-2-forecasting-engine-implementation: backlog
+  4-2-forecasting-engine-implementation: drafted
   4-3-automated-forecast-updates: backlog
   4-4-forecast-query-tool-mcp: backlog
   4-5-anomaly-detection: backlog

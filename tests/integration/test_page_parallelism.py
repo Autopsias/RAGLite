@@ -29,7 +29,7 @@ def get_ingestion_module():
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
-@pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_collection=True) - skip re-ingest cleanup
+@pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_existing=True) - skip re-ingest cleanup
 @pytest.mark.timeout(900)  # 15 minutes for 160-page PDF
 async def test_ac2_parallel_ingestion_4_threads():
     """
@@ -55,7 +55,7 @@ async def test_ac2_parallel_ingestion_4_threads():
 
     result = await pipeline.ingest_pdf(
         file_path=str(pdf_path),
-        clear_collection=True,
+        clear_existing=True,
     )
 
     end_time = time.time()
@@ -85,7 +85,7 @@ async def test_ac2_parallel_ingestion_4_threads():
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
-@pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_collection=True) - skip re-ingest cleanup
+@pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_existing=True) - skip re-ingest cleanup
 @pytest.mark.timeout(900)  # 15 minutes for 160-page PDF
 @pytest.mark.skip(reason="Run manually to test 8-thread configuration")
 async def test_ac2_parallel_ingestion_8_threads():
@@ -107,7 +107,7 @@ async def test_ac2_parallel_ingestion_8_threads():
 
     result = await pipeline.ingest_pdf(
         file_path=str(pdf_path),
-        clear_collection=True,
+        clear_existing=True,
     )
 
     end_time = time.time()
@@ -130,7 +130,7 @@ async def test_ac2_parallel_ingestion_8_threads():
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
-@pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_collection=True) - skip re-ingest cleanup
+@pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_existing=True) - skip re-ingest cleanup
 @pytest.mark.skipif(
     SKIP_SLOW_TESTS,
     reason="Slow test (10+ min) - runs 10 ingestion cycles for determinism. Run with: RUN_SLOW_TESTS=1",
@@ -184,7 +184,7 @@ async def test_ac4_thread_safety_determinism():
 
             result = await pipeline.ingest_pdf(
                 file_path=str(pdf_path),
-                clear_collection=True,
+                clear_existing=True,
             )
 
             chunk_counts.append(result.chunk_count)

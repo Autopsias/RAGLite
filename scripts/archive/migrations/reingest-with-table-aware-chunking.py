@@ -79,7 +79,7 @@ async def reingest_with_table_aware_chunking():
 
     # Ingest with table-aware chunking
     # skip_metadata=True to avoid Mistral API dependency for this validation
-    metadata = await ingest_pdf(pdf_path, clear_collection=True, skip_metadata=True)
+    metadata = await ingest_pdf(pdf_path, clear_existing=True, skip_metadata=True)
 
     logger.info("")
     logger.info("✅ Re-ingestion complete!")

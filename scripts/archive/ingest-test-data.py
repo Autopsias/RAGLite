@@ -116,7 +116,7 @@ async def main():
 
     result = await ingest_pdf(
         str(test_pdf),
-        clear_collection=False,  # Collection already fresh
+        clear_existing=False,  # Collection already fresh
         skip_metadata=True,  # Skip expensive LLM metadata extraction for speed
     )
 

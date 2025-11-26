@@ -112,7 +112,7 @@ class TestMetadataInjection:
                 pytest.skip("Test PDF not found - skipping integration test")
 
             # Ingest with mocked metadata
-            await ingest_pdf(str(test_pdf), clear_collection=True)
+            await ingest_pdf(str(test_pdf), clear_existing=True)
 
             # AI9: Test actual Qdrant filter API with reporting_period filter (Story 2.4 REVISION field name)
             client = get_qdrant_client()
@@ -135,9 +135,9 @@ class TestMetadataInjection:
             # Verify all results match the filter
             assert len(results) > 0, "Filter should return results"
             for result in results:
-                assert (
-                    result.payload["reporting_period"] == "Q3 2024"
-                ), f"All results must match filter: expected 'Q3 2024', got '{result.payload.get('reporting_period')}'"
+                assert result.payload["reporting_period"] == "Q3 2024", (
+                    f"All results must match filter: expected 'Q3 2024', got '{result.payload.get('reporting_period')}'"
+                )
 
 
 class TestCostValidation:
@@ -322,7 +322,7 @@ class TestBackwardCompatibility:
 
                 # Ingest should work without metadata extraction
                 # (metadata fields will be None)
-                metadata = await ingest_pdf(str(test_pdf), clear_collection=True)
+                metadata = await ingest_pdf(str(test_pdf), clear_existing=True)
 
                 assert metadata.chunk_count > 0
 

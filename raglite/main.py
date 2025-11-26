@@ -21,12 +21,14 @@ Example:
 """
 
 import time
+from pathlib import Path
 
 from fastmcp import FastMCP
 
 from raglite.agentic.fallback import FallbackResponse, handle_workflow_failure
 from raglite.agentic.orchestrator import WorkflowExecutor
 from raglite.agentic.planner import QueryComplexity, classify_query_complexity, decompose_query
+from raglite.ingestion.document_ingestion import temp_file_from_base64, temp_file_from_url
 from raglite.ingestion.job_tracker import create_job, get_job_status, start_background_job
 from raglite.ingestion.pipeline import ingest_document
 from raglite.retrieval.attribution import generate_citations
@@ -63,8 +65,63 @@ class DocumentProcessingError(Exception):
 
 
 @mcp.tool()
-async def ingest_financial_document(doc_path: str) -> DocumentMetadata:
+async def ingest_financial_document(
+    doc_path: str | None = None,
+    file_content: str | None = None,
+    filename: str | None = None,
+    doc_url: str | None = None,
+) -> DocumentMetadata:
     """Ingest financial PDF or Excel document into RAGLite knowledge base.
+
+    Story 4.0.7/4.0.8: Supports THREE input modes for maximum compatibility.
+
+    ╔══════════════════════════════════════════════════════════════════════════╗
+    ║  IMPORTANT: CHOOSING THE RIGHT MODE FOR YOUR CLAUDE CLIENT               ║
+    ╠══════════════════════════════════════════════════════════════════════════╣
+    ║                                                                          ║
+    ║  🖥️  CLAUDE CODE (this terminal):                                        ║
+    ║      → Use Mode 1 (doc_path) - Full filesystem access                    ║
+    ║      → Example: doc_path="/Users/you/Documents/report.pdf"               ║
+    ║                                                                          ║
+    ║  🖥️  CLAUDE DESKTOP with Filesystem MCP Server configured:               ║
+    ║      → Use Mode 1 (doc_path) - Access configured directories             ║
+    ║      → Do NOT drag files into conversation (creates sandboxed path)      ║
+    ║      → Instead, reference files by their REAL filesystem path            ║
+    ║                                                                          ║
+    ║  🌐  CLAUDE DESKTOP (file dragged into conversation):                    ║
+    ║      → ❌ WILL NOT WORK - Files are sandboxed at /mnt/user-data/uploads/ ║
+    ║      → ✅ Use Mode 3 (doc_url) instead - Upload to cloud, provide URL    ║
+    ║                                                                          ║
+    ║  🌐  CLAUDE.AI (web interface):                                          ║
+    ║      → ❌ WILL NOT WORK - Files are sandboxed, MCP cannot access         ║
+    ║      → ✅ Use Mode 3 (doc_url) - Upload to Google Drive/Dropbox/S3       ║
+    ║                                                                          ║
+    ╚══════════════════════════════════════════════════════════════════════════╝
+
+    **Mode 1 - Filesystem Path (Claude Code / Desktop with Filesystem MCP):**
+        Provide `doc_path` for documents accessible via MCP server filesystem.
+        Best for: Local development, configured directories, CI/CD pipelines.
+
+    **Mode 2 - Base64 Content (Programmatic / API):**
+        Provide `file_content` (base64-encoded) and `filename`.
+        Best for: Programmatic ingestion, API integrations, small files (<18MB).
+        Note: Claude.ai/Desktop CANNOT automatically encode uploaded files.
+
+    **Mode 3 - URL Download (Claude.ai / Desktop - RECOMMENDED):**
+        Provide `doc_url` with direct download link to the document.
+        Best for: Claude.ai, Claude Desktop when files are uploaded to conversation.
+        Supports: Google Drive, Dropbox, S3 presigned URLs, any direct file URL.
+
+    **Why Mode 3 for Claude.ai/Desktop uploaded files?**
+        When you drag a file into Claude.ai or Claude Desktop, it gets stored in
+        a sandboxed location (/mnt/user-data/uploads/) that MCP servers cannot
+        access. The MCP protocol doesn't support file transfer from client to
+        server. URL-based ingestion sidesteps this limitation entirely.
+
+    **Workflow for Claude.ai / Claude Desktop users:**
+        1. Upload your file to cloud storage (Google Drive, Dropbox, S3, etc.)
+        2. Get a direct/shareable download link
+        3. Use this tool with doc_url parameter
 
     Processes the document through the complete ingestion pipeline:
       1. Extract text/tables (Docling for PDF, openpyxl for Excel)
@@ -74,22 +131,30 @@ async def ingest_financial_document(doc_path: str) -> DocumentMetadata:
 
     **Performance & Timeout Considerations:**
       - Small files (<10 pages): ~2-5 minutes (MCP timeout safe)
-      - Large files (>10 pages): May timeout in MCP clients
-      - Processing time: ~20-30 seconds per page (Docling + embedding generation)
+      - Large files (>10 pages): May timeout - use async version
+      - URL downloads: Additional time for network transfer
 
-    **For Large Files:** Use CLI ingestion to avoid MCP timeouts:
-        ```bash
-        cd /path/to/RAGLite
-        uv run python -c "
-        import asyncio
-        from raglite.ingestion.pipeline import ingest_document
-        asyncio.run(ingest_document('/path/to/large.pdf'))
-        "
-        ```
-        Then query via MCP after ingestion completes.
+    **For Large Files:** Use async ingestion to avoid MCP timeouts:
+        >>> response = await ingest_financial_document_async(doc_path="...")
+        >>> # Poll status until complete
 
     Args:
-        doc_path: Absolute or relative path to document file (.pdf, .xlsx, .xls)
+        doc_path: Absolute or relative path to document file (.pdf, .xlsx, .xls).
+                  Use for Mode 1 (filesystem access).
+                  Cannot be combined with file_content or doc_url.
+
+        file_content: Base64-encoded file content. Use for Mode 2.
+                      Max size: 25MB encoded (~18MB decoded).
+                      Requires `filename` parameter.
+                      Cannot be combined with doc_path or doc_url.
+
+        filename: Original filename with extension (e.g., "Q3_Report.pdf").
+                  Required when using file_content.
+
+        doc_url: HTTP/HTTPS URL to download document from. Use for Mode 3.
+                 Max file size: 50MB. Timeout: 5 minutes.
+                 Supports Google Drive export links, Dropbox (dl=1), S3 presigned.
+                 Cannot be combined with doc_path or file_content.
 
     Returns:
         DocumentMetadata with ingestion results including:
@@ -100,59 +165,226 @@ async def ingest_financial_document(doc_path: str) -> DocumentMetadata:
           - chunk_count: Number of chunks created
 
     Raises:
-        DocumentProcessingError: If ingestion fails (file not found, parsing error,
-            embedding generation failure, or storage error)
+        DocumentProcessingError: If ingestion fails due to:
+          - Invalid input combination
+          - File not found / URL download failure
+          - Unsupported file extension
+          - File size exceeds limits
+          - Parsing or embedding generation failure
 
-    Example:
-        >>> metadata = await ingest_financial_document("/data/Q3_2023_Report.pdf")
+    Example (Mode 1 - filesystem path):
+        >>> metadata = await ingest_financial_document(doc_path="/data/Q3_Report.pdf")
+        >>> print(f"Ingested {metadata.chunk_count} chunks")
+
+    Example (Mode 2 - base64 content):
+        >>> metadata = await ingest_financial_document(
+        ...     file_content="JVBERi0xLjQg...",
+        ...     filename="Q3_Report.pdf"
+        ... )
+
+    Example (Mode 3 - URL download - RECOMMENDED for Claude.ai):
+        >>> # User uploaded file to Google Drive and got shareable link
+        >>> metadata = await ingest_financial_document(
+        ...     doc_url="https://drive.google.com/uc?export=download&id=FILE_ID"
+        ... )
         >>> print(f"Ingested {metadata.chunk_count} chunks from {metadata.filename}")
-
-    Note:
-        Epic 4 (Production Readiness) will add async job queue for large file ingestion
-        with progress tracking. See docs/future-enhancements.md for research roadmap.
     """
-    logger.info("Ingesting document", extra={"path": doc_path})
+    # AC2: Input validation - mutual exclusivity (now supports 3 modes)
+    has_path = doc_path is not None
+    has_content = file_content is not None
+    has_filename = filename is not None
+    has_url = doc_url is not None
 
-    try:
-        # Call Story 1.2 ingestion pipeline
-        start_time = time.perf_counter()
-        metadata = await ingest_document(doc_path)
-        duration_ms = (time.perf_counter() - start_time) * 1000
+    # Count how many input modes are provided
+    input_modes = sum([has_path, has_content, has_url])
 
+    if input_modes == 0:
+        raise DocumentProcessingError(
+            "Must provide one of: doc_path, file_content + filename, or doc_url.\n\n"
+            "📁 Mode 1 (doc_path): For Claude Code or configured Filesystem MCP directories\n"
+            "📦 Mode 2 (file_content): For programmatic/API base64 uploads\n"
+            "🌐 Mode 3 (doc_url): For Claude.ai/Desktop - upload to cloud, provide URL\n\n"
+            "⚠️  If you dragged a file into Claude.ai or Claude Desktop, use Mode 3:\n"
+            "    1. Upload file to Google Drive/Dropbox/S3\n"
+            "    2. Get shareable download link\n"
+            "    3. Call this tool with doc_url parameter"
+        )
+
+    if input_modes > 1:
+        raise DocumentProcessingError(
+            "Only one input mode allowed. Provide exactly one of:\n"
+            "- doc_path (filesystem path)\n"
+            "- file_content + filename (base64)\n"
+            "- doc_url (URL download)"
+        )
+
+    if has_content and not has_filename:
+        raise DocumentProcessingError(
+            "filename is required when using file_content. "
+            "Provide the original filename with extension (e.g., 'report.pdf')."
+        )
+
+    # Mode 3: URL download (Story 4.0.8 - Recommended for Claude.ai/Desktop)
+    if has_url:
+        assert doc_url is not None  # Type narrowing for mypy
         logger.info(
-            "Ingestion complete",
-            extra={
-                "doc_id": metadata.filename,
-                "doc_type": metadata.doc_type,
-                "chunks": metadata.chunk_count,
-                "pages": metadata.page_count,
-                "duration_ms": f"{duration_ms:.2f}",
-            },
+            "Ingesting document from URL",
+            extra={"url_truncated": doc_url[:80] + "..." if len(doc_url) > 80 else doc_url},
         )
-        return metadata
 
-    except FileNotFoundError as e:
-        logger.error(
-            "Document not found",
-            extra={"path": doc_path, "error": str(e)},
-            exc_info=True,
-        )
-        raise DocumentProcessingError(f"Document not found: {doc_path}") from e
+        try:
+            # Download file and process with automatic cleanup
+            with temp_file_from_url(doc_url) as (tmp_path, detected_filename):
+                start_time = time.perf_counter()
+                metadata = await ingest_document(tmp_path)
+                duration_ms = (time.perf_counter() - start_time) * 1000
 
-    except Exception as e:
-        logger.error(
-            "Ingestion failed",
-            extra={"path": doc_path, "error": str(e), "error_type": type(e).__name__},
-            exc_info=True,
+                # Use detected filename from URL/headers
+                metadata.filename = detected_filename
+
+                logger.info(
+                    "Ingestion complete (URL)",
+                    extra={
+                        "doc_id": metadata.filename,
+                        "doc_type": metadata.doc_type,
+                        "chunks": metadata.chunk_count,
+                        "pages": metadata.page_count,
+                        "duration_ms": f"{duration_ms:.2f}",
+                        "input_mode": "url",
+                    },
+                )
+                return metadata
+
+        except ValueError as e:
+            # URL validation errors (scheme, domain, size, extension)
+            logger.error(
+                "URL ingestion failed - validation error",
+                extra={"url_truncated": doc_url[:80], "error": str(e)},
+            )
+            raise DocumentProcessingError(str(e)) from e
+
+        except RuntimeError as e:
+            # Download failures (network, HTTP errors, timeout)
+            logger.error(
+                "URL ingestion failed - download error",
+                extra={"url_truncated": doc_url[:80], "error": str(e)},
+            )
+            raise DocumentProcessingError(str(e)) from e
+
+        except Exception as e:
+            logger.error(
+                "Ingestion failed (URL)",
+                extra={
+                    "url_truncated": doc_url[:80],
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+                exc_info=True,
+            )
+            raise DocumentProcessingError(f"Failed to ingest from URL: {e}") from e
+
+    # Mode 2: Base64 content (Story 4.0.7)
+    elif has_content:
+        assert file_content is not None and filename is not None  # Type narrowing
+        logger.info(
+            "Ingesting document from base64 content",
+            extra={"doc_filename": filename, "content_size": len(file_content)},
         )
-        raise DocumentProcessingError(f"Failed to ingest {doc_path}: {e}") from e
+
+        try:
+            # Create temp file from base64 with automatic cleanup
+            with temp_file_from_base64(file_content, filename) as tmp_path:
+                start_time = time.perf_counter()
+                metadata = await ingest_document(tmp_path)
+                duration_ms = (time.perf_counter() - start_time) * 1000
+
+                # Override metadata.filename with original filename (not temp path)
+                metadata.filename = filename
+
+                logger.info(
+                    "Ingestion complete (base64)",
+                    extra={
+                        "doc_id": metadata.filename,
+                        "doc_type": metadata.doc_type,
+                        "chunks": metadata.chunk_count,
+                        "pages": metadata.page_count,
+                        "duration_ms": f"{duration_ms:.2f}",
+                        "input_mode": "base64",
+                    },
+                )
+                return metadata
+
+        except ValueError as e:
+            # Base64 validation errors (size, extension, decode)
+            logger.error(
+                "Base64 ingestion failed - validation error",
+                extra={"doc_filename": filename, "error": str(e)},
+            )
+            raise DocumentProcessingError(str(e)) from e
+
+        except Exception as e:
+            logger.error(
+                "Ingestion failed (base64)",
+                extra={"doc_filename": filename, "error": str(e), "error_type": type(e).__name__},
+                exc_info=True,
+            )
+            raise DocumentProcessingError(f"Failed to ingest {filename}: {e}") from e
+
+    # Mode 1: Filesystem path (default, backward compatible)
+    # If we got here, has_path must be True (validated above)
+    else:
+        assert doc_path is not None  # Type narrowing for mypy
+        effective_path = doc_path
+
+        logger.info("Ingesting document", extra={"path": effective_path})
+
+        try:
+            # Call Story 1.2 ingestion pipeline
+            start_time = time.perf_counter()
+            metadata = await ingest_document(effective_path)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+
+            logger.info(
+                "Ingestion complete",
+                extra={
+                    "doc_id": metadata.filename,
+                    "doc_type": metadata.doc_type,
+                    "chunks": metadata.chunk_count,
+                    "pages": metadata.page_count,
+                    "duration_ms": f"{duration_ms:.2f}",
+                    "input_mode": "path",
+                },
+            )
+            return metadata
+
+        except FileNotFoundError as e:
+            logger.error(
+                "Document not found",
+                extra={"path": effective_path, "error": str(e)},
+                exc_info=True,
+            )
+            raise DocumentProcessingError(f"Document not found: {effective_path}") from e
+
+        except Exception as e:
+            logger.error(
+                "Ingestion failed",
+                extra={"path": effective_path, "error": str(e), "error_type": type(e).__name__},
+                exc_info=True,
+            )
+            raise DocumentProcessingError(f"Failed to ingest {effective_path}: {e}") from e
 
 
 @mcp.tool()
-async def ingest_financial_document_async(doc_path: str) -> AsyncIngestionResponse:
+async def ingest_financial_document_async(
+    doc_path: str | None = None,
+    file_content: str | None = None,
+    filename: str | None = None,
+    doc_url: str | None = None,
+) -> AsyncIngestionResponse:
     """Ingest large financial documents asynchronously to avoid MCP timeout.
 
     Story 4.0.3 AC5: Async ingestion for large documents (150-200 pages).
+    Story 4.0.7/4.0.8: Extended with base64 and URL support (same modes as sync version).
 
     **When to Use:**
     - Documents >50 pages (estimated time >6 minutes)
@@ -165,13 +397,26 @@ async def ingest_financial_document_async(doc_path: str) -> AsyncIngestionRespon
     3. Poll status with `get_ingestion_status(job_id)`
     4. Query document normally after completion
 
+    **Input Modes (same as sync version):**
+    - Mode 1 - doc_path: For documents accessible via MCP server filesystem
+    - Mode 2 - file_content + filename: For base64-encoded uploads
+    - Mode 3 - doc_url: For URL downloads (recommended for Claude.ai/Desktop)
+
     **Performance Guidance:**
     - Small docs (<10 pages): ~30-60s → Use `ingest_financial_document` (sync)
     - Medium docs (10-50 pages): ~1-6 min → Use `ingest_financial_document` (sync, may timeout)
     - Large docs (>50 pages): 6-30+ min → Use THIS TOOL (async, no timeout)
 
     Args:
-        doc_path: Absolute or relative path to document file (.pdf, .xlsx, .xls)
+        doc_path: Absolute or relative path to document file (.pdf, .xlsx, .xls).
+                  Use for Mode 1. Cannot be combined with file_content or doc_url.
+        file_content: Base64-encoded file content. Use for Mode 2.
+                      Max size: 25MB encoded (~18MB decoded file).
+                      Requires filename parameter.
+        filename: Original filename with extension (e.g., "Q3_Report.pdf").
+                  Required when using file_content.
+        doc_url: HTTP/HTTPS URL to download document from. Use for Mode 3.
+                 Max file size: 50MB. Recommended for Claude.ai/Desktop.
 
     Returns:
         AsyncIngestionResponse with:
@@ -181,75 +426,288 @@ async def ingest_financial_document_async(doc_path: str) -> AsyncIngestionRespon
           - estimated_time_s: Estimated completion time (based on page count if available)
 
     Raises:
-        DocumentProcessingError: If file doesn't exist or path is invalid
+        DocumentProcessingError: If file doesn't exist, path is invalid, or validation fails
 
-    Example - Async Ingestion Workflow:
-        >>> # Step 1: Start async ingestion
-        >>> response = await ingest_financial_document_async("/data/Annual_Report_2024.pdf")
-        >>> print(response.message)
-        "Ingestion started for Annual_Report_2024.pdf. Use get_ingestion_status to check progress."
+    Example - Async Ingestion (filesystem path):
+        >>> response = await ingest_financial_document_async(doc_path="/data/Annual_Report.pdf")
         >>> print(response.job_id)
-        "a3f8b2c1-4d5e-6f7g-8h9i-0j1k2l3m4n5o"
-        >>> print(response.estimated_time_s)
-        1458  # ~24 minutes for 200-page PDF
 
-        >>> # Step 2: Poll status (wait ~1-2 minutes between polls)
-        >>> import time
+    Example - Async Ingestion (URL - recommended for Claude.ai):
+        >>> response = await ingest_financial_document_async(
+        ...     doc_url="https://drive.google.com/uc?export=download&id=FILE_ID"
+        ... )
+        >>> # Poll status until complete
         >>> while True:
         ...     status = await get_ingestion_status(response.job_id)
-        ...     print(f"Status: {status.status}, Progress: {status.progress}%")
         ...     if status.status in ["completed", "failed"]:
         ...         break
-        ...     time.sleep(60)  # Check every minute
-        "Status: in_progress, Progress: 10%"
-        "Status: in_progress, Progress: 10%"
-        ... (multiple polls) ...
-        "Status: completed, Progress: 100%"
-
-        >>> # Step 3: Query document after completion
-        >>> if status.status == "completed":
-        ...     query_resp = await query_financial_documents(
-        ...         QueryRequest(query="What was Q3 revenue?")
-        ...     )
-        ...     print(query_resp.results[0].text)
+        ...     await asyncio.sleep(60)
 
     Note:
         Jobs are stored in-memory only (MVP). Jobs lost on server restart.
         Epic 5 (Production) will add persistent job storage with Redis.
     """
-    from pathlib import Path
+    import base64
+    import tempfile
+    import urllib.parse
+    import urllib.request
+    from urllib.error import HTTPError, URLError
 
-    logger.info("Async ingestion requested", extra={"path": doc_path})
+    from raglite.ingestion.document_ingestion import (
+        ALLOWED_URL_SCHEMES,
+        MAX_URL_DOWNLOAD_SIZE_BYTES,
+        URL_DOMAIN_ALLOWLIST,
+        URL_DOWNLOAD_TIMEOUT_TOTAL,
+    )
 
-    # Validate file exists before creating job
-    doc_file = Path(doc_path).resolve()
-    if not doc_file.exists():
-        error_msg = f"Document not found: {doc_path}"
-        logger.error(
-            "Async ingestion failed - file not found",
-            extra={"path": str(doc_file), "error": error_msg},
+    # Input validation - mutual exclusivity (supports 3 modes)
+    has_path = doc_path is not None
+    has_content = file_content is not None
+    has_filename = filename is not None
+    has_url = doc_url is not None
+
+    input_modes = sum([has_path, has_content, has_url])
+
+    if input_modes == 0:
+        raise DocumentProcessingError(
+            "Must provide one of: doc_path, file_content + filename, or doc_url.\n"
+            "For Claude.ai/Desktop: Use doc_url with a shareable download link."
         )
-        raise DocumentProcessingError(error_msg)
+
+    if input_modes > 1:
+        raise DocumentProcessingError(
+            "Only one input mode allowed. Provide exactly one of:\n"
+            "- doc_path (filesystem path)\n"
+            "- file_content + filename (base64)\n"
+            "- doc_url (URL download)"
+        )
+
+    if has_content and not has_filename:
+        raise DocumentProcessingError(
+            "filename is required when using file_content. "
+            "Provide the original filename with extension (e.g., 'report.pdf')."
+        )
+
+    # Variables for job creation
+    effective_path: str
+    display_name: str
+    temp_path_to_cleanup: str | None = None
+    original_filename: str | None = None
+
+    # Import constants
+    from raglite.ingestion.document_ingestion import (
+        MAX_BASE64_CONTENT_SIZE_BYTES,
+        SUPPORTED_EXTENSIONS,
+    )
+
+    # Mode 3: URL download (Story 4.0.8)
+    if has_url:
+        assert doc_url is not None  # Type narrowing for mypy
+        logger.info(
+            "Async ingestion requested (URL)",
+            extra={"url_truncated": doc_url[:80] + "..." if len(doc_url) > 80 else doc_url},
+        )
+
+        # Parse and validate URL
+        parsed = urllib.parse.urlparse(doc_url)
+
+        # Scheme validation
+        if parsed.scheme.lower() not in ALLOWED_URL_SCHEMES:
+            raise DocumentProcessingError(
+                f"URL scheme '{parsed.scheme}' not allowed. Use http or https."
+            )
+
+        # Domain allowlist check
+        if URL_DOMAIN_ALLOWLIST and parsed.netloc.lower() not in URL_DOMAIN_ALLOWLIST:
+            raise DocumentProcessingError(f"Domain '{parsed.netloc}' not in allowlist.")
+
+        # Extract filename from URL
+        url_path = urllib.parse.unquote(parsed.path)
+        filename_from_url = Path(url_path).name if url_path else "downloaded_document"
+
+        # Download file for background job
+        try:
+            request = urllib.request.Request(
+                doc_url,
+                headers={
+                    "User-Agent": "RAGLite/1.0 (Financial Document Ingestion)",
+                    "Accept": "application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, */*",
+                },
+            )
+
+            with urllib.request.urlopen(request, timeout=URL_DOWNLOAD_TIMEOUT_TOTAL) as response:  # nosec B310 - URL scheme validated above
+                # Check size
+                content_length = response.headers.get("Content-Length")
+                if content_length and int(content_length) > MAX_URL_DOWNLOAD_SIZE_BYTES:
+                    raise DocumentProcessingError(
+                        f"File too large. Maximum: {MAX_URL_DOWNLOAD_SIZE_BYTES / (1024 * 1024):.0f}MB"
+                    )
+
+                # Get filename from header if available
+                content_disposition = response.headers.get("Content-Disposition", "")
+                if "filename=" in content_disposition:
+                    import re
+
+                    match = re.search(r'filename[*]?=["\']?([^"\';\n]+)', content_disposition)
+                    if match:
+                        filename_from_url = match.group(1).strip()
+
+                # Determine extension
+                suffix = Path(filename_from_url).suffix.lower()
+                if not suffix:
+                    content_type = response.headers.get("Content-Type", "")
+                    if "pdf" in content_type:
+                        suffix = ".pdf"
+                        filename_from_url = "downloaded_document.pdf"
+                    elif "spreadsheet" in content_type or "excel" in content_type:
+                        suffix = ".xlsx"
+                        filename_from_url = "downloaded_document.xlsx"
+                    else:
+                        raise DocumentProcessingError(
+                            "Cannot determine file type from URL. "
+                            "Ensure URL ends with .pdf, .xlsx, or .xls"
+                        )
+
+                if suffix not in SUPPORTED_EXTENSIONS:
+                    raise DocumentProcessingError(
+                        f"Unsupported file type: {suffix}. Supported: .pdf, .xlsx, .xls"
+                    )
+
+                # Download to persistent temp file
+                with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+                    downloaded_size = 0
+                    while True:
+                        chunk = response.read(8192)
+                        if not chunk:
+                            break
+                        downloaded_size += len(chunk)
+                        if downloaded_size > MAX_URL_DOWNLOAD_SIZE_BYTES:
+                            raise DocumentProcessingError("Download exceeded size limit")
+                        tmp.write(chunk)
+                    temp_path = tmp.name
+
+                effective_path = temp_path
+                display_name = filename_from_url
+                temp_path_to_cleanup = temp_path
+                original_filename = filename_from_url
+
+                logger.info(
+                    "Downloaded file for async ingestion",
+                    extra={
+                        "url_domain": parsed.netloc,
+                        "filename": filename_from_url,
+                        "size_bytes": downloaded_size,
+                        "temp_path": temp_path,
+                    },
+                )
+
+        except HTTPError as e:
+            raise DocumentProcessingError(f"URL download failed: HTTP {e.code} {e.reason}") from e
+        except URLError as e:
+            raise DocumentProcessingError(f"URL download failed: {e.reason}") from e
+        except TimeoutError:
+            raise DocumentProcessingError(
+                f"Download timed out after {URL_DOWNLOAD_TIMEOUT_TOTAL}s"
+            ) from None
+
+    # Mode 2: Base64 content (Story 4.0.7)
+    elif has_content:
+        assert file_content is not None and filename is not None  # Type narrowing
+        logger.info(
+            "Async ingestion requested (base64)",
+            extra={"doc_filename": filename, "content_size": len(file_content)},
+        )
+
+        # Size validation
+        if len(file_content) > MAX_BASE64_CONTENT_SIZE_BYTES:
+            size_mb = len(file_content) / (1024 * 1024)
+            raise DocumentProcessingError(
+                f"File content ({size_mb:.1f}MB encoded) exceeds 25MB limit. "
+                "For larger files, save to filesystem and use doc_path parameter."
+            )
+
+        # Decode base64
+        try:
+            file_bytes = base64.b64decode(file_content)
+        except Exception as e:
+            raise DocumentProcessingError(f"Invalid base64 content: {e}") from e
+
+        # Extension validation
+        suffix = Path(filename).suffix.lower()
+        if suffix not in SUPPORTED_EXTENSIONS:
+            supported = ", ".join(sorted(SUPPORTED_EXTENSIONS))
+            raise DocumentProcessingError(
+                f"Unsupported file type: {suffix}. Supported extensions: {supported}"
+            )
+
+        # Create temp file that persists for background job (delete=False)
+        try:
+            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+                tmp.write(file_bytes)
+                temp_path = tmp.name
+
+            effective_path = temp_path
+            display_name = filename
+            temp_path_to_cleanup = temp_path
+            original_filename = filename
+
+            logger.info(
+                "Created persistent temp file for async base64 ingestion",
+                extra={
+                    "doc_filename": filename,
+                    "temp_path": temp_path,
+                    "size_bytes": len(file_bytes),
+                },
+            )
+
+        except Exception as e:
+            raise DocumentProcessingError(f"Failed to create temp file: {e}") from e
+
+    # Mode 1: Filesystem path (default)
+    else:
+        assert doc_path is not None  # Type narrowing for mypy
+        logger.info("Async ingestion requested", extra={"path": doc_path})
+
+        doc_file = Path(doc_path).resolve()
+        if not doc_file.exists():
+            error_msg = f"Document not found: {doc_path}"
+            logger.error(
+                "Async ingestion failed - file not found",
+                extra={"path": str(doc_file), "error": error_msg},
+            )
+            raise DocumentProcessingError(error_msg)
+
+        effective_path = str(doc_file)
+        display_name = doc_file.name
 
     # Create job
-    job_id = create_job(str(doc_file))
+    job_id = create_job(effective_path)
 
     # Start background ingestion (fire-and-forget)
-    start_background_job(job_id, str(doc_file))
+    # Story 4.0.7: Pass temp file info for cleanup after job completes
+    start_background_job(
+        job_id,
+        effective_path,
+        temp_path_to_cleanup=temp_path_to_cleanup,
+        original_filename=original_filename,
+    )
 
     # Estimate completion time (7.29s/page from Task 1 investigation)
-    # For now, use conservative estimate without knowing page count
     estimated_time_s = None  # Will be updated after first progress check
 
     message = (
-        f"Ingestion started for {doc_file.name}. "
+        f"Ingestion started for {display_name}. "
         f"Use get_ingestion_status('{job_id}') to check progress. "
         f"Large documents (150-200 pages) may take 15-30 minutes."
     )
 
     logger.info(
         "Async ingestion job started",
-        extra={"job_id": job_id, "doc_path": str(doc_file)},
+        extra={
+            "job_id": job_id,
+            "doc_path": effective_path,
+            "input_mode": "base64" if has_content else "path",
+        },
     )
 
     return AsyncIngestionResponse(

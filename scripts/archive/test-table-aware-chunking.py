@@ -51,7 +51,7 @@ async def test_table_aware_chunking():
 
     # Ingest PDF with table-aware chunking
     logger.info("Step 1: Ingesting PDF with table-aware chunking enabled...")
-    metadata = await ingest_pdf(pdf_path, clear_collection=True, skip_metadata=True)
+    metadata = await ingest_pdf(pdf_path, clear_existing=True, skip_metadata=True)
 
     logger.info(f"✅ Ingestion complete: {metadata.chunk_count} chunks created")
     logger.info("")

@@ -18,6 +18,11 @@ os.environ["TESTING"] = "true"
 
 from raglite.shared.clients import get_qdrant_client
 from raglite.shared.config import settings
+from raglite.shared.safety import SafetyGuard
+
+# Story 4.0.6 AC4: Display prominent environment banner
+guard = SafetyGuard()
+guard.display_environment_banner()
 
 print("=" * 80)
 print("CLEANING TEST DATABASES")

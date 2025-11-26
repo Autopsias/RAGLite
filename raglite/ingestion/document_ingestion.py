@@ -6,9 +6,13 @@ Extracts text, tables, and page numbers from financial documents.
 from __future__ import annotations
 
 import asyncio
+import base64
 import os
 import sys
+import tempfile
 import time
+from collections.abc import Generator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -37,8 +41,316 @@ from raglite.shared.clients import get_mistral_client, get_qdrant_client
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 from raglite.shared.models import Chunk, DocumentMetadata, ExtractedMetadata
+from raglite.shared.safety import SafetyGuard
 
 logger = get_logger(__name__)
+
+# Story 4.0.7: Maximum base64 content size (25MB encoded ≈ 18MB decoded)
+MAX_BASE64_CONTENT_SIZE_BYTES = 25 * 1024 * 1024  # 25MB
+
+# Story 4.0.8: Maximum URL download size (50MB - larger than base64 since no encoding overhead)
+MAX_URL_DOWNLOAD_SIZE_BYTES = 50 * 1024 * 1024  # 50MB
+
+# Story 4.0.8: URL download timeout (30 seconds for connection, 300 seconds total for large files)
+URL_DOWNLOAD_TIMEOUT_CONNECT = 30
+URL_DOWNLOAD_TIMEOUT_TOTAL = 300
+
+# Story 4.0.7: Supported file extensions for base64 ingestion
+SUPPORTED_EXTENSIONS = {".pdf", ".xlsx", ".xls"}
+
+# Story 4.0.8: Allowed URL schemes for security
+ALLOWED_URL_SCHEMES = {"http", "https"}
+
+# Story 4.0.8: Domain allowlist for URL downloads (empty = all domains allowed)
+# Can be configured via environment variable URL_DOMAIN_ALLOWLIST (comma-separated)
+URL_DOMAIN_ALLOWLIST: set[str] = (
+    set()
+)  # e.g., {"drive.google.com", "dropbox.com", "s3.amazonaws.com"}
+
+
+@contextmanager
+def temp_file_from_base64(content_b64: str, filename: str) -> Generator[str, None, None]:
+    """Create temporary file from base64 content with automatic cleanup.
+
+    Story 4.0.7 AC3/AC4: Context manager for safe temporary file handling.
+    Decodes base64 content, writes to temp file, and ensures cleanup on exit.
+
+    Args:
+        content_b64: Base64-encoded file content (max 25MB encoded).
+        filename: Original filename with extension (e.g., "report.pdf").
+                  Used for extension detection and validation.
+
+    Yields:
+        str: Absolute path to temporary file with correct extension.
+
+    Raises:
+        ValueError: If base64 content is invalid, extension unsupported,
+                    or size exceeds 25MB limit.
+
+    Example:
+        >>> with temp_file_from_base64(pdf_b64, "report.pdf") as tmp_path:
+        ...     metadata = await ingest_document(tmp_path)
+        >>> # tmp_path is automatically deleted after context exits
+    """
+    # AC5: Size check (before decoding to fail fast)
+    if len(content_b64) > MAX_BASE64_CONTENT_SIZE_BYTES:
+        size_mb = len(content_b64) / (1024 * 1024)
+        raise ValueError(
+            f"File content ({size_mb:.1f}MB encoded) exceeds 25MB limit. "
+            "For larger files, save to filesystem and use doc_path parameter."
+        )
+
+    # AC3: Decode base64
+    try:
+        file_bytes = base64.b64decode(content_b64)
+    except Exception as e:
+        raise ValueError(f"Invalid base64 content: {e}") from e
+
+    # AC6: Extension validation
+    suffix = Path(filename).suffix.lower()
+    if suffix not in SUPPORTED_EXTENSIONS:
+        supported = ", ".join(sorted(SUPPORTED_EXTENSIONS))
+        raise ValueError(f"Unsupported file type: {suffix}. Supported extensions: {supported}")
+
+    # Create temp file with correct extension (required for format detection)
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            tmp.write(file_bytes)
+            tmp_path = tmp.name
+
+        logger.info(
+            "Created temp file from base64 content",
+            extra={
+                "original_filename": filename,
+                "extension": suffix,
+                "size_bytes": len(file_bytes),
+                "temp_path": tmp_path,
+            },
+        )
+
+        yield tmp_path
+
+    finally:
+        # AC4: Guaranteed cleanup on success or failure
+        if tmp_path:
+            try:
+                Path(tmp_path).unlink(missing_ok=True)
+                logger.debug(
+                    "Cleaned up temp file",
+                    extra={"temp_path": tmp_path},
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to clean up temp file",
+                    extra={"temp_path": tmp_path, "error": str(e)},
+                )
+
+
+@contextmanager
+def temp_file_from_url(url: str) -> Generator[tuple[str, str], None, None]:
+    """Download file from URL to temporary file with automatic cleanup.
+
+    Story 4.0.8: URL-based ingestion for Claude.ai and Claude Desktop compatibility.
+    Downloads file from HTTP/HTTPS URL, validates, and provides temp file path.
+
+    This solves the MCP file transfer limitation where:
+    - Claude.ai cannot access uploaded files (sandboxed at /mnt/user-data/uploads/)
+    - Claude Desktop uploads are also sandboxed, not accessible to MCP servers
+    - URL-based ingestion works universally across all Claude clients
+
+    Args:
+        url: HTTP or HTTPS URL to download file from.
+             Supports direct download links from:
+             - Google Drive (use export links)
+             - Dropbox (use dl=1 parameter)
+             - S3 presigned URLs
+             - Any direct file URL
+
+    Yields:
+        tuple[str, str]: (temp_file_path, detected_filename)
+
+    Raises:
+        ValueError: If URL scheme is not allowed, domain not in allowlist,
+                    file too large, or extension not supported.
+        RuntimeError: If download fails (network error, 404, etc.)
+
+    Example:
+        >>> with temp_file_from_url("https://example.com/report.pdf") as (path, name):
+        ...     metadata = await ingest_document(path)
+        >>> # temp file automatically cleaned up
+    """
+    import urllib.parse
+    import urllib.request
+    from urllib.error import HTTPError, URLError
+
+    # Parse and validate URL
+    parsed = urllib.parse.urlparse(url)
+
+    # AC1: Scheme validation (security)
+    if parsed.scheme.lower() not in ALLOWED_URL_SCHEMES:
+        raise ValueError(
+            f"URL scheme '{parsed.scheme}' not allowed. "
+            f"Supported schemes: {', '.join(sorted(ALLOWED_URL_SCHEMES))}"
+        )
+
+    # AC2: Domain allowlist check (if configured)
+    if URL_DOMAIN_ALLOWLIST and parsed.netloc.lower() not in URL_DOMAIN_ALLOWLIST:
+        raise ValueError(
+            f"Domain '{parsed.netloc}' not in allowlist. "
+            "Contact administrator to add trusted domains."
+        )
+
+    # Extract filename from URL path or Content-Disposition header
+    url_path = urllib.parse.unquote(parsed.path)
+    filename_from_url = Path(url_path).name if url_path else ""
+
+    # Validate extension from URL (preliminary check)
+    if filename_from_url:
+        suffix = Path(filename_from_url).suffix.lower()
+        if suffix and suffix not in SUPPORTED_EXTENSIONS:
+            supported = ", ".join(sorted(SUPPORTED_EXTENSIONS))
+            raise ValueError(
+                f"Unsupported file type from URL: {suffix}. Supported extensions: {supported}"
+            )
+
+    logger.info(
+        "Starting URL download",
+        extra={
+            "url_domain": parsed.netloc,
+            "url_path": url_path[:100],  # Truncate for logging
+            "detected_filename": filename_from_url,
+        },
+    )
+
+    tmp_path = None
+    try:
+        # Create request with timeout and headers
+        request = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "RAGLite/1.0 (Financial Document Ingestion)",
+                "Accept": "application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, */*",
+            },
+        )
+
+        # Download with streaming to handle large files
+        with urllib.request.urlopen(request, timeout=URL_DOWNLOAD_TIMEOUT_TOTAL) as response:  # nosec B310 - URL scheme validated above
+            # Check Content-Length if available
+            content_length = response.headers.get("Content-Length")
+            if content_length and int(content_length) > MAX_URL_DOWNLOAD_SIZE_BYTES:
+                size_mb = int(content_length) / (1024 * 1024)
+                raise ValueError(
+                    f"File too large ({size_mb:.1f}MB). Maximum allowed: "
+                    f"{MAX_URL_DOWNLOAD_SIZE_BYTES / (1024 * 1024):.0f}MB"
+                )
+
+            # Try to get filename from Content-Disposition header
+            content_disposition = response.headers.get("Content-Disposition", "")
+            if "filename=" in content_disposition:
+                # Extract filename from header
+                import re
+
+                match = re.search(r'filename[*]?=["\']?([^"\';\n]+)', content_disposition)
+                if match:
+                    filename_from_url = match.group(1).strip()
+
+            # Determine file extension
+            suffix = ""
+            if filename_from_url:
+                suffix = Path(filename_from_url).suffix.lower()
+
+            # If no extension from URL/headers, try Content-Type
+            if not suffix:
+                content_type = response.headers.get("Content-Type", "")
+                if "pdf" in content_type:
+                    suffix = ".pdf"
+                    filename_from_url = "downloaded_document.pdf"
+                elif "spreadsheet" in content_type or "excel" in content_type:
+                    suffix = ".xlsx"
+                    filename_from_url = "downloaded_document.xlsx"
+                elif not filename_from_url:
+                    raise ValueError(
+                        "Cannot determine file type from URL. "
+                        "Ensure URL ends with .pdf, .xlsx, or .xls, "
+                        "or server provides Content-Type header."
+                    )
+
+            # Final extension validation
+            if suffix not in SUPPORTED_EXTENSIONS:
+                supported = ", ".join(sorted(SUPPORTED_EXTENSIONS))
+                raise ValueError(f"Unsupported file type: {suffix}. Supported: {supported}")
+
+            # Create temp file and download content
+            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+                tmp_path = tmp.name
+                downloaded_size = 0
+                chunk_size = 8192  # 8KB chunks
+
+                while True:
+                    chunk = response.read(chunk_size)
+                    if not chunk:
+                        break
+                    downloaded_size += len(chunk)
+
+                    # Check size limit during download
+                    if downloaded_size > MAX_URL_DOWNLOAD_SIZE_BYTES:
+                        raise ValueError(
+                            f"Download exceeded size limit during transfer. "
+                            f"Maximum: {MAX_URL_DOWNLOAD_SIZE_BYTES / (1024 * 1024):.0f}MB"
+                        )
+
+                    tmp.write(chunk)
+
+            logger.info(
+                "URL download complete",
+                extra={
+                    "url_domain": parsed.netloc,
+                    "doc_filename": filename_from_url,
+                    "size_bytes": downloaded_size,
+                    "temp_path": tmp_path,
+                },
+            )
+
+            yield tmp_path, filename_from_url
+
+    except HTTPError as e:
+        logger.error(
+            "HTTP error during URL download",
+            extra={"url_domain": parsed.netloc, "status_code": e.code, "reason": e.reason},
+        )
+        raise RuntimeError(f"Failed to download from URL: HTTP {e.code} {e.reason}") from e
+
+    except URLError as e:
+        logger.error(
+            "Network error during URL download",
+            extra={"url_domain": parsed.netloc, "error": str(e.reason)},
+        )
+        raise RuntimeError(f"Failed to download from URL: {e.reason}") from e
+
+    except TimeoutError:
+        logger.error(
+            "Timeout during URL download",
+            extra={"url_domain": parsed.netloc, "timeout_seconds": URL_DOWNLOAD_TIMEOUT_TOTAL},
+        )
+        raise RuntimeError(
+            f"Download timed out after {URL_DOWNLOAD_TIMEOUT_TOTAL} seconds. "
+            "Try a faster connection or smaller file."
+        ) from None
+
+    finally:
+        # Cleanup temp file
+        if tmp_path:
+            try:
+                Path(tmp_path).unlink(missing_ok=True)
+                logger.debug(
+                    "Cleaned up temp file from URL download", extra={"temp_path": tmp_path}
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to clean up temp file from URL download",
+                    extra={"temp_path": tmp_path, "error": str(e)},
+                )
 
 
 async def ingest_document(file_path: str) -> DocumentMetadata:
@@ -90,19 +402,27 @@ async def ingest_document(file_path: str) -> DocumentMetadata:
 
 
 async def ingest_pdf(
-    file_path: str, clear_collection: bool = True, skip_metadata: bool = False
+    file_path: str,
+    clear_existing: bool = False,
+    skip_metadata: bool = False,
+    force_production: bool = False,
 ) -> DocumentMetadata:
     """Ingest financial PDF and extract text, tables, and structure with page numbers.
 
     Uses Docling library for high-accuracy extraction (97.9% table accuracy).
     Extracts page numbers from element provenance metadata.
 
+    Story 4.0.6: Changed default from clear_collection=True to clear_existing=False
+    to prevent accidental data loss. Production operations require explicit override.
+
     Args:
         file_path: Path to PDF file (relative or absolute)
-        clear_collection: If True, clears existing Qdrant collection before ingestion
-                         to prevent data contamination. Default True for clean state.
+        clear_existing: If True, clears existing Qdrant collection and PostgreSQL
+                       tables before ingestion. Default False to preserve data.
         skip_metadata: If True, skips LLM metadata extraction (Story 2.4) to avoid API issues.
                        Default False. Use when Mistral API is unavailable.
+        force_production: If True, allows clear_existing on production database.
+                         Required for intentional production data replacement.
 
     Returns:
         DocumentMetadata with extraction results including page_count and ingestion timestamp
@@ -110,13 +430,17 @@ async def ingest_pdf(
     Raises:
         FileNotFoundError: If PDF file doesn't exist at specified path
         RuntimeError: If Docling parsing fails or PDF is corrupted
+        ProductionProtectionError: If clear_existing=True on production without force_production
 
     Example:
         >>> metadata = await ingest_pdf("docs/sample pdf/report.pdf")
         >>> print(f"Ingested {metadata.page_count} pages")
 
-        >>> # Append to existing collection without clearing
-        >>> metadata = await ingest_pdf("report2.pdf", clear_collection=False)
+        >>> # Clear existing data (safe in test environment)
+        >>> metadata = await ingest_pdf("report.pdf", clear_existing=True)
+
+        >>> # Clear production data (requires explicit override)
+        >>> metadata = await ingest_pdf("report.pdf", clear_existing=True, force_production=True)
 
         >>> # Skip metadata extraction to avoid API errors
         >>> metadata = await ingest_pdf("report.pdf", skip_metadata=True)
@@ -146,14 +470,29 @@ async def ingest_pdf(
         )
         raise FileNotFoundError(error_msg)
 
+    # Story 4.0.6: SafetyGuard protection for destructive operations
+    guard = SafetyGuard()
+
     # Clear Qdrant collection if requested (Story 2.2 fix - prevent data contamination)
-    if clear_collection:
+    # Story 4.0.6: Default changed to False, requires explicit clear_existing=True
+    if clear_existing:
+        # AC1/AC2: Check environment before destructive operation
+        guard.check_environment("clear_collection", force_production=force_production)
+
+        # AC2: Require confirmation in interactive mode for production
+        if guard.is_production and not force_production:
+            if not guard.require_confirmation("About to DELETE ALL DATA in production database"):
+                raise SystemExit("Operation cancelled by user")
+
         client = get_qdrant_client()
         try:
             client.delete_collection(settings.qdrant_collection_name)
             logger.info(
                 "Cleared existing collection",
-                extra={"collection": settings.qdrant_collection_name},
+                extra={
+                    "collection": settings.qdrant_collection_name,
+                    "environment": "PRODUCTION" if guard.is_production else "TEST",
+                },
             )
         except Exception:
             logger.info(
@@ -185,6 +524,7 @@ async def ingest_pdf(
                 extra={
                     "financial_chunks_deleted": chunks_deleted,
                     "financial_tables_deleted": tables_deleted,
+                    "environment": "PRODUCTION" if guard.is_production else "TEST",
                 },
             )
         except Exception as e:
@@ -222,7 +562,8 @@ async def ingest_pdf(
             "path": str(pdf_path),
             "doc_filename": pdf_path.name,
             "size_mb": round(pdf_path.stat().st_size / (1024 * 1024), 2),
-            "clear_collection": clear_collection,
+            "clear_existing": clear_existing,
+            "environment": "PRODUCTION" if guard.is_production else "TEST",
         },
     )
 

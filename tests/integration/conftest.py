@@ -571,13 +571,13 @@ def session_ingested_collection(request, warmup_embedding_model):
     if skip_metadata_extraction:
         print("   ⚡ PERFORMANCE: Skipping metadata extraction (LOCAL mode - saves ~40s)")
 
-    # Ingest with clear_collection=False (collection already fresh)
+    # Ingest with clear_existing=False (collection already fresh)
     print("DEBUG: Starting asyncio.run(ingest_pdf)...", file=sys.stderr)
     start_ingest = time.time()
     try:
         result = asyncio.run(
             ingest_pdf(
-                str(sample_pdf), clear_collection=False, skip_metadata=skip_metadata_extraction
+                str(sample_pdf), clear_existing=False, skip_metadata=skip_metadata_extraction
             )
         )
         ingest_duration = time.time() - start_ingest
@@ -778,10 +778,10 @@ def ensure_qdrant_test_isolation(request):
     """Ensure Qdrant collection isolation between integration tests (SMART VERSION).
 
     CRITICAL OPTIMIZATION: Skips re-ingest cleanup for tests that intentionally
-    modify collection (call ingest_pdf with clear_collection=True).
+    modify collection (call ingest_pdf with clear_existing=True).
 
-    Without this: Tests with clear_collection=True pay 150-170s (ingest + re-ingest cleanup)
-    With this: Tests with clear_collection=True pay only 75-85s (ingest only, no cleanup)
+    Without this: Tests with clear_existing=True pay 150-170s (ingest + re-ingest cleanup)
+    With this: Tests with clear_existing=True pay only 75-85s (ingest only, no cleanup)
 
     Behavior:
     - Tests marked @pytest.mark.preserve_collection: Skip cleanup (read-only tests)
@@ -789,7 +789,7 @@ def ensure_qdrant_test_isolation(request):
     - Other tests: Restore to baseline if collection modified (read-only tests that didn't get marked)
 
     This saves ~600-1500 seconds per test session by avoiding double-ingest on tests
-    that call ingest_pdf(clear_collection=True).
+    that call ingest_pdf(clear_existing=True).
 
     NOTE: This fixture lives in tests/integration/conftest.py, so it ONLY applies to
     integration tests. No need to detect test type via inspect - this conftest isn't
@@ -929,7 +929,7 @@ def ensure_qdrant_test_isolation(request):
 
             # CRITICAL FIX: Also restore PostgreSQL data (symmetric database lifecycle)
             # PostgreSQL must be restored when Qdrant is restored to prevent test isolation failures
-            # Root cause: Tests with clear_collection=True delete PostgreSQL, but only Qdrant was being restored
+            # Root cause: Tests with clear_existing=True delete PostgreSQL, but only Qdrant was being restored
             # PERFORMANCE: All tests now have proper markers (preserve_collection or manages_collection_state)
             # This restoration only triggers for tests that actually modify collections
             if _session_postgresql_row_count:
@@ -971,8 +971,8 @@ def ensure_qdrant_test_isolation(request):
                             sample_pdf = Path("tests/fixtures/sample-small-3-pages.pdf")
 
                         if sample_pdf.exists():
-                            # Ingest with clear_collection=False to preserve the Qdrant data we just restored
-                            asyncio.run(ingest_pdf(str(sample_pdf), clear_collection=False))
+                            # Ingest with clear_existing=False to preserve the Qdrant data we just restored
+                            asyncio.run(ingest_pdf(str(sample_pdf), clear_existing=False))
 
                             # Verify PostgreSQL restoration
                             cursor.execute("SELECT COUNT(*) FROM financial_tables")
@@ -1033,7 +1033,7 @@ async def ingested_160_page_pdf():
         pytest.skip(f"160-page PDF not found: {pdf_path}")
 
     print("\n⚙️  Ingesting 160-page PDF (shared fixture - runs once per module)...")
-    metadata = await ingest_pdf(str(pdf_path), clear_collection=True)
+    metadata = await ingest_pdf(str(pdf_path), clear_existing=True)
     client = get_qdrant_client()
 
     print(f"✓ 160-page PDF ingested: {metadata.chunk_count} chunks")
@@ -1074,7 +1074,7 @@ async def ingested_excerpt_pdf():
         pytest.skip(f"Story 2.14 excerpt PDF not found: {pdf_path}")
 
     print("\n⚙️  Ingesting Story 2.14 excerpt PDF (pages 18-50, 33 pages)...")
-    metadata = await ingest_pdf(str(pdf_path), clear_collection=True)
+    metadata = await ingest_pdf(str(pdf_path), clear_existing=True)
     client = get_qdrant_client()
 
     print(f"✓ Excerpt PDF ingested: {metadata.chunk_count} chunks ({metadata.page_count} pages)")

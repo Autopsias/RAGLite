@@ -33,7 +33,7 @@ async def main():
 
     # Ingest full PDF with collection clearing
     # CRITICAL FIX: Do NOT manually delete collection before calling ingest_pdf()
-    # Double deletion (manual + ingest_pdf's clear_collection=True) creates a race
+    # Double deletion (manual + ingest_pdf's clear_existing=True) creates a race
     # condition in Qdrant that can delete data after successful ingestion.
     _ = get_qdrant_client()  # Verify Qdrant connection before ingestion
 
@@ -42,8 +42,8 @@ async def main():
     print("This will take ~13-15 minutes...\n")
 
     try:
-        # Pass clear_collection=True to safely handle deletion + creation
-        result = await ingest_pdf(str(pdf_path), clear_collection=True)
+        # Pass clear_existing=True to safely handle deletion + creation
+        result = await ingest_pdf(str(pdf_path), clear_existing=True)
 
         print("\n" + "=" * 80)
         print("INGESTION COMPLETE")

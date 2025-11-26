@@ -32,7 +32,7 @@ async def main():
     print("=" * 80 + "\n")
 
     try:
-        result = await ingest_pdf(file_path=pdf_path, clear_collection=True)
+        result = await ingest_pdf(file_path=pdf_path, clear_existing=True)
 
         print("\n" + "=" * 80)
         print("✅ INGESTION COMPLETE")

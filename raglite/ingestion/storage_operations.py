@@ -27,8 +27,12 @@ from raglite.shared.clients import get_postgresql_connection, get_qdrant_client
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 from raglite.shared.models import Chunk
+from raglite.shared.safety import SafetyGuard
 
 logger = get_logger(__name__)
+
+# Story 4.0.6: SafetyGuard instance for environment audit logging
+_guard = SafetyGuard()
 
 
 # Exception class for storage operations
@@ -83,6 +87,8 @@ def create_collection(
             return
 
         # Create collection with HNSW indexing (default) + sparse vectors for BM25
+        # Story 4.0.6: Log environment for audit trail
+        _guard.log_operation(f"create_collection:{collection_name}")
         logger.info(
             "Creating Qdrant collection",
             extra={
@@ -91,6 +97,7 @@ def create_collection(
                 "distance": distance.name,
                 "indexing": "HNSW (default)",
                 "sparse_vectors": "enabled (BM25)",
+                "environment": "PRODUCTION" if _guard.is_production else "TEST",
             },
         )
 
@@ -163,12 +170,15 @@ async def store_vectors_in_qdrant(
     """
     start_time = time.time()
 
+    # Story 4.0.6: Log environment for audit trail
+    _guard.log_operation(f"store_vectors:{collection_name}")
     logger.info(
         "Storing vectors in Qdrant",
         extra={
             "chunk_count": len(chunks),
             "collection": collection_name,
             "batch_size": batch_size,
+            "environment": "PRODUCTION" if _guard.is_production else "TEST",
         },
     )
 
@@ -362,11 +372,14 @@ async def store_metadata_in_postgresql(
     """
     start_time = time.time()
 
+    # Story 4.0.6: Log environment for audit trail
+    _guard.log_operation("store_metadata_postgresql")
     logger.info(
         "Storing metadata in PostgreSQL",
         extra={
             "chunk_count": len(chunks),
             "batch_size": batch_size,
+            "environment": "PRODUCTION" if _guard.is_production else "TEST",
         },
     )
 
@@ -523,11 +536,14 @@ async def store_tables_in_postgresql(
     """
     start_time = time.time()
 
+    # Story 4.0.6: Log environment for audit trail
+    _guard.log_operation("store_tables_postgresql")
     logger.info(
         "Storing table data in PostgreSQL",
         extra={
             "row_count": len(table_rows),
             "batch_size": batch_size,
+            "environment": "PRODUCTION" if _guard.is_production else "TEST",
         },
     )
 
