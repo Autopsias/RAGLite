@@ -896,3 +896,183 @@ class InsightGenerationResult(BaseModel):
         description="Method used for insight generation",
     )
     metrics_analyzed: int = Field(..., description="Number of unique metrics processed")
+
+
+# Story 4.8: Strategic recommendation engine models
+class RecommendationCategory(str, Enum):
+    """Category of strategic recommendation.
+
+    Story 4.8 AC1: Recommendation categorization based on insight type.
+
+    - COST_REDUCTION: Reduce expenses, improve efficiency
+    - REVENUE_GROWTH: Increase revenue, expand market
+    - RISK_MITIGATION: Address risks, prevent losses
+    - OPERATIONAL_EFFICIENCY: Streamline processes
+    - STRATEGIC_INVESTMENT: Capital allocation decisions
+    """
+
+    COST_REDUCTION = "cost_reduction"
+    REVENUE_GROWTH = "revenue_growth"
+    RISK_MITIGATION = "risk_mitigation"
+    OPERATIONAL_EFFICIENCY = "operational_efficiency"
+    STRATEGIC_INVESTMENT = "strategic_investment"
+
+
+class Recommendation(BaseModel):
+    """Strategic recommendation generated from financial insights.
+
+    Story 4.8 AC2/AC3: Recommendation with impact score and rationale.
+
+    Attributes:
+        category: Recommendation category
+        impact_score: Impact score (1=low, 10=high)
+        title: Short recommendation title
+        description: Detailed recommendation description
+        rationale: LLM-generated explanation of why this matters
+        supporting_evidence: Data points supporting the recommendation
+        action_steps: Concrete action steps (3-5 items)
+        urgency: Urgency level (high, medium, low)
+        sources: Source insights/documents cited
+        created_at: Recommendation generation timestamp
+    """
+
+    category: RecommendationCategory = Field(..., description="Recommendation category")
+    impact_score: int = Field(
+        ...,
+        ge=1,
+        le=10,
+        description="Impact score (1=low, 10=high)",
+    )
+    title: str = Field(..., description="Short recommendation title")
+    description: str = Field(..., description="Detailed recommendation description")
+    rationale: str = Field(
+        default="",
+        description="LLM-generated explanation of why this matters",
+    )
+    supporting_evidence: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Data points supporting the recommendation",
+    )
+    action_steps: list[str] = Field(
+        default_factory=list,
+        description="Concrete action steps (3-5 items)",
+    )
+    urgency: str = Field(
+        default="medium",
+        description="Urgency level: high, medium, low",
+    )
+    sources: list[str] = Field(
+        default_factory=list,
+        description="Source insights/documents cited",
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="Recommendation generation timestamp",
+    )
+
+
+class RecommendationResult(BaseModel):
+    """Result of strategic recommendation generation.
+
+    Story 4.8 AC1: Complete recommendation result with metadata.
+
+    Attributes:
+        recommendations: List of recommendations sorted by impact (descending)
+        total_generated: Total recommendations before filtering
+        generation_method: Method used for recommendation generation
+        insights_analyzed: Number of insights processed
+    """
+
+    recommendations: list[Recommendation] = Field(
+        default_factory=list,
+        description="List of recommendations sorted by impact (descending)",
+    )
+    total_generated: int = Field(..., description="Total recommendations before filtering")
+    generation_method: str = Field(
+        default="LLM synthesis (Mistral Large)",
+        description="Method used for recommendation generation",
+    )
+    insights_analyzed: int = Field(..., description="Number of insights processed")
+
+
+# Story 4.9: Proactive Insights MCP Tool models
+class InsightsQueryRequest(BaseModel):
+    """Request for proactive financial insights via MCP.
+
+    Story 4.9 AC1: MCP tool parameters for insight queries.
+    Supports both structured parameters and natural language queries.
+
+    Attributes:
+        category: Optional filter by insight category (RISK, OPPORTUNITY, etc.)
+        time_period: Optional time period filter (last_quarter, ytd, etc.)
+        limit: Maximum insights to return (1-20, default 5)
+        include_recommendations: Include strategic recommendations (default True)
+        query: Optional natural language query for context-aware filtering
+    """
+
+    category: str | None = Field(
+        default=None,
+        description="Filter by category: RISK, OPPORTUNITY, ANOMALY, TREND, STRATEGIC_PRIORITY",
+    )
+    time_period: str | None = Field(
+        default=None,
+        description="Time period: last_quarter, last_year, ytd, current_quarter",
+    )
+    limit: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="Maximum insights to return (1-20, default 5)",
+    )
+    include_recommendations: bool = Field(
+        default=True,
+        description="Include strategic recommendations from Story 4.8",
+    )
+    query: str | None = Field(
+        default=None,
+        description="Natural language query for context-aware filtering",
+    )
+
+
+class InsightsQueryResponse(BaseModel):
+    """Response from proactive insights MCP tool.
+
+    Story 4.9 AC2/AC4: Ranked insights with conversational formatting.
+
+    Attributes:
+        insights: Ranked insights (priority 1=highest first)
+        recommendations: Strategic recommendations (impact 10=highest first)
+        total_insights: Total insights before limit
+        total_recommendations: Total recommendations before filtering
+        formatted_summary: LLM-friendly executive summary
+        time_period_analyzed: Time period covered by analysis
+        generation_time_ms: Total generation time in milliseconds
+        source_documents: Documents analyzed for insights
+    """
+
+    insights: list[Insight] = Field(
+        default_factory=list,
+        description="Ranked insights (priority 1=highest first)",
+    )
+    recommendations: list[Recommendation] = Field(
+        default_factory=list,
+        description="Strategic recommendations (impact 10=highest first)",
+    )
+    total_insights: int = Field(..., description="Total insights before limit")
+    total_recommendations: int = Field(..., description="Total recommendations before filtering")
+    formatted_summary: str = Field(
+        default="",
+        description="LLM-friendly executive summary",
+    )
+    time_period_analyzed: str = Field(
+        default="",
+        description="Time period covered by analysis",
+    )
+    generation_time_ms: float = Field(
+        default=0.0,
+        description="Total generation time in milliseconds",
+    )
+    source_documents: list[str] = Field(
+        default_factory=list,
+        description="Documents analyzed for insights",
+    )

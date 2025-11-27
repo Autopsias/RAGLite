@@ -43,7 +43,7 @@ class VectorStorageError(Exception):
 
 
 def create_collection(
-    collection_name: str = "financial_docs",
+    collection_name: str | None = None,
     vector_size: int = 1024,
     distance: Distance = Distance.COSINE,
 ) -> None:
@@ -54,7 +54,7 @@ def create_collection(
     performance and COSINE distance for semantic similarity.
 
     Args:
-        collection_name: Name of the collection (default: financial_docs)
+        collection_name: Name of the collection (default: settings.qdrant_collection_name)
         vector_size: Vector dimension (default: 1024 for Fin-E5)
         distance: Distance metric (default: COSINE for embeddings)
 
@@ -72,6 +72,10 @@ def create_collection(
         >>> # Safe to call multiple times - won't error if exists
         >>> create_collection("financial_docs", vector_size=1024)
     """
+    # Use settings.qdrant_collection_name if not provided (environment-aware)
+    if collection_name is None:
+        collection_name = settings.qdrant_collection_name
+
     client = get_qdrant_client()
 
     try:
@@ -135,7 +139,7 @@ def create_collection(
 
 
 async def store_vectors_in_qdrant(
-    chunks: list[Chunk], collection_name: str = "financial_docs", batch_size: int = 100
+    chunks: list[Chunk], collection_name: str | None = None, batch_size: int = 100
 ) -> int:
     """Store document chunks with embeddings in Qdrant vector database.
 
@@ -145,7 +149,7 @@ async def store_vectors_in_qdrant(
 
     Args:
         chunks: List of Chunk objects with embeddings from Story 1.5
-        collection_name: Qdrant collection name (default: financial_docs)
+        collection_name: Qdrant collection name (default: settings.qdrant_collection_name)
         batch_size: Vectors per batch (default: 100 for memory efficiency)
 
     Returns:
@@ -169,6 +173,10 @@ async def store_vectors_in_qdrant(
         >>> assert points_stored == len(chunks)
     """
     start_time = time.time()
+
+    # Use settings.qdrant_collection_name if not provided (environment-aware)
+    if collection_name is None:
+        collection_name = settings.qdrant_collection_name
 
     # Story 4.0.6: Log environment for audit trail
     _guard.log_operation(f"store_vectors:{collection_name}")

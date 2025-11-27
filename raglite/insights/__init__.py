@@ -1,8 +1,9 @@
-"""Insights module for anomaly detection, trend analysis, and proactive insights.
+"""Insights module for anomaly detection, trend analysis, proactive insights, and recommendations.
 
 Story 4.5: Anomaly detection for financial time-series data.
 Story 4.6: Trend analysis and pattern recognition.
 Story 4.7: Proactive insight generation.
+Story 4.8: Strategic recommendation engine.
 """
 
 from raglite.insights.anomalies import detect_anomalies, explain_anomaly
@@ -12,6 +13,14 @@ from raglite.insights.proactive import (
     filter_insights,
     generate_insights,
     synthesize_insight,
+)
+from raglite.insights.recommendations import (
+    calculate_impact_score,
+    categorize_recommendation,
+    determine_urgency,
+    filter_recommendations,
+    generate_recommendations,
+    synthesize_recommendation,
 )
 from raglite.insights.trends import (
     analyze_trends,
@@ -39,4 +48,11 @@ __all__ = [
     "calculate_insight_priority",
     "categorize_insight",
     "filter_insights",
+    # Story 4.8: Strategic recommendations
+    "generate_recommendations",
+    "synthesize_recommendation",
+    "calculate_impact_score",
+    "categorize_recommendation",
+    "determine_urgency",
+    "filter_recommendations",
 ]
