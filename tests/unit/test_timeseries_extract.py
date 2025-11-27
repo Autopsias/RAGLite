@@ -256,11 +256,12 @@ class TestExtractTimeseries:
                 new_callable=AsyncMock,
                 return_value=mock_search_results,
             ),
-            patch("raglite.shared.clients.get_claude_client") as mock_client,
+            patch("raglite.shared.clients.get_mistral_client") as mock_client,
         ):
             mock_response = MagicMock()
-            mock_response.content = [MagicMock(text=mock_llm_response)]
-            mock_client.return_value.messages.create.return_value = mock_response
+            mock_response.choices = [MagicMock()]
+            mock_response.choices[0].message.content = mock_llm_response
+            mock_client.return_value.chat.complete.return_value = mock_response
 
             result = await extract_timeseries(["Q3_2024_Report.pdf"], metric="revenue")
 
@@ -292,11 +293,12 @@ class TestExtractTimeseries:
                 new_callable=AsyncMock,
                 return_value=mock_search_results,
             ),
-            patch("raglite.shared.clients.get_claude_client") as mock_client,
+            patch("raglite.shared.clients.get_mistral_client") as mock_client,
         ):
             mock_response = MagicMock()
-            mock_response.content = [MagicMock(text=mock_llm_response)]
-            mock_client.return_value.messages.create.return_value = mock_response
+            mock_response.choices = [MagicMock()]
+            mock_response.choices[0].message.content = mock_llm_response
+            mock_client.return_value.chat.complete.return_value = mock_response
 
             result = await extract_timeseries(["report.pdf"], metric="revenue")
 
@@ -331,11 +333,12 @@ class TestExtractTimeseries:
                 new_callable=AsyncMock,
                 return_value=mock_search_results,
             ),
-            patch("raglite.shared.clients.get_claude_client") as mock_client,
+            patch("raglite.shared.clients.get_mistral_client") as mock_client,
         ):
             mock_response = MagicMock()
-            mock_response.content = [MagicMock(text="[]")]
-            mock_client.return_value.messages.create.return_value = mock_response
+            mock_response.choices = [MagicMock()]
+            mock_response.choices[0].message.content = "[]"
+            mock_client.return_value.chat.complete.return_value = mock_response
 
             with pytest.raises(ExtractionError, match="No revenue data found"):
                 await extract_timeseries(["report.pdf"], metric="revenue")
@@ -357,11 +360,12 @@ class TestExtractTimeseries:
                 new_callable=AsyncMock,
                 return_value=mock_search_results,
             ),
-            patch("raglite.shared.clients.get_claude_client") as mock_client,
+            patch("raglite.shared.clients.get_mistral_client") as mock_client,
         ):
             mock_response = MagicMock()
-            mock_response.content = [MagicMock(text="not valid json")]
-            mock_client.return_value.messages.create.return_value = mock_response
+            mock_response.choices = [MagicMock()]
+            mock_response.choices[0].message.content = "not valid json"
+            mock_client.return_value.chat.complete.return_value = mock_response
 
             with pytest.raises(ExtractionError, match="Invalid LLM response"):
                 await extract_timeseries(["report.pdf"], metric="revenue")
@@ -390,11 +394,12 @@ class TestExtractTimeseries:
                 new_callable=AsyncMock,
                 return_value=mock_search_results,
             ),
-            patch("raglite.shared.clients.get_claude_client") as mock_client,
+            patch("raglite.shared.clients.get_mistral_client") as mock_client,
         ):
             mock_response = MagicMock()
-            mock_response.content = [MagicMock(text=mock_llm_response)]
-            mock_client.return_value.messages.create.return_value = mock_response
+            mock_response.choices = [MagicMock()]
+            mock_response.choices[0].message.content = mock_llm_response
+            mock_client.return_value.chat.complete.return_value = mock_response
 
             result = await extract_timeseries(["report.pdf"], metric="revenue")
 
@@ -427,11 +432,12 @@ class TestExtractTimeseries:
                 new_callable=AsyncMock,
                 return_value=mock_search_results,
             ),
-            patch("raglite.shared.clients.get_claude_client") as mock_client,
+            patch("raglite.shared.clients.get_mistral_client") as mock_client,
         ):
             mock_response = MagicMock()
-            mock_response.content = [MagicMock(text=mock_llm_response)]
-            mock_client.return_value.messages.create.return_value = mock_response
+            mock_response.choices = [MagicMock()]
+            mock_response.choices[0].message.content = mock_llm_response
+            mock_client.return_value.chat.complete.return_value = mock_response
 
             # Only request Q3_2024_Report.pdf
             result = await extract_timeseries(["Q3_2024_Report.pdf"], metric="revenue")

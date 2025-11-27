@@ -207,7 +207,7 @@ async def extract_timeseries(
         4
     """
     from raglite.retrieval.search import hybrid_search
-    from raglite.shared.clients import get_claude_client
+    from raglite.shared.clients import get_mistral_client
 
     logger.info(
         "Extracting time-series data",
@@ -257,13 +257,12 @@ Document excerpts:
 JSON array:"""
 
     try:
-        client = get_claude_client()
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1024,
+        client = get_mistral_client()
+        response = client.chat.complete(
+            model="mistral-large-latest",
             messages=[{"role": "user", "content": extraction_prompt}],
         )
-        llm_response = response.content[0].text
+        llm_response = response.choices[0].message.content if response.choices else ""
     except Exception as e:
         logger.error(f"LLM extraction failed: {e}", exc_info=True)
         raise ExtractionError(f"LLM extraction failed: {e}") from e

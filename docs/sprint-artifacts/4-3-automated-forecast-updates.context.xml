@@ -1,0 +1,224 @@
+<story-context id="4-3-automated-forecast-updates" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>4.3</storyId>
+    <title>Automated Forecast Updates</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-26</generatedAt>
+    <generator>BMAD Story Context Workflow (SM Agent)</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-3-automated-forecast-updates.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>forecasts to update automatically when new financial documents are ingested</iWant>
+    <soThat>predictions remain current without manual intervention</soThat>
+    <tasks>
+      <task id="1" title="Design post-ingestion hook architecture" ac="1">
+        <subtask id="1.1">Define PostIngestionHook protocol/interface in shared/models.py</subtask>
+        <subtask id="1.2">Create ForecastUpdateHook implementing the protocol</subtask>
+        <subtask id="1.3">Decide trigger location: within ingest_document() or via orchestrator callback</subtask>
+      </task>
+      <task id="2" title="Implement forecast refresh trigger" ac="1,2">
+        <subtask id="2.1">Create raglite/forecasting/auto_update.py (~50-75 lines)</subtask>
+        <subtask id="2.2">Implement trigger_forecast_refresh(document_metadata: DocumentMetadata) async function</subtask>
+        <subtask id="2.3">Detect affected metrics from document metadata (reporting_period, metric_category)</subtask>
+        <subtask id="2.4">Call extract_timeseries() for affected document</subtask>
+        <subtask id="2.5">Call generate_forecast() for affected metrics only (incremental)</subtask>
+      </task>
+      <task id="3" title="Integrate with document ingestion pipeline" ac="1,3">
+        <subtask id="3.1">Add post-ingestion callback in document_ingestion.py:ingest_document()</subtask>
+        <subtask id="3.2">Configure optional/configurable hook (via Settings or parameter)</subtask>
+        <subtask id="3.3">Add timeout guard: 5-minute max for forecast refresh (graceful abort)</subtask>
+        <subtask id="3.4">Log forecast refresh success/failure with timing metrics</subtask>
+      </task>
+      <task id="4" title="Implement MCP response enrichment" ac="4">
+        <subtask id="4.1">Extend IngestionResult model with forecasts_updated: list[str] | None</subtask>
+        <subtask id="4.2">Update MCP ingest_financial_document() to include forecast status</subtask>
+        <subtask id="4.3">Add forecast_refresh_skipped_reason for cases where refresh not triggered</subtask>
+      </task>
+      <task id="5" title="Unit tests" ac="2,4">
+        <subtask id="5.1">Create tests/unit/test_auto_update.py</subtask>
+        <subtask id="5.2">Test trigger_forecast_refresh() with mocked time-series extraction</subtask>
+        <subtask id="5.3">Test incremental updates: only affected metrics refreshed</subtask>
+        <subtask id="5.4">Test timeout behavior: graceful abort at 5-minute limit</subtask>
+        <subtask id="5.5">Test MCP response includes forecast update status</subtask>
+        <subtask id="5.6">Achieve 80%+ coverage on new code (DoD requirement)</subtask>
+      </task>
+      <task id="6" title="Integration tests" ac="1,3,5">
+        <subtask id="6.1">Create tests/integration/test_auto_forecast_update.py</subtask>
+        <subtask id="6.2">Test end-to-end: ingest document to time-series extraction to forecast refresh</subtask>
+        <subtask id="6.3">Test performance: total time under 5 minutes for standard document</subtask>
+        <subtask id="6.4">Test with test database (port 6335/5433 per Story 4.0.5)</subtask>
+      </task>
+      <task id="7" title="Documentation and cleanup" ac="All">
+        <subtask id="7.1">Add Google-style docstrings to all public functions</subtask>
+        <subtask id="7.2">Update story file with Dev Agent Record</subtask>
+        <subtask id="7.3">Verify all linting passes (uv run ruff check .)</subtask>
+        <subtask id="7.4">Update raglite/forecasting/__init__.py with new exports</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Document ingestion triggers forecast refresh">
+      <description>Document ingestion triggers forecast refresh for affected metrics (FR20)</description>
+      <validation>Integration test: ingest document then verify forecast refresh invoked</validation>
+    </criterion>
+    <criterion id="AC2" title="Incremental updates avoid full recomputation">
+      <description>Incremental updates avoid full recomputation when possible</description>
+      <validation>Unit test: only affected metrics (by document type) are refreshed</validation>
+    </criterion>
+    <criterion id="AC3" title="5-minute completion time">
+      <description>Forecast update completes within 5 minutes of document ingestion</description>
+      <validation>Performance test: measure end-to-end ingestion + forecast time</validation>
+    </criterion>
+    <criterion id="AC4" title="User notification via MCP">
+      <description>Users notified of updated forecasts via MCP response (if applicable)</description>
+      <validation>Unit test: ingestion response includes forecasts_updated field</validation>
+    </criterion>
+    <criterion id="AC5" title="Integration test validation">
+      <description>Integration test validates forecast refresh after new document added</description>
+      <validation>Integration test: ingest then extract time-series then verify forecast updated</validation>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/prd/epic-4-forecasting-proactive-insights.md" title="Epic 4 PRD" section="Story 4.3">
+        Story requirements: automated forecast updates triggered by document ingestion, incremental updates, 5-minute completion, user notifications.
+      </doc>
+      <doc path="docs/archive/tech-spec-epic-4.md" title="Epic 4 Tech Spec" section="Section 6">
+        Implementation timeline: Story 4.3 in Weeks 9-10. Automated forecast updates on document ingestion per FR20.
+      </doc>
+      <doc path="docs/architecture/document-segregation-strategy.md" title="Document Segregation" section="Document Metadata">
+        DocumentMetadata model at shared/models.py:11-22 with filename, doc_type, reporting_period fields for metric identification.
+      </doc>
+      <doc path="docs/process/definition-of-done.md" title="Definition of Done" section="Testing">
+        New code must have 80%+ test coverage. CI/CD enforces coverage gate. All unit/integration tests must pass.
+      </doc>
+      <doc path="docs/sprint-artifacts/4-2-forecasting-engine-implementation.md" title="Previous Story" section="Dev Agent Record">
+        Story 4.2 learnings: ForecastingAgent integrated, Mistral Large LLM pattern, Prophet 8-quarter minimum, 92.18% coverage achieved.
+      </doc>
+    </docs>
+
+    <code>
+      <file path="raglite/forecasting/hybrid.py" kind="module" symbol="generate_forecast" lines="32-60" reason="Core forecasting function to invoke after document ingestion. Uses Prophet + Mistral Large hybrid approach."/>
+      <file path="raglite/forecasting/hybrid.py" kind="exception" symbol="InsufficientDataError" lines="26-29" reason="Exception for less than 8 data points - auto_update should catch and handle gracefully."/>
+      <file path="raglite/forecasting/timeseries_extract.py" kind="module" symbol="extract_timeseries" reason="Extract time-series data from newly ingested document for forecast refresh."/>
+      <file path="raglite/forecasting/__init__.py" kind="module" symbol="__all__" lines="20-30" reason="Module exports - add new auto_update functions here."/>
+      <file path="raglite/ingestion/document_ingestion.py" kind="module" symbol="ingest_document" lines="356-395" reason="Primary ingestion entry point - add post-ingestion hook call here."/>
+      <file path="raglite/shared/models.py" kind="model" symbol="DocumentMetadata" lines="12-22" reason="Input parameter for trigger_forecast_refresh(). Contains filename, doc_type, reporting_period."/>
+      <file path="raglite/shared/models.py" kind="model" symbol="ForecastResult" lines="367-399" reason="Return type from generate_forecast(). Add ForecastRefreshResult here."/>
+      <file path="raglite/shared/models.py" kind="model" symbol="TimeSeriesData" lines="322-343" reason="Output from extract_timeseries(), input to generate_forecast()."/>
+      <file path="raglite/shared/config.py" kind="settings" symbol="Settings" lines="24-131" reason="Add enable_forecast_auto_update and forecast_refresh_timeout settings here."/>
+      <file path="raglite/main.py" kind="mcp-server" symbol="ingest_financial_document" lines="68-70" reason="MCP tool - update return to include forecasts_updated field."/>
+      <file path="raglite/agentic/agents/forecasting_agent.py" kind="agent" symbol="ForecastingAgent" reason="Can be used for complex multi-step forecast refreshes via orchestrator."/>
+      <file path="raglite/agentic/orchestrator.py" kind="orchestrator" symbol="orchestrator" lines="121-127" reason="ForecastingAgent registered here - alternative integration point via events."/>
+      <file path="tests/unit/test_hybrid_forecasting.py" kind="test" symbol="TestGenerateForecast" reason="Follow test patterns established here for test_auto_update.py."/>
+      <file path="tests/unit/test_timeseries_extract.py" kind="test" symbol="mock_mistral_response" reason="Mock patterns for LLM responses - reuse for auto_update tests."/>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="prophet" version=">=1.1.5,<2.0.0">Time-series forecasting (Story 4.2)</package>
+        <package name="mistralai" version=">=1.9.11">LLM for forecast explanation</package>
+        <package name="pydantic" version=">=2.0,<3.0">Data models (ForecastRefreshResult)</package>
+        <package name="asyncio" version=">=3.4.3,<4.0.0">Async timeout guard</package>
+        <package name="pytest" version="8.4.2">Unit testing framework</package>
+        <package name="pytest-asyncio" version="1.2.0">Async test support</package>
+        <package name="pytest-cov" version="5.0.0">Coverage measurement</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint category="architecture">
+      File location: raglite/forecasting/auto_update.py (~50-75 lines target per architecture guidelines)
+    </constraint>
+    <constraint category="architecture">
+      Direct SDK usage only - NO custom wrappers or abstraction layers per CLAUDE.md anti-over-engineering rules
+    </constraint>
+    <constraint category="performance">
+      FR20: Forecast refresh triggered on document ingestion. AC3: Total time under 5 minutes.
+    </constraint>
+    <constraint category="data-requirement">
+      Prophet requires minimum 8 data points (2 years quarterly). Handle InsufficientDataError gracefully.
+    </constraint>
+    <constraint category="llm-pattern">
+      Use Mistral Large (mistral-large-latest) for LLM reasoning - maintain consistency with Stories 4.1/4.2.
+    </constraint>
+    <constraint category="testing">
+      Integration tests use test database (port 6335 Qdrant, port 5433 PostgreSQL) per Story 4.0.5.
+    </constraint>
+    <constraint category="coverage">
+      New code must have 80%+ test coverage (DoD requirement). Previous stories achieved 88-92%.
+    </constraint>
+    <constraint category="configuration">
+      Settings must be configurable via environment variables (enable_forecast_auto_update, forecast_refresh_timeout).
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="trigger_forecast_refresh" kind="async-function">
+      <signature>async def trigger_forecast_refresh(document_metadata: DocumentMetadata, timeout_seconds: int = 300) -> ForecastRefreshResult</signature>
+      <path>raglite/forecasting/auto_update.py</path>
+      <description>Main entry point for automatic forecast refresh after document ingestion</description>
+    </interface>
+    <interface name="identify_affected_metrics" kind="async-function">
+      <signature>async def identify_affected_metrics(document_metadata: DocumentMetadata) -> list[str]</signature>
+      <path>raglite/forecasting/auto_update.py</path>
+      <description>Identify which metrics need refresh based on document metadata</description>
+    </interface>
+    <interface name="generate_forecast" kind="async-function" existing="true">
+      <signature>async def generate_forecast(metric: str, historical_data: TimeSeriesData, periods_ahead: int = 4) -> ForecastResult</signature>
+      <path>raglite/forecasting/hybrid.py</path>
+      <description>Existing function from Story 4.2 - invoke for each affected metric</description>
+    </interface>
+    <interface name="extract_timeseries" kind="async-function" existing="true">
+      <signature>async def extract_timeseries(chunks: list[Chunk], metric_hint: str | None = None) -> TimeSeriesData</signature>
+      <path>raglite/forecasting/timeseries_extract.py</path>
+      <description>Existing function from Story 4.1 - extract time-series from new document</description>
+    </interface>
+    <interface name="ingest_document" kind="async-function" existing="true">
+      <signature>async def ingest_document(file_path: str) -> DocumentMetadata</signature>
+      <path>raglite/ingestion/document_ingestion.py</path>
+      <description>Existing ingestion function - add post-ingestion hook call here</description>
+    </interface>
+    <interface name="ForecastRefreshResult" kind="pydantic-model">
+      <signature>class ForecastRefreshResult(BaseModel)</signature>
+      <path>raglite/shared/models.py</path>
+      <description>New model: document_id, metrics_refreshed, metrics_skipped, refresh_duration_ms, success, error_message</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Follow pytest patterns established in tests/unit/test_hybrid_forecasting.py. Use pytest-asyncio for async tests.
+      Mock external dependencies (Mistral API, Prophet model) for unit tests.
+      Use test database (ports 6335/5433) for integration tests per Story 4.0.5.
+      New code must achieve 80%+ coverage. Previous forecasting module: 92.18% coverage.
+      All tests must pass before marking story complete per Definition of Done.
+    </standards>
+    <locations>
+      <location>tests/unit/test_auto_update.py (NEW - create for this story)</location>
+      <location>tests/integration/test_auto_forecast_update.py (NEW - create for this story)</location>
+      <location>tests/unit/test_hybrid_forecasting.py (existing - patterns to follow)</location>
+      <location>tests/unit/test_timeseries_extract.py (existing - mock patterns)</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test that ingest_document() calls trigger_forecast_refresh() when enabled</idea>
+      <idea ac="1">Test that ForecastRefreshResult is returned with correct metrics</idea>
+      <idea ac="2">Test identify_affected_metrics() returns only relevant metrics based on doc type</idea>
+      <idea ac="2">Test revenue doc only refreshes revenue forecast, not expenses</idea>
+      <idea ac="3">Test asyncio.timeout() properly aborts after 300 seconds</idea>
+      <idea ac="3">Test ingestion completes successfully even if forecast refresh times out</idea>
+      <idea ac="4">Test MCP response includes forecasts_updated field when refresh succeeds</idea>
+      <idea ac="4">Test MCP response includes forecast_refresh_skipped_reason when disabled</idea>
+      <idea ac="5">Integration: ingest test PDF then verify time-series extracted and forecast generated</idea>
+      <idea ac="5">Integration: verify forecasts updated in database/cache after refresh</idea>
+      <idea edge="insufficient-data">Test graceful handling when document lacks enough time-series data</idea>
+      <idea edge="invalid-metric">Test handling when metric_category unknown</idea>
+    </ideas>
+  </tests>
+</story-context>

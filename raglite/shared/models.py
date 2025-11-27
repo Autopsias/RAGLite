@@ -343,6 +343,60 @@ class TimeSeriesData(BaseModel):
     )
 
 
+# Story 4.2: Forecasting engine models for Prophet + LLM hybrid approach
+class ForecastPoint(BaseModel):
+    """Single forecast data point with confidence interval.
+
+    Story 4.2 AC3: Forecast predictions with confidence intervals (FR19).
+
+    Attributes:
+        date: Datetime of the forecast point
+        value: Predicted value (yhat from Prophet)
+        lower: Lower bound of confidence interval (yhat_lower)
+        upper: Upper bound of confidence interval (yhat_upper)
+        label: Optional label like "Q1 2025" for display
+    """
+
+    date: datetime = Field(..., description="Datetime of the forecast point")
+    value: float = Field(..., description="Predicted value (yhat)")
+    lower: float = Field(..., description="Lower confidence interval (yhat_lower)")
+    upper: float = Field(..., description="Upper confidence interval (yhat_upper)")
+    label: str | None = Field(default=None, description="Optional label like 'Q1 2025'")
+
+
+class ForecastResult(BaseModel):
+    """Complete forecast result with predictions and reasoning.
+
+    Story 4.2 AC1-AC7: Hybrid forecasting output combining Prophet predictions
+    with LLM-generated reasoning and confidence rationale.
+
+    Attributes:
+        metric_name: Name of forecasted metric (revenue, cash_flow, expenses)
+        historical_data: Original time-series input data
+        forecast: List of ForecastPoint predictions
+        confidence_reasoning: LLM-generated explanation of confidence intervals
+        basis: Description of forecast basis (e.g., "Prophet model trained on 8 quarters")
+        accuracy_estimate: Expected accuracy (e.g., "±15% per NFR10")
+        periods_ahead: Number of periods forecasted
+    """
+
+    metric_name: str = Field(..., description="Name of forecasted metric")
+    historical_data: list[TimeSeriesPoint] = Field(
+        default_factory=list, description="Original time-series input data"
+    )
+    forecast: list[ForecastPoint] = Field(
+        default_factory=list, description="Forecast predictions with confidence intervals"
+    )
+    confidence_reasoning: str = Field(
+        default="", description="LLM-generated explanation of confidence intervals"
+    )
+    basis: str = Field(
+        default="", description="Forecast basis (e.g., 'Prophet model trained on 8 quarters')"
+    )
+    accuracy_estimate: str = Field(default="±15%", description="Expected accuracy per NFR10")
+    periods_ahead: int = Field(default=4, description="Number of periods forecasted")
+
+
 # Story 4.0.3: Async ingestion models for large document processing
 class AsyncIngestionRequest(BaseModel):
     """Request parameters for async document ingestion.

@@ -118,8 +118,8 @@ development_status:
 
   # Epic 4 Feature Stories (Start after prep stories complete)
   4-1-time-series-data-extraction: done  # ✅ APPROVED (2025-11-25) - All ACs verified, 88.89% coverage
-  4-2-forecasting-engine-implementation: drafted
-  4-3-automated-forecast-updates: backlog
+  4-2-forecasting-engine-implementation: done  # ✅ APPROVED (2025-11-26) - All ACs verified, 92.18% coverage, 47 unit tests
+  4-3-automated-forecast-updates: ready-for-dev
   4-4-forecast-query-tool-mcp: backlog
   4-5-anomaly-detection: backlog
   4-6-trend-analysis-pattern-recognition: backlog
