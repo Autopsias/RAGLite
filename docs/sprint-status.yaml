@@ -120,9 +120,9 @@ development_status:
   4-1-time-series-data-extraction: done  # ✅ APPROVED (2025-11-25) - All ACs verified, 88.89% coverage
   4-2-forecasting-engine-implementation: done  # ✅ APPROVED (2025-11-26) - All ACs verified, 92.18% coverage, 47 unit tests
   4-3-automated-forecast-updates: done  # ✅ APPROVED (2025-11-27) - All ACs verified, 39 tests, Senior Dev Review passed
-  4-4-forecast-query-tool-mcp: backlog
-  4-5-anomaly-detection: backlog
-  4-6-trend-analysis-pattern-recognition: backlog
+  4-4-forecast-query-tool-mcp: done  # ✅ APPROVED (2025-11-27) - All ACs verified, 49 tests, Senior Dev Review passed
+  4-5-anomaly-detection: done  # ✅ APPROVED (2025-11-27) - All ACs verified, 97.56% coverage, 43 tests, Senior Dev Review passed
+  4-6-trend-analysis-pattern-recognition: ready-for-dev
   4-7-proactive-insight-generation: backlog
   4-8-strategic-recommendation-engine: backlog
   4-9-proactive-insights-tool-mcp: backlog

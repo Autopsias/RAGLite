@@ -1,12 +1,13 @@
 """RAGLite MCP Server - Model Context Protocol entry point.
 
 This module implements the FastMCP server that exposes RAGLite capabilities
-to MCP clients (Claude Desktop, etc.). Provides five core tools:
+to MCP clients (Claude Desktop, etc.). Provides six core tools:
   1. ingest_financial_document - Ingest PDF/Excel documents (sync, <50 pages)
   2. ingest_financial_document_async - Async ingestion for large documents (>50 pages, Story 4.0.3)
   3. get_ingestion_status - Poll async ingestion job status (Story 4.0.3)
   4. query_financial_documents - Query documents using natural language (Epic 1-2)
   5. analytical_query_financial_documents - Advanced multi-step analytical queries (Epic 3)
+  6. get_financial_forecast - Query financial forecasts via natural language (Epic 4, Story 4.4)
 
 The server follows standard MCP pattern: tools return raw data (chunks with metadata),
 and the LLM client (Claude) synthesizes natural language answers.
@@ -29,6 +30,8 @@ from raglite.agentic.fallback import FallbackResponse, handle_workflow_failure
 from raglite.agentic.orchestrator import WorkflowExecutor
 from raglite.agentic.planner import QueryComplexity, classify_query_complexity, decompose_query
 from raglite.forecasting.auto_update import trigger_forecast_refresh
+from raglite.forecasting.hybrid import InsufficientDataError, generate_forecast
+from raglite.forecasting.timeseries_extract import ExtractionError, extract_timeseries
 from raglite.ingestion.document_ingestion import temp_file_from_base64, temp_file_from_url
 from raglite.ingestion.job_tracker import create_job, get_job_status, start_background_job
 from raglite.ingestion.pipeline import ingest_document
@@ -42,6 +45,8 @@ from raglite.shared.models import (
     AnalyticalQueryResponse,
     AsyncIngestionResponse,
     DocumentMetadata,
+    ForecastQueryRequest,
+    ForecastQueryResponse,
     IngestionJobStatus,
     IngestionResult,
     QueryRequest,
@@ -1458,6 +1463,302 @@ async def analytical_query_financial_documents(
             reasoning_steps=fallback_reasoning,
             sources=fallback_sources,
         )
+
+
+# Story 4.4: Supported metrics for forecast queries
+SUPPORTED_FORECAST_METRICS = {"revenue", "cash_flow", "expenses"}
+
+
+def parse_forecast_query(query: str) -> tuple[str | None, int | None]:
+    """Parse natural language query to extract metric and period.
+
+    Story 4.4 AC4: Natural language query parsing for forecast queries.
+    Uses regex pattern matching first, with LLM fallback for complex queries.
+
+    Args:
+        query: Natural language query (e.g., "What's the revenue forecast for next quarter?")
+
+    Returns:
+        Tuple of (metric, periods) where either may be None if not found
+    """
+    import re
+
+    query_lower = query.lower()
+
+    # Metric patterns (primary extraction)
+    metric_patterns = {
+        r"\b(?:revenue|sales|income)\b": "revenue",
+        r"\bcash\s*flow\b": "cash_flow",
+        r"\b(?:expenses?|costs?|spending)\b": "expenses",
+    }
+
+    metric = None
+    for pattern, metric_name in metric_patterns.items():
+        if re.search(pattern, query_lower):
+            metric = metric_name
+            break
+
+    # Period patterns (extract number of quarters)
+    periods = None
+
+    # "next quarter" = 1 quarter
+    if re.search(r"next\s+quarter\b", query_lower):
+        periods = 1
+
+    # "next N quarters" = N quarters
+    next_n_match = re.search(r"next\s+(\d+)\s+quarters?", query_lower)
+    if next_n_match:
+        periods = min(int(next_n_match.group(1)), 8)  # Cap at 8
+
+    # "for N quarters" = N quarters
+    for_n_match = re.search(r"for\s+(?:the\s+)?(?:next\s+)?(\d+)\s+quarters?", query_lower)
+    if for_n_match:
+        periods = min(int(for_n_match.group(1)), 8)
+
+    # Specific quarter reference (Q1-Q4 YYYY) - calculate periods to that quarter
+    q_match = re.search(r"q([1-4])\s*(\d{4})", query_lower)
+    if q_match:
+        from datetime import datetime
+
+        target_quarter = int(q_match.group(1))
+        target_year = int(q_match.group(2))
+
+        now = datetime.now()
+        current_quarter = (now.month - 1) // 3 + 1
+        current_year = now.year
+
+        # Calculate quarters ahead
+        target_q_ordinal = target_year * 4 + target_quarter
+        current_q_ordinal = current_year * 4 + current_quarter
+        periods = max(1, target_q_ordinal - current_q_ordinal)
+        periods = min(periods, 8)  # Cap at 8
+
+    return metric, periods
+
+
+@mcp.tool()
+async def get_financial_forecast(
+    request: ForecastQueryRequest,
+) -> ForecastQueryResponse:
+    """Query financial forecasts for key metrics.
+
+    Story 4.4 AC1-AC5: MCP tool for conversational forecast queries using
+    Prophet statistical forecasting combined with LLM reasoning.
+
+    **Supported Metrics:** revenue, cash_flow, expenses
+
+    **Input Modes:**
+
+    1. **Structured Query (Programmatic):**
+       Provide explicit `metric` and `periods_ahead` parameters.
+
+       Example:
+           >>> request = ForecastQueryRequest(metric="revenue", periods_ahead=4)
+           >>> response = await get_financial_forecast(request)
+
+    2. **Natural Language Query (Conversational):**
+       Provide a `query` parameter and let the system extract parameters.
+
+       Example:
+           >>> request = ForecastQueryRequest(query="What's the revenue forecast for next quarter?")
+           >>> response = await get_financial_forecast(request)
+
+    **How It Works:**
+
+    1. Parse query to extract metric and time period (regex + LLM fallback)
+    2. Extract historical time-series data from ingested documents
+    3. Generate forecast using Prophet + LLM hybrid approach
+    4. Return predictions with confidence intervals and explanation
+
+    **Minimum Data Requirement:**
+    - Requires 8+ historical data points (2 years quarterly) for reliable forecasts
+    - Returns clear error message if insufficient data
+
+    Args:
+        request: Forecast query parameters containing:
+          - metric: Financial metric to forecast (revenue, cash_flow, expenses)
+          - periods_ahead: Number of quarters to forecast (1-8, default: 4)
+          - query: Optional natural language query (parsed for metric/period)
+
+    Returns:
+        ForecastQueryResponse containing:
+          - metric_name: Name of forecasted metric
+          - forecast: List of ForecastPoint with value/lower/upper confidence intervals
+          - basis: Description of historical data used (e.g., "Prophet model trained on 12 quarters")
+          - confidence_reasoning: LLM explanation of forecast confidence
+          - methodology: "Prophet + Mistral Large hybrid forecasting"
+          - accuracy_estimate: "±15% (NFR10 target)"
+          - source_documents: Documents used for time-series extraction
+          - periods_ahead: Number of periods forecasted
+
+    Raises:
+        QueryError: If metric not supported, no metric specified, or insufficient data
+
+    Example - Structured Query:
+        >>> request = ForecastQueryRequest(metric="revenue", periods_ahead=4)
+        >>> response = await get_financial_forecast(request)
+        >>> print(response.forecast[0])
+        ForecastPoint(date=2026-03-31, value=15.2M, lower=14.1M, upper=16.3M, label="Q1 2026")
+
+    Example - Natural Language Query:
+        >>> request = ForecastQueryRequest(query="What's the revenue forecast for next quarter?")
+        >>> response = await get_financial_forecast(request)
+        >>> print(response.basis)
+        "Prophet model trained on 12 quarters of historical revenue data from 3 documents"
+
+    Example - Cash Flow Forecast:
+        >>> request = ForecastQueryRequest(query="Forecast cash flow for the next 4 quarters")
+        >>> response = await get_financial_forecast(request)
+        >>> print(f"{response.metric_name}: {len(response.forecast)} quarters forecasted")
+        "cash_flow: 4 quarters forecasted"
+    """
+    logger.info(
+        "Forecast query received",
+        extra={
+            "metric": request.metric,
+            "periods_ahead": request.periods_ahead,
+            "query": request.query,
+        },
+    )
+
+    # Step 1: Determine metric and periods from request
+    metric = request.metric
+    periods_ahead = request.periods_ahead
+
+    # If natural language query provided, parse it (AC4)
+    if request.query and not metric:
+        parsed_metric, parsed_periods = parse_forecast_query(request.query)
+        if parsed_metric:
+            metric = parsed_metric
+        if parsed_periods:
+            periods_ahead = parsed_periods
+
+        logger.info(
+            "Parsed natural language query",
+            extra={
+                "original_query": request.query,
+                "parsed_metric": metric,
+                "parsed_periods": periods_ahead,
+            },
+        )
+
+    # Validate metric is provided
+    if not metric:
+        error_msg = (
+            "Could not determine metric to forecast. Please specify a metric "
+            "(revenue, cash_flow, expenses) or rephrase your query to include the metric."
+        )
+        logger.warning("Forecast query failed - no metric", extra={"query": request.query})
+        raise QueryError(error_msg)
+
+    # Validate metric is supported
+    if metric.lower() not in SUPPORTED_FORECAST_METRICS:
+        error_msg = (
+            f"Unsupported metric: {metric}. "
+            f"Supported metrics: {', '.join(sorted(SUPPORTED_FORECAST_METRICS))}"
+        )
+        logger.warning("Forecast query failed - unsupported metric", extra={"metric": metric})
+        raise QueryError(error_msg)
+
+    metric = metric.lower()
+
+    try:
+        # Step 2: Extract historical time-series data (AC3)
+        logger.info(
+            "Extracting time-series data",
+            extra={"metric": metric},
+        )
+
+        historical_data = await extract_timeseries(docs=[], metric=metric)
+
+        logger.info(
+            "Time-series extraction complete",
+            extra={
+                "metric": metric,
+                "data_points": len(historical_data.points),
+                "source_docs": len(historical_data.source_documents),
+            },
+        )
+
+        # Step 3: Generate forecast using Prophet + LLM (AC1, AC2)
+        forecast_result = await generate_forecast(
+            metric=metric,
+            historical_data=historical_data,
+            periods_ahead=periods_ahead,
+        )
+
+        logger.info(
+            "Forecast generated successfully",
+            extra={
+                "metric": metric,
+                "periods": periods_ahead,
+                "forecast_points": len(forecast_result.forecast),
+            },
+        )
+
+        # Step 4: Build MCP response (AC2, AC3)
+        # Update basis to include document count
+        enhanced_basis = (
+            f"Prophet model trained on {len(historical_data.points)} quarters of historical "
+            f"{metric} data from {len(historical_data.source_documents)} documents"
+        )
+        forecast_result.basis = enhanced_basis
+
+        response = ForecastQueryResponse.from_forecast_result(
+            result=forecast_result,
+            source_documents=historical_data.source_documents,
+        )
+
+        logger.info(
+            "Forecast query complete",
+            extra={
+                "metric": metric,
+                "periods": periods_ahead,
+                "confidence_reasoning_length": len(response.confidence_reasoning),
+            },
+        )
+
+        return response
+
+    except InsufficientDataError as e:
+        # AC4: Handle insufficient data gracefully with user-friendly message
+        error_msg = (
+            f"Insufficient historical data for {metric} forecast. "
+            f"At least 8 data points (2 years quarterly) are required for reliable predictions. "
+            f"Please ingest more financial documents containing {metric} data."
+        )
+        logger.warning(
+            "Forecast query failed - insufficient data",
+            extra={"metric": metric, "error": str(e)},
+        )
+        raise QueryError(error_msg) from e
+
+    except ExtractionError as e:
+        # Handle time-series extraction failures
+        error_msg = (
+            f"Could not extract {metric} time-series data from documents. "
+            f"Ensure financial documents containing {metric} data have been ingested. "
+            f"Details: {str(e)}"
+        )
+        logger.warning(
+            "Forecast query failed - extraction error",
+            extra={"metric": metric, "error": str(e)},
+        )
+        raise QueryError(error_msg) from e
+
+    except Exception as e:
+        # Catch-all for unexpected errors
+        logger.error(
+            "Forecast query failed - unexpected error",
+            extra={
+                "metric": metric,
+                "periods": periods_ahead,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+            exc_info=True,
+        )
+        raise QueryError(f"Forecast generation failed: {e}") from e
 
 
 # Module-level execution for direct startup

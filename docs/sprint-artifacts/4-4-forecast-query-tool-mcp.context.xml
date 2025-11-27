@@ -1,0 +1,202 @@
+<story-context id="4-4-forecast-query-tool-mcp" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>4</storyId>
+    <title>Forecast Query Tool (MCP)</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-4-forecast-query-tool-mcp.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to query financial forecasts via MCP</iWant>
+    <soThat>I can access predictive insights conversationally</soThat>
+    <tasks>
+      <task id="1" title="Design MCP tool interface and data models" ac="1,2,3">
+        <subtask id="1.1">Define ForecastQueryRequest model in shared/models.py with metric and period parameters</subtask>
+        <subtask id="1.2">Define ForecastQueryResponse model extending ForecastResult with MCP-friendly fields</subtask>
+        <subtask id="1.3">Decide parameter format: structured vs natural language parsing (Recommendation: Support both)</subtask>
+      </task>
+      <task id="2" title="Implement get_financial_forecast MCP tool" ac="1,2,3">
+        <subtask id="2.1">Add @mcp.tool() decorated function in raglite/main.py</subtask>
+        <subtask id="2.2">Implement parameter validation (supported metrics: revenue, cash_flow, expenses)</subtask>
+        <subtask id="2.3">Call existing generate_forecast() from raglite/forecasting/hybrid.py</subtask>
+        <subtask id="2.4">Handle InsufficientDataError gracefully with user-friendly message</subtask>
+        <subtask id="2.5">Format response with forecast values, confidence intervals, and explanation</subtask>
+      </task>
+      <task id="3" title="Add natural language query parsing" ac="4">
+        <subtask id="3.1">Implement parse_forecast_query() helper to extract metric and period from NL queries</subtask>
+        <subtask id="3.2">Support common query patterns (revenue forecast, cash flow, expenses)</subtask>
+        <subtask id="3.3">Use Mistral Large for complex query interpretation (fallback)</subtask>
+      </task>
+      <task id="4" title="Integrate with time-series extraction" ac="3">
+        <subtask id="4.1">Retrieve historical data via extract_timeseries()</subtask>
+        <subtask id="4.2">Include source document citations in response</subtask>
+        <subtask id="4.3">Add methodology field describing Prophet + LLM hybrid approach</subtask>
+      </task>
+      <task id="5" title="Unit tests" ac="1,2,3,5">
+        <subtask id="5.1">Create tests/unit/test_forecast_query_tool.py</subtask>
+        <subtask id="5.2">Test ForecastQueryRequest and ForecastQueryResponse models</subtask>
+        <subtask id="5.3">Test get_financial_forecast() with mocked generate_forecast()</subtask>
+        <subtask id="5.4">Test parameter validation (invalid metric, invalid period)</subtask>
+        <subtask id="5.5">Test error handling for InsufficientDataError</subtask>
+        <subtask id="5.6">Test natural language query parsing with 5+ patterns</subtask>
+        <subtask id="5.7">Achieve >=80% coverage on new code</subtask>
+      </task>
+      <task id="6" title="Integration tests" ac="4,5">
+        <subtask id="6.1">Create tests/integration/test_forecast_query_mcp.py</subtask>
+        <subtask id="6.2">Test end-to-end: NL query -> time-series extraction -> forecast generation -> response</subtask>
+        <subtask id="6.3">Test with test database (port 6335/5433)</subtask>
+        <subtask id="6.4">Validate 5 test queries for accuracy and clarity</subtask>
+      </task>
+      <task id="7" title="Documentation and cleanup" ac="All">
+        <subtask id="7.1">Add Google-style docstrings to all public functions</subtask>
+        <subtask id="7.2">Update story file with Dev Agent Record</subtask>
+        <subtask id="7.3">Verify all linting passes (uv run ruff check .)</subtask>
+        <subtask id="7.4">Update raglite/main.py module docstring with new tool</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" validation="unit-test">MCP tool defined: get_financial_forecast with metric and time period parameters</criterion>
+    <criterion id="AC2" validation="unit-test">Tool returns forecast values with confidence intervals (ForecastPoint list with value/lower/upper)</criterion>
+    <criterion id="AC3" validation="unit-test">Tool explains basis for forecast (historical data used, methodology) - includes basis and confidence_reasoning fields</criterion>
+    <criterion id="AC4" validation="integration-test">Queries like "What's the revenue forecast for next quarter?" answered accurately</criterion>
+    <criterion id="AC5" validation="unit+integration">Test queries validated for accuracy and clarity - 5+ test queries covering all metrics and period formats</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/prd/epic-4-forecasting-proactive-insights.md" title="Epic 4 PRD" section="Story 4.4">
+        MCP tool defined: get_financial_forecast with metric and time period parameters. Tool returns forecast values with confidence intervals. Tool explains basis for forecast.
+      </doc>
+      <doc path="docs/architecture/high-level-architecture.md" title="High-Level Architecture" section="MCP Integration">
+        All services expose capabilities via MCP tools. Pattern: Domain-driven microservices with MCP interface.
+      </doc>
+      <doc path="docs/process/definition-of-done.md" title="Definition of Done" section="Testing">
+        New code must have >=80% test coverage. All unit, integration, E2E tests must pass. Google-style docstrings required.
+      </doc>
+      <doc path="docs/sprint-artifacts/4-3-automated-forecast-updates.md" title="Previous Story 4.3" section="Dev Agent Record">
+        Auto Update Module pattern, Settings Integration pattern, MCP Response Pattern (IngestionResult.from_metadata factory method), structured logging with extra={} context.
+      </doc>
+      <doc path="docs/sprint-artifacts/4-2-forecasting-engine-implementation.md" title="Story 4.2" section="Implementation">
+        ForecastResult model, generate_forecast() function, Prophet + Mistral Large hybrid approach, MIN_DATA_POINTS = 8 quarters.
+      </doc>
+    </docs>
+
+    <code>
+      <file path="raglite/main.py" kind="mcp-server" symbol="mcp" lines="1-200" reason="Add get_financial_forecast MCP tool following existing patterns">
+        FastMCP server with existing tools: ingest_financial_document, query_financial_documents, analytical_query_financial_documents. Follow @mcp.tool() decorator pattern.
+      </file>
+      <file path="raglite/forecasting/hybrid.py" kind="service" symbol="generate_forecast" lines="32-129" reason="Core forecasting function to call">
+        async def generate_forecast(metric, historical_data, periods_ahead) -> ForecastResult. Raises InsufficientDataError if <8 data points.
+      </file>
+      <file path="raglite/forecasting/hybrid.py" kind="service" symbol="explain_forecast" lines="132-200" reason="LLM explanation function">
+        async def explain_forecast(forecast, context) -> str. Uses Mistral Large for confidence reasoning.
+      </file>
+      <file path="raglite/forecasting/timeseries_extract.py" kind="service" symbol="extract_timeseries" lines="1-100" reason="Time-series data extraction">
+        Extracts temporal financial metrics from documents. Returns TimeSeriesData with points and source_documents.
+      </file>
+      <file path="raglite/forecasting/auto_update.py" kind="service" symbol="identify_affected_metrics" lines="31-70" reason="Metric validation patterns">
+        Identifies supported metrics (revenue, cash_flow, expenses) from document content. Reusable for validation.
+      </file>
+      <file path="raglite/shared/models.py" kind="models" symbol="ForecastPoint,ForecastResult" lines="347-398" reason="Add ForecastQueryRequest and ForecastQueryResponse">
+        Existing forecast models to extend. ForecastPoint has date, value, lower, upper, label fields.
+      </file>
+      <file path="raglite/shared/models.py" kind="models" symbol="TimeSeriesData,TimeSeriesPoint" lines="300-346" reason="Input data models for forecasting">
+        TimeSeriesData contains points list and source_documents list.
+      </file>
+      <file path="raglite/shared/clients.py" kind="util" symbol="get_mistral_client" reason="LLM client for NL query parsing fallback">
+        Returns configured Mistral client for complex query interpretation.
+      </file>
+      <file path="raglite/forecasting/__init__.py" kind="module" lines="1-38" reason="Update exports with new functions if any">
+        Module exports: extract_timeseries, generate_forecast, explain_forecast, InsufficientDataError, trigger_forecast_refresh, identify_affected_metrics.
+      </file>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="fastmcp" version="2.12.4" reason="MCP server framework"/>
+        <package name="pydantic" version=">=2.0,<3.0" reason="Request/Response models"/>
+        <package name="prophet" version=">=1.1.5,<2.0.0" reason="Time-series forecasting"/>
+        <package name="mistralai" version=">=1.9.11" reason="LLM for NL parsing and explanation"/>
+        <package name="pandas" version=">=2.0,<3.0" reason="Data manipulation for Prophet"/>
+        <package name="python-dateutil" version=">=2.8,<3.0" reason="Fiscal date parsing"/>
+      </python>
+      <testing>
+        <package name="pytest" version="8.4.2"/>
+        <package name="pytest-asyncio" version="1.2.0"/>
+        <package name="pytest-cov" version="5.0.0"/>
+        <package name="pytest-mock" version=">=3.12,<4.0"/>
+      </testing>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="pattern">Use @mcp.tool() decorator for MCP tool definition</constraint>
+    <constraint type="pattern">Pydantic models for request/response (ForecastQueryRequest, ForecastQueryResponse)</constraint>
+    <constraint type="pattern">Structured logging with extra={} context for all log statements</constraint>
+    <constraint type="pattern">Google-style docstrings on all public functions</constraint>
+    <constraint type="pattern">async/await for all I/O operations</constraint>
+    <constraint type="error-handling">Handle InsufficientDataError gracefully with user-friendly message</constraint>
+    <constraint type="error-handling">Raise QueryError for invalid metrics or parameters</constraint>
+    <constraint type="architecture">No new files - add to existing main.py and models.py</constraint>
+    <constraint type="architecture">Reuse existing forecasting module (hybrid.py, timeseries_extract.py)</constraint>
+    <constraint type="size">Target ~50-75 lines in main.py, ~30 lines in models.py</constraint>
+    <constraint type="testing">>=80% test coverage on new code (DoD requirement)</constraint>
+    <constraint type="testing">Use test database (port 6335 for Qdrant, 5433 for PostgreSQL)</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="get_financial_forecast" kind="mcp-tool" path="raglite/main.py">
+      <signature>async def get_financial_forecast(request: ForecastQueryRequest) -> ForecastQueryResponse</signature>
+      <description>MCP tool for querying financial forecasts with metric and period parameters</description>
+    </interface>
+    <interface name="generate_forecast" kind="function" path="raglite/forecasting/hybrid.py">
+      <signature>async def generate_forecast(metric: str, historical_data: TimeSeriesData, periods_ahead: int = 4) -> ForecastResult</signature>
+      <description>Core forecasting function using Prophet + Mistral Large hybrid</description>
+    </interface>
+    <interface name="extract_timeseries" kind="function" path="raglite/forecasting/timeseries_extract.py">
+      <signature>async def extract_timeseries(document_ids: list[str], metric: str) -> TimeSeriesData</signature>
+      <description>Extract time-series data from documents for specified metric</description>
+    </interface>
+    <interface name="ForecastQueryRequest" kind="pydantic-model" path="raglite/shared/models.py">
+      <signature>class ForecastQueryRequest(BaseModel): metric: str | None, periods_ahead: int = 4, query: str | None</signature>
+      <description>MCP tool request model supporting structured params and NL queries</description>
+    </interface>
+    <interface name="ForecastQueryResponse" kind="pydantic-model" path="raglite/shared/models.py">
+      <signature>class ForecastQueryResponse(BaseModel): metric_name: str, forecast: list[ForecastPoint], basis: str, confidence_reasoning: str, methodology: str, accuracy_estimate: str, source_documents: list[str], periods_ahead: int</signature>
+      <description>MCP tool response with forecast values, confidence intervals, and explanation</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Per Definition of Done: New code must have >=80% test coverage measured via pytest --cov. All unit, integration, and E2E tests must pass. Tests should mock external dependencies (generate_forecast, extract_timeseries, Mistral client). Use test database on ports 6335 (Qdrant) and 5433 (PostgreSQL). Follow existing test patterns from test_auto_update.py (26 unit tests) and test_auto_forecast_update.py (13 integration tests).
+    </standards>
+    <locations>
+      <location>tests/unit/test_forecast_query_tool.py</location>
+      <location>tests/integration/test_forecast_query_mcp.py</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test ForecastQueryRequest model with valid metric/period combinations</idea>
+      <idea ac="1">Test ForecastQueryRequest model with query parameter only (NL mode)</idea>
+      <idea ac="1">Test get_financial_forecast MCP tool is callable and returns ForecastQueryResponse</idea>
+      <idea ac="2">Test response contains ForecastPoint list with value, lower, upper fields</idea>
+      <idea ac="2">Test confidence intervals are present and valid (lower <= value <= upper)</idea>
+      <idea ac="3">Test response includes non-empty basis field describing historical data</idea>
+      <idea ac="3">Test response includes confidence_reasoning field from LLM explanation</idea>
+      <idea ac="3">Test methodology field is set to "Prophet + Mistral Large hybrid forecasting"</idea>
+      <idea ac="4">Test NL query "What's the revenue forecast for next quarter?" returns correct metric</idea>
+      <idea ac="4">Test NL query "Forecast cash flow for the next 4 quarters" parses correctly</idea>
+      <idea ac="4">Test NL query "Predict expenses for Q1 2026" extracts period correctly</idea>
+      <idea ac="5">Test invalid metric returns QueryError with helpful message</idea>
+      <idea ac="5">Test InsufficientDataError returns user-friendly message explaining 8+ quarter requirement</idea>
+      <idea ac="5">Test parameter validation: periods_ahead must be 1-8</idea>
+      <idea ac="5">Integration: End-to-end forecast query with mocked time-series data</idea>
+    </ideas>
+  </tests>
+</story-context>

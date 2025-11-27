@@ -4,6 +4,7 @@ Defines core data structures used across ingestion and retrieval modules.
 """
 
 from datetime import datetime
+from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -541,3 +542,176 @@ class IngestionJobStatus(BaseModel):
     completed_at: str | None = Field(
         default=None, description="Job completion timestamp (ISO 8601 format, only when done)"
     )
+
+
+# Story 4.4: Forecast Query Tool MCP models
+class ForecastQueryRequest(BaseModel):
+    """Request for financial forecast query via MCP.
+
+    Story 4.4 AC1: MCP tool parameters for forecast queries.
+    Supports both structured parameters and natural language queries.
+
+    Attributes:
+        metric: Metric to forecast (revenue, cash_flow, expenses). Optional if using query.
+        periods_ahead: Number of quarters to forecast (1-8, default 4).
+        query: Optional natural language query (e.g., "revenue forecast next quarter").
+    """
+
+    metric: str | None = Field(
+        default=None,
+        description="Metric to forecast: revenue, cash_flow, expenses",
+    )
+    periods_ahead: int = Field(
+        default=4,
+        ge=1,
+        le=8,
+        description="Number of quarters to forecast (1-8)",
+    )
+    query: str | None = Field(
+        default=None,
+        description="Optional natural language query (e.g., 'revenue forecast next quarter')",
+    )
+
+
+class ForecastQueryResponse(BaseModel):
+    """Response for financial forecast query via MCP.
+
+    Story 4.4 AC2/AC3: Forecast results with confidence intervals and explanations.
+
+    Attributes:
+        metric_name: Name of forecasted metric.
+        forecast: List of ForecastPoint predictions with confidence intervals.
+        basis: Description of historical data used for forecast.
+        confidence_reasoning: LLM-generated explanation of forecast confidence.
+        methodology: Forecasting methodology description.
+        accuracy_estimate: Expected forecast accuracy (±15% per NFR10).
+        source_documents: Documents used for time-series data extraction.
+        periods_ahead: Number of periods forecasted.
+    """
+
+    metric_name: str = Field(..., description="Name of forecasted metric")
+    forecast: list[ForecastPoint] = Field(
+        default_factory=list,
+        description="Forecast predictions with confidence intervals",
+    )
+    basis: str = Field(
+        ...,
+        description="Description of historical data used for forecast",
+    )
+    confidence_reasoning: str = Field(
+        default="",
+        description="LLM-generated explanation of forecast confidence",
+    )
+    methodology: str = Field(
+        default="Prophet + Mistral Large hybrid forecasting",
+        description="Forecasting methodology description",
+    )
+    accuracy_estimate: str = Field(
+        default="±15% (NFR10 target)",
+        description="Expected forecast accuracy",
+    )
+    source_documents: list[str] = Field(
+        default_factory=list,
+        description="Documents used for time-series data extraction",
+    )
+    periods_ahead: int = Field(..., description="Number of periods forecasted")
+
+    @classmethod
+    def from_forecast_result(
+        cls,
+        result: "ForecastResult",
+        source_documents: list[str] | None = None,
+    ) -> "ForecastQueryResponse":
+        """Create ForecastQueryResponse from ForecastResult.
+
+        Story 4.4 AC2/AC3: Factory method for MCP response creation.
+
+        Args:
+            result: ForecastResult from generate_forecast()
+            source_documents: List of source document filenames
+
+        Returns:
+            ForecastQueryResponse with all fields populated
+        """
+        return cls(
+            metric_name=result.metric_name,
+            forecast=result.forecast,
+            basis=result.basis,
+            confidence_reasoning=result.confidence_reasoning,
+            methodology="Prophet + Mistral Large hybrid forecasting",
+            accuracy_estimate=result.accuracy_estimate,
+            source_documents=source_documents or [],
+            periods_ahead=result.periods_ahead,
+        )
+
+
+# Story 4.5: Anomaly detection models
+class AnomalySeverity(str, Enum):
+    """Severity levels for detected anomalies.
+
+    Story 4.5 AC3: Anomaly severity scoring based on Z-score thresholds.
+    - CRITICAL: |z| > 3.0 - Extreme outlier requiring immediate attention
+    - MODERATE: |z| > 2.0 - Significant deviation from expected values
+    - MINOR: |z| > 1.5 - Small deviation, may indicate emerging trend
+    """
+
+    MINOR = "minor"
+    MODERATE = "moderate"
+    CRITICAL = "critical"
+
+
+class Anomaly(BaseModel):
+    """Detected anomaly in financial time-series data.
+
+    Story 4.5 AC2/AC4: Anomaly with full context for analysis and reporting.
+
+    Attributes:
+        date: Date/period of the anomaly (e.g., "2024-Q3", "Jan 2024")
+        metric: Name of the financial metric
+        value: Actual observed value
+        expected_value: Expected value based on historical mean
+        z_score: Standard deviations from mean (negative = below mean)
+        severity: Severity level based on Z-score thresholds
+        reason: LLM-generated explanation of the anomaly
+        magnitude_pct: Percentage deviation from expected value
+    """
+
+    date: str = Field(..., description="Date/period of anomaly (e.g., '2024-Q3')")
+    metric: str = Field(..., description="Name of the financial metric")
+    value: float = Field(..., description="Actual observed value")
+    expected_value: float = Field(..., description="Expected value based on mean")
+    z_score: float = Field(..., description="Standard deviations from mean")
+    severity: AnomalySeverity = Field(..., description="Anomaly severity level")
+    reason: str = Field(default="", description="LLM-generated explanation")
+    magnitude_pct: float = Field(
+        default=0.0,
+        description="Percentage deviation from expected ((value-expected)/expected * 100)",
+    )
+
+
+class AnomalyDetectionResult(BaseModel):
+    """Result of anomaly detection analysis.
+
+    Story 4.5 AC1: Complete anomaly detection result with metadata.
+
+    Attributes:
+        metric_name: Name of the analyzed metric
+        anomalies: List of detected Anomaly objects
+        data_points_analyzed: Number of data points processed
+        detection_method: Statistical method used for detection
+        mean_value: Mean of analyzed data
+        std_deviation: Standard deviation of analyzed data
+    """
+
+    metric_name: str = Field(..., description="Name of analyzed metric")
+    anomalies: list[Anomaly] = Field(
+        default_factory=list,
+        description="List of detected anomalies",
+    )
+    data_points_analyzed: int = Field(..., description="Number of data points processed")
+    detection_method: str = Field(
+        default="Z-score analysis (threshold: |z| > 2)",
+        description="Statistical method used for detection",
+    )
+    mean_value: float = Field(default=0.0, description="Mean of analyzed data")
+    std_deviation: float = Field(default=0.0, description="Standard deviation of data")
