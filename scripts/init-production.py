@@ -166,10 +166,12 @@ def initialize_postgresql_production(guard: SafetyGuard) -> bool:
         cursor = conn.cursor()
 
         # Check if tables exist
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT table_name FROM information_schema.tables
             WHERE table_schema = 'public' AND table_name IN ('documents', 'document_chunks')
-        """)
+        """
+        )
         existing_tables = [row[0] for row in cursor.fetchall()]
 
         if "documents" in existing_tables and "document_chunks" in existing_tables:
@@ -190,7 +192,8 @@ def initialize_postgresql_production(guard: SafetyGuard) -> bool:
         print("  Creating tables...")
 
         # Documents table
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS documents (
                 id TEXT PRIMARY KEY,
                 filename TEXT NOT NULL,
@@ -201,11 +204,13 @@ def initialize_postgresql_production(guard: SafetyGuard) -> bool:
                 ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 metadata JSONB DEFAULT '{}'::jsonb
             )
-        """)
+        """
+        )
         print("    - documents table created")
 
         # Document chunks table
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS document_chunks (
                 id TEXT PRIMARY KEY,
                 document_id TEXT REFERENCES documents(id) ON DELETE CASCADE,
@@ -216,16 +221,21 @@ def initialize_postgresql_production(guard: SafetyGuard) -> bool:
                 metadata JSONB DEFAULT '{}'::jsonb,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
         print("    - document_chunks table created")
 
         # Create indexes
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_chunks_document_id ON document_chunks(document_id)
-        """)
-        cursor.execute("""
+        """
+        )
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_documents_filename ON documents(filename)
-        """)
+        """
+        )
         print("    - indexes created")
 
         conn.commit()

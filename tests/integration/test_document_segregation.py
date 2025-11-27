@@ -261,13 +261,15 @@ class TestPostgreSQLDocumentSegregation:
                 cursor = conn.cursor()
 
                 # Query to verify document_id column exists and has data
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT document_id, page_number, COUNT(*) as row_count
                     FROM financial_tables
                     WHERE document_id IS NOT NULL
                     GROUP BY document_id, page_number
                     LIMIT 10
-                """)
+                """
+                )
 
                 rows = cursor.fetchall()
                 cursor.close()
@@ -316,12 +318,14 @@ class TestPostgreSQLDocumentSegregation:
                 cursor = conn.cursor()
 
                 # First get a valid document_id
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT DISTINCT document_id
                     FROM financial_tables
                     WHERE document_id IS NOT NULL
                     LIMIT 1
-                """)
+                """
+                )
 
                 doc_row = cursor.fetchone()
                 if not doc_row:

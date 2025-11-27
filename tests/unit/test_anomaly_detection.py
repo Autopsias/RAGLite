@@ -540,12 +540,10 @@ class TestEdgeCases:
         from raglite.insights.anomalies import detect_anomalies
 
         points = [
-            TimeSeriesPoint(date=datetime(2024, i, 1), value=10.0)  # No label
-            for i in range(1, 4)
+            TimeSeriesPoint(date=datetime(2024, i, 1), value=10.0)
+            for i in range(1, 4)  # No label
         ]
-        points.append(
-            TimeSeriesPoint(date=datetime(2024, 4, 1), value=100.0)  # Outlier, no label
-        )
+        points.append(TimeSeriesPoint(date=datetime(2024, 4, 1), value=100.0))  # Outlier, no label
 
         timeseries = TimeSeriesData(metric_name="revenue", points=points)
 
