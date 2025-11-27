@@ -230,7 +230,7 @@ class TestGenerateForecast:
 
         with (
             patch("raglite.forecasting.hybrid.Prophet", return_value=mock_prophet),
-            patch("raglite.shared.clients.get_mistral_client") as mock_mistral_client,
+            patch("raglite.forecasting.hybrid.get_mistral_client") as mock_mistral_client,
         ):
             mock_mistral_client.return_value.chat.complete.return_value = mock_mistral_response
 
@@ -258,7 +258,7 @@ class TestGenerateForecast:
 
         with (
             patch("raglite.forecasting.hybrid.Prophet") as mock_prophet_class,
-            patch("raglite.shared.clients.get_mistral_client") as mock_mistral,
+            patch("raglite.forecasting.hybrid.get_mistral_client") as mock_mistral,
         ):
             # Setup mock Prophet
             mock_prophet = MagicMock()
@@ -305,7 +305,7 @@ class TestGenerateForecast:
 
         with (
             patch("raglite.forecasting.hybrid.Prophet") as mock_prophet_class,
-            patch("raglite.shared.clients.get_mistral_client") as mock_mistral,
+            patch("raglite.forecasting.hybrid.get_mistral_client") as mock_mistral,
         ):
             mock_prophet = MagicMock()
             mock_prophet_class.return_value = mock_prophet
@@ -350,7 +350,7 @@ class TestGenerateForecast:
 
         with (
             patch("raglite.forecasting.hybrid.Prophet") as mock_prophet_class,
-            patch("raglite.shared.clients.get_mistral_client") as mock_mistral,
+            patch("raglite.forecasting.hybrid.get_mistral_client") as mock_mistral,
         ):
             mock_prophet = MagicMock()
             mock_prophet_class.return_value = mock_prophet
