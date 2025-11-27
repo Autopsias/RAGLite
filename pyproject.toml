@@ -258,6 +258,7 @@ module = [
     "dateutil.*",
     "tiktoken.*",
     "fastmcp.*",
+    "prophet.*",
 ]
 ignore_missing_imports = true
 follow_imports = "skip"
