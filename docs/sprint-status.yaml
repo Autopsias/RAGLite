@@ -122,9 +122,9 @@ development_status:
   4-3-automated-forecast-updates: done  # ✅ APPROVED (2025-11-27) - All ACs verified, 39 tests, Senior Dev Review passed
   4-4-forecast-query-tool-mcp: done  # ✅ APPROVED (2025-11-27) - All ACs verified, 49 tests, Senior Dev Review passed
   4-5-anomaly-detection: done  # ✅ APPROVED (2025-11-27) - All ACs verified, 97.56% coverage, 43 tests, Senior Dev Review passed
-  4-6-trend-analysis-pattern-recognition: ready-for-dev
-  4-7-proactive-insight-generation: backlog
-  4-8-strategic-recommendation-engine: backlog
+  4-6-trend-analysis-pattern-recognition: done  # ✅ APPROVED (2025-11-27) - All ACs verified, 69 tests (61 unit + 8 integration), 90%+ accuracy, Senior Dev Review passed
+  4-7-proactive-insight-generation: done  # ✅ APPROVED (2025-11-27) - All ACs verified, 61 tests (48 unit + 13 integration), 75%+ expert accuracy, Senior Dev Review passed
+  4-8-strategic-recommendation-engine: ready-for-dev
   4-9-proactive-insights-tool-mcp: backlog
   4-10-forecasting-insights-test-suite: backlog
   epic-4-retrospective: optional

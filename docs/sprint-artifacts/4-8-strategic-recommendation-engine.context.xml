@@ -1,0 +1,205 @@
+<story-context id="4-8-strategic-recommendation-engine" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>8</storyId>
+    <title>Strategic Recommendation Engine</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-8-strategic-recommendation-engine.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>to generate actionable recommendations based on financial data analysis</iWant>
+    <soThat>users receive strategic guidance on where to focus attention</soThat>
+    <tasks>
+      <task id="1" title="Design Recommendation data models">
+        <subtask>1.1 Define RecommendationCategory enum: COST_REDUCTION, REVENUE_GROWTH, RISK_MITIGATION, OPERATIONAL_EFFICIENCY, STRATEGIC_INVESTMENT</subtask>
+        <subtask>1.2 Define Recommendation model with fields: category, impact_score (1-10), title, description, rationale, supporting_evidence (Dict), action_steps (List[str]), urgency, sources, created_at</subtask>
+        <subtask>1.3 Define RecommendationResult model with fields: recommendations, total_generated, generation_method, insights_analyzed</subtask>
+      </task>
+      <task id="2" title="Implement generate_recommendations() function">
+        <subtask>2.1 Create raglite/insights/recommendations.py module (~80-120 lines)</subtask>
+        <subtask>2.2 Implement signature: async def generate_recommendations(insights: List[Insight], context: Optional[str] = None) -> RecommendationResult</subtask>
+        <subtask>2.3 Implement recommendation categorization logic based on insight type</subtask>
+        <subtask>2.4 Implement impact scoring (1=low impact, 10=high impact)</subtask>
+      </task>
+      <task id="3" title="Implement LLM-powered recommendation synthesis">
+        <subtask>3.1 Implement synthesize_recommendation() helper using Mistral Large</subtask>
+        <subtask>3.2 Generate rationale explaining why recommendation matters</subtask>
+        <subtask>3.3 Generate concrete action steps (3-5 steps per recommendation)</subtask>
+        <subtask>3.4 Include supporting evidence citations from source insights</subtask>
+        <subtask>3.5 Determine urgency level based on insight priority and category</subtask>
+      </task>
+      <task id="4" title="Implement recommendation prioritization and filtering">
+        <subtask>4.1 Implement impact scoring algorithm</subtask>
+        <subtask>4.2 Implement deduplication</subtask>
+        <subtask>4.3 Implement filter_recommendations() function</subtask>
+        <subtask>4.4 Sort results by impact score descending</subtask>
+      </task>
+      <task id="5" title="Structured logging and context">
+        <subtask>5.1 Add structured logging with extra={} context</subtask>
+        <subtask>5.2 Log fields: category, impact_score, urgency, sources_count, generation_time_ms</subtask>
+        <subtask>5.3 Add timing metrics for performance</subtask>
+      </task>
+      <task id="6" title="Unit tests">
+        <subtask>6.1 Create tests/unit/test_strategic_recommendations.py</subtask>
+        <subtask>6.2-6.9 Test all models, functions, edge cases - target 80%+ coverage</subtask>
+      </task>
+      <task id="7" title="Integration tests">
+        <subtask>7.1 Create tests/integration/test_strategic_recommendations_integration.py</subtask>
+        <subtask>7.2 Create expert-labeled test dataset</subtask>
+        <subtask>7.3 Validate 80%+ recommendation alignment</subtask>
+        <subtask>7.4 Test cloud cost example</subtask>
+        <subtask>7.5-7.6 End-to-end and performance tests</subtask>
+      </task>
+      <task id="8" title="Documentation and cleanup">
+        <subtask>8.1-8.4 Docstrings, story update, linting, exports</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Recommendation engine analyzes insights and generates actionable next steps (FR25) - Unit test: generate_recommendations() accepts List[Insight] and returns List[Recommendation]</criterion>
+    <criterion id="AC2">Recommendations prioritized by potential impact - Unit test: Recommendation model contains impact_score (1-10), results sorted by impact descending</criterion>
+    <criterion id="AC3">Recommendations include rationale with supporting data - Unit test: Recommendation model contains rationale string and supporting_evidence dict fields</criterion>
+    <criterion id="AC4">Recommendation quality validated: align with human expert analysis 80%+ of time - Integration test: validate recommendations against expert-labeled dataset</criterion>
+    <criterion id="AC5">Example tested: "Focus on reducing cloud infrastructure costs - trending 40% over budget with minimal usage increase" - Integration test with synthetic cloud cost anomaly</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/prd/epic-4-forecasting-proactive-insights.md" title="Epic 4 PRD" section="Story 4.8: Strategic Recommendation Engine">
+        Story requirements: AC1-AC5 for recommendation engine with 80% expert alignment target
+      </doc>
+      <doc path="docs/archive/tech-spec-epic-4.md" title="Tech Spec Epic 4" section="3.5 Proactive Insight Generation">
+        LLM-powered insight synthesis pattern, recommendation generation approach, NFR targets (80% alignment)
+      </doc>
+      <doc path="docs/architecture/coding-standards.md" title="Coding Standards" section="All">
+        Type hints, Google-style docstrings, structured logging, Pydantic models
+      </doc>
+      <doc path="docs/architecture/testing-strategy.md" title="Testing Strategy" section="Testing Pyramid">
+        80% unit tests, 15% integration, 5% E2E, pytest framework
+      </doc>
+      <doc path="docs/sprint-artifacts/4-7-proactive-insight-generation.md" title="Previous Story 4.7" section="Dev Agent Record">
+        Patterns to reuse: LLM synthesis, priority scoring, deduplication, test structure (48 unit + 13 integration)
+      </doc>
+    </docs>
+
+    <code>
+      <file path="raglite/insights/proactive.py" kind="module" symbol="generate_insights, synthesize_insight, categorize_insight, calculate_insight_priority, filter_insights" lines="1-504" reason="Primary module to build upon - uses patterns for LLM synthesis, priority scoring, and insight generation that Story 4.8 will adapt for recommendations">
+        Key patterns:
+        - synthesize_insight() uses get_mistral_client() for LLM reasoning
+        - calculate_insight_priority() maps severity/magnitude to 1-5 scale
+        - categorize_insight() determines category based on input type
+        - filter_insights() limits results by category/priority/count
+        - Structured logging with extra={} context throughout
+      </file>
+      <file path="raglite/insights/__init__.py" kind="module" symbol="exports" lines="1-43" reason="Module exports - add new recommendation functions here">
+        Current exports: Story 4.5 anomaly detection, Story 4.6 trend analysis, Story 4.7 proactive insights
+      </file>
+      <file path="raglite/shared/models.py" kind="models" symbol="Insight, InsightCategory, InsightGenerationResult" lines="814-898" reason="Existing models to reference - add RecommendationCategory, Recommendation, RecommendationResult here">
+        Key patterns:
+        - InsightCategory enum (str, Enum) with 5 values
+        - Insight model with category, priority (1-5), summary, supporting_data, rationale, sources, recommended_action, created_at
+        - InsightGenerationResult with insights list, total_generated, generation_method, metrics_analyzed
+      </file>
+      <file path="raglite/shared/clients.py" kind="service" symbol="get_mistral_client" lines="397-468" reason="LLM client factory - use for recommendation synthesis">
+        Singleton pattern with timeout configuration, returns Mistral client for LLM reasoning
+      </file>
+      <file path="raglite/shared/logging.py" kind="utility" symbol="get_logger" reason="Structured logging - use for all log statements">
+        logger = get_logger(__name__) pattern, use extra={} for context
+      </file>
+      <file path="tests/unit/test_proactive_insights.py" kind="test" reason="Reference test structure - 48 unit tests covering models, functions, edge cases">
+        Test patterns: model validation, LLM mocking, priority scoring, categorization, deduplication, edge cases
+      </file>
+      <file path="tests/integration/test_proactive_insights_integration.py" kind="test" reason="Reference integration test structure - 13 tests with expert-labeled scenarios">
+        Test patterns: end-to-end generation, processing time validation, accuracy threshold checking
+      </file>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="pydantic" version=">=2.0,<3.0" purpose="Data models with validation"/>
+        <package name="mistralai" version=">=1.9.11" purpose="LLM for recommendation synthesis"/>
+        <package name="pytest" version="8.4.2" purpose="Testing framework"/>
+        <package name="pytest-asyncio" version="1.2.0" purpose="Async test support"/>
+        <package name="pytest-mock" version=">=3.12,<4.0" purpose="Mocking Mistral client"/>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">New file: raglite/insights/recommendations.py (~80-120 lines)</constraint>
+    <constraint type="architecture">Models added to: raglite/shared/models.py (~40 lines)</constraint>
+    <constraint type="architecture">Exports added to: raglite/insights/__init__.py</constraint>
+    <constraint type="coding">Type hints mandatory on all functions</constraint>
+    <constraint type="coding">Google-style docstrings on all public functions</constraint>
+    <constraint type="coding">Structured logging with extra={} context</constraint>
+    <constraint type="coding">Async/await for LLM calls</constraint>
+    <constraint type="testing">80%+ code coverage on new code</constraint>
+    <constraint type="testing">Unit tests mock Mistral client</constraint>
+    <constraint type="testing">Integration tests validate 80% expert alignment</constraint>
+    <constraint type="nfr">Processing time &lt;3s for typical input (5-10 insights)</constraint>
+    <constraint type="nfr">80%+ recommendation alignment with expert analysis</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="generate_recommendations" kind="async function" path="raglite/insights/recommendations.py">
+      <signature>async def generate_recommendations(insights: List[Insight], context: Optional[str] = None) -> RecommendationResult</signature>
+      <description>Generate strategic recommendations from analyzed insights</description>
+    </interface>
+    <interface name="synthesize_recommendation" kind="async function" path="raglite/insights/recommendations.py">
+      <signature>async def synthesize_recommendation(insight: Insight) -> tuple[str, str, list[str], str]</signature>
+      <description>LLM-powered recommendation synthesis returning (title, rationale, action_steps, urgency)</description>
+    </interface>
+    <interface name="calculate_impact_score" kind="function" path="raglite/insights/recommendations.py">
+      <signature>def calculate_impact_score(insight: Insight) -> int</signature>
+      <description>Calculate recommendation impact score (1-10) based on insight priority and category</description>
+    </interface>
+    <interface name="categorize_recommendation" kind="function" path="raglite/insights/recommendations.py">
+      <signature>def categorize_recommendation(insight: Insight) -> RecommendationCategory</signature>
+      <description>Map insight category to recommendation category</description>
+    </interface>
+    <interface name="filter_recommendations" kind="function" path="raglite/insights/recommendations.py">
+      <signature>def filter_recommendations(recommendations: list[Recommendation], *, category: RecommendationCategory | None = None, min_impact: int | None = None, limit: int | None = None) -> list[Recommendation]</signature>
+      <description>Filter and limit recommendations by category, impact threshold, or count</description>
+    </interface>
+    <interface name="Insight" kind="model" path="raglite/shared/models.py">
+      <signature>class Insight(BaseModel): category, priority, summary, supporting_data, rationale, sources, recommended_action, created_at</signature>
+      <description>Input model from Story 4.7 - recommendations are generated from insights</description>
+    </interface>
+    <interface name="get_mistral_client" kind="factory function" path="raglite/shared/clients.py">
+      <signature>def get_mistral_client() -> Mistral</signature>
+      <description>Singleton Mistral client for LLM reasoning</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      pytest with pytest-asyncio for async tests. Mock external dependencies (Mistral client).
+      Use @pytest.fixture for test data setup. Test file naming: test_*.py.
+      Target 80%+ coverage on new code. Use pytest-mock for client mocking.
+    </standards>
+    <locations>
+      <location>tests/unit/test_strategic_recommendations.py</location>
+      <location>tests/integration/test_strategic_recommendations_integration.py</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test generate_recommendations() accepts List[Insight] and returns RecommendationResult with List[Recommendation]</idea>
+      <idea ac="AC1">Test empty insights list raises ValueError</idea>
+      <idea ac="AC2">Test RecommendationCategory enum has 5 values</idea>
+      <idea ac="AC2">Test Recommendation model has impact_score field with ge=1, le=10 constraint</idea>
+      <idea ac="AC2">Test results sorted by impact_score descending (highest first)</idea>
+      <idea ac="AC3">Test Recommendation model has rationale and supporting_evidence fields</idea>
+      <idea ac="AC3">Test synthesize_recommendation() returns title, rationale, action_steps, urgency</idea>
+      <idea ac="AC4">Test 80% alignment on expert-labeled dataset (6+ scenarios)</idea>
+      <idea ac="AC5">Test cloud cost example generates COST_REDUCTION recommendation with impact >= 7</idea>
+      <idea ac="edge">Test single insight input</idea>
+      <idea ac="edge">Test deduplication of similar insights</idea>
+      <idea ac="edge">Test LLM failure fallback</idea>
+      <idea ac="perf">Test processing time &lt;3s for 10 insights</idea>
+    </ideas>
+  </tests>
+</story-context>

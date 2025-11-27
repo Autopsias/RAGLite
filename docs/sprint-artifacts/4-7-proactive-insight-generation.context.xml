@@ -1,0 +1,221 @@
+<story-context id="bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>7</storyId>
+    <title>Proactive Insight Generation</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-7-proactive-insight-generation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>to autonomously generate insights highlighting risks, opportunities, and areas requiring attention</iWant>
+    <soThat>users learn what they should know without asking</soThat>
+    <tasks>
+      <task id="1" name="Design Insight data models" acs="2,3,5">
+        <subtask>1.1 Define InsightCategory enum in raglite/shared/models.py with values: RISK, OPPORTUNITY, ANOMALY, TREND, STRATEGIC_PRIORITY</subtask>
+        <subtask>1.2 Define Insight model with fields: category, priority (1-5), summary, supporting_data (Dict), rationale, sources, recommended_action, created_at</subtask>
+        <subtask>1.3 Define InsightGenerationResult model with fields: insights (List[Insight]), total_generated, generation_method, metrics_analyzed</subtask>
+      </task>
+      <task id="2" name="Implement generate_insights() function" acs="1,2,3">
+        <subtask>2.1 Create raglite/insights/proactive.py module (~50-80 lines per Tech Spec)</subtask>
+        <subtask>2.2 Implement signature: async def generate_insights(anomalies: List[Anomaly], trends: List[Trend], forecasts: List[ForecastResult]) -> InsightGenerationResult</subtask>
+        <subtask>2.3 Implement insight categorization logic based on input type</subtask>
+        <subtask>2.4 Implement priority scoring (1=critical, 5=low) based on severity, magnitude, and confidence</subtask>
+      </task>
+      <task id="3" name="Implement LLM-powered insight synthesis" acs="1,5">
+        <subtask>3.1 Implement synthesize_insight() helper using Mistral Large for contextual reasoning</subtask>
+        <subtask>3.2 Generate rationale combining anomalies, trends, and forecasts into coherent narrative</subtask>
+        <subtask>3.3 Generate recommended actions based on insight category</subtask>
+        <subtask>3.4 Include supporting data citations from source anomalies/trends/forecasts</subtask>
+      </task>
+      <task id="4" name="Implement insight ranking and filtering" acs="3,4">
+        <subtask>4.1 Implement priority scoring algorithm: anomaly severity + trend magnitude + forecast confidence</subtask>
+        <subtask>4.2 Implement deduplication (avoid redundant insights from same underlying data)</subtask>
+        <subtask>4.3 Implement filter_insights() to limit results by category, priority, or count</subtask>
+        <subtask>4.4 Sort results by priority (ascending: 1=most critical first)</subtask>
+      </task>
+      <task id="5" name="Structured logging and context" acs="1">
+        <subtask>5.1 Add structured logging with extra={} context for each generated insight</subtask>
+        <subtask>5.2 Log fields: category, priority, sources_count, generation_time_ms</subtask>
+        <subtask>5.3 Add timing metrics for insight generation performance</subtask>
+      </task>
+      <task id="6" name="Unit tests" acs="1,2,3,5">
+        <subtask>6.1 Create tests/unit/test_proactive_insights.py</subtask>
+        <subtask>6.2 Test InsightCategory enum and Insight model (validation, serialization)</subtask>
+        <subtask>6.3 Test generate_insights() with mock anomalies, trends, forecasts</subtask>
+        <subtask>6.4 Test priority scoring algorithm</subtask>
+        <subtask>6.5 Test insight categorization logic</subtask>
+        <subtask>6.6 Test synthesize_insight() with mocked Mistral client</subtask>
+        <subtask>6.7 Test deduplication logic</subtask>
+        <subtask>6.8 Test edge cases: empty inputs, single anomaly, no trends, conflicting signals</subtask>
+        <subtask>6.9 Achieve >=80% coverage on new code</subtask>
+      </task>
+      <task id="7" name="Integration tests" acs="4,6">
+        <subtask>7.1 Create tests/integration/test_proactive_insights_integration.py</subtask>
+        <subtask>7.2 Create expert-labeled test dataset with expected insights</subtask>
+        <subtask>7.3 Validate 75%+ insight usefulness on test dataset</subtask>
+        <subtask>7.4 Test marketing spend anomaly example</subtask>
+        <subtask>7.5 Test end-to-end: anomaly detection -> trend analysis -> insight generation</subtask>
+        <subtask>7.6 Test processing time less than 5s for typical input</subtask>
+      </task>
+      <task id="8" name="Documentation and cleanup" acs="All">
+        <subtask>8.1 Add Google-style docstrings to all public functions</subtask>
+        <subtask>8.2 Update story file with Dev Agent Record</subtask>
+        <subtask>8.3 Verify all linting passes (uv run ruff check .)</subtask>
+        <subtask>8.4 Update raglite/insights/__init__.py with new exports</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Insight generation combines anomaly detection, trend analysis, and contextual reasoning (FR22, FR23)</criterion>
+    <criterion id="AC2">Insights categorized: risks, opportunities, anomalies, trends, strategic priorities</criterion>
+    <criterion id="AC3">Insights ranked by priority/impact (FR24)</criterion>
+    <criterion id="AC4">Insight quality validated: 75%+ rated useful/actionable by user testing</criterion>
+    <criterion id="AC5">Insights include supporting data and rationale (FR25)</criterion>
+    <criterion id="AC6">Example insights tested: "Q3 marketing spend increased 30% YoY with no corresponding revenue increase - potential inefficiency"</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/prd/epic-4-forecasting-proactive-insights.md" title="Epic 4 PRD" section="Story 4.7: Proactive Insight Generation">
+        Defines AC1-AC6 for proactive insight generation combining anomaly detection, trend analysis, and contextual reasoning. Target: 75%+ insight usefulness.
+      </doc>
+      <doc path="docs/archive/tech-spec-epic-4.md" title="Epic 4 Tech Spec" section="3.5 Proactive Insight Generation">
+        Specifies ~50 lines integrated across modules, LLM-powered synthesis using Claude API, insight types (RISK, OPPORTUNITY, ANOMALY, STRATEGIC_PRIORITY), and NFR targets.
+      </doc>
+      <doc path="docs/architecture/coding-standards.md" title="Coding Standards" section="All">
+        Mandatory patterns: type hints, Google-style docstrings, structured logging with extra={}, Pydantic models, async/await for I/O.
+      </doc>
+      <doc path="docs/architecture/testing-strategy.md" title="Testing Strategy" section="Unit Tests">
+        80%+ coverage target, pytest-asyncio for async tests, mock external dependencies, synthetic test data with known outcomes.
+      </doc>
+      <doc path="docs/sprint-artifacts/4-6-trend-analysis-pattern-recognition.md" title="Previous Story 4.6" section="Dev Agent Record">
+        Learnings: insights module structure, model patterns, 69 tests achieved, LLM integration via get_mistral_client(), structured logging patterns.
+      </doc>
+    </docs>
+    <code>
+      <artifact path="raglite/insights/__init__.py" kind="module" symbol="__all__" lines="1-29" reason="Module exports - add generate_insights, InsightCategory, Insight, InsightGenerationResult">
+        Current exports: detect_anomalies, explain_anomaly, analyze_trends, calculate_cagr, calculate_qoq_growth, classify_direction, detect_correlation, explain_trend
+      </artifact>
+      <artifact path="raglite/insights/anomalies.py" kind="module" symbol="detect_anomalies, explain_anomaly" lines="1-232" reason="Story 4.5 anomaly detection - Anomaly model and detection logic to consume">
+        Key interfaces: detect_anomalies(metric: str, timeseries: TimeSeriesData) -> AnomalyDetectionResult
+        Returns: List[Anomaly] with severity, z_score, magnitude_pct, date, metric fields
+      </artifact>
+      <artifact path="raglite/insights/trends.py" kind="module" symbol="analyze_trends, explain_trend" lines="1-381" reason="Story 4.6 trend analysis - Trend model and analysis logic to consume">
+        Key interfaces: analyze_trends(metrics: list[str], timeseries_data: dict[str, TimeSeriesData]) -> TrendAnalysisResult
+        Returns: List[Trend] with direction, magnitude, confidence, cagr, qoq_growth fields
+      </artifact>
+      <artifact path="raglite/forecasting/hybrid.py" kind="module" symbol="generate_forecast, ForecastResult" lines="1-212" reason="Story 4.2 forecasting - ForecastResult model to consume">
+        Key interfaces: generate_forecast(metric: str, historical_data: TimeSeriesData, periods_ahead: int) -> ForecastResult
+        Returns: ForecastResult with forecast points, confidence_reasoning, accuracy_estimate
+      </artifact>
+      <artifact path="raglite/shared/models.py" kind="models" symbol="Anomaly, AnomalySeverity, Trend, TrendDirection, ForecastResult" lines="600-811" reason="Existing models to consume and extend with InsightCategory, Insight, InsightGenerationResult">
+        Anomaly: date, metric, value, expected_value, z_score, severity, magnitude_pct, reason
+        Trend: metric, direction, magnitude, confidence, start_date, end_date, cagr, qoq_growth
+        AnomalySeverity: MINOR, MODERATE, CRITICAL
+        TrendDirection: INCREASING, DECREASING, STABLE, CYCLICAL
+      </artifact>
+      <artifact path="raglite/shared/clients.py" kind="service" symbol="get_mistral_client" reason="LLM client for synthesize_insight() - same pattern as explain_anomaly() and explain_trend()">
+        Usage: client = get_mistral_client(); response = client.chat.complete(model="mistral-large-latest", messages=[...])
+      </artifact>
+      <artifact path="raglite/shared/logging.py" kind="utility" symbol="get_logger" reason="Structured logging with extra={} context for insight generation metrics">
+        Usage: logger = get_logger(__name__); logger.info("Insight generated", extra={"category": ..., "priority": ...})
+      </artifact>
+      <artifact path="tests/unit/test_trend_analysis.py" kind="test" symbol="test classes" reason="Pattern reference for unit tests - 61 tests covering models, calculations, edge cases">
+        Test patterns: model validation, calculation accuracy, edge cases (empty data, single point, identical values), mocked LLM client
+      </artifact>
+      <artifact path="tests/integration/test_trend_analysis_integration.py" kind="test" symbol="test classes" reason="Pattern reference for integration tests - 8 tests with expert-labeled validation">
+        Test patterns: accuracy validation on expert dataset, end-to-end pipeline, processing time validation
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pydantic" version=">=2.0,<3.0" reason="BaseModel for Insight, InsightGenerationResult models"/>
+        <package name="mistralai" version=">=1.9.11" reason="LLM synthesis via get_mistral_client()"/>
+        <package name="numpy" version="(via sentence-transformers)" reason="Statistical calculations if needed"/>
+        <package name="pytest" version="8.4.2" reason="Unit and integration testing"/>
+        <package name="pytest-asyncio" version="1.2.0" reason="Async test support"/>
+      </python>
+      <internal>
+        <module name="raglite.insights.anomalies" reason="Anomaly, AnomalySeverity, AnomalyDetectionResult, detect_anomalies"/>
+        <module name="raglite.insights.trends" reason="Trend, TrendDirection, TrendAnalysisResult, analyze_trends"/>
+        <module name="raglite.forecasting.hybrid" reason="ForecastResult, generate_forecast"/>
+        <module name="raglite.shared.models" reason="Base models and enums"/>
+        <module name="raglite.shared.clients" reason="get_mistral_client() for LLM synthesis"/>
+        <module name="raglite.shared.logging" reason="get_logger() for structured logging"/>
+      </internal>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="pattern">Follow existing module pattern: raglite/insights/proactive.py alongside anomalies.py and trends.py</constraint>
+    <constraint type="pattern">Use Pydantic BaseModel for InsightCategory enum and Insight/InsightGenerationResult models</constraint>
+    <constraint type="pattern">Use get_mistral_client() from shared/clients.py for LLM synthesis (same as explain_anomaly/explain_trend)</constraint>
+    <constraint type="pattern">Structured logging with extra={} for all insight generation events</constraint>
+    <constraint type="pattern">Async/await for LLM calls and any I/O operations</constraint>
+    <constraint type="testing">>=80% coverage on new code per Definition of Done</constraint>
+    <constraint type="testing">Integration tests validate 75%+ insight usefulness on expert-labeled dataset</constraint>
+    <constraint type="testing">Processing time <5s for typical input (10 anomalies, 5 trends, 3 forecasts)</constraint>
+    <constraint type="size">Target ~50-80 lines in proactive.py per Tech Spec Section 3.5 (comprehensive docstrings acceptable)</constraint>
+    <constraint type="simplicity">No new dependencies - use existing stdlib datetime and Pydantic</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="generate_insights" kind="function" path="raglite/insights/proactive.py">
+      <signature>async def generate_insights(anomalies: List[Anomaly], trends: List[Trend], forecasts: List[ForecastResult]) -> InsightGenerationResult</signature>
+      <description>Main entry point for proactive insight generation. Combines anomaly detection, trend analysis, and forecast results into prioritized actionable insights.</description>
+    </interface>
+    <interface name="synthesize_insight" kind="function" path="raglite/insights/proactive.py">
+      <signature>async def synthesize_insight(anomaly: Optional[Anomaly], trend: Optional[Trend], forecast: Optional[ForecastResult]) -> Insight</signature>
+      <description>LLM-powered synthesis of individual insight with rationale and recommended action.</description>
+    </interface>
+    <interface name="calculate_insight_priority" kind="function" path="raglite/insights/proactive.py">
+      <signature>def calculate_insight_priority(anomaly: Optional[Anomaly], trend: Optional[Trend], forecast: Optional[ForecastResult]) -> int</signature>
+      <description>Calculate priority score (1=critical, 5=low) based on severity, magnitude, and confidence.</description>
+    </interface>
+    <interface name="categorize_insight" kind="function" path="raglite/insights/proactive.py">
+      <signature>def categorize_insight(anomaly: Optional[Anomaly], trend: Optional[Trend], forecast: Optional[ForecastResult]) -> InsightCategory</signature>
+      <description>Determine insight category based on input characteristics.</description>
+    </interface>
+    <interface name="InsightCategory" kind="enum" path="raglite/shared/models.py">
+      <signature>class InsightCategory(str, Enum): RISK, OPPORTUNITY, ANOMALY, TREND, STRATEGIC_PRIORITY</signature>
+      <description>Category enumeration for insight classification.</description>
+    </interface>
+    <interface name="Insight" kind="model" path="raglite/shared/models.py">
+      <signature>class Insight(BaseModel): category, priority, summary, supporting_data, rationale, sources, recommended_action, created_at</signature>
+      <description>Pydantic model for individual proactive insight.</description>
+    </interface>
+    <interface name="InsightGenerationResult" kind="model" path="raglite/shared/models.py">
+      <signature>class InsightGenerationResult(BaseModel): insights, total_generated, generation_method, metrics_analyzed</signature>
+      <description>Pydantic model for complete insight generation result with metadata.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      pytest with pytest-asyncio for async functions. Mock external dependencies (Mistral client) in unit tests.
+      Use synthetic test data with known expected outcomes. Follow patterns from test_trend_analysis.py (61 unit tests)
+      and test_trend_analysis_integration.py (8 integration tests).
+    </standards>
+    <locations>
+      <location>tests/unit/test_proactive_insights.py</location>
+      <location>tests/integration/test_proactive_insights_integration.py</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test generate_insights() combines all three input types and produces valid InsightGenerationResult</idea>
+      <idea ac="AC2">Test InsightCategory enum has all 5 values, test categorize_insight() returns correct categories for each input type</idea>
+      <idea ac="AC3">Test priority scoring: critical anomaly -> priority 1, moderate trend -> priority 3, etc.</idea>
+      <idea ac="AC4">Integration test with expert-labeled dataset validates 75%+ accuracy</idea>
+      <idea ac="AC5">Test Insight model has supporting_data dict and rationale string populated after synthesis</idea>
+      <idea ac="AC6">Test marketing spend anomaly + stable revenue trend -> RISK insight with expected summary content</idea>
+      <idea edge="empty">Test generate_insights with empty lists raises ValueError</idea>
+      <idea edge="single">Test generate_insights with single anomaly, no trends, no forecasts produces valid insight</idea>
+      <idea edge="conflicting">Test conflicting signals (positive trend + critical anomaly) handled correctly</idea>
+      <idea perf="timing">Test processing time <5s for 10 anomalies, 5 trends, 3 forecasts</idea>
+    </ideas>
+  </tests>
+</story-context>

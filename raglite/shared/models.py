@@ -3,7 +3,7 @@
 Defines core data structures used across ingestion and retrieval modules.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -715,3 +715,184 @@ class AnomalyDetectionResult(BaseModel):
     )
     mean_value: float = Field(default=0.0, description="Mean of analyzed data")
     std_deviation: float = Field(default=0.0, description="Standard deviation of data")
+
+
+# Story 4.6: Trend analysis and pattern recognition models
+class TrendDirection(str, Enum):
+    """Direction of detected trend.
+
+    Story 4.6 AC3: Trend direction characterization.
+
+    - INCREASING: Growth > 5% (CAGR threshold)
+    - DECREASING: Growth < -5% (CAGR threshold)
+    - STABLE: -5% <= growth <= 5%
+    - CYCLICAL: Seasonal pattern detected (reserved for future)
+    """
+
+    INCREASING = "increasing"
+    DECREASING = "decreasing"
+    STABLE = "stable"
+    CYCLICAL = "cyclical"
+
+
+class Trend(BaseModel):
+    """Detected trend in financial time-series data.
+
+    Story 4.6 AC1/AC3: Trend with direction and magnitude.
+
+    Attributes:
+        metric: Name of the financial metric (e.g., "revenue", "expenses")
+        direction: Trend direction (INCREASING, DECREASING, STABLE, CYCLICAL)
+        magnitude: Magnitude as percentage (e.g., 15.2 for 15.2% CAGR)
+        confidence: Statistical confidence score (0.0 to 1.0)
+        start_date: Start of trend period (e.g., "2024-Q1")
+        end_date: End of trend period (e.g., "2024-Q4")
+        description: LLM-generated trend explanation
+        cagr: Compound Annual Growth Rate
+        qoq_growth: Quarter-over-Quarter average growth rate
+    """
+
+    metric: str = Field(..., description="Name of the financial metric")
+    direction: TrendDirection = Field(..., description="Trend direction")
+    magnitude: float = Field(..., description="Magnitude as percentage (e.g., 15.2 for 15.2% CAGR)")
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0, description="Statistical confidence")
+    start_date: str = Field(..., description="Start of trend period (e.g., '2024-Q1')")
+    end_date: str = Field(..., description="End of trend period (e.g., '2024-Q4')")
+    description: str = Field(default="", description="LLM-generated trend explanation")
+    cagr: float = Field(default=0.0, description="Compound Annual Growth Rate")
+    qoq_growth: float = Field(default=0.0, description="Quarter-over-Quarter average growth rate")
+
+
+class CorrelationResult(BaseModel):
+    """Correlation between two financial metrics.
+
+    Story 4.6 AC1: Correlation detection between metrics using Pearson correlation.
+
+    Attributes:
+        metric_a: First metric name
+        metric_b: Second metric name
+        correlation_coefficient: Pearson correlation coefficient (-1.0 to 1.0)
+        p_value: Statistical significance (p-value)
+        interpretation: Human-readable interpretation (e.g., "Strong positive correlation")
+    """
+
+    metric_a: str = Field(..., description="First metric name")
+    metric_b: str = Field(..., description="Second metric name")
+    correlation_coefficient: float = Field(
+        ..., ge=-1.0, le=1.0, description="Pearson correlation coefficient"
+    )
+    p_value: float = Field(..., description="Statistical significance (p-value)")
+    interpretation: str = Field(
+        default="",
+        description="Human-readable interpretation (e.g., 'Strong positive correlation')",
+    )
+
+
+class TrendAnalysisResult(BaseModel):
+    """Result of trend analysis across multiple metrics.
+
+    Story 4.6 AC1: Complete trend analysis result with metadata.
+
+    Attributes:
+        trends: List of detected Trend objects
+        correlations: List of detected CorrelationResult objects
+        metrics_analyzed: Number of metrics processed
+        analysis_method: Methods used for analysis (CAGR, QoQ, Pearson correlation)
+    """
+
+    trends: list[Trend] = Field(default_factory=list, description="List of detected trends")
+    correlations: list[CorrelationResult] = Field(
+        default_factory=list, description="List of detected correlations"
+    )
+    metrics_analyzed: int = Field(..., description="Number of metrics processed")
+    analysis_method: str = Field(
+        default="Statistical analysis (CAGR, QoQ, Pearson correlation)",
+        description="Methods used for analysis",
+    )
+
+
+# Story 4.7: Proactive insight generation models
+class InsightCategory(str, Enum):
+    """Category of proactive insight.
+
+    Story 4.7 AC2: Insight categorization.
+
+    - RISK: Negative trend, forecast downturn, critical anomaly
+    - OPPORTUNITY: Positive trend, growth potential
+    - ANOMALY: Unexplained outlier requiring investigation
+    - TREND: Notable pattern (neutral - could be good or bad)
+    - STRATEGIC_PRIORITY: High-impact area needing attention
+    """
+
+    RISK = "risk"
+    OPPORTUNITY = "opportunity"
+    ANOMALY = "anomaly"
+    TREND = "trend"
+    STRATEGIC_PRIORITY = "strategic_priority"
+
+
+class Insight(BaseModel):
+    """Proactive insight generated from financial analysis.
+
+    Story 4.7 AC2/AC3/AC5: Insight with category, priority, and supporting data.
+
+    Attributes:
+        category: Insight category (risk, opportunity, anomaly, trend, strategic_priority)
+        priority: Priority level (1=critical, 5=low)
+        summary: One-sentence insight summary
+        supporting_data: Data points supporting the insight
+        rationale: LLM-generated explanation
+        sources: Source documents/metrics cited
+        recommended_action: Suggested next step
+        created_at: Insight generation timestamp
+    """
+
+    category: InsightCategory = Field(..., description="Insight category")
+    priority: int = Field(
+        ...,
+        ge=1,
+        le=5,
+        description="Priority (1=critical, 5=low)",
+    )
+    summary: str = Field(..., description="One-sentence insight summary")
+    supporting_data: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Data points supporting the insight",
+    )
+    rationale: str = Field(default="", description="LLM-generated explanation")
+    sources: list[str] = Field(
+        default_factory=list,
+        description="Source documents/metrics cited",
+    )
+    recommended_action: str = Field(
+        default="",
+        description="Suggested next step",
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="Insight generation timestamp",
+    )
+
+
+class InsightGenerationResult(BaseModel):
+    """Result of proactive insight generation.
+
+    Story 4.7 AC1: Complete insight generation result with metadata.
+
+    Attributes:
+        insights: List of generated insights sorted by priority
+        total_generated: Total insights before filtering
+        generation_method: Method used for insight generation
+        metrics_analyzed: Number of unique metrics processed
+    """
+
+    insights: list[Insight] = Field(
+        default_factory=list,
+        description="List of generated insights sorted by priority",
+    )
+    total_generated: int = Field(..., description="Total insights before filtering")
+    generation_method: str = Field(
+        default="LLM synthesis (Mistral Large)",
+        description="Method used for insight generation",
+    )
+    metrics_analyzed: int = Field(..., description="Number of unique metrics processed")
