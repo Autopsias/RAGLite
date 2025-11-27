@@ -580,7 +580,7 @@ jobs:
       - name: Run integration tests (CI fast mode)
         env:
           QDRANT_HOST: localhost
-          QDRANT_PORT: 6333
+          QDRANT_PORT: 6335
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5433
           POSTGRES_DB: raglite_ci
@@ -772,7 +772,7 @@ jobs:
       - name: Run performance tests
         env:
           QDRANT_HOST: localhost
-          QDRANT_PORT: 6333
+          QDRANT_PORT: 6335
         run: |
           source ci-venv/bin/activate
           echo "========================================="
@@ -897,7 +897,7 @@ jobs:
       - name: Run agentic workflow test suite
         env:
           QDRANT_HOST: localhost
-          QDRANT_PORT: 6333
+          QDRANT_PORT: 6335
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5433
           POSTGRES_DB: raglite_ci
@@ -1633,7 +1633,7 @@ jobs:
       - name: Run burn-in loop (3 iterations)
         env:
           QDRANT_HOST: localhost
-          QDRANT_PORT: 6333
+          QDRANT_PORT: 6335
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5435  # Burn-in uses unique port to avoid race condition
           POSTGRES_DB: raglite_ci
