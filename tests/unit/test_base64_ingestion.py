@@ -171,12 +171,17 @@ class TestIngestFinancialDocumentSync:
     @pytest.mark.asyncio
     async def test_accepts_file_content_and_filename_params(self, valid_pdf_content: str) -> None:
         """AC1: Verify tool accepts file_content and filename parameters."""
-        # Mock ingest_document to avoid actual processing
-        mock_metadata = MagicMock()
-        mock_metadata.filename = "report.pdf"
-        mock_metadata.doc_type = "PDF"
-        mock_metadata.chunk_count = 10
-        mock_metadata.page_count = 5
+        from raglite.shared.models import DocumentMetadata
+
+        # Mock ingest_document to avoid actual processing - use real Pydantic model
+        mock_metadata = DocumentMetadata(
+            filename="report.pdf",
+            doc_type="PDF",
+            ingestion_timestamp="2024-01-01T00:00:00Z",
+            page_count=5,
+            source_path="/tmp/test.pdf",
+            chunk_count=10,
+        )
 
         with patch(
             "raglite.main.ingest_document", new_callable=AsyncMock, return_value=mock_metadata
@@ -214,15 +219,20 @@ class TestIngestFinancialDocumentSync:
     @pytest.mark.asyncio
     async def test_doc_path_backward_compatible(self, tmp_path: Path) -> None:
         """AC7: Verify existing doc_path usage remains backward compatible."""
+        from raglite.shared.models import DocumentMetadata
+
         # Create a test file
         test_file = tmp_path / "test.pdf"
         test_file.write_bytes(b"%PDF-1.4\n")
 
-        mock_metadata = MagicMock()
-        mock_metadata.filename = "test.pdf"
-        mock_metadata.doc_type = "PDF"
-        mock_metadata.chunk_count = 5
-        mock_metadata.page_count = 1
+        mock_metadata = DocumentMetadata(
+            filename="test.pdf",
+            doc_type="PDF",
+            ingestion_timestamp="2024-01-01T00:00:00Z",
+            page_count=1,
+            source_path=str(test_file),
+            chunk_count=5,
+        )
 
         with patch(
             "raglite.main.ingest_document", new_callable=AsyncMock, return_value=mock_metadata
@@ -253,11 +263,17 @@ class TestIngestFinancialDocumentSync:
     @pytest.mark.asyncio
     async def test_metadata_filename_uses_original_name(self, valid_pdf_content: str) -> None:
         """AC1: Verify metadata.filename shows original name, not temp path."""
-        mock_metadata = MagicMock()
-        mock_metadata.filename = "tmp_12345.pdf"  # Simulated temp filename
-        mock_metadata.doc_type = "PDF"
-        mock_metadata.chunk_count = 10
-        mock_metadata.page_count = 5
+        from raglite.shared.models import DocumentMetadata
+
+        # Mock returns temp filename, but result should have original name
+        mock_metadata = DocumentMetadata(
+            filename="tmp_12345.pdf",  # Simulated temp filename
+            doc_type="PDF",
+            ingestion_timestamp="2024-01-01T00:00:00Z",
+            page_count=5,
+            source_path="/tmp/tmp_12345.pdf",
+            chunk_count=10,
+        )
 
         with patch(
             "raglite.main.ingest_document", new_callable=AsyncMock, return_value=mock_metadata

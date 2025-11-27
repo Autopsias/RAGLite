@@ -16,7 +16,13 @@ from raglite.main import (
 )
 from raglite.retrieval.multi_index_search import MultiIndexSearchError, SearchResult
 from raglite.retrieval.search import QueryError
-from raglite.shared.models import DocumentMetadata, QueryRequest, QueryResponse, QueryResult
+from raglite.shared.models import (
+    DocumentMetadata,
+    IngestionResult,
+    QueryRequest,
+    QueryResponse,
+    QueryResult,
+)
 
 
 class TestMCPServerInitialization:
@@ -44,7 +50,7 @@ class TestIngestFinancialDocumentTool:
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     async def test_ingest_tool_success(self):
-        """Test successful document ingestion returns DocumentMetadata."""
+        """Test successful document ingestion returns IngestionResult (Story 4.3)."""
         # Mock Story 1.2 ingestion function
         mock_metadata = DocumentMetadata(
             filename="Q3_2023_Report.pdf",
@@ -55,12 +61,17 @@ class TestIngestFinancialDocumentTool:
             chunk_count=42,
         )
 
-        with patch("raglite.main.ingest_document", new_callable=AsyncMock) as mock_ingest:
+        with (
+            patch("raglite.main.ingest_document", new_callable=AsyncMock) as mock_ingest,
+            patch("raglite.main.settings") as mock_settings,
+        ):
             mock_ingest.return_value = mock_metadata
+            mock_settings.enable_forecast_auto_update = False  # Disable for simpler test
 
             result = await ingest_financial_document.fn("/data/Q3_2023_Report.pdf")
 
-            assert isinstance(result, DocumentMetadata)
+            # Story 4.3: Return type changed to IngestionResult
+            assert isinstance(result, IngestionResult)
             assert result.filename == "Q3_2023_Report.pdf"
             assert result.chunk_count == 42
             assert result.page_count == 10

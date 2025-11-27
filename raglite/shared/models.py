@@ -397,6 +397,98 @@ class ForecastResult(BaseModel):
     periods_ahead: int = Field(default=4, description="Number of periods forecasted")
 
 
+# Story 4.3: Automated forecast updates models
+class ForecastRefreshResult(BaseModel):
+    """Result of automatic forecast refresh after document ingestion.
+
+    Story 4.3 AC1/AC4: Returned from trigger_forecast_refresh() and included
+    in MCP ingestion response to notify users of updated forecasts.
+
+    Attributes:
+        document_id: Identifier of the ingested document that triggered refresh
+        metrics_refreshed: List of metrics successfully refreshed (e.g., ["revenue"])
+        metrics_skipped: List of metrics skipped with reasons (e.g., ["expenses: insufficient data"])
+        refresh_duration_ms: Time taken for forecast refresh in milliseconds
+        success: Whether refresh completed successfully (partial success = True)
+        error_message: Error details if refresh failed completely
+    """
+
+    document_id: str = Field(..., description="Document ID that triggered the refresh")
+    metrics_refreshed: list[str] = Field(
+        default_factory=list, description="Metrics successfully refreshed"
+    )
+    metrics_skipped: list[str] = Field(
+        default_factory=list, description="Metrics skipped with reasons"
+    )
+    refresh_duration_ms: int = Field(..., description="Refresh duration in milliseconds")
+    success: bool = Field(..., description="Whether refresh completed successfully")
+    error_message: str | None = Field(default=None, description="Error message if failed")
+
+
+class IngestionResult(BaseModel):
+    """Extended ingestion result with forecast refresh status.
+
+    Story 4.3 AC4: MCP ingestion response enriched with forecast update status.
+    Extends DocumentMetadata with forecast-related fields.
+
+    Attributes:
+        filename: Original document filename
+        doc_type: Document type (PDF, Excel)
+        ingestion_timestamp: ISO8601 timestamp of ingestion
+        page_count: Number of pages/sheets in document
+        source_path: Original file path
+        chunk_count: Number of chunks created from document
+        forecasts_updated: List of metrics refreshed after ingestion (None if disabled)
+        forecast_refresh_skipped_reason: Reason why forecast refresh was skipped (if applicable)
+    """
+
+    # DocumentMetadata fields
+    filename: str = Field(..., description="Original document filename")
+    doc_type: str = Field(..., description="Document type (PDF, Excel)")
+    ingestion_timestamp: str = Field(..., description="ISO8601 timestamp of ingestion")
+    page_count: int = Field(default=0, description="Number of pages/sheets in document")
+    source_path: str = Field(default="", description="Original file path")
+    chunk_count: int = Field(default=0, description="Number of chunks created from document")
+
+    # Story 4.3 AC4: Forecast refresh fields
+    forecasts_updated: list[str] | None = Field(
+        default=None,
+        description="List of metrics refreshed after ingestion (e.g., ['revenue', 'expenses'])",
+    )
+    forecast_refresh_skipped_reason: str | None = Field(
+        default=None,
+        description="Reason why forecast refresh was skipped (e.g., 'disabled', 'timeout')",
+    )
+
+    @classmethod
+    def from_metadata(
+        cls,
+        metadata: "DocumentMetadata",
+        forecasts_updated: list[str] | None = None,
+        forecast_refresh_skipped_reason: str | None = None,
+    ) -> "IngestionResult":
+        """Create IngestionResult from DocumentMetadata with forecast fields.
+
+        Args:
+            metadata: Document metadata from ingestion
+            forecasts_updated: List of refreshed metrics
+            forecast_refresh_skipped_reason: Reason if refresh was skipped
+
+        Returns:
+            IngestionResult with all fields populated
+        """
+        return cls(
+            filename=metadata.filename,
+            doc_type=metadata.doc_type,
+            ingestion_timestamp=metadata.ingestion_timestamp,
+            page_count=metadata.page_count,
+            source_path=metadata.source_path,
+            chunk_count=metadata.chunk_count,
+            forecasts_updated=forecasts_updated,
+            forecast_refresh_skipped_reason=forecast_refresh_skipped_reason,
+        )
+
+
 # Story 4.0.3: Async ingestion models for large document processing
 class AsyncIngestionRequest(BaseModel):
     """Request parameters for async document ingestion.

@@ -75,6 +75,10 @@ class Settings(BaseSettings):
     # PDF Processing Configuration (Story 2.2)
     pdf_processing_threads: int = 8  # Parallel page processing threads (default 8, range 1-16)
 
+    # Forecasting Auto-Update Configuration (Story 4.3)
+    enable_forecast_auto_update: bool = True  # Auto-refresh forecasts on document ingestion
+    forecast_refresh_timeout: int = 300  # 5-minute timeout for forecast refresh (AC3)
+
     @model_validator(mode="after")
     def adjust_for_environment(self) -> Self:
         """Automatically adjust database settings based on APP_ENV.

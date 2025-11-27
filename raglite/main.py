@@ -28,6 +28,7 @@ from fastmcp import FastMCP
 from raglite.agentic.fallback import FallbackResponse, handle_workflow_failure
 from raglite.agentic.orchestrator import WorkflowExecutor
 from raglite.agentic.planner import QueryComplexity, classify_query_complexity, decompose_query
+from raglite.forecasting.auto_update import trigger_forecast_refresh
 from raglite.ingestion.document_ingestion import temp_file_from_base64, temp_file_from_url
 from raglite.ingestion.job_tracker import create_job, get_job_status, start_background_job
 from raglite.ingestion.pipeline import ingest_document
@@ -42,6 +43,7 @@ from raglite.shared.models import (
     AsyncIngestionResponse,
     DocumentMetadata,
     IngestionJobStatus,
+    IngestionResult,
     QueryRequest,
     QueryResponse,
 )
@@ -64,13 +66,78 @@ class DocumentProcessingError(Exception):
     pass
 
 
+async def _perform_forecast_refresh(
+    metadata: DocumentMetadata,
+    auto_forecast: bool,
+) -> IngestionResult:
+    """Perform forecast refresh after ingestion and return enriched result.
+
+    Story 4.3 AC1/AC3/AC4: Post-ingestion forecast refresh with timeout.
+
+    Args:
+        metadata: Document metadata from ingestion
+        auto_forecast: Whether to attempt forecast refresh
+
+    Returns:
+        IngestionResult with forecast refresh status
+    """
+    forecasts_updated: list[str] | None = None
+    forecast_skip_reason: str | None = None
+
+    if not auto_forecast:
+        forecast_skip_reason = "auto_forecast=False"
+    elif not settings.enable_forecast_auto_update:
+        forecast_skip_reason = "forecast_auto_update disabled in settings"
+    else:
+        # Attempt forecast refresh with timeout protection (AC3)
+        try:
+            refresh_result = await trigger_forecast_refresh(
+                metadata, timeout_seconds=settings.forecast_refresh_timeout
+            )
+
+            if refresh_result.success:
+                forecasts_updated = refresh_result.metrics_refreshed
+                if refresh_result.metrics_skipped:
+                    logger.info(
+                        "Some metrics skipped during forecast refresh",
+                        extra={
+                            "doc_filename": metadata.filename,
+                            "skipped": refresh_result.metrics_skipped,
+                        },
+                    )
+            else:
+                forecast_skip_reason = refresh_result.error_message or "refresh failed"
+                logger.warning(
+                    "Forecast refresh failed",
+                    extra={
+                        "doc_filename": metadata.filename,
+                        "error": forecast_skip_reason,
+                    },
+                )
+
+        except Exception as e:
+            # AC3: Graceful degradation - don't fail ingestion if forecast refresh fails
+            forecast_skip_reason = f"unexpected error: {type(e).__name__}"
+            logger.warning(
+                "Forecast refresh failed unexpectedly",
+                extra={"doc_filename": metadata.filename, "error": str(e)},
+            )
+
+    return IngestionResult.from_metadata(
+        metadata,
+        forecasts_updated=forecasts_updated,
+        forecast_refresh_skipped_reason=forecast_skip_reason,
+    )
+
+
 @mcp.tool()
 async def ingest_financial_document(
     doc_path: str | None = None,
     file_content: str | None = None,
     filename: str | None = None,
     doc_url: str | None = None,
-) -> DocumentMetadata:
+    auto_forecast: bool = True,
+) -> IngestionResult:
     """Ingest financial PDF or Excel document into RAGLite knowledge base.
 
     Story 4.0.7/4.0.8: Supports THREE input modes for maximum compatibility.
@@ -156,13 +223,19 @@ async def ingest_financial_document(
                  Supports Google Drive export links, Dropbox (dl=1), S3 presigned.
                  Cannot be combined with doc_path or file_content.
 
+        auto_forecast: If True, automatically refresh forecasts after ingestion
+                       (Story 4.3). Default True. Set False to skip forecast refresh
+                       (e.g., for batch ingestion or when forecasting not needed).
+
     Returns:
-        DocumentMetadata with ingestion results including:
+        IngestionResult with ingestion results including:
           - filename: Original document name
           - doc_type: PDF or Excel
           - ingestion_timestamp: ISO8601 timestamp
           - page_count: Number of pages/sheets
           - chunk_count: Number of chunks created
+          - forecasts_updated: List of refreshed metrics (Story 4.3 AC4)
+          - forecast_refresh_skipped_reason: Why refresh was skipped (if applicable)
 
     Raises:
         DocumentProcessingError: If ingestion fails due to:
@@ -253,7 +326,9 @@ async def ingest_financial_document(
                         "input_mode": "url",
                     },
                 )
-                return metadata
+
+                # Story 4.3: Forecast refresh after ingestion
+                return await _perform_forecast_refresh(metadata, auto_forecast)
 
         except ValueError as e:
             # URL validation errors (scheme, domain, size, extension)
@@ -312,7 +387,9 @@ async def ingest_financial_document(
                         "input_mode": "base64",
                     },
                 )
-                return metadata
+
+                # Story 4.3: Forecast refresh after ingestion
+                return await _perform_forecast_refresh(metadata, auto_forecast)
 
         except ValueError as e:
             # Base64 validation errors (size, extension, decode)
@@ -355,7 +432,9 @@ async def ingest_financial_document(
                     "input_mode": "path",
                 },
             )
-            return metadata
+
+            # Story 4.3: Forecast refresh after ingestion
+            return await _perform_forecast_refresh(metadata, auto_forecast)
 
         except FileNotFoundError as e:
             logger.error(

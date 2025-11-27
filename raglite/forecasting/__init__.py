@@ -3,8 +3,13 @@
 Epic 4: Forecasting & Proactive Insights
 Story 4.1: Time-Series Data Extraction
 Story 4.2: Forecasting Engine Implementation
+Story 4.3: Automated Forecast Updates
 """
 
+from raglite.forecasting.auto_update import (
+    identify_affected_metrics,
+    trigger_forecast_refresh,
+)
 from raglite.forecasting.hybrid import (
     InsufficientDataError,
     explain_forecast,
@@ -27,4 +32,7 @@ __all__ = [
     "generate_forecast",
     "explain_forecast",
     "InsufficientDataError",
+    # Story 4.3: Automated forecast updates
+    "trigger_forecast_refresh",
+    "identify_affected_metrics",
 ]
