@@ -133,6 +133,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **⚠️ NOTE ON LANGGRAPH:** LangGraph IS conditionally approved for Epic 2 Phase 3 (Agentic Coordination) - ONLY if Phase 2 achieves <85% accuracy. Do NOT use LangGraph for Epic 1 or Phase 2A/2B/2C implementations.
 
+### Database Operation Safety (Story 4.0.7)
+
+**CRITICAL:** All database operations must follow the three-mode system documented in
+`docs/architecture/database-operation-modes.md`.
+
+| Mode | Use Case | Ports | Can Delete? |
+|------|----------|-------|-------------|
+| **TEST** | pytest, CI | 6335/5433 | Yes (test data only) |
+| **PRODUCTION READ/WRITE** | MCP, queries | 6333/5432 | **NO** |
+| **PRODUCTION DEPLOY** | Schema updates | 6333/5432 | Only with `--force-data-loss` |
+
+**Key Rules:**
+- Tests MUST use `APP_ENV=test` and will **FAIL** if they detect production ports
+- Use `scripts/deploy-to-production.py` for schema updates to production
+- NEVER call `delete_collection()` directly on production - use SafetyGuard
+- All database operations must use `SafetyGuard` class from `raglite/shared/safety.py`
+
+**Example (Required Pattern):**
+```python
+from raglite.shared.safety import SafetyGuard, ProductionProtectionError
+
+guard = SafetyGuard()
+guard.validate_test_environment("my_fixture")  # Raises if on production ports!
+```
+
 ---
 
 ## Repository Structure (Target)

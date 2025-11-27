@@ -390,8 +390,42 @@ def session_ingested_collection(request, warmup_embedding_model):
     from raglite.ingestion.pipeline import create_collection, ingest_pdf
     from raglite.shared.clients import get_qdrant_client
     from raglite.shared.config import settings
+    from raglite.shared.safety import ProductionProtectionError, SafetyGuard
 
     print("DEBUG: Fixture imports successful", file=sys.stderr)
+
+    # =========================================================================
+    # CRITICAL SAFETY CHECK (Story 4.0.7): Validate test environment FIRST
+    # This MUST run before ANY database operations to prevent production data loss.
+    # Added after 2025-11-27 incident where VS Code test runner deleted production data.
+    # =========================================================================
+    print("DEBUG: Validating test environment (SafetyGuard)...", file=sys.stderr)
+    guard = SafetyGuard()
+
+    try:
+        guard.validate_test_environment("session_ingested_collection fixture")
+        print(
+            f"DEBUG: Test environment validated - Qdrant:{settings.qdrant_port}, "
+            f"PostgreSQL:{settings.postgres_port}, Collection:{settings.qdrant_collection_name}",
+            file=sys.stderr,
+        )
+    except ProductionProtectionError as e:
+        # HARD FAIL: Do not allow tests to proceed on production infrastructure
+        error_msg = (
+            f"\n{'!' * 80}\n"
+            f"CRITICAL: TEST ISOLATION FAILURE\n"
+            f"{'!' * 80}\n\n"
+            f"{e}\n\n"
+            f"This test fixture attempted to run on PRODUCTION infrastructure.\n"
+            f"The operation has been BLOCKED to prevent data loss.\n\n"
+            f"To fix:\n"
+            f"  1. Set APP_ENV=test before running tests\n"
+            f"  2. Use --skip-ingestion to skip database operations\n"
+            f"  3. Run from terminal: APP_ENV=test pytest tests/\n"
+            f"{'!' * 80}\n"
+        )
+        print(error_msg, file=sys.stderr)
+        pytest.fail(error_msg)
 
     # SAFETY CHECK: Warn if collection has data and user didn't use --skip-ingestion
     # This prevents accidental deletion of manually ingested data
@@ -415,16 +449,39 @@ def session_ingested_collection(request, warmup_embedding_model):
             )
             print(warning_msg, file=sys.stderr)
 
-            # In CI/non-interactive mode, auto-proceed (CI always re-ingests fresh)
-            if os.getenv("CI") == "true" or not sys.stdin.isatty():
+            # FIXED (Story 4.0.7): Only auto-proceed in ACTUAL CI environment
+            # Previously: if os.getenv("CI") == "true" or not sys.stdin.isatty()
+            # Bug: VS Code test runner is non-interactive but NOT CI, so it auto-proceeded!
+            is_ci = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
+
+            if is_ci:
+                # CI environment with already-validated test infrastructure: OK to auto-proceed
                 print(
-                    "DEBUG: CI/non-interactive mode - proceeding with re-ingestion", file=sys.stderr
+                    "DEBUG: CI mode with validated test environment - proceeding with re-ingestion",
+                    file=sys.stderr,
                 )
+            elif not sys.stdin.isatty():
+                # Non-interactive but NOT CI (e.g., VS Code, IDE, background process)
+                # BLOCK: Cannot safely auto-proceed without user confirmation
+                block_msg = (
+                    f"\n{'!' * 80}\n"
+                    f"BLOCKED: Non-interactive mode outside CI\n"
+                    f"{'!' * 80}\n\n"
+                    f"Cannot auto-delete test data in non-interactive mode (VS Code, IDE, etc.)\n"
+                    f"without explicit user confirmation.\n\n"
+                    f"Options:\n"
+                    f"  1. Use --skip-ingestion flag to reuse existing data\n"
+                    f"  2. Run pytest from terminal (interactive mode)\n"
+                    f"  3. Set CI=true if this is a CI environment\n"
+                    f"{'!' * 80}\n"
+                )
+                print(block_msg, file=sys.stderr)
+                pytest.fail(block_msg)
             else:
                 # Interactive mode - require confirmation
                 try:
                     input(
-                        "Press Enter to DELETE existing data and re-ingest (or Ctrl+C to abort)..."
+                        "Press Enter to DELETE existing test data and re-ingest (or Ctrl+C to abort)..."
                     )
                 except KeyboardInterrupt:
                     pytest.skip(

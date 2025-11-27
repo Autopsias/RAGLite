@@ -69,6 +69,10 @@ def configure_test_environment():
     are set (line 50) to ensure test database configuration takes effect even if
     config.py was imported before conftest.py ran.
 
+    CRITICAL FIX (2025-11-27 - Story 4.0.7): Added SafetyGuard validation to catch
+    any test attempting to run on production infrastructure. This is a defense-in-depth
+    measure after the 2025-11-27 incident where VS Code test runner deleted production data.
+
     Test databases run on separate ports:
     - Qdrant: localhost:6335 (auto-adjusted by Settings validator)
     - PostgreSQL: localhost:5433 with raglite_ci credentials (set explicitly)
@@ -82,6 +86,25 @@ def configure_test_environment():
     )
     logger.info("Test environment confirmed: TESTING=true (enables connection timeouts)")
     logger.info("Test PostgreSQL settings: POSTGRES_PORT=5433, POSTGRES_DB=raglite_ci")
+
+    # DEFENSE-IN-DEPTH (Story 4.0.7): Validate test environment via SafetyGuard
+    # This is a redundant check - integration/conftest.py also validates.
+    # Belt-and-suspenders approach to prevent production data loss.
+    from raglite.shared.safety import SafetyGuard
+
+    guard = SafetyGuard()
+    try:
+        # Note: This will log a warning if on production ports but won't fail
+        # because unit tests don't do database operations. Integration tests
+        # have their own stricter check that WILL fail.
+        if guard.is_production:
+            logger.warning(
+                "SafetyGuard detected PRODUCTION environment in test session! "
+                "This should not happen - APP_ENV should be 'test'. "
+                f"Current: app_env={guard._app_env}, qdrant_port={guard._qdrant_port}"
+            )
+    except Exception as e:
+        logger.error(f"SafetyGuard check failed: {e}")
 
     yield
 
