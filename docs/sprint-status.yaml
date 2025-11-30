@@ -127,13 +127,15 @@ development_status:
   4-8-strategic-recommendation-engine: done  # ✅ APPROVED (2025-11-27) - All ACs verified, 79 tests (57 unit + 17 integration), 100% expert alignment, Senior Dev Review passed
   4-9-proactive-insights-tool-mcp: done  # ✅ APPROVED (2025-11-27) - All ACs verified, 43 tests, Senior Dev Review passed
   4-10-forecasting-insights-test-suite: done  # ✅ COMPLETE (2025-11-27) - 87 tests pass, all ACs met, validation framework ready
-  epic-4-retrospective: optional
+  epic-4-retrospective: completed  # ✅ COMPLETE (2025-11-30) - Retrospective facilitated, learnings documented, 2 new stories added to Epic 5
 
   # Epic 5: Production Readiness & Real-Time Operations
   epic-5: contexted
 
-  # Epic 5 Prep Stories (Bug Fixes from Epic 4 UAT - 2025-11-28)
+  # Epic 5 Prep Stories (Bug Fixes from Epic 4 UAT + Retrospective Actions)
   5-0-1-fix-timeseries-period-extraction: done  # BUG-E4-001: RESOLVED - Migration complete, SQL extraction operational
+  5-0-4-dynamic-metric-forecasting-support: backlog  # RETRO-L8: Enable forecasting for any metric, not just hardcoded 3
+  5-0-5-mcp-token-optimization-guidelines-compliance: backlog  # RETRO-L9: Anthropic MCP guidelines alignment, token efficiency
 
   # Epic 5 Feature Stories
   5-1-cloud-infrastructure-architecture: backlog
