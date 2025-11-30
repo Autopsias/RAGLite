@@ -128,10 +128,12 @@ jobs:
         run: |
           CACHE_DIR="${{ steps.pdf-hash.outputs.cache_dir }}"
 
-          if [ -d "$CACHE_DIR/.qdrant-export" ] && [ -d "$CACHE_DIR/.postgres-export" ]; then
+          # Check for BOTH directories AND required files (prevents incomplete cache hits)
+          if [ -d "$CACHE_DIR/.qdrant-export" ] && [ -f "$CACHE_DIR/.qdrant-export/points.json" ] && \
+             [ -d "$CACHE_DIR/.postgres-export" ] && [ -f "$CACHE_DIR/.postgres-export/metadata.json" ]; then
             echo "✅ Cache HIT - found cached data (saves ~25 minutes)"
-            echo "   Qdrant: $CACHE_DIR/.qdrant-export"
-            echo "   PostgreSQL: $CACHE_DIR/.postgres-export"
+            echo "   Qdrant: $CACHE_DIR/.qdrant-export/points.json ✓"
+            echo "   PostgreSQL: $CACHE_DIR/.postgres-export/metadata.json ✓"
             echo "cache_hit=true" >> $GITHUB_OUTPUT
 
             # Copy cached data to working directory
