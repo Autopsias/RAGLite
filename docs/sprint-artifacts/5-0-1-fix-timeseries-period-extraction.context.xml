@@ -1,0 +1,253 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>5</epicId>
+    <storyId>0.1</storyId>
+    <title>Fix Time-Series Period Extraction for Forecasting</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-28</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/5-0-1-fix-timeseries-period-extraction.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>financial analyst using RAGLite</asA>
+    <iWant>the forecasting tool to correctly extract time-series data from ingested documents</iWant>
+    <soThat>I can generate revenue, expense, and cash flow forecasts for future quarters</soThat>
+    <tasks>
+      - Task 1: Write SQL Migration Script (AC: 1)
+      - Task 2: Implement SQL-Based Time-Series Extraction (AC: 2)
+      - Task 3: Update MCP Tool for SQL-First Extraction (AC: 3)
+      - Task 4: Unit Tests for New Functions (AC: 5)
+      - Task 5: Integration Tests for End-to-End Flow (AC: 4)
+      - Task 6: Run Migration on Production Database (AC: 1)
+      - Task 7: UAT Re-Testing (AC: All)
+      - Task 8: Documentation and Cleanup (AC: All)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    AC1: SQL Migration Backfills fiscal_year Column
+    - GIVEN existing rows in `financial_tables` with `period` populated but `fiscal_year` NULL
+    - WHEN the SQL migration script is executed
+    - THEN `fiscal_year` is populated by parsing the year from `period` (e.g., "Jan-25" → 2025)
+    - AND 300,000+ rows are updated (89% of 344,316 rows with period)
+
+    AC2: SQL-Based Time-Series Extraction Function
+    - GIVEN the forecasting system needs historical metric data
+    - WHEN `extract_timeseries_from_sql(metric="revenue")` is called
+    - THEN it queries `financial_tables` for matching metric rows with valid `period` and `fiscal_year`
+    - AND returns `TimeSeriesData` with properly dated values
+    - AND falls back to hybrid search if SQL returns insufficient data (<8 points)
+
+    AC3: Forecasting Tool Uses SQL Extraction
+    - GIVEN the SQL-based extraction is implemented
+    - WHEN a user asks "What's the revenue forecast for the next quarter?"
+    - THEN the `get_financial_forecast` tool: (1) Calls `extract_timeseries_from_sql()` first, (2) Falls back to `extract_timeseries()` if SQL fails, (3) Returns forecast values with dates, confidence intervals, methodology
+
+    AC4: Integration Test Validates End-to-End Flow
+    - GIVEN the SQL migration has been applied
+    - AND the SQL-based extraction is implemented
+    - WHEN integration tests run
+    - THEN `test_forecast_query_with_sql_extraction()` passes
+    - AND forecast returns ≥8 data points for revenue metric
+
+    AC5: Unit Tests for Period Parsing
+    - GIVEN the period parsing logic
+    - WHEN unit tests are run
+    - THEN all patterns are validated: parse_period_to_date("Jan-25") → datetime(2025, 1, 1), "Aug-24" → datetime(2024, 8, 1), "Dec-23" → datetime(2023, 12, 1)
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-4-forecasting-proactive-insights.md</path>
+        <title>Epic 4 PRD - Forecasting & Proactive Insights</title>
+        <section>Story 4.1 - Time-Series Data Extraction</section>
+        <snippet>Original time-series extraction requirements: Extract time-series financial data from documents for forecasting. Data points extracted with timestamps and metric labels. Extraction handles various date formats and fiscal period labels.</snippet>
+      </doc>
+      <doc>
+        <path>docs/prd/epic-4-forecasting-proactive-insights.md</path>
+        <title>Epic 4 PRD - Forecasting & Proactive Insights</title>
+        <section>Story 4.4 - Forecast Query Tool (MCP)</section>
+        <snippet>MCP tool `get_financial_forecast` with metric and time period parameters. Tool returns forecast values with confidence intervals. Explains basis for forecast (historical data used, methodology).</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/high-level-architecture.md</path>
+        <title>High-Level Architecture</title>
+        <section>Graceful Degradation Pattern</section>
+        <snippet>Pattern: System continues operating with reduced capabilities if advanced features fail. Rationale: Reliability, user experience continuity. This story implements SQL-first extraction with fallback to hybrid search, following this pattern.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/coding-standards.md</path>
+        <title>RAGLite Coding Standards</title>
+        <section>Type Hints, Docstrings, Error Handling</section>
+        <snippet>MANDATORY: All function signatures MUST include type hints. Google-style docstrings required for all public functions (Args, Returns, Raises). Raise specific exceptions with context. Structured logging with extra={} for all operations.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/testing-strategy.md</path>
+        <title>Testing Strategy</title>
+        <section>Unit Tests and Integration Tests</section>
+        <snippet>Unit tests: 80%+ coverage target, mock all external dependencies, fast execution. Integration tests: Use real PostgreSQL test database (APP_ENV=test, port 5433), test service integration, verify end-to-end workflows.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/database-operation-modes.md</path>
+        <title>Database Operation Modes</title>
+        <section>Three-Mode Safety System</section>
+        <snippet>TEST mode (ports 6335/5433): Tests MUST use APP_ENV=test, can delete test data. PRODUCTION mode (ports 6333/5432): Schema updates require deploy script with --force-data-loss flag. All operations use SafetyGuard class.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/4-10-forecasting-insights-test-suite.md</path>
+        <title>Story 4.10 - Forecasting & Insights Test Suite</title>
+        <section>Previous Story Learnings</section>
+        <snippet>Story 4.10 created validation framework with 87 tests (all PASS). Key patterns: Orchestrator pattern for E2E validation, reusable validators, SMAPE fallback for zero values. No new dependencies added (approved stack only). Files created: tests/validation/ (4 files), scripts/generate_validation_report.py.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <file>
+        <path>raglite/forecasting/timeseries_extract.py</path>
+        <kind>module</kind>
+        <symbol>extract_timeseries()</symbol>
+        <lines>185-320</lines>
+        <reason>Current implementation using hybrid search + LLM extraction. This story adds SQL-based extraction as primary method with fallback to this function.</reason>
+      </file>
+      <file>
+        <path>raglite/main.py</path>
+        <kind>mcp-tool</kind>
+        <symbol>get_financial_forecast()</symbol>
+        <lines>~1678</lines>
+        <reason>MCP tool that currently calls extract_timeseries(). Needs modification to call extract_timeseries_from_sql() first with fallback to hybrid search.</reason>
+      </file>
+      <file>
+        <path>raglite/shared/clients.py</path>
+        <kind>module</kind>
+        <symbol>get_postgres_connection()</symbol>
+        <lines>unknown</lines>
+        <reason>Provides PostgreSQL database connection for SQL queries. Will be imported by new extract_timeseries_from_sql() function.</reason>
+      </file>
+      <file>
+        <path>raglite/shared/safety.py</path>
+        <kind>module</kind>
+        <symbol>SafetyGuard</symbol>
+        <lines>unknown</lines>
+        <reason>Database safety class that validates environment (test vs production). Integration tests must use SafetyGuard to prevent production database access.</reason>
+      </file>
+      <file>
+        <path>tests/validation/test_forecast_accuracy.py</path>
+        <kind>test</kind>
+        <symbol>ForecastAccuracyValidator</symbol>
+        <lines>~400</lines>
+        <reason>Story 4.10 validation framework. Reference for backtesting patterns, MAPE calculation, edge case handling (zero values → SMAPE fallback).</reason>
+      </file>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="prophet" version="latest" reason="Forecasting engine (Story 4.2)" />
+        <package name="psycopg2-binary" version="latest" reason="PostgreSQL driver for SQL queries" />
+        <package name="pandas" version="latest" reason="Time-series data manipulation" />
+        <package name="pytest" version="latest" reason="Unit and integration testing" />
+        <package name="pytest-asyncio" version="latest" reason="Async test support" />
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    1. **Database Safety (CRITICAL):** Story 4.0.7 established three-mode database operation system. SQL migration MUST use production deploy mode with --force-data-loss flag. All database operations must use SafetyGuard from raglite/shared/safety.py. Integration tests MUST use APP_ENV=test and will FAIL if they detect production ports (6333/5432).
+
+    2. **Graceful Degradation Pattern:** New SQL-first extraction follows high-level architecture graceful degradation pattern. Try SQL extraction → if fails → fall back to hybrid search. Maintains backward compatibility and reliability.
+
+    3. **Type Hints MANDATORY:** All function signatures MUST include type hints for parameters and return values per coding-standards.md.
+
+    4. **Google-Style Docstrings MANDATORY:** All public functions require Google-style docstrings with Args, Returns, Raises, Example sections per coding-standards.md.
+
+    5. **Structured Logging:** All operations must use structured logging with extra={} context (metric name, row counts, date ranges, errors).
+
+    6. **Error Handling:** Raise specific exceptions with context (ExtractionError with insufficient data message). Handle SQL connection errors gracefully. Log errors before raising.
+
+    7. **No New Dependencies:** Epic 4 pattern - use only approved libraries in tech stack. PostgreSQL driver (psycopg2-binary) already approved in Story 2.6.
+
+    8. **Testing Coverage:** Unit tests target ≥80% coverage. Integration tests use real PostgreSQL test database. UAT re-testing validates all Epic 4 forecasting queries.
+
+    9. **SQL Query Patterns:** Use LIKE pattern matching for metric names (LOWER(metric) LIKE '%revenue%'). Filter WHERE period IS NOT NULL AND fiscal_year IS NOT NULL. Order chronologically: ORDER BY fiscal_year, period.
+
+    10. **Repository Structure:** Estimated ~500 new lines total (SQL migration ~30 lines, extraction function ~150 lines, tests ~250 lines, MCP update ~20 lines). Well within MVP scope.
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>extract_timeseries_from_sql()</name>
+      <kind>function signature</kind>
+      <signature>async def extract_timeseries_from_sql(metric: str = "revenue", min_points: int = 8) -> TimeSeriesData</signature>
+      <path>raglite/forecasting/timeseries_extract.py</path>
+      <description>NEW function to create. Primary extraction method for forecasting. Queries PostgreSQL financial_tables for metric with period and fiscal_year. Returns TimeSeriesData with dated values. Raises ExtractionError if insufficient data.</description>
+    </interface>
+
+    <interface>
+      <name>parse_period_to_date()</name>
+      <kind>function signature</kind>
+      <signature>def parse_period_to_date(period: str, fiscal_year: int) -> datetime</signature>
+      <path>raglite/forecasting/timeseries_extract.py</path>
+      <description>NEW helper function to create. Converts period string (e.g., "Jan-25") to datetime. Handles all months (Jan-Dec). Returns datetime for first day of period month.</description>
+    </interface>
+
+    <interface>
+      <name>get_financial_forecast()</name>
+      <kind>MCP tool</kind>
+      <signature>@mcp.tool() async def get_financial_forecast(metric: str, periods_ahead: int = 4) -> str</signature>
+      <path>raglite/main.py</path>
+      <description>EXISTING MCP tool to modify. Currently calls extract_timeseries(). Needs update to call extract_timeseries_from_sql() first with fallback to hybrid search on ExtractionError.</description>
+    </interface>
+
+    <interface>
+      <name>financial_tables schema</name>
+      <kind>PostgreSQL table</kind>
+      <signature>CREATE TABLE financial_tables (metric VARCHAR(500), value NUMERIC, period VARCHAR(500), fiscal_year INTEGER, ...)</signature>
+      <path>database schema</path>
+      <description>EXISTING table from Story 2.6. Contains 386,466 rows with metric/value pairs. period column is 89% populated (e.g., "Jan-25"). fiscal_year column needs backfill (currently 3.6% populated).</description>
+    </interface>
+
+    <interface>
+      <name>TimeSeriesData model</name>
+      <kind>Pydantic model</kind>
+      <signature>class TimeSeriesData(BaseModel): metric_name: str, points: List[TimeSeriesPoint], interval: str, source_documents: List[str]</signature>
+      <path>raglite/forecasting/models.py (assumed)</path>
+      <description>EXISTING model. Return type for extract_timeseries_from_sql(). Contains list of TimeSeriesPoint objects with date, value, label.</description>
+    </interface>
+
+    <interface>
+      <name>SafetyGuard</name>
+      <kind>class</kind>
+      <signature>class SafetyGuard: validate_test_environment(context: str), check_production_port(port: int)</signature>
+      <path>raglite/shared/safety.py</path>
+      <description>EXISTING safety class from Story 4.0.7. Integration tests MUST use SafetyGuard.validate_test_environment() to prevent accidental production database access.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest with pytest-asyncio for async tests. Mock external dependencies (PostgreSQL, Qdrant) in unit tests. Use real PostgreSQL test database (APP_ENV=test, port 5433) for integration tests. Target ≥80% coverage on new functions. Parametrize tests for all month patterns (Jan-Dec). Use Google-style docstrings in test functions. Follow testing-strategy.md patterns from Story 4.10 validation framework.
+    </standards>
+
+    <locations>
+      tests/unit/test_timeseries_extract.py
+      tests/unit/test_sql_migrations.py
+      tests/integration/test_forecast_query_integration.py
+    </locations>
+
+    <ideas>
+      AC1: test_sql_migration_regex_pattern() - Verify regex extracts 2-digit year correctly
+      AC1: test_sql_migration_edge_cases() - Test invalid formats, NULL values, no data loss
+      AC2: test_extract_timeseries_from_sql_revenue() - Mock SQL connection, return valid TimeSeriesData
+      AC2: test_extract_timeseries_from_sql_insufficient_data() - Raise ExtractionError if <8 points
+      AC2: test_parse_period_to_date_all_months() - Parametrize test for Jan-25, Feb-25, ..., Dec-25
+      AC2: test_parse_period_to_date_edge_cases() - Invalid format, case insensitivity, fallback
+      AC3: test_forecast_tool_uses_sql_extraction() - Integration test with real database
+      AC3: test_forecast_tool_fallback_to_hybrid() - SQL fails, verify hybrid search called
+      AC4: test_forecast_query_with_sql_extraction() - End-to-end MCP tool test with ≥8 data points
+      AC4: test_sql_extraction_finds_revenue_data() - Real database query returns valid data
+      AC5: test_period_parsing_correctness() - Verify month number and year parsed correctly
+      General: test_safety_guard_validates_test_environment() - SafetyGuard prevents production access
+    </ideas>
+  </tests>
+</story-context>

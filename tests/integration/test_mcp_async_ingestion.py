@@ -19,8 +19,9 @@ from raglite.main import (
 )
 from raglite.shared.models import QueryRequest
 
-# Mark all tests in this module as integration tests
-pytestmark = pytest.mark.integration
+# Mark all tests in this module as integration tests that modify data
+# These tests call ingest_financial_document which modifies Qdrant collection
+pytestmark = [pytest.mark.integration, pytest.mark.manages_collection_state]
 
 
 @pytest.mark.priority("P1")

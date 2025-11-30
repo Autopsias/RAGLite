@@ -537,13 +537,41 @@ def _extract_fallback(
 
 
 def _extract_year(period_text: str | None) -> int | None:
-    """Extract fiscal year from period text."""
+    """Extract fiscal year from period text.
+
+    Examples:
+        >>> _extract_year("Oct-25")
+        2025
+
+        >>> _extract_year("Q2 2025")
+        2025
+
+        >>> _extract_year("2024")
+        2024
+
+        >>> _extract_year("YTD Jan-25")
+        2025
+    """
     if not period_text:
         return None
 
-    year_match = re.search(r"\b(20\d{2}|19\d{2})\b", period_text)
-    if year_match:
-        return int(year_match.group())
+    # Look for 4-digit year (2024, 2025, etc.)
+    match_4digit = re.search(r"\b(20\d{2})\b", period_text)
+    if match_4digit:
+        return int(match_4digit.group(1))
+
+    # Look for 2-digit year after dash (Oct-25, Jan-24, etc.) and convert to 20XX
+    match_2digit = re.search(r"-(\d{2})\b", period_text)
+    if match_2digit:
+        year_2digit = int(match_2digit.group(1))
+        # Assume 20XX for years 00-99
+        return 2000 + year_2digit
+
+    # Look for standalone 2-digit year at end
+    match_standalone = re.search(r"\b(\d{2})$", period_text)
+    if match_standalone:
+        year_2digit = int(match_standalone.group(1))
+        return 2000 + year_2digit
 
     return None
 

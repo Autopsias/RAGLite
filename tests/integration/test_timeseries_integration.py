@@ -20,8 +20,9 @@ from raglite.forecasting.timeseries_extract import (
 )
 from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
 
-# Mark all tests as integration tests
-pytestmark = [pytest.mark.integration]
+# Mark all tests as integration tests with preserve_collection
+# These are read-only tests that don't modify the Qdrant collection
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
 
 
 class TestTimeseriesIntegration:

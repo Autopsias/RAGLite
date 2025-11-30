@@ -78,3 +78,4 @@ postgresql_data_test/
 qdrant_storage_test/
 data/financial_docs_*_bm25.pkl
 data/financial_docs_test_bm25.pkl
+backups/

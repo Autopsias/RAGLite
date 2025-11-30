@@ -32,7 +32,11 @@ from raglite.agentic.orchestrator import WorkflowExecutor
 from raglite.agentic.planner import QueryComplexity, classify_query_complexity, decompose_query
 from raglite.forecasting.auto_update import trigger_forecast_refresh
 from raglite.forecasting.hybrid import InsufficientDataError, generate_forecast
-from raglite.forecasting.timeseries_extract import ExtractionError, extract_timeseries
+from raglite.forecasting.timeseries_extract import (
+    ExtractionError,
+    extract_timeseries,
+    extract_timeseries_from_sql,
+)
 from raglite.ingestion.document_ingestion import temp_file_from_base64, temp_file_from_url
 from raglite.ingestion.job_tracker import create_job, get_job_status, start_background_job
 from raglite.ingestion.pipeline import ingest_document
@@ -1471,8 +1475,8 @@ async def analytical_query_financial_documents(
         )
 
 
-# Story 4.4: Supported metrics for forecast queries
-SUPPORTED_FORECAST_METRICS = {"revenue", "cash_flow", "expenses"}
+# Story 5.0.1: No hardcoded metric list needed - SQL extraction supports any metric in database
+# Metrics are validated dynamically by checking if data exists in financial_tables
 
 
 def parse_forecast_query(query: str) -> tuple[str | None, int | None]:
@@ -1551,7 +1555,9 @@ async def get_financial_forecast(
     Story 4.4 AC1-AC5: MCP tool for conversational forecast queries using
     Prophet statistical forecasting combined with LLM reasoning.
 
-    **Supported Metrics:** revenue, cash_flow, expenses
+    **Supported Metrics:** Any metric in the financial_tables database (e.g., revenue, turnover,
+    cash_flow, ebitda, expenses, capex). The system automatically searches the database via SQL
+    and falls back to hybrid search if needed.
 
     **Input Modes:**
 
@@ -1572,7 +1578,9 @@ async def get_financial_forecast(
     **How It Works:**
 
     1. Parse query to extract metric and time period (regex + LLM fallback)
-    2. Extract historical time-series data from ingested documents
+    2. Extract historical time-series data (Story 5.0.1: SQL-first with fallback):
+       a. Try SQL extraction from PostgreSQL financial_tables (primary)
+       b. Fall back to hybrid search + LLM extraction if SQL fails
     3. Generate forecast using Prophet + LLM hybrid approach
     4. Return predictions with confidence intervals and explanation
 
@@ -1582,7 +1590,7 @@ async def get_financial_forecast(
 
     Args:
         request: Forecast query parameters containing:
-          - metric: Financial metric to forecast (revenue, cash_flow, expenses)
+          - metric: Financial metric to forecast (any metric in database: revenue, turnover, ebitda, cash_flow, expenses, capex, etc.)
           - periods_ahead: Number of quarters to forecast (1-8, default: 4)
           - query: Optional natural language query (parsed for metric/period)
 
@@ -1651,31 +1659,63 @@ async def get_financial_forecast(
     # Validate metric is provided
     if not metric:
         error_msg = (
-            "Could not determine metric to forecast. Please specify a metric "
-            "(revenue, cash_flow, expenses) or rephrase your query to include the metric."
+            "Could not determine metric to forecast. Please specify a financial metric "
+            "(e.g., revenue, turnover, ebitda, cash_flow, expenses, capex) or rephrase your query."
         )
         logger.warning("Forecast query failed - no metric", extra={"query": request.query})
         raise QueryError(error_msg)
 
-    # Validate metric is supported
-    if metric.lower() not in SUPPORTED_FORECAST_METRICS:
-        error_msg = (
-            f"Unsupported metric: {metric}. "
-            f"Supported metrics: {', '.join(sorted(SUPPORTED_FORECAST_METRICS))}"
-        )
-        logger.warning("Forecast query failed - unsupported metric", extra={"metric": metric})
-        raise QueryError(error_msg)
-
+    # Story 5.0.1: No validation needed - SQL extraction handles any metric in database
+    # The extract_timeseries_from_sql function will raise ExtractionError if metric not found
     metric = metric.lower()
 
     try:
         # Step 2: Extract historical time-series data (AC3)
+        # Story 5.0.1 AC3: SQL-first extraction with fallback to hybrid search
         logger.info(
             "Extracting time-series data",
             extra={"metric": metric},
         )
 
-        historical_data = await extract_timeseries(docs=[], metric=metric)
+        # Try SQL extraction first (primary method)
+        try:
+            logger.info(
+                "Attempting SQL-based extraction",
+                extra={"metric": metric, "method": "sql"},
+            )
+            historical_data = await extract_timeseries_from_sql(metric=metric, min_points=8)
+
+            logger.info(
+                "SQL extraction successful",
+                extra={
+                    "metric": metric,
+                    "data_points": len(historical_data.points),
+                    "method": "sql",
+                },
+            )
+
+        except ExtractionError as e:
+            # Fallback to hybrid search + LLM extraction
+            logger.warning(
+                "SQL extraction failed, falling back to hybrid search",
+                extra={
+                    "metric": metric,
+                    "reason": str(e),
+                    "fallback_method": "hybrid_search",
+                },
+            )
+
+            historical_data = await extract_timeseries(docs=[], metric=metric)
+
+            logger.info(
+                "Hybrid search extraction successful",
+                extra={
+                    "metric": metric,
+                    "data_points": len(historical_data.points),
+                    "source_docs": len(historical_data.source_documents),
+                    "method": "hybrid_search_fallback",
+                },
+            )
 
         logger.info(
             "Time-series extraction complete",

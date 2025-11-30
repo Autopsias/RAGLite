@@ -14,12 +14,14 @@ import asyncio
 import os
 import sys
 import time
+import traceback
 from pathlib import Path
 
 os.environ["APP_ENV"] = "production"
 
 from raglite.ingestion.document_ingestion import ingest_document
 from raglite.shared.logging import get_logger
+from raglite.shared.models import DocumentMetadata
 
 logger = get_logger(__name__)
 
@@ -45,30 +47,51 @@ async def ingest_folder(folder_path: str) -> None:
 
     print("\n🎯 Target: Production database (Qdrant:6333, PostgreSQL:5432)")
     print("-" * 60)
+    sys.stdout.flush()
 
-    successful = []
-    failed = []
+    successful: list[tuple[str, DocumentMetadata]] = []
+    failed: list[tuple[str, str]] = []
 
     for i, pdf_path in enumerate(pdf_files, 1):
         print(f"\n[{i}/{len(pdf_files)}] Ingesting: {pdf_path.name}")
+        sys.stdout.flush()
         start_time = time.time()
 
         try:
             metadata = await ingest_document(str(pdf_path))
             elapsed = time.time() - start_time
 
+            # Validate that we got the expected type
+            if not isinstance(metadata, DocumentMetadata):
+                raise TypeError(
+                    f"Expected DocumentMetadata, got {type(metadata).__name__} "
+                    f"from module {type(metadata).__module__}"
+                )
+
+            # Safely access attributes with explicit checks
+            filename = getattr(metadata, "filename", "<unknown>")
+            page_count = getattr(metadata, "page_count", 0)
+            chunk_count = getattr(metadata, "chunk_count", 0)
+
             print(f"   ✅ Success in {elapsed:.1f}s")
-            print(f"      Document ID: {metadata.doc_id}")
-            print(f"      Pages: {metadata.page_count}")
-            print(f"      Chunks: {metadata.chunk_count}")
-            print(f"      Tables: {metadata.table_count}")
+            print(f"      Filename: {filename}")
+            print(f"      Pages: {page_count}")
+            print(f"      Chunks: {chunk_count}")
+            sys.stdout.flush()
 
             successful.append((pdf_path.name, metadata))
 
         except Exception as e:
             elapsed = time.time() - start_time
-            print(f"   ❌ Failed after {elapsed:.1f}s: {e}")
-            failed.append((pdf_path.name, str(e)))
+            error_msg = str(e)
+
+            # Print full traceback for debugging
+            print(f"   ❌ Failed after {elapsed:.1f}s: {error_msg}")
+            print("   📋 Full traceback:")
+            traceback.print_exc()
+            sys.stdout.flush()
+
+            failed.append((pdf_path.name, error_msg))
 
     # Summary
     print("\n" + "=" * 60)
@@ -79,17 +102,18 @@ async def ingest_folder(folder_path: str) -> None:
     print(f"   Failed: {len(failed)}")
 
     if successful:
-        total_pages = sum(m.page_count for _, m in successful)
-        total_chunks = sum(m.chunk_count for _, m in successful)
-        total_tables = sum(m.table_count for _, m in successful)
+        # Use safe attribute access for summary calculation
+        total_pages = sum(getattr(m, "page_count", 0) for _, m in successful)
+        total_chunks = sum(getattr(m, "chunk_count", 0) for _, m in successful)
         print(f"\n   📄 Total pages ingested: {total_pages}")
         print(f"   🧩 Total chunks created: {total_chunks}")
-        print(f"   📊 Total tables extracted: {total_tables}")
 
     if failed:
         print("\n   ⚠️  Failed files:")
         for name, error in failed:
             print(f"      - {name}: {error}")
+
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":

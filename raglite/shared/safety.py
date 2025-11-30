@@ -16,6 +16,7 @@ The three modes are:
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from enum import Enum
 
@@ -71,6 +72,9 @@ class SafetyGuard:
     PRODUCTION_POSTGRES_PORT = 5432
     TEST_QDRANT_PORT = 6335
     TEST_POSTGRES_PORT = 5433
+
+    # Emergency lockfile path (kill switch for all production operations)
+    EMERGENCY_LOCKFILE = "/tmp/raglite_production_locked"  # nosec B108 - Platform-standard temp dir
 
     def __init__(self) -> None:
         """Initialize SafetyGuard with current environment settings."""
@@ -152,6 +156,83 @@ class SafetyGuard:
         )
 
         return confirmed
+
+    def require_typed_confirmation(self, operation: str, data_description: str) -> bool:
+        """Require user to type EXACT confirmation phrase for destructive operations.
+
+        This provides defense-in-depth by requiring conscious action rather than
+        just a simple "yes" confirmation. Prevents accidental script execution
+        with hardcoded force flags.
+
+        Args:
+            operation: Name of the operation (e.g., "cleanup_production")
+            data_description: What will be deleted (e.g., "financial documents and tables")
+
+        Returns:
+            True if user typed exact confirmation phrase
+
+        Raises:
+            ProductionProtectionError: If not in interactive terminal or phrase doesn't match
+        """
+        if not sys.stdin.isatty():
+            raise ProductionProtectionError(
+                f"Cannot confirm '{operation}' - not in interactive terminal. "
+                f"Destructive operations require manual confirmation."
+            )
+
+        confirmation_phrase = f"DELETE ALL {data_description.upper()} FROM PRODUCTION"
+
+        print(f"\n{'!' * 80}")
+        print(f"  ⚠️  DESTRUCTIVE OPERATION: {operation}")
+        print(f"  📊 This will delete: {data_description}")
+        print(f"  🗄️  Database: {settings.postgres_db}@localhost:{self._postgres_port}")
+        print(f"  🔍 Qdrant: localhost:{self._qdrant_port}")
+        print(f"{'!' * 80}")
+        print(f"\nTo proceed, type EXACTLY: {confirmation_phrase}")
+
+        user_input = input("\n> ").strip()
+
+        if user_input != confirmation_phrase:
+            raise ProductionProtectionError(
+                f"Confirmation phrase did not match - operation '{operation}' aborted"
+            )
+
+        logger.warning(
+            f"User confirmed destructive operation: {operation}",
+            extra={
+                "operation": operation,
+                "data_description": data_description,
+                "environment": "PRODUCTION",
+            },
+        )
+
+        return True
+
+    def check_emergency_lock(self) -> None:
+        """Check for emergency lockfile and block all production operations if present.
+
+        The lockfile serves as an emergency kill switch to prevent ANY operations
+        on production databases. Useful during incidents or maintenance windows.
+
+        Usage:
+            To activate: touch /tmp/raglite_production_locked
+            To deactivate: rm /tmp/raglite_production_locked
+
+        Raises:
+            ProductionProtectionError: If lockfile exists and environment is production
+        """
+        if os.path.exists(self.EMERGENCY_LOCKFILE):
+            if self.is_production:
+                raise ProductionProtectionError(
+                    f"EMERGENCY LOCK ACTIVE\n"
+                    f"Production operations blocked by lockfile: {self.EMERGENCY_LOCKFILE}\n"
+                    f"Remove lockfile to proceed: rm {self.EMERGENCY_LOCKFILE}"
+                )
+            else:
+                logger.warning(
+                    "Emergency lockfile present but environment is test - proceeding",
+                    extra={"lockfile": self.EMERGENCY_LOCKFILE, "env": self._app_env},
+                )
 
     def log_operation(self, operation: str) -> None:
         """Log operation with environment context.
@@ -292,7 +373,11 @@ class SafetyGuard:
 
         Raises:
             ProductionProtectionError: If destructive on production without force flag
+                                      or if emergency lockfile is present
         """
+        # Check emergency lockfile first (kill switch for all production operations)
+        self.check_emergency_lock()
+
         self.log_operation(f"{operation} (type={op_type.value})")
 
         if op_type == OperationType.SAFE:

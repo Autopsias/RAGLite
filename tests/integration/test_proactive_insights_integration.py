@@ -24,6 +24,10 @@ from raglite.shared.models import (
     TrendDirection,
 )
 
+# Mark all tests as preserve_collection - these are read-only tests
+# that don't modify the Qdrant collection (performance optimization)
+pytestmark = pytest.mark.preserve_collection
+
 # =============================================================================
 # Expert-Labeled Test Scenarios (AC4)
 # =============================================================================

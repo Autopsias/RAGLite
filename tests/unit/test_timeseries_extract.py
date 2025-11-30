@@ -15,8 +15,10 @@ import pytest
 from raglite.forecasting.timeseries_extract import (
     ExtractionError,
     extract_timeseries,
+    extract_timeseries_from_sql,
     normalize_to_interval,
     parse_fiscal_date,
+    parse_period_to_date,
 )
 from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
 
@@ -494,3 +496,285 @@ class TestTimeSeriesModels:
         assert data.points == []
         assert data.interval == "raw"
         assert data.source_documents == []
+
+
+# =============================================================================
+# Story 5.0.1: SQL-based time-series extraction tests
+# =============================================================================
+
+
+class TestParsePeriodToDate:
+    """Test period string parsing to datetime (Mon-YY format) - Story 5.0.1 AC5."""
+
+    @pytest.mark.parametrize(
+        "period,fiscal_year,expected_month",
+        [
+            # All months in 2025
+            ("Jan-25", 2025, 1),
+            ("Feb-25", 2025, 2),
+            ("Mar-25", 2025, 3),
+            ("Apr-25", 2025, 4),
+            ("May-25", 2025, 5),
+            ("Jun-25", 2025, 6),
+            ("Jul-25", 2025, 7),
+            ("Aug-25", 2025, 8),
+            ("Sep-25", 2025, 9),
+            ("Oct-25", 2025, 10),
+            ("Nov-25", 2025, 11),
+            ("Dec-25", 2025, 12),
+            # All months in 2024
+            ("Jan-24", 2024, 1),
+            ("Feb-24", 2024, 2),
+            ("Mar-24", 2024, 3),
+            ("Apr-24", 2024, 4),
+            ("May-24", 2024, 5),
+            ("Jun-24", 2024, 6),
+            ("Jul-24", 2024, 7),
+            ("Aug-24", 2024, 8),
+            ("Sep-24", 2024, 9),
+            ("Oct-24", 2024, 10),
+            ("Nov-24", 2024, 11),
+            ("Dec-24", 2024, 12),
+        ],
+    )
+    def test_valid_period_formats_all_months(
+        self, period: str, fiscal_year: int, expected_month: int
+    ) -> None:
+        """Test extraction from all valid Mon-YY month patterns."""
+        result = parse_period_to_date(period, fiscal_year)
+
+        assert result.year == fiscal_year
+        assert result.month == expected_month
+        assert result.day == 1  # Always first day of month
+        assert result.hour == 0
+        assert result.minute == 0
+        assert result.second == 0
+
+    def test_case_insensitivity(self) -> None:
+        """Test that month abbreviations are case-insensitive."""
+        test_cases = [
+            ("jan-25", 2025, 1),
+            ("JAN-25", 2025, 1),
+            ("Jan-25", 2025, 1),
+            ("jAn-25", 2025, 1),
+        ]
+
+        for period, fiscal_year, expected_month in test_cases:
+            result = parse_period_to_date(period, fiscal_year)
+            assert result.month == expected_month
+
+    def test_whitespace_handling(self) -> None:
+        """Test that leading/trailing whitespace is stripped."""
+        result = parse_period_to_date("  Jan-25  ", 2025)
+        assert result.month == 1
+        assert result.year == 2025
+
+    @pytest.mark.parametrize(
+        "invalid_period",
+        [
+            "Var.",  # Non-date value
+            "YTD",  # Non-date value
+            "2024",  # Year only
+            "Jan",  # Missing year
+            "25",  # Year only
+            "Jan 25",  # Space instead of hyphen
+            "Jan_25",  # Underscore instead of hyphen
+            "Jan-2025",  # 4-digit year
+            "",  # Empty string
+        ],
+    )
+    def test_invalid_period_formats(self, invalid_period: str) -> None:
+        """Test that invalid period formats raise ValueError."""
+        with pytest.raises(ValueError, match="Invalid period format"):
+            parse_period_to_date(invalid_period, 2025)
+
+    def test_invalid_month_abbreviation(self) -> None:
+        """Test that unrecognized month abbreviations raise ValueError."""
+        with pytest.raises(ValueError, match="Invalid month abbreviation"):
+            parse_period_to_date("Xyz-25", 2025)
+
+
+@pytest.mark.asyncio
+class TestExtractTimeseriesFromSQL:
+    """Test SQL-based time-series extraction - Story 5.0.1 AC2."""
+
+    async def test_successful_extraction_sufficient_data(self) -> None:
+        """Test successful extraction with ≥8 data points."""
+        # Mock SQL connection and cursor
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [
+            ("Jan-24", 2024, 100.5, 1, "2024-01 Performance Review"),
+            ("Feb-24", 2024, 105.2, 1, "2024-02 Performance Review"),
+            ("Mar-24", 2024, 110.8, 1, "2024-03 Performance Review"),
+            ("Apr-24", 2024, 115.3, 1, "2024-04 Performance Review"),
+            ("May-24", 2024, 120.0, 1, "2024-05 Performance Review"),
+            ("Jun-24", 2024, 125.5, 1, "2024-06 Performance Review"),
+            ("Jul-24", 2024, 130.2, 1, "2024-07 Performance Review"),
+            ("Aug-24", 2024, 135.8, 1, "2024-08 Performance Review"),
+            ("Sep-24", 2024, 140.3, 1, "2024-09 Performance Review"),
+        ]
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        with patch("raglite.shared.clients.get_postgresql_connection") as mock_pg:
+            mock_pg.return_value = mock_conn
+
+            result = await extract_timeseries_from_sql(metric="revenue", min_points=8)
+
+            # Verify result
+            assert isinstance(result, TimeSeriesData)
+            assert result.metric_name == "revenue"
+            assert len(result.points) == 9  # All 9 data points returned
+            assert result.interval == "monthly"
+
+            # Verify points are sorted chronologically
+            assert result.points[0].date.month == 1  # Jan
+            assert result.points[-1].date.month == 9  # Sep
+
+            # Verify SQL query was executed with synonym-mapped metric
+            mock_cursor.execute.assert_called_once()
+            # "revenue" gets mapped to "turnover" via synonym mapping
+            assert "turnover" in mock_cursor.execute.call_args[0][1]
+
+    async def test_insufficient_data_raises_error(self) -> None:
+        """Test that <min_points data raises ExtractionError."""
+        # Mock SQL connection with only 5 data points
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [
+            ("Jan-24", 2024, 100.5, 1, "2024-01 Performance Review"),
+            ("Feb-24", 2024, 105.2, 1, "2024-02 Performance Review"),
+            ("Mar-24", 2024, 110.8, 1, "2024-03 Performance Review"),
+            ("Apr-24", 2024, 115.3, 1, "2024-04 Performance Review"),
+            ("May-24", 2024, 120.0, 1, "2024-05 Performance Review"),
+        ]
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        with patch("raglite.shared.clients.get_postgresql_connection") as mock_pg:
+            mock_pg.return_value = mock_conn
+
+            with pytest.raises(ExtractionError, match="Insufficient data.*found 5 points, need 8"):
+                await extract_timeseries_from_sql(metric="revenue", min_points=8)
+
+    async def test_no_data_found_raises_error(self) -> None:
+        """Test that no SQL data raises ExtractionError."""
+        # Mock SQL connection with no results
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = []
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        with patch("raglite.shared.clients.get_postgresql_connection") as mock_pg:
+            mock_pg.return_value = mock_conn
+
+            with pytest.raises(ExtractionError, match="No data found in financial_tables"):
+                await extract_timeseries_from_sql(metric="revenue", min_points=8)
+
+    async def test_invalid_data_points_skipped(self) -> None:
+        """Test that invalid data points are skipped with warnings."""
+        # Mock SQL connection with mix of valid and invalid data
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [
+            ("Jan-24", 2024, 100.5, 1, "2024-01 Performance Review"),
+            (
+                "InvalidFormat",
+                2024,
+                105.2,
+                1,
+                "2024-02 Performance Review",
+            ),  # Invalid period format
+            ("Mar-24", 2024, "not_a_number", 1, "2024-03 Performance Review"),  # Invalid value
+            ("Apr-24", 2024, 115.3, 1, "2024-04 Performance Review"),
+            ("May-24", 2024, 120.0, 1, "2024-05 Performance Review"),
+            ("Jun-24", 2024, 125.5, 1, "2024-06 Performance Review"),
+            ("Jul-24", 2024, 130.2, 1, "2024-07 Performance Review"),
+            ("Aug-24", 2024, 135.8, 1, "2024-08 Performance Review"),
+            ("Sep-24", 2024, 140.3, 1, "2024-09 Performance Review"),
+            ("Oct-24", 2024, 145.0, 1, "2024-10 Performance Review"),
+        ]
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        with patch("raglite.shared.clients.get_postgresql_connection") as mock_pg:
+            mock_pg.return_value = mock_conn
+
+            result = await extract_timeseries_from_sql(metric="revenue", min_points=8)
+
+            # Should have 8 valid points (2 invalid skipped)
+            assert len(result.points) == 8
+
+    async def test_sql_query_error_handling(self) -> None:
+        """Test that SQL query errors are caught and re-raised as ExtractionError."""
+        # Mock SQL connection that raises an error
+        mock_conn = MagicMock()
+        mock_conn.cursor.side_effect = Exception("Database connection error")
+
+        with patch("raglite.shared.clients.get_postgresql_connection") as mock_pg:
+            mock_pg.return_value = mock_conn
+
+            with pytest.raises(ExtractionError, match="SQL query failed"):
+                await extract_timeseries_from_sql(metric="revenue", min_points=8)
+
+    async def test_metric_pattern_matching(self) -> None:
+        """Test that metric uses LIKE pattern for flexible matching."""
+        # Mock SQL connection
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [
+            ("Jan-24", 2024, 100.5, 1, "2024-01 Performance Review"),
+            ("Feb-24", 2024, 105.2, 1, "2024-02 Performance Review"),
+            ("Mar-24", 2024, 110.8, 1, "2024-03 Performance Review"),
+            ("Apr-24", 2024, 115.3, 1, "2024-04 Performance Review"),
+            ("May-24", 2024, 120.0, 1, "2024-05 Performance Review"),
+            ("Jun-24", 2024, 125.5, 1, "2024-06 Performance Review"),
+            ("Jul-24", 2024, 130.2, 1, "2024-07 Performance Review"),
+            ("Aug-24", 2024, 135.8, 1, "2024-08 Performance Review"),
+        ]
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        with patch("raglite.shared.clients.get_postgresql_connection") as mock_pg:
+            mock_pg.return_value = mock_conn
+
+            result = await extract_timeseries_from_sql(metric="revenue", min_points=8)
+
+            # Should match via synonym mapping (revenue → turnover)
+            assert len(result.points) == 8
+
+            # Verify synonym mapping was applied (revenue → turnover)
+            assert "turnover" in mock_cursor.execute.call_args[0][1]
+
+    async def test_chronological_sorting(self) -> None:
+        """Test that results are sorted chronologically by fiscal_year and period."""
+        # Mock SQL connection with unsorted data
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [
+            ("Jun-24", 2024, 125.5, 1, "2024-06 Performance Review"),
+            ("Jan-24", 2024, 100.5, 1, "2024-01 Performance Review"),
+            ("Dec-24", 2024, 150.0, 1, "2024-12 Performance Review"),
+            ("Mar-24", 2024, 110.8, 1, "2024-03 Performance Review"),
+            ("Sep-24", 2024, 140.3, 1, "2024-09 Performance Review"),
+            ("Apr-24", 2024, 115.3, 1, "2024-04 Performance Review"),
+            ("Feb-24", 2024, 105.2, 1, "2024-02 Performance Review"),
+            ("Aug-24", 2024, 135.8, 1, "2024-08 Performance Review"),
+        ]
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        with patch("raglite.shared.clients.get_postgresql_connection") as mock_pg:
+            mock_pg.return_value = mock_conn
+
+            result = await extract_timeseries_from_sql(metric="revenue", min_points=8)
+
+            # Verify points are sorted chronologically
+            dates = [p.date for p in result.points]
+            assert dates == sorted(dates)
+
+            # Verify first and last months
+            assert result.points[0].date.month == 1  # Jan
+            assert result.points[-1].date.month == 12  # Dec

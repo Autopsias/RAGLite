@@ -21,6 +21,10 @@ from raglite.shared.models import (
     TimeSeriesData,
 )
 
+# Mark all tests as preserve_collection - these are read-only tests
+# that don't modify the Qdrant collection (performance optimization)
+pytestmark = pytest.mark.preserve_collection
+
 
 class TestGetFinancialInsightsIntegration:
     """Integration tests for get_financial_insights() MCP tool."""

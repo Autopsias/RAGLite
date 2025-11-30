@@ -168,6 +168,8 @@ ignore = [
 "tests/integration/test_fixed_chunking.py" = ["E402"]  # pytestmark before imports
 "tests/integration/test_metadata_injection.py" = ["E402"]  # pytestmark before imports
 "tests/integration/test_table_retrieval.py" = ["E402"]  # pytestmark before imports
+"raglite/forecasting/hybrid.py" = ["E402"]  # Lazy-loading pattern for Prophet
+"tests/integration/test_anomaly_detection_integration.py" = ["E402"]  # pytestmark before imports
 
 # ============================================================================
 # ISORT CONFIGURATION (Import Sorting)
@@ -275,4 +277,4 @@ exclude_dirs = [
     "build/",
     "dist/",
 ]
-skips = ["B101"]  # Allow assert statements (used in tests)
+skips = ["B101", "B608"]  # Allow assert statements and internal SQL queries

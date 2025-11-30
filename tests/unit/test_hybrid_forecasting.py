@@ -229,7 +229,7 @@ class TestGenerateForecast:
         ].message.content = '{"summary": "Forecast shows growth.", "confidence_rationale": "Based on 8 quarters of data."}'
 
         with (
-            patch("raglite.forecasting.hybrid.Prophet", return_value=mock_prophet),
+            patch("prophet.Prophet", return_value=mock_prophet),
             patch("raglite.forecasting.hybrid.get_mistral_client") as mock_mistral_client,
         ):
             mock_mistral_client.return_value.chat.complete.return_value = mock_mistral_response
@@ -257,7 +257,7 @@ class TestGenerateForecast:
         historical_data = self._create_historical_data(num_points=8, metric="revenue")
 
         with (
-            patch("raglite.forecasting.hybrid.Prophet") as mock_prophet_class,
+            patch("prophet.Prophet") as mock_prophet_class,
             patch("raglite.forecasting.hybrid.get_mistral_client") as mock_mistral,
         ):
             # Setup mock Prophet
@@ -304,7 +304,7 @@ class TestGenerateForecast:
         historical_data = self._create_historical_data(num_points=8, metric="cash_flow")
 
         with (
-            patch("raglite.forecasting.hybrid.Prophet") as mock_prophet_class,
+            patch("prophet.Prophet") as mock_prophet_class,
             patch("raglite.forecasting.hybrid.get_mistral_client") as mock_mistral,
         ):
             mock_prophet = MagicMock()
@@ -349,7 +349,7 @@ class TestGenerateForecast:
         historical_data = self._create_historical_data(num_points=8, metric="expenses")
 
         with (
-            patch("raglite.forecasting.hybrid.Prophet") as mock_prophet_class,
+            patch("prophet.Prophet") as mock_prophet_class,
             patch("raglite.forecasting.hybrid.get_mistral_client") as mock_mistral,
         ):
             mock_prophet = MagicMock()

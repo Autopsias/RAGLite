@@ -9,6 +9,10 @@ import pytest
 
 from raglite.shared.models import DocumentMetadata, IngestionResult
 
+# Mark all tests as preserve_collection - these are read-only tests
+# that don't modify the Qdrant collection (performance optimization)
+pytestmark = pytest.mark.preserve_collection
+
 # =============================================================================
 # Test MCP Ingestion with Forecast Refresh
 # =============================================================================

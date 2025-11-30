@@ -479,16 +479,32 @@ class TestGetFinancialForecast:
 
     @pytest.mark.asyncio
     async def test_invalid_metric_error(self):
-        """Test error handling for unsupported metric."""
+        """Test error handling for metric with no data."""
+        from raglite.forecasting.timeseries_extract import ExtractionError
         from raglite.main import get_financial_forecast
         from raglite.retrieval.search import QueryError
 
-        request = ForecastQueryRequest(metric="invalid_metric")
+        # Mock SQL extraction to fail (no data for this metric)
+        with (
+            patch(
+                "raglite.main.extract_timeseries_from_sql",
+                new_callable=AsyncMock,
+                side_effect=ExtractionError(
+                    "No data found in financial_tables for metric 'invalid_metric'"
+                ),
+            ),
+            patch(
+                "raglite.main.extract_timeseries",  # Fallback also fails
+                new_callable=AsyncMock,
+                side_effect=ExtractionError("No documents found"),
+            ),
+        ):
+            request = ForecastQueryRequest(metric="invalid_metric")
 
-        with pytest.raises(QueryError) as exc_info:
-            await get_financial_forecast.fn(request)
+            with pytest.raises(QueryError) as exc_info:
+                await get_financial_forecast.fn(request)
 
-        assert "Unsupported metric" in str(exc_info.value)
+        assert "Could not extract" in str(exc_info.value)
         assert "invalid_metric" in str(exc_info.value)
 
     @pytest.mark.asyncio
@@ -823,26 +839,11 @@ class TestGetFinancialForecast:
 
 
 # =============================================================================
-# Test SUPPORTED_FORECAST_METRICS constant
+# Story 5.0.1 Update: SUPPORTED_FORECAST_METRICS constant removed
 # =============================================================================
-
-
-class TestSupportedMetrics:
-    """Tests for the SUPPORTED_FORECAST_METRICS constant."""
-
-    def test_supported_metrics_set(self):
-        """Test that supported metrics are defined correctly."""
-        from raglite.main import SUPPORTED_FORECAST_METRICS
-
-        assert "revenue" in SUPPORTED_FORECAST_METRICS
-        assert "cash_flow" in SUPPORTED_FORECAST_METRICS
-        assert "expenses" in SUPPORTED_FORECAST_METRICS
-        assert len(SUPPORTED_FORECAST_METRICS) == 3
-
-    def test_unsupported_metric_not_in_set(self):
-        """Test that unsupported metrics are not in the set."""
-        from raglite.main import SUPPORTED_FORECAST_METRICS
-
-        assert "profit" not in SUPPORTED_FORECAST_METRICS
-        assert "ebitda" not in SUPPORTED_FORECAST_METRICS
-        assert "assets" not in SUPPORTED_FORECAST_METRICS
+# The TestSupportedMetrics class has been removed because Story 5.0.1 changed
+# the validation model from a hardcoded whitelist to dynamic database lookup.
+# Any metric in the financial_tables database is now valid - metrics are
+# validated dynamically by checking if data exists in financial_tables.
+#
+# See raglite/main.py line 1478 for the implementation note.

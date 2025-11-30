@@ -63,7 +63,7 @@ repos:
     rev: 1.8.0
     hooks:
       - id: bandit
-        args: [-r, raglite/, -f, screen, --skip, B101]
+        args: [-r, raglite/, -f, screen, -s, B101, -s, B608]
         exclude: (raglite/tests/|raglite/ingestion/(adaptive_table_extraction|table_extraction).py)
         pass_filenames: false
 

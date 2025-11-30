@@ -16,6 +16,35 @@ from raglite.shared.models import QueryResponse
 from tests.fixtures.ground_truth import GROUND_TRUTH_QA
 
 
+@pytest.fixture(scope="module", autouse=True)
+def check_collection_exists():
+    """Module-level fixture to skip all tests if collection doesn't exist or is empty.
+
+    This prevents all 6 tests in this module from failing with cryptic collection errors.
+    Instead, they skip gracefully with an informative message.
+    """
+    from raglite.shared.clients import get_qdrant_client
+    from raglite.shared.config import settings
+
+    try:
+        client = get_qdrant_client()
+        collection_info = client.get_collection(settings.qdrant_collection_name)
+        if collection_info.points_count == 0:
+            pytest.skip(
+                f"Collection '{settings.qdrant_collection_name}' is empty - run ingestion first",
+                allow_module_level=True,
+            )
+    except Exception as e:
+        error_msg = str(e).lower()
+        if "doesn't exist" in error_msg or "not found" in error_msg:
+            pytest.skip(
+                f"Collection '{settings.qdrant_collection_name}' doesn't exist - run ingestion first",
+                allow_module_level=True,
+            )
+        # Re-raise unexpected errors
+        raise
+
+
 @pytest.mark.priority("P1")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
@@ -249,9 +278,9 @@ async def test_e2e_performance_validation(session_ingested_collection):
     # Validate NFR13 targets
     # NFR13: p50 <5000ms (5s), p95 <15000ms (15s including cold-start)
     assert p50_latency < 5000, f"p50 latency {p50_latency:.2f}ms exceeds NFR13 p50 target (5000ms)"
-    assert (
-        p95_latency < 15000
-    ), f"p95 latency {p95_latency:.2f}ms exceeds NFR13 p95 target (15000ms)"
+    assert p95_latency < 15000, (
+        f"p95 latency {p95_latency:.2f}ms exceeds NFR13 p95 target (15000ms)"
+    )
 
     print("\n✅ Performance meets NFR13 targets")
     print(f"   p50: {p50_latency:.2f}ms < 5000ms (NFR13 p50 target)")
@@ -384,9 +413,9 @@ async def test_e2e_standard_mcp_pattern(session_ingested_collection):
         ]
         text_lower = result.text.lower()
         for phrase in synthesized_phrases:
-            assert not text_lower.startswith(
-                phrase.lower()
-            ), f"Text should be raw chunk, not synthesized answer starting with '{phrase}'"
+            assert not text_lower.startswith(phrase.lower()), (
+                f"Text should be raw chunk, not synthesized answer starting with '{phrase}'"
+            )
 
     print("\n✅ Standard MCP pattern confirmed")
     print("   RAGLite returns raw chunks with citations")

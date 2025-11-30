@@ -549,17 +549,19 @@ class ForecastQueryRequest(BaseModel):
     """Request for financial forecast query via MCP.
 
     Story 4.4 AC1: MCP tool parameters for forecast queries.
+    Story 5.0.1 Enhancement: Supports SQL-based extraction for any metric in database.
     Supports both structured parameters and natural language queries.
 
     Attributes:
-        metric: Metric to forecast (revenue, cash_flow, expenses). Optional if using query.
+        metric: Metric to forecast (e.g., revenue, turnover, ebitda, cash_flow, expenses, capex).
+                Accepts any financial metric name - will search database via SQL and documents via hybrid search.
         periods_ahead: Number of quarters to forecast (1-8, default 4).
-        query: Optional natural language query (e.g., "revenue forecast next quarter").
+        query: Optional natural language query (e.g., "turnover forecast next quarter").
     """
 
     metric: str | None = Field(
         default=None,
-        description="Metric to forecast: revenue, cash_flow, expenses",
+        description="Metric to forecast: revenue, turnover, cash_flow, expenses, ebitda, capex, or any financial metric name",
     )
     periods_ahead: int = Field(
         default=4,
