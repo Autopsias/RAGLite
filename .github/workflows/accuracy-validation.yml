@@ -282,7 +282,7 @@ jobs:
         run: |
           source ci-venv/bin/activate
           echo "🔧 Initializing PostgreSQL schema (financial_chunks, financial_tables, entity_mappings)..."
-          python scripts/init-postgresql.py
+          python scripts/init-test-postgresql.py
           echo "✅ Schema initialized successfully"
 
       - name: Ingest PDF (if cache miss)
@@ -380,7 +380,7 @@ jobs:
 
           # Reinitialize PostgreSQL schema (clears corrupt data)
           echo "🔧 Reinitializing PostgreSQL schema..."
-          python scripts/init-postgresql.py
+          python scripts/init-test-postgresql.py
 
           # Run full PDF ingestion
           echo "📄 Starting full PDF ingestion (~13-15 minutes)..."

@@ -2,8 +2,22 @@
 
 This module provides type-safe configuration management loaded from environment
 variables via .env file.
+
+Environment-based configuration:
+- APP_ENV=production (default): Uses production databases (ports 6333, 5432)
+- APP_ENV=test: Automatically uses test databases (ports 6335, 5433)
+- APP_ENV=development: Uses development settings (same as production for now)
+
+All settings can be overridden by environment variables.
 """
 
+from __future__ import annotations
+
+import logging
+import os
+from typing import Self
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,7 +26,14 @@ class Settings(BaseSettings):
 
     All settings can be overridden via environment variables or .env file.
     Required settings will raise validation errors if not provided.
+
+    APP_ENV determines which database instances to use:
+    - production: localhost:6333 (Qdrant), localhost:5432 (PostgreSQL)
+    - test: localhost:6335 (Qdrant), localhost:5433 (PostgreSQL)
     """
+
+    # Environment Configuration (NEW)
+    app_env: str = "production"  # Options: production, test, development
 
     # Qdrant Vector Database
     qdrant_host: str = "localhost"
@@ -54,6 +75,57 @@ class Settings(BaseSettings):
     # PDF Processing Configuration (Story 2.2)
     pdf_processing_threads: int = 8  # Parallel page processing threads (default 8, range 1-16)
 
+    # Forecasting Auto-Update Configuration (Story 4.3)
+    enable_forecast_auto_update: bool = True  # Auto-refresh forecasts on document ingestion
+    forecast_refresh_timeout: int = 300  # 5-minute timeout for forecast refresh (AC3)
+
+    @model_validator(mode="after")
+    def adjust_for_environment(self) -> Self:
+        """Automatically adjust database settings based on APP_ENV.
+
+        CRITICAL FIX (2025-11-23): Removed PostgreSQL auto-adjustment to eliminate
+        configuration race condition in CI. PostgreSQL settings now come ONLY from
+        explicit environment variables set by CI workflow.
+
+        Root cause: The validator runs at Settings instantiation (module import time),
+        which happens BEFORE GitHub Actions sets CI=true. This caused Settings to use
+        "raglite_test" instead of "raglite_ci", creating a database mismatch where
+        ingestion wrote to one database and tests read from another.
+
+        Environment routing (Story 4.0.5):
+        - Production (default): Qdrant:6333, collection: financial_docs
+        - Test (APP_ENV=test): Qdrant:6335, collection: financial_docs_test
+        - CI: Uses explicit env vars (POSTGRES_DB=raglite_ci, etc.)
+
+        CI detection: Checks GITHUB_ACTIONS, CI, or CONTINUOUS_INTEGRATION environment variables
+        """
+        import os
+
+        # Detect if running in CI environment
+        is_ci = (
+            os.getenv("GITHUB_ACTIONS") == "true"
+            or os.getenv("CI") == "true"
+            or os.getenv("CONTINUOUS_INTEGRATION") == "true"
+        )
+
+        if self.app_env == "test":
+            # Qdrant adjustments (non-critical, useful for test isolation)
+            if self.qdrant_port == 6333:
+                self.qdrant_port = 6335
+            if self.qdrant_collection_name == "financial_docs":
+                # Story 4.0.5 AC4: Separate CI collection to avoid conflicts with local tests
+                collection_suffix = "_ci" if is_ci else "_test"
+                self.qdrant_collection_name = f"financial_docs{collection_suffix}"
+
+            # REMOVED: PostgreSQL auto-adjustment (causes CI race condition)
+            # PostgreSQL settings now come ONLY from explicit environment variables:
+            #   - CI: POSTGRES_DB=raglite_ci (set by .github/workflows/ci.yml)
+            #   - Local tests: POSTGRES_DB=raglite_test (set by local .env.test)
+            # This ensures Settings use the correct database name regardless of
+            # when CI=true environment variable is set.
+
+        return self
+
     # Pydantic 2.x configuration using SettingsConfigDict
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -65,3 +137,19 @@ class Settings(BaseSettings):
 
 # Singleton instance - import this in other modules
 settings = Settings()
+
+# Diagnostic logging for Settings initialization (helps debug CI configuration issues)
+logger = logging.getLogger(__name__)
+logger.info(
+    "Settings initialized",
+    extra={
+        "postgres_db": settings.postgres_db,
+        "postgres_port": settings.postgres_port,
+        "postgres_user": settings.postgres_user,
+        "qdrant_collection": settings.qdrant_collection_name,
+        "qdrant_port": settings.qdrant_port,
+        "app_env": settings.app_env,
+        "ci_detected": os.getenv("CI") == "true",
+        "github_actions": os.getenv("GITHUB_ACTIONS") == "true",
+    },
+)

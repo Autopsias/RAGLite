@@ -1,4 +1,7 @@
 services:
+  # ========================================
+  # PRODUCTION DATABASES (default ports)
+  # ========================================
   qdrant:
     image: qdrant/qdrant:v1.15.0
     container_name: raglite-qdrant
@@ -23,4 +26,33 @@ services:
       - POSTGRES_DB=raglite
       - POSTGRES_USER=raglite
       - POSTGRES_PASSWORD=raglite
+    restart: unless-stopped
+
+  # ========================================
+  # TEST DATABASES (separate ports/volumes)
+  # ========================================
+  qdrant-test:
+    image: qdrant/qdrant:v1.15.0
+    container_name: raglite-qdrant-test
+    ports:
+      - "6335:6333"  # HTTP API (mapped to 6335)
+      - "6336:6334"  # gRPC API (mapped to 6336)
+    volumes:
+      - ./qdrant_storage_test:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    restart: unless-stopped
+
+  postgresql-test:
+    image: postgres:16
+    container_name: raglite-postgresql-test
+    ports:
+      - "5433:5432"  # PostgreSQL (mapped to 5433)
+    volumes:
+      - ./postgresql_data_test:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=raglite_test
+      - POSTGRES_USER=raglite_test
+      - POSTGRES_PASSWORD=raglite_test
     restart: unless-stopped

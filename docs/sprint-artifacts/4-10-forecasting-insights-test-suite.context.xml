@@ -1,0 +1,300 @@
+<story-context id="4-10-forecasting-insights-test-suite" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>10</storyId>
+    <title>Forecasting &amp; Insights Test Suite</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-10-forecasting-insights-test-suite.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>to validate forecasting accuracy and insight quality</iWant>
+    <soThat>predictive capabilities meet MVP success criteria</soThat>
+    <tasks>
+      <task id="1" title="Create Forecast Accuracy Validation Framework" acs="1,2">
+        <subtask id="1.1">Create tests/validation/test_forecast_accuracy.py with ForecastAccuracyValidator</subtask>
+        <subtask id="1.2">Implement calculate_mape() helper function with SMAPE fallback</subtask>
+        <subtask id="1.3">Create test fixtures with known historical data (12+ months)</subtask>
+        <subtask id="1.4">Implement backtesting workflow with 80/20 train/test split</subtask>
+      </task>
+      <task id="2" title="Create Insight Quality Validation Framework" acs="3">
+        <subtask id="2.1">Create tests/validation/test_insight_quality.py with InsightQualityValidator</subtask>
+        <subtask id="2.2">Design expert-labeled test scenarios (10+ scenarios)</subtask>
+        <subtask id="2.3">Implement relevance scoring logic</subtask>
+        <subtask id="2.4">Calculate aggregate relevance score (target: >=75%)</subtask>
+      </task>
+      <task id="3" title="Create Recommendation Alignment Validation Framework" acs="4">
+        <subtask id="3.1">Create tests/validation/test_recommendation_alignment.py</subtask>
+        <subtask id="3.2">Design expert-labeled recommendation scenarios (8+ scenarios)</subtask>
+        <subtask id="3.3">Implement alignment scoring logic</subtask>
+        <subtask id="3.4">Calculate aggregate alignment score (target: >=80%)</subtask>
+      </task>
+      <task id="4" title="Implement End-to-End Validation Pipeline" acs="1,2,3,4">
+        <subtask id="4.1">Create tests/validation/test_epic4_e2e_validation.py</subtask>
+        <subtask id="4.2">Create comprehensive test data set (24+ months)</subtask>
+        <subtask id="4.3">Implement validation orchestrator</subtask>
+        <subtask id="4.4">Add CI/CD integration with @pytest.mark.validation</subtask>
+      </task>
+      <task id="5" title="Generate Validation Report Artifact" acs="5">
+        <subtask id="5.1">Create scripts/generate_validation_report.py</subtask>
+        <subtask id="5.2">Design report template with executive summary</subtask>
+        <subtask id="5.3">Implement improvement recommendations logic</subtask>
+        <subtask id="5.4">Output to docs/sprint-artifacts/validation-report-4-10-{date}.md</subtask>
+      </task>
+      <task id="6" title="Unit Tests for Validation Utilities" acs="All">
+        <subtask id="6.1">Create tests/unit/test_validation_utilities.py</subtask>
+        <subtask id="6.2">Test edge cases (empty data, zero values, single points)</subtask>
+        <subtask id="6.3">Achieve >=80% coverage on validation utility code</subtask>
+      </task>
+      <task id="7" title="Documentation and Cleanup" acs="All">
+        <subtask id="7.1">Add Google-style docstrings</subtask>
+        <subtask id="7.2">Document validation methodology</subtask>
+        <subtask id="7.3">Update story file with Dev Agent Record</subtask>
+        <subtask id="7.4">Verify linting passes</subtask>
+        <subtask id="7.5">Run full validation suite</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1" description="Forecast accuracy measured on historical data">
+      <validation>Unit test: ForecastAccuracyValidator compares Prophet predictions against held-out actuals</validation>
+      <threshold>Backtesting with 80% train / 20% test holdout</threshold>
+    </ac>
+    <ac id="2" description="Accuracy meets ±15% threshold for key indicators (NFR10)">
+      <validation>Integration test: validate MAPE ≤15% on revenue, expenses, cash flow forecasts</validation>
+      <threshold>MAPE ≤ 15% for all key metrics</threshold>
+    </ac>
+    <ac id="3" description="Insight relevance scored by user testing">
+      <validation>Integration test: expert-labeled test set validates insights</validation>
+      <threshold>75%+ insights rated useful or actionable</threshold>
+    </ac>
+    <ac id="4" description="Recommendation alignment with expert analysis measured">
+      <validation>Integration test: compare recommendations against expert-labeled ground truth</validation>
+      <threshold>≥80% alignment rate</threshold>
+    </ac>
+    <ac id="5" description="Test results documented with improvement recommendations">
+      <validation>Test report artifact: generate validation-report-4-10.md</validation>
+      <output>docs/sprint-artifacts/validation-report-4-10-{date}.md</output>
+    </ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/prd/epic-4-forecasting-proactive-insights.md" title="Epic 4 PRD" section="Story 4.10">
+        <snippet>Defines MVP success criteria: forecast accuracy ±15%, insight relevance 75%+, recommendation alignment 80%+</snippet>
+      </doc>
+      <doc path="docs/process/definition-of-done.md" title="Definition of Done" section="Testing">
+        <snippet>New code must have ≥80% test coverage. All unit/integration/E2E tests must pass. No skipped tests without issue reference.</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/4-2-forecasting-engine-implementation.md" title="Story 4.2" section="Dev Notes">
+        <snippet>Prophet forecasting with MIN_DATA_POINTS=8 requirement. Backtesting reference for AC2 validation.</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/4-7-proactive-insight-generation.md" title="Story 4.7" section="Dev Notes">
+        <snippet>Insight generation with priority scoring. Reference for AC3 validation test scenarios.</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/4-8-strategic-recommendation-engine.md" title="Story 4.8" section="Dev Notes">
+        <snippet>Recommendation engine with impact scoring. 100% expert alignment achieved - reference for AC4 validation.</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/4-9-proactive-insights-tool-mcp.md" title="Story 4.9" section="Dev Notes">
+        <snippet>MCP integration for insights. 43 tests as pattern reference for validation tests.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <file path="raglite/forecasting/hybrid.py" kind="module" lines="1-180">
+        <symbol>generate_forecast</symbol>
+        <symbol>InsufficientDataError</symbol>
+        <symbol>MIN_DATA_POINTS</symbol>
+        <reason>Core forecasting function to test in AC1/AC2. Uses Prophet for predictions.</reason>
+      </file>
+      <file path="raglite/forecasting/timeseries_extract.py" kind="module" lines="1-200">
+        <symbol>extract_timeseries</symbol>
+        <symbol>parse_fiscal_date</symbol>
+        <symbol>ExtractionError</symbol>
+        <reason>Time-series extraction for test data preparation. Parse fiscal periods for test fixtures.</reason>
+      </file>
+      <file path="raglite/insights/proactive.py" kind="module" lines="1-504">
+        <symbol>generate_insights</symbol>
+        <symbol>categorize_insight</symbol>
+        <symbol>calculate_insight_priority</symbol>
+        <symbol>filter_insights</symbol>
+        <reason>Insight generation to test in AC3. Category/priority logic for test scenarios.</reason>
+      </file>
+      <file path="raglite/insights/recommendations.py" kind="module" lines="1-386">
+        <symbol>generate_recommendations</symbol>
+        <symbol>calculate_impact_score</symbol>
+        <symbol>categorize_recommendation</symbol>
+        <symbol>filter_recommendations</symbol>
+        <reason>Recommendation engine to test in AC4. Impact scoring for alignment validation.</reason>
+      </file>
+      <file path="raglite/insights/anomalies.py" kind="module" lines="1-232">
+        <symbol>detect_anomalies</symbol>
+        <symbol>explain_anomaly</symbol>
+        <symbol>AnomalySeverity</symbol>
+        <reason>Anomaly detection used by insight generation. Test fixture data must trigger anomalies.</reason>
+      </file>
+      <file path="raglite/insights/trends.py" kind="module" lines="1-387">
+        <symbol>analyze_trends</symbol>
+        <symbol>calculate_cagr</symbol>
+        <symbol>calculate_qoq_growth</symbol>
+        <symbol>detect_correlation</symbol>
+        <reason>Trend analysis used by insight generation. Growth metrics for test scenarios.</reason>
+      </file>
+      <file path="raglite/shared/models.py" kind="models" lines="various">
+        <symbol>ForecastResult</symbol>
+        <symbol>TimeSeriesData</symbol>
+        <symbol>TimeSeriesPoint</symbol>
+        <symbol>Insight</symbol>
+        <symbol>InsightCategory</symbol>
+        <symbol>Recommendation</symbol>
+        <symbol>RecommendationCategory</symbol>
+        <reason>Data models for validation. Use for test fixtures and assertions.</reason>
+      </file>
+      <file path="tests/unit/test_hybrid_forecasting.py" kind="test" lines="1-500">
+        <symbol>Test patterns for Prophet forecasting</symbol>
+        <reason>Reference for forecast validation test patterns. Fixture structure for historical data.</reason>
+      </file>
+      <file path="tests/unit/test_proactive_insights.py" kind="test" lines="1-1000">
+        <symbol>Test patterns for insight generation</symbol>
+        <reason>Reference for insight validation test patterns. Expert-labeled scenario examples.</reason>
+      </file>
+      <file path="tests/unit/test_strategic_recommendations.py" kind="test" lines="1-1100">
+        <symbol>Test patterns for recommendation validation</symbol>
+        <reason>Reference for recommendation alignment test patterns. Expert ground truth examples.</reason>
+      </file>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="prophet" version=">=1.1.5,&lt;2.0.0">Time-series forecasting</package>
+        <package name="pandas" version=">=2.0,&lt;3.0">DataFrame operations for validation</package>
+        <package name="numpy" version="implicit">MAPE calculation, statistical operations</package>
+        <package name="scipy" version="implicit">Pearson correlation via scipy.stats</package>
+        <package name="pytest" version="8.4.2">Test framework</package>
+        <package name="pytest-asyncio" version="1.2.0">Async test support</package>
+        <package name="pytest-cov" version="5.0.0">Coverage reporting</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <interfaces>
+    <interface name="ForecastAccuracyValidator" kind="class">
+      <signature>
+class ForecastAccuracyValidator:
+    def validate_forecasts(
+        self,
+        historical_data: pd.DataFrame,
+        train_ratio: float = 0.8,
+    ) -> ForecastValidationResult
+
+    def calculate_mape(
+        self,
+        actuals: pd.Series,
+        predictions: pd.Series,
+    ) -> float
+      </signature>
+      <path>tests/validation/test_forecast_accuracy.py</path>
+    </interface>
+    <interface name="InsightQualityValidator" kind="class">
+      <signature>
+class InsightQualityValidator:
+    def validate_insights(
+        self,
+        test_scenarios: List[InsightTestScenario],
+    ) -> InsightValidationResult
+      </signature>
+      <path>tests/validation/test_insight_quality.py</path>
+    </interface>
+    <interface name="RecommendationAlignmentValidator" kind="class">
+      <signature>
+class RecommendationAlignmentValidator:
+    def validate_recommendations(
+        self,
+        test_scenarios: List[RecommendationTestScenario],
+    ) -> RecommendationValidationResult
+      </signature>
+      <path>tests/validation/test_recommendation_alignment.py</path>
+    </interface>
+    <interface name="generate_forecast" kind="async function">
+      <signature>
+async def generate_forecast(
+    metric: str,
+    historical_data: TimeSeriesData,
+    periods_ahead: int = 4,
+) -> ForecastResult
+      </signature>
+      <path>raglite/forecasting/hybrid.py</path>
+    </interface>
+    <interface name="generate_insights" kind="async function">
+      <signature>
+async def generate_insights(
+    anomalies: list[Anomaly],
+    trends: list[Trend],
+    forecasts: list[ForecastResult],
+    *,
+    auto_synthesize: bool = True,
+) -> InsightGenerationResult
+      </signature>
+      <path>raglite/insights/proactive.py</path>
+    </interface>
+    <interface name="generate_recommendations" kind="async function">
+      <signature>
+async def generate_recommendations(
+    insights: list[Insight],
+    context: str | None = None,
+    *,
+    auto_synthesize: bool = True,
+) -> RecommendationResult
+      </signature>
+      <path>raglite/insights/recommendations.py</path>
+    </interface>
+  </interfaces>
+
+  <constraints>
+    <constraint source="NFR10">Forecast accuracy must meet ±15% MAPE threshold on key indicators</constraint>
+    <constraint source="PRD Epic 4">Insight relevance target: 75%+ rated useful/actionable by user testing</constraint>
+    <constraint source="PRD Epic 4">Recommendation alignment target: 80%+ with expert analysis</constraint>
+    <constraint source="Definition of Done">New code must have ≥80% test coverage (CI/CD enforced)</constraint>
+    <constraint source="Architecture">Use tests/validation/ directory for validation tests (separate from unit/integration)</constraint>
+    <constraint source="Architecture">Use @pytest.mark.validation marker for CI/CD control</constraint>
+    <constraint source="Story 4.2">Minimum 8 data points required for reliable forecasting (MIN_DATA_POINTS)</constraint>
+    <constraint source="Testing Strategy">Unit tests mock external dependencies (Mistral LLM, Qdrant)</constraint>
+    <constraint source="Testing Strategy">Integration tests use test database (port 6335/5433)</constraint>
+    <constraint source="Coding Standards">Google-style docstrings on all public functions</constraint>
+    <constraint source="Coding Standards">Type hints on all function signatures</constraint>
+  </constraints>
+
+  <tests>
+    <standards>
+      Testing follows pytest patterns with pytest-asyncio for async tests. Unit tests mock external
+      dependencies (Mistral LLM for synthesis). Coverage target ≥80% for new code. Validation tests
+      use expert-labeled ground truth scenarios with binary pass/fail criteria. Use @pytest.mark.validation
+      marker for CI/CD control. Test database runs on port 6335 (Qdrant) and 5433 (PostgreSQL).
+    </standards>
+    <locations>
+      <location>tests/validation/test_forecast_accuracy.py</location>
+      <location>tests/validation/test_insight_quality.py</location>
+      <location>tests/validation/test_recommendation_alignment.py</location>
+      <location>tests/validation/test_epic4_e2e_validation.py</location>
+      <location>tests/unit/test_validation_utilities.py</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test MAPE calculation with known inputs: actuals=[100,110,120], predictions=[105,115,125] → MAPE~4.5%</idea>
+      <idea ac="1">Test backtesting workflow: 12-point series with 80/20 split, validate holdout MAPE</idea>
+      <idea ac="2">Test revenue forecast: synthetic growth data (5% QoQ), validate MAPE ≤15%</idea>
+      <idea ac="2">Test expenses forecast: seasonal pattern data, validate MAPE ≤15%</idea>
+      <idea ac="2">Test cash flow forecast: volatile data with known volatility, validate MAPE threshold</idea>
+      <idea ac="3">Marketing spike scenario: 30% YoY increase with flat revenue → expect RISK insight</idea>
+      <idea ac="3">Revenue growth scenario: 15% CAGR trend → expect OPPORTUNITY insight</idea>
+      <idea ac="3">Seasonal pattern scenario: Q4 spike pattern → expect TREND insight</idea>
+      <idea ac="4">Cost overrun scenario: cloud costs 40% over budget → expect COST_REDUCTION recommendation</idea>
+      <idea ac="4">Growth opportunity scenario: untapped market signal → expect REVENUE_GROWTH recommendation</idea>
+      <idea ac="5">Generate validation report with metrics: MAPE=12.3%, Insight Relevance=78%, Alignment=85%</idea>
+      <idea ac="5">Test improvement recommendations: if MAPE>15%, suggest "increase historical data or tune Prophet parameters"</idea>
+    </ideas>
+  </tests>
+</story-context>

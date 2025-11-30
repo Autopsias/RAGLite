@@ -1,0 +1,126 @@
+<story-context id="4-5-anomaly-detection" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>5</storyId>
+    <title>Anomaly Detection</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-5-anomaly-detection.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>to detect anomalies and outliers in financial data</iWant>
+    <soThat>unusual patterns are surfaced proactively</soThat>
+    <tasks>
+      <task id="1" ac="1,3,4">Design Anomaly data models - Define Anomaly, AnomalyDetectionResult, AnomalySeverity enum in shared/models.py</task>
+      <task id="2" ac="1,2,3">Implement detect_anomalies() function - Create raglite/insights/anomalies.py with Z-score analysis and severity classification</task>
+      <task id="3" ac="4">Add LLM-powered anomaly explanation - Implement explain_anomaly() using Mistral Large for contextual reasoning</task>
+      <task id="4" ac="4">Structured logging and context - Add logging with extra={} for anomaly metrics</task>
+      <task id="5" ac="1,2,3,4">Unit tests - Create tests/unit/test_anomaly_detection.py with synthetic test data</task>
+      <task id="6" ac="5">Integration tests - Create tests/integration/test_anomaly_detection_integration.py with accuracy validation</task>
+      <task id="7" ac="all">Documentation and cleanup - Add docstrings, update __init__.py, verify linting</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">Anomaly detection algorithm implemented (statistical thresholds per Tech Spec) - Unit test: detect_anomalies() callable with metric and timeseries, returns List[Anomaly]</ac>
+    <ac id="2">Anomalies identified: significant deviations from trends, unexpected spikes/drops, outliers - Unit test: synthetic data with known outliers correctly identified (Z-score > 2)</ac>
+    <ac id="3">Anomaly severity scored (minor, moderate, critical) - Unit test: severity correctly assigned based on Z-score thresholds (|z|>3 = critical, |z|>2 = moderate)</ac>
+    <ac id="4">Anomalies logged with context (metric, time period, magnitude of deviation) - Unit test: Anomaly model contains all required fields; structured logging emits context</ac>
+    <ac id="5">Integration test validates anomaly detection on sample data with known outliers - Integration test: end-to-end detection on test dataset achieves 85%+ accuracy, less than 10% false positive rate</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/prd/epic-4-forecasting-proactive-insights.md" title="Epic 4 PRD" section="Story 4.5: Anomaly Detection" snippet="Anomaly detection algorithm, severity scoring (minor/moderate/critical), anomalies logged with context including metric, time period, magnitude of deviation."/>
+      <doc path="docs/archive/tech-spec-epic-4.md" title="Tech Spec Epic 4" section="3.3 Anomaly Detection" snippet="Z-score analysis with threshold |z| > 2, severity levels: critical if |z| > 3 else moderate. Target 85%+ accuracy, less than 10% false positive rate. File: raglite/insights/anomalies.py (~50 lines)."/>
+      <doc path="docs/process/definition-of-done.md" title="Definition of Done" section="Testing" snippet="New code has >= 80% test coverage. All unit tests, integration tests, and E2E tests must pass. Coverage ratchet enforced by CI/CD."/>
+      <doc path="docs/architecture/coding-standards.md" title="Coding Standards" section="All" snippet="Type hints mandatory, Google-style docstrings, structured logging with extra={}, Pydantic models for data validation, async/await for I/O."/>
+      <doc path="docs/architecture/testing-strategy.md" title="Testing Strategy" section="Testing Pyramid" snippet="80% unit tests (functions/classes), 15% integration tests (service integration), 5% E2E tests (accuracy validation)."/>
+    </docs>
+    <code>
+      <file path="raglite/forecasting/timeseries_extract.py" kind="module" symbol="TimeSeriesData, extract_timeseries, ExtractionError" lines="1-321" reason="Provides TimeSeriesData input model for detect_anomalies(). Reuse extraction patterns and error handling."/>
+      <file path="raglite/shared/models.py" kind="models" symbol="TimeSeriesData, TimeSeriesPoint, ForecastResult" lines="305-398" reason="Target file for new Anomaly, AnomalyDetectionResult, AnomalySeverity models. Follow existing model patterns."/>
+      <file path="raglite/shared/clients.py" kind="clients" symbol="get_mistral_client" lines="397-468" reason="Mistral client for LLM-powered anomaly explanation. Reuse singleton pattern."/>
+      <file path="raglite/shared/logging.py" kind="utility" symbol="get_logger" reason="Structured logging with extra={} context. Use for anomaly detection logging."/>
+      <file path="tests/unit/test_forecast_query_tool.py" kind="test" lines="1-810" reason="Test pattern reference: 39 unit tests with model validation, mocked dependencies, error handling tests."/>
+      <file path="raglite/insights/" kind="directory" reason="NEW DIRECTORY - Create raglite/insights/__init__.py and raglite/insights/anomalies.py"/>
+    </code>
+    <dependencies>
+      <python>
+        <package name="numpy" version="via sentence-transformers" usage="Z-score calculation: np.mean(), np.std()"/>
+        <package name="pydantic" version=">=2.0,<3.0" usage="Anomaly, AnomalyDetectionResult, AnomalySeverity models"/>
+        <package name="mistralai" version=">=1.9.11" usage="LLM explanation via get_mistral_client()"/>
+        <package name="pytest" version="8.4.2" usage="Unit and integration tests"/>
+        <package name="pytest-asyncio" version="1.2.0" usage="Async test support"/>
+        <package name="pytest-cov" version="5.0.0" usage="Coverage measurement (80% target)"/>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="Tech Spec Section 3.3">File size: ~50 lines for raglite/insights/anomalies.py</constraint>
+    <constraint source="Tech Spec Section 3.3">Z-score threshold: |z| > 2 for anomaly detection</constraint>
+    <constraint source="Tech Spec Section 3.3">Severity: CRITICAL if |z| > 3, MODERATE if |z| > 2</constraint>
+    <constraint source="Tech Spec Section 3.3">Accuracy target: 85%+ on sample data with known outliers</constraint>
+    <constraint source="Tech Spec Section 3.3">False positive rate: less than 10%</constraint>
+    <constraint source="DoD">Test coverage: new code >= 80%</constraint>
+    <constraint source="Coding Standards">Type hints mandatory on all function signatures</constraint>
+    <constraint source="Coding Standards">Google-style docstrings on all public functions</constraint>
+    <constraint source="Coding Standards">Structured logging with extra={} for context</constraint>
+    <constraint source="CLAUDE.md">No abstractions, no frameworks, no custom wrappers - direct SDK usage only</constraint>
+    <constraint source="CLAUDE.md">Target ~600-800 lines total for MVP - keep implementation minimal</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="TimeSeriesData" kind="pydantic model" path="raglite/shared/models.py:322-343">
+      <signature>class TimeSeriesData(BaseModel): metric_name: str, points: list[TimeSeriesPoint], interval: str, source_documents: list[str]</signature>
+      <usage>Input to detect_anomalies() function - provides time-series data for analysis</usage>
+    </interface>
+    <interface name="TimeSeriesPoint" kind="pydantic model" path="raglite/shared/models.py:306-319">
+      <signature>class TimeSeriesPoint(BaseModel): date: datetime, value: float, label: str | None</signature>
+      <usage>Individual data point within TimeSeriesData - extract value and date for Z-score calculation</usage>
+    </interface>
+    <interface name="get_mistral_client" kind="function" path="raglite/shared/clients.py:397-468">
+      <signature>def get_mistral_client() -> Mistral</signature>
+      <usage>Get Mistral client for LLM-powered anomaly explanation. Call client.chat.complete() with explanation prompt.</usage>
+    </interface>
+    <interface name="get_logger" kind="function" path="raglite/shared/logging.py">
+      <signature>def get_logger(name: str) -> logging.Logger</signature>
+      <usage>Create logger for structured logging: logger.info("Anomaly detected", extra={"metric": m, "z_score": z})</usage>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing follows pytest + pytest-asyncio pattern. Unit tests mock external dependencies (Mistral client).
+      Integration tests validate accuracy on synthetic data with known outliers.
+      Target: 30+ tests (similar to Story 4.4 with 49 tests). Coverage: >= 80% on new code.
+      Use @pytest.mark.asyncio for async functions. Use pytest.fixture for reusable test data.
+      Follow test naming: test_{module}_{function}_{scenario}.py
+    </standards>
+    <locations>
+      <location>tests/unit/test_anomaly_detection.py</location>
+      <location>tests/integration/test_anomaly_detection_integration.py</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test detect_anomalies() returns AnomalyDetectionResult with correct structure</idea>
+      <idea ac="1">Test detect_anomalies() handles empty TimeSeriesData gracefully</idea>
+      <idea ac="1">Test detect_anomalies() raises ValueError for less than 3 data points</idea>
+      <idea ac="2">Test synthetic data [10, 10.5, 11, 25, 11.2, 10.9, 11.1, 3] identifies outliers 25 and 3</idea>
+      <idea ac="2">Test normal data [10, 10.5, 11, 10.8, 11.2, 10.9, 11.1, 10.7] returns no anomalies</idea>
+      <idea ac="3">Test Z-score > 3 returns CRITICAL severity</idea>
+      <idea ac="3">Test Z-score between 2 and 3 returns MODERATE severity</idea>
+      <idea ac="3">Test AnomalySeverity enum has MINOR, MODERATE, CRITICAL values</idea>
+      <idea ac="4">Test Anomaly model has all required fields: date, metric, value, expected_value, z_score, severity, reason</idea>
+      <idea ac="4">Test structured logging emits anomaly context with extra={}</idea>
+      <idea ac="4">Test explain_anomaly() calls Mistral client with correct prompt</idea>
+      <idea ac="5">Integration test: calculate precision/recall on labeled test dataset</idea>
+      <idea ac="5">Integration test: verify 85%+ detection accuracy on synthetic anomalies</idea>
+      <idea ac="5">Integration test: verify less than 10% false positive rate</idea>
+      <idea ac="5">Integration test: end-to-end from TimeSeriesData to AnomalyDetectionResult</idea>
+    </ideas>
+  </tests>
+</story-context>

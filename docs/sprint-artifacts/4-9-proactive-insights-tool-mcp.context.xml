@@ -1,0 +1,225 @@
+<story-context id="4-9-proactive-insights-tool-mcp" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>9</storyId>
+    <title>Proactive Insights Tool (MCP)</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-9-proactive-insights-tool-mcp.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to request proactive insights via MCP</iWant>
+    <soThat>the system tells me what I should know about the current financial state</soThat>
+    <tasks>
+      <task id="1" title="Design MCP request/response models">
+        <subtask id="1.1">Define InsightsQueryRequest model in raglite/shared/models.py</subtask>
+        <subtask id="1.2">Define InsightsQueryResponse model with insights, recommendations, formatted_summary</subtask>
+      </task>
+      <task id="2" title="Implement get_financial_insights MCP tool">
+        <subtask id="2.1">Add MCP tool decorator and function in raglite/main.py</subtask>
+        <subtask id="2.2">Implement async function signature</subtask>
+        <subtask id="2.3">Integrate with existing modules: generate_insights(), generate_recommendations(), detect_anomalies(), analyze_trends()</subtask>
+        <subtask id="2.4">Implement category filtering (InsightCategory enum)</subtask>
+        <subtask id="2.5">Implement time period parsing</subtask>
+        <subtask id="2.6">Apply limit parameter (default 5, max 20)</subtask>
+      </task>
+      <task id="3" title="Implement natural language query parsing">
+        <subtask id="3.1">Implement parse_insights_query() helper</subtask>
+        <subtask id="3.2">Support queries: risks, opportunities, trends, anomalies</subtask>
+        <subtask id="3.3">Use regex patterns first, fallback for ambiguous queries</subtask>
+      </task>
+      <task id="4" title="Implement conversational formatting">
+        <subtask id="4.1">Implement format_insights_for_display() helper</subtask>
+        <subtask id="4.2">Generate formatted_summary with executive summary</subtask>
+        <subtask id="4.3">Format for Claude/LLM consumption</subtask>
+      </task>
+      <task id="5" title="Structured logging and observability">
+        <subtask id="5.1">Add structured logging with extra={} context</subtask>
+        <subtask id="5.2">Log fields: category_filter, time_period, limit, counts, generation_time_ms</subtask>
+        <subtask id="5.3">Add timing metrics</subtask>
+      </task>
+      <task id="6" title="Unit tests">
+        <subtask id="6.1">Create tests/unit/test_proactive_insights_mcp.py</subtask>
+        <subtask id="6.2">Test model validation</subtask>
+        <subtask id="6.3">Test MCP tool with mocked dependencies</subtask>
+        <subtask id="6.4-6.11">Test filtering, parsing, formatting, edge cases</subtask>
+      </task>
+      <task id="7" title="Integration tests">
+        <subtask id="7.1">Create tests/integration/test_proactive_insights_mcp_integration.py</subtask>
+        <subtask id="7.2-7.7">Test end-to-end flows, query routing, performance</subtask>
+      </task>
+      <task id="8" title="Documentation and cleanup">
+        <subtask id="8.1">Add Google-style docstrings</subtask>
+        <subtask id="8.2">Update story file with Dev Agent Record</subtask>
+        <subtask id="8.3">Verify linting passes</subtask>
+        <subtask id="8.4">Update main.py module docstring</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">MCP tool defined: "get_financial_insights" with optional filter parameters (category, time period). Validation: Unit test - tool registered with FastMCP, accepts InsightsQueryRequest.</criterion>
+    <criterion id="AC2">Tool returns ranked list of insights with supporting data. Validation: Unit test - response includes List[Insight] with priority ranking and supporting_data dict.</criterion>
+    <criterion id="AC3">Default query returns top 3-5 most important insights. Validation: Unit test - default limit=5, results sorted by priority ascending (1=highest).</criterion>
+    <criterion id="AC4">Insights formatted for conversational display. Validation: Unit test - response includes formatted_summary string suitable for LLM response.</criterion>
+    <criterion id="AC5">User testing validates insight relevance and usefulness. Validation: Integration test - test queries return relevant insights matching query context.</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/prd/epic-4-forecasting-proactive-insights.md" title="Epic 4 PRD" section="Story 4.9: Proactive Insights Tool (MCP)">
+        MCP tool definition: "get_financial_insights" with filter parameters. Returns ranked insights formatted for conversational display.
+      </doc>
+      <doc path="docs/architecture/6-complete-reference-implementation.md" title="Reference Implementation" section="MCP Server Pattern">
+        FastMCP server setup with @mcp.tool() decorator, Pydantic models for validation, structured logging with extra={}.
+      </doc>
+      <doc path="docs/architecture/coding-standards.md" title="Coding Standards" section="All">
+        Type hints mandatory, Google-style docstrings, structured logging with extra={}, Pydantic models for data validation, async/await for I/O.
+      </doc>
+      <doc path="docs/architecture/testing-strategy.md" title="Testing Strategy" section="Testing Pyramid">
+        80% unit tests (mocked dependencies), 15% integration tests (service integration), 5% E2E tests.
+      </doc>
+    </docs>
+
+    <code>
+      <file path="raglite/main.py" kind="MCP Server" symbol="get_financial_forecast" lines="1539-1761" reason="MCP tool pattern reference - follow same structure for get_financial_insights">
+        Pattern: @mcp.tool() decorator, Pydantic request/response models, parse_forecast_query() helper, structured logging, error handling with QueryError
+      </file>
+      <file path="raglite/insights/proactive.py" kind="module" symbol="generate_insights, filter_insights" lines="292-503" reason="Direct integration - generate insights from anomalies, trends, forecasts">
+        Functions to integrate: generate_insights(anomalies, trends, forecasts) returns InsightGenerationResult, filter_insights(insights, category, max_priority, limit)
+      </file>
+      <file path="raglite/insights/recommendations.py" kind="module" symbol="generate_recommendations, filter_recommendations" lines="270-385" reason="Direct integration - generate strategic recommendations from insights">
+        Functions to integrate: generate_recommendations(insights, context) returns RecommendationResult, filter_recommendations(recommendations, category, min_impact, limit)
+      </file>
+      <file path="raglite/insights/anomalies.py" kind="module" symbol="detect_anomalies" lines="1-100" reason="Integration - detect anomalies in time-series data">
+        Function: detect_anomalies(time_series_data) returns AnomalyDetectionResult with list of Anomaly objects
+      </file>
+      <file path="raglite/insights/trends.py" kind="module" symbol="analyze_trends" lines="1-200" reason="Integration - identify trends and patterns">
+        Function: analyze_trends(time_series_list) returns TrendAnalysisResult with list of Trend objects
+      </file>
+      <file path="raglite/shared/models.py" kind="models" symbol="Insight, Recommendation, InsightCategory, RecommendationCategory" lines="815-996" reason="Existing models to reuse and extend">
+        Models: Insight, InsightCategory, InsightGenerationResult, Recommendation, RecommendationCategory, RecommendationResult - all ready to use
+      </file>
+      <file path="raglite/shared/models.py" kind="models" symbol="ForecastQueryRequest, ForecastQueryResponse" lines="547-645" reason="MCP request/response pattern to follow">
+        Pattern: Optional str fields with Field() descriptions, ge/le constraints, factory methods like from_forecast_result()
+      </file>
+      <file path="raglite/insights/__init__.py" kind="module exports" symbol="__all__" lines="34-58" reason="Add new exports for Story 4.9">
+        Update __all__ to export any new functions added
+      </file>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="fastmcp" version="2.12.4" purpose="MCP server framework with @mcp.tool() decorator"/>
+        <package name="pydantic" version=">=2.0,<3.0" purpose="Request/response model validation"/>
+        <package name="mistralai" version=">=1.9.11" purpose="LLM synthesis (already used by Story 4.7/4.8)"/>
+      </python>
+      <internal>
+        <module name="raglite.insights.proactive" purpose="generate_insights(), filter_insights()"/>
+        <module name="raglite.insights.recommendations" purpose="generate_recommendations(), filter_recommendations()"/>
+        <module name="raglite.insights.anomalies" purpose="detect_anomalies()"/>
+        <module name="raglite.insights.trends" purpose="analyze_trends()"/>
+        <module name="raglite.shared.models" purpose="Insight, Recommendation, existing enums and models"/>
+        <module name="raglite.shared.logging" purpose="get_logger() for structured logging"/>
+        <module name="raglite.shared.clients" purpose="get_mistral_client() if LLM needed"/>
+        <module name="raglite.forecasting.timeseries_extract" purpose="extract_timeseries() for time-series data"/>
+      </internal>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Follow MCP tool pattern from get_financial_forecast() in main.py - same structure, logging, error handling</constraint>
+    <constraint type="architecture">Add models to raglite/shared/models.py - do not create new model files</constraint>
+    <constraint type="architecture">Add MCP tool to raglite/main.py - keep tool count at 7 total</constraint>
+    <constraint type="simplicity">Target ~100-150 lines in main.py for the tool, ~50-70 lines in models.py for new models</constraint>
+    <constraint type="simplicity">Reuse existing generate_insights() and generate_recommendations() - do not recreate logic</constraint>
+    <constraint type="testing">Unit tests must mock external dependencies (Mistral LLM, Qdrant, PostgreSQL)</constraint>
+    <constraint type="testing">Integration tests use test database (port 6335/5433 per Story 4.0.5)</constraint>
+    <constraint type="performance">Query response time &lt;5s p50 for insight query (per NFR13)</constraint>
+    <constraint type="coding">Type hints mandatory for all functions</constraint>
+    <constraint type="coding">Google-style docstrings for all public functions</constraint>
+    <constraint type="coding">Structured logging with extra={} context</constraint>
+    <constraint type="coding">Use pydantic Field() with descriptions for all model fields</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="get_financial_insights" kind="MCP Tool">
+      <signature>@mcp.tool() async def get_financial_insights(request: InsightsQueryRequest) -> InsightsQueryResponse</signature>
+      <description>MCP tool for conversational insight queries combining anomaly detection, trend analysis, and strategic recommendations</description>
+    </interface>
+    <interface name="InsightsQueryRequest" kind="Pydantic Model">
+      <signature>class InsightsQueryRequest(BaseModel): category, time_period, limit, include_recommendations, query</signature>
+      <description>Request model for MCP tool - supports structured and natural language queries</description>
+    </interface>
+    <interface name="InsightsQueryResponse" kind="Pydantic Model">
+      <signature>class InsightsQueryResponse(BaseModel): insights, recommendations, total_insights, total_recommendations, formatted_summary, time_period_analyzed, generation_time_ms, source_documents</signature>
+      <description>Response model with ranked insights, recommendations, and LLM-friendly summary</description>
+    </interface>
+    <interface name="parse_insights_query" kind="Helper Function">
+      <signature>def parse_insights_query(query: str) -> tuple[InsightCategory | None, str | None]</signature>
+      <description>Extract category and time period from natural language query</description>
+    </interface>
+    <interface name="format_insights_for_display" kind="Helper Function">
+      <signature>def format_insights_for_display(insights: list[Insight], recommendations: list[Recommendation]) -> str</signature>
+      <description>Generate LLM-friendly formatted summary with priority indicators</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      pytest + pytest-asyncio for async testing. Mock external dependencies (Mistral LLM, Qdrant, PostgreSQL).
+      Follow existing test patterns from tests/unit/test_proactive_insights.py and tests/unit/test_strategic_recommendations.py.
+      Target >=80% coverage on new code. Use @pytest.mark.asyncio for async tests.
+    </standards>
+    <locations>
+      <location>tests/unit/test_proactive_insights_mcp.py</location>
+      <location>tests/integration/test_proactive_insights_mcp_integration.py</location>
+    </locations>
+    <ideas>
+      <idea acId="AC1">Test InsightsQueryRequest model validation - category enum values, limit range 1-20</idea>
+      <idea acId="AC1">Test MCP tool registration with FastMCP - tool discoverable</idea>
+      <idea acId="AC2">Test InsightsQueryResponse serialization - insights sorted by priority, supporting_data included</idea>
+      <idea acId="AC2">Test get_financial_insights() with mocked generate_insights() and generate_recommendations()</idea>
+      <idea acId="AC3">Test default limit=5 returns exactly 5 insights when more available</idea>
+      <idea acId="AC3">Test priority sorting - priority 1 (critical) appears before priority 5 (low)</idea>
+      <idea acId="AC4">Test formatted_summary includes executive summary, priority indicators</idea>
+      <idea acId="AC4">Test format_insights_for_display() output structure</idea>
+      <idea acId="AC5">Integration test: query "What risks should I know about?" returns RISK category insights</idea>
+      <idea acId="AC5">Integration test: query "Any opportunities?" returns OPPORTUNITY category insights</idea>
+      <idea acId="AC1,AC2">Test parse_insights_query() extracts category from various natural language inputs</idea>
+      <idea acId="AC1">Test time_period parsing: "last_quarter", "ytd", "current_quarter"</idea>
+      <idea acId="AC2,AC3">Test edge cases: empty insights, single insight, no recommendations</idea>
+      <idea acId="AC5">Test processing time &lt;5s for typical query</idea>
+    </ideas>
+  </tests>
+
+  <learnings>
+    <learning source="Story 4.8" title="Recommendation Infrastructure Complete">
+      generate_recommendations() and all supporting functions (categorize, impact scoring, filter) are ready to use.
+      DO NOT recreate - call directly from raglite/insights/recommendations.py.
+    </learning>
+    <learning source="Story 4.8" title="Model Patterns Established">
+      Recommendation, RecommendationCategory, RecommendationResult models follow same pattern needed for MCP response.
+      Use same Field() patterns with descriptions.
+    </learning>
+    <learning source="Story 4.8" title="LLM Synthesis Pattern">
+      synthesize_recommendation() uses get_mistral_client() with structured prompts.
+      Can reuse for format_insights_for_display() if needed.
+    </learning>
+    <learning source="Story 4.8" title="Test Coverage Pattern">
+      79 tests (62 unit + 17 integration) achieved 100% expert alignment.
+      Target 50+ tests, >=80% coverage.
+    </learning>
+    <learning source="Story 4.4" title="MCP Tool Pattern">
+      get_financial_forecast() demonstrates exact pattern: parse natural language, integrate with backend modules,
+      return structured response with timing metrics and source documents.
+    </learning>
+    <learning source="Story 4.7" title="Insight Infrastructure Complete">
+      generate_insights() and filter_insights() are ready to use.
+      InsightGenerationResult contains insights sorted by priority.
+    </learning>
+  </learnings>
+</story-context>

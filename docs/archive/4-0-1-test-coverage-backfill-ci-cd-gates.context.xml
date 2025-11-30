@@ -1,0 +1,554 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Story Context: 4.0.1 - Test Coverage Backfill & CI/CD Gates
+  Generated: 2025-11-23
+  Epic: 4 (Forecasting & Proactive Insights - Prep Story)
+  Priority: CRITICAL (Epic 3 Retrospective Action Item 1)
+-->
+
+<story-context>
+  <meta>
+    <story-id>4.0.1</story-id>
+    <story-key>4-0-1-test-coverage-backfill-ci-cd-gates</story-key>
+    <story-title>Test Coverage Backfill &amp; CI/CD Gates</story-title>
+    <epic-id>4</epic-id>
+    <status>drafted</status>
+    <priority>CRITICAL</priority>
+    <origin>Epic 3 Retrospective (2025-11-18) - Action Item 1</origin>
+  </meta>
+
+  <story>
+    <as-a>developer</as-a>
+    <i-want>comprehensive test coverage with automated CI/CD gates</i-want>
+    <so-that>code quality is maintained and regression bugs are prevented as the codebase scales</so-that>
+  </story>
+
+  <acceptance-criteria>
+    <criterion id="AC1">
+      <description>scripts/ test coverage ≥60% (currently 0%)</description>
+      <details>
+        - All scripts in scripts/ directory have unit tests
+        - Critical scripts (init-qdrant.py, ingestion scripts, validation scripts) have ≥80% coverage
+        - Test coverage measured via pytest --cov=scripts
+        - Scripts tested in isolation (mocked dependencies)
+      </details>
+    </criterion>
+
+    <criterion id="AC2">
+      <description>Overall project coverage ≥40% (currently 22%, target +18 percentage points)</description>
+      <details>
+        - Coverage increase focused on high-risk modules (ingestion, retrieval, shared)
+        - Backfill tests prioritize business-critical paths
+        - Coverage measured via pytest --cov=raglite --cov=scripts
+        - Coverage report shows module-by-module breakdown
+      </details>
+    </criterion>
+
+    <criterion id="AC3">
+      <description>CI/CD coverage gate enforces new code ≥80% (pytest-cov in GitHub Actions)</description>
+      <details>
+        - GitHub Actions workflow fails if new code coverage &lt;80%
+        - Coverage diff calculated (files changed in PR vs baseline)
+        - PR cannot merge if new code coverage &lt;80%
+        - Coverage gate runs on every PR (not just main branch)
+      </details>
+    </criterion>
+
+    <criterion id="AC4">
+      <description>CI/CD coverage ratchet (overall coverage cannot decrease between PRs)</description>
+      <details>
+        - Ratchet mechanism prevents coverage regression
+        - Overall project coverage tracked in CI artifacts
+        - PR fails if overall coverage decreases (even by 0.1%)
+        - Ratchet enforced on main branch merges
+      </details>
+    </criterion>
+
+    <criterion id="AC5">
+      <description>Coverage report displayed in PR comments (GitHub Actions integration)</description>
+      <details>
+        - Bot comments on PR with coverage summary
+        - Coverage diff highlighted (lines added with/without tests)
+        - Module-level coverage changes shown in table format
+        - Link to detailed HTML coverage report in artifacts
+      </details>
+    </criterion>
+  </acceptance-criteria>
+
+  <tasks>
+    <task id="1" acs="AC1">
+      <description>Backfill tests for scripts/ directory (Day 1)</description>
+      <subtasks>
+        <subtask id="1.1">Audit all scripts in scripts/ (list files, identify coverage gaps)</subtask>
+        <subtask id="1.2">Create tests/unit/test_scripts_init_qdrant.py for init-qdrant.py</subtask>
+        <subtask id="1.3">Create tests/unit/test_scripts_reingest.py for re-ingestion scripts</subtask>
+        <subtask id="1.4">Create tests/unit/test_scripts_validation.py for validation scripts</subtask>
+        <subtask id="1.5">Mock external dependencies (Qdrant client, PostgreSQL client, file I/O)</subtask>
+        <subtask id="1.6">Validate scripts coverage ≥60% via pytest --cov=scripts</subtask>
+      </subtasks>
+    </task>
+
+    <task id="2" acs="AC2">
+      <description>Backfill tests for core modules (Day 2-3)</description>
+      <subtasks>
+        <subtask id="2.1">Identify low-coverage modules (&lt;40%) via pytest --cov report</subtask>
+        <subtask id="2.2">Prioritize backfill targets: ingestion pipeline, retrieval search, shared utilities</subtask>
+        <subtask id="2.3">Backfill raglite/ingestion/pipeline.py (focus on untested branches)</subtask>
+        <subtask id="2.4">Backfill raglite/retrieval/search.py (focus on multi-index search edge cases)</subtask>
+        <subtask id="2.5">Backfill raglite/shared/ utilities (config, logging, models validation)</subtask>
+        <subtask id="2.6">Validate overall coverage ≥40% via pytest --cov=raglite --cov=scripts</subtask>
+      </subtasks>
+    </task>
+
+    <task id="3" acs="AC3">
+      <description>Implement CI/CD coverage gate (Day 4)</description>
+      <subtasks>
+        <subtask id="3.1">Add pytest-cov to GitHub Actions workflow (.github/workflows/ci.yml)</subtask>
+        <subtask id="3.2">Configure coverage diff calculation (compare PR branch vs main)</subtask>
+        <subtask id="3.3">Add coverage gate step: fail if new code &lt;80% coverage</subtask>
+        <subtask id="3.4">Test coverage gate with intentional low-coverage PR (validation)</subtask>
+        <subtask id="3.5">Document coverage gate behavior in docs/testing-guidelines.md</subtask>
+      </subtasks>
+    </task>
+
+    <task id="4" acs="AC4">
+      <description>Implement CI/CD coverage ratchet (Day 4)</description>
+      <subtasks>
+        <subtask id="4.1">Store baseline coverage % in CI artifact (main branch coverage report)</subtask>
+        <subtask id="4.2">Compare PR coverage to baseline (overall project coverage)</subtask>
+        <subtask id="4.3">Add ratchet step: fail if overall coverage decreases</subtask>
+        <subtask id="4.4">Test ratchet with intentional coverage decrease (validation)</subtask>
+        <subtask id="4.5">Document ratchet mechanism in docs/testing-guidelines.md</subtask>
+      </subtasks>
+    </task>
+
+    <task id="5" acs="AC5">
+      <description>Implement coverage PR comment bot (Day 4)</description>
+      <subtasks>
+        <subtask id="5.1">Add GitHub Actions step to generate coverage comment</subtask>
+        <subtask id="5.2">Format coverage summary table (module-level, before/after)</subtask>
+        <subtask id="5.3">Highlight coverage diff (lines added with/without tests)</subtask>
+        <subtask id="5.4">Add link to HTML coverage report artifact</subtask>
+        <subtask id="5.5">Test PR comment bot on sample PR</subtask>
+        <subtask id="5.6">Configure bot permissions (GITHUB_TOKEN scopes)</subtask>
+      </subtasks>
+    </task>
+
+    <task id="6" acs="AC1,AC2,AC3,AC4,AC5">
+      <description>Validation and documentation (Day 5)</description>
+      <subtasks>
+        <subtask id="6.1">Run full test suite with coverage enabled: pytest --cov</subtask>
+        <subtask id="6.2">Verify overall coverage ≥40% (AC2 met)</subtask>
+        <subtask id="6.3">Verify scripts coverage ≥60% (AC1 met)</subtask>
+        <subtask id="6.4">Create test PR to validate coverage gate (AC3), ratchet (AC4), comment bot (AC5)</subtask>
+        <subtask id="6.5">Update README.md with coverage commands and CI/CD gate documentation</subtask>
+        <subtask id="6.6">Document coverage improvement roadmap (Epic 4: 40% → Epic 5: 60% → Production: 80%)</subtask>
+      </subtasks>
+    </task>
+  </tasks>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/epic-3-retrospective-2025-11-18.md</path>
+        <title>Epic 3 Retrospective</title>
+        <section>ACTION ITEM 1: Test Coverage Backfill &amp; CI/CD Gates (lines 150-180)</section>
+        <snippet>
+          CRITICAL finding: Overall project test coverage is 22%, with some modules at 0% coverage (scripts/).
+          Root causes: No coverage gates in CI/CD, no Definition of Done requirement for 80% coverage,
+          focus on acceptance criteria tests but not overall coverage.
+          Strategic solution: 3-tier improvement (Epic 4: 40%, Epic 5: 60%, Production: 80%).
+        </snippet>
+      </doc>
+
+      <doc>
+        <path>docs/sprint-artifacts/3-8-agentic-workflow-test-suite.md</path>
+        <title>Story 3.8: Agentic Workflow Test Suite</title>
+        <section>Testing Best Practices (lines 709-717)</section>
+        <snippet>
+          Exemplary test suite with parameterized testing, fixture-based data, shared metrics aggregation,
+          meaningful assertions, CI/CD integration with 30-day artifact retention.
+          Patterns: @pytest.mark.parametrize, TestMetrics class, assert with f-string error messages.
+        </snippet>
+      </doc>
+
+      <doc>
+        <path>docs/architecture/coding-standards.md</path>
+        <title>Coding Standards</title>
+        <section>Testing Requirements</section>
+        <snippet>
+          Type hints required on all functions. Google-style docstrings. pytest 8.4.2 with pytest-asyncio 1.2.0.
+          Structured logging with extra={}. Specific exceptions (no bare except).
+          Async/await for I/O operations. Pydantic models for data structures.
+        </snippet>
+      </doc>
+
+      <doc>
+        <path>README.md</path>
+        <title>Project README</title>
+        <section>Testing (lines 259-299)</section>
+        <snippet>
+          Test suite: ~358 tests (200 unit, 115 integration, 28 e2e).
+          Commands: pytest tests/, pytest --cov=raglite --cov-report=html.
+          Slow tests marked with @pytest.mark.slow. CI workflow runs all tests.
+        </snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>scripts/</path>
+        <kind>directory</kind>
+        <symbol>100+ Python scripts</symbol>
+        <lines>N/A</lines>
+        <reason>0% coverage - primary backfill target for AC1. Includes critical scripts: init-qdrant.py, ingest-*.py, run-accuracy-tests.py</reason>
+      </artifact>
+
+      <artifact>
+        <path>tests/integration/test_agentic_workflow_suite.py</path>
+        <kind>test</kind>
+        <symbol>Parameterized test patterns</symbol>
+        <lines>1-389</lines>
+        <reason>Reference for testing best practices: @pytest.mark.parametrize, TestMetrics aggregation, CI/CD integration patterns</reason>
+      </artifact>
+
+      <artifact>
+        <path>.github/workflows/ci.yml</path>
+        <kind>ci-config</kind>
+        <symbol>GitHub Actions workflow</symbol>
+        <lines>569-708 (JOB 8 example)</lines>
+        <reason>CI/CD integration pattern reference. Will add JOB 9 for coverage enforcement (AC3-AC5)</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>module</kind>
+        <symbol>Document ingestion pipeline</symbol>
+        <lines>1-1936</lines>
+        <reason>High-priority backfill target (AC2). Complex module with untested branches</reason>
+      </artifact>
+
+      <artifact>
+        <path>raglite/retrieval/search.py</path>
+        <kind>module</kind>
+        <symbol>Multi-index search</symbol>
+        <lines>N/A</lines>
+        <reason>High-priority backfill target (AC2). Multi-index search edge cases need coverage</reason>
+      </artifact>
+
+      <artifact>
+        <path>tests/conftest.py</path>
+        <kind>test-config</kind>
+        <symbol>Shared pytest configuration</symbol>
+        <lines>N/A</lines>
+        <reason>Shared fixtures for test backfill. Patterns for mocking Qdrant, PostgreSQL, file I/O</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="pytest" version="8.4.2" />
+        <package name="pytest-cov" version="5.0.0" />
+        <package name="pytest-asyncio" version="1.2.0" />
+        <package name="pytest-mock" version=">=3.12,&lt;4.0" />
+        <package name="pytest-xdist" version=">=3.5,&lt;4.0" />
+        <package name="qdrant-client" version="1.15.1" />
+        <package name="psycopg2-binary" version=">=2.9,&lt;3.0" />
+        <package name="docling" version="2.55.1" />
+      </python>
+
+      <github-actions>
+        <action name="actions/checkout" version="v4" />
+        <action name="actions/upload-artifact" version="v4" />
+        <action name="py-cov-action/python-coverage-comment-action" version="v3" usage="AC5 PR comment bot" />
+      </github-actions>
+    </dependencies>
+  </artifacts>
+
+  <interfaces>
+    <interface>
+      <name>pytest --cov</name>
+      <kind>command-line</kind>
+      <signature>pytest --cov=raglite --cov=scripts --cov-report=html --cov-report=term --cov-report=json</signature>
+      <path>pyproject.toml (pytest-cov configuration)</path>
+      <notes>Coverage measurement command. --cov-report=json needed for CI/CD diff calculation</notes>
+    </interface>
+
+    <interface>
+      <name>GitHub Actions workflow syntax</name>
+      <kind>ci-config</kind>
+      <signature>
+        jobs:
+          test-coverage:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Run tests with coverage
+              - name: Coverage gate (new code)
+              - name: Coverage ratchet (overall)
+              - name: Post PR comment
+      </signature>
+      <path>.github/workflows/ci.yml</path>
+      <notes>CI/CD workflow structure for coverage enforcement (AC3-AC5)</notes>
+    </interface>
+
+    <interface>
+      <name>pytest.mark.parametrize</name>
+      <kind>decorator</kind>
+      <signature>@pytest.mark.parametrize("test_input,expected", [(input1, output1), ...])</signature>
+      <path>tests/integration/test_agentic_workflow_suite.py:172</path>
+      <notes>Pattern for reducing test duplication (Story 3.8 best practice)</notes>
+    </interface>
+
+    <interface>
+      <name>unittest.mock</name>
+      <kind>library</kind>
+      <signature>from unittest.mock import Mock, patch, AsyncMock</signature>
+      <path>pytest-mock library (installed)</path>
+      <notes>Mock external dependencies (Qdrant, PostgreSQL, file I/O) for script testing (AC1)</notes>
+    </interface>
+  </interfaces>
+
+  <constraints>
+    <constraint>
+      <type>coverage-targets</type>
+      <description>Coverage improvement roadmap (from Epic 3 Retrospective)</description>
+      <details>
+        - AC1: scripts/ ≥60%, critical scripts ≥80%
+        - AC2: overall project ≥40% (from 22%, +18 points)
+        - AC3: new code ≥80% (enforced via CI/CD gate)
+        - AC4: overall coverage ratchet (cannot decrease)
+        - Long-term: Epic 5: 60%, Production: 80%
+      </details>
+    </constraint>
+
+    <constraint>
+      <type>testing-standards</type>
+      <description>Type hints, docstrings, async/await patterns</description>
+      <details>
+        - Type hints on all test functions (AC compliance)
+        - Google-style docstrings on test classes/functions
+        - Use pytest.mark.asyncio for async tests
+        - Mock external I/O (no real Qdrant/PostgreSQL connections in unit tests)
+        - Fixtures for shared test data (tests/fixtures/ pattern)
+      </details>
+    </constraint>
+
+    <constraint>
+      <type>ci-cd-integration</type>
+      <description>GitHub Actions workflow requirements</description>
+      <details>
+        - pytest-cov with JSON output (coverage diff calculation)
+        - Baseline coverage stored as artifact (main branch .coverage.json)
+        - Coverage gate: fail if new code &lt;80%
+        - Coverage ratchet: fail if overall coverage decreases
+        - PR comment bot: py-cov-action/python-coverage-comment-action@v3
+      </details>
+    </constraint>
+
+    <constraint>
+      <type>test-organization</type>
+      <description>Test suite structure and naming</description>
+      <details>
+        - Unit tests: tests/unit/ (no external dependencies)
+        - Integration tests: tests/integration/ (requires Qdrant/PostgreSQL)
+        - Test file naming: test_*.py or *_test.py
+        - Test function naming: test_* prefix
+        - Fixtures: tests/conftest.py (shared) or local conftest.py (module-specific)
+      </details>
+    </constraint>
+  </constraints>
+
+  <tests>
+    <standards>
+      Use pytest 8.4.2 with pytest-cov 5.0.0 for coverage measurement.
+      All tests require type hints and Google-style docstrings.
+      Mock external dependencies (Qdrant client, PostgreSQL client, file I/O) using pytest-mock.
+      Follow Story 3.8 patterns: parameterized tests (@pytest.mark.parametrize),
+      fixture-based data (tests/fixtures/), shared metrics aggregation,
+      meaningful assertions with f-string error messages.
+    </standards>
+
+    <locations>
+      - tests/unit/ (unit tests, no external dependencies)
+      - tests/integration/ (integration tests, requires services)
+      - tests/e2e/ (end-to-end tests)
+      - tests/conftest.py (shared fixtures)
+      - tests/fixtures/ (test data files)
+    </locations>
+
+    <ideas>
+      <idea acs="AC1">
+        Create tests/unit/test_scripts_init_qdrant.py to test init-qdrant.py script logic.
+        Mock Qdrant client, test collection creation, index initialization, error handling.
+      </idea>
+
+      <idea acs="AC1">
+        Create tests/unit/test_scripts_reingest.py to test re-ingestion scripts.
+        Mock document loading, chunking, embedding, vector storage. Test different document types.
+      </idea>
+
+      <idea acs="AC1">
+        Create tests/unit/test_scripts_validation.py to test accuracy validation scripts (run-accuracy-tests.py).
+        Mock ground truth loading, query execution, accuracy calculation.
+      </idea>
+
+      <idea acs="AC2">
+        Backfill raglite/ingestion/pipeline.py tests - focus on untested branches (error paths, edge cases).
+        Test table-aware chunking, adaptive framework selection, metadata extraction.
+      </idea>
+
+      <idea acs="AC2">
+        Backfill raglite/retrieval/search.py tests - focus on multi-index search edge cases.
+        Test query classification, hybrid search scoring, cross-encoder re-ranking.
+      </idea>
+
+      <idea acs="AC2">
+        Backfill raglite/shared/ utilities tests - config loading, logging, Pydantic model validation.
+        Test environment variable handling, structured logging context.
+      </idea>
+
+      <idea acs="AC3,AC4,AC5">
+        Create scripts/check_coverage_diff.py to calculate coverage diff (new code only).
+        Compare .coverage.json vs .coverage-baseline.json, fail if new code &lt;80%.
+      </idea>
+
+      <idea acs="AC3,AC4,AC5">
+        Create scripts/check_coverage_ratchet.py to enforce coverage ratchet.
+        Compare overall coverage to baseline, fail if decreased.
+      </idea>
+
+      <idea acs="AC3,AC4,AC5">
+        Update .github/workflows/ci.yml with JOB 9: Test Coverage Enforcement.
+        Run pytest --cov, calculate diff, enforce gate/ratchet, post PR comment.
+      </idea>
+    </ideas>
+  </tests>
+
+  <development-notes>
+    <note>
+      <title>Epic 3 Retrospective Context (CRITICAL)</title>
+      <content>
+        This story addresses Action Item 1 from Epic 3 Retrospective (2025-11-18),
+        identified as the CRITICAL blocker for Epic 4 quality assurance.
+
+        Problem: Overall coverage 22%, scripts/ at 0%. No CI/CD coverage gates.
+        No Definition of Done requirement for 80% coverage.
+
+        Root Causes: Focus on acceptance criteria tests (does story work?)
+        but not overall coverage (is every line tested?). No enforcement mechanism.
+
+        Strategic Solution: 3-tier approach:
+        1. Immediate backfill (Epic 4: 40% overall, scripts 60%)
+        2. CI/CD enforcement (new code ≥80%, ratchet prevents regression)
+        3. Long-term incremental improvement (Epic 5: 60%, Production: 80%)
+      </content>
+    </note>
+
+    <note>
+      <title>Story 3.8 Testing Patterns (Reference)</title>
+      <content>
+        Story 3.8 marked "EXEMPLARY" by senior developer review.
+        Reuse these patterns:
+
+        1. Parameterized testing: @pytest.mark.parametrize reduces duplication
+        2. Fixture-based data: tests/fixtures/*.json for test scenarios
+        3. Shared metrics: TestMetrics class aggregates results
+        4. Meaningful assertions: assert X, f"Message with {variable}"
+        5. CI/CD integration: GitHub Actions with artifact retention
+
+        Files to reference:
+        - tests/integration/test_agentic_workflow_suite.py (389 lines, parameterized tests)
+        - .github/workflows/ci.yml (JOB 8: lines 569-708, CI/CD integration example)
+        - scripts/generate_failure_report.py (256 lines, reporting script pattern)
+      </content>
+    </note>
+
+    <note>
+      <title>Scripts Directory Scope (100+ files)</title>
+      <content>
+        AC1 target: scripts/ ≥60% coverage, critical scripts ≥80%.
+
+        Critical scripts (≥80% target):
+        - init-qdrant.py (Qdrant collection initialization)
+        - ingest-*.py (document ingestion scripts)
+        - run-accuracy-tests.py (accuracy validation)
+        - reingest-*.py (re-ingestion workflows)
+
+        Testing approach:
+        - Unit tests with mocked dependencies (no real Qdrant/PostgreSQL)
+        - Mock file I/O (use pytest tmp_path fixture)
+        - Parameterize tests for different document types, error scenarios
+        - Focus on business logic, not I/O operations
+      </content>
+    </note>
+
+    <note>
+      <title>Coverage Measurement Commands</title>
+      <content>
+        # Measure overall coverage (AC2)
+        pytest --cov=raglite --cov=scripts --cov-report=html --cov-report=term
+
+        # Measure scripts coverage only (AC1)
+        pytest --cov=scripts --cov-report=term
+
+        # Generate JSON for CI/CD (AC3-AC5)
+        pytest --cov=raglite --cov=scripts --cov-report=json
+
+        # View HTML report
+        open htmlcov/index.html
+
+        # Coverage diff calculation (new code only)
+        python scripts/check_coverage_diff.py --baseline=.coverage-baseline.json --current=.coverage.json --threshold=80
+
+        # Coverage ratchet check (overall coverage)
+        python scripts/check_coverage_ratchet.py --baseline=.coverage-baseline.json --current=.coverage.json
+      </content>
+    </note>
+
+    <note>
+      <title>CI/CD Workflow Structure (AC3-AC5)</title>
+      <content>
+        Add JOB 9 to .github/workflows/ci.yml:
+
+        test-coverage:
+          runs-on: ubuntu-latest
+          steps:
+            1. Checkout code
+            2. Setup Python + dependencies
+            3. Run pytest --cov (generate .coverage.json)
+            4. Download baseline coverage (.coverage-baseline.json from main branch artifact)
+            5. Coverage gate: python scripts/check_coverage_diff.py (fail if new code &lt;80%)
+            6. Coverage ratchet: python scripts/check_coverage_ratchet.py (fail if overall decreased)
+            7. Post PR comment: py-cov-action/python-coverage-comment-action@v3
+            8. Upload coverage report artifact (30-day retention)
+
+        PR Comment Format:
+        - Overall coverage: X% (±Y% from baseline)
+        - New code coverage: Z% (≥80% target)
+        - Module-level table (before/after)
+        - Link to HTML report artifact
+      </content>
+    </note>
+
+    <note>
+      <title>Coverage Improvement Roadmap</title>
+      <content>
+        Incremental strategy from Epic 3 Retrospective:
+
+        | Epic | Overall Coverage | Increment | New Code |
+        |------|-----------------|-----------|----------|
+        | Epic 3 | 22% | - | ≥80% (new only) |
+        | Epic 4 (this story) | 40% | +18% | ≥80% (enforced) |
+        | Epic 5 | 60% | +20% | ≥80% (enforced) |
+        | Production | 80% | +20% | ≥80% (enforced) |
+
+        Backfill priority:
+        - Epic 4: scripts/, ingestion, retrieval, shared → 40%
+        - Epic 5: MCP server, remaining modules → 60%
+        - Production: edge cases, error paths → 80%
+
+        Rationale: Incremental improvement across epics, maintaining 80%+ on new code while backfilling existing code.
+      </content>
+    </note>
+  </development-notes>
+</story-context>

@@ -1,0 +1,148 @@
+<story-context id="bmm/workflows/4-implementation/story-context" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>1</storyId>
+    <title>Time-Series Data Extraction</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-1-time-series-data-extraction.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>to extract time-series financial data from documents for forecasting</iWant>
+    <soThat>historical patterns can be analyzed and future values predicted</soThat>
+    <tasks>
+      <task id="1" name="Create forecasting module structure" acs="All">
+        <subtask id="1.1">Create raglite/forecasting/__init__.py</subtask>
+        <subtask id="1.2">Create raglite/forecasting/timeseries_extract.py skeleton</subtask>
+        <subtask id="1.3">Add Pydantic models: TimeSeriesData, TimeSeriesPoint to shared/models.py</subtask>
+      </task>
+      <task id="2" name="Implement time-series extraction function" acs="1,2">
+        <subtask id="2.1">Implement extract_timeseries(docs: List[str]) -> TimeSeriesData async function</subtask>
+        <subtask id="2.2">Use Epic 1 retrieval to find time-series mentions in documents</subtask>
+        <subtask id="2.3">Use LLM extraction prompt for metric values with dates</subtask>
+        <subtask id="2.4">Parse LLM response into structured TimeSeriesData</subtask>
+      </task>
+      <task id="3" name="Implement date normalization" acs="3,4">
+        <subtask id="3.1">Create normalize_to_interval function</subtask>
+        <subtask id="3.2">Handle fiscal period labels (Q3 FY24 -> 2024-07-01)</subtask>
+        <subtask id="3.3">Handle diverse date formats</subtask>
+        <subtask id="3.4">Support interval types: monthly, quarterly, yearly</subtask>
+      </task>
+      <task id="4" name="Unit tests" acs="1-4">
+        <subtask id="4.1">Create tests/unit/test_timeseries_extract.py</subtask>
+        <subtask id="4.2">Test extract_timeseries with mock LLM responses</subtask>
+        <subtask id="4.3">Test date normalization with various formats</subtask>
+        <subtask id="4.4">Test fiscal period parsing</subtask>
+        <subtask id="4.5">Achieve 80%+ coverage on new code</subtask>
+      </task>
+      <task id="5" name="Integration tests" acs="5,6">
+        <subtask id="5.1">Create tests/integration/test_timeseries_integration.py</subtask>
+        <subtask id="5.2">Test extraction from test fixture PDF</subtask>
+        <subtask id="5.3">Validate extraction accuracy 90%+</subtask>
+        <subtask id="5.4">Test end-to-end: document -> retrieval -> extraction -> TimeSeriesData</subtask>
+      </task>
+      <task id="6" name="Documentation and cleanup" acs="All">
+        <subtask id="6.1">Add Google-style docstrings to all public functions</subtask>
+        <subtask id="6.2">Update story file with Dev Agent Record</subtask>
+        <subtask id="6.3">Verify all linting passes</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" validation="Unit test">Time-series extraction identifies temporal financial metrics (monthly revenue, quarterly expenses)</criterion>
+    <criterion id="AC2" validation="Unit test">Data points extracted with timestamps and metric labels (TimeSeriesData structure)</criterion>
+    <criterion id="AC3" validation="Unit test">Data normalized to consistent time intervals (monthly, quarterly)</criterion>
+    <criterion id="AC4" validation="Unit test">Extraction handles various date formats and fiscal period labels (Q3 FY24 -> 2024-Q3)</criterion>
+    <criterion id="AC5" validation="Integration test">Extracted data validated against sample documents for 90%+ accuracy</criterion>
+    <criterion id="AC6" validation="Integration test">Integration test validates extraction from financial PDFs</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/prd/epic-4-forecasting-proactive-insights.md" title="Epic 4 PRD" section="Story 4.1" snippet="Time-series extraction identifies temporal financial metrics. Data points extracted with timestamps and metric labels. Handles various date formats and fiscal period labels." />
+      <doc path="docs/archive/tech-spec-epic-4.md" title="Epic 4 Tech Spec" section="3.1 Time-Series Extraction" snippet="Implementation in raglite/forecasting/timeseries_extract.py (~50 lines). Use Epic 1 retrieval to find time-series mentions, LLM extraction for values with dates, normalize to consistent intervals." />
+      <doc path="docs/architecture/3-repository-structure-monolithic.md" title="Repository Structure" section="forecasting module" snippet="raglite/forecasting/ - Forecasting module (Phase 3, ~100 lines) with hybrid.py for Prophet + LLM adjustment." />
+      <doc path="docs/process/definition-of-done.md" title="Definition of Done" section="Testing" snippet="New code must have 80%+ test coverage. Overall project coverage must not decrease (CI/CD enforced ratchet)." />
+      <doc path="docs/archive/4-0-5-database-separation-completion.md" title="Story 4.0.5" section="Implementation Details" snippet="Tests use APP_ENV=test with Qdrant port 6335 and PostgreSQL port 5433. Use small test fixtures for fast execution." />
+    </docs>
+    <code>
+      <file path="raglite/shared/models.py" kind="models" symbol="Chunk, QueryResult, DocumentMetadata" lines="1-356" reason="Add TimeSeriesPoint and TimeSeriesData Pydantic models here alongside existing data models" />
+      <file path="raglite/retrieval/search.py" kind="service" symbol="search_documents, generate_query_embedding" lines="82-100" reason="Reuse search_documents for finding time-series chunks in documents" />
+      <file path="raglite/shared/clients.py" kind="clients" symbol="get_claude_client, get_embedding_model" lines="*" reason="Use get_claude_client for LLM extraction prompts" />
+      <file path="raglite/shared/config.py" kind="config" symbol="Settings, settings" lines="*" reason="Environment configuration including APP_ENV for test/prod database routing" />
+      <file path="tests/fixtures/" kind="fixtures" symbol="sample-4-page.pdf" lines="*" reason="Use existing small test fixture for fast integration tests" />
+    </code>
+    <dependencies>
+      <python>
+        <package name="anthropic" version=">=0.18.0,<1.0.0" purpose="LLM extraction for time-series values" />
+        <package name="pydantic" version=">=2.0,<3.0" purpose="TimeSeriesData and TimeSeriesPoint models" />
+        <package name="python-dateutil" version="*" purpose="Parse diverse date formats and fiscal periods (may need to add if not transitive)" />
+        <package name="sentence-transformers" version="5.1.1" purpose="Embeddings for document retrieval" />
+        <package name="qdrant-client" version="1.15.1" purpose="Vector search for time-series chunks" />
+        <package name="pytest" version="8.4.2" purpose="Unit and integration tests" />
+        <package name="pytest-asyncio" version="1.2.0" purpose="Async test support" />
+        <package name="pytest-cov" version="5.0.0" purpose="Coverage enforcement (80%+ new code)" />
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="Architecture">Keep module to ~50 lines as specified in tech spec (Section 3.1)</constraint>
+    <constraint source="DoD">New code must have 80%+ test coverage - CI/CD will block merge if not met</constraint>
+    <constraint source="DoD">Overall project coverage must not decrease (ratchet enforcement)</constraint>
+    <constraint source="Architecture">Use simple, direct SDK calls - no custom wrappers or abstractions</constraint>
+    <constraint source="Story 4.0.5">Tests must use APP_ENV=test (auto-configured in conftest.py)</constraint>
+    <constraint source="NFR">Extraction accuracy must be 90%+ on sample documents</constraint>
+    <constraint source="NFR">Processing time must be less than 2 minutes for 5 documents</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="extract_timeseries" kind="async function" path="raglite/forecasting/timeseries_extract.py">
+      <signature>async def extract_timeseries(docs: List[str], metric: str = "revenue") -> TimeSeriesData</signature>
+      <purpose>Main entry point for time-series extraction from documents</purpose>
+    </interface>
+    <interface name="normalize_to_interval" kind="function" path="raglite/forecasting/timeseries_extract.py">
+      <signature>def normalize_to_interval(data: TimeSeriesData, interval: str) -> TimeSeriesData</signature>
+      <purpose>Normalize extracted data to consistent time intervals</purpose>
+    </interface>
+    <interface name="TimeSeriesPoint" kind="Pydantic model" path="raglite/shared/models.py">
+      <signature>class TimeSeriesPoint(BaseModel): date: datetime, value: float, label: str | None</signature>
+      <purpose>Single data point in a time series</purpose>
+    </interface>
+    <interface name="TimeSeriesData" kind="Pydantic model" path="raglite/shared/models.py">
+      <signature>class TimeSeriesData(BaseModel): metric_name: str, points: List[TimeSeriesPoint], interval: str, source_documents: List[str]</signature>
+      <purpose>Collection of time series data for a financial metric</purpose>
+    </interface>
+    <interface name="search_documents" kind="async function" path="raglite/retrieval/search.py">
+      <signature>async def search_documents(query: str, top_k: int = 5, filters: dict | None = None) -> list[QueryResult]</signature>
+      <purpose>Reuse for finding time-series chunks in documents</purpose>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      pytest framework with pytest-asyncio for async tests. Unit tests mock external dependencies (LLM, Qdrant). Integration tests use test database (APP_ENV=test, Qdrant:6335, PostgreSQL:5433). Coverage enforced at 80%+ for new code via CI/CD gates. Follow existing test patterns in tests/unit/ and tests/integration/.
+    </standards>
+    <locations>
+      <location>tests/unit/test_timeseries_extract.py (NEW)</location>
+      <location>tests/integration/test_timeseries_integration.py (NEW)</location>
+      <location>tests/fixtures/ (existing test data)</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test extract_timeseries identifies monthly revenue from mock document chunks</idea>
+      <idea ac="AC1">Test extract_timeseries identifies quarterly expenses from mock chunks</idea>
+      <idea ac="AC2">Test TimeSeriesData structure contains dates and values correctly</idea>
+      <idea ac="AC2">Test metric labels are preserved in extraction</idea>
+      <idea ac="AC3">Test normalize_to_interval converts daily to monthly</idea>
+      <idea ac="AC3">Test normalize_to_interval handles quarterly to monthly</idea>
+      <idea ac="AC4">Test parse_date handles "Q3 FY24" -> 2024-07-01</idea>
+      <idea ac="AC4">Test parse_date handles "Jan 2024", "2024-01", "1/2024", "January 2024"</idea>
+      <idea ac="AC5">Integration test with sample-4-page.pdf validates 90%+ accuracy</idea>
+      <idea ac="AC6">End-to-end test: ingest -> search -> extract -> TimeSeriesData</idea>
+    </ideas>
+  </tests>
+</story-context>

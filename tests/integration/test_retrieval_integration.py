@@ -86,9 +86,9 @@ class TestRetrievalIntegration:
             assert result.word_count > 0, "Word count should be positive"
 
         # Performance validation (NFR13: p50 <5s)
-        assert elapsed_seconds < 5.0, (
-            f"Search took {elapsed_seconds:.2f}s, expected <5s (p50 target per NFR13)"
-        )
+        assert (
+            elapsed_seconds < 5.0
+        ), f"Search took {elapsed_seconds:.2f}s, expected <5s (p50 target per NFR13)"
 
         # Log results
         print("\n\n✅ End-to-End Search Test:")

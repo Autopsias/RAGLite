@@ -1,0 +1,154 @@
+<story-context id="4-0-4-document-segregation-architecture" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>0.4</storyId>
+    <title>Document Segregation Architecture</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-0-4-document-segregation-architecture.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>architect</asA>
+    <iWant>clear documentation and validation of how documents are segregated in the vector and SQL databases</iWant>
+    <soThat>the team understands document provenance, query scoping, and test isolation strategies</soThat>
+    <tasks>
+      <task id="1" ac="2,3">Audit current document metadata implementation
+        <subtask id="1.1">Review raglite/shared/models.py - DocumentMetadata, Chunk models</subtask>
+        <subtask id="1.2">Review Qdrant storage in raglite/retrieval/search.py - payload structure</subtask>
+        <subtask id="1.3">Review PostgreSQL storage in raglite/ingestion/pipeline.py - table schema</subtask>
+        <subtask id="1.4">Document current implementation findings</subtask>
+      </task>
+      <task id="2" ac="2,3">Validate document-scoped query capability
+        <subtask id="2.1">Test Qdrant filter by source_document field</subtask>
+        <subtask id="2.2">Test PostgreSQL query with document filter</subtask>
+        <subtask id="2.3">Document query scoping capabilities and limitations</subtask>
+      </task>
+      <task id="3" ac="4">Create integration test for document attribution
+        <subtask id="3.1">Create test file tests/integration/test_document_segregation.py</subtask>
+        <subtask id="3.2">Test: Ingest PDF-A, verify chunks attributed to PDF-A</subtask>
+        <subtask id="3.3">Test: Ingest PDF-B, verify chunks attributed to PDF-B</subtask>
+        <subtask id="3.4">Test: Query and validate source citations are accurate</subtask>
+      </task>
+      <task id="4" ac="1">Create architecture document
+        <subtask id="4.1">Create docs/architecture/document-segregation-strategy.md</subtask>
+        <subtask id="4.2">Document document identification approach</subtask>
+        <subtask id="4.3">Document query scoping capabilities</subtask>
+        <subtask id="4.4">Document multi-document search behavior</subtask>
+        <subtask id="4.5">Include code examples and schema diagrams</subtask>
+      </task>
+      <task id="5" ac="5">Document test isolation strategy
+        <subtask id="5.1">Add test isolation section to architecture document</subtask>
+        <subtask id="5.2">Reference Story 4.0.5 environment separation</subtask>
+        <subtask id="5.3">Document test fixture best practices</subtask>
+        <subtask id="5.4">Provide guidance for future test authors</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Architecture Document Created - Create docs/architecture/document-segregation-strategy.md documenting: How documents are identified (doc_id, filename, metadata schema), How chunks are tagged with document provenance, Query scoping capabilities (filter by document, date range, source), Multi-document search behavior (all docs vs specific doc)</criterion>
+    <criterion id="AC2">Qdrant Schema Validation - Verify Qdrant collection schema includes document identification fields in payload, Document which metadata fields enable document-scoped queries, Validate chunks can be filtered by source_document or equivalent</criterion>
+    <criterion id="AC3">PostgreSQL Schema Validation - Verify PostgreSQL table schema tracks document-level metadata, Document SQL table columns for document identification, Validate SQL queries can filter by document source</criterion>
+    <criterion id="AC4">Integration Test - Document Attribution - Create test: Ingest 2 different PDFs, verify chunks have correct document attribution, Validate each chunk's metadata correctly identifies its source document, Test that query results include accurate source citations</criterion>
+    <criterion id="AC5">Test Isolation Strategy Documented - Document how tests avoid data pollution (unique collections, cleanup fixtures), Reference Story 4.0.5 environment separation strategy, Provide guidance for future test authors on maintaining isolation</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/architecture/7-data-layer.md" title="Data Layer Architecture" section="Vector Storage" snippet="Documents Qdrant collection schema and payload structure for chunk storage and retrieval." />
+      <doc path="docs/stories/4-0-5-test-prod-database-separation.md" title="Story 4.0.5: Test vs Production Database Separation" section="Architecture Overview" snippet="Defines environment separation: Production (ports 6333/5432, collection financial_docs) vs Test (ports 6335/5433, collection financial_docs_test). Uses APP_ENV for routing." />
+      <doc path="docs/sprint-artifacts/epic-3-retrospective-2025-11-18.md" title="Epic 3 Retrospective" section="ACTION ITEM 4" snippet="Document segregation strategy unclear. Questions: Are chunks tagged with doc_id? Can users query by document? How is provenance tracked?" />
+      <doc path="docs/prd/epic-4-forecasting-proactive-insights.md" title="Epic 4 PRD" section="Epic Overview" snippet="Epic 4 focuses on forecasting and proactive insights. Prep stories (4.0.x) address technical debt from Epic 3 retrospective." />
+    </docs>
+    <code>
+      <artifact path="raglite/shared/models.py" kind="models" symbol="DocumentMetadata" lines="11-23" reason="Defines document metadata schema: filename, doc_type, ingestion_timestamp, page_count, source_path, chunk_count. Primary identifier for document provenance." />
+      <artifact path="raglite/shared/models.py" kind="models" symbol="Chunk" lines="138-141" reason="Chunk model includes metadata: DocumentMetadata for parent document provenance. chunk.metadata.filename is the source document identifier." />
+      <artifact path="raglite/shared/models.py" kind="models" symbol="QueryResult" lines="varies" reason="QueryResult includes source_document field for attribution in search results." />
+      <artifact path="raglite/retrieval/search.py" kind="search" symbol="search_documents" lines="82-240" reason="Qdrant search implementation. Payload includes source_document, page_number, chunk_index. Supports filter by source_document (line 162)." />
+      <artifact path="raglite/retrieval/sql_table_search.py" kind="search" symbol="search_tables_sql" lines="128-277" reason="SQL table search. Uses document_id column from financial_tables for attribution. _format_table_row includes page_number." />
+      <artifact path="raglite/ingestion/storage_operations.py" kind="storage" symbol="store_vectors_in_qdrant" lines="130-250" reason="Qdrant storage. Payload includes source_document=chunk.metadata.filename (line 189, 250). 15 rich metadata fields stored." />
+      <artifact path="raglite/shared/clients.py" kind="clients" symbol="get_qdrant_client" lines="69-174" reason="Qdrant client singleton. Connects to settings.qdrant_host:qdrant_port. Environment-aware (test vs production)." />
+      <artifact path="raglite/shared/clients.py" kind="clients" symbol="get_postgresql_connection" lines="265-366" reason="PostgreSQL client singleton. Environment-aware (test port 5433, prod port 5432)." />
+      <artifact path="tests/conftest.py" kind="test-fixture" symbol="configure_test_environment" lines="56-99" reason="Session fixture sets APP_ENV=test, POSTGRES_PORT=5433. Ensures tests use test databases (Qdrant:6335, PostgreSQL:5433)." />
+    </code>
+    <dependencies>
+      <python version=">=3.11">
+        <package name="qdrant-client" version="1.15.1" reason="Vector database client for chunk storage/retrieval" />
+        <package name="psycopg2-binary" version=">=2.9" reason="PostgreSQL client for financial_tables SQL queries" />
+        <package name="pydantic" version=">=2.0" reason="Data models (DocumentMetadata, Chunk, QueryResult)" />
+        <package name="pydantic-settings" version=">=2.0" reason="Settings management with environment variable support" />
+        <package name="pytest" version="8.4.2" reason="Testing framework" />
+        <package name="pytest-asyncio" version="1.2.0" reason="Async test support" />
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <interfaces>
+    <interface name="DocumentMetadata" kind="Pydantic model" path="raglite/shared/models.py">
+      <signature>class DocumentMetadata(BaseModel):
+    filename: str  # Primary document identifier
+    doc_type: str  # "PDF" or "Excel"
+    ingestion_timestamp: str  # ISO8601 timestamp
+    page_count: int = 0
+    source_path: str = ""
+    chunk_count: int = 0</signature>
+    </interface>
+    <interface name="Qdrant Payload Schema" kind="Vector storage" path="raglite/ingestion/storage_operations.py">
+      <signature>payload = {
+    "chunk_id": str,
+    "text": str,
+    "word_count": int,
+    "source_document": str,  # chunk.metadata.filename
+    "page_number": int,
+    "chunk_index": int,
+    # + 15 rich metadata fields (document_type, reporting_period, etc.)
+}</signature>
+    </interface>
+    <interface name="PostgreSQL financial_tables" kind="SQL table" path="raglite/retrieval/sql_table_search.py">
+      <signature>SELECT document_id, entity, metric, value, unit, period, fiscal_year, page_number, table_caption
+FROM financial_tables
+WHERE document_id = 'document_filename.pdf';</signature>
+    </interface>
+    <interface name="search_documents filter" kind="API" path="raglite/retrieval/search.py">
+      <signature>await search_documents(
+    query: str,
+    top_k: int = 5,
+    filters: dict[str, str] | None = None  # e.g., {'source_document': 'Q3_Report.pdf'}
+) -> list[QueryResult]</signature>
+    </interface>
+  </interfaces>
+
+  <constraints>
+    <constraint type="architecture">Document provenance tracked via chunk.metadata.filename field - this is the primary identifier</constraint>
+    <constraint type="architecture">Qdrant payload includes source_document field for filtering - enables document-scoped queries</constraint>
+    <constraint type="architecture">PostgreSQL financial_tables uses document_id column for document attribution</constraint>
+    <constraint type="testing">Tests MUST use test database environment (APP_ENV=test) to avoid production data pollution</constraint>
+    <constraint type="testing">Test databases: Qdrant port 6335, PostgreSQL port 5433 with raglite_ci credentials</constraint>
+    <constraint type="testing">Small test fixture (sample-small-3-pages.pdf) recommended for integration tests</constraint>
+    <constraint type="pattern">Environment-based routing via Settings.adjust_for_environment() validator</constraint>
+    <constraint type="pattern">Singleton pattern for database clients (get_qdrant_client, get_postgresql_connection)</constraint>
+  </constraints>
+
+  <tests>
+    <standards>
+      pytest with pytest-asyncio for async tests. Tests organized in tests/unit/, tests/integration/, tests/e2e/.
+      Integration tests require @pytest.mark.preserve_collection or @pytest.mark.manages_collection_state markers.
+      Session fixture configure_test_environment() ensures APP_ENV=test for all tests.
+      Mock Mistral API calls via mock_mistral_api_globally session fixture to prevent real API calls.
+    </standards>
+    <locations>
+      <location>tests/unit/</location>
+      <location>tests/integration/</location>
+      <location>tests/fixtures/sample-small-3-pages.pdf</location>
+    </locations>
+    <ideas>
+      <idea ac="AC2">Test Qdrant filter: search_documents(query, filters={'source_document': 'test.pdf'}) returns only chunks from test.pdf</idea>
+      <idea ac="AC3">Test PostgreSQL filter: SELECT * FROM financial_tables WHERE document_id = 'test.pdf'</idea>
+      <idea ac="AC4">Integration test: Ingest 2 PDFs with different names, query both, verify source_document attribution matches</idea>
+      <idea ac="AC4">Test source citation: QueryResult.source_document matches original filename after ingestion</idea>
+      <idea ac="AC5">Validate test isolation: Check APP_ENV=test, verify Qdrant port 6335, PostgreSQL port 5433</idea>
+    </ideas>
+  </tests>
+</story-context>

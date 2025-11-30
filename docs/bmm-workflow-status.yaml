@@ -1,13 +1,6 @@
-# Workflow Status Template
-# This tracks progress through BMM methodology phases
-# Phase 3/4 (Implementation) is tracked separately in sprint-status.yaml
-
-# generated: 2025-11-04
-# project: RAGLite
-# project_type: software
-# selected_track: method
-# field_type: brownfield
-# workflow_path: method-brownfield.yaml
+# BMM Workflow Status
+# This tracks progress through BMM methodology Analysis, Planning, and Solutioning phases.
+# Implementation phase is tracked separately in sprint-status.yaml
 
 # STATUS DEFINITIONS:
 # ==================
@@ -21,23 +14,30 @@
 #   - {file-path}: File created/found (e.g., "docs/product-brief.md")
 #   - skipped: Optional/conditional workflow that was skipped
 
-generated: "2025-11-04"
+generated: "2025-11-25"
 project: "RAGLite"
-project_type: "software"
-selected_track: "method"
-field_type: "brownfield"
-workflow_path: "method-brownfield.yaml"
+project_type: "AI-powered financial document analysis system"
+selected_track: "bmad-method"
+field_type: "greenfield"
+workflow_path: "method-greenfield.yaml"
 
 workflow_status:
+  # Phase 0: Discovery (Optional)
+  brainstorm-project: skipped
+  research: skipped
+  product-brief: skipped
+
   # Phase 1: Planning
-  prd: docs/prd/index.md
-  validate-prd: docs/validation-improvements-summary.md
-  create-design: docs/front-end-spec/index.md
+  prd: docs/prd/
+  validate-prd: skipped
+  create-epics-and-stories: docs/prd/epic-list.md
+  create-design: skipped  # No UI - MCP server only
 
   # Phase 2: Solutioning
-  create-architecture: docs/architecture/index.md
-  validate-architecture: docs/architecture/validation-improvements-summary.md
-  solutioning-gate-check: docs/implementation-readiness-report-2025-11-04.md
+  create-architecture: docs/architecture/
+  test-design: skipped
+  validate-architecture: skipped
+  implementation-readiness: skipped
 
   # Phase 3: Implementation
   sprint-planning: docs/sprint-status.yaml

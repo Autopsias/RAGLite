@@ -1,0 +1,207 @@
+<story-context id="4-0-2-definition-of-done-update" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>0.2</storyId>
+    <title>Definition of Done Update</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-24</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-0-2-definition-of-done-update.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>Scrum Master</asA>
+    <iWant>update the Definition of Done with explicit coverage requirements</iWant>
+    <soThat>all future stories enforce test coverage standards and prevent technical debt accumulation</soThat>
+    <tasks>
+      <task id="1" ac="1" effort="15min">
+        <title>Create Definition of Done document</title>
+        <subtasks>
+          <subtask>1.1: Create docs/process/definition-of-done.md</subtask>
+          <subtask>1.2: Add standard quality gates (code review, tests pass, linting)</subtask>
+          <subtask>1.3: Add documentation requirements (docstrings, type hints)</subtask>
+          <subtask>1.4: Add security requirements (no secrets committed)</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2,3" effort="10min">
+        <title>Add coverage requirements</title>
+        <subtasks>
+          <subtask>2.1: Add "New code ≥80% coverage" requirement with pytest command</subtask>
+          <subtask>2.2: Add "Overall coverage must not decrease" requirement</subtask>
+          <subtask>2.3: Reference CI/CD enforcement (Story 4.0.1 implementation)</subtask>
+          <subtask>2.4: Add guidance on checking coverage locally before PR</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="4" effort="5min">
+        <title>Update story template reference</title>
+        <subtasks>
+          <subtask>3.1: Verify story template at .bmad/bmm/workflows/4-implementation/create-story/template.md</subtask>
+          <subtask>3.2: Add DoD reference in Dev Notes section (if not already present)</subtask>
+          <subtask>3.3: Document DoD location in README or CONTRIBUTING</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="1-4" effort="5min">
+        <title>Validation</title>
+        <subtasks>
+          <subtask>4.1: Verify DoD document renders correctly in GitHub</subtask>
+          <subtask>4.2: Confirm coverage commands work as documented</subtask>
+          <subtask>4.3: Mark story complete</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" priority="high">
+      <title>DoD checklist created at docs/process/definition-of-done.md</title>
+      <requirements>
+        <req>Document exists with clear structure</req>
+        <req>Includes all standard quality gates (code review, tests pass, etc.)</req>
+        <req>Covers development, testing, and documentation requirements</req>
+      </requirements>
+      <verification>File exists and contains DoD categories</verification>
+    </criterion>
+    <criterion id="AC2" priority="high">
+      <title>New code coverage requirement added to DoD</title>
+      <requirements>
+        <req>Explicit requirement: "New code must have ≥80% test coverage (measured via pytest --cov)"</req>
+        <req>Reference to CI/CD coverage gate (AC3 from Story 4.0.1)</req>
+        <req>Clear guidance on measuring coverage for changed files</req>
+      </requirements>
+      <verification>DoD contains 80% new code coverage requirement with pytest command</verification>
+    </criterion>
+    <criterion id="AC3" priority="high">
+      <title>Coverage ratchet requirement added to DoD</title>
+      <requirements>
+        <req>Explicit requirement: "Overall project coverage must not decrease (verified in CI/CD)"</req>
+        <req>Reference to CI/CD coverage ratchet (AC4 from Story 4.0.1)</req>
+        <req>Explanation that PRs failing ratchet check cannot merge</req>
+      </requirements>
+      <verification>DoD contains ratchet requirement with CI/CD reference</verification>
+    </criterion>
+    <criterion id="AC4" priority="medium">
+      <title>DoD integrated into story template</title>
+      <requirements>
+        <req>Story template references DoD checklist</req>
+        <req>Developers know where to find DoD requirements</req>
+        <req>DoD can be used as PR merge checklist</req>
+      </requirements>
+      <verification>Template or README references DoD location</verification>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/epic-3-retrospective-2025-11-18.md</path>
+        <title>Epic 3 Retrospective</title>
+        <section>ACTION ITEM 2: Update Definition of Done (lines 183-199)</section>
+        <snippet>Owner: Bob (SM). Add requirement: "New code must have ≥80% test coverage". Add requirement: "Overall project coverage must not decrease". Communicate to team in Epic 4 kickoff.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/4-0-1-test-coverage-backfill-ci-cd-gates.md</path>
+        <title>Story 4.0.1: Test Coverage Backfill &amp; CI/CD Gates</title>
+        <section>Completion Notes - CI/CD Implementation</section>
+        <snippet>AC3: Coverage gate (≥80% new code), AC4: Coverage ratchet (no regression), AC5: PR coverage comments. All implemented in .github/workflows/ci.yml JOB 9.</snippet>
+      </doc>
+      <doc>
+        <path>docs/process/uat-framework.md</path>
+        <title>UAT Framework</title>
+        <section>Testing Standards</section>
+        <snippet>Existing process documentation format. DoD should follow similar structure with clear checklists and pass/fail criteria.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>scripts/check_coverage_diff.py</path>
+        <kind>utility</kind>
+        <symbol>check_coverage_diff</symbol>
+        <lines>1-239</lines>
+        <reason>Implements 80% new code coverage threshold (AC3 from Story 4.0.1). DoD should reference this script for local validation.</reason>
+      </file>
+      <file>
+        <path>scripts/check_coverage_ratchet.py</path>
+        <kind>utility</kind>
+        <symbol>check_coverage_ratchet</symbol>
+        <lines>1-149</lines>
+        <reason>Implements coverage ratchet (AC4 from Story 4.0.1). DoD should reference this for regression prevention.</reason>
+      </file>
+      <file>
+        <path>.github/workflows/ci.yml</path>
+        <kind>config</kind>
+        <symbol>test-coverage-enforcement (JOB 9)</symbol>
+        <lines>759-909</lines>
+        <reason>CI/CD enforcement for coverage requirements. DoD should reference this as the automated enforcement mechanism.</reason>
+      </file>
+      <file>
+        <path>.bmad/bmm/workflows/4-implementation/create-story/template.md</path>
+        <kind>template</kind>
+        <symbol>Story Template</symbol>
+        <lines>1-52</lines>
+        <reason>Story template to potentially reference DoD in Dev Notes section (AC4).</reason>
+      </file>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pytest" version=">=8.0">Test runner</package>
+        <package name="pytest-cov" version=">=4.0">Coverage measurement</package>
+      </python>
+      <tools>
+        <tool name="ruff">Linting (referenced in DoD)</tool>
+        <tool name="uv">Package manager for running pytest</tool>
+      </tools>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="documentation">
+      <rule>DoD document must be concise and actionable (target ~100 lines)</rule>
+      <rule>Use markdown checklist format for easy verification</rule>
+      <rule>Include executable commands where applicable (pytest, ruff)</rule>
+    </constraint>
+    <constraint type="process">
+      <rule>DoD must align with existing CI/CD enforcement (Story 4.0.1)</rule>
+      <rule>Coverage threshold is 80% for new code (not negotiable)</rule>
+      <rule>Coverage ratchet prevents any decrease (not negotiable)</rule>
+    </constraint>
+    <constraint type="scope">
+      <rule>This is a documentation-only story - no code changes to production modules</rule>
+      <rule>May add DoD reference to story template or README (minor edit)</rule>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>Coverage Local Check</name>
+      <kind>CLI command</kind>
+      <signature>uv run pytest --cov=raglite --cov=scripts --cov-report=term</signature>
+      <path>scripts/check_coverage_diff.py</path>
+    </interface>
+    <interface>
+      <name>Coverage Diff Check</name>
+      <kind>CLI command</kind>
+      <signature>python scripts/check_coverage_diff.py --threshold=80</signature>
+      <path>scripts/check_coverage_diff.py</path>
+    </interface>
+    <interface>
+      <name>Coverage Ratchet Check</name>
+      <kind>CLI command</kind>
+      <signature>python scripts/check_coverage_ratchet.py</signature>
+      <path>scripts/check_coverage_ratchet.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>This is a documentation-only story. Testing consists of manual verification that the DoD document exists, renders correctly in GitHub, and contains all required sections. No automated tests required for documentation content.</standards>
+    <locations>
+      <location>docs/process/definition-of-done.md (manual review)</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Verify DoD file exists at docs/process/definition-of-done.md</idea>
+      <idea ac="AC1">Verify DoD contains 5 categories: Code Quality, Testing, Documentation, Security, CI/CD</idea>
+      <idea ac="AC2">Verify DoD contains "New code ≥80% coverage" with pytest command</idea>
+      <idea ac="AC3">Verify DoD contains "Overall coverage must not decrease" with CI/CD reference</idea>
+      <idea ac="AC4">Verify DoD location is documented (README, CONTRIBUTING, or story template)</idea>
+    </ideas>
+  </tests>
+</story-context>

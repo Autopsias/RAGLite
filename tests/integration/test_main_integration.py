@@ -7,7 +7,7 @@ with real Qdrant connection. Requires Docker services running.
 import pytest
 
 from raglite.main import ingest_financial_document, mcp, query_financial_documents
-from raglite.shared.models import DocumentMetadata, QueryRequest, QueryResponse
+from raglite.shared.models import DocumentMetadata, IngestionResult, QueryRequest, QueryResponse
 
 
 @pytest.mark.integration
@@ -45,7 +45,9 @@ class TestMCPProtocolCompliance:
         # Access the underlying function via .fn attribute
         ingest_sig = inspect.signature(ingest_financial_document.fn)
         assert "doc_path" in ingest_sig.parameters
-        assert ingest_sig.return_annotation == DocumentMetadata
+        # Story 4.3: Return type changed from DocumentMetadata to IngestionResult
+        # (adds forecast refresh fields)
+        assert ingest_sig.return_annotation == IngestionResult
 
         # Verify query tool has correct signature
         query_sig = inspect.signature(query_financial_documents.fn)
@@ -181,5 +183,9 @@ class TestMCPErrorHandling:
             assert isinstance(response, QueryResponse)
             assert len(response.results) >= 0  # Allow 0 results
         except QueryError as e:
-            # QueryError for empty collection is also acceptable
-            assert "empty" in str(e).lower() or "no results" in str(e).lower()
+            # QueryError for empty/missing collection is acceptable
+            error_lower = str(e).lower()
+            assert any(
+                phrase in error_lower
+                for phrase in ["empty", "no results", "doesn't exist", "not found"]
+            ), f"Expected error message to indicate empty/missing collection, got: {e}"

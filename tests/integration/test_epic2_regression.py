@@ -161,6 +161,21 @@ class TestEpic2Regression:
 
         Regression threshold: 15,000ms p95 (NFR13 target)
         """
+        # Skip if collection doesn't exist or is empty
+        from raglite.shared.clients import get_qdrant_client
+        from raglite.shared.config import settings
+
+        try:
+            client = get_qdrant_client()
+            collection_info = client.get_collection(settings.qdrant_collection_name)
+            if collection_info.points_count == 0:
+                pytest.skip("Collection is empty - run ingestion first")
+        except Exception as e:
+            error_msg = str(e).lower()
+            if "doesn't exist" in error_msg or "not found" in error_msg:
+                pytest.skip("Collection doesn't exist - run ingestion first")
+            raise
+
         latencies = []
 
         # Run 10 queries for latency check (first query may include cold-start)

@@ -25,6 +25,73 @@ class SQLSearchError(Exception):
     pass
 
 
+def _ensure_attribution_columns(sql_query: str) -> str:
+    """Ensure document_id and page_number are in SELECT clause for source attribution.
+
+    EXC-006 FIX: LLM-generated SQL sometimes omits document_id or page_number,
+    causing source attribution to fail (source_document='unknown'). This function
+    parses the SELECT clause and adds missing attribution columns if needed.
+
+    Args:
+        sql_query: Original SQL query (may be missing attribution columns)
+
+    Returns:
+        Modified SQL query with document_id and page_number guaranteed in SELECT
+
+    Example:
+        >>> sql = "SELECT entity, metric FROM financial_tables WHERE..."
+        >>> fixed = _ensure_attribution_columns(sql)
+        >>> # Returns: "SELECT document_id, page_number, entity, metric FROM financial_tables WHERE..."
+    """
+    import re
+
+    # Parse SELECT clause (case-insensitive)
+    select_match = re.search(r"SELECT\s+(.+?)\s+FROM", sql_query, re.IGNORECASE | re.DOTALL)
+    if not select_match:
+        # Invalid SQL or non-SELECT query, return as-is
+        logger.warning(
+            "Cannot parse SELECT clause to add attribution columns",
+            extra={"sql_preview": sql_query[:150]},
+        )
+        return sql_query
+
+    select_clause = select_match.group(1).strip()
+
+    # Check if document_id and page_number are already in SELECT
+    has_document_id = re.search(r"\bdocument_id\b", select_clause, re.IGNORECASE)
+    has_page_number = re.search(r"\bpage_number\b", select_clause, re.IGNORECASE)
+
+    if has_document_id and has_page_number:
+        # Both columns present, no modification needed
+        return sql_query
+
+    # Add missing columns at the start of SELECT clause
+    missing_cols = []
+    if not has_document_id:
+        missing_cols.append("document_id")
+    if not has_page_number:
+        missing_cols.append("page_number")
+
+    # Prepend missing columns to SELECT clause
+    augmented_select = ", ".join(missing_cols) + ", " + select_clause
+
+    # Replace SELECT clause in original query
+    augmented_query = (
+        sql_query[: select_match.start(1)] + augmented_select + sql_query[select_match.end(1) :]
+    )
+
+    logger.info(
+        "Added missing attribution columns to SQL query",
+        extra={
+            "added_columns": missing_cols,
+            "original_select": select_clause[:100],
+            "augmented_select": augmented_select[:100],
+        },
+    )
+
+    return augmented_query
+
+
 def _execute_sql_query_sync(sql_query: str) -> tuple[list[tuple], list[str]]:
     """Execute SQL query synchronously (called via asyncio.to_thread).
 
@@ -85,6 +152,10 @@ async def search_tables_sql(sql_query: str, top_k: int = 50) -> list[QueryResult
         >>> results[0].page_number
         12
     """
+    # EXC-006 FIX: Ensure document_id and page_number are in SELECT clause
+    # Even if LLM omits them, we need these for proper source attribution
+    sql_query = _ensure_attribution_columns(sql_query)
+
     logger.info("Executing SQL table search", extra={"sql_preview": sql_query[:150]})
 
     start_time = time.time()
@@ -144,6 +215,19 @@ async def search_tables_sql(sql_query: str, top_k: int = 50) -> list[QueryResult
             # Extract attribution metadata
             source_document = row_dict.get("document_id", "unknown")
             page_number = row_dict.get("page_number")
+
+            # EXC-006: Log warning if document_id is missing
+            if source_document == "unknown":
+                logger.warning(
+                    "SQL result missing document_id - source attribution will fail",
+                    extra={
+                        "row_index": row_idx,
+                        "columns_available": column_names,
+                        "entity": row_dict.get("entity"),
+                        "metric": row_dict.get("metric"),
+                        "row_sample": str(row_dict)[:200],
+                    },
+                )
 
             # Create QueryResult
             # Note: SQL results use score=1.0 (exact match semantics)

@@ -2,452 +2,274 @@
   <metadata>
     <epicId>2</epicId>
     <storyId>2.2</storyId>
-    <title>Element-Based Chunking Enhancement</title>
-    <status>Ready for Implementation</status>
-    <generatedAt>2025-10-18</generatedAt>
-    <generator>BMAD Story Context Workflow</generator>
-    <sourceStoryPath>docs/stories/story-2.2-element-chunking.md</sourceStoryPath>
+    <title>Implement Page-Level Parallelism (4-8 Threads)</title>
+    <status>IN PROGRESS</status>
+    <generatedAt>2025-10-19</generatedAt>
+    <generator>Developer (Amelia)</generator>
+    <sourceStoryPath>docs/stories/story-2.2.md</sourceStoryPath>
   </metadata>
 
   <story>
-    <asA>RAG system processing financial documents</asA>
-    <iWant>structure-aware chunking that respects element boundaries (tables, sections, paragraphs)</iWant>
-    <soThat>chunks preserve semantic coherence and improve retrieval accuracy from 56% to 64-68%</soThat>
+    <asA>a system administrator</asA>
+    <iWant>page-level parallel processing</iWant>
+    <soThat>PDF ingestion is 1.7-2.5x faster</soThat>
     <tasks>
-Day 1-2: Data Models & Element Extraction
-- Add ElementType enum and DocumentElement model
-- Implement extract_elements() function
-- Unit tests: test_element_extraction.py
-- Manual QA: Review extracted elements from sample PDF
-
-Day 3-4: Smart Chunking Algorithm
-- Implement chunk_elements() with table/section logic
-- Implement _split_large_table() helper
-- Unit tests: test_element_chunking.py
-- Manual QA: Review 10 table chunks for boundary correctness
-
-Day 5: Qdrant Integration
-- Update Chunk model with new fields
-- Modify create_embeddings() for enhanced payload
-- Integration tests: test_element_metadata.py
-
-Day 6: End-to-End Validation
-- Re-ingest 160-page financial PDF with element chunking
-- Run full 50-query ground truth test suite
-- Measure accuracy, latency, performance
-- Document results in Validation Results section
-
-Day 7: Documentation & Handoff
-- Update Story 2.2 status based on AC3 results
-- Document decision gate outcome
-- Update backlog with next steps
-- Code review and merge
+- Task 1: Configure Page-Level Parallelism (AC1 - 2 hours)
+  - 1.1: Add max_num_pages_visible=4 to DocumentConverter config
+  - 1.2: Configure thread pool size (test 4 vs 8 threads)
+  - 1.3: Implement proper thread pool cleanup in pipeline
+  - 1.4: Verify parallel processing engaged via logs/metrics
+- Task 2: Performance Benchmarking (AC2 - 1 hour)
+  - 2.1: Establish baseline time from Story 2.1 (single-threaded pypdfium)
+  - 2.2: Run 160-page PDF ingestion with 4 threads
+  - 2.3: Run 160-page PDF ingestion with 8 threads
+  - 2.4: Calculate speedup factor and select optimal configuration
+  - 2.5: Validate 1.7-2.5x speedup achieved (MANDATORY)
+- Task 3: Performance Documentation (AC3 - 30 min)
+  - 3.1: Document baseline time (Story 2.1 single-threaded)
+  - 3.2: Document parallel time (Story 2.2 multi-threaded)
+  - 3.3: Document speedup factor and thread count selection
+  - 3.4: Add results to Epic 2 tracking documentation
+- Task 4: Thread Safety Validation (AC4 - 30 min)
+  - 4.1: Create test that runs ingestion 10 times consecutively
+  - 4.2: Verify chunk count identical across all runs
+  - 4.3: Verify no exceptions, deadlocks, or race conditions
+  - 4.4: Document thread safety validation results
+- Task 5: Update Documentation (15 min)
+  - 5.1: Update Story 2.2 with performance results
+  - 5.2: Update CLAUDE.md with Phase 1 completion status
+  - 5.3: Prepare for Story 2.3 (Phase 2A start)
     </tasks>
   </story>
 
   <acceptanceCriteria>
-    <criterion id="AC1" priority="CRITICAL">
-      <title>Element-Aware Chunk Boundaries</title>
-      <description>Chunks MUST NOT split tables mid-row or section headers from content. Tables &lt;2,048 tokens stored as single chunk. Tables &gt;2,048 tokens split at row boundaries. Sections &gt;512 tokens split at paragraph boundaries.</description>
-      <validation>Unit test: test_element_boundaries_respected() with sample PDF. Manual QA: Review 10 table chunks from financial PDF.</validation>
-    </criterion>
-    <criterion id="AC2" priority="CRITICAL">
-      <title>Chunk Metadata Enhancement</title>
-      <description>Each chunk payload MUST include element_type field (table, section_header, paragraph, list, mixed) and section_title field (parent section header text or null). Existing fields preserved: page_number, chunk_index, source_document, word_count.</description>
-      <validation>Integration test: test_element_metadata_stored() verifies all fields present. Query test: Filter by element_type="table" returns only table chunks.</validation>
-    </criterion>
-    <criterion id="AC3" priority="CRITICAL - DECISION GATE">
-      <title>Retrieval Accuracy Validation</title>
-      <description>Retrieval accuracy ≥64.0% (32/50 queries) MANDATORY minimum viable improvement. TARGET: ≥68.0% (34/50 queries) research-backed stretch goal. Attribution accuracy ≥45.0%. No performance regression: p95 latency &lt;10,000ms (NFR13).</description>
-      <decision_gate>If accuracy &lt;64%: ESCALATE to PM. If 64-67%: PROCEED to Story 2.3 with caution. If ≥68%: PROCEED with high confidence.</decision_gate>
-      <validation>Integration test: tests/integration/test_hybrid_search_integration.py::test_hybrid_search_full_ground_truth</validation>
-    </criterion>
-    <criterion id="AC4" priority="HIGH">
-      <title>Performance &amp; Scalability (NFR Compliance)</title>
-      <description>Ingestion time ≤30s per 100 pages (same as Story 1.4 baseline). Memory usage ≤4 GB during ingestion. Chunk count within 20% of baseline (321 chunks ± 64 chunks). p95 retrieval latency &lt;10,000ms.</description>
-      <validation>Performance test: test_element_chunking_performance() measures ingestion time. Memory profiling: Monitor RSS during ingest_whole_pdf.py execution.</validation>
-    </criterion>
-    <criterion id="AC5" priority="HIGH">
-      <title>Backward Compatibility</title>
-      <description>Qdrant collection schema remains compatible (additive changes only). hybrid_search() API signature unchanged. Existing queries work without modification. Old semantic-only search continues to function.</description>
-      <validation>Regression test: Run Story 1.15B baseline tests against new chunks. API compatibility test: Existing test suite passes without modification.</validation>
-    </criterion>
+**AC1: Parallel Processing Configuration** (2 hours)
+- Configure Docling with max_num_pages_visible=4
+- Implement page-level concurrency (4-8 threads)
+- Handle thread pool cleanup
+- Source: Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.2 AC1
+
+**AC2: Speedup Validation** (1 hour) ⭐ MANDATORY
+- Ingest test PDF (160 pages) with parallelism
+- Measure ingestion time: target 3.3-4.8 min (vs 8.2 min baseline)
+- Calculate speedup: target 1.7-2.5x
+- MANDATORY: 1.7-2.5x speedup achieved
+- Source: Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.2 AC2
+- Tech Stack Reference: docs/architecture/5-technology-stack-definitive.md - Docling: 1.7-2.5x speedup
+
+**AC3: Speedup Documentation** (30 min)
+- Document ingestion time before/after
+- Document speedup factor (1.7x-2.5x range)
+- Document optimal thread count (4 vs 8)
+- Source: Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.2 AC3
+
+**AC4: No Race Conditions** (30 min)
+- Test 10 consecutive ingestions
+- Verify no deadlocks or race conditions
+- Verify output deterministic (same chunks every time)
+- Source: Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.2 AC4
   </acceptanceCriteria>
 
   <artifacts>
     <docs>
+      <!-- Epic 2 PRD - Story 2.2 Specification -->
       <doc>
         <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
-        <title>Epic 2: Advanced RAG Enhancements PRD</title>
-        <section>Story 2.2 Overview</section>
-        <snippet>After Story 2.1 (Hybrid Search) failed AC6 (56% accuracy vs ≥70% target), Story 2.2 implements element-based chunking. Conservative estimate: 56% → 64% (+8pp) based on element coherence. Stretch goal: 56% → 68% (+12pp) if table preservation yields high gains.</snippet>
+        <title>Epic 2: Advanced RAG Architecture Enhancement</title>
+        <section>Story 2.2: Implement Page-Level Parallelism (4-8 Threads)</section>
+        <snippet>Goal: Add concurrent page processing to Docling for 1.7-2.5x speedup. Depends on Story 2.1 (pypdfium backend). Expected: 8.2 min → 3.3-4.8 min for 160-page PDF. Strategic: Faster iterations for Phase 2A testing. Risk: LOW (official Docling feature).</snippet>
       </doc>
-      <doc>
-        <path>docs/tech-spec-epic-2.md</path>
-        <title>Technical Specification: Epic 2 - Advanced Document Understanding</title>
-        <section>Architecture Overview</section>
-        <snippet>Epic 2 adds Knowledge Graph (Neo4j) for relational reasoning. CONDITIONAL: Only implement if Phase 1 accuracy &lt;80% due to multi-hop failures. Element extraction and chunking are prerequisites.</snippet>
-      </doc>
-      <doc>
-        <path>docs/epic-2-preparation/table-aware-rag-comprehensive-research-2025.md</path>
-        <title>Enhancing RAG Retrieval Accuracy for Financial Documents with Complex Tables</title>
-        <section>Element-Type Chunking Research</section>
-        <snippet>Jimeno Yepes et al. (2024) - arXiv:2402.05131: Element-type chunking vs fixed token chunking yields +16.3pp page-level recall, +24.8% ROUGE score, +80.8% BLEU score. End-to-end Q&A accuracy: 48.2% → 53.2% (+5.0pp manual eval). Combined chunking (element-type + 128/256/512 token fallback) performs best.</snippet>
-      </doc>
-      <doc>
-        <path>docs/epic-2-preparation/alternative-rag-approaches-research-2025.md</path>
-        <title>Alternative RAG Approaches Research 2025</title>
-        <section>Element-Based Chunking Strategies</section>
-        <snippet>Research validation for pivot from BM25 to element-based chunking. Addresses table splitting issues and semantic coherence preservation.</snippet>
-      </doc>
-      <doc>
-        <path>docs/architecture/coding-standards.md</path>
-        <title>RAGLite Coding Standards</title>
-        <section>Type Hints, Docstrings, Error Handling</section>
-        <snippet>All functions MUST include type hints (PEP 8). Google-style docstrings mandatory. Structured logging with extra={} context required. No custom wrappers - use SDKs directly.</snippet>
-      </doc>
-      <doc>
-        <path>docs/architecture/testing-strategy.md</path>
-        <title>Testing Strategy</title>
-        <section>Testing Pyramid</section>
-        <snippet>80%+ unit test coverage target. Integration tests for service integration. E2E tests for accuracy validation (5% of suite). Ground truth test set: 50 queries from Story 1.15B baseline.</snippet>
-      </doc>
-      <doc>
-        <path>docs/architecture/6-complete-reference-implementation.md</path>
-        <title>Complete Reference Implementation</title>
-        <section>Coding Patterns</section>
-        <snippet>Reference patterns for Pydantic models, async/await, error handling, and structured logging. All code must follow these patterns exactly.</snippet>
-      </doc>
+
+      <!-- Technology Stack - Docling Parallelism -->
       <doc>
         <path>docs/architecture/5-technology-stack-definitive.md</path>
         <title>Technology Stack (Definitive)</title>
-        <section>Locked Dependencies</section>
-        <snippet>Docling 2.55.1 for PDF processing, sentence-transformers 5.1.1 for embeddings, Qdrant 1.15.1 for vector storage. NO additions without user approval.</snippet>
+        <section>PDF Processing - Docling</section>
+        <snippet>Docling 2.0+ with page-level parallelism support via max_num_pages_visible parameter. Empirically validated 1.7-2.5x speedup with 4-8 concurrent pages. Thread-safe with pypdfium backend. No additional dependencies required.</snippet>
+      </doc>
+
+      <!-- Implementation Strategy - Epic 2 Phase 1 -->
+      <doc>
+        <path>docs/architecture/8-phased-implementation-strategy-v11-simplified.md</path>
+        <title>Phased Implementation Strategy</title>
+        <section>Epic 2 Phase 1: PDF Ingestion Performance Optimization</section>
+        <snippet>Phase 1 completion: Story 2.1 (pypdfium) + Story 2.2 (parallelism) = 1.7-2.5x combined speedup. Enables faster Phase 2A iterations. Timeline: 1-2 days total. Unblocks Phase 2A (Stories 2.3-2.5).</snippet>
+      </doc>
+
+      <!-- Story 2.1 - Baseline Time Reference -->
+      <doc>
+        <path>docs/stories/story-2.1.md</path>
+        <title>Story 2.1: Implement pypdfium Backend</title>
+        <section>AC4 Validation Results</section>
+        <snippet>Story 2.1 baseline (single-threaded pypdfium): 13.3 minutes for 160-page PDF. This is the baseline for Story 2.2 speedup calculation. Target: 3.3-4.8 min (1.7-2.5x speedup).</snippet>
+      </doc>
+
+      <!-- CLAUDE.md - Development Constraints and Anti-Over-Engineering Rules -->
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project Development Guidelines</title>
+        <section>Anti-Over-Engineering Rules & Technology Stack Constraints</section>
+        <snippet>CRITICAL: KISS principle enforced - target ~600-800 lines. Technology stack LOCKED (no additions without approval). Direct SDK usage only (NO custom wrappers). Story 2.2: This is a 1-parameter configuration change (max_num_pages_visible). No custom thread pools, no async refactoring, no architectural changes. Simplicity first.</snippet>
+      </doc>
+
+      <!-- Documentation Structure and Navigation -->
+      <doc>
+        <path>docs/README.md</path>
+        <title>Documentation Guide and Navigation</title>
+        <section>Documentation Structure</section>
+        <snippet>Documentation organized in sharded files: docs/architecture/ (30 files), docs/prd/ (15 files), docs/stories/ (active user stories). Testing guidelines in pytest.ini. Quality gates and decision logs in workflow status. Story 2.2 artifacts location: docs/stories/.</snippet>
       </doc>
     </docs>
+
     <code>
+      <!-- Primary Integration Point - DocumentConverter Initialization -->
       <artifact>
         <path>raglite/ingestion/pipeline.py</path>
         <kind>service</kind>
-        <symbol>chunk_document()</symbol>
-        <lines>130-150</lines>
-        <reason>Current fixed-size chunking implementation (512-token chunks, 128-token overlap). MUST BE MODIFIED to use element-aware boundaries for Story 2.2.</reason>
+        <symbol>DocumentConverter initialization</symbol>
+        <lines>1013-1022</lines>
+        <reason>CRITICAL: Add max_num_pages_visible parameter to DocumentConverter initialization. Currently single-threaded. Need to add max_num_pages_visible=4 (or 8) to enable parallelism.</reason>
       </artifact>
+
+      <!-- Imports Section - Already has required imports -->
       <artifact>
         <path>raglite/ingestion/pipeline.py</path>
-        <kind>service</kind>
-        <symbol>generate_embeddings()</symbol>
-        <lines>41-80</lines>
-        <reason>Embedding generation for chunks. Will need to handle new element_type and section_title metadata fields in Qdrant payload.</reason>
+        <kind>import</kind>
+        <symbol>Docling imports</symbol>
+        <lines>13-22</lines>
+        <reason>All required imports already present (DocumentConverter, PdfFormatOption, PyPdfiumDocumentBackend). No new imports needed for parallelism.</reason>
       </artifact>
+
+      <!-- Integration Test - PDF Ingestion Template -->
       <artifact>
-        <path>raglite/shared/models.py</path>
-        <kind>model</kind>
-        <symbol>Chunk</symbol>
-        <lines>23-35</lines>
-        <reason>Current Chunk model. MUST BE EXTENDED with element_type (ElementType enum) and section_title (Optional[str]) fields for Story 2.2.</reason>
-      </artifact>
-      <artifact>
-        <path>raglite/shared/models.py</path>
-        <kind>model</kind>
-        <symbol>DocumentMetadata</symbol>
-        <lines>9-21</lines>
-        <reason>Document metadata model. May need extensions for element-level tracking (optional).</reason>
-      </artifact>
-      <artifact>
-        <path>raglite/shared/clients.py</path>
-        <kind>client</kind>
-        <symbol>get_qdrant_client()</symbol>
-        <lines>N/A</lines>
-        <reason>Qdrant client initialization. Enhanced metadata fields (element_type, section_title) must be added to Qdrant payload schema.</reason>
-      </artifact>
-      <artifact>
-        <path>raglite/shared/clients.py</path>
-        <kind>client</kind>
-        <symbol>get_embedding_model()</symbol>
-        <lines>N/A</lines>
-        <reason>Fin-E5 embedding model. No changes required - element-aware chunks use same embedding process.</reason>
-      </artifact>
-      <artifact>
-        <path>raglite/retrieval/search.py</path>
-        <kind>service</kind>
-        <symbol>hybrid_search()</symbol>
-        <lines>N/A</lines>
-        <reason>Hybrid search implementation from Story 2.1. API signature MUST remain unchanged (backward compatibility - AC5).</reason>
-      </artifact>
-      <artifact>
-        <path>tests/integration/test_hybrid_search_integration.py</path>
+        <path>tests/integration/test_ingestion_integration.py</path>
         <kind>test</kind>
-        <symbol>test_hybrid_search_full_ground_truth()</symbol>
-        <lines>167-267</lines>
-        <reason>CRITICAL test for AC3 validation. This test determines Story 2.2 success (≥64% accuracy mandatory, ≥68% stretch goal).</reason>
+        <symbol>TestPDFIngestionIntegration.test_ingest_financial_pdf_with_tables</symbol>
+        <lines>36-97</lines>
+        <reason>Use as template for parallel ingestion test. Extend to measure ingestion time and validate speedup. Already includes page count and table extraction validation.</reason>
+      </artifact>
+
+      <!-- AC4 Comprehensive Test - Timing Reference -->
+      <artifact>
+        <path>tests/integration/test_ac4_comprehensive.py</path>
+        <kind>test</kind>
+        <symbol>test_ac4_160page_pypdfium_optimized</symbol>
+        <lines>127-201</lines>
+        <reason>Story 2.1 baseline test: 13.3 min for 160-page PDF (single-threaded). Use this timing as Story 2.2 baseline comparison. Duplicate test with parallelism enabled.</reason>
       </artifact>
     </code>
+
     <dependencies>
-      <python version="3.11+">
-        <package name="docling" version="2.55.1">PDF processing with element detection (tables, sections, paragraphs)</package>
-        <package name="sentence-transformers" version="5.1.1">Fin-E5 financial domain embeddings (1024-dim)</package>
-        <package name="qdrant-client" version="1.15.1">Vector database with hybrid search support (Story 2.1)</package>
-        <package name="tiktoken" version="latest">Token counting for chunking decisions (NEW for Story 2.2)</package>
-        <package name="pydantic" version="2.0-3.0">Data models (Chunk, DocumentElement enums)</package>
-        <package name="pytest" version="latest">Unit and integration testing</package>
-        <package name="pytest-asyncio" version="latest">Async test support</package>
+      <!-- Python Dependencies from pyproject.toml -->
+      <python>
+        <package name="docling" version="2.55.1" />
+        <package name="sentence-transformers" version="5.1.1" />
+        <package name="qdrant-client" version="1.15.1" />
+        <package name="fastmcp" version="2.12.4" />
+        <package name="anthropic" version=">=0.18.0,<1.0.0" />
+        <package name="pydantic" version=">=2.0,<3.0" />
+        <package name="openpyxl" version=">=3.1,<4.0" />
+        <package name="pandas" version=">=2.0,<3.0" />
+        <package name="rank-bm25" version="0.2.2" />
+        <package name="tiktoken" version=">=0.5.1,<1.0.0" />
+        <package name="python-dotenv" version="1.1.1" />
+        <package name="asyncio" version=">=3.4.3,<4.0.0" />
+        <package name="httpx" version=">=0.28.1,<1.0.0" />
       </python>
-      <external>
-        <service name="Qdrant" version="1.11+">Vector database running in Docker Compose</service>
-        <api name="Docling API">Element extraction: TableItem, SectionHeaderItem, ParagraphItem, ListItem</api>
-      </external>
+
+      <dev>
+        <package name="pytest" version="8.4.2" />
+        <package name="pytest-asyncio" version="1.2.0" />
+        <package name="pytest-cov" version="5.0.0" />
+        <package name="pytest-mock" version=">=3.12,<4.0" />
+        <package name="pytest-xdist" version=">=3.5,<4.0" />
+        <package name="pytest-timeout" version=">=2.0,<3.0" />
+        <package name="black" version=">=23.3,<24.0" />
+        <package name="ruff" version=">=0.0.270,<1.0.0" />
+      </dev>
+
+      <note>No new dependencies required for Story 2.2. Parallelism is a built-in Docling feature accessible via max_num_pages_visible parameter.</note>
     </dependencies>
   </artifacts>
 
   <constraints>
-    <constraint type="architecture">
-      <title>KISS Principle - No Over-Engineering</title>
-      <rule>This is a ~600-800 line MVP. NO custom base classes, factories, builders, or abstract layers. ONE level of indirection maximum. Write simple, direct functions.</rule>
-    </constraint>
-    <constraint type="architecture">
-      <title>Technology Stack Locked</title>
-      <rule>ONLY use libraries in docs/architecture/5-technology-stack-definitive.md. NEVER add SDKs, frameworks, or libraries not documented. If library not in tech stack table → ASK FIRST.</rule>
-    </constraint>
-    <constraint type="architecture">
-      <title>No Custom Wrappers</title>
-      <rule>Use SDKs EXACTLY as documented. NO custom wrappers around Docling, Qdrant client, or any SDK. NO "simplified interfaces" or "convenience layers".</rule>
-    </constraint>
-    <constraint type="implementation">
-      <title>Element Boundary Preservation (AC1)</title>
-      <rule>Tables &lt;2,048 tokens MUST be stored as single chunk (indivisible). Tables &gt;2,048 tokens split at row boundaries only. Section headers MUST be grouped with first paragraph. NO mid-sentence splits.</rule>
-    </constraint>
-    <constraint type="implementation">
-      <title>Backward Compatibility (AC5)</title>
-      <rule>Qdrant collection schema MUST remain compatible (additive changes only). hybrid_search() API signature MUST NOT change. Existing queries MUST work without modification.</rule>
-    </constraint>
-    <constraint type="performance">
-      <title>NFR13 Compliance (AC4)</title>
-      <rule>p95 retrieval latency MUST be &lt;10,000ms. Ingestion time MUST be ≤30s per 100 pages. Memory usage MUST be ≤4 GB during ingestion. Chunk count MUST be within 20% of baseline (321 ± 64 chunks).</rule>
-    </constraint>
-    <constraint type="quality">
-      <title>Accuracy Decision Gate (AC3)</title>
-      <rule>Retrieval accuracy ≥64.0% MANDATORY for story completion. If &lt;64%: ESCALATE to PM immediately. If 64-67%: Document caution flag. If ≥68%: Document high confidence for Story 2.3.</rule>
-    </constraint>
-    <constraint type="code_quality">
-      <title>Type Hints and Docstrings</title>
-      <rule>All functions MUST have type annotations (PEP 8). Google-style docstrings MANDATORY for all public functions. Structured logging with extra={} context REQUIRED.</rule>
-    </constraint>
-    <constraint type="testing">
-      <title>Test Coverage</title>
-      <rule>80%+ unit test coverage target for new code. ALL acceptance criteria MUST have corresponding tests. Ground truth validation MUST run on full 50-query suite.</rule>
-    </constraint>
+    <!-- Development Constraints from Story Dev Notes -->
+    <constraint type="accuracy">MUST maintain table accuracy from Story 2.1 (100%). Parallelism must NOT affect extraction quality. TableFormerMode.ACCURATE configuration must be preserved.</constraint>
+
+    <constraint type="performance">MANDATORY 1.7-2.5x speedup requirement. This is a DECISION GATE for Phase 1 completion. Speedup <1.7x requires PM escalation.</constraint>
+
+    <constraint type="determinism">Output MUST be deterministic across parallel runs. Same chunk count, same embeddings, same metadata regardless of thread count or scheduling.</constraint>
+
+    <constraint type="thread-safety">MUST verify thread safety with 10 consecutive runs. No deadlocks, no race conditions, no data corruption. Qdrant client must handle concurrent writes safely.</constraint>
+
+    <constraint type="simplicity">KISS principle - This is a 1-parameter configuration change. Add max_num_pages_visible=4 (or 8) to DocumentConverter. No custom thread pools, no async refactoring, no architectural changes. Direct SDK usage only.</constraint>
+
+    <constraint type="baseline">Story 2.1 MUST be complete before starting Story 2.2. Baseline timing from Story 2.1 single-threaded pypdfium (13.3 min) is required for speedup calculation.</constraint>
   </constraints>
+
   <interfaces>
+    <!-- DocumentConverter Parallelism API -->
     <interface>
-      <name>Docling Element Detection API</name>
-      <kind>External SDK</kind>
-      <signature>
-doc_result.document.iterate_items() → Iterator[TableItem | SectionHeaderItem | ParagraphItem | ListItem]
-TableItem.export_to_markdown() → str
-SectionHeaderItem.text → str
-ParagraphItem.text → str
-item.prov[0].page → int
-      </signature>
-      <path>docling.datamodel.base_models (docling==2.55.1)</path>
-      <usage>Extract structured elements from Docling parsing result. Iterate through document items and convert to DocumentElement objects with type, content, and metadata.</usage>
+      <name>DocumentConverter</name>
+      <kind>class</kind>
+      <signature>DocumentConverter(format_options=..., max_num_pages_visible=4)</signature>
+      <path>docling.document_converter</path>
+      <usage>Add max_num_pages_visible parameter to existing DocumentConverter initialization. Value: 4 or 8 (test both). Enables concurrent page processing. Existing initialization at raglite/ingestion/pipeline.py:1016-1022.</usage>
     </interface>
+
+    <!-- PdfFormatOption - Unchanged -->
     <interface>
-      <name>Enhanced Qdrant Payload Schema</name>
-      <kind>Data Schema</kind>
-      <signature>
-PointStruct(
-    id: UUID,
-    vector: {"text-dense": List[float]},  # 1024-dim Fin-E5 embedding
-    payload: {
-        "chunk_id": str,
-        "text": str,
-        "word_count": int,
-        "source_document": str,
-        "page_number": int,
-        "chunk_index": int,
-        # NEW FIELDS for Story 2.2
-        "element_type": str,  # "table" | "section_header" | "paragraph" | "list" | "mixed"
-        "section_title": str | None  # Parent section header text or null
-    }
-)
-      </signature>
-      <path>raglite/ingestion/pipeline.py::create_embeddings()</path>
-      <usage>Enhanced metadata fields added to Qdrant payload. Enables filtering by element type (e.g., element_type="table") and preserves section context for attribution.</usage>
+      <name>PdfFormatOption</name>
+      <kind>class</kind>
+      <signature>PdfFormatOption(pipeline_options=pipeline_options, backend=PyPdfiumDocumentBackend)</signature>
+      <path>docling.document_converter</path>
+      <usage>No changes required to PdfFormatOption. Pipeline options and pypdfium backend configuration from Story 2.1 remain unchanged.</usage>
     </interface>
+
+    <!-- PdfPipelineOptions - Unchanged -->
     <interface>
-      <name>Chunk Model (Extended)</name>
-      <kind>Pydantic Model</kind>
-      <signature>
-class Chunk(BaseModel):
-    chunk_id: str
-    content: str
-    metadata: DocumentMetadata
-    page_number: int
-    chunk_index: int
-    embedding: list[float]
-    # NEW FIELDS for Story 2.2
-    element_type: ElementType  # Enum: TABLE, SECTION_HEADER, PARAGRAPH, LIST, MIXED
-    section_title: Optional[str]  # Parent section for context
-    parent_chunk_id: Optional[str]  # For Story 2.4 (table summaries)
-      </signature>
-      <path>raglite/shared/models.py:23-35 (EXTEND)</path>
-      <usage>Core chunk model extended with element metadata. Used throughout ingestion and retrieval pipeline.</usage>
-    </interface>
-    <interface>
-      <name>hybrid_search() API</name>
-      <kind>Function Signature (UNCHANGED)</kind>
-      <signature>
-async def hybrid_search(
-    query: str,
-    top_k: int = 5,
-    enable_hybrid: bool = True
-) -&gt; List[QueryResult]:
-    """Hybrid search combining semantic and keyword matching.
-
-    CRITICAL: API signature MUST NOT change for backward compatibility (AC5).
-    """
-      </signature>
-      <path>raglite/retrieval/search.py (Story 2.1)</path>
-      <usage>Existing hybrid search API from Story 2.1. Element-based chunks work transparently with this API - no breaking changes required.</usage>
-    </interface>
-    <interface>
-      <name>Element Extraction Function (NEW)</name>
-      <kind>Function Signature</kind>
-      <signature>
-def extract_elements(doc_result: ConversionResult) -&gt; list[DocumentElement]:
-    """Extract structured elements from Docling parsing result.
-
-    Iterates through Docling document items and converts them to
-    DocumentElement objects with type, content, and metadata.
-
-    Args:
-        doc_result: Docling conversion result with parsed document
-
-    Returns:
-        List of DocumentElement objects sorted by page/position
-    """
-      </signature>
-      <path>raglite/ingestion/pipeline.py (NEW FUNCTION)</path>
-      <usage>Core element extraction logic. Maps Docling types to ElementType enum, tracks parent section headers for context, counts tokens for chunking decisions.</usage>
-    </interface>
-    <interface>
-      <name>Smart Chunking Algorithm (NEW)</name>
-      <kind>Function Signature</kind>
-      <signature>
-def chunk_elements(
-    elements: list[DocumentElement],
-    max_tokens: int = 512,
-    overlap_tokens: int = 128
-) -&gt; list[Chunk]:
-    """Create chunks respecting element boundaries.
-
-    Strategy:
-        1. Tables &lt;2,048 tokens → single chunk (indivisible)
-        2. Tables &gt;2,048 tokens → split at row boundaries
-        3. Section headers → group with first paragraph
-        4. Paragraphs → accumulate until max_tokens
-        5. Preserve section_title context for all chunks
-    """
-      </signature>
-      <path>raglite/ingestion/pipeline.py (NEW FUNCTION)</path>
-      <usage>Replace fixed-size chunking with element-aware boundaries. Core implementation of AC1 (Element-Aware Chunk Boundaries).</usage>
+      <name>PdfPipelineOptions</name>
+      <kind>class</kind>
+      <signature>PdfPipelineOptions(do_table_structure=True, table_structure_options=...)</signature>
+      <path>docling.datamodel.pipeline_options</path>
+      <usage>No changes required to PdfPipelineOptions. All configuration from Story 2.1 preserved (pypdfium backend, TableFormerMode.ACCURATE).</usage>
     </interface>
   </interfaces>
+
   <tests>
     <standards>
-RAGLite follows the Testing Pyramid approach (80% unit, 15% integration, 5% E2E):
+Testing framework: pytest with pytest-asyncio for async function testing. Integration tests marked with @pytest.mark.integration and @pytest.mark.asyncio. Performance tests use pytest-timeout (900s for 160-page PDF tests). Lazy imports to avoid test discovery overhead (DO NOT import raglite modules at module level). Test markers: integration, unit, slow, smoke, p0/p1/p2 for priority. Code coverage via pytest-cov (target 80%+). Parallel execution via pytest-xdist with loadfile scheduling. Performance tests document timing with time.time() measurements.</standards>
 
-**Unit Tests (80%+ Coverage):**
-- Individual functions and classes tested in isolation
-- Mocked external dependencies (Qdrant, Claude API, Docling)
-- Fast execution (&lt;5 min for full suite)
-- Test framework: pytest + pytest-asyncio
-- Location: tests/unit/
-
-**Integration Tests (Service Integration):**
-- End-to-end ingestion pipeline (PDF → Docling → chunks → Qdrant)
-- Qdrant metadata storage and retrieval
-- Hybrid search with element-aware chunks
-- Test framework: pytest + pytest-asyncio with real Qdrant instance
-- Location: tests/integration/
-
-**Accuracy Validation (E2E):**
-- Ground truth test set: 50 queries from Story 1.15B baseline
-- Metrics: Retrieval accuracy (≥64% mandatory, ≥68% stretch), Attribution accuracy (≥45%)
-- Performance: p50/p95 latency (&lt;10,000ms p95 - NFR13)
-- Test framework: pytest with full pipeline execution
-- Location: tests/integration/test_hybrid_search_integration.py
-
-**Code Quality Standards:**
-- Type hints mandatory (PEP 8)
-- Google-style docstrings for all public functions
-- Structured logging with extra={} context
-- No custom wrappers - use SDKs directly
-- KISS principle - simple, direct functions only
-    </standards>
     <locations>
-      <location>tests/unit/test_element_extraction.py (NEW)</location>
-      <location>tests/unit/test_element_chunking.py (NEW)</location>
-      <location>tests/integration/test_element_metadata.py (NEW)</location>
-      <location>tests/integration/test_hybrid_search_integration.py (RERUN - AC3 validation)</location>
-      <location>tests/fixtures/ (sample PDFs and expected outputs)</location>
+      <location>tests/integration/test_ingestion_integration.py - Integration tests with real PDFs (10-page sample: tests/fixtures/sample_financial_report.pdf)</location>
+      <location>tests/integration/test_ac4_comprehensive.py - Production-scale tests (160-page PDF: docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf)</location>
+      <location>tests/integration/test_page_parallelism.py - NEW: Story 2.2 parallel processing tests (AC2, AC4)</location>
+      <location>pytest.ini - Test configuration (markers, timeouts, parallel execution settings)</location>
     </locations>
+
     <ideas>
-      <test_idea acceptance_criteria="AC1">
-        <test_name>test_extract_elements_from_sample_pdf</test_name>
-        <description>Test element extraction detects tables, sections, paragraphs from sample financial report. Validate element types, page numbers, token counts, and content.</description>
-        <file>tests/unit/test_element_extraction.py</file>
+      <!-- AC1: Parallel Processing Configuration -->
+      <test_idea ac="AC1">
+        <description>Unit test: Verify DocumentConverter initialization includes max_num_pages_visible parameter</description>
+        <approach>Mock DocumentConverter, assert max_num_pages_visible=4 (or 8) is set. Verify all Story 2.1 configuration preserved (pypdfium backend, TableFormerMode.ACCURATE). Log/inspect thread usage to confirm parallelism engaged.</approach>
       </test_idea>
-      <test_idea acceptance_criteria="AC1">
-        <test_name>test_section_context_preserved</test_name>
-        <description>Test section headers update current_section context. Subsequent elements should reference parent section title.</description>
-        <file>tests/unit/test_element_extraction.py</file>
+
+      <!-- AC2: Speedup Validation -->
+      <test_idea ac="AC2">
+        <description>Performance test: Measure speedup with 160-page PDF (4 vs 8 threads)</description>
+        <approach>Duplicate test_ac4_160page_pypdfium_optimized with max_num_pages_visible=4. Measure ingestion time. Compare with Story 2.1 baseline (13.3 min). Calculate speedup factor. MANDATORY: Validate ≥1.7x. Repeat with max_num_pages_visible=8 to find optimal configuration. Document results.</approach>
       </test_idea>
-      <test_idea acceptance_criteria="AC1">
-        <test_name>test_table_not_split_under_2048_tokens</test_name>
-        <description>Test tables &lt;2,048 tokens stored as single chunk. Verify element_type=TABLE and section_title preserved.</description>
-        <file>tests/unit/test_element_chunking.py</file>
+
+      <!-- AC3: Speedup Documentation -->
+      <test_idea ac="AC3">
+        <description>Documentation task: Record performance results in story file</description>
+        <approach>Create results table: Baseline (13.3 min), 4-thread (measured), 8-thread (measured), speedup factor, selected configuration. Add to Story 2.2 and Epic 2 tracking. Include in PR description.</approach>
       </test_idea>
-      <test_idea acceptance_criteria="AC1">
-        <test_name>test_large_table_split_at_row_boundaries</test_name>
-        <description>Test tables &gt;2,048 tokens split at row boundaries. Verify header row preserved in all chunks, no partial rows.</description>
-        <file>tests/unit/test_element_chunking.py</file>
-      </test_idea>
-      <test_idea acceptance_criteria="AC1">
-        <test_name>test_section_header_grouped_with_paragraph</test_name>
-        <description>Test section headers grouped with first paragraph. Verify both elements in same chunk with correct element_type.</description>
-        <file>tests/unit/test_element_chunking.py</file>
-      </test_idea>
-      <test_idea acceptance_criteria="AC2">
-        <test_name>test_element_metadata_stored_in_qdrant</test_name>
-        <description>Test element_type and section_title stored in Qdrant payload. Query for element_type="table" returns only table chunks.</description>
-        <file>tests/integration/test_element_metadata.py</file>
-      </test_idea>
-      <test_idea acceptance_criteria="AC2">
-        <test_name>test_element_chunking_end_to_end</test_name>
-        <description>Test end-to-end ingestion with element-aware chunking. Validate chunk count within 20% of baseline (321 ± 64 chunks). Validate element type distribution.</description>
-        <file>tests/integration/test_element_metadata.py</file>
-      </test_idea>
-      <test_idea acceptance_criteria="AC3">
-        <test_name>test_hybrid_search_full_ground_truth</test_name>
-        <description>CRITICAL test for AC3 validation. Run full 50-query ground truth suite against element-aware chunks. Assert retrieval accuracy ≥64% (mandatory) or ≥68% (stretch). Decision gate: &lt;64% ESCALATE, 64-67% caution, ≥68% high confidence.</description>
-        <file>tests/integration/test_hybrid_search_integration.py</file>
-      </test_idea>
-      <test_idea acceptance_criteria="AC4">
-        <test_name>test_element_chunking_performance</test_name>
-        <description>Test ingestion time ≤30s per 100 pages. Memory profiling during ingestion (≤4 GB). Measure p95 retrieval latency (&lt;10,000ms NFR13).</description>
-        <file>tests/integration/test_element_metadata.py</file>
-      </test_idea>
-      <test_idea acceptance_criteria="AC5">
-        <test_name>test_backward_compatibility_baseline_tests</test_name>
-        <description>Regression test: Run Story 1.15B baseline tests against new element-aware chunks. Verify existing queries work without modification.</description>
-        <file>tests/integration/test_hybrid_search_integration.py</file>
-      </test_idea>
-      <test_idea acceptance_criteria="AC5">
-        <test_name>test_hybrid_search_api_signature_unchanged</test_name>
-        <description>API compatibility test: Verify hybrid_search() signature unchanged. Test with existing call patterns from Story 2.1.</description>
-        <file>tests/integration/test_hybrid_search_integration.py</file>
+
+      <!-- AC4: Thread Safety Validation -->
+      <test_idea ac="AC4">
+        <description>Determinism test: Run parallel ingestion 10 times, verify identical output</description>
+        <approach>Create test loop: ingest same PDF 10 times with parallelism enabled. Collect chunk_count from each run. Assert all runs produce identical chunk_count. Verify no exceptions, no deadlocks. Log any variance. Pass if 10/10 runs match.</approach>
       </test_idea>
     </ideas>
   </tests>

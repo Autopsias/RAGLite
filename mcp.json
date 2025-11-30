@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "raglite": {
+      "command": "uv",
+      "args": [
+        "run",
+        "python",
+        "-m",
+        "raglite.main"
+      ],
+      "env": {
+        "PYTHONPATH": "/Users/ricardocarvalho/DeveloperFolder/RAGLite",
+        "QDRANT_URL": "http://localhost:6333",
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_USER": "raglite",
+        "POSTGRES_PASSWORD": "raglite",
+        "POSTGRES_DB": "raglite"
+      }
+    }
+  }
+}

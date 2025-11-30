@@ -11,17 +11,30 @@ help: ## Show this help message
 install-dev: ## Install development dependencies with performance plugins
 	uv sync --group dev --group test
 
-test: ## Run all tests with parallel execution (default)
-	uv run pytest -n auto --dist loadfile
+test: test-optimized ## Run optimized test suite (default) - FASTEST
 
-test-fast: ## Run unit tests only (fastest feedback)
-	uv run pytest -n auto --dist loadfile -m unit -x --tb=short
+test-optimized: ## Run tests with optimal parallelization strategy (<12 min target)
+	@echo "🚀 RAGLite Optimized Test Suite"
+	@echo "================================"
+	@echo "Phase 1: Unit tests (483 tests, parallel -n auto)"
+	@time uv run pytest tests/unit -n auto --dist loadfile --tb=line
+	@echo ""
+	@echo "Phase 2: Integration tests (220 tests, single worker for shared fixture)"
+	@time uv run pytest tests/integration -n 1 --dist loadfile --tb=line
+	@echo ""
+	@echo "✅ Test suite complete!"
+
+test-fast: ## Run unit tests only (fastest feedback <2 min)
+	@echo "⚡ Running unit tests in parallel..."
+	uv run pytest tests/unit -n auto --dist loadfile -x --tb=short
 
 test-unit: ## Run unit tests with coverage
-	uv run pytest -n auto --dist loadfile -m unit --cov=raglite --cov-report=term-missing
+	@echo "📊 Running unit tests with coverage..."
+	uv run pytest tests/unit -n auto --dist loadfile --cov=raglite --cov-report=term-missing
 
-test-integration: ## Run integration tests (requires Qdrant)
-	uv run pytest -n auto --dist loadfile -m integration
+test-integration: ## Run integration tests with optimal settings (requires Qdrant)
+	@echo "🔗 Running integration tests (single worker for session fixture)..."
+	uv run pytest tests/integration -n 1 --dist loadfile --tb=short
 
 test-slow: ## Run slow/e2e tests only
 	uv run pytest -n auto --dist loadfile -m "slow or e2e"
@@ -59,6 +72,27 @@ test-smoke: ## Run smoke tests only (quick validation)
 
 test-p0: ## Run priority 0 (critical) tests only
 	uv run pytest -n auto --dist loadfile -m p0
+
+# VS Code Test Explorer Performance Optimization Commands
+test-ingest-data: ## Ingest test data for skip-ingestion mode (enables 98% speedup)
+	@echo "📥 Ingesting test data for rapid iteration..."
+	@echo "This enables --skip-ingestion mode in VS Code Test Explorer"
+	@echo ""
+	uv run python scripts/ingest-test-data.py
+	@echo ""
+	@echo "✅ Test data ingested! Next steps:"
+	@echo "1. Uncomment '--skip-ingestion' in .vscode/settings.json"
+	@echo "2. Reload VS Code window: Cmd+Shift+P → 'Developer: Reload Window'"
+	@echo "3. Run tests via Test Explorer → completes in ~1 minute!"
+
+test-skip-ingestion: ## Run tests with skip-ingestion mode (requires test-ingest-data first)
+	@echo "⚡ Running tests with skip-ingestion (98% faster)..."
+	uv run pytest tests/integration --skip-ingestion -n 1 --dist loadfile
+
+test-vscode: ## Simulate VS Code Test Explorer batch execution (Fix #1)
+	@echo "🖥️  Simulating VS Code Test Explorer with batch optimization..."
+	@echo "Expected runtime: ~12 minutes (vs 44 minutes unoptimized)"
+	@time uv run pytest tests/ -v -n 1 --dist loadfile
 
 clean-test: ## Clean test artifacts and cache
 	rm -rf .pytest_cache htmlcov .coverage coverage.xml

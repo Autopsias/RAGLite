@@ -21,6 +21,9 @@ from raglite.agentic.fallback import (
 )
 from raglite.agentic.planner import AgentResult, QueryComplexity
 
+# Mark all tests in this module as integration tests that preserve collection state
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+
 
 class TestAgentTimeoutScenario:
     """Test agent timeout triggering fallback (AC6)."""

@@ -15,6 +15,9 @@ import pytest
 from raglite.agentic.agents.retrieval_agent import retrieval_agent
 from raglite.agentic.state import AgentState
 
+# Mark all tests in this module as integration tests that preserve collection state
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+
 
 class TestRetrievalSynthesisWorkflow:
     """Test retrieval_agent within simple 2-agent workflow (AC5)."""
@@ -38,9 +41,9 @@ class TestRetrievalSynthesisWorkflow:
         parsed = json.loads(result)
 
         # Verify results retrieved from Qdrant
-        assert parsed["search_metadata"]["success"] is True, (
-            "Search should succeed with real Qdrant"
-        )
+        assert (
+            parsed["search_metadata"]["success"] is True
+        ), "Search should succeed with real Qdrant"
         assert parsed["total_retrieved"] > 0, "Should retrieve results from Qdrant"
         assert len(parsed["chunks"]) > 0, "chunks list should not be empty"
 

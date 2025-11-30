@@ -35,6 +35,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Global environment variables (inherited by ALL jobs)
+env:
+  APP_ENV: test
+
 jobs:
   # ============================================================================
   # CODE QUALITY CHECKS
@@ -52,8 +56,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install uv (network-resilient)
+        run: |
+          # Network-resilient uv installation with retry logic
+          MAX_RETRIES=3
+          RETRY_DELAY=2
+
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "Installing uv (attempt $attempt/$MAX_RETRIES)..."
+
+            if curl --retry 3 --retry-delay 2 --retry-all-errors -LsSf https://astral.sh/uv/install.sh | sh; then
+              echo "✅ uv installed successfully"
+
+              # Verify installation
+              if command -v uv &> /dev/null; then
+                uv --version
+                exit 0
+              else
+                echo "⚠️  uv command not found after installation"
+              fi
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "⚠️  Installation attempt $attempt failed, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Failed to install uv after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Install dependencies with uv
         run: |
@@ -91,8 +122,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install uv (network-resilient)
+        run: |
+          # Network-resilient uv installation with retry logic
+          MAX_RETRIES=3
+          RETRY_DELAY=2
+
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "Installing uv (attempt $attempt/$MAX_RETRIES)..."
+
+            if curl --retry 3 --retry-delay 2 --retry-all-errors -LsSf https://astral.sh/uv/install.sh | sh; then
+              echo "✅ uv installed successfully"
+
+              # Verify installation
+              if command -v uv &> /dev/null; then
+                uv --version
+                exit 0
+              else
+                echo "⚠️  uv command not found after installation"
+              fi
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "⚠️  Installation attempt $attempt failed, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Failed to install uv after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Install dependencies with uv
         run: |
@@ -119,8 +177,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install uv (network-resilient)
+        run: |
+          # Network-resilient uv installation with retry logic
+          MAX_RETRIES=3
+          RETRY_DELAY=2
+
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "Installing uv (attempt $attempt/$MAX_RETRIES)..."
+
+            if curl --retry 3 --retry-delay 2 --retry-all-errors -LsSf https://astral.sh/uv/install.sh | sh; then
+              echo "✅ uv installed successfully"
+
+              # Verify installation
+              if command -v uv &> /dev/null; then
+                uv --version
+                exit 0
+              else
+                echo "⚠️  uv command not found after installation"
+              fi
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "⚠️  Installation attempt $attempt failed, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Failed to install uv after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Install security scanning tools with uv
         run: |
@@ -165,8 +250,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install uv (network-resilient)
+        run: |
+          # Network-resilient uv installation with retry logic
+          MAX_RETRIES=3
+          RETRY_DELAY=2
+
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "Installing uv (attempt $attempt/$MAX_RETRIES)..."
+
+            if curl --retry 3 --retry-delay 2 --retry-all-errors -LsSf https://astral.sh/uv/install.sh | sh; then
+              echo "✅ uv installed successfully"
+
+              # Verify installation
+              if command -v uv &> /dev/null; then
+                uv --version
+                exit 0
+              else
+                echo "⚠️  uv command not found after installation"
+              fi
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "⚠️  Installation attempt $attempt failed, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Failed to install uv after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Install dependencies with uv
         run: |
@@ -239,8 +351,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install uv (network-resilient)
+        run: |
+          # Network-resilient uv installation with retry logic
+          MAX_RETRIES=3
+          RETRY_DELAY=2
+
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "Installing uv (attempt $attempt/$MAX_RETRIES)..."
+
+            if curl --retry 3 --retry-delay 2 --retry-all-errors -LsSf https://astral.sh/uv/install.sh | sh; then
+              echo "✅ uv installed successfully"
+
+              # Verify installation
+              if command -v uv &> /dev/null; then
+                uv --version
+                exit 0
+              else
+                echo "⚠️  uv command not found after installation"
+              fi
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "⚠️  Installation attempt $attempt failed, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Failed to install uv after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Install dependencies with uv
         run: |
@@ -293,33 +432,67 @@ jobs:
           echo "To start: docker run -d -p 6333:6333 --name raglite-qdrant qdrant/qdrant:v1.15.0"
           exit 1
 
-      - name: Start and verify PostgreSQL
+      - name: Start and verify PostgreSQL (Integration)
         run: |
-          echo "Ensuring fresh PostgreSQL container..."
+          # ROOT CAUSE #3 FIX: Use unique container name per job to avoid parallel job race condition
+          # Integration Tests: raglite-postgresql-integration on port 5433
+          CONTAINER_NAME="raglite-postgresql-integration"
+          CONTAINER_PORT="5433"
+
+          echo "Ensuring PostgreSQL container '$CONTAINER_NAME' with correct credentials..."
+
+          # CLEANUP: Remove ANY container using port 5433 (including old raglite-postgresql-test)
+          echo "Cleaning up any containers using port $CONTAINER_PORT..."
+          docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":${CONTAINER_PORT}->" | awk '{print $1}' | xargs -r docker rm -f || true
+          sleep 2
 
           # Check if container exists
-          if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
-            echo "PostgreSQL container exists - restarting to ensure fresh state..."
+          if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+            echo "PostgreSQL container exists - verifying credentials..."
 
-            # CRITICAL: Always restart to prevent zombie/hung state
-            # Container may show as "running" but be unresponsive (seen 4-day old logs)
-            docker restart raglite-postgresql
-            echo "Waiting for restart to complete..."
-            sleep 5
+            # Check if container has correct user (raglite_ci)
+            if docker exec $CONTAINER_NAME psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+              echo "✅ Container has correct credentials (raglite_ci) - reusing existing container"
+
+              # Ensure it's running
+              if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+                echo "Container stopped - starting it..."
+                docker start $CONTAINER_NAME
+                sleep 5
+              fi
+            else
+              echo "⚠️  Container has wrong credentials - recreating with raglite_ci..."
+              docker rm -f $CONTAINER_NAME
+              docker volume rm ${CONTAINER_NAME}-data 2>/dev/null || true
+
+              # Wait for Docker to release port binding
+              echo "Waiting for Docker networking cleanup (port $CONTAINER_PORT)..."
+              sleep 5
+
+              docker run -d \
+                -p ${CONTAINER_PORT}:5432 \
+                -e POSTGRES_DB=raglite_ci \
+                -e POSTGRES_USER=raglite_ci \
+                -e POSTGRES_PASSWORD=raglite_ci \
+                --name $CONTAINER_NAME \
+                postgres:16
+              echo "Waiting for initial startup..."
+              sleep 8
+            fi
           else
             echo "Creating new PostgreSQL container..."
             docker run -d \
-              -p 5432:5432 \
-              -e POSTGRES_DB=raglite \
-              -e POSTGRES_USER=raglite \
-              -e POSTGRES_PASSWORD=raglite \
-              --name raglite-postgresql \
+              -p ${CONTAINER_PORT}:5432 \
+              -e POSTGRES_DB=raglite_ci \
+              -e POSTGRES_USER=raglite_ci \
+              -e POSTGRES_PASSWORD=raglite_ci \
+              --name $CONTAINER_NAME \
               postgres:16
             echo "Waiting for initial startup..."
             sleep 8
           fi
 
-          echo "✅ PostgreSQL container refreshed"
+          echo "✅ PostgreSQL container ready"
 
           # Wait for PostgreSQL to be ready (max 30 seconds)
           echo "Waiting for PostgreSQL to be ready..."
@@ -339,28 +512,28 @@ jobs:
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             # Try to connect using docker exec if psql not available
             if [ "$USE_DOCKER_EXEC" = true ]; then
-              if docker exec raglite-postgresql psql -U raglite -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+              if docker exec $CONTAINER_NAME psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
                 echo "✅ PostgreSQL is available (via docker exec)"
 
-                # Create raglite database if missing
-                docker exec raglite-postgresql psql -U raglite -d postgres -c "SELECT 1 FROM pg_database WHERE datname='raglite'" | grep -q 1 || \
-                  docker exec raglite-postgresql psql -U raglite -d postgres -c "CREATE DATABASE raglite" > /dev/null 2>&1
+                # Create raglite_ci database if missing
+                docker exec $CONTAINER_NAME psql -U raglite_ci -d postgres -c "SELECT 1 FROM pg_database WHERE datname='raglite_ci'" | grep -q 1 || \
+                  docker exec $CONTAINER_NAME psql -U raglite_ci -d postgres -c "CREATE DATABASE raglite_ci" > /dev/null 2>&1
 
-                echo "✅ Database 'raglite' ready"
+                echo "✅ Database 'raglite_ci' ready"
                 exit 0
               fi
             else
               # Try to connect using local psql
-              if PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d postgres -c "SELECT 1" > /dev/null 2>&1; then
-                echo "✅ PostgreSQL is available at localhost:5432"
+              if PGPASSWORD=raglite_ci psql -h localhost -p $CONTAINER_PORT -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+                echo "✅ PostgreSQL is available at localhost:$CONTAINER_PORT"
 
-                # Verify raglite database exists, create if missing
-                if PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d raglite -c "SELECT 1" > /dev/null 2>&1; then
-                  echo "✅ Database 'raglite' is accessible"
+                # Verify raglite_ci database exists, create if missing
+                if PGPASSWORD=raglite_ci psql -h localhost -p $CONTAINER_PORT -U raglite_ci -d raglite_ci -c "SELECT 1" > /dev/null 2>&1; then
+                  echo "✅ Database 'raglite_ci' is accessible"
                   exit 0
                 else
-                  echo "⚠️  Creating database 'raglite'..."
-                  PGPASSWORD=raglite psql -h localhost -p 5432 -U raglite -d postgres -c "CREATE DATABASE raglite" 2>&1 | grep -v "already exists" || true
+                  echo "⚠️  Creating database 'raglite_ci'..."
+                  PGPASSWORD=raglite_ci psql -h localhost -p $CONTAINER_PORT -U raglite_ci -d postgres -c "CREATE DATABASE raglite_ci" 2>&1 | grep -v "already exists" || true
                   sleep 1
                 fi
               fi
@@ -376,11 +549,11 @@ jobs:
           echo "❌ PostgreSQL not available after ${MAX_RETRIES}s"
           echo ""
           echo "Debug information:"
-          echo "- Container status: $(docker ps -a --filter name=raglite-postgresql --format '{{.Status}}')"
+          echo "- Container status: $(docker ps -a --filter name=$CONTAINER_NAME --format '{{.Status}}')"
           echo "- psql available: $(command -v psql &> /dev/null && echo 'yes' || echo 'no')"
           echo ""
           echo "Container logs (last 50 lines):"
-          docker logs raglite-postgresql --tail 50
+          docker logs $CONTAINER_NAME --tail 50
           exit 1
 
       - name: Initialize Qdrant collection
@@ -391,21 +564,28 @@ jobs:
           echo "✅ Qdrant collection initialized"
 
       - name: Initialize PostgreSQL schema
+        env:
+          APP_ENV: test
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5433
+          POSTGRES_DB: raglite_ci
+          POSTGRES_USER: raglite_ci
+          POSTGRES_PASSWORD: raglite_ci
         run: |
           source ci-venv/bin/activate
           echo "🔧 Initializing PostgreSQL schema (financial_chunks, financial_tables, entity_mappings)..."
-          python scripts/init-postgresql.py
+          python scripts/init-test-postgresql.py
           echo "✅ Schema initialized successfully"
 
       - name: Run integration tests (CI fast mode)
         env:
           QDRANT_HOST: localhost
-          QDRANT_PORT: 6333
+          QDRANT_PORT: 6335
           POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DB: raglite
-          POSTGRES_USER: raglite
-          POSTGRES_PASSWORD: raglite
+          POSTGRES_PORT: 5433
+          POSTGRES_DB: raglite_ci
+          POSTGRES_USER: raglite_ci
+          POSTGRES_PASSWORD: raglite_ci
           TEST_USE_FULL_PDF: "false"
         run: |
           source ci-venv/bin/activate
@@ -455,8 +635,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install uv (network-resilient)
+        run: |
+          # Network-resilient uv installation with retry logic
+          MAX_RETRIES=3
+          RETRY_DELAY=2
+
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "Installing uv (attempt $attempt/$MAX_RETRIES)..."
+
+            if curl --retry 3 --retry-delay 2 --retry-all-errors -LsSf https://astral.sh/uv/install.sh | sh; then
+              echo "✅ uv installed successfully"
+
+              # Verify installation
+              if command -v uv &> /dev/null; then
+                uv --version
+                exit 0
+              else
+                echo "⚠️  uv command not found after installation"
+              fi
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "⚠️  Installation attempt $attempt failed, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Failed to install uv after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Install dependencies with uv
         run: |
@@ -521,8 +728,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install uv (network-resilient)
+        run: |
+          # Network-resilient uv installation with retry logic
+          MAX_RETRIES=3
+          RETRY_DELAY=2
+
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "Installing uv (attempt $attempt/$MAX_RETRIES)..."
+
+            if curl --retry 3 --retry-delay 2 --retry-all-errors -LsSf https://astral.sh/uv/install.sh | sh; then
+              echo "✅ uv installed successfully"
+
+              # Verify installation
+              if command -v uv &> /dev/null; then
+                uv --version
+                exit 0
+              else
+                echo "⚠️  uv command not found after installation"
+              fi
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "⚠️  Installation attempt $attempt failed, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Failed to install uv after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Install dependencies with uv
         run: |
@@ -538,7 +772,7 @@ jobs:
       - name: Run performance tests
         env:
           QDRANT_HOST: localhost
-          QDRANT_PORT: 6333
+          QDRANT_PORT: 6335
         run: |
           source ci-venv/bin/activate
           echo "========================================="
@@ -578,8 +812,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install uv (network-resilient)
+        run: |
+          # Network-resilient uv installation with retry logic
+          MAX_RETRIES=3
+          RETRY_DELAY=2
+
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "Installing uv (attempt $attempt/$MAX_RETRIES)..."
+
+            if curl --retry 3 --retry-delay 2 --retry-all-errors -LsSf https://astral.sh/uv/install.sh | sh; then
+              echo "✅ uv installed successfully"
+
+              # Verify installation
+              if command -v uv &> /dev/null; then
+                uv --version
+                exit 0
+              else
+                echo "⚠️  uv command not found after installation"
+              fi
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "⚠️  Installation attempt $attempt failed, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Failed to install uv after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Install dependencies with uv
         run: |
@@ -614,11 +875,15 @@ jobs:
 
       - name: Verify PostgreSQL is available
         run: |
-          echo "Checking persistent PostgreSQL instance..."
+          # Use same container as Integration Tests job
+          CONTAINER_NAME="raglite-postgresql-integration"
+
+          echo "Checking PostgreSQL instance ($CONTAINER_NAME)..."
           MAX_RETRIES=30
           RETRY_COUNT=0
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            if docker exec raglite-postgresql psql -U raglite -d raglite -c "SELECT 1" > /dev/null 2>&1; then
+            # CI mode expects: user raglite_ci, db raglite_ci
+            if docker exec $CONTAINER_NAME psql -U raglite_ci -d raglite_ci -c "SELECT 1" > /dev/null 2>&1; then
               echo "✅ PostgreSQL is available"
               exit 0
             fi
@@ -632,12 +897,12 @@ jobs:
       - name: Run agentic workflow test suite
         env:
           QDRANT_HOST: localhost
-          QDRANT_PORT: 6333
+          QDRANT_PORT: 6335
           POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DB: raglite
-          POSTGRES_USER: raglite
-          POSTGRES_PASSWORD: raglite
+          POSTGRES_PORT: 5433
+          POSTGRES_DB: raglite_ci
+          POSTGRES_USER: raglite_ci
+          POSTGRES_PASSWORD: raglite_ci
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           source ci-venv/bin/activate
@@ -707,7 +972,189 @@ jobs:
           fi
 
   # ============================================================================
-  # JOB 9: Test Count Validation
+  # JOB 9: Test Coverage Enforcement
+  # OPTIMIZED: Uses cached coverage from test-unit (no redundant test execution)
+  # ============================================================================
+  test-coverage-enforcement:
+    name: "📊 Coverage Gates (AC3-AC5)"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 5  # Reduced from 15 - no test execution needed
+    needs: [test-unit, test-integration]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for git diff
+
+      - name: Download unit test coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-unit
+          path: .
+
+      - name: Install uv (network-resilient)
+        run: |
+          # Network-resilient uv installation with retry logic
+          MAX_RETRIES=3
+          RETRY_DELAY=2
+
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "Installing uv (attempt $attempt/$MAX_RETRIES)..."
+
+            if curl --retry 3 --retry-delay 2 --retry-all-errors -LsSf https://astral.sh/uv/install.sh | sh; then
+              echo "✅ uv installed successfully"
+
+              # Verify installation
+              if command -v uv &> /dev/null; then
+                uv --version
+                exit 0
+              else
+                echo "⚠️  uv command not found after installation"
+              fi
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "⚠️  Installation attempt $attempt failed, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Failed to install uv after $MAX_RETRIES attempts"
+          exit 1
+
+      - name: Install coverage tools
+        run: |
+          set -e
+          set -o pipefail
+
+          uv venv ci-venv
+          source ci-venv/bin/activate
+
+          echo "========================================="
+          echo "Installing coverage analysis tools..."
+          echo "========================================="
+
+          uv pip install coverage==7.6.1
+
+      - name: Convert coverage.xml to JSON format
+        run: |
+          source ci-venv/bin/activate
+
+          echo "========================================="
+          echo "Using cached coverage from test-unit job"
+          echo "========================================="
+
+          # Verify coverage artifact was downloaded
+          if [ -f "coverage.xml" ]; then
+            echo "✅ Found coverage.xml from test-unit job"
+            ls -la coverage.xml
+          else
+            echo "❌ coverage.xml not found!"
+            exit 1
+          fi
+
+          # Convert XML to JSON for diff/ratchet scripts
+          python3 scripts/convert_coverage_xml_to_json.py coverage.xml .coverage.json
+
+      - name: Download baseline coverage from main
+        id: download-baseline
+        continue-on-error: true
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: ci.yml
+          branch: main
+          name: coverage-baseline
+          path: .
+          if_no_artifact_found: warn
+
+      - name: Check coverage diff (AC3 - new code ≥80%)
+        run: |
+          source ci-venv/bin/activate
+
+          echo "========================================="
+          echo "AC3: Coverage Gate (New Code ≥80%)"
+          echo "========================================="
+
+          if [ -f ".coverage-baseline.json" ]; then
+            python scripts/check_coverage_diff.py \
+              --current=.coverage.json \
+              --baseline=.coverage-baseline.json \
+              --threshold=80
+          else
+            echo "⚠️  No baseline coverage found - skipping diff check"
+            echo "   This is expected for first PR or main branch builds"
+            python scripts/check_coverage_diff.py \
+              --current=.coverage.json \
+              --threshold=80
+          fi
+
+      - name: Check coverage ratchet (AC4 - no regression)
+        run: |
+          source ci-venv/bin/activate
+
+          echo "========================================="
+          echo "AC4: Coverage Ratchet (No Regression)"
+          echo "========================================="
+
+          if [ -f ".coverage-baseline.json" ]; then
+            python scripts/check_coverage_ratchet.py \
+              --current=.coverage.json \
+              --baseline=.coverage-baseline.json
+          else
+            echo "⚠️  No baseline coverage found - skipping ratchet check"
+            echo "   This is expected for first PR or main branch builds"
+          fi
+
+      - name: Post coverage comment to PR (AC5)
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF: ${{ github.ref }}
+        run: |
+          source ci-venv/bin/activate
+
+          echo "Posting coverage comment to PR..."
+          if [ -f ".coverage-baseline.json" ]; then
+            python scripts/post_coverage_comment.py .coverage.json --baseline .coverage-baseline.json
+          else
+            python scripts/post_coverage_comment.py .coverage.json
+          fi
+
+      - name: Upload coverage report (HTML)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report-html
+          path: htmlcov/
+          retention-days: 30
+
+      - name: Upload coverage baseline (for main branch)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-baseline
+          path: .coverage.json
+          retention-days: 90
+
+      - name: Display coverage summary
+        if: always()
+        run: |
+          source ci-venv/bin/activate
+
+          echo "========================================="
+          echo "📊 COVERAGE SUMMARY"
+          echo "========================================="
+
+          if [ -f ".coverage.json" ]; then
+            python3 scripts/display_coverage_summary.py .coverage.json || echo "Failed to display coverage summary"
+          fi
+
+          echo "========================================="
+
+  # ============================================================================
+  # JOB 10: Test Count Validation
   # ============================================================================
   test-count-validation:
     name: "🔢 NFR: Test Discovery Validation"
@@ -719,8 +1166,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install uv (network-resilient)
+        run: |
+          # Network-resilient uv installation with retry logic
+          MAX_RETRIES=3
+          RETRY_DELAY=2
+
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "Installing uv (attempt $attempt/$MAX_RETRIES)..."
+
+            if curl --retry 3 --retry-delay 2 --retry-all-errors -LsSf https://astral.sh/uv/install.sh | sh; then
+              echo "✅ uv installed successfully"
+
+              # Verify installation
+              if command -v uv &> /dev/null; then
+                uv --version
+                exit 0
+              else
+                echo "⚠️  uv command not found after installation"
+              fi
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "⚠️  Installation attempt $attempt failed, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Failed to install uv after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Install dependencies with uv
         run: |
@@ -826,28 +1300,59 @@ jobs:
 
       - name: Start PostgreSQL for test discovery
         run: |
-          echo "Ensuring PostgreSQL is available for test collection..."
+          # ROOT CAUSE #3 FIX: Use unique container name per job to avoid parallel job race condition
+          # Test Discovery: raglite-postgresql-discovery on port 5434
+          CONTAINER_NAME="raglite-postgresql-discovery"
+          CONTAINER_PORT="5434"
+
+          echo "Ensuring PostgreSQL container '$CONTAINER_NAME' with correct credentials..."
+
+          # CLEANUP: Remove ANY container using port 5434
+          echo "Cleaning up any containers using port $CONTAINER_PORT..."
+          docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":${CONTAINER_PORT}->" | awk '{print $1}' | xargs -r docker rm -f || true
+          sleep 2
 
           # Check if container exists
-          if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
-            echo "PostgreSQL container exists - ensuring it's running..."
+          if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+            echo "PostgreSQL container exists - verifying credentials..."
 
-            # Check if it's actually running
-            if docker ps --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
-              echo "✅ PostgreSQL already running"
+            # Check if container has correct user (raglite_ci)
+            if docker exec $CONTAINER_NAME psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+              echo "✅ Container has correct credentials (raglite_ci) - reusing existing container"
+
+              # Ensure it's running
+              if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+                echo "Container stopped - starting it..."
+                docker start $CONTAINER_NAME
+                sleep 5
+              fi
             else
-              echo "Starting PostgreSQL container..."
-              docker start raglite-postgresql
+              echo "⚠️  Container has wrong credentials - recreating with raglite_ci..."
+              docker rm -f $CONTAINER_NAME
+              docker volume rm ${CONTAINER_NAME}-data 2>/dev/null || true
+
+              # Wait for Docker to release port binding
+              echo "Waiting for Docker networking cleanup (port $CONTAINER_PORT)..."
               sleep 5
+
+              docker run -d \
+                -p ${CONTAINER_PORT}:5432 \
+                -e POSTGRES_DB=raglite_ci \
+                -e POSTGRES_USER=raglite_ci \
+                -e POSTGRES_PASSWORD=raglite_ci \
+                --name $CONTAINER_NAME \
+                postgres:16
+              echo "Waiting for PostgreSQL startup..."
+              sleep 8
             fi
           else
             echo "Creating new PostgreSQL container..."
             docker run -d \
-              -p 5432:5432 \
-              -e POSTGRES_DB=raglite \
-              -e POSTGRES_USER=raglite \
-              -e POSTGRES_PASSWORD=raglite \
-              --name raglite-postgresql \
+              -p ${CONTAINER_PORT}:5432 \
+              -e POSTGRES_DB=raglite_ci \
+              -e POSTGRES_USER=raglite_ci \
+              -e POSTGRES_PASSWORD=raglite_ci \
+              --name $CONTAINER_NAME \
               postgres:16
             echo "Waiting for PostgreSQL startup..."
             sleep 8
@@ -927,7 +1432,7 @@ jobs:
   # ============================================================================
 
   # ============================================================================
-  # JOB 10: Documentation Validation
+  # JOB 11: Documentation Validation
   # ============================================================================
   docs-validation:
     name: "📚 Documentation: Validation"
@@ -968,7 +1473,7 @@ jobs:
           fi
 
   # ============================================================================
-  # JOB 11: Burn-In Loop (Flaky Test Detection)
+  # JOB 12: Burn-In Loop (Flaky Test Detection)
   # ============================================================================
   burn-in:
     name: "🔥 Quality Gate: Burn-In Loop (3 iterations)"
@@ -983,8 +1488,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install uv (network-resilient)
+        run: |
+          # Network-resilient uv installation with retry logic
+          MAX_RETRIES=3
+          RETRY_DELAY=2
+
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "Installing uv (attempt $attempt/$MAX_RETRIES)..."
+
+            if curl --retry 3 --retry-delay 2 --retry-all-errors -LsSf https://astral.sh/uv/install.sh | sh; then
+              echo "✅ uv installed successfully"
+
+              # Verify installation
+              if command -v uv &> /dev/null; then
+                uv --version
+                exit 0
+              else
+                echo "⚠️  uv command not found after installation"
+              fi
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "⚠️  Installation attempt $attempt failed, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Failed to install uv after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Install dependencies with uv
         run: |
@@ -1015,27 +1547,67 @@ jobs:
           echo "❌ Qdrant not available after ${MAX_RETRIES}s"
           exit 1
 
-      - name: Start and verify PostgreSQL
+      - name: Start and verify PostgreSQL (Burn-in)
         run: |
-          echo "Ensuring fresh PostgreSQL container..."
-          if docker ps -a --format '{{.Names}}' | grep -q "^raglite-postgresql$"; then
-            echo "PostgreSQL container exists - restarting to ensure fresh state..."
-            docker restart raglite-postgresql
-            echo "Waiting for restart to complete..."
-            sleep 5
+          # ROOT CAUSE #3 FIX: Use unique container name per job to avoid parallel job race condition
+          # Burn-in Tests: raglite-postgresql-burnin on port 5435
+          CONTAINER_NAME="raglite-postgresql-burnin"
+          CONTAINER_PORT="5435"
+
+          echo "Ensuring PostgreSQL container '$CONTAINER_NAME' with correct credentials..."
+
+          # CLEANUP: Remove ANY container using port 5435
+          echo "Cleaning up any containers using port $CONTAINER_PORT..."
+          docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":${CONTAINER_PORT}->" | awk '{print $1}' | xargs -r docker rm -f || true
+          sleep 2
+
+          # Check if container exists
+          if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+            echo "PostgreSQL container exists - verifying credentials..."
+
+            # Check if container has correct user (raglite_ci)
+            if docker exec $CONTAINER_NAME psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+              echo "✅ Container has correct credentials (raglite_ci) - reusing existing container"
+
+              # Ensure it's running
+              if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+                echo "Container stopped - starting it..."
+                docker start $CONTAINER_NAME
+                sleep 5
+              fi
+            else
+              echo "⚠️  Container has wrong credentials - recreating with raglite_ci..."
+              docker rm -f $CONTAINER_NAME
+              docker volume rm ${CONTAINER_NAME}-data 2>/dev/null || true
+
+              # Wait for Docker to release port binding
+              echo "Waiting for Docker networking cleanup (port $CONTAINER_PORT)..."
+              sleep 5
+
+              docker run -d \
+                -p ${CONTAINER_PORT}:5432 \
+                -e POSTGRES_DB=raglite_ci \
+                -e POSTGRES_USER=raglite_ci \
+                -e POSTGRES_PASSWORD=raglite_ci \
+                --name $CONTAINER_NAME \
+                postgres:16
+              echo "Waiting for initial startup..."
+              sleep 8
+            fi
           else
             echo "Creating new PostgreSQL container..."
             docker run -d \
-              -p 5432:5432 \
-              -e POSTGRES_DB=raglite \
-              -e POSTGRES_USER=raglite \
-              -e POSTGRES_PASSWORD=raglite \
-              --name raglite-postgresql \
+              -p ${CONTAINER_PORT}:5432 \
+              -e POSTGRES_DB=raglite_ci \
+              -e POSTGRES_USER=raglite_ci \
+              -e POSTGRES_PASSWORD=raglite_ci \
+              --name $CONTAINER_NAME \
               postgres:16
             echo "Waiting for initial startup..."
             sleep 8
           fi
-          echo "✅ PostgreSQL container refreshed"
+
+          echo "✅ PostgreSQL container ready"
 
       - name: Initialize Qdrant collection
         run: |
@@ -1045,21 +1617,28 @@ jobs:
           echo "✅ Qdrant collection initialized"
 
       - name: Initialize PostgreSQL schema
+        env:
+          APP_ENV: test
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5435
+          POSTGRES_DB: raglite_ci
+          POSTGRES_USER: raglite_ci
+          POSTGRES_PASSWORD: raglite_ci
         run: |
           source ci-venv/bin/activate
           echo "🔧 Initializing PostgreSQL schema (financial_chunks, financial_tables, entity_mappings)..."
-          python scripts/init-postgresql.py
+          python scripts/init-test-postgresql.py
           echo "✅ Schema initialized successfully"
 
       - name: Run burn-in loop (3 iterations)
         env:
           QDRANT_HOST: localhost
-          QDRANT_PORT: 6333
+          QDRANT_PORT: 6335
           POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DB: raglite
-          POSTGRES_USER: raglite
-          POSTGRES_PASSWORD: raglite
+          POSTGRES_PORT: 5435  # Burn-in uses unique port to avoid race condition
+          POSTGRES_DB: raglite_ci
+          POSTGRES_USER: raglite_ci
+          POSTGRES_PASSWORD: raglite_ci
           TEST_USE_FULL_PDF: "false"
         run: |
           source ci-venv/bin/activate
@@ -1142,12 +1721,12 @@ jobs:
           retention-days: 30
 
   # ============================================================================
-  # JOB 12: Build Summary
+  # JOB 13: Build Summary
   # ============================================================================
   build-summary:
     name: "📊 CI Pipeline: Summary"
     runs-on: [self-hosted, raglite]
-    needs: [lint, type-check, security, test-unit, test-integration, test-e2e, test-performance, test-agentic-workflows, test-count-validation, docs-validation, burn-in]
+    needs: [lint, type-check, security, test-unit, test-integration, test-e2e, test-performance, test-agentic-workflows, test-coverage-enforcement, test-count-validation, docs-validation, burn-in]
     if: always()
 
     steps:

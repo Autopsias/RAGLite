@@ -27,8 +27,12 @@ from raglite.shared.clients import get_postgresql_connection, get_qdrant_client
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 from raglite.shared.models import Chunk
+from raglite.shared.safety import SafetyGuard
 
 logger = get_logger(__name__)
+
+# Story 4.0.6: SafetyGuard instance for environment audit logging
+_guard = SafetyGuard()
 
 
 # Exception class for storage operations
@@ -39,7 +43,7 @@ class VectorStorageError(Exception):
 
 
 def create_collection(
-    collection_name: str = "financial_docs",
+    collection_name: str | None = None,
     vector_size: int = 1024,
     distance: Distance = Distance.COSINE,
 ) -> None:
@@ -50,7 +54,7 @@ def create_collection(
     performance and COSINE distance for semantic similarity.
 
     Args:
-        collection_name: Name of the collection (default: financial_docs)
+        collection_name: Name of the collection (default: settings.qdrant_collection_name)
         vector_size: Vector dimension (default: 1024 for Fin-E5)
         distance: Distance metric (default: COSINE for embeddings)
 
@@ -68,6 +72,10 @@ def create_collection(
         >>> # Safe to call multiple times - won't error if exists
         >>> create_collection("financial_docs", vector_size=1024)
     """
+    # Use settings.qdrant_collection_name if not provided (environment-aware)
+    if collection_name is None:
+        collection_name = settings.qdrant_collection_name
+
     client = get_qdrant_client()
 
     try:
@@ -83,6 +91,8 @@ def create_collection(
             return
 
         # Create collection with HNSW indexing (default) + sparse vectors for BM25
+        # Story 4.0.6: Log environment for audit trail
+        _guard.log_operation(f"create_collection:{collection_name}")
         logger.info(
             "Creating Qdrant collection",
             extra={
@@ -91,6 +101,7 @@ def create_collection(
                 "distance": distance.name,
                 "indexing": "HNSW (default)",
                 "sparse_vectors": "enabled (BM25)",
+                "environment": "PRODUCTION" if _guard.is_production else "TEST",
             },
         )
 
@@ -128,7 +139,7 @@ def create_collection(
 
 
 async def store_vectors_in_qdrant(
-    chunks: list[Chunk], collection_name: str = "financial_docs", batch_size: int = 100
+    chunks: list[Chunk], collection_name: str | None = None, batch_size: int = 100
 ) -> int:
     """Store document chunks with embeddings in Qdrant vector database.
 
@@ -138,7 +149,7 @@ async def store_vectors_in_qdrant(
 
     Args:
         chunks: List of Chunk objects with embeddings from Story 1.5
-        collection_name: Qdrant collection name (default: financial_docs)
+        collection_name: Qdrant collection name (default: settings.qdrant_collection_name)
         batch_size: Vectors per batch (default: 100 for memory efficiency)
 
     Returns:
@@ -163,12 +174,19 @@ async def store_vectors_in_qdrant(
     """
     start_time = time.time()
 
+    # Use settings.qdrant_collection_name if not provided (environment-aware)
+    if collection_name is None:
+        collection_name = settings.qdrant_collection_name
+
+    # Story 4.0.6: Log environment for audit trail
+    _guard.log_operation(f"store_vectors:{collection_name}")
     logger.info(
         "Storing vectors in Qdrant",
         extra={
             "chunk_count": len(chunks),
             "collection": collection_name,
             "batch_size": batch_size,
+            "environment": "PRODUCTION" if _guard.is_production else "TEST",
         },
     )
 
@@ -362,11 +380,14 @@ async def store_metadata_in_postgresql(
     """
     start_time = time.time()
 
+    # Story 4.0.6: Log environment for audit trail
+    _guard.log_operation("store_metadata_postgresql")
     logger.info(
         "Storing metadata in PostgreSQL",
         extra={
             "chunk_count": len(chunks),
             "batch_size": batch_size,
+            "environment": "PRODUCTION" if _guard.is_production else "TEST",
         },
     )
 
@@ -410,7 +431,7 @@ async def store_metadata_in_postgresql(
             # Use chunk.chunk_id as STRING for embedding_id (link to Qdrant vector)
             record = (
                 uuid.uuid4(),  # chunk_id: NEW UUID for PostgreSQL primary key
-                uuid.uuid4(),  # document_id: placeholder (could be derived from filename in future)
+                chunk.metadata.filename,  # document_id: use source document filename
                 chunk.page_number,
                 chunk.chunk_index,
                 chunk.content,
@@ -523,11 +544,14 @@ async def store_tables_in_postgresql(
     """
     start_time = time.time()
 
+    # Story 4.0.6: Log environment for audit trail
+    _guard.log_operation("store_tables_postgresql")
     logger.info(
         "Storing table data in PostgreSQL",
         extra={
             "row_count": len(table_rows),
             "batch_size": batch_size,
+            "environment": "PRODUCTION" if _guard.is_production else "TEST",
         },
     )
 
@@ -566,9 +590,27 @@ async def store_tables_in_postgresql(
 
         # Prepare records for batch insert
         records = []
+        skipped_no_document_id = 0
         for row in valid_rows:
+            # CRITICAL FIX (EXC-006): Validate document_id is present
+            # Some table extraction paths may not set document_id, causing
+            # source attribution to fail with source_document='unknown'
+            document_id = row.get("document_id")
+            if not document_id:
+                skipped_no_document_id += 1
+                logger.warning(
+                    "Skipping table row with missing document_id",
+                    extra={
+                        "row_index": row.get("row_index"),
+                        "table_index": row.get("table_index"),
+                        "entity": row.get("entity"),
+                        "metric": row.get("metric"),
+                    },
+                )
+                continue
+
             record = (
-                row.get("document_id"),
+                document_id,
                 row.get("page_number"),
                 row.get("table_index"),
                 row.get("table_caption"),
@@ -620,8 +662,9 @@ async def store_tables_in_postgresql(
         logger.info(
             "PostgreSQL table storage complete",
             extra={
-                "records_stored": len(valid_rows),
+                "records_stored": len(records),
                 "records_skipped": skipped_count,
+                "records_skipped_no_document_id": skipped_no_document_id,
                 "duration_ms": duration_ms,
                 "records_per_second": (
                     round(len(valid_rows) / (duration_ms / 1000), 2) if duration_ms > 0 else 0
@@ -629,7 +672,9 @@ async def store_tables_in_postgresql(
             },
         )
 
-        return (len(valid_rows), skipped_count)
+        # Return actual records stored (may be less than valid_rows if some had no document_id)
+        total_skipped = skipped_count + skipped_no_document_id
+        return (len(records), total_skipped)
 
     except Exception as e:
         logger.error(

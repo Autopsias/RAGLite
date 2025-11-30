@@ -39,12 +39,14 @@ dependencies = [
     "pydantic-settings>=2.0,<3.0",
     "openpyxl>=3.1,<4.0",
     "pandas>=2.0,<3.0",
+    "python-dateutil>=2.8,<3.0",  # Story 4.1: Fiscal date parsing for time-series extraction
     "rank-bm25==0.2.2", # Epic 2: BM25 hybrid search (Story 2.1)
     "tiktoken>=0.5.1,<1.0.0", # Story 2.2: Token counting for element-aware chunking
     "python-dotenv==1.1.1",
     "asyncio>=3.4.3,<4.0.0",
     "httpx>=0.28.1,<1.0.0",
     "mistralai>=1.9.11",
+    "prophet>=1.1.5,<2.0.0",  # Story 4.2: Time-series forecasting with Prophet
     "psycopg2-binary>=2.9,<3.0", # Story 2.6: PostgreSQL for structured metadata storage
     # TODO Epic 3: AWS Strands agentic framework - uncomment when implementing Story 3.1
     # "strands>=1.15.0,<2.0.0",  # Agentic orchestration (Story 3.1+)
@@ -81,6 +83,7 @@ dev = [
     "pre-commit>=3.0,<4.0",
     "pypdf>=4.0,<5.0",
     "pytest-ordering>=0.6",
+    "types-python-dateutil>=2.9.0.20251115",
 ]
 test = [
     "faker>=18.0,<19.0",
@@ -165,6 +168,8 @@ ignore = [
 "tests/integration/test_fixed_chunking.py" = ["E402"]  # pytestmark before imports
 "tests/integration/test_metadata_injection.py" = ["E402"]  # pytestmark before imports
 "tests/integration/test_table_retrieval.py" = ["E402"]  # pytestmark before imports
+"raglite/forecasting/hybrid.py" = ["E402"]  # Lazy-loading pattern for Prophet
+"tests/integration/test_anomaly_detection_integration.py" = ["E402"]  # pytestmark before imports
 
 # ============================================================================
 # ISORT CONFIGURATION (Import Sorting)
@@ -205,6 +210,7 @@ omit = [
     "*/tests/*",
     "*/test_*.py",
     "*/__init__.py",
+    "scripts/*",  # Exclude all utility/operational scripts from coverage
 ]
 
 [tool.coverage.report]
@@ -251,8 +257,11 @@ module = [
     "PIL.*",
     "jinja2.*",
     "strands.*",
+    "dateutil.*",
     "tiktoken.*",
     "fastmcp.*",
+    "prophet.*",
+    "scipy.*",
 ]
 ignore_missing_imports = true
 follow_imports = "skip"
@@ -268,4 +277,4 @@ exclude_dirs = [
     "build/",
     "dist/",
 ]
-skips = ["B101"]  # Allow assert statements (used in tests)
+skips = ["B101", "B608"]  # Allow assert statements and internal SQL queries

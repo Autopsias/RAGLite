@@ -550,7 +550,74 @@ repos:
 
 ---
 
-## 12. Forbidden Patterns
+## 12. Database Operations (MANDATORY - Story 4.0.7)
+
+RAGLite uses a **three-mode database operation system** to prevent accidental production data loss.
+See `docs/architecture/database-operation-modes.md` for full documentation.
+
+### Three Modes
+
+| Mode | Ports | Collections | Allowed Operations |
+|------|-------|-------------|-------------------|
+| **TEST** | Qdrant 6335, PostgreSQL 5433 | `*_test`, `*_ci` | Full CRUD (create, delete, clear) |
+| **PRODUCTION READ/WRITE** | Qdrant 6333, PostgreSQL 5432 | `financial_docs` | Read, Insert, Update only |
+| **PRODUCTION DEPLOY** | Qdrant 6333, PostgreSQL 5432 | `financial_docs` | Schema updates with explicit consent |
+
+### Required Pattern: SafetyGuard for Test Fixtures
+
+```python
+# ✅ CORRECT - Use SafetyGuard at start of any test fixture with destructive operations
+from raglite.shared.safety import SafetyGuard, ProductionProtectionError
+
+@pytest.fixture(scope="session")
+def my_test_fixture():
+    """Test fixture that may delete/create data."""
+    guard = SafetyGuard()
+    guard.validate_test_environment("my_test_fixture")  # HARD BLOCK if on production
+
+    # Safe to proceed with test setup
+    qdrant.delete_collection("financial_docs_test")
+    # ...
+```
+
+### Required Pattern: SafetyGuard for Production Operations
+
+```python
+# ✅ CORRECT - Use SafetyGuard with operation classification
+from raglite.shared.safety import SafetyGuard, OperationType
+
+guard = SafetyGuard()
+guard.check_operation("delete_old_vectors", OperationType.DESTRUCTIVE, force_data_loss=False)
+# Raises ProductionProtectionError if on production without force_data_loss=True
+```
+
+### ❌ Forbidden: Direct Deletion Without SafetyGuard
+
+```python
+# ❌ WRONG - Direct deletion bypasses safety controls
+qdrant.delete_collection("financial_docs")
+
+# ❌ WRONG - Checking APP_ENV alone is NOT sufficient (ports can be misconfigured)
+if os.getenv("APP_ENV") == "test":
+    qdrant.delete_collection(...)  # DANGEROUS if on port 6333!
+
+# ✅ CORRECT - SafetyGuard checks BOTH env AND ports
+guard = SafetyGuard()
+guard.validate_test_environment("my_operation")  # Validates ports + collection suffix
+qdrant.delete_collection(...)
+```
+
+### Test Environment Validation Rules
+
+1. **Qdrant port must be 6335** (not 6333)
+2. **PostgreSQL port must be 5433** (not 5432)
+3. **Collection name must end with `_test` or `_ci`**
+
+Any violation raises `ProductionProtectionError` - no exceptions.
+
+---
+
+## 13. Forbidden Patterns
 
 ### ❌ NEVER DO THIS
 
@@ -582,8 +649,10 @@ Before committing code, verify:
 - [ ] Functions are verb phrases (snake_case)
 - [ ] Classes are nouns (PascalCase)
 - [ ] Tests exist for new functionality
-- [ ] Code formatted with `black`
+- [ ] Code formatted with `ruff format`
 - [ ] Linting passes with `ruff`
+- [ ] **Database operations use SafetyGuard** (Story 4.0.7)
+- [ ] **Test fixtures call `validate_test_environment()`** before destructive ops
 
 ---
 

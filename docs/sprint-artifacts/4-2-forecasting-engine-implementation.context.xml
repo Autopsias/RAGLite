@@ -1,0 +1,283 @@
+<story-context id="story-4.2" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>4.2</storyId>
+    <title>Forecasting Engine Implementation</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-26</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-2-forecasting-engine-implementation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>to forecast key financial indicators using the Architect-selected hybrid approach (Prophet + LLM)</iWant>
+    <soThat>predictive insights are available to users with confidence intervals and contextual reasoning</soThat>
+    <tasks>
+      <task id="1" name="Create hybrid forecasting module">
+        <subtask>1.1 Create raglite/forecasting/hybrid.py skeleton (~100 lines target)</subtask>
+        <subtask>1.2 Add Pydantic models: ForecastResult, ForecastPoint to shared/models.py</subtask>
+        <subtask>1.3 Implement generate_forecast() async function with Prophet + Claude</subtask>
+        <subtask>1.4 Support metrics: "revenue", "cash_flow", "expenses" via parameter</subtask>
+        <acs>AC1, AC2, AC3</acs>
+      </task>
+      <task id="2" name="Implement Prophet statistical forecasting">
+        <subtask>2.1 Configure Prophet model with quarterly seasonality (conservative settings)</subtask>
+        <subtask>2.2 Implement _fit_prophet_model() helper function</subtask>
+        <subtask>2.3 Extract predictions with confidence intervals (yhat, yhat_lower, yhat_upper)</subtask>
+        <subtask>2.4 Handle minimum data requirement (8 quarters) with graceful degradation</subtask>
+        <acs>AC1, AC3, AC4</acs>
+      </task>
+      <task id="3" name="Implement LLM reasoning layer">
+        <subtask>3.1 Implement explain_forecast() async function using Claude API</subtask>
+        <subtask>3.2 Generate confidence rationale based on data quality and trends</subtask>
+        <subtask>3.3 Identify risks/opportunities in forecast context</subtask>
+        <acs>AC1</acs>
+      </task>
+      <task id="4" name="Integrate with agentic framework">
+        <subtask>4.1 Create ForecastingAgent class in raglite/agentic/agents/</subtask>
+        <subtask>4.2 Register forecasting capabilities with orchestrator</subtask>
+        <subtask>4.3 Handle multi-step workflows (extract time-series -> forecast)</subtask>
+        <acs>AC5</acs>
+      </task>
+      <task id="5" name="Unit tests">
+        <subtask>5.1 Create tests/unit/test_hybrid_forecasting.py</subtask>
+        <subtask>5.2 Test generate_forecast() with mocked Prophet model</subtask>
+        <subtask>5.3 Test explain_forecast() with mocked Claude responses</subtask>
+        <subtask>5.4 Test graceful degradation (insufficient data scenarios)</subtask>
+        <subtask>5.5 Achieve 80%+ coverage on new code (DoD requirement)</subtask>
+        <acs>AC6</acs>
+      </task>
+      <task id="6" name="Integration tests">
+        <subtask>6.1 Create tests/integration/test_forecasting_integration.py</subtask>
+        <subtask>6.2 Implement backtesting: train on Q1-Q6, predict Q7-Q8, validate +/-15%</subtask>
+        <subtask>6.3 Test end-to-end: time-series extraction -> forecasting -> result</subtask>
+        <subtask>6.4 Test agentic framework integration</subtask>
+        <acs>AC4, AC7</acs>
+      </task>
+      <task id="7" name="Documentation and cleanup">
+        <subtask>7.1 Add Google-style docstrings to all public functions</subtask>
+        <subtask>7.2 Update story file with Dev Agent Record</subtask>
+        <subtask>7.3 Verify all linting passes (uv run ruff check .)</subtask>
+        <acs>All</acs>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Forecasting implementation uses hybrid approach (Prophet statistical + Mistral Large LLM reasoning) - Code review verifies Prophet model + Mistral API integration</criterion>
+    <criterion id="AC2">Key indicators supported: revenue, cash_flow, expense_categories per Project Brief (FR21) - Unit test verifies all three metric types</criterion>
+    <criterion id="AC3">Forecast generation produces predictions with confidence intervals (FR19) - Unit test validates ForecastResult contains yhat, yhat_lower, yhat_upper</criterion>
+    <criterion id="AC4">Forecast accuracy +/-15% validated on historical data (NFR10) - Integration test with backtesting on 8+ quarters historical data</criterion>
+    <criterion id="AC5">Forecasting agent integrated into agentic framework - Integration test validates orchestrator can invoke forecasting</criterion>
+    <criterion id="AC6">Unit tests cover forecasting logic with 80%+ coverage - pytest-cov report on new code</criterion>
+    <criterion id="AC7">Integration test validates end-to-end forecast generation - Integration test: time-series extraction -> forecasting -> ForecastResult</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-4-forecasting-proactive-insights.md</path>
+        <title>Epic 4 PRD</title>
+        <section>Story 4.2: Forecasting Engine Implementation</section>
+        <snippet>Forecasting implementation per Architect (hybrid: Prophet + LLM). Key indicators: revenue, cash flow, expense categories. Forecast accuracy +/-15% validated on historical data.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack</title>
+        <section>Forecasting</section>
+        <snippet>Prophet 1.2.1 approved for time-series baseline forecasting. Facebook library with seasonal handling and Apple M2 support.</snippet>
+      </doc>
+      <doc>
+        <path>docs/process/definition-of-done.md</path>
+        <title>Definition of Done</title>
+        <section>Testing Requirements</section>
+        <snippet>New code must have 80%+ test coverage. Overall project coverage must not decrease (CI/CD enforced ratchet). All unit, integration, and E2E tests must pass.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/epic-3-orchestration-design.md</path>
+        <title>Epic 3 Orchestration Design</title>
+        <section>Agent Registration Pattern</section>
+        <snippet>Agents register with orchestrator via _load_default_tools(). Pattern: create agent file in raglite/agentic/agents/, import and append to _registered_tools list.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <file>
+        <path>raglite/forecasting/timeseries_extract.py</path>
+        <kind>module</kind>
+        <symbol>extract_timeseries, parse_fiscal_date, normalize_to_interval</symbol>
+        <lines>1-322</lines>
+        <reason>Story 4.1 output - provides TimeSeriesData input for forecasting. Contains extract_timeseries() that returns TimeSeriesData with metric_name, points (list of TimeSeriesPoint), interval, source_documents.</reason>
+      </file>
+      <file>
+        <path>raglite/shared/models.py</path>
+        <kind>models</kind>
+        <symbol>TimeSeriesPoint, TimeSeriesData</symbol>
+        <lines>306-343</lines>
+        <reason>Existing time-series models from Story 4.1. ForecastResult and ForecastPoint models should be added here (lines ~345+).</reason>
+      </file>
+      <file>
+        <path>raglite/agentic/orchestrator.py</path>
+        <kind>orchestrator</kind>
+        <symbol>StrandsOrchestrator, WorkflowExecutor</symbol>
+        <lines>1-685</lines>
+        <reason>Agentic framework orchestrator - ForecastingAgent must register here via _load_default_tools() pattern (line ~66-118).</reason>
+      </file>
+      <file>
+        <path>raglite/agentic/agents/retrieval_agent.py</path>
+        <kind>agent</kind>
+        <symbol>retrieval_agent</symbol>
+        <reason>Reference implementation for agent pattern. ForecastingAgent should follow same structure.</reason>
+      </file>
+      <file>
+        <path>raglite/agentic/agents/analysis_agent.py</path>
+        <kind>agent</kind>
+        <symbol>analysis_agent</symbol>
+        <reason>Reference implementation for agent pattern. Similar to forecasting logic (calculations, reasoning).</reason>
+      </file>
+      <file>
+        <path>raglite/shared/clients.py</path>
+        <kind>clients</kind>
+        <symbol>get_mistral_client</symbol>
+        <reason>Mistral AI client getter - use for LLM reasoning layer in explain_forecast(). Uses mistral-large-latest model.</reason>
+      </file>
+      <file>
+        <path>tests/unit/test_timeseries_extract.py</path>
+        <kind>test</kind>
+        <symbol>test_parse_fiscal_date, test_normalize_to_interval, test_extract_timeseries</symbol>
+        <reason>Test patterns from Story 4.1. Use similar mocking strategies for Prophet and Claude.</reason>
+      </file>
+      <file>
+        <path>tests/integration/test_timeseries_integration.py</path>
+        <kind>test</kind>
+        <reason>Integration test patterns from Story 4.1. Use test database (port 6335/5433).</reason>
+      </file>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="prophet" version="1.2.1" status="approved">Time-series forecasting library. Requires df with 'ds' (datetime) and 'y' (value) columns.</package>
+        <package name="mistralai" version=">=1.9.11" status="approved">Mistral Large API for LLM reasoning layer (explain_forecast).</package>
+        <package name="pandas" version=">=2.0,&lt;3.0" status="approved">DataFrame for Prophet input preparation.</package>
+        <package name="pydantic" version="2.12.4" status="approved">ForecastResult, ForecastPoint models.</package>
+        <package name="pytest" version="8.4.2" status="approved">Testing framework.</package>
+        <package name="pytest-asyncio" version=">=1.2.0" status="approved">Async test support.</package>
+        <package name="pytest-cov" version="5.0.0" status="approved">Coverage reporting (80% requirement).</package>
+        <package name="pytest-mock" version=">=3.12,&lt;4.0" status="approved">Mock Prophet model and Claude API.</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Module must be ~100 lines as per architecture spec (raglite/forecasting/hybrid.py)</constraint>
+    <constraint type="architecture">Follow direct SDK usage pattern - no custom wrappers around Prophet or Claude</constraint>
+    <constraint type="architecture">Use existing TimeSeriesData and TimeSeriesPoint models from Story 4.1</constraint>
+    <constraint type="testing">New code requires 80%+ test coverage (DoD requirement)</constraint>
+    <constraint type="testing">Unit tests must mock Prophet model and Claude API (fast, deterministic)</constraint>
+    <constraint type="testing">Integration tests use test database (Qdrant port 6335, PostgreSQL port 5433)</constraint>
+    <constraint type="performance">Forecast generation must complete in &lt;30s for 4-quarter forecast</constraint>
+    <constraint type="accuracy">NFR10: +/-15% forecast accuracy validated via backtesting</constraint>
+    <constraint type="data">Minimum 8 data points (2 years quarterly) required for reliable forecasts</constraint>
+    <constraint type="graceful-degradation">Return InsufficientDataError if &lt;8 data points available</constraint>
+    <constraint type="agentic">ForecastingAgent must follow agent registration pattern from Epic 3</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>generate_forecast</name>
+      <kind>async function</kind>
+      <signature>async def generate_forecast(metric: str, historical_data: TimeSeriesData, periods_ahead: int = 4) -> ForecastResult</signature>
+      <path>raglite/forecasting/hybrid.py</path>
+    </interface>
+    <interface>
+      <name>explain_forecast</name>
+      <kind>async function</kind>
+      <signature>async def explain_forecast(forecast: ForecastResult, context: str) -> str</signature>
+      <path>raglite/forecasting/hybrid.py</path>
+    </interface>
+    <interface>
+      <name>ForecastingAgent</name>
+      <kind>agent function</kind>
+      <signature>async def forecasting_agent(instruction: str, context: dict) -> str</signature>
+      <path>raglite/agentic/agents/forecasting_agent.py</path>
+    </interface>
+    <interface>
+      <name>extract_timeseries</name>
+      <kind>async function (existing)</kind>
+      <signature>async def extract_timeseries(docs: list[str], metric: str = "revenue") -> TimeSeriesData</signature>
+      <path>raglite/forecasting/timeseries_extract.py</path>
+    </interface>
+    <interface>
+      <name>TimeSeriesData</name>
+      <kind>Pydantic model (existing)</kind>
+      <signature>class TimeSeriesData(BaseModel): metric_name: str; points: list[TimeSeriesPoint]; interval: str; source_documents: list[str]</signature>
+      <path>raglite/shared/models.py:322-343</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      pytest with pytest-asyncio for async tests. Mock external dependencies (Prophet, Mistral API) for unit tests.
+      Use test database for integration tests (Qdrant port 6335, PostgreSQL port 5433 per Story 4.0.5).
+      Follow existing patterns from tests/unit/test_timeseries_extract.py.
+      New code must achieve 80%+ coverage per DoD. No skipped tests without issue reference.
+    </standards>
+    <locations>
+      <location>tests/unit/test_hybrid_forecasting.py</location>
+      <location>tests/integration/test_forecasting_integration.py</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test Prophet model initialization with correct parameters (yearly_seasonality=True, quarterly_seasonality=True, changepoint_prior_scale=0.05)</idea>
+      <idea ac="AC1">Test Mistral Large API integration for explain_forecast() with mocked response</idea>
+      <idea ac="AC2">Test generate_forecast() accepts "revenue", "cash_flow", "expenses" metrics</idea>
+      <idea ac="AC3">Test ForecastResult contains yhat, yhat_lower, yhat_upper (confidence intervals)</idea>
+      <idea ac="AC4">Backtesting test: train on 6 quarters, predict 2 quarters, validate +/-15% accuracy</idea>
+      <idea ac="AC5">Test ForecastingAgent registered with orchestrator and invocable</idea>
+      <idea ac="AC6">Coverage report validates 80%+ on raglite/forecasting/hybrid.py</idea>
+      <idea ac="AC7">E2E test: extract_timeseries() -> generate_forecast() -> ForecastResult with valid predictions</idea>
+      <idea ac="graceful">Test InsufficientDataError raised when &lt;8 data points provided</idea>
+    </ideas>
+  </tests>
+
+  <prophetConfiguration>
+    <note>Per Tech Spec Section 3.2 - Prophet configuration for financial forecasting</note>
+    <code language="python"><![CDATA[
+from prophet import Prophet
+import pandas as pd
+
+model = Prophet(
+    yearly_seasonality=True,
+    quarterly_seasonality=True,
+    changepoint_prior_scale=0.05  # Conservative (prevent overfitting)
+)
+
+# Prepare DataFrame for Prophet (requires 'ds' and 'y' columns)
+df = pd.DataFrame({
+    'ds': [p.date for p in historical_data.points],
+    'y': [p.value for p in historical_data.points]
+})
+
+# Fit and predict
+model.fit(df)
+future = model.make_future_dataframe(periods=periods_ahead, freq='Q')
+forecast = model.predict(future)
+
+# Extract confidence intervals
+yhat = forecast['yhat'].values[-periods_ahead:]
+yhat_lower = forecast['yhat_lower'].values[-periods_ahead:]
+yhat_upper = forecast['yhat_upper'].values[-periods_ahead:]
+    ]]></code>
+  </prophetConfiguration>
+
+  <previousStoryLearnings>
+    <story id="4.1" title="Time-Series Data Extraction" status="done">
+      <learning>Forecasting module created at raglite/forecasting/ with __init__.py and timeseries_extract.py</learning>
+      <learning>Core functions available: extract_timeseries(), normalize_to_interval(), parse_fiscal_date()</learning>
+      <learning>TimeSeriesPoint and TimeSeriesData models in raglite/shared/models.py (lines 306-343)</learning>
+      <learning>Test patterns established: mock LLM responses for unit tests, use test fixtures for integration</learning>
+      <learning>88.89% coverage achieved (exceeds 80% requirement)</learning>
+      <learning>Implementation was 319 lines vs 50-line target - comprehensive error handling is acceptable</learning>
+    </story>
+  </previousStoryLearnings>
+</story-context>

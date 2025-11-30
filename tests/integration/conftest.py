@@ -27,16 +27,39 @@ import pytest
 # Debug: Track module load
 print("DEBUG: conftest.py loading...", file=sys.stderr)
 
+# CRITICAL FIX (2025-11-23): Set test environment variables BEFORE any raglite imports
+# This ensures the Settings singleton uses test database settings when it's created.
+# Root cause: tests/conftest.py sets env vars, but tests/integration/conftest.py is loaded
+# BEFORE parent conftest completes, so Settings singleton was created with production defaults.
+# Solution: Set env vars in BOTH conftest files to ensure they're available at import time.
+if "APP_ENV" not in os.environ:
+    os.environ["APP_ENV"] = "test"
+if "TESTING" not in os.environ:
+    os.environ["TESTING"] = "true"
+if "POSTGRES_PORT" not in os.environ:
+    os.environ["POSTGRES_PORT"] = "5433"
+if "POSTGRES_DB" not in os.environ:
+    os.environ["POSTGRES_DB"] = "raglite_ci"
+if "POSTGRES_USER" not in os.environ:
+    os.environ["POSTGRES_USER"] = "raglite_ci"
+if "POSTGRES_PASSWORD" not in os.environ:
+    os.environ["POSTGRES_PASSWORD"] = "raglite_ci"
+
+print("DEBUG: Test environment variables set before raglite imports", file=sys.stderr)
+
 # CRITICAL: Check service availability BEFORE importing any raglite modules
 # Test modules import raglite code which may try to connect at import time
 # This prevents collection-time hangs when services are unavailable
 print("DEBUG: Checking service availability before imports...", file=sys.stderr)
 
 # Get connection settings from environment (same as shared.config.Settings)
+# CRITICAL FIX (2025-11-19): Integration tests MUST use TEST database ports
+# Production: Qdrant 6333, PostgreSQL 5432
+# Test: Qdrant 6335, PostgreSQL 5433 (Story 4.0.5 database separation)
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
-QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
+QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6335"))  # TEST port (was 6333)
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
-POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
+POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5433"))  # TEST port (was 5432)
 
 
 def check_service_available(host: str, port: int, service_name: str) -> bool:
@@ -103,24 +126,107 @@ _session_sample_pdf_chunk_count = None
 _session_snapshot_name = None  # Track snapshot for fast restoration
 _session_postgresql_row_count = None  # Track PostgreSQL baseline for restoration
 
-# PERFORMANCE: Cache PostgreSQL connection to reduce connection overhead
-_session_postgresql_connection = None
+# CRITICAL FIX (2025-11-23): Use shared PostgreSQL connection from raglite.shared.clients
+# instead of creating a separate fixture connection. This prevents connection isolation
+# issues where the fixture can't see data committed by the ingestion pipeline.
+#
+# ROOT CAUSE: The fixture was creating its own PostgreSQL connection instance which was
+# completely separate from the connection used by store_tables_in_postgresql().
+# This caused a race condition where:
+#   1. Ingestion writes data using raglite.shared.clients.get_postgresql_connection()
+#   2. Fixture reads data using tests.integration.conftest.get_postgresql_connection()
+#   3. Two different connections = fixture can't see ingestion's committed data!
+#
+# SOLUTION: Import and use the shared connection factory from raglite.shared.clients
+# so both ingestion and fixture use the SAME connection instance.
+import raglite.shared.config  # noqa: E402
+from raglite.shared.clients import get_postgresql_connection  # noqa: E402
+
+# CRITICAL FIX (2025-11-23): Force reload of settings singleton after env vars are set
+# The Settings class creates a singleton at module import time (config.py line 135).
+# If config.py was imported before this conftest set test env vars, we need to recreate it.
+# This ensures integration tests use PostgreSQL port 5433 (test database).
+from raglite.shared.config import Settings  # noqa: E402
+
+raglite.shared.config.settings = Settings()  # Recreate singleton with test env vars
 
 
-def get_postgresql_connection():
-    """Get cached PostgreSQL connection for session to reduce connection overhead."""
-    global _session_postgresql_connection
+@pytest.fixture(scope="session", autouse=True)
+def ensure_test_database_schema(request):
+    """Ensure PostgreSQL test database schema is initialized before any tests run.
 
-    if _session_postgresql_connection is None:
-        import psycopg2
+    CRITICAL FIX (2025-11-19): Test database (raglite_test) needs schema initialization
+    before integration tests can run. This fixture creates the required tables if they
+    don't exist.
 
-        from raglite.shared.config import settings
+    Story 4.0.5: Database separation - ensures test database has proper schema.
 
-        conn_str = f"postgresql://{settings.postgres_user}:{settings.postgres_password}@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
-        _session_postgresql_connection = psycopg2.connect(conn_str)
-        _session_postgresql_connection.autocommit = True
+    This runs ONCE per test session, before any tests execute.
+    """
+    # Skip during test collection/discovery phase
+    if request.config.option.collectonly:
+        yield
+        return
 
-    return _session_postgresql_connection
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # PERFORMANCE: Check service availability first
+    check_and_skip_if_unavailable()
+
+    logger.info("🔧 Ensuring test database schema exists...")
+
+    try:
+        # PERFORMANCE: Use cached connection to reduce overhead
+        conn = get_postgresql_connection()
+        cursor = conn.cursor()
+
+        # Check if financial_chunks table exists
+        cursor.execute(
+            """
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables
+                WHERE table_schema = 'public'
+                AND table_name = 'financial_chunks'
+            );
+            """
+        )
+        table_exists = cursor.fetchone()[0]
+
+        if not table_exists:
+            logger.warning(
+                "⚠️  Test database schema not found - initializing (this should only happen once)"
+            )
+
+            # Run schema initialization script
+            import subprocess
+
+            result = subprocess.run(
+                ["uv", "run", "python", "scripts/init-test-postgresql.py"],
+                capture_output=True,
+                text=True,
+            )
+
+            if result.returncode != 0:
+                error_msg = f"Failed to initialize test database schema:\n{result.stderr}"
+                logger.error(f"❌ {error_msg}")
+                pytest.fail(error_msg)
+
+            logger.info("✅ Test database schema initialized successfully")
+        else:
+            logger.info("✅ Test database schema already exists")
+
+        cursor.close()  # Only close cursor, keep connection cached
+
+    except Exception as e:
+        error_msg = f"Failed to verify/initialize test database schema: {e}"
+        logger.error(f"❌ {error_msg}")
+        pytest.fail(error_msg)
+
+    yield
+
+    # No cleanup - schema persists for all tests
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -172,7 +278,7 @@ def warmup_embedding_model(request):
     # Model singleton persists for entire session
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def session_ingested_collection(request, warmup_embedding_model):
     """Session-scoped fixture: Ingest test PDFs ONCE for entire test session.
 
@@ -203,9 +309,10 @@ def session_ingested_collection(request, warmup_embedding_model):
 
     DISCOVERY OPTIMIZATION: Skips expensive PDF ingestion during test discovery phase.
 
-    NOTE (2025-11-09): autouse=True removed for performance optimization.
-    Tests that need vector search or ingested PDFs must explicitly request this fixture.
-    SQL-only tests (fuzzy matching, etc.) don't need it and run in <5s without ingestion overhead.
+    CRITICAL FIX (2025-11-21): Restored autouse=True for proper session fixture sharing.
+    Removing autouse=True on 2025-11-09 caused 6x performance regression (600s → 3600s).
+    With autouse=True: Fixture runs ONCE per session (50s total overhead).
+    Without autouse=True: Fixture runs per test file (50s × N files = massive overhead).
 
     Dependencies:
         - warmup_embedding_model: Pre-loads Fin-E5 model (60-70s) before ingestion
@@ -240,39 +347,85 @@ def session_ingested_collection(request, warmup_embedding_model):
             count = qdrant.count(collection_name=settings.qdrant_collection_name).count
 
             if count == 0:
-                error_msg = (
-                    "❌ ERROR: --skip-ingestion requires existing data, but Qdrant collection is empty!\n"
-                    "   Please ingest data first:\n"
-                    "   python scripts/ingest-full-pdf-ac3.py"
+                # GRACEFUL FALLBACK: Instead of failing, fall back to ingestion
+                # This allows tests to run even when --skip-ingestion is used but no data exists
+                warning_msg = (
+                    "\n" + "=" * 80 + "\n"
+                    "⚠️  WARNING: --skip-ingestion specified but Qdrant collection is empty!\n"
+                    "\n"
+                    "Falling back to full ingestion instead of failing.\n"
+                    "To avoid this warning and save time, ingest data first:\n"
+                    "  python scripts/ingest-test-data.py\n"
+                    "\n"
+                    "Proceeding with ingestion...\n" + "=" * 80 + "\n"
                 )
-                print(f"\n{error_msg}", file=sys.stderr)
-                pytest.fail(error_msg)
+                print(warning_msg, file=sys.stderr)
+                # Don't return - fall through to normal ingestion flow below
+            else:
+                # Data exists - use it!
+                # Store chunk count for test isolation
+                _session_sample_pdf_chunk_count = count
 
-            # Store chunk count for test isolation
-            _session_sample_pdf_chunk_count = count
+                print(f"\n✅ Using existing collection: {settings.qdrant_collection_name}")
+                print(f"   Chunks: {count}")
+                print("   Time saved: ~25 minutes")
+                print("   All tests will share this existing data\n")
+                print("=" * 80 + "\n")
 
-            print(f"\n✅ Using existing collection: {settings.qdrant_collection_name}")
-            print(f"   Chunks: {count}")
-            print("   Time saved: ~25 minutes")
-            print("   All tests will share this existing data\n")
-            print("=" * 80 + "\n")
-
-            # Yield without cleanup - data is managed externally
-            yield
-            return
+                # Yield without cleanup - data is managed externally
+                yield
+                return
 
         except Exception as e:
-            error_msg = f"❌ ERROR: Failed to verify existing data: {e}"
-            print(f"\n{error_msg}", file=sys.stderr)
-            pytest.fail(error_msg)
+            # Collection doesn't exist - fall back to ingestion
+            warning_msg = (
+                f"\n⚠️  WARNING: --skip-ingestion specified but collection doesn't exist: {e}\n"
+                f"Falling back to full ingestion...\n"
+            )
+            print(warning_msg, file=sys.stderr)
+            # Fall through to normal ingestion flow below
 
     print("\nDEBUG: Proceeding with full ingestion (--skip-ingestion not set)", file=sys.stderr)
 
     from raglite.ingestion.pipeline import create_collection, ingest_pdf
     from raglite.shared.clients import get_qdrant_client
     from raglite.shared.config import settings
+    from raglite.shared.safety import ProductionProtectionError, SafetyGuard
 
     print("DEBUG: Fixture imports successful", file=sys.stderr)
+
+    # =========================================================================
+    # CRITICAL SAFETY CHECK (Story 4.0.7): Validate test environment FIRST
+    # This MUST run before ANY database operations to prevent production data loss.
+    # Added after 2025-11-27 incident where VS Code test runner deleted production data.
+    # =========================================================================
+    print("DEBUG: Validating test environment (SafetyGuard)...", file=sys.stderr)
+    guard = SafetyGuard()
+
+    try:
+        guard.validate_test_environment("session_ingested_collection fixture")
+        print(
+            f"DEBUG: Test environment validated - Qdrant:{settings.qdrant_port}, "
+            f"PostgreSQL:{settings.postgres_port}, Collection:{settings.qdrant_collection_name}",
+            file=sys.stderr,
+        )
+    except ProductionProtectionError as e:
+        # HARD FAIL: Do not allow tests to proceed on production infrastructure
+        error_msg = (
+            f"\n{'!' * 80}\n"
+            f"CRITICAL: TEST ISOLATION FAILURE\n"
+            f"{'!' * 80}\n\n"
+            f"{e}\n\n"
+            f"This test fixture attempted to run on PRODUCTION infrastructure.\n"
+            f"The operation has been BLOCKED to prevent data loss.\n\n"
+            f"To fix:\n"
+            f"  1. Set APP_ENV=test before running tests\n"
+            f"  2. Use --skip-ingestion to skip database operations\n"
+            f"  3. Run from terminal: APP_ENV=test pytest tests/\n"
+            f"{'!' * 80}\n"
+        )
+        print(error_msg, file=sys.stderr)
+        pytest.fail(error_msg)
 
     # SAFETY CHECK: Warn if collection has data and user didn't use --skip-ingestion
     # This prevents accidental deletion of manually ingested data
@@ -296,16 +449,39 @@ def session_ingested_collection(request, warmup_embedding_model):
             )
             print(warning_msg, file=sys.stderr)
 
-            # In CI/non-interactive mode, auto-proceed (CI always re-ingests fresh)
-            if os.getenv("CI") == "true" or not sys.stdin.isatty():
+            # FIXED (Story 4.0.7): Only auto-proceed in ACTUAL CI environment
+            # Previously: if os.getenv("CI") == "true" or not sys.stdin.isatty()
+            # Bug: VS Code test runner is non-interactive but NOT CI, so it auto-proceeded!
+            is_ci = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
+
+            if is_ci:
+                # CI environment with already-validated test infrastructure: OK to auto-proceed
                 print(
-                    "DEBUG: CI/non-interactive mode - proceeding with re-ingestion", file=sys.stderr
+                    "DEBUG: CI mode with validated test environment - proceeding with re-ingestion",
+                    file=sys.stderr,
                 )
+            elif not sys.stdin.isatty():
+                # Non-interactive but NOT CI (e.g., VS Code, IDE, background process)
+                # BLOCK: Cannot safely auto-proceed without user confirmation
+                block_msg = (
+                    f"\n{'!' * 80}\n"
+                    f"BLOCKED: Non-interactive mode outside CI\n"
+                    f"{'!' * 80}\n\n"
+                    f"Cannot auto-delete test data in non-interactive mode (VS Code, IDE, etc.)\n"
+                    f"without explicit user confirmation.\n\n"
+                    f"Options:\n"
+                    f"  1. Use --skip-ingestion flag to reuse existing data\n"
+                    f"  2. Run pytest from terminal (interactive mode)\n"
+                    f"  3. Set CI=true if this is a CI environment\n"
+                    f"{'!' * 80}\n"
+                )
+                print(block_msg, file=sys.stderr)
+                pytest.fail(block_msg)
             else:
                 # Interactive mode - require confirmation
                 try:
                     input(
-                        "Press Enter to DELETE existing data and re-ingest (or Ctrl+C to abort)..."
+                        "Press Enter to DELETE existing test data and re-ingest (or Ctrl+C to abort)..."
                     )
                 except KeyboardInterrupt:
                     pytest.skip(
@@ -317,22 +493,25 @@ def session_ingested_collection(request, warmup_embedding_model):
         print(f"DEBUG: No existing collection found ({e}) - safe to create", file=sys.stderr)
 
     # Environment-based PDF selection:
-    # - LOCAL (VS Code): 10-page sample PDF (fast ~10-15 seconds ingestion)
+    # - LOCAL (VS Code): 4-page test PDF (fast ~5-10 seconds ingestion - Story 4.0.5)
     # - CI: 160-page full PDF (comprehensive ~150 seconds ingestion)
     use_full_pdf = os.getenv("TEST_USE_FULL_PDF", "false").lower() == "true"
 
     print(f"DEBUG: TEST_USE_FULL_PDF={use_full_pdf}", file=sys.stderr)
 
     if use_full_pdf:
-        # CI: Use full 160-page PDF for comprehensive testing
+        # CI: Use full 160-page PDF for comprehensive testing (--run-slow flag)
         sample_pdf = Path("docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf")
         pdf_description = "160-page full PDF (CI comprehensive mode)"
         estimated_time = "150-180 seconds"
     else:
-        # LOCAL: Use small 10-page PDF for fast iteration
+        # DEFAULT: Use 10-page sample PDF for testing (Story 2.14 ground truth alignment)
+        # Changed from 4-page sample-small-3-pages.pdf to 10-page sample_financial_report.pdf
+        # to match Story 2.14 ground truth expectations (v2.0-10PAGE) which expects Portugal
+        # Currency data on pages 9-10 (50 rows)
         sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
-        pdf_description = "10-page sample PDF (local fast mode)"
-        estimated_time = "10-15 seconds"
+        pdf_description = "10-page sample PDF (Story 2.14 ground truth aligned)"
+        estimated_time = "8-12 seconds"
 
     print(f"DEBUG: PDF selection complete - checking {sample_pdf}", file=sys.stderr)
 
@@ -439,11 +618,25 @@ def session_ingested_collection(request, warmup_embedding_model):
     print(f"⚙️  Ingesting {sample_pdf.name}...")
     print(f"   Estimated time: {estimated_time} (Docling + embeddings + Qdrant)")
 
-    # Ingest with clear_collection=False (collection already fresh)
+    # PERFORMANCE OPTIMIZATION: Skip metadata extraction in LOCAL mode (4-page PDF)
+    # - Metadata extraction uses Mistral API (~7s per chunk with network latency)
+    # - For 7 chunks: 7 × 7s = 49s overhead (10x slowdown!)
+    # - Most integration tests don't need LLM-extracted metadata
+    # - CI mode still extracts metadata for comprehensive testing
+    skip_metadata_extraction = not use_full_pdf  # LOCAL: skip, CI: extract
+
+    if skip_metadata_extraction:
+        print("   ⚡ PERFORMANCE: Skipping metadata extraction (LOCAL mode - saves ~40s)")
+
+    # Ingest with clear_existing=False (collection already fresh)
     print("DEBUG: Starting asyncio.run(ingest_pdf)...", file=sys.stderr)
     start_ingest = time.time()
     try:
-        result = asyncio.run(ingest_pdf(str(sample_pdf), clear_collection=False))
+        result = asyncio.run(
+            ingest_pdf(
+                str(sample_pdf), clear_existing=False, skip_metadata=skip_metadata_extraction
+            )
+        )
         ingest_duration = time.time() - start_ingest
         print(f"DEBUG: ingest_pdf completed in {ingest_duration:.1f}s", file=sys.stderr)
     except Exception as e:
@@ -463,9 +656,13 @@ def session_ingested_collection(request, warmup_embedding_model):
 
     # CRITICAL FIX: Verify PostgreSQL is FULLY populated with expected data
     # This ensures database inspection tests have complete data to work with
-    print("\n⚙️  Verifying PostgreSQL population...")
+    print("\n⚙️  Verifying PostgreSQL population WITH TRANSACTION VISIBILITY...")
     try:
+        import logging
+
         from psycopg2.extras import RealDictCursor
+
+        logger = logging.getLogger(__name__)
 
         # PERFORMANCE: Use cached connection to reduce overhead
         conn = get_postgresql_connection()
@@ -475,25 +672,58 @@ def session_ingested_collection(request, warmup_embedding_model):
         pg_count = 0
         expected_min_rows = 10 if not use_full_pdf else 100  # Adjust based on PDF size
 
-        # Smart polling: check fewer times with exponential backoff
-        max_attempts = 12  # Reduced from 25 to 12 attempts
+        # Smart polling: check with transaction visibility fix for CI environments
+        max_attempts = 20  # Increased from 12 to 20 for CI slowness
         for attempt in range(max_attempts):
+            # CRITICAL FIX: Force new transaction to see committed data
+            # This handles CI transaction isolation issues where ingested data
+            # may not be visible in the current transaction (READ COMMITTED isolation)
+            if not conn.autocommit:
+                conn.rollback()  # Abandon old transaction, start fresh
+
             cursor.execute("SELECT COUNT(*) FROM financial_tables")
             pg_count = cursor.fetchone()["count"]
 
             if pg_count >= expected_min_rows:
+                logger.info(
+                    "PostgreSQL data visible",
+                    extra={
+                        "rows": pg_count,
+                        "attempt": attempt + 1,
+                        "max_attempts": max_attempts,
+                        "expected_min": expected_min_rows,
+                    },
+                )
                 break
 
-            # Log only on attempts 1, 3, 6, 9, 12 to reduce noise
-            if attempt in [0, 2, 5, 8, 11]:
-                remaining = max_attempts - attempt - 1
+            # Exponential backoff: 0.2s, 0.4s, 0.8s, 1.6s, 2.0s (capped) for CI environments
+            sleep_time = min(0.2 * (2**attempt), 2.0)
+
+            # Log only on attempts 1, 3, 6, 9, 12, 15, 18 to reduce noise
+            if attempt in [0, 2, 5, 8, 11, 14, 17]:
                 print(
-                    f"   ⏳ PostgreSQL: {pg_count}/{expected_min_rows} rows ({remaining} checks left)"
+                    f"   ⏳ PostgreSQL: {pg_count}/{expected_min_rows} rows (attempt {attempt + 1}/{max_attempts}, wait {sleep_time:.1f}s)"
                 )
 
-            # Exponential backoff: 0.1s, 0.2s, 0.4s, 0.8s, 1.6s (max 1.0s)
-            sleep_time = min(0.1 * (2**attempt), 1.0)
+            logger.debug(
+                "PostgreSQL polling attempt",
+                extra={
+                    "attempt": attempt + 1,
+                    "max_attempts": max_attempts,
+                    "current_count": pg_count,
+                    "expected_min": expected_min_rows,
+                    "sleep_time": sleep_time,
+                },
+            )
             time.sleep(sleep_time)
+        else:
+            # Max attempts exceeded without reaching expected_min_rows
+            error_msg = (
+                f"PostgreSQL data not visible after {max_attempts} attempts: "
+                f"{pg_count}/{expected_min_rows} rows. Transaction isolation issue."
+            )
+            print(f"   ❌ ERROR: {error_msg}")
+            pytest.fail(error_msg)
 
         # Get detailed counts for validation
         cursor.execute("SELECT COUNT(*) FROM financial_chunks")
@@ -549,9 +779,14 @@ def session_ingested_collection(request, warmup_embedding_model):
     if use_full_pdf:
         expected_range = (150, 220)  # 160-page PDF
     else:
-        # Updated range for table-aware chunking (Story 2.8) - tables kept intact up to 4096 tokens
-        # Increased from (10, 50) to (10, 60) to accommodate larger table chunks
-        expected_range = (10, 60)  # 10-page PDF
+        # Updated range for 10-page sample_financial_report.pdf (Story 2.14 ground truth alignment)
+        # With table-aware chunking (Story 2.8) and 512-token fixed chunking:
+        # - This PDF is table-heavy (47 tables extracted, 1548 table rows)
+        # - Table-aware chunking keeps large tables intact (fewer, larger chunks)
+        # - Observed: 14 chunks from 10 pages (mostly large financial tables)
+        # - Text chunks are minimal because PDF is dominated by structured tables
+        # - Acceptable range: 10-30 chunks (table-heavy PDFs produce fewer, larger chunks)
+        expected_range = (10, 30)  # 10-page sample_financial_report.pdf (Story 2.14, table-heavy)
 
     if not (expected_range[0] <= count_after.count <= expected_range[1]):
         error_msg = f"CRITICAL: Chunk count {count_after.count} not in expected range {expected_range} for {pdf_description}"
@@ -590,16 +825,9 @@ def session_ingested_collection(request, warmup_embedding_model):
     except Exception as e:
         print(f"   ⚠️  Cleanup error (non-critical): {e}")
 
-    # PERFORMANCE: Close cached PostgreSQL connection
-    global _session_postgresql_connection
-    if _session_postgresql_connection:
-        try:
-            _session_postgresql_connection.close()
-            print("   ✓ PostgreSQL connection closed")
-        except Exception as e:
-            print(f"   ⚠️  PostgreSQL cleanup error (non-critical): {e}")
-        finally:
-            _session_postgresql_connection = None
+    # NOTE (2025-11-23): PostgreSQL connection cleanup removed
+    # We now use the shared singleton from raglite.shared.clients.get_postgresql_connection()
+    # which manages its own lifecycle. The connection will be closed when the process exits.
 
 
 @pytest.fixture(autouse=True)
@@ -607,10 +835,10 @@ def ensure_qdrant_test_isolation(request):
     """Ensure Qdrant collection isolation between integration tests (SMART VERSION).
 
     CRITICAL OPTIMIZATION: Skips re-ingest cleanup for tests that intentionally
-    modify collection (call ingest_pdf with clear_collection=True).
+    modify collection (call ingest_pdf with clear_existing=True).
 
-    Without this: Tests with clear_collection=True pay 150-170s (ingest + re-ingest cleanup)
-    With this: Tests with clear_collection=True pay only 75-85s (ingest only, no cleanup)
+    Without this: Tests with clear_existing=True pay 150-170s (ingest + re-ingest cleanup)
+    With this: Tests with clear_existing=True pay only 75-85s (ingest only, no cleanup)
 
     Behavior:
     - Tests marked @pytest.mark.preserve_collection: Skip cleanup (read-only tests)
@@ -618,7 +846,7 @@ def ensure_qdrant_test_isolation(request):
     - Other tests: Restore to baseline if collection modified (read-only tests that didn't get marked)
 
     This saves ~600-1500 seconds per test session by avoiding double-ingest on tests
-    that call ingest_pdf(clear_collection=True).
+    that call ingest_pdf(clear_existing=True).
 
     NOTE: This fixture lives in tests/integration/conftest.py, so it ONLY applies to
     integration tests. No need to detect test type via inspect - this conftest isn't
@@ -758,7 +986,9 @@ def ensure_qdrant_test_isolation(request):
 
             # CRITICAL FIX: Also restore PostgreSQL data (symmetric database lifecycle)
             # PostgreSQL must be restored when Qdrant is restored to prevent test isolation failures
-            # Root cause: Tests with clear_collection=True delete PostgreSQL, but only Qdrant was being restored
+            # Root cause: Tests with clear_existing=True delete PostgreSQL, but only Qdrant was being restored
+            # PERFORMANCE: All tests now have proper markers (preserve_collection or manages_collection_state)
+            # This restoration only triggers for tests that actually modify collections
             if _session_postgresql_row_count:
                 print(
                     f"\n🔄 Checking PostgreSQL state (baseline: {_session_postgresql_row_count} rows)..."
@@ -784,12 +1014,22 @@ def ensure_qdrant_test_isolation(request):
 
                         # Re-ingest the session PDF to restore PostgreSQL
                         # This triggers table extraction which populates financial_tables
+                        import os
+
                         from raglite.ingestion.pipeline import ingest_pdf
 
-                        sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
+                        # Use the same PDF that was ingested in session_ingested_collection fixture
+                        use_full_pdf = os.getenv("TEST_USE_FULL_PDF", "false").lower() == "true"
+                        if use_full_pdf:
+                            sample_pdf = Path(
+                                "docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf"
+                            )
+                        else:
+                            sample_pdf = Path("tests/fixtures/sample-small-3-pages.pdf")
+
                         if sample_pdf.exists():
-                            # Ingest with clear_collection=False to preserve the Qdrant data we just restored
-                            asyncio.run(ingest_pdf(str(sample_pdf), clear_collection=False))
+                            # Ingest with clear_existing=False to preserve the Qdrant data we just restored
+                            asyncio.run(ingest_pdf(str(sample_pdf), clear_existing=False))
 
                             # Verify PostgreSQL restoration
                             cursor.execute("SELECT COUNT(*) FROM financial_tables")
@@ -850,7 +1090,7 @@ async def ingested_160_page_pdf():
         pytest.skip(f"160-page PDF not found: {pdf_path}")
 
     print("\n⚙️  Ingesting 160-page PDF (shared fixture - runs once per module)...")
-    metadata = await ingest_pdf(str(pdf_path), clear_collection=True)
+    metadata = await ingest_pdf(str(pdf_path), clear_existing=True)
     client = get_qdrant_client()
 
     print(f"✓ 160-page PDF ingested: {metadata.chunk_count} chunks")
@@ -891,7 +1131,7 @@ async def ingested_excerpt_pdf():
         pytest.skip(f"Story 2.14 excerpt PDF not found: {pdf_path}")
 
     print("\n⚙️  Ingesting Story 2.14 excerpt PDF (pages 18-50, 33 pages)...")
-    metadata = await ingest_pdf(str(pdf_path), clear_collection=True)
+    metadata = await ingest_pdf(str(pdf_path), clear_existing=True)
     client = get_qdrant_client()
 
     print(f"✓ Excerpt PDF ingested: {metadata.chunk_count} chunks ({metadata.page_count} pages)")

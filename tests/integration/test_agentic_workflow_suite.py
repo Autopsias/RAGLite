@@ -27,6 +27,9 @@ import pytest
 from raglite.main import analytical_query_financial_documents
 from raglite.shared.models import AnalyticalQueryRequest, AnalyticalQueryResponse
 
+# Mark all tests in this module as integration tests that preserve collection state
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+
 # Access underlying function from FastMCP FunctionTool wrapper
 analytical_query_fn = analytical_query_financial_documents.fn
 
@@ -42,7 +45,7 @@ METADATA = test_data["metadata"]
 
 
 # Shared test state for summary reporting
-class TestMetrics:
+class WorkflowMetrics:
     """Shared metrics across all test executions."""
 
     def __init__(self):
@@ -123,7 +126,7 @@ class TestMetrics:
 
 
 # Global test metrics (shared across all tests)
-metrics = TestMetrics()
+metrics = WorkflowMetrics()
 
 
 def is_successful(

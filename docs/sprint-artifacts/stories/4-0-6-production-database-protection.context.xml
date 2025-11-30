@@ -1,0 +1,165 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>0.6</storyId>
+    <title>Production Database Protection Safeguards</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-0-6-production-database-protection.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>safeguards that prevent accidental modification or deletion of production database data</iWant>
+    <soThat>critical financial data is protected from unintentional cleanup operations</soThat>
+    <tasks>
+      <task id="1" title="Create SafetyGuard utility class" ac="1,3,6">
+        <subtask>1.1 Create raglite/shared/safety.py with SafetyGuard class</subtask>
+        <subtask>1.2 Implement check_environment() method that validates APP_ENV</subtask>
+        <subtask>1.3 Implement require_confirmation() method for interactive prompts</subtask>
+        <subtask>1.4 Implement log_operation() method with environment context</subtask>
+        <subtask>1.5 Add is_production() and is_test() helper properties</subtask>
+      </task>
+      <task id="2" title="Protect Qdrant operations" ac="1,2,3">
+        <subtask>2.1 Modify storage_operations.py to use SafetyGuard before delete_collection()</subtask>
+        <subtask>2.2 Add environment logging to all Qdrant modification operations</subtask>
+        <subtask>2.3 Require explicit confirmation for production collection deletion</subtask>
+      </task>
+      <task id="3" title="Protect PostgreSQL operations" ac="1,2,3">
+        <subtask>3.1 Modify storage_operations.py to use SafetyGuard before TRUNCATE/DELETE</subtask>
+        <subtask>3.2 Add environment logging to all PostgreSQL modification operations</subtask>
+        <subtask>3.3 Require explicit confirmation for production table operations</subtask>
+      </task>
+      <task id="4" title="Update ingestion pipeline" ac="5">
+        <subtask>4.1 Add clear_existing: bool = False parameter to ingest_pdf()</subtask>
+        <subtask>4.2 Default behavior: append to existing collection (no data loss)</subtask>
+        <subtask>4.3 When clear_existing=True on production: require SafetyGuard confirmation</subtask>
+        <subtask>4.4 Update all scripts that call ingest_pdf() to explicitly set clear_existing</subtask>
+      </task>
+      <task id="5" title="Add warning banners to scripts" ac="4">
+        <subtask>5.1 Create display_environment_banner() function in SafetyGuard</subtask>
+        <subtask>5.2 Update scripts/init-qdrant.py to show environment banner</subtask>
+        <subtask>5.3 Update scripts/clean-test-databases.py to show environment banner</subtask>
+        <subtask>5.4 Update ingestion scripts to show environment banner</subtask>
+      </task>
+      <task id="6" title="Unit tests" ac="All">
+        <subtask>6.1 Create tests/unit/test_safety_guard.py</subtask>
+        <subtask>6.2 Test check_environment() blocks production without override</subtask>
+        <subtask>6.3 Test require_confirmation() prompts in interactive mode</subtask>
+        <subtask>6.4 Test log_operation() includes environment context</subtask>
+        <subtask>6.5 Test ingest_pdf() default behavior preserves existing data</subtask>
+        <subtask>6.6 Achieve 80%+ coverage on new code</subtask>
+      </task>
+      <task id="7" title="Documentation" ac="All">
+        <subtask>7.1 Add docstrings to SafetyGuard class and methods</subtask>
+        <subtask>7.2 Update CLAUDE.md with database safety guidelines</subtask>
+        <subtask>7.3 Update story file with Dev Agent Record</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">All destructive database operations (DELETE, TRUNCATE, drop_collection) check APP_ENV before execution - Unit test verifies operations fail in production without explicit override</criterion>
+    <criterion id="AC2">Production operations require explicit --force-production flag or interactive confirmation - Integration test validates confirmation prompt appears</criterion>
+    <criterion id="AC3">Clear logging indicates which environment (PRODUCTION/TEST) is being modified - Log output inspection in unit tests</criterion>
+    <criterion id="AC4">Scripts that modify databases display prominent warning banner for production - Manual verification of script output</criterion>
+    <criterion id="AC5">ingest_pdf() requires explicit clear_existing=True parameter to delete existing data - Unit test validates default behavior preserves data</criterion>
+    <criterion id="AC6">New SafetyGuard utility class centralizes all protection logic - Code review verifies single source of truth</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/architecture/7-data-layer.md" title="Data Layer Architecture" section="Qdrant/PostgreSQL schema" snippet="Defines vector and SQL database schemas for financial document storage. Relevant for understanding which collections/tables need protection." />
+      <doc path="docs/architecture/6-complete-reference-implementation.md" title="Reference Implementation" section="MCP Server patterns" snippet="Demonstrates structured logging with extra={}, type hints, Google-style docstrings - patterns to follow for SafetyGuard class." />
+      <doc path="docs/prd/epic-4-forecasting-proactive-insights.md" title="Epic 4 PRD" section="All stories" snippet="Story 4.0.6 is an infrastructure story created post-incident, not listed in original Epic 4 PRD. Epic 4 covers forecasting (4.1-4.10)." />
+      <doc path="CLAUDE.md" title="Project Guidelines" section="Anti-Over-Engineering Rules" snippet="CRITICAL: SafetyGuard must be ~80 lines max, simple utility class, no abstractions. Follow KISS principle." />
+      <doc path="docs/sprint-artifacts/4-0-5-database-separation-completion.md" title="Story 4.0.5 Completion" section="Database Separation Architecture" snippet="Established APP_ENV-based port switching (prod: 6333/5432, test: 6335/5433). SafetyGuard builds on this infrastructure." />
+    </docs>
+    <code>
+      <file path="raglite/shared/config.py" kind="configuration" symbol="Settings, settings, app_env, adjust_for_environment" lines="24-136" reason="CRITICAL: Contains existing Settings.app_env field and adjust_for_environment() validator. SafetyGuard.is_production/is_test MUST use this - no duplicate logic." />
+      <file path="raglite/ingestion/document_ingestion.py" kind="service" symbol="ingest_pdf" lines="92-167" reason="MODIFY: Current signature has clear_collection=True (unsafe default). Change to clear_existing=False per AC5. Add SafetyGuard check when clear_existing=True." />
+      <file path="raglite/ingestion/storage_operations.py" kind="service" symbol="create_collection, delete_collection" lines="TBD" reason="MODIFY: Add SafetyGuard.check_environment() before delete_collection() and any TRUNCATE/DELETE operations per AC1." />
+      <file path="scripts/init-qdrant.py" kind="script" symbol="initialize_qdrant_collection" lines="27-66" reason="MODIFY: Add SafetyGuard.display_environment_banner() at start per AC4. Currently shows collection info but no environment warning." />
+      <file path="scripts/clean-test-databases.py" kind="script" symbol="main" lines="22-91" reason="MODIFY: Already has environment output (lines 22-29) but lacks prominent banner. Add SafetyGuard.display_environment_banner() per AC4." />
+      <file path="raglite/shared/clients.py" kind="utility" symbol="get_qdrant_client, get_postgres_conn" lines="TBD" reason="REFERENCE: Database client factories - SafetyGuard may need these for environment detection validation." />
+      <file path="raglite/shared/safety.py" kind="utility" symbol="SafetyGuard" lines="NEW" reason="CREATE: New ~80 line utility class per story Dev Notes. Centralizes all protection logic (AC6)." />
+    </code>
+    <dependencies>
+      <python>
+        <package name="pydantic" version=">=2.0,<3.0" reason="Settings class, type validation" />
+        <package name="pydantic-settings" version=">=2.0,<3.0" reason="BaseSettings for env loading" />
+        <package name="qdrant-client" version="1.15.1" reason="delete_collection() operations to protect" />
+        <package name="psycopg2-binary" version=">=2.9,<3.0" reason="PostgreSQL DELETE/TRUNCATE operations to protect" />
+      </python>
+      <stdlib>
+        <module name="sys" reason="sys.stdin.isatty() for interactive detection" />
+        <module name="os" reason="os.getenv() for APP_ENV access" />
+        <module name="logging" reason="Structured logging with environment context" />
+      </stdlib>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="CLAUDE.md" type="anti-over-engineering">SafetyGuard MUST be ~80 lines max. No abstract base classes, no custom decorators, no configuration frameworks. Simple utility class only.</constraint>
+    <constraint source="CLAUDE.md" type="tech-stack">Only use libraries listed in docs/architecture/5-technology-stack-definitive.md. No new dependencies allowed without user approval.</constraint>
+    <constraint source="Story 4.0.5" type="integration">Reuse existing Settings.app_env field - do NOT duplicate environment detection logic. SafetyGuard.is_production should check settings.app_env == 'production' AND settings.qdrant_port == 6333.</constraint>
+    <constraint source="NFR" type="performance">SafetyGuard checks are O(1) string comparisons. Zero performance impact on normal operations.</constraint>
+    <constraint source="Story" type="backward-compatibility">Existing scripts work unchanged - default safe behavior means no breaking changes for scripts that don't explicitly clear data.</constraint>
+    <constraint source="Project" type="line-budget">Project target is ~600-800 lines. SafetyGuard adds ~80 lines - ensure it stays minimal.</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="SafetyGuard" kind="class" path="raglite/shared/safety.py">
+      <signature>
+class SafetyGuard:
+    @property
+    def is_production(self) -> bool: ...
+    @property
+    def is_test(self) -> bool: ...
+    def check_environment(self, operation: str, force_production: bool = False) -> bool: ...
+    def require_confirmation(self, message: str) -> bool: ...
+    def display_environment_banner(self) -> None: ...
+      </signature>
+    </interface>
+    <interface name="ingest_pdf" kind="async function" path="raglite/ingestion/document_ingestion.py">
+      <signature>
+async def ingest_pdf(
+    file_path: str,
+    clear_existing: bool = False,  # CHANGED from clear_collection=True
+    force_production: bool = False,  # NEW parameter
+    skip_metadata: bool = False
+) -> DocumentMetadata: ...
+      </signature>
+    </interface>
+    <interface name="Settings.app_env" kind="property" path="raglite/shared/config.py">
+      <signature>app_env: str = "production"  # Options: production, test, development</signature>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Unit tests in tests/unit/ with no external dependencies. Use monkeypatch to set APP_ENV environment variable. Mock sys.stdin.isatty() to test interactive/non-interactive modes. Integration tests use test database infrastructure from Story 4.0.5 (Qdrant:6335, PostgreSQL:5433). Target 80%+ coverage on new code. Follow pytest-asyncio patterns for async functions.
+    </standards>
+    <locations>
+      <location>tests/unit/test_safety_guard.py</location>
+      <location>tests/unit/test_document_ingestion.py (extend existing)</location>
+      <location>tests/integration/test_safety_guard_integration.py (optional)</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test check_environment() raises EnvironmentError when app_env='production' and force_production=False</idea>
+      <idea ac="AC1">Test check_environment() returns True when app_env='production' and force_production=True</idea>
+      <idea ac="AC1">Test check_environment() returns True when app_env='test' regardless of force_production</idea>
+      <idea ac="AC2">Test require_confirmation() returns False in non-interactive mode (mocked isatty=False)</idea>
+      <idea ac="AC2">Test require_confirmation() returns True when user types 'yes' (mocked input)</idea>
+      <idea ac="AC2">Test require_confirmation() returns False when user types 'no' or anything else</idea>
+      <idea ac="AC3">Test log_operation() includes environment context in log extra dict</idea>
+      <idea ac="AC4">Test display_environment_banner() outputs 'PRODUCTION' when is_production=True</idea>
+      <idea ac="AC4">Test display_environment_banner() outputs 'TEST' when is_test=True</idea>
+      <idea ac="AC5">Test ingest_pdf() with default clear_existing=False does NOT delete collection</idea>
+      <idea ac="AC5">Test ingest_pdf() with clear_existing=True AND force_production=False raises on production</idea>
+      <idea ac="AC5">Test ingest_pdf() with clear_existing=True AND force_production=True deletes collection on production</idea>
+      <idea ac="AC6">Test SafetyGuard class exists and has all required methods</idea>
+    </ideas>
+  </tests>
+</story-context>

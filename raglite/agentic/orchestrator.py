@@ -117,6 +117,22 @@ class StrandsOrchestrator:
                 extra={"error": str(e)},
             )
 
+        try:
+            # Import forecasting_agent (Story 4.2 AC5)
+            from raglite.agentic.agents.forecasting_agent import forecasting_agent
+
+            self._registered_tools.append(forecasting_agent)
+            logger.info(
+                "Registered forecasting_agent tool",
+                extra={"tool_name": "forecasting_agent"},
+            )
+
+        except ImportError as e:
+            logger.warning(
+                "Failed to load forecasting_agent tool",
+                extra={"error": str(e)},
+            )
+
     def get_available_tools(self) -> list[Callable]:
         """Get list of all registered tools available to agents.
 

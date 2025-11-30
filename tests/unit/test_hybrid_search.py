@@ -492,14 +492,19 @@ class TestHybridSearchEndToEnd:
         assert len(results) == 1
         assert results[0].score == 0.9
 
+    @patch("raglite.retrieval.search.classify_query")
     @patch("raglite.retrieval.search.search_documents")
     @patch("raglite.retrieval.search.load_bm25_index")
     @patch("raglite.retrieval.search.compute_bm25_scores")
     @pytest.mark.priority("P1")
     async def test_hybrid_search_improves_ranking(
-        self, mock_compute_bm25, mock_load_bm25, mock_search_docs
+        self, mock_compute_bm25, mock_load_bm25, mock_search_docs, mock_classify
     ):
         """Test hybrid search improves ranking by boosting keyword matches."""
+        # Mock query classifier to skip SQL routing (Story 2.13)
+        from raglite.retrieval.query_classifier import QueryType
+
+        mock_classify.return_value = QueryType.VECTOR_ONLY
         # Arrange: Semantic ranks chunk_2 higher, but BM25 ranks chunk_1 higher
         mock_search_docs.return_value = [
             QueryResult(

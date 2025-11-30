@@ -16,6 +16,35 @@ from raglite.shared.models import QueryResponse
 from tests.fixtures.ground_truth import GROUND_TRUTH_QA
 
 
+@pytest.fixture(scope="module", autouse=True)
+def check_collection_exists():
+    """Module-level fixture to skip all tests if collection doesn't exist or is empty.
+
+    This prevents all 6 tests in this module from failing with cryptic collection errors.
+    Instead, they skip gracefully with an informative message.
+    """
+    from raglite.shared.clients import get_qdrant_client
+    from raglite.shared.config import settings
+
+    try:
+        client = get_qdrant_client()
+        collection_info = client.get_collection(settings.qdrant_collection_name)
+        if collection_info.points_count == 0:
+            pytest.skip(
+                f"Collection '{settings.qdrant_collection_name}' is empty - run ingestion first",
+                allow_module_level=True,
+            )
+    except Exception as e:
+        error_msg = str(e).lower()
+        if "doesn't exist" in error_msg or "not found" in error_msg:
+            pytest.skip(
+                f"Collection '{settings.qdrant_collection_name}' doesn't exist - run ingestion first",
+                allow_module_level=True,
+            )
+        # Re-raise unexpected errors
+        raise
+
+
 @pytest.mark.priority("P1")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup

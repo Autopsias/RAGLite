@@ -3,6 +3,8 @@
 Provides singleton client instances for Qdrant, Claude API, PostgreSQL, and Mistral AI.
 """
 
+from __future__ import annotations
+
 import time
 from typing import Any
 
@@ -361,6 +363,35 @@ def get_postgresql_connection() -> Any:
             raise ConnectionError(error_msg) from e
 
     return _postgresql_connection
+
+
+def reset_postgresql_connection() -> None:
+    """Reset PostgreSQL connection by closing and clearing the singleton.
+
+    This function should be called when the connection is in a failed
+    transaction state (e.g., after a PostgreSQL error that aborts the transaction).
+    The next call to get_postgresql_connection() will create a fresh connection.
+
+    Also attempts to rollback any pending transaction before closing.
+    """
+    global _postgresql_connection
+
+    if _postgresql_connection is not None:
+        try:
+            # Try to rollback any failed transaction
+            _postgresql_connection.rollback()
+            logger.info("PostgreSQL transaction rolled back")
+        except Exception as e:
+            logger.warning(f"Failed to rollback PostgreSQL transaction: {e}")
+
+        try:
+            _postgresql_connection.close()
+            logger.info("PostgreSQL connection closed for reset")
+        except Exception as e:
+            logger.warning(f"Failed to close PostgreSQL connection: {e}")
+
+        _postgresql_connection = None
+        logger.info("PostgreSQL connection reset complete - will reconnect on next use")
 
 
 def get_mistral_client() -> Mistral:

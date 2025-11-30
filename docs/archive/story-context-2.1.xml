@@ -1,220 +1,258 @@
-<story-context id="story-2.1-hybrid-search" v="1.0">
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
   <metadata>
     <epicId>2</epicId>
     <storyId>2.1</storyId>
-    <title>Hybrid Search (BM25 + Semantic Fusion)</title>
-    <status>Ready</status>
-    <generatedAt>2025-10-17</generatedAt>
+    <title>Implement pypdfium Backend for Docling</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-19</generatedAt>
     <generator>BMAD Story Context Workflow</generator>
-    <sourceStoryPath>docs/stories/story-2.1-hybrid-search.md</sourceStoryPath>
+    <sourceStoryPath>docs/stories/story-2.1.md</sourceStoryPath>
   </metadata>
 
   <story>
-    <asA>user querying financial documents</asA>
-    <iWant>hybrid search combining keyword matching (BM25) with semantic search (Fin-E5)</iWant>
-    <soThat>queries with specific financial terms and numbers retrieve correct pages with high precision</soThat>
+    <asA>a system administrator</asA>
+    <iWant>Docling configured with pypdfium backend</iWant>
+    <soThat>PDF ingestion is faster and uses less memory</soThat>
     <tasks>
-      <task id="AC1" duration="2h">BM25 Index Creation - Install rank_bm25, create BM25 index during ingestion, store sparse vectors in Qdrant, unit test indexing (4 subtasks)</task>
-      <task id="AC2" duration="2h">Hybrid Search Query Implementation - Implement BM25 query, score fusion (weighted sum alpha=0.7), configuration parameter, unit test hybrid search (4 subtasks)</task>
-      <task id="AC3" duration="1h">BM25 Parameter Tuning - Baseline test, tune k1 (1.5-2.0), tune b (0.5-0.7), tune alpha (0.6-0.8) (4 subtasks)</task>
-      <task id="AC4" duration="30min">Integration with MCP Server - Update MCP tool, integration test (2 subtasks)</task>
-      <task id="AC5" duration="1h">Unit Tests - 4 tests: BM25 index creation, BM25 query, score fusion, hybrid search end-to-end</task>
-      <task id="AC6" duration="1h">Integration Tests - 3 tests: exact numbers, financial terms, full ground truth (50 queries)</task>
-      <task id="AC7" duration="30min">Performance Validation - Latency benchmarking (10-query test), NFR13 compliance check</task>
+- Task 1: Configure pypdfium Backend (AC1 - 1 hour)
+  - 1.1: Add pypdfium dependency to pyproject.toml
+  - 1.2: Import PdfiumBackend in raglite/ingestion/pipeline.py
+  - 1.3: Update DocumentConverter initialization to use pypdfium backend
+  - 1.4: Verify backend configuration logs successful initialization
+- Task 2: Validate Ingestion with Test PDF (AC2 - 1 hour)
+  - 2.1: Identify test PDF (160 pages) from existing test suite
+  - 2.2: Run PDF ingestion with pypdfium backend
+  - 2.3: Verify page count matches expected (160 pages)
+  - 2.4: Verify table extraction still functional
+- Task 3: Table Accuracy Regression Testing (AC3 - 1 hour)
+  - 3.1: Run 10 ground truth table queries from test suite
+  - 3.2: Measure table extraction accuracy
+  - 3.3: Compare with baseline accuracy (before pypdfium)
+  - 3.4: Document results in test output
+- Task 4: Memory Usage Profiling (AC4 - 1 hour)
+  - 4.1: Measure baseline memory usage (before pypdfium)
+  - 4.2: Measure memory usage with pypdfium backend
+  - 4.3: Calculate memory reduction percentage
+  - 4.4: Document memory metrics in test output
+- Task 5: Update Documentation (30 min)
+  - 5.1: Update CLAUDE.md if needed (backend change note)
+  - 5.2: Update test documentation with pypdfium validation results
+  - 5.3: Add memory profiling results to Epic 2 tracking
     </tasks>
   </story>
 
   <acceptanceCriteria>
-    <criterion id="AC1" priority="CRITICAL">
-      <title>BM25 Index Creation</title>
-      <description>BM25 index created and stored in Qdrant sparse vectors during ingestion with parameters k1=1.7, b=0.6</description>
-      <validation>Verify BM25 index functional, sparse vectors stored in Qdrant, unit tests passing</validation>
-    </criterion>
-    <criterion id="AC2" priority="CRITICAL">
-      <title>Hybrid Search Query Implementation</title>
-      <description>Hybrid search implemented with weighted sum fusion (alpha=0.7: 70% semantic, 30% BM25)</description>
-      <validation>Verify hybrid_search() function returns combined results, alpha parameter affects ranking, unit tests passing</validation>
-    </criterion>
-    <criterion id="AC3" priority="HIGH">
-      <title>BM25 Parameter Tuning</title>
-      <description>BM25 parameters (k1, b, alpha) tuned for optimal retrieval accuracy on financial documents</description>
-      <validation>Verify optimal parameters documented (k1: 1.5-2.0, b: 0.5-0.7, alpha: 0.6-0.8), tuning results in completion notes</validation>
-    </criterion>
-    <criterion id="AC4" priority="HIGH">
-      <title>Integration with MCP Server</title>
-      <description>MCP tool uses hybrid search by default with enable_hybrid=True</description>
-      <validation>Verify MCP query returns hybrid search results, response format unchanged (backward compatible)</validation>
-    </criterion>
-    <criterion id="AC5" priority="CRITICAL">
-      <title>Unit Tests</title>
-      <description>4 unit tests passing: BM25 indexing, querying, fusion, end-to-end</description>
-      <validation>All unit tests passing in tests/unit/test_hybrid_search.py</validation>
-    </criterion>
-    <criterion id="AC6" priority="CRITICAL">
-      <title>Integration Tests</title>
-      <description>3 integration tests passing with retrieval accuracy ≥70% (target: 71-76%)</description>
-      <validation>Integration tests passing, full 50-query ground truth suite shows ≥70% retrieval accuracy</validation>
-    </criterion>
-    <criterion id="AC7" priority="HIGH">
-      <title>Performance Validation</title>
-      <description>p95 latency <10,000ms (NFR13 compliance), expected p50 ~100-150ms</description>
-      <validation>Latency benchmarks documented, NFR13 compliance verified (9,785ms budget remaining)</validation>
-    </criterion>
+**AC1: Docling Backend Configuration** (1 hour)
+- Configure PdfiumBackend in raglite/ingestion/pipeline.py
+- Remove default PDF.js backend configuration
+- Validate backend switch successful
+- Source: Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.1 AC1
+
+**AC2: Ingestion Validation** (1 hour)
+- Ingest test PDF (160 pages) successfully
+- Verify all pages processed
+- Verify table extraction still works
+- Source: Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.1 AC2
+
+**AC3: Table Accuracy Maintained** (1 hour)
+- Run 10 ground truth table queries
+- Validate table extraction accuracy ≥97.9% (no degradation)
+- Document any accuracy changes
+- Source: Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.1 AC3
+- NFR Reference: Requirements: docs/prd/requirements.md - NFR9: 95%+ table extraction accuracy
+
+**AC4: Memory Reduction Validation** (1 hour)
+- Measure peak memory usage during ingestion
+- Expected: 50-60% reduction (6.2GB → 2.4GB)
+- Document memory usage before/after
+- Source: Epic 2 PRD: docs/prd/epic-2-advanced-rag-enhancements.md - Story 2.1 AC4
+- Tech Stack Reference: docs/architecture/5-technology-stack-definitive.md - pypdfium: 50-60% memory reduction
   </acceptanceCriteria>
 
   <artifacts>
     <docs>
-      <doc path="CLAUDE.md" section="Anti-Over-Engineering Rules">
-        <title>Development Constraints</title>
-        <snippet>KISS principle - no custom wrappers, direct SDK usage only, tech stack locked, one level of indirection maximum</snippet>
+      <!-- Epic 2 PRD - Story 2.1 Specification -->
+      <doc>
+        <path>docs/prd/epic-2-advanced-rag-enhancements.md</path>
+        <title>Epic 2: Advanced RAG Architecture Enhancement</title>
+        <section>Story 2.1: Implement pypdfium Backend for Docling</section>
+        <snippet>Goal: Replace default PDF.js backend with pypdfium for 50-60% memory reduction (6.2GB → 2.4GB) and faster processing. Expected: 1.7-2.5x speedup empirically validated by Docling benchmarks. Risk: LOW (pypdfium is official Docling backend).</snippet>
       </doc>
-      <doc path="docs/prd/epic-2-advanced-rag-enhancements.md" section="Story 2.1: Phase 2A - Hybrid Search">
-        <title>Story Requirements</title>
-        <snippet>Combine semantic vector search with keyword matching for precision. Expected +5-10% retrieval accuracy. Post-search re-ranking with 70% semantic + 30% keyword scoring.</snippet>
+
+      <!-- Technology Stack - pypdfium Approval -->
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack (Definitive)</title>
+        <section>PDF Backend - pypdfium</section>
+        <snippet>pypdfium: APPROVED (Phase 1) - Docling backend for faster, lower-memory PDF processing. 1.7-2.5x speedup, 50-60% memory reduction. Status: Official Docling backend, production-proven, minimal integration required.</snippet>
       </doc>
-      <doc path="docs/epic-2-preparation/bm25-architecture-decision-record.md" section="Full Document">
-        <title>BM25 Technical Guidance</title>
-        <snippet>BM25 implementation decision record with rank_bm25 library (industry standard), Qdrant sparse vector support, weighted sum fusion (alpha=0.7), parameters k1=1.7 b=0.6 for financial docs</snippet>
+
+      <!-- Requirements - NFR9 Table Accuracy -->
+      <doc>
+        <path>docs/prd/requirements.md</path>
+        <title>Requirements</title>
+        <section>NFR9: Table Extraction Accuracy</section>
+        <snippet>Table extraction accuracy shall be 95%+ for financial tables with complex structures. Current baseline: 97.9% with TableFormerMode.ACCURATE. MUST NOT degrade when switching to pypdfium backend.</snippet>
       </doc>
-      <doc path="docs/architecture/coding-standards.md" section="Code Quality">
-        <title>Coding Standards</title>
-        <snippet>Type hints required, Google-style docstrings, structured logging with extra={}, async/await for I/O, Pydantic models for data structures</snippet>
-      </doc>
-      <doc path="docs/architecture/testing-strategy.md" section="Testing Standards">
-        <title>Testing Approach</title>
-        <snippet>pytest + pytest-asyncio, 80%+ coverage target, mock-based unit tests, real Qdrant integration tests, ground truth accuracy validation</snippet>
-      </doc>
-      <doc path="docs/stories/story-1.15B-baseline-validation.md" section="Baseline Results">
-        <title>Epic 1 Baseline</title>
-        <snippet>Retrieval accuracy 56.0% (28/50), attribution accuracy 32.0% (16/50), p50=33.20ms, p95=63.34ms. Failure analysis: 44% keyword coverage gaps, 32% page ranking issues.</snippet>
+
+      <!-- Implementation Strategy - Epic 2 Phase 1 -->
+      <doc>
+        <path>docs/architecture/8-phased-implementation-strategy-v11-simplified.md</path>
+        <title>Phased Implementation Strategy</title>
+        <section>Epic 2 Phase 1: PDF Ingestion Performance Optimization</section>
+        <snippet>Phase 1 implements pypdfium backend and page-level parallelism for 1.7-2.5x speedup. Strategic benefit: Faster ingestion enables quicker RAG testing iterations in Phase 2A. Timeline: 1-2 days.</snippet>
       </doc>
     </docs>
 
     <code>
-      <artifact path="raglite/ingestion/pipeline.py" kind="module" symbol="generate_embeddings, ingest_pdf" lines="40-200">
-        <reason>Existing ingestion pipeline to enhance with BM25 indexing. Add BM25 tokenization and sparse vector generation after chunk creation.</reason>
+      <!-- Primary Integration Point - DocumentConverter Initialization -->
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>service</kind>
+        <symbol>DocumentConverter initialization</symbol>
+        <lines>1013-1018</lines>
+        <reason>CRITICAL: This is where pypdfium backend must be configured. Currently uses default PDF.js backend (implicit). Need to add backend=PdfiumBackend to PdfPipelineOptions.</reason>
       </artifact>
-      <artifact path="raglite/retrieval/search.py" kind="module" symbol="search_documents" lines="70-180">
-        <reason>Existing semantic search function. Create new hybrid_search() function that combines semantic and BM25 results using weighted sum fusion.</reason>
+
+      <!-- Imports Section - Add pypdfium -->
+      <artifact>
+        <path>raglite/ingestion/pipeline.py</path>
+        <kind>import</kind>
+        <symbol>Docling imports</symbol>
+        <lines>13-22</lines>
+        <reason>Add 'from docling.backend.pypdfium_backend import PdfiumBackend' to existing Docling imports section.</reason>
       </artifact>
-      <artifact path="raglite/shared/clients.py" kind="module" symbol="get_qdrant_client, get_embedding_model" lines="1-100">
-        <reason>Qdrant client and embedding model singletons. Reuse for BM25 sparse vector storage and semantic search components of hybrid search.</reason>
+
+      <!-- Integration Test - PDF Ingestion -->
+      <artifact>
+        <path>tests/integration/test_ingestion_integration.py</path>
+        <kind>test</kind>
+        <symbol>TestPDFIngestionIntegration.test_ingest_financial_pdf_with_tables</symbol>
+        <lines>36-97</lines>
+        <reason>Integration test validates PDF ingestion with 10-page sample. Use as template for validating pypdfium backend switch. Already includes page count, table extraction, and performance validation.</reason>
       </artifact>
-      <artifact path="raglite/shared/models.py" kind="module" symbol="Chunk, QueryResult, SearchResult" lines="1-80">
-        <reason>Core data models. May need to extend Chunk model to store BM25 sparse vectors if not already in payload.</reason>
-      </artifact>
-      <artifact path="tests/unit/test_ingestion.py" kind="test" symbol="existing unit tests" lines="1-500">
-        <reason>Unit test patterns to follow. Create tests/unit/test_hybrid_search.py with same patterns (mock-based, async/await, pytest fixtures).</reason>
-      </artifact>
-      <artifact path="tests/integration/test_retrieval_integration.py" kind="test" symbol="integration test patterns" lines="1-350">
-        <reason>Integration test patterns. Create tests/integration/test_hybrid_search_integration.py with real Qdrant and ground truth queries.</reason>
-      </artifact>
-      <artifact path="tests/fixtures/ground_truth.py" kind="data" symbol="GROUND_TRUTH_QA" lines="1-700">
-        <reason>50 ground truth questions for accuracy validation. Use for AC6 integration test (full ground truth suite with ≥70% target).</reason>
-      </artifact>
-      <artifact path="pyproject.toml" kind="config" symbol="dependencies" lines="31-45">
-        <reason>rank-bm25==0.2.2 already added to dependencies (line 41). No changes needed, just verify during implementation.</reason>
+
+      <!-- Unit Test Location -->
+      <artifact>
+        <path>tests/unit/test_ingestion.py</path>
+        <kind>test</kind>
+        <symbol>Unit tests</symbol>
+        <lines>N/A</lines>
+        <reason>Location for unit-level backend configuration tests if needed (mock-based testing of DocumentConverter initialization).</reason>
       </artifact>
     </code>
 
     <dependencies>
+      <!-- Python Dependencies from pyproject.toml -->
       <python>
-        <package name="rank-bm25" version="0.2.2" usage="BM25 sparse vector generation (BM25Okapi class with k1, b parameters)" />
-        <package name="qdrant-client" version="1.15.1" usage="Sparse vector storage (SparseVectorParams, query with dense+sparse)" />
-        <package name="sentence-transformers" version="5.1.1" usage="Fin-E5 embeddings (semantic component of hybrid search)" />
-        <package name="pytest" version="8.4.2" usage="Unit and integration testing framework" />
-        <package name="pytest-asyncio" version="1.2.0" usage="Async test support for async functions" />
+        <package name="docling" version="2.55.1" />
+        <package name="sentence-transformers" version="5.1.1" />
+        <package name="qdrant-client" version="1.15.1" />
+        <package name="fastmcp" version="2.12.4" />
+        <package name="anthropic" version=">=0.18.0,&lt;1.0.0" />
+        <package name="pydantic" version=">=2.0,&lt;3.0" />
+        <package name="openpyxl" version=">=3.1,&lt;4.0" />
+        <package name="pandas" version=">=2.0,&lt;3.0" />
+        <package name="rank-bm25" version="0.2.2" />
+        <package name="tiktoken" version=">=0.5.1,&lt;1.0.0" />
+        <package name="python-dotenv" version="1.1.1" />
+        <package name="asyncio" version=">=3.4.3,&lt;4.0.0" />
+        <package name="httpx" version=">=0.28.1,&lt;1.0.0" />
       </python>
+
+      <dev>
+        <package name="pytest" version="8.4.2" />
+        <package name="pytest-asyncio" version="1.2.0" />
+        <package name="pytest-cov" version="5.0.0" />
+        <package name="pytest-mock" version=">=3.12,&lt;4.0" />
+        <package name="pytest-xdist" version=">=3.5,&lt;4.0" />
+        <package name="pytest-timeout" version=">=2.0,&lt;3.0" />
+        <package name="black" version=">=23.3,&lt;24.0" />
+        <package name="ruff" version=">=0.0.270,&lt;1.0.0" />
+      </dev>
+
+      <note>pypdfium is likely included as a Docling dependency. Verify with 'pip show docling' before adding to pyproject.toml. If not included, add as dependency.</note>
     </dependencies>
   </artifacts>
 
   <constraints>
-    <constraint id="C1" severity="CRITICAL">
-      <title>KISS Principle - No Custom Wrappers</title>
-      <description>Use rank_bm25 library and Qdrant SDK directly as documented. NO custom abstraction layers, wrappers, or "simplified interfaces". If SDK has a method, use it directly.</description>
-    </constraint>
-    <constraint id="C2" severity="CRITICAL">
-      <title>Tech Stack Locked</title>
-      <description>ONLY use rank-bm25 library (already approved). Do NOT add alternative BM25 libraries or custom implementations. rank-bm25==0.2.2 is the approved solution.</description>
-    </constraint>
-    <constraint id="C3" severity="HIGH">
-      <title>Follow Existing Patterns</title>
-      <description>Match patterns from Stories 1.2-1.15B: singleton clients (get_qdrant_client), async/await for I/O, Pydantic models, structured logging, type hints, Google-style docstrings.</description>
-    </constraint>
-    <constraint id="C4" severity="HIGH">
-      <title>Metadata Preservation Critical</title>
-      <description>Preserve all existing chunk metadata (page_number, source_document, chunk_id, chunk_index). BM25 sparse vectors stored in Qdrant payload, NOT replacing semantic vectors.</description>
-    </constraint>
-    <constraint id="C5" severity="CRITICAL">
-      <title>Backward Compatibility</title>
-      <description>MCP tool response format MUST remain unchanged. Hybrid search is internal enhancement - clients should not see API changes. Add enable_hybrid parameter with default=True.</description>
-    </constraint>
-    <constraint id="C6" severity="HIGH">
-      <title>Performance Budget</title>
-      <description>NFR13: &lt;10s p95 latency. Epic 1 baseline: 63.34ms. Expected hybrid search: +100-150ms (3-4x increase). Total budget: 9,935ms remaining. Well within limits.</description>
-    </constraint>
-    <constraint id="C7" severity="CRITICAL">
-      <title>Accuracy Target</title>
-      <description>AC6 is MANDATORY: ≥70% retrieval accuracy on full 50-query ground truth suite. Baseline: 56%. Expected: 71-76% (+15-20pp improvement). Failure to meet 70% requires investigation.</description>
-    </constraint>
+    <!-- Development Constraints from Story Dev Notes -->
+    <constraint type="accuracy">MUST maintain TableFormerMode.ACCURATE configuration - 97.9% table accuracy requirement (NFR9 compliance). No degradation allowed when switching backends.</constraint>
+
+    <constraint type="architecture">MUST preserve existing PdfPipelineOptions configuration structure. Only add backend=PdfiumBackend parameter, do not refactor or restructure converter initialization.</constraint>
+
+    <constraint type="async">MUST keep async pattern for pipeline consistency. DocumentConverter usage must remain async-compatible with existing ingest_pdf() async function.</constraint>
+
+    <constraint type="breaking-changes">NO breaking changes to downstream chunking/embedding pipeline. Backend switch must be transparent to extract_elements(), chunk_document(), and generate_embeddings() functions.</constraint>
+
+    <constraint type="simplicity">KISS principle - This is a 15-line modification-only change. No abstractions, no wrappers, no custom backend managers. Direct SDK usage only per CLAUDE.md anti-over-engineering rules.</constraint>
+
+    <constraint type="tech-stack">pypdfium is LOCKED and APPROVED technology (Phase 1). No other backend options should be explored. Follow docs/architecture/5-technology-stack-definitive.md exactly.</constraint>
   </constraints>
 
   <interfaces>
-    <interface name="get_qdrant_client" kind="function">
-      <signature>def get_qdrant_client() -> QdrantClient</signature>
-      <path>raglite/shared/clients.py</path>
-      <usage>Reuse existing Qdrant client singleton. Used for collection creation with sparse vectors and hybrid search queries.</usage>
+    <!-- Docling Backend API -->
+    <interface>
+      <name>PdfiumBackend</name>
+      <kind>class</kind>
+      <signature>from docling.backend.pypdfium_backend import PdfiumBackend</signature>
+      <path>docling.backend.pypdfium_backend</path>
+      <usage>Pass as backend parameter to PdfPipelineOptions: PdfPipelineOptions(do_table_structure=True, backend=PdfiumBackend)</usage>
     </interface>
-    <interface name="get_embedding_model" kind="function">
-      <signature>def get_embedding_model() -> SentenceTransformer</signature>
-      <path>raglite/shared/clients.py</path>
-      <usage>Reuse existing Fin-E5 model singleton. Used for semantic component of hybrid search (query embeddings).</usage>
+
+    <!-- DocumentConverter Configuration -->
+    <interface>
+      <name>DocumentConverter</name>
+      <kind>class</kind>
+      <signature>DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)})</signature>
+      <path>docling.document_converter</path>
+      <usage>Configure with PdfFormatOption containing PdfPipelineOptions with pypdfium backend. Existing initialization at raglite/ingestion/pipeline.py:1016-1018.</usage>
     </interface>
-    <interface name="BM25Okapi" kind="class">
-      <signature>class BM25Okapi(corpus, k1=1.5, b=0.75, epsilon=0.25)</signature>
-      <path>rank_bm25 (external library)</path>
-      <usage>Create BM25 index with k1=1.7, b=0.6 parameters. Use get_scores(query) to retrieve BM25 scores for fusion.</usage>
-    </interface>
-    <interface name="create_collection (sparse vectors)" kind="method">
-      <signature>client.create_collection(collection_name, vectors_config={...}, sparse_vectors_config={...})</signature>
-      <path>qdrant_client.QdrantClient</path>
-      <usage>Configure Qdrant collection with BOTH dense vectors (Fin-E5) and sparse vectors (BM25). Use SparseVectorParams for BM25 configuration.</usage>
-    </interface>
-    <interface name="query_points (hybrid)" kind="method">
-      <signature>client.query_points(collection_name, query=dense_vector, sparse_query=sparse_vector, limit=k)</signature>
-      <path>qdrant_client.QdrantClient</path>
-      <usage>Qdrant v1.15+ supports hybrid search with both dense and sparse query vectors. May use this OR implement weighted sum fusion in Python.</usage>
-    </interface>
-    <interface name="Chunk" kind="model">
-      <signature>class Chunk(BaseModel): chunk_id, content, metadata, page_number, chunk_index, embedding</signature>
-      <path>raglite/shared/models.py</path>
-      <usage>Core chunk model. BM25 sparse vectors stored in Qdrant payload (not in Chunk model itself). No model changes needed.</usage>
-    </interface>
-    <interface name="QueryResult" kind="model">
-      <signature>class QueryResult(BaseModel): score, chunk, source_citation</signature>
-      <path>raglite/shared/models.py</path>
-      <usage>Search result model. Hybrid search returns QueryResult with fused score (alpha * semantic + (1-alpha) * bm25). No changes needed.</usage>
+
+    <!-- PdfPipelineOptions Configuration -->
+    <interface>
+      <name>PdfPipelineOptions</name>
+      <kind>class</kind>
+      <signature>PdfPipelineOptions(do_table_structure: bool, backend: Type[Backend])</signature>
+      <path>docling.datamodel.pipeline_options</path>
+      <usage>Current: PdfPipelineOptions(do_table_structure=True). New: Add backend=PdfiumBackend parameter. Preserve table_structure_options.mode = TableFormerMode.ACCURATE.</usage>
     </interface>
   </interfaces>
 
   <tests>
     <standards>
-      pytest + pytest-asyncio for async test support. Mock-based unit tests (no real Qdrant). Integration tests with real Qdrant and ground truth data. Target: 80%+ code coverage. Use pytest fixtures from conftest.py. Structured assertions with clear failure messages. Performance validation with timing measurements (time.time()).
-    </standards>
+Testing framework: pytest with pytest-asyncio for async function testing. Integration tests marked with @pytest.mark.integration and @pytest.mark.asyncio. Unit tests use mocking (pytest-mock) to isolate components. Performance testing uses pytest-timeout (120s for PDF ingestion tests). Lazy imports to avoid test discovery overhead (DO NOT import raglite modules at module level). Test markers: integration, unit, slow, smoke, p0/p1/p2 for priority. Code coverage via pytest-cov (target 80%+). Parallel execution via pytest-xdist with loadfile scheduling.</standards>
+
     <locations>
-      - tests/unit/test_hybrid_search.py (NEW - 4 unit tests)
-      - tests/integration/test_hybrid_search_integration.py (NEW - 3 integration tests)
-      - tests/fixtures/ground_truth.py (EXISTING - 50 Q&A pairs for validation)
+      <location>tests/integration/test_ingestion_integration.py - Integration tests with real PDFs (10-page sample: tests/fixtures/sample_financial_report.pdf)</location>
+      <location>tests/unit/test_ingestion.py - Unit tests with mocked dependencies</location>
+      <location>pytest.ini - Test configuration (markers, timeouts, parallel execution settings)</location>
     </locations>
+
     <ideas>
-      <test id="T1" ac="AC1" type="unit">test_bm25_index_creation: Create BM25 index with 10 sample chunks, verify index created, verify tokenization correct</test>
-      <test id="T2" ac="AC1" type="unit">test_bm25_query: Query BM25 index with "EBITDA", verify scores returned for all chunks, verify relevant chunks ranked higher</test>
-      <test id="T3" ac="AC2" type="unit">test_score_fusion_weighted_sum: Mock semantic and BM25 scores, call fusion function with alpha=0.7, verify combined scores correct, verify top-k ranking correct</test>
-      <test id="T4" ac="AC2" type="unit">test_hybrid_search_end_to_end: Create test collection with 5 chunks, run hybrid search query, verify results include both semantic and BM25 matches, verify hybrid outperforms semantic-only</test>
-      <test id="T5" ac="AC6" type="integration">test_hybrid_search_exact_numbers: Query "What is the variable cost per ton?" (expects "23.2"), verify page 46 in top-3 results, measure improvement over semantic-only</test>
-      <test id="T6" ac="AC6" type="integration">test_hybrid_search_financial_terms: Query "What is the EBITDA IFRS margin for Portugal Cement?", verify page 46 in top-3 results, measure improvement over semantic-only</test>
-      <test id="T7" ac="AC6" type="integration">test_hybrid_search_full_ground_truth: Run full 50-query ground truth suite, measure retrieval accuracy with hybrid search, compare baseline (56%) vs hybrid (target: 71-76%), CRITICAL: ≥70% required for AC6</test>
-      <test id="T8" ac="AC7" type="performance">test_hybrid_search_latency: Run 10-query performance test, measure p50 and p95 latency, verify p50 &lt;150ms (expected 100-150ms), verify p95 &lt;10,000ms (NFR13 compliance)</test>
+      <!-- AC1: Docling Backend Configuration -->
+      <test_idea ac="AC1">
+        <description>Unit test: Verify DocumentConverter initialization includes PdfiumBackend</description>
+        <approach>Mock DocumentConverter and PdfPipelineOptions, assert backend parameter is PdfiumBackend class. Verify do_table_structure=True and TableFormerMode.ACCURATE preserved.</approach>
+      </test_idea>
+
+      <!-- AC2: Ingestion Validation -->
+      <test_idea ac="AC2">
+        <description>Integration test: Ingest 10-page sample PDF with pypdfium backend</description>
+        <approach>Use existing test_ingest_financial_pdf_with_tables() as template. Verify page_count=10, all pages processed, no errors during conversion. Validate DocumentMetadata structure matches baseline.</approach>
+      </test_idea>
+
+      <!-- AC3: Table Accuracy Maintained -->
+      <test_idea ac="AC3">
+        <description>Integration test: Run 10 ground truth table queries with pypdfium</description>
+        <approach>Ingest sample PDF with tables, run table extraction queries, compare accuracy with baseline (97.9%). Use tests/integration/test_hybrid_search_integration.py pattern for accuracy validation.</approach>
+      </test_idea>
+
+      <!-- AC4: Memory Reduction Validation -->
+      <test_idea ac="AC4">
+        <description>Performance test: Measure peak memory usage before/after pypdfium</description>
+        <approach>Use memory_profiler or tracemalloc to measure peak memory during ingest_pdf(). Compare pypdfium vs PDF.js backend. Document results. Target: 50-60% reduction (6.2GB → 2.4GB for 160-page PDF).</approach>
+      </test_idea>
     </ideas>
   </tests>
 </story-context>

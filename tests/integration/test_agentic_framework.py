@@ -15,6 +15,9 @@ from raglite.agentic.agents.mock_synthesis import MockSynthesisAgent
 from raglite.agentic.orchestrator import StrandsOrchestrator
 from raglite.agentic.state import AgentState
 
+# Mark all tests in this module as integration tests that preserve collection state
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+
 
 @pytest.mark.asyncio
 class TestAgenticFrameworkIntegration:
