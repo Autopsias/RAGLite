@@ -396,28 +396,30 @@ async def store_metadata_in_postgresql(
         logger.warning("No chunks provided for PostgreSQL storage")
         return (0, 0)
 
-    # Filter chunks that have metadata
-    chunks_with_metadata = [
-        chunk
-        for chunk in chunks
-        if chunk.document_type or chunk.company_name or chunk.metric_category
-    ]
-
-    skipped_count = len(chunks) - len(chunks_with_metadata)
-
-    if not chunks_with_metadata:
-        logger.info(
-            "No chunks with metadata to store in PostgreSQL - skipping PostgreSQL storage",
-            extra={"total_chunks": len(chunks)},
-        )
-        return (0, len(chunks))
+    # CRITICAL FIX (CI): Store ALL chunks, not just those with extracted metadata
+    # Metadata fields are nullable by design (see migrations/002_create_financial_tables.sql)
+    # Previously filtered to only chunks with metadata, causing 0 chunks to be stored when
+    # MISTRAL_API_KEY is not configured (CI environment, parallel ingestion tests)
+    #
+    # Root cause: Tests in tests/integration/test_parallel_ingestion.py were failing with:
+    # - AssertionError: New chunks should be stored in PostgreSQL financial_chunks
+    # - Assert: 0 > 0
+    #
+    # This was because metadata extraction requires MISTRAL_API_KEY, which is not set in CI.
+    # Without metadata, all chunks were being skipped, resulting in empty PostgreSQL table.
+    #
+    # Fix: Store all chunks regardless of metadata presence. Metadata is optional enrichment.
+    chunks_to_store = chunks
+    chunks_with_metadata_count = sum(
+        1 for chunk in chunks if chunk.document_type or chunk.company_name or chunk.metric_category
+    )
 
     logger.info(
-        "Filtered chunks for PostgreSQL storage",
+        "Preparing chunks for PostgreSQL storage",
         extra={
             "total_chunks": len(chunks),
-            "with_metadata": len(chunks_with_metadata),
-            "skipped": skipped_count,
+            "with_metadata": chunks_with_metadata_count,
+            "without_metadata": len(chunks) - chunks_with_metadata_count,
         },
     )
 
@@ -427,7 +429,7 @@ async def store_metadata_in_postgresql(
 
         # Prepare records for batch insert
         records = []
-        for chunk in chunks_with_metadata:
+        for chunk in chunks_to_store:
             # Generate new UUID for PostgreSQL chunk_id (primary key)
             # Use chunk.chunk_id as STRING for embedding_id (link to Qdrant vector)
             record = (
@@ -500,18 +502,17 @@ async def store_metadata_in_postgresql(
         logger.info(
             "PostgreSQL metadata storage complete",
             extra={
-                "records_stored": len(chunks_with_metadata),
-                "records_skipped": skipped_count,
+                "records_stored": len(chunks_to_store),
+                "with_metadata": chunks_with_metadata_count,
+                "without_metadata": len(chunks_to_store) - chunks_with_metadata_count,
                 "duration_ms": duration_ms,
                 "records_per_second": (
-                    round(len(chunks_with_metadata) / (duration_ms / 1000), 2)
-                    if duration_ms > 0
-                    else 0
+                    round(len(chunks_to_store) / (duration_ms / 1000), 2) if duration_ms > 0 else 0
                 ),
             },
         )
 
-        return (len(chunks_with_metadata), skipped_count)
+        return (len(chunks_to_store), 0)  # All chunks stored, none skipped
 
     except Exception as e:
         logger.error(

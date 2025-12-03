@@ -47,6 +47,9 @@ qdrant_storage/
 models/
 .cache/
 
+# Claude Code audio files
+.claude/audio/
+
 # Test outputs
 .pytest_cache/
 htmlcov/
