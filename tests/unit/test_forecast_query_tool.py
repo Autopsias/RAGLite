@@ -401,7 +401,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.main.extract_timeseries",
+                "raglite.main.extract_timeseries_from_sql",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
@@ -460,7 +460,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.main.extract_timeseries",
+                "raglite.main.extract_timeseries_from_sql",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
@@ -535,7 +535,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.main.extract_timeseries",
+                "raglite.main.extract_timeseries_from_sql",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
@@ -560,10 +560,17 @@ class TestGetFinancialForecast:
         from raglite.main import get_financial_forecast
         from raglite.retrieval.search import QueryError
 
-        with patch(
-            "raglite.main.extract_timeseries",
-            new_callable=AsyncMock,
-            side_effect=ExtractionError("No documents found"),
+        with (
+            patch(
+                "raglite.main.extract_timeseries_from_sql",
+                new_callable=AsyncMock,
+                side_effect=ExtractionError("No data found in financial_tables"),
+            ),
+            patch(
+                "raglite.main.extract_timeseries",
+                new_callable=AsyncMock,
+                side_effect=ExtractionError("No documents found"),
+            ),
         ):
             request = ForecastQueryRequest(metric="revenue")
 
@@ -579,10 +586,17 @@ class TestGetFinancialForecast:
         from raglite.main import get_financial_forecast
         from raglite.retrieval.search import QueryError
 
-        with patch(
-            "raglite.main.extract_timeseries",
-            new_callable=AsyncMock,
-            side_effect=RuntimeError("Unexpected crash"),
+        with (
+            patch(
+                "raglite.main.extract_timeseries_from_sql",
+                new_callable=AsyncMock,
+                side_effect=RuntimeError("Unexpected crash"),
+            ),
+            patch(
+                "raglite.main.extract_timeseries",
+                new_callable=AsyncMock,
+                side_effect=RuntimeError("Fallback also crashed"),
+            ),
         ):
             request = ForecastQueryRequest(metric="revenue")
 
@@ -629,7 +643,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.main.extract_timeseries",
+                "raglite.main.extract_timeseries_from_sql",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
@@ -682,7 +696,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.main.extract_timeseries",
+                "raglite.main.extract_timeseries_from_sql",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
@@ -727,7 +741,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.main.extract_timeseries",
+                "raglite.main.extract_timeseries_from_sql",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
@@ -775,7 +789,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.main.extract_timeseries",
+                "raglite.main.extract_timeseries_from_sql",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
@@ -821,7 +835,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.main.extract_timeseries",
+                "raglite.main.extract_timeseries_from_sql",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
