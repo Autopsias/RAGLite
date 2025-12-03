@@ -84,7 +84,8 @@ class ExtractedMetadata(BaseModel):
         description="Company name: Portugal Cement, CIMPOR, Cimpor Trading, InterCement",
     )
     geographic_jurisdiction: str | None = Field(
-        default=None, description="Geographic region: Portugal, EU, APAC, Americas, Global"
+        default=None,
+        description="Geographic region: Portugal, EU, APAC, Americas, Global",
     )
     data_source_type: str | None = Field(
         default=None,
@@ -216,7 +217,9 @@ class QueryResult(BaseModel):
     """
 
     score: float = Field(
-        ..., le=1.0, description="Relevance score (typically 0-1, but BM25 hybrid can be negative)"
+        ...,
+        le=1.0,
+        description="Relevance score (typically 0-1, but BM25 hybrid can be negative)",
     )
     text: str = Field(..., description="Chunk text content")
     source_document: str = Field(..., description="Source document filename")
@@ -318,7 +321,8 @@ class WorkflowMetrics(BaseModel):
     )
     execution_time_ms: int = Field(..., description="Total workflow execution time in milliseconds")
     agents_invoked: list[str] = Field(
-        default_factory=list, description="List of agents invoked (e.g., ['retrieval', 'analysis'])"
+        default_factory=list,
+        description="List of agents invoked (e.g., ['retrieval', 'analysis'])",
     )
     agents_failed: list[str] = Field(
         default_factory=list,
@@ -369,7 +373,8 @@ class TimeSeriesData(BaseModel):
         default_factory=list, description="Data points sorted by date"
     )
     interval: str = Field(
-        default="raw", description="Time interval: 'raw', 'monthly', 'quarterly', 'yearly'"
+        default="raw",
+        description="Time interval: 'raw', 'monthly', 'quarterly', 'yearly'",
     )
     source_documents: list[str] = Field(
         default_factory=list, description="Source document filenames"
@@ -418,13 +423,15 @@ class ForecastResult(BaseModel):
         default_factory=list, description="Original time-series input data"
     )
     forecast: list[ForecastPoint] = Field(
-        default_factory=list, description="Forecast predictions with confidence intervals"
+        default_factory=list,
+        description="Forecast predictions with confidence intervals",
     )
     confidence_reasoning: str = Field(
         default="", description="LLM-generated explanation of confidence intervals"
     )
     basis: str = Field(
-        default="", description="Forecast basis (e.g., 'Prophet model trained on 8 quarters')"
+        default="",
+        description="Forecast basis (e.g., 'Prophet model trained on 8 quarters')",
     )
     accuracy_estimate: str = Field(default="±15%", description="Expected accuracy per NFR10")
     periods_ahead: int = Field(default=4, description="Number of periods forecasted")
@@ -546,7 +553,8 @@ class AsyncIngestionResponse(BaseModel):
         description="User-friendly message (e.g., 'Ingestion started for large-file.pdf. Use get_ingestion_status to check progress.')",
     )
     estimated_time_s: int | None = Field(
-        default=None, description="Estimated completion time in seconds (based on page count)"
+        default=None,
+        description="Estimated completion time in seconds (based on page count)",
     )
 
 
@@ -572,7 +580,8 @@ class IngestionJobStatus(BaseModel):
         default=None, description="Job start timestamp (ISO 8601 format)"
     )
     completed_at: str | None = Field(
-        default=None, description="Job completion timestamp (ISO 8601 format, only when done)"
+        default=None,
+        description="Job completion timestamp (ISO 8601 format, only when done)",
     )
 
 

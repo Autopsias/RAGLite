@@ -109,7 +109,15 @@ async def validate_epic2():
         except Exception as e:
             print(f"       ❌ Error: {str(e)[:80]}")
             results.append(
-                TestResult(test_id, query, test["category"], expected_min, 0, False, str(e)[:100])
+                TestResult(
+                    test_id,
+                    query,
+                    test["category"],
+                    expected_min,
+                    0,
+                    False,
+                    str(e)[:100],
+                )
             )
 
     # Validate sad path tests
@@ -157,7 +165,13 @@ async def validate_epic2():
             print(f"       ✅ Gracefully handled error: {str(e)[:60]}")
             results.append(
                 TestResult(
-                    test_id, query, test["category"], 0, 0, True, f"Graceful error: {str(e)[:50]}"
+                    test_id,
+                    query,
+                    test["category"],
+                    0,
+                    0,
+                    True,
+                    f"Graceful error: {str(e)[:50]}",
                 )
             )
 

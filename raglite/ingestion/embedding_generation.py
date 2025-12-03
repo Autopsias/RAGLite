@@ -192,7 +192,12 @@ async def extract_chunk_metadata(
 
     try:
         # Import dependencies (lazy import to avoid startup overhead)
-        from mistralai.models import AssistantMessage, SystemMessage, ToolMessage, UserMessage
+        from mistralai.models import (
+            AssistantMessage,
+            SystemMessage,
+            ToolMessage,
+            UserMessage,
+        )
 
         # Story 2.6 AC6 FIX: Client pooling - accept pre-created client or create new one
         # This enables caller to reuse single client instance across all chunks (10-15x speedup)
@@ -264,7 +269,10 @@ async def extract_chunk_metadata(
         if not isinstance(response_content, str):
             logger.error(
                 "Response content is not a string, cannot parse JSON",
-                extra={"chunk_id": chunk_id, "content_type": type(response_content).__name__},
+                extra={
+                    "chunk_id": chunk_id,
+                    "content_type": type(response_content).__name__,
+                },
             )
             raise RuntimeError("Response content is not a string")
 

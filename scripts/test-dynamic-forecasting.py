@@ -264,7 +264,15 @@ async def discover_alternative_metrics() -> None:
             print(f"  {m.name:<50} | {m.data_point_count:>6} points")
 
     # Search for debt/capital metrics
-    capital_keywords = ["debt", "capital", "working", "cash", "inventory", "receivable", "payable"]
+    capital_keywords = [
+        "debt",
+        "capital",
+        "working",
+        "cash",
+        "inventory",
+        "receivable",
+        "payable",
+    ]
 
     print("\nDebt/Capital Metrics:")
     print("-" * 80)

@@ -45,7 +45,12 @@ def main():
         if isinstance(item, TableItem):
             page_no = item.prov[0].page_no if item.prov else None
             all_tables.append(
-                {"index": len(all_tables), "doc_index": idx, "page": page_no, "item": item}
+                {
+                    "index": len(all_tables),
+                    "doc_index": idx,
+                    "page": page_no,
+                    "item": item,
+                }
             )
 
     print(f"Tables found: {len(all_tables)}")

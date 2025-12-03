@@ -65,7 +65,8 @@ class TestRetrievalAgentInterface:
         """
         # Mock multi_index_search to return empty results
         with patch(
-            "raglite.agentic.agents.retrieval_agent.multi_index_search", new_callable=AsyncMock
+            "raglite.agentic.agents.retrieval_agent.multi_index_search",
+            new_callable=AsyncMock,
         ) as mock_search:
             mock_search.return_value = []
 
@@ -108,7 +109,8 @@ class TestRetrievalAgentReturnFormat:
         ]
 
         with patch(
-            "raglite.agentic.agents.retrieval_agent.multi_index_search", new_callable=AsyncMock
+            "raglite.agentic.agents.retrieval_agent.multi_index_search",
+            new_callable=AsyncMock,
         ) as mock_search:
             mock_search.return_value = mock_results
 
@@ -145,7 +147,8 @@ class TestRetrievalAgentReturnFormat:
         ]
 
         with patch(
-            "raglite.agentic.agents.retrieval_agent.multi_index_search", new_callable=AsyncMock
+            "raglite.agentic.agents.retrieval_agent.multi_index_search",
+            new_callable=AsyncMock,
         ) as mock_search:
             mock_search.return_value = mock_results
 
@@ -191,7 +194,8 @@ class TestRetrievalAgentReturnFormat:
         ]
 
         with patch(
-            "raglite.agentic.agents.retrieval_agent.multi_index_search", new_callable=AsyncMock
+            "raglite.agentic.agents.retrieval_agent.multi_index_search",
+            new_callable=AsyncMock,
         ) as mock_search:
             mock_search.return_value = mock_results
 
@@ -207,7 +211,11 @@ class TestRetrievalAgentReturnFormat:
             assert isinstance(metadata["latency_ms"], (int, float)), "latency_ms must be numeric"
             assert metadata["latency_ms"] >= 0, "latency_ms must be non-negative"
             assert "backend" in metadata, "search_metadata must include 'backend'"
-            assert metadata["backend"] in ["vector", "sql", "hybrid"], "backend must be valid type"
+            assert metadata["backend"] in [
+                "vector",
+                "sql",
+                "hybrid",
+            ], "backend must be valid type"
 
 
 class TestRetrievalAgentMultiIndexIntegration:
@@ -220,7 +228,8 @@ class TestRetrievalAgentMultiIndexIntegration:
         AC3: Agent wraps multi_index_search() from raglite.retrieval.multi_index_search
         """
         with patch(
-            "raglite.agentic.agents.retrieval_agent.multi_index_search", new_callable=AsyncMock
+            "raglite.agentic.agents.retrieval_agent.multi_index_search",
+            new_callable=AsyncMock,
         ) as mock_search:
             mock_search.return_value = []
 
@@ -236,7 +245,8 @@ class TestRetrievalAgentMultiIndexIntegration:
         AC3: Preserves query and top_k parameter routing
         """
         with patch(
-            "raglite.agentic.agents.retrieval_agent.multi_index_search", new_callable=AsyncMock
+            "raglite.agentic.agents.retrieval_agent.multi_index_search",
+            new_callable=AsyncMock,
         ) as mock_search:
             mock_search.return_value = []
 
@@ -272,7 +282,8 @@ class TestRetrievalAgentMultiIndexIntegration:
         ]
 
         with patch(
-            "raglite.agentic.agents.retrieval_agent.multi_index_search", new_callable=AsyncMock
+            "raglite.agentic.agents.retrieval_agent.multi_index_search",
+            new_callable=AsyncMock,
         ) as mock_search:
             mock_search.return_value = mock_results
 
@@ -298,7 +309,8 @@ class TestRetrievalAgentErrorHandling:
         from raglite.retrieval.multi_index_search import MultiIndexSearchError
 
         with patch(
-            "raglite.agentic.agents.retrieval_agent.multi_index_search", new_callable=AsyncMock
+            "raglite.agentic.agents.retrieval_agent.multi_index_search",
+            new_callable=AsyncMock,
         ) as mock_search:
             mock_search.side_effect = MultiIndexSearchError("Database connection failed")
 
@@ -319,7 +331,8 @@ class TestRetrievalAgentErrorHandling:
         NFR24: Graceful degradation for any error type
         """
         with patch(
-            "raglite.agentic.agents.retrieval_agent.multi_index_search", new_callable=AsyncMock
+            "raglite.agentic.agents.retrieval_agent.multi_index_search",
+            new_callable=AsyncMock,
         ) as mock_search:
             mock_search.side_effect = RuntimeError("Unexpected error: out of memory")
 
@@ -339,7 +352,8 @@ class TestRetrievalAgentErrorHandling:
         AC2: Output is always valid JSON string
         """
         with patch(
-            "raglite.agentic.agents.retrieval_agent.multi_index_search", new_callable=AsyncMock
+            "raglite.agentic.agents.retrieval_agent.multi_index_search",
+            new_callable=AsyncMock,
         ) as mock_search:
             mock_search.side_effect = ValueError("Invalid input")
 
@@ -373,7 +387,8 @@ class TestRetrievalAgentJSONSerialization:
         ]
 
         with patch(
-            "raglite.agentic.agents.retrieval_agent.multi_index_search", new_callable=AsyncMock
+            "raglite.agentic.agents.retrieval_agent.multi_index_search",
+            new_callable=AsyncMock,
         ) as mock_search:
             mock_search.return_value = mock_results
 
@@ -408,7 +423,8 @@ class TestRetrievalAgentJSONSerialization:
         ]
 
         with patch(
-            "raglite.agentic.agents.retrieval_agent.multi_index_search", new_callable=AsyncMock
+            "raglite.agentic.agents.retrieval_agent.multi_index_search",
+            new_callable=AsyncMock,
         ) as mock_search:
             mock_search.return_value = mock_results
 
@@ -433,7 +449,8 @@ class TestRetrievalAgentPerformance:
         import time
 
         with patch(
-            "raglite.agentic.agents.retrieval_agent.multi_index_search", new_callable=AsyncMock
+            "raglite.agentic.agents.retrieval_agent.multi_index_search",
+            new_callable=AsyncMock,
         ) as mock_search:
             # Return empty results to minimize overhead
             mock_search.return_value = []
@@ -454,7 +471,8 @@ class TestRetrievalAgentPerformance:
         import asyncio
 
         with patch(
-            "raglite.agentic.agents.retrieval_agent.multi_index_search", new_callable=AsyncMock
+            "raglite.agentic.agents.retrieval_agent.multi_index_search",
+            new_callable=AsyncMock,
         ) as mock_search:
             # Simulate some delay
             async def delayed_search(*args, **kwargs):

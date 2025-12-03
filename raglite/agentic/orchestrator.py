@@ -445,7 +445,10 @@ class WorkflowExecutor:
         if not agent:
             logger.warning(
                 "Agent type not found in registry",
-                extra={"agent_type": agent_type, "available": list(self._agent_registry.keys())},
+                extra={
+                    "agent_type": agent_type,
+                    "available": list(self._agent_registry.keys()),
+                },
             )
         return agent
 
@@ -665,7 +668,9 @@ class WorkflowExecutor:
             # AC8: Pass timeout parameter to _execute_task (Task 4.1)
             task_futures = [
                 self._execute_task(
-                    task, task_results, timeout_seconds=settings.strands_agent_timeout_seconds
+                    task,
+                    task_results,
+                    timeout_seconds=settings.strands_agent_timeout_seconds,
                 )
                 for task in ready_tasks
             ]

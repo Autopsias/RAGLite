@@ -145,7 +145,19 @@ for page_num in target_pages:
 
         # Check if row 2 has unit patterns
         if row_idx == 2:
-            unit_patterns = ["EUR", "ton", "Meur", "kt", "%", "GJ", "€", "USD", "kWh", "m3", "MW"]
+            unit_patterns = [
+                "EUR",
+                "ton",
+                "Meur",
+                "kt",
+                "%",
+                "GJ",
+                "€",
+                "USD",
+                "kWh",
+                "m3",
+                "MW",
+            ]
             cells_with_units = [
                 cell
                 for cell in cells_in_row
@@ -173,7 +185,19 @@ for page_num in target_pages:
         print()
     else:
         # Check if row 2 has units
-        unit_patterns = ["EUR", "ton", "Meur", "kt", "%", "GJ", "€", "USD", "kWh", "m3", "MW"]
+        unit_patterns = [
+            "EUR",
+            "ton",
+            "Meur",
+            "kt",
+            "%",
+            "GJ",
+            "€",
+            "USD",
+            "kWh",
+            "m3",
+            "MW",
+        ]
         cells_with_units = [
             cell
             for cell in row_2_cells

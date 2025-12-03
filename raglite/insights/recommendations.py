@@ -329,9 +329,12 @@ async def generate_recommendations(
         urgency = determine_urgency(insight, impact_score)
 
         if auto_synthesize:
-            title, description, rationale, action_steps = await synthesize_recommendation(
-                insight, category
-            )
+            (
+                title,
+                description,
+                rationale,
+                action_steps,
+            ) = await synthesize_recommendation(insight, category)
         else:
             title = f"{category.value.replace('_', ' ').title()} Recommendation"
             description = insight.summary

@@ -47,7 +47,10 @@ class TestAnalysisAgentWorkflow:
         assert result.value == pytest.approx(0.20, abs=0.01)
         assert result.formatted_value == "+20.0%"
         assert "(12.0 - 10.0)" in result.calculation
-        assert result.data_points_used == {"Q3_2023_revenue": 10.0, "Q3_2024_revenue": 12.0}
+        assert result.data_points_used == {
+            "Q3_2023_revenue": 10.0,
+            "Q3_2024_revenue": 12.0,
+        }
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -117,9 +120,9 @@ class TestAnalysisAgentWorkflow:
         assert result.value == pytest.approx(0.20, abs=0.01)
 
         # Claude Haiku latency typically 600-800ms, with overhead <1.2s p95
-        assert (
-            elapsed_s < 5.0
-        ), f"Analysis agent took {elapsed_s:.2f}s, expected <5s (allowing for network latency)"
+        assert elapsed_s < 5.0, (
+            f"Analysis agent took {elapsed_s:.2f}s, expected <5s (allowing for network latency)"
+        )
 
     @pytest.mark.asyncio
     @pytest.mark.integration

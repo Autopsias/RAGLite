@@ -109,12 +109,30 @@ METRIC_SYNONYMS: dict[str, list[str]] = {
         "EBITDA Margin",
     ],
     "revenue": ["Revenue", "Sales", "Turnover", "Net Revenue", "Total Revenue"],
-    "margin": ["Margin", "EBITDA Margin", "Gross Margin", "Net Margin", "Profit Margin"],
-    "cost": ["Cost", "Variable Cost", "Fixed Cost", "Total Cost", "Unit Cost", "Cost per ton"],
+    "margin": [
+        "Margin",
+        "EBITDA Margin",
+        "Gross Margin",
+        "Net Margin",
+        "Profit Margin",
+    ],
+    "cost": [
+        "Cost",
+        "Variable Cost",
+        "Fixed Cost",
+        "Total Cost",
+        "Unit Cost",
+        "Cost per ton",
+    ],
     "variable cost": ["Variable Cost", "Variable Costs", "VC", "Variable"],
     "fixed cost": ["Fixed Cost", "Fixed Costs", "FC", "Fixed"],
     # ===== PRODUCTION METRICS (CEMENT INDUSTRY) =====
-    "clinker ratio": ["Clinker Factor", "Clinker/Cement Ratio", "Clinker Ratio", "Clinker"],
+    "clinker ratio": [
+        "Clinker Factor",
+        "Clinker/Cement Ratio",
+        "Clinker Ratio",
+        "Clinker",
+    ],
     "clinker": ["Clinker", "Clinker Factor", "Clinker Production", "Clinker Ratio"],
     "capacity utilization": [
         "Plant Utilization",
@@ -123,19 +141,58 @@ METRIC_SYNONYMS: dict[str, list[str]] = {
         "Utilization",
         "Capacity",
     ],
-    "utilization": ["Utilization", "Plant Utilization", "Kiln Utilization", "Capacity Utilization"],
-    "production volume": ["Cement Volume", "Clinker Production", "Production", "Volume", "Output"],
-    "production": ["Production", "Volume", "Output", "Cement Production", "Clinker Production"],
+    "utilization": [
+        "Utilization",
+        "Plant Utilization",
+        "Kiln Utilization",
+        "Capacity Utilization",
+    ],
+    "production volume": [
+        "Cement Volume",
+        "Clinker Production",
+        "Production",
+        "Volume",
+        "Output",
+    ],
+    "production": [
+        "Production",
+        "Volume",
+        "Output",
+        "Cement Production",
+        "Clinker Production",
+    ],
     # ===== SUSTAINABILITY METRICS =====
-    "co2": ["CO2", "Emissions", "Carbon", "CO2 per ton", "Scope 1", "Scope 2", "Scope 3"],
-    "emissions": ["Emissions", "CO2", "Carbon Emissions", "Scope 1", "Scope 2", "Scope 3", "GHG"],
+    "co2": [
+        "CO2",
+        "Emissions",
+        "Carbon",
+        "CO2 per ton",
+        "Scope 1",
+        "Scope 2",
+        "Scope 3",
+    ],
+    "emissions": [
+        "Emissions",
+        "CO2",
+        "Carbon Emissions",
+        "Scope 1",
+        "Scope 2",
+        "Scope 3",
+        "GHG",
+    ],
     "carbon": ["Carbon", "CO2", "Emissions", "Carbon Footprint"],
     "scope 1": ["Scope 1", "Scope1", "Direct Emissions"],
     "scope 2": ["Scope 2", "Scope2", "Indirect Emissions"],
     "scope 3": ["Scope 3", "Scope3", "Value Chain Emissions"],
     # ===== COST STRUCTURE =====
     "cost per ton": ["Cost per ton", "Unit Cost", "EUR/ton", "Cost/ton", "$/ton"],
-    "fuel consumption": ["Fuel Consumption", "kcal/kg", "GJ/ton", "Fuel", "Thermal Consumption"],
+    "fuel consumption": [
+        "Fuel Consumption",
+        "kcal/kg",
+        "GJ/ton",
+        "Fuel",
+        "Thermal Consumption",
+    ],
     "power cost": ["Power Cost", "Electricity Cost", "EUR/MWh", "Energy Cost"],
     # ===== FINANCIAL RATIOS =====
     "ebitda per ton": ["EBITDA per ton", "Unit EBITDA", "EBITDA/ton"],
@@ -615,7 +672,12 @@ LIMIT 50;
 """  # nosec B608
 
         # Call Mistral API (using same pattern as metadata extraction)
-        from mistralai.models import AssistantMessage, SystemMessage, ToolMessage, UserMessage
+        from mistralai.models import (
+            AssistantMessage,
+            SystemMessage,
+            ToolMessage,
+            UserMessage,
+        )
 
         messages: list[AssistantMessage | SystemMessage | ToolMessage | UserMessage] = [
             SystemMessage(

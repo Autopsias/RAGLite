@@ -71,7 +71,8 @@ def load_split_pdfs():
             continue
 
         print(
-            f"   Loading {part_name} (pages {page_range.start}-{page_range.stop - 1})...", end=" "
+            f"   Loading {part_name} (pages {page_range.start}-{page_range.stop - 1})...",
+            end=" ",
         )
         reader = PdfReader(pdf_path)
 

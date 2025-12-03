@@ -19,7 +19,9 @@ async def test_analysis_agent_yoy_growth_calculation():
     with patch("raglite.agentic.agents.analysis_agent.get_claude_client") as mock_client:
         # Create a proper mock response object
         mock_response = type(
-            "Response", (), {"content": [type("Content", (), {"text": "Revenue grew 20% YoY"})()]}
+            "Response",
+            (),
+            {"content": [type("Content", (), {"text": "Revenue grew 20% YoY"})()]},
         )()
         mock_client.return_value.messages.create.return_value = mock_response
 
@@ -151,7 +153,9 @@ async def test_analysis_agent_json_serialization():
     """Test that AnalysisResult model serializes correctly to JSON."""
     with patch("raglite.agentic.agents.analysis_agent.get_claude_client") as mock_client:
         mock_response = type(
-            "Response", (), {"content": [type("Content", (), {"text": "Test reasoning"})()]}
+            "Response",
+            (),
+            {"content": [type("Content", (), {"text": "Test reasoning"})()]},
         )()
         mock_client.return_value.messages.create.return_value = mock_response
 
@@ -197,7 +201,9 @@ async def test_analysis_agent_negative_variance():
     """Test variance with negative (over budget) result."""
     with patch("raglite.agentic.agents.analysis_agent.get_claude_client") as mock_client:
         mock_response = type(
-            "Response", (), {"content": [type("Content", (), {"text": "Over budget"})()]}
+            "Response",
+            (),
+            {"content": [type("Content", (), {"text": "Over budget"})()]},
         )()
         mock_client.return_value.messages.create.return_value = mock_response
 
@@ -217,7 +223,9 @@ async def test_analysis_agent_trend_decreasing():
     """Test trend detection for decreasing pattern."""
     with patch("raglite.agentic.agents.analysis_agent.get_claude_client") as mock_client:
         mock_response = type(
-            "Response", (), {"content": [type("Content", (), {"text": "Downward trend"})()]}
+            "Response",
+            (),
+            {"content": [type("Content", (), {"text": "Downward trend"})()]},
         )()
         mock_client.return_value.messages.create.return_value = mock_response
 
@@ -236,7 +244,9 @@ async def test_analysis_agent_trend_stable():
     """Test trend detection for stable pattern."""
     with patch("raglite.agentic.agents.analysis_agent.get_claude_client") as mock_client:
         mock_response = type(
-            "Response", (), {"content": [type("Content", (), {"text": "Stable trend"})()]}
+            "Response",
+            (),
+            {"content": [type("Content", (), {"text": "Stable trend"})()]},
         )()
         mock_client.return_value.messages.create.return_value = mock_response
 

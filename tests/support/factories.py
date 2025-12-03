@@ -398,7 +398,10 @@ def create_mcp_tool_response(success: bool = True, **overrides: Any) -> dict[str
     if success:
         defaults = {
             "content": [
-                {"type": "text", "text": f"Found {fake.random_int(1, 10)} results for your query."}
+                {
+                    "type": "text",
+                    "text": f"Found {fake.random_int(1, 10)} results for your query.",
+                }
             ],
             "isError": False,
         }

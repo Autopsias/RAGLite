@@ -373,10 +373,16 @@ class TestWorkflowExecutorTimeoutIntegration:
 
         # Create two independent tasks
         task1 = AgentTask(
-            task_id="task_1", agent_type="retrieval", instruction="Slow task", depends_on=[]
+            task_id="task_1",
+            agent_type="retrieval",
+            instruction="Slow task",
+            depends_on=[],
         )
         task2 = AgentTask(
-            task_id="task_2", agent_type="analysis", instruction="Fast task", depends_on=[]
+            task_id="task_2",
+            agent_type="analysis",
+            instruction="Fast task",
+            depends_on=[],
         )
 
         from raglite.agentic.planner import WorkflowPlan

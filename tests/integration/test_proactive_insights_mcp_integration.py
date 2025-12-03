@@ -118,8 +118,16 @@ class TestGetFinancialInsightsIntegration:
         # Test various query patterns
         test_cases = [
             ("What risks should I know about?", InsightCategory.RISK, None),
-            ("Show me opportunities this quarter", InsightCategory.OPPORTUNITY, "current_quarter"),
-            ("Any anomalies from last quarter?", InsightCategory.ANOMALY, "last_quarter"),
+            (
+                "Show me opportunities this quarter",
+                InsightCategory.OPPORTUNITY,
+                "current_quarter",
+            ),
+            (
+                "Any anomalies from last quarter?",
+                InsightCategory.ANOMALY,
+                "last_quarter",
+            ),
             ("What are the trends year to date?", InsightCategory.TREND, "ytd"),
             ("What should I prioritize?", InsightCategory.STRATEGIC_PRIORITY, None),
         ]

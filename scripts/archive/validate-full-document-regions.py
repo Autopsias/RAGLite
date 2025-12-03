@@ -36,7 +36,11 @@ class RegionValidation:
 
 
 async def validate_region(
-    region_name: str, page_range: tuple, query: str, expected_min: int, expected_max: int
+    region_name: str,
+    page_range: tuple,
+    query: str,
+    expected_min: int,
+    expected_max: int,
 ) -> RegionValidation:
     """Validate a specific region."""
     try:
@@ -89,7 +93,11 @@ async def main():
 
     # First, check what page ranges exist in database
     conn = psycopg2.connect(
-        dbname="raglite", user="raglite", password="raglite", host="localhost", port=5432
+        dbname="raglite",
+        user="raglite",
+        password="raglite",
+        host="localhost",
+        port=5432,
     )
     cursor = conn.cursor()
 

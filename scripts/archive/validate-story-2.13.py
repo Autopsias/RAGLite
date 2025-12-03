@@ -176,7 +176,10 @@ SQL_QUERIES = [
         "id": "SQL-19",
         "query": "Compare production between Spain Cement and France Cement",
         "expected_keywords": ["production", "Spain Cement", "France Cement"],
-        "expected_page": [20, 21],  # Cost per ton table - Sales Volumes kton (production data)
+        "expected_page": [
+            20,
+            21,
+        ],  # Cost per ton table - Sales Volumes kton (production data)
         "query_type": "SQL_ONLY",
         "difficulty": "medium",
     },
@@ -184,7 +187,10 @@ SQL_QUERIES = [
         "id": "SQL-20",
         "query": "What is the distribution cost for Italy Aggregates?",
         "expected_keywords": ["distribution cost", "Italy Aggregates"],
-        "expected_page": [20, 21],  # Cost per ton table - Sales&Distribution Fixed Costs Eur/ton
+        "expected_page": [
+            20,
+            21,
+        ],  # Cost per ton table - Sales&Distribution Fixed Costs Eur/ton
         "query_type": "SQL_ONLY",
         "difficulty": "easy",
     },
@@ -220,7 +226,10 @@ HYBRID_QUERIES = [
         "id": "HYB-4",
         "query": "How do production volumes relate to operational efficiency across entities?",
         "expected_keywords": ["production", "efficiency", "operational"],
-        "expected_page": [20, 21],  # Cost per ton table - Sales Volumes kton (production data)
+        "expected_page": [
+            20,
+            21,
+        ],  # Cost per ton table - Sales Volumes kton (production data)
         "query_type": "HYBRID",
         "difficulty": "hard",
     },
@@ -276,7 +285,10 @@ HYBRID_QUERIES = [
         "id": "HYB-11",
         "query": "Show production metrics for Aggregates and market analysis",
         "expected_keywords": ["production", "Aggregates", "market"],
-        "expected_page": [20, 21],  # Cost per ton table - Sales Volumes kton (production data)
+        "expected_page": [
+            20,
+            21,
+        ],  # Cost per ton table - Sales Volumes kton (production data)
         "query_type": "HYBRID",
         "difficulty": "hard",
     },
@@ -284,7 +296,10 @@ HYBRID_QUERIES = [
         "id": "HYB-12",
         "query": "Compare distribution costs across divisions with logistics insights",
         "expected_keywords": ["distribution", "cost", "logistics"],
-        "expected_page": [20, 21],  # Cost per ton table - Sales&Distribution Fixed Costs Eur/ton
+        "expected_page": [
+            20,
+            21,
+        ],  # Cost per ton table - Sales&Distribution Fixed Costs Eur/ton
         "query_type": "HYBRID",
         "difficulty": "hard",
     },

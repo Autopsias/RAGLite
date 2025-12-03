@@ -17,7 +17,11 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-from raglite.retrieval.query_classifier import QueryType, classify_query, generate_sql_query
+from raglite.retrieval.query_classifier import (
+    QueryType,
+    classify_query,
+    generate_sql_query,
+)
 from raglite.retrieval.search import hybrid_search
 from raglite.retrieval.sql_table_search import SQLSearchError, search_tables_sql
 from raglite.structured.table_retrieval import TableRetrievalError
@@ -163,7 +167,10 @@ async def _execute_vector_search(
 
         # Call existing hybrid_search from search.py with SQL routing disabled
         vector_results = await hybrid_search(
-            query, top_k=top_k, enable_hybrid=True, enable_sql_tables=not disable_sql_routing
+            query,
+            top_k=top_k,
+            enable_hybrid=True,
+            enable_sql_tables=not disable_sql_routing,
         )
 
         # Convert QueryResult to SearchResult

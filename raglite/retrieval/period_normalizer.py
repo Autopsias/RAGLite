@@ -22,8 +22,22 @@ PERIOD_MAPPINGS = {
     "Q3 2025": ["Jul-25", "Aug-25", "Sep-25", "Jul-25 YTD", "Aug-25 YTD", "Q3-25"],
     "Q4 2025": ["Oct-25", "Nov-25", "Dec-25", "Oct-25 YTD", "Dec-25 YTD", "Q4-25"],
     # Half-year mappings
-    "H1 2025": ["Jan-25 YTD", "Feb-25 YTD", "Mar-25 YTD", "Apr-25 YTD", "May-25 YTD", "Jun-25 YTD"],
-    "H2 2025": ["Jul-25 YTD", "Aug-25 YTD", "Sep-25 YTD", "Oct-25 YTD", "Nov-25 YTD", "Dec-25 YTD"],
+    "H1 2025": [
+        "Jan-25 YTD",
+        "Feb-25 YTD",
+        "Mar-25 YTD",
+        "Apr-25 YTD",
+        "May-25 YTD",
+        "Jun-25 YTD",
+    ],
+    "H2 2025": [
+        "Jul-25 YTD",
+        "Aug-25 YTD",
+        "Sep-25 YTD",
+        "Oct-25 YTD",
+        "Nov-25 YTD",
+        "Dec-25 YTD",
+    ],
     # Full year mappings
     "2025": ["Jan-25 YTD", "Dec-25 YTD", "2025"],
     "FY2025": ["Jan-25 YTD", "Dec-25 YTD", "2025"],

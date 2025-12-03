@@ -130,7 +130,9 @@ def test_query_response_serialization():
     ]
 
     response = QueryResponse(
-        results=results, query="What was total revenue in Q3 2024?", retrieval_time_ms=830.5
+        results=results,
+        query="What was total revenue in Q3 2024?",
+        retrieval_time_ms=830.5,
     )
 
     # Test model_dump()

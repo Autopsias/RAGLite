@@ -240,7 +240,9 @@ def save_bm25_index(
     except Exception as e:
         error_msg = f"Failed to save BM25 index to {save_path}: {e}"
         logger.error(
-            "BM25 index save failed", extra={"path": str(save_path), "error": str(e)}, exc_info=True
+            "BM25 index save failed",
+            extra={"path": str(save_path), "error": str(e)},
+            exc_info=True,
         )
         raise BM25IndexError(error_msg) from e
 
@@ -318,7 +320,9 @@ def load_bm25_index(
     except Exception as e:
         error_msg = f"Failed to load BM25 index from {load_path}: {e}"
         logger.error(
-            "BM25 index load failed", extra={"path": str(load_path), "error": str(e)}, exc_info=True
+            "BM25 index load failed",
+            extra={"path": str(load_path), "error": str(e)},
+            exc_info=True,
         )
         raise BM25IndexError(error_msg) from e
 

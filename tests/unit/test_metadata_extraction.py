@@ -111,7 +111,8 @@ class TestExtractChunkMetadata:
         # This ensures `if not settings.mistral_api_key:` truthiness check works correctly
         with (
             patch(
-                "raglite.ingestion.embedding_generation.settings.mistral_api_key", "test-key-123"
+                "raglite.ingestion.embedding_generation.settings.mistral_api_key",
+                "test-key-123",
             ),
             patch(
                 "raglite.ingestion.embedding_generation.settings.metadata_extraction_model",

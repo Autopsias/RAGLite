@@ -73,7 +73,10 @@ def check_service_available(host: str, port: int, service_name: str) -> bool:
             print(f"DEBUG: {service_name} available at {host}:{port}", file=sys.stderr)
             return True
         else:
-            print(f"DEBUG: {service_name} connection refused at {host}:{port}", file=sys.stderr)
+            print(
+                f"DEBUG: {service_name} connection refused at {host}:{port}",
+                file=sys.stderr,
+            )
             return False
     except Exception as e:
         print(f"DEBUG: {service_name} check failed: {e}", file=sys.stderr)
@@ -272,7 +275,10 @@ def warmup_embedding_model(request):
         f"✅ Embedding model ready: {dim} dimensions (Fin-E5 loaded in {model_load_duration:.1f}s)",
         file=sys.stderr,
     )
-    print(f"📊 MODEL LOAD PERF: Model loading took {model_load_duration:.1f}s", file=sys.stderr)
+    print(
+        f"📊 MODEL LOAD PERF: Model loading took {model_load_duration:.1f}s",
+        file=sys.stderr,
+    )
 
     yield
     # Model singleton persists for entire session
@@ -385,7 +391,10 @@ def session_ingested_collection(request, warmup_embedding_model):
             print(warning_msg, file=sys.stderr)
             # Fall through to normal ingestion flow below
 
-    print("\nDEBUG: Proceeding with full ingestion (--skip-ingestion not set)", file=sys.stderr)
+    print(
+        "\nDEBUG: Proceeding with full ingestion (--skip-ingestion not set)",
+        file=sys.stderr,
+    )
 
     from raglite.ingestion.pipeline import create_collection, ingest_pdf
     from raglite.shared.clients import get_qdrant_client
@@ -490,7 +499,10 @@ def session_ingested_collection(request, warmup_embedding_model):
 
     except Exception as e:
         # Collection doesn't exist yet - safe to proceed
-        print(f"DEBUG: No existing collection found ({e}) - safe to create", file=sys.stderr)
+        print(
+            f"DEBUG: No existing collection found ({e}) - safe to create",
+            file=sys.stderr,
+        )
 
     # Environment-based PDF selection:
     # - LOCAL (VS Code): 4-page test PDF (fast ~5-10 seconds ingestion - Story 4.0.5)
@@ -594,7 +606,10 @@ def session_ingested_collection(request, warmup_embedding_model):
 
         if not deletion_confirmed:
             # Force proceed but with shorter warning
-            print("   ⚠️  Collection deletion timeout, proceeding (optimized)", file=sys.stderr)
+            print(
+                "   ⚠️  Collection deletion timeout, proceeding (optimized)",
+                file=sys.stderr,
+            )
 
         create_collection(
             collection_name=settings.qdrant_collection_name,
@@ -609,7 +624,10 @@ def session_ingested_collection(request, warmup_embedding_model):
             error_msg = f"Collection {settings.qdrant_collection_name} has {initial_count.count} chunks after creation (expected 0). Stale data detected!"
             print(f"   ❌ ERROR: {error_msg}", file=sys.stderr)
             pytest.skip(error_msg)
-        print(f"   ✓ Collection verified empty: {initial_count.count} chunks", file=sys.stderr)
+        print(
+            f"   ✓ Collection verified empty: {initial_count.count} chunks",
+            file=sys.stderr,
+        )
 
     except Exception as e:
         pytest.skip(f"Failed to initialize Qdrant collection: {e}")
@@ -634,7 +652,9 @@ def session_ingested_collection(request, warmup_embedding_model):
     try:
         result = asyncio.run(
             ingest_pdf(
-                str(sample_pdf), clear_existing=False, skip_metadata=skip_metadata_extraction
+                str(sample_pdf),
+                clear_existing=False,
+                skip_metadata=skip_metadata_extraction,
             )
         )
         ingest_duration = time.time() - start_ingest
@@ -786,7 +806,10 @@ def session_ingested_collection(request, warmup_embedding_model):
         # - Observed: 14 chunks from 10 pages (mostly large financial tables)
         # - Text chunks are minimal because PDF is dominated by structured tables
         # - Acceptable range: 10-30 chunks (table-heavy PDFs produce fewer, larger chunks)
-        expected_range = (10, 30)  # 10-page sample_financial_report.pdf (Story 2.14, table-heavy)
+        expected_range = (
+            10,
+            30,
+        )  # 10-page sample_financial_report.pdf (Story 2.14, table-heavy)
 
     if not (expected_range[0] <= count_after.count <= expected_range[1]):
         error_msg = f"CRITICAL: Chunk count {count_after.count} not in expected range {expected_range} for {pdf_description}"

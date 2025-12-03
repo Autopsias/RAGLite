@@ -52,7 +52,9 @@ async def main():
         # Check if it's the right document
         if count.count > 0:
             sample = qdrant.scroll(
-                collection_name=settings.qdrant_collection_name, limit=1, with_payload=True
+                collection_name=settings.qdrant_collection_name,
+                limit=1,
+                with_payload=True,
             )
             doc = sample[0][0].payload.get("source_document", "") if sample[0] else ""
 

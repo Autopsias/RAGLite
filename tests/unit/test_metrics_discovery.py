@@ -41,7 +41,11 @@ class TestMetricInfo:
     def test_metric_info_optional_periods(self):
         """Test MetricInfo works with None periods (empty database case)."""
         metric = MetricInfo(
-            name="capex", data_point_count=3, min_period=None, max_period=None, can_forecast=False
+            name="capex",
+            data_point_count=3,
+            min_period=None,
+            max_period=None,
+            can_forecast=False,
         )
 
         assert metric.name == "capex"
@@ -98,7 +102,10 @@ class TestListAvailableMetrics:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("raglite.forecasting.metrics.get_postgresql_connection", return_value=mock_conn):
+        with patch(
+            "raglite.forecasting.metrics.get_postgresql_connection",
+            return_value=mock_conn,
+        ):
             metrics = await list_available_metrics(use_cache=False)
 
         # Verify sorted by data_point_count desc
@@ -126,7 +133,10 @@ class TestListAvailableMetrics:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("raglite.forecasting.metrics.get_postgresql_connection", return_value=mock_conn):
+        with patch(
+            "raglite.forecasting.metrics.get_postgresql_connection",
+            return_value=mock_conn,
+        ):
             metrics = await list_available_metrics(min_points=8, use_cache=False)
 
         # Verify can_forecast flag
@@ -144,7 +154,10 @@ class TestListAvailableMetrics:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("raglite.forecasting.metrics.get_postgresql_connection", return_value=mock_conn):
+        with patch(
+            "raglite.forecasting.metrics.get_postgresql_connection",
+            return_value=mock_conn,
+        ):
             metrics = await list_available_metrics(use_cache=False)
 
         assert metrics == []
@@ -161,7 +174,10 @@ class TestListAvailableMetrics:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("raglite.forecasting.metrics.get_postgresql_connection", return_value=mock_conn):
+        with patch(
+            "raglite.forecasting.metrics.get_postgresql_connection",
+            return_value=mock_conn,
+        ):
             # First call - hits database
             metrics1 = await list_available_metrics(use_cache=True)
             assert len(metrics1) == 1
@@ -185,7 +201,10 @@ class TestListAvailableMetrics:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("raglite.forecasting.metrics.get_postgresql_connection", return_value=mock_conn):
+        with patch(
+            "raglite.forecasting.metrics.get_postgresql_connection",
+            return_value=mock_conn,
+        ):
             # First call
             metrics1 = await list_available_metrics(use_cache=True)
             assert len(metrics1) == 1
@@ -213,7 +232,10 @@ class TestListAvailableMetrics:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("raglite.forecasting.metrics.get_postgresql_connection", return_value=mock_conn):
+        with patch(
+            "raglite.forecasting.metrics.get_postgresql_connection",
+            return_value=mock_conn,
+        ):
             # Populate cache
             metrics1 = await list_available_metrics(use_cache=True)
             assert len(metrics1) == 1
@@ -240,7 +262,10 @@ class TestListAvailableMetrics:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("raglite.forecasting.metrics.get_postgresql_connection", return_value=mock_conn):
+        with patch(
+            "raglite.forecasting.metrics.get_postgresql_connection",
+            return_value=mock_conn,
+        ):
             with pytest.raises(RuntimeError, match="Metric discovery query failed"):
                 await list_available_metrics(use_cache=False)
 
@@ -257,7 +282,10 @@ class TestListAvailableMetrics:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
-        with patch("raglite.forecasting.metrics.get_postgresql_connection", return_value=mock_conn):
+        with patch(
+            "raglite.forecasting.metrics.get_postgresql_connection",
+            return_value=mock_conn,
+        ):
             # Use lower threshold for testing
             metrics = await list_available_metrics(min_points=5, use_cache=False)
 

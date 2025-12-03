@@ -463,7 +463,10 @@ ACTION: Conduct marketing ROI analysis and review campaign effectiveness metrics
         assert marketing_insight is not None
 
         # Validate the insight matches AC6 example
-        assert marketing_insight.category in [InsightCategory.ANOMALY, InsightCategory.RISK]
+        assert marketing_insight.category in [
+            InsightCategory.ANOMALY,
+            InsightCategory.RISK,
+        ]
         assert marketing_insight.priority <= 3  # Should be moderate to high priority
         assert marketing_insight.supporting_data.get("magnitude_pct") == 30.0
         assert (

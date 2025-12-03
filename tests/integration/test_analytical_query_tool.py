@@ -288,7 +288,8 @@ class TestQueryTypes:
     async def test_variance_analysis_query(self, session_ingested_collection):
         """Test variance analysis query (AC5)."""
         request = AnalyticalQueryRequest(
-            query="Explain why operating expenses increased in Q3 compared to budget", top_k=5
+            query="Explain why operating expenses increased in Q3 compared to budget",
+            top_k=5,
         )
 
         response = await analytical_query_fn(request)
@@ -372,7 +373,8 @@ class TestQueryTypes:
     async def test_variance_budget_vs_actual(self, session_ingested_collection):
         """Test variance analysis for budget vs actual (AC5 - additional coverage)."""
         request = AnalyticalQueryRequest(
-            query="Explain the variance between projected and actual revenue for Q4", top_k=5
+            query="Explain the variance between projected and actual revenue for Q4",
+            top_k=5,
         )
 
         response = await analytical_query_fn(request)
@@ -578,7 +580,8 @@ class TestGracefulDegradation:
         """Fallback responses must include sources if available."""
         # Query that might trigger fallback
         request = AnalyticalQueryRequest(
-            query="Perform comprehensive financial analysis with trend forecasting", top_k=5
+            query="Perform comprehensive financial analysis with trend forecasting",
+            top_k=5,
         )
 
         response = await analytical_query_fn(request)

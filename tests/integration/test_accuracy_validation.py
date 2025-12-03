@@ -109,7 +109,13 @@ class TestAccuracyTestRunner:
     def test_verbose_output(self, session_ingested_collection):
         """Test --verbose option shows detailed query output."""
         result = subprocess.run(
-            [sys.executable, "scripts/run-accuracy-tests.py", "--subset", "2", "--verbose"],
+            [
+                sys.executable,
+                "scripts/run-accuracy-tests.py",
+                "--subset",
+                "2",
+                "--verbose",
+            ],
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,

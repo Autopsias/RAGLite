@@ -192,7 +192,11 @@ class TestParallelDocumentIngestion:
                 return mock_metadata_3
 
         # Test with 3 documents
-        file_paths = ["/path/to/report1.pdf", "/path/to/report2.pdf", "/path/to/data.xlsx"]
+        file_paths = [
+            "/path/to/report1.pdf",
+            "/path/to/report2.pdf",
+            "/path/to/data.xlsx",
+        ]
 
         with patch(
             "raglite.ingestion.document_ingestion.ingest_document",
@@ -236,7 +240,11 @@ class TestParallelDocumentIngestion:
                 chunk_count=25,
             )
 
-        file_paths = ["/path/to/report1.pdf", "/path/to/report2.pdf", "/path/to/report3.pdf"]
+        file_paths = [
+            "/path/to/report1.pdf",
+            "/path/to/report2.pdf",
+            "/path/to/report3.pdf",
+        ]
 
         with patch(
             "raglite.ingestion.document_ingestion.ingest_document",

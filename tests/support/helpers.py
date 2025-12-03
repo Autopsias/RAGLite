@@ -201,7 +201,10 @@ def assert_qdrant_collection_count(
 
 
 def assert_search_results_valid(
-    results: list[Any], min_results: int = 1, max_results: int | None = None, min_score: float = 0.0
+    results: list[Any],
+    min_results: int = 1,
+    max_results: int | None = None,
+    min_score: float = 0.0,
 ) -> None:
     """Assert search results are valid.
 

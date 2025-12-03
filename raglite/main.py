@@ -29,7 +29,11 @@ from fastmcp import FastMCP
 
 from raglite.agentic.fallback import FallbackResponse, handle_workflow_failure
 from raglite.agentic.orchestrator import WorkflowExecutor
-from raglite.agentic.planner import QueryComplexity, classify_query_complexity, decompose_query
+from raglite.agentic.planner import (
+    QueryComplexity,
+    classify_query_complexity,
+    decompose_query,
+)
 from raglite.forecasting.auto_update import trigger_forecast_refresh
 from raglite.forecasting.hybrid import InsufficientDataError, generate_forecast
 from raglite.forecasting.timeseries_extract import (
@@ -38,11 +42,21 @@ from raglite.forecasting.timeseries_extract import (
     extract_timeseries,
     extract_timeseries_from_sql,
 )
-from raglite.ingestion.document_ingestion import temp_file_from_base64, temp_file_from_url
-from raglite.ingestion.job_tracker import create_job, get_job_status, start_background_job
+from raglite.ingestion.document_ingestion import (
+    temp_file_from_base64,
+    temp_file_from_url,
+)
+from raglite.ingestion.job_tracker import (
+    create_job,
+    get_job_status,
+    start_background_job,
+)
 from raglite.ingestion.pipeline import ingest_document
 from raglite.retrieval.attribution import generate_citations
-from raglite.retrieval.multi_index_search import MultiIndexSearchError, multi_index_search
+from raglite.retrieval.multi_index_search import (
+    MultiIndexSearchError,
+    multi_index_search,
+)
 from raglite.retrieval.search import QueryError
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
@@ -418,7 +432,11 @@ async def ingest_financial_document(
         except Exception as e:
             logger.error(
                 "Ingestion failed (base64)",
-                extra={"doc_filename": filename, "error": str(e), "error_type": type(e).__name__},
+                extra={
+                    "doc_filename": filename,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
                 exc_info=True,
             )
             raise DocumentProcessingError(f"Failed to ingest {filename}: {e}") from e
@@ -463,7 +481,11 @@ async def ingest_financial_document(
         except Exception as e:
             logger.error(
                 "Ingestion failed",
-                extra={"path": effective_path, "error": str(e), "error_type": type(e).__name__},
+                extra={
+                    "path": effective_path,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
                 exc_info=True,
             )
             raise DocumentProcessingError(f"Failed to ingest {effective_path}: {e}") from e
@@ -1325,7 +1347,8 @@ async def analytical_query_financial_documents(
             retrieval_results = [r for r in results if r.agent_type == "retrieval" and r.success]
             for i, r in enumerate(retrieval_results, start=2):
                 task_desc = next(
-                    (t.instruction for t in plan.tasks if t.task_id == r.task_id), "retrieval task"
+                    (t.instruction for t in plan.tasks if t.task_id == r.task_id),
+                    "retrieval task",
                 )
                 # Extract document count if available in result
                 doc_count = len(r.result) if isinstance(r.result, list) else "relevant"
@@ -1336,7 +1359,8 @@ async def analytical_query_financial_documents(
             step_num = len(reasoning_steps) + 1
             for r in analysis_results:
                 task_desc = next(
-                    (t.instruction for t in plan.tasks if t.task_id == r.task_id), "analysis task"
+                    (t.instruction for t in plan.tasks if t.task_id == r.task_id),
+                    "analysis task",
                 )
                 reasoning_steps.append(f"{step_num}. Performed analysis: {task_desc}")
                 step_num += 1
@@ -1833,7 +1857,13 @@ async def get_financial_forecast(
 
 
 # Story 4.9: Supported categories for insights queries
-SUPPORTED_INSIGHT_CATEGORIES = {"RISK", "OPPORTUNITY", "ANOMALY", "TREND", "STRATEGIC_PRIORITY"}
+SUPPORTED_INSIGHT_CATEGORIES = {
+    "RISK",
+    "OPPORTUNITY",
+    "ANOMALY",
+    "TREND",
+    "STRATEGIC_PRIORITY",
+}
 
 # Story 4.9: Time period mappings
 TIME_PERIOD_MAPPINGS = {

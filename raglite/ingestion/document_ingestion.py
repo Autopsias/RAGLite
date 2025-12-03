@@ -30,7 +30,10 @@ from qdrant_client.models import (
 )
 
 from raglite.ingestion.chunking_strategy import chunk_by_docling_items, chunk_document
-from raglite.ingestion.embedding_generation import extract_chunk_metadata, generate_embeddings
+from raglite.ingestion.embedding_generation import (
+    extract_chunk_metadata,
+    generate_embeddings,
+)
 from raglite.ingestion.storage_operations import (
     store_metadata_in_postgresql,
     store_tables_in_postgresql,
@@ -40,7 +43,12 @@ from raglite.ingestion.table_extraction import TableExtractor
 from raglite.shared.clients import get_mistral_client, get_qdrant_client
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
-from raglite.shared.models import BatchIngestionResult, Chunk, DocumentMetadata, ExtractedMetadata
+from raglite.shared.models import (
+    BatchIngestionResult,
+    Chunk,
+    DocumentMetadata,
+    ExtractedMetadata,
+)
 from raglite.shared.safety import SafetyGuard
 
 logger = get_logger(__name__)
@@ -317,7 +325,11 @@ def temp_file_from_url(url: str) -> Generator[tuple[str, str], None, None]:
     except HTTPError as e:
         logger.error(
             "HTTP error during URL download",
-            extra={"url_domain": parsed.netloc, "status_code": e.code, "reason": e.reason},
+            extra={
+                "url_domain": parsed.netloc,
+                "status_code": e.code,
+                "reason": e.reason,
+            },
         )
         raise RuntimeError(f"Failed to download from URL: HTTP {e.code} {e.reason}") from e
 
@@ -331,7 +343,10 @@ def temp_file_from_url(url: str) -> Generator[tuple[str, str], None, None]:
     except TimeoutError:
         logger.error(
             "Timeout during URL download",
-            extra={"url_domain": parsed.netloc, "timeout_seconds": URL_DOWNLOAD_TIMEOUT_TOTAL},
+            extra={
+                "url_domain": parsed.netloc,
+                "timeout_seconds": URL_DOWNLOAD_TIMEOUT_TOTAL,
+            },
         )
         raise RuntimeError(
             f"Download timed out after {URL_DOWNLOAD_TIMEOUT_TOTAL} seconds. "
@@ -344,7 +359,8 @@ def temp_file_from_url(url: str) -> Generator[tuple[str, str], None, None]:
             try:
                 Path(tmp_path).unlink(missing_ok=True)
                 logger.debug(
-                    "Cleaned up temp file from URL download", extra={"temp_path": tmp_path}
+                    "Cleaned up temp file from URL download",
+                    extra={"temp_path": tmp_path},
                 )
             except Exception as e:
                 logger.warning(
@@ -571,7 +587,10 @@ async def ingest_pdf(
             )
             logger.info(
                 "Created fresh collection",
-                extra={"collection": settings.qdrant_collection_name, "vector_size": 1024},
+                extra={
+                    "collection": settings.qdrant_collection_name,
+                    "vector_size": 1024,
+                },
             )
         except Exception as e:
             logger.warning(
@@ -624,7 +643,11 @@ async def ingest_pdf(
                 )
             }
         )
-        print("CHECKPOINT: DocumentConverter created successfully", file=sys.stderr, flush=True)
+        print(
+            "CHECKPOINT: DocumentConverter created successfully",
+            file=sys.stderr,
+            flush=True,
+        )
         logger.info(
             "Docling converter initialized with pypdfium backend and table extraction",
             extra={
@@ -660,7 +683,11 @@ async def ingest_pdf(
         error_msg = f"Docling parsing failed for {pdf_path.name}: {e}"
         logger.error(
             "PDF parsing failed",
-            extra={"path": str(pdf_path), "doc_filename": pdf_path.name, "error": str(e)},
+            extra={
+                "path": str(pdf_path),
+                "doc_filename": pdf_path.name,
+                "error": str(e),
+            },
             exc_info=True,
         )
         raise RuntimeError(error_msg) from e
@@ -776,7 +803,9 @@ async def ingest_pdf(
     print("CHECKPOINT: Starting chunking...", file=sys.stderr, flush=True)
     chunks = await chunk_by_docling_items(result, metadata)
     print(
-        f"CHECKPOINT: Chunking complete - {len(chunks)} chunks created", file=sys.stderr, flush=True
+        f"CHECKPOINT: Chunking complete - {len(chunks)} chunks created",
+        file=sys.stderr,
+        flush=True,
     )
 
     # Story 2.4 AC1 (REVISED): Extract business context metadata PER CHUNK using Mistral Small
@@ -806,13 +835,17 @@ async def ingest_pdf(
         # Mistral Free API has stricter rate limits than initially tested
         semaphore = asyncio.Semaphore(5)  # Max 5 concurrent requests to Mistral API
 
-        async def extract_for_chunk(chunk: Chunk) -> tuple[Chunk, ExtractedMetadata | None]:
+        async def extract_for_chunk(
+            chunk: Chunk,
+        ) -> tuple[Chunk, ExtractedMetadata | None]:
             """Extract metadata for a single chunk with error handling and rate limiting."""
             async with semaphore:  # Limit concurrent requests
                 try:
                     # Story 2.6 AC6 FIX: Pass shared client instance to enable connection pooling
                     extracted = await extract_chunk_metadata(
-                        text=chunk.content, chunk_id=chunk.chunk_id, client=mistral_client
+                        text=chunk.content,
+                        chunk_id=chunk.chunk_id,
+                        client=mistral_client,
                     )
                     return (chunk, extracted)
                 except Exception as e:
@@ -975,7 +1008,11 @@ async def extract_excel(file_path: str) -> DocumentMetadata:
         )
         logger.error(
             "Excel file is invalid or password-protected",
-            extra={"path": str(excel_path), "doc_filename": excel_path.name, "error": str(e)},
+            extra={
+                "path": str(excel_path),
+                "doc_filename": excel_path.name,
+                "error": str(e),
+            },
             exc_info=True,
         )
         raise RuntimeError(error_msg) from e
@@ -983,7 +1020,11 @@ async def extract_excel(file_path: str) -> DocumentMetadata:
         error_msg = f"Unexpected error loading Excel file {excel_path.name}: {e}"
         logger.error(
             "Excel loading failed",
-            extra={"path": str(excel_path), "doc_filename": excel_path.name, "error": str(e)},
+            extra={
+                "path": str(excel_path),
+                "doc_filename": excel_path.name,
+                "error": str(e),
+            },
             exc_info=True,
         )
         raise RuntimeError(error_msg) from e
@@ -1053,7 +1094,11 @@ async def extract_excel(file_path: str) -> DocumentMetadata:
         error_msg = f"Failed to extract data from sheets in {excel_path.name}: {e}"
         logger.error(
             "Sheet extraction failed",
-            extra={"path": str(excel_path), "doc_filename": excel_path.name, "error": str(e)},
+            extra={
+                "path": str(excel_path),
+                "doc_filename": excel_path.name,
+                "error": str(e),
+            },
             exc_info=True,
         )
         raise RuntimeError(error_msg) from e
@@ -1102,6 +1147,18 @@ async def extract_excel(file_path: str) -> DocumentMetadata:
                 "doc_filename": excel_path.name,
                 "points_stored": points_stored,
                 "collection": settings.qdrant_collection_name,
+            },
+        )
+
+        # Store metadata in PostgreSQL for structured filtering (Story 2.6 AC4)
+        # Maintains parity with PDF ingestion path
+        records_stored, records_skipped = await store_metadata_in_postgresql(chunks_with_embeddings)
+        logger.info(
+            "Metadata stored in PostgreSQL",
+            extra={
+                "doc_filename": excel_path.name,
+                "records_stored": records_stored,
+                "records_skipped": records_skipped,
             },
         )
 

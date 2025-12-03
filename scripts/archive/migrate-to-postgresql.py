@@ -266,7 +266,9 @@ async def main():
 
     parser = argparse.ArgumentParser(description="Migrate Qdrant chunks to PostgreSQL")
     parser.add_argument(
-        "--dry-run", action="store_true", help="Simulate migration without writing to database"
+        "--dry-run",
+        action="store_true",
+        help="Simulate migration without writing to database",
     )
     parser.add_argument(
         "--batch-size",

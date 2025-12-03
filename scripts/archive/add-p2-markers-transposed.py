@@ -15,7 +15,11 @@ replacements = [
         "Edge case: insufficient metrics ratio test",
     ),
     ("2.13-UNIT-005", "insufficient_rows", "Edge case: insufficient rows test"),
-    ("2.13-UNIT-006", "single_header_transposed", "Advanced feature: transposed table extraction"),
+    (
+        "2.13-UNIT-006",
+        "single_header_transposed",
+        "Advanced feature: transposed table extraction",
+    ),
     (
         "2.13-UNIT-007",
         "multi_header_transposed",
@@ -23,7 +27,11 @@ replacements = [
     ),
     ("2.13-UNIT-008", "handles_empty_cells", "Edge case: empty cell handling"),
     ("2.13-UNIT-009", "metric_parsing", "Advanced feature: metric parsing"),
-    ("2.13-UNIT-010", "column_name_generation", "Advanced feature: column name generation"),
+    (
+        "2.13-UNIT-010",
+        "column_name_generation",
+        "Advanced feature: column name generation",
+    ),
     ("2.13-UNIT-011", "metadata_fields", "Advanced feature: metadata extraction"),
 ]
 

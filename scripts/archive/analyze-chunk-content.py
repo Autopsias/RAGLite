@@ -101,8 +101,14 @@ def analyze_chunks():
 
     test_queries = [
         ("What is the variable cost per ton in August 2025?", "variable cost ton"),
-        ("What is the EBITDA margin for the Secil Group in August 2025?", "EBITDA margin"),
-        ("What is the thermal energy cost per ton in August 2025?", "thermal energy cost ton"),
+        (
+            "What is the EBITDA margin for the Secil Group in August 2025?",
+            "EBITDA margin",
+        ),
+        (
+            "What is the thermal energy cost per ton in August 2025?",
+            "thermal energy cost ton",
+        ),
     ]
 
     for full_query, simplified in test_queries:

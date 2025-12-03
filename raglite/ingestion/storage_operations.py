@@ -292,7 +292,8 @@ async def store_vectors_in_qdrant(
 
     if not points:
         logger.warning(
-            "No valid chunks with embeddings to store", extra={"collection": collection_name}
+            "No valid chunks with embeddings to store",
+            extra={"collection": collection_name},
         )
         return 0
 

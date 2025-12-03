@@ -54,7 +54,10 @@ class TestIngestPDF:
 
         mock_document = Mock()
         mock_document.num_pages.return_value = 2
-        mock_document.iterate_items.return_value = [(mock_element1, 1), (mock_element2, 1)]
+        mock_document.iterate_items.return_value = [
+            (mock_element1, 1),
+            (mock_element2, 1),
+        ]
         mock_document.export_to_markdown.return_value = "Financial Report Q4 2024\nRevenue Summary"
 
         mock_result = Mock()
@@ -101,7 +104,8 @@ class TestIngestPDF:
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.store_vectors_in_qdrant", return_value=None
+                "raglite.ingestion.document_ingestion.store_vectors_in_qdrant",
+                return_value=None,
             ),
         ):
             mock_converter_instance = MockConverter.return_value
@@ -229,7 +233,8 @@ class TestIngestPDF:
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.store_vectors_in_qdrant", return_value=None
+                "raglite.ingestion.document_ingestion.store_vectors_in_qdrant",
+                return_value=None,
             ),
         ):
             mock_converter_instance = MockConverter.return_value
@@ -303,7 +308,8 @@ class TestIngestPDF:
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.store_vectors_in_qdrant", return_value=None
+                "raglite.ingestion.document_ingestion.store_vectors_in_qdrant",
+                return_value=None,
             ),
         ):
             mock_converter_instance = MockConverter.return_value
@@ -407,7 +413,8 @@ class TestIngestPDF:
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.store_vectors_in_qdrant", return_value=None
+                "raglite.ingestion.document_ingestion.store_vectors_in_qdrant",
+                return_value=None,
             ),
         ):
             mock_converter_instance = MockConverter.return_value
@@ -511,7 +518,8 @@ class TestExtractExcel:
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.storage_operations.store_vectors_in_qdrant", return_value=None
+                "raglite.ingestion.storage_operations.store_vectors_in_qdrant",
+                return_value=None,
             ),
         ):
             mock_load.return_value = mock_workbook
@@ -593,7 +601,8 @@ class TestExtractExcel:
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.storage_operations.store_vectors_in_qdrant", return_value=None
+                "raglite.ingestion.storage_operations.store_vectors_in_qdrant",
+                return_value=None,
             ),
         ):
             mock_load.return_value = mock_workbook
@@ -659,7 +668,8 @@ class TestExtractExcel:
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.storage_operations.store_vectors_in_qdrant", return_value=None
+                "raglite.ingestion.storage_operations.store_vectors_in_qdrant",
+                return_value=None,
             ),
         ):
             mock_load.return_value = mock_workbook

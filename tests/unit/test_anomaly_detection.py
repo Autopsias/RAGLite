@@ -658,7 +658,10 @@ class TestIncludeMinorParameter:
 
         # With include_minor=False, only MODERATE and CRITICAL should be detected
         for anomaly in result.anomalies:
-            assert anomaly.severity in [AnomalySeverity.MODERATE, AnomalySeverity.CRITICAL]
+            assert anomaly.severity in [
+                AnomalySeverity.MODERATE,
+                AnomalySeverity.CRITICAL,
+            ]
             assert anomaly.severity != AnomalySeverity.MINOR
 
     @pytest.mark.asyncio

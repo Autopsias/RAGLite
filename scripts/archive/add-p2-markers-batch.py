@@ -24,7 +24,8 @@ def update_test_file(filepath, test_updates):
 
             # Check if already has a priority marker
             if not re.search(
-                rf'@pytest\.mark\.test_id\("{test_id}"\)\n    @pytest\.mark\.priority', content
+                rf'@pytest\.mark\.test_id\("{test_id}"\)\n    @pytest\.mark\.priority',
+                content,
             ):
                 # Add priority marker
                 replacement = (

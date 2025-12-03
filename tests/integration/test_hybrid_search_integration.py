@@ -216,7 +216,8 @@ class TestHybridSearchIntegration:
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.skipif(
-        not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
+        not pytest.run_slow,
+        reason="Requires full 160-page PDF. Run with: pytest --run-slow",
     )
     @pytest.mark.priority("P0")
     async def test_hybrid_search_full_ground_truth(self):

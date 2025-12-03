@@ -41,9 +41,9 @@ class TestRetrievalSynthesisWorkflow:
         parsed = json.loads(result)
 
         # Verify results retrieved from Qdrant
-        assert (
-            parsed["search_metadata"]["success"] is True
-        ), "Search should succeed with real Qdrant"
+        assert parsed["search_metadata"]["success"] is True, (
+            "Search should succeed with real Qdrant"
+        )
         assert parsed["total_retrieved"] > 0, "Should retrieve results from Qdrant"
         assert len(parsed["chunks"]) > 0, "chunks list should not be empty"
 
@@ -155,7 +155,10 @@ class TestRetrievalSynthesisWorkflow:
         queries = [
             ("simple_query", "What is the revenue?"),  # Simple fact
             ("table_query", "Show me Q1 and Q2 revenue by region"),  # Table data
-            ("analytical_query", "Compare profitability trends across years"),  # Analytical
+            (
+                "analytical_query",
+                "Compare profitability trends across years",
+            ),  # Analytical
         ]
 
         for query_type, query in queries:

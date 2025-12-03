@@ -140,7 +140,12 @@ class TestGetActionableInsight:
 
     def test_insights_contain_multiple_recommendations(self) -> None:
         """Test that insights provide multiple actionable recommendations."""
-        for category in ["timeout", "llm_api_error", "retrieval_failure", "accuracy_issue"]:
+        for category in [
+            "timeout",
+            "llm_api_error",
+            "retrieval_failure",
+            "accuracy_issue",
+        ]:
             insight = generate_failure_report.get_actionable_insight(category, "test error")
             # Each insight should have numbered recommendations (1), (2), (3), etc.
             assert "(1)" in insight

@@ -158,7 +158,11 @@ async def search_tables(query: str, top_k: int = 5) -> list[dict[str, Any]]:
         error_msg = f"Table search failed: {e}"
         logger.error(
             "Table search failed",
-            extra={"query": query[:100], "error": str(e), "error_type": type(e).__name__},
+            extra={
+                "query": query[:100],
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
             exc_info=True,
         )
         raise TableRetrievalError(error_msg) from e

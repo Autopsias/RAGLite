@@ -57,7 +57,12 @@ SAMPLE_QUERIES = [
     {
         "id": 6,
         "query": "Compare variable costs for Portugal Cement between Aug-25 YTD and Aug-24",
-        "expected_sql_fragments": ["Portugal Cement", "variable cost", "Aug-25", "Aug-24"],
+        "expected_sql_fragments": [
+            "Portugal Cement",
+            "variable cost",
+            "Aug-25",
+            "Aug-24",
+        ],
         "description": "Two-period comparison",
     },
     {
@@ -111,7 +116,13 @@ SAMPLE_QUERIES = [
     {
         "id": 14,
         "query": "Which entity had the highest variable costs in August 2025?",
-        "expected_sql_fragments": ["variable cost", "Aug-25", "highest", "DESC", "LIMIT"],
+        "expected_sql_fragments": [
+            "variable cost",
+            "Aug-25",
+            "highest",
+            "DESC",
+            "LIMIT",
+        ],
         "description": "Ranking query with ORDER BY",
     },
     {
@@ -142,13 +153,25 @@ SAMPLE_QUERIES = [
     {
         "id": 19,
         "query": "What percentage of total costs are variable costs for each entity?",
-        "expected_sql_fragments": ["variable cost", "total cost", "percentage", "GROUP BY"],
+        "expected_sql_fragments": [
+            "variable cost",
+            "total cost",
+            "percentage",
+            "GROUP BY",
+        ],
         "description": "Ratio calculation across entities",
     },
     {
         "id": 20,
         "query": "Show the top 5 entities by EBITDA margin in August 2025",
-        "expected_sql_fragments": ["EBITDA", "margin", "Aug-25", "ORDER BY", "DESC", "LIMIT 5"],
+        "expected_sql_fragments": [
+            "EBITDA",
+            "margin",
+            "Aug-25",
+            "ORDER BY",
+            "DESC",
+            "LIMIT 5",
+        ],
         "description": "Top-N ranking query",
     },
 ]

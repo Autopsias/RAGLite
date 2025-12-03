@@ -138,7 +138,11 @@ def import_table(cursor, table_name: str, input_dir: Path) -> int:
             for col in columns:
                 val = row.get(col)
                 # Handle datetime strings
-                if isinstance(val, str) and col in ("created_at", "updated_at", "ingested_at"):
+                if isinstance(val, str) and col in (
+                    "created_at",
+                    "updated_at",
+                    "ingested_at",
+                ):
                     try:
                         val = datetime.fromisoformat(val)
                     except ValueError:

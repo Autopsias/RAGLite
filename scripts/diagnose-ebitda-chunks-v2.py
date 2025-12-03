@@ -26,7 +26,11 @@ async def diagnose_chunks():
         print("=" * 80)
 
         results = await hybrid_search(
-            query=query, top_k=5, enable_hybrid=True, auto_classify=False, enable_sql_tables=False
+            query=query,
+            top_k=5,
+            enable_hybrid=True,
+            auto_classify=False,
+            enable_sql_tables=False,
         )
 
         for i, result in enumerate(results[:3], 1):

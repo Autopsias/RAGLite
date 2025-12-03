@@ -353,7 +353,9 @@ class TestMetadataInjectionMocked:
 
         try:
             points = client.scroll(
-                collection_name=settings.qdrant_collection_name, limit=10, with_payload=True
+                collection_name=settings.qdrant_collection_name,
+                limit=10,
+                with_payload=True,
             )[0]
         except Exception as e:
             pytest.skip(f"Qdrant collection not available: {e}")
@@ -439,7 +441,9 @@ class TestMetadataInjectionMocked:
         try:
             # First, find what metadata values exist in the collection
             all_points = client.scroll(
-                collection_name=settings.qdrant_collection_name, limit=50, with_payload=True
+                collection_name=settings.qdrant_collection_name,
+                limit=50,
+                with_payload=True,
             )[0]
         except Exception as e:
             pytest.skip(f"Qdrant collection not available: {e}")

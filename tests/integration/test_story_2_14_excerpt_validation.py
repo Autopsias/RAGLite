@@ -139,14 +139,20 @@ class TestStory214ExcerptValidation:
     @pytest.mark.parametrize(
         "test_query",
         [
-            {"id": "EXC-001", "query": "What is the revenue for Portugal in August 2025?"},
+            {
+                "id": "EXC-001",
+                "query": "What is the revenue for Portugal in August 2025?",
+            },
             {"id": "EXC-002", "query": "Show EBITDA for Tunisia"},
             {"id": "EXC-003", "query": "Angola EBITDA and revenue"},
             {"id": "EXC-004", "query": "Brazil turnover"},
             {"id": "EXC-005", "query": "Portugal currency values"},
             {"id": "EXC-006", "query": "Compare EBITDA for Portugal and Tunisia"},
             {"id": "EXC-007", "query": "Brazil and Angola revenue metrics"},
-            {"id": "EXC-008", "query": "Show differences between Portugal and Tunisia turnover"},
+            {
+                "id": "EXC-008",
+                "query": "Show differences between Portugal and Tunisia turnover",
+            },
             {"id": "EXC-009", "query": "EBITDA values for Portugal operations"},
             {"id": "EXC-010", "query": "Total revenue for Brazil"},
             {"id": "EXC-011", "query": "Portugal revenue August 2025"},
@@ -157,7 +163,11 @@ class TestStory214ExcerptValidation:
     @pytest.mark.priority("P1")
     @pytest.mark.preserve_collection  # Read-only SQL test - prevents 80-90s teardown restoration per test
     async def test_excerpt_query(
-        self, test_query, excerpt_ground_truth, mock_mistral_client, session_ingested_collection
+        self,
+        test_query,
+        excerpt_ground_truth,
+        mock_mistral_client,
+        session_ingested_collection,
     ):
         """Test individual ground truth query against 10-page sample PDF.
 

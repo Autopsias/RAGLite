@@ -58,7 +58,11 @@ class TestSimpleSynthesis:
         """Test simple synthesis with both retrieval and analysis results."""
         retrieval_results = [{"content": "Revenue was $120M", "source": "report.pdf"}]
         analysis_results = [
-            {"calculation": "growth", "formatted_value": "+20%", "reasoning": "YoY increase"}
+            {
+                "calculation": "growth",
+                "formatted_value": "+20%",
+                "reasoning": "YoY increase",
+            }
         ]
         query = "Analyze revenue growth"
 
@@ -94,7 +98,11 @@ class TestMistralSynthesis:
         """Test Mistral synthesis builds proper context from results."""
         retrieval_results = [{"content": "Revenue: $50M", "source": "report.pdf"}]
         analysis_results = [
-            {"calculation": "growth", "formatted_value": "+15%", "reasoning": "YoY increase"}
+            {
+                "calculation": "growth",
+                "formatted_value": "+15%",
+                "reasoning": "YoY increase",
+            }
         ]
         query = "What is revenue growth?"
 
@@ -105,13 +113,17 @@ class TestMistralSynthesis:
         mock_response.choices[0].message.content = json.dumps(
             {
                 "answer": "Revenue grew 15% to $50M",
-                "reasoning_steps": ["Step 1: Check revenue", "Step 2: Calculate growth"],
+                "reasoning_steps": [
+                    "Step 1: Check revenue",
+                    "Step 2: Calculate growth",
+                ],
             }
         )
         mock_client.chat.complete.return_value = mock_response
 
         with patch(
-            "raglite.agentic.agents.synthesis_agent.get_mistral_client", return_value=mock_client
+            "raglite.agentic.agents.synthesis_agent.get_mistral_client",
+            return_value=mock_client,
         ):
             answer, reasoning, sources = await _synthesize_with_mistral(
                 retrieval_results, analysis_results, query
@@ -135,7 +147,8 @@ class TestMistralSynthesis:
         mock_client.chat.complete.return_value = mock_response
 
         with patch(
-            "raglite.agentic.agents.synthesis_agent.get_mistral_client", return_value=mock_client
+            "raglite.agentic.agents.synthesis_agent.get_mistral_client",
+            return_value=mock_client,
         ):
             answer, reasoning, sources = await _synthesize_with_mistral(
                 retrieval_results, [], query
@@ -161,7 +174,8 @@ class TestMistralSynthesis:
         mock_client.chat.complete.return_value = mock_response
 
         with patch(
-            "raglite.agentic.agents.synthesis_agent.get_mistral_client", return_value=mock_client
+            "raglite.agentic.agents.synthesis_agent.get_mistral_client",
+            return_value=mock_client,
         ):
             _, _, sources = await _synthesize_with_mistral(retrieval_results, [], query)
 
@@ -184,7 +198,8 @@ class TestMistralSynthesis:
         mock_client.chat.complete.return_value = mock_response
 
         with patch(
-            "raglite.agentic.agents.synthesis_agent.get_mistral_client", return_value=mock_client
+            "raglite.agentic.agents.synthesis_agent.get_mistral_client",
+            return_value=mock_client,
         ):
             answer, reasoning, sources = await _synthesize_with_mistral(
                 retrieval_results, [], query
@@ -221,7 +236,10 @@ class TestOpenAISynthesis:
         )
         mock_client.chat.completions.create.return_value = mock_response
 
-        with patch("raglite.agentic.agents.synthesis_agent.AsyncOpenAI", return_value=mock_client):
+        with patch(
+            "raglite.agentic.agents.synthesis_agent.AsyncOpenAI",
+            return_value=mock_client,
+        ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
                 answer, reasoning, sources = await _synthesize_with_openai(
                     retrieval_results, [], query
@@ -250,7 +268,10 @@ class TestOpenAISynthesis:
         mock_response.choices[0].message.content = json.dumps({"answer": "Test answer"})
         mock_client.chat.completions.create.return_value = mock_response
 
-        with patch("raglite.agentic.agents.synthesis_agent.AsyncOpenAI", return_value=mock_client):
+        with patch(
+            "raglite.agentic.agents.synthesis_agent.AsyncOpenAI",
+            return_value=mock_client,
+        ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
                 await _synthesize_with_openai(retrieval_results, [], query, model="gpt-4-turbo")
 
@@ -271,7 +292,10 @@ class TestOpenAISynthesis:
         mock_response.choices[0].message.content = None  # None response
         mock_client.chat.completions.create.return_value = mock_response
 
-        with patch("raglite.agentic.agents.synthesis_agent.AsyncOpenAI", return_value=mock_client):
+        with patch(
+            "raglite.agentic.agents.synthesis_agent.AsyncOpenAI",
+            return_value=mock_client,
+        ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
                 answer, reasoning, sources = await _synthesize_with_openai(
                     retrieval_results, [], query
@@ -296,7 +320,11 @@ class TestSynthesisAgent:
                 }
             ),
             "task_2": json.dumps(
-                {"calculation": "growth", "formatted_value": "+15%", "reasoning": "YoY increase"}
+                {
+                    "calculation": "growth",
+                    "formatted_value": "+15%",
+                    "reasoning": "YoY increase",
+                }
             ),
         }
 
@@ -309,7 +337,10 @@ class TestSynthesisAgent:
         )
         mock_client.chat.completions.create.return_value = mock_response
 
-        with patch("raglite.agentic.agents.synthesis_agent.AsyncOpenAI", return_value=mock_client):
+        with patch(
+            "raglite.agentic.agents.synthesis_agent.AsyncOpenAI",
+            return_value=mock_client,
+        ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
                 result_json = await synthesis_agent("Synthesize results", context)
 
@@ -359,7 +390,11 @@ class TestSynthesisAgent:
             with patch(
                 "raglite.agentic.agents.synthesis_agent._synthesize_with_mistral"
             ) as mock_mistral:
-                mock_mistral.return_value = ("Mistral answer", ["Reasoning"], ["test.pdf"])
+                mock_mistral.return_value = (
+                    "Mistral answer",
+                    ["Reasoning"],
+                    ["test.pdf"],
+                )
                 result_json = await synthesis_agent("Test query", context)
 
         result = json.loads(result_json)
@@ -383,7 +418,10 @@ class TestSynthesisAgent:
         mock_response.choices[0].message.content = json.dumps({"answer": "Test answer"})
         mock_client.chat.completions.create.return_value = mock_response
 
-        with patch("raglite.agentic.agents.synthesis_agent.AsyncOpenAI", return_value=mock_client):
+        with patch(
+            "raglite.agentic.agents.synthesis_agent.AsyncOpenAI",
+            return_value=mock_client,
+        ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
                 result_json = await synthesis_agent("Test query", context)
 
@@ -395,7 +433,10 @@ class TestSynthesisAgent:
         """Test synthesis agent gracefully skips invalid context entries."""
         context = {
             "task_1": json.dumps(
-                {"chunks": [{"content": "Valid", "source": "test.pdf"}], "query": "Test"}
+                {
+                    "chunks": [{"content": "Valid", "source": "test.pdf"}],
+                    "query": "Test",
+                }
             ),
             "task_2": "invalid json string {{{",
             "task_3": None,
@@ -408,7 +449,10 @@ class TestSynthesisAgent:
         mock_response.choices[0].message.content = json.dumps({"answer": "Test answer"})
         mock_client.chat.completions.create.return_value = mock_response
 
-        with patch("raglite.agentic.agents.synthesis_agent.AsyncOpenAI", return_value=mock_client):
+        with patch(
+            "raglite.agentic.agents.synthesis_agent.AsyncOpenAI",
+            return_value=mock_client,
+        ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
                 result_json = await synthesis_agent("Test query", context)
 
@@ -428,7 +472,10 @@ class TestSynthesisAgent:
         mock_response.choices[0].message.content = json.dumps({"answer": "Test answer"})
         mock_client.chat.completions.create.return_value = mock_response
 
-        with patch("raglite.agentic.agents.synthesis_agent.AsyncOpenAI", return_value=mock_client):
+        with patch(
+            "raglite.agentic.agents.synthesis_agent.AsyncOpenAI",
+            return_value=mock_client,
+        ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
                 result_json = await synthesis_agent("What is the revenue?", context)
 

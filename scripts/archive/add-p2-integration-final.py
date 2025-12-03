@@ -26,7 +26,9 @@ def add_p2_marker(filepath, test_id, justification):
                 for j in range(i + 2, min(i + 12, len(lines))):
                     if "Priority:" in lines[j] and ("TBD" in lines[j] or "Priority: P" in lines[j]):
                         lines[j] = re.sub(
-                            r"Priority: .*", f"Priority: P2 (Medium) - {justification}", lines[j]
+                            r"Priority: .*",
+                            f"Priority: P2 (Medium) - {justification}",
+                            lines[j],
                         )
                         modified = True
                         break

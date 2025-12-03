@@ -50,13 +50,19 @@ class TestFetchDistinctMetrics:
 
         # WHEN: Inspecting database
         with patch(
-            "scripts.inspect_database_for_epic_3.get_postgresql_connection", return_value=mock_conn
+            "scripts.inspect_database_for_epic_3.get_postgresql_connection",
+            return_value=mock_conn,
         ):
             with patch("builtins.open", mock_open()):
                 catalog = inspect_database()
 
                 # THEN: Should return sorted list of metrics
-                assert catalog["metrics"] == ["EBITDA", "Fixed Cost", "Revenue", "Variable Cost"]
+                assert catalog["metrics"] == [
+                    "EBITDA",
+                    "Fixed Cost",
+                    "Revenue",
+                    "Variable Cost",
+                ]
                 assert "metrics" in catalog
 
     def test_fetch_distinct_metrics_empty_table(self):
@@ -78,7 +84,8 @@ class TestFetchDistinctMetrics:
 
         # WHEN: Inspecting empty database
         with patch(
-            "scripts.inspect_database_for_epic_3.get_postgresql_connection", return_value=mock_conn
+            "scripts.inspect_database_for_epic_3.get_postgresql_connection",
+            return_value=mock_conn,
         ):
             with patch("builtins.open", mock_open()):
                 catalog = inspect_database()
@@ -114,7 +121,12 @@ class TestFetchDistinctPeriods:
         mock_cursor.fetchone.return_value = (100,)  # row count
         mock_cursor.fetchall.side_effect = [
             [("EBITDA",)],  # metrics
-            [("Aug-25",), ("Aug-25 YTD",), ("Jul-25",), ("Sep-25",)],  # periods (sorted)
+            [
+                ("Aug-25",),
+                ("Aug-25 YTD",),
+                ("Jul-25",),
+                ("Sep-25",),
+            ],  # periods (sorted)
             [("Portugal Cement",)],  # entities
             [("EUR",)],  # units
         ]
@@ -124,13 +136,19 @@ class TestFetchDistinctPeriods:
 
         # WHEN: Inspecting database
         with patch(
-            "scripts.inspect_database_for_epic_3.get_postgresql_connection", return_value=mock_conn
+            "scripts.inspect_database_for_epic_3.get_postgresql_connection",
+            return_value=mock_conn,
         ):
             with patch("builtins.open", mock_open()):
                 catalog = inspect_database()
 
                 # THEN: Should return sorted list (SQL ORDER BY handles sorting)
-                assert catalog["periods"] == ["Aug-25", "Aug-25 YTD", "Jul-25", "Sep-25"]
+                assert catalog["periods"] == [
+                    "Aug-25",
+                    "Aug-25 YTD",
+                    "Jul-25",
+                    "Sep-25",
+                ]
                 assert "periods" in catalog
 
 
@@ -163,7 +181,8 @@ class TestFetchDistinctEntities:
 
         # WHEN: Inspecting database
         with patch(
-            "scripts.inspect_database_for_epic_3.get_postgresql_connection", return_value=mock_conn
+            "scripts.inspect_database_for_epic_3.get_postgresql_connection",
+            return_value=mock_conn,
         ):
             with patch("builtins.open", mock_open()):
                 catalog = inspect_database()
@@ -203,7 +222,8 @@ class TestFetchDistinctUnits:
 
         # WHEN: Inspecting database
         with patch(
-            "scripts.inspect_database_for_epic_3.get_postgresql_connection", return_value=mock_conn
+            "scripts.inspect_database_for_epic_3.get_postgresql_connection",
+            return_value=mock_conn,
         ):
             with patch("builtins.open", mock_open()):
                 catalog = inspect_database()
@@ -237,7 +257,8 @@ class TestFetchRowCount:
 
         # WHEN: Inspecting database
         with patch(
-            "scripts.inspect_database_for_epic_3.get_postgresql_connection", return_value=mock_conn
+            "scripts.inspect_database_for_epic_3.get_postgresql_connection",
+            return_value=mock_conn,
         ):
             with patch("builtins.open", mock_open()):
                 catalog = inspect_database()
@@ -274,7 +295,8 @@ class TestGenerateJsonCatalog:
 
         # WHEN: Inspecting database (generates catalog)
         with patch(
-            "scripts.inspect_database_for_epic_3.get_postgresql_connection", return_value=mock_conn
+            "scripts.inspect_database_for_epic_3.get_postgresql_connection",
+            return_value=mock_conn,
         ):
             with patch("builtins.open", mock_open()):
                 catalog = inspect_database()
@@ -307,7 +329,8 @@ class TestGenerateJsonCatalog:
 
         # WHEN: Inspecting empty database
         with patch(
-            "scripts.inspect_database_for_epic_3.get_postgresql_connection", return_value=mock_conn
+            "scripts.inspect_database_for_epic_3.get_postgresql_connection",
+            return_value=mock_conn,
         ):
             with patch("builtins.open", mock_open()):
                 catalog = inspect_database()
@@ -342,7 +365,8 @@ class TestSaveCatalogToFile:
         # WHEN: Inspecting database (saves to file)
         mock_file_handle = mock_open()
         with patch(
-            "scripts.inspect_database_for_epic_3.get_postgresql_connection", return_value=mock_conn
+            "scripts.inspect_database_for_epic_3.get_postgresql_connection",
+            return_value=mock_conn,
         ):
             with patch("pathlib.Path.open", mock_file_handle):
                 _catalog = inspect_database(output_path="docs/data-dictionary-epic-3.json")
@@ -374,7 +398,8 @@ class TestSaveCatalogToFile:
 
         # WHEN: Saving to file in new directory
         with patch(
-            "scripts.inspect_database_for_epic_3.get_postgresql_connection", return_value=mock_conn
+            "scripts.inspect_database_for_epic_3.get_postgresql_connection",
+            return_value=mock_conn,
         ):
             with patch("pathlib.Path.mkdir") as mock_mkdir:
                 with patch("pathlib.Path.open", mock_open()):
@@ -409,7 +434,8 @@ class TestInspectDatabase:
 
         # WHEN: Running inspect_database
         with patch(
-            "scripts.inspect_database_for_epic_3.get_postgresql_connection", return_value=mock_conn
+            "scripts.inspect_database_for_epic_3.get_postgresql_connection",
+            return_value=mock_conn,
         ):
             with patch("builtins.open", mock_open()):
                 result = inspect_database()
@@ -441,7 +467,8 @@ class TestInspectDatabase:
         # WHEN: Running inspection with file save
         mock_file_handle = mock_open()
         with patch(
-            "scripts.inspect_database_for_epic_3.get_postgresql_connection", return_value=mock_conn
+            "scripts.inspect_database_for_epic_3.get_postgresql_connection",
+            return_value=mock_conn,
         ):
             with patch("pathlib.Path.open", mock_file_handle):
                 inspect_database(output_path="docs/data-dictionary-epic-3.json")
@@ -474,7 +501,8 @@ class TestCatalogStructureValidation:
 
         # WHEN: Inspecting database
         with patch(
-            "scripts.inspect_database_for_epic_3.get_postgresql_connection", return_value=mock_conn
+            "scripts.inspect_database_for_epic_3.get_postgresql_connection",
+            return_value=mock_conn,
         ):
             with patch("builtins.open", mock_open()):
                 catalog = inspect_database()
@@ -507,7 +535,8 @@ class TestCatalogStructureValidation:
 
         # WHEN: Inspecting database
         with patch(
-            "scripts.inspect_database_for_epic_3.get_postgresql_connection", return_value=mock_conn
+            "scripts.inspect_database_for_epic_3.get_postgresql_connection",
+            return_value=mock_conn,
         ):
             with patch("builtins.open", mock_open()):
                 catalog = inspect_database()

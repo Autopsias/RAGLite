@@ -247,7 +247,9 @@ class TestPDFIngestionIntegration:
         for qa in sample_queries:
             # Search for relevant chunks (PDF already in Qdrant from session fixture)
             results = await search_documents(
-                query=qa["question"], top_k=3, source_document="sample_financial_report.pdf"
+                query=qa["question"],
+                top_k=3,
+                source_document="sample_financial_report.pdf",
             )
 
             # Check if any result has correct page (±1 tolerance)
@@ -864,7 +866,10 @@ class TestQdrantStorageIntegration:
         - All metadata fields are preserved
         """
         # Lazy imports to avoid test discovery overhead
-        from raglite.ingestion.pipeline import generate_embeddings, store_vectors_in_qdrant
+        from raglite.ingestion.pipeline import (
+            generate_embeddings,
+            store_vectors_in_qdrant,
+        )
         from raglite.shared.clients import get_qdrant_client
         from raglite.shared.models import Chunk, DocumentMetadata
 
@@ -953,7 +958,10 @@ class TestQdrantStorageIntegration:
         - Vector search works correctly
         """
         # Lazy imports to avoid test discovery overhead
-        from raglite.ingestion.pipeline import generate_embeddings, store_vectors_in_qdrant
+        from raglite.ingestion.pipeline import (
+            generate_embeddings,
+            store_vectors_in_qdrant,
+        )
         from raglite.shared.clients import get_qdrant_client
         from raglite.shared.models import Chunk, DocumentMetadata
 
@@ -1037,7 +1045,10 @@ class TestQdrantStorageIntegration:
         - No performance degradation with larger datasets
         """
         # Lazy imports to avoid test discovery overhead
-        from raglite.ingestion.pipeline import generate_embeddings, store_vectors_in_qdrant
+        from raglite.ingestion.pipeline import (
+            generate_embeddings,
+            store_vectors_in_qdrant,
+        )
         from raglite.shared.clients import get_qdrant_client
         from raglite.shared.models import Chunk, DocumentMetadata
 

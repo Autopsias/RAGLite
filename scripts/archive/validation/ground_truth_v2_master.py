@@ -813,7 +813,11 @@ def validate_query_answer(query: dict, system_answer: str) -> dict:
     if criteria.get("require_period", False):
         period = expected.get("period", "")
         # Generate period variants
-        period_variants = [period, period.replace("August", "Aug"), period.replace("2025", "25")]
+        period_variants = [
+            period,
+            period.replace("August", "Aug"),
+            period.replace("2025", "25"),
+        ]
         if any(variant in system_answer for variant in period_variants):
             results["period_match"] = True
             results["score"] += 0.2

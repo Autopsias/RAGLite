@@ -419,7 +419,12 @@ class TestCalculatePerformanceMetrics:
     def test_metrics_with_errors(self) -> None:
         """Test metrics calculation with query errors."""
         results = [
-            {"retrieval_pass": True, "attribution_pass": True, "latency_ms": 1000.0, "error": None},
+            {
+                "retrieval_pass": True,
+                "attribution_pass": True,
+                "latency_ms": 1000.0,
+                "error": None,
+            },
             {
                 "retrieval_pass": False,
                 "attribution_pass": False,

@@ -18,7 +18,12 @@ def test_merge_results_empty_inputs():
     # Only SQL empty
     vector = [
         SearchResult(
-            text="vec1", score=0.01, source="vector", metadata={}, document_id="doc1", page_number=1
+            text="vec1",
+            score=0.01,
+            source="vector",
+            metadata={},
+            document_id="doc1",
+            page_number=1,
         )
     ]
     assert merge_results(vector, []) == vector[:5]
@@ -26,7 +31,12 @@ def test_merge_results_empty_inputs():
     # Only vector empty
     sql = [
         SearchResult(
-            text="sql1", score=1.0, source="sql", metadata={}, document_id="doc2", page_number=1
+            text="sql1",
+            score=1.0,
+            source="sql",
+            metadata={},
+            document_id="doc2",
+            page_number=1,
         )
     ]
     assert merge_results([], sql) == sql[:5]
@@ -66,7 +76,12 @@ def test_merge_results_score_normalization_basic():
     # SQL results with hardcoded scores (typically 1.0)
     sql_results = [
         SearchResult(
-            text="sql1", score=1.0, source="sql", metadata={}, document_id="doc1", page_number=1
+            text="sql1",
+            score=1.0,
+            source="sql",
+            metadata={},
+            document_id="doc1",
+            page_number=1,
         ),  # Same doc as vec_high
     ]
 
@@ -94,14 +109,24 @@ def test_merge_results_alpha_sensitivity_after_normalization():
     # Vector results with RRF scores (very small)
     vector_results = [
         SearchResult(
-            text="vec", score=0.02, source="vector", metadata={}, document_id="doc1", page_number=1
+            text="vec",
+            score=0.02,
+            source="vector",
+            metadata={},
+            document_id="doc1",
+            page_number=1,
         ),
     ]
 
     # SQL results
     sql_results = [
         SearchResult(
-            text="sql", score=1.0, source="sql", metadata={}, document_id="doc2", page_number=1
+            text="sql",
+            score=1.0,
+            source="sql",
+            metadata={},
+            document_id="doc2",
+            page_number=1,
         ),
     ]
 
@@ -176,26 +201,56 @@ def test_merge_results_realistic_scenario():
     # Realistic vector results (RRF: 0.001-0.03 range)
     vector_results = [
         SearchResult(
-            text="v1", score=0.025, source="vector", metadata={}, document_id="doc1", page_number=1
+            text="v1",
+            score=0.025,
+            source="vector",
+            metadata={},
+            document_id="doc1",
+            page_number=1,
         ),
         SearchResult(
-            text="v2", score=0.018, source="vector", metadata={}, document_id="doc2", page_number=1
+            text="v2",
+            score=0.018,
+            source="vector",
+            metadata={},
+            document_id="doc2",
+            page_number=1,
         ),
         SearchResult(
-            text="v3", score=0.012, source="vector", metadata={}, document_id="doc3", page_number=1
+            text="v3",
+            score=0.012,
+            source="vector",
+            metadata={},
+            document_id="doc3",
+            page_number=1,
         ),
         SearchResult(
-            text="v4", score=0.005, source="vector", metadata={}, document_id="doc4", page_number=1
+            text="v4",
+            score=0.005,
+            source="vector",
+            metadata={},
+            document_id="doc4",
+            page_number=1,
         ),
     ]
 
     # Realistic SQL results (score=1.0)
     sql_results = [
         SearchResult(
-            text="s1", score=1.0, source="sql", metadata={}, document_id="doc2", page_number=1
+            text="s1",
+            score=1.0,
+            source="sql",
+            metadata={},
+            document_id="doc2",
+            page_number=1,
         ),  # Overlap with v2
         SearchResult(
-            text="s2", score=1.0, source="sql", metadata={}, document_id="doc5", page_number=1
+            text="s2",
+            score=1.0,
+            source="sql",
+            metadata={},
+            document_id="doc5",
+            page_number=1,
         ),
     ]
 
@@ -221,10 +276,20 @@ def test_merge_results_no_sql_degradation():
     """Test that SQL-only results get reasonable scores after normalization."""
     sql_results = [
         SearchResult(
-            text="s1", score=1.0, source="sql", metadata={}, document_id="doc1", page_number=1
+            text="s1",
+            score=1.0,
+            source="sql",
+            metadata={},
+            document_id="doc1",
+            page_number=1,
         ),
         SearchResult(
-            text="s2", score=1.0, source="sql", metadata={}, document_id="doc2", page_number=1
+            text="s2",
+            score=1.0,
+            source="sql",
+            metadata={},
+            document_id="doc2",
+            page_number=1,
         ),
     ]
 

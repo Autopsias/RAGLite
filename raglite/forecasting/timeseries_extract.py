@@ -157,7 +157,11 @@ async def extract_ebitda_from_qdrant_chunks(
 
     logger.info(
         "Extracting EBITDA from Qdrant chunks (fallback)",
-        extra={"entity": entity, "search_pattern": search_pattern, "min_points": min_points},
+        extra={
+            "entity": entity,
+            "search_pattern": search_pattern,
+            "min_points": min_points,
+        },
     )
 
     client = get_qdrant_client()
@@ -251,7 +255,11 @@ async def extract_ebitda_from_qdrant_chunks(
                         ebitda_data[period] = ytd_value
                         logger.debug(
                             f"Found EBITDA: {period} = €{ytd_value}K",
-                            extra={"period": period, "value": ytd_value, "source": source_doc},
+                            extra={
+                                "period": period,
+                                "value": ytd_value,
+                                "source": source_doc,
+                            },
                         )
 
     if not ebitda_data:
@@ -412,7 +420,12 @@ def parse_fiscal_date(date_str: str, fiscal_year_start_month: int = 7) -> dateti
     try:
         parsed = date_parser.parse(date_str)
         return datetime(
-            parsed.year, parsed.month, parsed.day, parsed.hour, parsed.minute, parsed.second
+            parsed.year,
+            parsed.month,
+            parsed.day,
+            parsed.hour,
+            parsed.minute,
+            parsed.second,
         )
     except (ValueError, TypeError) as e:
         raise ValueError(f"Cannot parse date: {date_str}") from e
@@ -835,7 +848,14 @@ async def extract_timeseries_from_sql(
         points = []
         source_documents = set()  # FIX (2025-12-01): Track unique source documents
         is_ytd_data = False  # Track if any row is YTD data (for conversion later)
-        for period_str, fiscal_year, total_value, row_count, source_doc, row_is_ytd in rows:
+        for (
+            period_str,
+            fiscal_year,
+            total_value,
+            row_count,
+            source_doc,
+            row_is_ytd,
+        ) in rows:
             if source_doc:
                 source_documents.add(source_doc)
             if row_is_ytd:
@@ -986,7 +1006,11 @@ async def extract_timeseries_from_sql(
 
                 logger.debug(
                     f"YTD→Monthly: {period_label} YTD €{p.value:.1f}M → Monthly €{monthly_value:.1f}M",
-                    extra={"period": period_label, "ytd": p.value, "monthly": monthly_value},
+                    extra={
+                        "period": period_label,
+                        "ytd": p.value,
+                        "monthly": monthly_value,
+                    },
                 )
 
             points = monthly_points
@@ -1050,7 +1074,11 @@ async def extract_timeseries_from_sql(
         if metric.lower() == "ebitda":
             logger.warning(
                 "SQL extraction failed for EBITDA, trying Qdrant chunk fallback",
-                extra={"metric": metric, "entity": "portugal", "original_error": str(e)},
+                extra={
+                    "metric": metric,
+                    "entity": "portugal",
+                    "original_error": str(e),
+                },
             )
             try:
                 # Story 5.0.4 AC5: Use default entity (portugal/GROUP consolidated)

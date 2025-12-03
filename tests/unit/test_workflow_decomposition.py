@@ -26,7 +26,10 @@ class TestCircularDependencyDetection:
         """Linear task chain should have no circular dependencies."""
         tasks = [
             AgentTask(
-                task_id="task_1", agent_type="retrieval", instruction="Get data", depends_on=[]
+                task_id="task_1",
+                agent_type="retrieval",
+                instruction="Get data",
+                depends_on=[],
             ),
             AgentTask(
                 task_id="task_2",
@@ -46,8 +49,18 @@ class TestCircularDependencyDetection:
     def test_no_circular_dependencies_parallel(self):
         """Parallel tasks with common downstream dependency should be valid."""
         tasks = [
-            AgentTask(task_id="task_1", agent_type="retrieval", instruction="Get A", depends_on=[]),
-            AgentTask(task_id="task_2", agent_type="retrieval", instruction="Get B", depends_on=[]),
+            AgentTask(
+                task_id="task_1",
+                agent_type="retrieval",
+                instruction="Get A",
+                depends_on=[],
+            ),
+            AgentTask(
+                task_id="task_2",
+                agent_type="retrieval",
+                instruction="Get B",
+                depends_on=[],
+            ),
             AgentTask(
                 task_id="task_3",
                 agent_type="analysis",
@@ -61,7 +74,10 @@ class TestCircularDependencyDetection:
         """Simple circular dependency (A→B→A) should be detected."""
         tasks = [
             AgentTask(
-                task_id="task_1", agent_type="retrieval", instruction="Get A", depends_on=["task_2"]
+                task_id="task_1",
+                agent_type="retrieval",
+                instruction="Get A",
+                depends_on=["task_2"],
             ),
             AgentTask(
                 task_id="task_2",
@@ -76,7 +92,10 @@ class TestCircularDependencyDetection:
         """Complex circular dependency (A→B→C→A) should be detected."""
         tasks = [
             AgentTask(
-                task_id="task_1", agent_type="retrieval", instruction="Get A", depends_on=["task_3"]
+                task_id="task_1",
+                agent_type="retrieval",
+                instruction="Get A",
+                depends_on=["task_3"],
             ),
             AgentTask(
                 task_id="task_2",
@@ -97,7 +116,10 @@ class TestCircularDependencyDetection:
         """Self-referencing task (A→A) should be detected as circular."""
         tasks = [
             AgentTask(
-                task_id="task_1", agent_type="retrieval", instruction="Get A", depends_on=["task_1"]
+                task_id="task_1",
+                agent_type="retrieval",
+                instruction="Get A",
+                depends_on=["task_1"],
             ),
         ]
         assert _has_circular_dependencies(tasks)

@@ -97,7 +97,11 @@ async def extract_ebitda_from_rag(query: str, top_k: int = 50) -> dict:
                         if period_match:
                             period_str = " ".join(period_match.groups())
                             ebitda_data[period_str].append(
-                                {"value": value, "doc_id": doc_id, "context": context_window[:150]}
+                                {
+                                    "value": value,
+                                    "doc_id": doc_id,
+                                    "context": context_window[:150],
+                                }
                             )
                             break
 

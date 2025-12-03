@@ -113,7 +113,10 @@ async def trigger_forecast_refresh(
             affected_metrics = await identify_affected_metrics(document_metadata)
             logger.debug(
                 "Identified affected metrics",
-                extra={"metrics": affected_metrics, "doc_filename": document_metadata.filename},
+                extra={
+                    "metrics": affected_metrics,
+                    "doc_filename": document_metadata.filename,
+                },
             )
 
             # Step 2: Extract time-series and refresh each metric

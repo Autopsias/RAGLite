@@ -108,9 +108,9 @@ class TestEndToEndWorkflowOrchestration:
 
         # Step 4: Verify results
         assert len(results) >= 4
-        assert all(
-            r.success for r in results
-        ), f"Some tasks failed: {[r.error_message for r in results if not r.success]}"
+        assert all(r.success for r in results), (
+            f"Some tasks failed: {[r.error_message for r in results if not r.success]}"
+        )
 
         # Verify final synthesis result
         synthesis_result = next(r for r in reversed(results) if r.agent_type == "synthesis")
@@ -177,9 +177,9 @@ class TestParallelTaskExecution:
 
         # Verify parallel execution: total time should be ~200ms, not ~400ms
         # Allow some overhead, but should be significantly less than sequential (400ms)
-        assert (
-            workflow_duration < 0.35
-        ), f"Workflow took {workflow_duration}s, expected <350ms for parallel execution"
+        assert workflow_duration < 0.35, (
+            f"Workflow took {workflow_duration}s, expected <350ms for parallel execution"
+        )
 
         # Verify tasks overlapped in time
         task_1_start, task_1_end = execution_times["task_1"]
@@ -333,7 +333,10 @@ class TestSequentialDependencyExecution:
                     depends_on=[],
                 ),
                 AgentTask(
-                    task_id="task_2", agent_type="analysis", instruction="Parallel 2", depends_on=[]
+                    task_id="task_2",
+                    agent_type="analysis",
+                    instruction="Parallel 2",
+                    depends_on=[],
                 ),
                 AgentTask(
                     task_id="task_3",
@@ -353,9 +356,9 @@ class TestSequentialDependencyExecution:
         assert all(r.success for r in results)
 
         # Verify parallel execution: should take ~100ms, not 200ms
-        assert (
-            workflow_duration < 0.2
-        ), f"Expected ~100ms for parallel + sequential, got {workflow_duration}s"
+        assert workflow_duration < 0.2, (
+            f"Expected ~100ms for parallel + sequential, got {workflow_duration}s"
+        )
 
 
 class TestWorkflowPatternRecognition:

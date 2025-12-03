@@ -18,12 +18,14 @@ async def show_ebitda_data():
     cursor = conn.cursor()
 
     # Show all distinct EBITDA metrics
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT DISTINCT metric
         FROM financial_tables
         WHERE LOWER(metric) LIKE '%ebitda%'
         ORDER BY metric
-    """)
+    """
+    )
 
     metrics = [row[0] for row in cursor.fetchall()]
 

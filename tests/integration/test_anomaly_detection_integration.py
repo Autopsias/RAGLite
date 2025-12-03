@@ -275,7 +275,15 @@ class TestEndToEndWorkflow:
     async def test_e2e_timeseries_to_result(self):
         """Test complete workflow: TimeSeriesData → AnomalyDetectionResult."""
         # Create realistic financial time-series
-        values = [1000000.0, 1050000.0, 1020000.0, 980000.0, 1100000.0, 3500000.0, 1030000.0]
+        values = [
+            1000000.0,
+            1050000.0,
+            1020000.0,
+            980000.0,
+            1100000.0,
+            3500000.0,
+            1030000.0,
+        ]
         labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"]
 
         timeseries = create_timeseries(values, labels, "revenue")

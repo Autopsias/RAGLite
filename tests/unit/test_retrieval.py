@@ -9,7 +9,11 @@ import numpy as np
 import pytest
 
 from raglite.retrieval.attribution import CitationError, generate_citations
-from raglite.retrieval.search import QueryError, generate_query_embedding, search_documents
+from raglite.retrieval.search import (
+    QueryError,
+    generate_query_embedding,
+    search_documents,
+)
 from raglite.shared.models import QueryResult
 
 
@@ -111,13 +115,22 @@ class TestSearchDocuments:
         }
 
         mock_result = Mock()
-        mock_result.points = [mock_point1, mock_point2, mock_point1, mock_point2, mock_point1]
+        mock_result.points = [
+            mock_point1,
+            mock_point2,
+            mock_point1,
+            mock_point2,
+            mock_point1,
+        ]
 
         mock_qdrant = Mock()
         mock_qdrant.query_points.return_value = mock_result
 
         with (
-            patch("raglite.retrieval.search.generate_query_embedding", return_value=mock_embedding),
+            patch(
+                "raglite.retrieval.search.generate_query_embedding",
+                return_value=mock_embedding,
+            ),
             patch("raglite.retrieval.search.get_qdrant_client", return_value=mock_qdrant),
         ):
             results = await search_documents(query, top_k=5)
@@ -163,7 +176,10 @@ class TestSearchDocuments:
         mock_qdrant.query_points.return_value = mock_result
 
         with (
-            patch("raglite.retrieval.search.generate_query_embedding", return_value=mock_embedding),
+            patch(
+                "raglite.retrieval.search.generate_query_embedding",
+                return_value=mock_embedding,
+            ),
             patch("raglite.retrieval.search.get_qdrant_client", return_value=mock_qdrant),
         ):
             # Test top_k=10
@@ -207,7 +223,10 @@ class TestSearchDocuments:
         mock_qdrant.query_points.return_value = mock_result
 
         with (
-            patch("raglite.retrieval.search.generate_query_embedding", return_value=mock_embedding),
+            patch(
+                "raglite.retrieval.search.generate_query_embedding",
+                return_value=mock_embedding,
+            ),
             patch("raglite.retrieval.search.get_qdrant_client", return_value=mock_qdrant),
         ):
             results = await search_documents(query, top_k=5, filters=filters)
@@ -269,7 +288,10 @@ class TestSearchDocuments:
         mock_qdrant.query_points.return_value = mock_result
 
         with (
-            patch("raglite.retrieval.search.generate_query_embedding", return_value=mock_embedding),
+            patch(
+                "raglite.retrieval.search.generate_query_embedding",
+                return_value=mock_embedding,
+            ),
             patch("raglite.retrieval.search.get_qdrant_client", return_value=mock_qdrant),
         ):
             results = await search_documents(query, top_k=5)
@@ -297,7 +319,10 @@ class TestSearchDocuments:
         mock_qdrant.query_points.side_effect = ConnectionError("Qdrant connection failed")
 
         with (
-            patch("raglite.retrieval.search.generate_query_embedding", return_value=mock_embedding),
+            patch(
+                "raglite.retrieval.search.generate_query_embedding",
+                return_value=mock_embedding,
+            ),
             patch("raglite.retrieval.search.get_qdrant_client", return_value=mock_qdrant),
         ):
             with pytest.raises(QueryError, match="Vector search failed"):
@@ -335,7 +360,10 @@ class TestSearchDocuments:
         mock_qdrant.query_points.return_value = mock_result
 
         with (
-            patch("raglite.retrieval.search.generate_query_embedding", return_value=mock_embedding),
+            patch(
+                "raglite.retrieval.search.generate_query_embedding",
+                return_value=mock_embedding,
+            ),
             patch("raglite.retrieval.search.get_qdrant_client", return_value=mock_qdrant),
         ):
             results = await search_documents(query, top_k=5)
@@ -383,7 +411,10 @@ class TestSearchDocuments:
         mock_qdrant.query_points.return_value = mock_result
 
         with (
-            patch("raglite.retrieval.search.generate_query_embedding", return_value=mock_embedding),
+            patch(
+                "raglite.retrieval.search.generate_query_embedding",
+                return_value=mock_embedding,
+            ),
             patch("raglite.retrieval.search.get_qdrant_client", return_value=mock_qdrant),
         ):
             # Should not raise error, but logs warning

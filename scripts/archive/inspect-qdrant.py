@@ -35,7 +35,10 @@ def inspect_qdrant():
         # Sample a few points to see what's in there
         if info.points_count > 0:
             sample = client.scroll(
-                collection_name=collection.name, limit=3, with_payload=True, with_vectors=False
+                collection_name=collection.name,
+                limit=3,
+                with_payload=True,
+                with_vectors=False,
             )
 
             print("   - Sample documents:")
@@ -83,7 +86,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Inspect and clean Qdrant database")
     parser.add_argument(
-        "--clean", action="store_true", help="Clean the database (requires confirmation)"
+        "--clean",
+        action="store_true",
+        help="Clean the database (requires confirmation)",
     )
 
     args = parser.parse_args()

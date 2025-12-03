@@ -68,10 +68,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Split large PDF files")
     parser.add_argument("input_pdf", help="Path to input PDF file")
     parser.add_argument(
-        "--output-dir", default="./docs/sample pdf/split", help="Output directory for split files"
+        "--output-dir",
+        default="./docs/sample pdf/split",
+        help="Output directory for split files",
     )
     parser.add_argument(
-        "--pages-per-file", type=int, default=50, help="Pages per output file (default: 50)"
+        "--pages-per-file",
+        type=int,
+        default=50,
+        help="Pages per output file (default: 50)",
     )
     parser.add_argument(
         "--info-only", action="store_true", help="Only show PDF info without splitting"

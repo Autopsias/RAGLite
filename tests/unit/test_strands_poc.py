@@ -234,7 +234,10 @@ class TestAgentFunctions:
         from strands_poc import synthesis_agent
 
         retrieval_json = json.dumps(
-            {"chunks": [{"text": "Q3 revenue $150M", "page": 3}], "query": "What was Q3 revenue?"}
+            {
+                "chunks": [{"text": "Q3 revenue $150M", "page": 3}],
+                "query": "What was Q3 revenue?",
+            }
         )
 
         result = await synthesis_agent(retrieval_json)
@@ -293,7 +296,8 @@ class TestCreateOrchestrator:
         create_orchestrator()
 
         mock_mistral_class.assert_called_once_with(
-            api_key=settings.mistral_api_key, model_id=settings.metadata_extraction_model
+            api_key=settings.mistral_api_key,
+            model_id=settings.metadata_extraction_model,
         )
 
     @patch("strands_poc.Agent")

@@ -121,7 +121,9 @@ def get_qdrant_client() -> QdrantClient:
         for attempt in range(max_retries):
             try:
                 _qdrant_client = QdrantClient(
-                    host=settings.qdrant_host, port=settings.qdrant_port, timeout=connection_timeout
+                    host=settings.qdrant_host,
+                    port=settings.qdrant_port,
+                    timeout=connection_timeout,
                 )
                 logger.info(
                     "Qdrant client connected successfully",

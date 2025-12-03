@@ -719,7 +719,8 @@ class TestSQLTimeseriesExtraction:
         # DATABASE FIX (2025-12-03): Updated regex to match new MetricValidationError format
         # Note: Will match either "has X data points" (MetricValidationError) or "No data found" (ExtractionError)
         with pytest.raises(
-            ExtractionError, match="(has \\d+ data points|Insufficient data|No data found)"
+            ExtractionError,
+            match="(has \\d+ data points|Insufficient data|No data found)",
         ):
             await extract_timeseries_from_sql(metric="revenue", min_points=1000000)
 

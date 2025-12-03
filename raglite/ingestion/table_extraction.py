@@ -17,7 +17,10 @@ if TYPE_CHECKING:
     from docling_core.types.doc import TableItem
 
 # Phase 2: Import safe wrapper functions from centralized validation module
-from raglite.ingestion.adaptive_table.validation import safe_assign_entity, safe_assign_metric
+from raglite.ingestion.adaptive_table.validation import (
+    safe_assign_entity,
+    safe_assign_metric,
+)
 from raglite.ingestion.adaptive_table_extraction import extract_table_data_adaptive
 from raglite.shared.logging import get_logger
 
@@ -57,7 +60,10 @@ class TableExtractor:
             from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
             from docling.datamodel.accelerator_options import AcceleratorOptions
             from docling.datamodel.base_models import InputFormat
-            from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
+            from docling.datamodel.pipeline_options import (
+                PdfPipelineOptions,
+                TableFormerMode,
+            )
             from docling.document_converter import DocumentConverter, PdfFormatOption
 
             # Configure Docling with pypdfium backend (Story 2.1)
@@ -116,7 +122,10 @@ class TableExtractor:
         return await self.extract_tables_from_result(result, Path(doc_path).stem)
 
     async def extract_tables_from_result(
-        self, result: ConversionResult, document_id: str, unit_cache: dict[str, str] | None = None
+        self,
+        result: ConversionResult,
+        document_id: str,
+        unit_cache: dict[str, str] | None = None,
     ) -> list[dict[str, Any]]:
         """Extract and parse tables from existing Docling ConversionResult with async unit inference.
 
@@ -183,7 +192,11 @@ class TableExtractor:
         return all_rows
 
     def _parse_table_structure(
-        self, table_item: TableItem, result: ConversionResult, table_index: int, document_id: str
+        self,
+        table_item: TableItem,
+        result: ConversionResult,
+        table_index: int,
+        document_id: str,
     ) -> list[dict[str, Any]]:
         """Parse table into structured rows for SQL insertion using table_cells API.
 
@@ -221,7 +234,8 @@ class TableExtractor:
 
         if not table_cells:
             logger.warning(
-                f"Skipping empty table {table_index}", extra={"table_index": table_index}
+                f"Skipping empty table {table_index}",
+                extra={"table_index": table_index},
             )
             return rows
 

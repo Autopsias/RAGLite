@@ -38,7 +38,9 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.main.ingest_document", new_callable=AsyncMock, return_value=mock_metadata
+                "raglite.main.ingest_document",
+                new_callable=AsyncMock,
+                return_value=mock_metadata,
             ),
             patch("raglite.main.settings") as mock_settings,
             patch("raglite.main.trigger_forecast_refresh", new_callable=AsyncMock),
@@ -78,7 +80,9 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.main.ingest_document", new_callable=AsyncMock, return_value=mock_metadata
+                "raglite.main.ingest_document",
+                new_callable=AsyncMock,
+                return_value=mock_metadata,
             ),
             patch("raglite.main.settings") as mock_settings,
             patch(
@@ -116,7 +120,9 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.main.ingest_document", new_callable=AsyncMock, return_value=mock_metadata
+                "raglite.main.ingest_document",
+                new_callable=AsyncMock,
+                return_value=mock_metadata,
             ),
             patch("raglite.main.settings") as mock_settings,
             patch("raglite.main.trigger_forecast_refresh", new_callable=AsyncMock) as mock_refresh,
@@ -152,7 +158,9 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.main.ingest_document", new_callable=AsyncMock, return_value=mock_metadata
+                "raglite.main.ingest_document",
+                new_callable=AsyncMock,
+                return_value=mock_metadata,
             ),
             patch("raglite.main.settings") as mock_settings,
             patch("raglite.main.trigger_forecast_refresh", new_callable=AsyncMock) as mock_refresh,

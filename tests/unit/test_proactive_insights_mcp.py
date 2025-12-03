@@ -71,7 +71,13 @@ class TestInsightsQueryRequestModel:
 
     def test_valid_categories(self):
         """Test valid category values are accepted."""
-        for category in ["RISK", "OPPORTUNITY", "ANOMALY", "TREND", "STRATEGIC_PRIORITY"]:
+        for category in [
+            "RISK",
+            "OPPORTUNITY",
+            "ANOMALY",
+            "TREND",
+            "STRATEGIC_PRIORITY",
+        ]:
             request = InsightsQueryRequest(category=category)
             assert request.category == category
 

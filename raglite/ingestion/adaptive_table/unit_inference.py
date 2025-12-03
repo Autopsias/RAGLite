@@ -80,7 +80,12 @@ def infer_unit_from_rules(metric: str) -> str | None:
         if re.search(pattern, metric):
             logger.debug(
                 "Unit inferred from rules",
-                extra={"metric": metric, "pattern": pattern, "unit": unit, "source": "rule"},
+                extra={
+                    "metric": metric,
+                    "pattern": pattern,
+                    "unit": unit,
+                    "source": "rule",
+                },
             )
             return unit
 
@@ -235,7 +240,10 @@ def _extract_units_entity_column_junk(
                 units[header.start_col_offset_idx] = potential_unit
                 logger.debug(
                     "Extracted unit from header",
-                    extra={"col_idx": header.start_col_offset_idx, "unit": potential_unit},
+                    extra={
+                        "col_idx": header.start_col_offset_idx,
+                        "unit": potential_unit,
+                    },
                 )
 
     # Strategy 2: Check rows 3-5 for dedicated unit row (beyond typical 0-2)
@@ -466,7 +474,8 @@ def _infer_unit_from_context(
     # Check if Mistral API key is configured
     if not settings.mistral_api_key:
         logger.debug(
-            "Mistral API key not configured - skipping unit inference", extra={"metric": metric}
+            "Mistral API key not configured - skipping unit inference",
+            extra={"metric": metric},
         )
         return None
 
@@ -518,7 +527,12 @@ METRIC INFORMATION:
 
     try:
         # Call Mistral API
-        from mistralai.models import AssistantMessage, SystemMessage, ToolMessage, UserMessage
+        from mistralai.models import (
+            AssistantMessage,
+            SystemMessage,
+            ToolMessage,
+            UserMessage,
+        )
 
         from raglite.shared.clients import get_mistral_client
 
@@ -538,7 +552,10 @@ METRIC INFORMATION:
         # Extract inferred unit
         response_content = response.choices[0].message.content
         if not response_content or not isinstance(response_content, str):
-            logger.debug("Empty response from Mistral", extra={"metric": metric, "entity": entity})
+            logger.debug(
+                "Empty response from Mistral",
+                extra={"metric": metric, "entity": entity},
+            )
             return None
 
         inferred_unit: str = response_content.strip()
@@ -546,7 +563,8 @@ METRIC INFORMATION:
         # Validate response
         if inferred_unit == "UNKNOWN" or not inferred_unit:
             logger.debug(
-                "Unit inference returned UNKNOWN", extra={"metric": metric, "entity": entity}
+                "Unit inference returned UNKNOWN",
+                extra={"metric": metric, "entity": entity},
             )
             return None
 
@@ -564,7 +582,8 @@ METRIC INFORMATION:
 
     except Exception as e:
         logger.warning(
-            "Unit inference failed", extra={"metric": metric, "entity": entity, "error": str(e)}
+            "Unit inference failed",
+            extra={"metric": metric, "entity": entity, "error": str(e)},
         )
         return None
 
@@ -606,7 +625,8 @@ async def _infer_unit_from_context_async(
     # Check if Mistral API key is configured
     if not settings.mistral_api_key:
         logger.debug(
-            "Mistral API key not configured - skipping unit inference", extra={"metric": metric}
+            "Mistral API key not configured - skipping unit inference",
+            extra={"metric": metric},
         )
         return None
 
@@ -684,7 +704,8 @@ METRIC INFORMATION:
                 response_content = response.choices[0].message.content
                 if not response_content or not isinstance(response_content, str):
                     logger.debug(
-                        "Empty response from Mistral", extra={"metric": metric, "entity": entity}
+                        "Empty response from Mistral",
+                        extra={"metric": metric, "entity": entity},
                     )
                     return None
 
@@ -712,12 +733,14 @@ METRIC INFORMATION:
 
         except TimeoutError:
             logger.warning(
-                "Unit inference timeout (5s)", extra={"metric": metric, "entity": entity}
+                "Unit inference timeout (5s)",
+                extra={"metric": metric, "entity": entity},
             )
             return None
         except Exception as e:
             logger.warning(
-                "Unit inference failed", extra={"metric": metric, "entity": entity, "error": str(e)}
+                "Unit inference failed",
+                extra={"metric": metric, "entity": entity, "error": str(e)},
             )
             return None
 

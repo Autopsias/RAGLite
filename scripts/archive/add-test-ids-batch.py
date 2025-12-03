@@ -153,7 +153,12 @@ def get_next_sequence_number(test_ids: list[str]) -> int:
 
 
 def add_test_id_to_function(
-    content: str, function_name: str, line_number: int, indentation: str, test_id: str, story: str
+    content: str,
+    function_name: str,
+    line_number: int,
+    indentation: str,
+    test_id: str,
+    story: str,
 ) -> str:
     """Add test_id marker and update docstring for a test function."""
     lines = content.split("\n")
@@ -325,7 +330,9 @@ def main():
         description="Batch add test IDs to test files (Story 3-0-6 AC3)"
     )
     parser.add_argument(
-        "files", nargs="*", help="Specific test files to process (default: all mapped files)"
+        "files",
+        nargs="*",
+        help="Specific test files to process (default: all mapped files)",
     )
     parser.add_argument(
         "--dry-run", action="store_true", help="Preview changes without modifying files"

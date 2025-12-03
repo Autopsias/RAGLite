@@ -824,7 +824,11 @@ ACTIONS:
         with patch("raglite.shared.clients.get_mistral_client") as mock_client:
             mock_client.return_value.chat.complete.return_value = mock_mistral_for_generation
             result = await generate_recommendations(
-                [sample_risk_insight, sample_opportunity_insight, sample_anomaly_insight]
+                [
+                    sample_risk_insight,
+                    sample_opportunity_insight,
+                    sample_anomaly_insight,
+                ]
             )
             assert result.total_generated == 3
             assert result.insights_analyzed == 3

@@ -184,7 +184,9 @@ class TestIngestFinancialDocumentSync:
         )
 
         with patch(
-            "raglite.main.ingest_document", new_callable=AsyncMock, return_value=mock_metadata
+            "raglite.main.ingest_document",
+            new_callable=AsyncMock,
+            return_value=mock_metadata,
         ):
             # Use .fn to access the underlying async function (FastMCP wraps it)
             result = await ingest_financial_document.fn(
@@ -235,7 +237,9 @@ class TestIngestFinancialDocumentSync:
         )
 
         with patch(
-            "raglite.main.ingest_document", new_callable=AsyncMock, return_value=mock_metadata
+            "raglite.main.ingest_document",
+            new_callable=AsyncMock,
+            return_value=mock_metadata,
         ):
             result = await ingest_financial_document.fn(doc_path=str(test_file))
             assert result.filename == "test.pdf"
@@ -276,7 +280,9 @@ class TestIngestFinancialDocumentSync:
         )
 
         with patch(
-            "raglite.main.ingest_document", new_callable=AsyncMock, return_value=mock_metadata
+            "raglite.main.ingest_document",
+            new_callable=AsyncMock,
+            return_value=mock_metadata,
         ):
             result = await ingest_financial_document.fn(
                 file_content=valid_pdf_content, filename="Q3_Report.pdf"

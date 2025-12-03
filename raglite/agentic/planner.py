@@ -530,7 +530,10 @@ async def decompose_query(query: str, complexity: QueryComplexity) -> WorkflowPl
 
     logger.info(
         "Query decomposition complete",
-        extra={"task_count": len(tasks), "pattern": plan.metadata.get("pattern", "unknown")},
+        extra={
+            "task_count": len(tasks),
+            "pattern": plan.metadata.get("pattern", "unknown"),
+        },
     )
 
     return plan

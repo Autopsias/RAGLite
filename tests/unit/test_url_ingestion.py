@@ -73,7 +73,10 @@ class TestTempFileFromURL:
         mock_response.__exit__ = MagicMock(return_value=False)
         mock_urlopen.return_value = mock_response
 
-        with temp_file_from_url("https://example.com/report.pdf") as (tmp_path, filename):
+        with temp_file_from_url("https://example.com/report.pdf") as (
+            tmp_path,
+            filename,
+        ):
             assert tmp_path is not None
             assert tmp_path.endswith(".pdf")
             assert filename == "report.pdf"
@@ -97,7 +100,10 @@ class TestTempFileFromURL:
         mock_response.__exit__ = MagicMock(return_value=False)
         mock_urlopen.return_value = mock_response
 
-        with temp_file_from_url("https://example.com/download?id=123") as (tmp_path, filename):
+        with temp_file_from_url("https://example.com/download?id=123") as (
+            tmp_path,
+            filename,
+        ):
             assert filename == "Q3_Report_2024.pdf"
 
     @patch("urllib.request.urlopen")

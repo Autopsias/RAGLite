@@ -92,7 +92,8 @@ class AccuracyMetrics:
 @pytest.mark.priority("P0")
 @pytest.mark.slow
 @pytest.mark.skipif(
-    not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
+    not pytest.run_slow,
+    reason="Requires full 160-page PDF. Run with: pytest --run-slow",
 )
 @pytest.mark.timeout(600)  # 10 minutes - 50 queries × ~10 seconds each + overhead
 @pytest.mark.asyncio
@@ -306,7 +307,8 @@ async def test_ac1_full_ground_truth_execution() -> AccuracyMetrics:
 @pytest.mark.priority("P0")
 @pytest.mark.slow
 @pytest.mark.skipif(
-    not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
+    not pytest.run_slow,
+    reason="Requires full 160-page PDF. Run with: pytest --run-slow",
 )
 @pytest.mark.timeout(600)  # 10 minutes - delegates to test_ac1 which runs 50 queries
 @pytest.mark.asyncio
@@ -402,7 +404,8 @@ async def test_ac2_decision_gate_validation():
 @pytest.mark.priority("P0")
 @pytest.mark.slow
 @pytest.mark.skipif(
-    not pytest.run_slow, reason="Requires full 160-page PDF. Run with: pytest --run-slow"
+    not pytest.run_slow,
+    reason="Requires full 160-page PDF. Run with: pytest --run-slow",
 )
 @pytest.mark.timeout(600)  # 10 minutes - delegates to test_ac1 which runs 50 queries
 @pytest.mark.asyncio

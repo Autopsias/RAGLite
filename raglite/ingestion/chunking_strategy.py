@@ -223,7 +223,11 @@ def split_large_table_by_rows(
 
     logger.info(
         f"Splitting large table ({token_count} tokens) by rows",
-        extra={"token_count": token_count, "threshold": max_tokens, "table_index": table_index},
+        extra={
+            "token_count": token_count,
+            "threshold": max_tokens,
+            "table_index": table_index,
+        },
     )
 
     # Split table into lines
@@ -454,7 +458,11 @@ async def chunk_by_docling_items(
 
             # Record page mapping: [start_token, end_token) → page_number
             page_mapping.append(
-                (current_token_offset, current_token_offset + item_token_count, page_num)
+                (
+                    current_token_offset,
+                    current_token_offset + item_token_count,
+                    page_num,
+                )
             )
 
             full_text_parts.append(text_content)

@@ -125,7 +125,9 @@ def test_adjust_for_environment_test_mode() -> None:
     ):
         # Remove CI env vars to ensure test mode (not CI mode)
         with patch.dict(
-            os.environ, {"GITHUB_ACTIONS": "", "CI": "", "CONTINUOUS_INTEGRATION": ""}, clear=False
+            os.environ,
+            {"GITHUB_ACTIONS": "", "CI": "", "CONTINUOUS_INTEGRATION": ""},
+            clear=False,
         ):
             settings = Settings()
 
@@ -191,7 +193,12 @@ def test_adjust_for_environment_ci_generic() -> None:
     """
     with patch.dict(
         os.environ,
-        {"APP_ENV": "test", "CI": "true", "GITHUB_ACTIONS": "", "POSTGRES_DB": "raglite_ci"},
+        {
+            "APP_ENV": "test",
+            "CI": "true",
+            "GITHUB_ACTIONS": "",
+            "POSTGRES_DB": "raglite_ci",
+        },
         clear=False,
     ):
         settings = Settings()

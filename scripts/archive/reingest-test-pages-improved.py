@@ -152,7 +152,13 @@ async def main():
     """
     )
 
-    for entity_status, metric_status, period_status, value_status, count in cursor.fetchall():
+    for (
+        entity_status,
+        metric_status,
+        period_status,
+        value_status,
+        count,
+    ) in cursor.fetchall():
         pct = count / total_rows * 100
         pattern = f"{entity_status:4s}|{metric_status:4s}|{period_status:4s}|{value_status:4s}"
         logger.info(f"  {pattern}: {count:5d} ({pct:5.1f}%)")
