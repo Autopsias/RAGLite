@@ -23,6 +23,31 @@ class DocumentMetadata(BaseModel):
     source_path: str = Field(default="", description="Original file path")
     chunk_count: int = Field(default=0, description="Number of chunks created from document")
 
+    @property
+    def document_id(self) -> str:
+        """Document identifier (alias for filename for backward compatibility)."""
+        return self.filename
+
+
+class BatchIngestionResult(BaseModel):
+    """Results from parallel batch document ingestion.
+
+    Story 5.0.6 AC1: Tracks success/failure counts and per-document results
+    for parallel ingestion operations.
+    """
+
+    total_documents: int = Field(..., description="Total documents processed")
+    successful: int = Field(..., description="Number of successfully ingested documents")
+    failed: int = Field(..., description="Number of failed ingestions")
+    duration_seconds: float = Field(..., description="Total batch processing time in seconds")
+    results: list[DocumentMetadata] = Field(
+        default_factory=list, description="Metadata for successfully ingested documents"
+    )
+    errors: list[dict[str, str]] = Field(
+        default_factory=list,
+        description="Error details for failed documents (filename, error message)",
+    )
+
 
 class ExtractedMetadata(BaseModel):
     """LLM-extracted business context metadata from financial documents.
@@ -186,6 +211,8 @@ class QueryResult(BaseModel):
 
     Represents a document chunk retrieved from Qdrant similarity search
     with relevance score and full metadata for source attribution.
+
+    Story 5.0.6 AC5: Added optional metadata field for query-time enrichment.
     """
 
     score: float = Field(
@@ -198,6 +225,11 @@ class QueryResult(BaseModel):
     )
     chunk_index: int = Field(..., description="Sequential chunk index (0-based)")
     word_count: int = Field(..., description="Word count of chunk")
+    metadata: ExtractedMetadata | None = Field(
+        default=None,
+        description="LLM-extracted rich metadata (Story 5.0.6 AC5). "
+        "Populated by query-time enrichment when enabled. None if not enriched or extraction failed.",
+    )
 
 
 class QueryRequest(BaseModel):

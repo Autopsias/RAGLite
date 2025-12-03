@@ -1,0 +1,266 @@
+<story-context id="5-0-4-dynamic-metric-forecasting-support" v="1.0">
+  <metadata>
+    <epicId>5</epicId>
+    <storyId>0.4</storyId>
+    <title>Dynamic Metric Forecasting Support</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-30</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/5-0-4-dynamic-metric-forecasting-support.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>financial analyst</asA>
+    <iWant>to forecast any financial metric found in my documents</iWant>
+    <soThat>I can get predictive insights for any metric, not just hardcoded ones</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <name>Implement Metric Discovery</name>
+        <subtasks>
+          <subtask id="1.1">Create raglite/forecasting/metrics.py with list_available_metrics(), MetricInfo model, SQL query for unique metrics</subtask>
+          <subtask id="1.2">Add caching for metric list (in-memory, 5-minute TTL)</subtask>
+          <subtask id="1.3">Unit tests in tests/unit/test_metrics_discovery.py</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2,5">
+        <name>Refactor Time-Series Extraction</name>
+        <subtasks>
+          <subtask id="2.1">Update extract_timeseries_from_sql() - remove entity parameter, deprecate EBITDA_ENTITY_PATTERNS</subtask>
+          <subtask id="2.2">Update extract_ebitda_from_qdrant_chunks() - make entity optional with deprecation warning</subtask>
+          <subtask id="2.3">Unit tests for dynamic metric extraction</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <name>Implement Insufficient Data Validation</name>
+        <subtasks>
+          <subtask id="3.1">Create MetricValidationError exception class with structured fields</subtask>
+          <subtask id="3.2">Update extract_timeseries_from_sql() to raise MetricValidationError for insufficient data</subtask>
+          <subtask id="3.3">Unit tests for validation errors</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <name>Update MCP Forecast Tool</name>
+        <subtasks>
+          <subtask id="4.1">Update get_financial_forecast() to call list_available_metrics() on validation failure</subtask>
+          <subtask id="4.2">Add list_metrics parameter for metric discovery</subtask>
+          <subtask id="4.3">Update ForecastQueryResponse model with optional available_metrics field</subtask>
+          <subtask id="4.4">Integration tests for MCP tool with dynamic metrics</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="6">
+        <name>Add EBITDA to Validation Suite</name>
+        <subtasks>
+          <subtask id="5.1">Update tests/validation/test_forecast_accuracy.py with EBITDA scenarios</subtask>
+          <subtask id="5.2">Add turnover and minimum-threshold edge case validation</subtask>
+          <subtask id="5.3">Run validation suite and document results</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="all">
+        <name>Documentation and Cleanup</name>
+        <subtasks>
+          <subtask id="6.1">Add Google-style docstrings to all new functions</subtask>
+          <subtask id="6.2">Update CLAUDE.md if forecasting patterns change</subtask>
+          <subtask id="6.3">Update story file with Dev Agent Record</subtask>
+          <subtask id="6.4">Verify linting passes (uv run ruff check .)</subtask>
+          <subtask id="6.5">Run full test suite and ensure no regressions</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">Metric discovery: System can list all available metrics in financial_tables. Validation: Integration test for list_available_metrics()</ac>
+    <ac id="2">Dynamic metric support: Forecasting works for any metric with 8+ data points. Validation: Unit test for arbitrary metric names</ac>
+    <ac id="3">Insufficient data validation: Clear error when metric has &lt;8 data points. Validation: Unit test for "Insufficient data" response</ac>
+    <ac id="4">MCP tool updated: get_financial_forecast accepts any metric and validates availability. Validation: Integration test for available metrics on failure</ac>
+    <ac id="5">Entity parameter removed: EBITDA forecasting works without entity disambiguation. Validation: Integration test for consolidated GROUP values</ac>
+    <ac id="6">Validation test coverage: EBITDA and 2+ additional metrics in forecast accuracy tests. Validation: test_forecast_accuracy.py includes multiple metrics</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/epic-4-retrospective.md</path>
+        <title>Epic 4 Retrospective</title>
+        <section>Decisions Made - Story 5.0.4</section>
+        <snippet>Story 5.0.4: Enable forecasting for any financial metric found in documents, not just hardcoded revenue/cash_flow/expenses. Refactor time-series storage schema for dynamic metrics.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/4-1-time-series-data-extraction.md</path>
+        <title>Story 4.1: Time-Series Data Extraction</title>
+        <section>Dev Notes</section>
+        <snippet>Implementation of extract_timeseries_from_sql() and extract_timeseries() functions for extracting temporal financial metrics from documents.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/4-10-forecasting-insights-test-suite.md</path>
+        <title>Story 4.10: Forecasting &amp; Insights Test Suite</title>
+        <section>Dev Notes - Forecast Accuracy Framework</section>
+        <snippet>ForecastAccuracyValidator with MAPE calculation, backtesting with 80/20 split. 14 tests validate ±15% threshold per NFR10. Extend for EBITDA scenarios.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/4-non-functional-requirements.md</path>
+        <title>Non-Functional Requirements</title>
+        <section>NFR10</section>
+        <snippet>Forecast accuracy ±15% validated on historical data. 8+ data points minimum for reliable forecasting.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <file>
+        <path>raglite/forecasting/timeseries_extract.py</path>
+        <kind>module</kind>
+        <symbol>extract_timeseries_from_sql</symbol>
+        <lines>499-801</lines>
+        <reason>Primary function to refactor: add dynamic metric support, remove entity parameter, improve validation</reason>
+      </file>
+      <file>
+        <path>raglite/forecasting/timeseries_extract.py</path>
+        <kind>module</kind>
+        <symbol>extract_ebitda_from_qdrant_chunks</symbol>
+        <lines>57-279</lines>
+        <reason>EBITDA fallback extraction - deprecate entity patterns, make entity optional</reason>
+      </file>
+      <file>
+        <path>raglite/forecasting/timeseries_extract.py</path>
+        <kind>constant</kind>
+        <symbol>METRIC_SYNONYMS</symbol>
+        <lines>546-551</lines>
+        <reason>Metric name mapping (revenue→turnover, ebitda→EBITDA IFRS) - keep as optional fallback</reason>
+      </file>
+      <file>
+        <path>raglite/forecasting/timeseries_extract.py</path>
+        <kind>constant</kind>
+        <symbol>EBITDA_ENTITY_PATTERNS</symbol>
+        <lines>29-40</lines>
+        <reason>Entity patterns to deprecate after this story</reason>
+      </file>
+      <file>
+        <path>raglite/forecasting/hybrid.py</path>
+        <kind>module</kind>
+        <symbol>generate_forecast</symbol>
+        <lines>59-234</lines>
+        <reason>Prophet forecasting engine - no changes needed but referenced for MIN_DATA_POINTS constant</reason>
+      </file>
+      <file>
+        <path>raglite/forecasting/hybrid.py</path>
+        <kind>constant</kind>
+        <symbol>MIN_DATA_POINTS</symbol>
+        <lines>50</lines>
+        <reason>Minimum 8 data points constant - reuse in metrics.py</reason>
+      </file>
+      <file>
+        <path>raglite/main.py</path>
+        <kind>mcp-tool</kind>
+        <symbol>get_financial_forecast</symbol>
+        <lines>1550-1700</lines>
+        <reason>MCP tool to update: add list_metrics parameter, improve error handling</reason>
+      </file>
+      <file>
+        <path>raglite/shared/models.py</path>
+        <kind>model</kind>
+        <symbol>TimeSeriesData</symbol>
+        <lines>323-344</lines>
+        <reason>Time series data model - reference for metric_name field</reason>
+      </file>
+      <file>
+        <path>raglite/shared/models.py</path>
+        <kind>model</kind>
+        <symbol>ForecastResult</symbol>
+        <lines>368-399</lines>
+        <reason>Forecast result model - reference for structure</reason>
+      </file>
+      <file>
+        <path>raglite/shared/clients.py</path>
+        <kind>module</kind>
+        <symbol>get_postgresql_connection</symbol>
+        <reason>Database connection for metric discovery SQL query</reason>
+      </file>
+      <file>
+        <path>tests/validation/test_forecast_accuracy.py</path>
+        <kind>test</kind>
+        <symbol>ForecastAccuracyValidator</symbol>
+        <reason>Validation framework to extend with EBITDA and additional metrics</reason>
+      </file>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="pydantic" version=">=2.0,&lt;3.0">Data models for MetricInfo</package>
+        <package name="psycopg2-binary" version=">=2.9,&lt;3.0">PostgreSQL queries for metric discovery</package>
+        <package name="prophet" version=">=1.1.5,&lt;2.0.0">Forecasting engine (no changes)</package>
+        <package name="pandas" version=">=2.0,&lt;3.0">Data manipulation (no changes)</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="CLAUDE.md">Anti-over-engineering: Keep solutions simple, ~600-800 line total codebase target. No custom wrappers, use SDKs directly.</constraint>
+    <constraint source="architecture">Use existing MIN_DATA_POINTS=8 constant from hybrid.py. Don't introduce new thresholds.</constraint>
+    <constraint source="architecture">All database operations must use SafetyGuard for production protection. Tests use port 6335/5433.</constraint>
+    <constraint source="definition-of-done">Unit tests for all new functions. Integration tests for MCP tool. Validation tests for metrics.</constraint>
+    <constraint source="story-4.10">Follow ForecastAccuracyValidator pattern for new validation scenarios. Use MAPE/SMAPE for accuracy.</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>list_available_metrics</name>
+      <kind>async function</kind>
+      <signature>async def list_available_metrics(min_points: int = 8) -> list[MetricInfo]</signature>
+      <path>raglite/forecasting/metrics.py</path>
+    </interface>
+    <interface>
+      <name>MetricInfo</name>
+      <kind>Pydantic model</kind>
+      <signature>class MetricInfo(BaseModel): name: str, data_point_count: int, min_date: Optional[datetime], max_date: Optional[datetime], can_forecast: bool</signature>
+      <path>raglite/forecasting/metrics.py</path>
+    </interface>
+    <interface>
+      <name>MetricValidationError</name>
+      <kind>exception</kind>
+      <signature>class MetricValidationError(Exception): metric_name, data_points_found, minimum_required, available_metrics</signature>
+      <path>raglite/forecasting/timeseries_extract.py</path>
+    </interface>
+    <interface>
+      <name>ForecastQueryRequest.list_metrics</name>
+      <kind>Pydantic field</kind>
+      <signature>list_metrics: bool = Field(False, description="If True, return available metrics instead of forecast")</signature>
+      <path>raglite/main.py</path>
+    </interface>
+    <interface>
+      <name>ForecastQueryResponse.available_metrics</name>
+      <kind>Pydantic field</kind>
+      <signature>available_metrics: Optional[list[MetricInfo]] = Field(None, description="Available metrics on error or list_metrics=True")</signature>
+      <path>raglite/main.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Follow project testing patterns: pytest with pytest-asyncio for async tests, pytest-mock for mocking.
+      Unit tests in tests/unit/, integration tests in tests/integration/, validation tests in tests/validation/.
+      Use test database ports 6335 (Qdrant) and 5433 (PostgreSQL).
+      Target 80%+ coverage on new code. Use @pytest.mark.asyncio for async tests.
+      Validation tests use @pytest.mark.validation marker for CI control.
+    </standards>
+    <locations>
+      <location>tests/unit/test_metrics_discovery.py</location>
+      <location>tests/unit/test_timeseries_extract.py</location>
+      <location>tests/integration/test_forecast_query_integration.py</location>
+      <location>tests/validation/test_forecast_accuracy.py</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test list_available_metrics() returns sorted list by data_point_count desc</idea>
+      <idea ac="1">Test metric caching - second call within TTL returns cached result</idea>
+      <idea ac="1">Test empty database returns empty list gracefully</idea>
+      <idea ac="2">Test arbitrary metric name "capex" accepted by extract_timeseries_from_sql()</idea>
+      <idea ac="2">Test case insensitivity: "REVENUE" and "revenue" return same data</idea>
+      <idea ac="3">Test MetricValidationError raised when metric has 3 points (need 8)</idea>
+      <idea ac="3">Test unknown metric raises ExtractionError with available metrics suggestion</idea>
+      <idea ac="4">Test MCP tool list_metrics=True returns MetricInfo list</idea>
+      <idea ac="4">Test MCP tool unknown metric error includes available_metrics field</idea>
+      <idea ac="5">Test ebitda metric returns consolidated GROUP values without entity parameter</idea>
+      <idea ac="6">Test EBITDA included in forecast validation scenarios</idea>
+      <idea ac="6">Test turnover synonym validation passes</idea>
+    </ideas>
+  </tests>
+</story-context>

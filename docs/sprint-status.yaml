@@ -134,8 +134,9 @@ development_status:
 
   # Epic 5 Prep Stories (Bug Fixes from Epic 4 UAT + Retrospective Actions)
   5-0-1-fix-timeseries-period-extraction: done  # BUG-E4-001: RESOLVED - Migration complete, SQL extraction operational
-  5-0-4-dynamic-metric-forecasting-support: backlog  # RETRO-L8: Enable forecasting for any metric, not just hardcoded 3
+  5-0-4-dynamic-metric-forecasting-support: done  # ✅ APPROVED (2025-11-30) - All ACs verified, 109 tests passing, Senior Dev Review passed
   5-0-5-mcp-token-optimization-guidelines-compliance: backlog  # RETRO-L9: Anthropic MCP guidelines alignment, token efficiency
+  5-0-6-parallel-ingestion-optimization: review  # P0: Critical performance fix - 4-5 hours → 45 min for 10 PDFs - ALL ACs COMPLETE (2025-12-01)
 
   # Epic 5 Feature Stories
   5-1-cloud-infrastructure-architecture: backlog

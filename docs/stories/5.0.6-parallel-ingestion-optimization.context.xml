@@ -1,0 +1,300 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>5</epicId>
+    <storyId>0.6</storyId>
+    <title>Parallel Ingestion Pipeline Optimization</title>
+    <status>DRAFTED</status>
+    <generatedAt>2025-11-30</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/5.0.6-parallel-ingestion-optimization.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>RAGLite user</asA>
+    <iWant>parallel document ingestion with optimized API usage</iWant>
+    <soThat>I can ingest 10 PDFs in 30-45 minutes instead of 4-5 hours (6-10x speedup)</soThat>
+    <tasks>
+### Task 1: Implement Parallel Document Processing (AC: 1, 6)
+- [ ] 1.1 Create `ingest_documents_parallel()` in `raglite/ingestion/document_ingestion.py` (semaphore-based concurrency, default: 2, global unit cache, error handling per document)
+- [ ] 1.2 Add progress logging with document count and timing
+- [ ] 1.3 Return `BatchIngestionResult` with success/failure counts and timing stats
+- [ ] 1.4 Unit tests for parallel ingestion logic (mock Docling)
+
+### Task 2: Implement Rule-Based Unit Pre-Filter (AC: 2)
+- [ ] 2.1 Create `UNIT_RULES` regex pattern list in `raglite/ingestion/adaptive_table/unit_inference.py`
+- [ ] 2.2 Implement `infer_unit_from_rules(metric: str) -> str | None`
+- [ ] 2.3 Update existing unit inference to try rules FIRST before API
+- [ ] 2.4 Track and log rule vs LLM inference counts
+- [ ] 2.5 Unit tests for all rule patterns (10+ test cases)
+
+### Task 3: Implement Cross-Document Unit Cache (AC: 3)
+- [ ] 3.1 Create `infer_unit_hybrid()` function with rules -> cache -> LLM fallback
+- [ ] 3.2 Add `unit_source` field to track inference method
+- [ ] 3.3 Pass cache as parameter to enable cross-document sharing
+- [ ] 3.4 Unit tests for cache behavior
+
+### Task 4: Implement Skip Metadata at Ingestion (AC: 4)
+- [ ] 4.1 Add `skip_metadata: bool = True` parameter to `ingest_pdf()`
+- [ ] 4.2 Mark chunks with `metadata_extracted = False` when skipped
+- [ ] 4.3 Add `SKIP_INGESTION_METADATA` config setting (default: True)
+- [ ] 4.4 Unit tests for skip behavior
+
+### Task 5: Implement Query-Time Metadata Enrichment (AC: 5)
+- [ ] 5.1 Create `enrich_results_with_metadata()` in `raglite/retrieval/search.py`
+- [ ] 5.2 Add parallel API calls with asyncio for unenriched chunks
+- [ ] 5.3 Add timeout with graceful degradation (return without metadata)
+- [ ] 5.4 Integrate into `hybrid_search()` after retrieval
+- [ ] 5.5 Add `QUERY_TIME_METADATA_ENABLED` and `QUERY_TIME_METADATA_TIMEOUT` config
+- [ ] 5.6 Unit tests for enrichment logic and timeout behavior
+
+### Task 6: Add Configuration Settings (AC: 1, 4, 5)
+- [ ] 6.1 Add new settings to `raglite/shared/config.py`
+- [ ] 6.2 Document settings in config file docstrings
+
+### Task 7: Integration and Performance Testing (AC: 7)
+- [ ] 7.1 Create `tests/integration/test_parallel_ingestion.py`
+- [ ] 7.2 Create performance test script `scripts/benchmark-parallel-ingestion.py`
+- [ ] 7.3 Create `tests/unit/test_parallel_ingestion.py`
+- [ ] 7.4 Verify query latency with enrichment <3 seconds
+
+### Task 8: Documentation and Cleanup (AC: All)
+- [ ] 8.1 Add Google-style docstrings to all new functions
+- [ ] 8.2 Update CLAUDE.md if ingestion patterns change
+- [ ] 8.3 Update this story file with Dev Agent Record
+- [ ] 8.4 Verify all linting passes (ruff check)
+- [ ] 8.5 Run full test suite and ensure no regressions
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+### AC1: Parallel Document Processing (2x speedup)
+- [ ] Implement `ingest_documents_parallel()` function that processes N documents concurrently
+- [ ] Default concurrency: 2 documents (configurable via `INGESTION_PARALLEL_DOCS` env var)
+- [ ] Memory-safe: Docling uses 2-4GB RAM per 160-page PDF, so 2 parallel = 4-8GB
+- [ ] Graceful error handling: One document failure doesn't abort entire batch
+- [ ] Cross-document unit cache shared between parallel workers
+
+### AC2: Rule-Based Unit Pre-Filter (80% API reduction for units)
+- [ ] Implement `infer_unit_from_rules()` that handles common patterns WITHOUT API calls
+- [ ] Patterns to cover (80%+ of financial documents): Revenue/EBITDA -> Meur, Margin -> %, /ton -> EUR/ton, Volume -> kton, Days -> days, Headcount -> FTE
+- [ ] LLM fallback ONLY for table chunks (per user preference)
+- [ ] Track stats: `rule_inferred_count` vs `llm_inferred_count`
+
+### AC3: Cross-Document Unit Cache (30% additional API reduction)
+- [ ] Implement global `UNIT_CACHE: dict[str, str]` keyed by metric name
+- [ ] Cache persists across all documents in a batch
+- [ ] If metric "EBITDA IFRS" was inferred as "Meur" for doc 1, reuse for docs 2-10
+- [ ] Add `unit_source` field: "rule", "cached", "llm"
+
+### AC4: Skip Chunk Metadata Extraction at Ingestion (90% API reduction)
+- [ ] Add `skip_metadata: bool = True` parameter to `ingest_pdf()`
+- [ ] When `skip_metadata=True`, mark chunks with `metadata_extracted = False`
+- [ ] Eliminates 400 API calls per document
+- [ ] Add configuration: `SKIP_INGESTION_METADATA=true` (default)
+
+### AC5: Query-Time Metadata Enrichment (Strategy C)
+- [ ] Implement `enrich_results_with_metadata()` in `raglite/retrieval/search.py`
+- [ ] Called AFTER retrieval, only for top-K results (5-10 chunks)
+- [ ] Parallel API calls for all unenriched results
+- [ ] Timeout: 2.5 seconds (configurable via `QUERY_TIME_METADATA_TIMEOUT`)
+- [ ] Graceful degradation: Return results without metadata if timeout exceeded
+- [ ] Add feature flag: `QUERY_TIME_METADATA_ENABLED=true` (default)
+
+### AC6: Progress Reporting
+- [ ] Log document-level progress: "Ingesting document 3/10: report_Q3.pdf"
+- [ ] Log batch-level timing: "Batch complete: 10 docs in 42 minutes (4.2 min avg)"
+- [ ] Log API call stats: "Unit inference: 45 rule-based, 12 LLM calls"
+- [ ] Return summary statistics from `ingest_documents_parallel()`
+
+### AC7: Validation
+- [ ] All existing unit tests pass
+- [ ] Unit tests for rule-based unit inference (10+ test cases)
+- [ ] Integration test: Ingest 3 test PDFs in parallel, verify all chunks stored correctly
+- [ ] Performance test: 10-PDF batch completes in <45 minutes (measured on M1 Mac)
+- [ ] Query latency test: hybrid_search with enrichment completes in <3 seconds
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/prd/epic-5-production-readiness-real-time-operations.md</path>
+        <title>Epic 5: Production Readiness &amp; Real-Time Operations</title>
+        <section>Story 5.8: Performance Optimization</section>
+        <snippet>Query response time &lt;5 sec (p50), &lt;15 sec (p95) validated under load (NFR13). Complex workflows complete in &lt;30 sec (NFR5). LLM API call optimization (batching, caching where appropriate).</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/6-complete-reference-implementation.md</path>
+        <title>Complete Reference Implementation</title>
+        <section>6.1 MCP Server Patterns</section>
+        <snippet>Demonstrates FastMCP server setup, Pydantic models, structured logging with context (extra={}), error handling, type hints, Google-style docstrings, async patterns for I/O operations.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/5-technology-stack-definitive.md</path>
+        <title>Technology Stack (Definitive)</title>
+        <section>Core Technologies</section>
+        <snippet>Docling 2.0.0 for PDF extraction (97.9% table accuracy), pypdfium backend (1.7-2.5x speedup), sentence-transformers ≥5.1 for embeddings, Qdrant ≥1.15.5 for vector storage, MCP Python SDK 1.20.0, Python ≥3.11,≤3.13.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/8-phased-implementation-strategy-v11-simplified.md</path>
+        <title>Phased Implementation Strategy (v1.1 Simplified)</title>
+        <section>Phase 1: Monolithic MVP</section>
+        <snippet>Week 1-5 ingestion pipeline patterns. Docling extraction, simple chunking (500 words, 50 overlap), Fin-E5 embedding generation, Qdrant storage. Docker Compose for services, pytest for testing.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>raglite/ingestion/document_ingestion.py</path>
+        <kind>module</kind>
+        <symbol>ingest_document</symbol>
+        <lines>1-600</lines>
+        <reason>Main ingestion entry point. Current serial implementation to be enhanced with parallel batch processing (AC1). Contains temp_file_from_base64 pattern for file handling.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/ingestion/adaptive_table/unit_inference.py</path>
+        <kind>module</kind>
+        <symbol>MISTRAL_SEMAPHORE, _extract_units_normal</symbol>
+        <lines>1-100</lines>
+        <reason>Current LLM-based unit inference with semaphore rate limiting. Target for rule-based pre-filter (AC2) and cross-document cache (AC3).</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/shared/config.py</path>
+        <kind>module</kind>
+        <symbol>Settings</symbol>
+        <lines>1-100</lines>
+        <reason>Pydantic Settings pattern for configuration. Need to add: ingestion_parallel_docs, skip_ingestion_metadata, query_time_metadata_enabled, query_time_metadata_timeout, unit_inference_llm_tables_only (AC6).</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/retrieval/search.py</path>
+        <kind>module</kind>
+        <symbol>search_documents, generate_query_embedding</symbol>
+        <lines>1-100</lines>
+        <reason>Vector search implementation. Target for query-time metadata enrichment (AC5). Need to add enrich_results_with_metadata() function.</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/ingestion/chunking_strategy.py</path>
+        <kind>module</kind>
+        <symbol>chunk_by_docling_items</symbol>
+        <lines>N/A</lines>
+        <reason>Current chunking implementation with metadata extraction. Need to add skip_metadata parameter (AC4).</reason>
+      </artifact>
+      <artifact>
+        <path>raglite/ingestion/embedding_generation.py</path>
+        <kind>module</kind>
+        <symbol>extract_chunk_metadata</symbol>
+        <lines>N/A</lines>
+        <reason>Current LLM-based metadata extraction at ingestion time. Target for conditional skipping (AC4) and query-time enrichment (AC5).</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="docling" version="2.0.0">PDF/table extraction</package>
+        <package name="pypdfium" version="N/A">Docling backend for performance</package>
+        <package name="openpyxl" version="≥3.1,&lt;4.0">Excel processing</package>
+        <package name="pandas" version="≥2.0,&lt;3.0">Data manipulation</package>
+        <package name="sentence-transformers" version="≥5.1">Embedding generation</package>
+        <package name="qdrant-client" version="≥1.15.5">Vector storage</package>
+        <package name="anthropic" version="0.72.0">Claude API</package>
+        <package name="mistralai" version="≥1.9.11,&lt;2.0.0">Mistral API for unit inference</package>
+        <package name="pydantic" version="2.12.4">Data validation</package>
+        <package name="pydantic-settings" version="≥2.0">Settings management</package>
+        <package name="pytest" version="8.4.2">Testing framework</package>
+        <package name="pytest-asyncio" version="≥1.2.0">Async test support</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <category>Anti-Over-Engineering</category>
+      <rule>This is a ~600-800 line MVP. NO custom base classes, factories, or abstract layers. ONE level of indirection maximum. If you need a helper function, call it directly.</rule>
+    </constraint>
+    <constraint>
+      <category>Technology Stack</category>
+      <rule>Technology stack is LOCKED. ONLY use libraries listed in docs/architecture/5-technology-stack-definitive.md. NEVER add SDKs, frameworks, or libraries not documented. If a library isn't in the tech stack table, ASK FIRST.</rule>
+    </constraint>
+    <constraint>
+      <category>SDK Usage</category>
+      <rule>Use SDKs EXACTLY as documented in official documentation. NO custom wrappers, NO simplified interfaces, NO convenience layers. If SDK documentation says client.search(), use client.search() - don't wrap it.</rule>
+    </constraint>
+    <constraint>
+      <category>Async/Await</category>
+      <rule>All I/O operations MUST use async/await pattern. Use asyncio.Semaphore for controlled concurrency (matches existing codebase pattern in unit_inference.py).</rule>
+    </constraint>
+    <constraint>
+      <category>Error Handling</category>
+      <rule>Specific exceptions with context. Graceful degradation: Query-time enrichment timeout should return results without metadata rather than fail.</rule>
+    </constraint>
+    <constraint>
+      <category>Memory Budget</category>
+      <rule>8GB max for M1 Mac development = 2 concurrent 160-page PDFs. Docling uses 2-4GB RAM per document.</rule>
+    </constraint>
+    <constraint>
+      <category>Database Safety</category>
+      <rule>All database operations must use SafetyGuard class from raglite/shared/safety.py. Tests MUST use APP_ENV=test and will FAIL if they detect production ports (6333/5432).</rule>
+    </constraint>
+    <constraint>
+      <category>Code Quality</category>
+      <rule>Type hints for ALL functions. Google-style docstrings for ALL public functions. Structured logging with extra={} for context. Follow patterns from docs/architecture/6-complete-reference-implementation.md.</rule>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>ingest_document</name>
+      <kind>async function</kind>
+      <signature>async def ingest_document(doc_path: str, skip_metadata: bool = True) -> DocumentMetadata</signature>
+      <path>raglite/ingestion/document_ingestion.py</path>
+      <description>Current ingestion entry point. Returns DocumentMetadata with document_id, page_count, chunk_count. Will be wrapped by ingest_documents_parallel() for batch processing.</description>
+    </interface>
+    <interface>
+      <name>extract_chunk_metadata</name>
+      <kind>async function</kind>
+      <signature>async def extract_chunk_metadata(chunk: Chunk) -> ExtractedMetadata</signature>
+      <path>raglite/ingestion/embedding_generation.py</path>
+      <description>LLM-based metadata extraction. Called during ingestion (400 API calls/doc). Target for skip_metadata parameter and query-time enrichment reuse.</description>
+    </interface>
+    <interface>
+      <name>search_documents</name>
+      <kind>async function</kind>
+      <signature>async def search_documents(query: str, top_k: int = 5, filters: dict[str, str] | None = None) -> list[QueryResult]</signature>
+      <path>raglite/retrieval/search.py</path>
+      <description>Vector search returning top-K results. Target for post-retrieval metadata enrichment (AC5).</description>
+    </interface>
+    <interface>
+      <name>Settings (Pydantic BaseSettings)</name>
+      <kind>class</kind>
+      <signature>class Settings(BaseSettings)</signature>
+      <path>raglite/shared/config.py</path>
+      <description>Configuration management. Need to add: ingestion_parallel_docs (int = 2), skip_ingestion_metadata (bool = True), query_time_metadata_enabled (bool = True), query_time_metadata_timeout (float = 2.5), unit_inference_llm_tables_only (bool = True).</description>
+    </interface>
+    <interface>
+      <name>MISTRAL_SEMAPHORE</name>
+      <kind>asyncio.Semaphore</kind>
+      <signature>asyncio.Semaphore(10)</signature>
+      <path>raglite/ingestion/adaptive_table/unit_inference.py</path>
+      <description>Global semaphore for rate limiting Mistral API calls (max 10 concurrent). Pattern to reuse for parallel document processing.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing follows pytest patterns with async support (pytest-asyncio). All tests consolidated in tests/ directory with clear separation: tests/unit/ for fast tests with no external dependencies, tests/integration/ for end-to-end flows requiring Qdrant/PostgreSQL. Tests use APP_ENV=test to avoid production database conflicts. Target coverage: 80%+ for critical paths. Mock external dependencies (Docling, Claude API, Mistral API) in unit tests. Integration tests validate full pipelines with real databases.
+    </standards>
+    <locations>
+      <location>tests/unit/ - Fast unit tests, no external dependencies</location>
+      <location>tests/integration/ - End-to-end tests with Qdrant/PostgreSQL</location>
+      <location>tests/unit/test_parallel_ingestion.py - NEW: Rule-based unit inference, cache behavior, query-time enrichment</location>
+      <location>tests/integration/test_parallel_ingestion.py - NEW: Parallel ingestion with 3 test PDFs, verify all chunks stored</location>
+      <location>scripts/benchmark-parallel-ingestion.py - NEW: Performance benchmark for 10-PDF batch</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test parallel ingestion with 3 PDFs, verify all chunks stored correctly in Qdrant and PostgreSQL. Mock Docling to avoid slow PDF processing. Verify cross-document unit cache shared between workers.</idea>
+      <idea ac="AC2">Unit tests for rule-based unit inference: test_revenue_metrics (Revenue -> Meur), test_margin_metrics (Margin -> %), test_volume_metrics (Volume -> kton), test_per_ton_metrics (/ton -> EUR/ton), test_headcount_metrics (Headcount -> FTE), test_no_match_returns_none.</idea>
+      <idea ac="AC3">Unit tests for cross-document cache: test_cache_populates_on_first_inference, test_cache_reused_across_documents. Verify cache key normalization (lowercase, stripped).</idea>
+      <idea ac="AC4">Unit tests for skip_metadata parameter: test_skip_metadata_true_marks_unenriched, test_skip_metadata_false_extracts_metadata. Verify metadata_extracted flag in chunks.</idea>
+      <idea ac="AC5">Unit tests for query-time enrichment: test_enrich_results_with_metadata_parallel, test_enrichment_timeout_graceful_degradation, test_enrichment_feature_flag_disabled. Integration test: verify query latency with enrichment <3 seconds.</idea>
+      <idea ac="AC6">Integration test: verify progress logging appears in structured logs. Verify BatchIngestionResult contains success/failure counts and timing stats.</idea>
+      <idea ac="AC7">Performance test: benchmark 10-PDF batch time (target <45 min on M1 Mac). Report API call reduction statistics (rule vs cache vs LLM). Verify no regressions in existing test suite (109 tests passing).</idea>
+    </ideas>
+  </tests>
+</story-context>

@@ -4,8 +4,16 @@
 Restores points from JSON files exported by export-qdrant-snapshot.py,
 allowing CI to skip PDF ingestion when data hasn't changed.
 
+SAFETY: This script DELETES the collection before importing.
+        It REFUSES to run against production ports (6333/5432) unless
+        explicitly overridden with --force-production flag.
+
 Usage:
-    python scripts/import-qdrant-snapshot.py --input .qdrant-export
+    # Safe: Uses test ports from APP_ENV=test
+    APP_ENV=test python scripts/import-qdrant-snapshot.py --input .qdrant-export
+
+    # DANGEROUS: Override production safety (requires typed confirmation)
+    python scripts/import-qdrant-snapshot.py --input .qdrant-export --force-production
 """
 
 import argparse
@@ -25,6 +33,66 @@ from raglite.shared.config import settings  # noqa: E402
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
+# Production port constants (NEVER use these in CI/tests)
+PRODUCTION_QDRANT_PORT = 6333
+PRODUCTION_POSTGRES_PORT = 5432
+
+
+def check_production_safety(force_production: bool = False) -> None:
+    """Check if running against production and block unless explicitly forced.
+
+    This is a CRITICAL safety check to prevent accidental data loss.
+    The script DELETES the collection before importing, so running against
+    production would destroy all ingested documents.
+
+    Args:
+        force_production: If True, allow running against production with warning
+
+    Raises:
+        SystemExit: If running against production without --force-production
+    """
+    qdrant_port = settings.qdrant_port
+    postgres_port = settings.postgres_port
+
+    is_production_qdrant = qdrant_port == PRODUCTION_QDRANT_PORT
+    is_production_postgres = postgres_port == PRODUCTION_POSTGRES_PORT
+
+    if is_production_qdrant or is_production_postgres:
+        logger.error("=" * 70)
+        logger.error("🚨 PRODUCTION DATABASE DETECTED - IMPORT BLOCKED 🚨")
+        logger.error("=" * 70)
+        logger.error(f"Qdrant port: {qdrant_port} (production={is_production_qdrant})")
+        logger.error(f"PostgreSQL port: {postgres_port} (production={is_production_postgres})")
+        logger.error("")
+        logger.error("This script DELETES the collection before importing!")
+        logger.error("Running against production would DESTROY ALL DATA.")
+        logger.error("")
+
+        if not force_production:
+            logger.error("To use test databases, set APP_ENV=test:")
+            logger.error(
+                "  APP_ENV=test python scripts/import-qdrant-snapshot.py --input .qdrant-export"
+            )
+            logger.error("")
+            logger.error("To force production (DANGEROUS), use --force-production flag")
+            logger.error("=" * 70)
+            sys.exit(1)
+
+        # Force production requested - require typed confirmation
+        logger.warning("⚠️  --force-production flag detected")
+        logger.warning("You are about to DELETE AND REPLACE production data!")
+        logger.warning("")
+
+        confirmation = input("Type 'DELETE PRODUCTION DATA' to confirm: ")
+
+        if confirmation != "DELETE PRODUCTION DATA":
+            logger.error("Confirmation failed - aborting")
+            sys.exit(1)
+
+        logger.warning("Production override confirmed - proceeding with caution")
+    else:
+        logger.info(f"✅ Using test databases (Qdrant:{qdrant_port}, PostgreSQL:{postgres_port})")
 
 
 def import_qdrant_data(input_dir: Path) -> None:
@@ -139,14 +207,25 @@ def import_qdrant_data(input_dir: Path) -> None:
 
 def main() -> int:
     """Main entry point."""
-    parser = argparse.ArgumentParser(description="Import Qdrant collection from cache")
+    parser = argparse.ArgumentParser(
+        description="Import Qdrant collection from cache (DELETES existing data!)",
+        epilog="SAFETY: This script refuses to run against production ports without --force-production",
+    )
     parser.add_argument(
         "--input",
         type=str,
         default=".qdrant-export",
         help="Input directory containing export files",
     )
+    parser.add_argument(
+        "--force-production",
+        action="store_true",
+        help="DANGEROUS: Allow running against production databases (requires typed confirmation)",
+    )
     args = parser.parse_args()
+
+    # CRITICAL: Check production safety BEFORE any database operations
+    check_production_safety(force_production=args.force_production)
 
     input_dir = Path(args.input)
 

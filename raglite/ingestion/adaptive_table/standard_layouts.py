@@ -119,6 +119,9 @@ def _extract_entity_cols_metric_rows(
     from .core import _extract_year, _get_table_caption, _get_table_markdown
     from .unit_inference import _parse_value_unit
 
+    # Phase 2: Import safe wrapper function from centralized validation module
+    from .validation import safe_assign_entity
+
     rows: list[dict[str, Any]] = []
 
     column_headers = [cell for cell in table_cells if cell.column_header]
@@ -129,7 +132,19 @@ def _extract_entity_cols_metric_rows(
     col_entity_map: dict[int, str | None] = {}
     for cell in column_headers:
         col_idx = cell.start_col_offset_idx
-        col_entity_map[col_idx] = cell.text.strip() if cell.text else None
+        entity_raw = cell.text.strip() if cell.text else None
+
+        # Phase 2: Use safe wrapper function for entity validation
+        # This ALWAYS validates and is IMPOSSIBLE to bypass
+        entity = safe_assign_entity(
+            entity_raw,
+            source="standard_layouts_entity_cols",
+            page_number=page_number,
+            table_index=table_index,
+            col_idx=col_idx,
+        )
+
+        col_entity_map[col_idx] = entity
 
     # Build row → metric mapping
     row_metric_map: dict[int, str | None] = {}
@@ -233,6 +248,9 @@ def _extract_transposed_entity_cols_metric_row_labels(
         _parse_value_unit,
     )
 
+    # Phase 2: Import safe wrapper function from centralized validation module
+    from .validation import safe_assign_entity
+
     rows: list[dict[str, Any]] = []
 
     column_headers = [cell for cell in table_cells if cell.column_header]
@@ -270,9 +288,23 @@ def _extract_transposed_entity_cols_metric_row_labels(
         for cell in headers_by_row[entity_row]:
             start_col = cell.start_col_offset_idx
             end_col = cell.end_col_offset_idx
-            entity_text = cell.text.strip() if cell.text else "Unknown"
-            for col_idx in range(start_col, end_col):
-                entity_map[col_idx] = entity_text
+            entity_raw = cell.text.strip() if cell.text else None
+
+            # Phase 2: Use safe wrapper function for entity validation
+            # This ALWAYS validates and is IMPOSSIBLE to bypass
+            entity_text = safe_assign_entity(
+                entity_raw,
+                source="standard_layouts_transposed_multi_header",
+                page_number=page_number,
+                table_index=table_index,
+                row_idx=entity_row,
+                col_idx=start_col,
+            )
+
+            # Skip None entities (empty cells)
+            if entity_text is not None:
+                for col_idx in range(start_col, end_col):
+                    entity_map[col_idx] = entity_text
 
         # Build final mapping with periods
         for cell in headers_by_row[period_row]:
@@ -339,7 +371,18 @@ def _extract_transposed_entity_cols_metric_row_labels(
         # Single header row - assume entities (no periods)
         for cell in headers_by_row[row_levels[0]]:
             col_idx = cell.start_col_offset_idx
-            header_entity: str | None = cell.text.strip() if cell.text else None
+            header_entity_raw: str | None = cell.text.strip() if cell.text else None
+
+            # Phase 2: Use safe wrapper function for entity validation
+            # This ALWAYS validates and is IMPOSSIBLE to bypass
+            header_entity = safe_assign_entity(
+                header_entity_raw,
+                source="standard_layouts_transposed_single_header",
+                page_number=page_number,
+                table_index=table_index,
+                col_idx=col_idx,
+            )
+
             column_mapping[col_idx] = (header_entity, None)
 
     # Build row → metric mapping from first column

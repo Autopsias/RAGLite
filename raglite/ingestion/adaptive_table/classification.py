@@ -67,6 +67,23 @@ def classify_header(text: str) -> HeaderType:
 
     text_lower = text.lower().strip()
 
+    # UNIT DESCRIPTOR patterns - check FIRST before any other classification
+    # Headers like "Currency (1000 EUR)" describe units, NOT actual data categories
+    # These should return UNKNOWN early to prevent misclassification as METRIC
+    # (Fix for June 2025 PDF table extraction bug)
+    unit_descriptor_patterns = [
+        r"currency\s*\([^)]*\)",  # "Currency (1000 EUR)", "Currency (EUR million)"
+        r"\b\d+\s*eur\b",  # "1000 EUR" standalone
+        r"\b\d+\s*usd\b",  # "1000 USD" standalone
+        r"^\s*unit[s]?\s*$",  # "Unit", "Units" as standalone header
+        r"^\s*uom\s*$",  # "UOM" (Unit of Measure)
+    ]
+
+    # If this is a unit descriptor, return UNKNOWN early (not a data category)
+    for pattern in unit_descriptor_patterns:
+        if re.search(pattern, text_lower):
+            return HeaderType.UNKNOWN
+
     # TEMPORAL patterns (highest priority - strongest layout signal)
     temporal_patterns = [
         # Years
@@ -169,6 +186,26 @@ def classify_header(text: str) -> HeaderType:
         r"\bgbp/[a-z]{3}\b",  # GBP/USD, etc.
         r"\bexchange\b",
         r"\bcurrency\b",
+        # ====== CEMENT INDUSTRY SPECIFIC METRICS (Phase 1.1) ======
+        # Fuels - CRITICAL for petcoke queries
+        r"\b(petcoke|pet\s*coke|petroleum\s*coke)\b",
+        r"\b(coal|lignite|natural\s*gas|fuel\s*oil)\b",
+        r"\b(alternative\s*fuels?|af\s*rate|biomass|waste\s*fuel)\b",
+        # Production metrics - clinker, slag, etc.
+        r"\b(clinker|slag|fly\s*ash|gypsum|limestone)\b",
+        r"\b(clinker\s*factor|clinker\s*ratio|clinker/cement)\b",
+        r"\b(kiln|grinding|raw\s*mill|cement\s*mill)\b",
+        # Sustainability metrics - CO2, emissions
+        r"\b(co2|emissions?|carbon|scope\s*[123])\b",
+        r"\b(thermal\s*substitution|tsr)\b",
+        r"\b(decarboni[sz]ation|net\s*zero)\b",
+        # Capacity and utilization
+        r"\b(utilization|uptime|availability)\b",
+        r"\b(mtpa|tpd|tons?\s*per)\b",
+        r"\b(kcal/kg|gj/ton|kwh/ton)\b",
+        # Logistics and distribution
+        r"\b(lead\s*distance|freight|logistics)\b",
+        r"\b(dispatch|delivery|transport)\b",
     ]
 
     # Count pattern matches
@@ -659,6 +696,44 @@ def _detect_table_orientation(
         "Operating",
         "COGS",
         "SG&A",
+        # ====== CEMENT INDUSTRY SPECIFIC (Phase 1.1) ======
+        # Fuels - CRITICAL for petcoke queries
+        "Petcoke",
+        "Pet Coke",
+        "Petroleum Coke",
+        "Coal",
+        "Lignite",
+        "Natural Gas",
+        "Fuel Oil",
+        "Alternative Fuel",
+        "AF Rate",
+        "Biomass",
+        # Production metrics
+        "Clinker",
+        "Clinker Factor",
+        "Clinker Ratio",
+        "Slag",
+        "Fly Ash",
+        "Gypsum",
+        "Limestone",
+        "Kiln",
+        "Raw Mill",
+        "Cement Mill",
+        # Sustainability
+        "CO2",
+        "Emissions",
+        "Carbon",
+        "Scope 1",
+        "Scope 2",
+        "Scope 3",
+        "TSR",
+        "Thermal Substitution",
+        # Units
+        "kcal/kg",
+        "GJ/ton",
+        "kWh/ton",
+        "MTPA",
+        "TPD",
     ]
 
     entity_patterns = [

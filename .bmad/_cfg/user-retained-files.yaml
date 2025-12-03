@@ -1,0 +1,32 @@
+retainedFiles: []
+history:
+  - date: '2025-12-01T10:42:12.469Z'
+    deleted: 26
+    retained: 0
+    files:
+      - bmm/tasks/daily-standup.xml.bak
+      - bmm/workflows/1-analysis/domain-research/workflow.yaml.bak
+      - bmm/workflows/2-plan-workflows/create-ux-design/workflow.yaml.bak
+      - bmm/workflows/2-plan-workflows/prd/domain-complexity.csv.bak
+      - bmm/workflows/2-plan-workflows/prd/project-types.csv.bak
+      - bmm/workflows/3-solutioning/architecture/pattern-categories.csv.bak
+      - bmm/workflows/3-solutioning/architecture/workflow.yaml.bak
+      - bmm/workflows/4-implementation/code-review/workflow.yaml.bak
+      - bmm/workflows/4-implementation/create-story/template.md.bak
+      - bmm/workflows/4-implementation/epic-tech-context/workflow.yaml.bak
+      - bmm/workflows/4-implementation/retrospective/workflow.yaml.bak
+      - bmm/workflows/frame-expert/create-dataflow/workflow.yaml.bak
+      - bmm/workflows/frame-expert/create-diagram/workflow.yaml.bak
+      - bmm/workflows/frame-expert/create-flowchart/workflow.yaml.bak
+      - bmm/workflows/frame-expert/create-wireframe/workflow.yaml.bak
+      - bmm/workflows/workflow-status/init/workflow.yaml.bak
+      - core/agents/bmad-web-orchestrator.agent.xml.bak
+      - core/tasks/adv-elicit-methods.csv.bak
+      - core/tasks/adv-elicit.xml.bak
+      - core/tasks/advanced-elicitation-methods.csv.bak
+      - core/tasks/advanced-elicitation.xml.bak
+      - core/tasks/index-docs.xml.bak
+      - core/tasks/validate-workflow.xml.bak
+      - core/tasks/workflow.xml.bak
+      - core/tools/shard-doc.xml.bak
+      - core/workflows/brainstorming/brain-methods.csv.bak

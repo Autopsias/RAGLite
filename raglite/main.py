@@ -34,6 +34,7 @@ from raglite.forecasting.auto_update import trigger_forecast_refresh
 from raglite.forecasting.hybrid import InsufficientDataError, generate_forecast
 from raglite.forecasting.timeseries_extract import (
     ExtractionError,
+    MetricValidationError,
     extract_timeseries,
     extract_timeseries_from_sql,
 )
@@ -314,7 +315,7 @@ async def ingest_financial_document(
 
     # Mode 3: URL download (Story 4.0.8 - Recommended for Claude.ai/Desktop)
     if has_url:
-        assert doc_url is not None  # Type narrowing for mypy
+        assert doc_url is not None  # nosec B101 - Type narrowing for mypy
         logger.info(
             "Ingesting document from URL",
             extra={"url_truncated": doc_url[:80] + "..." if len(doc_url) > 80 else doc_url},
@@ -375,7 +376,7 @@ async def ingest_financial_document(
 
     # Mode 2: Base64 content (Story 4.0.7)
     elif has_content:
-        assert file_content is not None and filename is not None  # Type narrowing
+        assert file_content is not None and filename is not None  # nosec B101 - Type narrowing
         logger.info(
             "Ingesting document from base64 content",
             extra={"doc_filename": filename, "content_size": len(file_content)},
@@ -425,7 +426,7 @@ async def ingest_financial_document(
     # Mode 1: Filesystem path (default, backward compatible)
     # If we got here, has_path must be True (validated above)
     else:
-        assert doc_path is not None  # Type narrowing for mypy
+        assert doc_path is not None  # nosec B101 - Type narrowing for mypy
         effective_path = doc_path
 
         logger.info("Ingesting document", extra={"path": effective_path})
@@ -596,7 +597,7 @@ async def ingest_financial_document_async(
 
     # Mode 3: URL download (Story 4.0.8)
     if has_url:
-        assert doc_url is not None  # Type narrowing for mypy
+        assert doc_url is not None  # nosec B101 - Type narrowing for mypy
         logger.info(
             "Async ingestion requested (URL)",
             extra={"url_truncated": doc_url[:80] + "..." if len(doc_url) > 80 else doc_url},
@@ -706,7 +707,7 @@ async def ingest_financial_document_async(
 
     # Mode 2: Base64 content (Story 4.0.7)
     elif has_content:
-        assert file_content is not None and filename is not None  # Type narrowing
+        assert file_content is not None and filename is not None  # nosec B101 - Type narrowing
         logger.info(
             "Async ingestion requested (base64)",
             extra={"doc_filename": filename, "content_size": len(file_content)},
@@ -759,7 +760,7 @@ async def ingest_financial_document_async(
 
     # Mode 1: Filesystem path (default)
     else:
-        assert doc_path is not None  # Type narrowing for mypy
+        assert doc_path is not None  # nosec B101 - Type narrowing for mypy
         logger.info("Async ingestion requested", extra={"path": doc_path})
 
         doc_file = Path(doc_path).resolve()
@@ -1683,7 +1684,8 @@ async def get_financial_forecast(
                 "Attempting SQL-based extraction",
                 extra={"metric": metric, "method": "sql"},
             )
-            historical_data = await extract_timeseries_from_sql(metric=metric, min_points=8)
+            # FIX (2025-12-01): Use min_points=6 to allow GROUP data with missing months
+            historical_data = await extract_timeseries_from_sql(metric=metric, min_points=6)
 
             logger.info(
                 "SQL extraction successful",
@@ -1693,6 +1695,11 @@ async def get_financial_forecast(
                     "method": "sql",
                 },
             )
+
+        except MetricValidationError:
+            # Re-raise MetricValidationError immediately - let outer handler process it
+            # This preserves available_metrics list for user suggestions (Story 5.0.4 AC3)
+            raise
 
         except ExtractionError as e:
             # Fallback to hybrid search + LLM extraction
@@ -1779,13 +1786,31 @@ async def get_financial_forecast(
         )
         raise QueryError(error_msg) from e
 
-    except ExtractionError as e:
-        # Handle time-series extraction failures
+    except MetricValidationError as e:
+        # Story 5.0.4 AC3, AC4: Handle validation errors with available metrics
+        # This exception provides structured info about alternative metrics
         error_msg = (
-            f"Could not extract {metric} time-series data from documents. "
-            f"Ensure financial documents containing {metric} data have been ingested. "
-            f"Details: {str(e)}"
+            f"{str(e)}\n\n"
+            f"Available metrics with ≥8 data points for forecasting:\n"
+            + "\n".join(f"  - {m}" for m in e.available_metrics[:10])
         )
+        if len(e.available_metrics) > 10:
+            error_msg += f"\n  ... and {len(e.available_metrics) - 10} more"
+
+        logger.warning(
+            "Forecast query failed - metric validation",
+            extra={
+                "metric": e.metric_name,
+                "data_points_found": e.data_points_found,
+                "available_metrics": e.available_metrics[:5],
+            },
+        )
+        raise QueryError(error_msg) from e
+
+    except ExtractionError as e:
+        # Story 5.0.4 AC3: Handle extraction errors with available metrics suggestion
+        # ExtractionError may already include available metrics in message (see timeseries_extract.py)
+        error_msg = f"Could not extract {metric} time-series data. Details: {str(e)}"
         logger.warning(
             "Forecast query failed - extraction error",
             extra={"metric": metric, "error": str(e)},

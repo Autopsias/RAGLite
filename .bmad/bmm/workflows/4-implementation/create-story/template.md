@@ -24,7 +24,6 @@ so that {{benefit}}.
 - Relevant architecture patterns and constraints
 - Source tree components to touch
 - Testing standards summary
-- **Definition of Done:** See `docs/process/definition-of-done.md` for completion checklist
 
 ### Project Structure Notes
 

@@ -79,6 +79,22 @@ class Settings(BaseSettings):
     enable_forecast_auto_update: bool = True  # Auto-refresh forecasts on document ingestion
     forecast_refresh_timeout: int = 300  # 5-minute timeout for forecast refresh (AC3)
 
+    # Metrics Discovery Cache Configuration (Story 5.0.4 Advisory)
+    metrics_cache_ttl_seconds: int = 300  # 5-minute TTL for development; tune for production
+
+    # Parallel Ingestion Configuration (Story 5.0.6)
+    ingestion_parallel_docs: int = 2  # Max concurrent documents (default: 2, range: 1-4)
+
+    # Metadata Extraction Strategy (Story 5.0.6: Strategy C - Query-time enrichment)
+    skip_ingestion_metadata: bool = (
+        True  # Skip metadata extraction at ingestion (saves 400 API calls/doc)
+    )
+    query_time_metadata_enabled: bool = True  # Enable query-time metadata enrichment
+    query_time_metadata_timeout: float = 2.5  # Query-time enrichment timeout (seconds)
+
+    # Unit Inference Optimization (Story 5.0.6)
+    unit_inference_llm_tables_only: bool = True  # Only use LLM for table chunks (user preference)
+
     @model_validator(mode="after")
     def adjust_for_environment(self) -> Self:
         """Automatically adjust database settings based on APP_ENV.

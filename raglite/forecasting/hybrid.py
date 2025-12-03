@@ -46,8 +46,11 @@ from raglite.shared.models import (
 
 logger = get_logger(__name__)
 
-# Minimum data points required for reliable forecasting (2 years quarterly)
-MIN_DATA_POINTS = 8
+# Minimum data points required for reliable forecasting
+# FIX (2025-12-01): Lowered from 8 to 6 to allow GROUP-level SQL data
+# with occasional missing months (e.g., 7 months Feb-Sep missing June)
+# Prophet can produce reasonable forecasts with 6+ monthly data points
+MIN_DATA_POINTS = 6
 
 
 class InsufficientDataError(Exception):

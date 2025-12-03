@@ -16,6 +16,12 @@ import logging
 import re
 from typing import TYPE_CHECKING, Any
 
+# Phase 2: Import safe wrapper functions from centralized validation module
+from .validation import (
+    safe_infer_entity_from_context,
+    safe_infer_metric_from_context,
+)
+
 if TYPE_CHECKING:
     from docling.document_converter import ConversionResult
     from docling_core.types.doc import TableItem
@@ -29,11 +35,14 @@ async def extract_table_data_adaptive(
     table_index: int,
     document_id: str,
     page_number: int,
+    unit_cache: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Extract table data using adaptive pattern detection with async unit inference.
 
     This is the main entry point for adaptive extraction. Implements Milestone 1 async
     conversion for 10x speedup in unit inference (62 min → 6 min for 942 rows).
+
+    Story 5.0.6 AC3: Supports cross-document unit cache for 30% additional API reduction.
 
     Args:
         table_item: Docling TableItem
@@ -41,6 +50,8 @@ async def extract_table_data_adaptive(
         table_index: Table number on page
         document_id: Document filename
         page_number: Page number
+        unit_cache: Optional shared cache for cross-document unit inference (AC3).
+                   If None, creates local cache per table. If provided, enables reuse across documents.
 
     Returns:
         List of structured row dictionaries ready for PostgreSQL insertion
@@ -50,6 +61,7 @@ async def extract_table_data_adaptive(
         - Rate limiting via MISTRAL_SEMAPHORE
         - 5-second timeout per call
         - Connection pooling via shared Mistral client
+        - Story 5.0.6 AC3: Cross-document cache reduces duplicate API calls by 30%
     """
     from .classification import (
         TableLayout,
@@ -149,7 +161,8 @@ async def extract_table_data_adaptive(
 
     # Phase 2.7.5: Apply async context-aware unit inference for rows with null units
     # Milestone 1: Uses concurrent processing for 10x speedup (62 min → 6 min)
-    rows = await _apply_context_aware_unit_inference_async(rows, table_item, result)
+    # Story 5.0.6 AC3: Pass unit_cache for cross-document reuse
+    rows = await _apply_context_aware_unit_inference_async(rows, table_item, result, unit_cache)
 
     return rows
 
@@ -300,6 +313,136 @@ def _infer_entity_from_context(page_context: dict) -> str | None:
     return None
 
 
+def _validate_entity(entity: str | None) -> bool:
+    """Validate that an entity value is semantically valid.
+
+    Returns False for values that are clearly NOT entities:
+    - Unit descriptors (Currency, EUR, kton, etc.)
+    - Numeric values
+    - Common non-entity patterns
+
+    This is a safety net to catch misclassified headers that slip through
+    the primary classification logic. (Fix for June 2025 PDF table extraction bug)
+
+    Args:
+        entity: The entity value to validate
+
+    Returns:
+        True if entity appears valid, False if it's likely misclassified
+    """
+    if not entity or not entity.strip():
+        return False
+
+    entity_lower = entity.lower().strip()
+
+    # Reject known unit descriptor patterns
+    invalid_entity_patterns = [
+        # CRITICAL: Placeholder values
+        r"^\s*unknown\s*$",  # "Unknown" placeholder
+        # CRITICAL: Temporal descriptors (most common data quality issue)
+        r"^\s*ytd\s*$",  # Year-to-date
+        r"^\s*mtd\s*$",  # Month-to-date
+        r"^\s*qtd\s*$",  # Quarter-to-date
+        r"^\s*%\s*(ly|py|b)\s*$",  # % LY, % PY, % B
+        r"^\s*b\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)",  # B Oct-25
+        r"^\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[-\s]?\d{2,4}$",  # Oct-24, Mar-25
+        # CRITICAL: Currency descriptors
+        r"^\s*currency\b",  # "Currency (1000 EUR)"
+        r"\(\s*\d+\s*(eur|usd|gbp|brl)\b",  # Parenthetical currency ANYWHERE: "Others (1000 BRL)"
+        r"^\s*\d+\s*(eur|usd|gbp)",  # "1000 EUR"
+        r"^\s*(eur|usd|gbp)/",  # "EUR/ton"
+        # HIGH: Standalone currency codes and common units
+        r"^\s*(eur|usd|gbp|brl|akz)\s*$",  # Standalone currency codes
+        r"^\s*m(eur|usd|gbp)\s*$",  # Million currency: Meur, Musd
+        r"^\s*unit\s*$",  # "Unit"
+        r"^\s*(kton|mton|ton|gwh|mwh|gj)\s*$",  # Energy/weight units
+        r"^\s*%\s*$",  # Percentage symbol alone
+        r"^\s*days?\s*$",  # "day" or "days"
+        r"^\s*fte\s*$",  # FTE
+        # MEDIUM: Null representations and placeholders
+        r"^\s*(n/?a|null|none|-|#)\s*$",  # N/A, NA, null, -, #
+        # LOW: Numeric and measurement descriptors
+        r"^\s*\d+[\.,]?\d*\s*$",  # Pure numeric values
+        r"^\s*measurement\s*$",  # "Measurement"
+        r"^\s*uom\s*$",  # "UOM" (Unit of Measure)
+    ]
+
+    for pattern in invalid_entity_patterns:
+        if re.search(pattern, entity_lower):
+            return False
+
+    return True
+
+
+def _validate_metric(metric: str) -> bool:
+    """Validate metric name to filter out temporal patterns, units, placeholders.
+
+    This function mirrors _validate_entity() but for metric validation.
+    Rejects values that are clearly not metric names (temporal descriptors,
+    currency codes, placeholders, units, etc.).
+
+    Args:
+        metric: Metric name to validate
+
+    Returns:
+        True if valid metric name, False if should be rejected
+
+    Examples:
+        >>> _validate_metric("EBITDA")
+        True
+        >>> _validate_metric("Unknown")
+        False
+        >>> _validate_metric("YTD")
+        False
+        >>> _validate_metric("EUR")
+        False
+    """
+    if not metric or not metric.strip():
+        return False
+
+    metric_lower = metric.strip().lower()
+
+    # Reject invalid metric patterns
+    invalid_metric_patterns = [
+        # CRITICAL: Placeholder values
+        r"^\s*unknown\s*$",  # "Unknown" placeholder
+        # CRITICAL: Temporal descriptors (most common data quality issue)
+        r"^\s*ytd\s*$",  # Year-to-date
+        r"^\s*mtd\s*$",  # Month-to-date
+        r"^\s*qtd\s*$",  # Quarter-to-date
+        r"^\s*%\s*(ly|py|b)\s*$",  # % LY, % PY, % B
+        r"^\s*b\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)",  # B Oct-25
+        r"\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[-\s]?\d{2,4}\b",  # Oct-25, Mar-24
+        r"\b(q[1-4]|h[12])\s*\d{4}\b",  # Q1 2025, H1 2024
+        r"^\s*var\.?\s*%",  # Var. % B
+        # CRITICAL: Currency descriptors
+        r"^\s*currency\b",  # "Currency (1000 EUR)"
+        r"\(\s*\d+\s*(eur|usd|gbp|brl|akz|mzn)\b",  # Parenthetical currency
+        r"^\s*\d+\s*(eur|usd|gbp)",  # "1000 EUR"
+        r"^\s*(eur|usd|gbp)/",  # "EUR/ton"
+        # HIGH: Standalone currency codes and common units
+        r"^\s*(eur|usd|gbp|brl|akz|mzn)\s*$",  # Standalone currency codes
+        r"^\s*m(eur|usd|gbp)\s*$",  # Million currency: Meur, Musd
+        r"^\s*unit\s*$",  # "Unit"
+        r"^\s*(kton|mton|ton|gwh|mwh|gj)\s*$",  # Energy/weight units
+        r"^\s*%\s*$",  # Percentage symbol alone
+        r"^\s*days?\s*$",  # "day" or "days"
+        r"^\s*fte\s*$",  # FTE
+        # MEDIUM: Null representations and placeholders
+        r"^\s*(n/?a|null|none|-|#)\s*$",  # N/A, NA, null, -, #
+        # LOW: Numeric and measurement descriptors
+        r"^\s*\d+[\.,]?\d*\s*$",  # Pure numeric values
+        r"^\s*measurement\s*$",  # "Measurement"
+        r"^\s*uom\s*$",  # "UOM" (Unit of Measure)
+    ]
+
+    for pattern in invalid_metric_patterns:
+        if re.search(pattern, metric_lower, re.IGNORECASE):
+            return False
+
+    return True
+
+
 def _extract_fallback(
     table_cells: list,
     num_rows: int,
@@ -376,6 +519,51 @@ def _extract_fallback(
         ):
             caption_period = section_heading
             caption_year = section_year
+
+    # PHASE 3.1: Pre-scan row headers for hierarchical parent entity tracking
+    # Identifies rows that are "parent" headers (entity-only rows that define context for following rows)
+    # Pattern: Working Capital tables often have "Portugal" as a parent row, then "Trade Receivables" etc. below
+    parent_entity_by_row: dict[int, str | None] = {}
+    current_parent_entity: str | None = None
+
+    # Build list of rows sorted by row index
+    all_row_indices = sorted({cell.start_row_offset_idx for cell in data_cells})
+
+    for row_idx in all_row_indices:
+        row_header = row_header_map.get(row_idx)
+        if not row_header:
+            # No row header - inherit parent
+            parent_entity_by_row[row_idx] = current_parent_entity
+            continue
+
+        # Check if this row header looks like a parent entity (standalone entity name)
+        # Pattern: Row header is an ENTITY but row has very few data cells or mostly empty
+        row_data_cells = [c for c in data_cells if c.start_row_offset_idx == row_idx]
+        non_empty_cells = [c for c in row_data_cells if c.text and c.text.strip()]
+
+        # Heuristic: If row header is entity-like and most data cells are empty,
+        # this is likely a parent header row
+
+        header_type = classify_header(row_header)
+        is_likely_parent = (
+            header_type == HeaderType.ENTITY
+            and len(non_empty_cells) <= 1  # 0 or 1 data cell with values
+        )
+
+        if is_likely_parent:
+            # This row defines a new parent entity context
+            current_parent_entity = row_header
+            logger.debug(
+                "Hierarchical parent entity detected",
+                extra={
+                    "parent_entity": current_parent_entity,
+                    "row_idx": row_idx,
+                    "page_number": page_number,
+                    "table_index": table_index,
+                },
+            )
+
+        parent_entity_by_row[row_idx] = current_parent_entity
 
     # Extract data cells using ORIENTATION-AWARE field assignment
     for cell in data_cells:
@@ -474,23 +662,64 @@ def _extract_fallback(
 
             confidence = "low"
 
+        # SAFETY NET: Validate entity before context inference (June 2025 fix)
+        # If entity is invalid (e.g., "Currency (1000 EUR)"), clear it so
+        # context inference can set the correct value
+        if entity and not _validate_entity(entity):
+            logger.warning(
+                "Invalid entity detected in table extraction - clearing for context inference",
+                extra={
+                    "invalid_entity": entity,
+                    "row_idx": row_idx,
+                    "col_idx": col_idx,
+                    "orientation": orientation,
+                },
+            )
+            entity = None
+
         # PHASE 2.6: Section context-based inference for NULL fields
-        # If orientation detection produced NULL entity/metric (correctly!),
-        # try to infer from page/section context to enable SQL queries
-        # Production-validated approach from Unstructured.io, LLMSherpa research
+        # Phase 2: Use safe wrapper functions for context inference
+        # These wrappers ALWAYS validate and are IMPOSSIBLE to bypass
+        # Replaces 30 lines of manual validation logic with 6 lines of safe calls
         inferred_from_context = False
 
         if not metric and page_context:
-            inferred_metric = _infer_metric_from_context(page_context)
-            if inferred_metric:
-                metric = inferred_metric
+            metric = safe_infer_metric_from_context(
+                page_context,
+                page_number=page_number,
+                table_index=table_index,
+                row_idx=row_idx,
+                col_idx=col_idx,
+            )
+            if metric:
                 inferred_from_context = True
 
         if not entity and page_context:
-            inferred_entity = _infer_entity_from_context(page_context)
-            if inferred_entity:
-                entity = inferred_entity
+            entity = safe_infer_entity_from_context(
+                page_context,
+                page_number=page_number,
+                table_index=table_index,
+                row_idx=row_idx,
+                col_idx=col_idx,
+            )
+            if entity:
                 inferred_from_context = True
+
+        # PHASE 3.1: Hierarchical parent entity fallback
+        # If entity is STILL None, try to inherit from parent entity in hierarchical table
+        if not entity and parent_entity_by_row.get(row_idx):
+            entity = parent_entity_by_row[row_idx]
+            logger.debug(
+                "Entity inherited from hierarchical parent",
+                extra={
+                    "inherited_entity": entity,
+                    "row_idx": row_idx,
+                    "page_number": page_number,
+                    "table_index": table_index,
+                },
+            )
+            # Track as context-inferred but medium confidence (hierarchical inheritance)
+            inferred_from_context = True
 
         # Lower confidence if we had to infer from context (medium confidence)
         if inferred_from_context and confidence == "high":

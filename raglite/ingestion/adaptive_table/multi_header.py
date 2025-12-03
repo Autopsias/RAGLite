@@ -11,11 +11,14 @@ The extraction produces (entity, metric, period, value, unit) tuples.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from docling.document_converter import ConversionResult
     from docling_core.types.doc import TableItem
+
+logger = logging.getLogger(__name__)
 
 
 def _extract_multi_header_metric_entity(
@@ -59,6 +62,9 @@ def _extract_multi_header_metric_entity(
     )
     from .unit_inference import _parse_value_unit
 
+    # Phase 2: Import safe wrapper functions from centralized validation module
+    from .validation import safe_assign_entity, safe_assign_metric
+
     rows: list[dict[str, Any]] = []
 
     column_headers = [cell for cell in table_cells if cell.column_header]
@@ -94,8 +100,32 @@ def _extract_multi_header_metric_entity(
     column_mapping: dict[int, tuple[str | None, str | None]] = {}
     for cell in headers_by_row[entity_row]:
         col_idx = cell.start_col_offset_idx
-        entity = cell.text.strip() if cell.text else "Unknown"
-        metric = metric_map.get(col_idx, "Unknown")
+        entity_raw = cell.text.strip() if cell.text else None
+
+        # Phase 2: Use safe wrapper function for entity validation
+        # This ALWAYS validates and is IMPOSSIBLE to bypass
+        entity = safe_assign_entity(
+            entity_raw,
+            source="multi_header_entity_row",
+            page_number=page_number,
+            table_index=table_index,
+            row_idx=entity_row,
+            col_idx=col_idx,
+        )
+
+        metric_raw = metric_map.get(col_idx)
+
+        # Phase 2: Use safe wrapper function for metric validation
+        # This ALWAYS validates and is IMPOSSIBLE to bypass
+        metric = safe_assign_metric(
+            metric_raw,
+            source="multi_header_metric_row",
+            page_number=page_number,
+            table_index=table_index,
+            row_idx=metric_row,
+            col_idx=col_idx,
+        )
+
         column_mapping[col_idx] = (metric, entity)
 
     # Build row period mapping

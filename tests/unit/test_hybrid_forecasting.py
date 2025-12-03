@@ -107,13 +107,13 @@ class TestInsufficientDataError:
     """Tests for minimum data requirement (AC4)."""
 
     def test_min_data_points_constant(self) -> None:
-        """AC4: MIN_DATA_POINTS is 8 (2 years quarterly)."""
-        assert MIN_DATA_POINTS == 8
+        """AC4: MIN_DATA_POINTS is 6 (1.5 years quarterly)."""
+        assert MIN_DATA_POINTS == 6
 
     @pytest.mark.asyncio
     async def test_insufficient_data_raises_error(self) -> None:
-        """AC4: Raise InsufficientDataError when <8 data points."""
-        # Only 4 data points (less than minimum 8)
+        """AC4: Raise InsufficientDataError when <6 data points."""
+        # Only 4 data points (less than minimum 6)
         points = [
             TimeSeriesPoint(date=datetime(2024, 1, 1), value=100.0),
             TimeSeriesPoint(date=datetime(2024, 4, 1), value=110.0),
@@ -127,7 +127,7 @@ class TestInsufficientDataError:
             source_documents=["test.pdf"],
         )
 
-        with pytest.raises(InsufficientDataError, match="Minimum 8 data points required"):
+        with pytest.raises(InsufficientDataError, match="Minimum 6 data points required"):
             await generate_forecast(metric="revenue", historical_data=data)
 
     @pytest.mark.asyncio

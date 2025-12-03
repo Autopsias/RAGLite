@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     )
     from docling_core.types.doc import TableItem
 
+# Phase 2: Import safe wrapper functions from centralized validation module
+from raglite.ingestion.adaptive_table.validation import safe_assign_entity, safe_assign_metric
 from raglite.ingestion.adaptive_table_extraction import extract_table_data_adaptive
 from raglite.shared.logging import get_logger
 
@@ -114,7 +116,7 @@ class TableExtractor:
         return await self.extract_tables_from_result(result, Path(doc_path).stem)
 
     async def extract_tables_from_result(
-        self, result: ConversionResult, document_id: str
+        self, result: ConversionResult, document_id: str, unit_cache: dict[str, str] | None = None
     ) -> list[dict[str, Any]]:
         """Extract and parse tables from existing Docling ConversionResult with async unit inference.
 
@@ -124,9 +126,14 @@ class TableExtractor:
         Implements Milestone 1 async conversion for 10x speedup in table extraction
         (62 min → 6 min for 942 rows with unit inference).
 
+        Story 5.0.6 AC3: Supports cross-document unit cache for 30% additional API reduction.
+
         Args:
             result: Docling ConversionResult from document conversion
             document_id: Document filename (without extension)
+            unit_cache: Optional shared cache for cross-document unit inference (AC3).
+                       If None, creates local cache per document. If provided, enables
+                       reuse across documents in a batch.
 
         Returns:
             List of table rows as dicts (ready for SQL insertion)
@@ -136,6 +143,7 @@ class TableExtractor:
             - Rate limiting via MISTRAL_SEMAPHORE
             - 5-second timeout per call
             - Connection pooling via shared Mistral client
+            - Story 5.0.6 AC3: Cross-document cache reduces duplicate API calls by 30%
         """
         # Lazy import for isinstance check
         from docling_core.types.doc import TableItem
@@ -151,12 +159,14 @@ class TableExtractor:
 
                 # Extract using adaptive table extraction with async unit inference
                 # Milestone 1: Concurrent processing for 10x speedup (62 min → 6 min)
+                # Story 5.0.6 AC3: Pass unit_cache for cross-document reuse
                 parsed_rows = await extract_table_data_adaptive(
                     table_item=item,
                     result=result,
                     table_index=table_index,
                     document_id=document_id,
                     page_number=page_number,
+                    unit_cache=unit_cache,
                 )
                 all_rows.extend(parsed_rows)
                 table_index += 1
@@ -336,21 +346,42 @@ class TableExtractor:
                 entity_row = row_levels[1]
 
                 # Build metric mapping (may span multiple columns)
-                metric_map: dict[int, str] = {}
+                metric_map: dict[int, str | None] = {}
                 for cell in headers_by_row[metric_row]:
                     start_col = cell.start_col_offset_idx
                     end_col = cell.end_col_offset_idx
-                    metric_text = cell.text.strip() if cell.text else "Unknown"
-                    # Apply metric to all spanned columns
-                    for col_idx in range(start_col, end_col):
-                        metric_map[col_idx] = metric_text
+                    metric_raw = cell.text.strip() if cell.text else None
+
+                    # Phase 2: Use safe wrapper function for metric validation
+                    # This ALWAYS validates and is IMPOSSIBLE to bypass
+                    metric_text = safe_assign_metric(
+                        metric_raw,
+                        source="legacy_table_extraction_metric_row",
+                        row_idx=metric_row,
+                        col_idx=start_col,
+                    )
+
+                    # Apply validated metric to all spanned columns
+                    if metric_text:
+                        for col_idx in range(start_col, end_col):
+                            metric_map[col_idx] = metric_text
 
                 # Build final mapping with entities
                 for cell in headers_by_row[entity_row]:
                     col_idx = cell.start_col_offset_idx
-                    entity = cell.text.strip() if cell.text else "Unknown"
-                    metric = metric_map.get(col_idx, "Unknown")
-                    mapping[col_idx] = (metric, entity)
+                    entity_raw = cell.text.strip() if cell.text else None
+                    metric = metric_map.get(col_idx)
+
+                    # Phase 2: Use safe wrapper function for entity validation
+                    # This ALWAYS validates and is IMPOSSIBLE to bypass
+                    entity_text = safe_assign_entity(
+                        entity_raw,
+                        source="legacy_table_extraction_entity_row",
+                        row_idx=entity_row,
+                        col_idx=col_idx,
+                    )
+
+                    mapping[col_idx] = (metric, entity_text)
 
         else:
             # Single-header: Periods as column names

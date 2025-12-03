@@ -40,7 +40,7 @@ from raglite.ingestion.table_extraction import TableExtractor
 from raglite.shared.clients import get_mistral_client, get_qdrant_client
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
-from raglite.shared.models import Chunk, DocumentMetadata, ExtractedMetadata
+from raglite.shared.models import BatchIngestionResult, Chunk, DocumentMetadata, ExtractedMetadata
 from raglite.shared.safety import SafetyGuard
 
 logger = get_logger(__name__)
@@ -353,14 +353,21 @@ def temp_file_from_url(url: str) -> Generator[tuple[str, str], None, None]:
                 )
 
 
-async def ingest_document(file_path: str) -> DocumentMetadata:
+async def ingest_document(
+    file_path: str, unit_cache: dict[str, str] | None = None
+) -> DocumentMetadata:
     """Ingest financial document (PDF or Excel) with automatic format detection.
 
     Routes documents to appropriate extraction handler based on file extension.
     Supports PDF (.pdf) and Excel (.xlsx, .xls) formats.
 
+    Story 5.0.6 AC3: Supports cross-document unit cache for 30% additional API reduction.
+
     Args:
         file_path: Path to document file (relative or absolute)
+        unit_cache: Optional shared cache for cross-document unit inference (AC3).
+                   If None, creates local cache. If provided (from parallel ingestion),
+                   enables metric unit reuse across documents in a batch.
 
     Returns:
         DocumentMetadata with extraction results
@@ -373,6 +380,11 @@ async def ingest_document(file_path: str) -> DocumentMetadata:
     Example:
         >>> metadata = await ingest_document("reports/Q4_2024.pdf")
         >>> metadata = await ingest_document("data/financials.xlsx")
+
+        >>> # Batch ingestion with shared cache (Story 5.0.6 AC3)
+        >>> cache = {}
+        >>> meta1 = await ingest_document("report1.pdf", unit_cache=cache)
+        >>> meta2 = await ingest_document("report2.pdf", unit_cache=cache)  # Reuses cache
     """
     # Resolve file path to check extension
     doc_path = Path(file_path).resolve()
@@ -389,7 +401,7 @@ async def ingest_document(file_path: str) -> DocumentMetadata:
     extension = doc_path.suffix.lower()
 
     if extension == ".pdf":
-        return await ingest_pdf(str(doc_path))
+        return await ingest_pdf(str(doc_path), unit_cache=unit_cache)
     elif extension in [".xlsx", ".xls"]:
         return await extract_excel(str(doc_path))
     else:
@@ -406,6 +418,7 @@ async def ingest_pdf(
     clear_existing: bool = False,
     skip_metadata: bool = False,
     force_production: bool = False,
+    unit_cache: dict[str, str] | None = None,
 ) -> DocumentMetadata:
     """Ingest financial PDF and extract text, tables, and structure with page numbers.
 
@@ -415,6 +428,8 @@ async def ingest_pdf(
     Story 4.0.6: Changed default from clear_collection=True to clear_existing=False
     to prevent accidental data loss. Production operations require explicit override.
 
+    Story 5.0.6 AC3: Supports cross-document unit cache for 30% additional API reduction.
+
     Args:
         file_path: Path to PDF file (relative or absolute)
         clear_existing: If True, clears existing Qdrant collection and PostgreSQL
@@ -423,6 +438,9 @@ async def ingest_pdf(
                        Default False. Use when Mistral API is unavailable.
         force_production: If True, allows clear_existing on production database.
                          Required for intentional production data replacement.
+        unit_cache: Optional shared cache for cross-document unit inference (AC3).
+                   If None, creates local cache. If provided (from parallel ingestion),
+                   enables metric unit reuse across documents in a batch.
 
     Returns:
         DocumentMetadata with extraction results including page_count and ingestion timestamp
@@ -444,6 +462,11 @@ async def ingest_pdf(
 
         >>> # Skip metadata extraction to avoid API errors
         >>> metadata = await ingest_pdf("report.pdf", skip_metadata=True)
+
+        >>> # Batch ingestion with shared cache (Story 5.0.6 AC3)
+        >>> cache = {}
+        >>> meta1 = await ingest_pdf("report1.pdf", unit_cache=cache)
+        >>> meta2 = await ingest_pdf("report2.pdf", unit_cache=cache)  # Reuses cache
     """
     # Lazy import Docling: Avoid hanging on import when this module loads
     # Docling initializes PyTorch/CUDA on import which can hang without GPU
@@ -659,8 +682,11 @@ async def ingest_pdf(
             # and to enable test mocking (tests can mock converter once, used by both stages)
             extractor = TableExtractor(converter=converter)
             # Milestone 1: Async table extraction with 10x speedup (62 min → 6 min)
+            # Story 5.0.6 AC3: Pass unit_cache for cross-document reuse
             # FIX: Use pdf_path.name (with extension) for consistency with Qdrant document IDs
-            table_rows = await extractor.extract_tables_from_result(result, pdf_path.name)
+            table_rows = await extractor.extract_tables_from_result(
+                result, pdf_path.name, unit_cache=unit_cache
+            )
             print(
                 f"CHECKPOINT: Table extraction complete - {len(table_rows)} rows",
                 file=sys.stderr,
@@ -1101,3 +1127,166 @@ async def extract_excel(file_path: str) -> DocumentMetadata:
     )
 
     return metadata
+
+
+async def ingest_documents_parallel(
+    file_paths: list[str],
+    max_concurrent: int | None = None,
+) -> BatchIngestionResult:
+    """Ingest multiple documents in parallel with concurrency control.
+
+    Story 5.0.6 AC1: Parallel document ingestion with memory-safe concurrency limits.
+    Uses asyncio.Semaphore to limit concurrent ingestions and prevent memory exhaustion.
+
+    Args:
+        file_paths: List of document file paths to ingest (PDF, Excel)
+        max_concurrent: Maximum concurrent documents (default: settings.ingestion_parallel_docs).
+                       Set to 1 for sequential processing, 2-4 for parallel.
+
+    Returns:
+        BatchIngestionResult with success/failure counts and per-document results
+
+    Raises:
+        ValueError: If file_paths is empty or max_concurrent < 1
+
+    Example:
+        >>> paths = ["report1.pdf", "report2.pdf", "data.xlsx"]
+        >>> result = await ingest_documents_parallel(paths, max_concurrent=2)
+        >>> print(f"Success: {result.successful}/{result.total_documents}")
+        Success: 3/3
+        >>> print(f"Duration: {result.duration_seconds:.1f}s")
+        Duration: 45.2s
+
+    Performance (Story 5.0.6 AC8):
+        - Sequential (max_concurrent=1): ~4-5 hours for 10 PDFs (40 pages each)
+        - Parallel (max_concurrent=2): ~45 minutes for 10 PDFs (6-10x speedup target)
+        - Memory usage: ~4GB per concurrent document, max 8GB with default limit
+    """
+    # AC1: Validation
+    if not file_paths:
+        raise ValueError("file_paths cannot be empty")
+
+    # AC1: Use config default if not specified
+    if max_concurrent is None:
+        max_concurrent = settings.ingestion_parallel_docs
+
+    if max_concurrent < 1:
+        raise ValueError(f"max_concurrent must be >= 1, got {max_concurrent}")
+
+    # Start timing for batch
+    batch_start = time.time()
+    total_docs = len(file_paths)
+
+    logger.info(
+        "Starting parallel document ingestion",
+        extra={
+            "total_documents": total_docs,
+            "max_concurrent": max_concurrent,
+            "batch_size": total_docs,
+        },
+    )
+
+    # AC1: Semaphore for concurrency control (max 2 by default to stay within 8GB memory)
+    semaphore = asyncio.Semaphore(max_concurrent)
+
+    # AC3: Create shared unit cache for cross-document inference (30% API reduction)
+    # Cache persists across all documents in the batch, enabling metric unit reuse
+    shared_unit_cache: dict[str, str] = {}
+
+    # Results tracking
+    successful_results: list[DocumentMetadata] = []
+    error_details: list[dict[str, str]] = []
+    completed_count = 0
+
+    async def process_document(file_path: str, doc_index: int) -> None:
+        """Process single document with semaphore control and error handling."""
+        nonlocal completed_count
+
+        async with semaphore:
+            try:
+                # AC1/AC8: Progress logging (before processing)
+                logger.info(
+                    "Processing document",
+                    extra={
+                        "doc_index": doc_index + 1,
+                        "total_documents": total_docs,
+                        "file_path": file_path,
+                        "concurrent_slots": max_concurrent,
+                    },
+                )
+
+                # AC3: Ingest document with shared cache for cross-document unit reuse
+                metadata = await ingest_document(file_path, unit_cache=shared_unit_cache)
+
+                successful_results.append(metadata)
+                completed_count += 1
+
+                # AC1/AC8: Progress logging (after success)
+                logger.info(
+                    "Document ingested successfully",
+                    extra={
+                        "doc_index": doc_index + 1,
+                        "total_documents": total_docs,
+                        "completed": completed_count,
+                        "file_path": file_path,
+                        "chunk_count": metadata.chunk_count,
+                        "page_count": metadata.page_count,
+                    },
+                )
+
+            except Exception as e:
+                # AC1: Error tracking (don't fail entire batch on single document error)
+                error_msg = str(e)
+                error_details.append({"filename": str(file_path), "error": error_msg})
+                completed_count += 1
+
+                logger.error(
+                    "Document ingestion failed",
+                    extra={
+                        "doc_index": doc_index + 1,
+                        "total_documents": total_docs,
+                        "completed": completed_count,
+                        "file_path": file_path,
+                        "error": error_msg,
+                    },
+                )
+
+    # AC1: Launch all ingestion tasks (asyncio schedules them with semaphore control)
+    tasks = [process_document(path, idx) for idx, path in enumerate(file_paths)]
+    await asyncio.gather(*tasks)
+
+    # Calculate batch duration
+    batch_duration = time.time() - batch_start
+
+    # AC1/AC8: Final batch summary logging
+    success_count = len(successful_results)
+    fail_count = len(error_details)
+    total_chunks = sum(m.chunk_count for m in successful_results)
+    total_pages = sum(m.page_count for m in successful_results)
+
+    logger.info(
+        "Parallel batch ingestion complete",
+        extra={
+            "total_documents": total_docs,
+            "successful": success_count,
+            "failed": fail_count,
+            "duration_seconds": round(batch_duration, 1),
+            "duration_minutes": round(batch_duration / 60, 1),
+            "docs_per_minute": round(success_count / (batch_duration / 60), 2)
+            if batch_duration > 0
+            else 0,
+            "total_chunks": total_chunks,
+            "total_pages": total_pages,
+            "max_concurrent": max_concurrent,
+        },
+    )
+
+    # AC1: Return BatchIngestionResult
+    return BatchIngestionResult(
+        total_documents=total_docs,
+        successful=success_count,
+        failed=fail_count,
+        duration_seconds=round(batch_duration, 2),
+        results=successful_results,
+        errors=error_details,
+    )
