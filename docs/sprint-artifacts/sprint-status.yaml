@@ -1,0 +1,127 @@
+# generated: 2025-12-03
+# project: RAGLite
+# project_key: raglite-mvp
+# tracking_system: file-system
+# story_location: docs/sprint-artifacts/stories
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic exists in epic file but not contexted
+#   - contexted or in-progress
+#   - done: Epic completed
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - drafted: Story file created in stories folder by *create-story
+#   - ready-for-dev: Draft approved and story context created by *story-ready
+#   - in-progress: Developer actively working on implementation by *dev-story
+#   - review: Implementation complete, ready for review by *code-review
+#   - done: Story completed by *story-done
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - completed: Retrospective has been done by *retrospective
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epics should be marked `in-progress` before stories can be marked beyond `backlog`
+# - SM typically drafts next story ONLY after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', dev reviews, then Dev moves to 'done'
+
+generated: 2025-12-03
+project: RAGLite
+project_key: raglite-mvp
+tracking_system: file-system
+story_location: docs/sprint-artifacts/stories
+
+development_status:
+  # Epic 0: Week 0 Integration Spike (COMPLETE)
+  epic-0: done
+  0-0-production-repository-setup: done
+  0-1-week-0-integration-spike: done
+  epic-0-retrospective: optional
+
+  # Epic 1: Foundation & Accurate Retrieval (COMPLETE)
+  epic-1: done
+  1-1-project-setup-development-environment: done
+  1-2-pdf-document-ingestion-docling: done
+  1-3-excel-document-ingestion: done
+  1-4-document-chunking-semantic-segmentation: done
+  1-5-embedding-model-integration-vector-generation: done
+  1-6-qdrant-vector-database-setup-storage: done
+  1-7-vector-similarity-search-retrieval: done
+  1-8-source-attribution-citation-generation: done
+  1-9-mcp-server-foundation-protocol-compliance: done
+  1-10-natural-language-query-tool-mcp: done
+  1-11-enhanced-chunk-metadata-mcp-response-formatting: done
+  1-12a-ground-truth-test-set-creation: done
+  1-12b-continuous-accuracy-tracking-final-validation: done
+  1-15-table-extraction-fix: done
+  1-15b-baseline-validation-analysis: done
+  epic-1-retrospective: completed
+
+  # Epic 2: Advanced RAG Architecture Enhancement (IN PROGRESS)
+  epic-2: in-progress
+  2-1-implement-pypdfium-backend-docling: done
+  2-2-implement-page-level-parallelism: done
+  2-3-refactor-chunking-fixed-512-token-approach: done
+  2-4-add-llm-contextual-metadata-injection: done
+  2-5-ac3-validation-optimization-target-70-accuracy: done
+  2-6-postgresql-schema-data-migration: done
+  2-7-multi-index-search-architecture: done
+  2-8-implement-table-aware-chunking-strategy: done
+  2-9-fix-ground-truth-page-references: done
+  2-10-fix-query-classification-over-routing: done
+  2-11-fix-hybrid-search-score-normalization-fusion: done
+  2-12-cross-encoder-re-ranking: backlog
+  2-13-sql-table-search: done
+  2-14-sql-generation-edge-case-refinement: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: AI Intelligence & Orchestration (COMPLETE)
+  epic-3: done
+  3-1-agentic-framework-integration: done
+  3-2-retrieval-agent-implementation: done
+  3-3-analysis-agent-implementation: done
+  3-4-synthesis-agent-implementation: done
+  3-5-multi-step-workflow-orchestration: done
+  3-6-analytical-query-tool-mcp: done
+  3-7-graceful-degradation-workflow-failures: done
+  3-8-agentic-workflow-test-suite: done
+  epic-3-retrospective: completed
+
+  # Epic 4: Forecasting & Proactive Insights (COMPLETE)
+  epic-4: done
+  4-1-time-series-data-extraction: done
+  4-2-forecasting-engine-implementation: done
+  4-3-automated-forecast-updates: done
+  4-4-forecast-query-tool-mcp: done
+  4-5-anomaly-detection: done
+  4-6-trend-analysis-pattern-recognition: done
+  4-7-proactive-insight-generation: done
+  4-8-strategic-recommendation-engine: done
+  4-9-proactive-insights-tool-mcp: done
+  4-10-forecasting-insights-test-suite: done
+  epic-4-retrospective: completed
+
+  # Epic 5: Production Readiness & Real-Time Operations (IN PROGRESS)
+  epic-5: in-progress
+  5-0-1-fix-timeseries-period-extraction: done
+  5-0-6-parallel-ingestion-optimization: done
+  5-0-7-cement-industry-query-improvements: in-progress
+  5-1-cloud-infrastructure-architecture: in-progress
+  5-2-containerization-cloud-deployment: backlog
+  5-3-environment-configuration-secrets-management: backlog
+  5-4-data-encryption-at-rest: backlog
+  5-5-file-watching-real-time-document-detection: backlog
+  5-6-incremental-indexing-version-history: backlog
+  5-7-monitoring-logging-infrastructure: backlog
+  5-8-performance-optimization: backlog
+  5-9-scalability-validation: backlog
+  5-10-disaster-recovery-backup: backlog
+  5-11-production-validation-user-acceptance: backlog
+  5-12-ci-cd-pipeline-setup-automation: backlog
+  5-13-api-documentation-mcp-tool-reference: backlog
+  5-14-knowledge-transfer-team-onboarding-documentation: backlog
+  epic-5-retrospective: optional

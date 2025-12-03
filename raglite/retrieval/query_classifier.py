@@ -147,6 +147,12 @@ METRIC_SYNONYMS: dict[str, list[str]] = {
         "Kiln Utilization",
         "Capacity Utilization",
     ],
+    "kiln utilization": [
+        "Kiln Utilization",
+        "Kiln Uptime",
+        "Kiln Availability",
+        "Kiln Operating Rate",
+    ],
     "production volume": [
         "Cement Volume",
         "Clinker Production",
@@ -727,20 +733,6 @@ LIMIT 50;
                 "duration_ms": duration_ms,
             },
         )
-
-        # DEBUGGING: Log full SQL query to file for analysis
-        import tempfile
-        from pathlib import Path
-
-        log_dir = Path(tempfile.gettempdir())
-        log_file = log_dir / "sql_queries_debug.log"
-
-        with open(log_file, "a") as f:
-            f.write("=" * 80 + "\n")
-            f.write(f"QUERY: {query}\n")
-            f.write("-" * 80 + "\n")
-            f.write(f"GENERATED SQL:\n{sql_query}\n")
-            f.write("=" * 80 + "\n\n")
 
         return sql_query
 

@@ -61,6 +61,13 @@ async def test_parallel_ingestion_three_documents():
     postgres_conn = get_postgresql_connection()
     cursor = postgres_conn.cursor()
 
+    # Clear stale test data to ensure accurate differential counts
+    # Tests with @pytest.mark.manages_collection_state don't use ingest_test_data fixture
+    # which normally handles this cleanup (conftest.py lines 569-571)
+    cursor.execute("DELETE FROM financial_chunks")
+    cursor.execute("DELETE FROM financial_tables")
+    postgres_conn.commit()
+
     # Force new transaction BEFORE baseline counts
     # This ensures we're not reading stale baseline from a previous worker's transaction
     if not postgres_conn.autocommit:
@@ -235,6 +242,20 @@ async def test_parallel_ingestion_stores_metadata():
     file_paths = [str(fixtures_dir / "sample-small-3-pages.pdf")]
 
     assert Path(file_paths[0]).exists(), "Test file not found"
+
+    # Clear stale test data to ensure accurate differential counts
+    # Tests with @pytest.mark.manages_collection_state don't use ingest_test_data fixture
+    # which normally handles this cleanup (conftest.py lines 569-571)
+    from raglite.shared.clients import reset_postgresql_connection
+
+    reset_postgresql_connection()
+    postgres_conn = get_postgresql_connection()
+    cursor = postgres_conn.cursor()
+
+    cursor.execute("DELETE FROM financial_chunks")
+    cursor.execute("DELETE FROM financial_tables")
+    postgres_conn.commit()
+    cursor.close()
 
     # Ingest document
     result = await ingest_documents_parallel(file_paths)

@@ -195,8 +195,8 @@ def classify_header(text: str) -> HeaderType:
         r"\b(clinker|slag|fly\s*ash|gypsum|limestone)\b",
         r"\b(clinker\s*factor|clinker\s*ratio|clinker/cement)\b",
         r"\b(kiln|grinding|raw\s*mill|cement\s*mill)\b",
-        # Sustainability metrics - CO2, emissions
-        r"\b(co2|emissions?|carbon|scope\s*[123])\b",
+        # Sustainability metrics - CO2, emissions, GHG
+        r"\b(co2|emissions?|carbon|scope\s*[123]|ghg)\b",
         r"\b(thermal\s*substitution|tsr)\b",
         r"\b(decarboni[sz]ation|net\s*zero)\b",
         # Capacity and utilization

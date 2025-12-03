@@ -215,3 +215,136 @@ class TestPatternPriority:
         """Test Margin classified as METRIC."""
         assert classify_header("Margin") == HeaderType.METRIC
         assert classify_header("Gross Margin") == HeaderType.METRIC
+
+
+# ============================================================================
+# PHASE 4: EXTENDED CEMENT KPI PATTERNS
+# ============================================================================
+
+
+class TestPhase4ProductionEfficiency:
+    """Test Phase 4.1 production efficiency patterns."""
+
+    def test_kiln_utilization_combined(self):
+        """Test kiln utilization combined pattern (Phase 4.1)."""
+        assert classify_header("Kiln Utilization") == HeaderType.METRIC
+        assert classify_header("Kiln Utilization Rate") == HeaderType.METRIC
+        assert classify_header("Kiln Uptime") == HeaderType.METRIC
+
+    def test_capacity_utilization_combined(self):
+        """Test capacity utilization combined pattern (Phase 4.1)."""
+        assert classify_header("Capacity Utilization") == HeaderType.METRIC
+        assert classify_header("Plant Capacity Utilization") == HeaderType.METRIC
+
+    def test_production_rate_pattern(self):
+        """Test production rate pattern (Phase 4.1)."""
+        assert classify_header("Production Rate") == HeaderType.METRIC
+        assert classify_header("Production Rate (tpd)") == HeaderType.METRIC
+
+
+class TestPhase4CostStructure:
+    """Test Phase 4.2 cost structure patterns."""
+
+    def test_cost_per_ton_pattern(self):
+        """Test cost per ton pattern (Phase 4.2)."""
+        assert classify_header("Cost per ton") == HeaderType.METRIC
+        assert classify_header("Unit Cost") == HeaderType.METRIC
+        assert classify_header("Cash Cost") == HeaderType.METRIC
+
+    def test_fuel_consumption_kcal(self):
+        """Test fuel consumption kcal/kg pattern (Phase 4.2)."""
+        assert classify_header("Fuel Consumption") == HeaderType.METRIC
+        assert classify_header("kcal/kg") == HeaderType.METRIC
+
+    def test_power_cost_pattern(self):
+        """Test power cost pattern (Phase 4.2)."""
+        assert classify_header("Power Cost") == HeaderType.METRIC
+        assert classify_header("Electricity Cost") == HeaderType.METRIC
+        assert classify_header("Energy Cost") == HeaderType.METRIC
+
+
+class TestPhase4Sustainability:
+    """Test Phase 4.3 sustainability patterns."""
+
+    def test_co2_per_ton_pattern(self):
+        """Test CO2 per ton pattern (Phase 4.3)."""
+        assert classify_header("CO2 per ton") == HeaderType.METRIC
+        assert classify_header("Emissions Intensity") == HeaderType.METRIC
+        assert classify_header("Carbon Intensity") == HeaderType.METRIC
+
+    def test_ghg_emissions_pattern(self):
+        """Test GHG emissions pattern (Phase 4.3)."""
+        assert classify_header("GHG Emissions") == HeaderType.METRIC
+        assert classify_header("GHG") == HeaderType.METRIC
+
+
+class TestPhase4UnitInference:
+    """Test Phase 4 unit inference rules (unit_inference.py)."""
+
+    def test_clinker_factor_unit_inference(self):
+        """Test clinker factor inferred as % (Phase 4.1).
+
+        Clinker factor is a percentage representing clinker/cement ratio.
+        """
+        from raglite.ingestion.adaptive_table.unit_inference import infer_unit_from_rules
+
+        assert infer_unit_from_rules("Clinker Factor") == "%"
+
+    def test_tpd_unit_inference(self):
+        """Test tpd metric inferred as tons/day (Phase 4.1)."""
+        from raglite.ingestion.adaptive_table.unit_inference import infer_unit_from_rules
+
+        assert infer_unit_from_rules("Production (tpd)") == "tons/day"
+        assert infer_unit_from_rules("Capacity tpd") == "tons/day"
+
+    def test_mtpa_unit_inference(self):
+        """Test mtpa metric inferred as Mton/year (Phase 4.1)."""
+        from raglite.ingestion.adaptive_table.unit_inference import infer_unit_from_rules
+
+        assert infer_unit_from_rules("Capacity (mtpa)") == "Mton/year"
+        assert infer_unit_from_rules("Production MTPA") == "Mton/year"
+
+    def test_kcal_kg_unit_inference(self):
+        """Test kcal/kg metric preserves unit (Phase 4.2)."""
+        from raglite.ingestion.adaptive_table.unit_inference import infer_unit_from_rules
+
+        assert infer_unit_from_rules("Fuel Consumption (kcal/kg)") == "kcal/kg"
+
+    def test_kwh_ton_unit_inference(self):
+        """Test kWh/ton metric preserves unit (Phase 4.2)."""
+        from raglite.ingestion.adaptive_table.unit_inference import infer_unit_from_rules
+
+        assert infer_unit_from_rules("Power Consumption (kWh/ton)") == "kWh/ton"
+
+    def test_pattern_priority_ebitda_margin(self):
+        """Test EBITDA Margin gets % not Meur (pattern priority).
+
+        This prevents regression of Story 5.0.6 pattern priority bug.
+        The margin/ratio pattern MUST match before revenue/ebitda pattern.
+        """
+        from raglite.ingestion.adaptive_table.unit_inference import infer_unit_from_rules
+
+        result = infer_unit_from_rules("EBITDA Margin")
+        assert result == "%", f"EBITDA Margin should be % not {result}"
+
+    def test_gross_margin_unit(self):
+        """Test Gross Margin gets % unit."""
+        from raglite.ingestion.adaptive_table.unit_inference import infer_unit_from_rules
+
+        assert infer_unit_from_rules("Gross Margin") == "%"
+
+
+class TestPhase4SynonymExpansion:
+    """Test Phase 4.4 METRIC_SYNONYMS additions."""
+
+    def test_kiln_utilization_synonym(self):
+        """Test kiln utilization synonym group exists (Phase 4.4)."""
+        assert "kiln utilization" in METRIC_SYNONYMS
+        assert "Kiln Utilization" in METRIC_SYNONYMS["kiln utilization"]
+        assert "Kiln Uptime" in METRIC_SYNONYMS["kiln utilization"]
+
+    def test_co2_emissions_synonym(self):
+        """Test co2 emissions synonym group exists (Phase 4.4)."""
+        # Either "co2 emissions" or combined lookup should work
+        result = expand_metric_synonyms("What are the CO2 emissions?")
+        assert "CO2" in result or "Emissions" in result

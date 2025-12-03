@@ -34,10 +34,26 @@ MISTRAL_SEMAPHORE = asyncio.Semaphore(10)
 # IMPORTANT: Pattern order matters - first match wins!
 # Margin/Ratio patterns MUST come before Revenue/EBITDA to correctly handle
 # cases like "EBITDA Margin" (should be %, not Meur)
+#
+# Phase 4.1-4.2: Added cement industry specific patterns (Story 5.0.7)
 UNIT_RULES = [
-    # Margin, Ratio, Rate → % (FIRST to match "EBITDA Margin" → % not Meur)
+    # ===== PHASE 4: CEMENT INDUSTRY SPECIFIC (HIGHEST PRIORITY) =====
+    # TPD (tons per day) → tons/day (BEFORE production pattern)
+    (r"(?i)\btpd\b", "tons/day"),
+    # MTPA (million tons per annum) → Mton/year (BEFORE capacity pattern)
+    (r"(?i)\bmtpa\b", "Mton/year"),
+    # kcal/kg (fuel consumption) → kcal/kg (BEFORE other patterns)
+    (r"(?i)kcal/kg", "kcal/kg"),
+    # kWh/ton (power consumption) → kWh/ton (BEFORE /ton pattern)
+    (r"(?i)kwh/ton", "kWh/ton"),
+    # GJ/ton (energy intensity) → GJ/ton (BEFORE /ton pattern)
+    (r"(?i)gj/ton", "GJ/ton"),
+    # Factor (e.g., Clinker Factor) → % (clinker factor is a percentage ratio)
+    (r"(?i)\bfactor\b", "%"),
+    # ===== STANDARD FINANCIAL PATTERNS =====
+    # Margin, Ratio, Rate → % (matches "EBITDA Margin" → % not Meur)
     (r"(?i)(margin|ratio|rate|percentage|%)", "%"),
-    # Per ton metrics → EUR/ton (SECOND to match "Cost/ton" → EUR/ton not Meur)
+    # Per ton metrics → EUR/ton (matches "Cost/ton" → EUR/ton not Meur)
     (r"(?i)(/ton|per ton|€/ton)", "EUR/ton"),
     # Revenue, Income, Profit metrics → Meur (AFTER margin/per-ton to avoid conflicts)
     (r"(?i)(revenue|ebitda|profit|income|cost|capex|sales|turnover)", "Meur"),
