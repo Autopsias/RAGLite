@@ -48,8 +48,23 @@ async def test_parallel_ingestion_three_documents():
 
     # Get baseline counts before ingestion
     qdrant = get_qdrant_client()
+
+    # CRITICAL FIX (CI): Reset singleton connection to force fresh connection
+    # This solves CI-specific issues:
+    # 1. Stale connections from previous test runs
+    # 2. Transaction isolation issues in pytest-xdist parallel execution
+    # 3. Connection pooling conflicts in CI environment
+    from raglite.shared.clients import reset_postgresql_connection
+
+    reset_postgresql_connection()
+
     postgres_conn = get_postgresql_connection()
     cursor = postgres_conn.cursor()
+
+    # Force new transaction BEFORE baseline counts
+    # This ensures we're not reading stale baseline from a previous worker's transaction
+    if not postgres_conn.autocommit:
+        postgres_conn.rollback()
 
     # Count existing data
     initial_qdrant_count = qdrant.count(collection_name=settings.qdrant_collection_name).count
@@ -78,6 +93,21 @@ async def test_parallel_ingestion_three_documents():
     final_qdrant_count = qdrant.count(collection_name=settings.qdrant_collection_name).count
     new_qdrant_chunks = final_qdrant_count - initial_qdrant_count
     assert new_qdrant_chunks > 0, "New chunks should be stored in Qdrant"
+
+    # CRITICAL FIX (CI): Reset singleton connection AGAIN after ingestion
+    # This forces a completely fresh connection that will see all committed data
+    # from parallel ingestion workers (fixes CI-specific transaction isolation issues)
+    reset_postgresql_connection()
+    postgres_conn = get_postgresql_connection()
+    cursor = postgres_conn.cursor()
+
+    # Force new transaction to see committed data from parallel workers
+    # In pytest-xdist parallel execution, worker A commits data but worker B's
+    # connection may not see it due to transaction isolation (READ COMMITTED).
+    # Rollback abandons the old transaction and starts a fresh one that can see
+    # all committed data from other workers.
+    if not postgres_conn.autocommit:
+        postgres_conn.rollback()  # Start fresh transaction with visibility of committed data
 
     # Verify new chunks were added to PostgreSQL
     cursor.execute("SELECT COUNT(*) FROM financial_chunks")
@@ -221,8 +251,19 @@ async def test_parallel_ingestion_stores_metadata():
     assert metadata.page_count > 0
 
     # Verify metadata is accessible in PostgreSQL
+    # CRITICAL FIX (CI): Reset singleton connection to force fresh connection
+    # This ensures we see all committed data from parallel ingestion workers
+    from raglite.shared.clients import reset_postgresql_connection
+
+    reset_postgresql_connection()
+
     postgres_conn = get_postgresql_connection()
     cursor = postgres_conn.cursor()
+
+    # Force new transaction to see committed data from parallel workers
+    # Same transaction visibility fix as test_parallel_ingestion_three_documents
+    if not postgres_conn.autocommit:
+        postgres_conn.rollback()  # Start fresh transaction with visibility of committed data
 
     # Note: document_id in PostgreSQL corresponds to filename from DocumentMetadata
     cursor.execute(
