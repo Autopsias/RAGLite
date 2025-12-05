@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import csv
 import io
+from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 
@@ -140,7 +141,7 @@ class ATICClient:
         )
         return results
 
-    def _map_columns(self, fieldnames: list[str]) -> dict[str, str]:
+    def _map_columns(self, fieldnames: list[str] | Sequence[str]) -> dict[str, str]:
         """Map CSV column names to standard names.
 
         Args:

@@ -92,7 +92,7 @@ class BPstatClient:
                 try:
                     response = await client.get(url, params=params, headers=headers)
                     response.raise_for_status()
-                    return response.json()
+                    return dict(response.json())
 
                 except httpx.TimeoutException as e:
                     if attempt < max_retries - 1:

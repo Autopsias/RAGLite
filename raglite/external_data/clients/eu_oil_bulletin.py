@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import os
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ET  # nosec B405 - XML from trusted EU gov source
 from datetime import date
 
 import httpx
@@ -186,10 +186,10 @@ class EUOilBulletinClient:
         Returns:
             List of diesel price records
         """
-        results = []
+        results: list[EUDieselPrice] = []
 
         try:
-            root = ET.fromstring(content)
+            root = ET.fromstring(content)  # nosec B314 - XML from trusted EU gov source
         except ET.ParseError as e:
             logger.warning(
                 "Failed to parse EU Oil Bulletin XML",
@@ -210,10 +210,14 @@ class EUOilBulletinClient:
                 continue
 
             try:
+                if date_str is None:
+                    continue
                 record_date = date.fromisoformat(date_str)
                 if not (start_date <= record_date <= end_date):
                     continue
 
+                if price_str is None:
+                    continue
                 price = float(price_str)
                 results.append(
                     EUDieselPrice(

@@ -94,7 +94,7 @@ class CommoditiesClient:
                 try:
                     response = await client.get(url)
                     response.raise_for_status()
-                    return response.json()
+                    return dict(response.json())
 
                 except httpx.TimeoutException as e:
                     if attempt < max_retries - 1:
@@ -154,7 +154,9 @@ class CommoditiesClient:
         except ExternalDataFetchError:
             # Fall back to cache
             logger.warning("Failed to fetch CO2 prices from API, using cache")
-            return self.load_from_cache("co2_eua", start_date, end_date)
+            cached_results = self.load_from_cache("co2_eua", start_date, end_date)
+            # Cast is safe: load_from_cache with "co2_eua" only returns CO2EUAPrice instances
+            return [item for item in cached_results if isinstance(item, CO2EUAPrice)]
 
     async def fetch_coal_prices(
         self,
@@ -180,7 +182,9 @@ class CommoditiesClient:
 
         # Coal prices typically require commercial APIs
         # Fall back to cache/manual data
-        return self.load_from_cache("coal", start_date, end_date)
+        cached_results = self.load_from_cache("coal", start_date, end_date)
+        # Cast is safe: load_from_cache with "coal" only returns CoalPrice instances
+        return [item for item in cached_results if isinstance(item, CoalPrice)]
 
     async def fetch_petcoke_prices(
         self,
@@ -204,7 +208,9 @@ class CommoditiesClient:
             extra={"start": str(start_date), "end": str(end_date)},
         )
 
-        return self.load_from_cache("petcoke", start_date, end_date)
+        cached_results = self.load_from_cache("petcoke", start_date, end_date)
+        # Cast is safe: load_from_cache with "petcoke" only returns PetcokePrice instances
+        return [item for item in cached_results if isinstance(item, PetcokePrice)]
 
     def _parse_co2_prices(
         self,
@@ -222,7 +228,7 @@ class CommoditiesClient:
         Returns:
             List of CO2 EUA price records
         """
-        results = []
+        results: list[CO2EUAPrice] = []
 
         for record in data.get("data", []):
             try:
@@ -289,7 +295,7 @@ class CommoditiesClient:
             )
             return []
 
-        results = []
+        results: list[CommodityPrice] = []
         for record in data:
             try:
                 record_date = date.fromisoformat(record["date"])
@@ -300,42 +306,36 @@ class CommoditiesClient:
                     continue
 
                 # Create appropriate model based on commodity type
+                price_obj: CommodityPrice
                 if commodity == "coal":
-                    results.append(
-                        CoalPrice(
-                            date=record_date,
-                            price=float(record["price"]),
-                            currency=record.get("currency", "EUR"),
-                            grade=record.get("grade"),
-                        )
+                    price_obj = CoalPrice(
+                        date=record_date,
+                        price=float(record["price"]),
+                        currency=record.get("currency", "EUR"),
+                        grade=record.get("grade"),
                     )
                 elif commodity == "petcoke":
-                    results.append(
-                        PetcokePrice(
-                            date=record_date,
-                            price=float(record["price"]),
-                            currency=record.get("currency", "EUR"),
-                            sulfur_content_pct=record.get("sulfur_content_pct"),
-                        )
+                    price_obj = PetcokePrice(
+                        date=record_date,
+                        price=float(record["price"]),
+                        currency=record.get("currency", "EUR"),
+                        sulfur_content_pct=record.get("sulfur_content_pct"),
                     )
                 elif commodity == "co2_eua":
-                    results.append(
-                        CO2EUAPrice(
-                            date=record_date,
-                            price=float(record["price"]),
-                            currency=record.get("currency", "EUR"),
-                        )
+                    price_obj = CO2EUAPrice(
+                        date=record_date,
+                        price=float(record["price"]),
+                        currency=record.get("currency", "EUR"),
                     )
                 else:
-                    results.append(
-                        CommodityPrice(
-                            date=record_date,
-                            commodity=commodity,
-                            price=float(record["price"]),
-                            currency=record.get("currency", "EUR"),
-                            unit=record.get("unit", "EUR/tonne"),
-                        )
+                    price_obj = CommodityPrice(
+                        date=record_date,
+                        commodity=commodity,
+                        price=float(record["price"]),
+                        currency=record.get("currency", "EUR"),
+                        unit=record.get("unit", "EUR/tonne"),
                     )
+                results.append(price_obj)
             except (ValueError, KeyError) as e:
                 logger.warning(
                     f"Failed to parse cached {commodity} record",
@@ -426,7 +426,7 @@ class CommoditiesClient:
                 message=f"CSV file not found: {csv_path}",
             )
 
-        results = []
+        results: list[CommodityPrice] = []
 
         with open(path) as f:
             reader = csv.DictReader(f)
@@ -438,46 +438,40 @@ class CommoditiesClient:
                     currency = row.get("currency", "EUR")
                     unit = row.get("unit", "EUR/tonne")
 
+                    price_obj: CommodityPrice
                     if commodity == "coal":
-                        results.append(
-                            CoalPrice(
-                                date=record_date,
-                                price=price_val,
-                                currency=currency,
-                                grade=row.get("grade"),
-                            )
+                        price_obj = CoalPrice(
+                            date=record_date,
+                            price=price_val,
+                            currency=currency,
+                            grade=row.get("grade"),
                         )
                     elif commodity == "petcoke":
-                        results.append(
-                            PetcokePrice(
-                                date=record_date,
-                                price=price_val,
-                                currency=currency,
-                                sulfur_content_pct=(
-                                    float(row["sulfur_content_pct"])
-                                    if row.get("sulfur_content_pct")
-                                    else None
-                                ),
-                            )
+                        price_obj = PetcokePrice(
+                            date=record_date,
+                            price=price_val,
+                            currency=currency,
+                            sulfur_content_pct=(
+                                float(row["sulfur_content_pct"])
+                                if row.get("sulfur_content_pct")
+                                else None
+                            ),
                         )
                     elif commodity == "co2_eua":
-                        results.append(
-                            CO2EUAPrice(
-                                date=record_date,
-                                price=price_val,
-                                currency=currency,
-                            )
+                        price_obj = CO2EUAPrice(
+                            date=record_date,
+                            price=price_val,
+                            currency=currency,
                         )
                     else:
-                        results.append(
-                            CommodityPrice(
-                                date=record_date,
-                                commodity=commodity,
-                                price=price_val,
-                                currency=currency,
-                                unit=unit,
-                            )
+                        price_obj = CommodityPrice(
+                            date=record_date,
+                            commodity=commodity,
+                            price=price_val,
+                            currency=currency,
+                            unit=unit,
                         )
+                    results.append(price_obj)
                 except (ValueError, KeyError) as e:
                     logger.warning(
                         f"Failed to parse CSV row for {commodity}",
