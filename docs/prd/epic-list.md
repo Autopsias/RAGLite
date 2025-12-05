@@ -14,6 +14,11 @@
 **Epic 4: Forecasting & Proactive Insights**
 *Goal:* Deliver predictive intelligence and strategic recommendations through AI-powered forecasting and autonomous insight generation, enabling the system to proactively surface trends, anomalies, and strategic priorities.
 
+**Epic 6: Advanced Forecasting with External Data** 🟡 **READY TO START**
+*Goal:* Enhance forecasting capabilities with multi-variate models using external Portuguese/EU data sources for cement industry demand prediction, enabling correlation analysis between macro-economic drivers and business KPIs.
+
+*Priority:* P0 (blocks Epic 5) | *Status:* READY TO START | *Timeline:* 3-4 weeks (14-20 days) | *Dependencies:* Epic 4 (DONE) | *Technology Stack:* PostgreSQL 16.10 LTS, APScheduler 3.10+, scikit-learn 1.5+, XGBoost 2.1+ (all APPROVED) | *Accuracy Target:* ±10% or better (vs Epic 4 ±15%, 20-30% improvement)
+
 **Epic 5: Production Readiness & Real-Time Operations**
 *Goal:* Deploy production-ready cloud infrastructure with real-time document updates, performance optimization, and monitoring to deliver a reliable, scalable system ready for daily use and team rollout.
 

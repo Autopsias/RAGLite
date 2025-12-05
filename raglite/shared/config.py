@@ -95,6 +95,17 @@ class Settings(BaseSettings):
     # Unit Inference Optimization (Story 5.0.6)
     unit_inference_llm_tables_only: bool = True  # Only use LLM for table chunks (user preference)
 
+    # External Data API Keys (Story 6.1: Tier 1 sources)
+    ine_api_key: str | None = None
+    bpstat_api_key: str | None = None
+    omie_api_key: str | None = None  # May not require key
+    ipma_api_key: str | None = None  # Public API, no key needed
+
+    # External Data Configuration (Story 6.1)
+    external_data_stale_days: int = 30  # Max days before data considered stale
+    external_data_retry_attempts: int = 3  # Retry attempts with exponential backoff
+    external_data_timeout: int = 30  # HTTP timeout seconds
+
     @model_validator(mode="after")
     def adjust_for_environment(self) -> Self:
         """Automatically adjust database settings based on APP_ENV.

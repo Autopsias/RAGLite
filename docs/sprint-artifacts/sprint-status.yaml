@@ -1,4 +1,4 @@
-# generated: 2025-12-03
+# generated: 2025-12-05
 # project: RAGLite
 # project_key: raglite-mvp
 # tracking_system: file-system
@@ -29,7 +29,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', dev reviews, then Dev moves to 'done'
 
-generated: 2025-12-03
+generated: 2025-12-05
 project: RAGLite
 project_key: raglite-mvp
 tracking_system: file-system
@@ -61,8 +61,8 @@ development_status:
   1-15b-baseline-validation-analysis: done
   epic-1-retrospective: completed
 
-  # Epic 2: Advanced RAG Architecture Enhancement (IN PROGRESS)
-  epic-2: in-progress
+  # Epic 2: Advanced RAG Architecture Enhancement (COMPLETE)
+  epic-2: done
   2-1-implement-pypdfium-backend-docling: done
   2-2-implement-page-level-parallelism: done
   2-3-refactor-chunking-fixed-512-token-approach: done
@@ -74,10 +74,10 @@ development_status:
   2-9-fix-ground-truth-page-references: done
   2-10-fix-query-classification-over-routing: done
   2-11-fix-hybrid-search-score-normalization-fusion: done
-  2-12-cross-encoder-re-ranking: backlog
+  2-12-cross-encoder-re-ranking: done
   2-13-sql-table-search: done
-  2-14-sql-generation-edge-case-refinement: backlog
-  epic-2-retrospective: optional
+  2-14-sql-generation-edge-case-refinement: done
+  epic-2-retrospective: completed
 
   # Epic 3: AI Intelligence & Orchestration (COMPLETE)
   epic-3: done
@@ -93,6 +93,8 @@ development_status:
 
   # Epic 4: Forecasting & Proactive Insights (COMPLETE)
   epic-4: done
+  4-0-6-production-database-protection: done
+  4-0-7-mcp-base64-ingestion: done
   4-1-time-series-data-extraction: done
   4-2-forecasting-engine-implementation: done
   4-3-automated-forecast-updates: done
@@ -105,12 +107,33 @@ development_status:
   4-10-forecasting-insights-test-suite: done
   epic-4-retrospective: completed
 
-  # Epic 5: Production Readiness & Real-Time Operations (IN PROGRESS)
-  epic-5: in-progress
+  # Epic 6: Advanced Forecasting with External Data (IN PROGRESS - 2025-12-05)
+  # Sprint Change Proposal: SCP-2025-12-04-001 APPROVED
+  # Goal: Multi-variate forecasting with external Portuguese/EU data sources
+  # Timeline: 3-4 weeks (14-20 days)
+  # Blockers: None (Epic 4 complete, technologies approved)
+  epic-6: in-progress
+
+  # Epic 6 Stories (Story files created - DRAFTED)
+  6-1-tier-1-external-data-integration: drafted  # Story file: docs/stories/6.1-tier-1-external-data-integration.md
+  6-2-postgresql-external-data-schema: drafted  # Story file: docs/stories/6.2-postgresql-external-data-schema.md
+  6-3-prophet-multivariate-forecasting: drafted  # Story file: docs/stories/6.3-prophet-multi-variate-forecasting.md
+  6-4-model-ensemble-framework: drafted  # Story file: docs/stories/6.4-model-ensemble-framework.md
+  6-5-automated-data-refresh-scheduler: drafted  # Story file: docs/stories/6.5-automated-data-refresh-scheduler.md
+  6-6-external-data-query-tool-mcp: drafted  # Story file: docs/stories/6.6-external-data-query-tool-mcp.md
+  6-7-multivariate-forecast-accuracy-validation: drafted  # Story file: docs/stories/6.7-multi-variate-forecast-accuracy-validation.md
+  6-8-tier-2-data-sources-conditional: drafted  # Story file: docs/stories/6.8-tier-2-data-sources-conditional.md (CONDITIONAL)
+  epic-6-retrospective: optional
+
+  # Epic 5: Production Readiness & Real-Time Operations
+  # BLOCKED by Epic 6 until data pipeline components ready for cloud deployment
+  epic-5: backlog
   5-0-1-fix-timeseries-period-extraction: done
+  5-0-4-dynamic-metric-forecasting-support: done
   5-0-6-parallel-ingestion-optimization: done
   5-0-7-cement-industry-query-improvements: done
-  5-1-cloud-infrastructure-architecture: in-progress
+  # Story 5.1 architecture APPROVED (2025-12-04) but BLOCKED by Epic 6 for data pipeline updates
+  5-1-cloud-infrastructure-architecture: drafted  # Story file: docs/stories/5.1-cloud-infrastructure-architecture.md (BLOCKED by Epic 6)
   5-2-containerization-cloud-deployment: backlog
   5-3-environment-configuration-secrets-management: backlog
   5-4-data-encryption-at-rest: backlog

@@ -104,8 +104,8 @@ development_status:
   3-8-agentic-workflow-test-suite: done  # ✅ APPROVED (2025-11-18) - Exemplary test suite implementation
   epic-3-retrospective: completed
 
-  # Epic 4: Forecasting & Proactive Insights
-  epic-4: contexted
+  # Epic 4: Forecasting & Proactive Insights (COMPLETE)
+  epic-4: done
 
   # Epic 4 Prep Stories (Post-Epic 3 Retrospective Actions - 2025-11-18)
   4-0-1-test-coverage-backfill-ci-cd-gates: done  # ✅ COMPLETE - All ACs met/exceeded (57.62% coverage, CI/CD gates working, 2025-11-23)
@@ -129,17 +129,37 @@ development_status:
   4-10-forecasting-insights-test-suite: done  # ✅ COMPLETE (2025-11-27) - 87 tests pass, all ACs met, validation framework ready
   epic-4-retrospective: completed  # ✅ COMPLETE (2025-11-30) - Retrospective facilitated, learnings documented, 2 new stories added to Epic 5
 
+  # Epic 6: Advanced Forecasting with External Data (NEW - 2025-12-04)
+  # Sprint Change Proposal: SCP-2025-12-04-001 APPROVED
+  # Goal: Multi-variate forecasting with external Portuguese/EU data sources
+  # Timeline: 3-4 weeks (14-20 days)
+  # Blockers: None (Epic 4 complete, technologies approved)
+  epic-6: backlog
+
+  # Epic 6 Stories (To be created by PM Agent)
+  6-1-tier-1-external-data-integration: review  # ✅ Implementation complete, 61 tests passing, 82.33% coverage
+  6-2-postgresql-external-data-schema: backlog  # PostgreSQL schema for external data storage
+  6-3-prophet-multivariate-forecasting: backlog  # Prophet with external regressors
+  6-4-model-ensemble-framework: backlog  # scikit-learn + XGBoost ensemble
+  6-5-automated-data-refresh-scheduler: backlog  # APScheduler integration
+  6-6-external-data-query-tool-mcp: backlog  # MCP tool for external data queries
+  6-7-multivariate-forecast-accuracy-validation: backlog  # Accuracy validation (±10% target)
+  6-8-tier-2-data-sources-conditional: backlog  # Conditional: ONLY if Story 6.7 <±12%
+  epic-6-retrospective: optional
+
   # Epic 5: Production Readiness & Real-Time Operations
-  epic-5: contexted
+  # ⚠️ BLOCKED by Epic 6 until data pipeline components ready for cloud deployment
+  epic-5: backlog
 
   # Epic 5 Prep Stories (Bug Fixes from Epic 4 UAT + Retrospective Actions)
   5-0-1-fix-timeseries-period-extraction: done  # BUG-E4-001: RESOLVED - Migration complete, SQL extraction operational
   5-0-4-dynamic-metric-forecasting-support: done  # ✅ APPROVED (2025-11-30) - All ACs verified, 109 tests passing, Senior Dev Review passed
   5-0-5-mcp-token-optimization-guidelines-compliance: backlog  # RETRO-L9: Anthropic MCP guidelines alignment, token efficiency
-  5-0-6-parallel-ingestion-optimization: review  # P0: Critical performance fix - 4-5 hours → 45 min for 10 PDFs - ALL ACs COMPLETE (2025-12-01)
+  5-0-6-parallel-ingestion-optimization: done  # ✅ APPROVED (2025-12-01) - 6-10x speedup achieved, 41 tests passing, 32 PDFs ingested (4,881 pages), ready for merge
 
   # Epic 5 Feature Stories
-  5-1-cloud-infrastructure-architecture: backlog
+  # ⚠️ Story 5.1 architecture APPROVED (2025-12-04) but BLOCKED by Epic 6 for data pipeline updates
+  5-1-cloud-infrastructure-architecture: backlog  # BLOCKED: Needs Epic 6 data pipeline requirements
   5-2-containerization-cloud-deployment: backlog
   5-3-environment-configuration-secrets-management: backlog
   5-4-data-encryption-at-rest: backlog

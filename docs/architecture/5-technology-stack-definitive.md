@@ -12,13 +12,16 @@
 | **Finance Embedding** | FinanceMTEB/FinE5 | Latest (Feb 2025) | 2025-11-05 | Financial domain embeddings | 71.05% financial domain accuracy, e5-Mistral-7B fine-tuned |
 | **Chunking** | Contextual Retrieval | N/A | 2025-11-05 | LLM-generated context per chunk | 98.1% retrieval accuracy |
 | **Vector Database** | Qdrant | ≥1.15.5 | 2025-11-05 | Store/search embeddings | HNSW indexing, sub-5s retrieval, latest: 1.15.5 (Aug 2025) |
-| **SQL Database** | PostgreSQL | 16.10 (LTS) | 2025-11-05 | Structured table storage for financial data | ⚠️ CONDITIONAL (Phase 2B/2C): IF Phase 2A fixed chunking <70% accuracy. PG 18 latest, 16.10 stable LTS |
+| **SQL Database** | PostgreSQL | 16.10 (LTS) | 2025-12-04 | Structured table storage + external data (Epic 6) | ✅ APPROVED (Epic 6): Financial tables (Phase 2B) + external data sources. PG 18 latest, 16.10 stable LTS |
 | **Graph Database** | Neo4j | 5.26 LTS | 2025-11-05 | Knowledge graph for entity relationships | ⚠️ CONDITIONAL (Phase 2C): IF Phase 2B structured multi-index <75% accuracy. Latest: 2025.08 (calendar), 5.26 LTS recommended |
 | **Agent Framework** | LangGraph + AWS Strands | Latest | 2025-11-05 | Multi-agent orchestration for query planning | ⚠️ CONDITIONAL (Phase 3): IF Phase 2 <85% accuracy |
 | **MCP Server** | MCP Python SDK (mcp) | 1.20.0 | 2025-11-05 | Expose tools via MCP protocol | Official SDK by Anthropic, FastMCP 1.0 merged into official SDK |
 | **MCP Framework** | FastMCP 2.0 | 2.0 | 2025-11-05 | Production MCP framework (optional) | Extends official SDK with advanced patterns, enterprise auth, testing |
 | **LLM (Primary)** | Claude 3.7 Sonnet (Anthropic SDK) | 0.72.0 | 2025-11-05 | Reasoning, analysis, synthesis | Latest SDK (Oct 28, 2025), state-of-art reasoning, 200K context |
 | **Forecasting** | Prophet | 1.2.1 | 2025-11-05 | Time-series baseline | Facebook library, seasonal handling, Apple M2 support |
+| **Task Scheduler** | APScheduler | 3.10+ | 2025-12-04 | Periodic external data refresh | Lightweight Python scheduler, persistent jobs in PostgreSQL, no external deps |
+| **ML Framework** | scikit-learn | 1.5+ | 2025-12-04 | Model ensemble (Linear Regression) | Industry standard ML library, numpy/scipy compatible |
+| **Gradient Boosting** | XGBoost | 2.1+ | 2025-12-04 | Advanced forecasting ensemble | State-of-art boosting for time-series, production-proven |
 | **Backend Language** | Python | ≥3.11,≤3.13 | 2025-11-05 | All application code | 3.13.5 latest (Oct 2025), 3.11+ for production stability, async support |
 | **Data Validation** | Pydantic | 2.12.4 | 2025-11-05 | Data models and validation | Latest (Nov 5, 2025), type-safe, runtime validation, Python 3.14 support |
 | **Configuration** | Pydantic Settings | ≥2.0 | 2025-11-05 | Settings management | Environment variable loading |
@@ -54,12 +57,28 @@
   - **Risk**: LOW (production-proven, minimal integration required)
   - **Timeline**: 1-2 days implementation + validation
 
-**Phase 2B-C (CONDITIONAL - Decision Gate Approval)**:
-- ⚠️ **PostgreSQL**: ONLY if Phase 2A Fixed Chunking <70% accuracy (requires Structured Multi-Index)
-  - **Trigger**: Phase 2A decision gate (T+17, Week 3 Day 3)
-  - **Probability**: 15% (research suggests 80% chance Phase 2A achieves 68-72%)
-  - **Decision Authority**: PM (John) approves based on accuracy validation results
+**Epic 6 (APPROVED - 2025-12-04)**:
+- ✅ **PostgreSQL 16.10 LTS**: APPROVED for Epic 6 external data storage
+  - **Rationale**: Store Tier 1/2 time-series data (INE, BPstat, OMIE, IPMA, etc.)
+  - **Schema**: `external_data_sources` + `external_data_points` tables
+  - **Decision Authority**: Ricardo (Product Owner) - SCP-2025-12-04-001
 
+- ✅ **APScheduler 3.10+**: APPROVED for periodic data refresh
+  - **Rationale**: Lightweight Python scheduler, persistent jobs in PostgreSQL
+  - **Alternative Considered**: AWS EventBridge (cloud-only, rejected for local dev)
+  - **Decision Authority**: Ricardo (Product Owner) - SCP-2025-12-04-001
+
+- ✅ **scikit-learn 1.5+**: APPROVED for ML ensemble framework
+  - **Rationale**: Industry standard, integrates with Prophet for multi-model forecasting
+  - **Models**: Linear Regression with external regressors
+  - **Decision Authority**: Ricardo (Product Owner) - SCP-2025-12-04-001
+
+- ✅ **XGBoost 2.1+**: APPROVED for gradient boosting ensemble
+  - **Rationale**: State-of-art forecasting accuracy, production-proven
+  - **Alternative Considered**: LightGBM (XGBoost chosen for better documentation)
+  - **Decision Authority**: Ricardo (Product Owner) - SCP-2025-12-04-001
+
+**Phase 2B-C (CONDITIONAL - Decision Gate Approval)**:
 - ⚠️ **Neo4j 5.x**: ONLY if Phase 2B Structured <75% accuracy (requires Hybrid Architecture)
   - **Trigger**: Phase 2B decision gate (IF triggered)
   - **Probability**: 5% (Phase 2B expected to achieve 70-80%)
@@ -74,6 +93,58 @@
 **Decision Authority**: PM (John) approves at each decision gate based on accuracy validation results from AC3 ground truth test suite (50 queries).
 
 **Technology Stack LOCKED Policy**: No additions without user approval (per CLAUDE.md constraints). All conditional technologies have been pre-approved with trigger conditions defined.
+
+---
+
+## Epic 6: Advanced Forecasting with External Data
+
+**Timeline:** 3-4 weeks (14-20 days)
+**Status:** Backlog (waiting for PM to create stories)
+**Dependencies:** Epic 4 complete (DONE)
+
+### New Dependencies
+
+| Technology | Version | Purpose | Justification |
+|------------|---------|---------|---------------|
+| **PostgreSQL** | 16.10 LTS | External data storage | Structured time-series data for 11 Tier 1 sources, 5-year retention |
+| **APScheduler** | 3.10+ | Data refresh scheduler | Daily/weekly/monthly refresh for external sources, persistent jobs |
+| **scikit-learn** | 1.5+ | ML ensemble | Linear Regression for multi-variate forecasting |
+| **XGBoost** | 2.1+ | Gradient boosting | Advanced ensemble for 20-30% accuracy improvement |
+| **httpx** | 0.28.1+ | HTTP client | Async API calls to INE, BPstat, OMIE, IPMA (already approved) |
+| **pandas** | 2.0+ | Data manipulation | Time-series processing (already approved) |
+
+### External Data Sources (Tier 1)
+
+**11 datasets integrated via API/CSV:**
+1. **INE (Portugal Statistics):** Building Permits, Construction Output Index, Construction Cost Index
+2. **ATIC:** Cement Consumption (CSV if no API)
+3. **Banco de Portugal BPstat:** Mortgage Loans
+4. **OMIE:** Electricity Prices (Iberian market)
+5. **EU Oil Bulletin:** Diesel Prices
+6. **IPMA (Portugal Weather):** Temperature, Rainfall
+7. **Base.gov.pt:** Public Works Contracts
+8. **Manual/Scraping:** Coal/Petcoke Prices, CO₂ EUA Prices
+
+**Tier 2 Sources (Conditional):** 9 additional datasets IF Story 6.7 accuracy <±12%
+
+### Architecture Impact
+
+**New Modules:**
+- `raglite/external_data/` - API clients, data validation, scheduler
+- `raglite/forecasting/ensemble.py` - Multi-model framework (Prophet + scikit-learn + XGBoost)
+
+**Enhanced Modules:**
+- `raglite/forecasting/hybrid.py` - Add multi-variate Prophet with external regressors
+- `raglite/shared/clients.py` - Add PostgreSQL external data client
+
+**Database Schema:**
+- PostgreSQL tables: `external_data_sources`, `external_data_points`
+- Indexes: (source_id, date), (metric_name)
+
+**MCP Tools:**
+- `query_external_data(source, date_range, metric)` - Query external sources
+- `refresh_external_data(source_name)` - Manual data refresh trigger
+- Enhanced `get_financial_forecast()` - Multi-model support
 
 ---
 

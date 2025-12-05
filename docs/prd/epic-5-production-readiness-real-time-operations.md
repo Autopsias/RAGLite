@@ -29,12 +29,25 @@
 
 **Acceptance Criteria:**
 1. Docker images built for all services per Architect's design
+   - **Epic 6:** Include forecasting module (Stories 6.3-6.4 multi-variate Prophet & ensemble models)
 2. Container orchestration configured (ECS, EKS, or equivalent)
 3. Managed vector database deployed (Qdrant Cloud or OpenSearch)
 4. Managed graph database deployed if KG implemented (Neo4j Aura or equivalent)
-5. Services deployed to cloud and validated functional
-6. Health checks and readiness probes configured
-7. Deployment achieves 99%+ uptime target (NFR1)
+5. **Epic 6:** PostgreSQL external data schema deployed (Story 6.2 migrations)
+   - Deploy `external_data_sources` and `external_data_points` tables
+   - Run Alembic migrations for external data schema
+6. **Epic 6:** AWS EventBridge Scheduler configured for data refresh
+   - Daily: Weather (IPMA), Electricity Prices (OMIE), CO₂ EUA
+   - Weekly: Building Permits (INE), Mortgage Loans (BPstat), Diesel Prices
+   - Monthly: Construction Output, Cost Index (INE), Cement Consumption (ATIC)
+   - Replace local APScheduler with AWS EventBridge for production
+7. **Epic 6:** External API credentials stored in AWS Secrets Manager
+   - INE_API_KEY, BPSTAT_API_KEY, OMIE_API_KEY, IPMA_API_KEY
+8. **Epic 6:** Security group rules for outbound HTTPS to external data sources
+   - INE, BPstat, OMIE, IPMA APIs, Base.gov.pt, EU Oil Bulletin, energy sites
+9. Services deployed to cloud and validated functional
+10. Health checks and readiness probes configured
+11. Deployment achieves 99%+ uptime target (NFR1)
 
 ## Story 5.3: Environment Configuration & Secrets Management
 
@@ -270,7 +283,14 @@ CI/CD is critical for solo developer + AI agent workflow:
    - `ingest_financial_document(file_path, document_type)` - Phase 1
    - `query_financial_documents(query, filters)` - Phase 1
    - `get_financial_forecast(metric, time_period)` - Phase 3 (if implemented)
+     - **Epic 6 UPDATE:** Now supports multi-variate forecasting with external regressors (Story 6.3)
+     - **Epic 6 UPDATE:** Now supports model selection: "prophet", "linear", "xgboost", "ensemble" (Story 6.4)
+     - **Epic 6 Parameters:** Add `external_regressors` (optional), `model_type` (optional, default: "prophet")
    - `generate_insights(category, time_range)` - Phase 3 (if implemented)
+   - **Epic 6 NEW TOOLS:**
+     - `query_external_data(source, date_range, metric)` - Query external data sources (INE, BPstat, OMIE, IPMA) (Story 6.6)
+     - `refresh_external_data(source_name)` - Manually trigger external data refresh for one or all sources (Story 6.5)
+     - `forecast_with_model(metric, model_type, periods_ahead)` - Generate forecast with specific model selection (Story 6.4 ensemble framework)
    - Any additional tools implemented in Epics 2-4
 
 3. **Response Format Specifications:**
