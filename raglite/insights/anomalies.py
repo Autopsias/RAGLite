@@ -7,12 +7,7 @@ Target: ~50 lines per Tech Spec Section 3.3.
 import numpy as np
 
 from raglite.shared.logging import get_logger
-from raglite.shared.models import (
-    Anomaly,
-    AnomalyDetectionResult,
-    AnomalySeverity,
-    TimeSeriesData,
-)
+from raglite.shared.models import Anomaly, AnomalyDetectionResult, AnomalySeverity, TimeSeriesData
 
 logger = get_logger(__name__)
 

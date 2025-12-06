@@ -20,26 +20,15 @@ from __future__ import annotations
 # Test compatibility imports - needed for test mocking
 import openpyxl  # noqa: F401
 
-from raglite.shared.clients import (  # noqa: F401
-    get_embedding_model,
-    get_qdrant_client,
-)
+from raglite.shared.clients import get_embedding_model, get_qdrant_client  # noqa: F401
 
 # Chunking Strategy Module
-from .chunking_strategy import (
-    chunk_by_docling_items,
-    chunk_document,
-    split_large_table_by_rows,
-)
+from .chunking_strategy import chunk_by_docling_items, chunk_document, split_large_table_by_rows
 
 # Re-export all functions from focused modules
 # This ensures backward compatibility with existing test imports
 # Document Ingestion Module
-from .document_ingestion import (
-    extract_excel,
-    ingest_document,
-    ingest_pdf,
-)
+from .document_ingestion import extract_excel, ingest_document, ingest_pdf
 
 # Embedding Generation Module
 from .embedding_generation import (

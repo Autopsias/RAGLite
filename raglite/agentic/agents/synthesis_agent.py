@@ -18,9 +18,7 @@ except ImportError:
         return func
 
 
-from raglite.agentic.state import (
-    SynthesisResult,
-)
+from raglite.agentic.state import SynthesisResult
 from raglite.shared.clients import get_mistral_client
 from raglite.shared.logging import get_logger
 

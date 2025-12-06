@@ -19,10 +19,7 @@ from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 
-from raglite.external_data.exceptions import (
-    ExternalDataFetchError,
-    ExternalDataValidationError,
-)
+from raglite.external_data.exceptions import ExternalDataFetchError, ExternalDataValidationError
 from raglite.external_data.models import ATICCementConsumption
 from raglite.shared.logging import get_logger
 

@@ -199,10 +199,7 @@ class TestAC6CementKPIPatterns:
     @pytest.mark.asyncio
     async def test_clinker_factor_classification(self):
         """Test clinker factor is classified as METRIC."""
-        from raglite.ingestion.adaptive_table.classification import (
-            HeaderType,
-            classify_header,
-        )
+        from raglite.ingestion.adaptive_table.classification import HeaderType, classify_header
 
         assert classify_header("Clinker Factor") == HeaderType.METRIC
         assert classify_header("Clinker Ratio") == HeaderType.METRIC
@@ -217,10 +214,7 @@ class TestAC6CementKPIPatterns:
     @pytest.mark.asyncio
     async def test_co2_emissions_classification(self):
         """Test CO2 emissions patterns are classified as METRIC."""
-        from raglite.ingestion.adaptive_table.classification import (
-            HeaderType,
-            classify_header,
-        )
+        from raglite.ingestion.adaptive_table.classification import HeaderType, classify_header
 
         assert classify_header("CO2 per ton") == HeaderType.METRIC
         assert classify_header("Emissions Intensity") == HeaderType.METRIC

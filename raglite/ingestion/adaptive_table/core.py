@@ -17,10 +17,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 # Phase 2: Import safe wrapper functions from centralized validation module
-from .validation import (
-    safe_infer_entity_from_context,
-    safe_infer_metric_from_context,
-)
+from .validation import safe_infer_entity_from_context, safe_infer_metric_from_context
 
 if TYPE_CHECKING:
     from docling.document_converter import ConversionResult
@@ -63,10 +60,7 @@ async def extract_table_data_adaptive(
         - Connection pooling via shared Mistral client
         - Story 5.0.6 AC3: Cross-document cache reduces duplicate API calls by 30%
     """
-    from .classification import (
-        TableLayout,
-        detect_table_layout,
-    )
+    from .classification import TableLayout, detect_table_layout
     from .multi_header import _extract_multi_header_metric_entity
     from .standard_layouts import (
         _extract_entity_cols_metric_rows,

@@ -10,17 +10,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from docling.document_converter import (
-        ConversionResult,
-        DocumentConverter,
-    )
+    from docling.document_converter import ConversionResult, DocumentConverter
     from docling_core.types.doc import TableItem
 
 # Phase 2: Import safe wrapper functions from centralized validation module
-from raglite.ingestion.adaptive_table.validation import (
-    safe_assign_entity,
-    safe_assign_metric,
-)
+from raglite.ingestion.adaptive_table.validation import safe_assign_entity, safe_assign_metric
 from raglite.ingestion.adaptive_table_extraction import extract_table_data_adaptive
 from raglite.shared.logging import get_logger
 
@@ -60,10 +54,7 @@ class TableExtractor:
             from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
             from docling.datamodel.accelerator_options import AcceleratorOptions
             from docling.datamodel.base_models import InputFormat
-            from docling.datamodel.pipeline_options import (
-                PdfPipelineOptions,
-                TableFormerMode,
-            )
+            from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
             from docling.document_converter import DocumentConverter, PdfFormatOption
 
             # Configure Docling with pypdfium backend (Story 2.1)

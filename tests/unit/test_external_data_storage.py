@@ -13,10 +13,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from raglite.external_data.orm_models import (
-    ExternalDataPointORM,
-    ExternalDataSourceORM,
-)
+from raglite.external_data.orm_models import ExternalDataPointORM, ExternalDataSourceORM
 from raglite.external_data.storage import ExternalDataStorage
 
 

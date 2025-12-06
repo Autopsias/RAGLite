@@ -34,10 +34,7 @@ class TestPypdfiumBackendConfiguration:
         - Configuration doesn't break existing structure
         """
         # Lazy import to avoid test discovery overhead
-        from docling.datamodel.pipeline_options import (
-            PdfPipelineOptions,
-            TableFormerMode,
-        )
+        from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
 
         # Configure pipeline options as done in pipeline.py
         pipeline_options = PdfPipelineOptions(do_table_structure=True)
@@ -57,10 +54,7 @@ class TestPypdfiumBackendConfiguration:
         # Lazy imports
         from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
         from docling.datamodel.base_models import InputFormat
-        from docling.datamodel.pipeline_options import (
-            PdfPipelineOptions,
-            TableFormerMode,
-        )
+        from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
         from docling.document_converter import DocumentConverter, PdfFormatOption
 
         # Configure pipeline options

@@ -226,11 +226,7 @@ class TestMetricsTracking:
 
     def test_log_workflow_metrics_tier_2_partial(self):
         """Test metrics logging for Tier 2 partial workflow."""
-        from raglite.agentic.fallback import (
-            ErrorType,
-            FallbackTier,
-            log_workflow_metrics,
-        )
+        from raglite.agentic.fallback import ErrorType, FallbackTier, log_workflow_metrics
 
         log_workflow_metrics(
             query_id="test-456",
@@ -245,11 +241,7 @@ class TestMetricsTracking:
 
     def test_log_workflow_metrics_tier_4_epic1_fallback(self):
         """Test metrics logging for Tier 4 Epic 1 fallback."""
-        from raglite.agentic.fallback import (
-            ErrorType,
-            FallbackTier,
-            log_workflow_metrics,
-        )
+        from raglite.agentic.fallback import ErrorType, FallbackTier, log_workflow_metrics
 
         log_workflow_metrics(
             query_id="test-789",

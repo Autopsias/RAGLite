@@ -870,10 +870,7 @@ class TestQdrantStorageIntegration:
         - All metadata fields are preserved
         """
         # Lazy imports to avoid test discovery overhead
-        from raglite.ingestion.pipeline import (
-            generate_embeddings,
-            store_vectors_in_qdrant,
-        )
+        from raglite.ingestion.pipeline import generate_embeddings, store_vectors_in_qdrant
         from raglite.shared.clients import get_qdrant_client
         from raglite.shared.models import Chunk, DocumentMetadata
 
@@ -962,10 +959,7 @@ class TestQdrantStorageIntegration:
         - Vector search works correctly
         """
         # Lazy imports to avoid test discovery overhead
-        from raglite.ingestion.pipeline import (
-            generate_embeddings,
-            store_vectors_in_qdrant,
-        )
+        from raglite.ingestion.pipeline import generate_embeddings, store_vectors_in_qdrant
         from raglite.shared.clients import get_qdrant_client
         from raglite.shared.models import Chunk, DocumentMetadata
 
@@ -1049,10 +1043,7 @@ class TestQdrantStorageIntegration:
         - No performance degradation with larger datasets
         """
         # Lazy imports to avoid test discovery overhead
-        from raglite.ingestion.pipeline import (
-            generate_embeddings,
-            store_vectors_in_qdrant,
-        )
+        from raglite.ingestion.pipeline import generate_embeddings, store_vectors_in_qdrant
         from raglite.shared.clients import get_qdrant_client
         from raglite.shared.models import Chunk, DocumentMetadata
 

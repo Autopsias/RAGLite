@@ -27,10 +27,7 @@ from raglite.external_data.clients.eu_oil_bulletin import EUOilBulletinClient
 from raglite.external_data.clients.ine import INEClient
 from raglite.external_data.clients.ipma import IPMAClient
 from raglite.external_data.clients.omie import OMIEClient
-from raglite.external_data.exceptions import (
-    ExternalDataFetchError,
-    ExternalDataValidationError,
-)
+from raglite.external_data.exceptions import ExternalDataFetchError, ExternalDataValidationError
 from raglite.external_data.models import (
     ATICCementConsumption,
     BaseGovContract,

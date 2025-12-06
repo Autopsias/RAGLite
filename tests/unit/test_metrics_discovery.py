@@ -10,11 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from raglite.forecasting.metrics import (
-    MetricInfo,
-    clear_metrics_cache,
-    list_available_metrics,
-)
+from raglite.forecasting.metrics import MetricInfo, clear_metrics_cache, list_available_metrics
 
 # Test database marker (Story 4.0.7: three-mode database system)
 pytestmark = pytest.mark.unit

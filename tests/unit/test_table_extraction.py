@@ -692,10 +692,7 @@ class TestHeaderClassification:
         'Currency (1000 EUR)' was misclassified as METRIC due to the
         'currency' pattern in metric_patterns.
         """
-        from raglite.ingestion.adaptive_table.classification import (
-            HeaderType,
-            classify_header,
-        )
+        from raglite.ingestion.adaptive_table.classification import HeaderType, classify_header
 
         result = classify_header("Currency (1000 EUR)")
         assert result == HeaderType.UNKNOWN, (
@@ -708,10 +705,7 @@ class TestHeaderClassification:
 
         This ensures the fix doesn't break legitimate currency-related metrics.
         """
-        from raglite.ingestion.adaptive_table.classification import (
-            HeaderType,
-            classify_header,
-        )
+        from raglite.ingestion.adaptive_table.classification import HeaderType, classify_header
 
         result = classify_header("Currency Exchange Rate")
         assert result == HeaderType.METRIC, (
@@ -721,10 +715,7 @@ class TestHeaderClassification:
 
     def test_unit_descriptors_are_unknown(self):
         """Test that various unit descriptors are classified as UNKNOWN."""
-        from raglite.ingestion.adaptive_table.classification import (
-            HeaderType,
-            classify_header,
-        )
+        from raglite.ingestion.adaptive_table.classification import HeaderType, classify_header
 
         unit_descriptors = [
             "Currency (1000 EUR)",

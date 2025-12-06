@@ -102,10 +102,7 @@ class TestCRUDOperations:
 
     def test_create_external_data_point(self, clean_session) -> None:
         """Test creating a new external data point."""
-        from raglite.external_data.orm_models import (
-            ExternalDataPointORM,
-            ExternalDataSourceORM,
-        )
+        from raglite.external_data.orm_models import ExternalDataPointORM, ExternalDataSourceORM
 
         # Create source first
         source = ExternalDataSourceORM(
@@ -131,10 +128,7 @@ class TestCRUDOperations:
 
     def test_query_data_points_by_date_range(self, clean_session) -> None:
         """Test querying data points within a date range."""
-        from raglite.external_data.orm_models import (
-            ExternalDataPointORM,
-            ExternalDataSourceORM,
-        )
+        from raglite.external_data.orm_models import ExternalDataPointORM, ExternalDataSourceORM
 
         # Create source
         source = ExternalDataSourceORM(
@@ -171,10 +165,7 @@ class TestCRUDOperations:
 
     def test_soft_delete_data_point(self, clean_session) -> None:
         """Test soft deleting a data point."""
-        from raglite.external_data.orm_models import (
-            ExternalDataPointORM,
-            ExternalDataSourceORM,
-        )
+        from raglite.external_data.orm_models import ExternalDataPointORM, ExternalDataSourceORM
 
         # Create source and point
         source = ExternalDataSourceORM(
@@ -229,10 +220,7 @@ class TestConstraints:
 
     def test_unique_constraint_on_source_date_metric(self, clean_session) -> None:
         """Test unique constraint on (source_id, date, metric_name)."""
-        from raglite.external_data.orm_models import (
-            ExternalDataPointORM,
-            ExternalDataSourceORM,
-        )
+        from raglite.external_data.orm_models import ExternalDataPointORM, ExternalDataSourceORM
 
         # Create source
         source = ExternalDataSourceORM(
@@ -296,10 +284,7 @@ class TestRelationships:
 
     def test_source_to_data_points_relationship(self, clean_session) -> None:
         """Test one-to-many relationship from source to data points."""
-        from raglite.external_data.orm_models import (
-            ExternalDataPointORM,
-            ExternalDataSourceORM,
-        )
+        from raglite.external_data.orm_models import ExternalDataPointORM, ExternalDataSourceORM
 
         # Create source with data points
         source = ExternalDataSourceORM(
@@ -325,10 +310,7 @@ class TestRelationships:
 
     def test_data_point_to_source_relationship(self, clean_session) -> None:
         """Test many-to-one relationship from data point to source."""
-        from raglite.external_data.orm_models import (
-            ExternalDataPointORM,
-            ExternalDataSourceORM,
-        )
+        from raglite.external_data.orm_models import ExternalDataPointORM, ExternalDataSourceORM
 
         # Create source
         source = ExternalDataSourceORM(
@@ -357,10 +339,7 @@ class TestIndexUsage:
 
     def test_query_uses_source_date_index(self, clean_session) -> None:
         """Test that date range queries can use the source_date index."""
-        from raglite.external_data.orm_models import (
-            ExternalDataPointORM,
-            ExternalDataSourceORM,
-        )
+        from raglite.external_data.orm_models import ExternalDataPointORM, ExternalDataSourceORM
 
         # Create source with many data points
         source = ExternalDataSourceORM(

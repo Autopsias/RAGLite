@@ -29,11 +29,7 @@ from fastmcp import FastMCP
 
 from raglite.agentic.fallback import FallbackResponse, handle_workflow_failure
 from raglite.agentic.orchestrator import WorkflowExecutor
-from raglite.agentic.planner import (
-    QueryComplexity,
-    classify_query_complexity,
-    decompose_query,
-)
+from raglite.agentic.planner import QueryComplexity, classify_query_complexity, decompose_query
 from raglite.forecasting.auto_update import trigger_forecast_refresh
 from raglite.forecasting.hybrid import (
     InsufficientDataError,
@@ -46,21 +42,11 @@ from raglite.forecasting.timeseries_extract import (
     extract_timeseries,
     extract_timeseries_from_sql,
 )
-from raglite.ingestion.document_ingestion import (
-    temp_file_from_base64,
-    temp_file_from_url,
-)
-from raglite.ingestion.job_tracker import (
-    create_job,
-    get_job_status,
-    start_background_job,
-)
+from raglite.ingestion.document_ingestion import temp_file_from_base64, temp_file_from_url
+from raglite.ingestion.job_tracker import create_job, get_job_status, start_background_job
 from raglite.ingestion.pipeline import ingest_document
 from raglite.retrieval.attribution import generate_citations
-from raglite.retrieval.multi_index_search import (
-    MultiIndexSearchError,
-    multi_index_search,
-)
+from raglite.retrieval.multi_index_search import MultiIndexSearchError, multi_index_search
 from raglite.retrieval.search import QueryError
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
@@ -2127,9 +2113,7 @@ async def get_financial_insights(
         from raglite.forecasting.timeseries_extract import extract_timeseries
         from raglite.insights.anomalies import detect_anomalies
         from raglite.insights.proactive import filter_insights, generate_insights
-        from raglite.insights.recommendations import (
-            generate_recommendations,
-        )
+        from raglite.insights.recommendations import generate_recommendations
         from raglite.insights.trends import analyze_trends
 
         # Step 3: Extract time-series data for analysis

@@ -21,12 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 os.environ["APP_ENV"] = "production"
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import (
-    Distance,
-    SparseIndexParams,
-    SparseVectorParams,
-    VectorParams,
-)
+from qdrant_client.models import Distance, SparseIndexParams, SparseVectorParams, VectorParams
 
 from raglite.ingestion.document_ingestion import ingest_document
 from raglite.shared.config import settings

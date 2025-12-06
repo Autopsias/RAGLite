@@ -476,11 +476,7 @@ class TestJobTrackerTempFileCleanup:
         self, tmp_path: Path, valid_pdf_content: str
     ) -> None:
         """AC8: Verify original filename is used in result metadata."""
-        from raglite.ingestion.job_tracker import (
-            create_job,
-            get_job_status,
-            run_async_ingestion,
-        )
+        from raglite.ingestion.job_tracker import create_job, get_job_status, run_async_ingestion
 
         temp_file = tmp_path / "temp_abc123.pdf"
         temp_file.write_bytes(base64.b64decode(valid_pdf_content))

@@ -543,12 +543,7 @@ METRIC INFORMATION:
 
     try:
         # Call Mistral API
-        from mistralai.models import (
-            AssistantMessage,
-            SystemMessage,
-            ToolMessage,
-            UserMessage,
-        )
+        from mistralai.models import AssistantMessage, SystemMessage, ToolMessage, UserMessage
 
         from raglite.shared.clients import get_mistral_client
 

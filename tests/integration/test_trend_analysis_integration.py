@@ -8,11 +8,7 @@ from datetime import datetime
 
 import pytest
 
-from raglite.shared.models import (
-    TimeSeriesData,
-    TimeSeriesPoint,
-    TrendDirection,
-)
+from raglite.shared.models import TimeSeriesData, TimeSeriesPoint, TrendDirection
 
 # Mark all tests as preserve_collection - these are read-only tests
 # that don't modify the Qdrant collection (performance optimization)

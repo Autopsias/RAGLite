@@ -9,10 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from raglite.ingestion.adaptive_table.unit_inference import (
-    UNIT_RULES,
-    infer_unit_from_rules,
-)
+from raglite.ingestion.adaptive_table.unit_inference import UNIT_RULES, infer_unit_from_rules
 from raglite.ingestion.document_ingestion import ingest_documents_parallel
 from raglite.shared.models import BatchIngestionResult, DocumentMetadata
 

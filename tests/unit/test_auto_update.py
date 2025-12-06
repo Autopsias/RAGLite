@@ -7,15 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from raglite.forecasting.auto_update import (
-    identify_affected_metrics,
-    trigger_forecast_refresh,
-)
-from raglite.shared.models import (
-    DocumentMetadata,
-    ForecastRefreshResult,
-    IngestionResult,
-)
+from raglite.forecasting.auto_update import identify_affected_metrics, trigger_forecast_refresh
+from raglite.shared.models import DocumentMetadata, ForecastRefreshResult, IngestionResult
 
 # =============================================================================
 # Test ForecastRefreshResult Model

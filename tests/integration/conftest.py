@@ -846,17 +846,17 @@ def session_ingested_collection(request, warmup_embedding_model):
         expected_range = (150, 220)  # 160-page PDF
     else:
         # Updated range for 10-page sample_financial_report.pdf (Story 2.14 ground truth alignment)
-        # With table-aware chunking (Story 2.8) and 512-token fixed chunking:
-        # - This PDF is table-heavy (47 tables extracted, 1548 table rows)
-        # - Table-aware chunking keeps large tables intact (fewer, larger chunks)
-        # - Observed: 80-240 chunks depending on Docling version and ingestion mode
-        # - Cached collection (--skip-ingestion): ~88 chunks
-        # - Fresh ingestion: ~162-236 chunks (CI variation)
-        # - Acceptable range: 50-250 chunks (expanded for full variation)
+        # ROOT CAUSE FIX (2025-12-06): Previous range (50,250) was WRONG - it described 160-page PDF.
+        # NOTE: This PDF contains ONLY the first 10 pages of the 160-page Performance Review.
+        # The first 10 pages are intro/summary pages with minimal table content.
+        # - Observed: 14-15 chunks consistently (docs confirm this)
+        # - The table-heavy content (47 tables, 1548 rows) is in pages 11-160, NOT pages 1-10
+        # - For full PDF testing, use TEST_USE_FULL_PDF=true
+        # - See docs/archive/3-6-analytical-query-tool-mcp.md:619 for "14 chunks" reference
         expected_range = (
-            50,
-            250,
-        )  # 10-page sample_financial_report.pdf (Story 2.14, table-heavy)
+            10,
+            25,
+        )  # 10-page sample: first 10 pages produce ~14-15 chunks
 
     if not (expected_range[0] <= count_after.count <= expected_range[1]):
         error_msg = f"CRITICAL: Chunk count {count_after.count} not in expected range {expected_range} for {pdf_description}"

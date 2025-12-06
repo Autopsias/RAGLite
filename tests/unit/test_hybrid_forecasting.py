@@ -20,12 +20,7 @@ from raglite.forecasting.hybrid import (
     explain_forecast,
     generate_forecast,
 )
-from raglite.shared.models import (
-    ForecastPoint,
-    ForecastResult,
-    TimeSeriesData,
-    TimeSeriesPoint,
-)
+from raglite.shared.models import ForecastPoint, ForecastResult, TimeSeriesData, TimeSeriesPoint
 
 
 class TestForecastModels:

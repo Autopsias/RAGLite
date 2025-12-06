@@ -55,11 +55,7 @@ def _extract_multi_header_metric_entity(
     """
     # Import helper functions from other modules
     # These are imported locally to avoid circular dependencies
-    from .core import (
-        _extract_year,
-        _get_table_caption,
-        _get_table_markdown,
-    )
+    from .core import _extract_year, _get_table_caption, _get_table_markdown
     from .unit_inference import _parse_value_unit
 
     # Phase 2: Import safe wrapper functions from centralized validation module

@@ -54,11 +54,7 @@ def _get_prophet_class() -> type[Prophet]:
 
 
 from raglite.shared.logging import get_logger
-from raglite.shared.models import (
-    ForecastPoint,
-    ForecastResult,
-    TimeSeriesData,
-)
+from raglite.shared.models import ForecastPoint, ForecastResult, TimeSeriesData
 
 logger = get_logger(__name__)
 

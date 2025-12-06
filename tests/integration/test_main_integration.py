@@ -7,12 +7,7 @@ with real Qdrant connection. Requires Docker services running.
 import pytest
 
 from raglite.main import ingest_financial_document, mcp, query_financial_documents
-from raglite.shared.models import (
-    DocumentMetadata,
-    IngestionResult,
-    QueryRequest,
-    QueryResponse,
-)
+from raglite.shared.models import DocumentMetadata, IngestionResult, QueryRequest, QueryResponse
 
 # Mark all tests in this module as integration tests that preserve collection state
 pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]

@@ -21,9 +21,7 @@ from pathlib import Path
 
 import httpx
 
-from raglite.external_data.exceptions import (
-    ExternalDataFetchError,
-)
+from raglite.external_data.exceptions import ExternalDataFetchError
 from raglite.external_data.models import CO2EUAPrice, CoalPrice, CommodityPrice, PetcokePrice
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger

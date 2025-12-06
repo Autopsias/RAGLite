@@ -22,18 +22,10 @@ if TYPE_CHECKING:
 
 import openpyxl
 import pandas as pd
-from qdrant_client.models import (
-    Distance,
-    SparseIndexParams,
-    SparseVectorParams,
-    VectorParams,
-)
+from qdrant_client.models import Distance, SparseIndexParams, SparseVectorParams, VectorParams
 
 from raglite.ingestion.chunking_strategy import chunk_by_docling_items, chunk_document
-from raglite.ingestion.embedding_generation import (
-    extract_chunk_metadata,
-    generate_embeddings,
-)
+from raglite.ingestion.embedding_generation import extract_chunk_metadata, generate_embeddings
 from raglite.ingestion.storage_operations import (
     store_metadata_in_postgresql,
     store_tables_in_postgresql,
@@ -43,12 +35,7 @@ from raglite.ingestion.table_extraction import TableExtractor
 from raglite.shared.clients import get_mistral_client, get_qdrant_client
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
-from raglite.shared.models import (
-    BatchIngestionResult,
-    Chunk,
-    DocumentMetadata,
-    ExtractedMetadata,
-)
+from raglite.shared.models import BatchIngestionResult, Chunk, DocumentMetadata, ExtractedMetadata
 from raglite.shared.safety import SafetyGuard
 
 logger = get_logger(__name__)

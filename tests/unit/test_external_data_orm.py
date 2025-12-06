@@ -203,9 +203,7 @@ class TestBaseMetadata:
 
     def test_external_data_sources_table_columns(self) -> None:
         """Test external_data_sources table has expected columns."""
-        from raglite.external_data.orm_models import (  # noqa: F401
-            ExternalDataSourceORM,
-        )
+        from raglite.external_data.orm_models import ExternalDataSourceORM  # noqa: F401
         from raglite.shared.database import Base
 
         table = Base.metadata.tables["external_data_sources"]
@@ -227,9 +225,7 @@ class TestBaseMetadata:
 
     def test_external_data_points_table_columns(self) -> None:
         """Test external_data_points table has expected columns."""
-        from raglite.external_data.orm_models import (  # noqa: F401
-            ExternalDataPointORM,
-        )
+        from raglite.external_data.orm_models import ExternalDataPointORM  # noqa: F401
         from raglite.shared.database import Base
 
         table = Base.metadata.tables["external_data_points"]
@@ -251,9 +247,7 @@ class TestBaseMetadata:
 
     def test_external_data_points_foreign_key(self) -> None:
         """Test foreign key constraint on source_id."""
-        from raglite.external_data.orm_models import (  # noqa: F401
-            ExternalDataPointORM,
-        )
+        from raglite.external_data.orm_models import ExternalDataPointORM  # noqa: F401
         from raglite.shared.database import Base
 
         table = Base.metadata.tables["external_data_points"]
@@ -266,9 +260,7 @@ class TestBaseMetadata:
 
     def test_external_data_points_indexes(self) -> None:
         """Test indexes are defined on external_data_points."""
-        from raglite.external_data.orm_models import (  # noqa: F401
-            ExternalDataPointORM,
-        )
+        from raglite.external_data.orm_models import ExternalDataPointORM  # noqa: F401
         from raglite.shared.database import Base
 
         table = Base.metadata.tables["external_data_points"]
@@ -279,9 +271,7 @@ class TestBaseMetadata:
 
     def test_external_data_points_unique_constraint(self) -> None:
         """Test unique constraint on (source_id, date, metric_name)."""
-        from raglite.external_data.orm_models import (  # noqa: F401
-            ExternalDataPointORM,
-        )
+        from raglite.external_data.orm_models import ExternalDataPointORM  # noqa: F401
         from raglite.shared.database import Base
 
         table = Base.metadata.tables["external_data_points"]

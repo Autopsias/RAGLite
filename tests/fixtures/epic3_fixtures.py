@@ -13,10 +13,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from tests.support.factories import (
-    create_database_query_result,
-    create_inspection_catalog,
-)
+from tests.support.factories import create_database_query_result, create_inspection_catalog
 
 
 @pytest.fixture

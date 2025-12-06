@@ -192,18 +192,14 @@ async def test_ac5_fast_chunk_count_validation(session_ingested_collection, enco
     # AC5.1: Verify chunk count in expected range for 10-page sample PDF
     # Expected chunk breakdown:
     # - 10-page PDF (table-heavy content with 47 tables, 1548 table rows)
-    # - Table-aware chunking (Story 2.8) with 4096-token threshold
-    # - Tables <4096 tokens kept intact as single chunks
-    # - Large tables >4096 tokens split by rows (Story 2.8 AC2)
-    # - Epic 6 update (2025-12-06): Fresh ingestion produces ~310 chunks:
-    #   - 225 table chunks (tables split by rows when >4096 tokens)
-    #   - 85 text chunks
-    #   - 10 pages × ~31 chunks/page average
-    # - Cached collection (--skip-ingestion): ~88-162 chunks (depends on cache)
-    # - Fresh ingestion: ~280-350 chunks (consistent with table-aware chunking)
-    # - Total expected range: 50-400 chunks (expanded for fresh ingestion variation)
-    assert 50 <= chunk_count <= 400, (
-        f"Chunk count {chunk_count} not in expected range 50-400 for 10-page sample PDF (sample_financial_report.pdf)"
+    # ROOT CAUSE FIX (2025-12-06): Previous range (50-400) was WRONG - it described 160-page PDF.
+    # NOTE: sample_financial_report.pdf contains ONLY the first 10 pages of 160-page Performance Review.
+    # The first 10 pages are intro/summary pages with minimal table content.
+    # - Observed: 14-15 chunks consistently (verified in docs and CI runs)
+    # - The table-heavy content (47 tables, 1548 rows) is in pages 11-160, NOT pages 1-10
+    # - See docs/archive/3-6-analytical-query-tool-mcp.md:619 for "14 chunks" reference
+    assert 10 <= chunk_count <= 25, (
+        f"Chunk count {chunk_count} not in expected range 10-25 for 10-page sample PDF (sample_financial_report.pdf)"
     )
 
     # AC5.2: Separate table chunks from text chunks
@@ -248,7 +244,7 @@ async def test_ac5_fast_chunk_count_validation(session_ingested_collection, enco
 
             # AC5.4: Document chunk count and size distribution
             print("\n✅ AC5 FAST PASS: Chunk Count Validation (10-page sample PDF)")
-            print(f"   - Total chunks: {chunk_count} (expected 50-400)")
+            print(f"   - Total chunks: {chunk_count} (expected 10-25)")
             print(
                 f"   - Text chunks: {len(text_token_counts)} (mean: {text_mean:.1f} tokens, std: {text_std:.1f})"
             )
@@ -261,7 +257,7 @@ async def test_ac5_fast_chunk_count_validation(session_ingested_collection, enco
             # Table-heavy document - skip text chunk size validation
             # AC5.4: Document chunk count and size distribution (minimal validation)
             print("\n⚠️  AC5 FAST: Table-heavy document, skipping text chunk validation")
-            print(f"   - Total chunks: {chunk_count} (expected 50-400)")
+            print(f"   - Total chunks: {chunk_count} (expected 10-25)")
             print(
                 f"   - Text chunks: {len(text_token_counts)} (mean: {text_mean:.1f} tokens) - INSUFFICIENT FOR VALIDATION"
             )

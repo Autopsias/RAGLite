@@ -192,12 +192,7 @@ async def extract_chunk_metadata(
 
     try:
         # Import dependencies (lazy import to avoid startup overhead)
-        from mistralai.models import (
-            AssistantMessage,
-            SystemMessage,
-            ToolMessage,
-            UserMessage,
-        )
+        from mistralai.models import AssistantMessage, SystemMessage, ToolMessage, UserMessage
 
         # Story 2.6 AC6 FIX: Client pooling - accept pre-created client or create new one
         # This enables caller to reuse single client instance across all chunks (10-15x speedup)

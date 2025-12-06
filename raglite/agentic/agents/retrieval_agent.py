@@ -20,10 +20,7 @@ except ImportError:
         return func
 
 
-from raglite.retrieval.multi_index_search import (
-    MultiIndexSearchError,
-    multi_index_search,
-)
+from raglite.retrieval.multi_index_search import MultiIndexSearchError, multi_index_search
 from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)

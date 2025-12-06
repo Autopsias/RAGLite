@@ -180,9 +180,7 @@ class TestSemanticEntityResolver:
                 return_value=["Portugal", "Group"],
             ):
                 # Clear the LRU cache to force recalculation
-                from raglite.retrieval.entity_resolver import (
-                    _get_canonical_entity_embeddings,
-                )
+                from raglite.retrieval.entity_resolver import _get_canonical_entity_embeddings
 
                 _get_canonical_entity_embeddings.cache_clear()
 
@@ -378,10 +376,7 @@ class TestQueryIntelligenceIntegration:
             resolve_entities_in_query,
             resolve_entity_semantic,
         )
-        from raglite.retrieval.query_classifier import (
-            METRIC_SYNONYMS,
-            expand_metric_synonyms,
-        )
+        from raglite.retrieval.query_classifier import METRIC_SYNONYMS, expand_metric_synonyms
         from raglite.retrieval.search import (
             _remove_time_periods,
             get_metric_names,

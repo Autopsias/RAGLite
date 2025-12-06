@@ -17,12 +17,7 @@ Enums:
 - TableLayout: Detected table layout pattern
 """
 
-from .classification import (
-    HeaderType,
-    TableLayout,
-    classify_header,
-    detect_table_layout,
-)
+from .classification import HeaderType, TableLayout, classify_header, detect_table_layout
 from .core import extract_table_data_adaptive
 
 __all__ = [

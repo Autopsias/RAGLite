@@ -15,12 +15,7 @@ from raglite.insights.recommendations import (
     categorize_recommendation,
     generate_recommendations,
 )
-from raglite.shared.models import (
-    Insight,
-    InsightCategory,
-    Recommendation,
-    RecommendationCategory,
-)
+from raglite.shared.models import Insight, InsightCategory, Recommendation, RecommendationCategory
 
 
 @dataclass

@@ -92,18 +92,14 @@ class TestPypdfiumIngestionValidation:
         else:
             # LOCAL mode: 10-page sample_financial_report.pdf (Story 2.14 alignment)
             # Updated range for 10-page PDF (Story 2.14 + table-aware chunking):
-            # - 10-page PDF with 47 tables and 1548 table rows
-            # - Table-aware chunking (Story 2.8) with 4096-token threshold
-            # - Tables <4096 tokens kept intact, large tables split by rows
-            # - Epic 6 update (2025-12-06): Fresh ingestion produces ~310 chunks:
-            #   - 225 table chunks (tables split by rows when >4096 tokens)
-            #   - 85 text chunks
-            #   - 10 pages × ~31 chunks/page average
-            # - Cached collection (--skip-ingestion): ~88-162 chunks (depends on cache)
-            # - Fresh ingestion: ~280-350 chunks (consistent with table-aware chunking)
-            # - Total expected range: 50-400 chunks (expanded for fresh ingestion variation)
-            expected_min_chunks = 50
-            expected_max_chunks = 400
+            # ROOT CAUSE FIX (2025-12-06): Previous range (50-400) was WRONG - it described 160-page PDF.
+            # NOTE: sample_financial_report.pdf contains ONLY the first 10 pages of 160-page Performance Review.
+            # The first 10 pages are intro/summary pages with minimal table content.
+            # - Observed: 14-15 chunks consistently (verified in docs and CI runs)
+            # - The table-heavy content (47 tables, 1548 rows) is in pages 11-160, NOT pages 1-10
+            # - See docs/archive/3-6-analytical-query-tool-mcp.md:619 for "14 chunks" reference
+            expected_min_chunks = 10
+            expected_max_chunks = 25
             pdf_type = "10-page sample PDF (LOCAL mode - Story 2.14)"
 
         assert expected_min_chunks <= count.count <= expected_max_chunks, (

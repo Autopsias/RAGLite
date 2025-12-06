@@ -9,11 +9,7 @@ import numpy as np
 import pytest
 
 from raglite.retrieval.attribution import CitationError, generate_citations
-from raglite.retrieval.search import (
-    QueryError,
-    generate_query_embedding,
-    search_documents,
-)
+from raglite.retrieval.search import QueryError, generate_query_embedding, search_documents
 from raglite.shared.models import QueryResult
 
 

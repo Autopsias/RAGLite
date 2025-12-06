@@ -678,12 +678,7 @@ LIMIT 50;
 """  # nosec B608
 
         # Call Mistral API (using same pattern as metadata extraction)
-        from mistralai.models import (
-            AssistantMessage,
-            SystemMessage,
-            ToolMessage,
-            UserMessage,
-        )
+        from mistralai.models import AssistantMessage, SystemMessage, ToolMessage, UserMessage
 
         messages: list[AssistantMessage | SystemMessage | ToolMessage | UserMessage] = [
             SystemMessage(
