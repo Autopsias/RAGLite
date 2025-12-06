@@ -157,7 +157,7 @@ jobs:
           uv venv ci-venv
           source ci-venv/bin/activate
           uv pip install -e .
-          uv pip install mypy types-requests types-setuptools
+          uv pip install mypy types-requests types-setuptools sqlalchemy-stubs
 
       - name: Run mypy on raglite/ package
         run: |
