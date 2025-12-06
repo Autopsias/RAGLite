@@ -346,6 +346,20 @@ jobs:
     runs-on: [self-hosted, raglite]
     timeout-minutes: 90  # Sequential execution requires 45-50 min + buffer for slow tests
     needs: [test-unit]
+    # CRITICAL FIX: Set APP_ENV=test at job level for consistent test database routing
+    # This ensures ALL steps (health check, init, tests) use the same test infrastructure:
+    # - Qdrant: port 6335, collection financial_docs_ci
+    # - PostgreSQL: port 5433, database raglite_ci
+    env:
+      APP_ENV: test
+      QDRANT_HOST: localhost
+      QDRANT_PORT: 6335
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5433
+      POSTGRES_DB: raglite_ci
+      POSTGRES_USER: raglite_ci
+      POSTGRES_PASSWORD: raglite_ci
+      TEST_USE_FULL_PDF: "false"
 
     steps:
       - name: Checkout code
@@ -393,30 +407,58 @@ jobs:
             "pytest-timeout>=2.0,<3.0" \
             pytest-mock>=3.15
 
-      - name: Verify Qdrant is available
+      - name: Start and verify Qdrant (Test Instance)
         run: |
-          echo "Checking persistent Qdrant instance..."
+          # CRITICAL FIX: Use QDRANT_PORT from job-level env (6335 for test isolation)
+          # This prevents production data contamination and ensures test repeatability
+          CONTAINER_NAME="raglite-qdrant-test"
+          CONTAINER_PORT="${QDRANT_PORT:-6335}"
+          QDRANT_URL="http://localhost:${CONTAINER_PORT}"
+
+          echo "Ensuring Qdrant test container on port ${CONTAINER_PORT}..."
+
+          # Check if container exists
+          if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+            echo "Qdrant test container exists - checking if running..."
+            if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+              echo "Container stopped - starting it..."
+              docker start ${CONTAINER_NAME}
+              sleep 3
+            fi
+          else
+            echo "Creating new Qdrant test container..."
+            # Remove any container using the test port
+            docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":${CONTAINER_PORT}->" | awk '{print $1}' | xargs -r docker rm -f || true
+            sleep 2
+
+            docker run -d \
+              -p ${CONTAINER_PORT}:6333 \
+              --name ${CONTAINER_NAME} \
+              qdrant/qdrant:v1.15.0
+            echo "Waiting for initial startup..."
+            sleep 5
+          fi
 
           # Wait for Qdrant to be ready (max 30 seconds)
           MAX_RETRIES=30
           RETRY_COUNT=0
 
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
-              echo "✅ Qdrant is available at localhost:6333"
+            if curl -sf ${QDRANT_URL}/healthz > /dev/null 2>&1; then
+              echo "✅ Qdrant TEST instance available at ${QDRANT_URL}"
 
               # Additional health check: verify cluster status
-              CLUSTER_STATUS=$(curl -sf http://localhost:6333/cluster | python3 -c "import sys, json; print(json.load(sys.stdin)['status'])" 2>/dev/null || echo "unknown")
+              CLUSTER_STATUS=$(curl -sf ${QDRANT_URL}/cluster | python3 -c "import sys, json; print(json.load(sys.stdin)['status'])" 2>/dev/null || echo "unknown")
               echo "Cluster status: $CLUSTER_STATUS"
 
               # Check telemetry for any recent 500 errors
-              ERROR_500_COUNT=$(curl -sf http://localhost:6333/telemetry 2>/dev/null | python3 -c "import sys, json; data=json.load(sys.stdin); print(sum(endpoint.get('500', {}).get('count', 0) for endpoint in data['result']['requests']['rest']['responses'].values()))" 2>/dev/null || echo "0")
+              ERROR_500_COUNT=$(curl -sf ${QDRANT_URL}/telemetry 2>/dev/null | python3 -c "import sys, json; data=json.load(sys.stdin); print(sum(endpoint.get('500', {}).get('count', 0) for endpoint in data['result']['requests']['rest']['responses'].values()))" 2>/dev/null || echo "0")
               echo "Recent 500 errors: $ERROR_500_COUNT"
 
               if [ "$ERROR_500_COUNT" -gt 0 ]; then
                 echo "⚠️  Warning: Qdrant has $ERROR_500_COUNT recent 500 errors"
                 echo "Restarting Qdrant to clear error state..."
-                docker restart raglite-qdrant
+                docker restart ${CONTAINER_NAME}
                 sleep 5
               fi
 
@@ -428,8 +470,8 @@ jobs:
             sleep 1
           done
 
-          echo "❌ Qdrant not available after ${MAX_RETRIES}s"
-          echo "To start: docker run -d -p 6333:6333 --name raglite-qdrant qdrant/qdrant:v1.15.0"
+          echo "❌ Qdrant test instance not available after ${MAX_RETRIES}s"
+          docker logs ${CONTAINER_NAME} --tail 20 || true
           exit 1
 
       - name: Start and verify PostgreSQL (Integration)
@@ -557,36 +599,25 @@ jobs:
           exit 1
 
       - name: Initialize Qdrant collection
+        # NOTE: Uses job-level env vars (APP_ENV=test, QDRANT_PORT=6335)
+        # This ensures collection is created on the TEST Qdrant instance
         run: |
           source ci-venv/bin/activate
-          echo "🔧 Initializing Qdrant collection (financial_docs)..."
+          echo "🔧 Initializing Qdrant collection (APP_ENV=${APP_ENV}, port ${QDRANT_PORT})..."
           python scripts/init-qdrant.py
-          echo "✅ Qdrant collection initialized"
+          echo "✅ Qdrant collection initialized on port ${QDRANT_PORT}"
 
       - name: Initialize PostgreSQL schema
-        env:
-          APP_ENV: test
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5433
-          POSTGRES_DB: raglite_ci
-          POSTGRES_USER: raglite_ci
-          POSTGRES_PASSWORD: raglite_ci
+        # NOTE: Uses job-level env vars (APP_ENV=test, POSTGRES_PORT=5433, POSTGRES_DB=raglite_ci)
         run: |
           source ci-venv/bin/activate
-          echo "🔧 Initializing PostgreSQL schema (financial_chunks, financial_tables, entity_mappings)..."
+          echo "🔧 Initializing PostgreSQL schema (${POSTGRES_DB} on port ${POSTGRES_PORT})..."
           python scripts/init-test-postgresql.py
           echo "✅ Schema initialized successfully"
 
       - name: Run integration tests (CI fast mode)
-        env:
-          QDRANT_HOST: localhost
-          QDRANT_PORT: 6335
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5433
-          POSTGRES_DB: raglite_ci
-          POSTGRES_USER: raglite_ci
-          POSTGRES_PASSWORD: raglite_ci
-          TEST_USE_FULL_PDF: "false"
+        # NOTE: Environment variables are now set at job level (see test-integration.env)
+        # This ensures ALL steps use consistent database configuration
         run: |
           source ci-venv/bin/activate
 
@@ -595,7 +626,9 @@ jobs:
           export PYTHONPATH="${PWD}:${PWD}/scripts:${PYTHONPATH}"
 
           echo "========================================="
-          echo "CI MODE: Fast Testing"
+          echo "CI MODE: Fast Testing (APP_ENV=${APP_ENV})"
+          echo "- Qdrant: ${QDRANT_HOST}:${QDRANT_PORT}"
+          echo "- PostgreSQL: ${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
           echo "- Using 10-page sample PDF (~10-15s ingestion)"
           echo "- Running core integration tests (slow tests skipped)"
           echo "- Sequential execution (shared Qdrant collection prevents parallelism)"
