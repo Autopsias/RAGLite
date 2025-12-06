@@ -34,6 +34,12 @@ os.environ["POSTGRES_DB"] = "raglite_ci"
 os.environ["POSTGRES_USER"] = "raglite_ci"
 os.environ["POSTGRES_PASSWORD"] = "raglite_ci"
 
+# CRITICAL FIX (2025-12-06): Set dummy MISTRAL_API_KEY for unit tests
+# The get_mistral_client() function validates the API key BEFORE instantiation,
+# which happens before the mock_mistral_api_globally fixture can patch the Mistral class.
+# This dummy key prevents ValueError in unit tests while the autouse mock handles actual API calls.
+os.environ.setdefault("MISTRAL_API_KEY", "test-mistral-api-key-for-ci")
+
 import logging
 import time
 from unittest.mock import MagicMock
