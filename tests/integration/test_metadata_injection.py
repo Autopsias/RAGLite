@@ -80,6 +80,9 @@ class TestMetadataInjection:
     @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     @pytest.mark.slow  # MARKED SLOW: This test still needs mocked metadata, skip in fast runs
+    @pytest.mark.skipif(
+        not os.getenv("MISTRAL_API_KEY"), reason="MISTRAL_API_KEY not set - skipping filter test"
+    )
     async def test_metadata_filtering(self, tmp_path):
         """Test AC3: Metadata accessible via Qdrant filter API.
 
@@ -89,9 +92,6 @@ class TestMetadataInjection:
 
         TODO: Consider refactoring to use pre-ingested test data with known metadata.
         """
-        # Skip if no Mistral API key (Story 2.4 REVISION: migrated from OpenAI to Mistral)
-        if not os.getenv("MISTRAL_API_KEY"):
-            pytest.skip("MISTRAL_API_KEY not set - skipping filter test")
 
         # Mock metadata extraction for controlled testing (Story 2.4 REVISION: 15-field schema)
         from raglite.shared.models import ExtractedMetadata
@@ -145,11 +145,12 @@ class TestCostValidation:
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.skipif(
+        not os.getenv("MISTRAL_API_KEY"),
+        reason="MISTRAL_API_KEY not set - skipping cost validation test",
+    )
     async def test_cost_tracking_single_document(self, caplog):
         """Test AC5: Measure Mistral Small 3.2 API token usage and cost (Story 2.4 REVISION: FREE)."""
-        # Skip if no Mistral API key (Story 2.4 REVISION: migrated from OpenAI to Mistral)
-        if not os.getenv("MISTRAL_API_KEY"):
-            pytest.skip("MISTRAL_API_KEY not set - skipping cost validation test")
 
         from raglite.ingestion.embedding_generation import extract_chunk_metadata
 
@@ -194,11 +195,12 @@ class TestCostValidation:
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.skipif(
+        not os.getenv("MISTRAL_API_KEY"),
+        reason="MISTRAL_API_KEY not set - skipping cost budget test",
+    )
     async def test_cost_budget_compliance(self):
         """Test AC5: Verify cost is $0.00 per chunk (Story 2.4 REVISION: Mistral Small 3.2 is FREE)."""
-        # Skip if no Mistral API key (Story 2.4 REVISION: migrated from OpenAI to Mistral)
-        if not os.getenv("MISTRAL_API_KEY"):
-            pytest.skip("MISTRAL_API_KEY not set - skipping cost budget test")
 
         from unittest.mock import patch
 
