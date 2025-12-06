@@ -14,6 +14,9 @@ from pathlib import Path
 
 import pytest
 
+# Mark all tests in this module as integration tests that preserve collection state
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+
 # Lazy imports for expensive modules - DO NOT import raglite modules at module level!
 # Test explorers (VS Code) run discovery multiple times causing 30+ second delays.
 # Import inside test functions instead:
@@ -86,9 +89,9 @@ class TestRetrievalIntegration:
             assert result.word_count > 0, "Word count should be positive"
 
         # Performance validation (NFR13: p50 <5s)
-        assert (
-            elapsed_seconds < 5.0
-        ), f"Search took {elapsed_seconds:.2f}s, expected <5s (p50 target per NFR13)"
+        assert elapsed_seconds < 5.0, (
+            f"Search took {elapsed_seconds:.2f}s, expected <5s (p50 target per NFR13)"
+        )
 
         # Log results
         print("\n\n✅ End-to-End Search Test:")

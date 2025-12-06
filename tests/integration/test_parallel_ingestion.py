@@ -16,7 +16,7 @@ from raglite.shared.clients import get_postgresql_connection, get_qdrant_client
 from raglite.shared.config import settings
 
 # Mark all tests in this module as integration tests
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
 
 
 @pytest.mark.priority("P1")

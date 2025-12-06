@@ -15,11 +15,8 @@ from pathlib import Path
 
 import pytest
 
-# Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
-
 # Mark all tests in this module as integration tests
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
 
 
 @pytest.mark.asyncio
@@ -206,6 +203,7 @@ async def test_ac4_160page_pypdfium_optimized():
     reason="Requires full 160-page PDF. Run with: pytest --run-slow",
 )
 @pytest.mark.priority("P0")
+@pytest.mark.preserve_collection  # Read-only test - just prints comparison methodology
 def test_ac4_160page_comparison():
     """Final comparison: Calculate reduction percentage from test results.
 

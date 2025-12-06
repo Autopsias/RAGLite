@@ -17,6 +17,7 @@ import pytest
 # Skip all tests if test document not available
 pytestmark = [
     pytest.mark.integration,
+    pytest.mark.preserve_collection,  # All tests in this module are read-only query validation tests
     pytest.mark.skipif(
         os.environ.get("SKIP_CEMENT_INTEGRATION", "1") == "1",
         reason="Set SKIP_CEMENT_INTEGRATION=0 and ensure test documents are ingested",
@@ -33,6 +34,7 @@ class TestAC1PetcokeQueries:
     """
 
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Read-only test - validates synonym expansion logic
     async def test_petcoke_synonym_expansion(self):
         """Test petcoke synonym expansion is triggered in query pipeline."""
         from raglite.retrieval.query_classifier import expand_metric_synonyms
@@ -43,6 +45,7 @@ class TestAC1PetcokeQueries:
         assert any("Petcoke" in s or "Pet Coke" in s for s in synonyms)
 
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Read-only test - validates query pipeline graceful handling
     async def test_petcoke_query_pipeline_graceful(self):
         """Test petcoke query doesn't crash even without petcoke data."""
         from raglite.retrieval.search import hybrid_search
@@ -58,6 +61,7 @@ class TestAC1PetcokeQueries:
         assert isinstance(results, list), "Query should return a list"
 
     @pytest.mark.asyncio
+    @pytest.mark.preserve_collection  # Read-only test - validates reformulation fallback chain
     async def test_petcoke_reformulation_fallback(self):
         """Test petcoke queries execute through reformulation fallback chain."""
         from raglite.retrieval.search import search_with_reformulation

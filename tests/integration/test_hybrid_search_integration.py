@@ -34,6 +34,9 @@ from scripts.accuracy_utils import NFR13_P95_TARGET_MS
 #   from raglite.retrieval.attribution import generate_citations
 from tests.fixtures.ground_truth import GROUND_TRUTH_QA
 
+# Mark all tests in this module as integration tests that preserve collection state
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+
 # Story 2.1 targets
 HYBRID_RETRIEVAL_TARGET = 70.0  # ≥70% retrieval accuracy (vs 56% baseline)
 HYBRID_ATTRIBUTION_TARGET = 45.0  # ≥45% attribution accuracy (vs 32% baseline)

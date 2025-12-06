@@ -14,7 +14,7 @@ from raglite.retrieval.search import fuse_sql_vector_results, hybrid_search
 from raglite.shared.models import QueryResult
 
 # Mark all tests in this module as integration tests
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
 
 
 @pytest.mark.preserve_collection  # Read-only query tests - no data modification

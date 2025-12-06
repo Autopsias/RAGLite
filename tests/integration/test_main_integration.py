@@ -14,6 +14,9 @@ from raglite.shared.models import (
     QueryResponse,
 )
 
+# Mark all tests in this module as integration tests that preserve collection state
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+
 
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Tests don't modify Qdrant - skip cleanup
@@ -61,6 +64,7 @@ class TestMCPProtocolCompliance:
 
 
 @pytest.mark.integration
+@pytest.mark.preserve_collection  # Read-only tests - queries only
 @pytest.mark.skipif(
     True,
     reason="Requires real Qdrant with ingested data - run manually after ingestion",

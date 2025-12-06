@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 # Mark all tests in this module as integration tests
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
 # Project root for running scripts
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
@@ -194,6 +194,7 @@ class TestAccuracyCalculations:
     @pytest.mark.priority("P1")
     @pytest.mark.slow  # Marks as slow test - takes 5+ minutes to run
     @pytest.mark.timeout(0)  # Disable pytest-timeout - subprocess has its own 600s timeout
+    @pytest.mark.preserve_collection  # Read-only test - runs accuracy script
     def test_retrieval_accuracy_calculation(self, session_ingested_collection):
         """Test that retrieval accuracy is calculated correctly."""
         # This would test the check_retrieval_accuracy function
@@ -213,6 +214,7 @@ class TestAccuracyCalculations:
     @pytest.mark.priority("P2")
     @pytest.mark.slow  # Marks as slow test - takes 5+ minutes to run
     @pytest.mark.timeout(0)  # Disable pytest-timeout - subprocess has its own 600s timeout
+    @pytest.mark.preserve_collection  # Read-only test - runs accuracy script
     def test_attribution_accuracy_calculation(self, session_ingested_collection):
         """Test that attribution accuracy is calculated correctly."""
         result = subprocess.run(
@@ -229,6 +231,7 @@ class TestAccuracyCalculations:
 
     @pytest.mark.priority("P0")
     @pytest.mark.timeout(900)  # 15 minutes - subprocess needs 14 min + overhead
+    @pytest.mark.preserve_collection  # Read-only test - runs accuracy script
     def test_performance_metrics_calculated(self, session_ingested_collection):
         """Test that p50/p95 latency metrics are calculated."""
         result = subprocess.run(
@@ -249,6 +252,7 @@ class TestNFRValidation:
 
     @pytest.mark.priority("P0")
     @pytest.mark.timeout(900)  # 15 minutes - subprocess needs 9 min + overhead
+    @pytest.mark.preserve_collection  # Read-only test - runs accuracy script
     def test_nfr_targets_displayed(self, session_ingested_collection):
         """Test that NFR validation results are shown."""
         result = subprocess.run(
@@ -265,6 +269,7 @@ class TestNFRValidation:
 
     @pytest.mark.priority("P1")
     @pytest.mark.timeout(600)  # 10 minutes - subprocess needs 5 min + overhead
+    @pytest.mark.preserve_collection  # Read-only test - runs accuracy script
     def test_exit_codes(self, session_ingested_collection):
         """Test that script returns correct exit codes."""
         # Running small subset likely to fail accuracy targets

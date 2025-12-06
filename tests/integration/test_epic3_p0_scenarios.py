@@ -30,9 +30,6 @@ import pytest
 # Mark all tests in this module as integration tests that preserve collection state
 pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
 
-# Mark all tests in this module as integration tests
-pytestmark = pytest.mark.integration
-
 # Epic 3 imports (TODO: Update paths when modules are implemented)
 # from raglite.agentic.orchestration import execute_workflow_with_timeout
 # from raglite.agentic.agents import RetrievalAgent, AnalysisAgent, SynthesisAgent

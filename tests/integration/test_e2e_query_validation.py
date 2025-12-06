@@ -29,6 +29,9 @@ from raglite.main import query_financial_documents
 from raglite.shared.models import QueryRequest
 from tests.fixtures.ground_truth import GROUND_TRUTH_QA
 
+# Mark all tests in this module as integration tests that preserve collection state
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+
 
 @pytest.mark.skip(
     reason="Story 2.2 dependency - Current chunking quality produces fragmented chunks with low semantic scores. Semantic search accuracy is 56% baseline, below the 70% target. This test requires element-based chunking (Story 2.2) to achieve the expected 0.7+ scores consistently. Will be re-enabled after Story 2.2 implementation."

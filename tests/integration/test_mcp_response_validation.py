@@ -15,6 +15,9 @@ from raglite.retrieval.search import search_documents
 from raglite.shared.models import QueryResponse
 from tests.fixtures.ground_truth import GROUND_TRUTH_QA
 
+# Mark all tests in this module as integration tests that preserve collection state
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+
 
 @pytest.fixture(scope="module", autouse=True)
 def check_collection_exists():
