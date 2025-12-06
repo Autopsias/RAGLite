@@ -8,7 +8,7 @@ Provides ExternalDataStorage class for CRUD operations on external data.
 from __future__ import annotations
 
 from datetime import date
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
@@ -104,7 +104,7 @@ class ExternalDataStorage:
         Returns:
             ExternalDataSourceORM if found and not deleted, None otherwise
         """
-        result = (
+        result: ExternalDataSourceORM | None = (
             self.session.query(ExternalDataSourceORM)
             .filter(
                 ExternalDataSourceORM.source_name == source_name,
@@ -112,7 +112,7 @@ class ExternalDataStorage:
             )
             .first()
         )
-        return cast("ExternalDataSourceORM | None", result)  # type: ignore[redundant-cast]
+        return result
 
     def get_or_create_source(
         self,
@@ -270,7 +270,8 @@ class ExternalDataStorage:
         if metric_name:
             query = query.filter(ExternalDataPointORM.metric_name == metric_name)
 
-        return query.order_by(ExternalDataPointORM.date).all()
+        results: list[ExternalDataPointORM] = query.order_by(ExternalDataPointORM.date).all()
+        return results
 
     def query_latest(
         self,
@@ -300,7 +301,10 @@ class ExternalDataStorage:
         if metric_name:
             query = query.filter(ExternalDataPointORM.metric_name == metric_name)
 
-        return query.order_by(ExternalDataPointORM.date.desc()).limit(limit).all()
+        results: list[ExternalDataPointORM] = (
+            query.order_by(ExternalDataPointORM.date.desc()).limit(limit).all()
+        )
+        return results
 
     def soft_delete_source(self, source_name: str) -> bool:
         """Soft delete a data source and all its data points.
@@ -347,7 +351,10 @@ class ExternalDataStorage:
         if not include_deleted:
             query = query.filter(ExternalDataSourceORM.deleted_at.is_(None))
 
-        return query.order_by(ExternalDataSourceORM.source_name).all()
+        results: list[ExternalDataSourceORM] = query.order_by(
+            ExternalDataSourceORM.source_name
+        ).all()
+        return results
 
     def get_metrics_for_source(self, source_name: str) -> list[str]:
         """Get all unique metric names for a source.

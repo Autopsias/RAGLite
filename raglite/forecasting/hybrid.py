@@ -1303,27 +1303,35 @@ async def generate_ensemble_forecast(
         task_names.append("prophet")
 
     # Linear Regression task (sync, via ThreadPoolExecutor)
-    if "linear" in models and len(X.columns) > 0:
-        tasks.append(
-            loop.run_in_executor(
-                _sklearn_executor,
-                lambda: _fit_and_forecast_linear(
-                    X.copy(), y.copy(), X_future.copy(), list(X.columns), periods_ahead
-                ),  # type: ignore[misc,union-attr]
+    if "linear" in models and len(X.columns) > 0 and X_future is not None:
+        # Create explicit copies for thread safety
+        X_copy = X.copy()
+        y_copy = y.copy()
+        X_future_copy = X_future.copy()
+        feature_names = list(X.columns)
+
+        def run_linear() -> dict[str, Any]:
+            return _fit_and_forecast_linear(
+                X_copy, y_copy, X_future_copy, feature_names, periods_ahead
             )
-        )
+
+        tasks.append(loop.run_in_executor(_sklearn_executor, run_linear))
         task_names.append("linear")
 
     # XGBoost task (sync, via ThreadPoolExecutor)
-    if "xgboost" in models and len(X.columns) > 0:
-        tasks.append(
-            loop.run_in_executor(
-                _sklearn_executor,
-                lambda fm=fast_mode: _fit_and_forecast_xgboost(
-                    X.copy(), y.copy(), X_future.copy(), periods_ahead, fm
-                ),  # type: ignore[misc,union-attr]
+    if "xgboost" in models and len(X.columns) > 0 and X_future is not None:
+        # Create explicit copies for thread safety
+        X_copy_xgb = X.copy()
+        y_copy_xgb = y.copy()
+        X_future_copy_xgb = X_future.copy()
+        fast_mode_copy = fast_mode
+
+        def run_xgboost() -> dict[str, Any]:
+            return _fit_and_forecast_xgboost(
+                X_copy_xgb, y_copy_xgb, X_future_copy_xgb, periods_ahead, fast_mode_copy
             )
-        )
+
+        tasks.append(loop.run_in_executor(_sklearn_executor, run_xgboost))
         task_names.append("xgboost")
 
     # Execute all models in parallel
@@ -1348,9 +1356,11 @@ async def generate_ensemble_forecast(
                 logger.info("Prophet model succeeded (parallel)")
             else:
                 # Linear or XGBoost result is a dict with values and metrics
-                result_dict = cast(dict, result)  # type: ignore[assignment]
+                result_dict = cast("dict[str, Any]", result)
                 predictions[name] = result_dict["values"]
-                metrics_results[name] = result_dict.get("metrics")
+                metrics_value = result_dict.get("metrics")
+                if metrics_value is not None:
+                    metrics_results[name] = cast("dict[str, Any]", metrics_value)
                 successful_models.append(name)
                 logger.info(f"{name.capitalize()} model succeeded (parallel)")
     else:
