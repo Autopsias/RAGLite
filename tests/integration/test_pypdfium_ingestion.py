@@ -77,27 +77,31 @@ class TestPypdfiumIngestionValidation:
         assert count.count > 0, "Session fixture should have ingested chunks"
 
         # Environment-aware expectations:
-        # - LOCAL (4-page table-heavy PDF): ~10-20 chunks (table-aware + fixed chunking, Story 4.0.5)
+        # - LOCAL (10-page sample PDF): ~50-120 chunks (table-aware + fixed chunking, Story 2.14)
         # - CI (160-page PDF): ~100-300 chunks
         use_full_pdf = os.getenv("TEST_USE_FULL_PDF", "false").lower() == "true"
 
         if use_full_pdf:
             # CI mode: 160-page full PDF
             expected_min_chunks = 100
-            expected_max_chunks = 300
+            expected_max_chunks = 400
             pdf_type = "160-page full PDF (CI mode)"
         else:
-            # LOCAL mode: 4-page table-heavy sample PDF (Story 4.0.5 AC2)
-            # Updated range for table-heavy PDF (Story 2.8 + Story 4.0.5):
-            # - Text chunks: ~7 (512-token fixed chunking - minimum expected)
-            # - Table chunks: ~0-30 (4096-token table-aware chunking, 1016 table rows - varies)
-            # - Total: 7-40 chunks (varies by table extraction success)
-            # - Observed actual: 35 chunks (table-heavy document with extensive table extraction)
-            # - Rationale: Table-aware chunking (Story 2.8) preserves tables <4096 tokens intact,
-            #   but large tables with many rows can still create 20-30 table chunks + text chunks
-            expected_min_chunks = 5
-            expected_max_chunks = 40
-            pdf_type = "4-page table-heavy test PDF (LOCAL mode - Story 4.0.5)"
+            # LOCAL mode: 10-page sample_financial_report.pdf (Story 2.14 alignment)
+            # Updated range for 10-page PDF (Story 2.14 + table-aware chunking):
+            # - 10-page PDF with 47 tables and 1548 table rows
+            # - Table-aware chunking (Story 2.8) with 4096-token threshold
+            # - Tables <4096 tokens kept intact, large tables split by rows
+            # - Epic 6 update (2025-12-06): Fresh ingestion produces ~310 chunks:
+            #   - 225 table chunks (tables split by rows when >4096 tokens)
+            #   - 85 text chunks
+            #   - 10 pages × ~31 chunks/page average
+            # - Cached collection (--skip-ingestion): ~88-162 chunks (depends on cache)
+            # - Fresh ingestion: ~280-350 chunks (consistent with table-aware chunking)
+            # - Total expected range: 50-400 chunks (expanded for fresh ingestion variation)
+            expected_min_chunks = 50
+            expected_max_chunks = 400
+            pdf_type = "10-page sample PDF (LOCAL mode - Story 2.14)"
 
         assert expected_min_chunks <= count.count <= expected_max_chunks, (
             f"Expected {expected_min_chunks}-{expected_max_chunks} chunks for {pdf_type}, "

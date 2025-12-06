@@ -408,6 +408,9 @@ class ForecastResult(BaseModel):
     Story 4.2 AC1-AC7: Hybrid forecasting output combining Prophet predictions
     with LLM-generated reasoning and confidence rationale.
 
+    Story 6.3: Extended with multi-variate forecasting fields.
+    Story 6.4: Extended with ensemble model fields for multi-model forecasting.
+
     Attributes:
         metric_name: Name of forecasted metric (revenue, cash_flow, expenses)
         historical_data: Original time-series input data
@@ -416,6 +419,13 @@ class ForecastResult(BaseModel):
         basis: Description of forecast basis (e.g., "Prophet model trained on 8 quarters")
         accuracy_estimate: Expected accuracy (e.g., "±15% per NFR10")
         periods_ahead: Number of periods forecasted
+        model_type: Model type - 'prophet_univariate', 'prophet_multivariate', or 'ensemble'
+        accuracy_metrics: Accuracy metrics from cross-validation (RMSE, MAE, MAPE)
+        regressors_used: List of external regressors used in multi-variate forecast
+        improvement_vs_baseline: Percentage improvement vs Epic 4 baseline RMSE
+        ensemble_models: List of models used in ensemble (Story 6.4)
+        individual_predictions: Per-model predictions for transparency (Story 6.4)
+        ensemble_weights: Model weights used for weighted average (Story 6.4)
     """
 
     metric_name: str = Field(..., description="Name of forecasted metric")
@@ -435,6 +445,38 @@ class ForecastResult(BaseModel):
     )
     accuracy_estimate: str = Field(default="±15%", description="Expected accuracy per NFR10")
     periods_ahead: int = Field(default=4, description="Number of periods forecasted")
+
+    # Story 6.3: Multi-variate forecasting fields
+    model_type: str = Field(
+        default="prophet_univariate",
+        description="Model type: 'prophet_univariate' or 'prophet_multivariate'",
+    )
+    accuracy_metrics: dict[str, float] = Field(
+        default_factory=dict,
+        description="Accuracy metrics: {'rmse': X, 'mae': Y, 'mape': Z}",
+    )
+    regressors_used: list[str] = Field(
+        default_factory=list,
+        description="List of external regressors used in forecast",
+    )
+    improvement_vs_baseline: float | None = Field(
+        default=None,
+        description="Percentage improvement vs Epic 4 baseline RMSE",
+    )
+
+    # Story 6.4: Ensemble forecasting fields
+    ensemble_models: list[str] = Field(
+        default_factory=list,
+        description="Models used in ensemble: ['prophet', 'linear', 'xgboost']",
+    )
+    individual_predictions: dict[str, list[float]] = Field(
+        default_factory=dict,
+        description="Per-model predictions: {'prophet': [1.2, 1.3], 'linear': [1.1, 1.4]}",
+    )
+    ensemble_weights: dict[str, float] = Field(
+        default_factory=dict,
+        description="Model weights: {'prophet': 0.4, 'linear': 0.3, 'xgboost': 0.3}",
+    )
 
 
 # Story 4.3: Automated forecast updates models
@@ -591,6 +633,7 @@ class ForecastQueryRequest(BaseModel):
 
     Story 4.4 AC1: MCP tool parameters for forecast queries.
     Story 5.0.1 Enhancement: Supports SQL-based extraction for any metric in database.
+    Story 6.4 Enhancement: Supports ensemble forecasting with multiple models.
     Supports both structured parameters and natural language queries.
 
     Attributes:
@@ -598,6 +641,7 @@ class ForecastQueryRequest(BaseModel):
                 Accepts any financial metric name - will search database via SQL and documents via hybrid search.
         periods_ahead: Number of quarters to forecast (1-8, default 4).
         query: Optional natural language query (e.g., "turnover forecast next quarter").
+        model_type: Forecasting model type: 'prophet' (default), 'ensemble', or 'prophet_multivariate'.
     """
 
     metric: str | None = Field(
@@ -613,6 +657,10 @@ class ForecastQueryRequest(BaseModel):
     query: str | None = Field(
         default=None,
         description="Optional natural language query (e.g., 'revenue forecast next quarter')",
+    )
+    model_type: str = Field(
+        default="prophet",
+        description="Forecasting model: 'prophet' (default), 'ensemble' (Prophet+Linear+XGBoost), or 'prophet_multivariate'",
     )
 
 

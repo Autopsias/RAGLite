@@ -608,6 +608,7 @@ jobs:
               -n 1 \
               -m "not slow" \
               -v \
+              --enforce-isolation-markers \
               --junitxml=pytest-integration-report.xml
           else
             echo "⚠️  No integration tests found, skipping..."

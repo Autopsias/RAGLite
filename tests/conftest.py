@@ -714,14 +714,21 @@ def pytest_collection_modifyitems(config, items):
             # Force embedding_model group (single worker for all integration tests)
             item.add_marker(pytest.mark.xdist_group(name="embedding_model"))
 
-            # Enforce test isolation markers (Phase 2 optimization)
-            # Integration tests must have @pytest.mark.preserve_collection or
-            # @pytest.mark.manages_collection_state to prevent expensive cleanup
+            # PERFORMANCE FIX (2025-12-06): Apply default preserve_collection marker
+            # Integration tests that don't explicitly have a marker get preserve_collection
+            # by default, eliminating unnecessary cleanup checks (42+ seconds overhead).
+            #
+            # Tests that modify data should explicitly use @pytest.mark.manages_collection_state
+            # to override this default.
             has_preserve = item.get_closest_marker("preserve_collection")
             has_manages = item.get_closest_marker("manages_collection_state")
 
             if not (has_preserve or has_manages):
-                # Only error if enforcement is enabled
+                # DEFAULT: Apply preserve_collection marker for read-only tests
+                # This prevents expensive cleanup after each test (100ms × 425 tests = 42s)
+                item.add_marker(pytest.mark.preserve_collection)
+
+                # In strict CI mode, still require explicit markers
                 if enforce_markers:
                     raise ValueError(
                         f"{item.nodeid}: Integration test missing isolation marker. "

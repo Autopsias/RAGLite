@@ -48,6 +48,9 @@ dependencies = [
     "mistralai>=1.9.11",
     "prophet>=1.1.5,<2.0.0",  # Story 4.2: Time-series forecasting with Prophet
     "psycopg2-binary>=2.9,<3.0", # Story 2.6: PostgreSQL for structured metadata storage
+    "scikit-learn>=1.5,<2.0",  # Story 6.4: Model ensemble (Linear Regression, TimeSeriesSplit)
+    "xgboost>=2.1,<3.0",       # Story 6.4: Gradient boosting ensemble
+    "sqlalchemy>=2.0,<3.0",    # Story 6.2: ORM for external data storage
     # TODO Epic 3: AWS Strands agentic framework - uncomment when implementing Story 3.1
     # "strands>=1.15.0,<2.0.0",  # Agentic orchestration (Story 3.1+)
 ]
@@ -262,6 +265,8 @@ module = [
     "fastmcp.*",
     "prophet.*",
     "scipy.*",
+    "xgboost.*",
+    "sklearn.*",
 ]
 ignore_missing_imports = true
 follow_imports = "skip"

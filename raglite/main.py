@@ -35,7 +35,11 @@ from raglite.agentic.planner import (
     decompose_query,
 )
 from raglite.forecasting.auto_update import trigger_forecast_refresh
-from raglite.forecasting.hybrid import InsufficientDataError, generate_forecast
+from raglite.forecasting.hybrid import (
+    InsufficientDataError,
+    generate_ensemble_forecast,
+    generate_forecast,
+)
 from raglite.forecasting.timeseries_extract import (
     ExtractionError,
     MetricValidationError,
@@ -1757,12 +1761,27 @@ async def get_financial_forecast(
             },
         )
 
-        # Step 3: Generate forecast using Prophet + LLM (AC1, AC2)
-        forecast_result = await generate_forecast(
-            metric=metric,
-            historical_data=historical_data,
-            periods_ahead=periods_ahead,
-        )
+        # Step 3: Generate forecast using selected model type (Story 6.4)
+        model_type = request.model_type or "prophet"
+
+        if model_type == "ensemble":
+            # Story 6.4: Ensemble forecasting (Prophet + Linear Regression + XGBoost)
+            # Note: External regressors are fetched from PostgreSQL by generate_ensemble_forecast
+            forecast_result = await generate_ensemble_forecast(
+                metric=metric,
+                historical_data=historical_data,
+                periods_ahead=periods_ahead,
+                fast_mode=True,  # Use fast mode for MCP calls
+            )
+            model_desc = "Ensemble"
+        else:
+            # Default: Prophet (univariate or multivariate based on available regressors)
+            forecast_result = await generate_forecast(
+                metric=metric,
+                historical_data=historical_data,
+                periods_ahead=periods_ahead,
+            )
+            model_desc = "Prophet"
 
         logger.info(
             "Forecast generated successfully",
@@ -1770,15 +1789,23 @@ async def get_financial_forecast(
                 "metric": metric,
                 "periods": periods_ahead,
                 "forecast_points": len(forecast_result.forecast),
+                "model_type": model_type,
             },
         )
 
         # Step 4: Build MCP response (AC2, AC3)
-        # Update basis to include document count
-        enhanced_basis = (
-            f"Prophet model trained on {len(historical_data.points)} quarters of historical "
-            f"{metric} data from {len(historical_data.source_documents)} documents"
-        )
+        # Update basis to include document count and model info
+        if model_type == "ensemble" and forecast_result.ensemble_models:
+            models_used = ", ".join(forecast_result.ensemble_models)
+            enhanced_basis = (
+                f"{model_desc} model ({models_used}) trained on {len(historical_data.points)} "
+                f"quarters of historical {metric} data from {len(historical_data.source_documents)} documents"
+            )
+        else:
+            enhanced_basis = (
+                f"{model_desc} model trained on {len(historical_data.points)} quarters of historical "
+                f"{metric} data from {len(historical_data.source_documents)} documents"
+            )
         forecast_result.basis = enhanced_basis
 
         response = ForecastQueryResponse.from_forecast_result(

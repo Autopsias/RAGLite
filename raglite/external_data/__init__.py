@@ -48,6 +48,7 @@ from raglite.external_data.models import (
     OMIEElectricityPrice,
     PetcokePrice,
 )
+from raglite.external_data.storage import ExternalDataStorage
 
 __all__ = [
     # Exceptions
@@ -55,6 +56,8 @@ __all__ = [
     "ExternalDataFetchError",
     "ExternalDataValidationError",
     "ExternalDataStaleError",
+    # Storage
+    "ExternalDataStorage",
     # Enums
     "DataSource",
     "DataFrequency",

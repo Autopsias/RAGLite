@@ -106,6 +106,13 @@ class Settings(BaseSettings):
     external_data_retry_attempts: int = 3  # Retry attempts with exponential backoff
     external_data_timeout: int = 30  # HTTP timeout seconds
 
+    # Story 6.4: Ensemble Forecasting Configuration
+    forecasting_models: str = "prophet,linear,xgboost"  # Comma-separated model list
+    ensemble_weight_prophet: float = 0.4  # Prophet model weight (40%)
+    ensemble_weight_linear: float = 0.3  # Linear Regression weight (30%)
+    ensemble_weight_xgboost: float = 0.3  # XGBoost weight (30%)
+    ensemble_fast_mode: bool = False  # Use reduced hyperparameter grid for faster training
+
     @model_validator(mode="after")
     def adjust_for_environment(self) -> Self:
         """Automatically adjust database settings based on APP_ENV.
