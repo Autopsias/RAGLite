@@ -49,6 +49,20 @@ def initialize_qdrant_collection() -> None:
         logger.info(f"Connecting to Qdrant at {settings.qdrant_host}:{settings.qdrant_port}")
         logger.info(f"Target collection: {settings.qdrant_collection_name}")
 
+        # In CI/test mode, ensure clean slate by deleting existing collection
+        # This prevents stale data from previous CI runs causing test failures
+        if settings.app_env == "test":
+            from raglite.shared.clients import get_qdrant_client
+
+            client = get_qdrant_client()
+            try:
+                client.delete_collection(collection_name=settings.qdrant_collection_name)
+                logger.info(
+                    f"✅ Deleted existing collection for clean CI run: {settings.qdrant_collection_name}"
+                )
+            except Exception as e:
+                logger.info(f"ℹ️  No existing collection to delete (first run): {e}")
+
         # Create collection (idempotent - safe to call multiple times)
         create_collection(
             collection_name=settings.qdrant_collection_name,
