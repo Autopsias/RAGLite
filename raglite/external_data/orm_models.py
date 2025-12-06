@@ -7,6 +7,8 @@ NOTE: Pydantic models are in models.py. This file contains SQLAlchemy ORM models
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy import (
     Column,
     Date,
@@ -20,9 +22,12 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 
 from raglite.shared.database import Base, utc_now
+
+if TYPE_CHECKING:
+    pass
 
 
 class ExternalDataSourceORM(Base):
@@ -44,7 +49,7 @@ class ExternalDataSourceORM(Base):
     metadata_ = Column("metadata", JSONB, default={})
 
     # Relationship to data points
-    data_points = relationship(
+    data_points: Mapped[list[ExternalDataPointORM]] = relationship(
         "ExternalDataPointORM",
         back_populates="source",
         cascade="all, delete-orphan",
@@ -75,7 +80,9 @@ class ExternalDataPointORM(Base):
     deleted_at = Column(DateTime, nullable=True)  # Soft delete (AC5)
 
     # Relationship to source
-    source = relationship("ExternalDataSourceORM", back_populates="data_points")
+    source: Mapped[ExternalDataSourceORM] = relationship(
+        "ExternalDataSourceORM", back_populates="data_points"
+    )
 
     __table_args__ = (
         Index("idx_data_points_source_date", "source_id", "date"),

@@ -9,10 +9,9 @@ Follows singleton pattern from clients.py.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from raglite.shared.config import settings
 
@@ -25,11 +24,11 @@ def utc_now() -> datetime:
     return datetime.now(UTC)
 
 
-if TYPE_CHECKING:
-    from sqlalchemy import Engine
-    from sqlalchemy.orm import Session
+class Base(DeclarativeBase):
+    """SQLAlchemy declarative base class."""
 
-Base = declarative_base()
+    pass
+
 
 # Module-level singletons
 _engine: Engine | None = None
@@ -61,7 +60,8 @@ def get_session() -> Session:
     global _SessionLocal
     if _SessionLocal is None:
         _SessionLocal = sessionmaker(bind=get_engine())
-    return _SessionLocal()
+    session: Session = _SessionLocal()
+    return session
 
 
 def reset_engine() -> None:

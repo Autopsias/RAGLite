@@ -26,12 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from qdrant_client import QdrantClient  # noqa: E402
-from qdrant_client.models import (
-    Distance,
-    PointStruct,
-    SparseVector,
-    VectorParams,
-)  # noqa: E402
+from qdrant_client.models import Distance, PointStruct, SparseVector, VectorParams  # noqa: E402
 
 from raglite.shared.config import settings  # noqa: E402
 

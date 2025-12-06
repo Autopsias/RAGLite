@@ -214,9 +214,10 @@ class ExternalDataStorage:
                 )
                 if existing:
                     existing.value = dp["value"]
-                    existing.unit = dp.get("unit")
+                    unit_value = dp.get("unit")
+                    existing.unit = unit_value if unit_value is not None else existing.unit
                     existing.metadata_ = dp.get("metadata", {})
-                    existing.deleted_at = None  # Restore if soft deleted
+                    existing.deleted_at = None
                     count += 1
                     continue
 
@@ -226,11 +227,12 @@ class ExternalDataStorage:
         self.session.commit()
 
         # Update last_refresh timestamp
-        self.session.execute(
+        stmt = (
             update(ExternalDataSourceORM)
             .where(ExternalDataSourceORM.id == source.id)
             .values(last_refresh_at=utc_now())
         )
+        self.session.execute(stmt)
         self.session.commit()
 
         return count
@@ -322,7 +324,7 @@ class ExternalDataStorage:
         now = utc_now()
 
         # Soft delete all data points
-        self.session.execute(
+        stmt = (
             update(ExternalDataPointORM)
             .where(
                 ExternalDataPointORM.source_id == source.id,
@@ -330,6 +332,7 @@ class ExternalDataStorage:
             )
             .values(deleted_at=now)
         )
+        self.session.execute(stmt)
 
         # Soft delete the source
         source.deleted_at = now

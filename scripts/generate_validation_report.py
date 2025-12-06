@@ -25,9 +25,7 @@ from tests.validation.test_epic4_e2e_validation import (  # noqa: E402
     Epic4ValidationResult,
     create_comprehensive_test_data,
 )
-from tests.validation.test_forecast_accuracy import (  # noqa: E402
-    ForecastValidationResult,
-)  # noqa: E402
+from tests.validation.test_forecast_accuracy import ForecastValidationResult  # noqa: E402
 from tests.validation.test_insight_quality import InsightValidationResult  # noqa: E402
 from tests.validation.test_recommendation_alignment import (  # noqa: E402
     RecommendationValidationResult,
