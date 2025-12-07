@@ -1,7 +1,7 @@
 """RAGLite MCP Server - Model Context Protocol entry point.
 
 This module implements the FastMCP server that exposes RAGLite capabilities
-to MCP clients (Claude Desktop, etc.). Provides seven core tools:
+to MCP clients (Claude Desktop, etc.). Provides eight core tools:
   1. ingest_financial_document - Ingest PDF/Excel documents (sync, <50 pages)
   2. ingest_financial_document_async - Async ingestion for large documents (>50 pages, Story 4.0.3)
   3. get_ingestion_status - Poll async ingestion job status (Story 4.0.3)
@@ -9,6 +9,7 @@ to MCP clients (Claude Desktop, etc.). Provides seven core tools:
   5. analytical_query_financial_documents - Advanced multi-step analytical queries (Epic 3)
   6. get_financial_forecast - Query financial forecasts via natural language (Epic 4, Story 4.4)
   7. get_financial_insights - Request proactive insights combining anomalies, trends, recommendations (Epic 4, Story 4.9)
+  8. query_external_data - Query external macro-economic data sources (Epic 6, Story 6.6)
 
 The server follows standard MCP pattern: tools return raw data (chunks with metadata),
 and the LLM client (Claude) synthesizes natural language answers.
@@ -22,14 +23,18 @@ Example:
     - Transport: stdio
 """
 
+import json
 import time
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from fastmcp import FastMCP
+from pydantic import BaseModel, Field
 
 from raglite.agentic.fallback import FallbackResponse, handle_workflow_failure
 from raglite.agentic.orchestrator import WorkflowExecutor
 from raglite.agentic.planner import QueryComplexity, classify_query_complexity, decompose_query
+from raglite.external_data.storage import ExternalDataStorage
 from raglite.forecasting.auto_update import trigger_forecast_refresh
 from raglite.forecasting.hybrid import (
     InsufficientDataError,
@@ -84,6 +89,44 @@ class DocumentProcessingError(Exception):
     """
 
     pass
+
+
+# Story 6.6: External Data Query Models
+class ExternalDataQueryRequest(BaseModel):
+    """Request model for external data queries."""
+
+    source: str = Field(
+        ...,
+        description="Source name (e.g., 'INE_BuildingPermits', 'OMIE_Electricity') or 'all' for all sources",
+    )
+    date_range: str = Field(
+        ...,
+        description="Date range: ISO format 'YYYY-MM-DD:YYYY-MM-DD' or shortcuts 'last_30_days', 'last_year', 'last_quarter'",
+    )
+    metric: str | None = Field(
+        None,
+        description="Optional: specific metric name to filter",
+    )
+
+
+class ExternalDataPoint(BaseModel):
+    """Single data point in response."""
+
+    date: date
+    metric_name: str
+    value: float
+    unit: str | None
+
+
+class ExternalDataQueryResponse(BaseModel):
+    """Response model for external data queries."""
+
+    source_name: str
+    data_frequency: str | None
+    last_refresh: datetime | None
+    data_points: list[ExternalDataPoint]
+    visualization_hint: str | None
+    record_count: int
 
 
 async def _perform_forecast_refresh(
@@ -2410,6 +2453,293 @@ async def refresh_external_data(source_name: str | None = None) -> str:
             exc_info=True,
         )
         return json.dumps({"error": f"Refresh failed: {e}"})
+
+
+# Story 6.6: External Data Query Helper Functions
+def _parse_date_range(date_range: str) -> tuple[date, date]:
+    """Parse date range string to start/end dates.
+
+    Supported formats:
+      - ISO: "YYYY-MM-DD:YYYY-MM-DD" (e.g., "2024-01-01:2024-12-31")
+      - Shortcuts: "last_30_days", "last_90_days", "last_year", "last_quarter", "ytd"
+
+    Args:
+        date_range: Date range string
+
+    Returns:
+        Tuple of (start_date, end_date)
+
+    Raises:
+        ValueError: If date_range format is invalid
+    """
+    today = date.today()
+
+    # Handle shortcuts (case insensitive)
+    shortcuts = {
+        "last_30_days": (today - timedelta(days=30), today),
+        "last_90_days": (today - timedelta(days=90), today),
+        "last_year": (today - timedelta(days=365), today),
+        "last_quarter": (today - timedelta(days=90), today),
+        "ytd": (date(today.year, 1, 1), today),
+    }
+
+    if date_range.lower() in shortcuts:
+        return shortcuts[date_range.lower()]
+
+    # Handle ISO format: YYYY-MM-DD:YYYY-MM-DD
+    if ":" in date_range:
+        parts = date_range.split(":")
+        if len(parts) != 2:
+            raise ValueError(
+                f"Invalid date range format: {date_range}. Expected 'YYYY-MM-DD:YYYY-MM-DD'"
+            )
+
+        try:
+            start = datetime.strptime(parts[0].strip(), "%Y-%m-%d").date()
+            end = datetime.strptime(parts[1].strip(), "%Y-%m-%d").date()
+            return start, end
+        except ValueError as e:
+            raise ValueError(f"Invalid date format in range: {e}") from e
+
+    raise ValueError(
+        f"Invalid date_range: '{date_range}'. "
+        "Use ISO format 'YYYY-MM-DD:YYYY-MM-DD' or shortcuts: last_30_days, last_90_days, last_year, last_quarter, ytd"
+    )
+
+
+def _get_visualization_hint(record_count: int, data_type: str | None) -> str:
+    """Suggest visualization type based on data characteristics."""
+    if record_count == 0:
+        return "No data available for visualization"
+    elif record_count == 1:
+        return "Single value - display as card or gauge"
+    elif record_count <= 12:
+        return "Bar chart recommended for comparison"
+    elif data_type == "time_series":
+        return "Line chart recommended for time-series trend analysis"
+    else:
+        return "Line chart or area chart recommended"
+
+
+def _query_single_source(
+    storage: "ExternalDataStorage",
+    source_name: str,
+    start_date: date,
+    end_date: date,
+    metric: str | None,
+) -> list[ExternalDataQueryResponse]:
+    """Query a single external data source."""
+    source = storage.get_source(source_name)
+    if not source:
+        raise ValueError(f"Source '{source_name}' not found. Use 'all' to list available sources.")
+
+    data_points = storage.query_data_range(source_name, start_date, end_date, metric)
+
+    return [
+        ExternalDataQueryResponse(
+            source_name=source_name,
+            data_frequency=source.refresh_frequency,
+            last_refresh=source.last_refresh_at,
+            data_points=[
+                ExternalDataPoint(
+                    date=dp.date,
+                    metric_name=dp.metric_name,
+                    value=float(dp.value),
+                    unit=dp.unit,
+                )
+                for dp in data_points
+            ],
+            visualization_hint=_get_visualization_hint(len(data_points), source.data_type),
+            record_count=len(data_points),
+        )
+    ]
+
+
+def _query_all_sources(
+    storage: "ExternalDataStorage",
+    start_date: date,
+    end_date: date,
+    metric: str | None,
+) -> list[ExternalDataQueryResponse]:
+    """Query all available external data sources."""
+    sources = storage.list_sources()
+    results = []
+
+    for source in sources:
+        try:
+            data_points = storage.query_data_range(source.source_name, start_date, end_date, metric)
+            results.append(
+                ExternalDataQueryResponse(
+                    source_name=source.source_name,
+                    data_frequency=source.refresh_frequency,
+                    last_refresh=source.last_refresh_at,
+                    data_points=[
+                        ExternalDataPoint(
+                            date=dp.date,
+                            metric_name=dp.metric_name,
+                            value=float(dp.value),
+                            unit=dp.unit,
+                        )
+                        for dp in data_points
+                    ],
+                    visualization_hint=_get_visualization_hint(len(data_points), source.data_type),
+                    record_count=len(data_points),
+                )
+            )
+        except Exception as e:
+            logger.warning(f"Failed to query source {source.source_name}: {e}")
+
+    return results
+
+
+def _format_response(results: list[ExternalDataQueryResponse], original_source: str) -> str:
+    """Format query results as JSON with markdown hints."""
+    if not results:
+        return json.dumps(
+            {
+                "message": f"No data found for source '{original_source}'",
+                "available_sources": "Use source='all' to list available sources",
+            }
+        )
+
+    # Single source response
+    if len(results) == 1:
+        r = results[0]
+        return json.dumps(
+            {
+                "source": r.source_name,
+                "frequency": r.data_frequency,
+                "last_refresh": r.last_refresh.isoformat() if r.last_refresh else None,
+                "record_count": r.record_count,
+                "visualization_hint": r.visualization_hint,
+                "data": [
+                    {
+                        "date": dp.date.isoformat(),
+                        "metric": dp.metric_name,
+                        "value": dp.value,
+                        "unit": dp.unit,
+                    }
+                    for dp in r.data_points
+                ],
+            },
+            indent=2,
+        )
+
+    # Multi-source response (for "all" or comparison queries)
+    return json.dumps(
+        {
+            "query": "multi-source",
+            "sources_queried": len(results),
+            "total_records": sum(r.record_count for r in results),
+            "results": [
+                {
+                    "source": r.source_name,
+                    "frequency": r.data_frequency,
+                    "last_refresh": r.last_refresh.isoformat() if r.last_refresh else None,
+                    "record_count": r.record_count,
+                    "visualization_hint": r.visualization_hint,
+                    "data": [
+                        {
+                            "date": dp.date.isoformat(),
+                            "metric": dp.metric_name,
+                            "value": dp.value,
+                            "unit": dp.unit,
+                        }
+                        for dp in r.data_points[:10]  # Limit per source for multi-query
+                    ],
+                    "truncated": len(r.data_points) > 10,
+                }
+                for r in results
+            ],
+        },
+        indent=2,
+    )
+
+
+@mcp.tool()
+async def query_external_data(request: ExternalDataQueryRequest) -> str:
+    """Query external data sources and return time-series data.
+
+    Story 6.6: MCP tool for querying external macro-economic data sources.
+
+    Supports querying Portuguese/EU macro-economic data sources including:
+    - INE (Building Permits, Construction Indexes)
+    - BPstat (Mortgage Loans)
+    - OMIE (Electricity Prices)
+    - IPMA (Weather Data)
+
+    Examples:
+      - query_external_data(source="INE_BuildingPermits", date_range="2024-01-01:2024-12-31")
+      - query_external_data(source="OMIE_Electricity", date_range="last_30_days")
+      - query_external_data(source="all", date_range="last_year", metric="permits_count")
+
+    Args:
+        request: Query parameters (source, date_range, metric)
+
+    Returns:
+        JSON string with time-series data, metadata, and visualization hints
+    """
+    from raglite.external_data.storage import ExternalDataStorage
+    from raglite.shared.database import get_session
+
+    start_time = time.time()
+    logger.info(
+        "External data query",
+        extra={
+            "source": request.source,
+            "date_range": request.date_range,
+            "metric": request.metric,
+        },
+    )
+
+    session = None
+    try:
+        # Parse date range
+        start_date, end_date = _parse_date_range(request.date_range)
+
+        # Get database session
+        session = get_session()
+        storage = ExternalDataStorage(session)
+
+        # Handle "all" sources query
+        if request.source.lower() == "all":
+            results = _query_all_sources(storage, start_date, end_date, request.metric)
+        else:
+            results = _query_single_source(
+                storage, request.source, start_date, end_date, request.metric
+            )
+
+        elapsed_ms = (time.time() - start_time) * 1000
+        logger.info(
+            "External data query complete",
+            extra={
+                "source": request.source,
+                "record_count": sum(r.record_count for r in results),
+                "duration_ms": elapsed_ms,
+            },
+        )
+
+        return _format_response(results, request.source)
+
+    except ValueError as e:
+        logger.warning("External data query failed", extra={"error": str(e)})
+        return json.dumps({"error": str(e), "source": request.source})
+
+    except Exception as e:
+        logger.error(
+            "External data query failed",
+            extra={
+                "source": request.source,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+            exc_info=True,
+        )
+        return json.dumps({"error": f"Query failed: {e}", "source": request.source})
+
+    finally:
+        if session:
+            session.close()
 
 
 async def start_mcp_with_scheduler() -> None:
