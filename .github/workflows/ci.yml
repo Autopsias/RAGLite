@@ -90,7 +90,7 @@ jobs:
         run: |
           uv venv ci-venv
           source ci-venv/bin/activate
-          uv pip install ruff black isort
+          uv pip install ruff isort
 
       - name: Run Ruff linter
         run: |
@@ -98,10 +98,11 @@ jobs:
           ruff check . --output-format=github
         continue-on-error: true
 
-      - name: Run Black formatter check
+      - name: Run Ruff formatter check
         run: |
           source ci-venv/bin/activate
-          black --check --diff raglite/ tests/ scripts/
+          # Use ruff format to match pre-commit hook configuration
+          ruff format --check --diff raglite/ tests/ scripts/
         continue-on-error: true
 
       - name: Run isort import check
