@@ -2285,14 +2285,193 @@ async def get_financial_insights(
         raise QueryError(f"Insight generation failed: {e}") from e
 
 
-# Module-level execution for direct startup
-if __name__ == "__main__":
+@mcp.tool()
+async def refresh_external_data(source_name: str | None = None) -> str:
+    """Manually trigger external data refresh.
+
+    Story 6.5 AC4: MCP tool for manual triggering of external data refresh.
+
+    This tool allows manual refresh of external data sources outside the
+    scheduled refresh times. Useful for:
+    - Immediate data updates before analysis
+    - Recovery from stale data situations
+    - Testing data source connectivity
+
+    **Data Sources:**
+    - IPMA: Portuguese weather data
+    - OMIE: Iberian electricity prices
+    - CO2_EUA: EU carbon emission prices
+    - INE_BuildingPermits: Portuguese building permit statistics
+    - BPstat_MortgageLoans: Portuguese mortgage loan data
+    - EUOil_Diesel: EU diesel fuel prices
+    - INE_ConstructionOutput: Portuguese construction output index
+    - ATIC_CementConsumption: Portuguese cement consumption
+
+    Args:
+        source_name: Specific source to refresh. If None, refreshes ALL sources.
+                     Valid values: IPMA, OMIE, CO2_EUA, INE_BuildingPermits,
+                     BPstat_MortgageLoans, EUOil_Diesel, INE_ConstructionOutput,
+                     ATIC_CementConsumption
+
+    Returns:
+        JSON string with refresh status for each source including:
+        - success: Whether refresh succeeded
+        - records_updated: Number of records updated
+        - duration_seconds: Time taken for refresh
+        - error_message: Error details if failed
+
+    Example - Refresh all sources:
+        >>> result = await refresh_external_data()
+        >>> print(result)
+        {"total_sources": 8, "successful": 7, "failed": 1, ...}
+
+    Example - Refresh specific source:
+        >>> result = await refresh_external_data(source_name="IPMA")
+        >>> print(result)
+        {"source_name": "IPMA", "success": true, "records_updated": 7, ...}
+    """
+    import json
+
+    from raglite.external_data.refresh import (
+        refresh_all_sources,
+        refresh_source,
+    )
+
+    logger.info(
+        "Manual refresh triggered",
+        extra={"source_name": source_name or "all"},
+    )
+
+    try:
+        if source_name is None:
+            # Refresh all sources
+            bulk_result = await refresh_all_sources()
+            response = {
+                "total_sources": bulk_result.total_sources,
+                "successful": bulk_result.successful,
+                "failed": bulk_result.failed,
+                "total_duration_seconds": round(bulk_result.total_duration_seconds, 2),
+                "results": [
+                    {
+                        "source_name": r.source_name,
+                        "success": r.success,
+                        "records_updated": r.records_updated,
+                        "duration_seconds": round(r.duration_seconds, 2),
+                        "error_message": r.error_message,
+                        "attempts": r.attempts,
+                    }
+                    for r in bulk_result.results
+                ],
+            }
+        else:
+            # Refresh specific source
+            single_result = await refresh_source(source_name)
+            response = {
+                "source_name": single_result.source_name,
+                "success": single_result.success,
+                "records_updated": single_result.records_updated,
+                "duration_seconds": round(single_result.duration_seconds, 2),
+                "error_message": single_result.error_message,
+                "attempts": single_result.attempts,
+            }
+
+        # Compute success status based on which path we took
+        if source_name is None:
+            success_status = bulk_result.successful == bulk_result.total_sources
+        else:
+            success_status = single_result.success
+
+        logger.info(
+            "Manual refresh completed",
+            extra={
+                "source_name": source_name or "all",
+                "success": success_status,
+            },
+        )
+
+        return json.dumps(response, indent=2)
+
+    except ValueError as e:
+        # Unknown source name
+        logger.warning(
+            "Manual refresh failed - invalid source",
+            extra={"source_name": source_name, "error": str(e)},
+        )
+        return json.dumps({"error": str(e)})
+
+    except Exception as e:
+        logger.error(
+            "Manual refresh failed",
+            extra={
+                "source_name": source_name or "all",
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+            exc_info=True,
+        )
+        return json.dumps({"error": f"Refresh failed: {e}"})
+
+
+async def start_mcp_with_scheduler() -> None:
+    """Start the MCP server with the external data scheduler.
+
+    Story 6.5 AC1: Integrates APScheduler with MCP server lifecycle.
+
+    This function:
+    1. Starts the APScheduler for external data refresh
+    2. Runs the MCP server
+    3. Gracefully shuts down the scheduler on exit
+    """
+    from raglite.external_data.scheduler import shutdown_scheduler, start_scheduler
+
+    # Start the scheduler if enabled
+    if settings.scheduler_enabled:
+        try:
+            await start_scheduler()
+            logger.info(
+                "External data scheduler started",
+                extra={"timezone": settings.scheduler_timezone},
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to start scheduler - continuing without scheduled refreshes",
+                extra={"error": str(e)},
+            )
+
+    try:
+        # Run the MCP server (this blocks until shutdown)
+        mcp.run(show_banner=False)
+    finally:
+        # Gracefully shutdown the scheduler
+        if settings.scheduler_enabled:
+            try:
+                await shutdown_scheduler()
+                logger.info("External data scheduler stopped")
+            except Exception as e:
+                logger.warning(
+                    "Error during scheduler shutdown",
+                    extra={"error": str(e)},
+                )
+
+
+def main() -> None:
+    """Main entry point for RAGLite MCP server."""
+    import asyncio
+
     logger.info(
         "Starting RAGLite MCP Server",
         extra={
             "qdrant_host": settings.qdrant_host,
             "qdrant_port": settings.qdrant_port,
             "collection": settings.qdrant_collection_name,
+            "scheduler_enabled": settings.scheduler_enabled,
         },
     )
-    mcp.run(show_banner=False)
+
+    # Run with scheduler integration
+    asyncio.run(start_mcp_with_scheduler())
+
+
+# Module-level execution for direct startup
+if __name__ == "__main__":
+    main()

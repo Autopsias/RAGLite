@@ -41,7 +41,9 @@ class TestPypdfiumIngestionValidation:
     @pytest.mark.integration
     @pytest.mark.preserve_collection  # Uses session-scoped fixture, read-only
     @pytest.mark.timeout(10)  # Fast validation, no ingestion
-    async def test_ingest_pdf_with_pypdfium_backend(self, session_ingested_collection) -> None:
+    async def test_ingest_pdf_with_pypdfium_backend(
+        self, session_ingested_collection, request
+    ) -> None:
         """Test AC2: Validate session-ingested PDF with pypdfium backend.
 
         OPTIMIZATION: This test now validates the session fixture's ingestion result
@@ -60,7 +62,19 @@ class TestPypdfiumIngestionValidation:
         - Table extraction preserved
 
         This test requires Qdrant to be running with pre-ingested data.
+
+        NOTE: Skipped when --skip-ingestion is used because chunk count validation
+        requires fresh ingestion. With --skip-ingestion, the collection may contain
+        arbitrary accumulated data from previous tests.
         """
+        # Skip if using --skip-ingestion (chunk count validation requires fresh ingestion)
+        skip_ingestion = request.config.getoption("--skip-ingestion", default=False)
+        if skip_ingestion:
+            pytest.skip(
+                "Chunk count validation requires fresh ingestion (incompatible with --skip-ingestion). "
+                "The collection may contain accumulated data from previous tests."
+            )
+
         # Lazy imports to avoid test discovery overhead
         from raglite.shared.clients import get_qdrant_client
         from raglite.shared.config import settings
@@ -92,21 +106,19 @@ class TestPypdfiumIngestionValidation:
             pdf_type = "160-page full PDF (CI mode)"
         else:
             # LOCAL/CI mode: 10-page sample_financial_report.pdf (Story 2.14 alignment)
-            # ROOT CAUSE FIX (2025-12-06): CI produces ~88 chunks vs LOCAL ~14 chunks.
-            # This discrepancy suggests:
-            # 1. CI may use skip_metadata=False (adds contextual chunks)
-            # 2. CI may have different chunking config
-            # 3. CI may use a different PDF excerpt
+            # ROOT CAUSE FIX (2025-12-07): Fresh ingestion produces ~14 chunks for 10-page PDF.
+            # Previous observations of 162-236 chunks were due to test isolation bug where
+            # tests with manages_collection_state marker accumulated data without restoration.
             #
-            # Widened range to accommodate both scenarios while investigating root cause.
-            # LOCAL observed: 14 chunks (skip_metadata=True)
-            # CI observed: 88 chunks (possibly skip_metadata=False or different PDF)
+            # Actual fresh baseline (verified 2025-12-07):
+            # - 10-page PDF with skip_metadata=True produces ~14 chunks
+            # - Fixed 512-token chunking for text
+            # - Table-aware chunking preserves small tables
             #
             # NOTE: sample_financial_report.pdf contains first 10 pages of 160-page Performance Review.
-            # First 10 pages are intro/summary with minimal table content.
-            # Table-heavy content (47 tables, 1548 rows) is in pages 11-160, NOT pages 1-10.
+            # First 10 pages have relatively little content (intro/summary).
             expected_min_chunks = 10
-            expected_max_chunks = 100  # Widened from 25 to 100 to accommodate CI (88 chunks)
+            expected_max_chunks = 30  # Fresh ingestion produces ~14 chunks
             pdf_type = "10-page sample PDF (LOCAL/CI mode - Story 2.14)"
 
         assert expected_min_chunks <= count.count <= expected_max_chunks, (

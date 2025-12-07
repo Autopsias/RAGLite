@@ -846,23 +846,21 @@ def session_ingested_collection(request, warmup_embedding_model):
         expected_range = (150, 220)  # 160-page PDF
     else:
         # Updated range for 10-page sample_financial_report.pdf (Story 2.14 ground truth alignment)
-        # ROOT CAUSE FIX (2025-12-06): CI produces ~88 chunks vs LOCAL ~14 chunks.
-        # This discrepancy suggests:
-        # 1. CI may use skip_metadata=False (adds contextual chunks)
-        # 2. CI may have different chunking config
-        # 3. CI may use a different PDF excerpt
+        # ROOT CAUSE FIX (2025-12-07): Fresh ingestion produces ~14 chunks for 10-page PDF.
+        # Previous observations of 162-236 chunks were due to test isolation bug where
+        # tests with manages_collection_state marker accumulated data without restoration.
         #
-        # Widened range to accommodate both scenarios while investigating root cause.
-        # LOCAL observed: 14 chunks (skip_metadata=True)
-        # CI observed: 88 chunks (possibly skip_metadata=False or different PDF)
+        # Actual fresh baseline (verified 2025-12-07):
+        # - 10-page PDF with skip_metadata=True produces ~14 chunks
+        # - Fixed 512-token chunking for text
+        # - Table-aware chunking preserves small tables
         #
         # NOTE: This PDF contains ONLY the first 10 pages of the 160-page Performance Review.
-        # First 10 pages are intro/summary with minimal table content.
-        # Table-heavy content (47 tables, 1548 rows) is in pages 11-160, NOT pages 1-10.
+        # First 10 pages have relatively little content (intro/summary).
         expected_range = (
             10,
-            100,
-        )  # Widened from (10, 25) to accommodate CI's 88 chunks
+            30,
+        )  # Fresh ingestion produces ~14 chunks
 
     if not (expected_range[0] <= count_after.count <= expected_range[1]):
         error_msg = f"CRITICAL: Chunk count {count_after.count} not in expected range {expected_range} for {pdf_description}"
@@ -906,6 +904,97 @@ def session_ingested_collection(request, warmup_embedding_model):
     # which manages its own lifecycle. The connection will be closed when the process exits.
 
 
+def _do_restoration(qdrant, settings):
+    """Helper function to restore Qdrant collection to session baseline.
+
+    PERFORMANCE OPTIMIZATION (2025-12-07): Extracted to enable lazy restoration.
+    Called from ensure_qdrant_test_isolation when restoration is needed.
+
+    Uses snapshot recovery (fast path, <1s) or PDF re-ingestion (slow path, 10-45s).
+    """
+    global _session_sample_pdf_chunk_count
+    global _session_snapshot_name
+    global _session_postgresql_row_count
+
+    # PERFORMANCE OPTIMIZATION: Use snapshot recovery instead of re-ingestion
+    # Snapshot restore: <1s vs PDF re-ingestion: 10-15s (10-15x faster!)
+    if _session_snapshot_name:
+        # FAST PATH: Restore from snapshot
+        import time
+
+        print(f"   ⚡ Using snapshot: {_session_snapshot_name}")
+        restore_start = time.time()
+
+        try:
+            # Delete collection first
+            try:
+                qdrant.delete_collection(collection_name=settings.qdrant_collection_name)
+            except Exception:
+                pass
+
+            # Recover from snapshot stored on Qdrant server
+            # Construct snapshot URL from Qdrant host
+            qdrant_host = settings.qdrant_url.rstrip("/")
+            snapshot_url = f"{qdrant_host}/collections/{settings.qdrant_collection_name}/snapshots/{_session_snapshot_name}"
+
+            qdrant.recover_snapshot(
+                collection_name=settings.qdrant_collection_name,
+                location=snapshot_url,
+                priority="snapshot",  # Prioritize snapshot data
+                wait=True,
+            )
+
+            restore_duration = time.time() - restore_start
+
+            # Verify restoration
+            restored_count = 0
+            for _attempt in range(10):  # Max 2 seconds wait
+                restored_count = qdrant.count(collection_name=settings.qdrant_collection_name).count
+                if restored_count == _session_sample_pdf_chunk_count:
+                    break
+                time.sleep(0.2)
+
+            print(f"   ✓ Restored ({restored_count} chunks) in {restore_duration:.2f}s")
+            return  # Success - exit early
+
+        except Exception as e:
+            print(f"   ⚠️  Snapshot recovery failed: {e}")
+            print("   ⚠️  Falling back to PDF re-ingestion")
+            # Fall through to re-ingestion below
+
+    # SLOW PATH: Re-ingest PDF (fallback if snapshot failed or doesn't exist)
+    print("   🐌 Using PDF re-ingestion (slow path)")
+    from raglite.ingestion.pipeline import create_collection, ingest_pdf
+
+    sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
+
+    # Clear collection
+    try:
+        qdrant.delete_collection(collection_name=settings.qdrant_collection_name)
+    except Exception:
+        pass
+
+    # Recreate with sample PDF data
+    create_collection(
+        collection_name=settings.qdrant_collection_name,
+        vector_size=settings.embedding_dimension,
+    )
+
+    asyncio.run(ingest_pdf(str(sample_pdf)))
+
+    # CRITICAL: Wait for Qdrant to commit the restoration
+    import time
+
+    restored_count = 0
+    for _attempt in range(10):  # Max 2 seconds wait
+        restored_count = qdrant.count(collection_name=settings.qdrant_collection_name).count
+        if restored_count == _session_sample_pdf_chunk_count:
+            break
+        time.sleep(0.2)
+
+    print(f"   ✓ Restored ({restored_count} chunks)")
+
+
 @pytest.fixture(autouse=True)
 def ensure_qdrant_test_isolation(request):
     """Ensure Qdrant collection isolation between integration tests (SMART VERSION).
@@ -918,11 +1007,16 @@ def ensure_qdrant_test_isolation(request):
 
     Behavior:
     - Tests marked @pytest.mark.preserve_collection: Skip cleanup (read-only tests)
-    - Tests marked @pytest.mark.manages_collection_state: Skip cleanup (intentionally modify)
-    - Other tests: Restore to baseline if collection modified (read-only tests that didn't get marked)
+    - Tests marked @pytest.mark.manages_collection_state: Mark session dirty, defer restoration
+    - Other tests: Restore BEFORE test if session is dirty, then run test
 
-    This saves ~600-1500 seconds per test session by avoiding double-ingest on tests
-    that call ingest_pdf(clear_existing=True).
+    LAZY RESTORATION (2025-12-07): Instead of restoring after EVERY `manages_collection_state`
+    test, we now use lazy restoration:
+    1. `manages_collection_state` tests just mark session as "dirty" (no immediate restoration)
+    2. Restoration only happens BEFORE a test that NEEDS clean state
+    3. This reduces restoration overhead from O(N) to O(transitions)
+
+    Performance improvement: ~400 seconds saved by batching restorations.
 
     NOTE: This fixture lives in tests/integration/conftest.py, so it ONLY applies to
     integration tests. No need to detect test type via inspect - this conftest isn't
@@ -939,11 +1033,27 @@ def ensure_qdrant_test_isolation(request):
         yield
         return
 
-    # Check if test is marked with preserve_collection or manages_collection_state (skip expensive cleanup)
-    if "preserve_collection" in request.keywords or "manages_collection_state" in request.keywords:
-        yield  # Test runs - no cleanup needed
+    # Initialize dirty flag at session level (tracks if collection was modified)
+    if not hasattr(request.session, "_collection_dirty"):
+        request.session._collection_dirty = False
+
+    # Read-only tests: Skip all cleanup/restore (preserve_collection marker)
+    # These tests don't care if collection is dirty - they just read
+    if "preserve_collection" in request.keywords:
+        yield  # Test runs - no cleanup needed (read-only)
         return
 
+    # Tests that manage their own state: Mark dirty but don't restore yet (lazy restoration)
+    manages_state = "manages_collection_state" in request.keywords
+
+    if manages_state:
+        # LAZY RESTORATION: Don't restore after this test, just mark dirty
+        # Restoration will happen BEFORE the next test that needs clean state
+        yield  # Test runs and modifies collection
+        request.session._collection_dirty = True  # Mark dirty for lazy restoration
+        return
+
+    # --- Tests that need clean state (no marker) ---
     # Import Qdrant client and settings
     from raglite.shared.clients import get_qdrant_client
     from raglite.shared.config import settings
@@ -954,17 +1064,22 @@ def ensure_qdrant_test_isolation(request):
 
     qdrant = request.session._cached_qdrant_client
 
-    # PERFORMANCE: Only check state for tests that don't have markers (assumed read-only)
-    # Most tests are read-only and won't modify data, so skip the pre-check
-    # We'll only verify AFTER the test if restoration is needed
+    # LAZY RESTORATION: Restore BEFORE this test if session is dirty
+    # This batches all restorations - only restore when transitioning from dirty to clean
+    if request.session._collection_dirty and _session_sample_pdf_chunk_count is not None:
+        print(
+            f"\n🔄 [lazy restoration] Restoring session baseline BEFORE test: {request.node.name}"
+        )
+        _do_restoration(qdrant, settings)
+        request.session._collection_dirty = False
 
     yield  # Test runs here
 
-    # Check state after test - only cleanup if data changed
+    # Check state after test - restore if unexpectedly modified
     try:
         final_count = qdrant.count(collection_name=settings.qdrant_collection_name).count
 
-        # Only restore if count changed (test modified data)
+        # Only restore if count changed unexpectedly (test without marker modified data)
         if _session_sample_pdf_chunk_count is not None:
             should_restore = final_count != _session_sample_pdf_chunk_count
         else:
@@ -976,89 +1091,7 @@ def ensure_qdrant_test_isolation(request):
             print(
                 f"\n🔄 Restoring Qdrant (current: {final_count} chunks, baseline: {_session_sample_pdf_chunk_count})"
             )
-
-            # PERFORMANCE OPTIMIZATION: Use snapshot recovery instead of re-ingestion
-            # Snapshot restore: <1s vs PDF re-ingestion: 10-15s (10-15x faster!)
-            if _session_snapshot_name:
-                # FAST PATH: Restore from snapshot
-                import time
-
-                print(f"   ⚡ Using snapshot: {_session_snapshot_name}")
-                restore_start = time.time()
-
-                try:
-                    # Delete collection first
-                    try:
-                        qdrant.delete_collection(collection_name=settings.qdrant_collection_name)
-                    except Exception:
-                        pass
-
-                    # Recover from snapshot stored on Qdrant server
-                    # Construct snapshot URL from Qdrant host
-                    qdrant_host = settings.qdrant_url.rstrip("/")
-                    snapshot_url = f"{qdrant_host}/collections/{settings.qdrant_collection_name}/snapshots/{_session_snapshot_name}"
-
-                    qdrant.recover_snapshot(
-                        collection_name=settings.qdrant_collection_name,
-                        location=snapshot_url,
-                        priority="snapshot",  # Prioritize snapshot data
-                        wait=True,
-                    )
-
-                    restore_duration = time.time() - restore_start
-
-                    # Verify restoration
-                    restored_count = 0
-                    for _attempt in range(10):  # Max 2 seconds wait
-                        restored_count = qdrant.count(
-                            collection_name=settings.qdrant_collection_name
-                        ).count
-                        if restored_count == _session_sample_pdf_chunk_count:
-                            break
-                        time.sleep(0.2)
-
-                    print(f"   ✓ Restored ({restored_count} chunks) in {restore_duration:.2f}s")
-
-                except Exception as e:
-                    print(f"   ⚠️  Snapshot recovery failed: {e}")
-                    print("   ⚠️  Falling back to PDF re-ingestion")
-                    # Fall through to re-ingestion below
-                    _session_snapshot_name = None
-
-            if not _session_snapshot_name:
-                # SLOW PATH: Re-ingest PDF (fallback if snapshot failed)
-                print("   🐌 Using PDF re-ingestion (slow path)")
-                from raglite.ingestion.pipeline import create_collection, ingest_pdf
-
-                sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
-
-                # Clear collection
-                try:
-                    qdrant.delete_collection(collection_name=settings.qdrant_collection_name)
-                except Exception:
-                    pass
-
-                # Recreate with sample PDF data
-                create_collection(
-                    collection_name=settings.qdrant_collection_name,
-                    vector_size=settings.embedding_dimension,
-                )
-
-                asyncio.run(ingest_pdf(str(sample_pdf)))
-
-                # CRITICAL: Wait for Qdrant to commit the restoration
-                import time
-
-                restored_count = 0
-                for _attempt in range(10):  # Max 2 seconds wait
-                    restored_count = qdrant.count(
-                        collection_name=settings.qdrant_collection_name
-                    ).count
-                    if restored_count == _session_sample_pdf_chunk_count:
-                        break
-                    time.sleep(0.2)
-
-                print(f"   ✓ Restored ({restored_count} chunks)")
+            _do_restoration(qdrant, settings)
 
             # CRITICAL FIX: Also restore PostgreSQL data (symmetric database lifecycle)
             # PostgreSQL must be restored when Qdrant is restored to prevent test isolation failures

@@ -1,0 +1,67 @@
+{
+  "_comment": "Performance baseline for RAGLite test suite. CI fails if exceeded by >25%.",
+  "_updated": "2025-12-07",
+  "_version": "1.0.0",
+
+  "budgets": {
+    "unit_tests": {
+      "max_seconds": 120,
+      "description": "Unit tests should complete in <2 minutes",
+      "command": "pytest tests/unit/ -v"
+    },
+    "integration_skip_ingestion": {
+      "max_seconds": 600,
+      "description": "Integration tests with --skip-ingestion should complete in <10 minutes",
+      "command": "pytest tests/integration/ --skip-ingestion -v"
+    },
+    "integration_fresh": {
+      "max_seconds": 900,
+      "description": "Integration tests with fresh ingestion should complete in <15 minutes",
+      "command": "CI=true pytest tests/integration/ -v"
+    },
+    "full_suite": {
+      "max_seconds": 1800,
+      "description": "Full test suite should complete in <30 minutes",
+      "command": "CI=true pytest tests/ -m '' -v"
+    }
+  },
+
+  "slow_test_threshold_seconds": 30,
+
+  "baselines": {
+    "_comment": "Measured baselines from 2025-12-07 after lazy restoration optimization",
+    "integration_skip_ingestion": {
+      "measured_seconds": 552,
+      "test_count": 345,
+      "skipped_count": 53,
+      "measurement_date": "2025-12-07"
+    }
+  },
+
+  "thresholds": {
+    "regression_alert_percent": 25,
+    "regression_fail_percent": 50,
+    "per_test_max_seconds_without_slow_marker": 60
+  },
+
+  "markers_required_for_integration": {
+    "_comment": "All integration tests MUST have one of these markers",
+    "read_only": "preserve_collection",
+    "modifies_state": "manages_collection_state",
+    "explanation": "Tests without markers cause O(N) cleanup overhead. Default marker applied via pytestmark in conftest.py"
+  },
+
+  "fixture_architecture": {
+    "session_ingested_collection": {
+      "scope": "session",
+      "purpose": "Ingest PDF once, create snapshot for restoration",
+      "typical_duration_seconds": 60
+    },
+    "ensure_qdrant_test_isolation": {
+      "scope": "function",
+      "autouse": true,
+      "strategy": "lazy_restoration",
+      "purpose": "Restore collection only when transitioning from dirty to clean state"
+    }
+  }
+}

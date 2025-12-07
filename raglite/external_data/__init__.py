@@ -48,6 +48,21 @@ from raglite.external_data.models import (
     OMIEElectricityPrice,
     PetcokePrice,
 )
+from raglite.external_data.refresh import (
+    BulkRefreshResult,
+    RefreshResult,
+    get_staleness_report,
+    refresh_all_sources,
+    refresh_source,
+)
+from raglite.external_data.scheduler import (
+    RefreshFrequency,
+    get_job_info,
+    get_next_run_times,
+    get_scheduler,
+    shutdown_scheduler,
+    start_scheduler,
+)
 from raglite.external_data.storage import ExternalDataStorage
 
 __all__ = [
@@ -84,4 +99,17 @@ __all__ = [
     "CO2EUAPrice",
     # Storage Model
     "ExternalDataPoint",
+    # Scheduler (Story 6.5)
+    "RefreshFrequency",
+    "get_scheduler",
+    "start_scheduler",
+    "shutdown_scheduler",
+    "get_job_info",
+    "get_next_run_times",
+    # Refresh (Story 6.5)
+    "RefreshResult",
+    "BulkRefreshResult",
+    "refresh_source",
+    "refresh_all_sources",
+    "get_staleness_report",
 ]

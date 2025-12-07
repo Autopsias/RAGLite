@@ -113,6 +113,18 @@ class Settings(BaseSettings):
     ensemble_weight_xgboost: float = 0.3  # XGBoost weight (30%)
     ensemble_fast_mode: bool = False  # Use reduced hyperparameter grid for faster training
 
+    # Story 6.5: Automated Data Refresh Scheduler Configuration
+    scheduler_enabled: bool = True  # Enable/disable the scheduler
+    scheduler_timezone: str = "UTC"  # Timezone for scheduled jobs (always UTC per AC2)
+    scheduler_job_coalesce: bool = True  # Coalesce missed jobs after downtime (AC1)
+    scheduler_misfire_grace_time: int = 3600  # 1 hour grace time for misfired jobs (AC1)
+
+    # Cron schedules for external data refresh (AC2)
+    # Format: minute hour day_of_month month day_of_week
+    refresh_cron_daily: str = "0 6 * * *"  # Daily at 06:00 UTC
+    refresh_cron_weekly: str = "0 6 * * 0"  # Sunday at 06:00 UTC
+    refresh_cron_monthly: str = "0 6 1 * *"  # 1st of month at 06:00 UTC
+
     @model_validator(mode="after")
     def adjust_for_environment(self) -> Self:
         """Automatically adjust database settings based on APP_ENV.

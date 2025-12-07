@@ -1,39 +1,39 @@
-# generated: 2025-12-05
+# generated: 2025-12-07
 # project: RAGLite
 # project_key: raglite-mvp
 # tracking_system: file-system
-# story_location: docs/sprint-artifacts/stories
+# story_location: docs/stories
 
 # STATUS DEFINITIONS:
 # ==================
 # Epic Status:
-#   - backlog: Epic exists in epic file but not contexted
-#   - contexted or in-progress
-#   - done: Epic completed
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
 #
 # Story Status:
 #   - backlog: Story only exists in epic file
-#   - drafted: Story file created in stories folder by *create-story
-#   - ready-for-dev: Draft approved and story context created by *story-ready
-#   - in-progress: Developer actively working on implementation by *dev-story
-#   - review: Implementation complete, ready for review by *code-review
-#   - done: Story completed by *story-done
+#   - drafted: Story file created in stories folder
+#   - ready-for-dev: Draft approved and story context created
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review
+#   - done: Story completed
 #
 # Retrospective Status:
 #   - optional: Can be completed but not required
-#   - completed: Retrospective has been done by *retrospective
+#   - completed: Retrospective has been done
 #
 # WORKFLOW NOTES:
 # ===============
-# - Epics should be marked `in-progress` before stories can be marked beyond `backlog`
-# - SM typically drafts next story ONLY after previous one is 'done' to incorporate learnings
-# - Dev moves story to 'review', dev reviews, then Dev moves to 'done'
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - SM typically drafts next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
-generated: 2025-12-05
+generated: 2025-12-07
 project: RAGLite
 project_key: raglite-mvp
 tracking_system: file-system
-story_location: docs/sprint-artifacts/stories
+story_location: docs/stories
 
 development_status:
   # Epic 0: Week 0 Integration Spike (COMPLETE)
@@ -113,13 +113,11 @@ development_status:
   # Timeline: 3-4 weeks (14-20 days)
   # Blockers: None (Epic 4 complete, technologies approved)
   epic-6: in-progress
-
-  # Epic 6 Stories (Story files created - DRAFTED)
-  6-1-tier-1-external-data-integration: drafted  # Story file: docs/stories/6.1-tier-1-external-data-integration.md
-  6-2-postgresql-external-data-schema: drafted  # Story file: docs/stories/6.2-postgresql-external-data-schema.md
-  6-3-prophet-multivariate-forecasting: drafted  # Story file: docs/stories/6.3-prophet-multi-variate-forecasting.md
-  6-4-model-ensemble-framework: drafted  # Story file: docs/stories/6.4-model-ensemble-framework.md
-  6-5-automated-data-refresh-scheduler: drafted  # Story file: docs/stories/6.5-automated-data-refresh-scheduler.md
+  6-1-tier-1-external-data-integration: done  # COMPLETE: 8 API clients (INE, BPstat, OMIE, IPMA, ATIC, BaseGov, EUOil, Commodities) + tests
+  6-2-postgresql-external-data-schema: done  # COMPLETE: ORM models (ExternalDataSourceORM, ExternalDataPointORM) + Alembic migrations + tests
+  6-3-prophet-multivariate-forecasting: done  # COMPLETE: generate_forecast() with external_regressors support + tests
+  6-4-model-ensemble-framework: done  # COMPLETE: fit_linear_regression(), fit_xgboost(), ensemble voting + tests
+  6-5-automated-data-refresh-scheduler: done  # COMPLETE: APScheduler + refresh logic + MCP tool + tests
   6-6-external-data-query-tool-mcp: drafted  # Story file: docs/stories/6.6-external-data-query-tool-mcp.md
   6-7-multivariate-forecast-accuracy-validation: drafted  # Story file: docs/stories/6.7-multi-variate-forecast-accuracy-validation.md
   6-8-tier-2-data-sources-conditional: drafted  # Story file: docs/stories/6.8-tier-2-data-sources-conditional.md (CONDITIONAL)
@@ -128,11 +126,10 @@ development_status:
   # Epic 5: Production Readiness & Real-Time Operations
   # BLOCKED by Epic 6 until data pipeline components ready for cloud deployment
   epic-5: backlog
-  5-0-1-fix-timeseries-period-extraction: done
-  5-0-4-dynamic-metric-forecasting-support: done
-  5-0-6-parallel-ingestion-optimization: done
-  5-0-7-cement-industry-query-improvements: done
-  # Story 5.1 architecture APPROVED (2025-12-04) but BLOCKED by Epic 6 for data pipeline updates
+  5-0-1-fix-timeseries-period-extraction: done  # Hotfix story
+  5-0-4-dynamic-metric-forecasting-support: done  # Hotfix story
+  5-0-6-parallel-ingestion-optimization: done  # Hotfix story
+  5-0-7-cement-industry-query-improvements: done  # Hotfix story
   5-1-cloud-infrastructure-architecture: drafted  # Story file: docs/stories/5.1-cloud-infrastructure-architecture.md (BLOCKED by Epic 6)
   5-2-containerization-cloud-deployment: backlog
   5-3-environment-configuration-secrets-management: backlog
