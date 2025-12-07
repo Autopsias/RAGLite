@@ -151,11 +151,19 @@ def _shutdown_scheduler_sync() -> None:
     """
     global _scheduler
     if _scheduler is not None and _scheduler.running:
-        logger.info("Shutting down scheduler (atexit)")
+        try:
+            logger.info("Shutting down scheduler (atexit)")
+        except (ValueError, OSError):
+            # Ignore logging errors during shutdown (stdout/stderr may be closed)
+            pass
         try:
             _scheduler.shutdown(wait=False)
         except Exception as e:
-            logger.warning(f"Error during scheduler shutdown: {e}")
+            try:
+                logger.warning(f"Error during scheduler shutdown: {e}")
+            except (ValueError, OSError):
+                # Ignore logging errors during shutdown
+                pass
 
 
 async def shutdown_scheduler() -> None:
