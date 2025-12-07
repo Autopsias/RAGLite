@@ -16,11 +16,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# Skip all tests in this file if not in integration test mode
-pytestmark = pytest.mark.skipif(
-    os.getenv("APP_ENV") != "test",
-    reason="Integration tests require APP_ENV=test",
-)
+# Mark all tests in this module as integration tests that preserve collection state
+# Note: These tests don't interact with Qdrant, but CI requires isolation markers for all integration tests
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,  # Read-only - no Qdrant interaction
+    pytest.mark.skipif(
+        os.getenv("APP_ENV") != "test",
+        reason="Integration tests require APP_ENV=test",
+    ),
+]
 
 
 class TestSchedulerJobStore:
