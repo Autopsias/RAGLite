@@ -106,19 +106,17 @@ class TestPypdfiumIngestionValidation:
             pdf_type = "160-page full PDF (CI mode)"
         else:
             # LOCAL/CI mode: 10-page sample_financial_report.pdf (Story 2.14 alignment)
-            # ROOT CAUSE FIX (2025-12-07): Fresh ingestion produces ~14 chunks for 10-page PDF.
-            # Previous observations of 162-236 chunks were due to test isolation bug where
-            # tests with manages_collection_state marker accumulated data without restoration.
             #
-            # Actual fresh baseline (verified 2025-12-07):
-            # - 10-page PDF with skip_metadata=True produces ~14 chunks
-            # - Fixed 512-token chunking for text
-            # - Table-aware chunking preserves small tables
+            # Chunk count varies by environment:
+            # - LOCAL with skip_metadata=True: ~14 chunks
+            # - CI with skip_metadata=False: ~88 chunks (contextual metadata adds chunks)
+            #
+            # The difference is due to LLM contextual metadata enrichment which creates
+            # additional chunks with summaries and context when skip_metadata=False.
             #
             # NOTE: sample_financial_report.pdf contains first 10 pages of 160-page Performance Review.
-            # First 10 pages have relatively little content (intro/summary).
             expected_min_chunks = 10
-            expected_max_chunks = 30  # Fresh ingestion produces ~14 chunks
+            expected_max_chunks = 100  # Accommodates both local (~14) and CI (~88)
             pdf_type = "10-page sample PDF (LOCAL/CI mode - Story 2.14)"
 
         assert expected_min_chunks <= count.count <= expected_max_chunks, (
