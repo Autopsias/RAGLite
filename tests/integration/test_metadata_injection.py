@@ -155,6 +155,7 @@ class TestCostValidation:
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.slow  # Requires real Mistral API - skip in CI fast mode
     @pytest.mark.skipif(
         not _has_valid_mistral_api_key(),
         reason="MISTRAL_API_KEY not set or invalid - skipping cost validation test",
@@ -205,6 +206,7 @@ class TestCostValidation:
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
+    @pytest.mark.slow  # Requires real Mistral API - skip in CI fast mode
     @pytest.mark.skipif(
         not _has_valid_mistral_api_key(),
         reason="MISTRAL_API_KEY not set or invalid - skipping cost budget test",
