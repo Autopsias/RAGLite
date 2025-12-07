@@ -17,6 +17,15 @@ from raglite.shared.clients import get_qdrant_client
 from raglite.shared.config import settings
 
 
+def _has_valid_mistral_api_key() -> bool:
+    """Check if MISTRAL_API_KEY is set and looks valid (not placeholder/empty)."""
+    key = os.getenv("MISTRAL_API_KEY", "")
+    # Skip if empty, placeholder, or too short to be valid
+    if not key or len(key) < 20 or key in ("placeholder", "test", "dummy", "none"):
+        return False
+    return True
+
+
 @pytest.mark.preserve_collection  # OPTIMIZED: Use session fixture instead of re-ingesting
 class TestMetadataInjection:
     """Integration tests for AC3: Metadata injection into Qdrant.
@@ -81,7 +90,8 @@ class TestMetadataInjection:
     @pytest.mark.asyncio
     @pytest.mark.slow  # MARKED SLOW: This test still needs mocked metadata, skip in fast runs
     @pytest.mark.skipif(
-        not os.getenv("MISTRAL_API_KEY"), reason="MISTRAL_API_KEY not set - skipping filter test"
+        not _has_valid_mistral_api_key(),
+        reason="MISTRAL_API_KEY not set or invalid - skipping filter test",
     )
     async def test_metadata_filtering(self, tmp_path):
         """Test AC3: Metadata accessible via Qdrant filter API.
@@ -146,8 +156,8 @@ class TestCostValidation:
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.skipif(
-        not os.getenv("MISTRAL_API_KEY"),
-        reason="MISTRAL_API_KEY not set - skipping cost validation test",
+        not _has_valid_mistral_api_key(),
+        reason="MISTRAL_API_KEY not set or invalid - skipping cost validation test",
     )
     async def test_cost_tracking_single_document(self, caplog):
         """Test AC5: Measure Mistral Small 3.2 API token usage and cost (Story 2.4 REVISION: FREE)."""
@@ -196,8 +206,8 @@ class TestCostValidation:
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
     @pytest.mark.skipif(
-        not os.getenv("MISTRAL_API_KEY"),
-        reason="MISTRAL_API_KEY not set - skipping cost budget test",
+        not _has_valid_mistral_api_key(),
+        reason="MISTRAL_API_KEY not set or invalid - skipping cost budget test",
     )
     async def test_cost_budget_compliance(self):
         """Test AC5: Verify cost is $0.00 per chunk (Story 2.4 REVISION: Mistral Small 3.2 is FREE)."""
