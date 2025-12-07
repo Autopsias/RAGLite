@@ -217,7 +217,7 @@ class ExternalDataStorage:
                     unit_value = dp.get("unit")
                     existing.unit = unit_value if unit_value is not None else existing.unit
                     existing.metadata_ = dp.get("metadata", {})
-                    existing.deleted_at = None
+                    existing.deleted_at = None  # type: ignore[assignment]
                     count += 1
                     continue
 
@@ -335,7 +335,7 @@ class ExternalDataStorage:
         self.session.execute(stmt)
 
         # Soft delete the source
-        source.deleted_at = now
+        source.deleted_at = now  # type: ignore[assignment]
         self.session.commit()
 
         return True

@@ -271,6 +271,11 @@ module = [
 ignore_missing_imports = true
 follow_imports = "skip"
 
+# SQLAlchemy legacy ORM models - disable strict type checking for Column assignments
+[[tool.mypy.overrides]]
+module = ["raglite.external_data.*"]
+warn_unused_ignores = false
+
 # ============================================================================
 # BANDIT CONFIGURATION (Security Linting)
 # ============================================================================
