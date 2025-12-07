@@ -157,7 +157,8 @@ jobs:
           uv venv ci-venv
           source ci-venv/bin/activate
           uv pip install -e .
-          uv pip install mypy types-requests types-setuptools sqlalchemy-stubs
+          # SQLAlchemy 2.x has built-in type hints, no stubs needed (sqlalchemy-stubs is for 1.x only)
+          uv pip install mypy types-requests types-setuptools
 
       - name: Run mypy on raglite/ package
         run: |
