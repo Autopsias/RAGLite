@@ -19,7 +19,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
-from typing import Any, cast
+from typing import Any
 
 from raglite.external_data.clients import (
     ATICClient,
@@ -770,7 +770,7 @@ async def refresh_source(source_name: str) -> RefreshResult:
         # Check staleness (AC5)
         source_orm = storage.get_source(source_name)
         if source_orm:
-            check_staleness(source_name, cast(datetime | None, source_orm.last_refresh_at))
+            check_staleness(source_name, source_orm.last_refresh_at)
 
         return result
 
@@ -824,7 +824,7 @@ async def refresh_sources_by_frequency(frequency: RefreshFrequency) -> BulkRefre
             # Check staleness for each source (AC5)
             source_orm = storage.get_source(source_name)
             if source_orm:
-                check_staleness(source_name, cast(datetime | None, source_orm.last_refresh_at))
+                check_staleness(source_name, source_orm.last_refresh_at)
 
     finally:
         session.close()
@@ -887,7 +887,7 @@ async def refresh_all_sources() -> BulkRefreshResult:
             # Check staleness (AC5)
             source_orm = storage.get_source(source_name)
             if source_orm:
-                check_staleness(source_name, cast(datetime | None, source_orm.last_refresh_at))
+                check_staleness(source_name, source_orm.last_refresh_at)
 
     finally:
         session.close()
@@ -913,7 +913,7 @@ async def refresh_all_sources() -> BulkRefreshResult:
     )
 
 
-def get_staleness_report() -> list[dict]:
+def get_staleness_report() -> list[dict[str, str | int | bool | None]]:
     """Get staleness status for all registered sources.
 
     AC5: Check all sources for staleness.
@@ -925,7 +925,7 @@ def get_staleness_report() -> list[dict]:
     storage = ExternalDataStorage(session)
 
     try:
-        report = []
+        report: list[dict[str, str | int | bool | None]] = []
         now = datetime.now(UTC)
 
         for source_name in SOURCE_REFRESH_FUNCTIONS.keys():

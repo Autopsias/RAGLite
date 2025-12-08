@@ -7,22 +7,14 @@ NOTE: Pydantic models are in models.py. This file contains SQLAlchemy ORM models
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from datetime import date as date_type
+from datetime import datetime
+from decimal import Decimal
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import (
-    Column,
-    Date,
-    DateTime,
-    ForeignKey,
-    Index,
-    Integer,
-    Numeric,
-    String,
-    Text,
-    UniqueConstraint,
-)
+from sqlalchemy import DateTime, ForeignKey, Index, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from raglite.shared.database import Base, utc_now
 
@@ -38,15 +30,19 @@ class ExternalDataSourceORM(Base):
 
     __tablename__ = "external_data_sources"
 
-    id = Column(Integer, primary_key=True)
-    source_name = Column(String(100), unique=True, nullable=False, index=True)
-    api_endpoint = Column(Text)
-    data_type = Column(String(50))
-    refresh_frequency = Column(String(20))
-    last_refresh_at = Column(DateTime)
-    created_at = Column(DateTime, default=utc_now)
-    deleted_at = Column(DateTime, nullable=True)  # Soft delete (AC5)
-    metadata_ = Column("metadata", JSONB, default={})
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source_name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    api_endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
+    data_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    refresh_frequency: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    last_refresh_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, default=utc_now, nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )  # Soft delete (AC5)
+    metadata_: Mapped[dict[str, Any] | None] = mapped_column(
+        "metadata", JSONB, default={}, nullable=True
+    )
 
     # Relationship to data points
     data_points: Mapped[list[ExternalDataPointORM]] = relationship(
@@ -69,15 +65,19 @@ class ExternalDataPointORM(Base):
 
     __tablename__ = "external_data_points"
 
-    id = Column(Integer, primary_key=True)
-    source_id = Column(Integer, ForeignKey("external_data_sources.id"), nullable=False)
-    date = Column(Date, nullable=False)
-    metric_name = Column(String(100), nullable=False)
-    value = Column(Numeric, nullable=False)
-    unit = Column(String(50))
-    metadata_ = Column("metadata", JSONB, default={})
-    created_at = Column(DateTime, default=utc_now)
-    deleted_at = Column(DateTime, nullable=True)  # Soft delete (AC5)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source_id: Mapped[int] = mapped_column(ForeignKey("external_data_sources.id"), nullable=False)
+    date: Mapped[date_type] = mapped_column(nullable=False)
+    metric_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    value: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    metadata_: Mapped[dict[str, Any] | None] = mapped_column(
+        "metadata", JSONB, default={}, nullable=True
+    )
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, default=utc_now, nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )  # Soft delete (AC5)
 
     # Relationship to source
     source: Mapped[ExternalDataSourceORM] = relationship(

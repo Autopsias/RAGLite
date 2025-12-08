@@ -39,12 +39,20 @@ repos:
       - id: ruff-format
 
   # MyPy - Type checking for raglite/ production code (enabled Phase 1)
+  # NOTE: additional_dependencies must include all packages used in raglite/ for proper type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.13.0
     hooks:
       - id: mypy
-        additional_dependencies: [pydantic, types-requests, anthropic, qdrant-client]
-        args: [--show-error-codes, --ignore-missing-imports]
+        additional_dependencies:
+          - pydantic
+          - pydantic-settings  # Required for settings module
+          - types-requests
+          - anthropic
+          - qdrant-client
+          - sqlalchemy[mypy]  # Required for SQLAlchemy ORM type checking
+          - types-setuptools
+        args: [--show-error-codes]
         files: ^raglite/
         exclude: (raglite/tests/|raglite/ingestion/(adaptive_table_extraction|table_extraction).py)
 
