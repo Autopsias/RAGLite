@@ -1,12 +1,19 @@
 """OMIE (Operador del Mercado Ibérico de Energía) client.
 
 Story 6.1: Tier 1 External Data Source Integration
+Story 6.9.2: OMIE Electricity Market Fix (AC1-AC6)
 
 Fetches Iberian electricity market prices:
 - Daily spot prices (MIBEL)
 - Hourly prices
 
-Data Source: https://www.omie.es/sites/default/files/dados/
+Data Source: https://www.omie.es/es/file-download
+
+Story 6.9.2 Changes:
+- AC1: Updated URL pattern to use file-download endpoint (old /dados/ path returns 404)
+- AC2: Enabled follow_redirects=True (OMIE returns 302 redirect)
+- AC3: Updated CSV parser for new format (MARGINALPDBC;YEAR;MONTH;DAY;HOUR;PT;ES)
+- AC6: Implemented retry logic per NFR1 (exponential backoff 2s/4s/8s)
 """
 
 from __future__ import annotations
@@ -25,7 +32,10 @@ from raglite.shared.logging import get_logger
 logger = get_logger(__name__)
 
 # OMIE Data URLs
-OMIE_BASE_URL = "https://www.omie.es/sites/default/files/dados"
+# Story 6.9.2 AC1: Updated from /sites/default/files/dados/ to /es/file-download
+# Old URL (404): https://www.omie.es/sites/default/files/dados/AGNO_{year}/MES_{month}/TXT/{filename}
+# New URL (working): https://www.omie.es/es/file-download?parents=marginalpdbc&filename={filename}
+OMIE_BASE_URL = "https://www.omie.es/es/file-download"
 
 
 class OMIEClient:
@@ -56,6 +66,11 @@ class OMIEClient:
 
         OMIE publishes daily CSV files with hourly prices.
 
+        Story 6.9.2:
+        - AC1: Use file-download endpoint with query params
+        - AC2: Enable follow_redirects=True (OMIE returns 302)
+        - AC6: Exponential backoff per NFR1 (2s/4s/8s)
+
         Args:
             target_date: Date to fetch prices for
 
@@ -66,13 +81,16 @@ class OMIEClient:
             ExternalDataFetchError: If fetch fails
         """
         max_retries = settings.external_data_retry_attempts
-        retry_delays = [1, 2, 4]
+        # Story 6.9.2 AC6: Exponential backoff per NFR1 (2s/4s/8s intervals)
+        retry_delays = [2, 4, 8]
 
         # OMIE file naming convention: marginalpdbc_YYYYMMDD.1
+        # Story 6.9.2 AC1: New URL pattern using file-download endpoint
         filename = f"marginalpdbc_{target_date.strftime('%Y%m%d')}.1"
-        url = f"{self.base_url}/AGNO_{target_date.year}/MES_{target_date.month:02d}/TXT/{filename}"
+        url = f"{self.base_url}?parents=marginalpdbc&filename={filename}"
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        # Story 6.9.2 AC2: Enable follow_redirects=True (OMIE returns 302 redirect)
+        async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
             for attempt in range(max_retries):
                 try:
                     response = await client.get(url)
@@ -192,10 +210,15 @@ class OMIEClient:
     ) -> list[OMIEElectricityPrice]:
         """Parse OMIE daily price file.
 
-        OMIE CSV format (semicolon-separated):
-        Hour;Portugal;Spain
-        1;XX.XX;YY.YY
-        ...
+        Story 6.9.2 AC3: Updated parser for new CSV format.
+
+        New OMIE CSV format (semicolon-separated):
+        MARGINALPDBC;YEAR;MONTH;DAY;HOUR;PT_PRICE;ES_PRICE;...
+
+        Example line:
+        MARGINALPDBC;2024;12;08;1;111,60;111,60;...
+
+        Note: Hour is 1-based (1-24), prices use European decimal comma.
 
         Args:
             content: CSV file content
@@ -207,24 +230,29 @@ class OMIEClient:
         results = []
         lines = content.strip().split("\n")
 
-        for line in lines[1:]:  # Skip header
-            try:
-                parts = line.split(";")
-                if len(parts) >= 2:
-                    hour = int(parts[0]) - 1  # OMIE uses 1-24, we use 0-23
-                    # Portugal price is usually in column 2 (index 1)
-                    price_str = parts[1].replace(",", ".")
-                    price = float(price_str)
+        for line in lines:
+            # Story 6.9.2 AC3: Only parse MARGINALPDBC data lines
+            parts = line.split(";")
+            if len(parts) < 7 or parts[0] != "MARGINALPDBC":
+                continue
 
-                    results.append(
-                        OMIEElectricityPrice(
-                            date=target_date,
-                            hour=hour,
-                            price_eur_mwh=price,
-                            market="MIBEL",
-                            price_type="spot",
-                        )
+            try:
+                # Story 6.9.2 AC3: Parse new format
+                # Format: MARGINALPDBC;YEAR;MONTH;DAY;HOUR;PT_PRICE;ES_PRICE;...
+                hour = int(parts[4]) - 1  # Convert 1-24 to 0-23
+                # Portugal price is in column 6 (index 5)
+                price_str = parts[5].replace(",", ".")  # Handle European decimal comma
+                price = float(price_str)
+
+                results.append(
+                    OMIEElectricityPrice(
+                        date=target_date,
+                        hour=hour,
+                        price_eur_mwh=price,
+                        market="MIBEL",
+                        price_type="spot",
                     )
+                )
             except (ValueError, IndexError) as e:
                 logger.warning(
                     "Failed to parse OMIE line",

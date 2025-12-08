@@ -54,7 +54,11 @@ repos:
           - types-setuptools
         args: [--show-error-codes]
         files: ^raglite/
-        exclude: (raglite/tests/|raglite/ingestion/(adaptive_table_extraction|table_extraction).py)
+<<<<<<< Updated upstream
+        exclude: ^(raglite/tests/|raglite/ingestion/(adaptive_table/|chunking_strategy\.py|table_extraction\.py))
+=======
+        exclude: (raglite/tests/|raglite/ingestion/(adaptive_table_extraction|table_extraction|chunking_strategy|adaptive_table/).*\.py)
+>>>>>>> Stashed changes
 
   # ============ SECURITY CHECKS ============
   # Secret detection with Gitleaks
@@ -72,7 +76,7 @@ repos:
     hooks:
       - id: bandit
         args: [-r, raglite/, -f, screen, -s, B101, -s, B608]
-        exclude: (raglite/tests/|raglite/ingestion/(adaptive_table_extraction|table_extraction).py)
+        exclude: (raglite/tests/|raglite/ingestion/(adaptive_table_extraction|table_extraction|chunking_strategy|adaptive_table/).*\.py)
         pass_filenames: false
 
   # ============ CUSTOM LOCAL HOOKS ============

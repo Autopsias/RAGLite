@@ -81,21 +81,196 @@ class InsufficientDataError(Exception):
 # =============================================================================
 
 
+def transform_yoy_to_index(
+    yoy_series: pd.Series,
+    base_value: float = 100.0,
+) -> pd.Series:
+    """Reconstruct absolute index from YoY% changes.
+
+    Story 6.7: Transform Year-over-Year percentage changes to co-integrated
+    level series suitable for forecasting regressors.
+
+    The transformation accumulates monthly changes to reconstruct an index:
+    Index_t = Index_{t-1} * (1 + YoY%_t / 1200)
+
+    This converts small percentage values (2.0, 3.3, -1.5) to index values
+    that co-move with absolute quantities.
+
+    Args:
+        yoy_series: Series of YoY% changes (e.g., 2.0, 3.3, -1.5)
+        base_value: Starting index value (default: 100)
+
+    Returns:
+        Series of reconstructed absolute index values
+
+    Example:
+        >>> yoy = pd.Series([2.0, 3.0, -1.0], index=dates)
+        >>> index = transform_yoy_to_index(yoy)
+        # Returns approximately [100.17, 100.42, 100.34]
+    """
+    if yoy_series.empty:
+        return yoy_series.copy()
+
+    # Sort by date
+    sorted_series = yoy_series.sort_index()
+
+    # Initialize result array
+    index_values = np.zeros(len(sorted_series))
+    index_values[0] = base_value
+
+    # Accumulate changes: Index_t = Index_{t-1} * (1 + YoY% / 1200)
+    # Using 1200 because YoY% needs to be converted to monthly growth
+    for i in range(1, len(sorted_series)):
+        yoy_pct = sorted_series.iloc[i]
+        # Convert annual % to monthly factor
+        monthly_factor = 1 + (yoy_pct / 1200)
+        index_values[i] = index_values[i - 1] * monthly_factor
+
+    result = pd.Series(index_values, index=sorted_series.index)
+
+    logger.debug(
+        "Transformed YoY% to index",
+        extra={
+            "input_range": f"{sorted_series.min():.2f} to {sorted_series.max():.2f}",
+            "output_range": f"{result.min():.2f} to {result.max():.2f}",
+        },
+    )
+
+    return result
+
+
+def detect_yoy_percentage(series: pd.Series, target_series: pd.Series | None = None) -> bool:
+    """Detect if a series contains YoY percentage changes vs absolute values.
+
+    Story 6.7: Identify YoY% data (e.g., INE Construction Output Index)
+    that needs transformation before use as regressors.
+
+    Characteristics of YoY% data:
+    - Small range (typically ±10%, max ±30%)
+    - Mean close to 0 (long-term average growth)
+    - Contains negative values (periods of decline)
+    - Values typically between -30 and +30
+
+    Args:
+        series: Series to analyze
+        target_series: Optional target series for scale comparison
+
+    Returns:
+        True if series appears to be YoY% data
+    """
+    if series.empty:
+        return False
+
+    series_min = series.min()
+    series_max = series.max()
+    series_range = series_max - series_min
+    series_mean = series.mean()
+
+    # YoY% specific checks:
+    # 1. Must contain negative values (decline periods)
+    has_negative = series_min < 0
+
+    # 2. Values typically in -30 to +30 range for YoY%
+    in_yoy_range = series_min >= -50 and series_max <= 50
+
+    # 3. Mean should be close to 0 (long-term balance)
+    mean_near_zero = abs(series_mean) < 10
+
+    # 4. Small range (YoY% typically varies by ±10 points)
+    small_range = series_range < 30
+
+    # All conditions must be met for confident YoY% detection
+    if has_negative and in_yoy_range and mean_near_zero and small_range:
+        return True
+
+    # Additional check: Scale ratio vs target (if large mismatch)
+    if target_series is not None and not target_series.empty:
+        target_range = target_series.max() - target_series.min()
+        if target_range > 0 and series_range > 0:
+            scale_ratio = target_range / series_range
+            # Only flag as YoY% if target is 50x+ larger AND values look like percentages
+            if scale_ratio > 50 and in_yoy_range and has_negative:
+                return True
+
+    return False
+
+
+def validate_regressor_scale(
+    regressor: pd.Series,
+    target: pd.Series,
+    max_scale_ratio: float = 100.0,
+    min_correlation: float = 0.2,
+) -> tuple[bool, str, dict]:
+    """Validate that regressor is suitable for forecasting target.
+
+    Story 6.7: Scale validation prevents mismatched data from causing
+    poor forecast accuracy.
+
+    Args:
+        regressor: Regressor series to validate
+        target: Target series for comparison
+        max_scale_ratio: Maximum allowed scale ratio (default: 100)
+        min_correlation: Minimum correlation threshold (default: 0.2)
+
+    Returns:
+        Tuple of (is_valid, message, metadata)
+    """
+    metadata: dict = {}
+
+    # Align data
+    aligned = pd.DataFrame({"target": target, "regressor": regressor}).dropna()
+
+    if len(aligned) < 10:
+        return False, f"Insufficient overlap: only {len(aligned)} aligned points", metadata
+
+    # Scale check
+    regressor_range = aligned["regressor"].max() - aligned["regressor"].min()
+    target_range = aligned["target"].max() - aligned["target"].min()
+    scale_ratio = target_range / max(regressor_range, 1e-6)
+
+    metadata["scale_ratio"] = scale_ratio
+    metadata["regressor_range"] = regressor_range
+    metadata["target_range"] = target_range
+
+    if scale_ratio > max_scale_ratio:
+        return (
+            False,
+            f"Scale mismatch: target range {target_range:.1f} vs regressor range {regressor_range:.1f} (ratio: {scale_ratio:.1f}x)",
+            metadata,
+        )
+
+    # Correlation check
+    corr = aligned["target"].corr(aligned["regressor"])
+    metadata["correlation"] = corr
+
+    if abs(corr) < min_correlation:
+        return (
+            False,
+            f"Low correlation: {corr:.3f} < {min_correlation}",
+            metadata,
+        )
+
+    return True, "OK", metadata
+
+
 def select_regressors(
     target: pd.Series,
     candidates: dict[str, pd.Series],
     top_n: int = 7,
-    min_correlation: float = 0.5,
+    min_correlation: float = 0.3,  # Story 6.7: Lowered from 0.5 to accept moderate correlations
+    auto_transform_yoy: bool = True,
 ) -> list[str]:
     """Select top regressors by Pearson correlation with target.
 
     Story 6.3 AC3: Correlation-based regressor selection.
+    Story 6.7: Auto-transform YoY% data before correlation calculation.
 
     Args:
         target: Target time-series (y values)
         candidates: Dictionary of candidate regressors {name: series}
         top_n: Maximum number of regressors to select (default: 7)
         min_correlation: Minimum absolute correlation threshold (default: 0.5)
+        auto_transform_yoy: Auto-transform YoY% data before correlation (default: True)
 
     Returns:
         List of selected regressor names sorted by abs(correlation) descending
@@ -103,9 +278,28 @@ def select_regressors(
     if not candidates:
         return []
 
+    # Story 6.7: Transform YoY% candidates before correlation calculation
+    transformed_candidates: dict[str, pd.Series] = {}
+    for name, series in candidates.items():
+        working_series = series.copy()
+
+        if auto_transform_yoy and detect_yoy_percentage(working_series, target):
+            # Transform YoY% to index scaled to target mean
+            base_value = target.mean() if not target.empty else 100.0
+            working_series = transform_yoy_to_index(working_series, base_value=base_value)
+            logger.debug(
+                f"Pre-selection YoY% transform: {name}",
+                extra={
+                    "original_range": f"{series.min():.2f}-{series.max():.2f}",
+                    "transformed_range": f"{working_series.min():.2f}-{working_series.max():.2f}",
+                },
+            )
+
+        transformed_candidates[name] = working_series
+
     # Build DataFrame with target and all candidates
     df = pd.DataFrame({"target": target})
-    for name, series in candidates.items():
+    for name, series in transformed_candidates.items():
         # Reindex to match target
         df[name] = series.reindex(target.index)
 
@@ -124,6 +318,7 @@ def select_regressors(
             "candidates": len(candidates),
             "selected": len(selected),
             "names": selected,
+            "correlations": {name: f"{correlations.get(name, 0):.3f}" for name in selected},
         },
     )
 
@@ -133,14 +328,19 @@ def select_regressors(
 def prepare_regressors(
     regressors: dict[str, pd.Series],
     target_index: pd.DatetimeIndex,
+    target_series: pd.Series | None = None,
+    auto_transform_yoy: bool = True,
 ) -> dict[str, pd.Series]:
-    """Prepare regressors: align, interpolate, validate.
+    """Prepare regressors: align, interpolate, transform, validate.
 
     Story 6.3 AC4: Missing data handling for regressors.
+    Story 6.7: Auto-transform YoY% to absolute index for scale compatibility.
 
     Args:
         regressors: Dictionary of regressor series
         target_index: Target DatetimeIndex to align to
+        target_series: Optional target series for YoY% detection
+        auto_transform_yoy: Auto-transform detected YoY% data (default: True)
 
     Returns:
         Dictionary of prepared regressor series
@@ -151,8 +351,33 @@ def prepare_regressors(
     prepared = {}
 
     for name, series in regressors.items():
+        working_series = series.copy()
+
+        # Story 6.7: Auto-detect and transform YoY% data
+        if auto_transform_yoy and detect_yoy_percentage(working_series, target_series):
+            logger.info(
+                f"Auto-transforming YoY% regressor: {name}",
+                extra={
+                    "original_range": f"{working_series.min():.2f} to {working_series.max():.2f}",
+                },
+            )
+            # Scale base value to target range for better correlation
+            if target_series is not None and not target_series.empty:
+                # Use target mean as base to improve correlation
+                base_value = target_series.mean()
+            else:
+                base_value = 100.0
+
+            working_series = transform_yoy_to_index(working_series, base_value=base_value)
+            logger.info(
+                f"Transformed {name} to index",
+                extra={
+                    "new_range": f"{working_series.min():.2f} to {working_series.max():.2f}",
+                },
+            )
+
         # Reindex to target index
-        aligned = series.reindex(target_index)
+        aligned = working_series.reindex(target_index)
 
         # Check missing ratio
         missing_count = aligned.isna().sum()
@@ -506,11 +731,12 @@ async def generate_forecast(
         selected = select_regressors(target_series, external_regressors)
 
         if selected:
-            # Prepare regressors (align, interpolate)
+            # Prepare regressors (align, interpolate, auto-transform YoY%)
             target_index = pd.DatetimeIndex(df["ds"])
             prepared = prepare_regressors(
                 {k: v for k, v in external_regressors.items() if k in selected},
                 target_index,
+                target_series=target_series,  # Story 6.7: Enable YoY% auto-detection
             )
 
             # Add each regressor to Prophet and DataFrame
@@ -548,63 +774,104 @@ async def generate_forecast(
         is_monthly_data = False
 
     if is_monthly_data:
-        # Monthly input: forecast monthly for 12 months (covers 4 quarters), then aggregate
-        monthly_periods = periods_ahead * 3  # 3 months per quarter
-        future = model.make_future_dataframe(periods=monthly_periods, freq="ME")
+        # Story 6.7: Respect frequency parameter - return monthly if requested
+        output_monthly = frequency.upper() in ("M", "ME", "MS")
 
-        # Story 6.3: Add regressor values to future dataframe
-        if regressors_used and external_regressors:
-            future_dates = pd.DatetimeIndex(future["ds"].tail(monthly_periods))
-            extended = _generate_future_regressors(
-                {k: v for k, v in external_regressors.items() if k in regressors_used},
-                future_dates,
-                strategy=future_regressor_strategy,
-            )
-            for name in regressors_used:
-                if name in extended:
-                    future[name] = extended[name].reindex(future["ds"]).values
+        if output_monthly:
+            # Monthly input, monthly output (Story 6.7)
+            future = model.make_future_dataframe(periods=periods_ahead, freq="ME")
 
-        prophet_forecast = model.predict(future)
-
-        # Get only the future monthly predictions (not historical)
-        forecast_months = prophet_forecast.tail(monthly_periods)
-
-        # Aggregate monthly forecasts into quarterly
-        forecast_points = []
-        for q_idx in range(periods_ahead):
-            # Get 3 months for this quarter
-            start_idx = q_idx * 3
-            end_idx = start_idx + 3
-            quarter_months = forecast_months.iloc[start_idx:end_idx]
-
-            # Sum monthly values to get quarterly total
-            quarterly_value = quarter_months["yhat"].sum()
-            quarterly_lower = quarter_months["yhat_lower"].sum()
-            quarterly_upper = quarter_months["yhat_upper"].sum()
-
-            # Use the last month's date as the quarter-end date
-            quarter_end_date = quarter_months.iloc[-1]["ds"]
-            quarter = (quarter_end_date.month - 1) // 3 + 1
-            label = f"Q{quarter} {quarter_end_date.year}"
-
-            forecast_points.append(
-                ForecastPoint(
-                    date=quarter_end_date.to_pydatetime(),
-                    value=quarterly_value,
-                    lower=quarterly_lower,
-                    upper=quarterly_upper,
-                    label=label,
+            # Story 6.3: Add regressor values to future dataframe
+            if regressors_used and external_regressors:
+                future_dates = pd.DatetimeIndex(future["ds"].tail(periods_ahead))
+                extended = _generate_future_regressors(
+                    {k: v for k, v in external_regressors.items() if k in regressors_used},
+                    future_dates,
+                    strategy=future_regressor_strategy,
                 )
-            )
+                for name in regressors_used:
+                    if name in extended:
+                        future[name] = extended[name].reindex(future["ds"]).values
+
+            prophet_forecast = model.predict(future)
+            forecast_months = prophet_forecast.tail(periods_ahead)
+
+            # Return monthly forecasts directly (no aggregation)
+            forecast_points = []
+            for _, row in forecast_months.iterrows():
+                month_name = row["ds"].strftime("%b %Y")
+                forecast_points.append(
+                    ForecastPoint(
+                        date=row["ds"].to_pydatetime(),
+                        value=row["yhat"],
+                        lower=row["yhat_lower"],
+                        upper=row["yhat_upper"],
+                        label=month_name,
+                    )
+                )
 
             logger.debug(
-                f"Quarterly aggregation: {label} = sum of 3 monthly forecasts",
-                extra={
-                    "quarter": label,
-                    "monthly_values": quarter_months["yhat"].tolist(),
-                    "quarterly_total": quarterly_value,
-                },
+                "Monthly forecast generated",
+                extra={"periods": periods_ahead, "output_frequency": "monthly"},
             )
+        else:
+            # Monthly input, quarterly output (aggregate 3 months)
+            monthly_periods = periods_ahead * 3  # 3 months per quarter
+            future = model.make_future_dataframe(periods=monthly_periods, freq="ME")
+
+            # Story 6.3: Add regressor values to future dataframe
+            if regressors_used and external_regressors:
+                future_dates = pd.DatetimeIndex(future["ds"].tail(monthly_periods))
+                extended = _generate_future_regressors(
+                    {k: v for k, v in external_regressors.items() if k in regressors_used},
+                    future_dates,
+                    strategy=future_regressor_strategy,
+                )
+                for name in regressors_used:
+                    if name in extended:
+                        future[name] = extended[name].reindex(future["ds"]).values
+
+            prophet_forecast = model.predict(future)
+
+            # Get only the future monthly predictions (not historical)
+            forecast_months = prophet_forecast.tail(monthly_periods)
+
+            # Aggregate monthly forecasts into quarterly
+            forecast_points = []
+            for q_idx in range(periods_ahead):
+                # Get 3 months for this quarter
+                start_idx = q_idx * 3
+                end_idx = start_idx + 3
+                quarter_months = forecast_months.iloc[start_idx:end_idx]
+
+                # Sum monthly values to get quarterly total
+                quarterly_value = quarter_months["yhat"].sum()
+                quarterly_lower = quarter_months["yhat_lower"].sum()
+                quarterly_upper = quarter_months["yhat_upper"].sum()
+
+                # Use the last month's date as the quarter-end date
+                quarter_end_date = quarter_months.iloc[-1]["ds"]
+                quarter = (quarter_end_date.month - 1) // 3 + 1
+                label = f"Q{quarter} {quarter_end_date.year}"
+
+                forecast_points.append(
+                    ForecastPoint(
+                        date=quarter_end_date.to_pydatetime(),
+                        value=quarterly_value,
+                        lower=quarterly_lower,
+                        upper=quarterly_upper,
+                        label=label,
+                    )
+                )
+
+                logger.debug(
+                    f"Quarterly aggregation: {label} = sum of 3 monthly forecasts",
+                    extra={
+                        "quarter": label,
+                        "monthly_values": quarter_months["yhat"].tolist(),
+                        "quarterly_total": quarterly_value,
+                    },
+                )
     else:
         # Non-monthly input: use original quarterly forecast
         future = model.make_future_dataframe(periods=periods_ahead, freq="QE")
@@ -1254,6 +1521,7 @@ async def generate_ensemble_forecast(
             prepared = prepare_regressors(
                 {k: v for k, v in external_regressors.items() if k in selected},
                 pd.DatetimeIndex(df["ds"]),
+                target_series=target_series,  # Story 6.7: Enable YoY% auto-detection
             )
 
     # Build feature matrix for sklearn models

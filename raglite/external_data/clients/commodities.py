@@ -35,7 +35,9 @@ COAL_DATA_SOURCES = {
 }
 
 CO2_DATA_SOURCES = {
-    "ember": "https://ember-climate.org/data/carbon-price-viewer/",
+    # Ember rebranded from ember-climate.org to ember-energy.org (2025-01-01)
+    # Story 6.9.1 AC4: Updated to new domain
+    "ember": "https://ember-energy.org/data/carbon-price-viewer/",
     "icap": "https://icapcarbonaction.com/en/ets-prices",
 }
 
@@ -85,7 +87,7 @@ class CommoditiesClient:
             ExternalDataFetchError: If all retries fail
         """
         max_retries = settings.external_data_retry_attempts
-        retry_delays = [1, 2, 4]
+        retry_delays = [2, 4, 8]  # NFR1: exponential backoff at 2s/4s/8s intervals
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             for attempt in range(max_retries):
@@ -143,8 +145,10 @@ class CommoditiesClient:
             extra={"start": str(start_date), "end": str(end_date)},
         )
 
-        # Ember Climate has a public API for carbon prices
-        url = "https://api.ember-climate.org/v1/carbon-price-tracker/eu-ets"
+        # Ember Energy has a public API for carbon prices
+        # Story 6.9.1 AC4: Updated from deprecated ember-climate.org domain (deprecated 2025-01-01)
+        # API docs: https://api.ember-energy.org/v1/docs
+        url = "https://api.ember-energy.org/v1/carbon-price-tracker/eu-ets"
 
         try:
             data = await self._fetch_with_retry(url)

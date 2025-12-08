@@ -1,13 +1,20 @@
 """BPstat (Banco de Portugal Statistics) API client.
 
 Story 6.1: Tier 1 External Data Source Integration
+Story 6.9.3: BPstat Banco de Portugal Fix
 
 Fetches Portuguese financial data:
-- Mortgage loans (Housing loans to households)
-- Interest rates
-- Credit statistics
+- Mortgage interest rates (New housing loans - variable rate)
+- Interest rate distribution percentiles (10th, 25th, median, 75th, 90th)
 
-API Documentation: https://bpstat.bportugal.pt/data/docs
+API Documentation: https://bpstat.bportugal.pt/api/
+API Observations endpoint: https://bpstat.bportugal.pt/api/observations/
+
+IMPORTANT: Story 6.9.3 - Series IDs were corrected on 2025-12-08
+Old series 12532089 was returning Egyptian Pound FX rate, NOT mortgage data.
+See: https://bpstat.bportugal.pt/api/series/12532089 (returns "Egypt, Pounds (EGP)")
+
+Correct series IDs verified at: https://bpstat.bportugal.pt/api/series/{id}
 """
 
 from __future__ import annotations
@@ -26,26 +33,44 @@ from raglite.shared.logging import get_logger
 logger = get_logger(__name__)
 
 # BPstat API Configuration
-BPSTAT_API_BASE = "https://bpstat.bportugal.pt/data/v1"
+# Story 6.9.3 AC2: Updated from /data/v1 (404) to /api (working)
+BPSTAT_API_BASE = "https://bpstat.bportugal.pt/api"
 
 
 class BPstatClient:
     """Client for Banco de Portugal Statistics API.
 
-    Provides access to Portuguese financial statistics including mortgage loans.
+    Provides access to Portuguese mortgage interest rate statistics.
+
+    Story 6.9.3: Updated API endpoint and series IDs (2025-12-08)
+    - Old endpoint /data/v1 returns 404
+    - New endpoint /api/observations/ returns data
 
     Example:
         >>> client = BPstatClient()
-        >>> loans = await client.fetch_mortgage_loans(
+        >>> rates = await client.fetch_mortgage_loans(
         ...     start_date=date(2024, 1, 1),
         ...     end_date=date(2024, 3, 31)
         ... )
     """
 
-    # BPstat series codes
-    MORTGAGE_LOANS_SERIES = "12532089"  # Housing loans to households
-    NEW_MORTGAGE_LOANS_SERIES = "12532090"  # New housing loans
-    MORTGAGE_RATE_SERIES = "12532091"  # Average mortgage interest rate
+    # BPstat series codes for mortgage interest rates (Variable rate - New housing loans)
+    # Story 6.9.3 AC1/AC6: Correct series IDs (verified 2025-12-08)
+    # Source: https://bpstat.bportugal.pt/api/series/{id}
+    #
+    # IMPORTANT: Old series IDs (12532089, 12532090, 12532091) were WRONG
+    # They returned FX rates (Egyptian Pound, etc.), NOT mortgage data!
+    #
+    # Interest rate distribution for new housing loans (variable rate):
+    MORTGAGE_RATE_MEDIAN = "12710733"  # 50th percentile (median) - PRIMARY
+    MORTGAGE_RATE_10TH_PERCENTILE = "12710735"  # 10th percentile
+    MORTGAGE_RATE_25TH_PERCENTILE = "12710781"  # 25th percentile
+    MORTGAGE_RATE_75TH_PERCENTILE = "12710734"  # 75th percentile
+    MORTGAGE_RATE_90TH_PERCENTILE = "12710736"  # 90th percentile
+
+    # Backward compatibility aliases (deprecated - use new names)
+    MORTGAGE_LOANS_SERIES = MORTGAGE_RATE_MEDIAN  # Alias for backward compat
+    MORTGAGE_RATE_SERIES = MORTGAGE_RATE_MEDIAN  # Alias for backward compat
 
     def __init__(self) -> None:
         self.base_url = BPSTAT_API_BASE
@@ -56,31 +81,36 @@ class BPstatClient:
 
     async def _fetch_with_retry(
         self,
-        series_id: str,
+        series_ids: list[str],
         start_date: date,
         end_date: date,
     ) -> dict:
         """Fetch data from BPstat API with retry logic.
 
+        Story 6.9.3 AC2/AC3/AC7: Updated for new API structure
+
         Args:
-            series_id: BPstat series identifier
+            series_ids: List of BPstat series identifiers (can fetch multiple in one request)
             start_date: Start of date range
             end_date: End of date range
 
         Returns:
-            JSON response from API
+            JSON response from API with observations data
 
         Raises:
             ExternalDataFetchError: If all retries fail
         """
         max_retries = settings.external_data_retry_attempts
-        retry_delays = [1, 2, 4]
+        # Story 6.9.3 AC7: NFR1 exponential backoff at 2s/4s/8s intervals
+        retry_delays = [2, 4, 8]
 
-        # BPstat uses YYYY-MM format for date filtering
-        url = f"{self.base_url}/series/{series_id}/observations"
+        # Story 6.9.3 AC2: New API endpoint structure
+        # Old (broken): /data/v1/series/{id}/observations
+        # New (working): /api/observations/?series_ids={ids}&lang=EN
+        url = f"{self.base_url}/observations/"
         params = {
-            "startPeriod": start_date.strftime("%Y-%m"),
-            "endPeriod": end_date.strftime("%Y-%m"),
+            "series_ids": ",".join(series_ids),
+            "lang": "EN",
         }
 
         headers = {"Accept": "application/json"}
@@ -102,7 +132,7 @@ class BPstatClient:
                             extra={
                                 "attempt": attempt + 1,
                                 "delay": delay,
-                                "series": series_id,
+                                "series_ids": series_ids,
                             },
                         )
                         await asyncio.sleep(delay)
@@ -140,58 +170,160 @@ class BPstatClient:
         self,
         start_date: date,
         end_date: date,
+        include_percentiles: bool = False,
     ) -> list[BPstatMortgageLoans]:
-        """Fetch mortgage loan data.
+        """Fetch mortgage interest rate data.
+
+        Story 6.9.3 AC4: Updated to fetch interest rate percentiles
+        instead of old (wrong) loan amount series.
 
         Args:
             start_date: Start of date range
             end_date: End of date range
+            include_percentiles: If True, fetch all percentile series (10th, 25th, 75th, 90th)
+                                 If False, only fetch median (50th percentile)
 
         Returns:
-            List of mortgage loan records
+            List of mortgage interest rate records
         """
         logger.info(
-            "Fetching BPstat mortgage loans",
+            "Fetching BPstat mortgage interest rates",
             extra={"start": str(start_date), "end": str(end_date)},
         )
 
-        # Fetch all three series
-        total_loans_data = await self._fetch_with_retry(
-            self.MORTGAGE_LOANS_SERIES,
+        # Story 6.9.3: Fetch interest rate percentiles (not loan amounts)
+        # New API allows fetching multiple series in one request
+        series_to_fetch = [self.MORTGAGE_RATE_MEDIAN]
+
+        if include_percentiles:
+            series_to_fetch.extend(
+                [
+                    self.MORTGAGE_RATE_10TH_PERCENTILE,
+                    self.MORTGAGE_RATE_25TH_PERCENTILE,
+                    self.MORTGAGE_RATE_75TH_PERCENTILE,
+                    self.MORTGAGE_RATE_90TH_PERCENTILE,
+                ]
+            )
+
+        # Fetch all series in one request (new API supports this)
+        response_data = await self._fetch_with_retry(
+            series_to_fetch,
             start_date,
             end_date,
         )
 
-        # Optional: fetch new loans and interest rates
-        try:
-            new_loans_data = await self._fetch_with_retry(
-                self.NEW_MORTGAGE_LOANS_SERIES,
-                start_date,
-                end_date,
-            )
-        except ExternalDataFetchError:
-            new_loans_data = {"observations": []}
-            logger.warning("Failed to fetch new loans series, continuing without it")
+        return self._parse_interest_rate_data(response_data, series_to_fetch)
 
-        try:
-            rates_data = await self._fetch_with_retry(
-                self.MORTGAGE_RATE_SERIES,
-                start_date,
-                end_date,
-            )
-        except ExternalDataFetchError:
-            rates_data = {"observations": []}
-            logger.warning("Failed to fetch rates series, continuing without it")
+    def _parse_interest_rate_data(
+        self,
+        response_data: dict,
+        series_ids: list[str],
+    ) -> list[BPstatMortgageLoans]:
+        """Parse interest rate data from new API response.
 
-        return self._merge_loan_data(total_loans_data, new_loans_data, rates_data)
+        Story 6.9.3 AC3: Updated parser for new API structure
 
+        Args:
+            response_data: JSON response from BPstat API
+            series_ids: List of series IDs that were requested
+
+        Returns:
+            List of mortgage interest rate records
+        """
+        results = []
+
+        # New API response structure:
+        # {
+        #   "data": {
+        #     "series_id": { ... series metadata ... },
+        #     ...
+        #   },
+        #   "observations": [
+        #     { "period": "2024-01", "value": 3.45, "series_id": "12710733" },
+        #     ...
+        #   ]
+        # }
+
+        # Build lookup for observations by period and series
+        observations_by_period: dict[str, dict[str, float]] = {}
+
+        for obs in response_data.get("observations", []):
+            try:
+                period = obs.get("period", obs.get("refPeriod"))
+                series_id = str(obs.get("series_id", obs.get("seriesId", "")))
+                value = obs.get("value")
+
+                if not period or value is None:
+                    continue
+
+                if period not in observations_by_period:
+                    observations_by_period[period] = {}
+
+                observations_by_period[period][series_id] = float(value)
+
+            except (ValueError, TypeError) as e:
+                logger.warning(
+                    "Failed to parse BPstat observation",
+                    extra={"obs": obs, "error": str(e)},
+                )
+                continue
+
+        # Create records for each period where we have data
+        for period, series_values in sorted(observations_by_period.items()):
+            try:
+                # Parse period (format: YYYY-MM)
+                year, month = map(int, period.split("-"))
+                record_date = date(year, month, 1)
+
+                # Get median rate (primary series) - required
+                median_rate = series_values.get(self.MORTGAGE_RATE_MEDIAN)
+                if median_rate is None:
+                    # Try old alias for backward compatibility
+                    median_rate = series_values.get(self.MORTGAGE_LOANS_SERIES)
+
+                if median_rate is None:
+                    logger.warning(
+                        "Missing median rate for period",
+                        extra={"period": period},
+                    )
+                    continue
+
+                results.append(
+                    BPstatMortgageLoans(
+                        date=record_date,
+                        # Story 6.9.3: Now returns interest rates, not loan amounts
+                        # total_loans_eur is kept for backward compatibility but
+                        # will be 0 since we no longer fetch loan amount series
+                        total_loans_eur=0.0,
+                        new_loans_eur=None,
+                        avg_interest_rate_pct=median_rate,
+                    )
+                )
+
+            except (ValueError, KeyError) as e:
+                logger.warning(
+                    "Failed to create BPstat record",
+                    extra={"period": period, "error": str(e)},
+                )
+                continue
+
+        logger.info(
+            "Parsed BPstat mortgage interest rates",
+            extra={"record_count": len(results)},
+        )
+        return results
+
+    # Legacy method kept for backward compatibility
     def _merge_loan_data(
         self,
         total_loans: dict,
         new_loans: dict,
         rates: dict,
     ) -> list[BPstatMortgageLoans]:
-        """Merge loan data from multiple series.
+        """Merge loan data from multiple series (DEPRECATED).
+
+        Story 6.9.3: This method is deprecated. Use _parse_interest_rate_data instead.
+        Kept for backward compatibility only.
 
         Args:
             total_loans: Total outstanding loans data
@@ -201,6 +333,11 @@ class BPstatClient:
         Returns:
             List of merged loan records
         """
+        logger.warning(
+            "Using deprecated _merge_loan_data method - "
+            "update caller to use _parse_interest_rate_data"
+        )
+
         results = []
 
         # Index new loans and rates by period for quick lookup
