@@ -35,6 +35,7 @@ import os
 from datetime import date, datetime, timedelta
 from io import BytesIO
 from pathlib import Path
+from typing import Any
 
 import httpx
 import openpyxl
@@ -571,7 +572,7 @@ class BaseGovClient:
 
         return results
 
-    async def _check_ocds_availability(self) -> dict | None:
+    async def _check_ocds_availability(self) -> dict[Any, Any] | None:
         """Check if dados.gov.pt OCDS dataset has resources.
 
         Story 6.9.5 AC1/AC2: Check OCDS dataset availability
@@ -585,7 +586,7 @@ class BaseGovClient:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(url)
                 response.raise_for_status()
-                data = response.json()
+                data: dict[Any, Any] = response.json()
 
                 resources = data.get("resources", [])
                 if not resources:

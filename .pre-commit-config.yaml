@@ -54,11 +54,7 @@ repos:
           - types-setuptools
         args: [--show-error-codes]
         files: ^raglite/
-<<<<<<< Updated upstream
         exclude: ^(raglite/tests/|raglite/ingestion/(adaptive_table/|chunking_strategy\.py|table_extraction\.py))
-=======
-        exclude: (raglite/tests/|raglite/ingestion/(adaptive_table_extraction|table_extraction|chunking_strategy|adaptive_table/).*\.py)
->>>>>>> Stashed changes
 
   # ============ SECURITY CHECKS ============
   # Secret detection with Gitleaks

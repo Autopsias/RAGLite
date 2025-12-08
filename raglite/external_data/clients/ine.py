@@ -368,7 +368,7 @@ class INEClient:
                 for value_data in values if isinstance(values, list) else [values]:
                     if isinstance(value_data, dict):
                         value = value_data.get("valor")
-                        region = value_data.get("geodsg", value_data.get("geocod", "Portugal"))
+                        region = str(value_data.get("geodsg", value_data.get("geocod", "Portugal")))
                     else:
                         value = value_data
                         region = "Portugal"
