@@ -50,6 +50,7 @@ dependencies = [
     "psycopg2-binary>=2.9,<3.0", # Story 2.6: PostgreSQL for structured metadata storage
     "scikit-learn>=1.5,<2.0",  # Story 6.4: Model ensemble (Linear Regression, TimeSeriesSplit)
     "xgboost>=2.1,<3.0",       # Story 6.4: Gradient boosting ensemble
+    "lightgbm>=4.5,<5.0",      # Story 6.8: LightGBM ensemble (AC4)
     "sqlalchemy>=2.0,<3.0",    # Story 6.2: ORM for external data storage
     "apscheduler>=3.10,<4.0",  # Story 6.5: Automated data refresh scheduler
     # TODO Epic 3: AWS Strands agentic framework - uncomment when implementing Story 3.1
@@ -267,6 +268,7 @@ module = [
     "prophet.*",
     "scipy.*",
     "xgboost.*",
+    "lightgbm.*",
     "sklearn.*",
     "apscheduler.*",
 ]

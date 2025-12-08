@@ -2,3 +2,7 @@
 docs/sprint-artifacts/*.context.xml:generic-api-key:12
 docs/sprint-artifacts/4-0-1-test-coverage-backfill-ci-cd-gates.context.xml:generic-api-key:12
 docs/sprint-artifacts/4-0-3-fix-mcp-ingestion-timeout.context.xml:generic-api-key:12
+# False positives - data source keys (not API keys)
+raglite/external_data/storage.py:generic-api-key:819
+raglite/external_data/storage.py:generic-api-key:903
+raglite/external_data/storage.py:generic-api-key:936

@@ -2855,3 +2855,138 @@ invalid-date,130.0,EUR,EUR/tonne
         # Only the valid row should be imported
         assert len(result) == 1
         assert result[0].price == 120.0
+
+
+# =============================================================================
+# Story 6.8: Tier 2 Data Sources Tests
+# =============================================================================
+
+
+class TestStory68INEExtensions:
+    """Tests for INE client Story 6.8 extensions (AC2.1)."""
+
+    @pytest.fixture
+    def client(self) -> INEClient:
+        return INEClient()
+
+    def test_house_price_index_indicator_constant(self) -> None:
+        """AC2.1: Verify HPI indicator code is defined."""
+        assert INEClient.HOUSE_PRICE_INDEX_INDICATOR == "0010017"
+
+    def test_construction_confidence_indicator_constant(self) -> None:
+        """AC2.1: Verify Construction Confidence indicator code is defined."""
+        assert INEClient.CONSTRUCTION_CONFIDENCE_INDICATOR == "0011127"
+
+    @pytest.mark.asyncio
+    async def test_fetch_house_price_index_success(self, client: INEClient) -> None:
+        """AC2.1: Test successful house price index fetch."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "Dados": {
+                "2024T1": [{"valor": 145.2, "geodsg": "Portugal"}],
+                "2024T2": [{"valor": 148.5, "geodsg": "Portugal"}],
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
+
+            result = await client.fetch_house_price_index(
+                start_date=date(2024, 1, 1),
+                end_date=date(2024, 6, 30),
+            )
+
+            assert len(result) == 2
+            assert result[0].index_value == 145.2
+            assert result[0].region == "Portugal"
+
+    @pytest.mark.asyncio
+    async def test_fetch_construction_confidence_success(self, client: INEClient) -> None:
+        """AC2.1: Test successful construction confidence fetch."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "Dados": {
+                "202401": [{"valor": -5.2, "geodsg": "Portugal"}],
+                "202402": [{"valor": -3.8, "geodsg": "Portugal"}],
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
+
+            result = await client.fetch_construction_confidence(
+                start_date=date(2024, 1, 1),
+                end_date=date(2024, 2, 28),
+            )
+
+            assert len(result) == 2
+            assert result[0].confidence_index == -5.2
+
+
+class TestStory68BPstatExtensions:
+    """Tests for BPstat client Story 6.8 extensions (AC2.2)."""
+
+    @pytest.fixture
+    def client(self) -> BPstatClient:
+        return BPstatClient()
+
+    def test_bank_appraisal_series_constant(self) -> None:
+        """AC2.2: Verify bank appraisal series ID is defined."""
+        assert BPstatClient.BANK_APPRAISAL_SERIES == "12559916"
+
+    @pytest.mark.asyncio
+    async def test_fetch_bank_appraisals_success(self, client: BPstatClient) -> None:
+        """AC2.2: Test successful bank appraisals fetch."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [
+                {"period": "2024-01", "value": 1234.56, "series_id": "12559916"},
+                {"period": "2024-02", "value": 1256.78, "series_id": "12559916"},
+            ]
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
+
+            result = await client.fetch_bank_appraisals(
+                start_date=date(2024, 1, 1),
+                end_date=date(2024, 2, 28),
+            )
+
+            assert len(result) == 2
+            assert result[0].avg_appraisal_eur_m2 == 1234.56
+            assert result[0].region == "Portugal"
+
+    def test_parse_bank_appraisal_data_empty(self, client: BPstatClient) -> None:
+        """AC2.2: Test parsing empty response."""
+
+        response = {"data": []}
+        result = client._parse_bank_appraisal_data(response)
+
+        assert len(result) == 0
+
+    def test_parse_bank_appraisal_data_with_reference_date(self, client: BPstatClient) -> None:
+        """AC2.2: Test parsing with reference_date format."""
+        response = {
+            "data": [
+                {"reference_date": "2024-01-31", "value": 1300.00},
+            ]
+        }
+
+        result = client._parse_bank_appraisal_data(response)
+
+        assert len(result) == 1
+        assert result[0].date == date(2024, 1, 1)
+        assert result[0].avg_appraisal_eur_m2 == 1300.00

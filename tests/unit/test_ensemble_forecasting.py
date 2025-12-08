@@ -172,16 +172,25 @@ class TestEnsembleSettings:
     """Tests for Settings configuration (AC2)."""
 
     def test_default_ensemble_weights(self) -> None:
-        """AC2: Default ensemble weights match story requirements."""
+        """AC2: Default ensemble weights match story requirements.
+
+        Story 6.8 AC4: Added LightGBM with 20% weight, redistributed others:
+        - Prophet: 35% (was 40%)
+        - Linear: 20% (was 30%)
+        - XGBoost: 25% (was 30%)
+        - LightGBM: 20% (new)
+        """
         from raglite.shared.config import Settings
 
         # Create fresh settings instance
         settings = Settings()
 
-        assert settings.ensemble_weight_prophet == 0.4
-        assert settings.ensemble_weight_linear == 0.3
-        assert settings.ensemble_weight_xgboost == 0.3
-        assert settings.forecasting_models == "prophet,linear,xgboost"
+        # Story 6.8: Updated weights with LightGBM (4 models total = 100%)
+        assert settings.ensemble_weight_prophet == 0.35
+        assert settings.ensemble_weight_linear == 0.20
+        assert settings.ensemble_weight_xgboost == 0.25
+        assert settings.ensemble_weight_lightgbm == 0.20
+        assert settings.forecasting_models == "prophet,linear,xgboost,lightgbm"
 
     def test_ensemble_weights_from_env(self) -> None:
         """AC2: Ensemble weights can be overridden via environment."""

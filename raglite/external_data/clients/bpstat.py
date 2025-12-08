@@ -26,7 +26,7 @@ from datetime import date
 import httpx
 
 from raglite.external_data.exceptions import ExternalDataFetchError
-from raglite.external_data.models import BPstatMortgageLoans
+from raglite.external_data.models import BPstatBankAppraisal, BPstatMortgageLoans
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 
@@ -71,6 +71,9 @@ class BPstatClient:
     # Backward compatibility aliases (deprecated - use new names)
     MORTGAGE_LOANS_SERIES = MORTGAGE_RATE_MEDIAN  # Alias for backward compat
     MORTGAGE_RATE_SERIES = MORTGAGE_RATE_MEDIAN  # Alias for backward compat
+
+    # Story 6.8 AC2.2: Bank appraisal values for housing
+    BANK_APPRAISAL_SERIES = "12559916"  # Average bank appraisal values (EUR/m²)
 
     def __init__(self) -> None:
         self.base_url = BPSTAT_API_BASE
@@ -214,6 +217,95 @@ class BPstatClient:
 
         return self._parse_interest_rate_data(response_data, series_to_fetch)
 
+    async def fetch_bank_appraisals(
+        self,
+        start_date: date,
+        end_date: date,
+    ) -> list[BPstatBankAppraisal]:
+        """Fetch average bank appraisal values for housing.
+
+        Story 6.8 AC2.2: Leading indicator for construction financing.
+
+        BPstat series: 12559916 (average bank appraisal values)
+        Coverage: 2008-present, monthly
+        Unit: EUR per m²
+
+        Args:
+            start_date: Start of date range
+            end_date: End of date range
+
+        Returns:
+            List of bank appraisal records
+        """
+        logger.info(
+            "Fetching BPstat bank appraisals",
+            extra={"start": str(start_date), "end": str(end_date)},
+        )
+
+        response_data = await self._fetch_with_retry(
+            [self.BANK_APPRAISAL_SERIES],
+            start_date,
+            end_date,
+        )
+
+        return self._parse_bank_appraisal_data(response_data)
+
+    def _parse_bank_appraisal_data(
+        self,
+        response_data: dict,
+    ) -> list[BPstatBankAppraisal]:
+        """Parse bank appraisal data from API response.
+
+        Args:
+            response_data: JSON response from BPstat API
+
+        Returns:
+            List of bank appraisal records
+        """
+        results = []
+
+        # Same API structure as interest rates
+        raw_observations = response_data.get("data", response_data.get("observations", []))
+
+        for obs in raw_observations:
+            try:
+                # Handle both old and new date formats
+                period = obs.get("period", obs.get("refPeriod"))
+                if not period:
+                    ref_date = obs.get("reference_date")
+                    if ref_date:
+                        period = ref_date[:7]
+
+                value = obs.get("value")
+
+                if not period or value is None:
+                    continue
+
+                # Parse period (format: YYYY-MM)
+                year, month = map(int, period.split("-"))
+                record_date = date(year, month, 1)
+
+                results.append(
+                    BPstatBankAppraisal(
+                        date=record_date,
+                        avg_appraisal_eur_m2=float(value),
+                        region="Portugal",
+                    )
+                )
+
+            except (ValueError, TypeError, KeyError) as e:
+                logger.warning(
+                    "Failed to parse BPstat appraisal observation",
+                    extra={"obs": obs, "error": str(e)},
+                )
+                continue
+
+        logger.info(
+            "Parsed BPstat bank appraisals",
+            extra={"record_count": len(results)},
+        )
+        return results
+
     def _parse_interest_rate_data(
         self,
         response_data: dict,
@@ -247,9 +339,20 @@ class BPstatClient:
         # Build lookup for observations by period and series
         observations_by_period: dict[str, dict[str, float]] = {}
 
-        for obs in response_data.get("observations", []):
+        # Story 6.9.4: BPstat API returns data in "data" array (not "observations")
+        # Each item has "reference_date" (YYYY-MM-DD format) instead of "period"
+        raw_observations = response_data.get("data", response_data.get("observations", []))
+
+        for obs in raw_observations:
             try:
+                # Handle both old ("period": "2024-01") and new ("reference_date": "2024-01-31") formats
                 period = obs.get("period", obs.get("refPeriod"))
+                if not period:
+                    ref_date = obs.get("reference_date")
+                    if ref_date:
+                        # Convert "2024-01-31" to "2024-01"
+                        period = ref_date[:7]
+
                 series_id = str(obs.get("series_id", obs.get("seriesId", "")))
                 value = obs.get("value")
 

@@ -341,22 +341,33 @@ class EUOilBulletinClient:
                 logger.warning("No active sheet in EU Oil Bulletin XLSX")
                 return results
 
-        # Find country column
-        # First row contains headers with country names
+        # Find country diesel column
+        # Story 6.9.5: Header format is {CC}_price_with_tax_diesel where CC is 2-letter country code
+        # Example: PT_price_with_tax_diesel for Portugal
         country_col_idx: int | None = None
         header_row = list(ws.iter_rows(min_row=1, max_row=1, values_only=True))[0]
+
+        # Get country code
+        country_code = self.COUNTRY_CODES.get(country, "")
+        target_pattern = f"{country_code}_price_with_tax_diesel".lower() if country_code else None
 
         for idx, cell_value in enumerate(header_row):
             if cell_value is None:
                 continue
-            cell_str = str(cell_value).strip()
-            # Match by country name or code
-            if country.lower() in cell_str.lower():
+            cell_str = str(cell_value).strip().lower()
+
+            # Priority 1: Exact match on country code diesel column (e.g., "pt_price_with_tax_diesel")
+            if target_pattern and target_pattern in cell_str:
                 country_col_idx = idx
                 break
-            # Also check country code
-            country_code = self.COUNTRY_CODES.get(country, "")
-            if country_code and country_code.lower() in cell_str.lower():
+
+            # Priority 2: Partial match on country name with diesel
+            if country.lower() in cell_str and "diesel" in cell_str:
+                country_col_idx = idx
+                break
+
+            # Priority 3: Exact country name match (for simple headers like "Portugal")
+            if cell_str == country.lower():
                 country_col_idx = idx
                 break
 
@@ -367,8 +378,21 @@ class EUOilBulletinClient:
             )
             return results
 
+        # Detect data start row:
+        # - Production files have 3 header rows (start at row 4)
+        # - Test mocks may have 1 header row (start at row 2)
+        # Check if row 2 has a date value in the first column
+        data_start_row = 4  # Default for production files
+        try:
+            row_2 = list(ws.iter_rows(min_row=2, max_row=2, values_only=True))[0]
+            first_cell = row_2[0] if row_2 else None
+            if isinstance(first_cell, (datetime, date)):
+                data_start_row = 2  # Test mock format with single header
+        except (IndexError, StopIteration):
+            pass
+
         # Parse data rows
-        for row in ws.iter_rows(min_row=2, values_only=True):
+        for row in ws.iter_rows(min_row=data_start_row, values_only=True):
             try:
                 # First column is date
                 date_cell = row[0]
@@ -406,8 +430,13 @@ class EUOilBulletinClient:
 
                 price = float(price_cell)
 
-                # Skip invalid prices
-                if price <= 0 or price > 10:  # Reasonable range for EUR/litre
+                # Story 6.9.5: Prices in XLSX are in cents (e.g., 1604 = €1.604/L)
+                # Convert to EUR per litre
+                if price > 100:  # Clearly in cents
+                    price = price / 1000.0
+
+                # Skip invalid prices (reasonable range for EUR/litre is 0.5 - 3.0)
+                if price <= 0.3 or price > 5.0:
                     continue
 
                 results.append(

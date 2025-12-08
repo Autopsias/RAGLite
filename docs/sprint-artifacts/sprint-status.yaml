@@ -120,7 +120,7 @@ development_status:
   6-5-automated-data-refresh-scheduler: done  # COMPLETE: APScheduler + refresh logic + MCP tool + tests
   6-6-external-data-query-tool-mcp: done  # COMPLETE: MCP tool query_external_data() + tests
   6-7-multivariate-forecast-accuracy-validation: done  # COMPLETE: 9.0% MAPE achieved (target ≤10%), pending code review
-  6-8-tier-2-data-sources-conditional: drafted  # Story file: docs/stories/6.8-tier-2-data-sources-conditional.md (CONDITIONAL)
+  6-8-tier-2-data-sources-conditional: in-progress  # Story file: docs/stories/6.8-tier-2-data-sources-conditional.md (USER OVERRIDE - proceeding despite gate pass)
   # Story 6.9: External Data Source Fixes (Umbrella Story - SCP-2025-12-08-001 APPROVED)
   # Split into 5 independent sub-stories for parallel development
   # Total effort: 17-24 hours, 13 story points

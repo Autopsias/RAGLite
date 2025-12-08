@@ -21,8 +21,10 @@ import httpx
 from raglite.external_data.exceptions import ExternalDataFetchError
 from raglite.external_data.models import (
     INEBuildingPermits,
+    INEConstructionConfidence,
     INEConstructionCostIndex,
     INEConstructionOutput,
+    INEHousePriceIndex,
 )
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
@@ -51,6 +53,10 @@ class INEClient:
     BUILDING_PERMITS_INDICATOR = "0012096"  # Edifícios licenciados (N.º)
     CONSTRUCTION_OUTPUT_INDICATOR = "0011845"  # Índice de produção na construção (Base 2021)
     CONSTRUCTION_COST_INDICATOR = "0011750"  # Índice de custo de construção (Base 2021)
+
+    # Story 6.8 AC2.1: Tier 2 indicator codes
+    HOUSE_PRICE_INDEX_INDICATOR = "0010017"  # Índice de Preços da Habitação (Base 2015)
+    CONSTRUCTION_CONFIDENCE_INDICATOR = "0011127"  # Indicador de Confiança da Construção
 
     # Portuguese month names for parsing API responses
     MONTH_NAMES_PT = {
@@ -82,6 +88,7 @@ class INEClient:
             - "Setembro de 2025" (Portuguese month name)
             - "202509" or "2025-09" (YYYYMM)
             - "2025" (year only)
+            - "2024T1" or "2024T2" (quarterly format - Story 6.8)
 
         Args:
             period: Period string from INE API
@@ -99,6 +106,16 @@ class INEClient:
             month = self.MONTH_NAMES_PT.get(month_name)
             if month:
                 return date(int(year_str), month, 1)
+
+        # Story 6.8: Try quarterly format: "2024T1", "2024T2", etc.
+        quarterly_pattern = r"(\d{4})T([1-4])"
+        match = re.match(quarterly_pattern, period)
+        if match:
+            year_str, quarter_str = match.groups()
+            quarter = int(quarter_str)
+            # Q1 = Jan, Q2 = Apr, Q3 = Jul, Q4 = Oct
+            month = (quarter - 1) * 3 + 1
+            return date(int(year_str), month, 1)
 
         # Try YYYYMM format: "202509"
         if len(period) == 6 and period.isdigit():
@@ -530,6 +547,195 @@ class INEClient:
 
         logger.info(
             "Parsed INE construction cost index",
+            extra={"record_count": len(results)},
+        )
+        return results
+
+    # =========================================================================
+    # Story 6.8 AC2.1: Tier 2 methods
+    # =========================================================================
+
+    async def fetch_house_price_index(
+        self,
+        start_date: date,
+        end_date: date,
+    ) -> list[INEHousePriceIndex]:
+        """Fetch INE House Price Index (HPI).
+
+        Story 6.8 AC2.1: Leading indicator for construction demand.
+
+        Dataset: 0010017 (Índice de Preços da Habitação)
+        Coverage: 2009-present, quarterly
+        Base year: 2015 = 100
+
+        Args:
+            start_date: Start of date range
+            end_date: End of date range
+
+        Returns:
+            List of house price index records
+        """
+        logger.info(
+            "Fetching INE house price index",
+            extra={"start": str(start_date), "end": str(end_date)},
+        )
+
+        data = await self._fetch_with_retry(
+            self.HOUSE_PRICE_INDEX_INDICATOR,
+            start_date,
+            end_date,
+        )
+
+        return self._parse_house_price_index(data, start_date, end_date)
+
+    async def fetch_construction_confidence(
+        self,
+        start_date: date,
+        end_date: date,
+    ) -> list[INEConstructionConfidence]:
+        """Fetch INE Construction Confidence Indicator.
+
+        Story 6.8 AC2.1: Sentiment indicator for construction sector.
+
+        Dataset: 0011127 (Indicador de Confiança da Construção)
+        Coverage: 1987-present, monthly
+        Range: typically -50 to +50
+
+        Args:
+            start_date: Start of date range
+            end_date: End of date range
+
+        Returns:
+            List of construction confidence records
+        """
+        logger.info(
+            "Fetching INE construction confidence",
+            extra={"start": str(start_date), "end": str(end_date)},
+        )
+
+        data = await self._fetch_with_retry(
+            self.CONSTRUCTION_CONFIDENCE_INDICATOR,
+            start_date,
+            end_date,
+        )
+
+        return self._parse_construction_confidence(data, start_date, end_date)
+
+    def _parse_house_price_index(
+        self, data: dict, start_date: date | None = None, end_date: date | None = None
+    ) -> list[INEHousePriceIndex]:
+        """Parse INE house price index response.
+
+        Args:
+            data: Raw JSON response from INE API
+            start_date: Optional start date filter
+            end_date: Optional end date filter
+
+        Returns:
+            List of house price index records within date range
+        """
+        results = []
+        records = data.get("Dados", {})
+
+        for period, values in records.items():
+            try:
+                # Parse period using flexible parser
+                record_date = self._parse_period_to_date(period)
+                if record_date is None:
+                    logger.debug(f"Skipping unparseable period: {period}")
+                    continue
+
+                # Apply date range filter
+                if start_date and record_date < start_date.replace(day=1):
+                    continue
+                if end_date and record_date > end_date:
+                    continue
+
+                for value_data in values if isinstance(values, list) else [values]:
+                    if isinstance(value_data, dict):
+                        value = value_data.get("valor")
+                        region = str(value_data.get("geodsg", value_data.get("geocod", "Portugal")))
+                    else:
+                        value = value_data
+                        region = "Portugal"
+
+                    if value is not None:
+                        results.append(
+                            INEHousePriceIndex(
+                                date=record_date,
+                                index_value=float(value),
+                                yoy_change_pct=None,  # Calculated separately if needed
+                                region=region,
+                            )
+                        )
+            except (ValueError, KeyError) as e:
+                logger.warning(
+                    "Failed to parse INE house price index record",
+                    extra={"period": period, "error": str(e)},
+                )
+                continue
+
+        logger.info(
+            "Parsed INE house price index",
+            extra={"record_count": len(results)},
+        )
+        return results
+
+    def _parse_construction_confidence(
+        self, data: dict, start_date: date | None = None, end_date: date | None = None
+    ) -> list[INEConstructionConfidence]:
+        """Parse INE construction confidence response.
+
+        Args:
+            data: Raw JSON response from INE API
+            start_date: Optional start date filter
+            end_date: Optional end date filter
+
+        Returns:
+            List of construction confidence records within date range
+        """
+        results = []
+        records = data.get("Dados", {})
+
+        for period, values in records.items():
+            try:
+                # Parse period using flexible parser
+                record_date = self._parse_period_to_date(period)
+                if record_date is None:
+                    logger.debug(f"Skipping unparseable period: {period}")
+                    continue
+
+                # Apply date range filter
+                if start_date and record_date < start_date.replace(day=1):
+                    continue
+                if end_date and record_date > end_date:
+                    continue
+
+                for value_data in values if isinstance(values, list) else [values]:
+                    if isinstance(value_data, dict):
+                        value = value_data.get("valor")
+                        region = str(value_data.get("geodsg", value_data.get("geocod", "Portugal")))
+                    else:
+                        value = value_data
+                        region = "Portugal"
+
+                    if value is not None:
+                        results.append(
+                            INEConstructionConfidence(
+                                date=record_date,
+                                confidence_index=float(value),
+                                region=region,
+                            )
+                        )
+            except (ValueError, KeyError) as e:
+                logger.warning(
+                    "Failed to parse INE construction confidence record",
+                    extra={"period": period, "error": str(e)},
+                )
+                continue
+
+        logger.info(
+            "Parsed INE construction confidence",
             extra={"record_count": len(results)},
         )
         return results

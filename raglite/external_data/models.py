@@ -281,6 +281,108 @@ class CO2EUAPrice(CommodityPrice):
 
 
 # =============================================================================
+# Story 6.8: Tier 2 Data Source Models
+# =============================================================================
+
+
+class API2CoalPrice(CommodityPrice):
+    """API2 Coal Index price (CIF ARA benchmark).
+
+    Story 6.8 AC1.1: API2 Coal as pet coke proxy (correlation 0.7-0.85)
+
+    API2 is the European thermal coal benchmark for coal delivered
+    to Amsterdam-Rotterdam-Antwerp (ARA) ports.
+
+    Used as proxy for pet coke pricing due to high correlation.
+    """
+
+    commodity: str = Field(default="api2_coal")
+    unit: str = Field(default="USD/tonne")
+    benchmark: str = Field(default="API2_CIF_ARA", description="Coal benchmark index")
+    petcoke_proxy: bool = Field(
+        default=True, description="Indicates this is used as pet coke proxy"
+    )
+
+
+class TTFGasPrice(CommodityPrice):
+    """TTF Natural Gas price (European benchmark).
+
+    Story 6.8 AC1.2: TTF Natural Gas for thermal energy forecasting
+
+    TTF (Title Transfer Facility) is the leading European natural
+    gas price benchmark, traded on ICE Endex.
+
+    Critical regressor for SECIL thermal energy cost forecasting.
+    """
+
+    commodity: str = Field(default="ttf_gas")
+    unit: str = Field(default="EUR/MWh")
+    market: str = Field(default="TTF", description="Title Transfer Facility (Netherlands)")
+
+
+class EurostatElectricityPrice(BaseModel):
+    """Electricity price from Eurostat.
+
+    Story 6.8 AC1.3: Monthly electricity prices for industrial consumers
+
+    Dataset: nrg_pc_204 (electricity prices for industrial consumers)
+    Coverage: 2008-present, monthly
+    """
+
+    date: date
+    price_eur_kwh: float = Field(description="Price in EUR per kWh")
+    country: str = Field(default="PT", description="Country code (ISO 2-letter)")
+    consumption_band: str = Field(
+        default="IC", description="Consumption band (IC = 500-2000 MWh/year)"
+    )
+    tax_component: str = Field(
+        default="X_TAX", description="Tax component (X_TAX = excluding taxes)"
+    )
+
+
+class INEHousePriceIndex(BaseModel):
+    """House Price Index from INE.
+
+    Story 6.8 AC2.1: Leading indicator for construction demand
+
+    Dataset: 0010017 (Índice de Preços da Habitação)
+    """
+
+    date: date
+    index_value: float = Field(description="House price index value (base=100)")
+    yoy_change_pct: float | None = Field(
+        default=None, description="Year-over-year change percentage"
+    )
+    region: str = Field(default="Portugal", description="Geographic region")
+
+
+class INEConstructionConfidence(BaseModel):
+    """Construction Confidence Indicator from INE.
+
+    Story 6.8 AC2.1: Sentiment indicator for construction sector
+
+    Dataset: 0011127 (Indicador de Confiança da Construção)
+    """
+
+    date: date
+    confidence_index: float = Field(description="Construction confidence index")
+    region: str = Field(default="Portugal", description="Geographic region")
+
+
+class BPstatBankAppraisal(BaseModel):
+    """Bank appraisal values from Banco de Portugal.
+
+    Story 6.8 AC2.2: Leading indicator for construction financing
+
+    BPstat series: 12559916 (average bank appraisal values for housing)
+    """
+
+    date: date
+    avg_appraisal_eur_m2: float = Field(description="Average appraisal value in EUR per m²")
+    region: str = Field(default="Portugal", description="Geographic region")
+
+
+# =============================================================================
 # Generic Data Point Model (for storage)
 # =============================================================================
 

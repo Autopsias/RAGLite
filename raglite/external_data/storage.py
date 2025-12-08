@@ -1,9 +1,18 @@
 """External data storage utilities.
 
 Story 6.2: PostgreSQL External Data Schema & Storage (AC4)
+Story 6.8: Tier 2 Data Sources & ML Enhancements (Conditional)
 Story 6.9: External Data Source Client Fixes - Freshness Tracking
 
 Provides ExternalDataStorage class for CRUD operations on external data.
+
+Tier 2 Source Configuration (Story 6.8 AC3):
+- ICE_API2_Coal: API2 Coal settlement prices (pet coke proxy)
+- ICE_TTF_Gas: TTF Natural Gas settlement prices
+- Eurostat_Electricity: EU electricity prices for industrial consumers
+- INE_HousePriceIndex: Portuguese house price index (quarterly)
+- INE_ConstructionConfidence: Construction sector confidence indicator
+- BPstat_BankAppraisals: Average bank appraisal values (EUR/m²)
 """
 
 from __future__ import annotations
@@ -31,6 +40,65 @@ FRESHNESS_THRESHOLDS: dict[str, timedelta] = {
     "monthly": timedelta(days=45),
     "quarterly": timedelta(days=120),
     "annual": timedelta(days=400),
+}
+
+# ===========================================================================
+# Tier 2 Source Configuration (Story 6.8 AC3)
+# ===========================================================================
+
+# Source name constants for Tier 2 data sources
+TIER2_SOURCES = {
+    # Energy commodities (AC1.1, AC1.2)
+    "ICE_API2_Coal": {
+        "api_endpoint": "https://data.nasdaq.com/api/v3/datasets/CHRIS/ICE_ATW1",
+        "data_type": "time_series",
+        "refresh_frequency": "daily",
+        "metrics": ["settlement_price"],
+        "unit": "USD/tonne",
+        "description": "API2 Coal (CIF ARA) - pet coke proxy (correlation 0.7-0.85)",
+    },
+    "ICE_TTF_Gas": {
+        "api_endpoint": "https://data.nasdaq.com/api/v3/datasets/CHRIS/ICE_TFM1",
+        "data_type": "time_series",
+        "refresh_frequency": "daily",
+        "metrics": ["settlement_price"],
+        "unit": "EUR/MWh",
+        "description": "TTF Natural Gas - critical for thermal energy forecasting",
+    },
+    # EU statistics (AC1.3)
+    "Eurostat_Electricity": {
+        "api_endpoint": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1",
+        "data_type": "time_series",
+        "refresh_frequency": "monthly",
+        "metrics": ["price_eur_kwh"],
+        "unit": "EUR/kWh",
+        "description": "EU electricity prices for industrial consumers (nrg_pc_204)",
+    },
+    # Portuguese indicators (AC2.1, AC2.2)
+    "INE_HousePriceIndex": {
+        "api_endpoint": "https://www.ine.pt/ine/json_indicador/",
+        "data_type": "index",
+        "refresh_frequency": "quarterly",
+        "metrics": ["index_value", "yoy_change_pct"],
+        "unit": "index (base 2015)",
+        "description": "Portuguese House Price Index - leading indicator for construction",
+    },
+    "INE_ConstructionConfidence": {
+        "api_endpoint": "https://www.ine.pt/ine/json_indicador/",
+        "data_type": "index",
+        "refresh_frequency": "monthly",
+        "metrics": ["confidence_index"],
+        "unit": "index",
+        "description": "Construction sector confidence indicator",
+    },
+    "BPstat_BankAppraisals": {
+        "api_endpoint": "https://bpstat.bportugal.pt/api/observations/",
+        "data_type": "time_series",
+        "refresh_frequency": "monthly",
+        "metrics": ["avg_appraisal_eur_m2"],
+        "unit": "EUR/m²",
+        "description": "Average bank appraisal values for housing",
+    },
 }
 
 
@@ -620,3 +688,272 @@ class ExternalDataStorage:
             extra={"source_name": source_name, "refresh_time": refresh_time.isoformat()},
         )
         return True
+
+    # =========================================================================
+    # Tier 2 Data Storage (Story 6.8 AC3)
+    # =========================================================================
+
+    def register_tier2_source(self, source_key: str) -> ExternalDataSourceORM:
+        """Register a Tier 2 data source from configuration.
+
+        Args:
+            source_key: Key from TIER2_SOURCES (e.g., "ICE_API2_Coal")
+
+        Returns:
+            Created or existing ExternalDataSourceORM
+
+        Raises:
+            ValueError: If source_key not found in TIER2_SOURCES
+        """
+        if source_key not in TIER2_SOURCES:
+            raise ValueError(
+                f"Unknown Tier 2 source: {source_key}. Valid keys: {list(TIER2_SOURCES.keys())}"
+            )
+
+        config = TIER2_SOURCES[source_key]
+        source, created = self.get_or_create_source(
+            source_name=source_key,
+            api_endpoint=config["api_endpoint"]
+            if isinstance(config["api_endpoint"], str)
+            else ", ".join(config["api_endpoint"]),
+            data_type=config["data_type"]
+            if isinstance(config["data_type"], str)
+            else ", ".join(config["data_type"]),
+            refresh_frequency=config["refresh_frequency"]
+            if isinstance(config["refresh_frequency"], str)
+            else ", ".join(config["refresh_frequency"]),
+            metadata={
+                "tier": 2,
+                "unit": config["unit"],
+                "description": config["description"],
+                "metrics": config["metrics"],
+            },
+        )
+
+        if created:
+            logger.info(
+                "Registered Tier 2 source",
+                extra={"source_key": source_key, "refresh_frequency": config["refresh_frequency"]},
+            )
+
+        return source
+
+    def store_api2_coal_prices(
+        self,
+        prices: list,  # list[API2CoalPrice]
+        upsert: bool = True,
+    ) -> int:
+        """Store API2 Coal prices from ICEFuturesClient.
+
+        Args:
+            prices: List of API2CoalPrice Pydantic models
+            upsert: Update existing records on conflict (default: True)
+
+        Returns:
+            Number of records stored
+        """
+        source_key = "ICE_API2_Coal"
+        self.register_tier2_source(source_key)
+
+        data_points = []
+        for price in prices:
+            data_points.append(
+                {
+                    "date": price.date,
+                    "metric_name": "settlement_price",
+                    "value": price.settlement_price,
+                    "unit": price.currency,
+                    "metadata": {
+                        "commodity": price.commodity,
+                        "petcoke_proxy": price.petcoke_proxy,
+                        "source": price.source,
+                    },
+                }
+            )
+
+        return self.insert_data_points(source_key, data_points, upsert=upsert)
+
+    def store_ttf_gas_prices(
+        self,
+        prices: list,  # list[TTFGasPrice]
+        upsert: bool = True,
+    ) -> int:
+        """Store TTF Natural Gas prices from ICEFuturesClient.
+
+        Args:
+            prices: List of TTFGasPrice Pydantic models
+            upsert: Update existing records on conflict (default: True)
+
+        Returns:
+            Number of records stored
+        """
+        source_key = "ICE_TTF_Gas"
+        self.register_tier2_source(source_key)
+
+        data_points = []
+        for price in prices:
+            data_points.append(
+                {
+                    "date": price.date,
+                    "metric_name": "settlement_price",
+                    "value": price.settlement_price,
+                    "unit": price.currency,
+                    "metadata": {
+                        "commodity": price.commodity,
+                        "market": price.market,
+                        "source": price.source,
+                    },
+                }
+            )
+
+        return self.insert_data_points(source_key, data_points, upsert=upsert)
+
+    def store_eurostat_electricity_prices(
+        self,
+        prices: list,  # list[EurostatElectricityPrice]
+        upsert: bool = True,
+    ) -> int:
+        """Store Eurostat electricity prices.
+
+        Args:
+            prices: List of EurostatElectricityPrice Pydantic models
+            upsert: Update existing records on conflict (default: True)
+
+        Returns:
+            Number of records stored
+        """
+        source_key = "Eurostat_Electricity"
+        self.register_tier2_source(source_key)
+
+        data_points = []
+        for price in prices:
+            data_points.append(
+                {
+                    "date": price.date,
+                    "metric_name": "price_eur_kwh",
+                    "value": price.price_eur_kwh,
+                    "unit": "EUR/kWh",
+                    "metadata": {
+                        "country": price.country,
+                        "consumption_band": price.consumption_band,
+                        "tax_component": price.tax_component,
+                    },
+                }
+            )
+
+        return self.insert_data_points(source_key, data_points, upsert=upsert)
+
+    def store_house_price_index(
+        self,
+        records: list,  # list[INEHousePriceIndex]
+        upsert: bool = True,
+    ) -> int:
+        """Store INE House Price Index data.
+
+        Args:
+            records: List of INEHousePriceIndex Pydantic models
+            upsert: Update existing records on conflict (default: True)
+
+        Returns:
+            Number of records stored
+        """
+        source_key = "INE_HousePriceIndex"
+        self.register_tier2_source(source_key)
+
+        data_points = []
+        for record in records:
+            # Store index value
+            data_points.append(
+                {
+                    "date": record.date,
+                    "metric_name": "index_value",
+                    "value": record.index_value,
+                    "unit": "index",
+                    "metadata": {
+                        "region": record.region,
+                        "property_type": record.property_type,
+                    },
+                }
+            )
+            # Store YoY change if available
+            if record.yoy_change_pct is not None:
+                data_points.append(
+                    {
+                        "date": record.date,
+                        "metric_name": "yoy_change_pct",
+                        "value": record.yoy_change_pct,
+                        "unit": "percent",
+                        "metadata": {
+                            "region": record.region,
+                            "property_type": record.property_type,
+                        },
+                    }
+                )
+
+        return self.insert_data_points(source_key, data_points, upsert=upsert)
+
+    def store_construction_confidence(
+        self,
+        records: list,  # list[INEConstructionConfidence]
+        upsert: bool = True,
+    ) -> int:
+        """Store INE Construction Confidence data.
+
+        Args:
+            records: List of INEConstructionConfidence Pydantic models
+            upsert: Update existing records on conflict (default: True)
+
+        Returns:
+            Number of records stored
+        """
+        source_key = "INE_ConstructionConfidence"
+        self.register_tier2_source(source_key)
+
+        data_points = []
+        for record in records:
+            data_points.append(
+                {
+                    "date": record.date,
+                    "metric_name": "confidence_index",
+                    "value": record.confidence_index,
+                    "unit": "index",
+                    "metadata": {
+                        "indicator_type": record.indicator_type,
+                    },
+                }
+            )
+
+        return self.insert_data_points(source_key, data_points, upsert=upsert)
+
+    def store_bank_appraisals(
+        self,
+        records: list,  # list[BPstatBankAppraisal]
+        upsert: bool = True,
+    ) -> int:
+        """Store BPstat Bank Appraisal data.
+
+        Args:
+            records: List of BPstatBankAppraisal Pydantic models
+            upsert: Update existing records on conflict (default: True)
+
+        Returns:
+            Number of records stored
+        """
+        source_key = "BPstat_BankAppraisals"
+        self.register_tier2_source(source_key)
+
+        data_points = []
+        for record in records:
+            data_points.append(
+                {
+                    "date": record.date,
+                    "metric_name": "avg_appraisal_eur_m2",
+                    "value": record.avg_appraisal_eur_m2,
+                    "unit": "EUR/m²",
+                    "metadata": {
+                        "region": record.region,
+                    },
+                }
+            )
+
+        return self.insert_data_points(source_key, data_points, upsert=upsert)
