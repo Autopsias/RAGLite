@@ -96,8 +96,8 @@ class TestExtractChunkMetadata:
     async def test_metadata_extraction_success(self):
         """Test successful metadata extraction using session mock.
 
-        FIXED: Patch individual settings attributes (not entire object) to pass truthiness check.
-        Session mock prevents real API calls and returns realistic metadata structure.
+        FIXED: Patch settings in shared.clients where get_mistral_client validates the API key.
+        Session mock (mock_mistral_api_globally) handles actual Mistral class instantiation.
         """
         test_text = """
         Financial Report Q3 2024
@@ -107,9 +107,13 @@ class TestExtractChunkMetadata:
         This report covers the third quarter of fiscal year 2024...
         """
 
-        # Patch settings attributes directly (not the entire settings object)
-        # This ensures `if not settings.mistral_api_key:` truthiness check works correctly
+        # Patch settings where they're checked (in get_mistral_client validation)
+        # This ensures the `if not settings.mistral_api_key:` check passes
         with (
+            patch(
+                "raglite.shared.clients.settings.mistral_api_key",
+                "test-key-123",
+            ),
             patch(
                 "raglite.ingestion.embedding_generation.settings.mistral_api_key",
                 "test-key-123",
