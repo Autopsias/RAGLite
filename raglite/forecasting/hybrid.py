@@ -1890,20 +1890,10 @@ def _get_catboost_class() -> type[CatBoostRegressor]:
             if not hasattr(CatBoostRegressor, "__sklearn_tags__"):
                 from sklearn.base import BaseEstimator
 
-                # Copy the __sklearn_tags__ implementation from BaseEstimator
+                # Copy the __sklearn_tags__ method from BaseEstimator to the class
+                # sklearn 1.7+ calls this method, so we need it available
+                # We only need the class-level attribute - sklearn will call it on the class
                 CatBoostRegressor.__sklearn_tags__ = BaseEstimator.__sklearn_tags__
-
-                # Also patch __init__ to set __sklearn_tags__ on instances
-                # Wrap __init__ to add __sklearn_tags__ after initialization
-                original_init = CatBoostRegressor.__init__
-
-                def init_wrapper(*args, **kwargs):  # type: ignore[no-untyped-def]
-                    instance = original_init(*args, **kwargs)
-                    if not hasattr(instance, "__sklearn_tags__"):
-                        instance.__sklearn_tags__ = BaseEstimator.__sklearn_tags__(instance)
-                    return instance
-
-                CatBoostRegressor.__init__ = classmethod(init_wrapper)
 
             _catboost_class = CatBoostRegressor
         except ImportError as e:
