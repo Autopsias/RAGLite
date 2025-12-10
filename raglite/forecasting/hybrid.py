@@ -1890,50 +1890,28 @@ def _get_catboost_class() -> type[CatBoostRegressor]:
 
             # Fix sklearn 1.7+ and 1.8+ compatibility: CatBoostRegressor lacks __sklearn_tags__
             # sklearn 1.8+ requires proper Tags object with regressor-specific fields
+            # The most robust solution is to create a wrapper class that inherits from
+            # sklearn's BaseEstimator to get proper __sklearn_tags__ method resolution
             if not hasattr(CatBoostRegressor, "__sklearn_tags__"):
-                try:
-                    # sklearn 1.8+ has Tags class
-                    from sklearn.utils._tags import InputTags, RegressorTags, Tags, TargetTags
+                from sklearn.base import BaseEstimator
 
-                    def __sklearn_tags__(self: CatBoostRegressor) -> Tags:
-                        """Return sklearn tags for CatBoost regressor compatibility."""
-                        return Tags(
-                            estimator_type="regressor",
-                            target_tags=TargetTags(
-                                required=True,
-                                one_d_labels=False,
-                                two_d_labels=False,
-                                positive_only=False,
-                                multi_output=True,
-                                single_output=True,
-                            ),
-                            regressor_tags=RegressorTags(poor_score=False),
-                            input_tags=InputTags(
-                                one_d_array=False,
-                                two_d_array=True,
-                                three_d_array=False,
-                                sparse=False,
-                                categorical=True,  # CatBoost supports categorical
-                                string=False,
-                                dict=False,
-                                positive_only=False,
-                                allow_nan=False,
-                                pairwise=False,
-                            ),
-                            array_api_support=False,
-                            no_validation=False,
-                            non_deterministic=False,
-                            requires_fit=True,
-                        )
+                # Create a wrapper class that adds sklearn compatibility
+                # BaseEstimator must be AFTER CatBoostRegressor in MRO to avoid conflicts
+                class SklearnCompatibleCatBoost(CatBoostRegressor, BaseEstimator):
+                    """CatBoost wrapper with sklearn __sklearn_tags__ compatibility.
 
-                    CatBoostRegressor.__sklearn_tags__ = __sklearn_tags__
-                except ImportError:
-                    # sklearn 1.7.x - fallback to BaseEstimator approach
-                    from sklearn.base import BaseEstimator
+                    sklearn 1.7+ and 1.8+ require __sklearn_tags__ method.
+                    By inheriting from BaseEstimator, we get proper method resolution.
+                    """
 
-                    CatBoostRegressor.__sklearn_tags__ = BaseEstimator.__sklearn_tags__
+                    pass
 
-            _catboost_class = CatBoostRegressor
+                # Keep the original class name for compatibility with tests and logging
+                SklearnCompatibleCatBoost.__name__ = "CatBoostRegressor"
+                SklearnCompatibleCatBoost.__qualname__ = "CatBoostRegressor"
+                _catboost_class = SklearnCompatibleCatBoost
+            else:
+                _catboost_class = CatBoostRegressor
         except ImportError as e:
             logger.error(
                 "CatBoost not installed. Install with: pip install catboost>=1.2",
