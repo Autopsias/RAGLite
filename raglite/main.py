@@ -2933,6 +2933,157 @@ async def check_database_health() -> str:
         )
 
 
+class ModelWeightAdminRequest(BaseModel):
+    """Request model for model weight administration.
+
+    Story 6.12 AC5: MCP admin tool for viewing/modifying model weights.
+    """
+
+    action: str = Field(
+        ...,
+        description="Action: 'view' (show weights), 'run_backtest' (trigger backtest), 'reset' (delete and reset to static)",
+    )
+    metric: str | None = Field(
+        None,
+        description="Optional: Filter to specific metric (e.g., 'cement_demand'). None = all metrics.",
+    )
+
+
+class ModelWeightAdminResponse(BaseModel):
+    """Response model for model weight administration."""
+
+    action: str
+    success: bool
+    message: str
+    weights: list[dict] | None = None
+    backtest_status: dict | None = None
+
+
+@mcp.tool()
+async def manage_model_weights(request: ModelWeightAdminRequest) -> str:
+    """Manage adaptive model weights for ensemble forecasting.
+
+    Story 6.12 AC5: Admin tool for viewing, triggering backtest, and resetting weights.
+
+    Actions:
+    - 'view': Display current weights from PostgreSQL (or static defaults if none stored)
+    - 'run_backtest': Trigger immediate backtest job to recalculate weights
+    - 'reset': Delete stored weights and revert to static configuration defaults
+
+    Examples:
+        manage_model_weights(action='view')
+        -> Shows all model weights across all metrics
+
+        manage_model_weights(action='view', metric='cement_demand')
+        -> Shows weights only for cement_demand
+
+        manage_model_weights(action='run_backtest')
+        -> Triggers immediate backtest calculation
+
+        manage_model_weights(action='reset', metric='cement_demand')
+        -> Deletes cement_demand weights, reverts to config.py defaults
+
+    Args:
+        request: ModelWeightAdminRequest with action and optional metric filter
+
+    Returns:
+        JSON string with ModelWeightAdminResponse
+    """
+    from raglite.external_data.storage import ExternalDataStorage
+    from raglite.forecasting.adaptive_weights import _get_static_weights
+    from raglite.forecasting.backtest_job import trigger_backtest_now
+    from raglite.shared.database import get_session
+
+    logger.info(
+        "Model weight admin action",
+        extra={"action": request.action, "metric": request.metric},
+    )
+
+    try:
+        session = get_session()
+        storage = ExternalDataStorage(session)
+
+        if request.action == "view":
+            # Get weights from database
+            db_weights = storage.get_model_weights(request.metric)
+
+            if db_weights:
+                weights_data = [
+                    {
+                        "metric_name": w.metric_name,
+                        "model_name": w.model_name,
+                        "weight": float(w.weight),
+                        "backtest_rmse": float(w.backtest_rmse) if w.backtest_rmse else None,
+                        "backtest_mape": float(w.backtest_mape) if w.backtest_mape else None,
+                        "calculated_at": w.calculated_at.isoformat() if w.calculated_at else None,
+                    }
+                    for w in db_weights
+                ]
+                message = f"Found {len(weights_data)} weight entries in database"
+            else:
+                # Return static defaults
+                static = _get_static_weights()
+                weights_data = [
+                    {
+                        "metric_name": "default",
+                        "model_name": k,
+                        "weight": v,
+                        "source": "static_config",
+                    }
+                    for k, v in static.items()
+                ]
+                message = "No adaptive weights stored - showing static defaults from config"
+
+            session.close()
+            return ModelWeightAdminResponse(
+                action="view",
+                success=True,
+                message=message,
+                weights=weights_data,
+            ).model_dump_json(indent=2)
+
+        elif request.action == "run_backtest":
+            # Trigger backtest job
+            session.close()
+            backtest_result = await trigger_backtest_now(
+                metrics=[request.metric] if request.metric else None
+            )
+
+            return ModelWeightAdminResponse(
+                action="run_backtest",
+                success=True,
+                message="Backtest job triggered",
+                backtest_status=backtest_result,
+            ).model_dump_json(indent=2)
+
+        elif request.action == "reset":
+            # Delete weights
+            deleted_count = storage.delete_model_weights(request.metric)
+            session.close()
+
+            return ModelWeightAdminResponse(
+                action="reset",
+                success=True,
+                message=f"Deleted {deleted_count} weight entries. Using static defaults.",
+            ).model_dump_json(indent=2)
+
+        else:
+            session.close()
+            return ModelWeightAdminResponse(
+                action=request.action,
+                success=False,
+                message=f"Unknown action: {request.action}. Use 'view', 'run_backtest', or 'reset'.",
+            ).model_dump_json(indent=2)
+
+    except Exception as e:
+        logger.error(f"Model weight admin failed: {e}", exc_info=True)
+        return ModelWeightAdminResponse(
+            action=request.action,
+            success=False,
+            message=f"Error: {e}",
+        ).model_dump_json(indent=2)
+
+
 async def start_mcp_with_scheduler() -> None:
     """Start the MCP server with the external data scheduler.
 

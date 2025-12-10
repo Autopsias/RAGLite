@@ -1,6 +1,7 @@
 """SQLAlchemy ORM models for external data storage.
 
 Story 6.2: PostgreSQL External Data Schema & Storage
+Story 6.12: Model weights for adaptive ensemble forecasting
 
 NOTE: Pydantic models are in models.py. This file contains SQLAlchemy ORM models.
 """
@@ -12,7 +13,17 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import DateTime, ForeignKey, Index, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -95,4 +106,42 @@ class ExternalDataPointORM(Base):
         return (
             f"<ExternalDataPointORM(id={self.id}, source_id={self.source_id}, "
             f"date={self.date}, metric_name='{self.metric_name}')>"
+        )
+
+
+class ModelWeightORM(Base):
+    """Model weight for adaptive ensemble forecasting (SQLAlchemy ORM).
+
+    Story 6.12 AC2: Adaptive weights PostgreSQL schema for backtest-driven
+    ensemble weight optimization.
+
+    Stores model performance metrics from rolling backtest and calculated
+    weights for each model-metric combination.
+    """
+
+    __tablename__ = "model_weights"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    metric_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    model_name: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    weight: Mapped[Decimal] = mapped_column(Numeric(5, 4), nullable=False)
+    # Story 6.12 Issue #6 fix: Define precision for RMSE/MAPE columns
+    # RMSE: Can be large for raw values (e.g., cement tons), precision 12,4 allows up to 99999999.9999
+    # MAPE: Percentage, typically 0-100%, precision 8,4 allows up to 9999.9999%
+    backtest_rmse: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    backtest_mape: Mapped[Decimal | None] = mapped_column(Numeric(8, 4), nullable=True)
+    has_regressors: Mapped[bool] = mapped_column(Boolean, default=True)
+    data_points: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    calculated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+    __table_args__ = (
+        UniqueConstraint("metric_name", "model_name", name="uq_metric_model"),
+        Index("idx_model_weights_metric", "metric_name"),
+    )
+
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return (
+            f"<ModelWeightORM(metric_name='{self.metric_name}', "
+            f"model_name='{self.model_name}', weight={self.weight})>"
         )

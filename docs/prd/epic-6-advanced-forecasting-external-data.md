@@ -542,6 +542,466 @@ As a system, I want to integrate Tier 2 data sources (House Price Index, Bank Ap
 
 ---
 
+## Story 6.12: CatBoost Integration + Adaptive Weights
+
+**Priority:** P0
+**Estimated Effort:** 2-3 days
+**Sprint Change Proposal:** SCP-2025-12-10-001
+
+**User Story:**
+As a system, I want to integrate CatBoost into the forecasting ensemble with adaptive backtest-driven weights, so that model selection is optimized automatically based on actual performance.
+
+**Acceptance Criteria:**
+
+1. ✅ **CatBoost Integration:**
+   - Add `catboost>=1.2` to dependencies
+   - Implement `CatBoostRegressor` in `raglite/forecasting/hybrid.py`
+   - Support categorical variables natively (fuel types, regions, etc.)
+   - Follow existing XGBoost/LightGBM patterns for consistency
+
+2. ✅ **Adaptive Weights System:**
+   - Create PostgreSQL `model_weights` table:
+     ```sql
+     CREATE TABLE model_weights (
+         id SERIAL PRIMARY KEY,
+         metric_name VARCHAR(100) NOT NULL,
+         model_name VARCHAR(50) NOT NULL,
+         weight NUMERIC(5,4) NOT NULL,
+         backtest_rmse NUMERIC,
+         backtest_mape NUMERIC,
+         has_regressors BOOLEAN DEFAULT TRUE,
+         data_points INTEGER,
+         calculated_at TIMESTAMP DEFAULT NOW(),
+         UNIQUE(metric_name, model_name)
+     );
+     ```
+
+3. ✅ **Weekly Backtest Job:**
+   - Integrate with APScheduler (Story 6.5)
+   - Calculate rolling backtest: train on months 1-9, test on 10-12
+   - Weight formula: `weight = 1 / (RMSE + ε)`, normalized to sum to 1.0
+   - Store results in `model_weights` table
+
+4. ✅ **Adaptive Weight Behavior:**
+   - No regressors available → Chronos-2 weight ×2, regressor-dependent models ×0.3
+   - Model fails during forecast → Removed from ensemble, weights re-normalized
+   - New metric (no history) → Default equal weights until backtest data exists
+   - Weight caps: Min 5%, Max 50% per model (maintain diversity)
+
+5. ✅ **MCP Tool (Admin):**
+   - `recalculate_model_weights(metric=None)` - Force weight recalculation
+   - If metric=None, recalculate all metrics
+   - Returns new weights and previous weights for comparison
+
+6. ✅ **Unit Tests:** 80%+ coverage for CatBoost and weight calculation
+7. ✅ **Integration Tests:** Ensemble with adaptive weights, backtest job execution
+
+**Technical Notes:**
+- CatBoost API mirrors XGBoost/LightGBM - straightforward integration
+- Backtest job runs Sunday 3am (after data refresh)
+- Weights cached in PostgreSQL, loaded at forecast time (no runtime cost)
+
+**Dependencies:**
+- Story 6.4 (existing ensemble framework)
+- Story 6.5 (APScheduler integration)
+
+**NFRs:**
+- CatBoost inference: <1s
+- Backtest job: <10 minutes for all metrics
+- Weight lookup: <100ms from PostgreSQL
+
+**Validation Requirements (MANDATORY):**
+```bash
+# BEFORE implementation - capture baseline
+uv run python scripts/validate-cement-forecasting-12vars.py --full-ensemble --real-data > validation-pre-6.12.txt
+
+# AFTER implementation - verify no regression
+uv run python scripts/validate-cement-forecasting-12vars.py --full-ensemble --real-data > validation-post-6.12.txt
+
+# Compare: Avg MAPE must be ≤ 2.05% (no regression from baseline)
+# Verify: CatBoost appears in ensemble_weights with weight > 0
+# Verify: model_weights table populated in PostgreSQL
+```
+
+---
+
+## Story 6.13: Chronos-2 Integration (Cold-Start & Ensemble Member)
+
+**Priority:** P0
+**Estimated Effort:** 2-3 days
+**Sprint Change Proposal:** SCP-2025-12-10-001
+
+**User Story:**
+As a system, I want to integrate Chronos-2 as both a cold-start handler and ensemble member, so that forecasting works even with limited data or missing external regressors.
+
+**Acceptance Criteria:**
+
+1. ✅ **Chronos-2 Integration:**
+   - Add `chronos-forecasting>=2.0` to dependencies
+   - Use `amazon/chronos-bolt-small` model (250× faster than original)
+   - Support CPU inference (GPU optional for better performance)
+   - Implement lazy loading pattern (like `_get_prophet_class()`)
+
+2. ✅ **Cold-Start Path (< 6 data points):**
+   - Route to Chronos-2 only when `len(data_points) < MIN_DATA_POINTS`
+   - Zero-shot forecasting (no training required)
+   - Return prediction with confidence intervals
+   - Log: "Cold-start path: using Chronos-2 zero-shot"
+
+3. ✅ **Ensemble Member Path (≥ 6 data points):**
+   - Add Chronos-2 as weighted ensemble member
+   - Chronos-2 supports covariates (use external regressors when available)
+   - Weight determined by adaptive backtest system (Story 6.12)
+
+4. ✅ **Fallback Behavior (No Regressors):**
+   - When external regressors unavailable, auto-boost Chronos-2 weight
+   - Chronos-2 works well without regressors (pure time-series model)
+   - Log: "No regressors available: boosting Chronos-2 weight"
+
+5. ✅ **Model Caching:**
+   - Load Chronos-2 model once on first use
+   - Reuse across all forecast calls in session
+   - Avoid 10-30s cold-start penalty on repeated calls
+
+6. ✅ **Inference Performance:**
+   - Chronos-2 component: <2 seconds per forecast
+   - Benchmark on startup, log if exceeds threshold
+
+7. ✅ **Unit Tests:** 80%+ coverage
+8. ✅ **Integration Tests:**
+   - Cold-start scenario (3 data points → Chronos-2 only)
+   - Fallback scenario (no regressors → boosted weight)
+   - Ensemble scenario (full ensemble with Chronos-2 member)
+
+**Technical Notes:**
+- Chronos-2 (October 2025) supports covariates - major upgrade from original
+- Use `BaseChronosPipeline.from_pretrained("amazon/chronos-bolt-small")`
+- CPU device_map for local development, GPU optional for production
+- 120M parameters, context up to 8,192 tokens
+
+**Dependencies:**
+- Story 6.12 (adaptive weights system)
+
+**NFRs:**
+- Cold-start forecast: <3s total
+- Ensemble with Chronos-2: <5s total (meets existing NFR)
+- Model load: <30s first time, <1ms cached
+
+**Validation Requirements (MANDATORY):**
+```bash
+# BEFORE implementation - capture baseline
+uv run python scripts/validate-cement-forecasting-12vars.py --full-ensemble --real-data > validation-pre-6.13.txt
+
+# AFTER implementation - verify no regression
+uv run python scripts/validate-cement-forecasting-12vars.py --full-ensemble --real-data > validation-post-6.13.txt
+
+# Cold-start specific test (NEW)
+uv run python -c "
+from raglite.forecasting.hybrid import generate_forecast
+from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
+from datetime import datetime
+import asyncio
+
+# Create minimal data (3 points - should trigger Chronos-2)
+points = [TimeSeriesPoint(date=datetime(2024, i, 1), value=100+i*5, label=f'M{i}') for i in range(1, 4)]
+data = TimeSeriesData(metric_name='test_cold_start', points=points, interval='monthly')
+result = asyncio.run(generate_forecast('test_cold_start', data, periods_ahead=3))
+print(f'Model used: {result.model_type}')
+assert 'chronos' in result.model_type.lower(), 'Cold-start should use Chronos-2'
+print('✅ Cold-start validation PASSED')
+"
+
+# Compare: Avg MAPE must be ≤ 2.05% (no regression from baseline)
+# Verify: Cold-start works with <6 data points
+# Verify: Chronos-2 appears in ensemble for ≥6 data points
+```
+
+---
+
+## Story 6.14: TFT Integration with Training Workflow
+
+**Priority:** P1
+**Estimated Effort:** 4-5 days
+**Sprint Change Proposal:** SCP-2025-12-10-001
+
+**User Story:**
+As a system, I want to integrate Temporal Fusion Transformer (TFT) with offline training workflow, so that complex multivariate patterns with attention-based explainability are captured for financial KPIs.
+
+**Acceptance Criteria:**
+
+1. ✅ **TFT Implementation:**
+   - Add `pytorch-forecasting>=1.0` to dependencies
+   - Implement TFT model using `TemporalFusionTransformer.from_dataset()`
+   - Support static, known-future, and observed covariates
+   - Follow pytorch-forecasting best practices
+
+2. ✅ **Model Registry Table:**
+   ```sql
+   CREATE TABLE model_registry (
+       id SERIAL PRIMARY KEY,
+       model_type VARCHAR(50) NOT NULL,
+       model_version VARCHAR(20) NOT NULL,
+       checkpoint_path TEXT NOT NULL,
+       metrics_json JSONB,
+       trained_at TIMESTAMP DEFAULT NOW(),
+       is_active BOOLEAN DEFAULT FALSE,
+       UNIQUE(model_type, model_version)
+   );
+   ```
+
+3. ✅ **Offline Training Workflow:**
+   - **Trigger 1:** Weekly scheduled (Sunday 2am, before weight calculation)
+   - **Trigger 2:** After data refresh (Story 6.5 completion hook)
+   - **Trigger 3:** Manual MCP tool: `retrain_forecasting_models(models="tft")`
+   - Training time: <30 minutes for full dataset
+   - Save best checkpoint by validation loss
+
+4. ✅ **Training Process:**
+   - Create `TimeSeriesDataSet` with encoder_length, prediction_length, covariates
+   - Train with PyTorch Lightning `Trainer` (max_epochs=50, early stopping)
+   - Validate on holdout set (last 12 months)
+   - Log training metrics to structured logging
+   - Store checkpoint path in `model_registry`
+
+5. ✅ **Graceful Degradation:**
+   - If TFT not trained → Skip in ensemble (weight = 0)
+   - If TFT training fails → Log error, continue without TFT
+   - If checkpoint corrupted → Fall back to previous version
+   - Ensemble always works regardless of TFT state
+
+6. ✅ **MCP Tool:**
+   - `retrain_forecasting_models(models="tft,catboost", force=False)`
+   - `models`: Comma-separated list or "all"
+   - `force`: Retrain even if recent checkpoint exists
+   - Returns: Training status, metrics, checkpoint path
+
+7. ✅ **Inference Performance:**
+   - TFT inference: <1 second (pre-trained model forward pass)
+   - Load checkpoint on first use, cache for session
+
+8. ✅ **Unit Tests:** 80%+ coverage
+9. ✅ **Integration Tests:**
+   - Training workflow end-to-end
+   - Model registry operations
+   - Ensemble with TFT (when trained)
+   - Graceful degradation (TFT not available)
+
+**Technical Notes:**
+- TFT requires offline training (unlike Chronos-2 zero-shot)
+- Training on GPU recommended (~5-10 minutes), CPU fallback (~30-60 minutes)
+- Model checkpoint ~50-100MB per trained model
+- TFT shines with 30+ external features (RAGLite has 11+)
+
+**Dependencies:**
+- Story 6.12 (adaptive weights system)
+- Story 6.13 (Chronos-2 for comparison)
+
+**NFRs:**
+- Training time: <30 minutes on GPU, <60 minutes on CPU
+- Inference time: <1 second
+- Checkpoint size: <100MB per model
+
+**Validation Requirements (MANDATORY):**
+```bash
+# BEFORE implementation - capture baseline
+uv run python scripts/validate-cement-forecasting-12vars.py --full-ensemble --real-data > validation-pre-6.14.txt
+
+# AFTER implementation - verify no regression
+uv run python scripts/validate-cement-forecasting-12vars.py --full-ensemble --real-data > validation-post-6.14.txt
+
+# TFT Training workflow test (NEW)
+uv run python -c "
+from raglite.main import retrain_forecasting_models
+import asyncio
+
+# Test training workflow
+result = asyncio.run(retrain_forecasting_models(models='tft', force=True))
+print(f'Status: {result.status}')
+print(f'Checkpoint: {result.checkpoint_path}')
+assert result.status == 'success', 'TFT training failed'
+print('✅ TFT training validation PASSED')
+"
+
+# TFT Graceful degradation test
+uv run python -c "
+from raglite.forecasting.hybrid import generate_ensemble_forecast
+import asyncio
+
+# Should work even if TFT not trained (graceful degradation)
+result = asyncio.run(generate_ensemble_forecast(...))
+print(f'Models used: {list(result.ensemble_weights.keys())}')
+# TFT weight may be 0 if not trained - that's OK
+print('✅ Graceful degradation validation PASSED')
+"
+
+# Compare: Avg MAPE must be ≤ 2.05% (no regression from baseline)
+# Verify: TFT training completes in <30 min (GPU) or <60 min (CPU)
+# Verify: model_registry table has TFT checkpoint
+# Verify: Ensemble works even if TFT unavailable (graceful degradation)
+```
+
+---
+
+## Testing Methodology for Stories 6.12-6.14 (CRITICAL)
+
+**Source:** Stories 6.7, 6.10, 6.11 validation results (2025-12-08 to 2025-12-09)
+
+### Validated Baseline Results (BEFORE Model Enhancement)
+
+| Test Suite | Variables | Avg MAPE | Improvement | Status |
+|------------|-----------|----------|-------------|--------|
+| **Story 6.10** (12-var cement) | 8/8 PASS | **2.05%** | 97.3% | ✅ |
+| **Story 6.11** (MCP ensemble) | 8/8 PASS | **2.2%** | 97% | ✅ |
+| **Story 6.7** (cement demand) | 1/1 PASS | **9.0%** | 40% | ✅ |
+
+**Best Baseline for Comparison:** Story 6.10 = **2.05% avg MAPE** (8 cement industry variables)
+
+### Per-Variable Baseline (Story 6.10 Results)
+
+| Variable | Baseline MAPE | Multi-var MAPE | Target |
+|----------|---------------|----------------|--------|
+| Revenue | 51.5% | **2.8%** | <5.0% |
+| EBITDA | 131.6% | **2.5%** | <5.0% |
+| Sales Volume | 119.8% | **0.8%** | <5.0% |
+| Electricity Cost | 85.2% | **3.0%** | <8.0% |
+| Thermal Energy | 54.0% | **2.6%** | <10.0% |
+| Variable Cost | 72.3% | **0.7%** | <8.0% |
+| Avg Selling Price | 63.6% | **1.6%** | <6.0% |
+| Capacity Utilization | 133.6% | **2.5%** | <10.0% |
+
+### Required Validation Scripts
+
+```bash
+# PRIMARY: 12-variable cement forecasting (Story 6.10)
+uv run python scripts/validate-cement-forecasting-12vars.py --full-ensemble --real-data
+
+# MCP multi-variate validation (Story 6.11)
+uv run python scripts/validate-mcp-multivariate-forecasting.py
+
+# MCP ensemble validation (Story 6.11)
+uv run python scripts/validate-mcp-ensemble-forecasting.py
+
+# Cement demand ground truth (Story 6.7)
+uv run python scripts/validate-epic6-accuracy.py
+```
+
+### Model-Specific Validation Requirements
+
+#### For CatBoost (Story 6.12)
+```python
+# Run ensemble with CatBoost enabled
+result = await generate_ensemble_forecast(
+    metric="revenue",
+    historical_data=train_data,
+    external_regressors=regressors,
+    models=["prophet", "linear", "xgboost", "lightgbm", "catboost"],
+)
+assert result.ensemble_weights.get("catboost", 0) > 0, "CatBoost not in ensemble"
+assert mape <= 0.0205, f"Regression! MAPE={mape:.2%} exceeds 2.05% baseline"
+```
+
+#### For Chronos-2 (Story 6.13)
+```python
+# Test 1: Cold-start path (<6 data points)
+short_data = TimeSeriesData(points=train_data.points[:5])  # Only 5 points
+result = await generate_forecast(metric="new_metric", historical_data=short_data)
+assert "chronos" in result.model_type.lower(), "Cold-start should use Chronos-2"
+
+# Test 2: Ensemble member (≥6 data points)
+result = await generate_ensemble_forecast(
+    metric="revenue",
+    historical_data=train_data,
+    models=["prophet", "chronos"],
+)
+assert result.ensemble_weights.get("chronos", 0) > 0, "Chronos not in ensemble"
+```
+
+#### For TFT (Story 6.14)
+```python
+# Test 1: Training workflow
+train_result = await retrain_forecasting_models(models="tft", force=True)
+assert train_result.status == "success"
+assert Path(train_result.checkpoint_path).exists()
+
+# Test 2: Inference with trained model
+result = await generate_ensemble_forecast(
+    metric="revenue",
+    historical_data=train_data,
+    models=["prophet", "tft"],
+)
+# TFT may have weight=0 if not trained - that's graceful degradation
+```
+
+#### For Adaptive Weights (Story 6.12)
+```python
+# Verify weights stored in PostgreSQL
+weights = await get_model_weights(metric="revenue")
+assert sum(weights.values()) == pytest.approx(1.0, abs=0.001)
+assert all(0.05 <= w <= 0.50 for w in weights.values()), "Weight caps violated"
+```
+
+### Working Regressors by Variable Type
+
+| Variable Type | Regressors | Source |
+|--------------|------------|--------|
+| **Financial** (Revenue, EBITDA) | euribor_3m, diesel, ttf_gas, api2_coal | ECB, EU Oil, ICE |
+| **Energy** (Electricity, Thermal) | eurostat_electricity, ttf_gas, api2_coal | Eurostat, ICE |
+| **Production** (Volume, Capacity) | euribor_3m, diesel, ttf_gas | ECB, EU Oil, ICE |
+| **Pricing** (Avg Selling Price) | diesel, euribor_3m, ttf_gas | EU Oil, ECB, ICE |
+
+### APIs with Historical Data (USE FOR VALIDATION)
+
+| API | Historical Range | Records | Use Case |
+|-----|------------------|---------|----------|
+| **ICE API2 Coal** | 751 days | 751 | ✅ Energy costs |
+| **ICE TTF Gas** | 752 days | 752 | ✅ Energy costs |
+| **BPstat EURIBOR** | 2018-2025 | 83 | ✅ Financial metrics |
+| **Eurostat Electricity** | 2020+ | 5+ | ✅ Industrial prices |
+
+### APIs with Recent Data Only (PRODUCTION ONLY - NOT FOR VALIDATION)
+
+| API | Range | Why Not for Validation |
+|-----|-------|------------------------|
+| OMIE Electricity | Last 7 days | No historical overlap |
+| CO2_EUA | Last 7 days | No historical overlap |
+| EU Oil Bulletin | Last 14 days | No historical overlap |
+| INE Building Permits | ❌ BROKEN | Wrong indicator (returns death stats) |
+
+### Success Criteria for Stories 6.12-6.14
+
+| Metric | Current Baseline | Target | Validation Method |
+|--------|------------------|--------|-------------------|
+| **Avg MAPE (8 vars)** | 2.05% | ≤ 2.05% | `validate-cement-forecasting-12vars.py` |
+| **8-var pass rate** | 100% | 100% | All 8 variables within target |
+| **Cold-start** | FAILS | WORKS | Test with 3-5 data points |
+| **Models in ensemble** | 4 | 6 | Verify ensemble_weights includes all |
+| **Adaptive weights** | Static | Adaptive | Check PostgreSQL model_weights table |
+| **TFT training** | N/A | <30 min | Time training workflow |
+
+### CI/CD Integration
+
+```yaml
+# .github/workflows/ci.yaml - Add accuracy regression gate
+- name: Run accuracy regression tests
+  run: |
+    uv run pytest tests/integration/test_epic6_accuracy_regression.py -v
+    uv run python scripts/validate-cement-forecasting-12vars.py --full-ensemble --real-data
+  env:
+    MAPE_CI_GATE: 0.12  # Fail if MAPE > 12%
+    MAPE_WARNING: 0.025  # Warning if MAPE > 2.5% (regression from 2.05%)
+```
+
+### Reference Documents
+
+- **Baseline report:** `docs/baseline-accuracy-2025-12-10.md`
+- **Ground truth:** `tests/ground_truth/cement_demand_2020_2024.csv`
+- **Validation scripts:** `scripts/validate-*.py`
+- **CI tests:** `tests/integration/test_epic6_accuracy_regression.py`
+- **Story 6.10:** `docs/stories/6.10-forecasting-data-quality.md`
+- **Story 6.11:** `docs/stories/6.11-mcp-multivariate-forecasting.md`
+
+---
+
 ## Epic Impact on Epic 5
 
 ### Story 5.1: Cloud Infrastructure Architecture

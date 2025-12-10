@@ -1,4 +1,4 @@
-# generated: 2025-12-08
+# generated: 2025-12-10
 # project: RAGLite
 # project_key: raglite-mvp
 # tracking_system: file-system
@@ -29,7 +29,7 @@
 # - SM typically drafts next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
-generated: 2025-12-08
+generated: 2025-12-10
 project: RAGLite
 project_key: raglite-mvp
 tracking_system: file-system
@@ -107,40 +107,50 @@ development_status:
   4-10-forecasting-insights-test-suite: done
   epic-4-retrospective: completed
 
-  # Epic 6: Advanced Forecasting with External Data (IN PROGRESS - 2025-12-05)
+  # Epic 6: Advanced Forecasting with External Data (IN PROGRESS)
   # Sprint Change Proposal: SCP-2025-12-04-001 APPROVED
   # Goal: Multi-variate forecasting with external Portuguese/EU data sources
   # Timeline: 3-4 weeks (14-20 days)
   # Blockers: None (Epic 4 complete, technologies approved)
   epic-6: in-progress
-  6-1-tier-1-external-data-integration: done  # COMPLETE: 8 API clients (INE, BPstat, OMIE, IPMA, ATIC, BaseGov, EUOil, Commodities) + tests
-  6-2-postgresql-external-data-schema: done  # COMPLETE: ORM models (ExternalDataSourceORM, ExternalDataPointORM) + Alembic migrations + tests
-  6-3-prophet-multivariate-forecasting: done  # COMPLETE: generate_forecast() with external_regressors support + tests
-  6-4-model-ensemble-framework: done  # COMPLETE: fit_linear_regression(), fit_xgboost(), ensemble voting + tests
-  6-5-automated-data-refresh-scheduler: done  # COMPLETE: APScheduler + refresh logic + MCP tool + tests
-  6-6-external-data-query-tool-mcp: done  # COMPLETE: MCP tool query_external_data() + tests
-  6-7-multivariate-forecast-accuracy-validation: done  # COMPLETE: 9.0% MAPE achieved (target ≤10%), pending code review
-  6-8-tier-2-data-sources-conditional: in-progress  # Story file: docs/stories/6.8-tier-2-data-sources-conditional.md (USER OVERRIDE - proceeding despite gate pass)
+  6-1-tier-1-external-data-integration: done
+  6-2-postgresql-external-data-schema: done
+  6-3-prophet-multivariate-forecasting: done
+  6-4-model-ensemble-framework: done
+  6-5-automated-data-refresh-scheduler: done
+  6-6-external-data-query-tool-mcp: done
+  6-7-multivariate-forecast-accuracy-validation: done
+  6-8-tier-2-data-sources-conditional: done
   # Story 6.9: External Data Source Fixes (Umbrella Story - SCP-2025-12-08-001 APPROVED)
   # Split into 5 independent sub-stories for parallel development
-  # Total effort: 17-24 hours, 13 story points
   # ALL SUB-STORIES COMPLETE - 2025-12-08
-  6-9-external-data-source-fixes: review  # Umbrella story - validation complete, ready for review
-  6-9-1-quick-wins-ine-commodities: done  # 1 SP, 1 hour, P0 - INE date filter + Ember domain (COMPLETE 2025-12-08)
-  6-9-2-omie-electricity-market-fix: done  # 3 SP, 2-3 hours, P0 - URL pattern + CSV parser - COMPLETE 2025-12-08
-  6-9-3-bpstat-banco-de-portugal-fix: done  # 5 SP, 4-6 hours, P1 - COMPLETE 2025-12-08
-  6-9-4-eu-oil-bulletin-fix: done  # 5 SP, 4-6 hours, P1 - XML→XLSX migration - COMPLETE 2025-12-08
-  6-9-5-basegov-public-procurement-fix: done  # 8 SP, 6-8 hours, P2 - TED API v3 + OCDS placeholder - COMPLETE 2025-12-08
+  6-9-external-data-source-fixes: done
+  6-9-1-quick-wins-ine-commodities: done
+  6-9-2-omie-electricity-market-fix: done
+  6-9-3-bpstat-banco-de-portugal-fix: done
+  6-9-4-eu-oil-bulletin-fix: done
+  6-9-5-basegov-public-procurement-fix: done
+  # Story 6.10: Forecasting Data Quality & External Data Reliability
+  # Sub-stories can be developed in parallel
+  6-10-forecasting-data-quality: done
+  # Story 6.11: MCP Multi-Variate Forecasting & External Data Source Fixes
+  6-11-mcp-multivariate-forecasting: done
+  # Stories 6.12-6.14: Enhanced Model Ensemble (SCP-2025-12-10-001 APPROVED)
+  # Tier 1 (P0): 6.12, 6.13 - CatBoost, Chronos-2, Adaptive Weights
+  # Tier 2 (P1): 6.14 - TFT with Training Workflow
+  6-12-catboost-adaptive-weights: review
+  6-13-chronos2-cold-start-ensemble: backlog
+  6-14-tft-training-workflow: backlog
   epic-6-retrospective: optional
 
   # Epic 5: Production Readiness & Real-Time Operations
   # BLOCKED by Epic 6 until data pipeline components ready for cloud deployment
   epic-5: backlog
-  5-0-1-fix-timeseries-period-extraction: done  # Hotfix story
-  5-0-4-dynamic-metric-forecasting-support: done  # Hotfix story
-  5-0-6-parallel-ingestion-optimization: done  # Hotfix story
-  5-0-7-cement-industry-query-improvements: done  # Hotfix story
-  5-1-cloud-infrastructure-architecture: drafted  # Story file: docs/stories/5.1-cloud-infrastructure-architecture.md (BLOCKED by Epic 6)
+  5-0-1-fix-timeseries-period-extraction: done
+  5-0-4-dynamic-metric-forecasting-support: done
+  5-0-6-parallel-ingestion-optimization: done
+  5-0-7-cement-industry-query-improvements: done
+  5-1-cloud-infrastructure-architecture: drafted
   5-2-containerization-cloud-deployment: backlog
   5-3-environment-configuration-secrets-management: backlog
   5-4-data-encryption-at-rest: backlog
@@ -155,3 +165,22 @@ development_status:
   5-13-api-documentation-mcp-tool-reference: backlog
   5-14-knowledge-transfer-team-onboarding-documentation: backlog
   epic-5-retrospective: optional
+
+  # Epic 7: Technical Debt & Code Quality
+  # Sprint Change Proposal: SCP-2025-12-10-002 APPROVED
+  # Goal: Reduce ALL files to <500 LOC for optimal AI comprehension
+  # Timeline: ~90 days total (~30-45 days with parallelization)
+  # Blockers: None (can run in parallel with Epic 5/6)
+  # Reference: docs/analysis/file-size-refactoring-briefing.md
+  epic-7: backlog
+  # Batch 1: Enable Other Refactoring (Test Infrastructure)
+  7-1-split-test-external-data-clients: backlog
+  7-2-split-root-conftest: backlog
+  7-3-split-integration-conftest: backlog
+  # Batch 2: Largest Production Files
+  7-4-refactor-main-py-mcp-module: backlog
+  7-5-refactor-hybrid-py-forecasting-modules: backlog
+  # Batch 3: Ingestion Module (stories 7.6-7.9 to be drafted)
+  # Batch 4: External Data Module (stories 7.10-7.14 to be drafted)
+  # Batch 5: Remaining Tier 2-3 Files (stories 7.15-7.45 to be drafted)
+  epic-7-retrospective: optional

@@ -435,6 +435,7 @@ class TestSchedulerLifecycle:
             mock_settings.refresh_cron_daily = "0 6 * * *"
             mock_settings.refresh_cron_weekly = "0 6 * * 0"
             mock_settings.refresh_cron_monthly = "0 6 1 * *"
+            mock_settings.refresh_cron_backtest = "0 3 * * 0"  # Story 6.12 AC3: Sunday 03:00 UTC
 
             with patch("raglite.external_data.scheduler.SQLAlchemyJobStore") as mock_job_store:
                 mock_job_store.return_value = MagicMock()
@@ -450,7 +451,9 @@ class TestSchedulerLifecycle:
                     await start_scheduler()
 
                     # Verify jobs were added
-                    assert mock_scheduler.add_job.call_count == 3  # daily, weekly, monthly
+                    assert (
+                        mock_scheduler.add_job.call_count == 4
+                    )  # daily, weekly, monthly, backtest
                     mock_scheduler.start.assert_called_once()
 
     @pytest.mark.asyncio

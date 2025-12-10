@@ -112,6 +112,28 @@ jobs:
         continue-on-error: true
 
   # ============================================================================
+  # JOB 1.5: File Size Validation
+  # ============================================================================
+  file-size-check:
+    name: "📏 Code Quality: File Size Limits"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 2
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check file sizes
+        run: |
+          echo "========================================="
+          echo "FILE SIZE VALIDATION"
+          echo "- Warning threshold: 400 LOC"
+          echo "- Hard limit: 500 LOC"
+          echo "- Mode: Block new violations in raglite/"
+          echo "========================================="
+          python3 scripts/check_file_sizes.py --verbose
+
+  # ============================================================================
   # JOB 2: Type Checking
   # ============================================================================
   type-check:
@@ -1892,7 +1914,7 @@ jobs:
   build-summary:
     name: "📊 CI Pipeline: Summary"
     runs-on: [self-hosted, raglite]
-    needs: [lint, type-check, security, test-unit, test-integration, test-e2e, test-performance, test-epic6-accuracy, test-agentic-workflows, test-coverage-enforcement, test-count-validation, docs-validation, burn-in]
+    needs: [lint, file-size-check, type-check, security, test-unit, test-integration, test-e2e, test-performance, test-epic6-accuracy, test-agentic-workflows, test-coverage-enforcement, test-count-validation, docs-validation, burn-in]
     if: always()
 
     steps:
@@ -1904,6 +1926,7 @@ jobs:
           echo ""
           echo "📝 CODE QUALITY:"
           echo "  Lint & Format:     ${{ needs.lint.result }}"
+          echo "  File Size Limits:  ${{ needs.file-size-check.result }}"
           echo "  Type Check:        ${{ needs.type-check.result }}"
           echo "  Security Scan:     ${{ needs.security.result }}"
           echo ""

@@ -108,11 +108,15 @@ class Settings(BaseSettings):
 
     # Story 6.4: Ensemble Forecasting Configuration
     # Story 6.8: Added LightGBM to ensemble (AC4)
-    forecasting_models: str = "prophet,linear,xgboost,lightgbm"  # Comma-separated model list
-    ensemble_weight_prophet: float = 0.35  # Prophet model weight (35%)
-    ensemble_weight_linear: float = 0.20  # Linear Regression weight (20%)
-    ensemble_weight_xgboost: float = 0.25  # XGBoost weight (25%)
+    # Story 6.12: Added CatBoost to ensemble
+    forecasting_models: str = (
+        "prophet,linear,xgboost,lightgbm,catboost"  # Comma-separated model list
+    )
+    ensemble_weight_prophet: float = 0.30  # Prophet model weight (30%)
+    ensemble_weight_linear: float = 0.15  # Linear Regression weight (15%)
+    ensemble_weight_xgboost: float = 0.20  # XGBoost weight (20%)
     ensemble_weight_lightgbm: float = 0.20  # LightGBM weight (20%)
+    ensemble_weight_catboost: float = 0.15  # CatBoost weight (15%) - Story 6.12
     ensemble_fast_mode: bool = False  # Use reduced hyperparameter grid for faster training
 
     # Story 6.5: Automated Data Refresh Scheduler Configuration
@@ -126,6 +130,7 @@ class Settings(BaseSettings):
     refresh_cron_daily: str = "0 6 * * *"  # Daily at 06:00 UTC
     refresh_cron_weekly: str = "0 6 * * 0"  # Sunday at 06:00 UTC
     refresh_cron_monthly: str = "0 6 1 * *"  # 1st of month at 06:00 UTC
+    refresh_cron_backtest: str = "0 3 * * 0"  # Story 6.12: Sunday at 03:00 UTC (backtest job)
 
     @model_validator(mode="after")
     def adjust_for_environment(self) -> Self:

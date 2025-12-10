@@ -268,6 +268,33 @@ def _register_refresh_jobs(scheduler: AsyncIOScheduler) -> None:
         extra={"cron": settings.refresh_cron_monthly},
     )
 
+    # Story 6.12: Weekly backtest job (Sunday 03:00 UTC)
+    _register_backtest_job(scheduler)
+
+
+def _register_backtest_job(scheduler: AsyncIOScheduler) -> None:
+    """Register weekly backtest job for adaptive weight calculation.
+
+    Story 6.12 AC3: Schedule backtest for Sunday 03:00 UTC (after data refresh at 06:00).
+
+    Args:
+        scheduler: The AsyncIOScheduler instance
+    """
+    from raglite.forecasting.backtest_job import run_weekly_backtest
+
+    backtest_cron = _parse_cron_expression(settings.refresh_cron_backtest)
+    scheduler.add_job(
+        run_weekly_backtest,
+        CronTrigger(**backtest_cron, timezone=settings.scheduler_timezone),
+        id="backtest_weekly",
+        name="Weekly Model Backtest",
+        replace_existing=True,
+    )
+    logger.info(
+        "Registered weekly backtest job",
+        extra={"cron": settings.refresh_cron_backtest},
+    )
+
 
 def get_next_run_times() -> dict[str, datetime | None]:
     """Get next scheduled run times for all jobs.

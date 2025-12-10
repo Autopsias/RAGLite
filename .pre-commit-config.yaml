@@ -85,3 +85,12 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-commit]
+
+      # File size limits - prevent large file proliferation
+      - id: check-file-sizes
+        name: check-python-file-sizes
+        entry: python scripts/check_file_sizes.py
+        language: python
+        pass_filenames: false
+        stages: [pre-commit]
+        always_run: true
