@@ -126,27 +126,39 @@ class TestGetEntityIlikePattern:
     """Test get_entity_ilike_pattern() SQL generation."""
 
     def test_portugal_pattern(self):
-        """Test Portugal ILIKE pattern generation."""
+        """Test Portugal ILIKE pattern generation.
+
+        Story 6.10.3: Pattern uses %% for psycopg2 escaping by default.
+        """
         pattern = get_entity_ilike_pattern("Portugal")
         assert "entity ILIKE ANY" in pattern
-        assert "'%Portugal%'" in pattern
-        assert "'%PT%'" in pattern
+        # Pattern uses %% for psycopg2 compatibility (escapes to single % in SQL)
+        assert "'%%Portugal%%'" in pattern
+        assert "'%%PT%%'" in pattern
         assert "ARRAY[" in pattern
 
     def test_brazil_pattern(self):
-        """Test Brazil ILIKE pattern generation."""
+        """Test Brazil ILIKE pattern generation.
+
+        Story 6.10.3: Pattern uses %% for psycopg2 escaping by default.
+        """
         pattern = get_entity_ilike_pattern("Brazil")
         assert "entity ILIKE ANY" in pattern
-        assert "'%Brazil%'" in pattern
-        assert "'%BR%'" in pattern
-        assert "'%Brasil%'" in pattern
+        # Pattern uses %% for psycopg2 compatibility (escapes to single % in SQL)
+        assert "'%%Brazil%%'" in pattern
+        assert "'%%BR%%'" in pattern
+        assert "'%%Brasil%%'" in pattern
 
     def test_unknown_entity_fallback(self):
-        """Test unknown entity generates ILIKE ANY pattern with canonical name."""
+        """Test unknown entity generates ILIKE ANY pattern with canonical name.
+
+        Story 6.10.3: Pattern uses %% for psycopg2 escaping by default.
+        """
         pattern = get_entity_ilike_pattern("UnknownEntity")
         # Function returns ILIKE ANY pattern even for unknown entities (includes canonical name)
         assert "entity ILIKE ANY" in pattern
-        assert "'%UnknownEntity%'" in pattern
+        # Pattern uses %% for psycopg2 compatibility (escapes to single % in SQL)
+        assert "'%%UnknownEntity%%'" in pattern
 
 
 class TestGetAllCanonicalEntities:

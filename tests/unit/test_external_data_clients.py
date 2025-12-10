@@ -84,6 +84,9 @@ class TestINEClient:
     @pytest.mark.asyncio
     async def test_fetch_building_permits_timeout_retry(self, client: INEClient) -> None:
         """Test retry logic on timeout."""
+        # Story 6.10.3: Clear cache to ensure mock is used
+        client._cache.clear()
+
         mock_response = MagicMock()
         mock_response.json.return_value = {"Dados": {"202401": [{"valor": 100}]}}
         mock_response.raise_for_status = MagicMock()
@@ -111,6 +114,9 @@ class TestINEClient:
     @pytest.mark.asyncio
     async def test_fetch_building_permits_timeout_exhausted(self, client: INEClient) -> None:
         """Test exception when all retries exhausted."""
+        # Story 6.10.3: Clear cache to ensure mock is used
+        client._cache.clear()
+
         with patch("httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.get = AsyncMock(
                 side_effect=httpx.TimeoutException("timeout")
@@ -1146,6 +1152,7 @@ class TestBaseGovStory695:
         assert "OCDS" in source
         assert "dados.gov.pt" in source
 
+    @pytest.mark.slow  # Tests actual exponential backoff with real delays (~6s)
     @pytest.mark.asyncio
     async def test_ac8_retry_logic_exponential_backoff(self, client: BaseGovClient) -> None:
         """AC8: Test retry logic with exponential backoff."""
@@ -1434,6 +1441,9 @@ class TestINEClientAdditional:
     @pytest.mark.asyncio
     async def test_http_client_error(self, client: INEClient) -> None:
         """Test handling of 4xx client errors (no retry)."""
+        # Story 6.10.3: Clear cache to ensure mock is used
+        client._cache.clear()
+
         error_response = MagicMock()
         error_response.status_code = 400
         error = httpx.HTTPStatusError("Bad Request", request=MagicMock(), response=error_response)
@@ -2044,18 +2054,24 @@ class TestCommoditiesClientAdditional:
     @pytest.mark.asyncio
     async def test_fetch_co2_api_failure_fallback(self, client: CommoditiesClient) -> None:
         """Test CO2 prices fallback on API failure."""
+        import pandas as pd
+
         with patch("httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.get = AsyncMock(
                 side_effect=httpx.TimeoutException("timeout")
             )
 
-            with patch("asyncio.sleep", new_callable=AsyncMock):
-                result = await client.fetch_co2_prices(
-                    start_date=date(2024, 1, 1),
-                    end_date=date(2024, 3, 31),
-                )
+            # Story 6.10: Also mock yfinance to ensure all API paths fail
+            with patch("yfinance.download") as mock_yf:
+                mock_yf.return_value = pd.DataFrame()  # Empty DataFrame triggers fallback
 
-        # Falls back to empty cache
+                with patch("asyncio.sleep", new_callable=AsyncMock):
+                    result = await client.fetch_co2_prices(
+                        start_date=date(2024, 1, 1),
+                        end_date=date(2024, 3, 31),
+                    )
+
+        # Falls back to empty cache (tmp_path cache is empty)
         assert result == []
 
     def test_import_csv_file_not_found(self, client: CommoditiesClient) -> None:
@@ -2119,6 +2135,9 @@ class TestRateLimitHandling:
     async def test_ine_rate_limit_retry(self) -> None:
         """Test INE client retries on 429 rate limit."""
         client = INEClient()
+
+        # Story 6.10.3: Clear cache to ensure mock is used
+        client._cache.clear()
 
         # Create 429 error response
         rate_limit_response = MagicMock()
@@ -2731,18 +2750,24 @@ class TestCommoditiesClientCoverage:
 
     @pytest.mark.asyncio
     async def test_fetch_co2_prices_timeout_exhausted(self, client: CommoditiesClient) -> None:
-        """Test CO2 fetch with all retries exhausted."""
+        """Test CO2 fetch with all retries exhausted falls back to empty cache."""
+        import pandas as pd
+
         with patch("httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.get = AsyncMock(
                 side_effect=httpx.TimeoutException("timeout")
             )
 
-            with patch("asyncio.sleep", new_callable=AsyncMock):
-                # Should fall back to empty cache
-                result = await client.fetch_co2_prices(
-                    start_date=date(2024, 1, 1),
-                    end_date=date(2024, 1, 31),
-                )
+            # Story 6.10: Also mock yfinance to ensure all API paths fail
+            with patch("yfinance.download") as mock_yf:
+                mock_yf.return_value = pd.DataFrame()  # Empty DataFrame triggers fallback
+
+                with patch("asyncio.sleep", new_callable=AsyncMock):
+                    # Should fall back to empty cache (tmp_path cache is empty)
+                    result = await client.fetch_co2_prices(
+                        start_date=date(2024, 1, 1),
+                        end_date=date(2024, 1, 31),
+                    )
 
         assert result == []
 
@@ -2870,8 +2895,12 @@ class TestStory68INEExtensions:
         return INEClient()
 
     def test_house_price_index_indicator_constant(self) -> None:
-        """AC2.1: Verify HPI indicator code is defined."""
-        assert INEClient.HOUSE_PRICE_INDEX_INDICATOR == "0010017"
+        """AC2.1: Verify HPI indicator code is defined.
+
+        Story 6.11.4: Fixed HPI indicator - 0010017 returned wrong data (death statistics)
+        Correct indicator is 0009201 per INE construction/housing page.
+        """
+        assert INEClient.HOUSE_PRICE_INDEX_INDICATOR == "0009201"
 
     def test_construction_confidence_indicator_constant(self) -> None:
         """AC2.1: Verify Construction Confidence indicator code is defined."""

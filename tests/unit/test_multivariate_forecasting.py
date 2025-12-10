@@ -115,18 +115,34 @@ class TestPrepareRegressors:
         assert result["sparse"].iloc[5] == 6.0  # interpolated
 
     def test_prepare_regressors_exceeds_missing_threshold(self) -> None:
-        """Test that >10% missing raises ValueError."""
+        """Test that >30% missing skips regressor (Story 6.10.4 behavior change).
+
+        Story 6.10.4: Changed from raising ValueError to skipping regressors
+        with too much missing data. This allows forecasting to continue with
+        available regressors instead of failing entirely.
+
+        Note: MAX_MISSING_RATIO was increased from 10% to 30% in Story 6.10.4
+        to tolerate date range mismatches between external and SECIL data.
+        """
         target_index = pd.date_range("2024-01-01", periods=10, freq="ME")
-        # 2 out of 10 = 20% missing > 10% threshold
+        # 4 out of 10 = 40% missing > 30% threshold
         regressors = {
-            "too_sparse": pd.Series([1, np.nan, np.nan, 4, 5, 6, 7, 8, 9, 10], index=target_index),
+            "too_sparse": pd.Series(
+                [1, np.nan, np.nan, np.nan, np.nan, 6, 7, 8, 9, 10], index=target_index
+            ),
         }
 
-        with pytest.raises(ValueError, match="missing values"):
-            prepare_regressors(regressors, target_index)
+        # Story 6.10.4: Now skips regressor instead of raising
+        result = prepare_regressors(regressors, target_index)
+        assert "too_sparse" not in result  # Regressor should be skipped
 
     def test_prepare_regressors_different_index(self) -> None:
-        """Test regressors with non-overlapping index raise error due to missing values."""
+        """Test regressors with non-overlapping index are skipped (Story 6.10.4 behavior change).
+
+        Story 6.10.4: Changed from raising ValueError to skipping regressors
+        with non-overlapping indices. This allows forecasting to continue with
+        available regressors instead of failing entirely.
+        """
         target_index = pd.date_range("2024-01-01", periods=10, freq="ME")
         # Completely non-overlapping dates - will result in 100% missing
         regressor_index = pd.date_range("2025-01-01", periods=5, freq="ME")
@@ -135,9 +151,9 @@ class TestPrepareRegressors:
             "misaligned": pd.Series([1, 2, 3, 4, 5], index=regressor_index),
         }
 
-        # Non-overlapping indices mean all values are missing after reindex
-        with pytest.raises(ValueError, match="missing values"):
-            prepare_regressors(regressors, target_index)
+        # Story 6.10.4: Now skips regressor instead of raising
+        result = prepare_regressors(regressors, target_index)
+        assert "misaligned" not in result  # Regressor should be skipped
 
 
 class TestCalculateAccuracy:

@@ -69,8 +69,14 @@ class ECBClient:
 
     def __init__(self) -> None:
         self.base_url = ECB_API_BASE
+        # Story 6.10.2 AC3: Increased test timeout from 1s to 10s for slow APIs
+        # Production timeout unchanged (uses external_data_timeout from settings)
         is_test = os.getenv("PYTEST_CURRENT_TEST") is not None
-        self.timeout = 1.0 if is_test else float(settings.external_data_timeout)
+        self.timeout = 10.0 if is_test else float(settings.external_data_timeout)
+        # Story 6.10.3 AC3: Add file-based caching for external data
+        from raglite.shared.caching import ExternalDataCache
+
+        self._cache = ExternalDataCache(ttl_hours=24)
 
     async def fetch_euribor(
         self,
@@ -79,6 +85,9 @@ class ECBClient:
         tenor: str = "3M",
     ) -> list[EuriborRate]:
         """Fetch EURIBOR interest rates for date range.
+
+        Story 6.10.3 AC3: Uses file-based caching to reduce API calls
+        and handle transient failures gracefully.
 
         Args:
             start_date: Start of date range
@@ -93,6 +102,16 @@ class ECBClient:
                 f"Invalid tenor: {tenor}. Must be one of: {list(self.EURIBOR_SERIES.keys())}"
             )
 
+        # Story 6.10.3 AC3: Try cache first
+        cache_key = f"ecb_euribor_{tenor}_{start_date}_{end_date}"
+        cached = self._cache.get(cache_key)
+        if cached:
+            logger.info(
+                "ECB EURIBOR rates loaded from cache",
+                extra={"start": str(start_date), "end": str(end_date), "tenor": tenor},
+            )
+            return [EuriborRate(**r) for r in cached]
+
         logger.info(
             "Fetching ECB EURIBOR rates",
             extra={
@@ -105,7 +124,13 @@ class ECBClient:
         series_key = self.EURIBOR_SERIES[tenor]
         csv_data = await self._fetch_series(series_key, start_date, end_date)
 
-        return self._parse_euribor_csv(csv_data, tenor)
+        results = self._parse_euribor_csv(csv_data, tenor)
+
+        # Story 6.10.3: Cache results for future use
+        if results:
+            self._cache.set(cache_key, [r.__dict__ for r in results])
+
+        return results
 
     async def _fetch_series(
         self,

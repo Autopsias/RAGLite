@@ -737,9 +737,16 @@ async def ingest_pdf(
             )
     except Exception as e:
         # Don't fail ingestion if table extraction fails - log and continue
+        # Story: Fix PostgreSQL Data Synchronization Gap - Make failures visible
         logger.warning(
-            "Table extraction failed - continuing with document ingestion",
-            extra={"doc_filename": pdf_path.name, "error": str(e)},
+            "Table extraction failed - document will have vectors but no structured tables in PostgreSQL. "
+            "Run 'python scripts/backfill-postgresql-tables.py' to fix after resolving the error.",
+            extra={
+                "doc_filename": pdf_path.name,
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "action_required": "backfill_tables",
+            },
             exc_info=True,
         )
 

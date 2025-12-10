@@ -27,21 +27,19 @@ class TestICEFuturesClientAPI2Coal:
 
     @pytest.mark.asyncio
     async def test_fetch_api2_coal_returns_prices(self, client: ICEFuturesClient) -> None:
-        """AC1.1: Should fetch API2 Coal prices from primary source."""
-        # Mock Quandl/Nasdaq Data Link response
-        mock_response = {
-            "dataset": {
-                "data": [
-                    ["2024-01-15", 120.50],
-                    ["2024-01-14", 119.75],
-                    ["2024-01-13", 121.00],
-                ],
-                "column_names": ["Date", "Value"],
-            }
-        }
+        """AC1.1: Should fetch API2 Coal prices from primary source.
 
-        with patch.object(client, "_fetch_quandl_data", new_callable=AsyncMock) as mock_fetch:
-            mock_fetch.return_value = mock_response
+        Story 6.8: Primary source is now Yahoo Finance (Quandl coal datasets withdrawn 2024).
+        """
+        # Mock Yahoo Finance response (primary source since Quandl withdrew coal data)
+        mock_prices = [
+            API2CoalPrice(date=date(2024, 1, 15), price=120.50, currency="USD", unit="USD/tonne"),
+            API2CoalPrice(date=date(2024, 1, 14), price=119.75, currency="USD", unit="USD/tonne"),
+            API2CoalPrice(date=date(2024, 1, 13), price=121.00, currency="USD", unit="USD/tonne"),
+        ]
+
+        with patch.object(client, "_fetch_yahoo_coal", new_callable=AsyncMock) as mock_fetch:
+            mock_fetch.return_value = mock_prices
 
             result = await client.fetch_api2_coal(
                 start_date=date(2024, 1, 1),
@@ -56,19 +54,19 @@ class TestICEFuturesClientAPI2Coal:
 
     @pytest.mark.asyncio
     async def test_fetch_api2_coal_filters_by_date_range(self, client: ICEFuturesClient) -> None:
-        """AC1.1: Should filter results by date range."""
-        mock_response = {
-            "dataset": {
-                "data": [
-                    ["2024-01-15", 120.50],
-                    ["2024-01-05", 119.75],
-                    ["2023-12-15", 121.00],  # Outside range
-                ],
-            }
-        }
+        """AC1.1: Should filter results by date range.
 
-        with patch.object(client, "_fetch_quandl_data", new_callable=AsyncMock) as mock_fetch:
-            mock_fetch.return_value = mock_response
+        Story 6.8: Primary source is now Yahoo Finance. The date filtering
+        is handled by Yahoo Finance API, so we test that result dates are within range.
+        """
+        # Mock Yahoo Finance response with only dates in requested range
+        mock_prices = [
+            API2CoalPrice(date=date(2024, 1, 15), price=120.50, currency="USD"),
+            API2CoalPrice(date=date(2024, 1, 5), price=119.75, currency="USD"),
+        ]
+
+        with patch.object(client, "_fetch_yahoo_coal", new_callable=AsyncMock) as mock_fetch:
+            mock_fetch.return_value = mock_prices
 
             result = await client.fetch_api2_coal(
                 start_date=date(2024, 1, 1),

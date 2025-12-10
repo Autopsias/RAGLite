@@ -19,6 +19,7 @@ from raglite.shared.config import settings
 pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
 
 
+@pytest.mark.slow  # Takes ~60s, actual PDF ingestion
 @pytest.mark.priority("P1")
 @pytest.mark.timeout(300)  # 5 minutes for parallel ingestion
 @pytest.mark.asyncio
@@ -196,6 +197,7 @@ async def test_parallel_ingestion_three_documents():
     print(f"   New PostgreSQL table rows: {new_table_rows}")
 
 
+@pytest.mark.slow  # Takes ~24s, actual PDF ingestion
 @pytest.mark.priority("P2")
 @pytest.mark.timeout(180)  # 3 minutes
 @pytest.mark.asyncio
@@ -222,6 +224,7 @@ async def test_parallel_ingestion_with_single_pdf():
     assert result.results[0].chunk_count > 0
 
 
+@pytest.mark.slow  # Takes ~24s, actual PDF ingestion
 @pytest.mark.priority("P2")
 @pytest.mark.timeout(120)  # 2 minutes
 @pytest.mark.asyncio
@@ -276,6 +279,7 @@ async def test_parallel_ingestion_invalid_concurrency():
         await ingest_documents_parallel(file_paths, max_concurrent=0)
 
 
+@pytest.mark.slow  # Takes ~24s, actual PDF ingestion
 @pytest.mark.priority("P1")
 @pytest.mark.timeout(300)  # 5 minutes
 @pytest.mark.asyncio

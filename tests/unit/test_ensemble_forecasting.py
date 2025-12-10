@@ -254,12 +254,16 @@ class TestForecastQueryRequest:
     """Tests for ForecastQueryRequest model_type field."""
 
     def test_forecast_query_request_default_model_type(self) -> None:
-        """ForecastQueryRequest defaults to 'prophet' model type."""
+        """ForecastQueryRequest defaults to 'auto' model type.
+
+        Story 6.11: Updated default from 'prophet' to 'auto' for automatic
+        model selection based on data availability and quality.
+        """
         from raglite.shared.models import ForecastQueryRequest
 
         request = ForecastQueryRequest(metric="revenue")
 
-        assert request.model_type == "prophet"
+        assert request.model_type == "auto"
 
     def test_forecast_query_request_ensemble_model_type(self) -> None:
         """ForecastQueryRequest accepts 'ensemble' model type."""

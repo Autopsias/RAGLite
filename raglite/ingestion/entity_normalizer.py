@@ -223,29 +223,38 @@ def get_entity_aliases(canonical_entity: str) -> list[str]:
     return aliases
 
 
-def get_entity_ilike_pattern(canonical_entity: str) -> str:
+def get_entity_ilike_pattern(canonical_entity: str, escape_percent: bool = True) -> str:
     """Generate SQL ILIKE ANY pattern for an entity and all its aliases.
 
     Phase 2.1: Creates a PostgreSQL ILIKE ANY clause for fuzzy matching
     all entity variations.
 
+    Story 6.10.3 Fix: Added escape_percent parameter to handle psycopg2's
+    % interpretation when using parameterized queries. When the pattern is
+    used in a query with %s placeholders, % must be escaped as %%.
+
     Args:
         canonical_entity: Canonical entity name (e.g., "Portugal")
+        escape_percent: If True (default), escape % as %% for psycopg2 compatibility.
+            Set to False if using non-parameterized queries.
 
     Returns:
         SQL pattern string for use in WHERE clause.
 
     Example:
         >>> get_entity_ilike_pattern("Portugal")
-        "entity ILIKE ANY(ARRAY['%Portugal%', '%PT%', '%Cimento de Portugal%'])"
+        "entity ILIKE ANY(ARRAY['%%Portugal%%', '%%PT%%', '%%Cimento de Portugal%%'])"
     """
     aliases = get_entity_aliases(canonical_entity)
 
+    # Use %% for psycopg2 compatibility (escapes to single % in final SQL)
+    pct = "%%" if escape_percent else "%"
+
     if not aliases:
-        return f"entity ILIKE '%{canonical_entity}%'"
+        return f"entity ILIKE '{pct}{canonical_entity}{pct}'"
 
     # Create ILIKE patterns for each alias
-    patterns = [f"'%{alias}%'" for alias in aliases]
+    patterns = [f"'{pct}{alias}{pct}'" for alias in aliases]
     return f"entity ILIKE ANY(ARRAY[{', '.join(patterns)}])"
 
 

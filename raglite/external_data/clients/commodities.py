@@ -41,6 +41,10 @@ CO2_DATA_SOURCES = {
     "icap": "https://icapcarbonaction.com/en/ets-prices",
 }
 
+# Yahoo Finance ticker for CO2/Carbon - KraneShares Global Carbon Strategy ETF
+# Tracks ICE ECX EUA futures and other global carbon credits - good EU ETS proxy
+YAHOO_CO2_TICKER = "KRBN"
+
 
 class CommoditiesClient:
     """Client for commodity price data.
@@ -71,8 +75,9 @@ class CommoditiesClient:
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
+        # Story 6.10.2 AC2: Increased test timeout from 1s to 10s for slow APIs
         is_test = os.getenv("PYTEST_CURRENT_TEST") is not None
-        self.timeout = 1.0 if is_test else float(settings.external_data_timeout)
+        self.timeout = 10.0 if is_test else float(settings.external_data_timeout)
 
     async def _fetch_with_retry(self, url: str) -> dict:
         """Fetch data from URL with retry logic.
@@ -131,7 +136,7 @@ class CommoditiesClient:
         start_date: date,
         end_date: date,
     ) -> list[CO2EUAPrice]:
-        """Fetch CO2 EUA prices from Ember Climate.
+        """Fetch CO2 EUA prices from Ember Climate or Yahoo Finance fallback.
 
         Args:
             start_date: Start of date range
@@ -152,13 +157,109 @@ class CommoditiesClient:
 
         try:
             data = await self._fetch_with_retry(url)
-            return self._parse_co2_prices(data, start_date, end_date)
+            results = self._parse_co2_prices(data, start_date, end_date)
+            if results:
+                return results
+        except ExternalDataFetchError:
+            logger.warning("Ember API failed, trying Yahoo Finance fallback")
+
+        # Fallback: Yahoo Finance KRBN (KraneShares Global Carbon ETF)
+        try:
+            return await self._fetch_yahoo_co2(start_date, end_date)
         except ExternalDataFetchError:
             # Fall back to cache
-            logger.warning("Failed to fetch CO2 prices from API, using cache")
+            logger.warning("Yahoo Finance failed, using cache")
             cached_results = self.load_from_cache("co2_eua", start_date, end_date)
             # Cast is safe: load_from_cache with "co2_eua" only returns CO2EUAPrice instances
             return [item for item in cached_results if isinstance(item, CO2EUAPrice)]
+
+    async def _fetch_yahoo_co2(
+        self,
+        start_date: date,
+        end_date: date,
+    ) -> list[CO2EUAPrice]:
+        """Fetch CO2 prices from Yahoo Finance using KRBN ETF as proxy.
+
+        KRBN tracks global carbon credits including EU ETS - good proxy for EUA prices.
+
+        Args:
+            start_date: Start of date range
+            end_date: End of date range
+
+        Returns:
+            List of CO2 EUA price records
+        """
+        try:
+            import warnings
+
+            import yfinance as yf  # type: ignore[import-not-found]
+
+            warnings.filterwarnings("ignore", category=FutureWarning)
+
+            logger.info(
+                "Fetching CO2 prices from Yahoo Finance", extra={"ticker": YAHOO_CO2_TICKER}
+            )
+
+            # Fetch KRBN (KraneShares Global Carbon Strategy ETF)
+            df = yf.download(
+                YAHOO_CO2_TICKER,
+                start=str(start_date),
+                end=str(end_date),
+                progress=False,
+                auto_adjust=True,
+            )
+
+            if df.empty:
+                raise ExternalDataFetchError(
+                    source="Yahoo_Finance",
+                    message=f"No data returned for {YAHOO_CO2_TICKER}",
+                )
+
+            results: list[CO2EUAPrice] = []
+            for idx, row in df.iterrows():
+                try:
+                    record_date = idx.date() if hasattr(idx, "date") else idx
+                    close_price = float(
+                        row["Close"].iloc[0] if hasattr(row["Close"], "iloc") else row["Close"]
+                    )
+
+                    results.append(
+                        CO2EUAPrice(
+                            date=record_date,
+                            price=close_price,
+                            currency="USD",  # KRBN is USD-denominated
+                        )
+                    )
+                except (ValueError, KeyError, IndexError) as e:
+                    logger.warning(
+                        "Failed to parse Yahoo CO2 record",
+                        extra={"date": str(idx), "error": str(e)},
+                    )
+                    continue
+
+            logger.info(
+                "Fetched CO2 prices from Yahoo Finance",
+                extra={"count": len(results)},
+            )
+
+            # Cache the results
+            if results:
+                self.save_to_cache("co2_eua", results)
+
+            return results
+
+        except ImportError as e:
+            raise ExternalDataFetchError(
+                source="Yahoo_Finance",
+                message="yfinance not installed",
+                original_error=e,
+            ) from e
+        except Exception as e:
+            raise ExternalDataFetchError(
+                source="Yahoo_Finance",
+                message=f"Failed to fetch CO2 prices: {e}",
+                original_error=e,
+            ) from e
 
     async def fetch_coal_prices(
         self,

@@ -60,8 +60,10 @@ class OMIEClient:
     def __init__(self) -> None:
         self.base_url = OMIE_BASE_URL
         self.api_key = settings.omie_api_key  # Usually not needed
+        # Story 6.10.2 AC2: Increased test timeout from 1s to 10s for slow APIs
+        # Production timeout unchanged (uses external_data_timeout from settings)
         is_test = os.getenv("PYTEST_CURRENT_TEST") is not None
-        self.timeout = 1.0 if is_test else float(settings.external_data_timeout)
+        self.timeout = 10.0 if is_test else float(settings.external_data_timeout)
 
     async def _fetch_daily_file(
         self,
@@ -140,7 +142,8 @@ class OMIEClient:
                         break  # Try next URL after max retries or non-retryable error
 
         # If both URLs failed, log and return empty
-        logger.info(
+        # Story 6.10.2 AC4: Changed from INFO to WARNING for better visibility
+        logger.warning(
             "OMIE data not available for date",
             extra={"date": str(target_date)},
         )
@@ -218,14 +221,18 @@ class OMIEClient:
         """Parse OMIE daily price file.
 
         Story 6.9.2 AC3: Updated parser for new CSV format.
+        Story 6.10.3: Fixed parser to handle both old and new OMIE formats.
 
-        New OMIE CSV format (semicolon-separated):
+        Supported formats (semicolon-separated):
+
+        Format A (Legacy - pre-Dec 2024):
         MARGINALPDBC;YEAR;MONTH;DAY;HOUR;PT_PRICE;ES_PRICE;...
 
-        Example line:
-        MARGINALPDBC;2024;12;08;1;111,60;111,60;...
+        Format B (Current - Dec 2024+):
+        - Header line: MARGINALPDBC;
+        - Data lines: YEAR;MONTH;DAY;HOUR;PT_PRICE;ES_PRICE;
 
-        Note: Hour is 1-based (1-24), prices use European decimal comma.
+        Note: Hour is 1-based (1-24), prices may use comma or period as decimal.
 
         Args:
             content: CSV file content
@@ -238,17 +245,38 @@ class OMIEClient:
         lines = content.strip().split("\n")
 
         for line in lines:
-            # Story 6.9.2 AC3: Only parse MARGINALPDBC data lines
+            # Strip carriage returns for Windows line endings
+            line = line.strip()
             parts = line.split(";")
-            if len(parts) < 7 or parts[0] != "MARGINALPDBC":
+
+            # Skip header-only lines (e.g., "MARGINALPDBC;") or invalid lines
+            if len(parts) < 6:
                 continue
 
+            # Determine format and extract indices
+            # Format A: MARGINALPDBC;YEAR;MONTH;DAY;HOUR;PT_PRICE;ES_PRICE;...
+            # Format B: YEAR;MONTH;DAY;HOUR;PT_PRICE;ES_PRICE;
+            if parts[0] == "MARGINALPDBC":
+                # Format A (legacy): MARGINALPDBC prefix
+                if len(parts) < 7:
+                    continue
+                hour_idx, price_idx = 4, 5
+            else:
+                # Format B (current): starts with year
+                # Check if first part is a year (4 digits)
+                try:
+                    year = int(parts[0])
+                    if year < 2000 or year > 2100:
+                        continue
+                except ValueError:
+                    # Not a valid data line
+                    continue
+                hour_idx, price_idx = 3, 4
+
             try:
-                # Story 6.9.2 AC3: Parse new format
-                # Format: MARGINALPDBC;YEAR;MONTH;DAY;HOUR;PT_PRICE;ES_PRICE;...
-                hour = int(parts[4]) - 1  # Convert 1-24 to 0-23
-                # Portugal price is in column 6 (index 5)
-                price_str = parts[5].replace(",", ".")  # Handle European decimal comma
+                hour = int(parts[hour_idx]) - 1  # Convert 1-24 to 0-23
+                # Handle both decimal formats (comma and period)
+                price_str = parts[price_idx].replace(",", ".")
                 price = float(price_str)
 
                 results.append(

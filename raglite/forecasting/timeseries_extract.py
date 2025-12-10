@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from dateutil import parser as date_parser
 
+from raglite.ingestion.entity_normalizer import get_entity_ilike_pattern, normalize_entity
 from raglite.shared.logging import get_logger
 from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
 
@@ -565,9 +566,44 @@ def parse_period_to_date(period: str, fiscal_year: int) -> datetime:
     return datetime(fiscal_year, month, 1)
 
 
+def prefer_group_level(entity: str | None, metric: str) -> str | None:
+    """For metrics that aggregate regionally, prefer GROUP-level data.
+
+    Story 6.10.1 AC5: For aggregate metrics like EBITDA,
+    prefer GROUP-level consolidated data to avoid mixing regional data
+    which causes high MAPE from aggregating incompatible data sources.
+
+    Story 6.10.4 Fix: Return None for non-aggregate metrics to disable
+    entity filtering (allow all entities). Previously returned "Group"
+    by default which caused 10/12 SKIPs due to missing GROUP-level data.
+
+    Story 6.10.4 Revenue Fix: Removed "revenue" and "turnover" from GROUP
+    metrics because turnover data in database has entity="Currency (1000 EUR)",
+    not "GROUP". Filtering by GROUP returns 0 rows causing 101,488% MAPE.
+
+    Args:
+        entity: Requested entity (may be None)
+        metric: Metric name being extracted
+
+    Returns:
+        'Group' for aggregate metrics when no specific entity requested,
+        original entity if specified, or None to disable entity filter.
+    """
+    # Story 6.10.4: Only EBITDA IFRS has GROUP-level consolidated data
+    # Revenue/turnover doesn't have GROUP entity - uses "Currency (1000 EUR)"
+    # Sales Volume and Capacity Utilization also lack GROUP-level rows
+    GROUP_PREFERRED_METRICS = {"ebitda"}  # Only metrics with actual GROUP data
+    if metric.lower() in GROUP_PREFERRED_METRICS:
+        if entity is None or entity.lower() not in ("group", "portugal", "brazil", "tunisia"):
+            return "Group"
+    # Return entity if specified, None otherwise (no filtering for non-aggregate metrics)
+    return entity
+
+
 async def extract_timeseries_from_sql(
     metric: str = "revenue",
     min_points: int = 6,  # FIX (2025-12-01): Lowered from 8 to allow GROUP data with missing months
+    aggregation: str = "sum",  # Story 6.10.4: "sum" or "max" - use "max" for revenue/turnover
 ) -> TimeSeriesData:
     """Extract time-series data from PostgreSQL financial_tables.
 
@@ -582,10 +618,17 @@ async def extract_timeseries_from_sql(
     For EBITDA metrics, automatically uses consolidated GROUP entity values
     to avoid double-counting regional breakdowns (Brazil, Tunisia, etc.).
 
+    Story 6.10.4: Added aggregation parameter to handle metrics where multiple
+    values per period exist (e.g., turnover has both actual values and ratios).
+    Use "max" for revenue/turnover to get the actual value instead of summing
+    all sub-components.
+
     Args:
         metric: Metric name to extract (e.g., "revenue", "expenses", "ebitda", "capex", "margins")
                 Supports any metric found in financial_tables with sufficient data points.
         min_points: Minimum number of data points required (default: 8)
+        aggregation: "sum" (default) or "max" - aggregation method for multiple values per period.
+                     Use "max" for revenue/turnover where largest value is actual amount.
 
     Returns:
         TimeSeriesData with metric_name, chronologically sorted points, interval
@@ -616,15 +659,33 @@ async def extract_timeseries_from_sql(
         "ebitda": "EBITDA IFRS",  # Consolidated EBITDA (requires entity=GROUP filter)
     }
 
+    # Apply synonym mapping if metric matches a known synonym
+    metric_search = METRIC_SYNONYMS.get(metric.lower(), metric)
+
     # Metrics requiring entity filter for proper consolidation
     # These metrics have multiple entity rows (geographic, segments) that would sum incorrectly
     # Format: metric -> (entity_filter, prefer_ytd_data)
+    #
+    # Story 6.10.4: Only EBITDA IFRS has GROUP-level consolidated data in database
+    # - turnover: has entity="Currency (1000 EUR)", NOT "GROUP" - filter removed
+    # - sales volume: no GROUP rows available - filter removed
+    # - capacity utilization: no GROUP rows available - filter removed
     ENTITY_FILTERS = {
         "EBITDA IFRS": ("GROUP", True),  # Use GROUP consolidated with YTD data
+        # Story 6.10.4: Removed turnover, sales volume, capacity utilization
+        # because they don't have GROUP-level data rows (GROUP filter = 0 results)
     }
 
-    # Apply synonym mapping if metric matches a known synonym
-    metric_search = METRIC_SYNONYMS.get(metric.lower(), metric)
+    # Story 6.10.1 AC5: Dynamically add GROUP filter for aggregate metrics
+    # using prefer_group_level() to catch metrics not explicitly listed above
+    preferred_entity = prefer_group_level(None, metric)
+    if preferred_entity == "Group" and metric_search not in ENTITY_FILTERS:
+        # Add dynamic GROUP filter for this aggregate metric
+        ENTITY_FILTERS[metric_search] = ("GROUP", False)
+        logger.debug(
+            "Dynamic GROUP filter applied via prefer_group_level",
+            extra={"metric": metric, "metric_search": metric_search},
+        )
 
     # STRATEGY: Always try exact match first, fall back to wildcard if no results
     # This prevents aggregating multiple variants (EBITDA, EBITDA IFRS, EBITDA Portugal, etc.)
@@ -667,25 +728,28 @@ async def extract_timeseries_from_sql(
         match_type = "exact"
 
         # Apply entity filter if metric requires it (e.g., EBITDA IFRS → GROUP only)
+        # Story 6.10.1: Use normalized entity matching via get_entity_ilike_pattern()
+        # which returns a complete SQL clause like "entity ILIKE ANY(ARRAY['%Group%', '%Conso%', ...])"
         entity_filter = ""
         prefer_ytd = False
         filter_config = ENTITY_FILTERS.get(metric_search)
         if filter_config:
             required_entity, prefer_ytd = filter_config
-            # NOTE (2025-12-01): June 2025 document has misparsed columns where
-            # "Secil Group" appears in the period field instead of entity field
-            # and the metric is "EBITDA" instead of "EBITDA IFRS".
-            # We intentionally DO NOT include this misparsed data because the
-            # EBITDA values from "Secil Group" are a different metric series
-            # than "EBITDA IFRS" from "GROUP" entity. Mixing them causes incorrect
-            # monthly deltas in YTD→Monthly conversion. The forecasting handles
-            # the missing June data via gap interpolation instead.
-            entity_filter = f"AND entity = '{required_entity}'"
+            # Story 6.10.1 AC1-AC3: Normalize entity and use ILIKE pattern for all aliases
+            # This eliminates entity mixing (e.g., GROUP vs Portugal vs Brazil data)
+            canonical_entity = normalize_entity(required_entity)
+            # get_entity_ilike_pattern returns complete clause: "entity ILIKE ANY(ARRAY[...])"
+            entity_clause = get_entity_ilike_pattern(canonical_entity or required_entity)
+            entity_filter = f"AND {entity_clause}"
             logger.info(
-                "Applying entity filter for consolidated metric",
+                "Applying normalized entity filter for consolidated metric",
                 extra={
                     "metric": metric_search,
-                    "entity": required_entity,
+                    "required_entity": required_entity,
+                    "canonical_entity": canonical_entity,
+                    "entity_clause_preview": entity_clause[:80] + "..."
+                    if len(entity_clause) > 80
+                    else entity_clause,
                     "prefer_ytd": prefer_ytd,
                 },
             )
@@ -693,6 +757,9 @@ async def extract_timeseries_from_sql(
         # nosec B608 - SQL query uses parameterized internal variables only
         # Story 5.0.4 Fix: Infer fiscal_year from period when NULL (e.g., "Jan-25" → 2025)
         # This addresses data quality issue where only 33% of rows have fiscal_year populated
+
+        # Story 6.10.4: Determine aggregation function - SUM for most metrics, MAX for revenue/turnover
+        agg_func = "MAX" if aggregation.lower() == "max" else "SUM"
 
         # Helper function to build query with current metric_condition and entity_filter
         # FIX (2025-12-01): For YTD metrics (like EBITDA IFRS), extract only YTD periods
@@ -755,7 +822,7 @@ async def extract_timeseries_from_sql(
                 SELECT
                     ft.clean_period as period,
                     ft.inferred_fiscal_year as fiscal_year,
-                    SUM(ft.value) as total_value,
+                    {agg_func}(ft.value) as total_value,
                     COUNT(*) as row_count,
                     MAX(ft.document_id) as source_doc,
                     BOOL_OR(ft.is_ytd) as is_ytd_data
@@ -765,7 +832,8 @@ async def extract_timeseries_from_sql(
                     AND ft.inferred_fiscal_year = ld.inferred_fiscal_year
                     AND ft.document_id = ld.latest_doc
                 GROUP BY ft.clean_period, ft.inferred_fiscal_year
-                HAVING SUM(ft.value) > 0
+                HAVING {agg_func}(ft.value) <> 0
+                -- FIX (2025-12-09): Changed from > 0 to <> 0 to support cost metrics (negative values)
                 -- FIX (2025-12-01): Sort chronologically, not alphabetically
                 -- "Apr-25" should come AFTER "Feb-25", not before
                 ORDER BY ft.inferred_fiscal_year, TO_DATE(ft.clean_period, 'Mon-YY')

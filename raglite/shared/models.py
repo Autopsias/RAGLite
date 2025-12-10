@@ -659,8 +659,34 @@ class ForecastQueryRequest(BaseModel):
         description="Optional natural language query (e.g., 'revenue forecast next quarter')",
     )
     model_type: str = Field(
-        default="prophet",
-        description="Forecasting model: 'prophet' (default), 'ensemble' (Prophet+Linear+XGBoost), or 'prophet_multivariate'",
+        default="auto",
+        description=(
+            "Forecasting model selection: "
+            "'auto' (intelligent selection based on metric and context), "
+            "'prophet' (fast ~21s, recommended for most queries), "
+            "'ensemble' (slower ~78s, Prophet+Linear+XGBoost+LightGBM, use with prefer_accuracy=True)"
+        ),
+    )
+    # Story 6.11.6: Intelligent model selection parameter
+    prefer_accuracy: bool = Field(
+        default=False,
+        description=(
+            "When model_type='auto': Set True to prefer ensemble model for potentially higher accuracy "
+            "(accepts ~3.7x slower execution: ~78s vs ~21s). Recommended for high-stakes financial forecasts."
+        ),
+    )
+    # Story 6.11.1: Multi-variate forecasting parameters
+    use_external_regressors: bool = Field(
+        default=True,
+        description="Enable multi-variate forecasting with external economic indicators (97% accuracy improvement)",
+    )
+    regressor_names: list[str] | None = Field(
+        default=None,
+        description="Specific regressors to use (auto-selected if None). Options: euribor_3m, ttf_gas, api2_coal, diesel, eurostat_electricity",
+    )
+    future_regressor_strategy: str = Field(
+        default="constant",
+        description="Strategy for future regressor values: 'constant' (last value), 'extrapolate' (trend)",
     )
 
 
@@ -706,20 +732,42 @@ class ForecastQueryResponse(BaseModel):
         description="Documents used for time-series data extraction",
     )
     periods_ahead: int = Field(..., description="Number of periods forecasted")
+    # Story 6.11.1: Multi-variate forecasting response fields
+    regressors_used: list[str] | None = Field(
+        default=None,
+        description="External regressors used in forecast (e.g., euribor_3m, ttf_gas)",
+    )
+    model_type: str = Field(
+        default="prophet_univariate",
+        description="Forecasting model type used: prophet_univariate, prophet_multivariate, ensemble",
+    )
+    # Story 6.11.6: Model selection explanation
+    model_selection_reason: str | None = Field(
+        default=None,
+        description="Explanation of why this model was selected (when model_type='auto' was used)",
+    )
 
     @classmethod
     def from_forecast_result(
         cls,
         result: "ForecastResult",
         source_documents: list[str] | None = None,
+        regressors_used: list[str] | None = None,
+        model_type: str = "prophet_univariate",
+        model_selection_reason: str | None = None,
     ) -> "ForecastQueryResponse":
         """Create ForecastQueryResponse from ForecastResult.
 
         Story 4.4 AC2/AC3: Factory method for MCP response creation.
+        Story 6.11.1: Added regressors_used and model_type parameters.
+        Story 6.11.6: Added model_selection_reason for auto-selection transparency.
 
         Args:
             result: ForecastResult from generate_forecast()
             source_documents: List of source document filenames
+            regressors_used: List of external regressors used in forecast
+            model_type: Forecasting model type used
+            model_selection_reason: Explanation for model selection (when auto-selected)
 
         Returns:
             ForecastQueryResponse with all fields populated
@@ -733,6 +781,9 @@ class ForecastQueryResponse(BaseModel):
             accuracy_estimate=result.accuracy_estimate,
             source_documents=source_documents or [],
             periods_ahead=result.periods_ahead,
+            regressors_used=regressors_used,
+            model_type=model_type,
+            model_selection_reason=model_selection_reason,
         )
 
 

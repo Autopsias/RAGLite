@@ -156,7 +156,9 @@ class RegimeDetectionResult:
 MIN_DATA_POINTS = 6
 
 # Story 6.3: Constants for multi-variate forecasting
-MAX_MISSING_RATIO = 0.10  # Maximum 10% missing data allowed
+# Story 6.10.4: Increased from 10% to 30% to tolerate date range mismatches
+# between external data (2020-2025) and SECIL data (2021-2025)
+MAX_MISSING_RATIO = 0.30  # Maximum 30% missing data allowed
 MAX_INTERPOLATION_GAP = 3  # Maximum periods to interpolate
 MIN_CV_DATA_POINTS = 12  # Minimum points for cross-validation
 
@@ -931,6 +933,8 @@ def prepare_regressors(
 
     Story 6.3 AC4: Missing data handling for regressors.
     Story 6.7: Auto-transform YoY% to absolute index for scale compatibility.
+    Story 6.10.4: Auto-resample high-frequency regressors (weekly/daily) to
+    monthly before alignment to prevent high missing ratio.
 
     Args:
         regressors: Dictionary of regressor series
@@ -939,15 +943,57 @@ def prepare_regressors(
         auto_transform_yoy: Auto-transform detected YoY% data (default: True)
 
     Returns:
-        Dictionary of prepared regressor series
-
-    Raises:
-        ValueError: If >10% missing after interpolation
+        Dictionary of prepared regressor series (skips regressors with too much
+        missing data instead of raising - Story 6.10.4)
     """
     prepared = {}
 
+    # Story 6.11: Handle duplicate indices in target (can occur after YTD→Monthly conversion)
+    if target_index.duplicated().any():
+        logger.warning(
+            "Target index has duplicates, deduplicating",
+            extra={"duplicates": int(target_index.duplicated().sum())},
+        )
+        # Keep first occurrence of each date
+        unique_mask = ~target_index.duplicated(keep="first")
+        target_index = target_index[unique_mask]
+
+    # Story 6.10.4: Detect target frequency for logging purposes
+    if len(target_index) >= 2:
+        avg_days = (target_index[-1] - target_index[0]).days / (len(target_index) - 1)
+        _target_frequency = (
+            "monthly"
+            if 25 <= avg_days <= 35
+            else ("bimonthly" if 50 <= avg_days <= 70 else "irregular")
+        )
+    else:
+        avg_days = 30.0
+        _target_frequency = "monthly"
+
     for name, series in regressors.items():
         working_series = series.copy()
+
+        # Story 6.11: Auto-resample high-frequency data to monthly
+        # Always resample if regressor has 3x+ more points than target (weekly/daily data)
+        # This works for monthly, bimonthly, or irregular targets because:
+        # 1. Weekly/daily data gets aggregated to monthly means
+        # 2. Reindex to target dates finds matching month-start dates
+        if len(working_series) > len(target_index) * 3:
+            # Regressor has 3x+ more points than target - likely weekly or daily data
+            logger.info(
+                f"Auto-resampling high-frequency regressor {name} to monthly",
+                extra={
+                    "original_points": len(working_series),
+                    "target_points": len(target_index),
+                },
+            )
+            # Resample to month-start with mean aggregation
+            working_series = working_series.resample("MS").mean()
+            working_series = working_series.dropna()
+            logger.info(
+                f"Resampled {name} to monthly",
+                extra={"new_points": len(working_series)},
+            )
 
         # Story 6.7: Auto-detect and transform YoY% data
         if auto_transform_yoy and detect_yoy_percentage(working_series, target_series):
@@ -972,6 +1018,11 @@ def prepare_regressors(
                 },
             )
 
+        # Story 6.11: Handle duplicate indices in working_series before reindex
+        if working_series.index.duplicated().any():
+            # Keep mean of duplicates
+            working_series = working_series.groupby(working_series.index).mean()
+
         # Reindex to target index
         aligned = working_series.reindex(target_index)
 
@@ -979,11 +1030,18 @@ def prepare_regressors(
         missing_count = aligned.isna().sum()
         missing_ratio = missing_count / len(aligned)
 
+        # Story 6.10.4: Skip regressors with too much missing data instead of failing
         if missing_ratio > MAX_MISSING_RATIO:
-            raise ValueError(
-                f"Regressor '{name}' has {missing_ratio:.1%} missing values "
-                f"(max allowed: {MAX_MISSING_RATIO:.0%})"
+            logger.warning(
+                f"Skipping regressor '{name}' - {missing_ratio:.1%} missing values "
+                f"(max allowed: {MAX_MISSING_RATIO:.0%})",
+                extra={
+                    "regressor": name,
+                    "missing_ratio": missing_ratio,
+                    "max_allowed": MAX_MISSING_RATIO,
+                },
             )
+            continue  # Skip this regressor, continue with others
 
         # Linear interpolation for gaps <= MAX_INTERPOLATION_GAP
         if missing_count > 0:
@@ -994,9 +1052,17 @@ def prepare_regressors(
             aligned = aligned.ffill(limit=MAX_INTERPOLATION_GAP)
             aligned = aligned.bfill(limit=MAX_INTERPOLATION_GAP)
 
-        # Final validation
+        # Final validation - skip if still has NaN instead of failing
         if aligned.isna().any():
-            raise ValueError(f"Regressor '{name}' still has missing values after interpolation")
+            remaining_missing = aligned.isna().sum()
+            logger.warning(
+                f"Skipping regressor '{name}' - still has {remaining_missing} missing values after interpolation",
+                extra={
+                    "regressor": name,
+                    "remaining_missing": remaining_missing,
+                },
+            )
+            continue  # Skip this regressor, continue with others
 
         prepared[name] = aligned
 
@@ -1156,7 +1222,14 @@ def _generate_future_regressors(
             raise ValueError(f"Unknown future regressor strategy: {strategy}")
 
         # Combine historical and future (for constant/extrapolate strategies only)
-        extended[name] = pd.concat([historical, future_values])
+        # Story 6.11: Exclude overlapping dates from historical to avoid duplicate indices
+        # This can happen when historical data extends into the future period
+        non_overlapping_historical = historical[~historical.index.isin(future_values.index)]
+        combined = pd.concat([non_overlapping_historical, future_values])
+        # Also handle any remaining duplicates (from data issues)
+        if combined.index.duplicated().any():
+            combined = combined.groupby(combined.index).mean()
+        extended[name] = combined
 
     return extended
 
@@ -1387,7 +1460,10 @@ async def generate_forecast(
                 )
                 for name in regressors_used:
                     if name in extended:
-                        future[name] = extended[name].reindex(future["ds"]).values
+                        # Story 6.11: Reindex and fill any NaN with forward-fill then backward-fill
+                        reindexed = extended[name].reindex(future["ds"])
+                        reindexed = reindexed.ffill().bfill()
+                        future[name] = reindexed.values
 
             prophet_forecast = model.predict(future)
             forecast_months = prophet_forecast.tail(periods_ahead)
@@ -1425,7 +1501,10 @@ async def generate_forecast(
                 )
                 for name in regressors_used:
                     if name in extended:
-                        future[name] = extended[name].reindex(future["ds"]).values
+                        # Story 6.11: Reindex and fill any NaN with forward-fill then backward-fill
+                        reindexed = extended[name].reindex(future["ds"])
+                        reindexed = reindexed.ffill().bfill()
+                        future[name] = reindexed.values
 
             prophet_forecast = model.predict(future)
 
@@ -1482,7 +1561,11 @@ async def generate_forecast(
             )
             for name in regressors_used:
                 if name in extended:
-                    future[name] = extended[name].reindex(future["ds"]).values
+                    # Story 6.11: Reindex and fill any NaN with forward-fill then backward-fill
+                    # (matches monthly path at line 1461-1464)
+                    reindexed = extended[name].reindex(future["ds"])
+                    reindexed = reindexed.ffill().bfill()
+                    future[name] = reindexed.values
 
         prophet_forecast = model.predict(future)
 

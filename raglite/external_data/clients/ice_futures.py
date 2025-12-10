@@ -35,8 +35,10 @@ QUANDL_API_BASE = "https://data.nasdaq.com/api/v3/datasets"
 QUANDL_API2_COAL = "ODA/PCOALAU_USD"  # API2 Coal CIF ARA
 QUANDL_TTF_GAS = "CHRIS/ICE_TFM1"  # TTF Natural Gas Front Month
 
-# Yahoo Finance tickers (fallback)
-YAHOO_API2_TICKER = "MTF=F"  # Coal futures proxy
+# Yahoo Finance tickers (primary source - Quandl is blocked)
+YAHOO_TTF_TICKER = "TTF=F"  # TTF Dutch Natural Gas Futures
+YAHOO_NG_TICKER = "NG=F"  # Henry Hub Natural Gas (US benchmark, fallback)
+YAHOO_API2_TICKER = "MTF=F"  # Coal futures proxy (often unavailable)
 
 # EEX API (fallback for TTF)
 EEX_API_BASE = "https://www.eex.com/en/market-data"
@@ -76,9 +78,9 @@ class ICEFuturesClient:
         # API key from settings (optional for Quandl free tier)
         self.quandl_api_key = getattr(settings, "quandl_api_key", None)
 
-        # Use test timeout in test environment
+        # Story 6.10.2 AC2: Increased test timeout from 1s to 10s for slow APIs
         is_test = os.getenv("PYTEST_CURRENT_TEST") is not None
-        self.timeout = 1.0 if is_test else float(settings.external_data_timeout)
+        self.timeout = 10.0 if is_test else float(settings.external_data_timeout)
 
     async def _fetch_with_retry(self, url: str, params: dict | None = None) -> dict:
         """Fetch data from URL with retry logic.
@@ -185,34 +187,25 @@ class ICEFuturesClient:
         Returns:
             List of API2 Coal price records
 
-        Primary: Quandl/Nasdaq Data Link
-        Fallback: Yahoo Finance (delayed)
+        Primary: Yahoo Finance MTF=F (Coal Futures)
+        Fallback: Local cache
+        Note: Quandl ODA/PCOALAU_USD permanently withdrawn (2024)
         """
         logger.info(
             "Fetching API2 Coal prices",
             extra={"start": str(start_date), "end": str(end_date)},
         )
 
+        # Primary: Yahoo Finance (Quandl coal datasets withdrawn in 2024)
         try:
-            data = await self._fetch_quandl_data(
-                QUANDL_API2_COAL,
-                start_date,
-                end_date,
-            )
-            return self._parse_quandl_coal_data(data, start_date, end_date)
-
+            return await self._fetch_yahoo_coal(start_date, end_date)
         except ExternalDataFetchError as e:
             logger.warning(
-                "Quandl API2 Coal fetch failed, trying Yahoo fallback",
+                "Yahoo Finance coal fetch failed, using cache",
                 extra={"error": str(e)},
             )
-
-            try:
-                return await self._fetch_yahoo_coal(start_date, end_date)
-            except ExternalDataFetchError:
-                logger.warning("Yahoo fallback also failed, using cache")
-                cached = self.load_from_cache("api2_coal", start_date, end_date)
-                return [p for p in cached if isinstance(p, API2CoalPrice)]
+            cached = self.load_from_cache("api2_coal", start_date, end_date)
+            return [p for p in cached if isinstance(p, API2CoalPrice)]
 
     async def fetch_ttf_gas(
         self,
@@ -396,55 +389,85 @@ class ICEFuturesClient:
         start_date: date,
         end_date: date,
     ) -> list[API2CoalPrice]:
-        """Fetch coal prices from Yahoo Finance (fallback).
+        """Fetch coal prices from Yahoo Finance using yfinance.
+
+        Primary source for API2 Coal data since Quandl datasets are withdrawn.
+        Uses MTF=F (Coal Futures) ticker which provides daily price data.
 
         Args:
             start_date: Start of date range
             end_date: End of date range
 
         Returns:
-            List of coal price records
+            List of API2 Coal price records
         """
-        # Yahoo Finance API for coal futures proxy
-        # Note: This uses yfinance-compatible endpoint
-        import time
-
-        period1 = int(time.mktime(start_date.timetuple()))
-        period2 = int(time.mktime(end_date.timetuple()))
-
-        url = (
-            f"https://query1.finance.yahoo.com/v7/finance/download/{YAHOO_API2_TICKER}"
-            f"?period1={period1}&period2={period2}&interval=1d&events=history"
-        )
-
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.get(url)
-                response.raise_for_status()
+            import warnings
 
-                lines = response.text.strip().split("\n")
-                results: list[API2CoalPrice] = []
+            import yfinance as yf  # type: ignore[import-not-found]
 
-                for line in lines[1:]:  # Skip header
-                    parts = line.split(",")
-                    if len(parts) >= 5:
-                        try:
-                            record_date = date.fromisoformat(parts[0])
-                            close_price = float(parts[4])  # Adj Close
+            warnings.filterwarnings("ignore", category=FutureWarning)
 
-                            results.append(
-                                API2CoalPrice(
-                                    date=record_date,
-                                    price=close_price,
-                                    currency="USD",
-                                )
-                            )
-                        except (ValueError, IndexError):
-                            continue
+            # Fetch MTF=F (Coal Futures) - working as of 2025
+            logger.info(
+                "Fetching coal prices from Yahoo Finance", extra={"ticker": YAHOO_API2_TICKER}
+            )
 
-                return results
+            df = yf.download(
+                YAHOO_API2_TICKER,
+                start=str(start_date),
+                end=str(end_date),
+                progress=False,
+                auto_adjust=True,
+            )
 
-        except (httpx.HTTPStatusError, httpx.TimeoutException) as e:
+            if df.empty:
+                raise ExternalDataFetchError(
+                    source="Yahoo_Finance",
+                    message=f"No data returned for {YAHOO_API2_TICKER}",
+                )
+
+            results: list[API2CoalPrice] = []
+            for idx, row in df.iterrows():
+                try:
+                    record_date = idx.date() if hasattr(idx, "date") else idx
+                    # Handle MultiIndex columns from yfinance
+                    close_price = float(
+                        row["Close"].iloc[0] if hasattr(row["Close"], "iloc") else row["Close"]
+                    )
+
+                    results.append(
+                        API2CoalPrice(
+                            date=record_date,
+                            price=close_price,
+                            currency="USD",
+                        )
+                    )
+                except (ValueError, KeyError, IndexError) as e:
+                    logger.warning(
+                        "Failed to parse Yahoo coal record",
+                        extra={"date": str(idx), "error": str(e)},
+                    )
+                    continue
+
+            logger.info(
+                "Fetched coal prices from Yahoo Finance",
+                extra={"count": len(results)},
+            )
+
+            # Cache the results
+            if results:
+                self.save_to_cache("api2_coal", results)
+
+            return results
+
+        except ImportError as e:
+            raise ExternalDataFetchError(
+                source="Yahoo_Finance",
+                message="yfinance not installed",
+                original_error=e,
+            ) from e
+        except Exception as e:
             raise ExternalDataFetchError(
                 source="Yahoo_Finance",
                 message=f"Failed to fetch coal prices: {e}",
@@ -456,7 +479,7 @@ class ICEFuturesClient:
         start_date: date,
         end_date: date,
     ) -> list[TTFGasPrice]:
-        """Fetch TTF gas prices from EEX (fallback).
+        """Fetch TTF gas prices from Yahoo Finance (fallback).
 
         Args:
             start_date: Start of date range
@@ -465,20 +488,104 @@ class ICEFuturesClient:
         Returns:
             List of TTF gas price records
 
-        Note: EEX requires web scraping or has limited public API.
-        This returns cached data if available.
+        Note: Uses Yahoo Finance TTF=F ticker which provides Dutch TTF prices.
         """
-        logger.warning("EEX API requires authentication, using cache fallback")
+        logger.info("Fetching TTF gas from Yahoo Finance", extra={"ticker": YAHOO_TTF_TICKER})
 
-        # EEX doesn't have a free public API, fall back to cache
-        cached = self.load_from_cache("ttf_gas", start_date, end_date)
-        if cached:
-            return [p for p in cached if isinstance(p, TTFGasPrice)]
+        try:
+            return await self._fetch_yahoo_ttf(start_date, end_date)
+        except ExternalDataFetchError:
+            # Fall back to cache
+            cached = self.load_from_cache("ttf_gas", start_date, end_date)
+            if cached:
+                return [p for p in cached if isinstance(p, TTFGasPrice)]
 
-        raise ExternalDataFetchError(
-            source="EEX",
-            message="EEX API requires authentication and no cached data available",
-        )
+            raise ExternalDataFetchError(
+                source="Yahoo_Finance",
+                message="Failed to fetch TTF gas and no cached data available",
+            ) from None
+
+    async def _fetch_yahoo_ttf(
+        self,
+        start_date: date,
+        end_date: date,
+    ) -> list[TTFGasPrice]:
+        """Fetch TTF gas prices from Yahoo Finance using yfinance.
+
+        Args:
+            start_date: Start of date range
+            end_date: End of date range
+
+        Returns:
+            List of TTF gas price records
+        """
+        try:
+            import warnings
+
+            import yfinance as yf  # type: ignore[import-not-found]
+
+            warnings.filterwarnings("ignore", category=FutureWarning)
+
+            # Fetch TTF=F (Dutch TTF Natural Gas Futures)
+            df = yf.download(
+                YAHOO_TTF_TICKER,
+                start=str(start_date),
+                end=str(end_date),
+                progress=False,
+                auto_adjust=True,
+            )
+
+            if df.empty:
+                raise ExternalDataFetchError(
+                    source="Yahoo_Finance",
+                    message=f"No data returned for {YAHOO_TTF_TICKER}",
+                )
+
+            results: list[TTFGasPrice] = []
+            for idx, row in df.iterrows():
+                try:
+                    record_date = idx.date() if hasattr(idx, "date") else idx
+                    close_price = float(
+                        row["Close"].iloc[0] if hasattr(row["Close"], "iloc") else row["Close"]
+                    )
+
+                    results.append(
+                        TTFGasPrice(
+                            date=record_date,
+                            price=close_price,
+                            currency="EUR",
+                        )
+                    )
+                except (ValueError, KeyError, IndexError) as e:
+                    logger.warning(
+                        "Failed to parse Yahoo TTF record",
+                        extra={"date": str(idx), "error": str(e)},
+                    )
+                    continue
+
+            logger.info(
+                "Fetched TTF gas from Yahoo Finance",
+                extra={"count": len(results)},
+            )
+
+            # Cache the results
+            if results:
+                self.save_to_cache("ttf_gas", results)
+
+            return results
+
+        except ImportError as e:
+            raise ExternalDataFetchError(
+                source="Yahoo_Finance",
+                message="yfinance not installed",
+                original_error=e,
+            ) from e
+        except Exception as e:
+            raise ExternalDataFetchError(
+                source="Yahoo_Finance",
+                message=f"Failed to fetch TTF gas: {e}",
+                original_error=e,
+            ) from e
 
     def load_from_cache(
         self,

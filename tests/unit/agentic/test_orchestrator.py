@@ -200,6 +200,7 @@ class TestWorkflowExecution:
         assert final_state.retrieval_results is not None
         assert final_state.synthesis_result == "Result based on retrieval"
 
+    @pytest.mark.slow  # Tests actual timeout behavior with real 15s wait
     @pytest.mark.asyncio
     async def test_workflow_timeout_handling(self) -> None:
         """Test workflow timeout handling.

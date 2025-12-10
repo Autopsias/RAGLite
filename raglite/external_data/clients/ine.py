@@ -55,7 +55,9 @@ class INEClient:
     CONSTRUCTION_COST_INDICATOR = "0011750"  # Índice de custo de construção (Base 2021)
 
     # Story 6.8 AC2.1: Tier 2 indicator codes
-    HOUSE_PRICE_INDEX_INDICATOR = "0010017"  # Índice de Preços da Habitação (Base 2015)
+    # Story 6.11.4: Fixed HPI indicator - 0010017 returned wrong data (death statistics)
+    # Correct indicator is 0009201 per INE construction/housing page
+    HOUSE_PRICE_INDEX_INDICATOR = "0009201"  # Índice de Preços da Habitação (Base 2015)
     CONSTRUCTION_CONFIDENCE_INDICATOR = "0011127"  # Indicador de Confiança da Construção
 
     # Portuguese month names for parsing API responses
@@ -77,9 +79,14 @@ class INEClient:
     def __init__(self) -> None:
         self.base_url = INE_API_BASE
         self.api_key = settings.ine_api_key
-        # Use test timeout in test environment (per clients.py pattern)
+        # Story 6.10.2 AC1: Increased test timeout from 1s to 10s for slow APIs
+        # Production timeout unchanged (uses external_data_timeout from settings)
         is_test = os.getenv("PYTEST_CURRENT_TEST") is not None
-        self.timeout = 1.0 if is_test else float(settings.external_data_timeout)
+        self.timeout = 10.0 if is_test else float(settings.external_data_timeout)
+        # Story 6.10.3 AC2: Add file-based caching for external data
+        from raglite.shared.caching import ExternalDataCache
+
+        self._cache = ExternalDataCache(ttl_hours=24)
 
     def _parse_period_to_date(self, period: str) -> date | None:
         """Parse INE period string to date.
@@ -275,6 +282,9 @@ class INEClient:
     ) -> list[INEBuildingPermits]:
         """Fetch building permits data.
 
+        Story 6.10.3 AC2: Uses file-based caching to reduce API calls
+        and handle transient failures gracefully.
+
         Args:
             start_date: Start of date range
             end_date: End of date range
@@ -282,6 +292,16 @@ class INEClient:
         Returns:
             List of building permit records
         """
+        # Story 6.10.3 AC2: Try cache first
+        cache_key = f"ine_building_permits_{start_date}_{end_date}"
+        cached = self._cache.get(cache_key)
+        if cached:
+            logger.info(
+                "INE building permits loaded from cache",
+                extra={"start": str(start_date), "end": str(end_date)},
+            )
+            return [INEBuildingPermits(**r) for r in cached]
+
         logger.info(
             "Fetching INE building permits",
             extra={"start": str(start_date), "end": str(end_date)},
@@ -293,7 +313,13 @@ class INEClient:
             end_date,
         )
 
-        return self._parse_building_permits(data, start_date, end_date)
+        results = self._parse_building_permits(data, start_date, end_date)
+
+        # Story 6.10.3: Cache results for future use
+        if results:
+            self._cache.set(cache_key, [r.__dict__ for r in results])
+
+        return results
 
     async def fetch_construction_output(
         self,

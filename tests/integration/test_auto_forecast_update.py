@@ -339,6 +339,7 @@ class TestTimeoutBehavior:
         assert result.success is False
         assert "timed out" in result.error_message.lower()
 
+    @pytest.mark.slow  # Tests timeout behavior with real 5s sleep
     @pytest.mark.asyncio
     async def test_mcp_ingestion_graceful_timeout(self):
         """Test that MCP ingestion handles forecast timeout gracefully (AC3)."""

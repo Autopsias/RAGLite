@@ -1,7 +1,7 @@
 """RAGLite MCP Server - Model Context Protocol entry point.
 
 This module implements the FastMCP server that exposes RAGLite capabilities
-to MCP clients (Claude Desktop, etc.). Provides eight core tools:
+to MCP clients (Claude Desktop, etc.). Provides nine core tools:
   1. ingest_financial_document - Ingest PDF/Excel documents (sync, <50 pages)
   2. ingest_financial_document_async - Async ingestion for large documents (>50 pages, Story 4.0.3)
   3. get_ingestion_status - Poll async ingestion job status (Story 4.0.3)
@@ -10,6 +10,7 @@ to MCP clients (Claude Desktop, etc.). Provides eight core tools:
   6. get_financial_forecast - Query financial forecasts via natural language (Epic 4, Story 4.4)
   7. get_financial_insights - Request proactive insights combining anomalies, trends, recommendations (Epic 4, Story 4.9)
   8. query_external_data - Query external macro-economic data sources (Epic 6, Story 6.6)
+  9. check_database_health - Validate data synchronization between Qdrant and PostgreSQL
 
 The server follows standard MCP pattern: tools return raw data (chunks with metadata),
 and the LLM client (Claude) synthesizes natural language answers.
@@ -1617,6 +1618,26 @@ async def get_financial_forecast(
     cash_flow, ebitda, expenses, capex). The system automatically searches the database via SQL
     and falls back to hybrid search if needed.
 
+    **Model Selection (Story 6.11.6):**
+
+    The tool intelligently selects between Prophet (~21s, fast) and Ensemble (~78s, 4 models) based on:
+
+    - **Default (model_type="auto", prefer_accuracy=False):** Uses Prophet for fast response
+    - **High-accuracy mode (prefer_accuracy=True):** Uses Ensemble (Prophet+Linear+XGBoost+LightGBM)
+
+    **WHEN TO SET prefer_accuracy=True:**
+
+    Set `prefer_accuracy=True` when the user indicates they want:
+    - "highly accurate", "most accurate", "best possible" forecast
+    - "take your time", "don't rush", "thorough analysis"
+    - "for board presentation", "critical decision", "important forecast"
+    - "ensemble model", "multiple models", "robust forecast"
+
+    **WHEN TO USE DEFAULT (prefer_accuracy=False):**
+    - Quick questions: "What's the revenue forecast?"
+    - No urgency indicators mentioned
+    - User wants fast response
+
     **Input Modes:**
 
     1. **Structured Query (Programmatic):**
@@ -1639,8 +1660,9 @@ async def get_financial_forecast(
     2. Extract historical time-series data (Story 5.0.1: SQL-first with fallback):
        a. Try SQL extraction from PostgreSQL financial_tables (primary)
        b. Fall back to hybrid search + LLM extraction if SQL fails
-    3. Generate forecast using Prophet + LLM hybrid approach
-    4. Return predictions with confidence intervals and explanation
+    3. Auto-select model based on metric type and prefer_accuracy flag
+    4. Generate forecast using selected model + LLM hybrid approach
+    5. Return predictions with confidence intervals and model selection explanation
 
     **Minimum Data Requirement:**
     - Requires 8+ historical data points (2 years quarterly) for reliable forecasts
@@ -1651,6 +1673,8 @@ async def get_financial_forecast(
           - metric: Financial metric to forecast (any metric in database: revenue, turnover, ebitda, cash_flow, expenses, capex, etc.)
           - periods_ahead: Number of quarters to forecast (1-8, default: 4)
           - query: Optional natural language query (parsed for metric/period)
+          - model_type: "auto" (intelligent selection), "prophet" (fast), or "ensemble" (slower, 4 models)
+          - prefer_accuracy: Set True when user wants highest accuracy (accepts ~3.7x slower execution)
 
     Returns:
         ForecastQueryResponse containing:
@@ -1662,27 +1686,35 @@ async def get_financial_forecast(
           - accuracy_estimate: "±15% (NFR10 target)"
           - source_documents: Documents used for time-series extraction
           - periods_ahead: Number of periods forecasted
+          - model_type: Which model was used (prophet_univariate, prophet_multivariate, ensemble)
+          - model_selection_reason: Why this model was chosen (helpful for transparency)
 
     Raises:
         QueryError: If metric not supported, no metric specified, or insufficient data
 
-    Example - Structured Query:
+    Example - Quick Forecast (Default - Prophet):
+        >>> # User asks: "What's the revenue forecast for next quarter?"
         >>> request = ForecastQueryRequest(metric="revenue", periods_ahead=4)
         >>> response = await get_financial_forecast(request)
-        >>> print(response.forecast[0])
-        ForecastPoint(date=2026-03-31, value=15.2M, lower=14.1M, upper=16.3M, label="Q1 2026")
+        >>> print(response.model_type)
+        "prophet_multivariate"
+        >>> print(response.model_selection_reason)
+        "Prophet selected (faster execution ~21s vs ~78s with comparable accuracy)"
 
-    Example - Natural Language Query:
-        >>> request = ForecastQueryRequest(query="What's the revenue forecast for next quarter?")
+    Example - High-Accuracy Forecast (Ensemble):
+        >>> # User asks: "I need the most accurate EBITDA forecast possible for board presentation"
+        >>> request = ForecastQueryRequest(metric="ebitda", periods_ahead=4, prefer_accuracy=True)
         >>> response = await get_financial_forecast(request)
-        >>> print(response.basis)
-        "Prophet model trained on 12 quarters of historical revenue data from 3 documents"
+        >>> print(response.model_type)
+        "ensemble"
+        >>> print(response.model_selection_reason)
+        "High-value financial metric with accuracy preference and 3 regressors available"
 
-    Example - Cash Flow Forecast:
-        >>> request = ForecastQueryRequest(query="Forecast cash flow for the next 4 quarters")
+    Example - Natural Language with Accuracy Intent:
+        >>> # User asks: "Give me a thorough, detailed revenue forecast - take your time"
+        >>> request = ForecastQueryRequest(query="thorough detailed revenue forecast", prefer_accuracy=True)
         >>> response = await get_financial_forecast(request)
-        >>> print(f"{response.metric_name}: {len(response.forecast)} quarters forecasted")
-        "cash_flow: 4 quarters forecasted"
+        >>> # Will use ensemble model due to prefer_accuracy=True
     """
     logger.info(
         "Forecast query received",
@@ -1791,26 +1823,106 @@ async def get_financial_forecast(
         )
 
         # Step 3: Generate forecast using selected model type (Story 6.4)
-        model_type = request.model_type or "prophet"
+        # Story 6.11.1: Multi-variate forecasting with external regressors
+        # Story 6.11.6: Intelligent model selection when model_type="auto"
+        requested_model_type = request.model_type or "auto"
+        external_regressors = None
+        regressors_used: list[str] = []
+        model_selection_reason: str | None = None
+
+        # Story 6.11.1 AC2/AC5: Fetch external regressors when enabled (default True)
+        # Note: Ensemble models (Linear, XGBoost, LightGBM) REQUIRE external regressors to run
+        if request.use_external_regressors:
+            try:
+                from datetime import timedelta
+
+                from raglite.forecasting.regressor_fetch import fetch_regressors_for_metric
+
+                # Calculate date range from historical data
+                # TimeSeriesPoint uses .date attribute, not .timestamp
+                if historical_data.points:
+                    historical_dates = [
+                        p.date.date() if hasattr(p.date, "date") else p.date
+                        for p in historical_data.points
+                    ]
+                    start_date = min(historical_dates) - timedelta(days=365)
+                    end_date = max(historical_dates) + timedelta(days=30 * periods_ahead)
+
+                    external_regressors = await fetch_regressors_for_metric(
+                        metric=metric,
+                        start_date=start_date,
+                        end_date=end_date,
+                        regressor_names=request.regressor_names,
+                    )
+                    regressors_used = list(external_regressors.keys())
+
+                    logger.info(
+                        "External regressors fetched",
+                        extra={
+                            "metric": metric,
+                            "regressors": regressors_used,
+                            "count": len(regressors_used),
+                        },
+                    )
+            except Exception as e:
+                # Story 6.11.1 AC6: Graceful fallback to univariate if regressor fetch fails
+                logger.warning(
+                    "External regressor fetch failed, falling back to univariate",
+                    extra={"metric": metric, "error": str(e)},
+                )
+                external_regressors = None
+                regressors_used = []
+
+        # Story 6.11.6: Intelligent model selection when model_type="auto"
+        if requested_model_type == "auto":
+            from raglite.forecasting.regressor_config import select_model_type
+
+            model_type, model_selection_reason = select_model_type(
+                metric=metric,
+                prefer_accuracy=request.prefer_accuracy,
+                num_regressors=len(regressors_used),
+            )
+            logger.info(
+                "Auto-selected model type",
+                extra={
+                    "metric": metric,
+                    "selected_model": model_type,
+                    "reason": model_selection_reason,
+                    "prefer_accuracy": request.prefer_accuracy,
+                    "num_regressors": len(regressors_used),
+                },
+            )
+        else:
+            # User explicitly requested a specific model type
+            model_type = requested_model_type
+            model_selection_reason = f"User explicitly requested {model_type}"
 
         if model_type == "ensemble":
-            # Story 6.4: Ensemble forecasting (Prophet + Linear Regression + XGBoost)
-            # Note: External regressors are fetched from PostgreSQL by generate_ensemble_forecast
+            # Story 6.4: Ensemble forecasting (Prophet + Linear Regression + XGBoost + LightGBM)
+            # Note: External regressors are fetched above and passed here - required for Linear/XGBoost/LightGBM
             forecast_result = await generate_ensemble_forecast(
                 metric=metric,
                 historical_data=historical_data,
                 periods_ahead=periods_ahead,
                 fast_mode=True,  # Use fast mode for MCP calls
+                external_regressors=external_regressors,  # Required for non-Prophet models
             )
             model_desc = "Ensemble"
+            actual_model_type = "ensemble"
         else:
             # Default: Prophet (univariate or multivariate based on available regressors)
+            # Story 6.11.1 AC3: Pass external regressors to generate_forecast
             forecast_result = await generate_forecast(
                 metric=metric,
                 historical_data=historical_data,
                 periods_ahead=periods_ahead,
+                external_regressors=external_regressors if external_regressors else None,
+                future_regressor_strategy=request.future_regressor_strategy,
             )
-            model_desc = "Prophet"
+            model_desc = "Prophet Multi-variate" if external_regressors else "Prophet"
+            actual_model_type = (
+                "prophet_multivariate" if external_regressors else "prophet_univariate"
+            )
 
         logger.info(
             "Forecast generated successfully",
@@ -1824,11 +1936,19 @@ async def get_financial_forecast(
 
         # Step 4: Build MCP response (AC2, AC3)
         # Update basis to include document count and model info
+        # Story 6.11.1 AC4: Include regressors in basis description
         if model_type == "ensemble" and forecast_result.ensemble_models:
             models_used = ", ".join(forecast_result.ensemble_models)
             enhanced_basis = (
                 f"{model_desc} model ({models_used}) trained on {len(historical_data.points)} "
                 f"quarters of historical {metric} data from {len(historical_data.source_documents)} documents"
+            )
+        elif regressors_used:
+            regressors_str = ", ".join(regressors_used)
+            enhanced_basis = (
+                f"{model_desc} model trained on {len(historical_data.points)} quarters of historical "
+                f"{metric} data with external regressors ({regressors_str}) from "
+                f"{len(historical_data.source_documents)} documents"
             )
         else:
             enhanced_basis = (
@@ -1837,9 +1957,14 @@ async def get_financial_forecast(
             )
         forecast_result.basis = enhanced_basis
 
+        # Story 6.11.1 AC4: Include regressors_used and model_type in response
+        # Story 6.11.6: Include model_selection_reason for transparency
         response = ForecastQueryResponse.from_forecast_result(
             result=forecast_result,
             source_documents=historical_data.source_documents,
+            regressors_used=regressors_used if regressors_used else None,
+            model_type=actual_model_type,
+            model_selection_reason=model_selection_reason,
         )
 
         logger.info(
@@ -1847,6 +1972,9 @@ async def get_financial_forecast(
             extra={
                 "metric": metric,
                 "periods": periods_ahead,
+                "model_type": actual_model_type,
+                "model_selection_reason": model_selection_reason,
+                "regressors_used": regressors_used,
                 "confidence_reasoning_length": len(response.confidence_reasoning),
             },
         )
@@ -2740,6 +2868,69 @@ async def query_external_data(request: ExternalDataQueryRequest) -> str:
     finally:
         if session:
             session.close()
+
+
+@mcp.tool()
+async def check_database_health() -> str:
+    """Check data synchronization between Qdrant and PostgreSQL.
+
+    Validates that all documents ingested into Qdrant also have their table data
+    stored in PostgreSQL. Detects data drift caused by:
+    - Snapshot restorations without PostgreSQL sync
+    - Table extraction failures during ingestion
+    - Partial ingestion runs
+
+    Returns a detailed integrity report with:
+    - Document counts per database
+    - List of any missing documents
+    - Actionable recommendations to fix drift
+
+    Example:
+        check_database_health()
+        -> {"is_synchronized": false, "missing_in_postgresql": ["2024-05 Report.pdf", ...]}
+
+    Returns:
+        JSON string with DataIntegrityResult containing sync status and recommendations
+    """
+    from raglite.shared.validation import check_data_integrity
+
+    logger.info("Running database health check")
+
+    try:
+        result = await check_data_integrity()
+
+        # Log summary
+        if result.is_synchronized:
+            logger.info(
+                "Database health check passed",
+                extra={
+                    "qdrant_docs": result.qdrant.documents,
+                    "postgresql_docs": result.postgresql.documents,
+                },
+            )
+        else:
+            logger.warning(
+                "Database health check found data drift",
+                extra={
+                    "qdrant_docs": result.qdrant.documents,
+                    "postgresql_docs": result.postgresql.documents,
+                    "missing_in_postgresql": len(result.missing_in_postgresql),
+                    "missing_in_qdrant": len(result.missing_in_qdrant),
+                },
+            )
+
+        return result.model_dump_json(indent=2)
+
+    except Exception as e:
+        logger.error(f"Database health check failed: {e}", exc_info=True)
+        return json.dumps(
+            {
+                "error": f"Health check failed: {e}",
+                "is_synchronized": False,
+                "recommendations": ["Check database connectivity"],
+            },
+            indent=2,
+        )
 
 
 async def start_mcp_with_scheduler() -> None:

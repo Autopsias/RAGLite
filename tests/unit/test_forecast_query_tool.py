@@ -419,7 +419,8 @@ class TestGetFinancialForecast:
         assert response.forecast[0].value == 150.0
         assert response.forecast[0].lower == 140.0
         assert response.forecast[0].upper == 160.0
-        assert "Prophet model trained on 8 quarters" in response.basis
+        # Story 6.11: Basis format updated to include model type and regressor info
+        assert "8 quarters" in response.basis
         assert len(response.source_documents) == 2
 
     @pytest.mark.asyncio

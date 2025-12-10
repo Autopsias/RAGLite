@@ -36,6 +36,7 @@ class TestAccuracyTestRunner:
         assert "--verbose" in result.stdout
         assert "--output" in result.stdout
 
+    @pytest.mark.slow  # Runs subprocess that takes 6-8 minutes
     @pytest.mark.priority("P1")
     @pytest.mark.timeout(600)  # 10 minutes - subprocess needs 9 min + overhead
     def test_subset_option(self, session_ingested_collection):
@@ -54,6 +55,7 @@ class TestAccuracyTestRunner:
             "Running 3 queries" in result.stdout or "Selected random subset of 3" in result.stdout
         )
 
+    @pytest.mark.slow  # Runs subprocess that takes 10-12 minutes
     @pytest.mark.priority("P1")
     @pytest.mark.timeout(900)  # 15 minutes - subprocess needs 14 min + overhead
     def test_category_filter(self, session_ingested_collection):
@@ -75,6 +77,7 @@ class TestAccuracyTestRunner:
         assert result.returncode in [0, 1]
         assert "cost_analysis" in result.stdout or "Filtered to" in result.stdout
 
+    @pytest.mark.slow  # Runs subprocess that takes 3-5 minutes
     @pytest.mark.priority("P1")
     @pytest.mark.timeout(0)  # Disable pytest-timeout - subprocess has its own 300s timeout
     def test_output_file_generation(self, tmp_path, session_ingested_collection):
@@ -104,6 +107,7 @@ class TestAccuracyTestRunner:
             assert "results" in data
             assert "timestamp" in data
 
+    @pytest.mark.slow  # Runs subprocess that takes 4-6 minutes
     @pytest.mark.priority("P1")
     @pytest.mark.timeout(480)  # 8 minutes - subprocess needs 6 min + overhead
     def test_verbose_output(self, session_ingested_collection):
@@ -145,6 +149,7 @@ class TestDailyAccuracyCheck:
         assert "--subset" in result.stdout
         assert "--show-trend" in result.stdout
 
+    @pytest.mark.slow  # Runs subprocess that takes 10-12 minutes
     @pytest.mark.priority("P1")
     @pytest.mark.timeout(900)  # 15 minutes - subprocess needs 14 min + overhead
     def test_daily_check_execution(self, session_ingested_collection):
@@ -161,6 +166,7 @@ class TestDailyAccuracyCheck:
         assert "DAILY CHECK RESULTS" in result.stdout
         assert "Retrieval Accuracy" in result.stdout
 
+    @pytest.mark.slow  # Runs subprocess that takes 6-8 minutes
     @pytest.mark.priority("P1")
     @pytest.mark.timeout(600)  # 10 minutes - subprocess needs 9 min + overhead
     def test_tracking_log_created(self, session_ingested_collection):
@@ -229,6 +235,7 @@ class TestAccuracyCalculations:
         assert "Attribution Accuracy:" in result.stdout
         assert "%" in result.stdout
 
+    @pytest.mark.slow  # Runs subprocess that takes 10-12 minutes
     @pytest.mark.priority("P0")
     @pytest.mark.timeout(900)  # 15 minutes - subprocess needs 14 min + overhead
     @pytest.mark.preserve_collection  # Read-only test - runs accuracy script
@@ -250,6 +257,7 @@ class TestAccuracyCalculations:
 class TestNFRValidation:
     """Test NFR (Non-Functional Requirements) validation."""
 
+    @pytest.mark.slow  # Runs subprocess that takes 10-12 minutes
     @pytest.mark.priority("P0")
     @pytest.mark.timeout(900)  # 15 minutes - subprocess needs 9 min + overhead
     @pytest.mark.preserve_collection  # Read-only test - runs accuracy script
@@ -267,6 +275,7 @@ class TestNFRValidation:
         assert "NFR" in result.stdout or "NFR6" in result.stdout
         assert "90%" in result.stdout or "retrieval" in result.stdout.lower()
 
+    @pytest.mark.slow  # Runs subprocess that takes 6-8 minutes
     @pytest.mark.priority("P1")
     @pytest.mark.timeout(600)  # 10 minutes - subprocess needs 5 min + overhead
     @pytest.mark.preserve_collection  # Read-only test - runs accuracy script
