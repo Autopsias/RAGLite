@@ -1872,6 +1872,7 @@ def _get_catboost_class() -> type[CatBoostRegressor]:
 
     Story 6.12 AC1: Lazy-load CatBoost to avoid import penalties.
     Story 6.12 Issue #7 fix: Graceful handling if CatBoost not installed.
+    Story 6.12 CI fix: Add __sklearn_tags__ compatibility for scikit-learn 1.7+.
 
     Returns:
         CatBoostRegressor class from catboost library
@@ -1883,6 +1884,26 @@ def _get_catboost_class() -> type[CatBoostRegressor]:
     if _catboost_class is None:
         try:
             from catboost import CatBoostRegressor
+
+            # Fix sklearn 1.7+ compatibility: CatBoostRegressor lacks __sklearn_tags__
+            # This prevents deprecation warnings and ensures future compatibility
+            if not hasattr(CatBoostRegressor, "__sklearn_tags__"):
+                from sklearn.base import BaseEstimator
+
+                # Copy the __sklearn_tags__ implementation from BaseEstimator
+                CatBoostRegressor.__sklearn_tags__ = BaseEstimator.__sklearn_tags__
+
+                # Also patch __init__ to set __sklearn_tags__ on instances
+                # Wrap __init__ to add __sklearn_tags__ after initialization
+                original_init = CatBoostRegressor.__init__
+
+                def init_wrapper(*args, **kwargs):  # type: ignore[no-untyped-def]
+                    instance = original_init(*args, **kwargs)
+                    if not hasattr(instance, "__sklearn_tags__"):
+                        instance.__sklearn_tags__ = BaseEstimator.__sklearn_tags__(instance)
+                    return instance
+
+                CatBoostRegressor.__init__ = classmethod(init_wrapper)
 
             _catboost_class = CatBoostRegressor
         except ImportError as e:

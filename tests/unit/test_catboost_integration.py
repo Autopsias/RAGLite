@@ -520,8 +520,7 @@ class TestCalculateBacktestWeightsWithProphet:
             points.append(TimeSeriesPoint(date=d, value=value))
 
         return TimeSeriesData(
-            metric="test_metric",
-            unit="units",
+            metric_name="test_metric",
             points=points,
         )
 
