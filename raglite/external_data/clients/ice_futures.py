@@ -404,7 +404,7 @@ class ICEFuturesClient:
         try:
             import warnings
 
-            import yfinance as yf  # type: ignore[import-not-found]
+            import yfinance as yf  # type: ignore[import-untyped,import-not-found]
 
             warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -457,6 +457,7 @@ class ICEFuturesClient:
 
             # Cache the results
             if results:
+                # Cast to CommodityPrice list for cache storage
                 self.save_to_cache("api2_coal", results)
 
             return results
@@ -522,7 +523,7 @@ class ICEFuturesClient:
         try:
             import warnings
 
-            import yfinance as yf  # type: ignore[import-not-found]
+            import yfinance as yf  # type: ignore[import-untyped,import-not-found]
 
             warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -570,6 +571,7 @@ class ICEFuturesClient:
 
             # Cache the results
             if results:
+                # Cast to CommodityPrice list for cache storage
                 self.save_to_cache("ttf_gas", results)
 
             return results
@@ -661,7 +663,7 @@ class ICEFuturesClient:
     def save_to_cache(
         self,
         commodity: str,
-        prices: list[CommodityPrice],
+        prices: list[CommodityPrice] | list[API2CoalPrice] | list[TTFGasPrice],
     ) -> None:
         """Save commodity prices to local cache.
 

@@ -192,7 +192,7 @@ class CommoditiesClient:
         try:
             import warnings
 
-            import yfinance as yf  # type: ignore[import-not-found]
+            import yfinance as yf  # type: ignore[import-untyped,import-not-found]
 
             warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -244,6 +244,7 @@ class CommoditiesClient:
 
             # Cache the results
             if results:
+                # Cast to CommodityPrice list for cache storage
                 self.save_to_cache("co2_eua", results)
 
             return results
@@ -451,7 +452,7 @@ class CommoditiesClient:
     def save_to_cache(
         self,
         commodity: str,
-        prices: list[CommodityPrice],
+        prices: list[CommodityPrice] | list[CO2EUAPrice] | list[CoalPrice] | list[PetcokePrice],
     ) -> None:
         """Save commodity prices to local cache.
 

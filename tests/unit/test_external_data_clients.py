@@ -2056,15 +2056,17 @@ class TestCommoditiesClientAdditional:
         """Test CO2 prices fallback on API failure."""
         import pandas as pd
 
+        # Mock yfinance module at sys.modules level for dynamic imports
+        mock_yfinance = MagicMock()
+        mock_yfinance.download = MagicMock(return_value=pd.DataFrame())
+
         with patch("httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.get = AsyncMock(
                 side_effect=httpx.TimeoutException("timeout")
             )
 
-            # Story 6.10: Also mock yfinance to ensure all API paths fail
-            with patch("yfinance.download") as mock_yf:
-                mock_yf.return_value = pd.DataFrame()  # Empty DataFrame triggers fallback
-
+            # Story 6.10: Mock yfinance at module level to handle dynamic import
+            with patch.dict("sys.modules", {"yfinance": mock_yfinance}):
                 with patch("asyncio.sleep", new_callable=AsyncMock):
                     result = await client.fetch_co2_prices(
                         start_date=date(2024, 1, 1),
@@ -2753,15 +2755,17 @@ class TestCommoditiesClientCoverage:
         """Test CO2 fetch with all retries exhausted falls back to empty cache."""
         import pandas as pd
 
+        # Mock yfinance module at sys.modules level for dynamic imports
+        mock_yfinance = MagicMock()
+        mock_yfinance.download = MagicMock(return_value=pd.DataFrame())
+
         with patch("httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.get = AsyncMock(
                 side_effect=httpx.TimeoutException("timeout")
             )
 
-            # Story 6.10: Also mock yfinance to ensure all API paths fail
-            with patch("yfinance.download") as mock_yf:
-                mock_yf.return_value = pd.DataFrame()  # Empty DataFrame triggers fallback
-
+            # Story 6.10: Mock yfinance at module level to handle dynamic import
+            with patch.dict("sys.modules", {"yfinance": mock_yfinance}):
                 with patch("asyncio.sleep", new_callable=AsyncMock):
                     # Should fall back to empty cache (tmp_path cache is empty)
                     result = await client.fetch_co2_prices(

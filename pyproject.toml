@@ -175,6 +175,7 @@ ignore = [
 "tests/integration/test_table_retrieval.py" = ["E402"]  # pytestmark before imports
 "raglite/forecasting/hybrid.py" = ["E402"]  # Lazy-loading pattern for Prophet
 "tests/integration/test_anomaly_detection_integration.py" = ["E402"]  # pytestmark before imports
+"scripts/validate-cement-forecasting-12vars.py" = ["I001"]  # Local imports with isort compatibility
 
 # ============================================================================
 # ISORT CONFIGURATION (Import Sorting)

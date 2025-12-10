@@ -760,9 +760,8 @@ async def run_external_only_forecast(
     Returns:
         Tuple of (MAPE, data_points_found, error_message)
     """
-    from raglite.forecasting.models import TimeSeriesData, TimeSeriesPoint
-
     from raglite.forecasting.hybrid import generate_forecast
+    from raglite.forecasting.models import TimeSeriesData, TimeSeriesPoint
 
     end_date = date.today()
     start_date = end_date - timedelta(days=365 * 2)  # 2 years of data

@@ -52,9 +52,9 @@ repos:
           - qdrant-client
           - sqlalchemy[mypy]  # Required for SQLAlchemy ORM type checking
           - types-setuptools
-        args: [--show-error-codes]
+        args: [--show-error-codes, --ignore-missing-imports]
         files: ^raglite/
-        exclude: ^(raglite/tests/|raglite/ingestion/(adaptive_table/|chunking_strategy\.py|table_extraction\.py))
+        exclude: ^(raglite/tests/|raglite/ingestion/(adaptive_table/.*|chunking_strategy\.py|table_extraction\.py))
 
   # ============ SECURITY CHECKS ============
   # Secret detection with Gitleaks

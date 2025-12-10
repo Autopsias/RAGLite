@@ -15,9 +15,9 @@ Supported regressors:
 
 from __future__ import annotations
 
-from typing import Any
 import asyncio
 from datetime import date, timedelta
+from typing import Any
 
 import pandas as pd
 
@@ -61,11 +61,11 @@ async def fetch_single_regressor(
             from raglite.external_data.clients.ice_futures import ICEFuturesClient
 
             client_ttf: ICEFuturesClient = ICEFuturesClient()
-            data: list[Any] = await client_ttf.fetch_ttf_gas(start_date, end_date)  # type: ignore[assignment]
-            if data:
+            ttf_data: list[Any] = await client_ttf.fetch_ttf_gas(start_date, end_date)
+            if ttf_data:
                 series = pd.Series(
-                    [d.price for d in data],
-                    index=pd.DatetimeIndex([d.date for d in data]),
+                    [d.price for d in ttf_data],
+                    index=pd.DatetimeIndex([d.date for d in ttf_data]),
                 )
                 series = series.groupby(level=0).mean()
                 return series
@@ -74,11 +74,11 @@ async def fetch_single_regressor(
             from raglite.external_data.clients.ice_futures import ICEFuturesClient
 
             client_ice: ICEFuturesClient = ICEFuturesClient()
-            data: list[Any] = await client_ice.fetch_api2_coal(start_date, end_date)  # type: ignore[assignment]
-            if data:
+            coal_data: list[Any] = await client_ice.fetch_api2_coal(start_date, end_date)
+            if coal_data:
                 series = pd.Series(
-                    [d.price for d in data],
-                    index=pd.DatetimeIndex([d.date for d in data]),
+                    [d.price for d in coal_data],
+                    index=pd.DatetimeIndex([d.date for d in coal_data]),
                 )
                 series = series.groupby(level=0).mean()
                 return series
@@ -87,11 +87,11 @@ async def fetch_single_regressor(
             from raglite.external_data.clients.eu_oil_bulletin import EUOilBulletinClient
 
             client_oil: EUOilBulletinClient = EUOilBulletinClient()
-            data: list[Any] = await client_oil.fetch_diesel_prices(start_date, end_date)  # type: ignore[assignment]
-            if data:
+            diesel_data: list[Any] = await client_oil.fetch_diesel_prices(start_date, end_date)
+            if diesel_data:
                 series = pd.Series(
-                    [d.price_eur_litre for d in data],
-                    index=pd.DatetimeIndex([d.date for d in data]),
+                    [d.price_eur_litre for d in diesel_data],
+                    index=pd.DatetimeIndex([d.date for d in diesel_data]),
                 )
                 series = series.groupby(level=0).mean()
                 return series
@@ -100,13 +100,13 @@ async def fetch_single_regressor(
             from raglite.external_data.clients.eurostat import EurostatClient
 
             client_eurostat: EurostatClient = EurostatClient()
-            data = await client_eurostat.fetch_electricity_prices(  # type: ignore[assignment]
+            electricity_data = await client_eurostat.fetch_electricity_prices(
                 start_date=start_date, end_date=end_date
             )
-            if data:
+            if electricity_data:
                 series = pd.Series(
-                    [d.price_eur_kwh for d in data],
-                    index=pd.DatetimeIndex([d.date for d in data]),
+                    [d.price_eur_kwh for d in electricity_data],
+                    index=pd.DatetimeIndex([d.date for d in electricity_data]),
                 )
                 series = series.groupby(level=0).mean()
                 return series
@@ -195,7 +195,7 @@ async def fetch_regressors_for_metric(
     for reg_name, result in zip(regressors_to_fetch, results, strict=False):
         if isinstance(result, Exception):
             logger.warning(f"Regressor {reg_name} fetch failed: {result}")
-        elif result is not None and len(result) > 0:
+        elif isinstance(result, pd.Series) and len(result) > 0:
             regressors[reg_name] = result
             logger.info(f"Fetched regressor {reg_name}: {len(result)} points")
         else:
