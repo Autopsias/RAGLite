@@ -69,6 +69,7 @@ jobs:
       POSTGRES_DB: raglite_test
       POSTGRES_USER: raglite
       POSTGRES_PASSWORD: raglite
+      CI: "true"
 
     # Prevent concurrent accuracy validation runs (queue instead of cancel)
     concurrency:

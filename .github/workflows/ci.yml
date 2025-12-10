@@ -38,6 +38,7 @@ concurrency:
 # Global environment variables (inherited by ALL jobs)
 env:
   APP_ENV: test
+  CI: "true"
 
 jobs:
   # ============================================================================
@@ -384,6 +385,7 @@ jobs:
       POSTGRES_USER: raglite_ci
       POSTGRES_PASSWORD: raglite_ci
       TEST_USE_FULL_PDF: "false"
+      CI: "true"
 
     steps:
       - name: Checkout code
@@ -875,6 +877,7 @@ jobs:
       POSTGRES_DB: raglite_ci
       POSTGRES_USER: raglite_ci
       POSTGRES_PASSWORD: raglite_ci
+      CI: "true"
 
     steps:
       - name: Checkout code
@@ -1092,6 +1095,7 @@ jobs:
           POSTGRES_USER: raglite_ci
           POSTGRES_PASSWORD: raglite_ci
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CI: "true"
         run: |
           source ci-venv/bin/activate
 
@@ -1828,6 +1832,7 @@ jobs:
           POSTGRES_USER: raglite_ci
           POSTGRES_PASSWORD: raglite_ci
           TEST_USE_FULL_PDF: "false"
+          CI: "true"
         run: |
           source ci-venv/bin/activate
 
