@@ -1872,7 +1872,10 @@ def _get_catboost_class() -> type[CatBoostRegressor]:
 
     Story 6.12 AC1: Lazy-load CatBoost to avoid import penalties.
     Story 6.12 Issue #7 fix: Graceful handling if CatBoost not installed.
-    Story 6.12 CI fix: Add __sklearn_tags__ compatibility for scikit-learn 1.7+.
+    Story 6.12 CI fix: Add __sklearn_tags__ compatibility for scikit-learn 1.7+ and 1.8+.
+
+    sklearn 1.8+ requires proper Tags object with regressor-specific fields.
+    Fallback to sklearn 1.7.x approach if Tags import fails.
 
     Returns:
         CatBoostRegressor class from catboost library
@@ -1885,15 +1888,50 @@ def _get_catboost_class() -> type[CatBoostRegressor]:
         try:
             from catboost import CatBoostRegressor
 
-            # Fix sklearn 1.7+ compatibility: CatBoostRegressor lacks __sklearn_tags__
-            # This prevents deprecation warnings and ensures future compatibility
+            # Fix sklearn 1.7+ and 1.8+ compatibility: CatBoostRegressor lacks __sklearn_tags__
+            # sklearn 1.8+ requires proper Tags object with regressor-specific fields
             if not hasattr(CatBoostRegressor, "__sklearn_tags__"):
-                from sklearn.base import BaseEstimator
+                try:
+                    # sklearn 1.8+ has Tags class
+                    from sklearn.utils._tags import InputTags, RegressorTags, Tags, TargetTags
 
-                # Copy the __sklearn_tags__ method from BaseEstimator to the class
-                # sklearn 1.7+ calls this method, so we need it available
-                # We only need the class-level attribute - sklearn will call it on the class
-                CatBoostRegressor.__sklearn_tags__ = BaseEstimator.__sklearn_tags__
+                    def __sklearn_tags__(self: CatBoostRegressor) -> Tags:
+                        """Return sklearn tags for CatBoost regressor compatibility."""
+                        return Tags(
+                            estimator_type="regressor",
+                            target_tags=TargetTags(
+                                required=True,
+                                one_d_labels=False,
+                                two_d_labels=False,
+                                positive_only=False,
+                                multi_output=True,
+                                single_output=True,
+                            ),
+                            regressor_tags=RegressorTags(poor_score=False),
+                            input_tags=InputTags(
+                                one_d_array=False,
+                                two_d_array=True,
+                                three_d_array=False,
+                                sparse=False,
+                                categorical=True,  # CatBoost supports categorical
+                                string=False,
+                                dict=False,
+                                positive_only=False,
+                                allow_nan=False,
+                                pairwise=False,
+                            ),
+                            array_api_support=False,
+                            no_validation=False,
+                            non_deterministic=False,
+                            requires_fit=True,
+                        )
+
+                    CatBoostRegressor.__sklearn_tags__ = __sklearn_tags__
+                except ImportError:
+                    # sklearn 1.7.x - fallback to BaseEstimator approach
+                    from sklearn.base import BaseEstimator
+
+                    CatBoostRegressor.__sklearn_tags__ = BaseEstimator.__sklearn_tags__
 
             _catboost_class = CatBoostRegressor
         except ImportError as e:
