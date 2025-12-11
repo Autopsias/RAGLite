@@ -3325,6 +3325,8 @@ async def generate_ensemble_forecast(
     # Build parallel task list
     tasks: list[Any] = []
     task_names: list[str] = []
+    # Story 6.12 AC4: Track failed models for weight re-normalization (initialize early)
+    failed_models: list[str] = []
 
     # Prophet task (async native)
     if "prophet" in models:
@@ -3339,68 +3341,88 @@ async def generate_ensemble_forecast(
         task_names.append("prophet")
 
     # Linear Regression task (sync, via ThreadPoolExecutor)
-    if "linear" in models and len(X.columns) > 0 and X_future is not None:
-        # Create explicit copies for thread safety
-        X_copy = X.copy()
-        y_copy = y.copy()
-        X_future_copy = X_future.copy()
-        feature_names = list(X.columns)
+    if "linear" in models:
+        if len(X.columns) > 0 and X_future is not None:
+            # Create explicit copies for thread safety
+            X_copy = X.copy()
+            y_copy = y.copy()
+            X_future_copy = X_future.copy()
+            feature_names = list(X.columns)
 
-        def run_linear() -> dict[str, Any]:
-            return _fit_and_forecast_linear(
-                X_copy, y_copy, X_future_copy, feature_names, periods_ahead
-            )
+            def run_linear() -> dict[str, Any]:
+                return _fit_and_forecast_linear(
+                    X_copy, y_copy, X_future_copy, feature_names, periods_ahead
+                )
 
-        tasks.append(loop.run_in_executor(_sklearn_executor, run_linear))
-        task_names.append("linear")
+            tasks.append(loop.run_in_executor(_sklearn_executor, run_linear))
+            task_names.append("linear")
+        else:
+            # Story 6.12 AC4: Linear skipped due to no regressors - add to failed_models for weight re-normalization
+            logger.info("Linear model skipped: requires external regressors (len(X.columns)=0)")
+            failed_models.append("linear")
 
     # XGBoost task (sync, via ThreadPoolExecutor)
-    if "xgboost" in models and len(X.columns) > 0 and X_future is not None:
-        # Create explicit copies for thread safety
-        X_copy_xgb = X.copy()
-        y_copy_xgb = y.copy()
-        X_future_copy_xgb = X_future.copy()
-        fast_mode_copy = fast_mode
+    if "xgboost" in models:
+        if len(X.columns) > 0 and X_future is not None:
+            # Create explicit copies for thread safety
+            X_copy_xgb = X.copy()
+            y_copy_xgb = y.copy()
+            X_future_copy_xgb = X_future.copy()
+            fast_mode_copy = fast_mode
 
-        def run_xgboost() -> dict[str, Any]:
-            return _fit_and_forecast_xgboost(
-                X_copy_xgb, y_copy_xgb, X_future_copy_xgb, periods_ahead, fast_mode_copy
-            )
+            def run_xgboost() -> dict[str, Any]:
+                return _fit_and_forecast_xgboost(
+                    X_copy_xgb, y_copy_xgb, X_future_copy_xgb, periods_ahead, fast_mode_copy
+                )
 
-        tasks.append(loop.run_in_executor(_sklearn_executor, run_xgboost))
-        task_names.append("xgboost")
+            tasks.append(loop.run_in_executor(_sklearn_executor, run_xgboost))
+            task_names.append("xgboost")
+        else:
+            # Story 6.12 AC4: XGBoost skipped due to no regressors - add to failed_models for weight re-normalization
+            logger.info("XGBoost model skipped: requires external regressors (len(X.columns)=0)")
+            failed_models.append("xgboost")
 
     # LightGBM task (sync, via ThreadPoolExecutor) - Story 6.8 AC4
-    if "lightgbm" in models and len(X.columns) > 0 and X_future is not None:
-        # Create explicit copies for thread safety
-        X_copy_lgb = X.copy()
-        y_copy_lgb = y.copy()
-        X_future_copy_lgb = X_future.copy()
-        fast_mode_copy_lgb = fast_mode
+    if "lightgbm" in models:
+        if len(X.columns) > 0 and X_future is not None:
+            # Create explicit copies for thread safety
+            X_copy_lgb = X.copy()
+            y_copy_lgb = y.copy()
+            X_future_copy_lgb = X_future.copy()
+            fast_mode_copy_lgb = fast_mode
 
-        def run_lightgbm() -> dict[str, Any]:
-            return _fit_and_forecast_lightgbm(
-                X_copy_lgb, y_copy_lgb, X_future_copy_lgb, periods_ahead, fast_mode_copy_lgb
-            )
+            def run_lightgbm() -> dict[str, Any]:
+                return _fit_and_forecast_lightgbm(
+                    X_copy_lgb, y_copy_lgb, X_future_copy_lgb, periods_ahead, fast_mode_copy_lgb
+                )
 
-        tasks.append(loop.run_in_executor(_sklearn_executor, run_lightgbm))
-        task_names.append("lightgbm")
+            tasks.append(loop.run_in_executor(_sklearn_executor, run_lightgbm))
+            task_names.append("lightgbm")
+        else:
+            # Story 6.12 AC4: LightGBM skipped due to no regressors - add to failed_models for weight re-normalization
+            logger.info("LightGBM model skipped: requires external regressors (len(X.columns)=0)")
+            failed_models.append("lightgbm")
 
     # CatBoost task (sync, via ThreadPoolExecutor) - Story 6.12
-    if "catboost" in models and len(X.columns) > 0 and X_future is not None:
-        # Create explicit copies for thread safety
-        X_copy_cat = X.copy()
-        y_copy_cat = y.copy()
-        X_future_copy_cat = X_future.copy()
-        fast_mode_copy_cat = fast_mode
+    if "catboost" in models:
+        if len(X.columns) > 0 and X_future is not None:
+            # Create explicit copies for thread safety
+            X_copy_cat = X.copy()
+            y_copy_cat = y.copy()
+            X_future_copy_cat = X_future.copy()
+            fast_mode_copy_cat = fast_mode
 
-        def run_catboost() -> dict[str, Any]:
-            return _fit_and_forecast_catboost(
-                X_copy_cat, y_copy_cat, X_future_copy_cat, periods_ahead, fast_mode_copy_cat
-            )
+            def run_catboost() -> dict[str, Any]:
+                return _fit_and_forecast_catboost(
+                    X_copy_cat, y_copy_cat, X_future_copy_cat, periods_ahead, fast_mode_copy_cat
+                )
 
-        tasks.append(loop.run_in_executor(_sklearn_executor, run_catboost))
-        task_names.append("catboost")
+            tasks.append(loop.run_in_executor(_sklearn_executor, run_catboost))
+            task_names.append("catboost")
+        else:
+            # Story 6.12 AC4: CatBoost skipped due to no regressors - add to failed_models for weight re-normalization
+            logger.info("CatBoost model skipped: requires external regressors (len(X.columns)=0)")
+            failed_models.append("catboost")
 
     # Chronos-2 task (sync, via ThreadPoolExecutor) - Story 6.13
     # Chronos-2 works with OR without regressors (pure time-series model)
@@ -3438,7 +3460,6 @@ async def generate_ensemble_forecast(
         task_names.append("tft")
 
     # Execute all models in parallel
-    failed_models: list[str] = []  # Story 6.12 AC4: Track failed models for weight re-normalization
     if tasks:
         logger.info(
             "Running ensemble models in parallel",
