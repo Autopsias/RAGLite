@@ -12,6 +12,7 @@ pytestmark = pytest.mark.integration
 class TestModelRegistryOperations:
     """Test model registry PostgreSQL operations."""
 
+    @pytest.mark.manages_collection_state
     @pytest.mark.asyncio
     async def test_save_and_retrieve_checkpoint(self, external_data_storage):
         """Test saving and retrieving TFT checkpoint from registry."""
@@ -41,6 +42,7 @@ class TestModelRegistryOperations:
         assert active is not None
         assert active.checkpoint_path == f"/tmp/test_checkpoint_{test_id}.ckpt"
 
+    @pytest.mark.manages_collection_state
     @pytest.mark.asyncio
     async def test_checkpoint_history(self, external_data_storage):
         """Test retrieving checkpoint history."""
@@ -71,6 +73,7 @@ class TestModelRegistryOperations:
 class TestSchedulerIntegration:
     """Test TFT training job registration with APScheduler."""
 
+    @pytest.mark.manages_collection_state
     @pytest.mark.asyncio
     async def test_tft_training_job_registered(self):
         """Test that TFT training job is registered in scheduler."""
@@ -106,6 +109,7 @@ class TestSchedulerIntegration:
         # Clean up
         await shutdown_scheduler()
 
+    @pytest.mark.preserve_collection
     @pytest.mark.asyncio
     async def test_tft_training_runs_before_backtest(self):
         """Test that TFT training is scheduled before backtest."""
@@ -125,6 +129,7 @@ class TestSchedulerIntegration:
 class TestEnsembleWithTFT:
     """Test ensemble integration with TFT."""
 
+    @pytest.mark.preserve_collection
     @pytest.mark.asyncio
     async def test_ensemble_includes_tft_in_models(self):
         """Test that TFT is included in ensemble models list."""
@@ -133,6 +138,7 @@ class TestEnsembleWithTFT:
         models = settings.forecasting_models.split(",")
         assert "tft" in models
 
+    @pytest.mark.preserve_collection
     @pytest.mark.asyncio
     async def test_ensemble_has_tft_weight(self):
         """Test that TFT has configured weight."""
@@ -144,6 +150,7 @@ class TestEnsembleWithTFT:
 class TestGracefulDegradation:
     """Test graceful degradation when TFT unavailable."""
 
+    @pytest.mark.preserve_collection
     @pytest.mark.asyncio
     async def test_ensemble_works_without_tft_checkpoint(
         self,
