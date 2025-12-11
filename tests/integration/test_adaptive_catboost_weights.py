@@ -88,4 +88,6 @@ class TestAdaptiveCatBoostWeights:
         assert "prophet" in result.ensemble_models
 
         # Prophet should have weight 1.0 when it's the only model
+        # Note: Weights are re-normalized via handle_model_failure() when CatBoost
+        # is excluded due to missing regressors (Story 6.12 AC4)
         assert result.ensemble_weights.get("prophet", 0) == 1.0
