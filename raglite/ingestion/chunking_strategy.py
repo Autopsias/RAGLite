@@ -32,6 +32,122 @@ except ImportError:
     )
 
 
+class FixedTokenChunker:
+    """Fixed token chunker for consistent 512-token chunks.
+
+    Story 2.3 AC2: Fixed 512-token chunking with token counting.
+    Story 2.8 AC3: Table-aware chunking with row-wise splitting.
+    """
+
+    def __init__(self, embedding_model: Any):
+        """Initialize chunker with embedding model for tokenization.
+
+        Args:
+            embedding_model: Model used for tokenization
+        """
+        self.embedding_model = embedding_model
+
+    def chunk_document(
+        self,
+        text: str,
+        source_document: str,
+        metadata: dict[str, Any] | None = None,
+        chunk_size: int = 512,
+        overlap: int = 50,
+    ) -> list[Chunk]:
+        """Chunk document into fixed-size token chunks.
+
+        Args:
+            text: Document text content
+            source_document: Source document path
+            metadata: Optional metadata dict
+            chunk_size: Target chunk size in tokens (default: 512)
+            overlap: Token overlap between chunks (default: 50)
+
+        Returns:
+            List of Chunk objects with fixed token size
+        """
+        # Import here to avoid circular imports
+        from datetime import datetime
+
+        from raglite.shared.models import DocumentMetadata
+
+        # Create document metadata (required fields only)
+        doc_metadata = DocumentMetadata(
+            filename=source_document,
+            doc_type=metadata.get("document_type", "unknown") if metadata else "unknown",
+            ingestion_timestamp=datetime.now().isoformat(),
+            page_count=metadata.get("total_pages", 1) if metadata else 1,
+        )
+
+        chunks: list[Chunk] = []
+
+        # Tokenize the full text using the embedding model's tokenization
+        # This ensures consistency between chunking and downstream processing
+        try:
+            # Use embedding model for tokenization (preferred for consistency)
+            tokens = self.embedding_model.encode([text], convert_to_tensor=False)
+            if hasattr(tokens[0], "__len__"):
+                # Handle batch encoding result
+                token_ids = list(range(len(tokens[0])))
+            else:
+                # Handle single encoding result
+                token_ids = list(range(len(tokens)))
+
+            # Split text into character positions for chunking
+            # Since embedding models don't provide token-to-text mapping,
+            # we need to approximate chunk boundaries
+            text_chars = list(text)
+            chars_per_token = len(text_chars) / len(token_ids) if token_ids else 1
+
+        except Exception as e:
+            logger.warning(f"Embedding model tokenization failed, using word split: {e}")
+            # Fallback: split by spaces and count
+            words = text.split()
+            token_ids = list(range(len(words)))  # Mock tokens
+            chars_per_token = 1
+
+        # Create chunks with overlap
+        step_size = chunk_size - overlap
+        for i in range(0, len(token_ids), step_size):
+            # Get chunk token IDs
+            chunk_token_ids = token_ids[i : i + chunk_size]
+
+            if not chunk_token_ids:
+                continue
+
+            # Convert token range back to text using character approximation
+            try:
+                start_char = int(i * chars_per_token)
+                end_char = int(min((i + chunk_size) * chars_per_token, len(text)))
+                chunk_text = text[start_char:end_char]
+            except (TypeError, ValueError, IndexError):
+                # Fallback: simple text splitting
+                chunk_text = text[i : i + chunk_size * 10]  # Rough approximation
+
+            # Determine section type
+            section_type = "Text"
+            if metadata and metadata.get("section_type"):
+                section_type = metadata["section_type"]
+
+            # Create chunk
+            import uuid
+
+            chunk = Chunk(
+                chunk_id=str(uuid.uuid4()),
+                content=chunk_text,
+                metadata=doc_metadata,
+                page_number=metadata.get("page_number", 1) if metadata else 1,
+                chunk_index=len(chunks),
+                section_type=section_type,
+                document_type=metadata.get("document_type") if metadata else None,
+                reporting_period=metadata.get("reporting_period") if metadata else None,
+            )
+            chunks.append(chunk)
+
+        return chunks
+
+
 async def chunk_document(
     full_text: str,
     doc_metadata: DocumentMetadata,
@@ -497,21 +613,35 @@ async def chunk_by_docling_items(
 
             # AC2: Preserve sentence boundaries when possible
             # If not at the end, try to end at a sentence boundary
+            # FIXED: Ensure trimming doesn't create chunks that are too small (causes high variance)
             if idx + chunk_size < total_tokens and len(chunk_text) > 50:
                 # Look for sentence-ending punctuation near the end
-                last_50_chars = chunk_text[-50:]
+                last_100_chars = chunk_text[-100:]  # Increased search range
                 sentence_end_positions = [
-                    last_50_chars.rfind(". "),
-                    last_50_chars.rfind("! "),
-                    last_50_chars.rfind("? "),
-                    last_50_chars.rfind(".\n"),
+                    last_100_chars.rfind(". "),
+                    last_100_chars.rfind("! "),
+                    last_100_chars.rfind("? "),
+                    last_100_chars.rfind(".\n"),
                 ]
                 max_pos = max(sentence_end_positions)
 
                 if max_pos > 0:
-                    # Trim to sentence boundary
-                    cut_position = len(chunk_text) - 50 + max_pos + 1
-                    chunk_text = chunk_text[:cut_position].strip()
+                    # Calculate what the trimmed chunk size would be
+                    cut_position = len(chunk_text) - 100 + max_pos + 1
+                    trimmed_text = chunk_text[:cut_position].strip()
+                    trimmed_tokens = len(encoding.encode(trimmed_text))
+
+                    # Only trim if it doesn't make the chunk too small (causes high variance)
+                    # Minimum chunk size should be at least 75% of target (384 tokens for 512 target)
+                    MIN_TRIMMED_SIZE = int(chunk_size * 0.75)
+
+                    if trimmed_tokens >= MIN_TRIMMED_SIZE:
+                        # Safe to trim - chunk remains reasonably sized
+                        chunk_text = trimmed_text
+                    else:
+                        # Trimming would make chunk too small - keep original size
+                        # This prevents creating tiny chunks that increase variance
+                        pass
 
             # Story 2.3 P1-ENHANCE: Accurate page number from provenance mapping
             # Find the page number for this chunk's starting token position
@@ -536,12 +666,25 @@ async def chunk_by_docling_items(
             chunk_index += 1
 
             # Advance with overlap (AC2: 50-token overlap)
-            idx += chunk_size - overlap
+            # IMPROVED: Adjust overlap based on actual chunk size to maintain consistency
+            actual_chunk_tokens = len(encoding.encode(chunk_text))
+
+            # If chunk was trimmed significantly, reduce overlap proportionally
+            # This helps maintain consistent stride and reduces variance
+            if actual_chunk_tokens < chunk_size * 0.85:
+                # Chunk was trimmed - reduce overlap proportionally
+                adjusted_overlap = max(10, int(overlap * (actual_chunk_tokens / chunk_size)))
+                idx += chunk_size - adjusted_overlap
+            else:
+                # Normal chunk - use standard overlap
+                idx += chunk_size - overlap
 
     # Story 2.3 AC6 FIX: Merge tiny text chunks to reduce variance
     # Problem: Sentence boundary trimming creates orphan chunks <100 tokens
     # Solution: Merge tiny chunks with previous chunk (or next if first chunk)
+    # IMPROVED: Also merge chunks that are much smaller than target to reduce variance
     MIN_CHUNK_TOKENS = 100  # Minimum viable chunk size
+    SMALL_CHUNK_THRESHOLD = 256  # Chunks smaller than this are candidates for merging
 
     # Separate table chunks from text chunks for filtering
     table_chunk_count = len(tables)  # Tables were added first
@@ -571,6 +714,39 @@ async def chunk_by_docling_items(
                         "chunk_index": current_chunk.chunk_index,
                     },
                 )
+            # If chunk is small (not tiny) and next chunk exists, consider merging
+            # This helps reduce variance by balancing chunk sizes
+            elif (
+                SMALL_CHUNK_THRESHOLD <= current_token_count < chunk_size * 0.85
+                and i + 1 < len(text_chunks_only)
+                and not merged_text_chunks
+            ):
+                # Small first chunk - merge with next to avoid tiny first chunk
+                next_chunk = text_chunks_only[i + 1]
+                next_token_count = len(encoding.encode(next_chunk.content))
+
+                # Only merge if combined size is reasonable (not too large)
+                combined_tokens = current_token_count + next_token_count
+                if combined_tokens <= chunk_size * 1.25:  # Allow 25% over target
+                    merged_content = current_chunk.content + "\n\n" + next_chunk.content
+                    next_chunk.content = merged_content
+                    next_chunk.word_count = len(merged_content.split())
+                    # Skip current chunk, keep next (which now has merged content)
+                    i += 1
+                    merged_text_chunks.append(next_chunk)
+
+                    logger.debug(
+                        "Merged small first chunk with next chunk",
+                        extra={
+                            "current_tokens": current_token_count,
+                            "next_tokens": next_token_count,
+                            "combined_tokens": combined_tokens,
+                            "chunk_index": current_chunk.chunk_index,
+                        },
+                    )
+                else:
+                    # Combined too large - keep as separate chunks
+                    merged_text_chunks.append(current_chunk)
             # If chunk is tiny and first chunk, try to merge with next
             elif current_token_count < MIN_CHUNK_TOKENS and i + 1 < len(text_chunks_only):
                 # Merge with next chunk

@@ -96,6 +96,7 @@ def calculate_backtest_weights(
     df = df.sort_values("ds").reset_index(drop=True)
 
     # Rolling backtest: train on first 75%, test on last 25%
+    # 0.75 is a standard ML practice for time series train/test splits (AC3 requirement)
     train_size = int(len(df) * 0.75)
     train_df = df.iloc[:train_size]
     test_df = df.iloc[train_size:]
@@ -374,16 +375,34 @@ def get_adaptive_weights(
 def _get_static_weights() -> dict[str, float]:
     """Get static weights from config.py.
 
+    Story 6.13: Added Chronos-2 weight.
+    Story 6.14: Added TFT weight.
+
     Returns:
-        Dict of model weights from settings
+        Dict of model weights from settings, normalized to sum to 1.0
     """
-    return {
+    weights = {
         "prophet": settings.ensemble_weight_prophet,
         "linear": settings.ensemble_weight_linear,
         "xgboost": settings.ensemble_weight_xgboost,
         "lightgbm": settings.ensemble_weight_lightgbm,
         "catboost": settings.ensemble_weight_catboost,
+        "chronos": settings.ensemble_weight_chronos,  # Story 6.13
+        "tft": settings.ensemble_weight_tft,  # Story 6.14
     }
+
+    # Normalize weights to sum to 1.0
+    total = sum(weights.values())
+    if total == 0:
+        # If all weights are 0, assign equal weights
+        n_models = len(weights)
+        if n_models > 0:
+            return dict.fromkeys(weights, 1.0 / n_models)
+        else:
+            return {}
+
+    # Normalize each weight
+    return {k: v / total for k, v in weights.items()}
 
 
 def _adjust_weights_no_regressors(weights: dict[str, float]) -> dict[str, float]:
@@ -447,37 +466,20 @@ def apply_weight_caps(weights: dict[str, float]) -> dict[str, float]:
     return capped
 
 
-def handle_model_failure(
-    weights: dict[str, float],
-    failed_model: str,
-) -> dict[str, float]:
+def handle_model_failure(weights: dict[str, float], failed_model: str) -> dict[str, float]:
     """Handle model failure by removing and re-normalizing weights.
 
-    Story 6.12 AC4: Model fails during forecast → Removed from ensemble,
-    weights re-normalized.
-
-    Args:
-        weights: Current model weights
-        failed_model: Name of failed model to remove
-
-    Returns:
-        Re-normalized weights without failed model
+    Story 6.12 AC4: Model fails → Removed from ensemble, weights re-normalized.
     """
     if failed_model not in weights:
         return weights
-
-    # Remove failed model
     remaining = {k: v for k, v in weights.items() if k != failed_model}
-
     if not remaining:
         logger.error("All models failed, cannot re-normalize")
         return {}
-
-    # Re-normalize
     total = sum(remaining.values())
     if total > 0:
         remaining = {k: v / total for k, v in remaining.items()}
-
     logger.info(
         "Re-normalized weights after model failure",
         extra={"failed_model": failed_model, "remaining": remaining},

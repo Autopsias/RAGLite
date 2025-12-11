@@ -25,8 +25,10 @@ import pandas as pd
 
 if TYPE_CHECKING:
     from catboost import CatBoostRegressor
+    from chronos import BaseChronosPipeline
     from lightgbm import LGBMRegressor
     from prophet import Prophet
+    from pytorch_forecasting import TemporalFusionTransformer
     from sklearn.linear_model import LinearRegression
     from xgboost import XGBRegressor
 
@@ -55,6 +57,129 @@ def _get_prophet_class() -> type[Prophet]:
 
         _prophet_class = Prophet
     return cast("type[Prophet]", _prophet_class)
+
+
+# Story 6.13: Lazy-load Chronos-2 pipeline to avoid import-time penalty
+# Chronos-2 model loading takes 10-30s on first use, cache singleton
+_chronos_pipeline: BaseChronosPipeline | None = None
+
+
+def _get_chronos_pipeline() -> BaseChronosPipeline:
+    """Lazy-load Chronos-2 pipeline on first use.
+
+    Story 6.13 AC1, AC5: Singleton pattern for model caching.
+    Uses amazon/chronos-bolt-small (250x faster than original Chronos).
+
+    Returns:
+        Chronos-2 pipeline instance (cached after first load)
+
+    Raises:
+        ImportError: If chronos-forecasting package not installed
+    """
+    global _chronos_pipeline
+    if _chronos_pipeline is None:
+        try:
+            from chronos import BaseChronosPipeline
+
+            logger.info("Loading Chronos-2 model (first use, 10-30s)...")
+            _chronos_pipeline = BaseChronosPipeline.from_pretrained(
+                "amazon/chronos-bolt-small",
+                device_map="cpu",  # GPU optional via future config
+            )
+            logger.info("Chronos-2 model loaded successfully")
+        except ImportError as e:
+            raise ImportError(
+                "Chronos-2 requires 'chronos-forecasting' package. "
+                "Install with: uv sync --all-groups"
+            ) from e
+    return cast("BaseChronosPipeline", _chronos_pipeline)
+
+
+# Story 6.14: Lazy-load TFT model from checkpoint on first use
+# TFT model loading takes <30s on first use, cache singleton
+_tft_model: TemporalFusionTransformer | None = None
+_tft_checkpoint_path: str | None = None
+
+
+def _get_tft_model() -> TemporalFusionTransformer | None:
+    """Lazy-load TFT model from checkpoint on first use.
+
+    Story 6.14 AC1, AC7: Singleton pattern for model caching.
+    Returns None if no trained checkpoint available (graceful degradation).
+
+    Returns:
+        TFT model instance (cached after first load), or None if unavailable
+
+    Raises:
+        ImportError: If pytorch-forecasting package not installed
+    """
+    global _tft_model, _tft_checkpoint_path
+    if _tft_model is None:
+        try:
+            # Check model_registry for active checkpoint
+            from raglite.external_data.storage import ExternalDataStorage
+            from raglite.shared.database import get_session
+
+            session = get_session()
+            storage = ExternalDataStorage(session)
+            checkpoint_entry = storage.get_active_model("tft")
+
+            if checkpoint_entry is None:
+                logger.warning("No TFT checkpoint available - skipping TFT in ensemble")
+                return None
+
+            from pytorch_forecasting import TemporalFusionTransformer
+
+            # Try to load active checkpoint
+            try:
+                logger.info(f"Loading TFT model from {checkpoint_entry.checkpoint_path}...")
+                _tft_model = TemporalFusionTransformer.load_from_checkpoint(
+                    checkpoint_entry.checkpoint_path
+                )
+                _tft_checkpoint_path = checkpoint_entry.checkpoint_path
+                logger.info("TFT model loaded successfully")
+            except Exception as load_error:
+                # AC5: Fallback to previous checkpoint if current fails
+                logger.warning(
+                    f"Failed to load active checkpoint: {load_error}. Trying previous checkpoints..."
+                )
+
+                # Get checkpoint history (excluding the failed active one)
+                history = storage.get_model_history("tft", limit=5)
+                for prev_checkpoint in history:
+                    if prev_checkpoint.checkpoint_path == checkpoint_entry.checkpoint_path:
+                        continue  # Skip the one that just failed
+
+                    try:
+                        logger.info(
+                            f"Attempting fallback checkpoint: {prev_checkpoint.checkpoint_path}"
+                        )
+                        _tft_model = TemporalFusionTransformer.load_from_checkpoint(
+                            prev_checkpoint.checkpoint_path
+                        )
+                        _tft_checkpoint_path = prev_checkpoint.checkpoint_path
+                        logger.info(
+                            f"Successfully loaded fallback checkpoint (version: {prev_checkpoint.model_version})"
+                        )
+                        break
+                    except Exception as fallback_error:
+                        logger.warning(
+                            f"Fallback checkpoint {prev_checkpoint.checkpoint_path} also failed: {fallback_error}"
+                        )
+                        continue
+
+                if _tft_model is None:
+                    logger.error("All TFT checkpoints failed to load")
+                    return None
+
+        except ImportError as e:
+            raise ImportError(
+                "TFT requires 'pytorch-forecasting' package. Install with: uv sync --all-groups"
+            ) from e
+        except Exception as e:
+            logger.error(f"Failed to load TFT model: {e}")
+            return None
+    return cast("TemporalFusionTransformer | None", _tft_model)
 
 
 from raglite.shared.logging import get_logger
@@ -1288,6 +1413,114 @@ async def fetch_historical_metric(
     raise ValueError(f"Metric '{metric}' not found in external data sources")
 
 
+# =============================================================================
+# Story 6.13: Chronos-2 Cold-Start Forecasting
+# =============================================================================
+
+
+async def _generate_chronos_cold_start_forecast(
+    metric: str,
+    historical_data: TimeSeriesData,
+    periods_ahead: int = 4,
+) -> ForecastResult:
+    """Generate zero-shot forecast using Chronos-2 for cold-start scenarios.
+
+    Story 6.13 AC2: Cold-start path when historical_data < MIN_DATA_POINTS.
+    Uses Chronos-2 foundation model which requires NO training and works
+    with as few as 3 data points.
+
+    Args:
+        metric: Metric name
+        historical_data: Time-series data (3-5 points typically)
+        periods_ahead: Number of periods to forecast
+
+    Returns:
+        ForecastResult with Chronos-2 zero-shot predictions and confidence intervals
+
+    Raises:
+        InsufficientDataError: If <3 data points (absolute minimum for Chronos-2)
+    """
+    import torch
+
+    # Input validation: Check for empty data
+    if historical_data is None or len(historical_data.points) == 0:
+        raise InsufficientDataError("Chronos-2 requires minimum 3 data points. Got 0.")
+
+    if len(historical_data.points) < 3:
+        raise InsufficientDataError(
+            f"Chronos-2 requires minimum 3 data points. Got {len(historical_data.points)}."
+        )
+
+    # Input validation: Check for NaN values
+    values = [float(p.value) for p in historical_data.points]
+    if all(np.isnan(v) for v in values):
+        raise InsufficientDataError(
+            f"Chronos-2 received all-NaN values. Got {len(values)} NaN values."
+        )
+
+    logger.info(
+        "Cold-start path: using Chronos-2 zero-shot",
+        extra={
+            "metric": metric,
+            "data_points": len(historical_data.points),
+            "periods_ahead": periods_ahead,
+        },
+    )
+
+    # Load Chronos-2 pipeline (cached singleton)
+    pipeline = _get_chronos_pipeline()
+
+    # Prepare input tensor from historical data
+    inputs = torch.tensor(values, dtype=torch.float32).unsqueeze(0)  # Shape: (1, T)
+
+    # Generate forecast with prediction intervals
+    # Chronos-Bolt uses simplified API: predict(inputs, prediction_length)
+    forecast = pipeline.predict(
+        inputs=inputs,
+        prediction_length=periods_ahead,
+    )
+
+    # Extract quantiles from forecast tensor
+    # forecast shape: (1, num_samples, prediction_length)
+    forecast_samples = forecast.squeeze(0).numpy()  # Shape: (num_samples, prediction_length)
+
+    # Calculate quantiles: 10% (lower), 50% (median), 90% (upper)
+    lower_bound = np.percentile(forecast_samples, 10, axis=0).tolist()  # 10th percentile
+    median_forecast = np.percentile(forecast_samples, 50, axis=0).tolist()  # Median
+    upper_bound = np.percentile(forecast_samples, 90, axis=0).tolist()  # 90th percentile
+
+    # Generate future dates
+    last_date = historical_data.points[-1].date
+    forecast_dates = pd.date_range(start=last_date, periods=periods_ahead + 1, freq="MS")[1:]
+
+    # Build forecast points with confidence intervals
+    forecast_points = [
+        ForecastPoint(
+            date=forecast_dates[i].to_pydatetime(),
+            value=float(median_forecast[i]),
+            lower=float(lower_bound[i]),
+            upper=float(upper_bound[i]),
+            label=f"{forecast_dates[i].strftime('%b-%y')}",
+        )
+        for i in range(periods_ahead)
+    ]
+
+    return ForecastResult(
+        metric_name=metric,
+        forecast=forecast_points,
+        model_type="chronos-2-zero-shot",
+        confidence_reasoning=(
+            f"Zero-shot forecast using Chronos-2 foundation model. "
+            f"Cold-start scenario with only {len(historical_data.points)} data points. "
+            f"Chronos-2 is pre-trained on diverse time-series datasets and requires no training. "
+            f"Wider confidence intervals reflect limited historical context."
+        ),
+        basis=f"Chronos-2 zero-shot model (cold-start with {len(historical_data.points)} data points)",
+        periods_ahead=periods_ahead,
+        ensemble_weights={"chronos": 1.0},  # 100% Chronos-2 for cold-start
+    )
+
+
 async def generate_forecast(
     metric: str,
     historical_data: TimeSeriesData | None = None,
@@ -1357,10 +1590,17 @@ async def generate_forecast(
             "or use fetch_historical_metric() to load from PostgreSQL."
         )
 
+    # Story 6.13 AC2: Cold-start path for insufficient data
+    # Route to Chronos-2 zero-shot when < MIN_DATA_POINTS
     if len(historical_data.points) < MIN_DATA_POINTS:
-        raise InsufficientDataError(
-            f"Insufficient data for forecast. Minimum {MIN_DATA_POINTS} data points required "
-            f"for reliable predictions. Got {len(historical_data.points)}."
+        logger.info(
+            "Cold-start detected: routing to Chronos-2 zero-shot",
+            extra={"metric": metric, "data_points": len(historical_data.points)},
+        )
+        return await _generate_chronos_cold_start_forecast(
+            metric=metric,
+            historical_data=historical_data,
+            periods_ahead=periods_ahead,
         )
 
     # Step 1: Prepare DataFrame for Prophet (requires 'ds' and 'y' columns)
@@ -2557,6 +2797,243 @@ def _fit_and_forecast_catboost(
     }
 
 
+def _fit_and_forecast_chronos(
+    y: pd.Series,
+    periods_ahead: int,
+    external_regressors: pd.DataFrame | None = None,
+) -> dict[str, Any] | None:
+    """Generate Chronos-2 forecast (for ThreadPoolExecutor).
+
+    Story 6.13 AC3, AC4: Zero-shot forecasting with optional covariates.
+    Chronos-2 requires NO training - it's a pre-trained foundation model.
+
+    Args:
+        y: Target time-series values
+        periods_ahead: Number of periods to forecast
+        external_regressors: Optional external covariates (NOT USED in initial implementation)
+
+    Returns:
+        Dict with 'values' list and 'metrics' dict, or None if inference fails
+    """
+    import time
+
+    import torch
+
+    from raglite.shared.config import settings
+
+    # Input validation: Check for NaN or empty arrays
+    if y is None or len(y) == 0:
+        logger.warning("Chronos-2 received empty input array", extra={"data_points": 0})
+        return None
+
+    if y.isna().all():
+        logger.warning(
+            "Chronos-2 received all-NaN input",
+            extra={"data_points": len(y), "nan_count": y.isna().sum()},
+        )
+        return None
+
+    logger.info(
+        "Starting Chronos-2 inference",
+        extra={
+            "data_points": len(y),
+            "periods_ahead": periods_ahead,
+            "has_regressors": external_regressors is not None,
+        },
+    )
+
+    try:
+        start_time = time.time()
+
+        # Load Chronos-2 pipeline (cached singleton)
+        pipeline = _get_chronos_pipeline()
+
+        # Prepare input tensor
+        inputs = torch.tensor(y.values, dtype=torch.float32).unsqueeze(0)  # Shape: (1, T)
+
+        # Generate forecast (zero-shot, no training)
+        # Chronos-Bolt uses simplified API: predict(inputs, prediction_length)
+        # NOTE: Chronos-2 DOES support covariates in v2.0+, but we use simple
+        # time-series only for ensemble consistency. Future story can add covariates.
+        forecast = pipeline.predict(
+            inputs=inputs,
+            prediction_length=periods_ahead,
+        )
+
+        # Extract median forecast (50th percentile)
+        forecast_samples = forecast.squeeze(0).numpy()  # Shape: (num_samples, prediction_length)
+        median_forecast = np.percentile(forecast_samples, 50, axis=0)
+
+        # Calculate elapsed time
+        elapsed = time.time() - start_time
+
+        # Log completion with timing (AC6: timeout monitoring)
+        logger.info(
+            "Chronos-2 inference completed",
+            extra={
+                "elapsed_seconds": round(elapsed, 3),
+                "periods_ahead": periods_ahead,
+                "timeout_threshold": settings.chronos_inference_timeout,
+            },
+        )
+
+        # Warn if inference exceeded timeout threshold (AC6)
+        if elapsed > settings.chronos_inference_timeout:
+            logger.warning(
+                "Chronos-2 inference exceeded timeout threshold",
+                extra={
+                    "elapsed_seconds": round(elapsed, 3),
+                    "timeout_threshold": settings.chronos_inference_timeout,
+                    "overage_seconds": round(elapsed - settings.chronos_inference_timeout, 3),
+                },
+            )
+
+        # Return format matching other models
+        return {
+            "values": median_forecast.tolist(),
+            "metrics": {},  # Zero-shot model has no training metrics
+        }
+
+    except Exception as e:
+        logger.error(
+            "Chronos-2 inference failed",
+            extra={
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "data_points": len(y),
+                "periods_ahead": periods_ahead,
+            },
+        )
+        return None  # Graceful fallback - None indicates model failure
+
+
+def _fit_and_forecast_tft(
+    y: pd.Series,
+    periods_ahead: int,
+    external_regressors: pd.DataFrame | None = None,
+) -> dict[str, Any] | None:
+    """Generate TFT forecast from pre-trained checkpoint (for ThreadPoolExecutor).
+
+    Story 6.14 AC5, AC7: Offline-trained model inference with graceful degradation.
+    TFT requires OFFLINE TRAINING - checkpoint must exist in model_registry.
+
+    Args:
+        y: Target time-series values
+        periods_ahead: Number of periods to forecast
+        external_regressors: Optional external covariates (for TFT v2)
+
+    Returns:
+        Dict with 'values' list and 'metrics' dict, or None if no checkpoint available
+    """
+    import time
+
+    logger.info(
+        "Starting TFT inference",
+        extra={
+            "data_points": len(y),
+            "periods_ahead": periods_ahead,
+            "has_regressors": external_regressors is not None,
+        },
+    )
+
+    try:
+        start_time = time.time()
+
+        # Load TFT model from checkpoint (cached singleton)
+        # Returns None if no trained checkpoint available (graceful degradation)
+        model = _get_tft_model()
+
+        if model is None:
+            logger.warning("No TFT checkpoint available - skipping TFT forecast")
+            return None
+
+        # Prepare data for TFT inference
+        # TFT requires TimeSeriesDataSet format with time_idx, group_ids, target
+        from pytorch_forecasting import TimeSeriesDataSet
+
+        # Create DataFrame in TFT format
+        df = pd.DataFrame(
+            {
+                "time_idx": range(len(y)),
+                "metric_name": "target_metric",  # Single group for now
+                "value": y.values,
+            }
+        )
+
+        # Create minimal TimeSeriesDataSet for prediction
+        # Use same parameters as training (from TFT_TRAINING_CONFIG)
+        max_encoder_length = 12  # From settings.tft_encoder_length
+        max_prediction_length = periods_ahead
+
+        # Need sufficient history for encoder
+        if len(y) < max_encoder_length:
+            logger.warning(f"Insufficient data for TFT (need {max_encoder_length}, have {len(y)})")
+            return None
+
+        # Create dataset for inference
+        # Use last max_encoder_length points as context
+        dataset = TimeSeriesDataSet(
+            df,
+            time_idx="time_idx",
+            target="value",
+            group_ids=["metric_name"],
+            min_encoder_length=max_encoder_length,
+            max_encoder_length=max_encoder_length,
+            min_prediction_length=1,
+            max_prediction_length=max_prediction_length,
+            add_relative_time_idx=True,
+            add_target_scales=True,
+            add_encoder_length=True,
+            time_varying_known_reals=[],
+            time_varying_unknown_reals=[],
+            static_categoricals=[],
+        )
+
+        # Generate predictions
+        dataloader = dataset.to_dataloader(train=False, batch_size=1, num_workers=0)
+
+        # Get predictions from model
+        predictions = model.predict(dataloader, mode="raw", return_x=False)
+
+        # Extract point forecast (median quantile, index 3 out of 7 quantiles)
+        # TFT outputs quantiles: [0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]
+        if hasattr(predictions, "prediction"):
+            # Raw output format
+            point_forecast = predictions.prediction[0, :, 3].cpu().numpy().tolist()
+        else:
+            # Tensor output
+            point_forecast = predictions[0, :, 3].cpu().numpy().tolist()
+
+        elapsed = time.time() - start_time
+
+        logger.info(
+            "TFT inference complete",
+            extra={
+                "forecast_length": len(point_forecast),
+                "inference_time_ms": elapsed * 1000,
+            },
+        )
+
+        return {
+            "values": point_forecast,
+            "metrics": {
+                "inference_time_ms": elapsed * 1000,
+            },
+        }
+
+    except Exception as e:
+        logger.error(
+            "TFT inference failed",
+            extra={
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "data_points": len(y),
+                "periods_ahead": periods_ahead,
+            },
+        )
+        return None  # Graceful fallback - None indicates model failure
+
+
 def _calculate_weighted_average(
     predictions: dict[str, list[float]],
     weights: dict[str, float],
@@ -2583,12 +3060,21 @@ def _calculate_weighted_average(
         normalized = {m: weights.get(m, 0.0) / total_weight for m in models}
 
     # Weighted sum
-    n_periods = len(next(iter(predictions.values())))
+    if not predictions:
+        # No predictions available, return empty list
+        return []
+
+    # Use the maximum prediction length across all models
+    n_periods = max(len(pred) for pred in predictions.values())
     result = [0.0] * n_periods
 
     for model in models:
-        for i, val in enumerate(predictions[model]):
-            result[i] += val * normalized[model]
+        if model not in predictions:
+            continue  # Skip models that don't have predictions
+        pred_values = predictions[model]
+        # Add predictions for available periods
+        for i in range(len(pred_values)):
+            result[i] += pred_values[i] * normalized[model]
 
     return result
 
@@ -2723,13 +3209,15 @@ async def generate_ensemble_forecast(
     Story 6.4 AC5: Ensemble voting with configurable weights.
     Story 6.4 AC6: Graceful degradation with fallback.
     Story 6.12: Added CatBoost to ensemble.
+    Story 6.13: Added Chronos-2 to ensemble.
+    Story 6.14: Added TFT to ensemble.
 
     Args:
         metric: Metric name (e.g., "cement_demand")
         historical_data: Time-series data from extraction
         external_regressors: Dict of regressor series from PostgreSQL
         periods_ahead: Number of periods to forecast (default: 4)
-        models: Models to use (default: ["prophet", "linear", "xgboost", "lightgbm", "catboost"])
+        models: Models to use (default: ["prophet", "linear", "xgboost", "lightgbm", "catboost", "chronos", "tft"])
         weights: Model weights (default from settings)
         fast_mode: Use fast hyperparameter grid for XGBoost/LightGBM/CatBoost (default: False)
 
@@ -2767,6 +3255,8 @@ async def generate_ensemble_forecast(
                 "xgboost": settings.ensemble_weight_xgboost,
                 "lightgbm": settings.ensemble_weight_lightgbm,  # Story 6.8 AC4
                 "catboost": settings.ensemble_weight_catboost,  # Story 6.12
+                "chronos": settings.ensemble_weight_chronos,  # Story 6.13
+                "tft": settings.ensemble_weight_tft,  # Story 6.14
             }
 
     if fast_mode is False:
@@ -2912,6 +3402,41 @@ async def generate_ensemble_forecast(
         tasks.append(loop.run_in_executor(_sklearn_executor, run_catboost))
         task_names.append("catboost")
 
+    # Chronos-2 task (sync, via ThreadPoolExecutor) - Story 6.13
+    # Chronos-2 works with OR without regressors (pure time-series model)
+    if "chronos" in models:
+        # Create explicit copy for thread safety
+        y_copy_chronos = y.copy()
+        periods_copy_chronos = periods_ahead
+
+        def run_chronos() -> dict[str, Any] | None:
+            return _fit_and_forecast_chronos(
+                y_copy_chronos,
+                periods_copy_chronos,
+                external_regressors=None,  # Not using covariates in v1
+            )
+
+        tasks.append(loop.run_in_executor(_sklearn_executor, run_chronos))
+        task_names.append("chronos")
+
+    # TFT task (sync, via ThreadPoolExecutor) - Story 6.14
+    # TFT works with pre-trained checkpoint from offline training
+    if "tft" in models:
+        # Create explicit copy for thread safety
+        y_copy_tft = y.copy()
+        periods_copy_tft = periods_ahead
+        X_copy_tft = X.copy() if len(X.columns) > 0 else None
+
+        def run_tft() -> dict[str, Any] | None:
+            return _fit_and_forecast_tft(
+                y_copy_tft,
+                periods_copy_tft,
+                external_regressors=X_copy_tft,
+            )
+
+        tasks.append(loop.run_in_executor(_sklearn_executor, run_tft))
+        task_names.append("tft")
+
     # Execute all models in parallel
     failed_models: list[str] = []  # Story 6.12 AC4: Track failed models for weight re-normalization
     if tasks:
@@ -2928,6 +3453,12 @@ async def generate_ensemble_forecast(
                 failed_models.append(name)
                 continue
 
+            # Handle None return (graceful failure from model)
+            if result is None:
+                logger.warning(f"{name.capitalize()} model returned None (graceful failure)")
+                failed_models.append(name)
+                continue
+
             if name == "prophet":
                 prophet_result = cast(ForecastResult, result)
                 predictions["prophet"] = [p.value for p in prophet_result.forecast]
@@ -2935,7 +3466,7 @@ async def generate_ensemble_forecast(
                 successful_models.append("prophet")
                 logger.info("Prophet model succeeded (parallel)")
             else:
-                # Linear, XGBoost, or LightGBM result is a dict with values and metrics
+                # Linear, XGBoost, LightGBM, CatBoost, or Chronos result is a dict with values and metrics
                 result_dict = cast("dict[str, Any]", result)
                 predictions[name] = result_dict["values"]
                 metrics_value = result_dict.get("metrics")
@@ -2943,6 +3474,16 @@ async def generate_ensemble_forecast(
                     metrics_results[name] = cast("dict[str, Any]", metrics_value)
                 successful_models.append(name)
                 logger.info(f"{name.capitalize()} model succeeded (parallel)")
+
+                # Log Chronos-2 ensemble participation (Issue 7)
+                if name == "chronos":
+                    logger.info(
+                        "Chronos-2 participating in ensemble",
+                        extra={
+                            "ensemble_weight": weights.get("chronos", 0.0),
+                            "forecast_periods": len(result_dict["values"]),
+                        },
+                    )
     else:
         logger.info("No models configured to run")
 

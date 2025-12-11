@@ -190,6 +190,10 @@ CATBOOST_HYPERPARAM_GRID = {
 - **Database Pattern:** Follow existing ORM patterns in `raglite/external_data/orm_models.py`
 - **Testing:** Use pytest-asyncio for async tests, pytest-mock for mocking
 
+### Deprecation Notes
+
+Note: `historical_data` parameter in `generate_ensemble_forecast()` is deprecated and will be removed in Epic 7.
+
 ### Key Technical Details
 
 1. **CatBoost Advantages:**

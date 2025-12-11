@@ -26,7 +26,7 @@ Example:
 
 import json
 import time
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from fastmcp import FastMCP
@@ -3081,6 +3081,246 @@ async def manage_model_weights(request: ModelWeightAdminRequest) -> str:
             action=request.action,
             success=False,
             message=f"Error: {e}",
+        ).model_dump_json(indent=2)
+
+
+@mcp.tool()
+async def retrain_forecasting_models(
+    models: str = "tft",
+    force: bool = False,
+) -> str:
+    """Manually trigger model retraining for offline-trained forecasting models.
+
+    Story 6.14 AC6: MCP tool for manual TFT retraining.
+
+    This tool triggers offline training for models that require pre-training
+    (currently only TFT). Models are trained on all available historical data
+    and checkpoints are saved to the model_registry.
+
+    Args:
+        models: Comma-separated list of models to retrain (e.g., "tft", "all")
+                Default: "tft"
+        force: Force retraining even if recent checkpoint exists (<7 days)
+               Default: False
+
+    Returns:
+        JSON string with RetrainResult containing status, metrics, and checkpoint path
+
+    Examples:
+        retrain_forecasting_models(models="tft")
+        -> Trains TFT model if no recent checkpoint
+
+        retrain_forecasting_models(models="tft", force=True)
+        -> Forces TFT retraining regardless of checkpoint age
+
+        retrain_forecasting_models(models="all")
+        -> Trains all models requiring offline training (currently only TFT)
+    """
+    import time
+    from datetime import timedelta
+
+    from raglite.external_data.models import RetrainResult
+    from raglite.external_data.storage import ExternalDataStorage
+
+    logger.info(
+        "Manual model retraining triggered",
+        extra={"models": models, "force": force},
+    )
+
+    start_time = time.time()
+    errors: list[str] = []
+    models_trained: list[str] = []
+    checkpoint_path: str | None = None
+    metrics: dict[str, float | str] = {}
+
+    try:
+        # Parse model list
+        if models == "all":
+            model_list = ["tft"]  # Currently only TFT requires offline training
+        else:
+            model_list = [m.strip() for m in models.split(",")]
+
+        # Validate model names
+        valid_models = {"tft"}
+        invalid = [m for m in model_list if m not in valid_models]
+        if invalid:
+            raise ValueError(f"Invalid model names: {invalid}. Valid options: {valid_models}")
+
+        # Check checkpoint freshness (unless force=True)
+        from raglite.shared.database import get_session
+
+        session = get_session()
+        storage = ExternalDataStorage(session)
+        if not force and "tft" in model_list:
+            active_checkpoint = storage.get_active_model("tft")
+            if active_checkpoint:
+                age = datetime.now(UTC) - active_checkpoint.trained_at
+                if age < timedelta(days=settings.tft_checkpoint_freshness_days):
+                    logger.info(
+                        "TFT checkpoint is recent - skipping training",
+                        extra={
+                            "checkpoint_age_days": age.days,
+                            "freshness_threshold": settings.tft_checkpoint_freshness_days,
+                        },
+                    )
+                    return RetrainResult(
+                        status="skipped",
+                        models_trained=[],
+                        checkpoint_path=active_checkpoint.checkpoint_path,
+                        metrics={"checkpoint_age_days": age.days},
+                        duration_seconds=time.time() - start_time,
+                        errors=[
+                            f"TFT checkpoint is recent ({age.days} days old), use force=True to retrain"
+                        ],
+                    ).model_dump_json(indent=2)
+
+        # Train models
+        if "tft" in model_list:
+            try:
+                from datetime import timedelta
+
+                import pandas as pd
+
+                from raglite.external_data.orm_models import ExternalDataSourceORM
+                from raglite.forecasting.tft_training import (
+                    prepare_tft_dataset,
+                    save_tft_checkpoint,
+                    train_tft_model,
+                )
+                from raglite.shared.database import get_session
+
+                MIN_DATA_POINTS = 24  # 2 years of monthly data minimum
+
+                session = get_session()
+                storage_instance = ExternalDataStorage(session)
+
+                # Get all available sources
+                sources = (
+                    session.query(ExternalDataSourceORM)
+                    .filter(ExternalDataSourceORM.deleted_at.is_(None))
+                    .all()
+                )
+
+                if not sources:
+                    logger.warning("No external data sources found - skipping TFT training")
+                    errors.append("No external data sources available")
+                else:
+                    # Collect all time series data with sufficient history
+                    all_data = []
+                    end_date = date.today()
+                    start_date = end_date - timedelta(days=365 * 3)  # 3 years lookback
+
+                    for source in sources:
+                        try:
+                            metric_names = storage_instance.get_metrics_for_source(
+                                source.source_name
+                            )
+                            for metric in metric_names:
+                                data_points = storage_instance.query_data_range(
+                                    source_name=source.source_name,
+                                    start_date=start_date,
+                                    end_date=end_date,
+                                    metric_name=metric,
+                                )
+
+                                if len(data_points) >= MIN_DATA_POINTS:
+                                    # Convert to DataFrame format
+                                    for idx, point in enumerate(data_points):
+                                        all_data.append(
+                                            {
+                                                "metric_name": f"{source.source_name}_{metric}",
+                                                "date": point.date,
+                                                "value": point.value,
+                                                "time_idx": idx,
+                                            }
+                                        )
+                                    logger.info(
+                                        f"Included metric: {source.source_name}_{metric} ({len(data_points)} points)"
+                                    )
+
+                        except Exception as e:
+                            logger.warning(
+                                f"Failed to fetch data for source {source.source_name}: {e}"
+                            )
+                            continue
+
+                    if not all_data:
+                        logger.warning(
+                            "No metrics with sufficient historical data - skipping TFT training"
+                        )
+                        errors.append("No metrics with sufficient historical data (>=24 months)")
+                    else:
+                        # Convert to DataFrame
+                        df = pd.DataFrame(all_data)
+
+                        # Prepare datasets
+                        logger.info(f"Preparing TFT datasets with {len(df)} total data points")
+                        training_dataset, validation_dataset = prepare_tft_dataset(
+                            df=df,
+                            target_column="value",
+                            group_column="metric_name",
+                            time_column="time_idx",
+                        )
+
+                        # Train model
+                        logger.info("Starting TFT model training")
+                        tft_model, train_metrics = train_tft_model(
+                            training_dataset=training_dataset,
+                            validation_dataset=validation_dataset,
+                        )
+
+                        # Save checkpoint
+                        checkpoint_path = save_tft_checkpoint(
+                            model=tft_model,
+                            metrics=train_metrics,
+                        )
+
+                        models_trained.append("tft")
+                        metrics.update(train_metrics)
+                        metrics["training_samples"] = len(training_dataset)
+                        metrics["validation_samples"] = len(validation_dataset)
+
+                        logger.info(
+                            "TFT training completed successfully",
+                            extra={
+                                "checkpoint_path": checkpoint_path,
+                                "metrics": train_metrics,
+                            },
+                        )
+
+            except Exception as e:
+                logger.error(f"TFT training failed: {e}", exc_info=True)
+                errors.append(f"TFT training failed: {str(e)}")
+
+        # Determine status
+        if len(models_trained) == len(model_list):
+            status = "success"
+        elif len(models_trained) > 0:
+            status = "partial"
+        else:
+            status = "failed"
+
+        duration = time.time() - start_time
+
+        return RetrainResult(
+            status=status,
+            models_trained=models_trained,
+            checkpoint_path=checkpoint_path,
+            metrics=metrics,
+            duration_seconds=duration,
+            errors=errors,
+        ).model_dump_json(indent=2)
+
+    except Exception as e:
+        logger.error(f"Model retraining failed: {e}")
+        duration = time.time() - start_time
+        return RetrainResult(
+            status="failed",
+            models_trained=[],
+            checkpoint_path=None,
+            metrics={},
+            duration_seconds=duration,
+            errors=[str(e)],
         ).model_dump_json(indent=2)
 
 

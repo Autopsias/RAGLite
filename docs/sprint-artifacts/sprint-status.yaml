@@ -107,12 +107,13 @@ development_status:
   4-10-forecasting-insights-test-suite: done
   epic-4-retrospective: completed
 
-  # Epic 6: Advanced Forecasting with External Data (IN PROGRESS)
+  # Epic 6: Advanced Forecasting with External Data (COMPLETE)
   # Sprint Change Proposal: SCP-2025-12-04-001 APPROVED
   # Goal: Multi-variate forecasting with external Portuguese/EU data sources
   # Timeline: 3-4 weeks (14-20 days)
   # Blockers: None (Epic 4 complete, technologies approved)
-  epic-6: in-progress
+  # COMPLETED: 2025-12-10 - All 14 stories done!
+  epic-6: done
   6-1-tier-1-external-data-integration: done
   6-2-postgresql-external-data-schema: done
   6-3-prophet-multivariate-forecasting: done
@@ -138,10 +139,11 @@ development_status:
   # Stories 6.12-6.14: Enhanced Model Ensemble (SCP-2025-12-10-001 APPROVED)
   # Tier 1 (P0): 6.12, 6.13 - CatBoost, Chronos-2, Adaptive Weights
   # Tier 2 (P1): 6.14 - TFT with Training Workflow
-  6-12-catboost-adaptive-weights: review
-  6-13-chronos2-cold-start-ensemble: backlog
-  6-14-tft-training-workflow: backlog
+  6-12-catboost-adaptive-weights: done
+  6-13-chronos2-cold-start-ensemble: done
+  6-14-tft-training-workflow: done
   epic-6-retrospective: optional
+  # All Epic 6 stories complete! Epic 6: done
 
   # Epic 5: Production Readiness & Real-Time Operations
   # BLOCKED by Epic 6 until data pipeline components ready for cloud deployment

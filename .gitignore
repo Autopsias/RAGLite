@@ -47,6 +47,9 @@ qdrant_storage/
 models/
 .cache/
 
+# Keep data/models directory structure
+!data/models/.gitkeep
+
 # Claude Code audio files
 .claude/audio/
 

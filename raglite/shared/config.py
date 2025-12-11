@@ -109,15 +109,32 @@ class Settings(BaseSettings):
     # Story 6.4: Ensemble Forecasting Configuration
     # Story 6.8: Added LightGBM to ensemble (AC4)
     # Story 6.12: Added CatBoost to ensemble
+    # Story 6.13: Added Chronos-2 to ensemble
+    # Story 6.14: Added TFT to ensemble
     forecasting_models: str = (
-        "prophet,linear,xgboost,lightgbm,catboost"  # Comma-separated model list
+        "prophet,linear,xgboost,lightgbm,catboost,chronos,tft"  # Comma-separated model list
     )
-    ensemble_weight_prophet: float = 0.30  # Prophet model weight (30%)
-    ensemble_weight_linear: float = 0.15  # Linear Regression weight (15%)
-    ensemble_weight_xgboost: float = 0.20  # XGBoost weight (20%)
-    ensemble_weight_lightgbm: float = 0.20  # LightGBM weight (20%)
-    ensemble_weight_catboost: float = 0.15  # CatBoost weight (15%) - Story 6.12
+    ensemble_weight_prophet: float = 0.23  # Prophet model weight (23%)
+    ensemble_weight_linear: float = 0.11  # Linear Regression weight (11%)
+    ensemble_weight_xgboost: float = 0.15  # XGBoost weight (15%)
+    ensemble_weight_lightgbm: float = 0.15  # LightGBM weight (15%)
+    ensemble_weight_catboost: float = 0.12  # CatBoost weight (12%) - Story 6.12
+    ensemble_weight_chronos: float = 0.12  # Chronos-2 weight (12%) - Story 6.13
+    ensemble_weight_tft: float = 0.12  # TFT weight (12%) - Story 6.14
     ensemble_fast_mode: bool = False  # Use reduced hyperparameter grid for faster training
+
+    # Story 6.13: Chronos-2 Configuration
+    min_data_points_for_ensemble: int = 6  # Minimum data points for ensemble (cold-start threshold)
+    chronos_model_name: str = "amazon/chronos-bolt-small"  # Chronos-2 model variant
+    chronos_inference_timeout: float = 2.0  # Chronos-2 inference timeout (seconds)
+
+    # Story 6.14: TFT Configuration
+    tft_encoder_length: int = 12  # TFT lookback periods
+    tft_prediction_length: int = 3  # TFT forecast periods
+    tft_max_epochs: int = 50  # TFT training max epochs
+    tft_early_stopping_patience: int = 5  # TFT early stopping patience
+    tft_checkpoint_freshness_days: int = 7  # Force retrain if checkpoint older than this
+    tft_checkpoint_dir: str = "data/models"  # TFT checkpoint storage directory
 
     # Story 6.5: Automated Data Refresh Scheduler Configuration
     scheduler_enabled: bool = True  # Enable/disable the scheduler
@@ -131,6 +148,9 @@ class Settings(BaseSettings):
     refresh_cron_weekly: str = "0 6 * * 0"  # Sunday at 06:00 UTC
     refresh_cron_monthly: str = "0 6 1 * *"  # 1st of month at 06:00 UTC
     refresh_cron_backtest: str = "0 3 * * 0"  # Story 6.12: Sunday at 03:00 UTC (backtest job)
+    refresh_cron_tft_training: str = (
+        "0 2 * * 0"  # Story 6.14: Sunday at 02:00 UTC (TFT training, before backtest)
+    )
 
     @model_validator(mode="after")
     def adjust_for_environment(self) -> Self:

@@ -174,25 +174,32 @@ class TestEnsembleSettings:
     def test_default_ensemble_weights(self) -> None:
         """AC2: Default ensemble weights match story requirements.
 
-        Story 6.8 AC4: Added LightGBM with 20% weight, redistributed others:
-        - Prophet: 35% (was 40%)
-        - Linear: 20% (was 30%)
-        - XGBoost: 20% (was 25%)
-        - LightGBM: 20% (unchanged)
-        - CatBoost: 15% (new in Story 6.12)
+        Story 6.12: Added CatBoost with 12% weight
+        Story 6.13: Added Chronos-2 with 12% weight
+        Story 6.14: Added TFT with 15% weight
+        Current weights (all 7 models = 100%):
+        - Prophet: 23%
+        - Linear: 11%
+        - XGBoost: 15%
+        - LightGBM: 15%
+        - CatBoost: 12%
+        - Chronos: 12%
+        - TFT: 12%
         """
         from raglite.shared.config import Settings
 
         # Create fresh settings instance
         settings = Settings()
 
-        # Story 6.12: Updated weights with CatBoost (5 models total = 100%)
-        assert settings.ensemble_weight_prophet == 0.30
-        assert settings.ensemble_weight_linear == 0.15
-        assert settings.ensemble_weight_xgboost == 0.20
-        assert settings.ensemble_weight_lightgbm == 0.20
-        assert settings.ensemble_weight_catboost == 0.15
-        assert settings.forecasting_models == "prophet,linear,xgboost,lightgbm,catboost"
+        # Story 6.14: Updated weights with all 7 models (sum to 1.0)
+        assert settings.ensemble_weight_prophet == 0.23
+        assert settings.ensemble_weight_linear == 0.11
+        assert settings.ensemble_weight_xgboost == 0.15
+        assert settings.ensemble_weight_lightgbm == 0.15
+        assert settings.ensemble_weight_catboost == 0.12
+        assert settings.ensemble_weight_chronos == 0.12
+        assert settings.ensemble_weight_tft == 0.12
+        assert settings.forecasting_models == "prophet,linear,xgboost,lightgbm,catboost,chronos,tft"
 
     def test_ensemble_weights_from_env(self) -> None:
         """AC2: Ensemble weights can be overridden via environment."""
@@ -325,7 +332,28 @@ class TestGenerateEnsembleForecast:
                         lower=170.0,
                         upper=190.0,
                         label="Q1 2025",
-                    )
+                    ),
+                    ForecastPoint(
+                        date=datetime(2025, 4, 1, tzinfo=UTC),
+                        value=190.0,
+                        lower=180.0,
+                        upper=200.0,
+                        label="Q2 2025",
+                    ),
+                    ForecastPoint(
+                        date=datetime(2025, 7, 1, tzinfo=UTC),
+                        value=200.0,
+                        lower=190.0,
+                        upper=210.0,
+                        label="Q3 2025",
+                    ),
+                    ForecastPoint(
+                        date=datetime(2025, 10, 1, tzinfo=UTC),
+                        value=210.0,
+                        lower=200.0,
+                        upper=220.0,
+                        label="Q4 2025",
+                    ),
                 ],
                 model_type="prophet_univariate",
             )

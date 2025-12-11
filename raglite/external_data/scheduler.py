@@ -281,6 +281,21 @@ def _register_backtest_job(scheduler: AsyncIOScheduler) -> None:
         scheduler: The AsyncIOScheduler instance
     """
     from raglite.forecasting.backtest_job import run_weekly_backtest
+    from raglite.forecasting.tft_training_job import run_weekly_tft_training
+
+    # Story 6.14: TFT training job (Sunday 2am UTC, BEFORE backtest at 3am)
+    tft_training_cron = _parse_cron_expression(settings.refresh_cron_tft_training)
+    scheduler.add_job(
+        run_weekly_tft_training,
+        CronTrigger(**tft_training_cron, timezone=settings.scheduler_timezone),
+        id="tft_training_weekly",
+        name="Weekly TFT Training",
+        replace_existing=True,
+    )
+    logger.info(
+        "Registered weekly TFT training job",
+        extra={"cron": settings.refresh_cron_tft_training},
+    )
 
     backtest_cron = _parse_cron_expression(settings.refresh_cron_backtest)
     scheduler.add_job(

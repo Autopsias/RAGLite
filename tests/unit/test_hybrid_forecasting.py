@@ -107,13 +107,15 @@ class TestInsufficientDataError:
 
     @pytest.mark.asyncio
     async def test_insufficient_data_raises_error(self) -> None:
-        """AC4: Raise InsufficientDataError when <6 data points."""
-        # Only 4 data points (less than minimum 6)
+        """AC4: Raise InsufficientDataError when <3 data points.
+
+        Story 6.13: With Chronos-2 cold-start, we support 3-5 data points.
+        Only <3 data points raises an error.
+        """
+        # Only 2 data points (less than minimum 3 for Chronos-2)
         points = [
             TimeSeriesPoint(date=datetime(2024, 1, 1), value=100.0),
             TimeSeriesPoint(date=datetime(2024, 4, 1), value=110.0),
-            TimeSeriesPoint(date=datetime(2024, 7, 1), value=120.0),
-            TimeSeriesPoint(date=datetime(2024, 10, 1), value=130.0),
         ]
         data = TimeSeriesData(
             metric_name="revenue",
@@ -122,7 +124,7 @@ class TestInsufficientDataError:
             source_documents=["test.pdf"],
         )
 
-        with pytest.raises(InsufficientDataError, match="Minimum 6 data points required"):
+        with pytest.raises(InsufficientDataError, match="minimum 3 data points"):
             await generate_forecast(metric="revenue", historical_data=data)
 
     @pytest.mark.asyncio

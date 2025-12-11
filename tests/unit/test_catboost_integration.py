@@ -372,12 +372,15 @@ class TestConfigSettings:
         """Test all ensemble weights sum to approximately 1.0."""
         from raglite.shared.config import settings
 
+        # Include all 7 models (added chronos and TFT in Stories 6.13 and 6.14)
         total = (
             settings.ensemble_weight_prophet
             + settings.ensemble_weight_linear
             + settings.ensemble_weight_xgboost
             + settings.ensemble_weight_lightgbm
             + settings.ensemble_weight_catboost
+            + settings.ensemble_weight_chronos
+            + settings.ensemble_weight_tft
         )
         assert abs(total - 1.0) < 0.01
 

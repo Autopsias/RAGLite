@@ -34,6 +34,8 @@ from raglite.shared.logging import get_logger
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
+    from raglite.external_data.models import ModelRegistry
+
 logger = get_logger(__name__)
 
 # Freshness thresholds by refresh frequency
@@ -1134,3 +1136,146 @@ class ExternalDataStorage:
             extra={"metric": metric_name or "all", "count": count},
         )
         return count
+
+    # =========================================================================
+    # Story 6.14: Model Registry Operations
+    # =========================================================================
+
+    def save_model_checkpoint(
+        self,
+        model_type: str,
+        model_version: str,
+        checkpoint_path: str,
+        metrics_json: dict[str, float | str | int] | None = None,
+        set_active: bool = True,
+    ) -> ModelRegistry:
+        """Save trained model checkpoint to registry.
+
+        Story 6.14 AC2: Save checkpoint and update registry.
+
+        Args:
+            model_type: Model type (e.g., "tft")
+            model_version: Version string (e.g., "2024-12-10")
+            checkpoint_path: Path to checkpoint file
+            metrics_json: Training/validation metrics
+            set_active: Mark as active checkpoint for this model type
+
+        Returns:
+            ModelRegistry entry
+        """
+        from raglite.external_data.models import ModelRegistry
+        from raglite.external_data.orm_models import ModelRegistryORM
+
+        # Deactivate other checkpoints for this model_type if setting active
+        if set_active:
+            self.session.query(ModelRegistryORM).filter(
+                ModelRegistryORM.model_type == model_type
+            ).update({"is_active": False})
+
+        # Create new checkpoint entry
+        checkpoint_orm = ModelRegistryORM(
+            model_type=model_type,
+            model_version=model_version,
+            checkpoint_path=checkpoint_path,
+            metrics_json=metrics_json,
+            is_active=set_active,
+        )
+
+        self.session.add(checkpoint_orm)
+        self.session.commit()
+        self.session.refresh(checkpoint_orm)
+
+        logger.info(
+            "Saved model checkpoint to registry",
+            extra={
+                "model_type": model_type,
+                "version": model_version,
+                "active": set_active,
+            },
+        )
+
+        return ModelRegistry(
+            id=checkpoint_orm.id,
+            model_type=checkpoint_orm.model_type,
+            model_version=checkpoint_orm.model_version,
+            checkpoint_path=checkpoint_orm.checkpoint_path,
+            metrics_json=checkpoint_orm.metrics_json,
+            trained_at=checkpoint_orm.trained_at,
+            is_active=checkpoint_orm.is_active,
+        )
+
+    def get_active_model(self, model_type: str) -> ModelRegistry | None:
+        """Get active checkpoint for model type.
+
+        Story 6.14 AC2: Retrieve active checkpoint for inference.
+
+        Args:
+            model_type: Model type (e.g., "tft")
+
+        Returns:
+            Active ModelRegistry entry or None
+        """
+        from raglite.external_data.models import ModelRegistry
+        from raglite.external_data.orm_models import ModelRegistryORM
+
+        checkpoint_orm = (
+            self.session.query(ModelRegistryORM)
+            .filter(
+                ModelRegistryORM.model_type == model_type,
+                ModelRegistryORM.is_active == True,  # noqa: E712
+            )
+            .first()
+        )
+
+        if not checkpoint_orm:
+            return None
+
+        return ModelRegistry(
+            id=checkpoint_orm.id,
+            model_type=checkpoint_orm.model_type,
+            model_version=checkpoint_orm.model_version,
+            checkpoint_path=checkpoint_orm.checkpoint_path,
+            metrics_json=checkpoint_orm.metrics_json,
+            trained_at=checkpoint_orm.trained_at,
+            is_active=checkpoint_orm.is_active,
+        )
+
+    def get_model_history(
+        self,
+        model_type: str,
+        limit: int = 10,
+    ) -> list[ModelRegistry]:
+        """Get checkpoint history for model type.
+
+        Story 6.14 AC2: Retrieve checkpoint history for fallback.
+
+        Args:
+            model_type: Model type (e.g., "tft")
+            limit: Maximum number of checkpoints to return
+
+        Returns:
+            List of ModelRegistry entries (newest first)
+        """
+        from raglite.external_data.models import ModelRegistry
+        from raglite.external_data.orm_models import ModelRegistryORM
+
+        checkpoints_orm = (
+            self.session.query(ModelRegistryORM)
+            .filter(ModelRegistryORM.model_type == model_type)
+            .order_by(ModelRegistryORM.trained_at.desc())
+            .limit(limit)
+            .all()
+        )
+
+        return [
+            ModelRegistry(
+                id=c.id,
+                model_type=c.model_type,
+                model_version=c.model_version,
+                checkpoint_path=c.checkpoint_path,
+                metrics_json=c.metrics_json,
+                trained_at=c.trained_at,
+                is_active=c.is_active,
+            )
+            for c in checkpoints_orm
+        ]

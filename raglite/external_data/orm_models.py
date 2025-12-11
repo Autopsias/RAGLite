@@ -2,6 +2,7 @@
 
 Story 6.2: PostgreSQL External Data Schema & Storage
 Story 6.12: Model weights for adaptive ensemble forecasting
+Story 6.14: Model registry for TFT training workflow
 
 NOTE: Pydantic models are in models.py. This file contains SQLAlchemy ORM models.
 """
@@ -144,4 +145,36 @@ class ModelWeightORM(Base):
         return (
             f"<ModelWeightORM(metric_name='{self.metric_name}', "
             f"model_name='{self.model_name}', weight={self.weight})>"
+        )
+
+
+class ModelRegistryORM(Base):
+    """Model registry for trained model checkpoints (SQLAlchemy ORM).
+
+    Story 6.14 AC2: Store trained model checkpoints and metadata.
+
+    Stores checkpoint paths, training metrics, and versioning information
+    for models that require offline training (e.g., TFT).
+    """
+
+    __tablename__ = "model_registry"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    model_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    model_version: Mapped[str] = mapped_column(String(20), nullable=False)
+    checkpoint_path: Mapped[str] = mapped_column(Text, nullable=False)
+    metrics_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    trained_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    __table_args__ = (
+        UniqueConstraint("model_type", "model_version", name="uq_model_type_version"),
+        Index("idx_model_registry_type", "model_type"),
+    )
+
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return (
+            f"<ModelRegistryORM(model_type='{self.model_type}', "
+            f"model_version='{self.model_version}', is_active={self.is_active})>"
         )

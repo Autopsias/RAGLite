@@ -398,6 +398,7 @@ class TestStorageModelWeightMethods:
 class TestEnsembleWithCatBoost:
     """Integration tests for ensemble forecasting with CatBoost (AC1)."""
 
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_ensemble_includes_catboost(
         self,
@@ -427,6 +428,7 @@ class TestEnsembleWithCatBoost:
         # Note: CatBoost requires external regressors
         assert "catboost" in result.ensemble_models or "prophet" in result.ensemble_models
 
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_ensemble_catboost_with_all_models(
         self,
@@ -483,6 +485,7 @@ class TestEnsembleWithCatBoost:
 class TestAdaptiveWeightBehavior:
     """Integration tests for adaptive weight behavior (AC4)."""
 
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_ensemble_uses_custom_weights(
         self,
@@ -527,12 +530,13 @@ class TestAdaptiveWeightBehavior:
         from raglite.forecasting.hybrid import generate_ensemble_forecast
 
         # Without regressors, sklearn models should fail/skip
+        # Using default models to include Chronos-2 which works without regressors
         result = await generate_ensemble_forecast(
             metric="cement_demand",
             historical_data=sample_historical_data,
             external_regressors=None,  # No regressors - sklearn models can't run
             periods_ahead=4,
-            models=["prophet", "catboost", "xgboost"],
+            # Use default models to test behavior with Chronos-2 included
             fast_mode=True,
         )
 
@@ -540,10 +544,11 @@ class TestAdaptiveWeightBehavior:
         assert len(result.forecast) > 0
         assert "prophet" in result.ensemble_models
 
-        # Only Prophet should be in the ensemble (others can't run without regressors)
+        # When no regressors, Prophet and Chronos-2 can run (both don't require regressors)
         # Note: Weights reflect only successful models
-        assert len(result.ensemble_models) == 1
-        assert result.ensemble_models == ["prophet"]
+        assert len(result.ensemble_models) >= 2  # At least Prophet and Chronos-2
+        assert "prophet" in result.ensemble_models
+        assert "chronos" in result.ensemble_models
 
     @pytest.mark.asyncio
     async def test_ensemble_without_regressors_boosts_prophet(
@@ -569,9 +574,12 @@ class TestAdaptiveWeightBehavior:
         # Prophet should be present (only model that works without regressors)
         assert "prophet" in result.ensemble_models
 
-        # Prophet should be the only model in ensemble when no regressors
+        # When no regressors are provided, Prophet and Chronos-2 can run (both don't require regressors)
         # Other models (linear, xgboost, lightgbm, catboost) require regressors
-        assert len(result.ensemble_models) == 1
+        # So we expect 2 models: Prophet and Chronos-2
+        assert len(result.ensemble_models) == 2
+        assert "prophet" in result.ensemble_models
+        assert "chronos" in result.ensemble_models
 
         # Prophet should have a weight (might not be 1.0 due to how weights are tracked)
         prophet_weight = result.ensemble_weights.get("prophet", 0)

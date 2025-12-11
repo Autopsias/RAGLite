@@ -52,6 +52,9 @@ dependencies = [
     "xgboost>=2.1,<3.0",       # Story 6.4: Gradient boosting ensemble
     "lightgbm>=4.5,<5.0",      # Story 6.8: LightGBM ensemble (AC4)
     "catboost>=1.2,<2.0",      # Story 6.12: CatBoost ensemble with adaptive weights
+    "chronos-forecasting>=2.0,<3.0",  # Story 6.13: Chronos-2 cold-start & ensemble member
+    "pytorch-forecasting>=1.0,<2.0",  # Story 6.14: TFT with training workflow
+    "pytorch-lightning>=2.0,<3.0",    # Story 6.14: TFT training dependency
     "sqlalchemy>=2.0,<3.0",    # Story 6.2: ORM for external data storage
     "apscheduler>=3.10,<4.0",  # Story 6.5: Automated data refresh scheduler
     # TODO Epic 3: AWS Strands agentic framework - uncomment when implementing Story 3.1
@@ -272,6 +275,9 @@ module = [
     "xgboost.*",
     "lightgbm.*",
     "catboost.*",
+    "chronos.*",
+    "pytorch_forecasting.*",
+    "pytorch_lightning.*",
     "sklearn.*",
     "apscheduler.*",
 ]

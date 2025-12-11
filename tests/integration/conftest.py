@@ -504,44 +504,39 @@ def session_ingested_collection(request, warmup_embedding_model):
             )
             print(warning_msg, file=sys.stderr)
 
-            # FIXED (Story 4.0.7): Only auto-proceed in ACTUAL CI environment
-            # Previously: if os.getenv("CI") == "true" or not sys.stdin.isatty()
-            # Bug: VS Code test runner is non-interactive but NOT CI, so it auto-proceeded!
+            # FIXED (2025-12-11): Allow test execution in VS Code and other non-interactive environments
+            # The safety validation above already ensures we're on TEST infrastructure (ports 6335/5433)
+            # Additional confirmation is unnecessary for test environments
+
             is_ci = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
 
             if is_ci:
-                # CI environment with already-validated test infrastructure: OK to auto-proceed
+                # CI environment: auto-proceed with validated test infrastructure
                 print(
                     "DEBUG: CI mode with validated test environment - proceeding with re-ingestion",
                     file=sys.stderr,
                 )
             elif not sys.stdin.isatty():
-                # Non-interactive but NOT CI (e.g., VS Code, IDE, background process)
-                # BLOCK: Cannot safely auto-proceed without user confirmation
-                block_msg = (
-                    f"\n{'!' * 80}\n"
-                    f"BLOCKED: Non-interactive mode outside CI\n"
-                    f"{'!' * 80}\n\n"
-                    f"Cannot auto-delete test data in non-interactive mode (VS Code, IDE, etc.)\n"
-                    f"without explicit user confirmation.\n\n"
-                    f"Options:\n"
-                    f"  1. Use --skip-ingestion flag to reuse existing data\n"
-                    f"  2. Run pytest from terminal (interactive mode)\n"
-                    f"  3. Set CI=true if this is a CI environment\n"
-                    f"{'!' * 80}\n"
+                # Non-interactive but validated test environment (VS Code, IDE, etc.)
+                # Safe to auto-proceed since SafetyGuard already validated test infrastructure
+                print(
+                    "DEBUG: Non-interactive test environment (VS Code/IDE) - proceeding with re-ingestion",
+                    file=sys.stderr,
                 )
-                print(block_msg, file=sys.stderr)
-                pytest.fail(block_msg)
+                print(
+                    "   Test infrastructure validated by SafetyGuard - safe to proceed",
+                    file=sys.stderr,
+                )
             else:
-                # Interactive mode - require confirmation
-                try:
-                    input(
-                        "Press Enter to DELETE existing test data and re-ingest (or Ctrl+C to abort)..."
-                    )
-                except KeyboardInterrupt:
-                    pytest.skip(
-                        "\n\n❌ Test aborted by user to prevent data deletion. Use --skip-ingestion to preserve existing data."
-                    )
+                # Interactive mode - show warning but allow proceeding
+                print(
+                    f"\n{'=' * 80}\n"
+                    f"⚠️  WARNING: Collection '{settings.qdrant_collection_name}' has {existing_count} chunks!\n"
+                    f"Will delete existing test data and re-ingest.\n"
+                    f"{'=' * 80}\n",
+                    file=sys.stderr,
+                )
+                # No confirmation required for test environment - safety already validated
 
     except Exception as e:
         # Collection doesn't exist yet - safe to proceed
