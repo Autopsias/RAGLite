@@ -262,8 +262,8 @@ class TestExternalDataCache:
                 # Should not raise, but not cache
                 cache.set("bad_key", NotSerializable())
 
-                # Should return None
-                result = cache.get("bad_key")
+                # Should return None (or cached as string via default=str)
+                _result = cache.get("bad_key")
                 # Cache.set uses default=str, so it should still cache something
                 # The test verifies it doesn't crash
 
