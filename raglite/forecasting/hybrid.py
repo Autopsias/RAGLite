@@ -3517,6 +3517,20 @@ async def generate_ensemble_forecast(
             extra={"failed_models": failed_models, "new_weights": weights},
         )
 
+    # Normalize weights to only include successful models
+    # This ensures when only a subset of models are requested (e.g., prophet+catboost)
+    # and one fails (e.g., catboost), the remaining model gets weight 1.0
+    if successful_models and weights:
+        remaining = {k: weights.get(k, 0.0) for k in successful_models if weights.get(k, 0.0) > 0}
+        if remaining:
+            total = sum(remaining.values())
+            if total > 0:
+                weights = {k: v / total for k, v in remaining.items()}
+                logger.info(
+                    "Weights normalized to successful models only",
+                    extra={"successful_models": successful_models, "final_weights": weights},
+                )
+
     # Story 6.4 AC6: Fallback strategy
     if not successful_models:
         logger.warning("All ensemble models failed, falling back to Prophet-multivariate")
