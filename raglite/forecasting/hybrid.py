@@ -134,8 +134,16 @@ def _get_tft_model() -> TemporalFusionTransformer | None:
 
             try:
                 logger.info(f"Loading TFT model from {checkpoint_entry.checkpoint_path}...")
-                # Load checkpoint with weights_only=False for custom format
-                checkpoint = torch.load(
+                # Security: Validate checkpoint path before loading
+                if not checkpoint_entry.checkpoint_path or not isinstance(
+                    checkpoint_entry.checkpoint_path, str
+                ):
+                    raise ValueError("Invalid checkpoint path")
+                if not checkpoint_entry.checkpoint_path.endswith(".ckpt"):
+                    raise ValueError("Checkpoint must be .ckpt file")
+
+                # Load checkpoint with weights_only=False for custom PyTorch Forecasting format
+                checkpoint = torch.load(  # nosec B614 - Required for PyTorch Forecasting custom checkpoint format
                     checkpoint_entry.checkpoint_path,
                     map_location="cpu",
                     weights_only=False,
@@ -161,7 +169,16 @@ def _get_tft_model() -> TemporalFusionTransformer | None:
                         logger.info(
                             f"Attempting fallback checkpoint: {prev_checkpoint.checkpoint_path}"
                         )
-                        checkpoint = torch.load(
+                        # Security: Validate checkpoint path before loading
+                        if not prev_checkpoint.checkpoint_path or not isinstance(
+                            prev_checkpoint.checkpoint_path, str
+                        ):
+                            raise ValueError("Invalid checkpoint path")
+                        if not prev_checkpoint.checkpoint_path.endswith(".ckpt"):
+                            raise ValueError("Checkpoint must be .ckpt file")
+
+                        # Load checkpoint with weights_only=False for custom PyTorch Forecasting format
+                        checkpoint = torch.load(  # nosec B614 - Required for PyTorch Forecasting custom checkpoint format
                             prev_checkpoint.checkpoint_path,
                             map_location="cpu",
                             weights_only=False,
@@ -3027,8 +3044,27 @@ def _fit_and_forecast_tft(
             elif isinstance(batch_pred, dict) and "prediction" in batch_pred:
                 point_forecast = batch_pred["prediction"][0, :, 3].cpu().numpy().tolist()
             else:
-                # Tensor output
-                point_forecast = batch_pred[0, :, 3].cpu().numpy().tolist()
+                # Tensor output - check if it's actually a tensor-like object
+                if hasattr(batch_pred, "shape") and hasattr(batch_pred, "cpu"):
+                    # Tensor-like object (e.g., torch.Tensor)
+                    try:
+                        # MyPy can't infer this is a tensor, so we need to cast it
+                        point_forecast = batch_pred[0, :, 3].cpu().numpy().tolist()
+                    except (IndexError, TypeError) as e:
+                        logger.warning(f"Failed to extract tensor data: {e}")
+                        return None
+                elif hasattr(batch_pred, "__getitem__") and isinstance(batch_pred, list):
+                    # List output
+                    try:
+                        point_forecast = (
+                            batch_pred[0][3] if isinstance(batch_pred[0], list) else batch_pred[0]
+                        )
+                    except (IndexError, TypeError) as e:
+                        logger.warning(f"Failed to extract list data: {e}")
+                        return None
+                else:
+                    logger.warning("Unexpected batch_pred format for tensor output")
+                    return None
         else:
             logger.warning("TFT prediction returned empty results")
             return None

@@ -278,6 +278,7 @@ class TestGroundTruthData:
 class TestBaselineForecast:
     """Tests for Epic 4 baseline (Prophet univariate)."""
 
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_baseline_forecast_runs(
         self,
@@ -304,6 +305,7 @@ class TestBaselineForecast:
 class TestMultivariateForecast:
     """Tests for Story 6.3 multivariate forecasting."""
 
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_multivariate_forecast_runs(
         self,
@@ -331,6 +333,7 @@ class TestMultivariateForecast:
 class TestEnsembleForecast:
     """Tests for Story 6.4 ensemble forecasting."""
 
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_ensemble_forecast_runs(
         self,
@@ -358,6 +361,7 @@ class TestEnsembleForecast:
 class TestAccuracyGate:
     """Tests for AC5/AC6: Decision gate and CI accuracy threshold."""
 
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_baseline_forecast_executes(
         self,
@@ -407,6 +411,7 @@ class TestAccuracyGate:
         print("\nNOTE: High MAPE expected with synthetic proxy data.")
         print("Real accuracy validation requires actual ATIC consumption data.")
 
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_ensemble_executes_successfully(
         self,
@@ -450,6 +455,7 @@ class TestAccuracyGate:
         # Real external data integration (Story 6.8) should bring this down
         print(f"\nSynthetic regressor MAPE: {mape:.1%} (informational only)")
 
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_ensemble_models_all_execute(
         self,

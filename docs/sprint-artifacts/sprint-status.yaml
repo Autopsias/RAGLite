@@ -1,4 +1,4 @@
-# generated: 2025-12-10
+# generated: 2025-12-12
 # project: RAGLite
 # project_key: raglite-mvp
 # tracking_system: file-system
@@ -11,12 +11,16 @@
 #   - in-progress: Epic actively being worked on
 #   - done: All stories in epic completed
 #
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
 # Story Status:
 #   - backlog: Story only exists in epic file
 #   - drafted: Story file created in stories folder
 #   - ready-for-dev: Draft approved and story context created
 #   - in-progress: Developer actively working on implementation
-#   - review: Ready for code review
+#   - review: Ready for code review (via Dev's code-review workflow)
 #   - done: Story completed
 #
 # Retrospective Status:
@@ -26,10 +30,11 @@
 # WORKFLOW NOTES:
 # ===============
 # - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
 # - SM typically drafts next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
-generated: 2025-12-10
+generated: 2025-12-12
 project: RAGLite
 project_key: raglite-mvp
 tracking_system: file-system
@@ -107,7 +112,7 @@ development_status:
   4-10-forecasting-insights-test-suite: done
   epic-4-retrospective: completed
 
-  # Epic 6: Advanced Forecasting with External Data (REOPENED)
+  # Epic 6: Advanced Forecasting with External Data (IN PROGRESS)
   # Sprint Change Proposal: SCP-2025-12-04-001 APPROVED (original)
   # Sprint Change Proposal: SCP-2025-12-12-001 APPROVED (extension)
   # Goal: Multi-variate forecasting with external Portuguese/EU data sources
@@ -134,7 +139,6 @@ development_status:
   6-9-4-eu-oil-bulletin-fix: done
   6-9-5-basegov-public-procurement-fix: done
   # Story 6.10: Forecasting Data Quality & External Data Reliability
-  # Sub-stories can be developed in parallel
   6-10-forecasting-data-quality: done
   # Story 6.11: MCP Multi-Variate Forecasting & External Data Source Fixes
   6-11-mcp-multivariate-forecasting: done

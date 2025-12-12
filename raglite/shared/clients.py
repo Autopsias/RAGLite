@@ -312,7 +312,28 @@ def get_postgresql_connection() -> Any:
 
     global _postgresql_connection
 
-    if _postgresql_connection is None or _postgresql_connection.closed:
+    # Check if connection needs to be reset/recreated
+    need_new_connection = False
+    if _postgresql_connection is None:
+        need_new_connection = True
+    elif _postgresql_connection.closed:
+        need_new_connection = True
+    else:
+        # Check if connection is in failed transaction state
+        try:
+            # Test connection with a simple query
+            cursor = _postgresql_connection.cursor()
+            cursor.execute("SELECT 1")
+            cursor.close()
+        except (psycopg2.Error, psycopg2.InterfaceError):
+            # Connection is in failed state or has issues
+            need_new_connection = True
+            try:
+                _postgresql_connection.close()
+            except Exception:  # nosec B110 - Cleanup handler: errors are non-critical  # nosec B110 - Cleanup handler: connection close errors are non-critical
+                pass  # Cleanup handler: ignore close errors
+
+    if need_new_connection:
         logger.info(
             "Connecting to PostgreSQL",
             extra={

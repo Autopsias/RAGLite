@@ -13,6 +13,8 @@ import pytest
 
 from raglite.shared.models import ForecastQueryRequest, ForecastQueryResponse
 
+# Import database test fixtures
+
 # Mark all tests as preserve_collection - these are read-only tests
 # that don't modify the Qdrant collection (performance optimization)
 pytestmark = pytest.mark.preserve_collection
@@ -647,6 +649,11 @@ class TestSQLTimeseriesExtraction:
 
     These tests use the real PostgreSQL TEST database (port 5433).
     """
+
+    @pytest.fixture(autouse=True)
+    def setup_test_data(self, test_financial_data):
+        """Ensure test financial data is loaded for all tests in this class."""
+        pass
 
     @pytest.mark.asyncio
     async def test_sql_extraction_with_real_database(self):

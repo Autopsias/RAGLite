@@ -16,11 +16,12 @@ from typing import Any
 import pandas as pd
 
 # Use lightning (unified package) instead of pytorch_lightning for compatibility
+# Import lightning/pytorch_lightning with fallback
 try:
     import lightning.pytorch as pl
     from lightning.pytorch.callbacks import EarlyStopping
     from lightning.pytorch.loggers import CSVLogger
-except ImportError:
+except ImportError:  # pragma: no cover
     import pytorch_lightning as pl
     from pytorch_lightning.callbacks import EarlyStopping
     from pytorch_lightning.loggers import CSVLogger
@@ -105,9 +106,13 @@ async def collect_training_data(
     # Add external regressors if available
     try:
         ecb = ECBClient()
-        euribor_data = await ecb.fetch_euribor_rates()
+        from datetime import date
+
+        euribor_data = await ecb.fetch_euribor(
+            start_date=date(2020, 1, 1), end_date=date(2025, 12, 31), tenor="3M"
+        )
         if euribor_data:
-            euribor_series = pd.Series({d.date: float(d.value) for d in euribor_data})
+            euribor_series = pd.Series({d.date: float(d.rate_pct) for d in euribor_data})
             df["euribor_3m"] = df["date"].map(
                 lambda x: euribor_series.get(x, euribor_series.iloc[-1])
             )
@@ -117,9 +122,11 @@ async def collect_training_data(
 
     try:
         oil = EUOilBulletinClient()
-        diesel_data = await oil.fetch_diesel_prices()
+        diesel_data = await oil.fetch_diesel_prices(
+            start_date=date(2020, 1, 1), end_date=date(2025, 12, 31), country="Portugal"
+        )
         if diesel_data:
-            diesel_series = pd.Series({d.date: float(d.value) for d in diesel_data})
+            diesel_series = pd.Series({d.date: float(d.price_eur_litre) for d in diesel_data})
             df["diesel"] = df["date"].map(lambda x: diesel_series.get(x, diesel_series.iloc[-1]))
     except Exception as e:
         logger.warning(f"Failed to add diesel regressor: {e}")
@@ -267,7 +274,7 @@ def train_tft_model(
     early_stop_callback = EarlyStopping(
         monitor="val_loss",
         min_delta=1e-4,
-        patience=TFT_TRAINING_CONFIG["early_stopping_patience"],
+        patience=int(TFT_TRAINING_CONFIG["early_stopping_patience"]),
         verbose=False,
         mode="min",
     )
@@ -277,9 +284,9 @@ def train_tft_model(
 
     # PyTorch Lightning trainer
     trainer = pl.Trainer(
-        max_epochs=TFT_TRAINING_CONFIG["max_epochs"],
-        accelerator=TFT_TRAINING_CONFIG["accelerator"],
-        gradient_clip_val=TFT_TRAINING_CONFIG["gradient_clip_val"],
+        max_epochs=int(TFT_TRAINING_CONFIG["max_epochs"]),
+        accelerator=str(TFT_TRAINING_CONFIG["accelerator"]),
+        gradient_clip_val=float(TFT_TRAINING_CONFIG["gradient_clip_val"]),
         callbacks=[early_stop_callback],
         logger=csv_logger,
         enable_progress_bar=False,  # Disable for cleaner logs
@@ -317,10 +324,10 @@ def train_tft_model(
     )
 
     # Extract validation metrics
-    val_metrics = {
+    val_metrics: dict[str, float | int | str] = {
         "val_loss": float(trainer.callback_metrics.get("val_loss", 0.0)),
         "train_loss": float(trainer.callback_metrics.get("train_loss", 0.0)),
-        "best_epoch": trainer.current_epoch,
+        "best_epoch": int(trainer.current_epoch),
     }
 
     logger.info(
@@ -397,7 +404,8 @@ def save_tft_checkpoint(
 
     # Save checkpoint using torch.save (TFT models don't have a .save() method)
     checkpoint_path = checkpoint_dir / f"tft_{model_version}.ckpt"
-    torch.save(
+    # Security: Saving trusted model checkpoint - data is generated internally, not user input
+    torch.save(  # nosec B614 - PyTorch save operation with internally generated data only
         {
             "state_dict": model.state_dict(),
             "hparams": model.hparams,

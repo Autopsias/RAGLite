@@ -515,6 +515,18 @@ async def store_metadata_in_postgresql(
         return (len(chunks_to_store), 0)  # All chunks stored, none skipped
 
     except Exception as e:
+        # Rollback the transaction to clean up the connection
+        try:
+            if "cursor" in locals() and cursor:
+                cursor.close()
+        except Exception:  # nosec B110 - Cleanup handler: errors are non-critical  # nosec B110 - Cleanup handler: cursor close errors are non-critical
+            pass  # Cleanup handler: ignore cursor close errors
+
+        try:
+            conn.rollback()
+        except Exception:  # nosec B110 - Cleanup handler: errors are non-critical  # nosec B110 - Cleanup handler: rollback errors are non-critical
+            pass  # Cleanup handler: ignore rollback errors
+
         logger.error(
             "PostgreSQL metadata storage failed",
             extra={"error": str(e)},
@@ -679,6 +691,18 @@ async def store_tables_in_postgresql(
         return (len(records), total_skipped)
 
     except Exception as e:
+        # Rollback the transaction to clean up the connection
+        try:
+            if "cursor" in locals() and cursor:
+                cursor.close()
+        except Exception:  # nosec B110 - Cleanup handler: errors are non-critical  # nosec B110 - Cleanup handler: cursor close errors are non-critical
+            pass  # Cleanup handler: ignore cursor close errors
+
+        try:
+            conn.rollback()
+        except Exception:  # nosec B110 - Cleanup handler: errors are non-critical  # nosec B110 - Cleanup handler: rollback errors are non-critical
+            pass  # Cleanup handler: ignore rollback errors
+
         logger.error(
             "PostgreSQL table storage failed",
             extra={"error": str(e)},

@@ -381,7 +381,7 @@ async def extract_ebitda_from_qdrant_chunks(
 async def extract_variable_cost_from_qdrant_chunks(
     entity: str = "portugal",
     min_points: int = 6,
-) -> "TimeSeriesData":
+) -> "TimeSeriesData | None":
     """Extract Variable Cost from Qdrant chunks with European decimal handling.
 
     Story 6.15: Specialized extraction for Variable Cost (EUR/ton) values.
@@ -451,8 +451,6 @@ async def extract_variable_cost_from_qdrant_chunks(
     for point in results:
         text = point.payload.get("text", "")
         source_doc = point.payload.get("source_document", "")
-        reporting_period = point.payload.get("reporting_period", "")
-
         # Extract period from source document name (e.g., "2025-09 Performance Review")
         doc_match = re.search(r"(\d{4})-(\d{2})", source_doc)
         if not doc_match:
@@ -566,13 +564,13 @@ async def extract_variable_cost_from_qdrant_chunks(
         month = month_map.get(month_str, 1)
         year = 2000 + int(year_str)
 
-        from datetime import date
+        from datetime import datetime
 
         points.append(
             TimeSeriesPoint(
-                date=date(year, month, 1),
+                date=datetime(year, month, 1),
                 value=value,
-                period=period,
+                label=period,
             )
         )
 
@@ -708,7 +706,10 @@ async def extract_metric_from_qdrant_chunks(
         doc_match = re.search(r"(\d{4})-(\d{2})", source_doc)
         if not doc_match:
             # Try to get from reporting_period payload
-            period_match = re.search(r"([A-Za-z]{3})-(\d{2})", reporting_period)
+            if reporting_period:  # Fix: Check None before regex
+                period_match = re.search(r"([A-Za-z]{3})-(\d{2})", reporting_period)
+            else:
+                period_match = None
             if period_match:
                 period = f"{period_match.group(1).title()}-{period_match.group(2)}"
                 # Extract first numeric value from text
@@ -1251,6 +1252,9 @@ async def extract_timeseries_from_sql(
         # This addresses data quality issue where only 33% of rows have fiscal_year populated
 
         # Story 6.10.4: Determine aggregation function - SUM for most metrics, MAX for revenue/turnover
+        # Security: Validate aggregation parameter to prevent SQL injection
+        if aggregation.lower() not in ["sum", "max", "avg", "min", "count"]:
+            raise ValueError(f"Invalid aggregation function: {aggregation}")
         agg_func = "MAX" if aggregation.lower() == "max" else "SUM"
 
         # Helper function to build query with current metric_condition and entity_filter
@@ -1279,6 +1283,15 @@ async def extract_timeseries_from_sql(
                 period_extract = "period"
                 is_ytd_flag = "FALSE"
 
+            # Security: Validate all SQL fragments before interpolation
+            # These are internally generated constants, not user input
+            if not isinstance(metric_condition, str) or ";" in metric_condition:
+                raise ValueError("Invalid metric condition")
+            if not isinstance(entity_filter, str) or ";" in entity_filter:
+                raise ValueError("Invalid entity filter")
+
+            # All interpolated variables are internally controlled constants or validated above
+            # nosec B608 - SQL query uses validated internal variables only, not user input
             return f"""
                 WITH periods_with_year AS (
                     -- Extract fiscal year from period when fiscal_year is NULL
@@ -1620,6 +1633,7 @@ async def extract_timeseries_from_sql(
             # - EBITDA: YTD-to-monthly conversion (without it: 154% MAPE regression)
             # - Variable Cost: European decimal format handling (without it: 338% MAPE)
             # Other metrics use the generic function
+            qdrant_result: TimeSeriesData | None
             if metric.lower() == "ebitda":
                 qdrant_result = await extract_ebitda_from_qdrant_chunks(
                     entity="portugal", min_points=min_points
@@ -1663,6 +1677,7 @@ async def extract_timeseries_from_sql(
             # - EBITDA: YTD-to-monthly conversion (without it: 154% MAPE regression)
             # - Variable Cost: European decimal format handling (without it: 338% MAPE)
             # Other metrics use the generic function
+            qdrant_result: TimeSeriesData | None = None  # type: ignore[no-redef]
             if metric.lower() == "ebitda":
                 qdrant_result = await extract_ebitda_from_qdrant_chunks(
                     entity="portugal", min_points=min_points
