@@ -1,0 +1,10 @@
+@@ -404,7 +404,8 @@
+     metrics = {"val_loss": val_loss, "train_loss": train_loss, "best_epoch": trainer.current_epoch}
+
+     # Save checkpoint
+     checkpoint_path = checkpoint_dir / f"tft_{model_version}.ckpt"
+-    torch.save(
++    # Security: Saving trusted model checkpoint - data is generated internally, not user input
++    torch.save(  # nosec B614 - PyTorch save operation with internally generated data only
+         {
+             "state_dict": model.state_dict(),

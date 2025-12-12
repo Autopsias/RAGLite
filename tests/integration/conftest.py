@@ -47,6 +47,9 @@ if "POSTGRES_PASSWORD" not in os.environ:
 
 print("DEBUG: Test environment variables set before raglite imports", file=sys.stderr)
 
+# Load database fixtures module to make test_financial_data fixture available
+pytest_plugins = ["tests.fixtures.database_fixtures"]
+
 # CRITICAL: Check service availability BEFORE importing any raglite modules
 # Test modules import raglite code which may try to connect at import time
 # This prevents collection-time hangs when services are unavailable
