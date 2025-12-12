@@ -3049,7 +3049,7 @@ def _fit_and_forecast_tft(
                     # Tensor-like object (e.g., torch.Tensor)
                     try:
                         # MyPy can't infer this is a tensor, so we need to cast it
-                        point_forecast = batch_pred[0, :, 3].cpu().numpy().tolist()
+                        point_forecast = batch_pred[0, :, 3].cpu().numpy().tolist()  # type: ignore[call-overload]
                     except (IndexError, TypeError) as e:
                         logger.warning(f"Failed to extract tensor data: {e}")
                         return None

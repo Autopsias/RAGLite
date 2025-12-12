@@ -52,7 +52,7 @@ repos:
           - qdrant-client
           - sqlalchemy[mypy]  # Required for SQLAlchemy ORM type checking
           - types-setuptools
-        args: [--show-error-codes, --ignore-missing-imports]
+        args: [--show-error-codes, --ignore-missing-imports, --no-warn-unused-ignores]
         files: ^raglite/
         exclude: ^(raglite/tests/|raglite/ingestion/(adaptive_table/.*|chunking_strategy\.py|table_extraction\.py))
 

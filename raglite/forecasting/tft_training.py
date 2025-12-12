@@ -22,9 +22,9 @@ try:
     from lightning.pytorch.callbacks import EarlyStopping
     from lightning.pytorch.loggers import CSVLogger
 except ImportError:  # pragma: no cover
-    import pytorch_lightning as pl
-    from pytorch_lightning.callbacks import EarlyStopping
-    from pytorch_lightning.loggers import CSVLogger
+    import pytorch_lightning as pl  # type: ignore[no-redef]
+    from pytorch_lightning.callbacks import EarlyStopping  # type: ignore[no-redef]
+    from pytorch_lightning.loggers import CSVLogger  # type: ignore[no-redef]
 
 from pytorch_forecasting import TemporalFusionTransformer, TimeSeriesDataSet
 
