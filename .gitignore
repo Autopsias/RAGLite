@@ -86,3 +86,4 @@ data/financial_docs_*_bm25.pkl
 data/financial_docs_test_bm25.pkl
 backups/
 validation-*.txt
+lightning_logs/

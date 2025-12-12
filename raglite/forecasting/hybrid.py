@@ -128,14 +128,21 @@ def _get_tft_model() -> TemporalFusionTransformer | None:
                 logger.warning("No TFT checkpoint available - skipping TFT in ensemble")
                 return None
 
+            # Try to load active checkpoint
+            import torch
             from pytorch_forecasting import TemporalFusionTransformer
 
-            # Try to load active checkpoint
             try:
                 logger.info(f"Loading TFT model from {checkpoint_entry.checkpoint_path}...")
-                _tft_model = TemporalFusionTransformer.load_from_checkpoint(
-                    checkpoint_entry.checkpoint_path
+                # Load checkpoint with weights_only=False for custom format
+                checkpoint = torch.load(
+                    checkpoint_entry.checkpoint_path,
+                    map_location="cpu",
+                    weights_only=False,
                 )
+                # Create model from hparams and load state dict
+                _tft_model = TemporalFusionTransformer(**checkpoint["hparams"])
+                _tft_model.load_state_dict(checkpoint["state_dict"])
                 _tft_checkpoint_path = checkpoint_entry.checkpoint_path
                 logger.info("TFT model loaded successfully")
             except Exception as load_error:
@@ -154,9 +161,13 @@ def _get_tft_model() -> TemporalFusionTransformer | None:
                         logger.info(
                             f"Attempting fallback checkpoint: {prev_checkpoint.checkpoint_path}"
                         )
-                        _tft_model = TemporalFusionTransformer.load_from_checkpoint(
-                            prev_checkpoint.checkpoint_path
+                        checkpoint = torch.load(
+                            prev_checkpoint.checkpoint_path,
+                            map_location="cpu",
+                            weights_only=False,
                         )
+                        _tft_model = TemporalFusionTransformer(**checkpoint["hparams"])
+                        _tft_model.load_state_dict(checkpoint["state_dict"])
                         _tft_checkpoint_path = prev_checkpoint.checkpoint_path
                         logger.info(
                             f"Successfully loaded fallback checkpoint (version: {prev_checkpoint.model_version})"
@@ -2992,17 +3003,35 @@ def _fit_and_forecast_tft(
         # Generate predictions
         dataloader = dataset.to_dataloader(train=False, batch_size=1, num_workers=0)
 
-        # Get predictions from model
-        predictions = model.predict(dataloader, mode="raw", return_x=False)
+        # Force CPU inference to avoid MPS memory allocation issues
+        import torch
+
+        device = torch.device("cpu")
+        model = model.to(device)
+        model.eval()
+
+        # Get predictions from model (using Trainer for consistent behavior)
+        import lightning.pytorch as pl
+
+        trainer = pl.Trainer(accelerator="cpu", logger=False, enable_progress_bar=False)
+        predictions = trainer.predict(model, dataloader)
 
         # Extract point forecast (median quantile, index 3 out of 7 quantiles)
         # TFT outputs quantiles: [0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]
-        if hasattr(predictions, "prediction"):
-            # Raw output format
-            point_forecast = predictions.prediction[0, :, 3].cpu().numpy().tolist()
+        # trainer.predict returns a list of batch predictions
+        if predictions and len(predictions) > 0:
+            batch_pred = predictions[0]  # First batch
+            if hasattr(batch_pred, "prediction"):
+                # Raw output format
+                point_forecast = batch_pred.prediction[0, :, 3].cpu().numpy().tolist()
+            elif isinstance(batch_pred, dict) and "prediction" in batch_pred:
+                point_forecast = batch_pred["prediction"][0, :, 3].cpu().numpy().tolist()
+            else:
+                # Tensor output
+                point_forecast = batch_pred[0, :, 3].cpu().numpy().tolist()
         else:
-            # Tensor output
-            point_forecast = predictions[0, :, 3].cpu().numpy().tolist()
+            logger.warning("TFT prediction returned empty results")
+            return None
 
         elapsed = time.time() - start_time
 
@@ -3594,18 +3623,30 @@ async def generate_ensemble_forecast(
                 )
             )
 
-    # Aggregate accuracy metrics
+    # Aggregate accuracy metrics from individual models
     combined_metrics: dict[str, float] = {}
     if metrics_results:
         rmse_values = [
             float(m.get("rmse", 0))
             for m in metrics_results.values()
-            if isinstance(m.get("rmse"), (int, float))
+            if isinstance(m.get("rmse"), (int, float)) and m.get("rmse", 0) > 0
+        ]
+        mae_values = [
+            float(m.get("mae", 0))
+            for m in metrics_results.values()
+            if isinstance(m.get("mae"), (int, float)) and m.get("mae", 0) > 0
+        ]
+        mape_values = [
+            float(m.get("mape", 0))
+            for m in metrics_results.values()
+            if isinstance(m.get("mape"), (int, float)) and m.get("mape", 0) > 0
         ]
         if rmse_values:
             combined_metrics["rmse"] = float(np.mean(rmse_values))
-            combined_metrics["mae"] = 0.0
-            combined_metrics["mape"] = 0.0
+        if mae_values:
+            combined_metrics["mae"] = float(np.mean(mae_values))
+        if mape_values:
+            combined_metrics["mape"] = float(np.mean(mape_values))
 
     # Build ForecastResult
     basis_text = f"Ensemble of {len(successful_models)} models"

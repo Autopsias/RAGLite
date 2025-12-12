@@ -107,13 +107,15 @@ development_status:
   4-10-forecasting-insights-test-suite: done
   epic-4-retrospective: completed
 
-  # Epic 6: Advanced Forecasting with External Data (COMPLETE)
-  # Sprint Change Proposal: SCP-2025-12-04-001 APPROVED
+  # Epic 6: Advanced Forecasting with External Data (REOPENED)
+  # Sprint Change Proposal: SCP-2025-12-04-001 APPROVED (original)
+  # Sprint Change Proposal: SCP-2025-12-12-001 APPROVED (extension)
   # Goal: Multi-variate forecasting with external Portuguese/EU data sources
-  # Timeline: 3-4 weeks (14-20 days)
-  # Blockers: None (Epic 4 complete, technologies approved)
-  # COMPLETED: 2025-12-10 - All 14 stories done!
-  epic-6: done
+  # Extended Goal: Variable Cost MAPE from 41% to <8%, 10/12 variables passing
+  # Timeline: Extended by ~1-2 weeks for accuracy improvements
+  # Stories 6.1-6.14: COMPLETE (2025-12-10)
+  # Stories 6.15-6.23: NEW - Forecasting Accuracy Extension
+  epic-6: in-progress
   6-1-tier-1-external-data-integration: done
   6-2-postgresql-external-data-schema: done
   6-3-prophet-multivariate-forecasting: done
@@ -142,8 +144,20 @@ development_status:
   6-12-catboost-adaptive-weights: done
   6-13-chronos2-cold-start-ensemble: done
   6-14-tft-training-workflow: done
+  # Stories 6.15-6.23: Forecasting Accuracy Extension (SCP-2025-12-12-001)
+  # Track A (parallel): 6.16, 6.17, 6.18, 6.19 (external data sources)
+  # Track B (parallel): 6.15 (entity extraction)
+  # Critical Path: 6.15 → 6.20 → 6.21 → 6.23
+  6-15-entity-specific-variable-cost-extraction: backlog
+  6-16-eurostat-construction-industrial-indicators: backlog
+  6-17-ecb-macroeconomic-indicators: backlog
+  6-18-fix-ine-building-permits-api: backlog
+  6-19-ec-construction-confidence-index: backlog
+  6-20-regressor-config-cement-industry: backlog
+  6-21-unified-validation-script: backlog
+  6-22-mcp-validation-tool-integration: backlog
+  6-23-variable-cost-mape-final-validation: backlog
   epic-6-retrospective: optional
-  # All Epic 6 stories complete! Epic 6: done
 
   # Epic 5: Production Readiness & Real-Time Operations
   # BLOCKED by Epic 6 until data pipeline components ready for cloud deployment

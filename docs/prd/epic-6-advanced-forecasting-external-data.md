@@ -89,15 +89,23 @@ Ricardo provided comprehensive research:
 
 ---
 
-## Epic Success Criteria
+## Epic Success Criteria (Updated 2025-12-12)
 
+**Original Criteria (Stories 6.1-6.14):**
 1. ✅ Tier 1 data sources integrated (11 datasets: INE, BPstat, OMIE, IPMA, etc.)
 2. ✅ Multi-variate Prophet forecasting operational with external regressors
 3. ✅ Model ensemble framework delivering 20-30% accuracy improvement over Epic 4 baseline
 4. ✅ Automated data refresh scheduler operational (daily/weekly/monthly)
 5. ✅ PostgreSQL external data storage schema implemented
-6. ✅ Forecast accuracy validation: ±10% or better (vs Epic 4 ±15%)
+6. ⚠️ Forecast accuracy validation: **Variable Cost MAPE <8%** (currently 41.43%)
 7. ✅ MCP tools for external data queries and multi-model forecasting
+
+**Extended Criteria (Stories 6.15-6.23 - SCP-2025-12-12-001):**
+8. ⚠️ **10/12 variables meeting MAPE targets** (currently 5/8)
+9. 🆕 Entity-specific data extraction for Portugal (filter out Tunisia/Brazil)
+10. 🆕 Cement-industry-specific regressors (construction output, industrial production, GDP, inflation)
+11. 🆕 Unified validation script with all MAPE methods (holdout, walk-forward, CV)
+12. 🆕 MCP validation tools for accuracy monitoring
 
 ---
 
@@ -999,6 +1007,327 @@ assert all(0.05 <= w <= 0.50 for w in weights.values()), "Weight caps violated"
 - **CI tests:** `tests/integration/test_epic6_accuracy_regression.py`
 - **Story 6.10:** `docs/stories/6.10-forecasting-data-quality.md`
 - **Story 6.11:** `docs/stories/6.11-mcp-multivariate-forecasting.md`
+
+---
+
+---
+
+## Story 6.15: Entity-Specific Variable Cost Extraction
+
+**Priority:** P0 (Critical)
+**Estimated Effort:** 4 hours
+**Sprint Change Proposal:** SCP-2025-12-12-001
+
+**User Story:**
+As a system, I want to implement entity detection in Variable Cost extraction to filter Portugal-only data and normalize to EUR/ton, so that forecasting accuracy improves by eliminating multi-entity data mixing.
+
+**Acceptance Criteria:**
+
+1. ✅ **AC1:** Entity detection identifies Portugal/Tunisia/Brazil context with >95% accuracy
+2. ✅ **AC2:** Portugal-only extraction produces <15% coefficient of variation (vs 33% current)
+3. ✅ **AC3:** Values normalized to EUR/ton (range validation: -150 to -350)
+4. ✅ **AC4:** Variable Cost MAPE improves to <25% (from 41%)
+5. ✅ **AC5:** No regression in other metric extraction
+
+**Entity Detection Patterns:**
+```python
+ENTITY_PATTERNS = {
+    "Portugal": ["Portugal", "PT", "Custos Variáveis", "EUR/ton"],
+    "Tunisia": ["Tunisia", "TN", "TND", "Tunisie"],
+    "Brazil": ["Brazil", "BR", "BRL", "Brasil"],
+}
+```
+
+**Files to Modify:**
+- `raglite/forecasting/timeseries_extract.py` - Add entity detection and filtering
+- `tests/integration/test_variable_cost_extraction.py` - New validation tests
+
+**Dependencies:** None
+
+---
+
+## Story 6.16: Add Eurostat Construction & Industrial Indicators
+
+**Priority:** P1 (High)
+**Estimated Effort:** 8 hours
+**Sprint Change Proposal:** SCP-2025-12-12-001
+
+**User Story:**
+As a system, I want to extend the Eurostat client with construction output index and industrial production index, so that forecasting can use high-correlation leading indicators for cement demand.
+
+**Acceptance Criteria:**
+
+1. ✅ **AC1:** `fetch_construction_output()` returns monthly index for Portugal (2020-2025)
+2. ✅ **AC2:** `fetch_industrial_production()` returns monthly index for Portugal
+3. ✅ **AC3:** Both indicators show >0.3 correlation with sales_volume
+4. ✅ **AC4:** Data has <10% missing values over analysis period
+5. ✅ **AC5:** Unit tests verify parsing and data quality
+
+**API Reference:**
+```
+Eurostat SDMX API:
+- sts_copr_m: Construction production index
+- sts_inpr_m: Industrial production index
+
+Example request:
+GET /data/sts_copr_m?geo=PT&unit=I21&s_adj=SCA&nace_r2=F&format=JSON
+```
+
+**Dependencies:** None
+
+---
+
+## Story 6.17: Add ECB Macroeconomic Indicators
+
+**Priority:** P1 (High)
+**Estimated Effort:** 4 hours
+**Sprint Change Proposal:** SCP-2025-12-12-001
+
+**User Story:**
+As a system, I want to extend the ECB client with GDP growth rate and HICP inflation, so that forecasting can use macro indicators that affect construction demand and pricing.
+
+**Acceptance Criteria:**
+
+1. ✅ **AC1:** `fetch_gdp_growth()` returns quarterly YoY growth for Portugal
+2. ✅ **AC2:** `fetch_inflation()` returns monthly HICP for Portugal
+3. ✅ **AC3:** Quarterly GDP interpolated to monthly for regressor alignment
+4. ✅ **AC4:** Unit tests verify ECB SDW parsing
+
+**API Reference:**
+```
+ECB Statistical Data Warehouse:
+- MNA: National accounts (GDP growth)
+- ICP: HICP inflation
+
+Example request:
+GET /data/MNA/Q.Y.PT.W2.S1.S1.B.B1GQ._Z._Z._Z.XDC_R_B1GQ_Y.V.N?format=jsondata
+```
+
+**Dependencies:** None
+
+---
+
+## Story 6.18: Fix INE Building Permits API
+
+**Priority:** P1 (High)
+**Estimated Effort:** 4 hours
+**Sprint Change Proposal:** SCP-2025-12-12-001
+
+**User Story:**
+As a system, I want to fix the INE Building Permits indicator ID (currently returns death statistics) and add Eurostat backup, so that forecasting has access to construction leading indicators.
+
+**Current Bug:**
+```python
+# BROKEN - returns death statistics
+BUILDING_PERMITS_INDICATOR = "0008145"
+
+# FIX - correct indicator
+BUILDING_PERMITS_INDICATOR = "0010099"  # Licenciamento de obras
+```
+
+**Acceptance Criteria:**
+
+1. ✅ **AC1:** INE building permits returns construction data (not death statistics)
+2. ✅ **AC2:** Eurostat building permits added as backup source
+3. ✅ **AC3:** Fallback logic: try INE first, use Eurostat if INE fails
+4. ✅ **AC4:** Validation shows >0.3 correlation with sales_volume
+
+**Dependencies:** None
+
+---
+
+## Story 6.19: Add EC Construction Confidence Index
+
+**Priority:** P2 (Medium)
+**Estimated Effort:** 6 hours
+**Sprint Change Proposal:** SCP-2025-12-12-001
+
+**User Story:**
+As a system, I want to create a new client for European Commission Business Surveys to fetch construction confidence indicator, so that forecasting can use forward-looking sentiment data.
+
+**Acceptance Criteria:**
+
+1. ✅ **AC1:** New `ECBusinessSurveysClient` created
+2. ✅ **AC2:** `fetch_construction_confidence()` returns monthly indicator for Portugal
+3. ✅ **AC3:** Indicator components (order books, employment expectations) available
+4. ✅ **AC4:** Integration test verifies data quality
+
+**Data Model:**
+```python
+@dataclass
+class ConstructionConfidenceData:
+    date: date
+    confidence_index: float  # Balance %, typically -50 to +50
+    order_books: float  # Sub-indicator
+    employment_expectations: float  # Sub-indicator
+    country: str
+```
+
+**Dependencies:** None
+
+---
+
+## Story 6.20: Update Regressor Configuration for Cement Industry
+
+**Priority:** P1 (High)
+**Estimated Effort:** 4 hours
+**Sprint Change Proposal:** SCP-2025-12-12-001
+
+**User Story:**
+As a system, I want to update regressor mappings to use cement-industry-specific indicators instead of generic macro data, so that forecasting uses the most relevant predictors for each variable.
+
+**New Regressor Mappings:**
+```python
+METRIC_REGRESSORS = {
+    # Financial - demand-driven
+    "revenue": ["construction_output", "gdp_growth", "euribor_3m"],
+    "sales_volume": ["construction_output", "building_permits", "gdp_growth"],
+
+    # Costs - energy-driven
+    "variable_cost": ["ttf_gas", "api2_coal", "industrial_production", "diesel"],
+    "electricity_cost": ["eurostat_electricity", "industrial_production"],
+    "thermal_cost": ["api2_coal", "ttf_gas", "industrial_production"],
+
+    # Pricing - mixed drivers
+    "avg_selling_price": ["construction_confidence", "gdp_growth", "inflation"],
+    "capacity_utilization": ["construction_output", "gdp_growth", "industrial_production"],
+}
+```
+
+**Acceptance Criteria:**
+
+1. ✅ **AC1:** All 6 new regressors registered in AVAILABLE_REGRESSORS
+2. ✅ **AC2:** METRIC_REGRESSORS updated with optimal mappings per variable
+3. ✅ **AC3:** Correlation analysis confirms >0.3 correlation for selected regressors
+4. ✅ **AC4:** Variable Cost MAPE improves to <15% with new regressors
+
+**Dependencies:** Stories 6.16, 6.17, 6.18, 6.19
+
+---
+
+## Story 6.21: Unified Validation Script
+
+**Priority:** P1 (High)
+**Estimated Effort:** 8 hours
+**Sprint Change Proposal:** SCP-2025-12-12-001
+
+**User Story:**
+As a developer, I want a single unified validation script that consolidates all MAPE calculation methods and supports all 12 variables, so that accuracy validation is comprehensive and consistent.
+
+**Features:**
+- All MAPE calculation methods (holdout, walk-forward, confidence interval)
+- All 12 cement industry variables
+- All 7 models + ensemble
+- JSON export for programmatic access
+- MCP-compatible output format
+
+**Command Interface:**
+```bash
+# Full validation
+python scripts/validate-forecasting-unified.py --full
+
+# Single variable
+python scripts/validate-forecasting-unified.py --variable variable_cost
+
+# Specific MAPE method
+python scripts/validate-forecasting-unified.py --mape-method walkforward
+
+# Model comparison
+python scripts/validate-forecasting-unified.py --model-comparison
+
+# Export for MCP
+python scripts/validate-forecasting-unified.py --export-json --mcp-format
+```
+
+**Acceptance Criteria:**
+
+1. ✅ **AC1:** Single script validates all 12 variables
+2. ✅ **AC2:** Supports holdout, walk-forward, and CV MAPE methods
+3. ✅ **AC3:** JSON output includes per-model breakdown
+4. ✅ **AC4:** MCP-format output ready for tool integration
+5. ✅ **AC5:** Runtime <10 minutes for full validation
+
+**Dependencies:** Stories 6.15, 6.20
+
+---
+
+## Story 6.22: MCP Validation Tool Integration
+
+**Priority:** P2 (Medium)
+**Estimated Effort:** 6 hours
+**Sprint Change Proposal:** SCP-2025-12-12-001
+
+**User Story:**
+As a user, I want new MCP tools for forecasting validation and regressor management, so that I can monitor accuracy and explore available data sources conversationally.
+
+**New MCP Tools:**
+
+```python
+@mcp.tool()
+async def validate_forecasting_accuracy(
+    metrics: list[str] | None = None,
+    mape_method: str = "holdout",
+    include_model_breakdown: bool = True,
+) -> ValidationResponse:
+    """Run forecasting validation and return accuracy metrics."""
+
+@mcp.tool()
+async def list_available_regressors(
+    metric: str | None = None,
+    include_correlation: bool = True,
+) -> RegressorListResponse:
+    """List external regressors available for forecasting."""
+
+@mcp.tool()
+async def get_regressor_data(
+    regressor: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> RegressorDataResponse:
+    """Fetch specific regressor time series data."""
+```
+
+**Acceptance Criteria:**
+
+1. ✅ **AC1:** `validate_forecasting_accuracy` tool works via MCP
+2. ✅ **AC2:** `list_available_regressors` returns all 11 regressors with status
+3. ✅ **AC3:** `get_regressor_data` fetches live data from APIs
+4. ✅ **AC4:** Enhanced `get_financial_forecast` includes validation metrics
+
+**Dependencies:** Story 6.21
+
+---
+
+## Story 6.23: Variable Cost MAPE Final Validation
+
+**Priority:** P0 (Critical)
+**Estimated Effort:** 4 hours
+**Sprint Change Proposal:** SCP-2025-12-12-001
+
+**User Story:**
+As a developer, I want to run final validation to confirm Variable Cost MAPE meets target after all improvements, so that Epic 6 success criteria are verified.
+
+**Acceptance Criteria:**
+
+1. ✅ **AC1:** Variable Cost MAPE <8% (from 41.43%)
+2. ✅ **AC2:** Data coefficient of variation <15% (from 33%)
+3. ✅ **AC3:** At least 10/12 variables meet their MAPE targets
+4. ✅ **AC4:** Validation script completes in <10 minutes
+5. ✅ **AC5:** All MCP tools functional with new data sources
+
+**Validation Command:**
+```bash
+python scripts/validate-forecasting-unified.py --full --export-json
+```
+
+**Expected Results:**
+
+| Variable | Before | After | Target | Status |
+|----------|--------|-------|--------|--------|
+| Variable Cost | 41.43% | <8% | <8% | PASS |
+| All others | varies | maintains | varies | PASS |
+
+**Dependencies:** All stories 6.15-6.22
 
 ---
 

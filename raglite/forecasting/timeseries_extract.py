@@ -106,6 +106,41 @@ EBITDA_VALUE_THRESHOLDS = {
     "aggregates": 5000,  # €5M+ YTD
 }
 
+# Story 6.15: Qdrant metric_category mapping for fallback extraction
+# Maps user-facing metric names to Qdrant payload.metric_category values
+# Used when SQL extraction fails or returns insufficient data
+METRIC_CATEGORY_MAP = {
+    # Financial metrics
+    "revenue": "Revenue",
+    "turnover": "Revenue",
+    "sales": "Revenue",
+    "ebitda": "EBITDA",
+    # Volume metrics
+    "sales_volume": "Production Volume",
+    "production_volume": "Production Volume",
+    "capacity_utilization": "Production Volume",
+    # Cost metrics
+    "variable_cost": "Operating Expenses",
+    "operating_expenses": "Operating Expenses",
+    "fixed_costs": "Operating Expenses",
+    # Other
+    "cash_flow": "Cash Flow",
+    "capex": "Capital Expenditure",
+}
+
+# Story 6.15: Search text patterns for Qdrant text-based fallback
+# Used when metric_category filter returns no results
+METRIC_SEARCH_PATTERNS = {
+    "revenue": ["Turnover", "Revenue"],
+    "turnover": ["Turnover", "Revenue"],
+    "sales_volume": ["Sales Volumes", "Sales Volume", "Sales kton"],
+    "variable_cost": ["Variable Cost", "Variable Costs"],
+    "capacity_utilization": ["Frequency Ratio", "Capacity Utilization"],
+    "ebitda": ["EBITDA IFRS", "EBITDA"],
+    "cash_flow": ["Cash Flow", "Operating Cash Flow"],
+    "capex": ["Capital Expenditure", "CAPEX"],
+}
+
 
 async def extract_ebitda_from_qdrant_chunks(
     entity: str = "portugal",
@@ -340,6 +375,463 @@ async def extract_ebitda_from_qdrant_chunks(
         points=monthly_points,
         interval="monthly",
         source_documents=[],
+    )
+
+
+async def extract_variable_cost_from_qdrant_chunks(
+    entity: str = "portugal",
+    min_points: int = 6,
+) -> "TimeSeriesData":
+    """Extract Variable Cost from Qdrant chunks with European decimal handling.
+
+    Story 6.15: Specialized extraction for Variable Cost (EUR/ton) values.
+
+    Variable Cost data format:
+    - Values in EUR/ton (e.g., 281,1 = 281.1)
+    - European decimal format (comma as decimal separator)
+    - Can be in parentheses for negative values: (7.718) = -7718
+    - Row format: "| Variable Costs Cem | (60.102) | (64.177) |..."
+
+    Args:
+        entity: Geographic entity (default: portugal)
+        min_points: Minimum required data points
+
+    Returns:
+        TimeSeriesData with Variable Cost values in EUR/ton
+    """
+    from raglite.shared.clients import get_qdrant_client
+    from raglite.shared.config import settings
+    from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
+
+    logger.info("Extracting Variable Cost from Qdrant chunks (fallback)")
+
+    import re  # Ensure re is available in function scope
+
+    client = get_qdrant_client()
+    collection = settings.qdrant_collection_name
+
+    # Search patterns for Variable Cost
+    search_patterns = ["Variable Cost", "Variable Costs", "Variable Costs Cem"]
+
+    # Query Qdrant for chunks containing Variable Cost
+    from qdrant_client.models import FieldCondition, Filter, MatchText
+
+    results = []
+    for pattern in search_patterns:
+        batch, _ = client.scroll(
+            collection_name=collection,
+            scroll_filter=Filter(
+                must=[
+                    FieldCondition(
+                        key="text",
+                        match=MatchText(text=pattern),
+                    )
+                ]
+            ),
+            limit=200,
+            with_payload=True,
+        )
+        results.extend(batch)
+        if results:
+            break
+
+    if not results:
+        logger.warning("No Variable Cost chunks found in Qdrant")
+        return None
+
+    logger.info(
+        f"Found {len(results)} chunks for Variable Cost extraction",
+        extra={"entity": entity},
+    )
+
+    # Parse chunks to extract (period, value) pairs
+    metric_data: dict[str, float] = {}
+    source_documents: set[str] = set()
+
+    for point in results:
+        text = point.payload.get("text", "")
+        source_doc = point.payload.get("source_document", "")
+        reporting_period = point.payload.get("reporting_period", "")
+
+        # Extract period from source document name (e.g., "2025-09 Performance Review")
+        doc_match = re.search(r"(\d{4})-(\d{2})", source_doc)
+        if not doc_match:
+            continue
+
+        doc_year = int(doc_match.group(1))
+        doc_month = int(doc_match.group(2))
+
+        # Find Variable Cost lines
+        for line in text.split("\n"):
+            # Look for lines with Variable Cost
+            if not any(p.lower() in line.lower() for p in search_patterns):
+                continue
+
+            # Parse the markdown table row
+            cells = [c.strip() for c in line.split("|") if c.strip()]
+
+            # Extract numeric values with European decimal handling
+            for cell in cells:
+                # Skip non-numeric cells
+                clean = cell.strip()
+                if not clean or clean.lower() in [
+                    "variable cost",
+                    "variable costs",
+                    "variable costs cem",
+                    "eur/ton",
+                    "brl/ton",
+                ]:
+                    continue
+
+                # Handle parentheses for negative values: (7.718) -> -7718
+                is_negative = clean.startswith("(") and clean.endswith(")")
+                if is_negative:
+                    clean = clean[1:-1]  # Remove parentheses
+
+                # Remove currency symbols and spaces
+                clean = clean.replace("€", "").replace(" ", "").strip()
+
+                # European decimal format: comma is decimal separator
+                # Check if this looks like European format (has comma, no dot after comma)
+                if "," in clean:
+                    # European format: 281,1 -> 281.1
+                    clean = clean.replace(".", "").replace(",", ".")
+                else:
+                    # American format or integer: remove commas
+                    clean = clean.replace(",", "")
+
+                # Try to parse as float
+                try:
+                    val = float(clean)
+                    if is_negative:
+                        val = -val
+
+                    # Variable cost filtering for consistency:
+                    # - Should be NEGATIVE (costs are outflows)
+                    # - Focus on EUR/m³ or EUR/ton range: -100 to -400
+                    # - Excludes tiny values (EUR thousands: -1 to -25) and outliers (>400)
+                    if val < 0 and abs(val) > 100 and abs(val) < 400:
+                        month_abbr = [
+                            "Jan",
+                            "Feb",
+                            "Mar",
+                            "Apr",
+                            "May",
+                            "Jun",
+                            "Jul",
+                            "Aug",
+                            "Sep",
+                            "Oct",
+                            "Nov",
+                            "Dec",
+                        ][doc_month - 1]
+                        period = f"{month_abbr}-{doc_year % 100:02d}"
+
+                        if period not in metric_data:
+                            metric_data[period] = val
+                            source_documents.add(source_doc)
+                        break  # Found value for this line
+                except ValueError:
+                    continue
+
+    if not metric_data:
+        logger.warning("No Variable Cost values extracted from Qdrant")
+        return None
+
+    if len(metric_data) < min_points:
+        logger.warning(
+            f"Insufficient Variable Cost data: {len(metric_data)} points (need {min_points})"
+        )
+        return None
+
+    # Convert to TimeSeriesPoint objects
+    points = []
+    for period, value in sorted(metric_data.items(), key=lambda x: x[0]):
+        # Parse period (e.g., "Oct-25")
+        month_str, year_str = period.split("-")
+        month_map = {
+            "Jan": 1,
+            "Feb": 2,
+            "Mar": 3,
+            "Apr": 4,
+            "May": 5,
+            "Jun": 6,
+            "Jul": 7,
+            "Aug": 8,
+            "Sep": 9,
+            "Oct": 10,
+            "Nov": 11,
+            "Dec": 12,
+        }
+        month = month_map.get(month_str, 1)
+        year = 2000 + int(year_str)
+
+        from datetime import date
+
+        points.append(
+            TimeSeriesPoint(
+                date=date(year, month, 1),
+                value=value,
+                period=period,
+            )
+        )
+
+    # Sort by date
+    points.sort(key=lambda p: p.date)
+
+    logger.info(
+        f"Variable Cost extraction successful: {len(points)} points",
+        extra={"entity": entity, "points": len(points)},
+    )
+
+    return TimeSeriesData(
+        metric_name="variable_cost",
+        points=points,
+        interval="monthly",
+        source_documents=sorted(source_documents),
+    )
+
+
+async def extract_metric_from_qdrant_chunks(
+    metric: str,
+    min_points: int = 6,
+    entity: str = "portugal",
+) -> TimeSeriesData | None:
+    """Extract ANY financial metric from Qdrant chunks.
+
+    Story 6.15: Generalizes the EBITDA-only fallback to support all metrics.
+    Uses metric_category payload filtering + text search patterns.
+
+    Args:
+        metric: Metric name (e.g., "revenue", "sales_volume", "ebitda")
+        min_points: Minimum required data points
+        entity: Geographic entity filter (default: portugal)
+
+    Returns:
+        TimeSeriesData or None if insufficient data
+    """
+    import re
+
+    from qdrant_client.models import FieldCondition, Filter, MatchText, MatchValue
+
+    from raglite.shared.clients import get_qdrant_client
+    from raglite.shared.config import settings
+
+    metric_lower = metric.lower().strip()
+
+    # Map metric to category and search patterns
+    category = METRIC_CATEGORY_MAP.get(metric_lower)
+    search_patterns = METRIC_SEARCH_PATTERNS.get(metric_lower, [metric])
+
+    logger.info(
+        "Extracting metric from Qdrant chunks (fallback)",
+        extra={
+            "metric": metric,
+            "category": category,
+            "search_patterns": search_patterns,
+            "min_points": min_points,
+        },
+    )
+
+    client = get_qdrant_client()
+    collection = settings.qdrant_collection_name
+
+    results = []
+
+    # Try category-based filter first (more precise)
+    if category:
+        try:
+            results, _ = client.scroll(
+                collection_name=collection,
+                scroll_filter=Filter(
+                    must=[
+                        FieldCondition(
+                            key="metric_category",
+                            match=MatchValue(value=category),
+                        )
+                    ]
+                ),
+                limit=300,
+                with_payload=True,
+            )
+            logger.info(
+                f"Qdrant category filter returned {len(results)} chunks",
+                extra={"category": category, "chunks": len(results)},
+            )
+        except Exception as e:
+            logger.warning(f"Category filter failed: {e}")
+
+    # If no results, fall back to text search with patterns
+    if not results and search_patterns:
+        for pattern in search_patterns:
+            try:
+                results, _ = client.scroll(
+                    collection_name=collection,
+                    scroll_filter=Filter(
+                        must=[
+                            FieldCondition(
+                                key="text",
+                                match=MatchText(text=pattern),
+                            )
+                        ]
+                    ),
+                    limit=300,
+                    with_payload=True,
+                )
+                if results:
+                    logger.info(
+                        f"Qdrant text search found {len(results)} chunks",
+                        extra={"pattern": pattern, "chunks": len(results)},
+                    )
+                    break
+            except Exception as e:
+                logger.warning(f"Text search failed for pattern '{pattern}': {e}")
+
+    if not results:
+        logger.warning(
+            f"No Qdrant chunks found for metric: {metric}",
+            extra={"category": category, "patterns": search_patterns},
+        )
+        return None
+
+    # Parse values from markdown table rows
+    # Extract (period, value) pairs from chunks
+    metric_data: dict[str, float] = {}  # period -> value
+    source_documents: set[str] = set()
+
+    for point in results:
+        text = point.payload.get("text", "")
+        source_doc = point.payload.get("source_document", "unknown")
+        reporting_period = point.payload.get("reporting_period", "")
+
+        # Extract document period from filename (e.g., "2025-10 Performance Review" → Oct-25)
+        doc_match = re.search(r"(\d{4})-(\d{2})", source_doc)
+        if not doc_match:
+            # Try to get from reporting_period payload
+            period_match = re.search(r"([A-Za-z]{3})-(\d{2})", reporting_period)
+            if period_match:
+                period = f"{period_match.group(1).title()}-{period_match.group(2)}"
+                # Extract first numeric value from text
+                lines = text.split("\n")
+                for line in lines:
+                    for search_pattern in search_patterns:
+                        if search_pattern.lower() in line.lower():
+                            cells = [c.strip() for c in line.split("|") if c.strip()]
+                            for cell in cells:
+                                clean = cell.replace(",", "").replace("€", "").strip()
+                                num_match = re.match(r"^-?[\d.]+$", clean)
+                                if num_match:
+                                    try:
+                                        val = float(num_match.group(0))
+                                        if abs(val) > 0.01:  # Skip zero values
+                                            if period not in metric_data or abs(val) > abs(
+                                                metric_data[period]
+                                            ):
+                                                metric_data[period] = val
+                                                source_documents.add(source_doc)
+                                            break
+                                    except ValueError:
+                                        continue
+            continue
+
+        doc_year = int(doc_match.group(1))
+        doc_month = int(doc_match.group(2))
+
+        # Find lines containing our search patterns
+        lines = text.split("\n")
+        for line in lines:
+            for search_pattern in search_patterns:
+                if search_pattern.lower() in line.lower():
+                    # Parse the markdown table row
+                    cells = [c.strip() for c in line.split("|") if c.strip()]
+
+                    # Extract numeric values
+                    numeric_values = []
+                    for cell in cells:
+                        clean = cell.replace(",", "").replace(".", "").replace("€", "").strip()
+                        num_match = re.match(r"^-?\d+$", clean)
+                        if num_match:
+                            try:
+                                val = int(num_match.group(0))
+                                numeric_values.append(val)
+                            except ValueError:
+                                continue
+
+                    if numeric_values:
+                        # Convert to period format (Oct-25)
+                        month_abbr = [
+                            "Jan",
+                            "Feb",
+                            "Mar",
+                            "Apr",
+                            "May",
+                            "Jun",
+                            "Jul",
+                            "Aug",
+                            "Sep",
+                            "Oct",
+                            "Nov",
+                            "Dec",
+                        ][doc_month - 1]
+                        period = f"{month_abbr}-{doc_year % 100:02d}"
+
+                        # Use the largest absolute value
+                        best_value = max(numeric_values, key=abs)
+
+                        if period not in metric_data or abs(best_value) > abs(metric_data[period]):
+                            metric_data[period] = float(best_value)
+                            source_documents.add(source_doc)
+
+    if not metric_data:
+        logger.warning(
+            f"No values extracted from Qdrant chunks for metric: {metric}",
+            extra={"chunks_found": len(results)},
+        )
+        return None
+
+    # Convert to TimeSeriesPoint objects
+    points = []
+    for period_str, value in metric_data.items():
+        try:
+            date = parse_period_to_date(period_str, 2025)
+            points.append(
+                TimeSeriesPoint(
+                    date=date,
+                    value=float(value),
+                    label=f"{period_str} {metric.title()} (from Qdrant chunks)",
+                )
+            )
+        except (ValueError, TypeError) as e:
+            logger.warning(
+                f"Skipping invalid period: {period_str}",
+                extra={"period": period_str, "value": value, "error": str(e)},
+            )
+
+    if len(points) < min_points:
+        logger.warning(
+            f"Insufficient data from Qdrant for {metric}: found {len(points)} points, need {min_points}",
+            extra={"metric": metric, "points_found": len(points), "min_required": min_points},
+        )
+        return None
+
+    # Sort by date
+    points.sort(key=lambda p: p.date)
+
+    logger.info(
+        f"Qdrant extraction successful for {metric}",
+        extra={
+            "metric": metric,
+            "points": len(points),
+            "date_range": f"{points[0].date} to {points[-1].date}",
+            "source_documents": list(source_documents)[:5],
+        },
+    )
+
+    return TimeSeriesData(
+        metric_name=metric_lower,
+        points=points,
+        interval="monthly",
+        source_documents=sorted(source_documents),
     )
 
 
@@ -1112,60 +1604,97 @@ async def extract_timeseries_from_sql(
         )
 
     except MetricValidationError as e:
-        # Story 5.0.4 AC3: For EBITDA with insufficient SQL data, try Qdrant fallback
-        # Qdrant often has more complete data from document chunks (10 months vs 7 from SQL)
-        if metric.lower() == "ebitda":
-            logger.warning(
-                "SQL extraction has insufficient EBITDA data, trying Qdrant fallback",
-                extra={
-                    "metric": metric,
-                    "sql_points": e.data_points_found,
-                    "min_required": e.minimum_required,
-                },
-            )
-            try:
-                return await extract_ebitda_from_qdrant_chunks(
+        # Story 6.15: For ANY metric with insufficient SQL data, try Qdrant fallback
+        # Qdrant often has more complete data from document chunks than PostgreSQL
+        # (generalizes original EBITDA-only fallback from Story 5.0.4 AC3)
+        logger.warning(
+            f"SQL extraction has insufficient {metric} data, trying Qdrant fallback",
+            extra={
+                "metric": metric,
+                "sql_points": e.data_points_found,
+                "min_required": e.minimum_required,
+            },
+        )
+        try:
+            # CRITICAL: Some metrics require specialized extraction functions
+            # - EBITDA: YTD-to-monthly conversion (without it: 154% MAPE regression)
+            # - Variable Cost: European decimal format handling (without it: 338% MAPE)
+            # Other metrics use the generic function
+            if metric.lower() == "ebitda":
+                qdrant_result = await extract_ebitda_from_qdrant_chunks(
                     entity="portugal", min_points=min_points
                 )
-            except ExtractionError as qdrant_error:
-                logger.warning(
-                    "Qdrant fallback also failed, re-raising original MetricValidationError",
-                    extra={"qdrant_error": str(qdrant_error)},
+            elif metric.lower() in ["variable_cost", "variable cost"]:
+                qdrant_result = await extract_variable_cost_from_qdrant_chunks(
+                    entity="portugal", min_points=min_points
                 )
-        # Re-raise validation errors as-is for non-EBITDA or if Qdrant fails
+            else:
+                qdrant_result = await extract_metric_from_qdrant_chunks(
+                    metric=metric, min_points=min_points, entity="portugal"
+                )
+            if qdrant_result:
+                return qdrant_result
+            logger.warning(
+                f"Qdrant fallback returned no data for {metric}",
+                extra={"metric": metric},
+            )
+        except Exception as qdrant_error:
+            logger.warning(
+                f"Qdrant fallback failed for {metric}, re-raising original MetricValidationError",
+                extra={"metric": metric, "qdrant_error": str(qdrant_error)},
+            )
+        # Re-raise validation error if Qdrant fallback fails or returns no data
         raise
     except ExtractionError as e:
-        # Story 5.0.1 Enhancement: For EBITDA, try Qdrant fallback when SQL fails
-        # This handles the case where table extraction corrupted the financial_tables data
-        # but the raw chunk text in Qdrant still contains correct consolidated values
-        # Story 5.0.4 AC5: Removed entity parameter - uses default "portugal" consolidated GROUP
-        if metric.lower() == "ebitda":
+        # Story 6.15: For ANY metric, try Qdrant fallback when SQL extraction fails
+        # This handles cases where table extraction corrupted PostgreSQL data
+        # but raw chunk text in Qdrant still contains correct values
+        # (generalizes original EBITDA-only fallback from Story 5.0.1)
+        logger.warning(
+            f"SQL extraction failed for {metric}, trying Qdrant chunk fallback",
+            extra={
+                "metric": metric,
+                "entity": "portugal",
+                "original_error": str(e),
+            },
+        )
+        try:
+            # CRITICAL: Some metrics require specialized extraction functions
+            # - EBITDA: YTD-to-monthly conversion (without it: 154% MAPE regression)
+            # - Variable Cost: European decimal format handling (without it: 338% MAPE)
+            # Other metrics use the generic function
+            if metric.lower() == "ebitda":
+                qdrant_result = await extract_ebitda_from_qdrant_chunks(
+                    entity="portugal", min_points=min_points
+                )
+            elif metric.lower() in ["variable_cost", "variable cost"]:
+                qdrant_result = await extract_variable_cost_from_qdrant_chunks(
+                    entity="portugal", min_points=min_points
+                )
+            else:
+                qdrant_result = await extract_metric_from_qdrant_chunks(
+                    metric=metric, min_points=min_points, entity="portugal"
+                )
+            if qdrant_result:
+                return qdrant_result
             logger.warning(
-                "SQL extraction failed for EBITDA, trying Qdrant chunk fallback",
+                f"Qdrant fallback returned no data for {metric}",
+                extra={"metric": metric},
+            )
+        except Exception as qdrant_error:
+            logger.error(
+                f"Both SQL and Qdrant extraction failed for {metric}",
                 extra={
                     "metric": metric,
                     "entity": "portugal",
-                    "original_error": str(e),
+                    "sql_error": str(e),
+                    "qdrant_error": str(qdrant_error),
                 },
             )
-            try:
-                # Story 5.0.4 AC5: Use default entity (portugal/GROUP consolidated)
-                return await extract_ebitda_from_qdrant_chunks(
-                    entity="portugal", min_points=min_points
-                )
-            except ExtractionError as qdrant_error:
-                logger.error(
-                    "Both SQL and Qdrant extraction failed for EBITDA",
-                    extra={
-                        "entity": "portugal",
-                        "sql_error": str(e),
-                        "qdrant_error": str(qdrant_error),
-                    },
-                )
-                raise ExtractionError(
-                    f"EBITDA extraction failed. SQL: {e}. Qdrant: {qdrant_error}"
-                ) from qdrant_error
-        # For non-EBITDA metrics, re-raise the original error
+            raise ExtractionError(
+                f"{metric} extraction failed. SQL: {e}. Qdrant: {qdrant_error}"
+            ) from qdrant_error
+        # Re-raise original error if Qdrant fallback returns no data
         raise
     except Exception as e:
         # DATABASE FIX: Handle transaction errors with connection reset

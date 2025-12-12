@@ -14,10 +14,18 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-import pytorch_lightning as pl
+
+# Use lightning (unified package) instead of pytorch_lightning for compatibility
+try:
+    import lightning.pytorch as pl
+    from lightning.pytorch.callbacks import EarlyStopping
+    from lightning.pytorch.loggers import CSVLogger
+except ImportError:
+    import pytorch_lightning as pl
+    from pytorch_lightning.callbacks import EarlyStopping
+    from pytorch_lightning.loggers import CSVLogger
+
 from pytorch_forecasting import TemporalFusionTransformer, TimeSeriesDataSet
-from pytorch_lightning.callbacks import EarlyStopping
-from pytorch_lightning.loggers import CSVLogger
 
 # Import QuantileLoss from pytorch_forecasting
 try:
@@ -34,6 +42,97 @@ from raglite.shared.logging import get_logger
 logger = get_logger(__name__)
 
 
+async def collect_training_data(
+    metrics: list[str] | None = None,
+    min_data_points: int = 24,
+) -> pd.DataFrame | None:
+    """Collect training data for TFT from external data sources.
+
+    Story 6.14 AC4: Gather time-series data for TFT training.
+
+    Args:
+        metrics: List of metrics to collect (default: EBITDA, revenue, etc.)
+        min_data_points: Minimum required data points per metric
+
+    Returns:
+        DataFrame with columns: time_idx, metric_name, value, plus regressors
+        Returns None if insufficient data
+    """
+    from raglite.external_data.clients.ecb import ECBClient
+    from raglite.external_data.clients.eu_oil_bulletin import EUOilBulletinClient
+    from raglite.forecasting.timeseries_extract import extract_timeseries_from_sql
+
+    if metrics is None:
+        metrics = ["ebitda", "revenue", "sales_volume"]
+
+    all_data = []
+
+    for metric in metrics:
+        try:
+            # Extract time-series using SQL extraction (primary method)
+            ts_data = await extract_timeseries_from_sql(metric=metric, min_points=6)
+
+            if ts_data and len(ts_data.points) >= min_data_points:
+                # Convert to DataFrame rows
+                for i, point in enumerate(ts_data.points):
+                    all_data.append(
+                        {
+                            "time_idx": i,
+                            "metric_name": metric,
+                            "value": point.value,
+                            "date": point.date,
+                        }
+                    )
+                logger.info(
+                    f"Collected {len(ts_data.points)} points for {metric}",
+                    extra={"metric": metric, "points": len(ts_data.points)},
+                )
+            else:
+                logger.warning(
+                    f"Insufficient data for {metric}: "
+                    f"{len(ts_data.points) if ts_data else 0} points (need {min_data_points})"
+                )
+        except Exception as e:
+            logger.warning(f"Failed to collect data for {metric}: {e}")
+            continue
+
+    if not all_data:
+        logger.warning("No training data collected - need at least one metric with 24+ points")
+        return None
+
+    df = pd.DataFrame(all_data)
+
+    # Add external regressors if available
+    try:
+        ecb = ECBClient()
+        euribor_data = await ecb.fetch_euribor_rates()
+        if euribor_data:
+            euribor_series = pd.Series({d.date: float(d.value) for d in euribor_data})
+            df["euribor_3m"] = df["date"].map(
+                lambda x: euribor_series.get(x, euribor_series.iloc[-1])
+            )
+    except Exception as e:
+        logger.warning(f"Failed to add EURIBOR regressor: {e}")
+        df["euribor_3m"] = 0.0
+
+    try:
+        oil = EUOilBulletinClient()
+        diesel_data = await oil.fetch_diesel_prices()
+        if diesel_data:
+            diesel_series = pd.Series({d.date: float(d.value) for d in diesel_data})
+            df["diesel"] = df["date"].map(lambda x: diesel_series.get(x, diesel_series.iloc[-1]))
+    except Exception as e:
+        logger.warning(f"Failed to add diesel regressor: {e}")
+        df["diesel"] = 0.0
+
+    logger.info(
+        "Training data collection complete",
+        extra={"total_rows": len(df), "metrics": df["metric_name"].nunique()},
+    )
+
+    return df
+
+
 # Story 6.14 AC4: TFT training configuration constants
 TFT_TRAINING_CONFIG: dict[str, int | float | str] = {
     "encoder_length": settings.tft_encoder_length,  # 12 periods lookback
@@ -41,8 +140,8 @@ TFT_TRAINING_CONFIG: dict[str, int | float | str] = {
     "max_epochs": settings.tft_max_epochs,  # 50
     "early_stopping_patience": settings.tft_early_stopping_patience,  # 5
     "gradient_clip_val": 0.1,
-    "accelerator": "auto",  # GPU if available, else CPU
-    "batch_size": 64,
+    "accelerator": "cpu",  # Force CPU to avoid MPS issues with small batches
+    "batch_size": 32,  # Reduced batch size for small datasets
     "learning_rate": 0.03,
     "hidden_size": 16,  # Reduced for faster training on small datasets
     "attention_head_size": 4,
@@ -290,13 +389,22 @@ def save_tft_checkpoint(
     if model_version is None:
         model_version = datetime.now().strftime("%Y-%m-%d-%H%M%S")
 
+    import torch
+
     # Create checkpoint directory
     checkpoint_dir = Path(settings.tft_checkpoint_dir)
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save checkpoint
+    # Save checkpoint using torch.save (TFT models don't have a .save() method)
     checkpoint_path = checkpoint_dir / f"tft_{model_version}.ckpt"
-    model.save(str(checkpoint_path))
+    torch.save(
+        {
+            "state_dict": model.state_dict(),
+            "hparams": model.hparams,
+            "metrics": metrics,
+        },
+        str(checkpoint_path),
+    )
 
     # Update model registry
     session = get_session()

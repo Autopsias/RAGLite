@@ -504,6 +504,182 @@ scheduler.start()
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** 2025-12-04
-**Status:** Ready for Epic 6 Implementation
+## Epic 6 Extension: Forecasting Accuracy Improvements (SCP-2025-12-12-001)
+
+**Sprint Change Proposal:** SCP-2025-12-12-001
+**Date:** 2025-12-12
+**Stories:** 6.15-6.23
+**Goal:** Variable Cost MAPE from 41% to <8%, 10/12 variables passing
+
+---
+
+### Entity Detection Architecture (Story 6.15)
+
+**Problem:** Variable Cost data mixes Portugal + Tunisia + Brazil entities, causing 33% coefficient of variation.
+
+**Solution:** Add entity detection in `raglite/forecasting/timeseries_extract.py`:
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   Qdrant Chunks │────▶│ Entity Detector │────▶│ Portugal-Only   │
+│   (mixed data)  │     │ (PT/TN/BR)      │     │ Time Series     │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                               │
+                        ┌──────┴──────┐
+                        ▼             ▼
+                   ┌─────────┐   ┌─────────┐
+                   │EUR/ton  │   │Validate │
+                   │Normalize│   │Range    │
+                   └─────────┘   └─────────┘
+```
+
+**Entity Detection Patterns:**
+```python
+ENTITY_PATTERNS = {
+    "Portugal": ["Portugal", "PT", "Custos Variáveis", "EUR/ton"],
+    "Tunisia": ["Tunisia", "TN", "TND", "Tunisie"],
+    "Brazil": ["Brazil", "BR", "BRL", "Brasil"],
+}
+```
+
+**Expected Improvement:** Variable Cost coefficient of variation from 33% → <15%
+
+---
+
+### New Data Sources (Stories 6.16-6.19)
+
+**Extended Data Source Ecosystem:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    REGRESSOR ECOSYSTEM                          │
+├─────────────────────────────────────────────────────────────────┤
+│ TIER 1 (Working)          │ TIER 2 (New - Stories 6.16-6.19)   │
+│ ✓ TTF Gas (ICE)           │ + Eurostat Construction Output     │
+│ ✓ API2 Coal (ICE)         │ + Eurostat Industrial Production   │
+│ ✓ Diesel (EU Oil Bulletin)│ + ECB GDP Growth                   │
+│ ✓ EURIBOR (ECB)           │ + ECB HICP Inflation               │
+│ ✓ Electricity (Eurostat)  │ + EC Construction Confidence       │
+│ ✗ Building Permits (INE)  │ + Eurostat Building Permits (fix)  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**New API Clients:**
+
+| Client | Story | Endpoint | Data |
+|--------|-------|----------|------|
+| `EurostatClient` (extended) | 6.16 | `sts_copr_m`, `sts_inpr_m` | Construction Output, Industrial Production |
+| `ECBClient` (extended) | 6.17 | `MNA`, `ICP` | GDP Growth, HICP Inflation |
+| `ECBusinessSurveysClient` (new) | 6.19 | EC BCS API | Construction Confidence Index |
+| `INEClient` (fix) | 6.18 | `0010099` | Building Permits (correct indicator) |
+
+**API Reference:**
+
+```
+# Eurostat SDMX API
+GET /data/sts_copr_m?geo=PT&unit=I21&s_adj=SCA&nace_r2=F&format=JSON
+
+# ECB Statistical Data Warehouse
+GET /data/MNA/Q.Y.PT.W2.S1.S1.B.B1GQ._Z._Z._Z.XDC_R_B1GQ_Y.V.N?format=jsondata
+
+# INE Portugal (FIXED)
+BUILDING_PERMITS_INDICATOR = "0010099"  # Was 0008145 (death statistics!)
+```
+
+---
+
+### Updated Regressor Mappings (Story 6.20)
+
+**Current vs New Mappings:**
+
+| Metric | Old Regressors | New Regressors (Cement-Industry) |
+|--------|----------------|-----------------------------------|
+| revenue | euribor, diesel | construction_output, gdp_growth, euribor_3m |
+| sales_volume | euribor, diesel | construction_output, building_permits, gdp_growth |
+| variable_cost | euribor, diesel | ttf_gas, api2_coal, industrial_production, diesel |
+| electricity_cost | eurostat_electricity | eurostat_electricity, industrial_production |
+| thermal_cost | ttf_gas | api2_coal, ttf_gas, industrial_production |
+| avg_selling_price | euribor | construction_confidence, gdp_growth, inflation |
+| capacity_utilization | diesel | construction_output, gdp_growth, industrial_production |
+
+**Rationale:**
+- Financial metrics driven by construction demand (construction_output, building_permits)
+- Cost metrics driven by energy prices (ttf_gas, api2_coal)
+- Pricing/capacity driven by economic confidence and activity
+
+---
+
+### Unified Validation Architecture (Story 6.21)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              UNIFIED VALIDATION SCRIPT                          │
+├─────────────────────────────────────────────────────────────────┤
+│ MAPE Methods:                                                   │
+│ ├─ Holdout (last N points as test set)                         │
+│ ├─ Walk-Forward (expanding window)                             │
+│ ├─ Cross-Validation (k-fold on time series)                    │
+│ └─ Confidence Interval (fallback estimate)                     │
+│                                                                 │
+│ Variables: 12 (financial + external)                           │
+│ Models: 7 + ensemble                                            │
+│ Output: JSON report + MCP-compatible response                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Command Interface:**
+```bash
+python scripts/validate-forecasting-unified.py --full
+python scripts/validate-forecasting-unified.py --variable variable_cost
+python scripts/validate-forecasting-unified.py --mape-method walkforward
+python scripts/validate-forecasting-unified.py --export-json --mcp-format
+```
+
+---
+
+### MCP Tools Extension (Story 6.22)
+
+**New MCP Tools:**
+
+| Tool | Purpose |
+|------|---------|
+| `validate_forecasting_accuracy()` | Run validation for specified metrics |
+| `list_available_regressors()` | Show all regressors with correlation info |
+| `get_regressor_data()` | Fetch specific regressor time series |
+
+**Enhanced Existing Tools:**
+
+| Tool | Enhancement |
+|------|-------------|
+| `get_financial_forecast()` | Add `include_accuracy=True` parameter |
+| `get_financial_forecast()` | Add `prefer_entity="Portugal"` parameter |
+
+---
+
+### Success Metrics (Story 6.23)
+
+| Metric | Before | Target | Validation |
+|--------|--------|--------|------------|
+| Variable Cost MAPE | 41.43% | <8% | `validate-forecasting-unified.py` |
+| Variables passing | 5/8 | 10/12 | All 12 vars in unified script |
+| Data CV | 33% | <15% | Standard deviation analysis |
+| External regressors | 5 | 11 | `regressor_config.py` count |
+| MCP forecasting tools | 1 | 4 | `main.py` tool count |
+
+---
+
+## References
+
+- Sprint Change Proposal: `docs/sprint-change-proposals/2025-12-04-epic-6-advanced-forecasting.md`
+- Sprint Change Proposal (Extension): `docs/sprint-change-proposals/2025-12-12-epic-6-forecasting-accuracy-extension.md`
+- Unified Briefing: `docs/briefings/unified-forecasting-improvement-epic.md`
+- PM Handoff: `docs/sprint-change-proposals/PM-HANDOFF-EPIC-6.md`
+- Research Document: `docs/High-Level Overview.pdf` (27 pages)
+- Epic 4 Forecasting: `raglite/forecasting/hybrid.py`
+- Technology Stack: `docs/architecture/5-technology-stack-definitive.md`
+
+---
+
+**Document Version:** 1.1
+**Last Updated:** 2025-12-12
+**Status:** Updated for Stories 6.15-6.23
