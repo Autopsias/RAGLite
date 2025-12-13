@@ -58,6 +58,8 @@ models/
 htmlcov/
 .coverage
 .coverage.*
+test-results/
+!test-results/**/.gitkeep
 docs/sample pdf/split/
 postgresql_data/
 BMAD-METHOD/
