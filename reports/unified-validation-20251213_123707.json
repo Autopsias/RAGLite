@@ -1,0 +1,32 @@
+{
+  "timestamp": "2025-12-13T12:37:07.392237",
+  "runtime_seconds": 102.93076181411743,
+  "mape_method": "holdout",
+  "variables_tested": 1,
+  "variables_passed": 0,
+  "pass_rate": 0.0,
+  "average_mape": 83.65764042017976,
+  "variable_results": [
+    {
+      "variable_name": "variable_cost",
+      "display_name": "Variable Cost per Ton",
+      "target_mape": 8.0,
+      "actual_mape": 83.65764042017976,
+      "passed": false,
+      "holdout_mape": 83.65764042017976,
+      "walkforward_mape": null,
+      "cv_mape": null,
+      "ensemble_weights": {},
+      "best_model": "",
+      "best_model_mape": 0.0
+    }
+  ],
+  "model_performance": {},
+  "quality_gate": {
+    "passed": false,
+    "minimum_required": 10,
+    "actual_passed": 0,
+    "variable_cost_mape": 83.65764042017976,
+    "variable_cost_target": 8.0
+  }
+}

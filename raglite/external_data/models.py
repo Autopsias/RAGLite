@@ -340,6 +340,78 @@ class EurostatElectricityPrice(BaseModel):
     )
 
 
+class EurostatConstructionOutput(BaseModel):
+    """Construction production index from Eurostat.
+
+    Story 6.16 AC1: Construction output index for forecasting
+
+    Dataset: sts_copr_m (Short-term statistics: Production in construction)
+    Coverage: 2000-present, monthly
+    """
+
+    date: date
+    index_value: float = Field(gt=0, description="Index 2021=100")
+    country: str = Field(description="ISO 2-letter country code")
+    nace_sector: str = Field(description="NACE Rev. 2 sector code")
+    seasonal_adjustment: str = Field(description="Seasonal adjustment type (SCA, NSA, WDA)")
+
+
+class EurostatIndustrialProduction(BaseModel):
+    """Industrial production index from Eurostat.
+
+    Story 6.16 AC2: Industrial production index for forecasting
+
+    Dataset: sts_inpr_m (Industrial production)
+    Coverage: 2000-present, monthly
+    """
+
+    date: date
+    index_value: float = Field(gt=0, description="Index 2021=100")
+    country: str = Field(description="ISO 2-letter country code")
+    nace_sector: str = Field(description="NACE Rev. 2 sector code")
+    seasonal_adjustment: str = Field(description="Seasonal adjustment type (SCA, NSA, WDA)")
+
+
+class EurostatBuildingPermits(BaseModel):
+    """Building permits from Eurostat.
+
+    Story 6.18 AC2: Eurostat building permits backup for INE
+
+    Dataset: sts_cobp_m (Building permits - number of dwellings)
+    Coverage: 2000-present, monthly
+    """
+
+    date: date
+    permits_count: int = Field(ge=0, description="Number of building permits")
+    country: str = Field(description="ISO 2-letter country code")
+    building_type: str = Field(description="Building type (RES, NRES, TOTAL)")
+
+
+class ECConstructionConfidence(BaseModel):
+    """Construction Confidence from EC Business Surveys (via Eurostat).
+
+    Story 6.19: EC Construction Confidence Index
+
+    Dataset: ei_bsbu_m_r2 (Construction confidence indicator and survey results)
+    Source: European Commission DG ECFIN
+    Coverage: 1980-present, monthly
+    Indicators:
+    - BS-CCI-BAL: Construction confidence indicator (main)
+    - BS-CEME-BAL: Employment expectations over next 3 months
+    - BS-COB-BAL: Evolution of current order books
+    """
+
+    date: date
+    confidence_index: float = Field(description="Construction confidence indicator (BS-CCI-BAL)")
+    employment_expectations: float | None = Field(
+        None, description="Employment expectations over next 3 months (BS-CEME-BAL)"
+    )
+    order_books: float | None = Field(
+        None, description="Evolution of current order books (BS-COB-BAL)"
+    )
+    country: str = Field(description="ISO 2-letter country code")
+
+
 class INEHousePriceIndex(BaseModel):
     """House Price Index from INE.
 

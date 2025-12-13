@@ -40,6 +40,8 @@ from raglite.external_data.models import (
     DataFrequency,
     DataSource,
     EUDieselPrice,
+    EurostatConstructionOutput,
+    EurostatIndustrialProduction,
     ExternalDataPoint,
     INEBuildingPermits,
     INEConstructionCostIndex,
@@ -88,6 +90,9 @@ __all__ = [
     "OMIEElectricityPrice",
     # EU Oil Bulletin Models
     "EUDieselPrice",
+    # Eurostat Models
+    "EurostatConstructionOutput",
+    "EurostatIndustrialProduction",
     # IPMA Models
     "IPMAWeatherData",
     # Base.gov.pt Models

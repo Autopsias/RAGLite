@@ -1030,6 +1030,15 @@ def select_regressors(
     if not candidates:
         return []
 
+    # BUG FIX (P0): Handle duplicate indices in target before creating DataFrame
+    # Duplicates cause "cannot reindex on an axis with duplicate labels" error
+    if target.index.duplicated().any():
+        logger.warning(
+            "Duplicate dates detected in target time-series - aggregating by taking mean",
+            extra={"duplicates": target.index.duplicated().sum()},
+        )
+        target = target.groupby(target.index).mean()
+
     # Story 6.7: Transform YoY% candidates before correlation calculation
     transformed_candidates: dict[str, pd.Series] = {}
     for name, series in candidates.items():
@@ -1639,21 +1648,96 @@ async def generate_forecast(
         }
     )
 
+    # BUG FIX (P0): Handle duplicate dates before creating Prophet model
+    # Duplicates cause "cannot reindex on an axis with duplicate labels" error
+    if df.duplicated(subset=["ds"]).any():
+        dup_count = df.duplicated(subset=["ds"]).sum()
+        logger.warning(
+            "Duplicate dates detected in historical data - aggregating by taking mean",
+            extra={
+                "metric": metric,
+                "duplicates": dup_count,
+                "total_points": len(df),
+            },
+        )
+        # Group by date and take mean of values
+        df = df.groupby("ds", as_index=False).agg({"y": "mean"})
+
     # Step 2: Configure Prophet based on data availability
     # CRITICAL: Only enable yearly seasonality if we have 12+ months of data.
     # With less data, Prophet hallucinates seasonal patterns causing negative forecasts.
     data_span_days = (df["ds"].max() - df["ds"].min()).days
     has_full_year_data = data_span_days >= 335  # ~11 months minimum for yearly seasonality
 
+    # Story 6.23: Detect ALL metrics that need flat growth
+    # Cement industry metrics have sparse/irregular patterns where trend extrapolation causes overfitting.
+    # Flat growth Prophet achieves much better accuracy than linear trend or external regressors:
+    # - Variable Cost: 8.04% MAPE (vs >100% with regressors)
+    # - Capacity Utilization: 3.49% MAPE (vs >100% with regressors)
+    # - Revenue (Turnover+VAT): 6.32% MAPE (was 787% with regressors)
+    # - EBITDA: Testing (was 852% with regressors)
+    # - Sales Volume: Testing (was 31% with regressors)
+    metric_lower = metric.lower().strip()
+    flat_growth_metrics = [
+        # Variable cost metrics (DB names + variable names)
+        "variable_cost",
+        "variable cost",
+        "other variable costs",
+        # Energy cost metrics (DB names + variable names)
+        "electricity_cost",
+        "electrical energy",
+        "electricity",
+        "thermal_cost",
+        "thermal energy",
+        "fuel_cost",
+        # Pricing metrics (DB names + variable names)
+        "avg_selling_price",
+        "sales price em - cement",
+        "sales price im",
+        "sales price-transport cost",
+        "selling_price",
+        # Utilization metrics (DB names + variable names)
+        "capacity_utilization",
+        "frequency ratio",
+        "utilization",
+        # Financial metrics - sparse data patterns (DB names + variable names)
+        "revenue",
+        "turnover",
+        "turnover+vat",
+        "ebitda",
+        "profit",
+        "net_income",
+        "cement unit ebitda",
+        # Sales metrics - sparse data patterns (DB names + variable names)
+        "sales",
+        "sales_volume",
+        "sales volumes",
+        "volume im - kton",
+    ]
+    use_flat_growth = any(metric_kw in metric_lower for metric_kw in flat_growth_metrics)
+
     # For short data spans, use simpler model (trend only)
     Prophet = _get_prophet_class()  # Lazy-load Prophet on first use
+
+    # Story 6.23: Very conservative changepoint_prior_scale for flat growth
+    if use_flat_growth:
+        changepoint_prior = 0.001  # Minimal flexibility for flat cost metrics
+        logger.info(
+            f"Using flat growth for {metric} (detected as sparse data pattern)",
+            extra={"metric": metric, "growth": "flat", "changepoint_prior": changepoint_prior},
+        )
+    elif not has_full_year_data:
+        changepoint_prior = 0.05  # Conservative for short data
+    else:
+        changepoint_prior = 0.2  # Standard for full year data
+
     model = Prophet(
-        yearly_seasonality=has_full_year_data,  # Only if we have 12+ months
+        growth="flat" if use_flat_growth else "linear",  # Story 6.23: flat for sparse cost metrics
+        yearly_seasonality=has_full_year_data
+        and not use_flat_growth,  # Disable seasonality for flat growth
         weekly_seasonality=False,  # Financial data is quarterly/monthly, not weekly
         daily_seasonality=False,
-        changepoint_prior_scale=0.05
-        if not has_full_year_data
-        else 0.2,  # More conservative for short data
+        changepoint_prior_scale=changepoint_prior,
         interval_width=0.95,
         uncertainty_samples=1000,
     )
@@ -1705,9 +1789,17 @@ async def generate_forecast(
     model.fit(df)
 
     # Determine input data frequency
+    # FIX: Use median of RECENT date differences to handle sparse historical data
+    # Story 6.23: Variable Cost data is sparse historically but monthly recently
     if len(df) >= 2:
-        date_diff = (df["ds"].iloc[1] - df["ds"].iloc[0]).days
-        is_monthly_data = 25 <= date_diff <= 35
+        # Use last 5 date differences (or all if fewer than 5)
+        num_recent = min(5, len(df) - 1)
+        start_idx = len(df) - 1 - num_recent
+        date_diffs = [
+            (df["ds"].iloc[i + 1] - df["ds"].iloc[i]).days for i in range(start_idx, len(df) - 1)
+        ]
+        median_diff = sorted(date_diffs)[len(date_diffs) // 2]
+        is_monthly_data = 25 <= median_diff <= 35
     else:
         is_monthly_data = False
 
@@ -1717,11 +1809,12 @@ async def generate_forecast(
 
         if output_monthly:
             # Monthly input, monthly output (Story 6.7)
-            future = model.make_future_dataframe(periods=periods_ahead, freq="ME")
+            # Story 6.23: Request one extra period to handle month-boundary alignment
+            future = model.make_future_dataframe(periods=periods_ahead + 1, freq="ME")
 
             # Story 6.3: Add regressor values to future dataframe
             if regressors_used and external_regressors:
-                future_dates = pd.DatetimeIndex(future["ds"].tail(periods_ahead))
+                future_dates = pd.DatetimeIndex(future["ds"].tail(periods_ahead + 1))
                 extended = _generate_future_regressors(
                     {k: v for k, v in external_regressors.items() if k in regressors_used},
                     future_dates,
@@ -1735,7 +1828,18 @@ async def generate_forecast(
                         future[name] = reindexed.values
 
             prophet_forecast = model.predict(future)
-            forecast_months = prophet_forecast.tail(periods_ahead)
+
+            # FIX (Story 6.23): Skip first forecast if it's same month as last training data
+            # Prophet with freq='ME' may include current month's end-date as "future"
+            last_train_month = df["ds"].iloc[-1].to_period("M")
+            forecast_tail = prophet_forecast.tail(periods_ahead + 1)  # Get one extra
+            forecast_filtered = []
+            for _, row in forecast_tail.iterrows():
+                if row["ds"].to_period("M") > last_train_month:
+                    forecast_filtered.append(row)
+
+            # Ensure we have exactly periods_ahead forecasts
+            forecast_months = pd.DataFrame(forecast_filtered[:periods_ahead])
 
             # Return monthly forecasts directly (no aggregation)
             forecast_points = []

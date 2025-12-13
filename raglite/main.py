@@ -1,7 +1,7 @@
 """RAGLite MCP Server - Model Context Protocol entry point.
 
 This module implements the FastMCP server that exposes RAGLite capabilities
-to MCP clients (Claude Desktop, etc.). Provides nine core tools:
+to MCP clients (Claude Desktop, etc.). Provides twelve core tools:
   1. ingest_financial_document - Ingest PDF/Excel documents (sync, <50 pages)
   2. ingest_financial_document_async - Async ingestion for large documents (>50 pages, Story 4.0.3)
   3. get_ingestion_status - Poll async ingestion job status (Story 4.0.3)
@@ -11,6 +11,9 @@ to MCP clients (Claude Desktop, etc.). Provides nine core tools:
   7. get_financial_insights - Request proactive insights combining anomalies, trends, recommendations (Epic 4, Story 4.9)
   8. query_external_data - Query external macro-economic data sources (Epic 6, Story 6.6)
   9. check_database_health - Validate data synchronization between Qdrant and PostgreSQL
+  10. validate_forecasting_accuracy - Run forecasting validation and return accuracy metrics (Story 6.22)
+  11. list_available_regressors - List external regressors available for forecasting (Story 6.22)
+  12. get_regressor_data - Fetch specific regressor time series data (Story 6.22)
 
 The server follows standard MCP pattern: tools return raw data (chunks with metadata),
 and the LLM client (Claude) synthesizes natural language answers.
@@ -24,6 +27,7 @@ Example:
     - Transport: stdio
 """
 
+import asyncio
 import json
 import time
 from datetime import UTC, date, datetime, timedelta
@@ -69,9 +73,16 @@ from raglite.shared.models import (
     InsightCategory,
     InsightsQueryRequest,
     InsightsQueryResponse,
+    ModelPerformanceDetail,
     QueryRequest,
     QueryResponse,
     Recommendation,
+    RegressorDataPoint,
+    RegressorDataResponse,
+    RegressorInfo,
+    RegressorListResponse,
+    ValidationResponse,
+    VariableValidationDetail,
 )
 
 # Initialize structured logger
@@ -3322,6 +3333,310 @@ async def retrain_forecasting_models(
             duration_seconds=duration,
             errors=[str(e)],
         ).model_dump_json(indent=2)
+
+
+@mcp.tool()
+async def validate_forecasting_accuracy(
+    metrics: list[str] | None = None,
+    mape_method: str = "holdout",
+    include_model_breakdown: bool = True,
+    timeout_seconds: float = 300.0,
+) -> ValidationResponse:
+    """Run forecasting validation and return accuracy metrics.
+
+    Story 6.22 AC1: MCP tool for forecasting validation.
+
+    Validates forecasting accuracy across cement industry variables using
+    holdout, walk-forward, or cross-validation MAPE methods.
+
+    Args:
+        metrics: List of metric names to validate (default: all 12 cement variables)
+        mape_method: MAPE calculation method - 'holdout', 'walkforward', or 'cv' (default: 'holdout')
+        include_model_breakdown: Include per-model MAPE breakdown (default: True)
+        timeout_seconds: Maximum execution time in seconds (default: 300.0 = 5 minutes)
+
+    Returns:
+        ValidationResponse with per-variable results, quality gate status, and summary
+
+    Raises:
+        Exception: If validation fails or times out
+    """
+    # Import validation from scripts module
+    # Note: The scripts module adds project root to sys.path on import
+    try:
+        from scripts.validate_forecasting_unified import run_unified_validation
+    except ImportError as e:
+        logger.error("Failed to import validation script", extra={"error": str(e)})
+        return ValidationResponse(
+            timestamp=datetime.now(UTC).isoformat(),
+            runtime_seconds=0.0,
+            mape_method=mape_method,
+            variables_tested=0,
+            variables_passed=0,
+            pass_rate=0.0,
+            average_mape=0.0,
+            quality_gate_passed=False,
+            variable_cost_mape=None,
+            variable_results=[],
+            model_performance=None,
+        )
+
+    logger.info(
+        "Validation started",
+        extra={
+            "metrics": metrics or "all",
+            "mape_method": mape_method,
+            "include_breakdown": include_model_breakdown,
+            "timeout_seconds": timeout_seconds,
+        },
+    )
+
+    try:
+        # Run unified validation with configurable timeout protection
+        result = await asyncio.wait_for(
+            run_unified_validation(
+                variables=metrics,
+                mape_method=mape_method,
+                fail_fast=False,
+                quiet=True,
+            ),
+            timeout=timeout_seconds,
+        )
+
+        # Convert to MCP response format
+        variable_details = [
+            VariableValidationDetail(
+                variable_name=var_result.variable_name,
+                display_name=var_result.display_name,
+                target_mape=var_result.target_mape,
+                actual_mape=var_result.actual_mape,
+                passed=var_result.passed,
+                ensemble_weights=var_result.ensemble_weights,
+                best_model=var_result.best_model,
+            )
+            for var_result in result.variable_results
+        ]
+
+        # Convert model performance if requested
+        model_perf = None
+        if include_model_breakdown and result.model_performance:
+            model_perf = {
+                name: ModelPerformanceDetail(
+                    model_name=stats.model_name,
+                    avg_mape=stats.avg_mape,
+                    variables_used=stats.variables_used,
+                )
+                for name, stats in result.model_performance.items()
+            }
+
+        logger.info(
+            "Validation completed",
+            extra={
+                "variables_tested": result.variables_tested,
+                "variables_passed": result.variables_passed,
+                "runtime_seconds": result.runtime_seconds,
+                "quality_gate": "PASS" if result.quality_gate.passed else "FAIL",
+            },
+        )
+
+        return ValidationResponse(
+            timestamp=result.timestamp,
+            runtime_seconds=result.runtime_seconds,
+            mape_method=result.mape_method,
+            variables_tested=result.variables_tested,
+            variables_passed=result.variables_passed,
+            pass_rate=result.pass_rate,
+            average_mape=result.average_mape,
+            quality_gate_passed=result.quality_gate.passed,
+            variable_cost_mape=result.quality_gate.variable_cost_mape,
+            variable_results=variable_details,
+            model_performance=model_perf,
+        )
+
+    except TimeoutError:
+        logger.warning(
+            "Validation timed out",
+            extra={"timeout_seconds": timeout_seconds},
+        )
+        # Return error response
+        return ValidationResponse(
+            timestamp=datetime.now(UTC).isoformat(),
+            runtime_seconds=timeout_seconds,
+            mape_method=mape_method,
+            variables_tested=0,
+            variables_passed=0,
+            pass_rate=0.0,
+            average_mape=0.0,
+            quality_gate_passed=False,
+            variable_cost_mape=None,
+            variable_results=[],
+            model_performance=None,
+        )
+
+    except Exception as e:
+        logger.error("Validation failed", extra={"error": str(e)})
+        raise
+
+
+@mcp.tool()
+async def list_available_regressors(
+    metric: str | None = None,
+) -> RegressorListResponse:
+    """List external regressors available for forecasting.
+
+    Story 6.22 AC2: MCP tool for listing available regressors.
+
+    Returns metadata about external data sources (EURIBOR, TTF gas, construction
+    indices, etc.) that can be used for multi-variate forecasting.
+
+    Args:
+        metric: Optional metric name to filter to relevant regressors
+
+    Returns:
+        RegressorListResponse with regressor details and availability status
+
+    Note:
+        Correlation coefficients require historical calculation per metric.
+        This is not implemented yet - would need query-time computation.
+    """
+    try:
+        from raglite.forecasting.regressor_config import (
+            AVAILABLE_REGRESSORS,
+            METRIC_REGRESSORS,
+            REGRESSOR_METADATA,
+        )
+    except ImportError as e:
+        logger.error("Failed to import regressor config", extra={"error": str(e)})
+        return RegressorListResponse(regressors=[], total_count=0, available_count=0)
+
+    logger.info(
+        "Listing regressors",
+        extra={"metric_filter": metric},
+    )
+
+    # Determine which regressors to include
+    if metric:
+        # Filter by metric
+        metric_lower = metric.lower()
+        relevant_regressors = METRIC_REGRESSORS.get(metric_lower, AVAILABLE_REGRESSORS)
+    else:
+        relevant_regressors = AVAILABLE_REGRESSORS
+
+    regressors_info = []
+    for reg_name in relevant_regressors:
+        metadata = REGRESSOR_METADATA.get(reg_name, {})
+
+        regressor_info = RegressorInfo(
+            name=reg_name,
+            display_name=metadata.get("display_name", reg_name.replace("_", " ").title()),
+            source=metadata.get("source", "Unknown"),
+            available=True,  # Simplified - assume all are available
+            last_refresh=None,  # Would need to query database for actual value
+            data_range=None,  # Would need to query database for actual range
+            correlation=None,  # Correlation requires per-metric historical calculation
+            unit=metadata.get("unit"),
+        )
+        regressors_info.append(regressor_info)
+
+    logger.info("Regressors listed", extra={"count": len(regressors_info)})
+
+    return RegressorListResponse(
+        regressors=regressors_info,
+        total_count=len(regressors_info),
+        available_count=len(regressors_info),  # Simplified - all available
+    )
+
+
+@mcp.tool()
+async def get_regressor_data(
+    regressor: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> RegressorDataResponse:
+    """Fetch specific regressor time series data.
+
+    Story 6.22 AC3: MCP tool for fetching regressor data.
+
+    Retrieves historical time series data for a specific external regressor
+    from the appropriate API source (ECB, Eurostat, ICE Futures, etc.).
+
+    Args:
+        regressor: Regressor name (e.g., 'euribor_3m', 'construction_output', 'ttf_gas')
+        start_date: Start date in ISO format 'YYYY-MM-DD' (default: 2 years ago)
+        end_date: End date in ISO format 'YYYY-MM-DD' (default: today)
+
+    Returns:
+        RegressorDataResponse with time series data points
+
+    Raises:
+        ValueError: If regressor name is unknown
+        Exception: If API fetch fails
+    """
+    from raglite.forecasting.regressor_config import REGRESSOR_METADATA
+    from raglite.forecasting.regressor_fetch import fetch_single_regressor
+
+    logger.info(
+        "Fetching regressor data",
+        extra={"regressor": regressor, "start_date": start_date, "end_date": end_date},
+    )
+
+    # Parse dates
+    if start_date:
+        start = date.fromisoformat(start_date)
+    else:
+        start = date.today() - timedelta(days=730)  # 2 years ago
+
+    if end_date:
+        end = date.fromisoformat(end_date)
+    else:
+        end = date.today()
+
+    # Get metadata from shared constant
+    metadata = REGRESSOR_METADATA.get(regressor)
+    if not metadata:
+        raise ValueError(f"Unknown regressor: {regressor}")
+
+    try:
+        # Fetch data from API
+        series = await fetch_single_regressor(regressor, start, end)
+
+        if series is None or series.empty:
+            raise Exception(f"No data returned for {regressor}")
+
+        # Convert to response format, handling both Timestamp and date objects
+        data_points = []
+        for date_val, value in series.items():
+            # Handle both pandas Timestamp and datetime.date objects
+            if hasattr(date_val, "date"):
+                point_date = date_val.date()
+            else:
+                point_date = date_val  # Already a date object
+            data_points.append(RegressorDataPoint(date=point_date, value=float(value)))
+
+        logger.info(
+            "Regressor data fetched",
+            extra={"regressor": regressor, "points": len(data_points)},
+        )
+
+        # Build date range string (data_points guaranteed non-empty due to empty check above)
+        date_range_str = f"{data_points[0].date} to {data_points[-1].date}"
+
+        return RegressorDataResponse(
+            regressor_name=regressor,
+            display_name=metadata["display_name"],
+            source=metadata["source"],
+            unit=metadata.get("unit"),
+            data_points=data_points,
+            record_count=len(data_points),
+            date_range=date_range_str,
+            visualization_hint="line_chart",  # Suggest line chart for time series
+        )
+
+    except Exception as e:
+        logger.error(
+            "Failed to fetch regressor data", extra={"regressor": regressor, "error": str(e)}
+        )
+        raise
 
 
 async def start_mcp_with_scheduler() -> None:

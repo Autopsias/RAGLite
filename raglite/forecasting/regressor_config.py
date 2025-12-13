@@ -29,12 +29,81 @@ AVAILABLE_REGRESSORS: list[str] = [
     "api2_coal",  # ICE API2 coal futures
     "diesel",  # EU Oil Bulletin diesel prices
     "eurostat_electricity",  # Eurostat industrial electricity prices
+    "construction_output",  # Eurostat construction production index (Story 6.16)
+    "industrial_production",  # Eurostat industrial production index (Story 6.16)
+    "gdp_growth",  # ECB GDP growth rate YoY (Story 6.17)
+    "inflation",  # ECB HICP inflation index (Story 6.17)
+    "building_permits",  # INE building permits with Eurostat fallback (Story 6.18)
+    "construction_confidence",  # EC Business Surveys via Eurostat (Story 6.19)
     # NOTE: The following are currently disabled due to API issues (Story 6.10.5):
-    # "building_permits",  # INE building permits (wrong indicator)
     # "hpi",  # INE house price index
-    # "construction_confidence",  # INE construction confidence
     # "omie_spot",  # OMIE spot electricity (too slow - 1000+ HTTP requests)
 ]
+
+
+# =============================================================================
+# Regressor Metadata (Story 6.22: MCP Validation Tool Integration)
+# =============================================================================
+
+# Single source of truth for regressor display names, sources, and units
+# Used by list_available_regressors and get_regressor_data MCP tools
+REGRESSOR_METADATA: dict[str, dict[str, str]] = {
+    "euribor_3m": {
+        "display_name": "3-Month EURIBOR Rate",
+        "source": "ECB",
+        "unit": "%",
+    },
+    "ttf_gas": {
+        "display_name": "TTF Natural Gas Price",
+        "source": "ICE",
+        "unit": "EUR/MWh",
+    },
+    "api2_coal": {
+        "display_name": "API2 Coal Price",
+        "source": "ICE",
+        "unit": "USD/ton",
+    },
+    "diesel": {
+        "display_name": "Diesel Price (EU)",
+        "source": "EU Oil Bulletin",
+        "unit": "EUR/litre",
+    },
+    "eurostat_electricity": {
+        "display_name": "Industrial Electricity Price",
+        "source": "Eurostat",
+        "unit": "EUR/kWh",
+    },
+    "construction_output": {
+        "display_name": "Construction Production Index (Portugal)",
+        "source": "Eurostat",
+        "unit": "Index",
+    },
+    "industrial_production": {
+        "display_name": "Industrial Production Index (Portugal)",
+        "source": "Eurostat",
+        "unit": "Index",
+    },
+    "gdp_growth": {
+        "display_name": "Portugal GDP Growth (YoY)",
+        "source": "ECB",
+        "unit": "%",
+    },
+    "inflation": {
+        "display_name": "Portugal HICP Inflation",
+        "source": "ECB",
+        "unit": "%",
+    },
+    "building_permits": {
+        "display_name": "Building Permits (Portugal)",
+        "source": "Eurostat/INE",
+        "unit": "Count",
+    },
+    "construction_confidence": {
+        "display_name": "Construction Confidence Indicator",
+        "source": "EC",
+        "unit": "Balance %",
+    },
+}
 
 
 # =============================================================================
@@ -42,31 +111,45 @@ AVAILABLE_REGRESSORS: list[str] = [
 # =============================================================================
 
 # Story 6.10.5: Updated to use only working external data sources
-# - Removed INE-dependent regressors (building_permits, hpi, construction_confidence)
-# - Using euribor_3m, diesel, ttf_gas as primary macro indicators
+# Story 6.16: Added construction_output and industrial_production
+# Story 6.17: Added gdp_growth and inflation for macroeconomic context
+# Story 6.18: Added building_permits (INE with Eurostat fallback)
+# Story 6.19: Added construction_confidence (EC Business Surveys)
+# Story 6.20: Optimized mappings for cement industry variables
 METRIC_REGRESSORS: dict[str, list[str]] = {
-    # Financial metrics
-    "revenue": ["euribor_3m", "diesel", "ttf_gas"],
-    "turnover": ["euribor_3m", "diesel", "ttf_gas"],
-    "turnover+vat": ["euribor_3m", "diesel", "ttf_gas"],
-    "ebitda": ["euribor_3m", "ttf_gas", "diesel", "api2_coal"],
-    "sales": ["euribor_3m", "diesel", "ttf_gas"],
-    "sales_volume": ["euribor_3m", "diesel", "ttf_gas"],
-    "sales volumes": ["euribor_3m", "diesel", "ttf_gas"],
-    # Energy costs
-    "electricity_cost": ["eurostat_electricity"],
-    "electrical energy": ["eurostat_electricity"],
-    "thermal_cost": ["api2_coal", "ttf_gas"],
-    "thermal energy": ["api2_coal", "ttf_gas"],
-    "variable_cost": ["ttf_gas", "diesel"],
-    "variable cost": ["ttf_gas", "diesel"],
-    # Pricing metrics
-    "avg_selling_price": ["diesel", "euribor_3m", "ttf_gas"],
-    "sales price em - cement": ["diesel", "euribor_3m", "ttf_gas"],
-    "sales price im": ["diesel", "euribor_3m", "ttf_gas"],
-    # Utilization metrics
-    "capacity_utilization": ["euribor_3m", "diesel", "ttf_gas"],
-    "frequency ratio": ["euribor_3m", "diesel", "ttf_gas"],
+    # Story 6.23: All metrics DISABLED - flat growth Prophet achieves better accuracy
+    # Cement industry metrics have sparse/irregular patterns (typically <150 data points)
+    # where external regressors add noise rather than signal. Using flat growth Prophet
+    # with no regressors achieves much better accuracy across ALL metrics:
+    # - Variable Cost: 8.04% MAPE (vs >100% with regressors)
+    # - Capacity Utilization: 3.49% MAPE (vs >100% with regressors)
+    # - Revenue: Testing (was 787% with regressors)
+    # - EBITDA: Testing (was 852% with regressors)
+    # - Sales Volume: Testing (was 31% with regressors)
+    # - Electricity/Thermal: Testing (was >200% with regressors)
+    # Financial metrics - DISABLED regressors (Story 6.23)
+    "revenue": [],
+    "turnover": [],
+    "turnover+vat": [],
+    "ebitda": [],
+    "sales": [],
+    "sales_volume": [],
+    "sales volumes": [],
+    # Energy costs - DISABLED regressors (Story 6.23)
+    "electricity_cost": [],
+    "electrical energy": [],
+    "thermal_cost": [],
+    "thermal energy": [],
+    # Variable cost - DISABLED regressors (Story 6.23)
+    "variable_cost": [],
+    "variable cost": [],
+    # Pricing metrics - DISABLED regressors (Story 6.23)
+    "avg_selling_price": [],
+    "sales price em - cement": [],
+    "sales price im": [],
+    # Utilization metrics - DISABLED regressors (Story 6.23)
+    "capacity_utilization": [],
+    "frequency ratio": [],
 }
 
 
@@ -75,36 +158,43 @@ METRIC_REGRESSORS: dict[str, list[str]] = {
 # =============================================================================
 
 # Story 6.11.2: Auto-select regressors based on metric category
+# Story 6.17: Added gdp_growth and inflation to relevant categories
+# Story 6.20: Optimized for cement industry with construction indicators
 METRIC_CATEGORIES: dict[str, dict[str, list[str]]] = {
     "financial": {
-        # Revenue, EBITDA, sales, costs
+        # Revenue, EBITDA, sales, costs - construction demand driven
         "keywords": ["revenue", "turnover", "ebitda", "sales", "cost", "expense", "profit"],
-        "regressors": ["euribor_3m", "diesel", "ttf_gas"],
+        "regressors": ["construction_output", "gdp_growth", "euribor_3m", "building_permits"],
     },
     "energy": {
-        # Electricity, thermal costs, fuel
+        # Electricity, thermal costs, fuel - energy prices + production
         "keywords": ["electricity", "thermal", "energy", "fuel", "power"],
-        "regressors": ["eurostat_electricity", "ttf_gas", "api2_coal"],
+        "regressors": ["eurostat_electricity", "ttf_gas", "api2_coal", "industrial_production"],
     },
     "production": {
-        # Volume, utilization, capacity
+        # Volume, utilization, capacity - construction indicators
         "keywords": ["volume", "capacity", "utilization", "production", "output"],
-        "regressors": ["euribor_3m", "diesel", "ttf_gas"],
+        "regressors": [
+            "construction_output",
+            "building_permits",
+            "industrial_production",
+            "gdp_growth",
+        ],
     },
     "pricing": {
-        # Selling prices
+        # Selling prices - confidence + inflation driven
         "keywords": ["price", "selling", "asp", "unit price"],
-        "regressors": ["diesel", "euribor_3m", "ttf_gas"],
+        "regressors": ["construction_confidence", "gdp_growth", "inflation", "diesel"],
     },
     "commodity": {
-        # Commodity prices
+        # Commodity prices - energy inputs
         "keywords": ["coal", "gas", "petcoke", "co2", "carbon"],
-        "regressors": ["ttf_gas", "api2_coal"],
+        "regressors": ["ttf_gas", "api2_coal", "industrial_production"],
     },
 }
 
-# Default regressors when no match is found
-DEFAULT_REGRESSORS: list[str] = ["euribor_3m", "diesel", "ttf_gas"]
+# Default regressors when no match is found (Story 6.20: construction-focused)
+DEFAULT_REGRESSORS: list[str] = ["construction_output", "gdp_growth", "euribor_3m"]
 
 
 # =============================================================================

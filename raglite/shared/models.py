@@ -4,6 +4,7 @@ Defines core data structures used across ingestion and retrieval modules.
 """
 
 from datetime import UTC, datetime
+from datetime import date as date_type
 from enum import Enum
 from typing import Any
 
@@ -1218,3 +1219,171 @@ class InsightsQueryResponse(BaseModel):
         default_factory=list,
         description="Documents analyzed for insights",
     )
+
+
+# Story 6.22: MCP Validation Tool Integration models
+class VariableValidationDetail(BaseModel):
+    """Per-variable validation detail for MCP responses.
+
+    Story 6.22 AC1: MCP-compatible validation detail for individual variables.
+
+    Attributes:
+        variable_name: Technical variable name (e.g., 'variable_cost')
+        display_name: Human-readable name (e.g., 'Variable Cost')
+        target_mape: Target MAPE threshold for this variable
+        actual_mape: Actual MAPE achieved (None if not tested)
+        passed: Whether the variable passes its MAPE target
+        ensemble_weights: Model weights in ensemble (e.g., {'prophet': 0.4, 'linear': 0.3})
+        best_model: Best performing model for this variable
+    """
+
+    variable_name: str = Field(..., description="Technical variable name")
+    display_name: str = Field(..., description="Human-readable name")
+    target_mape: float = Field(..., description="Target MAPE threshold")
+    actual_mape: float | None = Field(None, description="Actual MAPE achieved")
+    passed: bool = Field(..., description="Whether variable passes target")
+    ensemble_weights: dict[str, float] = Field(
+        default_factory=dict,
+        description="Model weights in ensemble",
+    )
+    best_model: str = Field(default="", description="Best performing model")
+
+
+class ModelPerformanceDetail(BaseModel):
+    """Per-model performance detail for MCP responses.
+
+    Story 6.22 AC1: MCP-compatible model performance breakdown.
+
+    Attributes:
+        model_name: Model name (e.g., 'prophet', 'linear', 'xgboost')
+        avg_mape: Average MAPE across all variables using this model
+        variables_used: Number of variables using this model
+    """
+
+    model_name: str = Field(..., description="Model name")
+    avg_mape: float = Field(..., description="Average MAPE across variables")
+    variables_used: int = Field(..., description="Variables using this model")
+
+
+class ValidationResponse(BaseModel):
+    """Response model for forecasting validation via MCP.
+
+    Story 6.22 AC1: Complete validation result for MCP tool.
+
+    Attributes:
+        timestamp: Validation timestamp (ISO format)
+        runtime_seconds: Validation runtime in seconds
+        mape_method: MAPE calculation method used ('holdout', 'walkforward', or 'cv')
+        variables_tested: Number of variables validated
+        variables_passed: Number of variables passing MAPE target
+        pass_rate: Pass rate (0.0-1.0)
+        average_mape: Average MAPE across all variables
+        quality_gate_passed: Whether Epic 6 quality gate passed (10/12 variables + Variable Cost <8%)
+        variable_cost_mape: Variable Cost MAPE if tested
+        variable_results: Per-variable validation results
+        model_performance: Per-model breakdown if requested
+    """
+
+    timestamp: str = Field(..., description="Validation timestamp (ISO format)")
+    runtime_seconds: float = Field(..., description="Validation runtime in seconds")
+    mape_method: str = Field(..., description="MAPE calculation method used")
+
+    # Summary
+    variables_tested: int = Field(..., description="Number of variables validated")
+    variables_passed: int = Field(..., description="Number of variables passing MAPE target")
+    pass_rate: float = Field(..., description="Pass rate (0.0-1.0)")
+    average_mape: float = Field(..., description="Average MAPE across all variables")
+
+    # Quality gate
+    quality_gate_passed: bool = Field(..., description="Whether Epic 6 quality gate passed")
+    variable_cost_mape: float | None = Field(None, description="Variable Cost MAPE if tested")
+
+    # Details
+    variable_results: list[VariableValidationDetail] = Field(
+        ..., description="Per-variable validation results"
+    )
+    model_performance: dict[str, ModelPerformanceDetail] | None = Field(
+        None, description="Per-model breakdown if requested"
+    )
+
+
+class RegressorInfo(BaseModel):
+    """Information about a single regressor for MCP responses.
+
+    Story 6.22 AC2: Regressor metadata for list_available_regressors tool.
+
+    Attributes:
+        name: Regressor identifier (e.g., 'ttf_gas', 'euribor_3m')
+        display_name: Human-readable name (e.g., 'TTF Natural Gas Price')
+        source: Data source (e.g., 'ICE', 'ECB', 'Eurostat')
+        available: Can currently fetch data
+        last_refresh: Last successful fetch timestamp
+        data_range: Available date range
+        correlation: Correlation with metric (if requested)
+        unit: Data unit (e.g., 'EUR/MWh', '%')
+    """
+
+    name: str = Field(..., description="Regressor identifier")
+    display_name: str = Field(..., description="Human-readable name")
+    source: str = Field(..., description="Data source")
+    available: bool = Field(..., description="Can currently fetch data")
+    last_refresh: str | None = Field(None, description="Last successful fetch timestamp")
+    data_range: str | None = Field(None, description="Available date range")
+    correlation: float | None = Field(None, description="Correlation with metric")
+    unit: str | None = Field(None, description="Data unit")
+
+
+class RegressorListResponse(BaseModel):
+    """Response for listing available regressors via MCP.
+
+    Story 6.22 AC2: list_available_regressors tool response.
+
+    Attributes:
+        regressors: List of available regressors
+        total_count: Total number of regressors
+        available_count: Number currently available (can fetch)
+    """
+
+    regressors: list[RegressorInfo] = Field(..., description="List of available regressors")
+    total_count: int = Field(..., description="Total number of regressors")
+    available_count: int = Field(..., description="Number currently available")
+
+
+class RegressorDataPoint(BaseModel):
+    """Single regressor data point for MCP responses.
+
+    Story 6.22 AC3: Time series data point for get_regressor_data tool.
+
+    Attributes:
+        date: Date of the data point
+        value: Regressor value
+    """
+
+    date: date_type = Field(..., description="Date of the data point")
+    value: float = Field(..., description="Regressor value")
+
+
+class RegressorDataResponse(BaseModel):
+    """Response for fetching regressor data via MCP.
+
+    Story 6.22 AC3: get_regressor_data tool response.
+
+    Attributes:
+        regressor_name: Regressor identifier
+        display_name: Human-readable name
+        source: Data source
+        unit: Data unit
+        data_points: Time series data
+        record_count: Number of data points
+        date_range: Actual date range returned
+        visualization_hint: Suggested visualization type
+    """
+
+    regressor_name: str = Field(..., description="Regressor identifier")
+    display_name: str = Field(..., description="Human-readable name")
+    source: str = Field(..., description="Data source")
+    unit: str | None = Field(None, description="Data unit")
+    data_points: list[RegressorDataPoint] = Field(..., description="Time series data")
+    record_count: int = Field(..., description="Number of data points")
+    date_range: str = Field(..., description="Actual date range returned")
+    visualization_hint: str | None = Field(None, description="Suggested visualization type")

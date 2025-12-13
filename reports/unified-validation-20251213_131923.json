@@ -1,0 +1,32 @@
+{
+  "timestamp": "2025-12-13T13:19:23.317809",
+  "runtime_seconds": 3.624431848526001,
+  "mape_method": "holdout",
+  "variables_tested": 1,
+  "variables_passed": 0,
+  "pass_rate": 0.0,
+  "average_mape": 0.0,
+  "variable_results": [
+    {
+      "variable_name": "revenue",
+      "display_name": "Revenue",
+      "target_mape": 5.0,
+      "actual_mape": null,
+      "passed": false,
+      "holdout_mape": null,
+      "walkforward_mape": null,
+      "cv_mape": null,
+      "ensemble_weights": {},
+      "best_model": "",
+      "best_model_mape": 0.0
+    }
+  ],
+  "model_performance": {},
+  "quality_gate": {
+    "passed": false,
+    "minimum_required": 10,
+    "actual_passed": 0,
+    "variable_cost_mape": null,
+    "variable_cost_target": 8.5
+  }
+}

@@ -111,12 +111,165 @@ async def fetch_single_regressor(
                 series = series.groupby(level=0).mean()
                 return series
 
-        elif reg_name == "building_permits":
-            # NOTE: Currently disabled - INE indicator returns wrong data
-            # Story 6.11.4 will fix this
-            logger.warning(
-                f"Regressor {reg_name} currently disabled - INE indicator returns wrong data"
+        elif reg_name == "construction_output":
+            from raglite.external_data.clients.eurostat import EurostatClient
+
+            client_eurostat_constr: EurostatClient = EurostatClient()
+            construction_data = await client_eurostat_constr.fetch_construction_output(
+                start_date=start_date, end_date=end_date
             )
+            if construction_data:
+                series = pd.Series(
+                    [d.index_value for d in construction_data],
+                    index=pd.DatetimeIndex([d.date for d in construction_data]),
+                )
+                series = series.groupby(level=0).mean()
+                return series
+
+        elif reg_name == "industrial_production":
+            from raglite.external_data.clients.eurostat import EurostatClient
+
+            client_eurostat_ind: EurostatClient = EurostatClient()
+            industrial_data = await client_eurostat_ind.fetch_industrial_production(
+                start_date=start_date, end_date=end_date
+            )
+            if industrial_data:
+                series = pd.Series(
+                    [d.index_value for d in industrial_data],
+                    index=pd.DatetimeIndex([d.date for d in industrial_data]),
+                )
+                series = series.groupby(level=0).mean()
+                return series
+
+        elif reg_name == "gdp_growth":
+            # Story 6.17 AC1: GDP growth rate for demand-side forecasting
+            from raglite.external_data.clients.ecb import (
+                ECBClient,
+                interpolate_quarterly_to_monthly,
+            )
+
+            client_ecb_gdp: ECBClient = ECBClient()
+            quarterly_gdp = await client_ecb_gdp.fetch_gdp_growth(
+                country="PT", start_date=start_date, end_date=end_date
+            )
+            if quarterly_gdp:
+                # Interpolate quarterly to monthly for Prophet alignment
+                monthly_gdp = interpolate_quarterly_to_monthly(quarterly_gdp)
+                series = pd.Series(
+                    [d.growth_pct for d in monthly_gdp],
+                    index=pd.DatetimeIndex([d.date for d in monthly_gdp]),
+                )
+                series = series.groupby(level=0).mean()
+                return series
+
+        elif reg_name == "inflation":
+            # Story 6.17 AC2: HICP inflation for pricing/cost forecasting
+            from raglite.external_data.clients.ecb import ECBClient
+
+            client_ecb_hicp: ECBClient = ECBClient()
+            hicp_data = await client_ecb_hicp.fetch_inflation(
+                country="PT", start_date=start_date, end_date=end_date
+            )
+            if hicp_data:
+                series = pd.Series(
+                    [d.index_value for d in hicp_data],
+                    index=pd.DatetimeIndex([d.date for d in hicp_data]),
+                )
+                series = series.groupby(level=0).mean()
+                return series
+
+        elif reg_name == "building_permits":
+            # Story 6.18: INE building permits with Eurostat fallback
+            from raglite.external_data.clients.ine import INEClient
+
+            try:
+                client_ine = INEClient()
+                permits_data = await client_ine.fetch_building_permits(
+                    start_date=start_date, end_date=end_date
+                )
+
+                if permits_data:
+                    # Check if we have national totals (avoid double-counting with regions)
+                    # Code Review Issue 1: Filter for national data if available
+                    national_keywords = ("portugal", "total", "nacional", "pt")
+                    national_permits = [
+                        p for p in permits_data if p.region.lower() in national_keywords
+                    ]
+
+                    if national_permits:
+                        # Use national totals (still need aggregation - INE returns multiple records per month)
+                        # BUG FIX: INE API returns Portugal data broken down by building type/purpose
+                        # Multiple "Portugal" entries per month need to be summed to get monthly total
+                        series = pd.Series(
+                            [p.permits_count for p in national_permits],
+                            index=pd.DatetimeIndex([p.date for p in national_permits]),
+                        )
+                        series = series.groupby(level=0).sum()  # Aggregate duplicate months
+                    else:
+                        # Aggregate regional data to national monthly totals
+                        # Code Review Issue 2: Use pandas groupby for consistent aggregation
+                        series = pd.Series(
+                            [p.permits_count for p in permits_data],
+                            index=pd.DatetimeIndex([p.date for p in permits_data]),
+                        )
+                        series = series.groupby(level=0).sum()
+
+                    series = series.sort_index()
+                    logger.info(
+                        "Fetched building permits regressor",
+                        extra={"source": "INE", "data_points": len(series)},
+                    )
+                    return series
+
+            except Exception as e:
+                logger.warning(f"INE building permits failed, trying Eurostat fallback: {e}")
+
+            # Fallback to Eurostat
+            from raglite.external_data.clients.eurostat import EurostatClient
+
+            try:
+                client_eurostat = EurostatClient()
+                eurostat_data = await client_eurostat.fetch_building_permits(
+                    country="PT", start_date=start_date, end_date=end_date
+                )
+
+                if eurostat_data:
+                    series = pd.Series(
+                        [d.permits_count for d in eurostat_data],
+                        index=pd.DatetimeIndex([d.date for d in eurostat_data]),
+                    )
+                    series = series.groupby(level=0).sum()
+                    logger.info(
+                        "Fetched building permits regressor",
+                        extra={"source": "Eurostat (fallback)", "data_points": len(series)},
+                    )
+                    return series
+            except Exception as e:
+                logger.warning(f"Eurostat building permits fallback failed: {e}")
+
+            return None
+
+        elif reg_name == "construction_confidence":
+            # Story 6.19: EC Construction Confidence via Eurostat
+            from raglite.external_data.clients.eurostat import EurostatClient
+
+            client_eurostat = EurostatClient()
+            confidence_data = await client_eurostat.fetch_construction_confidence(
+                country="PT", start_date=start_date, end_date=end_date
+            )
+
+            if confidence_data:
+                series = pd.Series(
+                    [d.confidence_index for d in confidence_data],
+                    index=pd.DatetimeIndex([d.date for d in confidence_data]),
+                )
+                series = series.groupby(level=0).mean()
+                logger.info(
+                    "Fetched construction confidence regressor",
+                    extra={"source": "Eurostat (EC)", "data_points": len(series)},
+                )
+                return series
+
             return None
 
         elif reg_name == "omie_spot":
@@ -236,9 +389,14 @@ async def fetch_regressors_with_date_range(
     if not historical_data_dates:
         return {}
 
+    # Convert datetime to date if necessary (handles both date and datetime objects)
+    dates_as_dates = [
+        d.date() if hasattr(d, "date") and callable(d.date) else d for d in historical_data_dates
+    ]
+
     # Extend date range to cover historical period + buffer for alignment
-    start_date = min(historical_data_dates) - timedelta(days=365)  # 1 year buffer
-    end_date = max(historical_data_dates) + timedelta(days=30 * periods_ahead)
+    start_date = min(dates_as_dates) - timedelta(days=365)  # 1 year buffer
+    end_date = max(dates_as_dates) + timedelta(days=30 * periods_ahead)
 
     return await fetch_regressors_for_metric(
         metric=metric,

@@ -1,0 +1,498 @@
+2025-12-13 13:58:47 - __main__ - INFO - Discovering SECIL metrics in database...
+2025-12-13 13:58:47 - raglite.forecasting.metrics - INFO - Fetching available metrics from database
+2025-12-13 13:58:47 - raglite.shared.clients - INFO - Connecting to PostgreSQL
+2025-12-13 13:58:47 - raglite.shared.clients - INFO - PostgreSQL connection established
+2025-12-13 13:58:47 - raglite.forecasting.metrics - INFO - Metrics discovery complete
+2025-12-13 13:58:47 - __main__ - INFO - Found metrics in database
+2025-12-13 13:58:47 - __main__ - INFO - Matched revenue -> Turnover+VAT
+2025-12-13 13:58:47 - __main__ - INFO - Matched ebitda -> EBITDA
+2025-12-13 13:58:47 - __main__ - INFO - Matched sales_volume -> Sales Volumes
+2025-12-13 13:58:47 - __main__ - INFO - Matched electricity_cost -> Electrical Energy
+2025-12-13 13:58:47 - __main__ - INFO - Matched thermal_cost -> Thermal Energy
+2025-12-13 13:58:47 - __main__ - INFO - Matched variable_cost -> Variable Cost
+2025-12-13 13:58:47 - __main__ - INFO - Matched avg_selling_price -> Sales Price EM - Cement
+2025-12-13 13:58:47 - __main__ - INFO - Matched capacity_utilization -> Frequency Ratio
+
+[1/3] Discovering database metrics...
+
+[2/3] Running holdout MAPE validation...
+
+Validating variables:   0%|          | 0/12 [00:00<?, ?it/s]
+Validating Revenue:   0%|          | 0/12 [00:00<?, ?it/s]  2025-12-13 13:58:47 - raglite.forecasting.timeseries_extract - INFO - Extracting time-series from SQL
+2025-12-13 13:58:47 - raglite.forecasting.timeseries_extract - WARNING - Insufficient SQL data points
+2025-12-13 13:58:47 - raglite.forecasting.metrics - INFO - Returning cached metrics list
+2025-12-13 13:58:47 - raglite.forecasting.timeseries_extract - WARNING - SQL extraction has insufficient Turnover+VAT data, trying Qdrant fallback
+2025-12-13 13:58:47 - raglite.forecasting.timeseries_extract - INFO - Extracting metric from Qdrant chunks (fallback)
+2025-12-13 13:58:47 - raglite.shared.clients - INFO - Connecting to Qdrant
+2025-12-13 13:58:47 - raglite.shared.clients - INFO - Qdrant client connected successfully
+2025-12-13 13:58:47 - raglite.forecasting.timeseries_extract - INFO - Qdrant text search found 36 chunks
+2025-12-13 13:58:47 - raglite.forecasting.timeseries_extract - INFO - Qdrant extraction successful for Turnover+VAT
+2025-12-13 13:58:47 - raglite.forecasting.regressor_fetch - INFO - Fetching regressors for Turnover+VAT
+2025-12-13 13:58:47 - raglite.external_data.clients.eurostat - INFO - Fetching Eurostat construction output
+2025-12-13 13:58:47 - raglite.external_data.clients.eurostat - INFO - Fetching Eurostat data
+2025-12-13 13:58:47 - raglite.external_data.clients.ecb - INFO - Fetching ECB GDP growth
+2025-12-13 13:58:47 - raglite.external_data.clients.ecb - INFO - ECB EURIBOR rates loaded from cache
+2025-12-13 13:58:47 - raglite.external_data.clients.ine - INFO - INE building permits loaded from cache
+2025-12-13 13:58:47 - raglite.forecasting.regressor_fetch - INFO - Fetched building permits regressor
+2025-12-13 13:58:47 - raglite.forecasting.regressor_fetch - WARNING - Failed to fetch regressor gdp_growth: [ECB] GDP HTTP 404
+2025-12-13 13:58:49 - raglite.external_data.clients.eurostat - INFO - Parsed Eurostat construction output
+2025-12-13 13:58:49 - raglite.forecasting.regressor_fetch - INFO - Fetched regressor construction_output: 71 points
+2025-12-13 13:58:49 - raglite.forecasting.regressor_fetch - WARNING - Regressor gdp_growth returned no data
+2025-12-13 13:58:49 - raglite.forecasting.regressor_fetch - INFO - Fetched regressor euribor_3m: 72 points
+2025-12-13 13:58:49 - raglite.forecasting.regressor_fetch - INFO - Fetched regressor building_permits: 71 points
+2025-12-13 13:58:49 - raglite.forecasting.regressor_fetch - INFO - Regressor fetch complete
+2025-12-13 13:58:49 - __main__ - INFO - Fetched 3/4 regressors for Turnover+VAT
+2025-12-13 13:58:49 - raglite.forecasting.hybrid - INFO - Generating forecast
+2025-12-13 13:58:50 - raglite.forecasting.hybrid - INFO - Regressors selected
+2025-12-13 13:58:50 - raglite.forecasting.hybrid - INFO - Auto-resampling high-frequency regressor construction_output to monthly
+2025-12-13 13:58:50 - raglite.forecasting.hybrid - INFO - Resampled construction_output to monthly
+2025-12-13 13:58:50 - raglite.forecasting.hybrid - INFO - Auto-resampling high-frequency regressor euribor_3m to monthly
+2025-12-13 13:58:50 - raglite.forecasting.hybrid - INFO - Resampled euribor_3m to monthly
+2025-12-13 13:58:50 - raglite.forecasting.hybrid - INFO - Auto-transforming YoY% regressor: euribor_3m
+2025-12-13 13:58:50 - raglite.forecasting.hybrid - INFO - Transformed euribor_3m to index
+2025-12-13 13:58:50 - raglite.forecasting.hybrid - INFO - Auto-resampling high-frequency regressor building_permits to monthly
+2025-12-13 13:58:50 - raglite.forecasting.hybrid - INFO - Resampled building_permits to monthly
+2025-12-13 13:58:50 - raglite.forecasting.hybrid - INFO - Multi-variate regressors added
+2025-12-13 13:58:50 - raglite.forecasting.hybrid - INFO - Prophet configured
+13:58:50 - cmdstanpy - INFO - Chain [1] start processing
+13:58:55 - cmdstanpy - INFO - Chain [1] done processing
+
+
+  0%|          | 0/19 [00:00<?, ?it/s][A13:58:55 - cmdstanpy - INFO - Chain [1] start processing
+13:58:56 - cmdstanpy - INFO - Chain [1] done processing
+
+
+  5%|▌         | 1/19 [00:01<00:30,  1.71s/it][A13:58:56 - cmdstanpy - INFO - Chain [1] start processing
+13:58:58 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 11%|█         | 2/19 [00:03<00:28,  1.70s/it][A13:58:58 - cmdstanpy - INFO - Chain [1] start processing
+13:59:00 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 16%|█▌        | 3/19 [00:05<00:27,  1.70s/it][A13:59:00 - cmdstanpy - INFO - Chain [1] start processing
+13:59:02 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 21%|██        | 4/19 [00:07<00:28,  1.89s/it][A13:59:02 - cmdstanpy - INFO - Chain [1] start processing
+13:59:04 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 26%|██▋       | 5/19 [00:09<00:29,  2.07s/it][A13:59:04 - cmdstanpy - INFO - Chain [1] start processing
+13:59:04 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 32%|███▏      | 6/19 [00:09<00:18,  1.45s/it][A13:59:04 - cmdstanpy - INFO - Chain [1] start processing
+13:59:07 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 37%|███▋      | 7/19 [00:12<00:21,  1.82s/it][A13:59:07 - cmdstanpy - INFO - Chain [1] start processing
+13:59:10 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 42%|████▏     | 8/19 [00:15<00:23,  2.10s/it][A13:59:10 - cmdstanpy - INFO - Chain [1] start processing
+13:59:13 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 47%|████▋     | 9/19 [00:18<00:23,  2.34s/it][A13:59:13 - cmdstanpy - INFO - Chain [1] start processing
+13:59:16 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 53%|█████▎    | 10/19 [00:21<00:23,  2.57s/it][A13:59:16 - cmdstanpy - INFO - Chain [1] start processing
+13:59:19 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 58%|█████▊    | 11/19 [00:24<00:22,  2.85s/it][A13:59:19 - cmdstanpy - INFO - Chain [1] start processing
+13:59:22 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 63%|██████▎   | 12/19 [00:27<00:20,  2.95s/it][A13:59:22 - cmdstanpy - INFO - Chain [1] start processing
+13:59:26 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 68%|██████▊   | 13/19 [00:31<00:18,  3.11s/it][A13:59:26 - cmdstanpy - INFO - Chain [1] start processing
+13:59:29 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 74%|███████▎  | 14/19 [00:33<00:14,  2.98s/it][A13:59:29 - cmdstanpy - INFO - Chain [1] start processing
+13:59:32 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 79%|███████▉  | 15/19 [00:37<00:12,  3.25s/it][A13:59:32 - cmdstanpy - INFO - Chain [1] start processing
+13:59:37 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 84%|████████▍ | 16/19 [00:41<00:10,  3.51s/it][A13:59:37 - cmdstanpy - INFO - Chain [1] start processing
+13:59:40 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 89%|████████▉ | 17/19 [00:45<00:07,  3.57s/it][A13:59:40 - cmdstanpy - INFO - Chain [1] start processing
+13:59:45 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 95%|█████████▍| 18/19 [00:49<00:03,  3.80s/it][A13:59:45 - cmdstanpy - INFO - Chain [1] start processing
+13:59:49 - cmdstanpy - INFO - Chain [1] done processing
+
+
+100%|██████████| 19/19 [00:54<00:00,  4.01s/it][A
+100%|██████████| 19/19 [00:54<00:00,  2.87s/it]
+2025-12-13 13:59:49 - raglite.forecasting.hybrid - INFO - Generating forecast explanation with Mistral Large
+2025-12-13 13:59:49 - raglite.shared.clients - INFO - Initializing Mistral AI client
+2025-12-13 13:59:49 - raglite.shared.clients - INFO - Mistral AI client configured with production timeouts
+2025-12-13 13:59:49 - raglite.shared.clients - INFO - Mistral AI client initialized
+2025-12-13 13:59:56 - raglite.forecasting.hybrid - INFO - Forecast generated
+
+Validating Revenue:   8%|▊         | 1/12 [01:09<12:41, 69.19s/it]
+Validating EBITDA:   8%|▊         | 1/12 [01:09<12:41, 69.19s/it] 2025-12-13 13:59:56 - raglite.forecasting.timeseries_extract - INFO - Extracting time-series from SQL
+2025-12-13 13:59:56 - raglite.forecasting.timeseries_extract - INFO - Applying normalized entity filter for consolidated metric
+2025-12-13 13:59:56 - raglite.forecasting.timeseries_extract - WARNING - Insufficient SQL data points
+2025-12-13 13:59:56 - raglite.forecasting.metrics - INFO - Returning cached metrics list
+2025-12-13 13:59:56 - raglite.forecasting.timeseries_extract - WARNING - SQL extraction has insufficient EBITDA data, trying Qdrant fallback
+2025-12-13 13:59:56 - raglite.forecasting.timeseries_extract - INFO - Extracting EBITDA from Qdrant chunks (fallback)
+2025-12-13 13:59:56 - raglite.forecasting.timeseries_extract - INFO - Found Qdrant chunks with Portugal EBITDA IFRS
+2025-12-13 13:59:56 - raglite.forecasting.timeseries_extract - INFO - Qdrant EBITDA extraction successful for portugal
+2025-12-13 13:59:56 - raglite.forecasting.regressor_fetch - INFO - Fetching regressors for EBITDA
+2025-12-13 13:59:56 - raglite.external_data.clients.eurostat - INFO - Fetching Eurostat construction output
+2025-12-13 13:59:56 - raglite.external_data.clients.eurostat - INFO - Fetching Eurostat data
+2025-12-13 13:59:56 - raglite.external_data.clients.ecb - INFO - Fetching ECB GDP growth
+2025-12-13 13:59:56 - raglite.external_data.clients.ice_futures - INFO - Fetching TTF Natural Gas prices
+2025-12-13 13:59:56 - raglite.external_data.clients.ice_futures - INFO - Fetching Quandl data
+2025-12-13 13:59:56 - raglite.external_data.clients.ice_futures - INFO - Fetching API2 Coal prices
+2025-12-13 13:59:56 - raglite.external_data.clients.ice_futures - WARNING - Yahoo Finance coal fetch failed, using cache
+2025-12-13 13:59:56 - raglite.forecasting.regressor_fetch - WARNING - Failed to fetch regressor gdp_growth: [ECB] GDP HTTP 404
+2025-12-13 13:59:56 - raglite.external_data.clients.ice_futures - WARNING - Quandl TTF fetch failed, trying EEX fallback
+2025-12-13 13:59:56 - raglite.external_data.clients.ice_futures - INFO - Fetching TTF gas from Yahoo Finance
+2025-12-13 14:00:00 - raglite.external_data.clients.eurostat - INFO - Parsed Eurostat construction output
+2025-12-13 14:00:00 - raglite.forecasting.regressor_fetch - INFO - Fetched regressor construction_output: 47 points
+2025-12-13 14:00:00 - raglite.forecasting.regressor_fetch - WARNING - Regressor gdp_growth returned no data
+2025-12-13 14:00:00 - raglite.forecasting.regressor_fetch - INFO - Fetched regressor ttf_gas: 1012 points
+2025-12-13 14:00:00 - raglite.forecasting.regressor_fetch - INFO - Fetched regressor api2_coal: 1010 points
+2025-12-13 14:00:00 - raglite.forecasting.regressor_fetch - INFO - Regressor fetch complete
+2025-12-13 14:00:00 - __main__ - INFO - Fetched 3/4 regressors for EBITDA
+2025-12-13 14:00:00 - raglite.forecasting.hybrid - INFO - Generating forecast
+2025-12-13 14:00:00 - raglite.forecasting.hybrid - INFO - Regressors selected
+2025-12-13 14:00:00 - raglite.forecasting.hybrid - INFO - Prophet configured
+14:00:00 - cmdstanpy - INFO - Chain [1] start processing
+14:00:05 - cmdstanpy - INFO - Chain [1] done processing
+
+
+  0%|          | 0/10 [00:00<?, ?it/s][A14:00:05 - cmdstanpy - INFO - Chain [1] start processing
+14:00:08 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 10%|█         | 1/10 [00:03<00:27,  3.01s/it][A14:00:08 - cmdstanpy - INFO - Chain [1] start processing
+14:00:11 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 20%|██        | 2/10 [00:05<00:23,  2.97s/it][A14:00:11 - cmdstanpy - INFO - Chain [1] start processing
+14:00:14 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 30%|███       | 3/10 [00:09<00:22,  3.17s/it][A14:00:14 - cmdstanpy - INFO - Chain [1] start processing
+14:00:18 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 40%|████      | 4/10 [00:12<00:19,  3.32s/it][A14:00:18 - cmdstanpy - INFO - Chain [1] start processing
+14:00:21 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 50%|█████     | 5/10 [00:16<00:17,  3.47s/it][A14:00:21 - cmdstanpy - INFO - Chain [1] start processing
+14:00:25 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 60%|██████    | 6/10 [00:20<00:14,  3.56s/it][A14:00:25 - cmdstanpy - INFO - Chain [1] start processing
+14:00:29 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 70%|███████   | 7/10 [00:24<00:11,  3.69s/it][A14:00:29 - cmdstanpy - INFO - Chain [1] start processing
+14:00:33 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 80%|████████  | 8/10 [00:28<00:07,  3.83s/it][A14:00:33 - cmdstanpy - INFO - Chain [1] start processing
+14:00:38 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 90%|█████████ | 9/10 [00:32<00:03,  3.99s/it][A14:00:38 - cmdstanpy - INFO - Chain [1] start processing
+14:00:42 - cmdstanpy - INFO - Chain [1] done processing
+
+
+100%|██████████| 10/10 [00:37<00:00,  4.15s/it][A
+100%|██████████| 10/10 [00:37<00:00,  3.73s/it]
+2025-12-13 14:00:42 - raglite.forecasting.hybrid - INFO - Generating forecast explanation with Mistral Large
+2025-12-13 14:00:51 - raglite.forecasting.hybrid - INFO - Forecast generated
+
+Validating EBITDA:  17%|█▋        | 2/12 [02:03<10:07, 60.72s/it]
+Validating Sales Volume:  17%|█▋        | 2/12 [02:03<10:07, 60.72s/it]2025-12-13 14:00:51 - raglite.forecasting.timeseries_extract - INFO - Extracting time-series from SQL
+2025-12-13 14:00:51 - raglite.forecasting.timeseries_extract - WARNING - Insufficient SQL data points
+2025-12-13 14:00:51 - raglite.forecasting.metrics - INFO - Returning cached metrics list
+2025-12-13 14:00:51 - raglite.forecasting.timeseries_extract - WARNING - SQL extraction has insufficient Sales Volumes data, trying Qdrant fallback
+2025-12-13 14:00:51 - raglite.forecasting.timeseries_extract - INFO - Extracting metric from Qdrant chunks (fallback)
+2025-12-13 14:00:51 - raglite.forecasting.timeseries_extract - INFO - Qdrant text search found 253 chunks
+2025-12-13 14:00:51 - raglite.forecasting.timeseries_extract - INFO - Qdrant extraction successful for Sales Volumes
+2025-12-13 14:00:51 - raglite.forecasting.regressor_fetch - INFO - Fetching regressors for Sales Volumes
+2025-12-13 14:00:51 - raglite.external_data.clients.eurostat - INFO - Fetching Eurostat construction output
+2025-12-13 14:00:51 - raglite.external_data.clients.eurostat - INFO - Fetching Eurostat data
+2025-12-13 14:00:51 - raglite.external_data.clients.ine - INFO - INE building permits loaded from cache
+2025-12-13 14:00:51 - raglite.forecasting.regressor_fetch - INFO - Fetched building permits regressor
+2025-12-13 14:00:51 - raglite.external_data.clients.ecb - INFO - Fetching ECB GDP growth
+2025-12-13 14:00:51 - raglite.external_data.clients.eurostat - INFO - Fetching Eurostat industrial production
+2025-12-13 14:00:51 - raglite.external_data.clients.eurostat - INFO - Fetching Eurostat data
+2025-12-13 14:00:51 - raglite.forecasting.regressor_fetch - WARNING - Failed to fetch regressor gdp_growth: [ECB] GDP HTTP 404
+2025-12-13 14:00:53 - raglite.external_data.clients.eurostat - INFO - Parsed Eurostat construction output
+2025-12-13 14:01:20 - raglite.external_data.clients.eurostat - INFO - Parsed Eurostat industrial production
+2025-12-13 14:01:20 - raglite.forecasting.regressor_fetch - INFO - Fetched regressor construction_output: 95 points
+2025-12-13 14:01:20 - raglite.forecasting.regressor_fetch - INFO - Fetched regressor building_permits: 95 points
+2025-12-13 14:01:20 - raglite.forecasting.regressor_fetch - WARNING - Regressor gdp_growth returned no data
+2025-12-13 14:01:20 - raglite.forecasting.regressor_fetch - INFO - Fetched regressor industrial_production: 95 points
+2025-12-13 14:01:20 - raglite.forecasting.regressor_fetch - INFO - Regressor fetch complete
+2025-12-13 14:01:20 - __main__ - INFO - Fetched 3/4 regressors for Sales Volumes
+2025-12-13 14:01:20 - raglite.forecasting.hybrid - INFO - Generating forecast
+2025-12-13 14:01:20 - raglite.forecasting.hybrid - INFO - Regressors selected
+2025-12-13 14:01:20 - raglite.forecasting.hybrid - INFO - Auto-resampling high-frequency regressor building_permits to monthly
+2025-12-13 14:01:20 - raglite.forecasting.hybrid - INFO - Resampled building_permits to monthly
+2025-12-13 14:01:20 - raglite.forecasting.hybrid - INFO - Multi-variate regressors added
+2025-12-13 14:01:20 - raglite.forecasting.hybrid - INFO - Prophet configured
+14:01:20 - cmdstanpy - INFO - Chain [1] start processing
+14:01:20 - cmdstanpy - INFO - Chain [1] done processing
+
+
+  0%|          | 0/21 [00:00<?, ?it/s][A14:01:20 - cmdstanpy - INFO - Chain [1] start processing
+14:01:22 - cmdstanpy - INFO - Chain [1] done processing
+
+
+  5%|▍         | 1/21 [00:01<00:27,  1.37s/it][A14:01:22 - cmdstanpy - INFO - Chain [1] start processing
+14:01:24 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 10%|▉         | 2/21 [00:03<00:35,  1.85s/it][A14:01:24 - cmdstanpy - INFO - Chain [1] start processing
+14:01:27 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 14%|█▍        | 3/21 [00:06<00:38,  2.16s/it][A14:01:27 - cmdstanpy - INFO - Chain [1] start processing
+14:01:29 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 19%|█▉        | 4/21 [00:08<00:38,  2.29s/it][A14:01:29 - cmdstanpy - INFO - Chain [1] start processing
+14:01:32 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 24%|██▍       | 5/21 [00:11<00:37,  2.37s/it][A14:01:32 - cmdstanpy - INFO - Chain [1] start processing
+14:01:34 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 29%|██▊       | 6/21 [00:13<00:36,  2.47s/it][A14:01:34 - cmdstanpy - INFO - Chain [1] start processing
+14:01:35 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 33%|███▎      | 7/21 [00:14<00:27,  1.97s/it][A14:01:35 - cmdstanpy - INFO - Chain [1] start processing
+14:01:35 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 38%|███▊      | 8/21 [00:14<00:18,  1.40s/it][A14:01:35 - cmdstanpy - INFO - Chain [1] start processing
+14:01:36 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 43%|████▎     | 9/21 [00:15<00:15,  1.26s/it][A14:01:36 - cmdstanpy - INFO - Chain [1] start processing
+14:01:37 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 48%|████▊     | 10/21 [00:16<00:11,  1.05s/it][A14:01:37 - cmdstanpy - INFO - Chain [1] start processing
+14:01:37 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 52%|█████▏    | 11/21 [00:16<00:08,  1.20it/s][A14:01:37 - cmdstanpy - INFO - Chain [1] start processing
+14:01:38 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 57%|█████▋    | 12/21 [00:17<00:06,  1.31it/s][A14:01:38 - cmdstanpy - INFO - Chain [1] start processing
+14:01:41 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 62%|██████▏   | 13/21 [00:20<00:10,  1.35s/it][A14:01:41 - cmdstanpy - INFO - Chain [1] start processing
+14:01:44 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 67%|██████▋   | 14/21 [00:23<00:14,  2.10s/it][A14:01:44 - cmdstanpy - INFO - Chain [1] start processing
+14:01:48 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 71%|███████▏  | 15/21 [00:27<00:16,  2.71s/it][A14:01:48 - cmdstanpy - INFO - Chain [1] start processing
+14:01:53 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 76%|███████▌  | 16/21 [00:32<00:15,  3.18s/it][A14:01:53 - cmdstanpy - INFO - Chain [1] start processing
+14:01:57 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 81%|████████  | 17/21 [00:36<00:14,  3.57s/it][A14:01:57 - cmdstanpy - INFO - Chain [1] start processing
+14:02:02 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 86%|████████▌ | 18/21 [00:41<00:11,  3.90s/it][A14:02:02 - cmdstanpy - INFO - Chain [1] start processing
+14:02:02 - cmdstanpy - INFO - Chain [1] done processing
+14:02:02 - cmdstanpy - INFO - Chain [1] start processing
+14:02:02 - cmdstanpy - INFO - Chain [1] done processing
+
+
+ 95%|█████████▌| 20/21 [00:41<00:02,  2.13s/it][A14:02:02 - cmdstanpy - INFO - Chain [1] start processing
+14:02:02 - cmdstanpy - INFO - Chain [1] done processing
+
+100%|██████████| 21/21 [00:41<00:00,  1.98s/it]
+2025-12-13 14:02:02 - raglite.forecasting.hybrid - INFO - Generating forecast explanation with Mistral Large
+2025-12-13 14:02:09 - raglite.forecasting.hybrid - INFO - Forecast generated
+
+Validating Sales Volume:  25%|██▌       | 3/12 [03:22<10:19, 68.88s/it]
+Validating Electricity Cost:  25%|██▌       | 3/12 [03:22<10:19, 68.88s/it]2025-12-13 14:02:09 - raglite.forecasting.timeseries_extract - INFO - Extracting time-series from SQL
+2025-12-13 14:02:09 - raglite.forecasting.timeseries_extract - WARNING - Insufficient SQL data points
+2025-12-13 14:02:09 - raglite.forecasting.metrics - INFO - Returning cached metrics list
+2025-12-13 14:02:09 - raglite.forecasting.timeseries_extract - WARNING - SQL extraction has insufficient Electrical Energy data, trying Qdrant fallback
+2025-12-13 14:02:09 - raglite.forecasting.timeseries_extract - INFO - Extracting metric from Qdrant chunks (fallback)
+2025-12-13 14:02:09 - raglite.forecasting.timeseries_extract - INFO - Qdrant text search found 148 chunks
+2025-12-13 14:02:09 - raglite.forecasting.timeseries_extract - INFO - Qdrant extraction successful for Electrical Energy
+2025-12-13 14:02:09 - __main__ - INFO - No regressors configured for Electrical Energy
+2025-12-13 14:02:09 - raglite.forecasting.hybrid - INFO - Generating forecast
+2025-12-13 14:02:09 - raglite.forecasting.hybrid - INFO - Prophet configured
+14:02:09 - cmdstanpy - INFO - Chain [1] start processing
+14:02:09 - cmdstanpy - INFO - Chain [1] done processing
+2025-12-13 14:02:09 - raglite.forecasting.hybrid - INFO - Generating forecast explanation with Mistral Large
+2025-12-13 14:02:16 - raglite.forecasting.hybrid - INFO - Forecast generated
+
+Validating Electricity Cost:  33%|███▎      | 4/12 [03:29<05:54, 44.35s/it]
+Validating Thermal Energy Cost:  33%|███▎      | 4/12 [03:29<05:54, 44.35s/it]2025-12-13 14:02:16 - raglite.forecasting.timeseries_extract - INFO - Extracting time-series from SQL
+2025-12-13 14:02:16 - raglite.forecasting.timeseries_extract - WARNING - Insufficient SQL data points
+2025-12-13 14:02:16 - raglite.forecasting.metrics - INFO - Returning cached metrics list
+2025-12-13 14:02:16 - raglite.forecasting.timeseries_extract - WARNING - SQL extraction has insufficient Thermal Energy data, trying Qdrant fallback
+2025-12-13 14:02:16 - raglite.forecasting.timeseries_extract - INFO - Extracting metric from Qdrant chunks (fallback)
+2025-12-13 14:02:16 - raglite.forecasting.timeseries_extract - INFO - Qdrant text search found 148 chunks
+2025-12-13 14:02:16 - raglite.forecasting.timeseries_extract - INFO - Qdrant extraction successful for Thermal Energy
+2025-12-13 14:02:16 - __main__ - INFO - No regressors configured for Thermal Energy
+2025-12-13 14:02:16 - raglite.forecasting.hybrid - INFO - Generating forecast
+2025-12-13 14:02:16 - raglite.forecasting.hybrid - INFO - Prophet configured
+14:02:16 - cmdstanpy - INFO - Chain [1] start processing
+14:02:16 - cmdstanpy - INFO - Chain [1] done processing
+2025-12-13 14:02:16 - raglite.forecasting.hybrid - INFO - Generating forecast explanation with Mistral Large
+2025-12-13 14:02:24 - raglite.forecasting.hybrid - INFO - Forecast generated
+
+Validating Thermal Energy Cost:  42%|████▏     | 5/12 [03:37<03:38, 31.27s/it]
+Validating Variable Cost per Ton:  42%|████▏     | 5/12 [03:37<03:38, 31.27s/it]2025-12-13 14:02:24 - raglite.forecasting.timeseries_extract - INFO - Extracting time-series from SQL
+2025-12-13 14:02:24 - raglite.forecasting.timeseries_extract - WARNING - Insufficient SQL data points
+2025-12-13 14:02:24 - raglite.forecasting.metrics - INFO - Returning cached metrics list
+2025-12-13 14:02:24 - raglite.forecasting.timeseries_extract - WARNING - SQL extraction has insufficient Variable Cost data, trying Qdrant fallback
+2025-12-13 14:02:24 - raglite.forecasting.timeseries_extract - INFO - Extracting Variable Cost from Qdrant chunks (fallback)
+2025-12-13 14:02:24 - raglite.forecasting.timeseries_extract - INFO - Found 200 chunks for Variable Cost extraction (before entity filter)
+2025-12-13 14:02:24 - raglite.forecasting.timeseries_extract - INFO - Entity filtering: kept 135/200 chunks (skipped 65 non-portugal)
+2025-12-13 14:02:24 - raglite.forecasting.timeseries_extract - INFO - Variable Cost extraction successful: 24 points
+2025-12-13 14:02:24 - __main__ - INFO - No regressors configured for Variable Cost
+2025-12-13 14:02:24 - raglite.forecasting.hybrid - INFO - Generating forecast
+2025-12-13 14:02:24 - raglite.forecasting.hybrid - INFO - Prophet configured
+14:02:24 - cmdstanpy - INFO - Chain [1] start processing
+14:02:24 - cmdstanpy - INFO - Chain [1] done processing
+2025-12-13 14:02:24 - raglite.forecasting.hybrid - INFO - Generating forecast explanation with Mistral Large
+2025-12-13 14:02:32 - raglite.forecasting.hybrid - INFO - Forecast generated
+
+Validating Variable Cost per Ton:  50%|█████     | 6/12 [03:44<02:18, 23.16s/it]
+Validating Pet Coke Price:  50%|█████     | 6/12 [03:44<02:18, 23.16s/it]       2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - INFO - Extracting time-series from SQL
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - INFO - No results with exact match, trying wildcard fallback
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - WARNING - No SQL data found for metric
+2025-12-13 14:02:32 - raglite.forecasting.metrics - INFO - Returning cached metrics list
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - WARNING - SQL extraction failed for petcoke_price, trying Qdrant chunk fallback
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - INFO - Extracting metric from Qdrant chunks (fallback)
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - WARNING - No Qdrant chunks found for metric: petcoke_price
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - WARNING - Qdrant fallback returned no data for petcoke_price
+2025-12-13 14:02:32 - __main__ - ERROR - Forecast failed for petcoke_price: No data found in financial_tables for metric 'petcoke_price'. Available metrics: Ratio, Currency (1000 EUR), Turnover, CAPEX, Frequency Ratio  (1) (and 114 more)
+
+Validating Natural Gas Price (TTF):  50%|█████     | 6/12 [03:44<02:18, 23.16s/it]2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - INFO - Extracting time-series from SQL
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - INFO - No results with exact match, trying wildcard fallback
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - WARNING - No SQL data found for metric
+2025-12-13 14:02:32 - raglite.forecasting.metrics - INFO - Returning cached metrics list
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - WARNING - SQL extraction failed for ttf_gas_price, trying Qdrant chunk fallback
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - INFO - Extracting metric from Qdrant chunks (fallback)
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - WARNING - No Qdrant chunks found for metric: ttf_gas_price
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - WARNING - Qdrant fallback returned no data for ttf_gas_price
+2025-12-13 14:02:32 - __main__ - ERROR - Forecast failed for ttf_gas_price: No data found in financial_tables for metric 'ttf_gas_price'. Available metrics: Ratio, Currency (1000 EUR), Turnover, CAPEX, Frequency Ratio  (1) (and 114 more)
+
+Validating Natural Gas Price (TTF):  67%|██████▋   | 8/12 [03:44<00:47, 11.77s/it]
+Validating Average Selling Price:  67%|██████▋   | 8/12 [03:44<00:47, 11.77s/it]  2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - INFO - Extracting time-series from SQL
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - WARNING - Insufficient SQL data points
+2025-12-13 14:02:32 - raglite.forecasting.metrics - INFO - Returning cached metrics list
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - WARNING - SQL extraction has insufficient Sales Price EM - Cement data, trying Qdrant fallback
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - INFO - Extracting metric from Qdrant chunks (fallback)
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - INFO - Qdrant text search found 148 chunks
+2025-12-13 14:02:32 - raglite.forecasting.timeseries_extract - INFO - Qdrant extraction successful for Sales Price EM - Cement
+2025-12-13 14:02:32 - __main__ - INFO - No regressors configured for Sales Price EM - Cement
+2025-12-13 14:02:32 - raglite.forecasting.hybrid - INFO - Generating forecast
+2025-12-13 14:02:32 - raglite.forecasting.hybrid - INFO - Prophet configured
+14:02:32 - cmdstanpy - INFO - Chain [1] start processing
+14:02:32 - cmdstanpy - INFO - Chain [1] done processing
+2025-12-13 14:02:32 - raglite.forecasting.hybrid - INFO - Generating forecast explanation with Mistral Large
+2025-12-13 14:02:38 - raglite.forecasting.hybrid - INFO - Forecast generated
+
+Validating Average Selling Price:  75%|███████▌  | 9/12 [03:51<00:31, 10.44s/it]
+Validating Capacity Utilization:  75%|███████▌  | 9/12 [03:51<00:31, 10.44s/it] 2025-12-13 14:02:38 - raglite.forecasting.timeseries_extract - INFO - Extracting time-series from SQL
+2025-12-13 14:02:38 - raglite.forecasting.timeseries_extract - INFO - No results with exact match, trying wildcard fallback
+2025-12-13 14:02:38 - raglite.forecasting.timeseries_extract - INFO - Wildcard fallback succeeded
+2025-12-13 14:02:38 - raglite.forecasting.timeseries_extract - INFO - SQL extraction successful
+2025-12-13 14:02:38 - __main__ - INFO - No regressors configured for Frequency Ratio
+2025-12-13 14:02:38 - raglite.forecasting.hybrid - INFO - Generating forecast
+2025-12-13 14:02:38 - raglite.forecasting.hybrid - INFO - Cold-start detected: routing to Chronos-2 zero-shot
+2025-12-13 14:02:38 - raglite.forecasting.hybrid - INFO - Cold-start path: using Chronos-2 zero-shot
+2025-12-13 14:02:38 - raglite.forecasting.hybrid - INFO - Loading Chronos-2 model (first use, 10-30s)...
+2025-12-13 14:02:39 - raglite.forecasting.hybrid - INFO - Chronos-2 model loaded successfully
+
+Validating Capacity Utilization:  83%|████████▎ | 10/12 [03:52<00:15,  7.96s/it]
+Validating CO2 EUA Price:  83%|████████▎ | 10/12 [03:52<00:15,  7.96s/it]       2025-12-13 14:02:40 - raglite.forecasting.timeseries_extract - INFO - Extracting time-series from SQL
+2025-12-13 14:02:40 - raglite.forecasting.timeseries_extract - INFO - No results with exact match, trying wildcard fallback
+2025-12-13 14:02:40 - raglite.forecasting.timeseries_extract - WARNING - No SQL data found for metric
+2025-12-13 14:02:40 - raglite.forecasting.metrics - INFO - Returning cached metrics list
+2025-12-13 14:02:40 - raglite.forecasting.timeseries_extract - WARNING - SQL extraction failed for co2_eua_price, trying Qdrant chunk fallback
+2025-12-13 14:02:40 - raglite.forecasting.timeseries_extract - INFO - Extracting metric from Qdrant chunks (fallback)
+2025-12-13 14:02:40 - raglite.forecasting.timeseries_extract - WARNING - No Qdrant chunks found for metric: co2_eua_price
+2025-12-13 14:02:40 - raglite.forecasting.timeseries_extract - WARNING - Qdrant fallback returned no data for co2_eua_price
+2025-12-13 14:02:40 - __main__ - ERROR - Forecast failed for co2_eua_price: No data found in financial_tables for metric 'co2_eua_price'. Available metrics: Ratio, Currency (1000 EUR), Turnover, CAPEX, Frequency Ratio  (1) (and 114 more)
+
+Validating Clinker Factor:  83%|████████▎ | 10/12 [03:52<00:15,  7.96s/it]2025-12-13 14:02:40 - raglite.forecasting.timeseries_extract - INFO - Extracting time-series from SQL
+2025-12-13 14:02:40 - raglite.forecasting.timeseries_extract - INFO - No results with exact match, trying wildcard fallback
+2025-12-13 14:02:40 - raglite.forecasting.timeseries_extract - WARNING - No SQL data found for metric
+2025-12-13 14:02:40 - raglite.forecasting.metrics - INFO - Returning cached metrics list
+2025-12-13 14:02:40 - raglite.forecasting.timeseries_extract - WARNING - SQL extraction failed for clinker_factor, trying Qdrant chunk fallback
+2025-12-13 14:02:40 - raglite.forecasting.timeseries_extract - INFO - Extracting metric from Qdrant chunks (fallback)
+2025-12-13 14:02:40 - raglite.forecasting.timeseries_extract - WARNING - No Qdrant chunks found for metric: clinker_factor
+2025-12-13 14:02:40 - raglite.forecasting.timeseries_extract - WARNING - Qdrant fallback returned no data for clinker_factor
+2025-12-13 14:02:40 - __main__ - ERROR - Forecast failed for clinker_factor: No data found in financial_tables for metric 'clinker_factor'. Available metrics: Ratio, Currency (1000 EUR), Turnover, CAPEX, Frequency Ratio  (1) (and 114 more)
+
+Validating Clinker Factor: 100%|██████████| 12/12 [03:52<00:00, 19.41s/it]
+
+[3/3] Computing summary metrics...
+
+======================================================================
+UNIFIED FORECASTING VALIDATION RESULTS
+======================================================================
+
+Timestamp: 2025-12-13T14:02:40.148686
+Runtime: 233.1s
+MAPE Method: holdout
+
+Variables: 1/12 passed (8.3%)
+Average MAPE: 289.67%
+
+----------------------------------------------------------------------
+Variable                       Target     Actual     Status
+----------------------------------------------------------------------
+Revenue                        <5.0%        341.49%    FAIL
+EBITDA                         <5.0%        852.04%    FAIL
+Sales Volume                   <5.0%        31.49%     FAIL
+Electricity Cost               <8.0%        650.81%    FAIL
+Thermal Energy Cost            <10.0%        275.68%    FAIL
+Variable Cost per Ton          <8.5%        8.04%      PASS
+Pet Coke Price                 <12.0%        N/A        FAIL
+Natural Gas Price (TTF)        <12.0%        N/A        FAIL
+Average Selling Price          <6.0%        25.99%     FAIL
+Capacity Utilization           <10.0%        131.82%    FAIL
+CO2 EUA Price                  <15.0%        N/A        FAIL
+Clinker Factor                 <8.0%        N/A        FAIL
+
+======================================================================
+QUALITY GATE: FAILED
+  Requirement: 1/10 variables passing
+  Variable Cost: 8.04% (target: <8.5%)
+======================================================================

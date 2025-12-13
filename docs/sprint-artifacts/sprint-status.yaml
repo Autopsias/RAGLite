@@ -152,15 +152,15 @@ development_status:
   # Track A (parallel): 6.16, 6.17, 6.18, 6.19 (external data sources)
   # Track B (parallel): 6.15 (entity extraction)
   # Critical Path: 6.15 → 6.20 → 6.21 → 6.23
-  6-15-entity-specific-variable-cost-extraction: backlog
-  6-16-eurostat-construction-industrial-indicators: backlog
-  6-17-ecb-macroeconomic-indicators: backlog
-  6-18-fix-ine-building-permits-api: backlog
-  6-19-ec-construction-confidence-index: backlog
-  6-20-regressor-config-cement-industry: backlog
-  6-21-unified-validation-script: backlog
-  6-22-mcp-validation-tool-integration: backlog
-  6-23-variable-cost-mape-final-validation: backlog
+  6-15-entity-specific-variable-cost-extraction: done
+  6-16-eurostat-construction-industrial-indicators: done
+  6-17-ecb-macroeconomic-indicators: done
+  6-18-fix-ine-building-permits-api: done
+  6-19-ec-construction-confidence-index: done
+  6-20-regressor-config-cement-industry: done
+  6-21-unified-validation-script: done
+  6-22-mcp-validation-tool-integration: done
+  6-23-variable-cost-mape-final-validation: in-progress
   epic-6-retrospective: optional
 
   # Epic 5: Production Readiness & Real-Time Operations

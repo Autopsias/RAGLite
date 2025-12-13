@@ -141,6 +141,86 @@ METRIC_SEARCH_PATTERNS = {
     "capex": ["Capital Expenditure", "CAPEX"],
 }
 
+# Story 6.15: Entity detection patterns for Variable Cost extraction
+# Maps entity names to contextual patterns found in financial documents
+ENTITY_PATTERNS = {
+    "portugal": ["Portugal", "PT", "Custos Variáveis", "EUR/ton", "EUR/m³"],
+    "tunisia": ["Tunisia", "TN", "TND", "Tunisie", "TND/ton"],
+    "brazil": ["Brazil", "BR", "BRL", "Brasil", "BRL/ton"],
+}
+
+# Story 6.15 Task 2.5: Currency conversion rates to EUR
+# Used to normalize Tunisia (TND) and Brazil (BRL) Variable Cost values to EUR/ton
+# for cross-entity comparison and forecasting
+CURRENCY_TO_EUR = {
+    "TND": 0.31,  # 1 TND ≈ 0.31 EUR (Tunisian Dinar to Euro)
+    "BRL": 0.18,  # 1 BRL ≈ 0.18 EUR (Brazilian Real to Euro)
+    "EUR": 1.0,  # 1 EUR = 1 EUR (Portugal, baseline)
+}
+
+
+def detect_entity(text: str) -> str | None:
+    """Detect geographic entity from chunk text.
+
+    Story 6.15: Identifies Portugal/Tunisia/Brazil from context patterns
+    to filter Variable Cost data by entity.
+
+    Args:
+        text: Chunk text to analyze for entity indicators
+
+    Returns:
+        Canonical entity name ('portugal', 'tunisia', 'brazil') or None if undetectable
+
+    Example:
+        >>> detect_entity("Portugal Variable Cost EUR/ton")
+        'portugal'
+        >>> detect_entity("Brazil BRL/ton Custos")
+        'brazil'
+        >>> detect_entity("Unknown text")
+        None
+    """
+    import re
+
+    text_upper = text.upper()
+
+    # Priority order: Check country-specific patterns first (country names, currencies)
+    # then fall back to language patterns (which may be shared)
+
+    # Check Tunisia patterns first (most specific: TND currency, Tunisia/Tunisie country names)
+    for pattern in ENTITY_PATTERNS["tunisia"]:
+        # M1 FIX: Use word boundaries to avoid false positives (e.g., "TN" vs "TNT")
+        pattern_upper = pattern.upper()
+        if len(pattern_upper) <= 3:  # Short patterns like "TN", "BR", "PT" need word boundaries
+            if re.search(rf"\b{re.escape(pattern_upper)}\b", text_upper):
+                return "tunisia"
+        else:
+            if pattern_upper in text_upper:
+                return "tunisia"
+
+    # Check Brazil patterns (BRL currency, Brazil/Brasil country name)
+    for pattern in ENTITY_PATTERNS["brazil"]:
+        pattern_upper = pattern.upper()
+        if len(pattern_upper) <= 3:  # Short patterns like "BR" need word boundaries
+            if re.search(rf"\b{re.escape(pattern_upper)}\b", text_upper):
+                return "brazil"
+        else:
+            if pattern_upper in text_upper:
+                return "brazil"
+
+    # Check Portugal patterns (EUR currency, Portugal/PT)
+    # Note: "Custos Variáveis" can appear in both Portugal and Brazil contexts,
+    # so we check it last after more specific indicators
+    for pattern in ENTITY_PATTERNS["portugal"]:
+        pattern_upper = pattern.upper()
+        if len(pattern_upper) <= 3:  # Short patterns like "PT" need word boundaries
+            if re.search(rf"\b{re.escape(pattern_upper)}\b", text_upper):
+                return "portugal"
+        else:
+            if pattern_upper in text_upper:
+                return "portugal"
+
+    return None  # Unknown entity
+
 
 async def extract_ebitda_from_qdrant_chunks(
     entity: str = "portugal",
@@ -336,12 +416,37 @@ async def extract_ebitda_from_qdrant_chunks(
     # YTD values accumulate: Jan=23K, Feb=36K, Mar=51K, ... Oct=155K
     # Prophet needs periodic values: Jan=23K, Feb=13K (36-23), Mar=15K (51-36), ...
     # Without this conversion, Prophet sees artificial growth pattern and forecasts wrong.
+    #
+    # BUG FIX (P0): Detect year boundaries and reset YTD baseline
+    # Previously: Jan-25 YTD - Dec-24 YTD = negative value (wrong!)
+    # Now: When year changes, reset prev_ytd to 0
     monthly_points = []
     prev_ytd = 0.0
+    prev_date = None
     for _i, p in enumerate(points):
-        # Monthly value = Current YTD - Previous YTD
-        monthly_value = p.value - prev_ytd
+        # BUG FIX: Detect year gap and reset YTD baseline
+        if prev_date is not None:
+            if p.date.year != prev_date.year:
+                # Year boundary - reset baseline
+                logger.debug(
+                    f"Year boundary detected: {prev_date.strftime('%b-%y')} → {p.date.strftime('%b-%y')} - resetting YTD baseline",
+                    extra={
+                        "prev_year": prev_date.year,
+                        "curr_year": p.date.year,
+                        "prev_ytd": prev_ytd,
+                    },
+                )
+                prev_ytd = 0.0
+                monthly_value = p.value
+            else:
+                # Same year - normal YTD delta
+                monthly_value = p.value - prev_ytd
+        else:
+            # First point
+            monthly_value = p.value
+
         prev_ytd = p.value
+        prev_date = p.date
 
         # Extract period label (e.g., "Oct-25" from "Oct-25 YTD Portugal...")
         period_label = p.label.split(" ")[0] if p.label and " " in p.label else (p.label or "")
@@ -440,9 +545,33 @@ async def extract_variable_cost_from_qdrant_chunks(
         return None
 
     logger.info(
-        f"Found {len(results)} chunks for Variable Cost extraction",
-        extra={"entity": entity},
+        f"Found {len(results)} chunks for Variable Cost extraction (before entity filter)",
+        extra={"total_chunks": len(results), "entity_filter": entity},
     )
+
+    # Story 6.15: Filter chunks by entity before processing
+    if entity:
+        filtered_results = []
+        skipped_count = 0
+        for point in results:
+            chunk_text = point.payload.get("text", "")
+            detected = detect_entity(chunk_text)
+
+            # Include chunk if entity matches or if entity is None (undetectable, default to include)
+            if detected == entity or (detected is None and entity == "portugal"):
+                filtered_results.append(point)
+            else:
+                skipped_count += 1
+
+        logger.info(
+            f"Entity filtering: kept {len(filtered_results)}/{len(results)} chunks (skipped {skipped_count} non-{entity})",
+            extra={"entity": entity, "kept": len(filtered_results), "skipped": skipped_count},
+        )
+        results = filtered_results
+
+    if not results:
+        logger.warning(f"No chunks remaining after entity filter (entity={entity})")
+        return None
 
     # Parse chunks to extract (period, value) pairs
     metric_data: dict[str, float] = {}
@@ -504,11 +633,33 @@ async def extract_variable_cost_from_qdrant_chunks(
                     if is_negative:
                         val = -val
 
+                    # Story 6.15 Task 2.5: Currency normalization to EUR/ton
+                    # Convert Tunisia (TND) and Brazil (BRL) values to EUR for comparison
+                    if entity == "tunisia":
+                        # Convert TND/ton to EUR/ton
+                        val = val * CURRENCY_TO_EUR["TND"]
+                    elif entity == "brazil":
+                        # Convert BRL/ton to EUR/ton
+                        val = val * CURRENCY_TO_EUR["BRL"]
+                    # Portugal is already in EUR/ton, no conversion needed
+
+                    # Story 6.15: Entity-specific value range validation
                     # Variable cost filtering for consistency:
                     # - Should be NEGATIVE (costs are outflows)
-                    # - Focus on EUR/m³ or EUR/ton range: -100 to -400
-                    # - Excludes tiny values (EUR thousands: -1 to -25) and outliers (>400)
-                    if val < 0 and abs(val) > 100 and abs(val) < 400:
+                    # - Portugal (EUR/ton): -150 to -350 (AC3 requirement)
+                    # - After currency normalization, all entities in EUR/ton should match this range
+                    valid_range = False
+                    if entity == "portugal":
+                        # AC3: Portugal-only EUR/ton range (-150 to -350)
+                        valid_range = val < 0 and -350 <= val <= -150
+                    elif entity in ("tunisia", "brazil"):
+                        # After currency conversion, should match Portugal EUR/ton range
+                        valid_range = val < 0 and -350 <= val <= -150
+                    else:
+                        # General range for other entities or mixed data
+                        valid_range = val < 0 and abs(val) > 100 and abs(val) < 400
+
+                    if valid_range:
                         month_abbr = [
                             "Jan",
                             "Feb",
@@ -818,6 +969,178 @@ async def extract_metric_from_qdrant_chunks(
     # Sort by date
     points.sort(key=lambda p: p.date)
 
+    # BUG FIX (P0 Fix #3): Unit Normalization + Outlier Detection (Story 6.23)
+    # Electricity Cost (650% MAPE) and Thermal Energy (276% MAPE) have mixed units:
+    # - Most values: -400 to -600 (EUR/ton, correct units)
+    # - Outliers: -7,023, -21,203 (kEUR thousands, wrong units)
+    # - Dec-23 extreme: -17,801 (database corruption)
+    #
+    # Strategy:
+    # 1. Detect outliers >3σ from median (not mean, to avoid outlier influence)
+    # 2. For outliers >1000x median, divide by 1000 (kEUR → EUR normalization)
+    # 3. Filter remaining outliers >3σ after normalization
+    import statistics
+
+    if points:
+        values = [abs(p.value) for p in points if p.value is not None]
+        if values and len(values) >= 6:
+            median_value = statistics.median(values)
+
+            # Step 1: Identify unit inconsistency outliers (kEUR vs EUR)
+            # If a value is >5x median, it's likely in wrong units (kEUR instead of EUR)
+            # Example: median=-431, outlier=-21,203 → ratio=49x → normalize
+            normalized_points = []
+            for p in points:
+                if p.value is None:
+                    continue
+
+                abs_val = abs(p.value)
+                ratio = abs_val / median_value if median_value > 0 else 0
+
+                # BUG FIX: Normalize values >5x median (likely kEUR → EUR)
+                if ratio > 5.0:
+                    # Divide by 1000 to convert kEUR to EUR
+                    normalized_value = p.value / 1000
+                    logger.info(
+                        f"Normalized kEUR to EUR: {p.value:.0f} → {normalized_value:.2f} ({ratio:.1f}x median)",
+                        extra={
+                            "metric": metric,
+                            "date": p.date.strftime("%Y-%m-%d"),
+                            "original": p.value,
+                            "normalized": normalized_value,
+                            "ratio": ratio,
+                        },
+                    )
+                    normalized_points.append(
+                        TimeSeriesPoint(
+                            date=p.date,
+                            value=normalized_value,
+                            label=f"{p.label} (normalized kEUR→EUR)",
+                        )
+                    )
+                else:
+                    normalized_points.append(p)
+
+            points = normalized_points
+
+            # Step 2: Filter extreme outliers after normalization
+            # Recalculate median after normalization
+            normalized_values = [abs(p.value) for p in points if p.value is not None]
+            if normalized_values and len(normalized_values) >= 6:
+                new_median = statistics.median(normalized_values)
+                new_std = statistics.stdev(normalized_values) if len(normalized_values) > 1 else 0
+
+                # Filter points >2.5σ from median (extreme outliers indicating data corruption)
+                # Story 6.23: Using 2.5σ instead of 3σ for energy costs due to high volatility
+                # and data quality issues (mixed units, database corruption)
+                filtered_points = []
+                outlier_count = 0
+                for p in points:
+                    if p.value is None:
+                        continue
+
+                    abs_val = abs(p.value)
+                    deviation = abs(abs_val - new_median)
+
+                    # Keep points within 2.5σ of median (stricter for energy cost metrics)
+                    if deviation <= 2.5 * new_std or new_std == 0:
+                        filtered_points.append(p)
+                    else:
+                        outlier_count += 1
+                        logger.warning(
+                            f"Filtered extreme outlier: {p.value:.2f} (deviation: {deviation:.2f}, threshold: {2.5 * new_std:.2f})",
+                            extra={
+                                "metric": metric,
+                                "date": p.date.strftime("%Y-%m-%d"),
+                                "value": p.value,
+                                "median": new_median,
+                                "std": new_std,
+                            },
+                        )
+
+                if outlier_count > 0:
+                    logger.info(
+                        f"Removed {outlier_count} extreme outliers from {metric}",
+                        extra={
+                            "metric": metric,
+                            "outliers_removed": outlier_count,
+                            "points_remaining": len(filtered_points),
+                        },
+                    )
+                    points = filtered_points
+
+    # BUG FIX (P0 Fix #4): Capacity Utilization Bounds
+    # Percentage metrics cannot exceed 100% (physically impossible)
+    # Enforce 0-100 range for percentage-based metrics
+    PERCENTAGE_METRICS = {
+        "frequency ratio",
+        "capacity_utilization",
+        "capacity utilization",
+        "utilization",
+    }
+    if metric_lower in PERCENTAGE_METRICS:
+        original_points = points
+        points = [
+            TimeSeriesPoint(
+                date=p.date,
+                value=min(max(p.value, 0), 100) if p.value is not None else None,
+                label=p.label,
+            )
+            for p in points
+            if p.value is not None
+        ]
+        # Log if any values were clamped
+        clamped_count = sum(
+            1 for orig, new in zip(original_points, points, strict=False) if orig.value != new.value
+        )
+        if clamped_count > 0:
+            logger.warning(
+                f"Clamped {clamped_count} percentage values to 0-100 range",
+                extra={
+                    "metric": metric,
+                    "clamped_count": clamped_count,
+                    "total_points": len(points),
+                },
+            )
+
+    # Story 6.23: Cost metrics absolute value transformation (Qdrant fallback)
+    # Cost metrics (electricity, thermal, variable cost) are recorded as negative values
+    # in financial statements, but forecasting requires positive magnitudes
+    COST_METRICS = {
+        "electrical energy",
+        "electricity",
+        "electricity_cost",
+        "thermal energy",
+        "thermal",
+        "thermal_cost",
+        "fuel_cost",
+        "variable cost",
+        "variable_cost",
+    }
+    if metric_lower in COST_METRICS:
+        original_points = points
+        points = [
+            TimeSeriesPoint(
+                date=p.date, value=abs(p.value) if p.value is not None else None, label=p.label
+            )
+            for p in points
+            if p.value is not None
+        ]
+        # Log transformation stats
+        negative_count = sum(1 for p in original_points if p.value is not None and p.value < 0)
+        if negative_count > 0:
+            logger.info(
+                f"Converted {negative_count} negative cost values to absolute values (Qdrant)",
+                extra={
+                    "metric": metric,
+                    "negative_values": negative_count,
+                    "total_points": len(points),
+                    "avg_before": sum(p.value for p in original_points if p.value is not None)
+                    / len(original_points),
+                    "avg_after": sum(p.value for p in points if p.value is not None) / len(points),
+                },
+            )
+
     logger.info(
         f"Qdrant extraction successful for {metric}",
         extra={
@@ -1005,9 +1328,13 @@ def parse_period_to_date(period: str, fiscal_year: int) -> datetime:
     Converts period strings like "Jan-25", "Dec-24" to datetime objects
     representing the first day of that month.
 
+    BUG FIX (P0): Extract year from period suffix to prevent duplicate dates.
+    Previously ignored year suffix and used fiscal_year parameter, causing
+    "Jan-24" and "Jan-25" to both map to same date when processing multi-year data.
+
     Args:
         period: Period string in Mon-YY format (e.g., "Jan-25", "Dec-24")
-        fiscal_year: Fiscal year as integer (e.g., 2025, 2024)
+        fiscal_year: Fiscal year as integer (DEPRECATED - now extracted from period suffix)
 
     Returns:
         datetime object for the first day of the period month
@@ -1023,15 +1350,17 @@ def parse_period_to_date(period: str, fiscal_year: int) -> datetime:
     """
     import re
 
-    # Extract month abbreviation from period (e.g., "Jan-25" -> "Jan")
-    # Pattern matches anything ending with -XX, extracts the part before the hyphen
-    match = re.match(r"^([A-Za-z]+)-\d{2}$", period.strip())
+    # BUG FIX: Parse period suffix to determine actual year
+    # "Jan-24" → year = 2024, "Jan-25" → year = 2025
+    match = re.match(r"^([A-Za-z]+)-(\d{2})$", period.strip())
     if not match:
         raise ValueError(
             f"Invalid period format: '{period}'. Expected Mon-YY format (e.g., Jan-25)"
         )
 
     month_abbrev = match.group(1).capitalize()
+    year_suffix = int(match.group(2))
+    year = 2000 + year_suffix  # 24 → 2024, 25 → 2025
 
     # Month name to integer mapping
     month_map = {
@@ -1056,7 +1385,7 @@ def parse_period_to_date(period: str, fiscal_year: int) -> datetime:
         )
 
     month = month_map[month_abbrev]
-    return datetime(fiscal_year, month, 1)
+    return datetime(year, month, 1)
 
 
 def prefer_group_level(entity: str | None, metric: str) -> str | None:
@@ -1097,6 +1426,7 @@ async def extract_timeseries_from_sql(
     metric: str = "revenue",
     min_points: int = 6,  # FIX (2025-12-01): Lowered from 8 to allow GROUP data with missing months
     aggregation: str = "sum",  # Story 6.10.4: "sum" or "max" - use "max" for revenue/turnover
+    entity: str | None = None,  # Story 6.15 Task 3: Entity filter for multi-entity metrics
 ) -> TimeSeriesData:
     """Extract time-series data from PostgreSQL financial_tables.
 
@@ -1116,12 +1446,19 @@ async def extract_timeseries_from_sql(
     Use "max" for revenue/turnover to get the actual value instead of summing
     all sub-components.
 
+    Story 6.15 Task 3: Added entity parameter for filtering multi-entity metrics
+    like Variable Cost. When entity is specified, SQL query filters by normalized
+    entity name (e.g., "portugal" -> matches "Portugal", "PT", etc.).
+
     Args:
         metric: Metric name to extract (e.g., "revenue", "expenses", "ebitda", "capex", "margins")
                 Supports any metric found in financial_tables with sufficient data points.
-        min_points: Minimum number of data points required (default: 8)
+        min_points: Minimum number of data points required (default: 6)
         aggregation: "sum" (default) or "max" - aggregation method for multiple values per period.
                      Use "max" for revenue/turnover where largest value is actual amount.
+        entity: Optional entity filter (e.g., "portugal", "tunisia", "brazil").
+                When specified, filters SQL results to entity-specific data.
+                If None, uses prefer_group_level() logic for aggregate metrics.
 
     Returns:
         TimeSeriesData with metric_name, chronologically sorted points, interval
@@ -1131,13 +1468,17 @@ async def extract_timeseries_from_sql(
 
     Example:
         >>> # Extract any metric dynamically
-        >>> data = await extract_timeseries_from_sql(metric="revenue", min_points=8)
-        >>> len(data.points) >= 8
+        >>> data = await extract_timeseries_from_sql(metric="revenue", min_points=6)
+        >>> len(data.points) >= 6
         True
         >>> # EBITDA uses consolidated GROUP values automatically
         >>> ebitda_data = await extract_timeseries_from_sql(metric="ebitda")
         >>> ebitda_data.metric_name
         'ebitda'
+        >>> # Variable Cost filtered by entity
+        >>> vc_data = await extract_timeseries_from_sql(metric="variable_cost", entity="portugal")
+        >>> vc_data.metric_name
+        'variable_cost'
     """
     from raglite.shared.clients import get_postgresql_connection
 
@@ -1169,16 +1510,29 @@ async def extract_timeseries_from_sql(
         # because they don't have GROUP-level data rows (GROUP filter = 0 results)
     }
 
-    # Story 6.10.1 AC5: Dynamically add GROUP filter for aggregate metrics
-    # using prefer_group_level() to catch metrics not explicitly listed above
-    preferred_entity = prefer_group_level(None, metric)
-    if preferred_entity == "Group" and metric_search not in ENTITY_FILTERS:
-        # Add dynamic GROUP filter for this aggregate metric
-        ENTITY_FILTERS[metric_search] = ("GROUP", False)
-        logger.debug(
-            "Dynamic GROUP filter applied via prefer_group_level",
-            extra={"metric": metric, "metric_search": metric_search},
-        )
+    # Story 6.15 Task 3: Override entity filter if user explicitly specifies entity parameter
+    # This allows filtering by entity for ANY metric, not just those in ENTITY_FILTERS
+    if entity is not None:
+        # User-specified entity filter takes precedence
+        # Normalize entity and add to filters
+        canonical_entity = normalize_entity(entity)
+        if canonical_entity:
+            ENTITY_FILTERS[metric_search] = (canonical_entity, False)
+            logger.info(
+                "User-specified entity filter applied",
+                extra={"metric": metric, "entity": entity, "canonical": canonical_entity},
+            )
+    else:
+        # Story 6.10.1 AC5: Dynamically add GROUP filter for aggregate metrics
+        # using prefer_group_level() to catch metrics not explicitly listed above
+        preferred_entity = prefer_group_level(None, metric)
+        if preferred_entity == "Group" and metric_search not in ENTITY_FILTERS:
+            # Add dynamic GROUP filter for this aggregate metric
+            ENTITY_FILTERS[metric_search] = ("GROUP", False)
+            logger.debug(
+                "Dynamic GROUP filter applied via prefer_group_level",
+                extra={"metric": metric, "metric_search": metric_search},
+            )
 
     # STRATEGY: Always try exact match first, fall back to wildcard if no results
     # This prevents aggregating multiple variants (EBITDA, EBITDA IFRS, EBITDA Portugal, etc.)
@@ -1506,10 +1860,44 @@ async def extract_timeseries_from_sql(
         # Sort by date (should already be sorted, but ensure it)
         points.sort(key=lambda p: p.date)
 
+        # BUG FIX (P0 Fix #2): Deduplication safety net for duplicate dates
+        # Multi-year documents create duplicate dates when same period extracted multiple times
+        # Aggregate by taking the value with largest absolute magnitude (most authoritative)
+        from collections import defaultdict
+
+        date_to_points: dict[datetime, list[TimeSeriesPoint]] = defaultdict(list)
+        for p in points:
+            date_to_points[p.date].append(p)
+
+        if len(date_to_points) < len(points):
+            # Duplicates detected - aggregate them
+            logger.warning(
+                "Duplicate dates detected in time-series data - aggregating by taking value with largest magnitude",
+                extra={
+                    "metric": metric,
+                    "total_points": len(points),
+                    "unique_dates": len(date_to_points),
+                    "duplicates_removed": len(points) - len(date_to_points),
+                },
+            )
+
+            deduplicated_points = []
+            for date_val in sorted(date_to_points.keys()):
+                date_points = date_to_points[date_val]
+                # Take the point with the largest absolute value (most authoritative)
+                best_point = max(
+                    date_points, key=lambda p: abs(p.value) if p.value is not None else 0
+                )
+                deduplicated_points.append(best_point)
+
+            points = deduplicated_points
+
         # FIX (2025-12-01): Convert YTD cumulative values to monthly deltas
         # YTD values accumulate: Feb=23M, Mar=39M, Apr=51M, ... Sep=151M
         # Prophet needs periodic values: Feb=23M, Mar=16M (39-23), Apr=12M (51-39), ...
         # Without this conversion, Prophet sees artificial growth pattern and forecasts wrong.
+        #
+        # BUG FIX (P0): Detect year boundaries and reset YTD baseline
         if is_ytd_data and len(points) > 1:
             logger.info(
                 "Converting YTD cumulative values to monthly deltas",
@@ -1524,8 +1912,26 @@ async def extract_timeseries_from_sql(
             prev_ytd = 0.0
             prev_date = None
             for p in points:
-                # Monthly value = Current YTD - Previous YTD
-                monthly_value = p.value - prev_ytd
+                # BUG FIX: Detect year gap and reset YTD baseline
+                if prev_date is not None:
+                    if p.date.year != prev_date.year:
+                        # Year boundary - reset baseline
+                        logger.info(
+                            f"Year boundary detected: {prev_date.strftime('%b-%y')} → {p.date.strftime('%b-%y')} - resetting YTD baseline",
+                            extra={
+                                "prev_year": prev_date.year,
+                                "curr_year": p.date.year,
+                                "prev_ytd": prev_ytd,
+                            },
+                        )
+                        prev_ytd = 0.0
+                        monthly_value = p.value
+                    else:
+                        # Same year - normal YTD delta
+                        monthly_value = p.value - prev_ytd
+                else:
+                    # First point
+                    monthly_value = p.value
 
                 # FIX (2025-12-01): Detect month gaps and interpolate
                 # If we jump from May to Jul (missing June), split the delta evenly
@@ -1533,7 +1939,8 @@ async def extract_timeseries_from_sql(
                     months_gap = (p.date.year - prev_date.year) * 12 + (
                         p.date.month - prev_date.month
                     )
-                    if months_gap > 1:
+                    # Only interpolate within same year (avoid crossing year boundary)
+                    if months_gap > 1 and p.date.year == prev_date.year:
                         # Split combined delta across missing months
                         monthly_avg = monthly_value / months_gap
                         logger.info(
@@ -1594,6 +2001,184 @@ async def extract_timeseries_from_sql(
                     "monthly_values": [f"€{p.value:.1f}M" for p in points[:5]],
                 },
             )
+
+        # BUG FIX (P0 Fix #3): Unit Normalization + Outlier Detection (Story 6.23)
+        # Electricity Cost (650% MAPE) and Thermal Energy (276% MAPE) have mixed units:
+        # - Most values: -400 to -600 (EUR/ton, correct units)
+        # - Outliers: -7,023, -21,203 (kEUR thousands, wrong units)
+        # - Dec-23 extreme: -17,801 (database corruption)
+        #
+        # Strategy:
+        # 1. Detect outliers >3σ from median (not mean, to avoid outlier influence)
+        # 2. For outliers >1000x median, divide by 1000 (kEUR → EUR normalization)
+        # 3. Filter remaining outliers >3σ after normalization
+        import statistics
+
+        if points:
+            values = [abs(p.value) for p in points if p.value is not None]
+            if values and len(values) >= 6:
+                median_value = statistics.median(values)
+
+                # Step 1: Identify unit inconsistency outliers (kEUR vs EUR)
+                # If a value is >5x median, it's likely in wrong units (kEUR instead of EUR)
+                # Example: median=-431, outlier=-21,203 → ratio=49x → normalize
+                normalized_points = []
+                for p in points:
+                    if p.value is None:
+                        continue
+
+                    abs_val = abs(p.value)
+                    ratio = abs_val / median_value if median_value > 0 else 0
+
+                    # BUG FIX: Normalize values >5x median (likely kEUR → EUR)
+                    if ratio > 5.0:
+                        # Divide by 1000 to convert kEUR to EUR
+                        normalized_value = p.value / 1000
+                        logger.info(
+                            f"Normalized kEUR to EUR: {p.value:.0f} → {normalized_value:.2f} ({ratio:.1f}x median)",
+                            extra={
+                                "metric": metric,
+                                "date": p.date.strftime("%Y-%m-%d"),
+                                "original": p.value,
+                                "normalized": normalized_value,
+                                "ratio": ratio,
+                            },
+                        )
+                        normalized_points.append(
+                            TimeSeriesPoint(
+                                date=p.date,
+                                value=normalized_value,
+                                label=f"{p.label} (normalized kEUR→EUR)",
+                            )
+                        )
+                    else:
+                        normalized_points.append(p)
+
+                points = normalized_points
+
+                # Step 2: Filter extreme outliers after normalization
+                # Recalculate median after normalization
+                normalized_values = [abs(p.value) for p in points if p.value is not None]
+                if normalized_values and len(normalized_values) >= 6:
+                    new_median = statistics.median(normalized_values)
+                    new_std = (
+                        statistics.stdev(normalized_values) if len(normalized_values) > 1 else 0
+                    )
+
+                    # Filter points >2.5σ from median (extreme outliers indicating data corruption)
+                    # Story 6.23: Using 2.5σ instead of 3σ for energy costs due to high volatility
+                    # and data quality issues (mixed units, database corruption)
+                    filtered_points = []
+                    outlier_count = 0
+                    for p in points:
+                        if p.value is None:
+                            continue
+
+                        abs_val = abs(p.value)
+                        deviation = abs(abs_val - new_median)
+
+                        # Keep points within 2.5σ of median (stricter for energy cost metrics)
+                        if deviation <= 2.5 * new_std or new_std == 0:
+                            filtered_points.append(p)
+                        else:
+                            outlier_count += 1
+                            logger.warning(
+                                f"Filtered extreme outlier: {p.value:.2f} (deviation: {deviation:.2f}, threshold: {2.5 * new_std:.2f})",
+                                extra={
+                                    "metric": metric,
+                                    "date": p.date.strftime("%Y-%m-%d"),
+                                    "value": p.value,
+                                    "median": new_median,
+                                    "std": new_std,
+                                },
+                            )
+
+                    if outlier_count > 0:
+                        logger.info(
+                            f"Removed {outlier_count} extreme outliers from {metric}",
+                            extra={
+                                "metric": metric,
+                                "outliers_removed": outlier_count,
+                                "points_remaining": len(filtered_points),
+                            },
+                        )
+                        points = filtered_points
+
+        # BUG FIX (P0 Fix #4): Capacity Utilization Bounds
+        # Percentage metrics cannot exceed 100% (physically impossible)
+        # Enforce 0-100 range for percentage-based metrics
+        PERCENTAGE_METRICS = {
+            "frequency ratio",
+            "capacity_utilization",
+            "capacity utilization",
+            "utilization",
+        }
+        metric_lower_check = metric.lower()
+        if metric_lower_check in PERCENTAGE_METRICS:
+            original_points = points
+            points = [
+                TimeSeriesPoint(
+                    date=p.date,
+                    value=min(max(p.value, 0), 100) if p.value is not None else None,
+                    label=p.label,
+                )
+                for p in points
+                if p.value is not None
+            ]
+            # Log if any values were clamped
+            clamped_count = sum(
+                1
+                for orig, new in zip(original_points, points, strict=False)
+                if orig.value != new.value
+            )
+            if clamped_count > 0:
+                logger.warning(
+                    f"Clamped {clamped_count} percentage values to 0-100 range",
+                    extra={
+                        "metric": metric,
+                        "clamped_count": clamped_count,
+                        "total_points": len(points),
+                    },
+                )
+
+        # Story 6.23: Cost metrics absolute value transformation
+        # Cost metrics (electricity, thermal, variable cost) are recorded as negative values
+        # in financial statements, but forecasting requires positive magnitudes
+        COST_METRICS = {
+            "electrical energy",
+            "electricity",
+            "electricity_cost",
+            "thermal energy",
+            "thermal",
+            "thermal_cost",
+            "fuel_cost",
+            "variable cost",
+            "variable_cost",
+        }
+        if metric_lower_check in COST_METRICS:
+            original_points = points
+            points = [
+                TimeSeriesPoint(
+                    date=p.date, value=abs(p.value) if p.value is not None else None, label=p.label
+                )
+                for p in points
+                if p.value is not None
+            ]
+            # Log transformation stats
+            negative_count = sum(1 for p in original_points if p.value is not None and p.value < 0)
+            if negative_count > 0:
+                logger.info(
+                    f"Converted {negative_count} negative cost values to absolute values",
+                    extra={
+                        "metric": metric,
+                        "negative_values": negative_count,
+                        "total_points": len(points),
+                        "avg_before": sum(p.value for p in original_points if p.value is not None)
+                        / len(original_points),
+                        "avg_after": sum(p.value for p in points if p.value is not None)
+                        / len(points),
+                    },
+                )
 
         # Calculate date range for logging
         min_date = points[0].date.strftime("%Y-%m-%d")
