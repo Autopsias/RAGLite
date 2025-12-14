@@ -1710,6 +1710,22 @@ async def generate_forecast(
     # For short data spans, use simpler model (trend only)
     Prophet = _get_prophet_class()  # Lazy-load Prophet on first use
 
+    # FIX (2025-12-14): Detect significant gaps in data that cause Prophet instability
+    # EBITDA data often spans multiple years but has multi-month gaps (e.g., Mar 2023 → Jan 2024)
+    # This causes changepoint_prior_scale=0.2 to produce negative forecast extrapolations
+    # because Prophet treats gaps as potential changepoints, leading to erratic trend estimates
+    has_data_gaps = False
+    if len(df) >= 2:
+        for i in range(len(df) - 1):
+            gap_days = (df["ds"].iloc[i + 1] - df["ds"].iloc[i]).days
+            if gap_days > 60:  # More than 2 months gap indicates sparse data
+                has_data_gaps = True
+                logger.info(
+                    f"Data gap detected: {gap_days} days between {df['ds'].iloc[i]} and {df['ds'].iloc[i + 1]}",
+                    extra={"metric": metric, "gap_days": gap_days},
+                )
+                break
+
     # Story 6.23: Very conservative changepoint_prior_scale for flat growth
     if use_flat_growth:
         changepoint_prior = 0.001  # Minimal flexibility for flat cost metrics
@@ -1717,8 +1733,17 @@ async def generate_forecast(
             f"Using flat growth for {metric} (detected as sparse data pattern)",
             extra={"metric": metric, "growth": "flat", "changepoint_prior": changepoint_prior},
         )
-    elif not has_full_year_data:
-        changepoint_prior = 0.05  # Conservative for short data
+    elif not has_full_year_data or has_data_gaps:
+        changepoint_prior = 0.05  # Conservative for short data OR data with gaps
+        if has_data_gaps:
+            logger.info(
+                f"Using conservative changepoint prior for {metric} due to data gaps",
+                extra={
+                    "metric": metric,
+                    "changepoint_prior": changepoint_prior,
+                    "has_data_gaps": True,
+                },
+            )
     else:
         changepoint_prior = 0.2  # Standard for full year data
 
@@ -1800,12 +1825,16 @@ async def generate_forecast(
 
         if output_monthly:
             # Monthly input, monthly output (Story 6.7)
-            # Story 6.23: Request one extra period to handle month-boundary alignment
-            future = model.make_future_dataframe(periods=periods_ahead + 1, freq="ME")
+            # FIX (2025-12-14): Use freq="MS" to match historical data format
+            # Historical data uses month-start dates (e.g., 2025-10-01)
+            # Using "ME" (month-end) caused severe forecast errors because Prophet
+            # treated month-end as different time points, causing wild interpolation
+            # (e.g., €102M forecast instead of €15K for EBITDA)
+            future = model.make_future_dataframe(periods=periods_ahead, freq="MS")
 
             # Story 6.3: Add regressor values to future dataframe
             if regressors_used and external_regressors:
-                future_dates = pd.DatetimeIndex(future["ds"].tail(periods_ahead + 1))
+                future_dates = pd.DatetimeIndex(future["ds"].tail(periods_ahead))
                 extended = _generate_future_regressors(
                     {k: v for k, v in external_regressors.items() if k in regressors_used},
                     future_dates,
@@ -1820,17 +1849,9 @@ async def generate_forecast(
 
             prophet_forecast = model.predict(future)
 
-            # FIX (Story 6.23): Skip first forecast if it's same month as last training data
-            # Prophet with freq='ME' may include current month's end-date as "future"
-            last_train_month = df["ds"].iloc[-1].to_period("M")
-            forecast_tail = prophet_forecast.tail(periods_ahead + 1)  # Get one extra
-            forecast_filtered = []
-            for _, row in forecast_tail.iterrows():
-                if row["ds"].to_period("M") > last_train_month:
-                    forecast_filtered.append(row)
-
-            # Ensure we have exactly periods_ahead forecasts
-            forecast_months = pd.DataFrame(forecast_filtered[:periods_ahead])
+            # FIX (2025-12-14): With freq="MS", Prophet produces clean future dates
+            # No need for complex filtering - just take the last periods_ahead rows
+            forecast_months = prophet_forecast.tail(periods_ahead)
 
             # Return monthly forecasts directly (no aggregation)
             forecast_points = []
@@ -1853,7 +1874,8 @@ async def generate_forecast(
         else:
             # Monthly input, quarterly output (aggregate 3 months)
             monthly_periods = periods_ahead * 3  # 3 months per quarter
-            future = model.make_future_dataframe(periods=monthly_periods, freq="ME")
+            # FIX (2025-12-14): Use freq="MS" to match historical data format
+            future = model.make_future_dataframe(periods=monthly_periods, freq="MS")
 
             # Story 6.3: Add regressor values to future dataframe
             if regressors_used and external_regressors:
