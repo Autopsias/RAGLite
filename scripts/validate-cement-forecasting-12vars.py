@@ -55,6 +55,7 @@ warnings.filterwarnings(
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from raglite.shared.config import settings  # noqa: E402
 from raglite.shared.logging import get_logger  # noqa: E402
 
 logger = get_logger(__name__)
@@ -1008,7 +1009,8 @@ async def run_validation(
 
         # Date range for external data
         end_date = date.today()
-        start_date = end_date - timedelta(days=365 * 3)  # 3 years
+        buffer_days = settings.regressor_buffer_years * 365
+        start_date = end_date - timedelta(days=buffer_days)
 
         for _i, result in enumerate(report.variable_results):
             config = CEMENT_FORECAST_VARIABLES[result.variable_name]

@@ -444,18 +444,18 @@ class TestBackwardCompatibility:
 
     def test_p2_revenue_still_has_financial_regressors(self) -> None:
         """
-        [P2] revenue metric should still return euribor, diesel, ttf.
+        [P2] revenue metric should include construction and financial regressors.
 
-        Given: Metric "revenue"
+        Given: Metric "revenue" (Story 6.20: Cement industry focus)
         When: get_default_regressors() is called
-        Then: Returns existing financial regressors (no breaking change)
+        Then: Returns construction-focused financial regressors
         """
         from raglite.forecasting.regressor_config import get_default_regressors
 
         regressors = get_default_regressors("revenue")
         assert "euribor_3m" in regressors
-        assert "diesel" in regressors
-        assert "ttf_gas" in regressors
+        assert "construction_output" in regressors
+        assert "gdp_growth" in regressors
 
     def test_p2_ebitda_still_has_energy_regressors(self) -> None:
         """
@@ -486,14 +486,14 @@ class TestBackwardCompatibility:
 
     def test_p2_default_regressors_unchanged(self) -> None:
         """
-        [P2] DEFAULT_REGRESSORS should still be [euribor_3m, diesel, ttf_gas].
+        [P2] DEFAULT_REGRESSORS should be construction-focused.
 
-        Given: DEFAULT_REGRESSORS constant
+        Given: DEFAULT_REGRESSORS constant (Story 6.20: Cement industry focus)
         When: Checking its value
-        Then: Has euribor_3m, diesel, ttf_gas (no breaking change)
+        Then: Has construction-focused regressors
         """
         from raglite.forecasting.regressor_config import DEFAULT_REGRESSORS
 
         assert "euribor_3m" in DEFAULT_REGRESSORS
-        assert "diesel" in DEFAULT_REGRESSORS
-        assert "ttf_gas" in DEFAULT_REGRESSORS
+        assert "construction_output" in DEFAULT_REGRESSORS
+        assert "gdp_growth" in DEFAULT_REGRESSORS

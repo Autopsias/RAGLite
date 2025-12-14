@@ -136,6 +136,11 @@ class Settings(BaseSettings):
     tft_checkpoint_freshness_days: int = 7  # Force retrain if checkpoint older than this
     tft_checkpoint_dir: str = "data/models"  # TFT checkpoint storage directory
 
+    # Story 6.24: Regressor Buffer Configuration
+    # Controls how much historical data to fetch for regressor correlation detection
+    # Production uses 3-year buffer; tests use 1-year for faster execution
+    regressor_buffer_years: int = 3  # Historical data buffer for regressors (years)
+
     # Story 6.5: Automated Data Refresh Scheduler Configuration
     scheduler_enabled: bool = True  # Enable/disable the scheduler
     scheduler_timezone: str = "UTC"  # Timezone for scheduled jobs (always UTC per AC2)
@@ -190,6 +195,11 @@ class Settings(BaseSettings):
                 collection_suffix = "_ci" if is_ci else "_test"
                 self.qdrant_collection_name = f"financial_docs{collection_suffix}"
 
+            # Story 6.24: Reduce regressor buffer for faster test execution
+            # Only reduce if using the default 3-year value (allow explicit override)
+            if self.regressor_buffer_years == 3:
+                self.regressor_buffer_years = 1  # 1-year buffer for ~3x faster tests
+
             # REMOVED: PostgreSQL auto-adjustment (causes CI race condition)
             # PostgreSQL settings now come ONLY from explicit environment variables:
             #   - CI: POSTGRES_DB=raglite_ci (set by .github/workflows/ci.yml)
@@ -222,6 +232,7 @@ logger.info(
         "qdrant_collection": settings.qdrant_collection_name,
         "qdrant_port": settings.qdrant_port,
         "app_env": settings.app_env,
+        "regressor_buffer_years": settings.regressor_buffer_years,
         "ci_detected": os.getenv("CI") == "true",
         "github_actions": os.getenv("GITHUB_ACTIONS") == "true",
     },

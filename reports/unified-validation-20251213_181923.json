@@ -1,0 +1,32 @@
+{
+  "timestamp": "2025-12-13T18:19:23.425396",
+  "runtime_seconds": 8.209579944610596,
+  "mape_method": "holdout",
+  "variables_tested": 1,
+  "variables_passed": 1,
+  "pass_rate": 1.0,
+  "average_mape": 27.53553451423214,
+  "variable_results": [
+    {
+      "variable_name": "electricity_cost",
+      "display_name": "Electricity Cost",
+      "target_mape": 30.0,
+      "actual_mape": 27.53553451423214,
+      "passed": true,
+      "holdout_mape": 27.53553451423214,
+      "walkforward_mape": null,
+      "cv_mape": null,
+      "ensemble_weights": {},
+      "best_model": "",
+      "best_model_mape": 0.0
+    }
+  ],
+  "model_performance": {},
+  "quality_gate": {
+    "passed": false,
+    "minimum_required": 10,
+    "actual_passed": 1,
+    "variable_cost_mape": null,
+    "variable_cost_target": 8.5
+  }
+}

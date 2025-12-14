@@ -47,8 +47,8 @@ if "POSTGRES_PASSWORD" not in os.environ:
 
 print("DEBUG: Test environment variables set before raglite imports", file=sys.stderr)
 
-# Load database fixtures module to make test_financial_data fixture available
-pytest_plugins = ["tests.fixtures.database_fixtures"]
+# Import database fixtures directly to make them available
+# Note: pytest_plugins moved to tests/conftest.py to avoid non-top-level conftest issue
 
 # CRITICAL: Check service availability BEFORE importing any raglite modules
 # Test modules import raglite code which may try to connect at import time

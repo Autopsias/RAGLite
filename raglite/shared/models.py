@@ -747,6 +747,11 @@ class ForecastQueryResponse(BaseModel):
         default=None,
         description="Explanation of why this model was selected (when model_type='auto' was used)",
     )
+    # Story 6.25: Accuracy metrics from Prophet cross-validation
+    accuracy_metrics: dict[str, float] | None = Field(
+        default=None,
+        description="Model accuracy metrics from cross-validation: {'mape': X, 'rmse': Y, 'mae': Z}",
+    )
 
     @classmethod
     def from_forecast_result(
@@ -785,6 +790,8 @@ class ForecastQueryResponse(BaseModel):
             regressors_used=regressors_used,
             model_type=model_type,
             model_selection_reason=model_selection_reason,
+            # Story 6.25: Include accuracy metrics from Prophet cross-validation
+            accuracy_metrics=result.accuracy_metrics if result.accuracy_metrics else None,
         )
 
 

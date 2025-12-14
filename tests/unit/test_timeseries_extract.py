@@ -909,12 +909,13 @@ class TestExtractTimeseriesFromSQL:
             call_args = mock_cursor.execute.call_args[0]
             assert "turnover" in call_args[1]  # Parameter should be "turnover"
 
-            # Test "ebitda" → "EBITDA IFRS" synonym
+            # Test "ebitda" metric (no synonym mapping - was removed due to insufficient data)
             mock_cursor.reset_mock()
             _result_ebitda = await extract_timeseries_from_sql(metric="ebitda", min_points=8)
 
             call_args = mock_cursor.execute.call_args[0]
-            assert "EBITDA IFRS" in call_args[1]  # Parameter should be "EBITDA IFRS"
+            # EBITDA synonym was removed - only "revenue" maps to "turnover"
+            assert "ebitda" in call_args[1]  # Parameter should be "ebitda" (no synonym mapping)
 
     # Story 5.0.4 AC5: Test EBITDA consolidated GROUP extraction
     async def test_ebitda_uses_consolidated_group_values(self) -> None:

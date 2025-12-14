@@ -432,6 +432,24 @@
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"
+    },
+    "raglite/external_data/clients/eurostat.py": {
+      "lines": 957,
+      "reason": "Baseline: existing at time of enforcement - needs refactoring",
+      "target_lines": 500,
+      "directory": "raglite/"
+    },
+    "raglite/external_data/clients/ecb.py": {
+      "lines": 841,
+      "reason": "Baseline: existing at time of enforcement - needs refactoring",
+      "target_lines": 500,
+      "directory": "raglite/"
+    },
+    "raglite/external_data/models.py": {
+      "lines": 570,
+      "reason": "Baseline: existing at time of enforcement - needs refactoring",
+      "target_lines": 500,
+      "directory": "raglite/"
     }
   }
 }

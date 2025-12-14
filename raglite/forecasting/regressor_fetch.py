@@ -22,6 +22,7 @@ from typing import Any
 import pandas as pd
 
 from raglite.forecasting.regressor_config import get_default_regressors
+from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
@@ -395,7 +396,10 @@ async def fetch_regressors_with_date_range(
     ]
 
     # Extend date range to cover historical period + buffer for alignment
-    start_date = min(dates_as_dates) - timedelta(days=365)  # 1 year buffer
+    # Story 6.24: Buffer is now configurable via settings.regressor_buffer_years
+    # Production uses 3-year buffer for correlation detection; tests use 1-year for speed
+    buffer_days = settings.regressor_buffer_years * 365
+    start_date = min(dates_as_dates) - timedelta(days=buffer_days)
     end_date = max(dates_as_dates) + timedelta(days=30 * periods_ahead)
 
     return await fetch_regressors_for_metric(

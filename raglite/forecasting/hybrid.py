@@ -1679,23 +1679,14 @@ async def generate_forecast(
     # - Sales Volume: Testing (was 31% with regressors)
     metric_lower = metric.lower().strip()
     flat_growth_metrics = [
-        # Variable cost metrics (DB names + variable names)
-        "variable_cost",
-        "variable cost",
-        "other variable costs",
-        # Energy cost metrics (DB names + variable names)
-        "electricity_cost",
-        "electrical energy",
-        "electricity",
+        # Story 6.25: REMOVED variable_cost - Dec 9 achieved 0.7% MAPE with regressors
+        # Story 6.25: REMOVED electricity_cost - Dec 9 achieved 3.0% MAPE with regressors
+        # Story 6.25: REMOVED avg_selling_price - Dec 9 achieved 1.6% MAPE with regressors
+        # Commit 88785ba added these to flat growth causing 9-11x regressions
+        # Energy cost metrics (DB names + variable names) - KEEP thermal_cost only
         "thermal_cost",
         "thermal energy",
         "fuel_cost",
-        # Pricing metrics (DB names + variable names)
-        "avg_selling_price",
-        "sales price em - cement",
-        "sales price im",
-        "sales price-transport cost",
-        "selling_price",
         # Utilization metrics (DB names + variable names)
         "capacity_utilization",
         "frequency ratio",
@@ -1704,15 +1695,15 @@ async def generate_forecast(
         "revenue",
         "turnover",
         "turnover+vat",
-        "ebitda",
+        # Story 6.25: EBITDA REMOVED from flat growth - commit 88785ba regression!
+        # Before 88785ba (Dec 9): linear growth + regressors = 0.2-2.5% MAPE
+        # After 88785ba (Dec 13): flat growth added EBITDA here = 13.56% MAPE
+        # Root cause: Flat growth disables trend component that regressors capture
         "profit",
         "net_income",
-        "cement unit ebitda",
-        # Sales metrics - sparse data patterns (DB names + variable names)
-        "sales",
-        "sales_volume",
-        "sales volumes",
-        "volume im - kton",
+        # Story 6.25: REMOVED sales metrics - Dec 9 achieved 0.8% MAPE with regressors
+        # Commit 88785ba added these to flat growth = 31.68% MAPE (39.6x regression)
+        # Sales volume responds to macroeconomic trends (euribor, diesel, ttf_gas)
     ]
     use_flat_growth = any(metric_kw in metric_lower for metric_kw in flat_growth_metrics)
 

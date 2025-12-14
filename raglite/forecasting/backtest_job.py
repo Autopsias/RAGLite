@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 
 if TYPE_CHECKING:
@@ -184,9 +185,10 @@ async def _get_metric_historical_data(
         return None
 
     try:
-        # Query last 3 years of data
+        # Query historical data based on configurable buffer
         end_date = date.today()
-        start_date = end_date - timedelta(days=365 * 3)
+        buffer_days = settings.regressor_buffer_years * 365
+        start_date = end_date - timedelta(days=buffer_days)
 
         data_points = storage.query_data_range(
             source_name=source_name,
@@ -243,7 +245,8 @@ async def _get_external_regressors(
     ]
 
     end_date = date.today()
-    start_date = end_date - timedelta(days=365 * 3)
+    buffer_days = settings.regressor_buffer_years * 365
+    start_date = end_date - timedelta(days=buffer_days)
 
     for source_name, metric_name in regressor_sources:
         try:

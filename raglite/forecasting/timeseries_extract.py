@@ -428,8 +428,10 @@ async def extract_ebitda_from_qdrant_chunks(
         if prev_date is not None:
             if p.date.year != prev_date.year:
                 # Year boundary - reset baseline
+                prev_str = prev_date.strftime("%b-%y")
+                curr_str = p.date.strftime("%b-%y")
                 logger.debug(
-                    f"Year boundary detected: {prev_date.strftime('%b-%y')} → {p.date.strftime('%b-%y')} - resetting YTD baseline",
+                    f"Year boundary detected: {prev_str} → {curr_str} - resetting YTD",
                     extra={
                         "prev_year": prev_date.year,
                         "curr_year": p.date.year,
@@ -463,6 +465,36 @@ async def extract_ebitda_from_qdrant_chunks(
             f"YTD→Monthly: {period_label} YTD €{p.value:,.0f}K → Monthly €{monthly_value:,.0f}K",
             extra={"period": period_label, "ytd": p.value, "monthly": monthly_value},
         )
+
+    # BUG FIX (P0): Outlier detection and removal for EBITDA
+    # Data quality issues cause extreme values:
+    # - Dec-23: €94,388K (should be ~€10-20K, likely full-year YTD not converted)
+    # - Dec-24: €-131,112K (impossible negative, data error)
+    # Use IQR-based outlier detection to remove values that break forecasting.
+    if len(monthly_points) >= 10:
+        values = [p.value for p in monthly_points]
+        sorted_values = sorted(values)
+        n = len(sorted_values)
+        q1 = sorted_values[n // 4]
+        q3 = sorted_values[3 * n // 4]
+        iqr = q3 - q1
+        lower_bound = q1 - 3 * iqr  # Use 3x IQR for conservative outlier detection
+        upper_bound = q3 + 3 * iqr
+
+        original_count = len(monthly_points)
+        monthly_points = [p for p in monthly_points if lower_bound <= p.value <= upper_bound]
+
+        if len(monthly_points) < original_count:
+            removed = original_count - len(monthly_points)
+            logger.warning(
+                f"Removed {removed} outlier(s) from EBITDA data using 3x IQR bounds",
+                extra={
+                    "removed_count": removed,
+                    "lower_bound": lower_bound,
+                    "upper_bound": upper_bound,
+                    "remaining_points": len(monthly_points),
+                },
+            )
 
     logger.info(
         f"Qdrant EBITDA extraction successful for {entity}",
@@ -1411,13 +1443,18 @@ def prefer_group_level(entity: str | None, metric: str) -> str | None:
         'Group' for aggregate metrics when no specific entity requested,
         original entity if specified, or None to disable entity filter.
     """
-    # Story 6.10.4: Only EBITDA IFRS has GROUP-level consolidated data
+    # Story 6.10.4: Only EBITDA has actual GROUP-level data in database
     # Revenue/turnover doesn't have GROUP entity - uses "Currency (1000 EUR)"
     # Sales Volume and Capacity Utilization also lack GROUP-level rows
-    GROUP_PREFERRED_METRICS = {"ebitda"}  # Only metrics with actual GROUP data
-    if metric.lower() in GROUP_PREFERRED_METRICS:
-        if entity is None or entity.lower() not in ("group", "portugal", "brazil", "tunisia"):
-            return "Group"
+    GROUP_PREFERRED_METRICS: set[str] = {"ebitda"}  # Only EBITDA has GROUP data
+
+    # Normalize metric name for comparison
+    metric_lower = metric.lower().strip()
+
+    # If this is a GROUP-preferred metric and no specific entity requested
+    if metric_lower in GROUP_PREFERRED_METRICS and entity is None:
+        return "Group"
+
     # Return entity if specified, None otherwise (no filtering for non-aggregate metrics)
     return entity
 
@@ -1483,14 +1520,14 @@ async def extract_timeseries_from_sql(
     from raglite.shared.clients import get_postgresql_connection
 
     # Metric name synonyms mapping (revenue → turnover for Secil reports)
-    # EBITDA mapping: Map lowercase "ebitda" to exact database name
-    # FIX (2025-12-01): Map to "EBITDA IFRS" which contains consolidated GROUP data
-    # Previously mapped to "EBITDA" which only matched Currency (1000 EUR) aggregation rows
+    # Story 6.25: REMOVED "ebitda" → "EBITDA IFRS" mapping
+    # EBITDA IFRS only has 7 periods (insufficient), plain "EBITDA" has 125 periods
+    # Dec 9 baseline achieved 2.5% MAPE without this mapping
     METRIC_SYNONYMS = {
         "revenue": "turnover",
         "revenues": "turnover",
         "sales": "turnover",
-        "ebitda": "EBITDA IFRS",  # Consolidated EBITDA (requires entity=GROUP filter)
+        # "ebitda": "EBITDA IFRS",  # REMOVED - EBITDA IFRS has only 7 periods
     }
 
     # Apply synonym mapping if metric matches a known synonym
@@ -1504,8 +1541,11 @@ async def extract_timeseries_from_sql(
     # - turnover: has entity="Currency (1000 EUR)", NOT "GROUP" - filter removed
     # - sales volume: no GROUP rows available - filter removed
     # - capacity utilization: no GROUP rows available - filter removed
-    ENTITY_FILTERS = {
-        "EBITDA IFRS": ("GROUP", True),  # Use GROUP consolidated with YTD data
+    ENTITY_FILTERS: dict[str, tuple[str | None, bool]] = {
+        # Story 6.25: Keep YTD mode for EBITDA IFRS but remove GROUP filter
+        # Format: (entity_filter, prefer_ytd) - None means no entity filtering
+        # Dec 9 baseline achieved 2.5% MAPE without GROUP filter but needs YTD period matching
+        "EBITDA IFRS": (None, True),  # No entity filter, use YTD period format
         # Story 6.10.4: Removed turnover, sales volume, capacity utilization
         # because they don't have GROUP-level data rows (GROUP filter = 0 results)
     }
@@ -1582,24 +1622,33 @@ async def extract_timeseries_from_sql(
         filter_config = ENTITY_FILTERS.get(metric_search)
         if filter_config:
             required_entity, prefer_ytd = filter_config
-            # Story 6.10.1 AC1-AC3: Normalize entity and use ILIKE pattern for all aliases
-            # This eliminates entity mixing (e.g., GROUP vs Portugal vs Brazil data)
-            canonical_entity = normalize_entity(required_entity)
-            # get_entity_ilike_pattern returns complete clause: "entity ILIKE ANY(ARRAY[...])"
-            entity_clause = get_entity_ilike_pattern(canonical_entity or required_entity)
-            entity_filter = f"AND {entity_clause}"
-            logger.info(
-                "Applying normalized entity filter for consolidated metric",
-                extra={
-                    "metric": metric_search,
-                    "required_entity": required_entity,
-                    "canonical_entity": canonical_entity,
-                    "entity_clause_preview": entity_clause[:80] + "..."
-                    if len(entity_clause) > 80
-                    else entity_clause,
-                    "prefer_ytd": prefer_ytd,
-                },
-            )
+            # Story 6.25: Only apply entity filter if required_entity is not None
+            # This allows YTD mode without entity filtering (for EBITDA IFRS)
+            if required_entity is not None:
+                # Story 6.10.1 AC1-AC3: Normalize entity and use ILIKE pattern for all aliases
+                # This eliminates entity mixing (e.g., GROUP vs Portugal vs Brazil data)
+                canonical_entity = normalize_entity(required_entity)
+                # get_entity_ilike_pattern returns complete clause: "entity ILIKE ANY(ARRAY[...])"
+                entity_clause = get_entity_ilike_pattern(canonical_entity or required_entity)
+                entity_filter = f"AND {entity_clause}"
+                logger.info(
+                    "Applying normalized entity filter for consolidated metric",
+                    extra={
+                        "metric": metric_search,
+                        "required_entity": required_entity,
+                        "canonical_entity": canonical_entity,
+                        "entity_clause_preview": entity_clause[:80] + "..."
+                        if len(entity_clause) > 80
+                        else entity_clause,
+                        "prefer_ytd": prefer_ytd,
+                    },
+                )
+            else:
+                # Story 6.25: YTD mode without entity filtering
+                logger.info(
+                    "Using YTD period mode without entity filter",
+                    extra={"metric": metric_search, "prefer_ytd": prefer_ytd},
+                )
 
         # nosec B608 - SQL query uses parameterized internal variables only
         # Story 5.0.4 Fix: Infer fiscal_year from period when NULL (e.g., "Jan-25" → 2025)
@@ -2458,3 +2507,142 @@ JSON array:"""
         interval="raw",  # Raw extraction, normalize separately if needed
         source_documents=[r.source_document for r in results[:5]],
     )
+
+
+# =============================================================================
+# Story 6.24: External Data Extraction
+# =============================================================================
+
+# Maps forecast variable names to (source_name, metric_name) in external_data_points
+EXTERNAL_SOURCE_MAPPINGS: dict[str, tuple[str, str]] = {
+    "ttf_gas_price": ("ICE_TTF_Gas", "settlement_price"),
+    "petcoke_price": ("ICE_API2_Coal", "settlement_price"),
+    "co2_eua_price": ("CO2_EUA", "co2_eua_price"),
+}
+
+
+async def extract_external_timeseries(
+    metric: str,
+    min_points: int = 8,
+) -> TimeSeriesData | None:
+    """Extract time series from external_data_points table.
+
+    Story 6.24: External Data Integration for Forecasting
+
+    Queries external commodity data (TTF Gas, Petcoke/API2 Coal, CO2 EUA)
+    from PostgreSQL external_data_points table.
+
+    Args:
+        metric: Forecast variable name (e.g., "ttf_gas_price", "petcoke_price")
+        min_points: Minimum data points required (default 8)
+
+    Returns:
+        TimeSeriesData with extracted points, or None if insufficient data
+
+    Example:
+        >>> data = await extract_external_timeseries("ttf_gas_price")
+        >>> print(f"{len(data.points)} points from {data.points[0].date}")
+    """
+    from raglite.shared.clients import get_postgresql_connection
+
+    # Check if metric has external source mapping
+    if metric not in EXTERNAL_SOURCE_MAPPINGS:
+        logger.warning(f"No external source mapping for metric: {metric}")
+        return None
+
+    source_name, metric_name = EXTERNAL_SOURCE_MAPPINGS[metric]
+
+    logger.info(
+        "Extracting external time series",
+        extra={"metric": metric, "source": source_name, "db_metric": metric_name},
+    )
+
+    conn = get_postgresql_connection()
+    cursor = conn.cursor()
+
+    try:
+        query = """
+            SELECT edp.date, edp.value, edp.unit
+            FROM external_data_points edp
+            JOIN external_data_sources eds ON edp.source_id = eds.id
+            WHERE eds.source_name = %s
+              AND edp.metric_name = %s
+              AND edp.deleted_at IS NULL
+            ORDER BY edp.date ASC
+        """
+
+        cursor.execute(query, (source_name, metric_name))
+        rows = cursor.fetchall()
+
+        if len(rows) < min_points:
+            logger.warning(
+                f"Insufficient external data for {metric}",
+                extra={"found": len(rows), "required": min_points},
+            )
+            return None
+
+        # Convert to TimeSeriesPoint objects
+        points = []
+        for date_val, value, unit in rows:
+            # Convert date to datetime for consistency
+            dt = datetime.combine(date_val, datetime.min.time())
+            points.append(TimeSeriesPoint(date=dt, value=float(value), label=unit))
+
+        # Story 6.24: Resample daily data to monthly to match SECIL internal data frequency
+        # This is critical for consistent forecasting and MAPE comparison
+        if len(points) > 50:  # Only resample if we have enough daily data
+            import pandas as pd
+
+            df = pd.DataFrame([(p.date, p.value) for p in points], columns=["date", "value"])
+            df["date"] = pd.to_datetime(df["date"])
+            df = df.set_index("date")
+
+            # Resample to month-end, taking the mean
+            monthly = df.resample("ME").mean().dropna()
+
+            if len(monthly) >= min_points:
+                points = [
+                    TimeSeriesPoint(
+                        date=datetime.combine(idx.date(), datetime.min.time()),
+                        value=float(row["value"]),
+                        label="monthly_avg",
+                    )
+                    for idx, row in monthly.iterrows()
+                ]
+
+                logger.info(
+                    "Resampled external data from daily to monthly",
+                    extra={
+                        "metric": metric,
+                        "daily_points": len(rows),
+                        "monthly_points": len(points),
+                    },
+                )
+
+        logger.info(
+            "External time series extracted",
+            extra={
+                "metric": metric,
+                "source": source_name,
+                "points": len(points),
+                "date_range": f"{points[0].date.date()} to {points[-1].date.date()}",
+            },
+        )
+
+        return TimeSeriesData(
+            metric_name=metric,
+            points=points,
+            interval="monthly",  # Resampled to monthly for consistency
+            source_documents=[f"external:{source_name}"],
+        )
+
+    except Exception as e:
+        logger.error(
+            f"Failed to extract external time series for {metric}",
+            extra={"error": str(e)},
+            exc_info=True,
+        )
+        return None
+
+    finally:
+        cursor.close()

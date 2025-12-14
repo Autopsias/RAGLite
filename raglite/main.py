@@ -3219,7 +3219,8 @@ async def retrain_forecasting_models(
                     # Collect all time series data with sufficient history
                     all_data = []
                     end_date = date.today()
-                    start_date = end_date - timedelta(days=365 * 3)  # 3 years lookback
+                    buffer_days = settings.regressor_buffer_years * 365
+                    start_date = end_date - timedelta(days=buffer_days)
 
                     for source in sources:
                         try:

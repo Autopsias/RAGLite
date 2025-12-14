@@ -20,6 +20,7 @@ from raglite.forecasting.tft_training import (
     save_tft_checkpoint,
     train_tft_model,
 )
+from raglite.shared.config import settings
 from raglite.shared.database import get_session
 from raglite.shared.logging import get_logger
 
@@ -67,7 +68,8 @@ async def run_weekly_tft_training() -> None:
         # Collect all time series data with sufficient history
         all_data = []
         end_date = date.today()
-        start_date = end_date - timedelta(days=365 * 3)  # 3 years lookback
+        buffer_days = settings.regressor_buffer_years * 365
+        start_date = end_date - timedelta(days=buffer_days)
 
         for source in sources:
             try:

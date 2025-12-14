@@ -1,0 +1,32 @@
+{
+  "timestamp": "2025-12-13T18:19:44.831069",
+  "runtime_seconds": 8.231128692626953,
+  "mape_method": "holdout",
+  "variables_tested": 1,
+  "variables_passed": 1,
+  "pass_rate": 1.0,
+  "average_mape": 4.988897366455785,
+  "variable_results": [
+    {
+      "variable_name": "thermal_cost",
+      "display_name": "Thermal Energy Cost",
+      "target_mape": 10.0,
+      "actual_mape": 4.988897366455785,
+      "passed": true,
+      "holdout_mape": 4.988897366455785,
+      "walkforward_mape": null,
+      "cv_mape": null,
+      "ensemble_weights": {},
+      "best_model": "",
+      "best_model_mape": 0.0
+    }
+  ],
+  "model_performance": {},
+  "quality_gate": {
+    "passed": false,
+    "minimum_required": 10,
+    "actual_passed": 1,
+    "variable_cost_mape": null,
+    "variable_cost_target": 8.5
+  }
+}

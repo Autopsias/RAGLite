@@ -62,6 +62,7 @@ warnings.filterwarnings(
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
@@ -478,7 +479,8 @@ async def load_external_data(metric_name: str) -> Any:
     from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
 
     end_date = date.today()
-    start_date = end_date - timedelta(days=365 * 3)  # 3 years for better validation
+    buffer_days = settings.regressor_buffer_years * 365
+    start_date = end_date - timedelta(days=buffer_days)
 
     data_points: list[TimeSeriesPoint] = []
 

@@ -572,7 +572,7 @@ class TestRegressorIntegrationPoints:
         from raglite.forecasting.regressor_fetch import fetch_single_regressor
 
         # Mock the Eurostat client to avoid real API call
-        with patch("raglite.forecasting.regressor_fetch.EurostatClient") as mock_client_class:
+        with patch("raglite.external_data.clients.eurostat.EurostatClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
 
@@ -614,7 +614,7 @@ class TestRegressorIntegrationPoints:
         """
         from raglite.forecasting.regressor_fetch import fetch_single_regressor
 
-        with patch("raglite.forecasting.regressor_fetch.EurostatClient") as mock_client_class:
+        with patch("raglite.external_data.clients.eurostat.EurostatClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
 

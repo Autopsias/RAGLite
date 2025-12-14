@@ -59,6 +59,10 @@ raglite.shared.config.settings = Settings()  # Recreate singleton with test env 
 
 logger = logging.getLogger(__name__)
 
+# Load database fixtures module to make test_financial_data fixture available
+# Note: Moved from tests/integration/conftest.py to avoid non-top-level conftest issue
+pytest_plugins = ["tests.fixtures.database_fixtures"]
+
 
 @pytest.fixture(scope="session", autouse=True)
 def configure_test_environment():

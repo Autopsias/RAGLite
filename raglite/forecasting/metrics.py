@@ -17,6 +17,14 @@ from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Story 6.24: External data source to forecast variable mappings
+# Maps (source_name, metric_name) -> forecast_variable_name
+EXTERNAL_METRIC_MAPPINGS: dict[tuple[str, str], str] = {
+    ("ICE_TTF_Gas", "settlement_price"): "ttf_gas_price",
+    ("ICE_API2_Coal", "settlement_price"): "petcoke_price",  # API2 Coal as petcoke proxy
+    ("CO2_EUA", "co2_eua_price"): "co2_eua_price",
+}
+
 
 class MetricsCache(TypedDict):
     """Type definition for metrics cache."""
@@ -173,3 +181,106 @@ def clear_metrics_cache() -> None:
     global _metrics_cache
     _metrics_cache = None
     logger.info("Metrics cache cleared")
+
+
+async def list_external_metrics(
+    min_points: int = MIN_DATA_POINTS,
+) -> list[MetricInfo]:
+    """List external commodity metrics available for forecasting.
+
+    Story 6.24: External Data Integration for Forecasting
+
+    Queries the external_data_points table for commodity price data
+    (TTF Gas, API2 Coal/Petcoke, CO2 EUA) and maps them to forecast
+    variable names.
+
+    Args:
+        min_points: Minimum points to set can_forecast=True (default 8)
+
+    Returns:
+        List of MetricInfo objects for external commodity metrics
+
+    Example:
+        >>> external = await list_external_metrics()
+        >>> for m in external:
+        ...     print(f"{m.name}: {m.data_point_count} points")
+        ttf_gas_price: 2046 points
+        petcoke_price: 1260 points
+        co2_eua_price: 487 points
+    """
+    logger.info("Fetching external metrics from database", extra={"min_points": min_points})
+
+    conn = get_postgresql_connection()
+    cursor = conn.cursor()
+
+    try:
+        # Query external_data_points with source join
+        query = """
+            SELECT
+                eds.source_name,
+                edp.metric_name,
+                COUNT(*) as data_point_count,
+                MIN(edp.date)::text as min_date,
+                MAX(edp.date)::text as max_date
+            FROM external_data_points edp
+            JOIN external_data_sources eds ON edp.source_id = eds.id
+            WHERE edp.deleted_at IS NULL
+            GROUP BY eds.source_name, edp.metric_name
+            ORDER BY data_point_count DESC
+        """
+
+        cursor.execute(query)
+        rows = cursor.fetchall()
+
+        # Build MetricInfo objects with mapped names
+        metrics = []
+        for row in rows:
+            source_name, metric_name, count, min_date, max_date = row
+
+            # Map to forecast variable name
+            key = (source_name, metric_name)
+            if key in EXTERNAL_METRIC_MAPPINGS:
+                forecast_name = EXTERNAL_METRIC_MAPPINGS[key]
+                can_forecast = count >= min_points
+
+                metrics.append(
+                    MetricInfo(
+                        name=forecast_name,
+                        data_point_count=count,
+                        min_period=min_date,
+                        max_period=max_date,
+                        can_forecast=can_forecast,
+                    )
+                )
+
+                logger.debug(
+                    "External metric mapped",
+                    extra={
+                        "source": source_name,
+                        "metric": metric_name,
+                        "forecast_name": forecast_name,
+                        "count": count,
+                    },
+                )
+
+        logger.info(
+            "External metrics discovery complete",
+            extra={
+                "total_external": len(metrics),
+                "forecastable": sum(1 for m in metrics if m.can_forecast),
+            },
+        )
+
+        return metrics
+
+    except Exception as e:
+        logger.error(
+            "Failed to fetch external metrics",
+            extra={"error": str(e)},
+            exc_info=True,
+        )
+        # Return empty list on error (don't break existing flow)
+        return []
+
+    finally:
+        cursor.close()

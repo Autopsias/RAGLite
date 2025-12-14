@@ -283,7 +283,7 @@ class TestErrorHandlingForNewRegressors:
         """
         from raglite.forecasting.regressor_fetch import fetch_single_regressor
 
-        with patch("raglite.forecasting.regressor_fetch.EurostatClient") as mock_client_class:
+        with patch("raglite.external_data.clients.eurostat.EurostatClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.fetch_construction_output = AsyncMock(side_effect=Exception("API error"))
@@ -305,7 +305,7 @@ class TestErrorHandlingForNewRegressors:
         """
         from raglite.forecasting.regressor_fetch import fetch_single_regressor
 
-        with patch("raglite.forecasting.regressor_fetch.EurostatClient") as mock_client_class:
+        with patch("raglite.external_data.clients.eurostat.EurostatClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.fetch_industrial_production = AsyncMock(side_effect=Exception("API error"))
@@ -327,7 +327,7 @@ class TestErrorHandlingForNewRegressors:
         """
         from raglite.forecasting.regressor_fetch import fetch_single_regressor
 
-        with patch("raglite.forecasting.regressor_fetch.EurostatClient") as mock_client_class:
+        with patch("raglite.external_data.clients.eurostat.EurostatClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
             mock_client.fetch_construction_output = AsyncMock(return_value=[])  # Empty
