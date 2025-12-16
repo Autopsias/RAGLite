@@ -465,7 +465,7 @@ This story is ONLY implemented if Phase 2A (Story 2.3-2.5) achieves <70% retriev
 
 ### Context Reference
 
-- [Story Context XML](story-context-2.7.xml) - Generated 2025-10-24
+- [Story Context XML](story-context-2.7.xml.md) - Generated 2025-10-24
 
 ### Agent Model Used
 

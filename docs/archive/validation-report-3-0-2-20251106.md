@@ -96,8 +96,8 @@
 **Source Documents:**
 - [Epic 2 Retrospective](docs/retrospectives/epic-2-retro-2025-11-05.md) - Ground truth misalignment issue
 - [Epic 3 Prep Tech Spec](docs/tech-spec-epic-3-prep.md#story-302) - Data dictionary spec
-- [Epics.md - Epic 3](docs/epics.md#epic-3) - Epic-level requirements and context
-- [Action Item 1](docs/retrospectives/epic-2-retro-2025-11-05.md#action-item-1-data-validation-first) - Data validation first mandate
+- [Epics.md - Epic 3](docs/epics.md#epic-3.md) - Epic-level requirements and context
+- [Action Item 1](docs/retrospectives/epic-2-retro-2025-11-05.md#action-item-1-data-validation-first.md) - Data validation first mandate
 ```
 
 ---

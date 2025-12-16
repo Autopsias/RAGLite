@@ -16,7 +16,7 @@ import pytest
 
 # Mark all tests in this module as integration tests that preserve collection state by default
 # Individual classes can override with @pytest.mark.manages_collection_state if they modify data
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 # Lazy imports for expensive modules - DO NOT import raglite modules at module level!
 # Test explorers (VS Code) run discovery multiple times causing 30+ second delays.

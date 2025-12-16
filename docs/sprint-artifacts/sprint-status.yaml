@@ -161,6 +161,11 @@ development_status:
   6-21-unified-validation-script: done
   6-22-mcp-validation-tool-integration: done
   6-23-variable-cost-mape-final-validation: in-progress
+  # Story 6.24: Forecasting Validation Coverage & Data Quality
+  # Sub-stories: 6.24.1 (year-value filter), 6.24.2 (external metrics), 6.24.3 (construction regressors), 6.24.4 (external regressor extraction)
+  # Goal: Fix data corruption (Capacity Utilization 64%→<10%), expand validation from 11 to 20 variables
+  # Status: Code review complete, all 10 issues fixed, 9 tests passing
+  6-24-forecasting-validation-coverage: done
   epic-6-retrospective: optional
 
   # Epic 5: Production Readiness & Real-Time Operations

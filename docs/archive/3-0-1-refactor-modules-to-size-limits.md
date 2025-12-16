@@ -298,7 +298,7 @@ Winston reviews:
 **Source Documents:**
 - [Epic 2 Retrospective](docs/retrospectives/epic-2-retro-2025-11-05.md) - Code quality debt identified
 - [Epic 3 Prep Tech Spec](docs/tech-spec-epic-3-prep.md) - Refactoring strategy
-- [Action Item 2](docs/retrospectives/epic-2-retro-2025-11-05.md#action-item-2-code-quality-module-size-enforcement) - Module size enforcement
+- [Action Item 2](docs/retrospectives/epic-2-retro-2025-11-05.md#action-item-2-code-quality-module-size-enforcement.md) - Module size enforcement
 
 ## Definition of Done
 
@@ -344,7 +344,7 @@ Winston reviews:
 
 ### Context Reference
 
-- [Story Context XML](3-0-1-refactor-modules-to-size-limits.context.xml) - Generated 2025-11-05
+- [Story Context XML](3-0-1-refactor-modules-to-size-limits.context.xml.md) - Generated 2025-11-05
 
 ### Agent Model Used
 
@@ -736,7 +736,7 @@ No security issues identified during review. Refactoring maintained existing sec
 **Issue:** `test_ingest_pdf_logging` failing due to logger name mismatch
 **Fix Applied:** Updated test to use correct module name after refactoring
 - Changed: `"raglite.ingestion.pipeline"` → `"raglite.ingestion.document_ingestion"`
-- File: [tests/unit/test_ingestion.py:360](tests/unit/test_ingestion.py#L360)
+- File: [tests/unit/test_ingestion.py:360](tests/unit/test_ingestion.py#L360.md)
 - Verification: Test now passing (confirmed via `pytest tests/unit/test_ingestion.py::TestIngestPDF::test_ingest_pdf_logging`)
 
 #### Resolution 2: Module Size Exception Approved ✅

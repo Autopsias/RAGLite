@@ -17,6 +17,9 @@ import pytest
 # Skip all tests if test document not available
 pytestmark = [
     pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.integration,
     pytest.mark.preserve_collection,  # All tests in this module are read-only query validation tests
     pytest.mark.skipif(
         os.environ.get("SKIP_CEMENT_INTEGRATION", "1") == "1",

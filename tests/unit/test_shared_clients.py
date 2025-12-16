@@ -1,6 +1,5 @@
 """Unit tests for raglite.shared.clients module."""
 
-import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,15 +8,18 @@ from pytest import MonkeyPatch
 from raglite.shared.clients import get_claude_client, get_qdrant_client
 from raglite.shared.config import Settings
 
-# Mock dependencies to prevent import errors during unit testing
-# IMPORTANT: Mock only for unit test scope to avoid affecting integration tests
-# We will use scoped patches instead of global sys.modules mocking
-sys.modules["anthropic"] = MagicMock()
-sys.modules["sentence_transformers"] = MagicMock()
-sys.modules["qdrant_client"] = MagicMock()
-
-# NOTE: We do NOT mock mistralai here because integration tests need the real module
-# Instead, we mock it specifically in the unit tests that need it
+# CRITICAL FIX (2025-12-16): DO NOT use sys.modules mocking at module level!
+# Module-level sys.modules mocking persists for the entire Python process and
+# pollutes the global namespace. This caused 114 test failures when integration
+# tests tried to use the real sentence_transformers module but got MagicMock instead.
+#
+# Instead, use:
+# 1. patch() context managers within individual tests
+# 2. fixture-based mocking with proper cleanup
+# 3. Test-scoped patches using @patch decorators
+#
+# The tests in this file use @patch decorators which properly scope the mocks
+# to each individual test function.
 
 
 @pytest.mark.priority("P0")

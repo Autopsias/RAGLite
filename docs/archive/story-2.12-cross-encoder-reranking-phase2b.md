@@ -572,7 +572,7 @@ This story is ONLY implemented if:
 
 ### Context Reference
 
-- [Story Context XML](story-context-2.12.xml) - Generated 2025-10-24 (originally story-context-2.8.xml)
+- [Story Context XML](story-context-2.12.xml.md) - Generated 2025-10-24 (originally story-context-2.8.xml)
 
 ### Agent Model Used
 

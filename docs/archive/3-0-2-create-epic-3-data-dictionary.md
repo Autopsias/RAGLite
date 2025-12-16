@@ -216,8 +216,8 @@ Create comprehensive data dictionary: `docs/data-dictionary-epic-3.md`
 ## References
 
 - [Source: PostgreSQL financial_tables schema](raglite/shared/models.py)
-- [Source: Story 2.15 Period Normalization](raglite/retrieval/period_normalizer.py)
-- [Source: Story 2.14 Fuzzy Entity Matching](raglite/retrieval/query_classifier.py)
+- [Source: Story 2.15 Period Normalization](raglite/retrieval/period_normalizer.py.md)
+- [Source: Story 2.14 Fuzzy Entity Matching](raglite/retrieval/query_classifier.py.md)
 ```
 
 **Success Criteria:**
@@ -385,13 +385,13 @@ Winston reviews:
 - [Epic 3 - Epics.md](docs/epics.md#epic-3-ai-intelligence--orchestration) - Epic goal: Multi-step reasoning and agentic orchestration
 - [Epic 2 Retrospective](docs/retrospectives/epic-2-retro-2025-11-05.md) - Ground truth misalignment issue (12% → 77.6% accuracy gap)
 - [Epic 3 Prep Tech Spec](docs/tech-spec-epic-3-prep.md#story-302) - Data dictionary spec and implementation approach
-- [Action Item 1](docs/retrospectives/epic-2-retro-2025-11-05.md#action-item-1-data-validation-first) - Data validation first mandate (inspect before test)
+- [Action Item 1](docs/retrospectives/epic-2-retro-2025-11-05.md#action-item-1-data-validation-first.md) - Data validation first mandate (inspect before test)
 
 ## Dev Agent Record
 
 ### Context Reference
 
-- [Story Context XML](3-0-2-create-epic-3-data-dictionary.context.xml) - Generated 2025-11-06
+- [Story Context XML](3-0-2-create-epic-3-data-dictionary.context.xml.md) - Generated 2025-11-06
 
 ### Agent Model Used
 

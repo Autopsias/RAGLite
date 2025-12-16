@@ -8,14 +8,14 @@ This document describes the CI/CD pipeline setup, configuration, and best practi
 
 ## Table of Contents
 
-- [Overview](#overview)
+- [Overview](#overview.md)
 - [Pipeline Architecture](#pipeline-architecture)
-- [Pipeline Stages](#pipeline-stages)
-- [Local Development](#local-development)
-- [Debugging CI Failures](#debugging-ci-failures)
-- [Configuration & Secrets](#configuration--secrets)
-- [Performance Targets](#performance-targets)
-- [Best Practices](#best-practices)
+- [Pipeline Stages](#pipeline-stages.md)
+- [Local Development](#local-development.md)
+- [Debugging CI Failures](#debugging-ci-failures.md)
+- [Configuration & Secrets](#configuration--secrets.md)
+- [Performance Targets](#performance-targets.md)
+- [Best Practices](#best-practices.md)
 
 ---
 

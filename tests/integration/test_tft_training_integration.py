@@ -16,7 +16,8 @@ import pytest
 os.environ["APP_ENV"] = "test"
 
 # Skip all tests in this module if not running integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+# Mark as slow due to model training taking significant time
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 
 @pytest.fixture

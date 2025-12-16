@@ -176,7 +176,7 @@ converter = DocumentConverter(
 
 ### Context Reference
 
-- [Story Context XML: docs/stories/story-context-2.1.xml](story-context-2.1.xml) - Generated 2025-10-19
+- [Story Context XML: docs/stories/story-context-2.1.xml](story-context-2.1.xml.md) - Generated 2025-10-19
 
 ### Agent Model Used
 

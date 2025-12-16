@@ -14,7 +14,7 @@ Performance Optimization:
 import pytest
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 # Lazy imports for expensive modules - DO NOT import raglite modules at module level!
 

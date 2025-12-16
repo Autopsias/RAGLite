@@ -22,7 +22,8 @@ from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
 
 # Mark all tests as integration tests with preserve_collection
 # These are read-only tests that don't modify the Qdrant collection
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+# Mark as slow due to PDF ingestion taking 60+ seconds per test
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 
 class TestTimeseriesIntegration:

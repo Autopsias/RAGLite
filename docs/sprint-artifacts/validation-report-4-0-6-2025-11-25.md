@@ -263,8 +263,8 @@ The following issues were auto-fixed:
 - [Story 4.0.5: Database Separation](docs/archive/4-0-5-test-prod-database-separation.md)
 - [Architecture: Config Management](raglite/shared/config.py#L31-100)
 - [Architecture: High-Level Design](docs/architecture/high-level-architecture.md)
-- [Project: CLAUDE.md Anti-Over-Engineering Rules](CLAUDE.md)
-- [Incident: 2025-11-25 Production Data Loss](Background section of this story)
+- [Project: CLAUDE.md Anti-Over-Engineering Rules](../../CLAUDE.md)
+- Incident: 2025-11-25 Production Data Loss (see Background section)
 ```
 
 ### MAJOR: Missing Testing Standards Reference

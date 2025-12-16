@@ -8,21 +8,21 @@
 
 ## Table of Contents
 
-1. [Introduction](#introduction)
-2. [Executive Summary](#executive-summary)
+1. [Introduction](#introduction.md)
+2. [Executive Summary](#executive-summary.md)
 3. [Research Findings Summary](#research-findings-summary)
 4. [High-Level Architecture](#high-level-architecture)
 5. [Technology Stack](#technology-stack)
 6. [Microservices Architecture](#microservices-architecture)
 7. [Orchestration Layer](#orchestration-layer)
-8. [Data Layer](#data-layer)
+8. [Data Layer](#data-layer.md)
 9. [Phased Implementation Strategy](#phased-implementation-strategy)
 10. [Deployment Architecture](#deployment-architecture)
-11. [Security & Compliance](#security--compliance)
-12. [Performance & Scalability](#performance--scalability)
-13. [Monitoring & Observability](#monitoring--observability)
-14. [Development Workflow](#development-workflow)
-15. [Testing Strategy](#testing-strategy)
+11. [Security & Compliance](#security--compliance.md)
+12. [Performance & Scalability](#performance--scalability.md)
+13. [Monitoring & Observability](#monitoring--observability.md)
+14. [Development Workflow](#development-workflow.md)
+15. [Testing Strategy](#testing-strategy.md)
 
 ---
 

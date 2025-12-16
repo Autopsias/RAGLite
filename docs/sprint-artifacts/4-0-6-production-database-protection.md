@@ -240,8 +240,8 @@ Per project testing guidelines:
 - [Story 4.0.5: Database Separation](docs/archive/4-0-5-test-prod-database-separation.md) - Environment-based config infrastructure
 - [Architecture: Config Management](raglite/shared/config.py:31-100) - Settings.app_env and adjust_for_environment()
 - [Architecture: High-Level Design](docs/architecture/high-level-architecture.md) - Component placement
-- [Project Standards: CLAUDE.md](CLAUDE.md) - Anti-over-engineering rules, coding standards
-- [Incident: 2025-11-25 Production Data Loss](Background section of this story) - Motivation for safeguards
+- [Project Standards: CLAUDE.md](../../CLAUDE.md) - Anti-over-engineering rules, coding standards
+- Incident: 2025-11-25 Production Data Loss (see Background section) - Motivation for safeguards
 
 ## Dev Agent Record
 

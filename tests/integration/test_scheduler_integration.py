@@ -20,6 +20,9 @@ import pytest
 # Note: These tests don't interact with Qdrant, but CI requires isolation markers for all integration tests
 pytestmark = [
     pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.integration,
     pytest.mark.preserve_collection,  # Read-only - no Qdrant interaction
     pytest.mark.skipif(
         os.getenv("APP_ENV") != "test",

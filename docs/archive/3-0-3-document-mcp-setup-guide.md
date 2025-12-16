@@ -456,7 +456,7 @@ Story 3.0.2 created comprehensive data validation infrastructure for Epic 3 anal
 - [Epic 3 - AI Intelligence & Orchestration](docs/epics.md#epic-3-ai-intelligence--orchestration) - Epic goal: Multi-step reasoning and agentic orchestration
 - [Epic 2 Retrospective](docs/retrospectives/epic-2-retro-2025-11-05.md) - Documentation gap identified
 - [Epic 3 Prep Tech Spec](docs/tech-spec-epic-3-prep.md#story-303) - MCP setup guide spec
-- [Action Item 5](docs/retrospectives/epic-2-retro-2025-11-05.md#action-item-5-documentation-improvements) - Documentation improvements
+- [Action Item 5](docs/retrospectives/epic-2-retro-2025-11-05.md#action-item-5-documentation-improvements.md) - Documentation improvements
 - [Testing Strategy](docs/architecture/testing-strategy.md) - Manual testing approach for documentation validation
 - [Coding Standards](docs/architecture/coding-standards.md) - Markdown formatting guidelines
 

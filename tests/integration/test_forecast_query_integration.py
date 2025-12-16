@@ -17,7 +17,7 @@ from raglite.shared.models import ForecastQueryRequest, ForecastQueryResponse
 
 # Mark all tests as preserve_collection - these are read-only tests
 # that don't modify the Qdrant collection (performance optimization)
-pytestmark = pytest.mark.preserve_collection
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 # =============================================================================
 # Integration Tests for get_financial_forecast MCP Tool

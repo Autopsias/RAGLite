@@ -542,7 +542,7 @@ Story 3.0.3 created comprehensive MCP setup guide enabling Ricardo and stakehold
 - [Epic 3 - AI Intelligence & Orchestration](docs/epics.md#epic-3-ai-intelligence--orchestration) - Epic goals, prep sprint objectives, and UAT framework mandate
 - [Epic 2 Retrospective](docs/retrospectives/epic-2-retro-2025-11-05.md) - UAT framework gap identified
 - [Epic 3 Prep Tech Spec](docs/tech-spec-epic-3-prep.md#story-304) - UAT templates spec
-- [Action Item 3](docs/retrospectives/epic-2-retro-2025-11-05.md#action-item-3-user-acceptance-testing-uat-framework) - UAT framework mandate
+- [Action Item 3](docs/retrospectives/epic-2-retro-2025-11-05.md#action-item-3-user-acceptance-testing-uat-framework.md) - UAT framework mandate
 - [Testing Strategy](docs/architecture/testing-strategy.md) - Overall testing approach and UAT integration with automated testing
 - [Coding Standards](docs/architecture/coding-standards.md) - Markdown formatting guidelines and documentation structure conventions
 

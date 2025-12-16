@@ -360,7 +360,7 @@ async def test_e2e_metadata_completeness_validation():
 
 ### Context Reference
 
-- [Story Context XML](./story-context-1.11.xml) - Generated 2025-10-13
+- [Story Context XML](./story-context-1.11.xml.md) - Generated 2025-10-13
 
 ### Agent Model Used
 

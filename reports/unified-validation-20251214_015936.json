@@ -1,0 +1,32 @@
+{
+  "timestamp": "2025-12-14T01:59:36.004803",
+  "runtime_seconds": 85.00335097312927,
+  "mape_method": "holdout",
+  "variables_tested": 1,
+  "variables_passed": 0,
+  "pass_rate": 0.0,
+  "average_mape": 8.012900040785494,
+  "variable_results": [
+    {
+      "variable_name": "avg_selling_price",
+      "display_name": "Average Selling Price",
+      "target_mape": 6.0,
+      "actual_mape": 8.012900040785494,
+      "passed": false,
+      "holdout_mape": 8.012900040785494,
+      "walkforward_mape": null,
+      "cv_mape": null,
+      "ensemble_weights": {},
+      "best_model": "",
+      "best_model_mape": 0.0
+    }
+  ],
+  "model_performance": {},
+  "quality_gate": {
+    "passed": false,
+    "minimum_required": 9,
+    "actual_passed": 0,
+    "variable_cost_mape": null,
+    "variable_cost_target": 8.0
+  }
+}

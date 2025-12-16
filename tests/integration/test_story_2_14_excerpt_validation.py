@@ -19,7 +19,12 @@ from raglite.retrieval.sql_table_search import search_tables_sql
 
 # Mark all tests in this module as integration tests
 # Order 11: Run with other session_ingested_collection tests to share 10-page PDF fixture
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.order(11)]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.order(11),
+]
 
 
 @dataclass

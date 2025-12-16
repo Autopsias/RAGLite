@@ -12,7 +12,8 @@ from raglite.shared.models import TimeSeriesData, TimeSeriesPoint, TrendDirectio
 
 # Mark all tests as preserve_collection - these are read-only tests
 # that don't modify the Qdrant collection (performance optimization)
-pytestmark = pytest.mark.preserve_collection
+# Mark as slow due to PDF ingestion taking 60+ seconds per test
+pytestmark = [pytest.mark.preserve_collection, pytest.mark.slow]
 
 # =============================================================================
 # Test Expert-Labeled Trend Dataset

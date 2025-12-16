@@ -265,7 +265,6 @@ class TestVariablePassRate:
         THEN: Only 10+ passes should satisfy threshold
         """
         MINIMUM_REQUIRED = 10
-        TOTAL = 12
 
         # Test cases
         test_cases = [

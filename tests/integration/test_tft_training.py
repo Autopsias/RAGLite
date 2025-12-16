@@ -6,7 +6,8 @@ Story 6.14 AC9: Test training workflow, model registry, and ensemble integration
 import pytest
 
 # Mark all tests as integration tests
-pytestmark = pytest.mark.integration
+# Mark as slow due to model training and setup taking significant time
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 
 class TestModelRegistryOperations:

@@ -43,7 +43,13 @@ from raglite.external_data.models import (
 )
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+]
 
 # =============================================================================
 # Sample Data for Integration Tests

@@ -70,7 +70,7 @@ Sample 5 random chunks and validate page numbers:
 
 **Method:** Open PDF in viewer, locate chunk content, verify page number matches reported value.
 
-**Tolerance:** ±1 page acceptable for chunks near page boundaries.
+**Tolerance:** 1 page acceptable for chunks near page boundaries.
 
 ### 4. Financial Context Preservation
 

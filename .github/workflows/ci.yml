@@ -1677,34 +1677,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Verify required architecture docs exist
+      - name: Install Python for docs validation
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run comprehensive documentation validation
         run: |
-          echo "Checking for required documentation files..."
-          REQUIRED_DOCS=(
-            "docs/architecture/1-introduction-vision.md"
-            "docs/architecture/2-executive-summary.md"
-            "docs/architecture/6-complete-reference-implementation.md"
-            "docs/prd/index.md"
-            "CLAUDE.md"
-            "README.md"
-          )
-
-          MISSING=0
-          for doc in "${REQUIRED_DOCS[@]}"; do
-            if [ ! -f "$doc" ]; then
-              echo "❌ Missing: $doc"
-              MISSING=$((MISSING + 1))
-            else
-              echo "✅ Found: $doc"
-            fi
-          done
-
-          if [ $MISSING -gt 0 ]; then
-            echo "⚠️  $MISSING required documentation file(s) missing"
-            exit 1
-          else
-            echo "✅ All required documentation files present"
-          fi
+          echo "Running comprehensive documentation validation..."
+          python3 scripts/validate-docs.py
 
   # ============================================================================
   # JOB 12: Burn-In Loop (Flaky Test Detection)

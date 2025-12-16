@@ -49,8 +49,14 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import numpy as np
 import pandas as pd
+
+from raglite.shared.config import settings
+from raglite.shared.logging import get_logger
 
 # Suppress deprecation warning for historical_data parameter
 warnings.filterwarnings(
@@ -58,12 +64,6 @@ warnings.filterwarnings(
     message="historical_data parameter is deprecated",
     category=DeprecationWarning,
 )
-
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from raglite.shared.config import settings
-from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
 

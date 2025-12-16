@@ -110,9 +110,12 @@ class ECBClient:
     }
 
     # Story 6.17 AC1: GDP growth series key template
-    # Q.Y.{country}.W2.S1.S1.B.B1GQ._Z._Z._Z.XDC_R_B1GQ_Y.V.N
-    # Q = Quarterly, Y = Year-on-year, XDC_R_B1GQ_Y = Growth rate of real GDP
-    GDP_SERIES_TEMPLATE = "Q.Y.{country}.W2.S1.S1.B.B1GQ._Z._Z._Z.XDC_R_B1GQ_Y.V.N"
+    # Story 6.24: Fixed series key to match ECB Data Portal format
+    # Q.Y.{country}.W2.S1.S1.B.B1GQ._Z._Z._Z.EUR.LR.GY
+    # Q = Quarterly, Y = Year-on-year, B1GQ = GDP at market prices
+    # EUR = Euro currency, LR = Chain linked volume, GY = Growth year-on-year
+    # Working example: MNA.Q.Y.PT.W2.S1.S1.B.B1GQ._Z._Z._Z.EUR.LR.GY
+    GDP_SERIES_TEMPLATE = "Q.Y.{country}.W2.S1.S1.B.B1GQ._Z._Z._Z.EUR.LR.GY"
     GDP_SERIES = GDP_SERIES_TEMPLATE  # Alias for backwards compatibility
 
     # Story 6.17 AC2: HICP series key template
@@ -491,6 +494,16 @@ class ECBClient:
                         ) from e
 
                 except httpx.HTTPStatusError as e:
+                    # Story 6.24: ECB GDP endpoint discontinued, fallback to Eurostat
+                    if e.response.status_code == 404:
+                        # Extract country from series_key (format: Q.Y.PT.W2...)
+                        country = series_key.split(".")[2] if "." in series_key else "PT"
+                        logger.warning(
+                            "ECB GDP endpoint not found (404), falling back to Eurostat",
+                            extra={"series_key": series_key, "country": country},
+                        )
+                        return await self._fetch_gdp_from_eurostat(start_date, end_date, country)
+
                     should_retry = e.response.status_code >= 500 or e.response.status_code == 429
                     if attempt < max_retries - 1 and should_retry:
                         delay = retry_delays[attempt]
@@ -507,6 +520,185 @@ class ECBClient:
                         ) from e
 
         raise ExternalDataFetchError(source="ECB", message="GDP unexpected retry loop exit")
+
+    async def _fetch_gdp_from_eurostat(
+        self,
+        start_date: date | None,
+        end_date: date | None,
+        country: str = "PT",
+    ) -> str:
+        """Fetch GDP growth data from Eurostat API as fallback for ECB.
+
+        Story 6.24: ECB discontinued GDP endpoint, use Eurostat replacement.
+
+        Eurostat Dataset: namq_10_gdp (National accounts aggregates)
+        Endpoint: https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/namq_10_gdp
+
+        Args:
+            start_date: Start of date range
+            end_date: End of date range
+            country: ISO 2-letter country code (default: PT)
+
+        Returns:
+            CSV data in ECB-compatible format for _parse_gdp_csv()
+
+        Raises:
+            ExternalDataFetchError: If fetch fails
+        """
+        max_retries = settings.external_data_retry_attempts
+        retry_delays = [2, 4, 8]
+
+        # Eurostat API URL for GDP data
+        # Note: namq_10_gdp does not have PC_CHG unit - fetch index and calculate growth
+        # Eurostat API returns JSON by default (format=CSV causes HTTP 400)
+        url = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/namq_10_gdp"
+        params = {
+            "geo": country,
+            "na_item": "B1GQ",  # GDP at market prices
+            "unit": "CLV_I10",  # Chain-linked volumes, index 2010=100
+            "s_adj": "SCA",  # Seasonally and calendar adjusted
+        }
+
+        # Add date range filters if provided
+        if start_date:
+            params["startPeriod"] = f"{start_date.year}-Q{(start_date.month - 1) // 3 + 1}"
+        if end_date:
+            params["endPeriod"] = f"{end_date.year}-Q{(end_date.month - 1) // 3 + 1}"
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            for attempt in range(max_retries):
+                try:
+                    response = await client.get(url, params=params)
+                    response.raise_for_status()
+
+                    # Parse JSON response and convert to ECB-compatible CSV format
+                    eurostat_json = response.json()
+                    return self._convert_eurostat_json_to_ecb_format(eurostat_json)
+
+                except httpx.TimeoutException as e:
+                    if attempt < max_retries - 1:
+                        delay = retry_delays[attempt]
+                        logger.warning(
+                            "Eurostat API timeout, retrying",
+                            extra={"attempt": attempt + 1, "delay": delay},
+                        )
+                        await asyncio.sleep(delay)
+                    else:
+                        raise ExternalDataFetchError(
+                            source="Eurostat",
+                            message=f"GDP timeout after {max_retries} attempts",
+                            original_error=e,
+                        ) from e
+
+                except httpx.HTTPStatusError as e:
+                    should_retry = e.response.status_code >= 500 or e.response.status_code == 429
+                    if attempt < max_retries - 1 and should_retry:
+                        delay = retry_delays[attempt]
+                        logger.warning(
+                            "Eurostat API error, retrying",
+                            extra={"attempt": attempt + 1, "status": e.response.status_code},
+                        )
+                        await asyncio.sleep(delay)
+                    else:
+                        raise ExternalDataFetchError(
+                            source="Eurostat",
+                            message=f"GDP HTTP {e.response.status_code}",
+                            original_error=e,
+                        ) from e
+
+        raise ExternalDataFetchError(source="Eurostat", message="GDP unexpected retry loop exit")
+
+    def _convert_eurostat_json_to_ecb_format(self, eurostat_json: dict) -> str:
+        """Convert Eurostat JSON GDP index to YoY growth rates in ECB CSV format.
+
+        Story 6.24: Transform Eurostat JSON response to ECB growth rate format.
+
+        Eurostat provides chain-linked volume index (2010=100), which we convert
+        to year-on-year percentage change to match ECB's growth_pct format.
+
+        Args:
+            eurostat_json: JSON dict from Eurostat API (index values)
+
+        Returns:
+            CSV string in ECB-compatible format (YoY % growth)
+        """
+        from io import StringIO
+
+        # Extract time period mapping and values from JSON
+        try:
+            time_index = (
+                eurostat_json.get("dimension", {})
+                .get("time", {})
+                .get("category", {})
+                .get("index", {})
+            )
+            values = eurostat_json.get("value", {})
+        except (AttributeError, KeyError):
+            logger.warning("Invalid Eurostat JSON structure")
+            return "TIME_PERIOD,OBS_VALUE\n"
+
+        if not time_index or not values:
+            logger.warning("Empty Eurostat GDP response")
+            return "TIME_PERIOD,OBS_VALUE\n"
+
+        # Build index lookup: {quarter: index_value}
+        # time_index: {"2020-Q1": 0, "2020-Q2": 1, ...}
+        # values: {"0": 103.054, "1": 87.549, ...}
+        index_by_quarter: dict[str, float] = {}
+        for quarter, idx in time_index.items():
+            value = values.get(str(idx))
+            if value is not None:
+                try:
+                    index_by_quarter[quarter] = float(value)
+                except (ValueError, TypeError):
+                    logger.warning(
+                        "Invalid Eurostat index value",
+                        extra={"time_period": quarter, "value": value},
+                    )
+                    continue
+
+        # Calculate YoY percentage change
+        ecb_rows = []
+        sorted_quarters = sorted(index_by_quarter.keys())
+
+        for quarter in sorted_quarters:
+            # Parse year and quarter: "2024-Q1" -> year=2024, q=1
+            try:
+                year = int(quarter[:4])
+                q = int(quarter[-1])
+            except (ValueError, IndexError):
+                continue
+
+            # Calculate previous year same quarter: "2024-Q1" -> "2023-Q1"
+            prev_year_quarter = f"{year - 1}-Q{q}"
+
+            if prev_year_quarter in index_by_quarter:
+                current_index = index_by_quarter[quarter]
+                prev_index = index_by_quarter[prev_year_quarter]
+
+                if prev_index > 0:
+                    # YoY % change = ((current - previous) / previous) * 100
+                    yoy_growth = ((current_index - prev_index) / prev_index) * 100
+                    ecb_rows.append({"TIME_PERIOD": quarter, "OBS_VALUE": f"{yoy_growth:.2f}"})
+
+        # Write ECB-compatible CSV
+        output = StringIO()
+        if ecb_rows:
+            writer = csv.DictWriter(output, fieldnames=["TIME_PERIOD", "OBS_VALUE"])
+            writer.writeheader()
+            writer.writerows(ecb_rows)
+
+        result = output.getvalue()
+
+        logger.info(
+            "Converted Eurostat GDP index to YoY growth",
+            extra={
+                "eurostat_index_points": len(index_by_quarter),
+                "calculated_growth_points": len(ecb_rows),
+            },
+        )
+
+        return result
 
     def _parse_gdp_csv(self, csv_data: str, country: str) -> list[ECBGDPGrowth]:
         """Parse ECB SDMX CSV response for GDP growth data.

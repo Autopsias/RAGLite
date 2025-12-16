@@ -1405,28 +1405,48 @@ class TestGenerateEmbeddings:
         # Clear the global embedding model cache before testing
         import raglite.shared.clients as clients_module
 
+        # CRITICAL FIX (2025-12-16): Store and restore ALL global state to prevent
+        # mock pollution affecting subsequent tests (especially integration tests).
+        # The embedding model singleton uses three globals: _embedding_model,
+        # SENTENCE_TRANSFORMERS_AVAILABLE, and _SentenceTransformer.
         original_model = clients_module._embedding_model
         clients_module._embedding_model = None
+        original_sentence_transformers_available = clients_module.SENTENCE_TRANSFORMERS_AVAILABLE
+        clients_module.SENTENCE_TRANSFORMERS_AVAILABLE = None
+        original_sentence_transformer_class = clients_module._SentenceTransformer
+        clients_module._SentenceTransformer = None
 
         try:
-            with patch("raglite.shared.clients.SentenceTransformer") as MockST:
-                # Mock SentenceTransformer
+            with patch(
+                "raglite.shared.clients._get_sentence_transformer_class"
+            ) as mock_get_st_class:
+                # Mock SentenceTransformer class
+                MockST = Mock()
                 mock_model = Mock()
                 mock_model.get_sentence_embedding_dimension.return_value = 1024
                 MockST.return_value = mock_model
+                mock_get_st_class.return_value = MockST
 
                 # First call should load model
                 model1 = get_embedding_model()
                 assert model1 is mock_model
-                MockST.assert_called_once_with("intfloat/e5-large-v2")
 
                 # Second call should return cached model (no new instantiation)
                 model2 = get_embedding_model()
                 assert model2 is model1
-                MockST.assert_called_once()  # Still only called once
+
+                # Verify that _get_sentence_transformer_class was called twice (once per get_embedding_model call)
+                assert mock_get_st_class.call_count == 2
+
+                # But SentenceTransformer should only be instantiated once (singleton pattern)
+                MockST.assert_called_once_with("intfloat/e5-large-v2")
         finally:
-            # Restore original model state
+            # Restore ALL original state to prevent mock pollution
             clients_module._embedding_model = original_model
+            clients_module.SENTENCE_TRANSFORMERS_AVAILABLE = (
+                original_sentence_transformers_available
+            )
+            clients_module._SentenceTransformer = original_sentence_transformer_class
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio

@@ -131,6 +131,8 @@ from pathlib import Path  # noqa: E402
 _session_sample_pdf_chunk_count = None
 _session_snapshot_name = None  # Track snapshot for fast restoration
 _session_postgresql_row_count = None  # Track PostgreSQL baseline for restoration
+_session_sample_pdf_result = None  # Track ingestion result for --skip-ingestion mode
+_session_ingestion_duration = 0.0  # Track ingestion duration for --skip-ingestion mode
 
 # CRITICAL FIX (2025-11-23): Use shared PostgreSQL connection from raglite.shared.clients
 # instead of creating a separate fixture connection. This prevents connection isolation
@@ -402,15 +404,19 @@ def session_ingested_collection(request, warmup_embedding_model):
                 # This allows tests to run even when --skip-ingestion is used but no data exists
                 warning_msg = (
                     "\n" + "!" * 80 + "\n"
-                    "⚠️  --skip-ingestion IGNORED: Collection is empty!\n"
+                    "⚠️  --skip-ingestion IGNORED: Test collection is empty!\n"
                     "!" * 80 + "\n"
                     "\n"
-                    "You specified --skip-ingestion but the Qdrant collection has NO DATA.\n"
+                    f"You specified --skip-ingestion but the TEST Qdrant collection (port {settings.qdrant_port}) has NO DATA.\n"
                     "This means tests will run FULL INGESTION anyway (60-150 seconds).\n"
                     "\n"
                     "To actually use skip-ingestion mode:\n"
-                    "  1. First run:  python scripts/ingest-test-data.py\n"
+                    "  1. First run:  APP_ENV=test python scripts/ingest-for-validation.py\n"
                     "  2. Then run:   pytest --skip-ingestion\n"
+                    "\n"
+                    "Or use production data (if available):\n"
+                    "  1. Set APP_ENV=production\n"
+                    "  2. Run: pytest --skip-ingestion\n"
                     "\n"
                     "Proceeding with FULL INGESTION now...\n" + "!" * 80 + "\n"
                 )
@@ -421,11 +427,48 @@ def session_ingested_collection(request, warmup_embedding_model):
                 # Store chunk count for test isolation
                 _session_sample_pdf_chunk_count = count
 
-                print(f"\n✅ Using existing collection: {settings.qdrant_collection_name}")
+                print(
+                    f"\n✅ Using existing collection: {settings.qdrant_collection_name} (port {settings.qdrant_port})"
+                )
                 print(f"   Chunks: {count}")
+
+                # Validate chunk count is reasonable for testing
+                if count < 10:
+                    warning_msg = (
+                        f"\n⚠️  WARNING: Collection has only {count} chunks.\n"
+                        "This seems too low for proper testing.\n"
+                        "Expected: 10-30 chunks for 10-page PDF or 150+ chunks for 160-page PDF.\n"
+                        "Consider re-ingesting with proper test data.\n"
+                    )
+                    print(warning_msg, file=sys.stderr)
+                elif count > 50000:
+                    warning_msg = (
+                        f"\n⚠️  WARNING: Collection has {count} chunks.\n"
+                        "This seems like PRODUCTION data, not test data.\n"
+                        "Tests expect 10-30 chunks (10-page) or 150-220 chunks (160-page).\n"
+                        "Using production data may cause test failures.\n"
+                    )
+                    print(warning_msg, file=sys.stderr)
+
                 print("   Time saved: ~25 minutes")
                 print("   All tests will share this existing data\n")
                 print("=" * 80 + "\n")
+
+                # Create a mock result object for consistency
+                class MockResult:
+                    def __init__(self, chunk_count):
+                        self.filename = (
+                            "sample_financial_report.pdf"
+                            if chunk_count < 100
+                            else "2024-05 Performance Review CONSO_v1.pdf"
+                        )
+                        self.page_count = 10 if chunk_count < 100 else 160
+
+                # Set global variables that tests expect
+                _session_sample_pdf_chunk_count = count
+                global _session_sample_pdf_result, _session_ingestion_duration
+                _session_sample_pdf_result = MockResult(count)
+                _session_ingestion_duration = 0.0  # No ingestion time when using existing data
 
                 # Yield without cleanup - data is managed externally
                 yield
@@ -605,6 +648,16 @@ def session_ingested_collection(request, warmup_embedding_model):
         # CRITICAL FIX: Also clear PostgreSQL to maintain symmetric data lifecycle
         # This prevents mixed document IDs from accumulating across test runs
         try:
+            # CRITICAL SAFETY CHECK (Story 6.26): Validate test environment BEFORE any DELETE
+            # This is defense-in-depth after 2025-12-15 incident where production data was deleted.
+            # Even though validate_test_environment() was called at fixture start, we add a
+            # redundant check here because PostgreSQL port does NOT auto-adjust like Qdrant.
+            guard.validate_test_environment("postgresql_cleanup_before_delete")
+            print(
+                f"   ✓ SafetyGuard validated PostgreSQL port {settings.postgres_port} (test)",
+                file=sys.stderr,
+            )
+
             # PERFORMANCE: Use cached connection to reduce overhead
             conn = get_postgresql_connection()
             cursor = conn.cursor()

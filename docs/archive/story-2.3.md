@@ -196,7 +196,7 @@ def test_ac6_chunk_size_consistency():
 
 ### Context Reference
 
-- [Story Context XML: docs/stories/story-context-2.3.xml](story-context-2.3.xml) - Generated 2025-10-20
+- [Story Context XML: docs/stories/story-context-2.3.xml](story-context-2.3.xml.md) - Generated 2025-10-20
 
 ### Agent Model Used
 

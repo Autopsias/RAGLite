@@ -3640,51 +3640,55 @@ async def get_regressor_data(
         raise
 
 
-async def start_mcp_with_scheduler() -> None:
-    """Start the MCP server with the external data scheduler.
+def _start_scheduler_sync() -> None:
+    """Start the scheduler synchronously (before mcp.run() takes over event loop)."""
+    from raglite.external_data.scheduler import get_scheduler
 
-    Story 6.5 AC1: Integrates APScheduler with MCP server lifecycle.
+    if not settings.scheduler_enabled:
+        return
 
-    This function:
-    1. Starts the APScheduler for external data refresh
-    2. Runs the MCP server
-    3. Gracefully shuts down the scheduler on exit
-    """
-    from raglite.external_data.scheduler import shutdown_scheduler, start_scheduler
+    try:
+        from raglite.external_data.scheduler import _register_refresh_jobs
 
-    # Start the scheduler if enabled
-    if settings.scheduler_enabled:
-        try:
-            await start_scheduler()
+        scheduler = get_scheduler()
+        if not scheduler.running:
+            _register_refresh_jobs(scheduler)
+            scheduler.start()
             logger.info(
                 "External data scheduler started",
                 extra={"timezone": settings.scheduler_timezone},
             )
-        except Exception as e:
-            logger.warning(
-                "Failed to start scheduler - continuing without scheduled refreshes",
-                extra={"error": str(e)},
-            )
+    except Exception as e:
+        logger.warning(
+            "Failed to start scheduler - continuing without scheduled refreshes",
+            extra={"error": str(e)},
+        )
+
+
+def _shutdown_scheduler_sync() -> None:
+    """Shutdown the scheduler synchronously."""
+    from raglite.external_data.scheduler import get_scheduler
+
+    if not settings.scheduler_enabled:
+        return
 
     try:
-        # Run the MCP server (this blocks until shutdown)
-        mcp.run(show_banner=False)
-    finally:
-        # Gracefully shutdown the scheduler
-        if settings.scheduler_enabled:
-            try:
-                await shutdown_scheduler()
-                logger.info("External data scheduler stopped")
-            except Exception as e:
-                logger.warning(
-                    "Error during scheduler shutdown",
-                    extra={"error": str(e)},
-                )
+        scheduler = get_scheduler()
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
+            logger.info("Scheduler shutdown complete")
+    except Exception as e:
+        logger.warning(f"Error during scheduler shutdown: {e}")
 
 
 def main() -> None:
-    """Main entry point for RAGLite MCP server."""
-    import asyncio
+    """Main entry point for RAGLite MCP server.
+
+    Note: mcp.run() creates its own event loop via anyio.run(), so we cannot
+    wrap it in asyncio.run(). The scheduler is started synchronously before
+    mcp.run() takes over event loop management.
+    """
+    import atexit
 
     logger.info(
         "Starting RAGLite MCP Server",
@@ -3696,8 +3700,14 @@ def main() -> None:
         },
     )
 
-    # Run with scheduler integration
-    asyncio.run(start_mcp_with_scheduler())
+    # Start the scheduler synchronously before MCP takes over the event loop
+    _start_scheduler_sync()
+
+    # Register shutdown handler for graceful cleanup
+    atexit.register(_shutdown_scheduler_sync)
+
+    # Run the MCP server (this manages its own event loop via anyio.run())
+    mcp.run(show_banner=False)
 
 
 # Module-level execution for direct startup

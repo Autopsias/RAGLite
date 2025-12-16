@@ -10,7 +10,13 @@ from raglite.main import ingest_financial_document, mcp, query_financial_documen
 from raglite.shared.models import DocumentMetadata, IngestionResult, QueryRequest, QueryResponse
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+]
 
 
 @pytest.mark.integration

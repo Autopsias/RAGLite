@@ -15,7 +15,13 @@ import pytest
 # Add spike directory to path for importing spike modules
 
 # Mark all tests in this module as integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+]
 spike_dir = Path(__file__).parent.parent.parent / "spike"
 sys.path.insert(0, str(spike_dir))
 

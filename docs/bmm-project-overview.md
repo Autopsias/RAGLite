@@ -125,12 +125,12 @@ raglite/
 
 ## Related Documentation
 
-- [Architecture Documentation](./architecture/index.md)
+- [Architecture Documentation](docs/architecture/index.md)
 - [API Contracts (MCP Tools)](./bmm-api-contracts.md)
 - [Data Models](./bmm-data-models.md)
 - [Source Tree Analysis](./bmm-source-tree.md)
 - [Development Guide](./bmm-development-guide.md)
-- [PRD](./prd/)
+- [PRD](./prd/index.md)
 
 ---
 

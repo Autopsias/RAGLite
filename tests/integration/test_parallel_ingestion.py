@@ -14,6 +14,7 @@ import pytest
 from raglite.ingestion.document_ingestion import ingest_documents_parallel
 from raglite.shared.clients import get_postgresql_connection, get_qdrant_client
 from raglite.shared.config import settings
+from raglite.shared.safety import SafetyGuard
 
 # Mark all tests in this module as integration tests
 pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
@@ -58,6 +59,11 @@ async def test_parallel_ingestion_three_documents():
     from raglite.shared.clients import reset_postgresql_connection
 
     reset_postgresql_connection()
+
+    # CRITICAL SAFETY CHECK (Story 6.26): Validate test environment BEFORE any DELETE
+    # Defense-in-depth after 2025-12-15 incident where production data was deleted.
+    guard = SafetyGuard()
+    guard.validate_test_environment("test_parallel_ingestion_cleanup")
 
     postgres_conn = get_postgresql_connection()
     cursor = postgres_conn.cursor()
@@ -300,6 +306,11 @@ async def test_parallel_ingestion_stores_metadata():
     from raglite.shared.clients import reset_postgresql_connection
 
     reset_postgresql_connection()
+
+    # CRITICAL SAFETY CHECK (Story 6.26): Validate test environment BEFORE any DELETE
+    guard = SafetyGuard()
+    guard.validate_test_environment("test_metadata_stored_cleanup")
+
     postgres_conn = get_postgresql_connection()
     cursor = postgres_conn.cursor()
 

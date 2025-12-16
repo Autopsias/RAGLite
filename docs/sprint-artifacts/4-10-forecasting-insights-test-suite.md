@@ -348,7 +348,7 @@ INSIGHT_TEST_SCENARIOS = [
 - [Story 4.7: Proactive Insight Generation](docs/sprint-artifacts/4-7-proactive-insight-generation.md) - Insight validation reference
 - [Story 4.8: Strategic Recommendation Engine](docs/sprint-artifacts/4-8-strategic-recommendation-engine.md) - Recommendation validation reference
 - [Definition of Done](docs/process/definition-of-done.md)
-- [NFR10: Forecast Accuracy](docs/architecture/4-non-functional-requirements.md) - ±15% threshold
+- NFR10: Forecast Accuracy - ±15% threshold (see architecture docs)
 
 ## Dev Agent Record
 

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from dateutil import parser as date_parser
 
+from raglite.forecasting.regressor_fetch import fetch_single_regressor
 from raglite.ingestion.entity_normalizer import get_entity_ilike_pattern, normalize_entity
 from raglite.shared.logging import get_logger
 from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
@@ -1520,14 +1521,15 @@ async def extract_timeseries_from_sql(
     from raglite.shared.clients import get_postgresql_connection
 
     # Metric name synonyms mapping (revenue → turnover for Secil reports)
-    # Story 6.25: REMOVED "ebitda" → "EBITDA IFRS" mapping
-    # EBITDA IFRS only has 7 periods (insufficient), plain "EBITDA" has 125 periods
-    # Dec 9 baseline achieved 2.5% MAPE without this mapping
+    # Story 6.26: Restored "ebitda" → "EBITDA IFRS" mapping
+    # EBITDA IFRS has 20 YTD periods with GROUP entity (verified Dec 2025)
+    # Plain "EBITDA" only has line-item breakdowns (entity="Currency (1000 EUR)"), not consolidated GROUP values
+    # The "only 7 periods" claim was incorrect - actual data shows 20 distinct YTD periods
     METRIC_SYNONYMS = {
         "revenue": "turnover",
         "revenues": "turnover",
         "sales": "turnover",
-        # "ebitda": "EBITDA IFRS",  # REMOVED - EBITDA IFRS has only 7 periods
+        "ebitda": "EBITDA IFRS",  # Story 6.26: Restored - routes to consolidated YTD data
     }
 
     # Apply synonym mapping if metric matches a known synonym
@@ -1542,13 +1544,26 @@ async def extract_timeseries_from_sql(
     # - sales volume: no GROUP rows available - filter removed
     # - capacity utilization: no GROUP rows available - filter removed
     ENTITY_FILTERS: dict[str, tuple[str | None, bool]] = {
-        # Story 6.25: Keep YTD mode for EBITDA IFRS but remove GROUP filter
-        # Format: (entity_filter, prefer_ytd) - None means no entity filtering
-        # Dec 9 baseline achieved 2.5% MAPE without GROUP filter but needs YTD period matching
-        "EBITDA IFRS": (None, True),  # No entity filter, use YTD period format
+        # Story 6.26: RESTORED GROUP filter for EBITDA IFRS
+        # Format: (entity_filter, prefer_ytd)
+        # Without GROUP filter, SUM aggregates ALL entities (Portugal+Angola+Brazil+Tunisia+Lebanon+GROUP)
+        # which produces values 4-5x higher than correct GROUP-only consolidated values.
+        # GROUP row contains the consolidated total - we must NOT sum geographic segments.
+        "EBITDA IFRS": ("GROUP", True),  # Filter to GROUP entity only, use YTD period format
         # Story 6.10.4: Removed turnover, sales volume, capacity utilization
         # because they don't have GROUP-level data rows (GROUP filter = 0 results)
     }
+
+    # Story 6.26: Metrics that should use MAX aggregation instead of SUM
+    # Use MAX when multiple documents report the same period (duplicates from document versions)
+    # GROUP values are consolidated totals - summing duplicates produces wrong results
+    METRICS_USE_MAX_AGGREGATION = {"EBITDA IFRS", "ebitda ifrs"}
+    if metric_search in METRICS_USE_MAX_AGGREGATION:
+        aggregation = "max"
+        logger.info(
+            f"Using MAX aggregation for {metric_search} (prevents duplicate document summing)",
+            extra={"metric": metric_search, "aggregation": aggregation},
+        )
 
     # Story 6.15 Task 3: Override entity filter if user explicitly specifies entity parameter
     # This allows filtering by entity for ANY metric, not just those in ENTITY_FILTERS
@@ -1840,6 +1855,22 @@ async def extract_timeseries_from_sql(
                 date = parse_period_to_date(period_str, fiscal_year)
                 # Extract document month from source_doc (e.g., "2025-10 Performance Review" → "2025-10")
                 doc_month = source_doc.split()[0] if source_doc else "unknown"
+
+                # Story 6.24.1: Filter year values (2000-2099) that were accidentally captured as metrics
+                # Issue: Year column headers (2021, 2022, 2023, 2024) being captured as metric values
+                # Impacts: Capacity Utilization (64% MAPE), Thermal Energy (25% MAPE)
+                if total_value is not None and 2000 <= total_value <= 2099:
+                    logger.warning(
+                        "Filtered year-like value from metric data",
+                        extra={
+                            "metric": metric,
+                            "value": total_value,
+                            "period": period_str,
+                            "fiscal_year": fiscal_year,
+                            "source_doc": source_doc,
+                        },
+                    )
+                    continue
 
                 points.append(
                     TimeSeriesPoint(
@@ -2156,6 +2187,7 @@ async def extract_timeseries_from_sql(
         # BUG FIX (P0 Fix #4): Capacity Utilization Bounds
         # Percentage metrics cannot exceed 100% (physically impossible)
         # Enforce 0-100 range for percentage-based metrics
+        # Story 6.24.1: Also reject year-like values before clamping
         PERCENTAGE_METRICS = {
             "frequency ratio",
             "capacity_utilization",
@@ -2165,15 +2197,44 @@ async def extract_timeseries_from_sql(
         metric_lower_check = metric.lower()
         if metric_lower_check in PERCENTAGE_METRICS:
             original_points = points
-            points = [
-                TimeSeriesPoint(
-                    date=p.date,
-                    value=min(max(p.value, 0), 100) if p.value is not None else None,
-                    label=p.label,
+            filtered_points = []
+            year_filtered_count = 0
+
+            for p in points:
+                if p.value is None:
+                    continue
+                # Story 6.24.1: Filter year values (2000-2099) before clamping
+                if 2000 <= p.value <= 2099:
+                    logger.warning(
+                        f"Rejected year value {p.value} for percentage metric {metric}",
+                        extra={
+                            "metric": metric,
+                            "value": p.value,
+                            "date": p.date.isoformat() if p.date else None,
+                        },
+                    )
+                    year_filtered_count += 1
+                    continue
+
+                # Apply 0-100 clamping for valid percentage values
+                clamped_value = min(max(p.value, 0), 100)
+                filtered_points.append(
+                    TimeSeriesPoint(date=p.date, value=clamped_value, label=p.label)
                 )
-                for p in points
-                if p.value is not None
-            ]
+
+            points = filtered_points
+
+            # Log if any year values were filtered
+            if year_filtered_count > 0:
+                logger.warning(
+                    f"Filtered {year_filtered_count} year-like values from percentage metric",
+                    extra={
+                        "metric": metric,
+                        "year_filtered": year_filtered_count,
+                        "points_remaining": len(points),
+                    },
+                )
+
             # Log if any values were clamped
             clamped_count = sum(
                 1
@@ -2242,6 +2303,37 @@ async def extract_timeseries_from_sql(
                 "is_ytd_data": is_ytd_data,
             },
         )
+
+        # Story 6.26: Scale validation for EBITDA to catch line-item extraction errors
+        # Secil Group EBITDA should be in EUR millions (€100-200M/year), not EUR thousands
+        # If average extracted value is < €1M, we're likely extracting line-item breakdowns
+        # instead of consolidated GROUP values. This is a critical safety net.
+        EBITDA_METRICS = {"ebitda", "ebitda ifrs"}
+        if metric.lower() in EBITDA_METRICS and points:
+            avg_value = sum(p.value for p in points if p.value is not None) / len(points)
+            # €1M threshold: monthly EBITDA for Secil Group should be €10-20M
+            # YTD values in database are in EUR millions (e.g., 139.37 = €139.37M)
+            # If avg < 1.0, we're extracting wrong data (line items avg €97)
+            if avg_value < 1.0:
+                logger.error(
+                    f"EBITDA scale validation FAILED: avg={avg_value:.2f}, expected EUR millions",
+                    extra={
+                        "metric": metric,
+                        "avg_value": avg_value,
+                        "points_count": len(points),
+                        "sample_values": [p.value for p in points[:5]],
+                    },
+                )
+                raise ExtractionError(
+                    f"EBITDA values too small (avg={avg_value:.2f}). Expected EUR millions for Group EBITDA. "
+                    "Data may be extracting line-item breakdowns instead of consolidated values. "
+                    "Check that 'ebitda' maps to 'EBITDA IFRS' in METRIC_SYNONYMS."
+                )
+            else:
+                logger.info(
+                    f"EBITDA scale validation PASSED: avg={avg_value:.2f}M EUR",
+                    extra={"metric": metric, "avg_value": avg_value},
+                )
 
         return TimeSeriesData(
             metric_name=metric,
@@ -2646,3 +2738,117 @@ async def extract_external_timeseries(
 
     finally:
         cursor.close()
+
+
+async def extract_external_regressor_timeseries(
+    metric: str,
+    min_points: int = 6,
+) -> TimeSeriesData | None:
+    """Extract external regressor as standalone time series for validation.
+
+    Story 6.24.4: Enables validation of external-only metrics by reusing
+    regressor fetch logic. This bridges the gap between regressor system
+    and validation system.
+
+    Args:
+        metric: Regressor name (e.g., "euribor_3m", "diesel", "gdp_growth")
+        min_points: Minimum data points required (default 6)
+
+    Returns:
+        TimeSeriesData with points, or None if insufficient data
+
+    Example:
+        >>> data = await extract_external_regressor_timeseries("euribor_3m")
+        >>> print(f"{len(data.points)} points from {data.points[0].date}")
+
+    Note:
+        All external regressors are assumed to be monthly frequency.
+        NaN and infinite values are filtered out during conversion.
+    """
+    import math
+    from datetime import timedelta
+
+    try:
+        # Fetch last 5 years of data (sufficient for forecasting validation)
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=int(365.25 * 5))  # Accounts for leap years
+
+        logger.info(
+            "Fetching external regressor as time series",
+            extra={"metric": metric, "start_date": start_date, "end_date": end_date},
+        )
+
+        # Use regressor fetch infrastructure
+        series = await fetch_single_regressor(metric, start_date, end_date)
+
+        if series is None or len(series) == 0:
+            logger.warning(
+                "No data returned for external metric",
+                extra={"metric": metric, "points": len(series) if series is not None else 0},
+            )
+            return None
+
+        if len(series) < min_points:
+            logger.warning(
+                "Insufficient data for external metric",
+                extra={"metric": metric, "points": len(series), "min_required": min_points},
+            )
+            return None
+
+        # Convert pandas Series to TimeSeriesData, filtering NaN/Inf values
+        points = []
+        filtered_count = 0
+        for idx, val in series.items():
+            # Filter out NaN and infinite values (Issue #4 fix)
+            if not isinstance(val, (int, float)) or math.isnan(val) or math.isinf(val):
+                filtered_count += 1
+                logger.debug(
+                    "Filtered invalid value from external regressor",
+                    extra={"metric": metric, "date": idx, "value": val},
+                )
+                continue
+
+            points.append(
+                TimeSeriesPoint(
+                    date=idx.to_pydatetime(),
+                    value=float(val),
+                    label=f"{metric}_{idx.strftime('%Y-%m')}",
+                )
+            )
+
+        if filtered_count > 0:
+            logger.warning(
+                "Filtered NaN/Inf values from external regressor",
+                extra={"metric": metric, "filtered": filtered_count, "retained": len(points)},
+            )
+
+        if len(points) < min_points:
+            logger.warning(
+                "Insufficient valid data after filtering for external metric",
+                extra={"metric": metric, "valid_points": len(points), "min_required": min_points},
+            )
+            return None
+
+        logger.info(
+            "Extracted time series for external regressor",
+            extra={
+                "metric": metric,
+                "points": len(points),
+                "date_range": f"{points[0].date.date()} to {points[-1].date.date()}",
+            },
+        )
+
+        return TimeSeriesData(
+            metric_name=metric,
+            points=points,
+            interval="monthly",  # External regressors are monthly
+            source_documents=[f"external:{metric}"],
+        )
+
+    except Exception as e:
+        logger.error(
+            "Failed to extract external regressor time series",
+            extra={"metric": metric, "error": str(e)},
+            exc_info=True,
+        )
+        return None

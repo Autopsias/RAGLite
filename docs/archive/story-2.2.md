@@ -215,7 +215,7 @@ Before marking Story 2.2 complete:
 
 ### Context Reference
 
-- [Story Context XML: docs/stories/story-context-2.2.xml](story-context-2.2.xml) - Generated 2025-10-19
+- [Story Context XML: docs/stories/story-context-2.2.xml](story-context-2.2.xml.md) - Generated 2025-10-19
 
 ### File List
 

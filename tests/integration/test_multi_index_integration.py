@@ -20,7 +20,7 @@ from raglite.retrieval.multi_index_search import (
 from raglite.retrieval.query_classifier import QueryType, classify_query
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 
 class TestMultiIndexIntegration:

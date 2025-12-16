@@ -221,7 +221,7 @@ Per project testing guidelines:
 - [FastMCP Documentation](https://github.com/jlowin/fastmcp) - Parameter type handling
 - [Story 4.0.6: Production Database Protection](docs/sprint-artifacts/4-0-6-production-database-protection.md) - SafetyGuard pattern reference
 - [Architecture: MCP Server](raglite/main.py) - Current tool implementations
-- [Project Standards: CLAUDE.md](CLAUDE.md) - Anti-over-engineering rules
+- [Project Standards: CLAUDE.md](../../CLAUDE.md) - Anti-over-engineering rules
 - [Coding Standards](docs/architecture/coding-standards.md) - Type hints, docstrings, error handling patterns
 - [Testing Strategy](docs/architecture/testing-strategy.md) - pytest patterns, async testing, coverage targets
 

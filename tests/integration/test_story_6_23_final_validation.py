@@ -733,8 +733,6 @@ class TestAC5MCPToolsFunctional:
         from dataclasses import asdict
 
         try:
-            from raglite.forecasting.validation_schema import UnifiedValidationResult
-
             validate_func = self.get_tool_function("validate_forecasting_accuracy")
         except (ImportError, ValueError) as e:
             pytest.skip(f"MCP tools or schemas not implemented yet: {e}")

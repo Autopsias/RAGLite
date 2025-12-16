@@ -278,7 +278,7 @@ uv run pytest -m slow
 
 ### Context Reference
 
-- [Story Context XML](./story-context-1.3.xml) - Comprehensive implementation context including:
+- [Story Context XML](./story-context-1.3.xml.md) - Comprehensive implementation context including:
   - Task breakdown with 5 main tasks and 25+ subtasks
   - 9 acceptance criteria mapped to tasks
   - Documentation references (Tech Spec Epic 1, PRD, Architecture, Coding Standards, Testing Strategy, Story 1.2)

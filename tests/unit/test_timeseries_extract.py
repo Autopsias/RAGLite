@@ -10,6 +10,7 @@ Tests cover:
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pandas as pd
 import pytest
 
 from raglite.forecasting.timeseries_extract import (
@@ -909,13 +910,15 @@ class TestExtractTimeseriesFromSQL:
             call_args = mock_cursor.execute.call_args[0]
             assert "turnover" in call_args[1]  # Parameter should be "turnover"
 
-            # Test "ebitda" metric (no synonym mapping - was removed due to insufficient data)
+            # Test "ebitda" → "EBITDA IFRS" synonym (Story 6.26: Restored)
             mock_cursor.reset_mock()
             _result_ebitda = await extract_timeseries_from_sql(metric="ebitda", min_points=8)
 
             call_args = mock_cursor.execute.call_args[0]
-            # EBITDA synonym was removed - only "revenue" maps to "turnover"
-            assert "ebitda" in call_args[1]  # Parameter should be "ebitda" (no synonym mapping)
+            # EBITDA synonym mapping - "ebitda" maps to "EBITDA IFRS" for consolidated YTD data
+            assert (
+                "EBITDA IFRS" in call_args[1]
+            )  # Parameter should be "EBITDA IFRS" (synonym mapping applied)
 
     # Story 5.0.4 AC5: Test EBITDA consolidated GROUP extraction
     async def test_ebitda_uses_consolidated_group_values(self) -> None:
@@ -1055,3 +1058,356 @@ class TestExtractTimeseriesFromSQL:
                 assert "unknown_metric" in error_msg
                 assert "Available metrics:" in error_msg
                 assert "revenue" in error_msg or "ebitda" in error_msg
+
+
+class TestYearValueFilter:
+    """Tests for year-value data corruption filter (Story 6.24.1).
+
+    Tests cover:
+    - AC1: Filter values in range 2000-2099 from Capacity Utilization
+    - AC2: Filter values in range 2000-2099 from Thermal Energy
+    - AC3: Log filtered values for audit trail
+    """
+
+    @pytest.mark.asyncio
+    async def test_year_value_filtered_in_sql_extraction(self) -> None:
+        """AC1/AC2: Year values (2000-2099) are filtered during SQL extraction."""
+        # Mock SQL connection with year values in data
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [
+            # Normal values
+            ("Jan-23", 2023, 85.5, 1, "2023-01 Performance Review", False),
+            ("Feb-23", 2023, 87.2, 1, "2023-02 Performance Review", False),
+            # Year values that should be filtered
+            ("Mar-23", 2023, 2021.0, 1, "2021-12 Performance Review", False),  # Year!
+            ("Apr-23", 2023, 2022.0, 1, "2022-12 Performance Review", False),  # Year!
+            ("May-23", 2023, 2023.0, 1, "2023-01 Performance Review", False),  # Year!
+            # More normal values
+            ("Jun-23", 2023, 88.9, 1, "2023-06 Performance Review", False),
+        ]
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        with patch("raglite.shared.clients.get_postgresql_connection") as mock_pg:
+            mock_pg.return_value = mock_conn
+
+            result = await extract_timeseries_from_sql(metric="Frequency Ratio", min_points=3)
+
+            # Should only have 3 valid data points (year values filtered)
+            assert len(result.points) == 3
+            values = [p.value for p in result.points]
+            assert 85.5 in values
+            assert 87.2 in values
+            assert 88.9 in values
+            # Year values should NOT be present
+            assert 2021.0 not in values
+            assert 2022.0 not in values
+            assert 2023.0 not in values
+
+    @pytest.mark.asyncio
+    async def test_year_value_filtered_in_percentage_metrics(self) -> None:
+        """AC1: Year values filtered in percentage metric validation."""
+        # Mock SQL connection with year values
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [
+            ("Jan-23", 2023, 75.0, 1, "2023-01 Review", False),
+            ("Feb-23", 2023, 2024.0, 1, "2024-02 Review", False),  # Year value!
+            ("Mar-23", 2023, 80.0, 1, "2023-03 Review", False),
+            ("Apr-23", 2023, 2021.0, 1, "2021-12 Review", False),  # Year value!
+            ("May-23", 2023, 85.0, 1, "2023-05 Review", False),
+        ]
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        with patch("raglite.shared.clients.get_postgresql_connection") as mock_pg:
+            mock_pg.return_value = mock_conn
+
+            result = await extract_timeseries_from_sql(metric="capacity_utilization", min_points=3)
+
+            # Should only have 3 valid data points
+            assert len(result.points) == 3
+            values = [p.value for p in result.points]
+            # Valid percentage values should be present
+            assert 75.0 in values
+            assert 80.0 in values
+            assert 85.0 in values
+            # Year values should be filtered
+            assert 2024.0 not in values
+            assert 2021.0 not in values
+
+    @pytest.mark.asyncio
+    async def test_year_boundary_values_filtered(self) -> None:
+        """AC1/AC2: Boundary year values (2000, 2099) are filtered."""
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [
+            ("Jan-23", 2023, 2000.0, 1, "2000-01 Review", False),  # Boundary year
+            ("Feb-23", 2023, 2099.0, 1, "2099-12 Review", False),  # Boundary year
+            ("Mar-23", 2023, 1999.0, 1, "2023-03 Review", False),  # NOT filtered (valid data)
+            ("Apr-23", 2023, 2100.0, 1, "2023-04 Review", False),  # NOT filtered (valid data)
+            ("May-23", 2023, 50.0, 1, "2023-05 Review", False),
+        ]
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        with patch("raglite.shared.clients.get_postgresql_connection") as mock_pg:
+            mock_pg.return_value = mock_conn
+
+            result = await extract_timeseries_from_sql(metric="Thermal Energy", min_points=3)
+
+            # Should have 3 valid data points (2000 and 2099 filtered)
+            assert len(result.points) == 3
+            values = [p.value for p in result.points]
+            # Year boundary values should be filtered
+            assert 2000.0 not in values
+            assert 2099.0 not in values
+            # Non-year values should be present
+            assert 1999.0 in values  # Just outside year range
+            assert 2100.0 in values  # Just outside year range
+            assert 50.0 in values
+
+    @pytest.mark.asyncio
+    async def test_percentage_metric_year_value_logging(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """AC3: Filtered year values are logged for audit trail."""
+        import logging
+
+        caplog.set_level(logging.WARNING)
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [
+            ("Jan-23", 2023, 75.0, 1, "2023-01 Review", False),
+            ("Feb-23", 2023, 2024.0, 1, "2024-02 Review", False),  # Year value
+            ("Mar-23", 2023, 80.0, 1, "2023-03 Review", False),
+        ]
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        with patch("raglite.shared.clients.get_postgresql_connection") as mock_pg:
+            mock_pg.return_value = mock_conn
+
+            await extract_timeseries_from_sql(metric="Frequency Ratio", min_points=2)
+
+            # Check that year value filtering was logged
+            # The year filter logs warnings during SQL extraction
+            warning_records = [r for r in caplog.records if r.levelname == "WARNING"]
+            assert len(warning_records) > 0, "Expected year-value filter warning logs"
+
+            # Check for year-related warning messages
+            log_messages = [record.message for record in warning_records]
+            has_year_warning = any(
+                "year" in msg.lower() or "filtered year" in msg.lower() for msg in log_messages
+            )
+            assert has_year_warning, f"Expected year-value filter warning. Got: {log_messages}"
+
+
+class TestExtractExternalRegressorTimeseries:
+    """Tests for extract_external_regressor_timeseries (Story 6.24.4).
+
+    This function enables validation of external-only metrics by reusing
+    regressor fetch logic, bridging the gap between regressor system and
+    validation system.
+
+    Testing Strategy:
+    - Unit tests with mocked fetch_single_regressor
+    - Tests cover AC1-AC5 from Story 6.24.4
+    - Edge cases: NaN/Inf values, empty series, insufficient data
+    - Boundary: No actual API calls (integration testing separate)
+    """
+
+    @pytest.mark.asyncio
+    async def test_extract_euribor_3m_success(self, mocker) -> None:
+        """Test successful extraction of euribor_3m regressor data."""
+        from raglite.forecasting.timeseries_extract import extract_external_regressor_timeseries
+
+        # Mock fetch_single_regressor to return sample data
+        mock_series = pd.Series(
+            data=[0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+            index=pd.date_range("2024-01-01", periods=6, freq="ME"),
+        )
+        # Fix Issue #1: Mock at import location, not definition location
+        mocker.patch(
+            "raglite.forecasting.timeseries_extract.fetch_single_regressor",
+            return_value=mock_series,
+        )
+
+        result = await extract_external_regressor_timeseries("euribor_3m", min_points=6)
+
+        assert result is not None
+        assert result.metric_name == "euribor_3m"
+        assert len(result.points) == 6
+        assert result.points[0].value == 0.5
+        assert result.points[-1].value == 1.0
+        assert result.interval == "monthly"
+
+    @pytest.mark.asyncio
+    async def test_extract_insufficient_data_returns_none(self, mocker) -> None:
+        """Test that insufficient data returns None."""
+        from raglite.forecasting.timeseries_extract import extract_external_regressor_timeseries
+
+        # Mock fetch_single_regressor to return insufficient data
+        mock_series = pd.Series(
+            data=[1.0, 2.0, 3.0],
+            index=pd.date_range("2024-01-01", periods=3, freq="ME"),
+        )
+        mocker.patch(
+            "raglite.forecasting.timeseries_extract.fetch_single_regressor",
+            return_value=mock_series,
+        )
+
+        result = await extract_external_regressor_timeseries("gdp_growth", min_points=6)
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_extract_none_series_returns_none(self, mocker) -> None:
+        """Test that None series from fetch returns None."""
+        from raglite.forecasting.timeseries_extract import extract_external_regressor_timeseries
+
+        # Mock fetch_single_regressor to return None
+        mocker.patch(
+            "raglite.forecasting.timeseries_extract.fetch_single_regressor",
+            return_value=None,
+        )
+
+        result = await extract_external_regressor_timeseries("invalid_metric", min_points=6)
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_extract_empty_series_returns_none(self, mocker) -> None:
+        """Test that empty series returns None (Issue #7 fix)."""
+        from raglite.forecasting.timeseries_extract import extract_external_regressor_timeseries
+
+        # Mock fetch_single_regressor to return empty series
+        mock_series = pd.Series([], dtype=float)
+        mocker.patch(
+            "raglite.forecasting.timeseries_extract.fetch_single_regressor",
+            return_value=mock_series,
+        )
+
+        result = await extract_external_regressor_timeseries("empty_metric", min_points=6)
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_extract_diesel_price_conversion(self, mocker) -> None:
+        """Test data type conversion for diesel price regressor."""
+        from raglite.forecasting.timeseries_extract import extract_external_regressor_timeseries
+
+        # Mock fetch_single_regressor to return diesel price data
+        mock_series = pd.Series(
+            data=[1.45, 1.50, 1.55, 1.60, 1.65, 1.70, 1.75],
+            index=pd.date_range("2024-01-01", periods=7, freq="ME"),
+        )
+        mocker.patch(
+            "raglite.forecasting.timeseries_extract.fetch_single_regressor",
+            return_value=mock_series,
+        )
+
+        result = await extract_external_regressor_timeseries("diesel", min_points=6)
+
+        assert result is not None
+        assert result.metric_name == "diesel"
+        assert len(result.points) == 7
+        # Verify all values are floats
+        assert all(isinstance(p.value, float) for p in result.points)
+        # Verify date conversion
+        assert all(isinstance(p.date, datetime) for p in result.points)
+
+    @pytest.mark.asyncio
+    async def test_extract_filters_nan_values(self, mocker, caplog) -> None:
+        """Test that NaN values are filtered out (Issue #4 fix)."""
+        from raglite.forecasting.timeseries_extract import extract_external_regressor_timeseries
+
+        # Mock fetch_single_regressor to return data with NaN
+        mock_series = pd.Series(
+            data=[1.0, float("nan"), 3.0, 4.0, float("nan"), 6.0, 7.0, 8.0],
+            index=pd.date_range("2024-01-01", periods=8, freq="ME"),
+        )
+        mocker.patch(
+            "raglite.forecasting.timeseries_extract.fetch_single_regressor",
+            return_value=mock_series,
+        )
+
+        result = await extract_external_regressor_timeseries("test_metric", min_points=6)
+
+        assert result is not None
+        assert len(result.points) == 6  # 8 total - 2 NaN = 6 valid
+        # Verify no NaN values in result
+        assert all(not (val != val) for val in [p.value for p in result.points])
+        # Check warning log
+        warning_records = [r for r in caplog.records if r.levelname == "WARNING"]
+        assert any("Filtered NaN/Inf values" in r.message for r in warning_records)
+
+    @pytest.mark.asyncio
+    async def test_extract_filters_inf_values(self, mocker, caplog) -> None:
+        """Test that infinite values are filtered out (Issue #4 fix)."""
+        from raglite.forecasting.timeseries_extract import extract_external_regressor_timeseries
+
+        # Mock fetch_single_regressor to return data with Inf
+        mock_series = pd.Series(
+            data=[1.0, float("inf"), 3.0, 4.0, float("-inf"), 6.0, 7.0, 8.0],
+            index=pd.date_range("2024-01-01", periods=8, freq="ME"),
+        )
+        mocker.patch(
+            "raglite.forecasting.timeseries_extract.fetch_single_regressor",
+            return_value=mock_series,
+        )
+
+        result = await extract_external_regressor_timeseries("test_metric", min_points=6)
+
+        assert result is not None
+        assert len(result.points) == 6  # 8 total - 2 Inf = 6 valid
+        # Verify no infinite values in result
+        import math
+
+        assert all(not math.isinf(p.value) for p in result.points)
+        # Check warning log
+        warning_records = [r for r in caplog.records if r.levelname == "WARNING"]
+        assert any("Filtered NaN/Inf values" in r.message for r in warning_records)
+
+    @pytest.mark.asyncio
+    async def test_extract_nan_filtering_insufficient_after_filter(self, mocker, caplog) -> None:
+        """Test that insufficient data after NaN filtering returns None."""
+        from raglite.forecasting.timeseries_extract import extract_external_regressor_timeseries
+
+        # Mock fetch_single_regressor to return data with too many NaN
+        mock_series = pd.Series(
+            data=[1.0, float("nan"), float("nan"), 4.0, float("nan"), float("nan")],
+            index=pd.date_range("2024-01-01", periods=6, freq="ME"),
+        )
+        mocker.patch(
+            "raglite.forecasting.timeseries_extract.fetch_single_regressor",
+            return_value=mock_series,
+        )
+
+        result = await extract_external_regressor_timeseries("test_metric", min_points=6)
+
+        assert result is None  # Only 2 valid points after filtering
+        # Check warning logs
+        warning_records = [r for r in caplog.records if r.levelname == "WARNING"]
+        assert any("Insufficient valid data after filtering" in r.message for r in warning_records)
+
+    @pytest.mark.asyncio
+    async def test_extract_handles_fetch_exception(self, mocker, caplog) -> None:
+        """Test error handling when fetch_single_regressor raises exception."""
+        from raglite.forecasting.timeseries_extract import extract_external_regressor_timeseries
+
+        # Mock fetch_single_regressor to raise exception
+        mocker.patch(
+            "raglite.forecasting.timeseries_extract.fetch_single_regressor",
+            side_effect=Exception("API connection failed"),
+        )
+
+        result = await extract_external_regressor_timeseries("construction_output", min_points=6)
+
+        assert result is None
+        # Check error log
+        error_records = [r for r in caplog.records if r.levelname == "ERROR"]
+        assert len(error_records) > 0
+        assert any("Failed to extract external regressor" in r.message for r in error_records)

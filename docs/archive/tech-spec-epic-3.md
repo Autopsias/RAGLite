@@ -957,4 +957,4 @@ test = [
 - **[Orchestration Design](./architecture/epic-3-orchestration-design.md)** - 3-agent system architecture
 - **[Agent Patterns](./architecture/epic-3-agent-patterns.md)** - 5 reusable workflow patterns
 - **[Story 3.0.8 Context](./stories/3-0-8-agentic-framework-architecture-spike.context.xml)** - Implementation guidance
-- **[POC Code](../strands_poc.py)** - Working validation code
+- **[POC Code](../strands_poc.py.md)** - Working validation code

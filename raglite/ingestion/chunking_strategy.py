@@ -17,19 +17,41 @@ from raglite.shared.models import Chunk, DocumentMetadata
 
 logger = get_logger(__name__)
 
-# Initialize tiktoken encoding for token counting (Story 2.3 AC2)
+# LAZY LOAD: tiktoken encoding for token counting (Story 2.3 AC2)
 # Using cl100k_base encoding as specified in research (Yepes et al. 2024)
-encoding: Encoding | None = None  # Forward reference to avoid import errors
-try:
-    import tiktoken
-    from tiktoken import Encoding
+# Deferred until first use to speed up MCP server startup (~1-2s saved)
+_tiktoken_module: Any | None = None
+_encoding: Any | None = None  # tiktoken.Encoding (lazy-loaded)
+_tiktoken_checked: bool = False
 
-    encoding = tiktoken.get_encoding("cl100k_base")
-except ImportError:
-    logger.warning(
-        "tiktoken not installed - token counting will be approximate",
-        extra={"fallback": "word count estimation"},
-    )
+
+def _get_tiktoken_encoding() -> Any | None:
+    """Lazy-load tiktoken encoding to avoid slow startup.
+
+    Returns:
+        tiktoken Encoding object or None if not installed
+    """
+    global _tiktoken_module, _encoding, _tiktoken_checked
+    if not _tiktoken_checked:
+        _tiktoken_checked = True
+        try:
+            import tiktoken
+
+            _tiktoken_module = tiktoken
+            _encoding = tiktoken.get_encoding("cl100k_base")
+        except ImportError:
+            logger.warning(
+                "tiktoken not installed - token counting will be approximate",
+                extra={"fallback": "word count estimation"},
+            )
+            _tiktoken_module = None
+            _encoding = None
+    return _encoding
+
+
+# Backward compatibility: encoding is now a property-like getter
+# Code that references `encoding` directly will need to call _get_tiktoken_encoding()
+encoding: Any | None = None  # Will be set lazily - use _get_tiktoken_encoding() instead
 
 
 class FixedTokenChunker:
@@ -482,6 +504,8 @@ async def chunk_by_docling_items(
 
     start_time = time.time()
 
+    # Lazy-load tiktoken encoding
+    encoding = _get_tiktoken_encoding()
     if encoding is None:
         raise RuntimeError("tiktoken not available - required for Story 2.3 fixed chunking")
 

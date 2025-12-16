@@ -4,6 +4,9 @@ Story 6.14: TFT Integration with Training Workflow
 
 This module provides offline training functionality for TFT models,
 including dataset preparation, training loop, validation, and checkpoint management.
+
+LAZY LOADING: All heavy ML imports (PyTorch, Lightning, pytorch_forecasting) are
+deferred until first use to speed up MCP server startup (~5-15s saved).
 """
 
 from __future__ import annotations
@@ -15,32 +18,63 @@ from typing import Any
 
 import pandas as pd
 
-# Use lightning (unified package) instead of pytorch_lightning for compatibility
-# Import lightning/pytorch_lightning with fallback
-try:
-    import lightning.pytorch as pl
-    from lightning.pytorch.callbacks import EarlyStopping
-    from lightning.pytorch.loggers import CSVLogger
-except ImportError:  # pragma: no cover
-    import pytorch_lightning as pl  # type: ignore[no-redef]
-    from pytorch_lightning.callbacks import EarlyStopping  # type: ignore[no-redef]
-    from pytorch_lightning.loggers import CSVLogger  # type: ignore[no-redef]
-
-from pytorch_forecasting import TemporalFusionTransformer, TimeSeriesDataSet
-
-# Import QuantileLoss from pytorch_forecasting
-try:
-    from pytorch_forecasting.metrics import QuantileLoss
-except ImportError:
-    # Fallback for older versions
-    from pytorch_forecasting.metrics.quantile import QuantileLoss
-
 from raglite.external_data.storage import ExternalDataStorage
 from raglite.shared.config import settings
 from raglite.shared.database import get_session
 from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
+
+# LAZY LOAD: Heavy ML libraries (PyTorch, Lightning, pytorch_forecasting)
+# These imports take 5-15 seconds and are only needed for TFT training
+_pl_module: Any | None = None
+_EarlyStopping: type | None = None
+_CSVLogger: type | None = None
+_TFT: type | None = None
+_TimeSeriesDataSet: type | None = None
+_QuantileLoss: type | None = None
+_lightning_checked: bool = False
+
+
+def _get_lightning_module() -> Any:
+    """Lazy-load PyTorch Lightning module."""
+    global _pl_module, _EarlyStopping, _CSVLogger, _lightning_checked
+    if not _lightning_checked:
+        _lightning_checked = True
+        try:
+            import lightning.pytorch as pl
+            from lightning.pytorch.callbacks import EarlyStopping
+            from lightning.pytorch.loggers import CSVLogger
+
+            _pl_module = pl
+            _EarlyStopping = EarlyStopping
+            _CSVLogger = CSVLogger
+        except ImportError:
+            import pytorch_lightning as pl  # type: ignore[no-redef]
+            from pytorch_lightning.callbacks import EarlyStopping  # type: ignore[no-redef]
+            from pytorch_lightning.loggers import CSVLogger  # type: ignore[no-redef]
+
+            _pl_module = pl
+            _EarlyStopping = EarlyStopping
+            _CSVLogger = CSVLogger
+    return _pl_module
+
+
+def _get_pytorch_forecasting() -> tuple[type, type, type]:
+    """Lazy-load pytorch_forecasting classes."""
+    global _TFT, _TimeSeriesDataSet, _QuantileLoss
+    if _TFT is None:
+        from pytorch_forecasting import TemporalFusionTransformer, TimeSeriesDataSet
+
+        try:
+            from pytorch_forecasting.metrics import QuantileLoss
+        except ImportError:
+            from pytorch_forecasting.metrics.quantile import QuantileLoss
+
+        _TFT = TemporalFusionTransformer
+        _TimeSeriesDataSet = TimeSeriesDataSet
+        _QuantileLoss = QuantileLoss
+    return _TFT, _TimeSeriesDataSet, _QuantileLoss  # type: ignore[return-value]
 
 
 async def collect_training_data(
@@ -164,7 +198,7 @@ def prepare_tft_dataset(
     static_categoricals: list[str] | None = None,
     time_varying_known_reals: list[str] | None = None,
     time_varying_unknown_reals: list[str] | None = None,
-) -> tuple[TimeSeriesDataSet, TimeSeriesDataSet]:
+) -> tuple[Any, Any]:  # TimeSeriesDataSet (lazy-loaded)
     """Prepare TimeSeriesDataSet for TFT training.
 
     Story 6.14 AC4: Create training and validation datasets.
@@ -181,6 +215,9 @@ def prepare_tft_dataset(
     Returns:
         Tuple of (training_dataset, validation_dataset)
     """
+    # Lazy-load pytorch_forecasting classes
+    _, TimeSeriesDataSet, _ = _get_pytorch_forecasting()
+
     if static_categoricals is None:
         static_categoricals = []
     if time_varying_known_reals is None:
@@ -215,7 +252,7 @@ def prepare_tft_dataset(
     )
 
     # Validation dataset (last 12 months)
-    validation = TimeSeriesDataSet.from_dataset(
+    validation = TimeSeriesDataSet.from_dataset(  # type: ignore[attr-defined]
         training,
         df,
         predict=True,
@@ -236,10 +273,10 @@ def prepare_tft_dataset(
 
 
 def train_tft_model(
-    training_dataset: TimeSeriesDataSet,
-    validation_dataset: TimeSeriesDataSet,
+    training_dataset: Any,  # TimeSeriesDataSet (lazy-loaded)
+    validation_dataset: Any,  # TimeSeriesDataSet (lazy-loaded)
     checkpoint_dir: str | None = None,
-) -> tuple[TemporalFusionTransformer, dict[str, float | int | str]]:
+) -> tuple[Any, dict[str, float | int | str]]:  # TemporalFusionTransformer (lazy-loaded)
     """Train TFT model with PyTorch Lightning.
 
     Story 6.14 AC4: Training loop with early stopping.
@@ -252,6 +289,10 @@ def train_tft_model(
     Returns:
         Tuple of (trained_model, metrics_dict)
     """
+    # Lazy-load ML libraries
+    pl = _get_lightning_module()
+    TFT, _, QuantileLoss = _get_pytorch_forecasting()
+
     if checkpoint_dir is None:
         checkpoint_dir = settings.tft_checkpoint_dir
 
@@ -271,7 +312,7 @@ def train_tft_model(
     )
 
     # Early stopping callback
-    early_stop_callback = EarlyStopping(
+    early_stop_callback = _EarlyStopping(  # type: ignore[misc]
         monitor="val_loss",
         min_delta=1e-4,
         patience=int(TFT_TRAINING_CONFIG["early_stopping_patience"]),
@@ -280,7 +321,7 @@ def train_tft_model(
     )
 
     # CSV logger for training metrics
-    csv_logger = CSVLogger(checkpoint_dir, name="tft_training")
+    csv_logger = _CSVLogger(checkpoint_dir, name="tft_training")  # type: ignore[misc]
 
     # PyTorch Lightning trainer
     trainer = pl.Trainer(
@@ -294,7 +335,7 @@ def train_tft_model(
     )
 
     # Initialize TFT model
-    tft = TemporalFusionTransformer.from_dataset(
+    tft = TFT.from_dataset(  # type: ignore[attr-defined]
         training_dataset,
         learning_rate=TFT_TRAINING_CONFIG["learning_rate"],
         hidden_size=TFT_TRAINING_CONFIG["hidden_size"],
@@ -342,8 +383,8 @@ def train_tft_model(
 
 
 def validate_tft_model(
-    model: TemporalFusionTransformer,
-    validation_dataset: TimeSeriesDataSet,
+    model: Any,  # TemporalFusionTransformer (lazy-loaded)
+    validation_dataset: Any,  # TimeSeriesDataSet (lazy-loaded)
 ) -> dict[str, int | float | str]:
     """Calculate validation metrics for TFT model.
 
@@ -377,7 +418,7 @@ def validate_tft_model(
 
 
 def save_tft_checkpoint(
-    model: TemporalFusionTransformer,
+    model: Any,  # TemporalFusionTransformer (lazy-loaded)
     metrics: dict[str, float | int | str],
     model_version: str | None = None,
 ) -> str:

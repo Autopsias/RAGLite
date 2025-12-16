@@ -231,7 +231,7 @@ uv run pytest raglite/tests/test_ingestion.py --cov=raglite.ingestion
 
 ### Context Reference
 
-- [Story Context XML](./context/story-context-1.2.xml) - Comprehensive implementation context including:
+- [Story Context XML](./context/story-context-1.2.xml.md) - Comprehensive implementation context including:
   - Task breakdown with subtasks
   - Acceptance criteria mapping
   - Documentation references (Epic 1, Week 0 Spike Report, Architecture, Coding Standards)

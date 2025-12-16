@@ -8,6 +8,9 @@ from __future__ import annotations
 import time
 from typing import Any
 
+from raglite.shared.config import settings
+from raglite.shared.logging import get_logger
+
 # OPTIMIZATION: Make imports optional to prevent test failures when dependencies not available
 try:
     import psycopg2
@@ -45,23 +48,37 @@ except ImportError:
     QDRANT_AVAILABLE = False
     QdrantClient = None
 
-try:
-    from sentence_transformers import SentenceTransformer
+# LAZY LOAD: sentence_transformers is heavy (imports PyTorch ~3-10s)
+# Deferred until first use to speed up MCP server startup
+SENTENCE_TRANSFORMERS_AVAILABLE: bool | None = None  # Will be set on first check
+_SentenceTransformer: type | None = None
 
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
-    SentenceTransformer = None
 
-from raglite.shared.config import settings
-from raglite.shared.logging import get_logger
+def _get_sentence_transformer_class() -> type | None:
+    """Lazy-load SentenceTransformer class to avoid slow startup.
+
+    sentence_transformers imports PyTorch which takes 3-10 seconds.
+    By deferring this import, MCP server startup is much faster.
+    """
+    global SENTENCE_TRANSFORMERS_AVAILABLE, _SentenceTransformer
+    if SENTENCE_TRANSFORMERS_AVAILABLE is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+
+            _SentenceTransformer = SentenceTransformer
+            SENTENCE_TRANSFORMERS_AVAILABLE = True
+        except ImportError:
+            SENTENCE_TRANSFORMERS_AVAILABLE = False
+            _SentenceTransformer = None
+    return _SentenceTransformer
+
 
 logger = get_logger(__name__)
 
 
 # Module-level singletons (connection pooling and model caching)
 _qdrant_client: QdrantClient | None = None
-_embedding_model: SentenceTransformer | None = None
+_embedding_model: Any | None = None  # SentenceTransformer (lazy-loaded)
 _postgresql_connection: Any | None = None  # psycopg2.extensions.connection when available
 _mistral_client: Mistral | None = None
 
@@ -208,7 +225,7 @@ def get_claude_client() -> Anthropic:
     return client
 
 
-def get_embedding_model() -> SentenceTransformer:
+def get_embedding_model() -> Any:
     """Lazy-load Fin-E5 embedding model (singleton pattern).
 
     Loads intfloat/e5-large-v2 model on first call and caches it for reuse.
@@ -234,7 +251,9 @@ def get_embedding_model() -> SentenceTransformer:
         >>> len(embedding)
         1024
     """
-    if not SENTENCE_TRANSFORMERS_AVAILABLE:
+    # Lazy-load the SentenceTransformer class (avoids slow PyTorch import at startup)
+    SentenceTransformerClass = _get_sentence_transformer_class()
+    if SentenceTransformerClass is None:
         raise ImportError(
             "sentence-transformers package not installed. Install with: pip install sentence-transformers"
         )
@@ -245,7 +264,7 @@ def get_embedding_model() -> SentenceTransformer:
         logger.info("Loading Fin-E5 embedding model", extra={"model": "intfloat/e5-large-v2"})
 
         try:
-            _embedding_model = SentenceTransformer("intfloat/e5-large-v2")
+            _embedding_model = SentenceTransformerClass("intfloat/e5-large-v2")
             dimensions = _embedding_model.get_sentence_embedding_dimension()
 
             logger.info(

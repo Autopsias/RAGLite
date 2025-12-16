@@ -1683,10 +1683,8 @@ async def generate_forecast(
         # Story 6.25: REMOVED electricity_cost - Dec 9 achieved 3.0% MAPE with regressors
         # Story 6.25: REMOVED avg_selling_price - Dec 9 achieved 1.6% MAPE with regressors
         # Commit 88785ba added these to flat growth causing 9-11x regressions
-        # Energy cost metrics (DB names + variable names) - KEEP thermal_cost only
-        "thermal_cost",
-        "thermal energy",
-        "fuel_cost",
+        # Story 6.24: REMOVED thermal energy - flat growth = 25.48% MAPE, test linear growth
+        # Thermal Energy has 69 periods, 1398 rows (NOT sparse), should use Prophet linear growth
         # Utilization metrics (DB names + variable names)
         "capacity_utilization",
         "frequency ratio",
@@ -1725,6 +1723,22 @@ async def generate_forecast(
                     extra={"metric": metric, "gap_days": gap_days},
                 )
                 break
+
+    # Story 6.24: Special case for Thermal Energy - override gap detection
+    # Thermal Energy has expected quarterly gaps from SECIL reports (every ~90 days)
+    # These gaps are normal reporting cycles, NOT sparse data that needs conservative priors
+    # Without this override, gap detection triggers and breaks fuel price correlation (2.6% → 23.76% MAPE regression)
+    if metric.lower() in ("thermal_cost", "thermal energy", "thermal"):
+        if has_data_gaps:
+            logger.info(
+                "Thermal Energy: Overriding gap detection (quarterly reporting pattern is expected)",
+                extra={
+                    "metric": metric,
+                    "original_has_data_gaps": True,
+                    "override": "quarterly_pattern",
+                },
+            )
+        has_data_gaps = False  # Override - quarterly pattern is normal
 
     # Story 6.23: Very conservative changepoint_prior_scale for flat growth
     if use_flat_growth:

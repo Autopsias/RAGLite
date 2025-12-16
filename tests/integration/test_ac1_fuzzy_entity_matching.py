@@ -11,7 +11,7 @@ from raglite.shared.clients import get_postgresql_connection
 
 # Mark all tests in this module as integration tests
 # NOTE: Order marker removed (2025-11-08) - tests don't use excerpt fixture
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 
 @pytest.mark.priority("P2")

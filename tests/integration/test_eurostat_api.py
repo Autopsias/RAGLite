@@ -485,7 +485,7 @@ class TestEurostatCorrelationWithSalesVolume:
         )
 
         # Create lookup for sales data
-        sales_lookup = {d: v for d, v in mock_sales_volume_data}
+        sales_lookup = dict(mock_sales_volume_data)
 
         # Align data by date
         aligned_construction = []
@@ -534,7 +534,7 @@ class TestEurostatCorrelationWithSalesVolume:
         )
 
         # Create lookup for sales data
-        sales_lookup = {d: v for d, v in mock_sales_volume_data}
+        sales_lookup = dict(mock_sales_volume_data)
 
         # Align data by date
         aligned_industrial = []
@@ -580,7 +580,7 @@ class TestEurostatCorrelationWithSalesVolume:
             end_date=date(2024, 12, 31),
         )
 
-        sales_lookup = {d: v for d, v in mock_sales_volume_data}
+        sales_lookup = dict(mock_sales_volume_data)
 
         aligned_construction = []
         aligned_sales = []

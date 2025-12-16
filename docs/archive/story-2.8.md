@@ -768,7 +768,7 @@ After Story 2.8 + 2.9, re-run accuracy tests. If ≥70%, Epic 2 COMPLETE. If 65-
 
 ### Context Reference
 
-- [Story Context XML](story-context-2.8.xml) - ✅ Generated 2025-10-25 via BMAD Story Context Workflow
+- [Story Context XML](story-context-2.8.xml.md) - ✅ Generated 2025-10-25 via BMAD Story Context Workflow
 
 ### Agent Model Used
 

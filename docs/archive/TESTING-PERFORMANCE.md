@@ -3,12 +3,12 @@
 This document explains the performance optimizations implemented for the RAGLite test suite.
 
 ## Table of Contents
-- [Overview](#overview)
-- [Performance Improvements](#performance-improvements)
-- [Quick Start](#quick-start)
-- [Makefile Commands](#makefile-commands)
-- [VSCode Test Explorer](#vscode-test-explorer)
-- [Configuration Details](#configuration-details)
+- [Overview](#overview.md)
+- [Performance Improvements](#performance-improvements.md)
+- [Quick Start](#quick-start.md)
+- [Makefile Commands](#makefile-commands.md)
+- [VSCode Test Explorer](#vscode-test-explorer.md)
+- [Configuration Details](#configuration-details.md)
 - [Troubleshooting](#troubleshooting)
 
 ## Overview

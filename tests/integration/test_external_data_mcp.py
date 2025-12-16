@@ -20,7 +20,13 @@ import pytest
 os.environ["APP_ENV"] = "test"
 
 # Skip all tests in this module if not running integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+]
 
 
 @pytest.fixture(scope="module")

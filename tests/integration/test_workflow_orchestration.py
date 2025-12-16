@@ -26,7 +26,8 @@ from raglite.agentic.planner import (
 )
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+# Mark as slow due to PDF ingestion taking 60+ seconds per test
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 
 class TestEndToEndWorkflowOrchestration:
