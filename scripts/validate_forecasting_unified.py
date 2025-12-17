@@ -2,17 +2,23 @@
 """Unified Forecasting Validation Script.
 
 Story 6.21: Unified Validation Script
+Story 6.26: Multi-Metric Validation Enhancement
 
 Consolidates all validation approaches into a single script with:
-- 12 cement industry variables
+- 20 cement industry variables
+- Multi-metric validation: MAPE, MASE, SMAPE, RMSE, MAE, Bias
 - 3 MAPE methods: holdout, walk-forward, CV
 - JSON export with per-model breakdown
+- Comprehensive markdown report generation
 - MCP-compatible output format
 - <10 minute runtime target
 
 Usage:
-    # Full validation (all 12 variables, holdout MAPE)
+    # Full validation (all variables, holdout MAPE)
     python scripts/validate_forecasting_unified.py --full
+
+    # Generate comprehensive markdown report
+    python scripts/validate_forecasting_unified.py --full --report
 
     # Single variable with specific MAPE method
     python scripts/validate_forecasting_unified.py --variable variable_cost --mape-method walkforward
@@ -41,7 +47,7 @@ import json
 import sys
 import time
 import warnings
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -59,18 +65,42 @@ warnings.filterwarnings(
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import numpy as np  # noqa: E402
+
+from raglite.forecasting.report_generator import (  # noqa: E402
+    generate_validation_report,
+)
 from raglite.forecasting.validation_methods import (  # noqa: E402
+    calculate_all_metrics,
     calculate_cv_mape,
     calculate_holdout_mape,
     calculate_walkforward_mape,
+    validate_metric_consistency,
 )
 from raglite.forecasting.validation_schema import (  # noqa: E402
     ModelPerformanceStats,
+    MultiMetricValues,
     QualityGateResult,
     UnifiedValidationResult,
     VariableConfig,
     VariableValidationResult,
 )
+
+
+@dataclass
+class ForecastValidationData:
+    """Container for forecast validation data including arrays for multi-metric calculation.
+
+    Story 6.26: Multi-Metric Validation Enhancement
+    Returns actuals/predictions arrays for MASE, SMAPE, RMSE, MAE, Bias calculation.
+    """
+
+    mape: float | None
+    actuals: np.ndarray | None = None
+    predictions: np.ndarray | None = None
+    historical: np.ndarray | None = None
+
+
 from raglite.shared.logging import get_logger  # noqa: E402
 
 # Re-export for backward compatibility with tests - keep these names accessible
@@ -78,15 +108,20 @@ __all__ = [
     "calculate_holdout_mape",
     "calculate_walkforward_mape",
     "calculate_cv_mape",
+    "calculate_all_metrics",
+    "validate_metric_consistency",
+    "trim_regressors_for_holdout",
     "UnifiedValidationResult",
     "VariableValidationResult",
     "QualityGateResult",
     "ModelPerformanceStats",
     "VariableConfig",
+    "MultiMetricValues",
     "CEMENT_FORECAST_VARIABLES",
     "run_unified_validation",
     "export_json",
     "print_summary",
+    "generate_validation_report",
     "main",
 ]
 
@@ -122,6 +157,10 @@ CEMENT_FORECAST_VARIABLES: dict[str, VariableConfig] = {
         regressors=["euribor_3m", "ttf_gas", "diesel", "api2_coal"],
         target_mape=5.0,  # Restored - Dec 9 achieves 0.2% MAPE today with same config
         db_metric_aliases=["EBITDA", "ebitda", "Cement Unit Ebitda"],
+        # Story 6.27: EBITDA is volatile - MASE-only pass for excellent trend-following
+        primary_metric="mase",
+        allow_mase_only_pass=True,
+        target_mase=1.0,
     ),
     "sales_volume": VariableConfig(
         name="sales_volume",
@@ -144,6 +183,10 @@ CEMENT_FORECAST_VARIABLES: dict[str, VariableConfig] = {
         regressors=["eurostat_electricity"],
         target_mape=8.0,  # RESTORED from 30% - Dec 9 achieved 3.0% MAPE
         db_metric_aliases=["Electrical Energy", "electrical energy", "electricity"],
+        # Story 6.27: Cost metric - SMAPE handles negative/zero values better
+        primary_metric="smape",
+        allow_mase_only_pass=True,
+        target_smape=15.0,
     ),
     "thermal_cost": VariableConfig(
         name="thermal_cost",
@@ -158,6 +201,10 @@ CEMENT_FORECAST_VARIABLES: dict[str, VariableConfig] = {
         db_metric_aliases=["Thermal Energy", "thermal energy", "fuel_cost"],
         # Story 6.24: Regressors correlation: TTF gas (0.85-0.95), API2 coal (0.75-0.85), IPI (0.60-0.70)
         # Expected MAPE reduction: 23.76% -> <10% (60-80% improvement with fuel price signals)
+        # Story 6.27: Cost metric - SMAPE handles negative/zero values better
+        primary_metric="smape",
+        allow_mase_only_pass=True,
+        target_smape=12.0,
     ),
     "variable_cost": VariableConfig(
         name="variable_cost",
@@ -167,7 +214,13 @@ CEMENT_FORECAST_VARIABLES: dict[str, VariableConfig] = {
         # Variable cost driven by energy prices (TTF gas, OMIE spot, diesel)
         regressors=["ttf_gas", "omie_spot", "diesel"],
         target_mape=8.0,  # RESTORED from 8.5% - Dec 9 achieved 0.7% MAPE
-        db_metric_aliases=["Variable Cost", "variable cost", "Other Variable Costs"],
+        # Story 6.29 P1: Removed "Other Variable Costs" - different metric causing scale mixing
+        # Oct-25 shows Variable Cost=-22.30 vs Other Variable Costs=-9.40
+        db_metric_aliases=["Variable Cost", "variable cost"],
+        # Story 6.27: Cost metric with volatility - MASE-only pass for trend-following
+        primary_metric="mase",
+        allow_mase_only_pass=True,
+        target_mase=1.0,
     ),
     "petcoke_price": VariableConfig(
         name="petcoke_price",
@@ -179,6 +232,8 @@ CEMENT_FORECAST_VARIABLES: dict[str, VariableConfig] = {
         target_mape=31.0,
         db_metric_aliases=["petcoke", "pet_coke", "petcoke_price", "coque"],
         is_external_only=True,
+        # Story 6.27: Commodity - allow MASE-only for volatile series
+        allow_mase_only_pass=True,
     ),
     "ttf_gas_price": VariableConfig(
         name="ttf_gas_price",
@@ -190,20 +245,23 @@ CEMENT_FORECAST_VARIABLES: dict[str, VariableConfig] = {
         target_mape=45.0,
         db_metric_aliases=["ttf", "gas_price", "natural_gas", "ttf_gas"],
         is_external_only=True,
+        # Story 6.27: Energy commodity - allow MASE-only for extreme volatility
+        allow_mase_only_pass=True,
     ),
     "avg_selling_price": VariableConfig(
         name="avg_selling_price",
         display_name="Average Selling Price",
         unit="EUR_per_ton",
-        # Story 6.25: RE-ENABLED regressors - Dec 9 achieved 1.6% MAPE
-        # Selling price responds to diesel costs, interest rates, and gas prices
-        regressors=["diesel", "euribor_3m", "ttf_gas"],
+        # Story 6.29 P1: DISABLED regressors - they caused MASE 22.44 (predictions -31 vs actuals 67)
+        # Root cause: Scale mismatch - diesel ~1, euribor ~2, ttf_gas ~3-339, selling_price ~65
+        # Prophet produces negative predictions when regressor scales don't align with target
+        # Univariate forecast produces reasonable results (68.24, 64.41, 60.46, 65.26)
+        regressors=[],  # Disabled until regressor normalization is implemented
         target_mape=9.0,  # Story 6.23: Adjusted to 9% - selling price has volatility (8.01% current)
+        # Story 6.29 P1: Restrict to single metric to avoid scale mixing
+        # Sales Price IM (~119 EUR) and Transport Cost (~106 EUR) are 2x higher than EM-Cement (~61 EUR)
         db_metric_aliases=[
             "Sales Price EM - Cement",
-            "Sales Price IM",
-            "Sales Price-Transport Cost",
-            "selling_price",
         ],
     ),
     "capacity_utilization": VariableConfig(
@@ -214,6 +272,8 @@ CEMENT_FORECAST_VARIABLES: dict[str, VariableConfig] = {
         regressors=["construction_output", "building_permits"],
         target_mape=10.0,
         db_metric_aliases=["Frequency Ratio", "capacity_utilization", "utilization"],
+        # Story 6.27: Operational metric - allow MASE-only for trend-following
+        allow_mase_only_pass=True,
     ),
     "co2_eua_price": VariableConfig(
         name="co2_eua_price",
@@ -227,8 +287,11 @@ CEMENT_FORECAST_VARIABLES: dict[str, VariableConfig] = {
         # Story 6.24: Adjusted from 15% - carbon prices tied to energy markets, volatile
         # Monthly CV of ~15-20% typical, making <25% MAPE realistic with energy regressors
         target_mape=25.0,
-        db_metric_aliases=["co2", "eua", "co2_price", "carbon_price", "emissions_cost"],
+        # Story 6.29 P1: Tightened aliases - "co2" and "eua" were too broad
+        db_metric_aliases=["co2_price", "carbon_price", "emissions_cost", "CO2 EUA"],
         is_external_only=True,
+        # Story 6.27: Commodity tied to energy markets - allow MASE-only for volatility
+        allow_mase_only_pass=True,
     ),
     # Story 6.24: clinker_factor REMOVED from validation
     # Reason: Clinker Factor is a derived metric (clinker_production / cement_production)
@@ -259,6 +322,10 @@ CEMENT_FORECAST_VARIABLES: dict[str, VariableConfig] = {
         target_mape=55.0,  # Story 6.24: Adjusted - quarterly data interpolated to monthly creates artifacts (actual: 54.76%)
         db_metric_aliases=[],
         is_external_only=True,
+        # Story 6.27: Economic indicator with negative values - SMAPE is more appropriate
+        primary_metric="smape",
+        allow_mase_only_pass=True,
+        target_smape=55.0,
     ),
     "inflation": VariableConfig(
         name="inflation",
@@ -324,6 +391,10 @@ CEMENT_FORECAST_VARIABLES: dict[str, VariableConfig] = {
         target_mape=63.0,  # Story 6.24: Sentiment indicators inherently volatile (mean-reverting, policy-driven, actual: 62.09%)
         db_metric_aliases=[],
         is_external_only=True,
+        # Story 6.27: Sentiment indicator with negative values - SMAPE is more appropriate
+        primary_metric="smape",
+        allow_mase_only_pass=True,
+        target_smape=63.0,
     ),
     # Cement Industry (ATIC)
     # TODO: cement_consumption not yet implemented in regressor_fetch.py (Issue #3)
@@ -448,13 +519,54 @@ async def fetch_regressors_for_forecast(
         return {}
 
 
+def trim_regressors_for_holdout(
+    regressors: dict[str, pd.Series],
+    holdout_size: int,
+) -> dict[str, pd.Series]:
+    """Trim regressors to exclude holdout period for proper validation.
+
+    Story 6.27: Fix MAPE/MASE alignment for multivariate models.
+
+    When validating multivariate models, we must split training data AND
+    regressors consistently. This function removes the last `holdout_size`
+    periods from each regressor to match the training data split.
+
+    Args:
+        regressors: Dict of regressor name -> pandas Series with full data
+        holdout_size: Number of periods to exclude from end
+
+    Returns:
+        Dict of regressor name -> pandas Series with holdout period excluded
+    """
+    if not regressors or holdout_size <= 0:
+        return regressors
+
+    trimmed = {}
+    for name, series in regressors.items():
+        if len(series) > holdout_size:
+            # Remove last holdout_size periods from regressor
+            trimmed[name] = series.iloc[:-holdout_size]
+            logger.debug(f"Trimmed regressor {name}: {len(series)} -> {len(trimmed[name])} points")
+        else:
+            # Not enough data to trim - keep original
+            logger.warning(
+                f"Regressor {name} has only {len(series)} points, cannot trim {holdout_size}"
+            )
+            trimmed[name] = series
+
+    return trimmed
+
+
 async def run_forecast_with_method(
     metric_name: str,
     config: VariableConfig,
     mape_method: str,
     external_regressors: dict[str, pd.Series] | None = None,
-) -> float | None:
+) -> ForecastValidationData:
     """Run forecast and calculate MAPE using specified method.
+
+    Story 6.26: Returns ForecastValidationData with actuals/predictions arrays
+    for multi-metric calculation (MASE, SMAPE, RMSE, MAE, Bias).
 
     Args:
         metric_name: DB metric name or variable name
@@ -463,7 +575,7 @@ async def run_forecast_with_method(
         external_regressors: Optional external regressor data
 
     Returns:
-        MAPE as percentage, or None if failed
+        ForecastValidationData with MAPE and arrays for multi-metric calculation
 
     Note:
         Walk-forward and CV methods are MVP implementations that fall back to
@@ -515,7 +627,10 @@ async def run_forecast_with_method(
         # BUG FIX: Changed from <10 to <6 to match min_points requirement
         # Some metrics like Frequency Ratio have 7-8 points which is enough for holdout validation
         if not historical_data or len(historical_data.points) < 6:
-            return None
+            return ForecastValidationData(mape=None)
+
+        # Store full historical for MASE calculation
+        full_historical = np.array([p.value for p in historical_data.points])
 
         # Fetch external regressors if not provided
         if external_regressors is None:
@@ -526,27 +641,56 @@ async def run_forecast_with_method(
                 historical_dates=historical_dates,
             )
 
-        # For holdout: Use Prophet's internal cross-validation when regressors are enabled
+        # For holdout validation: Always split data into train/test for proper MASE calculation
         if mape_method == "holdout":
-            # Story 6.25: If regressors enabled, use Prophet's internal cross-validation MAPE
-            # Manual holdout splitting (21 train + 4 test) breaks regressor alignment
-            # Dec 9 script achieved 0.9% MAPE by passing all 25 points to Prophet
+            holdout_size = 4
+
+            # Story 6.27: Fix MAPE/MASE alignment for multivariate models
+            # PREVIOUS BUG: Passed ALL data to Prophet, then compared:
+            #   - actuals: last 4 historical points (Oct-Jan)
+            #   - predictions: first 4 forecast points (Feb-May)
+            # These were DIFFERENT TIME PERIODS causing catastrophic MASE!
+            #
+            # FIX: Split data even for multivariate - train on N-4, forecast for holdout period
+            # This ensures actuals and predictions refer to the SAME time period.
             if external_regressors and len(external_regressors) > 0:
-                # Use Prophet's internal cross-validation for multi-variate models
+                # Split training data - same as univariate
+                train_points = historical_data.points[:-holdout_size]
+                train_data = TimeSeriesData(
+                    metric_name=historical_data.metric_name,
+                    points=train_points,
+                    interval=historical_data.interval,
+                    source_documents=historical_data.source_documents,
+                )
+
+                # Trim regressors to match training period
+                trimmed_regressors = trim_regressors_for_holdout(external_regressors, holdout_size)
+
+                # Forecast on training data with trimmed regressors
                 result = await generate_forecast(
                     metric=metric_name,
-                    historical_data=historical_data,  # ALL points, not split
-                    periods_ahead=4,
-                    external_regressors=external_regressors,
+                    historical_data=train_data,  # SPLIT: N-4 points
+                    periods_ahead=holdout_size,
+                    external_regressors=trimmed_regressors,
                     frequency="M",
                 )
 
-                if result and result.accuracy_metrics:
-                    # Use Prophet's internal MAPE from cross-validation
-                    return result.accuracy_metrics.get("mape", result.accuracy_metrics.get("MAPE"))
+                if result and result.forecast:
+                    # Now actuals and predictions refer to the SAME time period
+                    actuals = np.array([p.value for p in historical_data.points[-holdout_size:]])
+                    predictions = np.array([p.value for p in result.forecast[:holdout_size]])
+                    # Use manual holdout MAPE for consistency with MASE
+                    mape = calculate_holdout_mape(
+                        historical_data.points, result.forecast, holdout_size=holdout_size
+                    )
+                    return ForecastValidationData(
+                        mape=mape,
+                        actuals=actuals,
+                        predictions=predictions,
+                        historical=full_historical,
+                    )
 
-            # Fallback to manual holdout for univariate
-            holdout_size = 4
+            # Univariate models (no regressors) - same logic
             # Split: training = first (N-4) points, test = last 4 points
             train_points = historical_data.points[:-holdout_size]
 
@@ -568,9 +712,17 @@ async def run_forecast_with_method(
             )
 
             if result and result.forecast:
-                # Compare forecast with held-out test data
-                return calculate_holdout_mape(
+                # Story 6.26: Extract actuals/predictions arrays for multi-metric calculation
+                actuals = np.array([p.value for p in historical_data.points[-holdout_size:]])
+                predictions = np.array([p.value for p in result.forecast[:holdout_size]])
+                mape = calculate_holdout_mape(
                     historical_data.points, result.forecast, holdout_size=holdout_size
+                )
+                return ForecastValidationData(
+                    mape=mape,
+                    actuals=actuals,
+                    predictions=predictions,
+                    historical=full_historical,
                 )
 
         # For walk-forward: MVP uses simplified holdout (full async implementation planned)
@@ -594,8 +746,16 @@ async def run_forecast_with_method(
                 frequency="M",
             )
             if result and result.forecast:
-                return calculate_holdout_mape(
+                actuals = np.array([p.value for p in historical_data.points[-holdout_size:]])
+                predictions = np.array([p.value for p in result.forecast[:holdout_size]])
+                mape = calculate_holdout_mape(
                     historical_data.points, result.forecast, holdout_size=holdout_size
+                )
+                return ForecastValidationData(
+                    mape=mape,
+                    actuals=actuals,
+                    predictions=predictions,
+                    historical=full_historical,
                 )
 
         # For CV: MVP uses simplified holdout (full async implementation planned)
@@ -617,15 +777,78 @@ async def run_forecast_with_method(
                 frequency="M",
             )
             if result and result.forecast:
-                return calculate_holdout_mape(
+                actuals = np.array([p.value for p in historical_data.points[-holdout_size:]])
+                predictions = np.array([p.value for p in result.forecast[:holdout_size]])
+                mape = calculate_holdout_mape(
                     historical_data.points, result.forecast, holdout_size=holdout_size
                 )
+                return ForecastValidationData(
+                    mape=mape,
+                    actuals=actuals,
+                    predictions=predictions,
+                    historical=full_historical,
+                )
 
-        return None
+        return ForecastValidationData(mape=None)
 
     except Exception as e:
         logger.error(f"Forecast failed for {metric_name}: {e}")
-        return None
+        return ForecastValidationData(mape=None)
+
+
+# =============================================================================
+# Story 6.27: Multi-Metric Pass/Fail Logic
+# =============================================================================
+
+
+def determine_pass_status(
+    mape: float | None,
+    smape: float | None,
+    mase: float | None,
+    config: VariableConfig,
+) -> tuple[bool, str, bool]:
+    """Determine pass/fail based on variable's primary metric.
+
+    Story 6.27: Multi-metric pass/fail determination.
+
+    This function implements a sophisticated pass/fail logic that considers:
+    1. MASE-only pass: If enabled and MASE < target, passes regardless of MAPE
+    2. Primary metric check: Uses configured primary_metric (mape/smape/mase)
+    3. Secondary MASE gate: MAPE/SMAPE passes blocked if MASE > 1.5
+
+    Args:
+        mape: MAPE value (or None if not calculated)
+        smape: SMAPE value (or None if not calculated)
+        mase: MASE value (or None if not calculated)
+        config: Variable configuration with thresholds and metric settings
+
+    Returns:
+        Tuple of (passed, primary_metric_used, mase_only_pass):
+        - passed: Whether the variable passed validation
+        - primary_metric_used: Which metric determined the outcome
+        - mase_only_pass: Whether MASE-only pass was applied
+    """
+    # MASE-only pass takes priority if allowed and MASE is excellent
+    if config.allow_mase_only_pass and mase is not None and mase < config.target_mase:
+        return True, "mase", True
+
+    # Check based on primary metric
+    if config.primary_metric == "smape":
+        threshold = config.target_smape or config.target_mape
+        if smape is not None and smape <= threshold:
+            # Secondary MASE gate: block if MASE is poor (>1.5)
+            if mase is None or mase < 1.5:
+                return True, "smape", False
+    elif config.primary_metric == "mase":
+        if mase is not None and mase < config.target_mase:
+            return True, "mase", False
+    else:  # "mape" (default)
+        if mape is not None and mape <= config.target_mape:
+            # Secondary MASE gate: block if MASE is poor (>1.5)
+            if mase is None or mase < 1.5:
+                return True, "mape", False
+
+    return False, config.primary_metric, False
 
 
 # =============================================================================
@@ -699,23 +922,81 @@ async def run_unified_validation(
         # Run forecast with specified MAPE method (regressors fetched automatically)
         # For external variables, use the variable name directly
         metric_for_forecast = var_name if is_external else (db_metric or var_name)
-        mape = await run_forecast_with_method(
+        forecast_data = await run_forecast_with_method(
             metric_name=metric_for_forecast,
             config=config,
             mape_method=mape_method,
             external_regressors=None,  # Will be fetched based on config.regressors
         )
 
-        # Create result
+        # Story 6.26: Calculate all metrics if we have actuals/predictions arrays
+        multi_metrics = MultiMetricValues()
+        mape = forecast_data.mape if forecast_data else None
+
+        if (
+            forecast_data
+            and forecast_data.actuals is not None
+            and forecast_data.predictions is not None
+            and len(forecast_data.actuals) > 0
+        ):
+            all_metrics = calculate_all_metrics(
+                actuals=forecast_data.actuals,
+                predictions=forecast_data.predictions,
+                historical_data=forecast_data.historical,
+                seasonality=12,  # Monthly data
+            )
+            multi_metrics = MultiMetricValues(
+                mape=all_metrics.mape,
+                mase=all_metrics.mase,
+                smape=all_metrics.smape,
+                rmse=all_metrics.rmse,
+                mae=all_metrics.mae,
+                bias=all_metrics.bias,
+            )
+            # Use calculated MAPE if forecast_data.mape was None (consistency)
+            if mape is None and all_metrics.mape is not None:
+                mape = all_metrics.mape
+
+        # Story 6.27: Calculate pass status with multi-metric logic
+        passed, primary_metric_used, mase_only_pass = determine_pass_status(
+            mape=mape,
+            smape=multi_metrics.smape,
+            mase=multi_metrics.mase,
+            config=config,
+        )
+
+        # Story 6.27: Check for bias alert (informational, non-blocking)
+        bias_alert = False
+        bias_alert_message = ""
+        if (
+            multi_metrics.bias is not None
+            and forecast_data
+            and forecast_data.actuals is not None
+            and len(forecast_data.actuals) > 0
+        ):
+            actual_mean = float(np.mean(forecast_data.actuals))
+            if actual_mean != 0 and abs(multi_metrics.bias) > 0.2 * abs(actual_mean):
+                bias_alert = True
+                direction = "over" if multi_metrics.bias > 0 else "under"
+                bias_alert_message = (
+                    f"Systematic {direction}-prediction detected (bias={multi_metrics.bias:.2f})"
+                )
+
+        # Create result with multi-metric values
         result = VariableValidationResult(
             variable_name=var_name,
             display_name=config.display_name,
             target_mape=config.target_mape,
             actual_mape=mape,
-            passed=(mape is not None and mape <= config.target_mape),
+            passed=passed,
+            primary_metric_used=primary_metric_used,
+            mase_only_pass=mase_only_pass,
+            bias_alert=bias_alert,
+            bias_alert_message=bias_alert_message,
             holdout_mape=mape if mape_method == "holdout" else None,
             walkforward_mape=mape if mape_method == "walkforward" else None,
             cv_mape=mape if mape_method == "cv" else None,
+            metrics=multi_metrics,  # Story 6.26: Multi-metric values
         )
 
         variable_results.append(result)
@@ -748,12 +1029,42 @@ async def run_unified_validation(
     if variable_cost_result is not None:
         variable_cost_mape = variable_cost_result.actual_mape
 
+    # Story 6.26: Calculate average MASE from variable results
+    valid_mases = [
+        r.metrics.mase
+        for r in variable_results
+        if r.metrics and r.metrics.mase is not None and r.metrics.mase != float("inf")
+    ]
+    average_mase = sum(valid_mases) / len(valid_mases) if valid_mases else None
+    mase_passed = average_mase is None or average_mase < 1.0
+
+    # Story 6.26: Calculate other average metrics
+    valid_smapes = [
+        r.metrics.smape for r in variable_results if r.metrics and r.metrics.smape is not None
+    ]
+    average_smape = sum(valid_smapes) / len(valid_smapes) if valid_smapes else None
+
+    valid_rmses = [
+        r.metrics.rmse for r in variable_results if r.metrics and r.metrics.rmse is not None
+    ]
+    average_rmse = sum(valid_rmses) / len(valid_rmses) if valid_rmses else None
+
+    valid_maes = [
+        r.metrics.mae for r in variable_results if r.metrics and r.metrics.mae is not None
+    ]
+    average_mae = sum(valid_maes) / len(valid_maes) if valid_maes else None
+
+    valid_biases = [
+        r.metrics.bias for r in variable_results if r.metrics and r.metrics.bias is not None
+    ]
+    average_bias = sum(valid_biases) / len(valid_biases) if valid_biases else None
+
     # Story 6.24: 11 variables with data sources after external data integration:
     # - 8 internal SECIL variables (revenue, ebitda, sales_volume, electricity_cost,
     #   thermal_cost, variable_cost, avg_selling_price, capacity_utilization)
     # - 3 external commodity variables (ttf_gas_price, petcoke_price, co2_eua_price)
     # clinker_factor REMOVED - derived metric requiring SECIL operational data extraction
-    # Gate requirement: 9/11 variables passing + variable_cost within target
+    # Gate requirement: 9/11 variables passing + variable_cost within target + MASE < 1.0
     quality_gate = QualityGateResult(
         passed=(
             variables_passed >= 9
@@ -762,6 +1073,7 @@ async def run_unified_validation(
                 and variable_cost_result.actual_mape is not None
                 and variable_cost_result.actual_mape <= variable_cost_result.target_mape
             )
+            and mase_passed  # Story 6.26: Add MASE criterion
         ),
         minimum_required=9,
         actual_passed=variables_passed,
@@ -769,6 +1081,10 @@ async def run_unified_validation(
         variable_cost_target=CEMENT_FORECAST_VARIABLES[
             "variable_cost"
         ].target_mape,  # Story 6.23: Use configured target
+        # Story 6.26: Multi-metric extension
+        average_mase=average_mase,
+        mase_passed=mase_passed,
+        mase_target=1.0,
     )
 
     runtime = time.time() - start_time
@@ -781,6 +1097,12 @@ async def run_unified_validation(
         variables_passed=variables_passed,
         pass_rate=variables_passed / len(test_vars) if test_vars else 0.0,
         average_mape=average_mape,
+        # Story 6.26: Multi-metric summary
+        average_mase=average_mase,
+        average_smape=average_smape,
+        average_rmse=average_rmse,
+        average_mae=average_mae,
+        average_bias=average_bias,
         variable_results=variable_results,
         model_performance={},  # TODO: Extract from ensemble results
         quality_gate=quality_gate,
@@ -818,10 +1140,13 @@ def export_json(
 
 
 def print_summary(result: UnifiedValidationResult) -> None:
-    """Print validation summary to console."""
-    print("\n" + "=" * 70)
-    print("UNIFIED FORECASTING VALIDATION RESULTS")
-    print("=" * 70)
+    """Print validation summary to console.
+
+    Story 6.26: Updated to show multi-metric results (MAPE, MASE, SMAPE, Bias).
+    """
+    print("\n" + "=" * 100)
+    print("UNIFIED FORECASTING VALIDATION RESULTS (Multi-Metric)")
+    print("=" * 100)
 
     print(f"\nTimestamp: {result.timestamp}")
     print(f"Runtime: {result.runtime_seconds:.1f}s")
@@ -832,21 +1157,44 @@ def print_summary(result: UnifiedValidationResult) -> None:
     )
     print(f"Average MAPE: {result.average_mape:.2f}%")
 
-    print("\n" + "-" * 70)
-    print(f"{'Variable':<30} {'Target':<10} {'Actual':<10} {'Status':<10}")
-    print("-" * 70)
+    # Story 6.26: Show average multi-metrics
+    if result.average_mase is not None:
+        mase_status = "✓ better than naïve" if result.average_mase < 1.0 else "✗ worse than naïve"
+        print(f"Average MASE: {result.average_mase:.2f} ({mase_status})")
+    if result.average_smape is not None:
+        print(f"Average SMAPE: {result.average_smape:.2f}%")
+    if result.average_bias is not None:
+        bias_direction = "over-predicting" if result.average_bias > 0 else "under-predicting"
+        print(f"Average Bias: {result.average_bias:+.2f} ({bias_direction})")
+
+    # Story 6.26: Multi-metric table header
+    print("\n" + "-" * 100)
+    print(
+        f"{'Variable':<28} {'Target':<9} {'MAPE':<9} {'MASE':<8} {'SMAPE':<9} {'Bias':<10} {'Status':<8}"
+    )
+    print("-" * 100)
 
     for var_result in result.variable_results:
         status = "PASS" if var_result.passed else "FAIL"
-        actual = f"{var_result.actual_mape:.2f}%" if var_result.actual_mape is not None else "N/A"
+        mape_str = f"{var_result.actual_mape:.2f}%" if var_result.actual_mape is not None else "N/A"
+
+        # Story 6.26: Extract multi-metric values
+        m = var_result.metrics
+        mase_str = f"{m.mase:.2f}" if m and m.mase is not None else "-"
+        smape_str = f"{m.smape:.1f}%" if m and m.smape is not None else "-"
+        bias_str = f"{m.bias:+.1f}" if m and m.bias is not None else "-"
+
         print(
-            f"{var_result.display_name:<30} "
-            f"<{var_result.target_mape}%{'':<7} "
-            f"{actual:<10} "
-            f"{status:<10}"
+            f"{var_result.display_name:<28} "
+            f"<{var_result.target_mape}%{'':<5} "
+            f"{mape_str:<9} "
+            f"{mase_str:<8} "
+            f"{smape_str:<9} "
+            f"{bias_str:<10} "
+            f"{status:<8}"
         )
 
-    print("\n" + "=" * 70)
+    print("\n" + "=" * 100)
     gate_status = "PASSED" if result.quality_gate.passed else "FAILED"
     print(f"QUALITY GATE: {gate_status}")
     print(
@@ -858,7 +1206,23 @@ def print_summary(result: UnifiedValidationResult) -> None:
         else "N/A"
     )
     print(f"  Variable Cost: {vc_mape_str} (target: <{result.quality_gate.variable_cost_target}%)")
-    print("=" * 70 + "\n")
+
+    # Story 6.26: Show MASE quality gate
+    if result.quality_gate.average_mase is not None:
+        mase_gate = "PASS" if result.quality_gate.mase_passed else "FAIL"
+        print(
+            f"  Average MASE: {result.quality_gate.average_mase:.2f} (target: <{result.quality_gate.mase_target}) - {mase_gate}"
+        )
+
+    print("=" * 100)
+
+    # Story 6.26: Legend for metrics
+    print("\nMetric Legend:")
+    print("  MAPE  = Mean Absolute Percentage Error (lower is better, <5% excellent)")
+    print("  MASE  = Mean Absolute Scaled Error (<1.0 means better than naïve baseline)")
+    print("  SMAPE = Symmetric MAPE (bounded 0-200%, handles zeros better)")
+    print("  Bias  = Systematic over(+) or under(-) prediction")
+    print()
 
 
 # =============================================================================
@@ -915,6 +1279,17 @@ holdout validation. Full async implementation is planned for future iterations.
         action="store_true",
         help="Use MCP-compatible output schema",
     )
+    parser.add_argument(
+        "--report",
+        action="store_true",
+        help="Generate comprehensive markdown validation report with actionable guidance",
+    )
+    parser.add_argument(
+        "--report-dir",
+        type=str,
+        default="reports",
+        help="Directory for report output (default: reports)",
+    )
 
     # Execution options
     parser.add_argument(
@@ -963,6 +1338,18 @@ holdout validation. Full async implementation is planned for future iterations.
         filename = f"unified-validation-{timestamp}.json"
         output_path = Path("reports") / filename
         export_json(result, output_path, mcp_format=args.mcp_format)
+
+    # Story 6.26: Generate comprehensive report if requested
+    if args.report:
+        report_dir = Path(args.report_dir)
+        formats = ["markdown", "json"]
+        if not args.quiet:
+            formats.append("console")
+        report_paths = generate_validation_report(result, output_dir=report_dir, formats=formats)
+        if not args.quiet:
+            for fmt, path in report_paths.items():
+                if path:
+                    print(f"Report ({fmt}): {path}")
 
     # Return exit code based on quality gate
     return 0 if result.quality_gate.passed else 1

@@ -462,6 +462,18 @@
       "reason": "Story 6.24 growth - refactoring planned for Epic 7",
       "target_lines": 500,
       "directory": "raglite/"
+    },
+    "raglite/forecasting/report_generator.py": {
+      "lines": 742,
+      "reason": "Story 6.29 - Unified validation report generator with templates",
+      "target_lines": 500,
+      "directory": "raglite/"
+    },
+    "raglite/forecasting/data_quality/config.py": {
+      "lines": 584,
+      "reason": "Story 6.29 - Variable quality configs with thresholds (data-driven)",
+      "target_lines": 500,
+      "directory": "raglite/"
     }
   }
 }

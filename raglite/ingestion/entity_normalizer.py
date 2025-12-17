@@ -223,6 +223,33 @@ def get_entity_aliases(canonical_entity: str) -> list[str]:
     return aliases
 
 
+def get_entity_exact_match_clause(canonical_entity: str) -> str:
+    """Generate SQL IN clause for exact entity matching (no wildcards).
+
+    Story 6.28: Exact matching prevents entity contamination discovered in audit.
+    ILIKE '%portugal%' matches 560 rows vs exact match returns ~50 rows.
+
+    Args:
+        canonical_entity: Canonical entity name (e.g., "Portugal", "Group")
+
+    Returns:
+        SQL IN clause string for use in WHERE clause.
+
+    Example:
+        >>> get_entity_exact_match_clause("Portugal")
+        "entity IN ('Portugal', 'PT', 'Portugal Cement', ...)"
+    """
+    # Get all known aliases for this entity
+    aliases = get_entity_aliases(canonical_entity)
+
+    if not aliases:
+        return f"entity = '{canonical_entity}'"
+
+    # Use exact IN clause - no wildcards
+    quoted_aliases = [f"'{alias}'" for alias in aliases]
+    return f"entity IN ({', '.join(quoted_aliases)})"
+
+
 def get_entity_ilike_pattern(canonical_entity: str, escape_percent: bool = True) -> str:
     """Generate SQL ILIKE ANY pattern for an entity and all its aliases.
 
