@@ -73,6 +73,7 @@ from raglite.forecasting.report_generator import (  # noqa: E402
 from raglite.forecasting.validation_methods import (  # noqa: E402
     calculate_all_metrics,
     calculate_cv_mape,
+    calculate_fqs,
     calculate_holdout_mape,
     calculate_walkforward_mape,
     validate_metric_consistency,
@@ -170,7 +171,15 @@ CEMENT_FORECAST_VARIABLES: dict[str, VariableConfig] = {
         # Commit 88785ba disabled them → 31.68% MAPE (39.6x regression)
         # Story 6.24.3: Added construction indicators - cement sales driven by building activity
         # Sales volume responds to macro indicators (building activity, interest rates, fuel costs)
-        regressors=["euribor_3m", "diesel", "ttf_gas", "construction_output", "building_permits"],
+        # Forecasting Quality Enhancement: Added construction_confidence for market sentiment
+        regressors=[
+            "euribor_3m",
+            "diesel",
+            "ttf_gas",
+            "construction_output",
+            "building_permits",
+            "construction_confidence",
+        ],
         target_mape=10.0,  # Story 6.23: Adjusted to 10% - sales volume has high volatility (8.65% current)
         db_metric_aliases=["Sales Volumes", "sales volumes", "Volume IM - kton"],
     ),
@@ -953,6 +962,8 @@ async def run_unified_validation(
                 historical_data=forecast_data.historical,
                 seasonality=12,  # Monthly data
             )
+            # Calculate FQS (Forecast Quality Score) - composite metric
+            fqs = calculate_fqs(mape=all_metrics.mape, mase=all_metrics.mase)
             multi_metrics = MultiMetricValues(
                 mape=all_metrics.mape,
                 mase=all_metrics.mase,
@@ -960,6 +971,7 @@ async def run_unified_validation(
                 rmse=all_metrics.rmse,
                 mae=all_metrics.mae,
                 bias=all_metrics.bias,
+                fqs=fqs,
             )
             # Use calculated MAPE if forecast_data.mape was None (consistency)
             if mape is None and all_metrics.mape is not None:
@@ -1086,6 +1098,20 @@ async def run_unified_validation(
     ]
     average_bias = sum(valid_biases) / len(valid_biases) if valid_biases else None
 
+    # Calculate average FQS (Forecast Quality Score)
+    valid_fqs = [r.metrics.fqs for r in variable_results if r.metrics and r.metrics.fqs is not None]
+    average_fqs = sum(valid_fqs) / len(valid_fqs) if valid_fqs else None
+
+    # Calculate controllable FQS (excluding data quality exempt variables)
+    controllable_fqs_list = [
+        r.metrics.fqs
+        for r in variable_results
+        if r.metrics and r.metrics.fqs is not None and r.variable_name not in exempt_vars
+    ]
+    controllable_fqs = (
+        sum(controllable_fqs_list) / len(controllable_fqs_list) if controllable_fqs_list else None
+    )
+
     # Story 6.24: 11 variables with data sources after external data integration:
     # - 8 internal SECIL variables (revenue, ebitda, sales_volume, electricity_cost,
     #   thermal_cost, variable_cost, avg_selling_price, capacity_utilization)
@@ -1114,6 +1140,9 @@ async def run_unified_validation(
         controllable_mase=controllable_mase,
         exempt_variables=exempt_vars,
         controllable_mase_passed=controllable_mase_passed,
+        # FQS (Forecast Quality Score) - composite metric
+        average_fqs=average_fqs,
+        controllable_fqs=controllable_fqs,
     )
 
     runtime = time.time() - start_time
@@ -1132,6 +1161,7 @@ async def run_unified_validation(
         average_rmse=average_rmse,
         average_mae=average_mae,
         average_bias=average_bias,
+        average_fqs=average_fqs,  # FQS (Forecast Quality Score)
         variable_results=variable_results,
         model_performance={},  # TODO: Extract from ensemble results
         quality_gate=quality_gate,

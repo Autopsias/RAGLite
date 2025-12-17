@@ -1,4 +1,4 @@
-# generated: 2025-11-09
+# generated: 2025-12-17
 # project: RAGLite
 # project_key: RAGLite
 # tracking_system: file-system
@@ -29,7 +29,7 @@
 # - SM typically drafts next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', SM reviews, then Dev moves to 'done'
 
-generated: 2025-11-09
+generated: 2025-12-17
 project: RAGLite
 project_key: RAGLite
 tracking_system: file-system
@@ -129,23 +129,45 @@ development_status:
   4-10-forecasting-insights-test-suite: done  # ✅ COMPLETE (2025-11-27) - 87 tests pass, all ACs met, validation framework ready
   epic-4-retrospective: completed  # ✅ COMPLETE (2025-11-30) - Retrospective facilitated, learnings documented, 2 new stories added to Epic 5
 
-  # Epic 6: Advanced Forecasting with External Data (NEW - 2025-12-04)
+  # Epic 6: Advanced Forecasting with External Data ✅ COMPLETE (2025-12-17)
   # Sprint Change Proposal: SCP-2025-12-04-001 APPROVED
   # Goal: Multi-variate forecasting with external Portuguese/EU data sources
-  # Timeline: 3-4 weeks (14-20 days)
-  # Blockers: None (Epic 4 complete, technologies approved)
-  epic-6: backlog
+  # Result: 17/20 variables passing validation (baseline established)
+  epic-6: done
 
-  # Epic 6 Stories (To be created by PM Agent)
-  6-1-tier-1-external-data-integration: review  # ✅ Implementation complete, 61 tests passing, 82.33% coverage
-  6-2-postgresql-external-data-schema: backlog  # PostgreSQL schema for external data storage
-  6-3-prophet-multivariate-forecasting: backlog  # Prophet with external regressors
-  6-4-model-ensemble-framework: backlog  # scikit-learn + XGBoost ensemble
-  6-5-automated-data-refresh-scheduler: backlog  # APScheduler integration
-  6-6-external-data-query-tool-mcp: backlog  # MCP tool for external data queries
-  6-7-multivariate-forecast-accuracy-validation: backlog  # Accuracy validation (±10% target)
-  6-8-tier-2-data-sources-conditional: backlog  # Conditional: ONLY if Story 6.7 <±12%
-  epic-6-retrospective: optional
+  # Epic 6 Stories - ALL COMPLETE
+  6-1-tier-1-external-data-integration: done  # ✅ External data clients implemented
+  6-2-postgresql-external-data-schema: done  # ✅ PostgreSQL schema deployed
+  6-3-prophet-multivariate-forecasting: done  # ✅ Prophet with external regressors
+  6-4-model-ensemble-framework: done  # ✅ XGBoost, LightGBM, CatBoost integrated
+  6-5-automated-data-refresh-scheduler: done  # ✅ APScheduler integration
+  6-6-external-data-query-tool-mcp: done  # ✅ MCP tool operational
+  6-7-multivariate-forecast-accuracy-validation: done  # ✅ Validation framework complete
+  6-8-tier-2-data-sources-conditional: done  # ✅ Additional sources integrated
+  6-9-external-data-source-fixes: done  # ✅ Data source stability fixes
+  6-10-forecasting-data-quality: done  # ✅ Data quality framework
+  6-11-mcp-multivariate-forecasting: done  # ✅ MCP multivariate support
+  6-12-catboost-adaptive-weights: done  # ✅ CatBoost optimization
+  6-13-chronos2-cold-start-ensemble: done  # ✅ Chronos-2 integration
+  6-14-tft-training-workflow: done  # ✅ TFT training pipeline
+  6-24-forecasting-validation-coverage: done  # ✅ Validation test coverage
+  epic-6-retrospective: done  # ✅ Retrospective complete, led to Epic 7
+
+  # Epic 7: Intelligent Model Selection Framework 🟡 READY FOR IMPLEMENTATION
+  # Sprint Change Proposal: APPROVED-2025-12-17 (correct-course)
+  # Goal: Per-variable model selection via cross-validation across 9 models
+  # Timeline: 10 development days (2 weeks)
+  # Dependencies: Epic 6 (COMPLETE)
+  epic-7: backlog
+
+  # Epic 7 Stories (6 stories, P0 priority)
+  7-1-add-arima-ets-model-wrappers: backlog  # NEW: pmdarima Auto-ARIMA + statsmodels ETS
+  7-2-data-characteristics-analyzer: backlog  # NEW: ADF/KPSS stationarity, ACF seasonality
+  7-3-per-variable-model-selection-cross-validation: backlog  # NEW: 9 models, TimeSeriesSplit CV
+  7-4-model-selection-cache-postgresql: backlog  # NEW: PostgreSQL table, 7-day TTL
+  7-5-model-selection-slash-commands-subagent: backlog  # NEW: /model-selection command
+  7-6-mcp-integration-model-selection: backlog  # NEW: MCP query-time routing
+  epic-7-retrospective: optional
 
   # Epic 5: Production Readiness & Real-Time Operations
   # ⚠️ BLOCKED by Epic 6 until data pipeline components ready for cloud deployment

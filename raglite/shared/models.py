@@ -1255,6 +1255,16 @@ class VariableValidationDetail(BaseModel):
     )
     best_model: str = Field(default="", description="Best performing model")
 
+    # Multi-metric fields (Forecasting Quality Enhancement)
+    actual_mase: float | None = Field(None, description="MASE value (<1.0 = better than naïve)")
+    actual_smape: float | None = Field(None, description="Symmetric MAPE (0-200%)")
+    actual_bias: float | None = Field(
+        None, description="Bias (+ = over-predict, - = under-predict)"
+    )
+    fqs: float | None = Field(None, description="Forecast Quality Score (0-100)")
+    primary_metric_used: str = Field(default="mape", description="Primary metric for pass/fail")
+    mase_only_pass: bool = Field(default=False, description="True if MASE-only pass applied")
+
 
 class ModelPerformanceDetail(BaseModel):
     """Per-model performance detail for MCP responses.
@@ -1304,6 +1314,12 @@ class ValidationResponse(BaseModel):
     # Quality gate
     quality_gate_passed: bool = Field(..., description="Whether Epic 6 quality gate passed")
     variable_cost_mape: float | None = Field(None, description="Variable Cost MAPE if tested")
+
+    # Multi-metric summary (Forecasting Quality Enhancement)
+    average_mase: float | None = Field(None, description="Average MASE (<1.0 = better than naïve)")
+    average_fqs: float | None = Field(None, description="Average Forecast Quality Score (0-100)")
+    controllable_mase: float | None = Field(None, description="MASE excluding exempt variables")
+    controllable_fqs: float | None = Field(None, description="FQS excluding exempt variables")
 
     # Details
     variable_results: list[VariableValidationDetail] = Field(

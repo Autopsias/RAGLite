@@ -211,7 +211,7 @@ def _get_tft_model() -> TemporalFusionTransformer | None:
 
 
 from raglite.shared.logging import get_logger
-from raglite.shared.models import ForecastPoint, ForecastResult, TimeSeriesData
+from raglite.shared.models import ForecastPoint, ForecastResult, TimeSeriesData, TimeSeriesPoint
 
 logger = get_logger(__name__)
 
@@ -1558,6 +1558,111 @@ async def _generate_chronos_cold_start_forecast(
     )
 
 
+# FIX (2025-12-16): Pre-forecasting data quality validation
+# Validates time-series data before forecasting to catch data quality issues early
+POSITIVE_ONLY_METRICS = {"ebitda", "revenue", "capacity_utilization", "sales_volume"}
+ALLOW_NEGATIVE_METRICS = {"variable_cost", "thermal_cost", "electricity_cost"}  # Cost adjustments
+
+
+def validate_timeseries_for_forecast(
+    metric: str, points: list[TimeSeriesPoint]
+) -> tuple[bool, list[str]]:
+    """Pre-flight validation for time-series data before forecasting.
+
+    FIX (2025-12-16): Detects data quality issues that cause forecast failures:
+    1. Scale within expected range (catches kEUR/M€ mixing after extraction)
+    2. Sign consistency (positive/negative per metric type)
+    3. No extreme swings (>10x between consecutive points = data contamination)
+
+    Args:
+        metric: Name of the metric being forecast
+        points: List of TimeSeriesPoint data to validate
+
+    Returns:
+        Tuple of (is_valid, list_of_issues). is_valid=True if no critical issues.
+        Issues are logged as warnings but do not block forecasting.
+    """
+    if not points:
+        return False, ["No data points provided"]
+
+    issues: list[str] = []
+    values = [p.value for p in points if p.value is not None]
+
+    if not values:
+        return False, ["All data points have None values"]
+
+    metric_lower = metric.lower()
+
+    # Check 1: Sign consistency for positive-only metrics
+    if metric_lower in POSITIVE_ONLY_METRICS:
+        neg_values = [v for v in values if v < 0]
+        if neg_values:
+            issues.append(
+                f"Found {len(neg_values)} negative values for positive-only metric '{metric}': "
+                f"{neg_values[:3]}{'...' if len(neg_values) > 3 else ''}"
+            )
+            logger.warning(
+                f"Data quality issue: Negative values in {metric}",
+                extra={
+                    "metric": metric,
+                    "negative_count": len(neg_values),
+                    "sample": neg_values[:3],
+                },
+            )
+
+    # Check 2: Detect extreme swings (10x jumps indicate data contamination)
+    swing_count = 0
+    for i in range(1, len(values)):
+        if values[i - 1] != 0:
+            ratio = abs(values[i] / values[i - 1])
+            if ratio > 10 or ratio < 0.1:
+                swing_count += 1
+                if swing_count <= 3:  # Only log first 3
+                    issues.append(
+                        f"10x swing at index {i}: {values[i - 1]:.2f} -> {values[i]:.2f} (ratio: {ratio:.1f}x)"
+                    )
+
+    if swing_count > 0:
+        logger.warning(
+            f"Data quality issue: {swing_count} extreme swings (>10x) detected in {metric}",
+            extra={"metric": metric, "swing_count": swing_count},
+        )
+
+    # Check 3: Scale sanity check for known metrics
+    EXPECTED_RANGES = {
+        "ebitda": (1, 500),  # 1-500 M€ for SECIL GROUP
+        "revenue": (10, 2000),  # 10-2000 M€
+        "variable_cost": (10, 500),  # 10-500 EUR/ton
+        "capacity_utilization": (0, 100),  # 0-100%
+    }
+
+    if metric_lower in EXPECTED_RANGES:
+        expected_min, expected_max = EXPECTED_RANGES[metric_lower]
+        abs_values = [abs(v) for v in values]
+        max_val = max(abs_values)
+        min_val = min(abs_values)
+
+        if max_val > expected_max * 100:  # 100x threshold for scale detection
+            issues.append(
+                f"Scale issue: max value {max_val:.0f} exceeds expected max {expected_max} by 100x+ "
+                f"(possible kEUR/M€ mixing still present)"
+            )
+            logger.warning(
+                f"Data quality issue: Scale mismatch in {metric}",
+                extra={"metric": metric, "max_value": max_val, "expected_max": expected_max},
+            )
+
+    # Return validation result (issues are warnings, not blockers)
+    is_valid = len(issues) == 0
+    if not is_valid:
+        logger.info(
+            f"Pre-forecast validation found {len(issues)} issues for {metric}",
+            extra={"metric": metric, "issue_count": len(issues)},
+        )
+
+    return is_valid, issues
+
+
 async def generate_forecast(
     metric: str,
     historical_data: TimeSeriesData | None = None,
@@ -1638,6 +1743,26 @@ async def generate_forecast(
             metric=metric,
             historical_data=historical_data,
             periods_ahead=periods_ahead,
+        )
+
+    # FIX (2025-12-16): Pre-flight data quality validation
+    # Validates data before forecasting to catch issues like:
+    # - Negative values for positive-only metrics (EBITDA, revenue)
+    # - Extreme swings (>10x) indicating data contamination
+    # - Scale mismatches (kEUR vs M€ that wasn't normalized)
+    is_valid, validation_issues = validate_timeseries_for_forecast(
+        metric=metric, points=historical_data.points
+    )
+    if not is_valid:
+        # Log issues but don't block forecasting (data already filtered/normalized upstream)
+        # The validation serves as a diagnostic tool to detect if upstream fixes are working
+        logger.warning(
+            f"Pre-forecast validation issues for {metric}: {validation_issues[:3]}",
+            extra={
+                "metric": metric,
+                "issues": validation_issues,
+                "data_points": len(historical_data.points),
+            },
         )
 
     # Step 1: Prepare DataFrame for Prophet (requires 'ds' and 'y' columns)
@@ -1880,6 +2005,26 @@ async def generate_forecast(
                         label=month_name,
                     )
                 )
+
+            # FIX (2025-12-16): Clamp negative values for positive-only metrics
+            # EBITDA, revenue, capacity_utilization should never be negative
+            if metric.lower() in POSITIVE_ONLY_METRICS:
+                clamped_count = 0
+                for i, point in enumerate(forecast_points):
+                    if point.value < 0:
+                        clamped_count += 1
+                        forecast_points[i] = ForecastPoint(
+                            date=point.date,
+                            value=0.0,  # Clamp to 0
+                            lower=max(0.0, point.lower),
+                            upper=point.upper,
+                            label=point.label,
+                        )
+                if clamped_count > 0:
+                    logger.warning(
+                        f"Clamped {clamped_count} negative forecast values to 0 for positive-only metric {metric}",
+                        extra={"metric": metric, "clamped_count": clamped_count},
+                    )
 
             logger.debug(
                 "Monthly forecast generated",

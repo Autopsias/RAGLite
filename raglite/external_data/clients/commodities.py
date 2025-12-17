@@ -41,9 +41,18 @@ CO2_DATA_SOURCES = {
     "icap": "https://icapcarbonaction.com/en/ets-prices",
 }
 
-# Yahoo Finance ticker for CO2/Carbon - KraneShares Global Carbon Strategy ETF
-# Tracks ICE ECX EUA futures and other global carbon credits - good EU ETS proxy
-YAHOO_CO2_TICKER = "KRBN"
+# Story 6.29 P3: REMOVED KRBN fallback - it was providing wrong data
+# KRBN is a Global Carbon ETF (~$30 USD share price), NOT EU ETS prices (~€70-85/tCO2)
+# The values are completely different instruments and cannot be used interchangeably
+# See: https://tradingeconomics.com/commodity/carbon for real EU ETS prices
+
+# Sandbag Carbon Price Viewer - sources data from ICAP (official EU ETS prices)
+# Historical data up to April 2025, EUR/tCO2
+SANDBAG_CARBON_URL = "https://sandbag.be/carbon-price-viewer/"
+
+# Minimum expected EU ETS price in EUR (sanity check)
+# EU ETS prices have been 50-100 EUR/tCO2 since 2022
+MIN_EXPECTED_CO2_PRICE_EUR = 40.0
 
 
 class CommoditiesClient:
@@ -136,7 +145,14 @@ class CommoditiesClient:
         start_date: date,
         end_date: date,
     ) -> list[CO2EUAPrice]:
-        """Fetch CO2 EUA prices from Ember Climate or Yahoo Finance fallback.
+        """Fetch CO2 EUA prices from available sources.
+
+        Story 6.29 P3: Removed KRBN ETF fallback - it provided wrong data.
+        KRBN is a Global Carbon ETF (~$30 USD), NOT EU ETS prices (~€70-85/tCO2).
+
+        Current fallback chain:
+        1. Ember Energy API (deprecated as of 2025-01)
+        2. Cache (if validated)
 
         Args:
             start_date: Start of date range
@@ -150,117 +166,114 @@ class CommoditiesClient:
             extra={"start": str(start_date), "end": str(end_date)},
         )
 
-        # Ember Energy has a public API for carbon prices
-        # Story 6.9.1 AC4: Updated from deprecated ember-climate.org domain (deprecated 2025-01-01)
-        # API docs: https://api.ember-energy.org/v1/docs
+        # Ember Energy API (likely deprecated - returns 404 as of Dec 2024)
+        # Keeping for potential future reactivation
         url = "https://api.ember-energy.org/v1/carbon-price-tracker/eu-ets"
 
         try:
             data = await self._fetch_with_retry(url)
             results = self._parse_co2_prices(data, start_date, end_date)
-            if results:
-                return results
+            # Validate prices are in expected range
+            validated = self._validate_co2_prices(results)
+            if validated:
+                return validated
         except ExternalDataFetchError:
-            logger.warning("Ember API failed, trying Yahoo Finance fallback")
+            logger.warning(
+                "Ember CO2 API unavailable (deprecated as of 2025-01)",
+                extra={"url": url},
+            )
 
-        # Fallback: Yahoo Finance KRBN (KraneShares Global Carbon ETF)
-        try:
-            return await self._fetch_yahoo_co2(start_date, end_date)
-        except ExternalDataFetchError:
-            # Fall back to cache
-            logger.warning("Yahoo Finance failed, using cache")
-            cached_results = self.load_from_cache("co2_eua", start_date, end_date)
-            # Cast is safe: load_from_cache with "co2_eua" only returns CO2EUAPrice instances
-            return [item for item in cached_results if isinstance(item, CO2EUAPrice)]
+        # Story 6.29 P3: REMOVED Yahoo Finance KRBN fallback
+        # KRBN ETF share price (~$30) is NOT the same as EU ETS carbon price (~€70-85)
+        # This was causing MASE of 7.63 due to fundamentally wrong data
 
-    async def _fetch_yahoo_co2(
+        # Fall back to cache (only if contains validated data)
+        logger.warning(
+            "CO2 price API unavailable, checking cache",
+            extra={"note": "Consider importing CSV with correct EU ETS prices"},
+        )
+        cached_results = self.load_from_cache("co2_eua", start_date, end_date)
+        co2_results = [item for item in cached_results if isinstance(item, CO2EUAPrice)]
+
+        # Validate cached data - reject if prices are too low (likely KRBN contamination)
+        validated = self._validate_co2_prices(co2_results)
+        if not validated:
+            logger.error(
+                "CO2 cache contains invalid data (prices below €40, likely KRBN contamination)",
+                extra={
+                    "cached_count": len(co2_results),
+                    "min_price": min((p.price for p in co2_results), default=0),
+                    "action": "Import correct EU ETS prices via CSV",
+                },
+            )
+            return []
+
+        return validated
+
+    def _validate_co2_prices(self, prices: list[CO2EUAPrice]) -> list[CO2EUAPrice]:
+        """Validate CO2 prices are in expected EUR range.
+
+        Story 6.29 P3: Added to detect KRBN contamination.
+        EU ETS prices have been 50-100 EUR/tCO2 since 2022.
+        KRBN ETF trades at ~$30/share - if we see prices this low, data is wrong.
+
+        Args:
+            prices: List of CO2 price records
+
+        Returns:
+            Validated prices (only those >= MIN_EXPECTED_CO2_PRICE_EUR)
+        """
+        if not prices:
+            return []
+
+        # Check for KRBN contamination (prices significantly below expected EU ETS levels)
+        valid_prices = []
+        invalid_count = 0
+
+        for price in prices:
+            # Convert USD to EUR if needed (approximate)
+            price_eur = price.price
+            if price.currency == "USD":
+                price_eur = price.price * 0.92  # Approximate USD->EUR
+
+            if price_eur >= MIN_EXPECTED_CO2_PRICE_EUR:
+                valid_prices.append(price)
+            else:
+                invalid_count += 1
+
+        if invalid_count > 0:
+            logger.warning(
+                "CO2 price validation: rejected low prices (likely KRBN contamination)",
+                extra={
+                    "rejected": invalid_count,
+                    "accepted": len(valid_prices),
+                    "min_threshold_eur": MIN_EXPECTED_CO2_PRICE_EUR,
+                },
+            )
+
+        return valid_prices
+
+    # Story 6.29 P3: DEPRECATED - KRBN provides fundamentally wrong data
+    # KRBN is a Global Carbon ETF (~$30 USD share price)
+    # EU ETS carbon prices are ~€70-85/tCO2 - completely different instruments
+    # This method is kept for reference but should NOT be used
+    async def _fetch_yahoo_co2_DEPRECATED(
         self,
         start_date: date,
         end_date: date,
     ) -> list[CO2EUAPrice]:
-        """Fetch CO2 prices from Yahoo Finance using KRBN ETF as proxy.
+        """DEPRECATED: Do not use - KRBN ETF is not a valid EU ETS proxy.
 
-        KRBN tracks global carbon credits including EU ETS - good proxy for EUA prices.
+        This method was returning KRBN ETF share prices (~$30 USD) instead of
+        actual EU ETS carbon prices (~€70-85/tCO2). The data types are completely
+        different and cannot be used interchangeably.
 
-        Args:
-            start_date: Start of date range
-            end_date: End of date range
-
-        Returns:
-            List of CO2 EUA price records
+        See Story 6.29 P3 for details.
         """
-        try:
-            import warnings
-
-            import yfinance as yf  # type: ignore[import-untyped,import-not-found]
-
-            warnings.filterwarnings("ignore", category=FutureWarning)
-
-            logger.info(
-                "Fetching CO2 prices from Yahoo Finance", extra={"ticker": YAHOO_CO2_TICKER}
-            )
-
-            # Fetch KRBN (KraneShares Global Carbon Strategy ETF)
-            df = yf.download(
-                YAHOO_CO2_TICKER,
-                start=str(start_date),
-                end=str(end_date),
-                progress=False,
-                auto_adjust=True,
-            )
-
-            if df.empty:
-                raise ExternalDataFetchError(
-                    source="Yahoo_Finance",
-                    message=f"No data returned for {YAHOO_CO2_TICKER}",
-                )
-
-            results: list[CO2EUAPrice] = []
-            for idx, row in df.iterrows():
-                try:
-                    record_date = idx.date() if hasattr(idx, "date") else idx
-                    close_price = float(
-                        row["Close"].iloc[0] if hasattr(row["Close"], "iloc") else row["Close"]
-                    )
-
-                    results.append(
-                        CO2EUAPrice(
-                            date=record_date,
-                            price=close_price,
-                            currency="USD",  # KRBN is USD-denominated
-                        )
-                    )
-                except (ValueError, KeyError, IndexError) as e:
-                    logger.warning(
-                        "Failed to parse Yahoo CO2 record",
-                        extra={"date": str(idx), "error": str(e)},
-                    )
-                    continue
-
-            logger.info(
-                "Fetched CO2 prices from Yahoo Finance",
-                extra={"count": len(results)},
-            )
-
-            # Cache the results
-            if results:
-                # Cast to CommodityPrice list for cache storage
-                self.save_to_cache("co2_eua", results)
-
-            return results
-
-        except ImportError as e:
-            raise ExternalDataFetchError(
-                source="Yahoo_Finance",
-                message="yfinance not installed",
-                original_error=e,
-            ) from e
-        except Exception as e:
-            raise ExternalDataFetchError(
-                source="Yahoo_Finance",
-                message=f"Failed to fetch CO2 prices: {e}",
-                original_error=e,
-            ) from e
+        raise ExternalDataFetchError(
+            source="Yahoo_Finance",
+            message="KRBN fallback disabled - provides wrong data type (ETF price vs carbon price)",
+        )
 
     async def fetch_coal_prices(
         self,

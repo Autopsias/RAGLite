@@ -12,6 +12,7 @@ from raglite.external_data.clients.basegov import BaseGovClient
 from raglite.external_data.clients.bpstat import BPstatClient
 from raglite.external_data.clients.commodities import CommoditiesClient
 from raglite.external_data.clients.ecb import ECBClient
+from raglite.external_data.clients.entsoe import ENTSOEClient
 from raglite.external_data.clients.eu_oil_bulletin import EUOilBulletinClient
 from raglite.external_data.clients.eurostat import EurostatClient
 from raglite.external_data.clients.ice_futures import ICEFuturesClient
@@ -33,4 +34,6 @@ __all__ = [
     # Tier 2 clients (Story 6.8)
     "ICEFuturesClient",
     "EurostatClient",
+    # Story 6.29 P3 Phase 2
+    "ENTSOEClient",
 ]

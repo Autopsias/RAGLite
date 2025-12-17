@@ -203,12 +203,41 @@ qdrant.delete_collection(...)
 | Local Test | 6335 | 5433 | `financial_docs_test` |
 | CI Test | 6335 | 5433 | `financial_docs_ci` |
 
+## Backup & Recovery
+
+**CRITICAL**: Always backup before destructive operations or migrations.
+
+### Backup Commands
+
+```bash
+./scripts/backup-all.sh           # Both databases (~800MB total)
+./scripts/backup-postgresql.sh    # PostgreSQL only
+./scripts/backup-qdrant.sh        # Qdrant only
+```
+
+### Restore Commands
+
+```bash
+# PostgreSQL
+docker exec -i raglite-postgresql psql -U raglite -d raglite < backups/postgresql_backup_YYYYMMDD.sql
+
+# Qdrant - Use snapshot recovery API (see backups/README.md)
+```
+
+### Backup Location
+
+All backups stored in `backups/` directory with README documenting restore procedures.
+
+---
+
 ## Related Files
 
 - **SafetyGuard implementation**: `raglite/shared/safety.py`
 - **Test fixture with validation**: `tests/integration/conftest.py`
 - **Deployment script**: `scripts/deploy-to-production.py`
 - **Production init script**: `scripts/init-production.py`
+- **Backup scripts**: `scripts/backup-*.sh`
+- **Backup documentation**: `backups/README.md`
 
 ## History
 

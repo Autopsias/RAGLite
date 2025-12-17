@@ -340,6 +340,29 @@ class EurostatElectricityPrice(BaseModel):
     )
 
 
+class ENTSOEElectricityPrice(BaseModel):
+    """Day-ahead electricity price from ENTSO-E Transparency Platform.
+
+    Story 6.29 P3: Phase 2 - ENTSO-E Integration for Electricity Cost Regressor
+
+    Source: https://transparency.entsoe.eu/
+    Coverage: 2015-present, hourly
+    Market: European electricity markets
+    API: RESTful API with free registration
+    """
+
+    date: date
+    hour: int | None = Field(
+        default=None, ge=0, le=23, description="Hour of day (0-23) for hourly prices"
+    )
+    price_eur_mwh: float = Field(description="Day-ahead price in EUR per MWh")
+    bidding_zone: str = Field(default="PT", description="Market bidding zone (PT, ES, etc.)")
+    price_type: str = Field(
+        default="day_ahead",
+        description="Price type (day_ahead, spot_daily_avg, monthly_avg)",
+    )
+
+
 class EurostatConstructionOutput(BaseModel):
     """Construction production index from Eurostat.
 

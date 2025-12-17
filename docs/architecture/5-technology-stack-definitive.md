@@ -57,7 +57,7 @@
   - **Risk**: LOW (production-proven, minimal integration required)
   - **Timeline**: 1-2 days implementation + validation
 
-**Epic 6 (APPROVED - 2025-12-04)**:
+**Epic 6 (COMPLETE - 2025-12-17)**:
 - ✅ **PostgreSQL 16.10 LTS**: APPROVED for Epic 6 external data storage
   - **Rationale**: Store Tier 1/2 time-series data (INE, BPstat, OMIE, IPMA, etc.)
   - **Schema**: `external_data_sources` + `external_data_points` tables
@@ -77,6 +77,17 @@
   - **Rationale**: State-of-art forecasting accuracy, production-proven
   - **Alternative Considered**: LightGBM (XGBoost chosen for better documentation)
   - **Decision Authority**: Ricardo (Product Owner) - SCP-2025-12-04-001
+
+**Epic 7 (APPROVED - 2025-12-17)**:
+- ✅ **pmdarima 2.0+**: APPROVED for Auto-ARIMA model selection
+  - **Rationale**: Automatic (p,d,q) selection for ARIMA models, statsmodels wrapper
+  - **Purpose**: Per-variable model selection framework (ARIMA/SARIMA)
+  - **Alternative Considered**: Manual ARIMA fitting (rejected for complexity)
+  - **Decision Authority**: Ricardo (Product Owner) - Correct-Course workflow
+
+- ✅ **statsmodels (already in stack via Prophet)**: Used for ETS, ADF/KPSS tests
+  - **Rationale**: Exponential Smoothing (ETS), stationarity tests for data analysis
+  - **No new dependency**: Already transitive via Prophet
 
 **Phase 2B-C (CONDITIONAL - Decision Gate Approval)**:
 - ⚠️ **Neo4j 5.x**: ONLY if Phase 2B Structured <75% accuracy (requires Hybrid Architecture)

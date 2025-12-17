@@ -122,6 +122,37 @@ uv run python -m raglite.main
 
 ---
 
+## Database Backup & Restore
+
+**Backup location:** `backups/` directory
+
+### Quick Backup
+
+```bash
+./scripts/backup-all.sh           # Backup both databases
+./scripts/backup-postgresql.sh    # PostgreSQL only (337MB)
+./scripts/backup-qdrant.sh        # Qdrant only (497MB)
+```
+
+### Restore
+
+```bash
+# PostgreSQL
+docker exec -i raglite-postgresql psql -U raglite -d raglite < backups/postgresql_backup_YYYYMMDD_HHMMSS.sql
+
+# Qdrant - See backups/README.md for snapshot recovery procedures
+```
+
+### When to Backup
+
+- **Before migrations** - Always run `./scripts/backup-all.sh`
+- **Before re-ingestion** - Preserve current state
+- **Before data cleanup** - Safety checkpoint
+
+See `backups/README.md` for detailed restore instructions and backup inventory.
+
+---
+
 ## Implementation Phases
 
 ### Completed: Week 0 - Integration Spike

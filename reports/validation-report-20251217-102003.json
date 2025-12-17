@@ -1,0 +1,63 @@
+{
+  "timestamp": "2025-12-17T10:20:03.321970",
+  "runtime_seconds": 18.643082857131958,
+  "mape_method": "holdout",
+  "variables_tested": 1,
+  "variables_passed": 0,
+  "pass_rate": 0.0,
+  "average_mape": 16.869521072419793,
+  "average_mase": 1.570643766895757,
+  "average_smape": 17.740882752778784,
+  "average_rmse": 14.943212377268281,
+  "average_mae": 12.491420741810947,
+  "average_bias": -6.01210399135403,
+  "variable_results": [
+    {
+      "variable_name": "co2_eua_price",
+      "display_name": "CO2 EUA Price",
+      "target_mape": 25.0,
+      "actual_mape": 16.869521072419793,
+      "passed": false,
+      "holdout_mape": 16.869521072419793,
+      "walkforward_mape": null,
+      "cv_mape": null,
+      "metrics": {
+        "mape": 16.869521072419797,
+        "mase": 1.570643766895757,
+        "smape": 17.740882752778784,
+        "rmse": 14.943212377268281,
+        "mae": 12.491420741810947,
+        "bias": -6.01210399135403
+      },
+      "assessment_status": "unknown",
+      "assessment_text": "",
+      "recommendations": [],
+      "ensemble_weights": {},
+      "best_model": "",
+      "best_model_mape": 0.0,
+      "primary_metric_used": "mape",
+      "mase_only_pass": false,
+      "bias_alert": false,
+      "bias_alert_message": ""
+    }
+  ],
+  "model_performance": {},
+  "quality_gate": {
+    "passed": false,
+    "minimum_required": 9,
+    "actual_passed": 0,
+    "variable_cost_mape": null,
+    "variable_cost_target": 8.0,
+    "average_mase": 1.570643766895757,
+    "mase_passed": false,
+    "mase_target": 1.0,
+    "controllable_mase": null,
+    "exempt_variables": [
+      "electricity_cost",
+      "co2_eua_price"
+    ],
+    "controllable_mase_passed": true
+  },
+  "_schema_version": "2.0",
+  "_source": "raglite-unified-validation"
+}

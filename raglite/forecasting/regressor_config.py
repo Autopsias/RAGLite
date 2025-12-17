@@ -132,21 +132,25 @@ METRIC_REGRESSORS: dict[str, list[str]] = {
     # Story 6.16: Added construction_output and industrial_production for sales metrics
     # Story 6.20: Cement industry - building permits for construction volume tracking
     "sales": ["construction_output", "building_permits", "euribor_3m"],
+    # Forecasting Quality Enhancement: Added construction_confidence for market sentiment
     "sales_volume": [
         "construction_output",
         "building_permits",
+        "construction_confidence",  # NEW: EC Business Survey indicator for market sentiment
         "euribor_3m",
         "industrial_production",
     ],
     "sales volumes": [
         "construction_output",
         "building_permits",
+        "construction_confidence",  # NEW: EC Business Survey indicator for market sentiment
         "euribor_3m",
         "industrial_production",
     ],
     "sales volume": [
         "construction_output",
         "building_permits",
+        "construction_confidence",  # NEW: EC Business Survey indicator for market sentiment
         "euribor_3m",
         "industrial_production",
     ],

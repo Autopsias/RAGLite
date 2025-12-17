@@ -100,6 +100,7 @@ class Settings(BaseSettings):
     bpstat_api_key: str | None = None
     omie_api_key: str | None = None  # May not require key
     ipma_api_key: str | None = None  # Public API, no key needed
+    # Story 6.29 P3: Note - electricity prices use Ember CSV (no API key needed)
 
     # External Data Configuration (Story 6.1)
     external_data_stale_days: int = 30  # Max days before data considered stale

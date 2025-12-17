@@ -39,6 +39,7 @@ from raglite.external_data.models import (
     CommodityPrice,
     DataFrequency,
     DataSource,
+    ENTSOEElectricityPrice,
     EUDieselPrice,
     EurostatConstructionOutput,
     EurostatIndustrialProduction,
@@ -88,6 +89,8 @@ __all__ = [
     "BPstatMortgageLoans",
     # OMIE Models
     "OMIEElectricityPrice",
+    # ENTSO-E Models (Story 6.29 P3)
+    "ENTSOEElectricityPrice",
     # EU Oil Bulletin Models
     "EUDieselPrice",
     # Eurostat Models

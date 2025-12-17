@@ -34,6 +34,7 @@ class MultiMetricValues:
     rmse: float | None = None
     mae: float | None = None
     bias: float | None = None
+    fqs: float | None = None  # Forecast Quality Score (0-100 composite metric)
 
 
 @dataclass
@@ -73,6 +74,10 @@ class QualityGateResult:
     controllable_mase: float | None = None  # MASE excluding exempt variables
     exempt_variables: list[str] = field(default_factory=list)  # Variables excluded
     controllable_mase_passed: bool = True  # True if controllable_mase < 1.0
+
+    # FQS (Forecast Quality Score) - composite metric
+    average_fqs: float | None = None  # Average FQS across all variables
+    controllable_fqs: float | None = None  # FQS excluding exempt variables
 
 
 @dataclass
@@ -137,6 +142,7 @@ class UnifiedValidationResult:
     average_rmse: float | None = None  # Average RMSE
     average_mae: float | None = None  # Average MAE
     average_bias: float | None = None  # Average bias
+    average_fqs: float | None = None  # Average FQS (Forecast Quality Score)
 
     # Per-variable details
     variable_results: list[VariableValidationResult] = field(default_factory=list)

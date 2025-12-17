@@ -26,6 +26,7 @@ services:
       - POSTGRES_DB=raglite
       - POSTGRES_USER=raglite
       - POSTGRES_PASSWORD=raglite
+    shm_size: 256m  # Required for VACUUM operations (default 64m is too small)
     restart: unless-stopped
 
   # ========================================
@@ -55,4 +56,5 @@ services:
       - POSTGRES_DB=raglite_test
       - POSTGRES_USER=raglite_test
       - POSTGRES_PASSWORD=raglite_test
+    shm_size: 256m  # Required for VACUUM operations (default 64m is too small)
     restart: unless-stopped

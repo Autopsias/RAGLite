@@ -3404,7 +3404,7 @@ async def validate_forecasting_accuracy(
             timeout=timeout_seconds,
         )
 
-        # Convert to MCP response format
+        # Convert to MCP response format with multi-metrics
         variable_details = [
             VariableValidationDetail(
                 variable_name=var_result.variable_name,
@@ -3414,6 +3414,13 @@ async def validate_forecasting_accuracy(
                 passed=var_result.passed,
                 ensemble_weights=var_result.ensemble_weights,
                 best_model=var_result.best_model,
+                # Multi-metric fields (Forecasting Quality Enhancement)
+                actual_mase=var_result.metrics.mase if var_result.metrics else None,
+                actual_smape=var_result.metrics.smape if var_result.metrics else None,
+                actual_bias=var_result.metrics.bias if var_result.metrics else None,
+                fqs=var_result.metrics.fqs if var_result.metrics else None,
+                primary_metric_used=getattr(var_result, "primary_metric_used", "mape"),
+                mase_only_pass=getattr(var_result, "mase_only_pass", False),
             )
             for var_result in result.variable_results
         ]
@@ -3450,6 +3457,13 @@ async def validate_forecasting_accuracy(
             average_mape=result.average_mape,
             quality_gate_passed=result.quality_gate.passed,
             variable_cost_mape=result.quality_gate.variable_cost_mape,
+            # Multi-metric summary (Forecasting Quality Enhancement)
+            average_mase=result.average_mase,
+            average_fqs=result.average_fqs,
+            controllable_mase=result.quality_gate.controllable_mase
+            if result.quality_gate
+            else None,
+            controllable_fqs=result.quality_gate.controllable_fqs if result.quality_gate else None,
             variable_results=variable_details,
             model_performance=model_perf,
         )
