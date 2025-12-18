@@ -17,6 +17,7 @@ import pytest
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.slow,  # Forecasting is slow
+    pytest.mark.preserve_collection,  # All tests are read-only (CLI/programmatic validation)
 ]
 
 

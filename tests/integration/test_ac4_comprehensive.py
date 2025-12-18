@@ -23,7 +23,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.m
 @pytest.mark.integration
 @pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_existing=True) - skip re-ingest cleanup
 @pytest.mark.skipif(
-    not pytest.run_slow,
+    not getattr(pytest, "run_slow", False),
     reason="Requires full 160-page PDF. Run with: pytest --run-slow",
 )
 @pytest.mark.priority("P0")
@@ -116,7 +116,7 @@ async def test_ac4_160page_doclingparse_baseline():
 @pytest.mark.integration
 @pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_existing=True) - skip re-ingest cleanup
 @pytest.mark.skipif(
-    not pytest.run_slow,
+    not getattr(pytest, "run_slow", False),
     reason="Requires full 160-page PDF. Run with: pytest --run-slow",
 )
 @pytest.mark.priority("P0")
@@ -199,7 +199,7 @@ async def test_ac4_160page_pypdfium_optimized():
 
 
 @pytest.mark.skipif(
-    not pytest.run_slow,
+    not getattr(pytest, "run_slow", False),
     reason="Requires full 160-page PDF. Run with: pytest --run-slow",
 )
 @pytest.mark.priority("P0")

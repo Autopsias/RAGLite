@@ -17,8 +17,8 @@ IMPORTANT: These tests require production data with Variable Cost information.
 
 import pytest
 
-# Mark all tests as integration and slow
-pytestmark = [pytest.mark.integration, pytest.mark.slow]
+# Mark all tests as integration, slow, and read-only (preserve collection)
+pytestmark = [pytest.mark.integration, pytest.mark.slow, pytest.mark.preserve_collection]
 
 
 class TestEuropeanDecimalFormatParsing:

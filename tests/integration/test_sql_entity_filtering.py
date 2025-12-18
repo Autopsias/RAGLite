@@ -11,7 +11,7 @@ Coverage gaps addressed:
 
 import pytest
 
-pytestmark = [pytest.mark.integration]
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
 
 
 class TestExtractTimeseriesFromSqlEntityParameter:

@@ -493,10 +493,15 @@ jobs:
           # Integration Tests: Ensure test databases and users are properly configured
           echo "Setting up PostgreSQL TEST environment..."
 
-          # CRITICAL FIX: Clean up any existing PostgreSQL test containers to avoid "already in use" errors
+          # CRITICAL FIX: More aggressive cleanup to prevent port conflicts in CI
           echo "Cleaning up existing PostgreSQL test containers..."
           docker rm -f raglite-postgresql-test 2>/dev/null || true
-          sleep 2
+          sleep 3  # Increased wait time for Docker networking cleanup
+
+          # Also kill any processes that might be holding port 5433
+          if command -v lsof > /dev/null 2>&1; then
+            lsof -ti:5433 | xargs -r kill -9 2>/dev/null || true
+          fi
 
           # Start test services using docker-compose for consistency
           docker compose up -d postgresql-test
@@ -539,16 +544,20 @@ jobs:
           echo "- PostgreSQL: ${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
           echo "- Using 10-page sample PDF (~10-15s ingestion)"
           echo "- Running core integration tests (slow tests skipped)"
-          echo "- Sequential execution (shared Qdrant collection prevents parallelism)"
-          echo "- Module-level service checks to prevent hangs"
+          echo "- CRITICAL FIX: Sequential execution (-n 0) to prevent pytest-xdist worker controller errors"
           echo "- Target: 45-50 minutes total (sequential due to shared state)"
           echo "- PYTHONPATH: ${PYTHONPATH}"
           echo "========================================="
           if [ -d "tests/integration" ] && [ -n "$(find tests/integration -name 'test_*.py' -type f)" ]; then
+            # CRITICAL FIX: Use sequential execution (-n 0) instead of parallel (-n 1)
+            # pytest-xdist worker controller has internal errors with shared Qdrant collection state
+            # Integration tests share session fixtures that don't work properly with worker processes
             pytest tests/integration/ \
-              -n 1 \
+              -n 0 \
               -m "not slow" \
               -v \
+              --tb=short \
+              --maxfail=3 \
               --enforce-isolation-markers \
               --junitxml=pytest-integration-report.xml
           else
@@ -957,9 +966,16 @@ jobs:
 
           echo "Ensuring PostgreSQL container '$CONTAINER_NAME' on port $CONTAINER_PORT..."
 
-          # Cleanup any stale containers on this port
+          # CRITICAL FIX: More aggressive cleanup to prevent port conflicts in CI
+          # Remove ANY container using this port, not just named containers
+          echo "Aggressively cleaning containers on port $CONTAINER_PORT..."
           docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":${CONTAINER_PORT}->" | awk '{print $1}' | xargs -r docker rm -f || true
-          sleep 2
+          sleep 3  # Increased wait time for Docker networking cleanup
+
+          # Also kill any processes that might be holding the port
+          if command -v lsof > /dev/null 2>&1; then
+            lsof -ti:$CONTAINER_PORT | xargs -r kill -9 2>/dev/null || true
+          fi
 
           # Check if container exists with correct credentials
           if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
@@ -980,7 +996,7 @@ jobs:
                 -e POSTGRES_PASSWORD=raglite_ci \
                 --name $CONTAINER_NAME \
                 postgres:16
-              sleep 8
+              sleep 10  # Increased startup wait time
             fi
           else
             echo "Creating new PostgreSQL container..."
@@ -991,11 +1007,11 @@ jobs:
               -e POSTGRES_PASSWORD=raglite_ci \
               --name $CONTAINER_NAME \
               postgres:16
-            sleep 8
+            sleep 10  # Increased startup wait time
           fi
 
-          # Wait for PostgreSQL to be ready
-          MAX_RETRIES=30
+          # Wait for PostgreSQL to be ready with enhanced error handling
+          MAX_RETRIES=45  # Increased from 30 for more reliability
           RETRY_COUNT=0
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             if docker exec $CONTAINER_NAME psql -U raglite_ci -d raglite_ci -c "SELECT 1" > /dev/null 2>&1; then
@@ -1003,10 +1019,14 @@ jobs:
               exit 0
             fi
             RETRY_COUNT=$((RETRY_COUNT + 1))
-            echo "Waiting for PostgreSQL... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            if [ $((RETRY_COUNT % 5)) -eq 0 ]; then
+              echo "Waiting for PostgreSQL... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            fi
             sleep 1
           done
           echo "❌ PostgreSQL not available after ${MAX_RETRIES}s"
+          echo "Container logs for debugging:"
+          docker logs $CONTAINER_NAME --tail 20 || true
           exit 1
 
       - name: Run agentic workflow test suite
@@ -1035,7 +1055,7 @@ jobs:
           echo "========================================="
 
           pytest tests/integration/test_agentic_workflow_suite.py \
-            -n 1 \
+            -n 0 \
             -m "slow" \
             -v \
             --json-report \
@@ -1423,10 +1443,16 @@ jobs:
 
           echo "Ensuring PostgreSQL container '$CONTAINER_NAME' with correct credentials..."
 
-          # CLEANUP: Remove ANY container using port 5434
-          echo "Cleaning up any containers using port $CONTAINER_PORT..."
+          # CRITICAL FIX: More aggressive cleanup to prevent port conflicts in CI
+          # Remove ANY container using this port, not just named containers
+          echo "Aggressively cleaning containers on port $CONTAINER_PORT..."
           docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":${CONTAINER_PORT}->" | awk '{print $1}' | xargs -r docker rm -f || true
-          sleep 2
+          sleep 3  # Increased wait time for Docker networking cleanup
+
+          # Also kill any processes that might be holding the port
+          if command -v lsof > /dev/null 2>&1; then
+            lsof -ti:$CONTAINER_PORT | xargs -r kill -9 2>/dev/null || true
+          fi
 
           # Check if container exists
           if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
@@ -1459,7 +1485,7 @@ jobs:
                 --name $CONTAINER_NAME \
                 postgres:16
               echo "Waiting for PostgreSQL startup..."
-              sleep 8
+              sleep 10  # Increased startup wait time
             fi
           else
             echo "Creating new PostgreSQL container..."
@@ -1471,7 +1497,7 @@ jobs:
               --name $CONTAINER_NAME \
               postgres:16
             echo "Waiting for PostgreSQL startup..."
-            sleep 8
+            sleep 10  # Increased startup wait time
           fi
 
           echo "✅ PostgreSQL container ready"
@@ -1655,10 +1681,16 @@ jobs:
 
           echo "Ensuring PostgreSQL container '$CONTAINER_NAME' with correct credentials..."
 
-          # CLEANUP: Remove ANY container using port 5435
-          echo "Cleaning up any containers using port $CONTAINER_PORT..."
+          # CRITICAL FIX: More aggressive cleanup to prevent port conflicts in CI
+          # Remove ANY container using this port, not just named containers
+          echo "Aggressively cleaning containers on port $CONTAINER_PORT..."
           docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":${CONTAINER_PORT}->" | awk '{print $1}' | xargs -r docker rm -f || true
-          sleep 2
+          sleep 3  # Increased wait time for Docker networking cleanup
+
+          # Also kill any processes that might be holding the port
+          if command -v lsof > /dev/null 2>&1; then
+            lsof -ti:$CONTAINER_PORT | xargs -r kill -9 2>/dev/null || true
+          fi
 
           # Check if container exists
           if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
@@ -1691,7 +1723,7 @@ jobs:
                 --name $CONTAINER_NAME \
                 postgres:16
               echo "Waiting for initial startup..."
-              sleep 8
+              sleep 10  # Increased startup wait time
             fi
           else
             echo "Creating new PostgreSQL container..."
@@ -1703,7 +1735,7 @@ jobs:
               --name $CONTAINER_NAME \
               postgres:16
             echo "Waiting for initial startup..."
-            sleep 8
+            sleep 10  # Increased startup wait time
           fi
 
           echo "✅ PostgreSQL container ready"
@@ -1769,8 +1801,9 @@ jobs:
             echo ""
 
             # Run full suite (fast tests only - skip slow)
+            # CRITICAL FIX: Use sequential execution to avoid pytest-xdist worker controller issues
             if pytest tests/ \
-              -n 1 \
+              -n 0 \
               -m "not slow" \
               -v \
               --junitxml=burn-in-iteration-$i.xml 2>&1 | tee burn-in-iteration-$i.log; then

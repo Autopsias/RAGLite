@@ -203,7 +203,7 @@ class TestPypdfiumTableAccuracy:
     @pytest.mark.integration
     @pytest.mark.timeout(180)
     @pytest.mark.skipif(
-        not pytest.run_slow,
+        not getattr(pytest, "run_slow", False),
         reason="Requires full 160-page PDF. Run with: pytest --run-slow",
     )
     @pytest.mark.priority("P0")

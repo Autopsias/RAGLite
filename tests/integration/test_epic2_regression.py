@@ -63,7 +63,7 @@ class TestEpic2Regression:
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
-        not pytest.run_slow,
+        not getattr(pytest, "run_slow", False),
         reason="Requires full 160-page PDF. Run with: pytest --run-slow",
     )
     @pytest.mark.priority("P0")
@@ -107,7 +107,7 @@ class TestEpic2Regression:
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
-        not pytest.run_slow,
+        not getattr(pytest, "run_slow", False),
         reason="Requires full 160-page PDF. Run with: pytest --run-slow",
     )
     @pytest.mark.priority("P0")
@@ -208,7 +208,7 @@ class TestEpic2Regression:
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
-        not pytest.run_slow,
+        not getattr(pytest, "run_slow", False),
         reason="Requires full 160-page PDF. Run with: pytest --run-slow",
     )
     @pytest.mark.priority("P1")

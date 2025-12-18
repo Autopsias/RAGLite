@@ -18,6 +18,7 @@ class TestINEBuildingPermitsRealAPI:
 
     @pytest.mark.integration
     @pytest.mark.slow
+    @pytest.mark.preserve_collection
     @pytest.mark.asyncio
     async def test_ine_building_permits_real_api(self) -> None:
         """Test fetching building permits from real INE API."""
@@ -38,6 +39,7 @@ class TestINEBuildingPermitsRealAPI:
 
     @pytest.mark.integration
     @pytest.mark.slow
+    @pytest.mark.preserve_collection
     @pytest.mark.asyncio
     async def test_ine_building_permits_data_quality(self) -> None:
         """Verify INE building permits data is construction-related."""
@@ -67,6 +69,7 @@ class TestEurostatBuildingPermitsRealAPI:
 
     @pytest.mark.integration
     @pytest.mark.slow
+    @pytest.mark.preserve_collection
     @pytest.mark.asyncio
     async def test_eurostat_building_permits_real_api(self) -> None:
         """Test fetching building permits from real Eurostat API."""
@@ -92,6 +95,7 @@ class TestBuildingPermitsRegressorIntegration:
 
     @pytest.mark.integration
     @pytest.mark.slow  # Hits real INE/Eurostat APIs
+    @pytest.mark.preserve_collection
     @pytest.mark.asyncio
     async def test_building_permits_regressor_returns_series(self) -> None:
         """Verify building_permits regressor returns valid pandas Series."""
@@ -111,6 +115,7 @@ class TestBuildingPermitsRegressorIntegration:
 
     @pytest.mark.integration
     @pytest.mark.slow  # Hits real INE/Eurostat APIs
+    @pytest.mark.preserve_collection
     @pytest.mark.asyncio
     async def test_building_permits_regressor_no_duplicates(self) -> None:
         """Verify aggregated data has no duplicate dates."""
@@ -132,6 +137,7 @@ class TestBuildingPermitsCorrelation:
 
     @pytest.mark.integration
     @pytest.mark.slow
+    @pytest.mark.preserve_collection
     @pytest.mark.asyncio
     async def test_building_permits_correlation_with_construction_output(self) -> None:
         """Verify building permits correlates with construction output (proxy for sales_volume)."""

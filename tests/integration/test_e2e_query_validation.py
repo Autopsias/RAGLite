@@ -135,7 +135,7 @@ async def test_financial_terminology_handling(session_ingested_collection):
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 @pytest.mark.skipif(
-    not pytest.run_slow,
+    not getattr(pytest, "run_slow", False),
     reason="Requires full 160-page PDF. Run with: pytest --run-slow",
 )
 @pytest.mark.priority("P0")
@@ -232,7 +232,7 @@ async def test_metadata_completeness_validation(session_ingested_collection):
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 @pytest.mark.skipif(
-    not pytest.run_slow,
+    not getattr(pytest, "run_slow", False),
     reason="Requires full 160-page PDF. Run with: pytest --run-slow",
 )
 @pytest.mark.priority("P0")

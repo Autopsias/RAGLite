@@ -42,6 +42,7 @@ except ImportError:
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.slow,  # Real API calls take 2-5 seconds
+    pytest.mark.preserve_collection,  # Read-only API tests, no Qdrant modification
 ]
 
 

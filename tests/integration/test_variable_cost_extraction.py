@@ -28,7 +28,8 @@ import statistics
 import pytest
 
 # Mark all tests as integration tests and slow (H3: reduce skip rate impact on performance budget)
-pytestmark = [pytest.mark.integration, pytest.mark.slow]
+# All tests are read-only (query operations only) - skip cleanup overhead
+pytestmark = [pytest.mark.integration, pytest.mark.slow, pytest.mark.preserve_collection]
 
 
 class TestVariableCostCoefficientOfVariation:

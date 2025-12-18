@@ -26,6 +26,7 @@ import pytest
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.slow,  # Real API calls
+    pytest.mark.preserve_collection,  # Read-only tests (don't modify Qdrant)
 ]
 
 

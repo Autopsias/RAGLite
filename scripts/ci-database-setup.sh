@@ -130,9 +130,65 @@ docker exec "$TEST_CONTAINER" psql -U raglite_ci -d raglite_ci -c "GRANT ALL ON 
 
 echo "✅ Permissions granted"
 
-# 5. Initialize database schemas
+# 5. Verify Qdrant test container volume mapping
 echo ""
-echo "🏗️  Step 5: Initialize database schemas..."
+echo "🔍 Step 5: Verify Qdrant test container volume mapping..."
+
+# Check if Qdrant test container can create collections (fix volume mapping issues)
+if docker exec "$TEST_CONTAINER" qdrant --help > /dev/null 2>&1; then
+    echo "Qdrant test container command found"
+else
+    # Use separate container name for Qdrant
+    QDRANT_TEST_CONTAINER="raglite-qdrant-test"
+
+    if ! docker ps --format '{{.Names}}' | grep -q "^${QDRANT_TEST_CONTAINER}$"; then
+        echo "Qdrant test container not running, starting..."
+        docker compose up -d qdrant-test
+        echo "Waiting for Qdrant to be ready..."
+        sleep 5
+    else
+        echo "✅ Qdrant test container is running"
+    fi
+
+    # Test Qdrant collection creation to verify volume mapping
+    echo "Testing Qdrant collection creation..."
+    if uv run python -c "
+from qdrant_client import QdrantClient
+from qdrant_client.http import models
+import time
+client = QdrantClient(host='localhost', port=6335)
+max_retries=10
+for attempt in range(max_retries):
+    try:
+        try:
+            client.delete_collection('ci_test_collection')
+        except:
+            pass
+        client.create_collection(
+            collection_name='ci_test_collection',
+            vectors_config=models.VectorParams(size=128, distance=models.Distance.COSINE)
+        )
+        print('✅ Qdrant collection creation successful')
+        client.delete_collection('ci_test_collection')
+        break
+    except Exception as e:
+        if attempt == max_retries - 1:
+            raise
+        print(f'Attempt {attempt + 1}/{max_retries} failed, retrying...')
+        time.sleep(1)
+    " 2>/dev/null; then
+        echo "✅ Qdrant test container volume mapping verified"
+    else
+        echo "❌ Qdrant test container volume mapping failed"
+        echo "Attempting to fix Qdrant container..."
+        docker compose restart qdrant-test
+        sleep 5
+    fi
+fi
+
+# 6. Initialize database schemas
+echo ""
+echo "🏗️  Step 6: Initialize database schemas..."
 
 # Initialize raglite_test schema
 echo "Initializing schema for raglite_test..."
@@ -150,9 +206,9 @@ else
     echo "❌ Failed to initialize raglite_ci schema"
 fi
 
-# 6. Verify setup
+# 7. Verify setup
 echo ""
-echo "✅ Step 6: Verify setup"
+echo "✅ Step 7: Verify setup"
 
 echo "Testing raglite_test connection..."
 if docker exec "$TEST_CONTAINER" psql -U raglite_test -d raglite_test -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'" | grep -q "^[0-9]"; then
