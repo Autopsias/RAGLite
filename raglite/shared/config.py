@@ -162,25 +162,20 @@ class Settings(BaseSettings):
     def adjust_for_environment(self) -> Self:
         """Automatically adjust database settings based on APP_ENV.
 
-        CRITICAL FIX (2025-11-23): Removed PostgreSQL auto-adjustment to eliminate
-        configuration race condition in CI. PostgreSQL settings now come ONLY from
-        explicit environment variables set by CI workflow.
-
-        Root cause: The validator runs at Settings instantiation (module import time),
-        which happens BEFORE GitHub Actions sets CI=true. This caused Settings to use
-        "raglite_test" instead of "raglite_ci", creating a database mismatch where
-        ingestion wrote to one database and tests read from another.
+        CRITICAL FIX (2025-12-18): Fixed CI database configuration race condition.
+        The issue was that module import happens BEFORE GitHub Actions sets CI=true,
+        causing database name mismatches between ingestion and testing.
 
         Environment routing (Story 4.0.5):
-        - Production (default): Qdrant:6333, collection: financial_docs
-        - Test (APP_ENV=test): Qdrant:6335, collection: financial_docs_test
-        - CI: Uses explicit env vars (POSTGRES_DB=raglite_ci, etc.)
+        - Production (default): Qdrant:6333, collection: financial_docs, PostgreSQL: raglite
+        - Test (APP_ENV=test): Qdrant:6335, collection: financial_docs_test, PostgreSQL: raglite_test
+        - CI: Uses explicit env vars (POSTGRES_DB=raglite_ci, POSTGRES_PORT=5433, etc.)
 
-        CI detection: Checks GITHUB_ACTIONS, CI, or CONTINUOUS_INTEGRATION environment variables
+        CI FIX: Apply CI-specific adjustments at runtime, not just module import time.
         """
         import os
 
-        # Detect if running in CI environment
+        # Detect if running in CI environment (runtime check)
         is_ci = (
             os.getenv("GITHUB_ACTIONS") == "true"
             or os.getenv("CI") == "true"
@@ -188,7 +183,7 @@ class Settings(BaseSettings):
         )
 
         if self.app_env == "test":
-            # Qdrant adjustments (non-critical, useful for test isolation)
+            # Qdrant adjustments for test isolation
             if self.qdrant_port == 6333:
                 self.qdrant_port = 6335
             if self.qdrant_collection_name == "financial_docs":
@@ -196,17 +191,30 @@ class Settings(BaseSettings):
                 collection_suffix = "_ci" if is_ci else "_test"
                 self.qdrant_collection_name = f"financial_docs{collection_suffix}"
 
+            # PostgreSQL: CRITICAL FIX - Ensure CI uses correct database name
+            if is_ci:
+                # CI environment: Force CI-specific settings
+                if not os.getenv("POSTGRES_DB"):
+                    # Only override if not explicitly set in environment
+                    self.postgres_db = "raglite_ci"
+                if not os.getenv("POSTGRES_PORT"):
+                    self.postgres_port = 5433
+                if not os.getenv("POSTGRES_USER"):
+                    self.postgres_user = "raglite_ci"
+                if not os.getenv("POSTGRES_PASSWORD"):
+                    # nosec: B105 - Test environment default password, not production
+                    self.postgres_password = "raglite_ci"  # nosec: B105 - Test environment default password, not production
+            else:
+                # Local test environment: Use test database
+                if not os.getenv("POSTGRES_DB"):
+                    self.postgres_db = "raglite_test"
+                if not os.getenv("POSTGRES_PORT"):
+                    self.postgres_port = 5433
+
             # Story 6.24: Reduce regressor buffer for faster test execution
             # Only reduce if using the default 3-year value (allow explicit override)
             if self.regressor_buffer_years == 3:
                 self.regressor_buffer_years = 1  # 1-year buffer for ~3x faster tests
-
-            # REMOVED: PostgreSQL auto-adjustment (causes CI race condition)
-            # PostgreSQL settings now come ONLY from explicit environment variables:
-            #   - CI: POSTGRES_DB=raglite_ci (set by .github/workflows/ci.yml)
-            #   - Local tests: POSTGRES_DB=raglite_test (set by local .env.test)
-            # This ensures Settings use the correct database name regardless of
-            # when CI=true environment variable is set.
 
         return self
 

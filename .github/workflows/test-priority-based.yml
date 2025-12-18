@@ -30,7 +30,7 @@ jobs:
   # Job 1: P0 Smoke Tests (6 minutes) - Critical path validation
   smoke-tests:
     name: "Smoke Tests (P0 - 6 min)"
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, raglite]
     if: github.event_name != 'schedule' || github.event.inputs.test_suite == 'smoke'
 
     steps:
@@ -69,8 +69,7 @@ jobs:
             --cov=raglite \
             --cov-report=xml \
             --cov-report=term-missing \
-            -m "not slow" \
-            -k "P0"
+            -m "not slow and priority(P0)"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -82,7 +81,7 @@ jobs:
   # Job 2: P0+P1 Pre-Merge Tests (20 minutes) - Required for merge
   pre-merge-tests:
     name: "Pre-Merge (P0+P1 - 20 min)"
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, raglite]
     needs: smoke-tests
     if: (github.event_name == 'push' || github.event_name == 'pull_request') && github.event.inputs.test_suite != 'smoke'
 
@@ -125,8 +124,7 @@ jobs:
             --cov-report=term-missing \
             -n auto \
             --dist loadfile \
-            -m "not slow" \
-            -k "P0 or P1"
+            -m "not slow and (priority(P0) or priority(P1))"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -152,7 +150,7 @@ jobs:
   # Job 3: Full Test Suite (40 minutes) - Nightly or on-demand
   full-test-suite:
     name: "Full Suite (All priorities - 40 min)"
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, raglite]
     if: |
       github.event_name == 'schedule' ||
       github.event.inputs.test_suite == 'full' ||
@@ -227,7 +225,7 @@ jobs:
   # Job 4: Generate Test Report Summary
   test-summary:
     name: "Generate Test Summary"
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, raglite]
     needs: [smoke-tests, pre-merge-tests]
     if: always()
 

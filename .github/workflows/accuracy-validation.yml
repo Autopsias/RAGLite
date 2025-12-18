@@ -209,14 +209,19 @@ jobs:
 
       - name: Verify Qdrant TEST instance is available
         run: |
-          echo "Checking Qdrant TEST instance at port $QDRANT_PORT..."
+          echo "Setting up Qdrant TEST environment (port $QDRANT_PORT)..."
           echo "(Production is on 6333 - we use 6335 for tests)"
 
+          # Start test services using docker-compose for consistency
+          docker compose up -d qdrant-test
+
+          # Wait for Qdrant to be ready (max 30 seconds)
           MAX_RETRIES=30
           RETRY_COUNT=0
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             if curl -sf http://localhost:$QDRANT_PORT/healthz > /dev/null 2>&1; then
               echo "✅ Qdrant TEST instance available at port $QDRANT_PORT"
+
               # Check for 500 errors and restart if needed
               ERROR_500_COUNT=$(curl -sf http://localhost:$QDRANT_PORT/telemetry 2>/dev/null | python3 -c "import sys, json; data=json.load(sys.stdin); print(sum(endpoint.get('500', {}).get('count', 0) for endpoint in data['result']['requests']['rest']['responses'].values()))" 2>/dev/null || echo "0")
               echo "Recent 500 errors: $ERROR_500_COUNT"
@@ -229,7 +234,9 @@ jobs:
               exit 0
             fi
             RETRY_COUNT=$((RETRY_COUNT + 1))
-            echo "Waiting for Qdrant at port $QDRANT_PORT... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            if [ $((RETRY_COUNT % 5)) -eq 0 ]; then
+              echo "Waiting for Qdrant at port $QDRANT_PORT... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            fi
             sleep 1
           done
           echo "❌ Qdrant TEST instance not available after ${MAX_RETRIES}s"
@@ -238,93 +245,16 @@ jobs:
 
       - name: Start and verify PostgreSQL TEST instance
         run: |
-          echo "Ensuring PostgreSQL TEST container (port $POSTGRES_PORT)..."
+          echo "Setting up PostgreSQL TEST environment (port $POSTGRES_PORT)..."
           echo "(Production is on 5432 - we use 5433 for tests)"
 
-          TEST_CONTAINER="raglite-postgresql-integration"
+          # Start test services using docker-compose for consistency
+          docker compose up -d postgresql-test
 
-          # Check if TEST container exists
-          if docker ps -a --format '{{.Names}}' | grep -q "^${TEST_CONTAINER}$"; then
-            echo "PostgreSQL TEST container exists - restarting to ensure fresh state..."
-            docker restart $TEST_CONTAINER
-            echo "Waiting for restart to complete..."
-            sleep 5
-          else
-            echo "Creating new PostgreSQL TEST container..."
-            docker run -d \
-              -p $POSTGRES_PORT:5432 \
-              -e POSTGRES_DB=$POSTGRES_DB \
-              -e POSTGRES_USER=$POSTGRES_USER \
-              -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
-              --name $TEST_CONTAINER \
-              postgres:16
-            echo "Waiting for initial startup..."
-            sleep 8
-          fi
+          # Run database setup script to create users/databases
+          ./scripts/ci-database-setup.sh
 
-          echo "✅ PostgreSQL TEST container refreshed on port $POSTGRES_PORT"
-
-          # Wait for PostgreSQL to be ready (max 30 seconds)
-          echo "Waiting for PostgreSQL TEST instance to be ready..."
-
-          # Debug: Check if psql is available
-          if ! command -v psql &> /dev/null; then
-            echo "⚠️  WARNING: psql command not found! Attempting to use docker exec instead..."
-            USE_DOCKER_EXEC=true
-          else
-            echo "✓ psql command available"
-            USE_DOCKER_EXEC=false
-          fi
-
-          MAX_RETRIES=30
-          RETRY_COUNT=0
-
-          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            # Try to connect using docker exec if psql not available
-            if [ "$USE_DOCKER_EXEC" = true ]; then
-              if docker exec $TEST_CONTAINER psql -U $POSTGRES_USER -d postgres -c "SELECT 1" > /dev/null 2>&1; then
-                echo "✅ PostgreSQL TEST instance is available (via docker exec)"
-
-                # Create test database if missing
-                docker exec $TEST_CONTAINER psql -U $POSTGRES_USER -d postgres -c "SELECT 1 FROM pg_database WHERE datname='$POSTGRES_DB'" | grep -q 1 || \
-                  docker exec $TEST_CONTAINER psql -U $POSTGRES_USER -d postgres -c "CREATE DATABASE $POSTGRES_DB" > /dev/null 2>&1
-
-                echo "✅ Database '$POSTGRES_DB' ready"
-                exit 0
-              fi
-            else
-              # Try to connect using local psql
-              if PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -p $POSTGRES_PORT -U $POSTGRES_USER -d postgres -c "SELECT 1" > /dev/null 2>&1; then
-                echo "✅ PostgreSQL TEST instance is available at localhost:$POSTGRES_PORT"
-
-                # Verify test database exists, create if missing
-                if PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -p $POSTGRES_PORT -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT 1" > /dev/null 2>&1; then
-                  echo "✅ Database '$POSTGRES_DB' is accessible"
-                  exit 0
-                else
-                  echo "⚠️  Creating database '$POSTGRES_DB'..."
-                  PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -p $POSTGRES_PORT -U $POSTGRES_USER -d postgres -c "CREATE DATABASE $POSTGRES_DB" 2>&1 | grep -v "already exists" || true
-                  sleep 1
-                fi
-              fi
-            fi
-
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            if [ $((RETRY_COUNT % 5)) -eq 0 ]; then
-              echo "Waiting for PostgreSQL at port $POSTGRES_PORT... (attempt $RETRY_COUNT/$MAX_RETRIES)"
-            fi
-            sleep 1
-          done
-
-          echo "❌ PostgreSQL not available after ${MAX_RETRIES}s"
-          echo ""
-          echo "Debug information:"
-          echo "- Container status: $(docker ps -a --filter name=raglite-postgresql --format '{{.Status}}')"
-          echo "- psql available: $(command -v psql &> /dev/null && echo 'yes' || echo 'no')"
-          echo ""
-          echo "Container logs (last 50 lines):"
-          docker logs raglite-postgresql --tail 50
-          exit 1
+          echo "✅ PostgreSQL TEST environment ready for accuracy validation"
 
       - name: Initialize Qdrant collection (if cache miss)
         if: steps.cache-check.outputs.cache_hit != 'true'

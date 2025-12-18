@@ -53,8 +53,8 @@ services:
     volumes:
       - ./postgresql_data_test:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=raglite_test
-      - POSTGRES_USER=raglite_test
-      - POSTGRES_PASSWORD=raglite_test
+      - POSTGRES_DB=raglite_ci  # CI expects raglite_ci database
+      - POSTGRES_USER=raglite_ci  # CI expects raglite_ci user
+      - POSTGRES_PASSWORD=raglite_ci  # CI expects raglite_ci password
     shm_size: 256m  # Required for VACUUM operations (default 64m is too small)
     restart: unless-stopped

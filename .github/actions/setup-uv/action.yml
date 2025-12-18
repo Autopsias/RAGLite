@@ -1,0 +1,153 @@
+name: 'Setup Python with UV'
+description: 'Install UV and set up Python environment with caching'
+
+inputs:
+  python-version:
+    description: 'Python version to use'
+    required: false
+    default: '3.11'
+  cache-dependency-glob:
+    description: 'Glob pattern for dependency caching'
+    required: false
+    default: 'pyproject.toml'
+  install-group:
+    description: 'Optional dependency group to install'
+    required: false
+    default: 'default'
+  install-args:
+    description: 'Additional arguments for uv pip install'
+    required: false
+    default: ''
+
+outputs:
+  cache-hit:
+    description: 'Whether the cache was hit'
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Get uv version
+      id: uv-version
+      shell: bash
+      run: |
+        # Use fixed uv version for stability across CI runs
+        echo "version=0.5.9" >> $GITHUB_OUTPUT
+
+    - name: Cache UV installation
+      id: cache-uv
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.local/bin/uv
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+        key: uv-${{ runner.os }}-${{ steps.uv-version.outputs.version }}
+        restore-keys: |
+          uv-${{ runner.os }}-
+
+    - name: Install uv (network-resilient)
+      shell: bash
+      run: |
+        set -e
+
+        if command -v uv &> /dev/null; then
+          echo "✅ uv already installed"
+          uv --version
+        else
+          echo "Installing uv (network-resilient with retry logic)..."
+          MAX_RETRIES=3
+          RETRY_DELAY=2
+          INSTALL_URL="https://astral.sh/uv/install.sh"
+
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "Installing uv (attempt $attempt/$MAX_RETRIES)..."
+
+            if curl --retry 3 --retry-delay 2 --retry-all-errors -LsSf "$INSTALL_URL" | sh; then
+              echo "✅ uv installed successfully"
+
+              # Verify installation and add to PATH
+              if command -v uv &> /dev/null; then
+                uv --version
+                echo "UV installation completed successfully"
+                break
+              else
+                echo "⚠️  uv command not found after installation, attempting to locate..."
+                export PATH="$HOME/.cargo/bin:$PATH"
+                if command -v uv &> /dev/null; then
+                  echo "✅ uv found in cargo bin"
+                  uv --version
+                  break
+                fi
+              fi
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "⚠️  Installation attempt $attempt failed, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            else
+              echo "❌ Failed to install uv after $MAX_RETRIES attempts"
+              exit 1
+            fi
+          done
+        fi
+
+    - name: Cache dependencies
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/uv
+          .venv
+        key: uv-virtualenv-${{ runner.os }}-${{ hashFiles(format('{0}{1}', github.workspace, inputs.cache-dependency-glob)) }}
+        restore-keys: |
+          uv-virtualenv-${{ runner.os }}-
+
+    - name: Create virtual environment
+      shell: bash
+      run: |
+        set -e
+
+        # Create venv if not cached
+        if [ ! -d ".venv" ]; then
+          echo "Creating virtual environment..."
+          uv venv .venv
+        else
+          echo "Virtual environment already exists"
+        fi
+
+        # Activate venv
+        echo "ACTIVATING_VENV=true" >> $GITHUB_ENV
+        source .venv/bin/activate
+
+        # Show environment info
+        python --version
+        uv --version
+
+    - name: Install dependencies
+      shell: bash
+      env:
+        ACTIVATING_VENV: ${{ env.ACTIVATING_VENV }}
+      run: |
+        set -e
+
+        # Activate virtual environment
+        source .venv/bin/activate
+
+        # Install base package
+        echo "Installing RAGLite package..."
+        uv pip install -e .
+
+        # Install additional dependencies if specified
+        if [ -n "${{ inputs.install-args }}" ]; then
+          echo "Installing additional dependencies..."
+          uv pip install ${{ inputs.install-args }}
+        fi
+
+        echo "✅ Dependencies installed successfully"

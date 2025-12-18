@@ -700,6 +700,9 @@ def pytest_collection_modifyitems(config, items):
 
     1. Groups all integration tests to run in the same xdist worker (prevents Qdrant race conditions)
     2. Reorders tests to run fast tests first for quicker feedback
+
+    CRITICAL FIX (2025-12-18): Fixed pytest internal errors by avoiding direct keyword/marker manipulation.
+    Use a safer approach that doesn't modify pytest internal data structures directly.
     """
 
     # Force ALL integration tests into the EXISTING "embedding_model" xdist worker group
@@ -711,41 +714,46 @@ def pytest_collection_modifyitems(config, items):
     # - Result: Session fixture ran TWICE (1600s total vs 600s expected)
     enforce_markers = config.getoption("--enforce-isolation-markers", default=False)
 
+    # Create new lists for processed items to avoid modifying during iteration
+    integration_items = []
+    other_items = []
+
     for item in items:
         if "integration" in str(item.fspath):
-            # FORCE all integration tests into embedding_model group (override any existing)
-            # This ensures session-scoped fixtures run ONCE, not once per worker
-            existing_group = item.get_closest_marker("xdist_group")
+            integration_items.append(item)
+        else:
+            other_items.append(item)
 
-            # Remove any existing xdist_group marker (including "database")
-            if existing_group:
-                # Remove from markers list (keywords dict is immutable in pytest 8.x)
-                item.own_markers = [m for m in item.own_markers if m.name != "xdist_group"]
+    # Process integration tests separately
+    for item in integration_items:
+        # PERFORMANCE FIX (2025-12-06): Apply default preserve_collection marker
+        # Integration tests that don't explicitly have a marker get preserve_collection
+        # by default, eliminating unnecessary cleanup checks (42+ seconds overhead).
+        #
+        # Tests that modify data should explicitly use @pytest.mark.manages_collection_state
+        # to override this default.
+        has_preserve = item.get_closest_marker("preserve_collection")
+        has_manages = item.get_closest_marker("manages_collection_state")
 
-            # Force embedding_model group (single worker for all integration tests)
-            item.add_marker(pytest.mark.xdist_group(name="embedding_model"))
+        if not (has_preserve or has_manages):
+            # DEFAULT: Apply preserve_collection marker for read-only tests
+            # This prevents expensive cleanup after each test (100ms × 425 tests = 42s)
+            item.add_marker(pytest.mark.preserve_collection)
 
-            # PERFORMANCE FIX (2025-12-06): Apply default preserve_collection marker
-            # Integration tests that don't explicitly have a marker get preserve_collection
-            # by default, eliminating unnecessary cleanup checks (42+ seconds overhead).
-            #
-            # Tests that modify data should explicitly use @pytest.mark.manages_collection_state
-            # to override this default.
-            has_preserve = item.get_closest_marker("preserve_collection")
-            has_manages = item.get_closest_marker("manages_collection_state")
+            # In strict CI mode, still require explicit markers
+            if enforce_markers:
+                raise ValueError(
+                    f"{item.nodeid}: Integration test missing isolation marker. "
+                    "Add @pytest.mark.preserve_collection (read-only) or "
+                    "@pytest.mark.manages_collection_state (modifies data)."
+                )
 
-            if not (has_preserve or has_manages):
-                # DEFAULT: Apply preserve_collection marker for read-only tests
-                # This prevents expensive cleanup after each test (100ms × 425 tests = 42s)
-                item.add_marker(pytest.mark.preserve_collection)
-
-                # In strict CI mode, still require explicit markers
-                if enforce_markers:
-                    raise ValueError(
-                        f"{item.nodeid}: Integration test missing isolation marker. "
-                        "Add @pytest.mark.preserve_collection (read-only) or "
-                        "@pytest.mark.manages_collection_state (modifies data)."
-                    )
+    # Add xdist_group marker to all integration tests
+    # Do this in a separate loop to avoid collection modification issues
+    for item in integration_items:
+        # Force embedding_model group (single worker for all integration tests)
+        # This will override any existing xdist_group marker automatically
+        item.add_marker(pytest.mark.xdist_group(name="embedding_model"))
 
     # Sort tests: unit tests first, then integration, then e2e/slow
     def test_priority(item):
@@ -759,6 +767,7 @@ def pytest_collection_modifyitems(config, items):
         else:
             return 1  # Default: medium priority
 
+    # Sort the original items list (not our separated lists)
     items.sort(key=test_priority)
 
 
