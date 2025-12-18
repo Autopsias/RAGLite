@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from raglite.forecasting.validation_methods import (
+from raglite.forecasting.validation_metrics import (
     MultiMetricResult,
     calculate_all_metrics,
     calculate_bias,

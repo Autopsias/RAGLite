@@ -80,9 +80,10 @@ class INEClient:
         self.base_url = INE_API_BASE
         self.api_key = settings.ine_api_key
         # Story 6.10.2 AC1: Increased test timeout from 1s to 10s for slow APIs
+        # Further increased to 60s for slow INE API responses
         # Production timeout unchanged (uses external_data_timeout from settings)
         is_test = os.getenv("PYTEST_CURRENT_TEST") is not None
-        self.timeout = 10.0 if is_test else float(settings.external_data_timeout)
+        self.timeout = 60.0 if is_test else float(settings.external_data_timeout)
         # Story 6.10.3 AC2: Add file-based caching for external data
         from raglite.shared.caching import ExternalDataCache
 

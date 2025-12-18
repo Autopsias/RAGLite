@@ -100,7 +100,7 @@ class TestExternalAPIReliabilityFixes:
     """Tests for Sub-Story 6.10.2: External API Reliability Fixes."""
 
     def test_ine_client_timeout_increased_for_tests(self) -> None:
-        """AC1: INE client timeout increased from 1s to 10s for tests."""
+        """AC1: INE client timeout increased from 1s to 60s for tests."""
         # Set test environment
         os.environ["PYTEST_CURRENT_TEST"] = "test_something"
 
@@ -108,7 +108,7 @@ class TestExternalAPIReliabilityFixes:
             from raglite.external_data.clients.ine import INEClient
 
             client = INEClient()
-            assert client.timeout == 10.0
+            assert client.timeout == 60.0
         finally:
             os.environ.pop("PYTEST_CURRENT_TEST", None)
 

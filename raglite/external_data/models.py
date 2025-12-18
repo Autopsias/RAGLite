@@ -363,6 +363,28 @@ class ENTSOEElectricityPrice(BaseModel):
     )
 
 
+class RENElectricityPrice(BaseModel):
+    """Portuguese electricity spot price from REN Data Hub.
+
+    Story 7.0: Electricity Cost Forecasting Fix via REN Integration
+
+    Source: https://datahub.ren.pt/
+    Coverage: 2015-present (daily), sourced from OMIE/MIBEL
+    Market: Portuguese electricity market (MIBEL)
+    API: RESTful JSON API, no authentication required
+    """
+
+    date: date
+    hour: int | None = Field(
+        default=None, ge=0, le=23, description="Hour of day (0-23) for hourly prices"
+    )
+    price_eur_mwh: float = Field(description="Electricity price in EUR/MWh")
+    price_type: str = Field(
+        default="spot",
+        description="Price type (spot, daily_avg, monthly_avg)",
+    )
+
+
 class EurostatConstructionOutput(BaseModel):
     """Construction production index from Eurostat.
 

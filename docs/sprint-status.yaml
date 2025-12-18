@@ -158,7 +158,10 @@ development_status:
   # Goal: Per-variable model selection via cross-validation across 9 models
   # Timeline: 10 development days (2 weeks)
   # Dependencies: Epic 6 (COMPLETE)
-  epic-7: backlog
+  epic-7: contexted
+
+  # Epic 7 Prerequisite (Hotfix - P0)
+  7-0-electricity-cost-data-fix: blocked  # BLOCKED: EntityMatchMode hypothesis refuted, MASE 10.04 unchanged, needs architecture review
 
   # Epic 7 Stories (6 stories, P0 priority)
   7-1-add-arima-ets-model-wrappers: backlog  # NEW: pmdarima Auto-ARIMA + statsmodels ETS

@@ -225,7 +225,7 @@ VARIABLE_QUALITY_CONFIGS: dict[str, VariableQualityConfig] = {
         ),
         entity=EntityConfig(
             required_entity="portugal",
-            match_mode=EntityMatchMode.ILIKE,
+            match_mode=EntityMatchMode.EXACT,  # Story 7.0: Fix ILIKE contamination (same as Variable Cost)
             contamination_check=True,  # Story 6.29: Enable contamination detection
         ),
         frequency=FrequencyConfig(

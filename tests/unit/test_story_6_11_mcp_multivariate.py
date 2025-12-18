@@ -61,7 +61,9 @@ class TestRegressorConfig:
         from raglite.forecasting.regressor_config import get_default_regressors
 
         regressors = get_default_regressors("electricity_cost")
-        assert "eurostat_electricity" in regressors
+        assert (
+            "ren_electricity" in regressors
+        )  # Story 7.0: REN electricity replaces eurostat_electricity
 
     def test_get_default_regressors_unknown_metric(self) -> None:
         """Story 6.11.2 AC3: Unknown metrics should fallback to default regressors."""
@@ -97,7 +99,9 @@ class TestRegressorConfig:
 
         # "power" keyword should match energy category
         regressors = get_default_regressors("power_consumption")
-        assert any(r in regressors for r in ["eurostat_electricity", "ttf_gas", "api2_coal"])
+        assert any(
+            r in regressors for r in ["ren_electricity", "ttf_gas", "api2_coal"]
+        )  # Story 7.0: ren_electricity replaces eurostat_electricity
 
     def test_validate_regressor_names_valid(self) -> None:
         """Validation should accept valid regressor names."""

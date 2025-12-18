@@ -67,13 +67,13 @@ class TestAC2MetricRegressorMappings:
         """Variable cost mapping includes industrial_production."""
         assert "industrial_production" in METRIC_REGRESSORS["variable_cost"]
 
-    def test_electricity_cost_has_eurostat_electricity(self) -> None:
-        """Electricity cost mapping includes eurostat_electricity."""
-        assert "eurostat_electricity" in METRIC_REGRESSORS["electricity_cost"]
+    def test_electricity_cost_has_ren_electricity(self) -> None:
+        """Electricity cost mapping includes ren_electricity."""
+        assert "ren_electricity" in METRIC_REGRESSORS["electricity_cost"]
 
-    def test_electricity_cost_has_industrial_production(self) -> None:
-        """Electricity cost mapping includes industrial_production."""
-        assert "industrial_production" in METRIC_REGRESSORS["electricity_cost"]
+    def test_electricity_cost_has_ttf_gas(self) -> None:
+        """Electricity cost mapping includes ttf_gas."""
+        assert "ttf_gas" in METRIC_REGRESSORS["electricity_cost"]
 
     def test_thermal_cost_has_all_energy_indicators(self) -> None:
         """Thermal cost mapping includes api2_coal, ttf_gas, industrial_production."""

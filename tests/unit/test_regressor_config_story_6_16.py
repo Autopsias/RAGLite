@@ -471,18 +471,19 @@ class TestBackwardCompatibility:
         assert "euribor_3m" in regressors
         assert "ttf_gas" in regressors
 
-    def test_p2_electricity_cost_still_uses_eurostat_electricity(self) -> None:
+    def test_p2_electricity_cost_uses_ren_electricity(self) -> None:
         """
-        [P2] electricity_cost should still use eurostat_electricity.
+        [P2] electricity_cost should use ren_electricity (Story 7.0).
 
         Given: Metric "electricity_cost"
         When: get_default_regressors() is called
-        Then: Returns eurostat_electricity (no breaking change)
+        Then: Returns ren_electricity (Story 7.0: 9 points → 60+ monthly)
         """
         from raglite.forecasting.regressor_config import get_default_regressors
 
         regressors = get_default_regressors("electricity_cost")
-        assert "eurostat_electricity" in regressors
+        assert "ren_electricity" in regressors
+        assert "ttf_gas" in regressors
 
     def test_p2_default_regressors_unchanged(self) -> None:
         """

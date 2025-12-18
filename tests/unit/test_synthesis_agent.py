@@ -29,12 +29,14 @@ class TestSimpleSynthesis:
         ]
         query = "What was Q3 performance?"
 
-        result = _synthesize_simple(retrieval_results, [], query)
+        result, reasoning_steps, sources = _synthesize_simple(retrieval_results, [], query)
 
         assert "Based on the query: What was Q3 performance?" in result
         assert "Retrieved 2 relevant documents:" in result
         assert "Q3 revenue was $50M" in result
         assert "report.pdf" in result
+        assert len(reasoning_steps) > 0
+        assert "report.pdf" in sources
 
     def test_simple_synthesis_analysis_only(self):
         """Test simple synthesis with analysis results only."""
@@ -47,12 +49,14 @@ class TestSimpleSynthesis:
         ]
         query = "What is the revenue growth?"
 
-        result = _synthesize_simple([], analysis_results, query)
+        result, reasoning_steps, sources = _synthesize_simple([], analysis_results, query)
 
         assert "Based on the query: What is the revenue growth?" in result
         assert "Analysis Results (1 calculations):" in result
         assert "+20%" in result
         assert "Revenue increased from $100M to $120M" in result
+        assert len(reasoning_steps) > 0
+        assert len(sources) == 0
 
     def test_simple_synthesis_combined_sources(self):
         """Test simple synthesis with both retrieval and analysis results."""
@@ -66,7 +70,9 @@ class TestSimpleSynthesis:
         ]
         query = "Analyze revenue growth"
 
-        result = _synthesize_simple(retrieval_results, analysis_results, query)
+        result, reasoning_steps, sources = _synthesize_simple(
+            retrieval_results, analysis_results, query
+        )
 
         assert "Retrieved 1 relevant documents:" in result
         assert "Analysis Results (1 calculations):" in result
@@ -80,7 +86,7 @@ class TestSimpleSynthesis:
         ]
         query = "Test query"
 
-        result = _synthesize_simple(retrieval_results, [], query)
+        result, reasoning_steps, sources = _synthesize_simple(retrieval_results, [], query)
 
         # Should only show top 3 chunks
         assert "1. Chunk 0 content" in result
@@ -88,6 +94,11 @@ class TestSimpleSynthesis:
         assert "3. Chunk 2 content" in result
         # Should not show chunk 4+
         assert "Chunk 3 content" not in result
+        # Only collects sources from displayed chunks (top 3)
+        assert len(sources) == 3
+        assert "source0.pdf" in sources
+        assert "source1.pdf" in sources
+        assert "source2.pdf" in sources
 
 
 class TestMistralSynthesis:
@@ -328,26 +339,17 @@ class TestSynthesisAgent:
             ),
         }
 
-        # Mock OpenAI synthesis
-        mock_client = AsyncMock()
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = json.dumps(
-            {"answer": "Revenue grew 15% to $50M", "reasoning_steps": ["Analyzed data"]}
-        )
-        mock_client.chat.completions.create.return_value = mock_response
-
-        with patch(
-            "raglite.agentic.agents.synthesis_agent.AsyncOpenAI",
-            return_value=mock_client,
-        ):
-            with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
-                result_json = await synthesis_agent("Synthesize results", context)
+        # In test mode, synthesis agent uses simple synthesis
+        result_json = await synthesis_agent("Synthesize results", context)
 
         result = json.loads(result_json)
-        assert result["answer"] == "Revenue grew 15% to $50M"
+        # Simple synthesis output
+        assert "Based on the query: Test query" in result["answer"]
+        assert "Revenue: $50M" in result["answer"]
+        assert "growth = +15%" in result["answer"]
         assert result["metadata"]["retrieval_count"] == 1
         assert result["metadata"]["analysis_count"] == 1
+        assert result["metadata"]["synthesis_type"] == "simple"
 
     @pytest.mark.asyncio
     async def test_synthesis_agent_validates_empty_query(self):
@@ -381,7 +383,7 @@ class TestSynthesisAgent:
             )
         }
 
-        # Mock OpenAI failure
+        # Mock OpenAI failure and bypass test mode
         with patch(
             "raglite.agentic.agents.synthesis_agent._synthesize_with_openai",
             side_effect=Exception("OpenAI API error"),
@@ -395,7 +397,9 @@ class TestSynthesisAgent:
                     ["Reasoning"],
                     ["test.pdf"],
                 )
-                result_json = await synthesis_agent("Test query", context)
+                # Temporarily disable test mode to test fallback behavior
+                with patch.dict("os.environ", {}, clear=True):
+                    result_json = await synthesis_agent("Test query", context)
 
         result = json.loads(result_json)
         assert result["answer"] == "Mistral answer"
@@ -476,7 +480,8 @@ class TestSynthesisAgent:
             "raglite.agentic.agents.synthesis_agent.AsyncOpenAI",
             return_value=mock_client,
         ):
-            with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
+            # Bypass test mode to test OpenAI synthesis
+            with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True):
                 result_json = await synthesis_agent("What is the revenue?", context)
 
         result = json.loads(result_json)

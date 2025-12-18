@@ -174,7 +174,7 @@ class TestAnalysisAgentWorkflow:
         query = "What was the revenue growth?"
         start_time = time.time()
 
-        retrieval_result_json = await retrieval_agent(query, top_k=5)
+        retrieval_result_json = await retrieval_agent(instruction=query, context={"top_k": 5})
         retrieval_result = json.loads(retrieval_result_json)
 
         if retrieval_result["total_retrieved"] == 0:
@@ -196,9 +196,8 @@ class TestAnalysisAgentWorkflow:
 
         analysis_start = time.time()
         analysis_result_json = await analysis_agent(
-            data=analysis_data,
-            analysis_type="yoy_growth",
-            context=f"Data retrieved from {len(chunks)} document(s)",
+            instruction="Calculate yoy_growth analysis",
+            context={"data": analysis_data},
         )
 
         analysis_result = AnalysisResult.model_validate_json(analysis_result_json)
@@ -213,31 +212,17 @@ class TestAnalysisAgentWorkflow:
         synthesis_start = time.time()
 
         # Prepare synthesis inputs
-        retrieval_results = [
-            {
-                "id": chunk.get("id", f"chunk_{i}"),
-                "content": chunk.get("content", ""),
-                "source": chunk.get("source", "unknown"),
-                "page_number": chunk.get("page_number"),
-            }
-            for i, chunk in enumerate(chunks)
-        ]
 
-        analysis_results = [
-            {
-                "calculation": analysis_result.calculation,
-                "value": analysis_result.value,
-                "formatted_value": analysis_result.formatted_value,
-                "reasoning": analysis_result.reasoning,
-                "data_points_used": analysis_result.data_points_used,
-            }
-        ]
+        # Create proper context format for synthesis agent
+        # The synthesis agent expects task_id -> result mapping
+        synthesis_context = {
+            "retrieval_task": json.dumps({"chunks": chunks, "query": query}),
+            "analysis_task": analysis_result_json,
+        }
 
         synthesis_result_json = await synthesis_agent(
-            retrieval_results=retrieval_results,
-            analysis_results=analysis_results,
-            query="What was the revenue growth?",
-            context=f"Based on {len(chunks)} document(s) and financial analysis",
+            instruction="Synthesize answer to: What was the revenue growth?",
+            context=synthesis_context,
         )
 
         synthesis_result = SynthesisResult.model_validate_json(synthesis_result_json)

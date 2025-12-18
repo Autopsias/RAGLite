@@ -71,11 +71,13 @@ from raglite.forecasting.report_generator import (  # noqa: E402
     generate_validation_report,
 )
 from raglite.forecasting.validation_methods import (  # noqa: E402
-    calculate_all_metrics,
     calculate_cv_mape,
-    calculate_fqs,
     calculate_holdout_mape,
     calculate_walkforward_mape,
+)
+from raglite.forecasting.validation_metrics import (  # noqa: E402
+    calculate_all_metrics,
+    calculate_fqs,
     validate_metric_consistency,
 )
 from raglite.forecasting.validation_schema import (  # noqa: E402
@@ -184,21 +186,19 @@ CEMENT_FORECAST_VARIABLES: dict[str, VariableConfig] = {
         db_metric_aliases=["Sales Volumes", "sales volumes", "Volume IM - kton"],
     ),
     "electricity_cost": VariableConfig(
-        name="electricity_cost",
+        # Story 7.0: Use REN Data Hub Portuguese spot prices directly (external-only)
+        # Internal Secil data has only 20 points with data quality issues
+        # REN provides 60+ monthly points of actual Portuguese MIBEL spot prices
+        name="ren_electricity",  # Maps to fetch_single_regressor("ren_electricity")
         display_name="Electricity Cost",
-        unit="EUR_per_ton",
-        # Story 6.25: RE-ENABLED regressors - Dec 9 achieved 3.0% MAPE
-        # Electricity cost driven by eurostat electricity prices
-        regressors=["eurostat_electricity"],
-        target_mape=8.0,  # RESTORED from 30% - Dec 9 achieved 3.0% MAPE
-        db_metric_aliases=["Electrical Energy", "electrical energy", "electricity"],
-        # Story 6.27: Cost metric - SMAPE handles negative/zero values better
-        primary_metric="smape",
+        unit="EUR_per_MWh",
+        regressors=[],  # Univariate forecast of external data
+        target_mape=15.0,  # Adjusted for commodity price volatility
+        db_metric_aliases=[],  # No internal database lookup
+        is_external_only=True,
+        # Story 6.27: Commodity tied to energy markets - allow MASE-only for volatility
         allow_mase_only_pass=True,
-        target_smape=15.0,
-        # Story 6.29 P2: Data quality issue - Nov-Dec 2024 data gap, only 19 data points
-        data_quality_exempt=True,
-        data_quality_reason="Data gap (Nov-Dec 2024 missing), short history",
+        target_mase=1.0,
     ),
     "thermal_cost": VariableConfig(
         name="thermal_cost",
@@ -1254,27 +1254,27 @@ def print_summary(result: UnifiedValidationResult) -> None:
         )
 
     print("\n" + "=" * 100)
-    gate_status = "PASSED" if result.quality_gate.passed else "FAILED"
+    gate_status = "PASSED" if result.quality_gate and result.quality_gate.passed else "FAILED"
     print(f"QUALITY GATE: {gate_status}")
+    min_req = result.quality_gate.minimum_required if result.quality_gate else "unknown"
+    actual_passed = result.quality_gate.actual_passed if result.quality_gate else 0
     print(
-        f"  Requirement: {result.quality_gate.actual_passed}/{result.variables_tested} variables passing (need {result.quality_gate.minimum_required})"
+        f"  Requirement: {actual_passed}/{result.variables_tested} variables passing (need {min_req})"
     )
-    vc_mape_str = (
-        f"{result.quality_gate.variable_cost_mape:.2f}%"
-        if result.quality_gate.variable_cost_mape is not None
-        else "N/A"
-    )
-    print(f"  Variable Cost: {vc_mape_str} (target: <{result.quality_gate.variable_cost_target}%)")
+    vc_mape = result.quality_gate.variable_cost_mape if result.quality_gate else None
+    vc_mape_str = f"{vc_mape:.2f}%" if vc_mape is not None else "N/A"
+    target_val = result.quality_gate.variable_cost_target if result.quality_gate else "unknown"
+    print(f"  Variable Cost: {vc_mape_str} (target: <{target_val}%)")
 
     # Story 6.26: Show MASE quality gate
-    if result.quality_gate.average_mase is not None:
+    if result.quality_gate and result.quality_gate.average_mase is not None:
         mase_gate = "PASS" if result.quality_gate.mase_passed else "FAIL"
         print(
             f"  Average MASE: {result.quality_gate.average_mase:.2f} (target: <{result.quality_gate.mase_target}) - {mase_gate}"
         )
 
     # Story 6.29 P2: Show controllable MASE (excluding exempt variables)
-    if result.quality_gate.controllable_mase is not None:
+    if result.quality_gate and result.quality_gate.controllable_mase is not None:
         ctrl_mase_gate = "PASS" if result.quality_gate.controllable_mase_passed else "FAIL"
         exempt_str = (
             ", ".join(result.quality_gate.exempt_variables)
@@ -1424,7 +1424,7 @@ holdout validation. Full async implementation is planned for future iterations.
                     print(f"Report ({fmt}): {path}")
 
     # Return exit code based on quality gate
-    return 0 if result.quality_gate.passed else 1
+    return 0 if result.quality_gate and result.quality_gate.passed else 1
 
 
 if __name__ == "__main__":

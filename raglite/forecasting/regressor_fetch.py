@@ -1,6 +1,7 @@
 """External regressor fetching for multi-variate forecasting.
 
 Story 6.11.1: MCP Multi-Variate Forecasting Interface
+Story 7.0: REN Data Hub integration for electricity cost
 
 This module provides functions to fetch external regressor data from various APIs
 for use in multi-variate forecasting with Prophet.
@@ -10,7 +11,8 @@ Supported regressors:
 - ttf_gas: TTF natural gas price (ICE Futures)
 - api2_coal: API2 coal price (ICE Futures)
 - diesel: Diesel price (EU Oil Bulletin)
-- eurostat_electricity: Industrial electricity price (Eurostat)
+- eurostat_electricity: Industrial electricity price (Eurostat) - 9 points only
+- ren_electricity: Portuguese spot electricity (REN Data Hub) - 60+ monthly points
 """
 
 from __future__ import annotations
@@ -111,6 +113,37 @@ async def fetch_single_regressor(
                 )
                 series = series.groupby(level=0).mean()
                 return series
+
+        elif reg_name == "ren_electricity":
+            # Story 7.0: REN Data Hub Portuguese spot electricity prices
+            from raglite.external_data.clients.ren import RENClient
+
+            client_ren = RENClient()
+
+            # Calculate year/month range for monthly fetch (more efficient)
+            start_year, start_month = start_date.year, start_date.month
+            end_year, end_month = end_date.year, end_date.month
+
+            ren_data = await client_ren.fetch_monthly_prices_range(
+                start_year=start_year,
+                start_month=start_month,
+                end_year=end_year,
+                end_month=end_month,
+            )
+
+            if ren_data:
+                series = pd.Series(
+                    [d.price_eur_mwh for d in ren_data],
+                    index=pd.DatetimeIndex([d.date for d in ren_data]),
+                )
+                series = series.groupby(level=0).mean()
+                logger.info(
+                    "Fetched REN electricity regressor",
+                    extra={"source": "REN Data Hub", "data_points": len(series)},
+                )
+                return series
+
+            return None
 
         elif reg_name == "construction_output":
             from raglite.external_data.clients.eurostat import EurostatClient
@@ -275,8 +308,8 @@ async def fetch_single_regressor(
 
         elif reg_name == "omie_spot":
             # NOTE: Currently disabled - too slow (1000+ HTTP requests)
-            # Use eurostat_electricity as proxy
-            logger.warning(f"Regressor {reg_name} disabled - too slow, use eurostat_electricity")
+            # Use ren_electricity as faster alternative (same underlying MIBEL data)
+            logger.warning(f"Regressor {reg_name} disabled - too slow, use ren_electricity")
             return None
 
         else:

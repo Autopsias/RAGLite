@@ -35,6 +35,7 @@ AVAILABLE_REGRESSORS: list[str] = [
     "inflation",  # ECB HICP inflation index (Story 6.17)
     "building_permits",  # INE building permits with Eurostat fallback (Story 6.18)
     "construction_confidence",  # EC Business Surveys via Eurostat (Story 6.19)
+    "ren_electricity",  # REN Data Hub Portuguese spot electricity (Story 7.0)
     # NOTE: The following are currently disabled due to API issues (Story 6.10.5):
     # "hpi",  # INE house price index
     # "omie_spot",  # OMIE spot electricity (too slow - 1000+ HTTP requests)
@@ -103,6 +104,11 @@ REGRESSOR_METADATA: dict[str, dict[str, str]] = {
         "source": "EC",
         "unit": "Balance %",
     },
+    "ren_electricity": {
+        "display_name": "Portuguese Electricity Spot Price",
+        "source": "REN",
+        "unit": "EUR/MWh",
+    },
 }
 
 
@@ -154,11 +160,11 @@ METRIC_REGRESSORS: dict[str, list[str]] = {
         "euribor_3m",
         "industrial_production",
     ],
+    # Story 7.0: REN electricity replaces eurostat_electricity (9 points → 60+ monthly)
     # Story 6.25: RE-ENABLED energy cost regressors based on validation results
     # Story 6.20: Cement industry - electricity and production activity linked
-    # Electricity Cost: Story 6.25 fix - re-enabled eurostat_electricity for 90% MAPE improvement
-    "electricity_cost": ["eurostat_electricity", "industrial_production"],
-    "electrical energy": ["eurostat_electricity", "industrial_production"],
+    "electricity_cost": ["ren_electricity", "ttf_gas"],  # Story 7.0: REN spot prices with gas proxy
+    "electrical energy": ["ren_electricity", "ttf_gas"],
     # Thermal cost continues with energy commodity regressors
     # Story 6.20: Cement industry - industrial production drives thermal energy demand
     "thermal_cost": ["api2_coal", "ttf_gas", "industrial_production"],
@@ -213,8 +219,9 @@ METRIC_CATEGORIES: dict[str, dict[str, list[str]]] = {
     },
     "energy": {
         # Electricity, thermal costs, fuel - energy prices + production
+        # Story 7.0: Use ren_electricity (60+ points) instead of eurostat_electricity (9 points)
         "keywords": ["electricity", "thermal", "energy", "fuel", "power"],
-        "regressors": ["eurostat_electricity", "ttf_gas", "api2_coal", "industrial_production"],
+        "regressors": ["ren_electricity", "ttf_gas", "api2_coal", "industrial_production"],
     },
     "production": {
         # Volume, utilization, capacity - construction indicators

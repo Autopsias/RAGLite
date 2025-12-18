@@ -3378,6 +3378,10 @@ async def validate_forecasting_accuracy(
             average_mape=0.0,
             quality_gate_passed=False,
             variable_cost_mape=None,
+            average_mase=None,
+            average_fqs=None,
+            controllable_mase=None,
+            controllable_fqs=None,
             variable_results=[],
             model_performance=None,
         )
@@ -3443,7 +3447,9 @@ async def validate_forecasting_accuracy(
                 "variables_tested": result.variables_tested,
                 "variables_passed": result.variables_passed,
                 "runtime_seconds": result.runtime_seconds,
-                "quality_gate": "PASS" if result.quality_gate.passed else "FAIL",
+                "quality_gate": "PASS"
+                if result.quality_gate and result.quality_gate.passed
+                else "FAIL",
             },
         )
 
@@ -3455,8 +3461,10 @@ async def validate_forecasting_accuracy(
             variables_passed=result.variables_passed,
             pass_rate=result.pass_rate,
             average_mape=result.average_mape,
-            quality_gate_passed=result.quality_gate.passed,
-            variable_cost_mape=result.quality_gate.variable_cost_mape,
+            quality_gate_passed=result.quality_gate.passed if result.quality_gate else False,
+            variable_cost_mape=result.quality_gate.variable_cost_mape
+            if result.quality_gate
+            else None,
             # Multi-metric summary (Forecasting Quality Enhancement)
             average_mase=result.average_mase,
             average_fqs=result.average_fqs,
@@ -3484,6 +3492,10 @@ async def validate_forecasting_accuracy(
             average_mape=0.0,
             quality_gate_passed=False,
             variable_cost_mape=None,
+            average_mase=None,
+            average_fqs=None,
+            controllable_mase=None,
+            controllable_fqs=None,
             variable_results=[],
             model_performance=None,
         )

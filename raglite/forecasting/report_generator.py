@@ -318,7 +318,9 @@ def generate_variable_assessment(result: UnifiedValidationResult) -> str:
 
             if m.bias is not None:
                 bias_direction = "over" if m.bias > 0 else "under"
-                bias_status = "⚠️ WARN" if abs(m.bias) > m.rmse * 0.5 else "INFO"
+                bias_status = (
+                    "⚠️ WARN" if m.rmse is not None and abs(m.bias) > m.rmse * 0.5 else "INFO"
+                )
                 lines.append(
                     f"| Bias | {m.bias:+.2f} | ~0 | {bias_status} | "
                     f"Tends to {bias_direction}-predict |"

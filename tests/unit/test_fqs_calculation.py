@@ -5,7 +5,7 @@ Tests the calculate_fqs() function with various MAPE/MASE combinations.
 
 import pytest
 
-from raglite.forecasting.validation_methods import calculate_fqs, calculate_system_fqs
+from raglite.forecasting.validation_metrics import calculate_fqs, calculate_system_fqs
 
 
 class TestCalculateFQS:

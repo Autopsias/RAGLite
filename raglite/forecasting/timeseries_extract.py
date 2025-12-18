@@ -1533,6 +1533,11 @@ async def extract_timeseries_from_sql(
         "revenues": "turnover",
         "sales": "turnover",
         "ebitda": "EBITDA IFRS",  # Story 6.26: Restored - routes to consolidated YTD data
+        # Story 7.0: Map electricity_cost to "Electrical Energy" specifically
+        # Avoids matching inconsistent "Electricity" metric from older data (pre-2024)
+        # "Electrical Energy" has consistent Portugal entity data (2024-2025, 20 points)
+        "electricity_cost": "Electrical Energy",
+        "electricity": "Electrical Energy",
     }
 
     # Apply synonym mapping if metric matches a known synonym
@@ -1597,9 +1602,13 @@ async def extract_timeseries_from_sql(
     # Keeping empty set - cost metrics will use default SUM from validation script.
     METRICS_USE_MIN_AGGREGATION: set[str] = set()  # Intentionally empty
 
-    # Story 6.29 P1: AVG aggregation for Electricity didn't improve MASE (still 6.11).
-    # Keeping default SUM for internal consistency.
-    METRICS_USE_AVG_AGGREGATION: set[str] = set()  # Intentionally empty
+    # Story 7.0: AVG aggregation for Electrical Energy normalizes row count variance
+    # Aug months have 12 rows vs 4 rows for other months (reporting artifact)
+    # SUM inflates Aug values by 3x, AVG normalizes to consistent per-period values
+    METRICS_USE_AVG_AGGREGATION: set[str] = {
+        "Electrical Energy",
+        "electrical energy",
+    }
 
     if metric_search in METRICS_USE_AVG_AGGREGATION:
         aggregation = "avg"

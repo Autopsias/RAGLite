@@ -19,6 +19,7 @@ from raglite.external_data.clients.ice_futures import ICEFuturesClient
 from raglite.external_data.clients.ine import INEClient
 from raglite.external_data.clients.ipma import IPMAClient
 from raglite.external_data.clients.omie import OMIEClient
+from raglite.external_data.clients.ren import RENClient
 
 __all__ = [
     # Tier 1 clients
@@ -36,4 +37,6 @@ __all__ = [
     "EurostatClient",
     # Story 6.29 P3 Phase 2
     "ENTSOEClient",
+    # Story 7.0: REN Data Hub for electricity cost
+    "RENClient",
 ]
