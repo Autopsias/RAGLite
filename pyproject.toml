@@ -153,6 +153,7 @@ exclude = [
     "venv",
 ]
 
+[tool.ruff.lint]
 # Enable specific rule sets
 select = [
     "E",   # pycodestyle errors
@@ -171,7 +172,7 @@ ignore = [
     "C901",  # Too complex (will address in Phase 4 refactoring)
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # Unused imports in __init__.py are OK
 "tests/integration/test_epic2_regression.py" = ["E402"]  # pytestmark before imports
 "tests/integration/test_fixed_chunking.py" = ["E402"]  # pytestmark before imports
@@ -180,6 +181,7 @@ ignore = [
 "raglite/forecasting/hybrid.py" = ["E402"]  # Lazy-loading pattern for Prophet
 "tests/integration/test_anomaly_detection_integration.py" = ["E402"]  # pytestmark before imports
 "scripts/validate-cement-forecasting-12vars.py" = ["I001"]  # Local imports with isort compatibility
+"raglite/shared/models.py" = ["I001"]  # isort prefers separate datetime imports with aliases
 
 # ============================================================================
 # ISORT CONFIGURATION (Import Sorting)

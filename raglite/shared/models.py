@@ -3,8 +3,9 @@
 Defines core data structures used across ingestion and retrieval modules.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC
 from datetime import date as date_type
+from datetime import datetime
 from enum import Enum
 from typing import Any
 
