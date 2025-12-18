@@ -1,0 +1,247 @@
+"""Application configuration using Pydantic Settings.
+
+This module provides type-safe configuration management loaded from environment
+variables via .env file.
+
+Environment-based configuration:
+- APP_ENV=production (default): Uses production databases (ports 6333, 5432)
+- APP_ENV=test: Automatically uses test databases (ports 6335, 5433)
+- APP_ENV=development: Uses development settings (same as production for now)
+
+All settings can be overridden by environment variables.
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+from typing import Self
+
+from pydantic import model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Application settings loaded from environment variables.
+
+    All settings can be overridden via environment variables or .env file.
+    Required settings will raise validation errors if not provided.
+
+    APP_ENV determines which database instances to use:
+    - production: localhost:6333 (Qdrant), localhost:5432 (PostgreSQL)
+    - test: localhost:6335 (Qdrant), localhost:5433 (PostgreSQL)
+    """
+
+    # Environment Configuration (NEW)
+    app_env: str = "production"  # Options: production, test, development
+
+    # Qdrant Vector Database
+    qdrant_host: str = "localhost"
+    qdrant_port: int = 6333
+    qdrant_collection_name: str = "financial_docs"
+
+    # PostgreSQL Database (Story 2.6: Structured metadata storage)
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
+    postgres_db: str = "raglite"
+    postgres_user: str = "raglite"
+    postgres_password: str = "raglite"
+
+    # Anthropic Claude API (optional for Phase 1 setup, required for Story 1.11+)
+    anthropic_api_key: str | None = None
+
+    # Mistral API (Story 2.4: Mistral Small for metadata extraction)
+    # Replaces OpenAI o1-mini which had 50% failure rate due to reasoning token overflow
+    # Mistral Small: FREE, 91% accuracy, native JSON schema support
+    mistral_api_key: str | None = None
+    metadata_extraction_model: str = (
+        "mistral-small-latest"  # Mistral model for chunk metadata extraction
+    )
+
+    # AWS Strands Agentic Framework (Story 3.1: Epic 3 orchestration)
+    strands_orchestration_model: str = (
+        "mistral-small-latest"  # Orchestration LLM (tunable to claude-3-5-sonnet-20241022)
+    )
+    strands_agent_timeout_seconds: int = 15  # Per NFR26: 15s max per agent
+    strands_enable_opentelemetry: bool = False  # Optional: can defer detailed setup to Story 3.5
+
+    # Embedding Model Configuration
+    embedding_model: str = "intfloat/e5-large-v2"
+    embedding_dimension: int = 1024
+
+    # MCP Server Configuration
+    mcp_server_port: int = 8000
+
+    # PDF Processing Configuration (Story 2.2)
+    pdf_processing_threads: int = 8  # Parallel page processing threads (default 8, range 1-16)
+
+    # Forecasting Auto-Update Configuration (Story 4.3)
+    enable_forecast_auto_update: bool = True  # Auto-refresh forecasts on document ingestion
+    forecast_refresh_timeout: int = 300  # 5-minute timeout for forecast refresh (AC3)
+
+    # Metrics Discovery Cache Configuration (Story 5.0.4 Advisory)
+    metrics_cache_ttl_seconds: int = 300  # 5-minute TTL for development; tune for production
+
+    # Parallel Ingestion Configuration (Story 5.0.6)
+    ingestion_parallel_docs: int = 2  # Max concurrent documents (default: 2, range: 1-4)
+
+    # Metadata Extraction Strategy (Story 5.0.6: Strategy C - Query-time enrichment)
+    skip_ingestion_metadata: bool = (
+        True  # Skip metadata extraction at ingestion (saves 400 API calls/doc)
+    )
+    query_time_metadata_enabled: bool = True  # Enable query-time metadata enrichment
+    query_time_metadata_timeout: float = 2.5  # Query-time enrichment timeout (seconds)
+
+    # Unit Inference Optimization (Story 5.0.6)
+    unit_inference_llm_tables_only: bool = True  # Only use LLM for table chunks (user preference)
+
+    # External Data API Keys (Story 6.1: Tier 1 sources)
+    ine_api_key: str | None = None
+    bpstat_api_key: str | None = None
+    omie_api_key: str | None = None  # May not require key
+    ipma_api_key: str | None = None  # Public API, no key needed
+    # Story 6.29 P3: Note - electricity prices use Ember CSV (no API key needed)
+
+    # External Data Configuration (Story 6.1)
+    external_data_stale_days: int = 30  # Max days before data considered stale
+    external_data_retry_attempts: int = 3  # Retry attempts with exponential backoff
+    external_data_timeout: int = 30  # HTTP timeout seconds
+
+    # Story 6.4: Ensemble Forecasting Configuration
+    # Story 6.8: Added LightGBM to ensemble (AC4)
+    # Story 6.12: Added CatBoost to ensemble
+    # Story 6.13: Added Chronos-2 to ensemble
+    # Story 6.14: Added TFT to ensemble
+    forecasting_models: str = (
+        "prophet,linear,xgboost,lightgbm,catboost,chronos,tft"  # Comma-separated model list
+    )
+    ensemble_weight_prophet: float = 0.23  # Prophet model weight (23%)
+    ensemble_weight_linear: float = 0.11  # Linear Regression weight (11%)
+    ensemble_weight_xgboost: float = 0.15  # XGBoost weight (15%)
+    ensemble_weight_lightgbm: float = 0.15  # LightGBM weight (15%)
+    ensemble_weight_catboost: float = 0.12  # CatBoost weight (12%) - Story 6.12
+    ensemble_weight_chronos: float = 0.12  # Chronos-2 weight (12%) - Story 6.13
+    ensemble_weight_tft: float = 0.12  # TFT weight (12%) - Story 6.14
+    ensemble_fast_mode: bool = False  # Use reduced hyperparameter grid for faster training
+
+    # Story 6.13: Chronos-2 Configuration
+    min_data_points_for_ensemble: int = 6  # Minimum data points for ensemble (cold-start threshold)
+    chronos_model_name: str = "amazon/chronos-bolt-small"  # Chronos-2 model variant
+    chronos_inference_timeout: float = 2.0  # Chronos-2 inference timeout (seconds)
+
+    # Story 6.14: TFT Configuration
+    tft_encoder_length: int = 12  # TFT lookback periods
+    tft_prediction_length: int = 3  # TFT forecast periods
+    tft_max_epochs: int = 50  # TFT training max epochs
+    tft_early_stopping_patience: int = 5  # TFT early stopping patience
+    tft_checkpoint_freshness_days: int = 7  # Force retrain if checkpoint older than this
+    tft_checkpoint_dir: str = "data/models"  # TFT checkpoint storage directory
+
+    # Story 6.24: Regressor Buffer Configuration
+    # Controls how much historical data to fetch for regressor correlation detection
+    # Production uses 3-year buffer; tests use 1-year for faster execution
+    regressor_buffer_years: int = 3  # Historical data buffer for regressors (years)
+
+    # Story 6.5: Automated Data Refresh Scheduler Configuration
+    scheduler_enabled: bool = True  # Enable/disable the scheduler
+    scheduler_timezone: str = "UTC"  # Timezone for scheduled jobs (always UTC per AC2)
+    scheduler_job_coalesce: bool = True  # Coalesce missed jobs after downtime (AC1)
+    scheduler_misfire_grace_time: int = 3600  # 1 hour grace time for misfired jobs (AC1)
+
+    # Cron schedules for external data refresh (AC2)
+    # Format: minute hour day_of_month month day_of_week
+    refresh_cron_daily: str = "0 6 * * *"  # Daily at 06:00 UTC
+    refresh_cron_weekly: str = "0 6 * * 0"  # Sunday at 06:00 UTC
+    refresh_cron_monthly: str = "0 6 1 * *"  # 1st of month at 06:00 UTC
+    refresh_cron_backtest: str = "0 3 * * 0"  # Story 6.12: Sunday at 03:00 UTC (backtest job)
+    refresh_cron_tft_training: str = (
+        "0 2 * * 0"  # Story 6.14: Sunday at 02:00 UTC (TFT training, before backtest)
+    )
+
+    @model_validator(mode="after")
+    def adjust_for_environment(self) -> Self:
+        """Automatically adjust database settings based on APP_ENV.
+
+        CRITICAL FIX (2025-12-18): Fixed CI database configuration race condition.
+        The issue was that module import happens BEFORE GitHub Actions sets CI=true,
+        causing database name mismatches between ingestion and testing.
+
+        Environment routing (Story 4.0.5):
+        - Production (default): Qdrant:6333, collection: financial_docs, PostgreSQL: raglite
+        - Test (APP_ENV=test): Qdrant:6335, collection: financial_docs_test, PostgreSQL: raglite_test
+        - CI: Uses explicit env vars (POSTGRES_DB=raglite_ci, POSTGRES_PORT=5433, etc.)
+
+        CI FIX: Apply CI-specific adjustments at runtime, not just module import time.
+        """
+        import os
+
+        # Detect if running in CI environment (runtime check)
+        is_ci = (
+            os.getenv("GITHUB_ACTIONS") == "true"
+            or os.getenv("CI") == "true"
+            or os.getenv("CONTINUOUS_INTEGRATION") == "true"
+        )
+
+        if self.app_env == "test":
+            # Qdrant adjustments for test isolation
+            if self.qdrant_port == 6333:
+                self.qdrant_port = 6335
+            if self.qdrant_collection_name == "financial_docs":
+                # Story 4.0.5 AC4: Separate CI collection to avoid conflicts with local tests
+                collection_suffix = "_ci" if is_ci else "_test"
+                self.qdrant_collection_name = f"financial_docs{collection_suffix}"
+
+            # PostgreSQL: CRITICAL FIX - Ensure CI uses correct database name
+            if is_ci:
+                # CI environment: Force CI-specific settings
+                if not os.getenv("POSTGRES_DB"):
+                    # Only override if not explicitly set in environment
+                    self.postgres_db = "raglite_ci"
+                if not os.getenv("POSTGRES_PORT"):
+                    self.postgres_port = 5433
+                if not os.getenv("POSTGRES_USER"):
+                    self.postgres_user = "raglite_ci"
+                if not os.getenv("POSTGRES_PASSWORD"):
+                    self.postgres_password = "raglite_ci"
+            else:
+                # Local test environment: Use test database
+                if not os.getenv("POSTGRES_DB"):
+                    self.postgres_db = "raglite_test"
+                if not os.getenv("POSTGRES_PORT"):
+                    self.postgres_port = 5433
+
+            # Story 6.24: Reduce regressor buffer for faster test execution
+            # Only reduce if using the default 3-year value (allow explicit override)
+            if self.regressor_buffer_years == 3:
+                self.regressor_buffer_years = 1  # 1-year buffer for ~3x faster tests
+
+        return self
+
+    # Pydantic 2.x configuration using SettingsConfigDict
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",  # Ignore extra fields from .env (e.g., TEST_PDF_PATH)
+    )
+
+
+# Singleton instance - import this in other modules
+settings = Settings()
+
+# Diagnostic logging for Settings initialization (helps debug CI configuration issues)
+logger = logging.getLogger(__name__)
+logger.info(
+    "Settings initialized",
+    extra={
+        "postgres_db": settings.postgres_db,
+        "postgres_port": settings.postgres_port,
+        "postgres_user": settings.postgres_user,
+        "qdrant_collection": settings.qdrant_collection_name,
+        "qdrant_port": settings.qdrant_port,
+        "app_env": settings.app_env,
+        "regressor_buffer_years": settings.regressor_buffer_years,
+        "ci_detected": os.getenv("CI") == "true",
+        "github_actions": os.getenv("GITHUB_ACTIONS") == "true",
+    },
+)

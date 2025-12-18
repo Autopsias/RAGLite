@@ -101,10 +101,10 @@ def phase1_qdrant_dedup(dry_run: bool = True) -> dict:
 
     # Group by text hash
     text_groups: dict[str, list] = defaultdict(list)
-    for point in all_points:
-        text = point.payload.get("text", "")
+    for _point in all_points:
+        text = _point.payload.get("text", "")
         text_hash = hashlib.md5(text.encode()).hexdigest()
-        text_groups[text_hash].append(point)
+        text_groups[text_hash].append(_point)
 
     unique_count = len(text_groups)
     duplicate_count = len(all_points) - unique_count
@@ -114,7 +114,7 @@ def phase1_qdrant_dedup(dry_run: bool = True) -> dict:
 
     # Find IDs to delete (keep first of each group)
     ids_to_delete = []
-    for text_hash, points in text_groups.items():
+    for _text_hash, points in text_groups.items():
         if len(points) > 1:
             # Keep first, delete rest
             for point in points[1:]:

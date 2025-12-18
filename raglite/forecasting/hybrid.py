@@ -1640,7 +1640,6 @@ def validate_timeseries_for_forecast(
         expected_min, expected_max = EXPECTED_RANGES[metric_lower]
         abs_values = [abs(v) for v in values]
         max_val = max(abs_values)
-        min_val = min(abs_values)
 
         if max_val > expected_max * 100:  # 100x threshold for scale detection
             issues.append(

@@ -239,7 +239,7 @@ class ENTSOEClient:
 
                     return df
 
-                except httpx.TimeoutException:
+                except httpx.TimeoutException as e:
                     if attempt < max_retries - 1:
                         delay = retry_delays[min(attempt, len(retry_delays) - 1)]
                         logger.warning(
@@ -251,7 +251,7 @@ class ENTSOEClient:
                     raise ExternalDataFetchError(
                         source="Ember",
                         message=f"CSV download timeout after {max_retries} attempts",
-                    )
+                    ) from e
 
                 except httpx.HTTPStatusError as e:
                     # Retry on server errors (5xx) or rate limit (429)
@@ -271,13 +271,13 @@ class ENTSOEClient:
                     raise ExternalDataFetchError(
                         source="Ember",
                         message=f"HTTP error: {e.response.status_code}",
-                    )
+                    ) from e
 
                 except Exception as e:
                     raise ExternalDataFetchError(
                         source="Ember",
                         message=f"Failed to parse CSV: {e}",
-                    )
+                    ) from e
 
         raise ExternalDataFetchError(
             source="Ember",

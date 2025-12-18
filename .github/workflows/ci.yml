@@ -493,6 +493,11 @@ jobs:
           # Integration Tests: Ensure test databases and users are properly configured
           echo "Setting up PostgreSQL TEST environment..."
 
+          # CRITICAL FIX: Clean up any existing PostgreSQL test containers to avoid "already in use" errors
+          echo "Cleaning up existing PostgreSQL test containers..."
+          docker rm -f raglite-postgresql-test 2>/dev/null || true
+          sleep 2
+
           # Start test services using docker-compose for consistency
           docker compose up -d postgresql-test
 
@@ -1559,14 +1564,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Python for docs validation
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
       - name: Run comprehensive documentation validation
         run: |
           echo "Running comprehensive documentation validation..."
+          # Use system python3 (consistent with other self-hosted jobs)
+          # Avoids permission errors with actions/setup-python on self-hosted runners
           python3 scripts/validate-docs.py
 
   # ============================================================================

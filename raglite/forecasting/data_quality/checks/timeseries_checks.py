@@ -319,16 +319,12 @@ async def check_missing_data_pattern(
     # Expected frequency gap
     expected_freq = config.frequency.expected
     if expected_freq == Frequency.DAILY:
-        expected_gap = pd.Timedelta(days=1)
         max_allowed_gap = pd.Timedelta(days=7)
     elif expected_freq == Frequency.MONTHLY:
-        expected_gap = pd.Timedelta(days=30)
         max_allowed_gap = pd.Timedelta(days=config.frequency.max_gap_months * 31)
     elif expected_freq == Frequency.QUARTERLY:
-        expected_gap = pd.Timedelta(days=90)
         max_allowed_gap = pd.Timedelta(days=config.frequency.max_gap_months * 31)
     else:
-        expected_gap = pd.Timedelta(days=365)
         max_allowed_gap = pd.Timedelta(days=400)
 
     # Find large gaps
