@@ -21,21 +21,22 @@ echo "========================================"
 echo "Target: PostgreSQL on port $TEST_PORT"
 
 # Function to execute SQL in test container
+# FIX: Use raglite_ci credentials that match docker-compose.yml configuration
 exec_sql() {
     local sql="$1"
-    docker exec "$TEST_CONTAINER" psql -U raglite -d postgres -c "$sql"
+    docker exec "$TEST_CONTAINER" psql -U raglite_ci -d postgres -c "$sql"
 }
 
 # Function to check if database exists
 db_exists() {
     local db_name="$1"
-    docker exec "$TEST_CONTAINER" psql -U raglite -d postgres -c "SELECT 1 FROM pg_database WHERE datname='$db_name'" | grep -q 1
+    docker exec "$TEST_CONTAINER" psql -U raglite_ci -d postgres -c "SELECT 1 FROM pg_database WHERE datname='$db_name'" | grep -q 1
 }
 
 # Function to check if user exists
 user_exists() {
     local user_name="$1"
-    docker exec "$TEST_CONTAINER" psql -U raglite -d postgres -c "SELECT 1 FROM pg_roles WHERE rolname='$user_name'" | grep -q 1
+    docker exec "$TEST_CONTAINER" psql -U raglite_ci -d postgres -c "SELECT 1 FROM pg_roles WHERE rolname='$user_name'" | grep -q 1
 }
 
 # 1. Ensure test PostgreSQL container is running
@@ -55,17 +56,19 @@ fi
 echo ""
 echo "🔗 Step 2: Verify PostgreSQL connectivity..."
 
-MAX_RETRIES=15
+# FIX: Increased timeout to 30s for CI environments where startup may be slower
+MAX_RETRIES=30
 RETRY_COUNT=0
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if docker exec "$TEST_CONTAINER" psql -U raglite -d postgres -c "SELECT 1" > /dev/null 2>&1; then
-        echo "✅ PostgreSQL is ready"
+    # FIX: Use raglite_ci credentials that match docker-compose.yml
+    if docker exec "$TEST_CONTAINER" psql -U raglite_ci -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+        echo "✅ PostgreSQL is ready (connected in ${RETRY_COUNT}s)"
         break
     fi
 
     RETRY_COUNT=$((RETRY_COUNT + 1))
-    if [ $((RETRY_COUNT % 3)) -eq 0 ]; then
+    if [ $((RETRY_COUNT % 5)) -eq 0 ]; then
         echo "Waiting for PostgreSQL... (attempt $RETRY_COUNT/$MAX_RETRIES)"
     fi
     sleep 1
@@ -73,6 +76,8 @@ done
 
 if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
     echo "❌ PostgreSQL not ready after ${MAX_RETRIES}s"
+    echo "Container logs:"
+    docker logs "$TEST_CONTAINER" --tail 30 || true
     exit 1
 fi
 
@@ -118,9 +123,10 @@ exec_sql "GRANT ALL PRIVILEGES ON DATABASE raglite_test TO raglite_test;"
 exec_sql "GRANT ALL PRIVILEGES ON DATABASE raglite_ci TO raglite_ci;"
 
 # Grant schema permissions for table creation
+# FIX: Use raglite_ci superuser to grant permissions (it owns the databases)
 echo "Granting schema permissions..."
-docker exec "$TEST_CONTAINER" psql -U raglite -d raglite_test -c "GRANT ALL ON SCHEMA public TO raglite_test;"
-docker exec "$TEST_CONTAINER" psql -U raglite -d raglite_ci -c "GRANT ALL ON SCHEMA public TO raglite_ci;"
+docker exec "$TEST_CONTAINER" psql -U raglite_ci -d raglite_test -c "GRANT ALL ON SCHEMA public TO raglite_test;"
+docker exec "$TEST_CONTAINER" psql -U raglite_ci -d raglite_ci -c "GRANT ALL ON SCHEMA public TO raglite_ci;"
 
 echo "✅ Permissions granted"
 

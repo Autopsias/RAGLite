@@ -13,13 +13,14 @@ from __future__ import annotations
 
 from datetime import date
 
+# Story 6.17: Add ECB Macroeconomic Indicators
 # These imports will fail until implementation is complete (RED phase)
 # Import paths match the story specification
 from raglite.external_data.clients.ecb import (
     ECBClient,
-    ECBGDPGrowth,  # Story 6.17: New dataclass for GDP growth
-    ECBInflation,  # Story 6.17: New dataclass for HICP inflation
-    interpolate_quarterly_to_monthly,  # Story 6.17: New function for interpolation
+    ECBGDPGrowth,
+    ECBInflation,
+    interpolate_quarterly_to_monthly,
 )
 
 
