@@ -835,7 +835,7 @@ jobs:
 
       - name: Verify PostgreSQL is available
         run: |
-          CONTAINER_NAME="raglite-postgresql-integration"
+          CONTAINER_NAME="raglite-postgresql-test"
           echo "Checking PostgreSQL instance ($CONTAINER_NAME)..."
           MAX_RETRIES=30
           RETRY_COUNT=0
