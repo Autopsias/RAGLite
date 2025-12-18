@@ -197,11 +197,11 @@ development_status:
   # Timeline: ~90 days total (~30-45 days with parallelization)
   # Blockers: None (can run in parallel with Epic 5/6)
   # Reference: docs/analysis/file-size-refactoring-briefing.md
-  epic-7: backlog
-  # Batch 1: Enable Other Refactoring (Test Infrastructure)
-  7-1-split-test-external-data-clients: backlog
-  7-2-split-root-conftest: backlog
-  7-3-split-integration-conftest: backlog
+  epic-7: in-progress
+  # Batch 1: Enable Other Refactoring (Test Infrastructure) - COMPLETE
+  7-1-split-test-external-data-clients: done
+  7-2-split-root-conftest: done
+  7-3-split-integration-conftest: done
   # Batch 2: Largest Production Files
   7-4-refactor-main-py-mcp-module: backlog
   7-5-refactor-hybrid-py-forecasting-modules: backlog
