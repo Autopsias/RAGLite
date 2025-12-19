@@ -6,8 +6,9 @@ to MCP clients. Tools have been refactored to raglite.mcp.tools (Story 7.4).
 For new code, import tools from raglite.mcp.tools.* instead of raglite.main.
 """
 
-from fastmcp import FastMCP
 from typing import Any
+
+from fastmcp import FastMCP
 
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
