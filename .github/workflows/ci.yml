@@ -538,12 +538,23 @@ jobs:
           # Integration tests also import from scripts directory
           export PYTHONPATH="${PWD}:${PWD}/scripts:${PYTHONPATH}"
 
-          echo "========================================="
-          echo "CI MODE: Fast Testing (APP_ENV=${APP_ENV})"
+          # Determine marker filter based on branch
+          # Main branch: run ALL tests including slow (thorough validation before release)
+          # Other branches: skip slow tests (faster feedback during development)
+          if [ "$GITHUB_REF" == "refs/heads/main" ]; then
+            MARKER_FILTER=""
+            echo "========================================="
+            echo "CI MODE: Full Testing on MAIN (APP_ENV=${APP_ENV})"
+            echo "- Running ALL integration tests (including slow)"
+          else
+            MARKER_FILTER="not slow"
+            echo "========================================="
+            echo "CI MODE: Fast Testing (APP_ENV=${APP_ENV})"
+            echo "- Running core integration tests (slow tests skipped)"
+          fi
           echo "- Qdrant: ${QDRANT_HOST}:${QDRANT_PORT}"
           echo "- PostgreSQL: ${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
           echo "- Using 10-page sample PDF (~10-15s ingestion)"
-          echo "- Running core integration tests (slow tests skipped)"
           echo "- CRITICAL FIX: Sequential execution (-n 0) to prevent pytest-xdist worker controller errors"
           echo "- Target: 45-50 minutes total (sequential due to shared state)"
           echo "- PYTHONPATH: ${PYTHONPATH}"
@@ -554,7 +565,7 @@ jobs:
             # Integration tests share session fixtures that don't work properly with worker processes
             pytest tests/integration/ \
               -n 0 \
-              -m "not slow" \
+              -m "$MARKER_FILTER" \
               -v \
               --tb=short \
               --maxfail=3 \
