@@ -446,6 +446,19 @@ jobs:
           docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":${CONTAINER_PORT}->" | awk '{print $1}' | xargs -r docker rm -f || true
           sleep 2
 
+          # PRE-FLIGHT: Check for corrupted storage from previous cancelled jobs
+          # Root cause analysis: cancel-in-progress can leave storage in bad state
+          if [ -d "./qdrant_storage_test" ]; then
+            echo "Checking Qdrant storage health..."
+            # Test if storage is usable by checking for lock files or corruption markers
+            if [ -f "./qdrant_storage_test/.lock" ] || \
+               find ./qdrant_storage_test -name "*.tmp" -type f 2>/dev/null | grep -q .; then
+              echo "⚠️  Detected potentially corrupted storage (lock files or temp files present)"
+              echo "Clearing storage for fresh start..."
+              rm -rf ./qdrant_storage_test
+            fi
+          fi
+
           # Start test services using docker-compose for consistency
           docker compose up -d qdrant-test
 
@@ -468,9 +481,14 @@ jobs:
 
               if [ "$ERROR_500_COUNT" -gt 0 ]; then
                 echo "⚠️  Warning: Qdrant has $ERROR_500_COUNT recent 500 errors"
-                echo "Restarting Qdrant TEST container to clear error state..."
-                docker restart raglite-qdrant-test
+                echo "Recreating Qdrant TEST container with fresh storage..."
+                # FIX: Full recreate instead of restart to clear corrupted storage
+                # Root cause: bind mount storage corruption from interrupted operations
+                docker compose down qdrant-test || true
+                rm -rf ./qdrant_storage_test
+                docker compose up -d qdrant-test
                 sleep 5
+                echo "✅ Qdrant TEST container recreated with fresh storage"
               fi
 
               exit 0
