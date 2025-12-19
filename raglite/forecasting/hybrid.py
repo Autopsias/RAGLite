@@ -200,7 +200,7 @@ def validate_regressor_scale(
     target: pd.Series,
     max_scale_ratio: float = 100.0,
     min_correlation: float = 0.2,
-) -> tuple[bool, str, dict]:
+) -> tuple[bool, str, dict[str, Any]]:
     """Validate that regressor is suitable for forecasting target.
 
     Story 6.7: Scale validation prevents mismatched data from causing
@@ -215,7 +215,7 @@ def validate_regressor_scale(
     Returns:
         Tuple of (is_valid, message, metadata)
     """
-    metadata: dict = {}
+    metadata: dict[str, Any] = {}
 
     # Align data
     aligned = pd.DataFrame({"target": target, "regressor": regressor}).dropna()
@@ -2045,6 +2045,10 @@ def _run_linear_forecast(
 # that import from raglite.forecasting.hybrid after the refactoring
 
 from raglite.forecasting.ensemble import generate_ensemble_forecast
+from raglite.forecasting.models.xgboost_model import (
+    _run_xgboost_forecast,
+    fit_xgboost,
+)
 
 __all__ = [
     "generate_forecast",
@@ -2053,4 +2057,7 @@ __all__ = [
     "explain_forecast",
     "InsufficientDataError",
     "MIN_DATA_POINTS",
+    # Re-export XGBoost functions for backward compatibility
+    "fit_xgboost",
+    "_run_xgboost_forecast",
 ]
