@@ -48,15 +48,13 @@ from raglite.mcp.tools.external_data import (  # noqa: E402, F401
     query_external_data,
     refresh_external_data,
 )
-from raglite.mcp.tools.forecast import (  # noqa: E402, F401
-    get_financial_forecast,
-)
+from raglite.mcp.tools.forecast import get_financial_forecast  # noqa: E402, F401
 from raglite.mcp.tools.health import check_database_health  # noqa: E402, F401
 
 # Re-export DocumentProcessingError for backward compatibility (AC4)
 # Re-export all tools for backward compatibility (AC4)
 from raglite.mcp.tools.ingestion import (  # noqa: E402, F401
-    DocumentProcessingError,  # noqa: E402, F401
+    DocumentProcessingError,
     _perform_forecast_refresh,
     get_ingestion_status,
     ingest_financial_document,
