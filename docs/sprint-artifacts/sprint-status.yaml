@@ -203,8 +203,8 @@ development_status:
   7-2-split-root-conftest: done
   7-3-split-integration-conftest: done
   # Batch 2: Largest Production Files
-  7-4-refactor-main-py-mcp-module: backlog
-  7-5-refactor-hybrid-py-forecasting-modules: backlog
+  7-4-refactor-main-py-mcp-module: done
+  7-5-refactor-hybrid-py-forecasting-modules: done
   # Batch 3: Ingestion Module (stories 7.6-7.9 to be drafted)
   # Batch 4: External Data Module (stories 7.10-7.14 to be drafted)
   # Batch 5: Remaining Tier 2-3 Files (stories 7.15-7.45 to be drafted)

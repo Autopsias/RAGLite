@@ -9,10 +9,6 @@ import pytest
 
 from raglite.shared.models import DocumentMetadata, IngestionResult
 
-# Mark all tests as preserve_collection - these are read-only tests
-# that don't modify the Qdrant collection (performance optimization)
-pytestmark = pytest.mark.preserve_collection
-
 # =============================================================================
 # Test MCP Ingestion with Forecast Refresh
 # =============================================================================
@@ -24,7 +20,7 @@ class TestMCPIngestionWithForecast:
     @pytest.mark.asyncio
     async def test_ingestion_returns_ingestion_result(self):
         """Test that ingest_financial_document returns IngestionResult (AC4)."""
-        from raglite.main import ingest_financial_document
+        from raglite.mcp.tools.ingestion import ingest_financial_document
 
         # Mock the entire ingestion pipeline
         mock_metadata = DocumentMetadata(
@@ -38,12 +34,12 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.main.ingest_document",
+                "raglite.mcp.tools.ingestion.ingest_document",
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
-            patch("raglite.main.settings") as mock_settings,
-            patch("raglite.main.trigger_forecast_refresh", new_callable=AsyncMock),
+            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
+            patch("raglite.mcp.tools.ingestion.trigger_forecast_refresh", new_callable=AsyncMock),
             patch("pathlib.Path.exists", return_value=True),
         ):
             mock_settings.enable_forecast_auto_update = False  # Disable to simplify test
@@ -58,7 +54,7 @@ class TestMCPIngestionWithForecast:
     @pytest.mark.asyncio
     async def test_ingestion_with_forecast_refresh_enabled(self):
         """Test that forecast refresh is triggered when enabled (AC1)."""
-        from raglite.main import ingest_financial_document
+        from raglite.mcp.tools.ingestion import ingest_financial_document
         from raglite.shared.models import ForecastRefreshResult
 
         mock_metadata = DocumentMetadata(
@@ -80,13 +76,13 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.main.ingest_document",
+                "raglite.mcp.tools.ingestion.ingest_document",
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
-            patch("raglite.main.settings") as mock_settings,
+            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
             patch(
-                "raglite.main.trigger_forecast_refresh",
+                "raglite.mcp.tools.ingestion.trigger_forecast_refresh",
                 new_callable=AsyncMock,
                 return_value=mock_refresh_result,
             ) as mock_refresh,
@@ -107,7 +103,7 @@ class TestMCPIngestionWithForecast:
     @pytest.mark.asyncio
     async def test_ingestion_with_auto_forecast_false(self):
         """Test that forecast refresh is skipped when auto_forecast=False."""
-        from raglite.main import ingest_financial_document
+        from raglite.mcp.tools.ingestion import ingest_financial_document
 
         mock_metadata = DocumentMetadata(
             filename="Report.pdf",
@@ -120,12 +116,12 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.main.ingest_document",
+                "raglite.mcp.tools.ingestion.ingest_document",
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
-            patch("raglite.main.settings") as mock_settings,
-            patch("raglite.main.trigger_forecast_refresh", new_callable=AsyncMock) as mock_refresh,
+            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
+            patch("raglite.mcp.tools.ingestion.trigger_forecast_refresh", new_callable=AsyncMock) as mock_refresh,
             patch("pathlib.Path.exists", return_value=True),
         ):
             mock_settings.enable_forecast_auto_update = True
@@ -145,7 +141,7 @@ class TestMCPIngestionWithForecast:
     @pytest.mark.asyncio
     async def test_ingestion_with_settings_disabled(self):
         """Test that forecast refresh is skipped when disabled in settings."""
-        from raglite.main import ingest_financial_document
+        from raglite.mcp.tools.ingestion import ingest_financial_document
 
         mock_metadata = DocumentMetadata(
             filename="Report.pdf",
@@ -158,12 +154,12 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.main.ingest_document",
+                "raglite.mcp.tools.ingestion.ingest_document",
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
-            patch("raglite.main.settings") as mock_settings,
-            patch("raglite.main.trigger_forecast_refresh", new_callable=AsyncMock) as mock_refresh,
+            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
+            patch("raglite.mcp.tools.ingestion.trigger_forecast_refresh", new_callable=AsyncMock) as mock_refresh,
             patch("pathlib.Path.exists", return_value=True),
         ):
             mock_settings.enable_forecast_auto_update = False
@@ -345,7 +341,7 @@ class TestTimeoutBehavior:
         """Test that MCP ingestion handles forecast timeout gracefully (AC3)."""
         import asyncio
 
-        from raglite.main import _perform_forecast_refresh
+        from raglite.mcp.tools.ingestion import _perform_forecast_refresh
         from raglite.shared.models import ForecastRefreshResult
 
         metadata = DocumentMetadata(
@@ -368,9 +364,9 @@ class TestTimeoutBehavior:
             )
 
         with (
-            patch("raglite.main.settings") as mock_settings,
+            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
             patch(
-                "raglite.main.trigger_forecast_refresh",
+                "raglite.mcp.tools.ingestion.trigger_forecast_refresh",
                 new_callable=AsyncMock,
                 side_effect=slow_refresh,
             ),

@@ -116,7 +116,7 @@ class TestWeightedAverage:
 
     def test_weighted_average_basic(self) -> None:
         """AC5: Weighted average calculates correctly."""
-        from raglite.forecasting.hybrid import _calculate_weighted_average
+        from raglite.forecasting.ensemble import _calculate_weighted_average
 
         predictions = {
             "prophet": [100.0, 110.0, 120.0],
@@ -134,7 +134,7 @@ class TestWeightedAverage:
 
     def test_weighted_average_normalizes_missing_models(self) -> None:
         """AC5: Weights are normalized for available models only."""
-        from raglite.forecasting.hybrid import _calculate_weighted_average
+        from raglite.forecasting.ensemble import _calculate_weighted_average
 
         predictions = {
             "prophet": [100.0, 110.0],
@@ -153,7 +153,7 @@ class TestWeightedAverage:
 
     def test_weighted_average_equal_weights_when_zero(self) -> None:
         """AC5: Equal weights applied when all weights are zero."""
-        from raglite.forecasting.hybrid import _calculate_weighted_average
+        from raglite.forecasting.ensemble import _calculate_weighted_average
 
         predictions = {
             "prophet": [100.0],
@@ -317,7 +317,7 @@ class TestGenerateEnsembleForecast:
         self, sample_historical_data: "TimeSeriesData"
     ) -> None:
         """AC5: Ensemble falls back to Prophet when no regressors available."""
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
+        from raglite.forecasting.ensemble import generate_ensemble_forecast
 
         # Mock generate_forecast to avoid actual Prophet call
         with patch("raglite.forecasting.hybrid.generate_forecast") as mock_generate:
@@ -376,7 +376,7 @@ class TestGenerateEnsembleForecast:
         self, sample_historical_data: "TimeSeriesData"
     ) -> None:
         """AC6: Ensemble falls back to Prophet when all models fail."""
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
+        from raglite.forecasting.ensemble import generate_ensemble_forecast
 
         # Mock all models to fail initially, then succeed on fallback
         call_count = [0]
