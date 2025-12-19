@@ -1,4 +1,5 @@
 """Admin MCP tools."""
+
 from datetime import UTC, date, datetime, timedelta
 
 from raglite.forecasting.backtest_job import trigger_backtest_now
@@ -8,6 +9,7 @@ from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
+
 
 @mcp.tool()
 async def manage_model_weights(request: ModelWeightAdminRequest) -> str:
@@ -34,7 +36,11 @@ async def manage_model_weights(request: ModelWeightAdminRequest) -> str:
     from raglite.external_data.storage import ExternalDataStorage
     from raglite.forecasting.adaptive_weights import _get_static_weights
     from raglite.shared.database import get_session
-    logger.info( "Model weight admin action", extra={"action": request.action, "metric": request.metric}, )
+
+    logger.info(
+        "Model weight admin action",
+        extra={"action": request.action, "metric": request.metric},
+    )
     try:
         session = get_session()
         storage = ExternalDataStorage(session)
@@ -105,6 +111,8 @@ async def manage_model_weights(request: ModelWeightAdminRequest) -> str:
             success=False,
             message=f"Error: {e}",
         ).model_dump_json(indent=2)
+
+
 @mcp.tool()
 async def retrain_forecasting_models(
     models: str = "tft",
@@ -114,7 +122,11 @@ async def retrain_forecasting_models(
 
     from raglite.external_data.models import RetrainResult
     from raglite.external_data.storage import ExternalDataStorage
-    logger.info( "Manual model retraining triggered", extra={"models": models, "force": force}, )
+
+    logger.info(
+        "Manual model retraining triggered",
+        extra={"models": models, "force": force},
+    )
     start_time = time.time()
     errors: list[str] = []
     models_trained: list[str] = []
@@ -130,6 +142,7 @@ async def retrain_forecasting_models(
         if invalid:
             raise ValueError(f"Invalid model names: {invalid}. Valid options: {valid_models}")
         from raglite.shared.database import get_session
+
         session = get_session()
         storage = ExternalDataStorage(session)
         if not force and "tft" in model_list:
@@ -137,7 +150,13 @@ async def retrain_forecasting_models(
             if active_checkpoint:
                 age = datetime.now(UTC) - active_checkpoint.trained_at
                 if age < timedelta(days=settings.tft_checkpoint_freshness_days):
-                    logger.info( "TFT checkpoint is recent - skipping training", extra={ "checkpoint_age_days": age.days, "freshness_threshold": settings.tft_checkpoint_freshness_days, }, )
+                    logger.info(
+                        "TFT checkpoint is recent - skipping training",
+                        extra={
+                            "checkpoint_age_days": age.days,
+                            "freshness_threshold": settings.tft_checkpoint_freshness_days,
+                        },
+                    )
                     return RetrainResult(
                         status="skipped",
                         models_trained=[],
@@ -159,6 +178,7 @@ async def retrain_forecasting_models(
                     train_tft_model,
                 )
                 from raglite.shared.database import get_session
+
                 MIN_DATA_POINTS = 24
                 session = get_session()
                 storage_instance = ExternalDataStorage(session)
@@ -232,7 +252,13 @@ async def retrain_forecasting_models(
                         metrics.update(train_metrics)
                         metrics["training_samples"] = len(training_dataset)
                         metrics["validation_samples"] = len(validation_dataset)
-                        logger.info( "TFT training completed successfully", extra={ "checkpoint_path": checkpoint_path, "metrics": train_metrics, }, )
+                        logger.info(
+                            "TFT training completed successfully",
+                            extra={
+                                "checkpoint_path": checkpoint_path,
+                                "metrics": train_metrics,
+                            },
+                        )
             except Exception as e:
                 logger.error(f"TFT training failed: {e}", exc_info=True)
                 errors.append(f"TFT training failed: {str(e)}")

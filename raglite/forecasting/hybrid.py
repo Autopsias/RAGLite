@@ -12,7 +12,6 @@ imported when generate_forecast() is actually called.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import os
 import warnings
@@ -25,10 +24,8 @@ import pandas as pd
 
 if TYPE_CHECKING:
     from catboost import CatBoostRegressor
-    from lightgbm import LGBMRegressor
     from prophet import Prophet
     from sklearn.linear_model import LinearRegression
-    from xgboost import XGBRegressor
 
     from raglite.external_data.storage import ExternalDataStorage
 
@@ -37,24 +34,7 @@ if TYPE_CHECKING:
 _sklearn_executor = ThreadPoolExecutor(max_workers=2)
 
 from raglite.forecasting.models.chronos_model import (
-    fit_and_forecast_chronos,
     generate_chronos_cold_start_forecast,
-)
-from raglite.forecasting.models.lightgbm_model import (
-    _fit_and_forecast_lightgbm,
-    fit_lightgbm,
-)
-from raglite.forecasting.models.tft_model import fit_and_forecast_tft
-from raglite.forecasting.models.xgboost_model import (
-    _fit_and_forecast_xgboost,
-    _run_xgboost_forecast,
-    fit_xgboost,
-)
-from raglite.forecasting.regime_detection import (
-    RegimeChangePoint,
-    RegimeDetectionResult,
-    detect_regime_changes,
-    get_post_regime_data,
 )
 from raglite.shared.clients import get_mistral_client
 

@@ -388,7 +388,9 @@ class TestIngestFinancialDocumentAsync:
             captured_args["original_filename"] = original_filename
 
         with patch("raglite.mcp.tools.ingestion.create_job", return_value="test-job-789"):
-            with patch("raglite.mcp.tools.ingestion.start_background_job", side_effect=capture_start_job):
+            with patch(
+                "raglite.mcp.tools.ingestion.start_background_job", side_effect=capture_start_job
+            ):
                 await ingest_financial_document_async.fn(
                     file_content=valid_pdf_content, filename="quarterly_report.pdf"
                 )

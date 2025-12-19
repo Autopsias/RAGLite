@@ -128,7 +128,9 @@ async def test_cold_start_with_absolute_minimum() -> None:
     ]
     data = TimeSeriesData(metric_name="test_metric", points=points, interval="monthly")
 
-    with patch("raglite.forecasting.models.chronos_model._get_chronos_pipeline") as mock_get_pipeline:
+    with patch(
+        "raglite.forecasting.models.chronos_model._get_chronos_pipeline"
+    ) as mock_get_pipeline:
         mock_pipeline = MagicMock()
         mock_get_pipeline.return_value = mock_pipeline
 

@@ -121,7 +121,9 @@ class TestMCPIngestionWithForecast:
                 return_value=mock_metadata,
             ),
             patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
-            patch("raglite.mcp.tools.ingestion.trigger_forecast_refresh", new_callable=AsyncMock) as mock_refresh,
+            patch(
+                "raglite.mcp.tools.ingestion.trigger_forecast_refresh", new_callable=AsyncMock
+            ) as mock_refresh,
             patch("pathlib.Path.exists", return_value=True),
         ):
             mock_settings.enable_forecast_auto_update = True
@@ -159,7 +161,9 @@ class TestMCPIngestionWithForecast:
                 return_value=mock_metadata,
             ),
             patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
-            patch("raglite.mcp.tools.ingestion.trigger_forecast_refresh", new_callable=AsyncMock) as mock_refresh,
+            patch(
+                "raglite.mcp.tools.ingestion.trigger_forecast_refresh", new_callable=AsyncMock
+            ) as mock_refresh,
             patch("pathlib.Path.exists", return_value=True),
         ):
             mock_settings.enable_forecast_auto_update = False

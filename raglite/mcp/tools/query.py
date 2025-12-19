@@ -1,4 +1,5 @@
 """Query MCP tools."""
+
 import time
 
 from raglite.agentic.fallback import FallbackResponse, handle_workflow_failure
@@ -17,6 +18,7 @@ from raglite.shared.models import (
 )
 
 logger = get_logger(__name__)
+
 
 @mcp.tool()
 async def query_financial_documents(request: QueryRequest) -> QueryResponse:
@@ -54,7 +56,13 @@ async def query_financial_documents(request: QueryRequest) -> QueryResponse:
         >>> for result in response.results:
         ...     print(f"[{result.score:.2f}] {result.text}")
     """
-    logger.info( "Query received", extra={ "query": request.query, "top_k": request.top_k, }, )
+    logger.info(
+        "Query received",
+        extra={
+            "query": request.query,
+            "top_k": request.top_k,
+        },
+    )
     if not request.query or not request.query.strip():
         error_msg = "Query cannot be empty"
         logger.warning("Empty query rejected", extra={"query": request.query})
@@ -64,6 +72,7 @@ async def query_financial_documents(request: QueryRequest) -> QueryResponse:
         search_results = await multi_index_search(request.query, top_k=request.top_k)
         search_duration_ms = (time.perf_counter() - start_time) * 1000
         from raglite.shared.models import QueryResult
+
         query_results = [
             QueryResult(
                 score=r.score,
@@ -83,9 +92,7 @@ async def query_financial_documents(request: QueryRequest) -> QueryResponse:
             extra={
                 "query": request.query,
                 "results_count": len(cited_results),
-                "retrieval_sources": list(
-                    retrieval_sources
-                ),
+                "retrieval_sources": list(retrieval_sources),
                 "search_time_ms": f"{search_duration_ms:.2f}",
                 "total_time_ms": f"{total_duration_ms:.2f}",
                 "retrieval_method": "multi-index",
@@ -97,18 +104,41 @@ async def query_financial_documents(request: QueryRequest) -> QueryResponse:
             retrieval_time_ms=total_duration_ms,
         )
     except MultiIndexSearchError as e:
-        logger.error( "Multi-index search failed", extra={ "query": request.query, "error": str(e), }, exc_info=True, )
+        logger.error(
+            "Multi-index search failed",
+            extra={
+                "query": request.query,
+                "error": str(e),
+            },
+            exc_info=True,
+        )
         raise QueryError(f"Multi-index search failed: {e}") from e
     except QueryError:
         raise
     except Exception as e:
-        logger.error( "Query failed", extra={ "query": request.query, "error": str(e), "error_type": type(e).__name__, }, exc_info=True, )
+        logger.error(
+            "Query failed",
+            extra={
+                "query": request.query,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+            exc_info=True,
+        )
         raise QueryError(f"Query failed: {e}") from e
+
+
 @mcp.tool()
 async def analytical_query_financial_documents(
     request: AnalyticalQueryRequest,
 ) -> AnalyticalQueryResponse:
-    logger.info( "Analytical query received", extra={ "query": request.query, "top_k": request.top_k, }, )
+    logger.info(
+        "Analytical query received",
+        extra={
+            "query": request.query,
+            "top_k": request.top_k,
+        },
+    )
     if not request.query or not request.query.strip():
         error_msg = "Query cannot be empty"
         logger.warning("Empty analytical query rejected", extra={"query": request.query})
@@ -116,9 +146,15 @@ async def analytical_query_financial_documents(
     workflow_start_time = time.perf_counter()
     try:
         complexity = await classify_query_complexity(request.query)
-        logger.info( "Query classified", extra={"query": request.query, "complexity": complexity}, )
+        logger.info(
+            "Query classified",
+            extra={"query": request.query, "complexity": complexity},
+        )
         if complexity == QueryComplexity.SIMPLE:
-            logger.info( "Routing simple query to Epic 2 basic retrieval", extra={"query": request.query, "complexity": complexity}, )
+            logger.info(
+                "Routing simple query to Epic 2 basic retrieval",
+                extra={"query": request.query, "complexity": complexity},
+            )
             basic_request = QueryRequest(query=request.query, top_k=request.top_k)
             basic_response = await query_financial_documents.fn(basic_request)
             workflow_duration_ms = (time.perf_counter() - workflow_start_time) * 1000
@@ -161,7 +197,14 @@ async def analytical_query_financial_documents(
                 sources=sources,
             )
         plan = await decompose_query(request.query, complexity)
-        logger.info( "Query decomposed", extra={ "query": request.query, "task_count": len(plan.tasks), "pattern": plan.metadata.get("pattern", "unknown"), }, )
+        logger.info(
+            "Query decomposed",
+            extra={
+                "query": request.query,
+                "task_count": len(plan.tasks),
+                "pattern": plan.metadata.get("pattern", "unknown"),
+            },
+        )
         executor = WorkflowExecutor()
         results = await executor.execute_workflow(plan)
         workflow_duration_ms = (time.perf_counter() - workflow_start_time) * 1000
@@ -214,7 +257,15 @@ async def analytical_query_financial_documents(
                             continue
                         if source not in sources:
                             sources.append(source)
-            logger.info( "Analytical query complete", extra={ "query": request.query, "task_count": len(results), "success_count": sum(1 for r in results if r.success), "duration_ms": f"{workflow_duration_ms:.2f}", "fallback_tier": fallback_tier, "sources_count": len(sources),
+            logger.info(
+                "Analytical query complete",
+                extra={
+                    "query": request.query,
+                    "task_count": len(results),
+                    "success_count": sum(1 for r in results if r.success),
+                    "duration_ms": f"{workflow_duration_ms:.2f}",
+                    "fallback_tier": fallback_tier,
+                    "sources_count": len(sources),
                 },
             )
             return AnalyticalQueryResponse(
@@ -235,7 +286,15 @@ async def analytical_query_financial_documents(
             raise RuntimeError("No synthesis result available from workflow")
     except Exception as e:
         workflow_duration_ms = (time.perf_counter() - workflow_start_time) * 1000
-        logger.warning( "Analytical workflow failed - initiating graceful degradation", extra={ "query": request.query, "error": str(e), "error_type": type(e).__name__, "duration_ms": f"{workflow_duration_ms:.2f}", }, )
+        logger.warning(
+            "Analytical workflow failed - initiating graceful degradation",
+            extra={
+                "query": request.query,
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "duration_ms": f"{workflow_duration_ms:.2f}",
+            },
+        )
         partial_results = []
         if "results" in locals():
             partial_results = results
@@ -246,7 +305,15 @@ async def analytical_query_financial_documents(
             error=e,
             total_time_ms=int(workflow_duration_ms),
         )
-        logger.info( "Graceful degradation complete", extra={ "query": request.query, "fallback_tier": fallback_response.tier.value, "confidence": fallback_response.confidence, "duration_ms": f"{workflow_duration_ms:.2f}", }, )
+        logger.info(
+            "Graceful degradation complete",
+            extra={
+                "query": request.query,
+                "fallback_tier": fallback_response.tier.value,
+                "confidence": fallback_response.confidence,
+                "duration_ms": f"{workflow_duration_ms:.2f}",
+            },
+        )
         fallback_reasoning = [
             "1. Classified query as analytical",
             f"2. Attempted multi-step workflow ({len(partial_results)} tasks started)",
@@ -276,8 +343,11 @@ async def analytical_query_financial_documents(
             reasoning_steps=fallback_reasoning,
             sources=fallback_sources,
         )
+
+
 def parse_forecast_query(query: str) -> tuple[str | None, int | None]:
     import re
+
     query_lower = query.lower()
     metric_patterns = {
         r"\b(?:revenue|sales|income)\b": "revenue",
@@ -301,6 +371,7 @@ def parse_forecast_query(query: str) -> tuple[str | None, int | None]:
     q_match = re.search(r"q([1-4])\s*(\d{4})", query_lower)
     if q_match:
         from datetime import datetime
+
         target_quarter = int(q_match.group(1))
         target_year = int(q_match.group(2))
         now = datetime.now()

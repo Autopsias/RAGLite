@@ -62,7 +62,9 @@ class TestIngestFinancialDocumentTool:
         )
 
         with (
-            patch("raglite.mcp.tools.ingestion.ingest_document", new_callable=AsyncMock) as mock_ingest,
+            patch(
+                "raglite.mcp.tools.ingestion.ingest_document", new_callable=AsyncMock
+            ) as mock_ingest,
             patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
         ):
             mock_ingest.return_value = mock_metadata
@@ -81,7 +83,9 @@ class TestIngestFinancialDocumentTool:
     @pytest.mark.asyncio
     async def test_ingest_tool_file_not_found(self):
         """Test ingestion with missing file raises DocumentProcessingError."""
-        with patch("raglite.mcp.tools.ingestion.ingest_document", new_callable=AsyncMock) as mock_ingest:
+        with patch(
+            "raglite.mcp.tools.ingestion.ingest_document", new_callable=AsyncMock
+        ) as mock_ingest:
             mock_ingest.side_effect = FileNotFoundError("File not found")
 
             with pytest.raises(DocumentProcessingError) as exc_info:
@@ -93,7 +97,9 @@ class TestIngestFinancialDocumentTool:
     @pytest.mark.asyncio
     async def test_ingest_tool_processing_error(self):
         """Test ingestion with processing error raises DocumentProcessingError."""
-        with patch("raglite.mcp.tools.ingestion.ingest_document", new_callable=AsyncMock) as mock_ingest:
+        with patch(
+            "raglite.mcp.tools.ingestion.ingest_document", new_callable=AsyncMock
+        ) as mock_ingest:
             mock_ingest.side_effect = Exception("PDF parsing failed")
 
             with pytest.raises(DocumentProcessingError) as exc_info:
@@ -113,7 +119,9 @@ class TestIngestFinancialDocumentTool:
             chunk_count=20,
         )
 
-        with patch("raglite.mcp.tools.ingestion.ingest_document", new_callable=AsyncMock) as mock_ingest:
+        with patch(
+            "raglite.mcp.tools.ingestion.ingest_document", new_callable=AsyncMock
+        ) as mock_ingest:
             mock_ingest.return_value = mock_metadata
 
             with caplog.at_level("INFO"):
@@ -182,8 +190,12 @@ class TestQueryFinancialDocumentsTool:
         ]
 
         with (
-            patch("raglite.mcp.tools.query.multi_index_search", new_callable=AsyncMock) as mock_multi_search,
-            patch("raglite.mcp.tools.query.generate_citations", new_callable=AsyncMock) as mock_citations,
+            patch(
+                "raglite.mcp.tools.query.multi_index_search", new_callable=AsyncMock
+            ) as mock_multi_search,
+            patch(
+                "raglite.mcp.tools.query.generate_citations", new_callable=AsyncMock
+            ) as mock_citations,
         ):
             mock_multi_search.return_value = mock_search_results
             mock_citations.return_value = mock_cited_results
@@ -229,7 +241,9 @@ class TestQueryFinancialDocumentsTool:
     @pytest.mark.asyncio
     async def test_query_tool_search_error(self):
         """Test query with multi-index search failure re-raises QueryError."""
-        with patch("raglite.mcp.tools.query.multi_index_search", new_callable=AsyncMock) as mock_multi_search:
+        with patch(
+            "raglite.mcp.tools.query.multi_index_search", new_callable=AsyncMock
+        ) as mock_multi_search:
             mock_multi_search.side_effect = MultiIndexSearchError("Qdrant connection failed")
 
             request = QueryRequest(query="valid query", top_k=5)
@@ -243,7 +257,9 @@ class TestQueryFinancialDocumentsTool:
     @pytest.mark.asyncio
     async def test_query_tool_unexpected_error(self):
         """Test query with unexpected error wraps in QueryError."""
-        with patch("raglite.mcp.tools.query.multi_index_search", new_callable=AsyncMock) as mock_multi_search:
+        with patch(
+            "raglite.mcp.tools.query.multi_index_search", new_callable=AsyncMock
+        ) as mock_multi_search:
             mock_multi_search.side_effect = Exception("Unexpected failure")
 
             request = QueryRequest(query="valid query", top_k=5)
@@ -287,8 +303,12 @@ class TestQueryFinancialDocumentsTool:
         ]
 
         with (
-            patch("raglite.mcp.tools.query.multi_index_search", new_callable=AsyncMock) as mock_multi_search,
-            patch("raglite.mcp.tools.query.generate_citations", new_callable=AsyncMock) as mock_citations,
+            patch(
+                "raglite.mcp.tools.query.multi_index_search", new_callable=AsyncMock
+            ) as mock_multi_search,
+            patch(
+                "raglite.mcp.tools.query.generate_citations", new_callable=AsyncMock
+            ) as mock_citations,
         ):
             mock_multi_search.return_value = mock_search_results
             mock_citations.return_value = mock_cited_results

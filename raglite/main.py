@@ -5,7 +5,9 @@ to MCP clients. Tools have been refactored to raglite.mcp.tools (Story 7.4).
 
 For new code, import tools from raglite.mcp.tools.* instead of raglite.main.
 """
+
 from fastmcp import FastMCP
+from typing import Any
 
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
@@ -13,7 +15,7 @@ from raglite.shared.logging import get_logger
 logger = get_logger(__name__)
 
 # Initialize FastMCP server - must be in main for decorator access
-mcp = FastMCP("RAGLite")
+mcp: FastMCP = FastMCP("RAGLite")
 
 # Import all tool modules to register @mcp.tool() decorators
 # noqa comments suppress import order warnings
@@ -33,6 +35,7 @@ from raglite.mcp.tools import (  # noqa: E402, F401
     query,
     validation,
 )
+
 # Admin tools accessed via module namespace to avoid circular imports
 # from raglite.mcp.tools.admin import manage_model_weights, retrain_forecasting_models
 from raglite.mcp.tools.external_data import (  # noqa: E402, F401
@@ -99,8 +102,6 @@ __all__ = [
     "_query_single_source",
     "_query_all_sources",
     "_format_response",
-    "manage_model_weights",
-    "retrain_forecasting_models",
     "validate_forecasting_accuracy",
     "list_available_regressors",
     "get_regressor_data",
@@ -110,13 +111,16 @@ __all__ = [
     "ExternalDataQueryResponse",
 ]
 
-def __getattr__(name):
+
+def __getattr__(name: str) -> Any:
     """Lazy import for admin tools to avoid circular import during module load."""
     if name == "manage_model_weights":
         from raglite.mcp.tools import admin
+
         return admin.manage_model_weights
     elif name == "retrain_forecasting_models":
         from raglite.mcp.tools import admin
+
         return admin.retrain_forecasting_models
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
@@ -138,7 +142,8 @@ def _start_scheduler_sync() -> None:
             )
     except Exception as e:
         logger.warning(
-            "Failed to start scheduler - continuing without scheduled refreshes", extra={"error": str(e)}
+            "Failed to start scheduler - continuing without scheduled refreshes",
+            extra={"error": str(e)},
         )
 
 

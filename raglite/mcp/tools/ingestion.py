@@ -1,4 +1,5 @@
 """Document ingestion MCP tools."""
+
 import base64
 import tempfile
 import time
@@ -29,8 +30,12 @@ from raglite.shared.models import (
 )
 
 logger = get_logger(__name__)
+
+
 class DocumentProcessingError(Exception):
     pass
+
+
 async def _perform_forecast_refresh(
     metadata: DocumentMetadata,
     auto_forecast: bool,
@@ -49,18 +54,35 @@ async def _perform_forecast_refresh(
             if refresh_result.success:
                 forecasts_updated = refresh_result.metrics_refreshed
                 if refresh_result.metrics_skipped:
-                    logger.info( "Some metrics skipped during forecast refresh", extra={ "doc_filename": metadata.filename, "skipped": refresh_result.metrics_skipped, }, )
+                    logger.info(
+                        "Some metrics skipped during forecast refresh",
+                        extra={
+                            "doc_filename": metadata.filename,
+                            "skipped": refresh_result.metrics_skipped,
+                        },
+                    )
             else:
                 forecast_skip_reason = refresh_result.error_message or "refresh failed"
-                logger.warning( "Forecast refresh failed", extra={ "doc_filename": metadata.filename, "error": forecast_skip_reason, }, )
+                logger.warning(
+                    "Forecast refresh failed",
+                    extra={
+                        "doc_filename": metadata.filename,
+                        "error": forecast_skip_reason,
+                    },
+                )
         except Exception as e:
             forecast_skip_reason = f"unexpected error: {type(e).__name__}"
-            logger.warning( "Forecast refresh failed unexpectedly", extra={"doc_filename": metadata.filename, "error": str(e)}, )
+            logger.warning(
+                "Forecast refresh failed unexpectedly",
+                extra={"doc_filename": metadata.filename, "error": str(e)},
+            )
     return IngestionResult.from_metadata(
         metadata,
         forecasts_updated=forecasts_updated,
         forecast_refresh_skipped_reason=forecast_skip_reason,
     )
+
+
 @mcp.tool()
 async def ingest_financial_document(
     doc_path: str | None = None,
@@ -83,9 +105,7 @@ async def ingest_financial_document(
             "    3. Call this tool with doc_url parameter"
         )
     if input_modes > 1:
-        raise DocumentProcessingError(
-            "Only one input mode allowed"
-        )
+        raise DocumentProcessingError("Only one input mode allowed")
     if has_content and not has_filename:
         raise DocumentProcessingError(
             "filename is required when using file_content. "
@@ -93,7 +113,10 @@ async def ingest_financial_document(
         )
     if has_url:
         assert doc_url is not None
-        logger.info( "Ingesting document from URL", extra={"url_truncated": doc_url[:80] + "..." if len(doc_url) > 80 else doc_url}, )
+        logger.info(
+            "Ingesting document from URL",
+            extra={"url_truncated": doc_url[:80] + "..." if len(doc_url) > 80 else doc_url},
+        )
         try:
             with temp_file_from_url(doc_url) as (tmp_path, detected_filename):
                 start_time = time.perf_counter()
@@ -113,10 +136,16 @@ async def ingest_financial_document(
                 )
                 return await _perform_forecast_refresh(metadata, auto_forecast)
         except ValueError as e:
-            logger.error( "URL ingestion failed - validation error", extra={"url_truncated": doc_url[:80], "error": str(e)}, )
+            logger.error(
+                "URL ingestion failed - validation error",
+                extra={"url_truncated": doc_url[:80], "error": str(e)},
+            )
             raise DocumentProcessingError(str(e)) from e
         except RuntimeError as e:
-            logger.error( "URL ingestion failed - download error", extra={"url_truncated": doc_url[:80], "error": str(e)}, )
+            logger.error(
+                "URL ingestion failed - download error",
+                extra={"url_truncated": doc_url[:80], "error": str(e)},
+            )
             raise DocumentProcessingError(str(e)) from e
         except Exception as e:
             logger.error(
@@ -131,7 +160,10 @@ async def ingest_financial_document(
             raise DocumentProcessingError(f"Failed to ingest from URL: {e}") from e
     elif has_content:
         assert file_content is not None and filename is not None
-        logger.info( "Ingesting document from base64 content", extra={"doc_filename": filename, "content_size": len(file_content)}, )
+        logger.info(
+            "Ingesting document from base64 content",
+            extra={"doc_filename": filename, "content_size": len(file_content)},
+        )
         try:
             with temp_file_from_base64(file_content, filename) as tmp_path:
                 start_time = time.perf_counter()
@@ -151,7 +183,10 @@ async def ingest_financial_document(
                 )
                 return await _perform_forecast_refresh(metadata, auto_forecast)
         except ValueError as e:
-            logger.error( "Base64 ingestion failed - validation error", extra={"doc_filename": filename, "error": str(e)}, )
+            logger.error(
+                "Base64 ingestion failed - validation error",
+                extra={"doc_filename": filename, "error": str(e)},
+            )
             raise DocumentProcessingError(str(e)) from e
         except Exception as e:
             logger.error(
@@ -172,14 +207,38 @@ async def ingest_financial_document(
             start_time = time.perf_counter()
             metadata = await ingest_document(effective_path)
             duration_ms = (time.perf_counter() - start_time) * 1000
-            logger.info( "Ingestion complete", extra={ "doc_id": metadata.filename, "doc_type": metadata.doc_type, "chunks": metadata.chunk_count, "pages": metadata.page_count, "duration_ms": f"{duration_ms:.2f}", "input_mode": "path", }, )
+            logger.info(
+                "Ingestion complete",
+                extra={
+                    "doc_id": metadata.filename,
+                    "doc_type": metadata.doc_type,
+                    "chunks": metadata.chunk_count,
+                    "pages": metadata.page_count,
+                    "duration_ms": f"{duration_ms:.2f}",
+                    "input_mode": "path",
+                },
+            )
             return await _perform_forecast_refresh(metadata, auto_forecast)
         except FileNotFoundError as e:
-            logger.error( "Document not found", extra={"path": effective_path, "error": str(e)}, exc_info=True, )
+            logger.error(
+                "Document not found",
+                extra={"path": effective_path, "error": str(e)},
+                exc_info=True,
+            )
             raise DocumentProcessingError(f"Document not found: {effective_path}") from e
         except Exception as e:
-            logger.error( "Ingestion failed", extra={ "path": effective_path, "error": str(e), "error_type": type(e).__name__, }, exc_info=True, )
+            logger.error(
+                "Ingestion failed",
+                extra={
+                    "path": effective_path,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+                exc_info=True,
+            )
             raise DocumentProcessingError(f"Failed to ingest {effective_path}: {e}") from e
+
+
 @mcp.tool()
 async def ingest_financial_document_async(
     doc_path: str | None = None,
@@ -188,6 +247,7 @@ async def ingest_financial_document_async(
     doc_url: str | None = None,
 ) -> AsyncIngestionResponse:
     import urllib.request
+
     has_path = doc_path is not None
     has_content = file_content is not None
     has_filename = filename is not None
@@ -199,9 +259,7 @@ async def ingest_financial_document_async(
             "For Claude.ai/Desktop: Use doc_url with a shareable download link."
         )
     if input_modes > 1:
-        raise DocumentProcessingError(
-            "Only one input mode allowed"
-        )
+        raise DocumentProcessingError("Only one input mode allowed")
     if has_content and not has_filename:
         raise DocumentProcessingError(
             "filename is required when using file_content. "
@@ -243,6 +301,7 @@ async def ingest_financial_document_async(
                 content_disposition = response.headers.get("Content-Disposition", "")
                 if "filename=" in content_disposition:
                     import re
+
                     match = re.search(r'filename[*]?=["\']?([^"\';\n]+)', content_disposition)
                     if match:
                         filename_from_url = match.group(1).strip()
@@ -279,7 +338,15 @@ async def ingest_financial_document_async(
                 display_name = filename_from_url
                 temp_path_to_cleanup = temp_path
                 original_filename = filename_from_url
-                logger.info( "Downloaded file for async ingestion", extra={ "url_domain": parsed.netloc, "filename": filename_from_url, "size_bytes": downloaded_size, "temp_path": temp_path, }, )
+                logger.info(
+                    "Downloaded file for async ingestion",
+                    extra={
+                        "url_domain": parsed.netloc,
+                        "filename": filename_from_url,
+                        "size_bytes": downloaded_size,
+                        "temp_path": temp_path,
+                    },
+                )
         except HTTPError as e:
             raise DocumentProcessingError(f"URL download failed: HTTP {e.code} {e.reason}") from e
         except URLError as e:
@@ -318,7 +385,14 @@ async def ingest_financial_document_async(
             display_name = filename
             temp_path_to_cleanup = temp_path
             original_filename = filename
-            logger.info( "Created persistent temp file for async base64 ingestion", extra={ "doc_filename": filename, "temp_path": temp_path, "size_bytes": len(file_bytes), }, )
+            logger.info(
+                "Created persistent temp file for async base64 ingestion",
+                extra={
+                    "doc_filename": filename,
+                    "temp_path": temp_path,
+                    "size_bytes": len(file_bytes),
+                },
+            )
         except Exception as e:
             raise DocumentProcessingError(f"Failed to create temp file: {e}") from e
     else:
@@ -327,7 +401,10 @@ async def ingest_financial_document_async(
         doc_file = Path(doc_path).resolve()
         if not doc_file.exists():
             error_msg = f"Document not found: {doc_path}"
-            logger.error( "Async ingestion failed - file not found", extra={"path": str(doc_file), "error": error_msg}, )
+            logger.error(
+                "Async ingestion failed - file not found",
+                extra={"path": str(doc_file), "error": error_msg},
+            )
             raise DocumentProcessingError(error_msg)
         effective_path = str(doc_file)
         display_name = doc_file.name
@@ -344,13 +421,22 @@ async def ingest_financial_document_async(
         f"Use get_ingestion_status('{job_id}') to check progress. "
         f"Large documents (150-200 pages) may take 15-30 minutes."
     )
-    logger.info( "Async ingestion job started", extra={ "job_id": job_id, "doc_path": effective_path, "input_mode": "base64" if has_content else "path", }, )
+    logger.info(
+        "Async ingestion job started",
+        extra={
+            "job_id": job_id,
+            "doc_path": effective_path,
+            "input_mode": "base64" if has_content else "path",
+        },
+    )
     return AsyncIngestionResponse(
         job_id=job_id,
         status="started",
         message=message,
         estimated_time_s=estimated_time_s,
     )
+
+
 @mcp.tool()
 async def get_ingestion_status(job_id: str) -> IngestionJobStatus:
     logger.info("Checking job status", extra={"job_id": job_id})
@@ -359,5 +445,12 @@ async def get_ingestion_status(job_id: str) -> IngestionJobStatus:
         error_msg = f"Job not found: {job_id}. Job may have expired or server restarted."
         logger.warning("Job status check failed - job not found", extra={"job_id": job_id})
         raise ValueError(error_msg)
-    logger.info( "Job status retrieved", extra={ "job_id": job_id, "status": job_status.status, "progress": job_status.progress, }, )
+    logger.info(
+        "Job status retrieved",
+        extra={
+            "job_id": job_id,
+            "status": job_status.status,
+            "progress": job_status.progress,
+        },
+    )
     return job_status

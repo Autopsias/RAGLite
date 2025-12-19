@@ -1,4 +1,5 @@
 """Insights MCP tools."""
+
 import time
 
 from raglite.main import mcp
@@ -29,6 +30,7 @@ TIME_PERIOD_MAPPINGS = {
     "last_year": "Last 12 Months",
     "ytd": "Year-to-Date",
 }
+
 
 @mcp.tool()
 async def get_financial_insights(
@@ -83,7 +85,16 @@ async def get_financial_insights(
         "🔴 Critical: Marketing spend increased 30% with no revenue increase..."
     """
     start_time = time.perf_counter()
-    logger.info( "Insights query received", extra={ "category_filter": request.category, "time_period": request.time_period, "limit": request.limit, "include_recommendations": request.include_recommendations, "query": request.query, }, )
+    logger.info(
+        "Insights query received",
+        extra={
+            "category_filter": request.category,
+            "time_period": request.time_period,
+            "limit": request.limit,
+            "include_recommendations": request.include_recommendations,
+            "query": request.query,
+        },
+    )
     category_filter = request.category
     time_period = request.time_period
     if request.query and not category_filter:
@@ -92,13 +103,21 @@ async def get_financial_insights(
             category_filter = parsed_category.value.upper()
         if parsed_period and not time_period:
             time_period = parsed_period
-        logger.info( "Parsed natural language query", extra={ "original_query": request.query, "parsed_category": category_filter, "parsed_period": time_period, }, )
+        logger.info(
+            "Parsed natural language query",
+            extra={
+                "original_query": request.query,
+                "parsed_category": category_filter,
+                "parsed_period": time_period,
+            },
+        )
     try:
         from raglite.forecasting.timeseries_extract import extract_timeseries
         from raglite.insights.anomalies import detect_anomalies
         from raglite.insights.proactive import filter_insights, generate_insights
         from raglite.insights.recommendations import generate_recommendations
         from raglite.insights.trends import analyze_trends
+
         source_documents: list[str] = []
         all_anomalies = []
         all_trends = []
@@ -135,7 +154,10 @@ async def get_financial_insights(
             )
         source_documents = list(set(source_documents))
         if not all_anomalies and not all_trends:
-            logger.info( "No insights generated - insufficient data", extra={"anomalies_count": 0, "trends_count": 0}, )
+            logger.info(
+                "No insights generated - insufficient data",
+                extra={"anomalies_count": 0, "trends_count": 0},
+            )
             generation_time_ms = (time.perf_counter() - start_time) * 1000
             return InsightsQueryResponse(
                 insights=[],
@@ -168,7 +190,10 @@ async def get_financial_insights(
                     category=category_enum,
                 )
             except ValueError:
-                logger.warning( f"Invalid category filter: {category_filter}", extra={"valid_categories": list(SUPPORTED_INSIGHT_CATEGORIES)}, )
+                logger.warning(
+                    f"Invalid category filter: {category_filter}",
+                    extra={"valid_categories": list(SUPPORTED_INSIGHT_CATEGORIES)},
+                )
         filtered_insights = filtered_insights[: request.limit]
         recommendations: list[Recommendation] = []
         total_recommendations = 0
@@ -181,10 +206,23 @@ async def get_financial_insights(
                 recommendations = rec_result.recommendations[:5]
                 total_recommendations = rec_result.total_generated
             except Exception as e:
-                logger.warning( "Recommendation generation failed", extra={"error": str(e)}, )
+                logger.warning(
+                    "Recommendation generation failed",
+                    extra={"error": str(e)},
+                )
         formatted_summary = format_insights_for_display(filtered_insights, recommendations)
         generation_time_ms = (time.perf_counter() - start_time) * 1000
-        logger.info( "Insights query complete", extra={ "category_filter": category_filter, "time_period": time_period, "insights_count": len(filtered_insights), "recommendations_count": len(recommendations), "total_insights": insight_result.total_generated, "total_recommendations": total_recommendations, "generation_time_ms": f"{generation_time_ms:.2f}", "source_documents_count": len(source_documents),
+        logger.info(
+            "Insights query complete",
+            extra={
+                "category_filter": category_filter,
+                "time_period": time_period,
+                "insights_count": len(filtered_insights),
+                "recommendations_count": len(recommendations),
+                "total_insights": insight_result.total_generated,
+                "total_recommendations": total_recommendations,
+                "generation_time_ms": f"{generation_time_ms:.2f}",
+                "source_documents_count": len(source_documents),
             },
         )
         return InsightsQueryResponse(
@@ -201,11 +239,23 @@ async def get_financial_insights(
         )
     except Exception as e:
         generation_time_ms = (time.perf_counter() - start_time) * 1000
-        logger.error( "Insights query failed", extra={ "category_filter": category_filter, "time_period": time_period, "error": str(e), "error_type": type(e).__name__, "generation_time_ms": f"{generation_time_ms:.2f}", }, exc_info=True, )
+        logger.error(
+            "Insights query failed",
+            extra={
+                "category_filter": category_filter,
+                "time_period": time_period,
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "generation_time_ms": f"{generation_time_ms:.2f}",
+            },
+            exc_info=True,
+        )
         raise QueryError(f"Insight generation failed: {e}") from e
+
 
 def parse_insights_query(query: str) -> tuple[InsightCategory | None, str | None]:
     import re
+
     query_lower = query.lower()
     category = None
     if re.search(r"\b(?:risk|risks|dangers?|threats?|warnings?)\b", query_lower):
@@ -228,6 +278,8 @@ def parse_insights_query(query: str) -> tuple[InsightCategory | None, str | None
     elif re.search(r"\b(?:year\s*to\s*date|ytd)\b", query_lower):
         time_period = "ytd"
     return category, time_period
+
+
 def format_insights_for_display(
     insights: list[Insight],
     recommendations: list[Recommendation],

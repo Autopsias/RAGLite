@@ -46,8 +46,7 @@ class TestAC1FileSizeReduction:
             line_count = len(f.readlines())
 
         assert line_count < 300, (
-            f"main.py should be <300 LOC after refactoring, "
-            f"but has {line_count} lines"
+            f"main.py should be <300 LOC after refactoring, but has {line_count} lines"
         )
 
     @pytest.mark.priority("P0")
@@ -64,9 +63,7 @@ class TestAC1FileSizeReduction:
         with open(models_path) as f:
             line_count = len(f.readlines())
 
-        assert line_count < 500, (
-            f"mcp/models.py should be <500 LOC, but has {line_count} lines"
-        )
+        assert line_count < 500, f"mcp/models.py should be <500 LOC, but has {line_count} lines"
 
     @pytest.mark.priority("P0")
     @pytest.mark.parametrize(
@@ -114,7 +111,16 @@ class TestAC1FileSizeReduction:
             MCP_TOOLS_PATH / "__init__.py",
         ]
 
-        for tool in ["ingestion", "query", "forecast", "insights", "external_data", "admin", "validation", "health"]:
+        for tool in [
+            "ingestion",
+            "query",
+            "forecast",
+            "insights",
+            "external_data",
+            "admin",
+            "validation",
+            "health",
+        ]:
             modules_to_check.append(MCP_TOOLS_PATH / f"{tool}.py")
 
         ideal_count = 0

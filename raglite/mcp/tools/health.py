@@ -1,10 +1,12 @@
 """Health MCP tools."""
+
 import json
 
 from raglite.main import mcp
 from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
+
 
 @mcp.tool()
 async def check_database_health() -> str:
@@ -25,13 +27,28 @@ async def check_database_health() -> str:
         JSON string with DataIntegrityResult containing sync status and recommendations
     """
     from raglite.shared.validation import check_data_integrity
+
     logger.info("Running database health check")
     try:
         result = await check_data_integrity()
         if result.is_synchronized:
-            logger.info( "Database health check passed", extra={ "qdrant_docs": result.qdrant.documents, "postgresql_docs": result.postgresql.documents, }, )
+            logger.info(
+                "Database health check passed",
+                extra={
+                    "qdrant_docs": result.qdrant.documents,
+                    "postgresql_docs": result.postgresql.documents,
+                },
+            )
         else:
-            logger.warning( "Database health check found data drift", extra={ "qdrant_docs": result.qdrant.documents, "postgresql_docs": result.postgresql.documents, "missing_in_postgresql": len(result.missing_in_postgresql), "missing_in_qdrant": len(result.missing_in_qdrant), }, )
+            logger.warning(
+                "Database health check found data drift",
+                extra={
+                    "qdrant_docs": result.qdrant.documents,
+                    "postgresql_docs": result.postgresql.documents,
+                    "missing_in_postgresql": len(result.missing_in_postgresql),
+                    "missing_in_qdrant": len(result.missing_in_qdrant),
+                },
+            )
         return result.model_dump_json(indent=2)
     except Exception as e:
         logger.error(f"Database health check failed: {e}", exc_info=True)

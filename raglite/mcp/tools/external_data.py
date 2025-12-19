@@ -1,4 +1,5 @@
 """External Data MCP tools."""
+
 import json
 import time
 from datetime import date, datetime, timedelta
@@ -13,6 +14,7 @@ from raglite.mcp.models import (
 from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
+
 
 @mcp.tool()
 async def refresh_external_data(source_name: str | None = None) -> str:
@@ -58,7 +60,11 @@ async def refresh_external_data(source_name: str | None = None) -> str:
         refresh_all_sources,
         refresh_source,
     )
-    logger.info( "Manual refresh triggered", extra={"source_name": source_name or "all"}, )
+
+    logger.info(
+        "Manual refresh triggered",
+        extra={"source_name": source_name or "all"},
+    )
     try:
         if source_name is None:
             bulk_result = await refresh_all_sources()
@@ -93,14 +99,33 @@ async def refresh_external_data(source_name: str | None = None) -> str:
             success_status = bulk_result.successful == bulk_result.total_sources
         else:
             success_status = single_result.success
-        logger.info( "Manual refresh completed", extra={ "source_name": source_name or "all", "success": success_status, }, )
+        logger.info(
+            "Manual refresh completed",
+            extra={
+                "source_name": source_name or "all",
+                "success": success_status,
+            },
+        )
         return json.dumps(response, indent=2)
     except ValueError as e:
-        logger.warning( "Manual refresh failed - invalid source", extra={"source_name": source_name, "error": str(e)}, )
+        logger.warning(
+            "Manual refresh failed - invalid source",
+            extra={"source_name": source_name, "error": str(e)},
+        )
         return json.dumps({"error": str(e)})
     except Exception as e:
-        logger.error( "Manual refresh failed", extra={ "source_name": source_name or "all", "error": str(e), "error_type": type(e).__name__, }, exc_info=True, )
+        logger.error(
+            "Manual refresh failed",
+            extra={
+                "source_name": source_name or "all",
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+            exc_info=True,
+        )
         return json.dumps({"error": f"Refresh failed: {e}"})
+
+
 def _parse_date_range(date_range: str) -> tuple[date, date]:
     today = date.today()
     shortcuts = {
@@ -128,6 +153,8 @@ def _parse_date_range(date_range: str) -> tuple[date, date]:
         f"Invalid date_range: '{date_range}'. "
         "Use ISO format 'YYYY-MM-DD:YYYY-MM-DD' or shortcuts: last_30_days, last_90_days, last_year, last_quarter, ytd"
     )
+
+
 def _get_visualization_hint(record_count: int, data_type: str | None) -> str:
     if record_count == 0:
         return "No data available for visualization"
@@ -139,6 +166,8 @@ def _get_visualization_hint(record_count: int, data_type: str | None) -> str:
         return "Line chart recommended for time-series trend analysis"
     else:
         return "Line chart or area chart recommended"
+
+
 def _query_single_source(
     storage: "ExternalDataStorage",
     source_name: str,
@@ -168,6 +197,8 @@ def _query_single_source(
             record_count=len(data_points),
         )
     ]
+
+
 def _query_all_sources(
     storage: "ExternalDataStorage",
     start_date: date,
@@ -200,6 +231,8 @@ def _query_all_sources(
         except Exception as e:
             logger.warning(f"Failed to query source {source.source_name}: {e}")
     return results
+
+
 def _format_response(results: list[ExternalDataQueryResponse], original_source: str) -> str:
     if not results:
         return json.dumps(
@@ -257,12 +290,22 @@ def _format_response(results: list[ExternalDataQueryResponse], original_source: 
         },
         indent=2,
     )
+
+
 @mcp.tool()
 async def query_external_data(request: ExternalDataQueryRequest) -> str:
     from raglite.external_data.storage import ExternalDataStorage
     from raglite.shared.database import get_session
+
     start_time = time.time()
-    logger.info( "External data query", extra={ "source": request.source, "date_range": request.date_range, "metric": request.metric, }, )
+    logger.info(
+        "External data query",
+        extra={
+            "source": request.source,
+            "date_range": request.date_range,
+            "metric": request.metric,
+        },
+    )
     session = None
     try:
         start_date, end_date = _parse_date_range(request.date_range)
@@ -275,13 +318,28 @@ async def query_external_data(request: ExternalDataQueryRequest) -> str:
                 storage, request.source, start_date, end_date, request.metric
             )
         elapsed_ms = (time.time() - start_time) * 1000
-        logger.info( "External data query complete", extra={ "source": request.source, "record_count": sum(r.record_count for r in results), "duration_ms": elapsed_ms, }, )
+        logger.info(
+            "External data query complete",
+            extra={
+                "source": request.source,
+                "record_count": sum(r.record_count for r in results),
+                "duration_ms": elapsed_ms,
+            },
+        )
         return _format_response(results, request.source)
     except ValueError as e:
         logger.warning("External data query failed", extra={"error": str(e)})
         return json.dumps({"error": str(e), "source": request.source})
     except Exception as e:
-        logger.error( "External data query failed", extra={ "source": request.source, "error": str(e), "error_type": type(e).__name__, }, exc_info=True, )
+        logger.error(
+            "External data query failed",
+            extra={
+                "source": request.source,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+            exc_info=True,
+        )
         return json.dumps({"error": f"Query failed: {e}", "source": request.source})
     finally:
         if session:

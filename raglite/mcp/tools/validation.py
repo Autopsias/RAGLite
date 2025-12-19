@@ -1,4 +1,5 @@
 """Validation MCP tools."""
+
 import asyncio
 from datetime import UTC, date, datetime, timedelta
 
@@ -15,6 +16,7 @@ from raglite.shared.models import (
 )
 
 logger = get_logger(__name__)
+
 
 @mcp.tool()
 async def validate_forecasting_accuracy(
@@ -58,7 +60,15 @@ async def validate_forecasting_accuracy(
             variable_results=[],
             model_performance=None,
         )
-    logger.info( "Validation started", extra={ "metrics": metrics or "all", "mape_method": mape_method, "include_breakdown": include_model_breakdown, "timeout_seconds": timeout_seconds, }, )
+    logger.info(
+        "Validation started",
+        extra={
+            "metrics": metrics or "all",
+            "mape_method": mape_method,
+            "include_breakdown": include_model_breakdown,
+            "timeout_seconds": timeout_seconds,
+        },
+    )
     try:
         result = await asyncio.wait_for(
             run_unified_validation(
@@ -97,7 +107,17 @@ async def validate_forecasting_accuracy(
                 )
                 for name, stats in result.model_performance.items()
             }
-        logger.info( "Validation completed", extra={ "variables_tested": result.variables_tested, "variables_passed": result.variables_passed, "runtime_seconds": result.runtime_seconds, "quality_gate": "PASS" if result.quality_gate and result.quality_gate.passed else "FAIL", }, )
+        logger.info(
+            "Validation completed",
+            extra={
+                "variables_tested": result.variables_tested,
+                "variables_passed": result.variables_passed,
+                "runtime_seconds": result.runtime_seconds,
+                "quality_gate": "PASS"
+                if result.quality_gate and result.quality_gate.passed
+                else "FAIL",
+            },
+        )
         return ValidationResponse(
             timestamp=result.timestamp,
             runtime_seconds=result.runtime_seconds,
@@ -120,7 +140,10 @@ async def validate_forecasting_accuracy(
             model_performance=model_perf,
         )
     except TimeoutError:
-        logger.warning( "Validation timed out", extra={"timeout_seconds": timeout_seconds}, )
+        logger.warning(
+            "Validation timed out",
+            extra={"timeout_seconds": timeout_seconds},
+        )
         return ValidationResponse(
             timestamp=datetime.now(UTC).isoformat(),
             runtime_seconds=timeout_seconds,
@@ -141,6 +164,8 @@ async def validate_forecasting_accuracy(
     except Exception as e:
         logger.error("Validation failed", extra={"error": str(e)})
         raise
+
+
 @mcp.tool()
 async def list_available_regressors(
     metric: str | None = None,
@@ -154,7 +179,10 @@ async def list_available_regressors(
     except ImportError as e:
         logger.error("Failed to import regressor config", extra={"error": str(e)})
         return RegressorListResponse(regressors=[], total_count=0, available_count=0)
-    logger.info( "Listing regressors", extra={"metric_filter": metric}, )
+    logger.info(
+        "Listing regressors",
+        extra={"metric_filter": metric},
+    )
     if metric:
         metric_lower = metric.lower()
         relevant_regressors = METRIC_REGRESSORS.get(metric_lower, AVAILABLE_REGRESSORS)
@@ -180,6 +208,8 @@ async def list_available_regressors(
         total_count=len(regressors_info),
         available_count=len(regressors_info),
     )
+
+
 @mcp.tool()
 async def get_regressor_data(
     regressor: str,
@@ -188,7 +218,11 @@ async def get_regressor_data(
 ) -> RegressorDataResponse:
     from raglite.forecasting.regressor_config import REGRESSOR_METADATA
     from raglite.forecasting.regressor_fetch import fetch_single_regressor
-    logger.info( "Fetching regressor data", extra={"regressor": regressor, "start_date": start_date, "end_date": end_date}, )
+
+    logger.info(
+        "Fetching regressor data",
+        extra={"regressor": regressor, "start_date": start_date, "end_date": end_date},
+    )
     if start_date:
         start = date.fromisoformat(start_date)
     else:
@@ -211,7 +245,10 @@ async def get_regressor_data(
             else:
                 point_date = date_val
             data_points.append(RegressorDataPoint(date=point_date, value=float(value)))
-        logger.info( "Regressor data fetched", extra={"regressor": regressor, "points": len(data_points)}, )
+        logger.info(
+            "Regressor data fetched",
+            extra={"regressor": regressor, "points": len(data_points)},
+        )
         date_range_str = f"{data_points[0].date} to {data_points[-1].date}"
         return RegressorDataResponse(
             regressor_name=regressor,
@@ -224,5 +261,7 @@ async def get_regressor_data(
             visualization_hint="line_chart",
         )
     except Exception as e:
-        logger.error( "Failed to fetch regressor data", extra={"regressor": regressor, "error": str(e)} )
+        logger.error(
+            "Failed to fetch regressor data", extra={"regressor": regressor, "error": str(e)}
+        )
         raise

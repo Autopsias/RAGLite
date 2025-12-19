@@ -21,10 +21,9 @@ Test Coverage Targets:
 
 import importlib.util
 import json
-import sys
 from datetime import date, datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
@@ -204,9 +203,7 @@ class TestModelsValidation:
             action="view",
             success=True,
             message="Weights retrieved",
-            weights=[
-                {"metric": "cement_demand", "model": "LinearRegression", "weight": 0.7}
-            ],
+            weights=[{"metric": "cement_demand", "model": "LinearRegression", "weight": 0.7}],
             backtest_status=None,
         )
 
@@ -364,17 +361,8 @@ class TestToolRegistration:
         When listing tools from mcp._tool_manager
         Then at least 15 tools should be registered
         """
-        from raglite.main import mcp
-
         # Import all tool modules to ensure decorators run
-        import raglite.mcp.tools.admin
-        import raglite.mcp.tools.external_data
-        import raglite.mcp.tools.forecast
-        import raglite.mcp.tools.health
-        import raglite.mcp.tools.ingestion
-        import raglite.mcp.tools.insights
-        import raglite.mcp.tools.query
-        import raglite.mcp.tools.validation
+        from raglite.main import mcp
 
         # Get tool list
         tools = await mcp._tool_manager.list_tools()
@@ -641,9 +629,7 @@ class TestFutureProofing:
         ]
 
         for module in modules:
-            assert hasattr(
-                module, "logger"
-            ), f"{module.__name__} should have logger"
+            assert hasattr(module, "logger"), f"{module.__name__} should have logger"
 
     @pytest.mark.priority("P3")
     def test_main_module_reduced_complexity(self):
@@ -659,11 +645,7 @@ class TestFutureProofing:
             lines = f.readlines()
 
         # Count non-empty, non-comment lines
-        code_lines = [
-            line
-            for line in lines
-            if line.strip() and not line.strip().startswith("#")
-        ]
+        code_lines = [line for line in lines if line.strip() and not line.strip().startswith("#")]
 
         # Should be under 300 lines total (including imports/docstrings)
         assert len(lines) < 300, f"main.py has {len(lines)} lines, expected <300"
@@ -674,6 +656,6 @@ class TestFutureProofing:
 
         # At least 10% of code lines should be imports (reasonable after refactoring)
         # Note: Reduced from 30% due to necessary __getattr__ and orchestration code
-        assert (
-            import_ratio > 0.10
-        ), f"Expected >10% imports, got {import_ratio:.1%} ({len(import_lines)}/{len(code_lines)})"
+        assert import_ratio > 0.10, (
+            f"Expected >10% imports, got {import_ratio:.1%} ({len(import_lines)}/{len(code_lines)})"
+        )

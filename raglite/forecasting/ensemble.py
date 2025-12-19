@@ -76,7 +76,9 @@ def _calculate_weighted_average(
 
 
 # Import helper functions from hybrid module (will be moved to proper modules in future refactoring)
-def select_regressors(target_series: pd.Series, external_regressors: dict[str, pd.Series]) -> list[str]:
+def select_regressors(
+    target_series: pd.Series, external_regressors: dict[str, pd.Series]
+) -> list[str]:
     """Wrapper for select_regressors - imports from hybrid module."""
     from raglite.forecasting.hybrid import select_regressors as select_impl
 

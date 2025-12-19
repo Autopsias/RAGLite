@@ -86,9 +86,7 @@ class TestAC3FunctionalityPreserved:
             assert hasattr(tool, "fn"), (
                 f"Tool '{tool_name}' should have .fn attribute from FastMCP decorator"
             )
-            assert callable(tool.fn), (
-                f"Tool '{tool_name}'.fn should be callable"
-            )
+            assert callable(tool.fn), f"Tool '{tool_name}'.fn should be callable"
 
     @pytest.mark.priority("P0")
     def test_ac3_4_tool_count_preserved(self):
@@ -100,10 +98,7 @@ class TestAC3FunctionalityPreserved:
         """
         from raglite import main
 
-        available_tools = [
-            tool_name for tool_name in self.MCP_TOOLS
-            if hasattr(main, tool_name)
-        ]
+        available_tools = [tool_name for tool_name in self.MCP_TOOLS if hasattr(main, tool_name)]
 
         assert len(available_tools) >= 15, (
             f"At least 15 MCP tools should be available, "
@@ -167,8 +162,8 @@ class TestAC4BackwardCompatibility:
         Then request/response models should be available
         """
         from raglite.mcp.models import (
-            ExternalDataQueryRequest,
             ExternalDataPoint,
+            ExternalDataQueryRequest,
             ExternalDataQueryResponse,
         )
 
@@ -184,9 +179,9 @@ class TestAC4BackwardCompatibility:
         When importing from raglite.mcp.tools
         Then at least some tools should be importable
         """
+        from raglite.mcp.tools.health import check_database_health
         from raglite.mcp.tools.ingestion import ingest_financial_document
         from raglite.mcp.tools.query import query_financial_documents
-        from raglite.mcp.tools.health import check_database_health
 
         assert ingest_financial_document is not None
         assert query_financial_documents is not None

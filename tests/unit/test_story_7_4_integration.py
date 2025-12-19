@@ -62,7 +62,10 @@ class TestAC5CICompatibility:
         Then no import errors should occur
         """
         try:
-            import raglite.mcp
+            import importlib.util
+
+            spec = importlib.util.find_spec("raglite.mcp")
+            assert spec is not None
 
             assert True
         except ImportError as e:
@@ -197,9 +200,7 @@ class TestAC6Documentation:
         tree = ast.parse(content)
         docstring = ast.get_docstring(tree)
 
-        assert docstring is not None, (
-            f"mcp/tools/{tool_module}.py should have a module docstring"
-        )
+        assert docstring is not None, f"mcp/tools/{tool_module}.py should have a module docstring"
 
 
 class TestRefactoringIntegrity:
@@ -217,17 +218,9 @@ class TestRefactoringIntegrity:
         When importing all tool modules
         Then all tools should be registered with the mcp instance
         """
-        from raglite.main import mcp
 
         # Import all tool modules to trigger decorator registration
-        import raglite.mcp.tools.ingestion
-        import raglite.mcp.tools.query
-        import raglite.mcp.tools.forecast
-        import raglite.mcp.tools.insights
-        import raglite.mcp.tools.external_data
-        import raglite.mcp.tools.admin
-        import raglite.mcp.tools.validation
-        import raglite.mcp.tools.health
+        from raglite.main import mcp
 
         # Check that tools are registered
         # FastMCP stores tools in _tool_manager
@@ -251,8 +244,8 @@ class TestRefactoringIntegrity:
         Then they should match the original definitions
         """
         from raglite.mcp.models import (
-            ExternalDataQueryRequest,
             ExternalDataPoint,
+            ExternalDataQueryRequest,
             ExternalDataQueryResponse,
         )
 

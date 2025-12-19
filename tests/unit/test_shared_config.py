@@ -20,7 +20,6 @@ from pytest import MonkeyPatch
 
 from raglite.shared.config import Settings
 
-
 # =============================================================================
 # Basic Settings Tests (use default test environment from conftest.py)
 # =============================================================================
@@ -276,9 +275,7 @@ def test_adjust_for_environment_all_branches() -> None:
         assert settings_test.qdrant_collection_name == "financial_docs_test"
 
     # Test 3: Test environment WITH CI (adjusts to _ci suffix)
-    with patch.dict(
-        os.environ, {"APP_ENV": "test", "GITHUB_ACTIONS": "true"}, clear=True
-    ):
+    with patch.dict(os.environ, {"APP_ENV": "test", "GITHUB_ACTIONS": "true"}, clear=True):
         settings_ci = Settings(_env_file=None)
         assert settings_ci.qdrant_collection_name == "financial_docs_ci"
 

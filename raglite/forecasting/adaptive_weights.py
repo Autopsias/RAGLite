@@ -70,9 +70,7 @@ def calculate_backtest_weights(
     """
     from raglite.forecasting.hybrid import (
         fit_catboost,
-        fit_lightgbm,
         fit_linear_regression,
-        fit_xgboost,
     )
 
     if models is None:
@@ -219,13 +217,14 @@ def calculate_backtest_weights(
                 model, _ = fit_linear_regression(X_train, y_train, list(X_train.columns))
                 predictions = model.predict(X_test)
 
-            elif model_name == "xgboost" and has_features:
-                model, _ = fit_xgboost(X_train, y_train, fast_mode=True)
-                predictions = model.predict(X_test)
+            # TODO: Implement XGBoost and LightGBM models in hybrid.py
+            # elif model_name == "xgboost" and has_features:
+            #     model, _ = fit_xgboost(X_train, y_train, fast_mode=True)
+            #     predictions = model.predict(X_test)
 
-            elif model_name == "lightgbm" and has_features:
-                model, _ = fit_lightgbm(X_train, y_train, fast_mode=True)
-                predictions = model.predict(X_test)
+            # elif model_name == "lightgbm" and has_features:
+            #     model, _ = fit_lightgbm(X_train, y_train, fast_mode=True)
+            #     predictions = model.predict(X_test)
 
             elif model_name == "catboost" and has_features:
                 model, _ = fit_catboost(X_train, y_train, fast_mode=True)

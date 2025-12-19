@@ -19,6 +19,7 @@ from raglite.shared.models import ForecastQueryRequest, ForecastQueryResponse
 
 logger = get_logger(__name__)
 
+
 @mcp.tool()
 async def get_financial_forecast(
     request: ForecastQueryRequest,
@@ -108,7 +109,14 @@ async def get_financial_forecast(
         >>> response = await get_financial_forecast(request)
         >>>
     """
-    logger.info( "Forecast query received", extra={ "metric": request.metric, "periods_ahead": request.periods_ahead, "query": request.query, }, )
+    logger.info(
+        "Forecast query received",
+        extra={
+            "metric": request.metric,
+            "periods_ahead": request.periods_ahead,
+            "query": request.query,
+        },
+    )
     metric = request.metric
     periods_ahead = request.periods_ahead
     if request.query and not metric:
@@ -117,7 +125,14 @@ async def get_financial_forecast(
             metric = parsed_metric
         if parsed_periods:
             periods_ahead = parsed_periods
-        logger.info( "Parsed natural language query", extra={ "original_query": request.query, "parsed_metric": metric, "parsed_periods": periods_ahead, }, )
+        logger.info(
+            "Parsed natural language query",
+            extra={
+                "original_query": request.query,
+                "parsed_metric": metric,
+                "parsed_periods": periods_ahead,
+            },
+        )
     if not metric:
         error_msg = (
             "Could not determine metric to forecast. Please specify a financial metric "
@@ -127,18 +142,53 @@ async def get_financial_forecast(
         raise QueryError(error_msg)
     metric = metric.lower()
     try:
-        logger.info( "Extracting time-series data", extra={"metric": metric}, )
+        logger.info(
+            "Extracting time-series data",
+            extra={"metric": metric},
+        )
         try:
-            logger.info( "Attempting SQL-based extraction", extra={"metric": metric, "method": "sql"}, )
+            logger.info(
+                "Attempting SQL-based extraction",
+                extra={"metric": metric, "method": "sql"},
+            )
             historical_data = await extract_timeseries_from_sql(metric=metric, min_points=6)
-            logger.info( "SQL extraction successful", extra={ "metric": metric, "data_points": len(historical_data.points), "method": "sql", }, )
+            logger.info(
+                "SQL extraction successful",
+                extra={
+                    "metric": metric,
+                    "data_points": len(historical_data.points),
+                    "method": "sql",
+                },
+            )
         except MetricValidationError:
             raise
         except ExtractionError as e:
-            logger.warning( "SQL extraction failed, falling back to hybrid search", extra={ "metric": metric, "reason": str(e), "fallback_method": "hybrid_search", }, )
+            logger.warning(
+                "SQL extraction failed, falling back to hybrid search",
+                extra={
+                    "metric": metric,
+                    "reason": str(e),
+                    "fallback_method": "hybrid_search",
+                },
+            )
             historical_data = await extract_timeseries(docs=[], metric=metric)
-            logger.info( "Hybrid search extraction successful", extra={ "metric": metric, "data_points": len(historical_data.points), "source_docs": len(historical_data.source_documents), "method": "hybrid_search_fallback", }, )
-        logger.info( "Time-series extraction complete", extra={ "metric": metric, "data_points": len(historical_data.points), "source_docs": len(historical_data.source_documents), }, )
+            logger.info(
+                "Hybrid search extraction successful",
+                extra={
+                    "metric": metric,
+                    "data_points": len(historical_data.points),
+                    "source_docs": len(historical_data.source_documents),
+                    "method": "hybrid_search_fallback",
+                },
+            )
+        logger.info(
+            "Time-series extraction complete",
+            extra={
+                "metric": metric,
+                "data_points": len(historical_data.points),
+                "source_docs": len(historical_data.source_documents),
+            },
+        )
         requested_model_type = request.model_type or "auto"
         external_regressors = None
         regressors_used: list[str] = []
@@ -148,6 +198,7 @@ async def get_financial_forecast(
                 from datetime import timedelta
 
                 from raglite.forecasting.regressor_fetch import fetch_regressors_for_metric
+
                 if historical_data.points:
                     historical_dates = [
                         p.date.date() if hasattr(p.date, "date") else p.date
@@ -162,19 +213,39 @@ async def get_financial_forecast(
                         regressor_names=request.regressor_names,
                     )
                     regressors_used = list(external_regressors.keys())
-                    logger.info( "External regressors fetched", extra={ "metric": metric, "regressors": regressors_used, "count": len(regressors_used), }, )
+                    logger.info(
+                        "External regressors fetched",
+                        extra={
+                            "metric": metric,
+                            "regressors": regressors_used,
+                            "count": len(regressors_used),
+                        },
+                    )
             except Exception as e:
-                logger.warning( "External regressor fetch failed, falling back to univariate", extra={"metric": metric, "error": str(e)}, )
+                logger.warning(
+                    "External regressor fetch failed, falling back to univariate",
+                    extra={"metric": metric, "error": str(e)},
+                )
                 external_regressors = None
                 regressors_used = []
         if requested_model_type == "auto":
             from raglite.forecasting.regressor_config import select_model_type
+
             model_type, model_selection_reason = select_model_type(
                 metric=metric,
                 prefer_accuracy=request.prefer_accuracy,
                 num_regressors=len(regressors_used),
             )
-            logger.info( "Auto-selected model type", extra={ "metric": metric, "selected_model": model_type, "reason": model_selection_reason, "prefer_accuracy": request.prefer_accuracy, "num_regressors": len(regressors_used), }, )
+            logger.info(
+                "Auto-selected model type",
+                extra={
+                    "metric": metric,
+                    "selected_model": model_type,
+                    "reason": model_selection_reason,
+                    "prefer_accuracy": request.prefer_accuracy,
+                    "num_regressors": len(regressors_used),
+                },
+            )
         else:
             model_type = requested_model_type
             model_selection_reason = f"User explicitly requested {model_type}"
@@ -200,7 +271,15 @@ async def get_financial_forecast(
             actual_model_type = (
                 "prophet_multivariate" if external_regressors else "prophet_univariate"
             )
-        logger.info( "Forecast generated successfully", extra={ "metric": metric, "periods": periods_ahead, "forecast_points": len(forecast_result.forecast), "model_type": model_type, }, )
+        logger.info(
+            "Forecast generated successfully",
+            extra={
+                "metric": metric,
+                "periods": periods_ahead,
+                "forecast_points": len(forecast_result.forecast),
+                "model_type": model_type,
+            },
+        )
         if model_type == "ensemble" and forecast_result.ensemble_models:
             models_used = ", ".join(forecast_result.ensemble_models)
             enhanced_basis = (
@@ -227,7 +306,17 @@ async def get_financial_forecast(
             model_type=actual_model_type,
             model_selection_reason=model_selection_reason,
         )
-        logger.info( "Forecast query complete", extra={ "metric": metric, "periods": periods_ahead, "model_type": actual_model_type, "model_selection_reason": model_selection_reason, "regressors_used": regressors_used, "confidence_reasoning_length": len(response.confidence_reasoning), }, )
+        logger.info(
+            "Forecast query complete",
+            extra={
+                "metric": metric,
+                "periods": periods_ahead,
+                "model_type": actual_model_type,
+                "model_selection_reason": model_selection_reason,
+                "regressors_used": regressors_used,
+                "confidence_reasoning_length": len(response.confidence_reasoning),
+            },
+        )
         return response
     except InsufficientDataError as e:
         error_msg = (
@@ -235,7 +324,10 @@ async def get_financial_forecast(
             f"At least 8 data points (2 years quarterly) are required for reliable predictions. "
             f"Please ingest more financial documents containing {metric} data."
         )
-        logger.warning( "Forecast query failed - insufficient data", extra={"metric": metric, "error": str(e)}, )
+        logger.warning(
+            "Forecast query failed - insufficient data",
+            extra={"metric": metric, "error": str(e)},
+        )
         raise QueryError(error_msg) from e
     except MetricValidationError as e:
         error_msg = (
@@ -245,12 +337,31 @@ async def get_financial_forecast(
         )
         if len(e.available_metrics) > 10:
             error_msg += f"\n  ... and {len(e.available_metrics) - 10} more"
-        logger.warning( "Forecast query failed - metric validation", extra={ "metric": e.metric_name, "data_points_found": e.data_points_found, "available_metrics": e.available_metrics[:5], }, )
+        logger.warning(
+            "Forecast query failed - metric validation",
+            extra={
+                "metric": e.metric_name,
+                "data_points_found": e.data_points_found,
+                "available_metrics": e.available_metrics[:5],
+            },
+        )
         raise QueryError(error_msg) from e
     except ExtractionError as e:
         error_msg = f"Could not extract {metric} time-series data. Details: {str(e)}"
-        logger.warning( "Forecast query failed - extraction error", extra={"metric": metric, "error": str(e)}, )
+        logger.warning(
+            "Forecast query failed - extraction error",
+            extra={"metric": metric, "error": str(e)},
+        )
         raise QueryError(error_msg) from e
     except Exception as e:
-        logger.error( "Forecast query failed - unexpected error", extra={ "metric": metric, "periods": periods_ahead, "error": str(e), "error_type": type(e).__name__, }, exc_info=True, )
+        logger.error(
+            "Forecast query failed - unexpected error",
+            extra={
+                "metric": metric,
+                "periods": periods_ahead,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+            exc_info=True,
+        )
         raise QueryError(f"Forecast generation failed: {e}") from e
