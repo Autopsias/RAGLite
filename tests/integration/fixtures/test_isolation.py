@@ -21,6 +21,7 @@ import pytest
 
 # Import session state globals
 from . import session_state
+from .session_fixtures import _has_integration_tests
 
 
 def _do_restoration(qdrant, settings):
@@ -137,6 +138,12 @@ def ensure_qdrant_test_isolation(request):
     """
     # PERFORMANCE: Skip during test collection/discovery phase (Test Explorer optimization)
     if request.config.option.collectonly:
+        yield
+        return
+
+    # CRITICAL FIX (2025-12-19): Skip for unit-only test runs
+    # This prevents Qdrant connection attempts during unit tests
+    if not _has_integration_tests(request):
         yield
         return
 
