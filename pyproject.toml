@@ -57,6 +57,7 @@ dependencies = [
     "pytorch-lightning>=2.0,<3.0",    # Story 6.14: TFT training dependency
     "sqlalchemy>=2.0,<3.0",    # Story 6.2: ORM for external data storage
     "apscheduler>=3.10,<4.0",  # Story 6.5: Automated data refresh scheduler
+    "pmdarima>=2.0,<3.0",      # Story 7.1: Auto-ARIMA model selection
     # TODO Epic 3: AWS Strands agentic framework - uncomment when implementing Story 3.1
     # "strands>=1.15.0,<2.0.0",  # Agentic orchestration (Story 3.1+)
 ]

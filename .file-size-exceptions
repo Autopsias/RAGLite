@@ -486,6 +486,18 @@
       "reason": "Epic 7 Story 7.5 - Ensemble forecasting extraction from hybrid.py - refactoring planned",
       "target_lines": 500,
       "directory": "raglite/"
+    },
+    "tests/unit/test_arima_model.py": {
+      "lines": 730,
+      "reason": "Story 7b.1 - Comprehensive ATDD tests for ARIMA model wrapper - refactoring planned to split by test category",
+      "target_lines": 500,
+      "directory": "tests/"
+    },
+    "tests/unit/test_ets_model.py": {
+      "lines": 537,
+      "reason": "Story 7b.1 - Comprehensive ATDD tests for ETS model wrapper - refactoring planned to split by test category",
+      "target_lines": 500,
+      "directory": "tests/"
     }
   }
 }

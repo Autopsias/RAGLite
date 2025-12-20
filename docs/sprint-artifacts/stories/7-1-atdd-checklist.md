@@ -2,7 +2,7 @@
 
 **Story:** 7-1-split-test-external-data-clients
 **Epic:** 7 - Technical Debt & Code Quality
-**Status:** RED (Tests Created, Implementation Pending)
+**Status:** COMPLETE (Story Done)
 **Created:** 2025-12-18
 **Last Run:** 2025-12-18 (20 failed, 2 passed, 44 skipped in 0.18s)
 

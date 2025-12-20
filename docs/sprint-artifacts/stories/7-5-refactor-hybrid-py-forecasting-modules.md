@@ -1,6 +1,6 @@
 # Story 7.5: Refactor hybrid.py Forecasting Modules (3,998 LOC -> <500 LOC per file)
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
