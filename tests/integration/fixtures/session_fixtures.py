@@ -27,9 +27,9 @@ def _has_integration_tests(request) -> bool:
     PERFORMANCE FIX (2025-12-18): Without this check, autouse=True fixtures
     would load the 2GB Fin-E5 model even for unit tests.
 
-    FIX (2025-12-20): Use command-line argument detection instead of
-    request.session.items because pytest-xdist workers don't have session
-    items populated during session-scoped fixture setup.
+    FIX (2025-12-20): Use multiple detection methods because pytest-xdist
+    workers have different sys.argv than the controller. Workers are spawned
+    as separate processes with gateway-specific arguments.
 
     Args:
         request: pytest request fixture
@@ -37,8 +37,31 @@ def _has_integration_tests(request) -> bool:
     Returns:
         True if any tests in tests/integration/ are being collected
     """
-    # PRIORITY 1: Check command-line arguments for explicit test path
-    # This works reliably in both single-process and xdist worker modes
+    # PRIORITY 1: Check pytest's invocation directory and collected args
+    # This works in both controller and xdist worker processes
+    if hasattr(request, "config"):
+        # Check the args passed to pytest (available in all processes)
+        args = getattr(request.config, "args", [])
+        for arg in args:
+            if "tests/unit" in str(arg) and "integration" not in str(arg):
+                return False
+            if "tests/integration" in str(arg):
+                return True
+
+        # Check inipath for test root detection
+        inipath = getattr(request.config, "inipath", None)
+        if inipath:
+            rootdir = str(inipath.parent) if hasattr(inipath, "parent") else str(inipath)
+            # Check known_args_namespace for file args
+            known_args = getattr(request.config, "known_args_namespace", None)
+            if known_args and hasattr(known_args, "file_or_dir"):
+                for path in known_args.file_or_dir or []:
+                    if "tests/unit" in str(path) and "integration" not in str(path):
+                        return False
+                    if "tests/integration" in str(path):
+                        return True
+
+    # PRIORITY 2: Check command-line arguments (works in controller process)
     for arg in sys.argv:
         # Running only unit tests - skip integration fixtures
         if "tests/unit" in arg and "integration" not in arg:
@@ -47,18 +70,18 @@ def _has_integration_tests(request) -> bool:
         if "tests/integration" in arg:
             return True
 
-    # PRIORITY 2: Fall back to session items if available (single-process runs)
+    # PRIORITY 3: Fall back to session items if available (single-process runs)
     if hasattr(request, "session") and hasattr(request.session, "items"):
         for item in request.session.items:
             if "integration" in str(item.fspath):
                 return True
         return False
 
-    # PRIORITY 3: In xdist workers, check current node's file path
+    # PRIORITY 4: In xdist workers, check current node's file path
     if hasattr(request, "node") and hasattr(request.node, "fspath"):
         return "integration" in str(request.node.fspath)
 
-    # PRIORITY 4: Conservative default - assume integration tests
+    # PRIORITY 5: Conservative default - assume integration tests
     # This ensures integration fixtures load when we can't determine
     return True
 
