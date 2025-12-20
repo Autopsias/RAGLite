@@ -27,20 +27,40 @@ def _has_integration_tests(request) -> bool:
     PERFORMANCE FIX (2025-12-18): Without this check, autouse=True fixtures
     would load the 2GB Fin-E5 model even for unit tests.
 
+    FIX (2025-12-20): Use command-line argument detection instead of
+    request.session.items because pytest-xdist workers don't have session
+    items populated during session-scoped fixture setup.
+
     Args:
         request: pytest request fixture
 
     Returns:
         True if any tests in tests/integration/ are being collected
     """
-    if not hasattr(request, "session") or not hasattr(request.session, "items"):
-        # During collection phase, can't determine yet - assume integration tests
-        return True
-
-    for item in request.session.items:
-        if "integration" in str(item.fspath):
+    # PRIORITY 1: Check command-line arguments for explicit test path
+    # This works reliably in both single-process and xdist worker modes
+    for arg in sys.argv:
+        # Running only unit tests - skip integration fixtures
+        if "tests/unit" in arg and "integration" not in arg:
+            return False
+        # Explicitly running integration tests
+        if "tests/integration" in arg:
             return True
-    return False
+
+    # PRIORITY 2: Fall back to session items if available (single-process runs)
+    if hasattr(request, "session") and hasattr(request.session, "items"):
+        for item in request.session.items:
+            if "integration" in str(item.fspath):
+                return True
+        return False
+
+    # PRIORITY 3: In xdist workers, check current node's file path
+    if hasattr(request, "node") and hasattr(request.node, "fspath"):
+        return "integration" in str(request.node.fspath)
+
+    # PRIORITY 4: Conservative default - assume integration tests
+    # This ensures integration fixtures load when we can't determine
+    return True
 
 
 @pytest.fixture(scope="session", autouse=True)
