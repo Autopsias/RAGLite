@@ -18,6 +18,28 @@ from .service_checking import check_and_skip_if_unavailable
 # from raglite.ingestion.pipeline import create_collection, ingest_pdf
 
 
+def _is_postgresql_only_tests(request) -> bool:
+    """Check if only postgresql_only tests are being collected.
+
+    PostgreSQL-only tests (Story 7b-4) don't need Qdrant or embedding model.
+
+    Args:
+        request: pytest request fixture
+
+    Returns:
+        True if all tests have the postgresql_only marker
+    """
+    if hasattr(request, "session") and hasattr(request.session, "items"):
+        for item in request.session.items:
+            markers = [m.name for m in item.iter_markers()]
+            # If any test doesn't have postgresql_only, we need full setup
+            if "postgresql_only" not in markers:
+                return False
+        # All collected tests have postgresql_only marker
+        return len(request.session.items) > 0
+    return False
+
+
 def _has_integration_tests(request) -> bool:
     """Check if any integration tests are being collected.
 
@@ -43,7 +65,10 @@ def _has_integration_tests(request) -> bool:
         # Check the args passed to pytest (available in all processes)
         args = getattr(request.config, "args", [])
         for arg in args:
-            if "tests/unit" in str(arg) and "integration" not in str(arg):
+            # FIX (2025-12-21): Exclude UAT tests - they mock everything and don't need Qdrant
+            if ("tests/unit" in str(arg) or "tests/uat" in str(arg)) and "integration" not in str(
+                arg
+            ):
                 return False
             if "tests/integration" in str(arg):
                 return True
@@ -51,20 +76,24 @@ def _has_integration_tests(request) -> bool:
         # Check inipath for test root detection
         inipath = getattr(request.config, "inipath", None)
         if inipath:
-            rootdir = str(inipath.parent) if hasattr(inipath, "parent") else str(inipath)
+            str(inipath.parent) if hasattr(inipath, "parent") else str(inipath)
             # Check known_args_namespace for file args
             known_args = getattr(request.config, "known_args_namespace", None)
             if known_args and hasattr(known_args, "file_or_dir"):
                 for path in known_args.file_or_dir or []:
-                    if "tests/unit" in str(path) and "integration" not in str(path):
+                    # FIX (2025-12-21): Exclude UAT tests - they mock everything
+                    if (
+                        "tests/unit" in str(path) or "tests/uat" in str(path)
+                    ) and "integration" not in str(path):
                         return False
                     if "tests/integration" in str(path):
                         return True
 
     # PRIORITY 2: Check command-line arguments (works in controller process)
     for arg in sys.argv:
-        # Running only unit tests - skip integration fixtures
-        if "tests/unit" in arg and "integration" not in arg:
+        # Running only unit or UAT tests - skip integration fixtures
+        # FIX (2025-12-21): UAT tests mock external services, don't need Qdrant
+        if ("tests/unit" in arg or "tests/uat" in arg) and "integration" not in arg:
             return False
         # Explicitly running integration tests
         if "tests/integration" in arg:
@@ -150,6 +179,13 @@ def warmup_embedding_model(request):
         yield
         return
 
+    # PERFORMANCE FIX (2025-12-21): Skip for PostgreSQL-only tests (Story 7b-4)
+    # These tests don't need Qdrant or embedding model
+    if _is_postgresql_only_tests(request):
+        print("\n⚡ POSTGRESQL ONLY TESTS: Skipping embedding model warmup", file=sys.stderr)
+        yield
+        return
+
     skip_ingestion = request.config.getoption("--skip-ingestion", default=False)
     if skip_ingestion:
         print(
@@ -184,6 +220,13 @@ def session_ingested_collection(request, warmup_embedding_model):
     # PERFORMANCE FIX (2025-12-18): Skip for unit-only test runs
     if not _has_integration_tests(request):
         print("⚡ UNIT TESTS ONLY: Skipping PDF ingestion fixture", file=sys.stderr)
+        yield
+        return
+
+    # PERFORMANCE FIX (2025-12-21): Skip for PostgreSQL-only tests (Story 7b-4)
+    # These tests don't need Qdrant at all
+    if _is_postgresql_only_tests(request):
+        print("⚡ POSTGRESQL ONLY TESTS: Skipping PDF ingestion fixture", file=sys.stderr)
         yield
         return
 

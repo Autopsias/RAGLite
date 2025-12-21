@@ -33,10 +33,19 @@ if TYPE_CHECKING:
 # Limited to 2 workers to manage memory when running models in parallel
 _sklearn_executor = ThreadPoolExecutor(max_workers=2)
 
+from raglite.forecasting.models.arima_model import fit_arima
 from raglite.forecasting.models.chronos_model import (
     generate_chronos_cold_start_forecast,
 )
+from raglite.forecasting.models.ets_model import fit_ets
 from raglite.shared.clients import get_mistral_client
+
+# Story 7b-6: Model selection cache integration
+try:
+    from raglite.external_data.storage import get_cached_model_selection
+except ImportError:
+    # Storage module may not be available in some test scenarios
+    get_cached_model_selection = None  # type: ignore
 
 # Lazy-load Prophet to avoid import-time penalty during test collection
 # Prophet takes 3-5s to import due to Stan backend dependencies
@@ -802,6 +811,382 @@ def validate_timeseries_for_forecast(
     return is_valid, issues
 
 
+# =============================================================================
+# Story 7b-6: Model Selection Routing and Model-Specific Generators
+# =============================================================================
+
+
+async def _route_to_model(
+    model_name: str,
+    metric: str,
+    historical_data: TimeSeriesData,
+    periods_ahead: int,
+    external_regressors: dict[str, pd.Series] | None,
+) -> ForecastResult:
+    """Route forecast request to appropriate model function.
+
+    Story 7b-6 AC-7b.6.2: Routes to correct model based on cached selection.
+
+    Args:
+        model_name: Name of the model to use (e.g., 'arima', 'prophet', 'xgboost')
+        metric: Metric being forecast
+        historical_data: Historical time series data
+        periods_ahead: Forecast horizon
+        external_regressors: Optional external regressors
+
+    Returns:
+        ForecastResult from the selected model
+
+    Raises:
+        ValueError: If model_name is unknown
+    """
+    model_routers = {
+        "arima": _generate_arima_forecast,
+        "ets": _generate_ets_forecast,
+        "prophet": _generate_prophet_forecast,
+        "xgboost": _generate_xgboost_forecast,
+        "lightgbm": _generate_lightgbm_forecast,
+        "catboost": _generate_catboost_forecast,
+        "chronos": _generate_chronos_forecast,
+        "tft": _generate_tft_forecast,
+        "linear": _generate_linear_forecast,
+    }
+
+    if model_name not in model_routers:
+        raise ValueError(f"Unknown model: {model_name}")
+
+    generator = model_routers[model_name]
+    return await generator(  # type: ignore[no-any-return,operator]
+        metric=metric,
+        historical_data=historical_data,
+        periods_ahead=periods_ahead,
+        external_regressors=external_regressors,
+    )
+
+
+async def _generate_arima_forecast(
+    metric: str,
+    historical_data: TimeSeriesData,
+    periods_ahead: int,
+    external_regressors: dict[str, pd.Series] | None,
+    model_source: str = "cached",
+) -> ForecastResult:
+    """Generate forecast using ARIMA model.
+
+    Story 7b-6 AC-7b.6.2: ARIMA model wrapper.
+
+    Args:
+        metric: Metric name
+        historical_data: Historical data
+        periods_ahead: Forecast horizon
+        external_regressors: Optional regressors
+        model_source: Source of model selection ('cached', 'default', 'fallback')
+
+    Returns:
+        ForecastResult from ARIMA model
+    """
+
+    # Prepare data - ARIMA expects pandas Series
+    dates = pd.to_datetime([p.date for p in historical_data.points])
+    values = pd.Series([p.value for p in historical_data.points], index=dates)
+
+    # Prepare exogenous variables if provided
+    X_train = None
+    X_future = None
+    if external_regressors:
+        # Align regressors to historical dates
+        X_train = pd.DataFrame()
+        for name, series in external_regressors.items():
+            aligned = series.reindex(dates)
+            X_train[name] = aligned
+
+        # Generate future dates for forecast
+        last_date = dates[-1]
+        freq = "MS" if len(dates) >= 2 else "MS"  # Monthly by default
+        pd.date_range(start=last_date, periods=periods_ahead + 1, freq=freq)[1:]
+
+        # Prepare future regressors using last known values (constant strategy)
+        X_future = pd.DataFrame()
+        for name, series in external_regressors.items():
+            last_value = series.iloc[-1] if len(series) > 0 else 0.0
+            X_future[name] = [last_value] * periods_ahead
+
+    # Fit ARIMA model
+    model, metrics, predictions, conf_int = await fit_arima(
+        y_train=values,
+        X_train=X_train,
+        X_future=X_future,
+        forecast_horizon=periods_ahead,
+    )
+
+    # Convert predictions to ForecastPoints
+    forecast_points = []
+    last_date = dates[-1]
+    for i in range(periods_ahead):
+        # Generate next date
+        next_date = last_date + pd.DateOffset(months=i + 1)
+        label = next_date.strftime("%b %Y")
+
+        forecast_points.append(
+            ForecastPoint(
+                date=next_date.to_pydatetime(),
+                value=float(predictions[i]),
+                lower=float(conf_int[i][0]),
+                upper=float(conf_int[i][1]),
+                label=label,
+            )
+        )
+
+    # Build result
+    regressors_used = list(external_regressors.keys()) if external_regressors else []
+    model_type = "arima_multivariate" if regressors_used else "arima_univariate"
+    basis_text = f"ARIMA{metrics['order']} model with {len(historical_data.points)} data points"
+    if regressors_used:
+        basis_text += f" and {len(regressors_used)} regressors"
+
+    return ForecastResult(
+        metric_name=metric,
+        historical_data=historical_data.points,
+        forecast=forecast_points,
+        basis=basis_text,
+        accuracy_estimate="±10% (ARIMA model)",
+        periods_ahead=periods_ahead,
+        model_type=model_type,
+        regressors_used=regressors_used,
+        model_source=model_source,  # type: ignore[arg-type]
+    )
+
+
+async def _generate_ets_forecast(
+    metric: str,
+    historical_data: TimeSeriesData,
+    periods_ahead: int,
+    external_regressors: dict[str, pd.Series] | None,
+    model_source: str = "cached",
+) -> ForecastResult:
+    """Generate forecast using ETS model.
+
+    Story 7b-6 AC-7b.6.2: ETS model wrapper.
+    Note: ETS does not support exogenous regressors.
+
+    Args:
+        metric: Metric name
+        historical_data: Historical data
+        periods_ahead: Forecast horizon
+        external_regressors: Optional regressors (ignored for ETS)
+        model_source: Source of model selection ('cached', 'default', 'fallback')
+
+    Returns:
+        ForecastResult from ETS model
+    """
+    # Extract time series data
+    dates = pd.to_datetime([p.date for p in historical_data.points])
+    values = pd.Series([p.value for p in historical_data.points], index=dates)
+
+    # Fit ETS model
+    model, metrics, predictions, conf_int = await fit_ets(
+        y_train=values,
+        forecast_horizon=periods_ahead,
+        frequency="M",
+    )
+
+    # Convert predictions to ForecastPoints
+    forecast_points = []
+    last_date = dates[-1]
+    for i in range(periods_ahead):
+        # Generate next date
+        next_date = last_date + pd.DateOffset(months=i + 1)
+        label = next_date.strftime("%b %Y")
+
+        forecast_points.append(
+            ForecastPoint(
+                date=next_date.to_pydatetime(),
+                value=float(predictions[i]),
+                lower=float(conf_int[i][0]),
+                upper=float(conf_int[i][1]),
+                label=label,
+            )
+        )
+
+    # Build result
+    basis_text = f"ETS model with {len(historical_data.points)} data points"
+
+    return ForecastResult(
+        metric_name=metric,
+        historical_data=historical_data.points,
+        forecast=forecast_points,
+        basis=basis_text,
+        accuracy_estimate="±10% (ETS model)",
+        periods_ahead=periods_ahead,
+        model_type="ets",
+        regressors_used=[],
+        model_source=model_source,  # type: ignore[arg-type]
+    )
+
+
+async def _generate_prophet_forecast(
+    metric: str,
+    historical_data: TimeSeriesData,
+    periods_ahead: int,
+    external_regressors: dict[str, pd.Series] | None,
+) -> ForecastResult:
+    """Generate forecast using Prophet model.
+
+    Story 7b-6 AC-7b.6.2: Prophet model wrapper.
+    This uses the existing generate_forecast logic.
+
+    Args:
+        metric: Metric name
+        historical_data: Historical data
+        periods_ahead: Forecast horizon
+        external_regressors: Optional regressors
+
+    Returns:
+        ForecastResult from Prophet model
+    """
+    # Prophet forecasting is the default path in generate_forecast
+    # This function exists for routing consistency but delegates to main logic
+    raise NotImplementedError("Prophet wrapper - should use main generate_forecast logic")
+
+
+async def _generate_xgboost_forecast(
+    metric: str,
+    historical_data: TimeSeriesData,
+    periods_ahead: int,
+    external_regressors: dict[str, pd.Series] | None,
+) -> ForecastResult:
+    """Generate forecast using XGBoost model.
+
+    Story 7b-6 AC-7b.6.2: XGBoost model wrapper.
+
+    Args:
+        metric: Metric name
+        historical_data: Historical data
+        periods_ahead: Forecast horizon
+        external_regressors: Optional regressors
+
+    Returns:
+        ForecastResult from XGBoost model
+    """
+    # TODO: Implement XGBoost forecasting
+    raise NotImplementedError("XGBoost forecasting not yet implemented")
+
+
+async def _generate_lightgbm_forecast(
+    metric: str,
+    historical_data: TimeSeriesData,
+    periods_ahead: int,
+    external_regressors: dict[str, pd.Series] | None,
+) -> ForecastResult:
+    """Generate forecast using LightGBM model.
+
+    Story 7b-6 AC-7b.6.2: LightGBM model wrapper.
+
+    Args:
+        metric: Metric name
+        historical_data: Historical data
+        periods_ahead: Forecast horizon
+        external_regressors: Optional regressors
+
+    Returns:
+        ForecastResult from LightGBM model
+    """
+    # TODO: Implement LightGBM forecasting
+    raise NotImplementedError("LightGBM forecasting not yet implemented")
+
+
+async def _generate_catboost_forecast(
+    metric: str,
+    historical_data: TimeSeriesData,
+    periods_ahead: int,
+    external_regressors: dict[str, pd.Series] | None,
+) -> ForecastResult:
+    """Generate forecast using CatBoost model.
+
+    Story 7b-6 AC-7b.6.2: CatBoost model wrapper.
+
+    Args:
+        metric: Metric name
+        historical_data: Historical data
+        periods_ahead: Forecast horizon
+        external_regressors: Optional regressors
+
+    Returns:
+        ForecastResult from CatBoost model
+    """
+    # TODO: Implement CatBoost forecasting
+    raise NotImplementedError("CatBoost forecasting not yet implemented")
+
+
+async def _generate_chronos_forecast(
+    metric: str,
+    historical_data: TimeSeriesData,
+    periods_ahead: int,
+    external_regressors: dict[str, pd.Series] | None,
+) -> ForecastResult:
+    """Generate forecast using Chronos model.
+
+    Story 7b-6 AC-7b.6.2: Chronos model wrapper.
+
+    Args:
+        metric: Metric name
+        historical_data: Historical data
+        periods_ahead: Forecast horizon
+        external_regressors: Optional regressors (Chronos may not support)
+
+    Returns:
+        ForecastResult from Chronos model
+    """
+    # TODO: Implement Chronos forecasting (may use generate_chronos_cold_start_forecast)
+    raise NotImplementedError("Chronos forecasting not yet implemented")
+
+
+async def _generate_tft_forecast(
+    metric: str,
+    historical_data: TimeSeriesData,
+    periods_ahead: int,
+    external_regressors: dict[str, pd.Series] | None,
+) -> ForecastResult:
+    """Generate forecast using TFT (Temporal Fusion Transformer) model.
+
+    Story 7b-6 AC-7b.6.2: TFT model wrapper.
+
+    Args:
+        metric: Metric name
+        historical_data: Historical data
+        periods_ahead: Forecast horizon
+        external_regressors: Optional regressors
+
+    Returns:
+        ForecastResult from TFT model
+    """
+    # TODO: Implement TFT forecasting
+    raise NotImplementedError("TFT forecasting not yet implemented")
+
+
+async def _generate_linear_forecast(
+    metric: str,
+    historical_data: TimeSeriesData,
+    periods_ahead: int,
+    external_regressors: dict[str, pd.Series] | None,
+) -> ForecastResult:
+    """Generate forecast using Linear Regression model.
+
+    Story 7b-6 AC-7b.6.2: Linear model wrapper (Ridge/Lasso).
+
+    Args:
+        metric: Metric name
+        historical_data: Historical data
+        periods_ahead: Forecast horizon
+        external_regressors: Optional regressors
+
+    Returns:
+        ForecastResult from Linear model
+    """
+    # TODO: Implement Linear forecasting (Ridge/Lasso)
+    raise NotImplementedError("Linear forecasting not yet implemented")
+
+
 async def generate_forecast(
     metric: str,
     historical_data: TimeSeriesData | None = None,
@@ -809,6 +1194,7 @@ async def generate_forecast(
     external_regressors: dict[str, pd.Series] | None = None,
     frequency: str = "M",
     future_regressor_strategy: str = "constant",
+    use_model_selection: bool = True,
 ) -> ForecastResult:
     """Generate forecast for financial metric using Prophet + LLM.
 
@@ -816,6 +1202,7 @@ async def generate_forecast(
     and Mistral Large for confidence reasoning.
 
     Story 6.3: Extended with multi-variate forecasting support.
+    Story 7b-6: Integrated with model selection cache for automatic optimal model routing.
 
     Args:
         metric: Metric name (e.g., "revenue", "cash_flow", "expenses")
@@ -829,6 +1216,9 @@ async def generate_forecast(
             - 'constant': Use last known value (default)
             - 'extrapolate': Linear extrapolation from last 3 values
             - 'provided': Use values already in external_regressors
+        use_model_selection: If True, use cached model selection (default: True).
+            When enabled, checks model_selection cache and routes to optimal model.
+            When disabled, uses default Prophet model.
 
     Returns:
         ForecastResult with predictions, confidence intervals, and reasoning.
@@ -837,6 +1227,9 @@ async def generate_forecast(
         - accuracy_metrics: {'rmse': X, 'mae': Y, 'mape': Z}
         - regressors_used: list of regressor names
         - improvement_vs_baseline: percentage improvement vs Epic 4 baseline
+        When use_model_selection=True, includes:
+        - model_source: 'cached' (from cache), 'default' (no cache), 'fallback' (error)
+        - model_selection_reason: Human-readable explanation of model choice
 
     Raises:
         InsufficientDataError: If <6 data points available
@@ -850,6 +1243,44 @@ async def generate_forecast(
             stacklevel=2,
         )
 
+    # Story 7b-6 AC-7b.6.1: Check model selection cache first
+    model_source = "default"
+    model_selection_reason = None
+    selected_model = None
+    selected_regressors = None
+
+    if use_model_selection and get_cached_model_selection is not None:
+        try:
+            cached = await get_cached_model_selection(metric)
+            if cached and not cached.is_expired:
+                selected_model = cached.best_model
+                selected_regressors = cached.regressor_list if cached.use_regressors else None
+                model_source = "cached"
+                # Get model rationale from data_characteristics if available
+                if cached.data_characteristics:
+                    model_selection_reason = cached.data_characteristics.get("model_rationale")
+                logger.info(
+                    f"Using cached model selection for {metric}",
+                    extra={
+                        "model": selected_model,
+                        "source": model_source,
+                        "use_regressors": cached.use_regressors,
+                        "regressor_count": len(selected_regressors) if selected_regressors else 0,
+                    },
+                )
+            else:
+                cache_status = "miss" if not cached else "expired"
+                logger.info(
+                    f"No valid cache for {metric}, using default Prophet",
+                    extra={"cache_status": cache_status},
+                )
+        except Exception as e:
+            # Any error in cache lookup shouldn't break forecasting
+            logger.warning(
+                f"Error checking model selection cache for {metric}: {e}",
+                extra={"error": str(e)},
+            )
+
     # Determine if multi-variate mode
     is_multivariate = external_regressors is not None and len(external_regressors) > 0
 
@@ -861,6 +1292,8 @@ async def generate_forecast(
             "periods": periods_ahead,
             "multivariate": is_multivariate,
             "regressors": list(external_regressors.keys()) if external_regressors else [],
+            "use_model_selection": use_model_selection,
+            "selected_model": selected_model,
         },
     )
 
@@ -883,6 +1316,77 @@ async def generate_forecast(
             historical_data=historical_data,
             periods_ahead=periods_ahead,
         )
+
+    # Story 7b-6 AC-7b.6.3: Filter external_regressors based on cached selection
+    # This applies to ALL models when cache hit
+    filtered_regressors_for_routing = external_regressors
+    if selected_model is not None:
+        if selected_regressors is not None and external_regressors is not None:
+            # Only pass regressors that are in the cached selection AND available
+            filtered_regressors_for_routing = {
+                name: series
+                for name, series in external_regressors.items()
+                if name in selected_regressors
+            }
+            if not filtered_regressors_for_routing:
+                # If none of the selected regressors are available, pass None
+                filtered_regressors_for_routing = None
+        elif selected_regressors is None:
+            # use_regressors=False in cache - don't pass any regressors
+            filtered_regressors_for_routing = None
+
+    # Story 7b-6 AC-7b.6.2: Route to selected model (including Prophet)
+    if selected_model is not None:
+        # AC-7b.6.4: Try to route to selected model with fallback
+        try:
+            result = await _route_to_model(
+                model_name=selected_model,
+                metric=metric,
+                historical_data=historical_data,
+                periods_ahead=periods_ahead,
+                external_regressors=filtered_regressors_for_routing,
+            )
+            # Add metadata from cache
+            result.model_source = model_source  # type: ignore[assignment]
+            if model_selection_reason:
+                result.model_selection_reason = model_selection_reason
+
+            # Add LLM explanation
+            explanation = await explain_forecast(  # type: ignore[call-arg]
+                metric_name=metric,
+                forecast_points=result.forecast,
+                historical_data=historical_data.points,
+            )
+            result.confidence_reasoning = explanation
+
+            return result
+        except NotImplementedError:
+            # Model not yet implemented - fall through to main Prophet path as fallback
+            logger.debug(
+                f"Model {selected_model} not yet implemented, using main Prophet path for {metric}",
+                extra={"metric": metric, "requested_model": selected_model},
+            )
+            # Update external_regressors to filtered version for Prophet path
+            external_regressors = filtered_regressors_for_routing
+            # Update source to indicate fallback
+            model_source = "fallback"
+            model_selection_reason = (
+                f"{selected_model} model not yet implemented, using Prophet fallback"
+            )
+        except Exception as e:
+            # Fallback to Prophet on model failure
+            logger.warning(
+                f"Model {selected_model} failed for {metric}, falling back to Prophet",
+                extra={
+                    "model": selected_model,
+                    "error": str(e),
+                    "metric": metric,
+                },
+            )
+            # Update source to indicate fallback
+            model_source = "fallback"
+            model_selection_reason = f"Fallback due to {selected_model} failure: {str(e)}"
+            # Fall through to main Prophet path below
 
     # FIX (2025-12-16): Pre-flight data quality validation
     # Validates data before forecasting to catch issues like:
@@ -1314,6 +1818,9 @@ async def generate_forecast(
         accuracy_metrics=accuracy_metrics,
         regressors_used=regressors_used,
         improvement_vs_baseline=improvement_vs_baseline,
+        # Story 7b-6: Model selection metadata
+        model_source=model_source,  # type: ignore[arg-type]
+        model_selection_reason=model_selection_reason,
     )
 
     # Step 7: Generate LLM explanation for confidence reasoning

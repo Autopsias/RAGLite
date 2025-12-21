@@ -147,6 +147,13 @@ def ensure_qdrant_test_isolation(request):
         yield
         return
 
+    # FIX (2025-12-21): Skip for non-integration tests when running full suite
+    # UAT tests mock everything and don't need Qdrant isolation
+    test_path = str(request.fspath) if hasattr(request, "fspath") else ""
+    if "tests/uat" in test_path or ("tests/unit" in test_path and "integration" not in test_path):
+        yield
+        return
+
     # Initialize dirty flag at session level (tracks if collection was modified)
     if not hasattr(request.session, "_collection_dirty"):
         request.session._collection_dirty = False

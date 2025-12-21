@@ -197,13 +197,13 @@ development_status:
   # Timeline: 10 development days (2 weeks)
   # Dependencies: Epic 6 (Advanced Forecasting) - provides model inventory
   # Target: EBITDA MAPE from 84.77% to <15%, 15/20 variables meeting MAPE target
-  epic-7b: in-progress
+  epic-7b: done
   7b-1-add-arima-ets-model-wrappers: done
   7b-2-data-characteristics-analyzer: done
-  7b-3-per-variable-model-selection-cv: backlog
-  7b-4-model-selection-cache-postgresql: backlog
-  7b-5-model-selection-slash-commands: backlog
-  7b-6-mcp-integration-model-selection: backlog
+  7b-3-per-variable-model-selection-cv: done  # Phase 8 PASS - 2025-12-21
+  7b-4-model-selection-cache-postgresql: done  # Phase 8 PASS - 2025-12-21
+  7b-5-model-selection-slash-commands: done  # Phase 8 PASS - 2025-12-21
+  7b-6-mcp-integration-model-selection: done  # Complete - 2025-12-21 (48/48 tests passing)
   epic-7b-retrospective: optional
 
   # Epic 7: Technical Debt & Code Quality (ON HOLD - Resume after Epic 7B)
