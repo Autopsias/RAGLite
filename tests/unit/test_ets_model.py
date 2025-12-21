@@ -104,7 +104,7 @@ class TestFitEtsImplementation:
             mock_model.fit.return_value = mock_fit_result
             mock_ets_class.return_value = mock_model
 
-# result = await fit_ets(monthly_series, forecast_horizon=4, frequency="M")
+            await fit_ets(monthly_series, forecast_horizon=4, frequency="M")
 
             mock_ets_class.assert_called_once()
 
@@ -492,7 +492,7 @@ class TestEdgeCasesEts:
 
         # Should either work or raise a clear error
         try:
-# result = await fit_ets(zero_series, forecast_horizon=4, frequency="M", seasonal=None)
+            result = await fit_ets(zero_series, forecast_horizon=4, frequency="M", seasonal=None)
             assert result is not None
         except Exception as e:
             # Should be a clear error, not a cryptic one

@@ -199,7 +199,7 @@ development_status:
   # Target: EBITDA MAPE from 84.77% to <15%, 15/20 variables meeting MAPE target
   epic-7b: in-progress
   7b-1-add-arima-ets-model-wrappers: done
-  7b-2-data-characteristics-analyzer: drafted
+  7b-2-data-characteristics-analyzer: done
   7b-3-per-variable-model-selection-cv: backlog
   7b-4-model-selection-cache-postgresql: backlog
   7b-5-model-selection-slash-commands: backlog

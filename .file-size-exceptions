@@ -498,6 +498,12 @@
       "reason": "Story 7b.1 - Comprehensive ATDD tests for ETS model wrapper - refactoring planned to split by test category",
       "target_lines": 500,
       "directory": "tests/"
+    },
+    "raglite/forecasting/data_analyzer.py": {
+      "lines": 550,
+      "reason": "Story 7b.2 - Comprehensive statistical analysis module with ADF/KPSS/ACF/trend/volatility tests - cohesive implementation",
+      "target_lines": 500,
+      "directory": "raglite/"
     }
   }
 }

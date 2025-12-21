@@ -283,6 +283,8 @@ module = [
     "pytorch_lightning.*",
     "sklearn.*",
     "apscheduler.*",
+    "statsmodels.*",
+    "pmdarima.*",
 ]
 ignore_missing_imports = true
 follow_imports = "skip"

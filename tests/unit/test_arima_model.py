@@ -128,7 +128,7 @@ class TestFitArimaImplementation:
             mock_pm.auto_arima.return_value = mock_model
             mock_get_pm.return_value = mock_pm
 
-# result = await fit_arima(monthly_series, forecast_horizon=4, frequency="M")
+            await fit_arima(monthly_series, forecast_horizon=4, frequency="M")
 
             mock_pm.auto_arima.assert_called_once()
 
