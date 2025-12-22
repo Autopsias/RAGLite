@@ -1,5 +1,6 @@
 """Query MCP tools."""
 
+import json
 import time
 
 from raglite.agentic.fallback import FallbackResponse, handle_workflow_failure
@@ -189,7 +190,7 @@ async def analytical_query_financial_documents(
                     "task_count": 1,
                     "execution_time_ms": int(workflow_duration_ms),
                     "workflow_pattern": "simple_retrieval",
-                    "fallback_tier": "epic2_routing",
+                    "fallback_tier": "basic_retrieval",
                 },
                 confidence="high",
                 limitations=[],
@@ -214,7 +215,7 @@ async def analytical_query_financial_documents(
         )
         if synthesis_result:
             answer = str(synthesis_result.result)
-            fallback_tier = "full"
+            fallback_tier = "full_orchestration"
             confidence = "high"
             limitations: list[str] = []
             reasoning_steps = []
@@ -226,7 +227,17 @@ async def analytical_query_financial_documents(
                     (t.instruction for t in plan.tasks if t.task_id == r.task_id),
                     "retrieval task",
                 )
-                doc_count = len(r.result) if isinstance(r.result, list) else "relevant"
+                # Retrieval agent returns JSON string - parse to get chunk count
+                doc_count: str | int = "relevant"
+                if isinstance(r.result, str):
+                    try:
+                        result_data = json.loads(r.result)
+                        if isinstance(result_data, dict) and "chunks" in result_data:
+                            doc_count = len(result_data["chunks"])
+                    except (json.JSONDecodeError, KeyError):
+                        pass
+                elif isinstance(r.result, list):
+                    doc_count = len(r.result)
                 reasoning_steps.append(f"{i}. Retrieved {doc_count} documents: {task_desc}")
             analysis_results = [r for r in results if r.agent_type == "analysis" and r.success]
             step_num = len(reasoning_steps) + 1
@@ -243,7 +254,27 @@ async def analytical_query_financial_documents(
             )
             sources = []
             for r in retrieval_results:
-                if isinstance(r.result, list):
+                # Retrieval agent returns JSON string - parse to extract sources
+                if isinstance(r.result, str):
+                    try:
+                        result_data = json.loads(r.result)
+                        if isinstance(result_data, dict) and "chunks" in result_data:
+                            for chunk in result_data["chunks"]:
+                                # Extract document ID and page number from chunk
+                                doc_id = chunk.get("id") or chunk.get("source_document")
+                                page_num = chunk.get("page_number")
+                                if doc_id:
+                                    page_ref = f" (page {page_num})" if page_num is not None else ""
+                                    source = f"{doc_id}{page_ref}"
+                                    if source not in sources:
+                                        sources.append(source)
+                    except (json.JSONDecodeError, KeyError, TypeError):
+                        logger.warning(
+                            "Failed to parse retrieval result for sources",
+                            extra={"task_id": r.task_id, "result_type": type(r.result).__name__},
+                        )
+                elif isinstance(r.result, list):
+                    # Legacy support for list results (if any agents return this format)
                     for doc in r.result:
                         if hasattr(doc, "document_id"):
                             has_page = hasattr(doc, "page_number") and doc.page_number is not None
