@@ -636,10 +636,33 @@ jobs:
           fi
           mkdir -p "$STORAGE_PATH" && chmod 755 "$STORAGE_PATH"
 
-          # Start test services - Compose should find no existing containers now
-          docker compose up -d qdrant-test
+          # ========================================
+          # BYPASS DOCKER COMPOSE: Use raw docker run
+          # ========================================
+          # Docker Compose v2's label-based state tracking has persistent corruption
+          # (stale ID 324656797f5f in label index). Raw docker run bypasses this entirely.
+          # ========================================
+
+          echo "Starting Qdrant TEST using raw docker run (bypassing Compose state)..."
+
+          # Remove existing container by name (raw docker, ignores Compose labels)
+          docker rm -f raglite-qdrant-test 2>/dev/null || true
+
+          # Start container with raw docker run (matches docker-compose.yml config)
+          docker run -d \
+            --name raglite-qdrant-test \
+            -p 6335:6333 \
+            -p 6336:6334 \
+            -v "$(pwd)/qdrant_storage_test:/qdrant/storage" \
+            -e QDRANT__SERVICE__HTTP_PORT=6333 \
+            -e QDRANT__SERVICE__GRPC_PORT=6334 \
+            --memory=1g \
+            qdrant/qdrant:v1.15.0
+
+          echo "✅ Qdrant TEST container started (bypassed Docker Compose)"
 
           # Verify container started
+          sleep 2
           if ! docker ps --filter "name=raglite-qdrant-test" --format '{{.Names}}' | grep -q "raglite-qdrant-test"; then
             echo "❌ Container failed to start!"
             docker logs raglite-qdrant-test --tail 50 || true
@@ -674,20 +697,24 @@ jobs:
                 echo "Recreating Qdrant TEST container with fresh storage..."
                 # AGGRESSIVE CLEANUP: Full state clear to prevent persistent corruption
                 # Root cause: bind mount storage corruption from interrupted operations
-                docker compose stop qdrant-test 2>/dev/null || true
-                docker compose rm --force --stop qdrant-test 2>/dev/null || true
-                docker compose down --remove-orphans --volumes qdrant-test 2>/dev/null || true
-                docker container prune -f 2>/dev/null || true
-                docker volume prune -f 2>/dev/null || true
+                # Use raw docker commands to avoid Compose state corruption
+                docker rm -f raglite-qdrant-test 2>/dev/null || true
                 rm -rf ./qdrant_storage_test
+                mkdir -p ./qdrant_storage_test && chmod 755 ./qdrant_storage_test
 
-                # Clear Docker Compose project state before recreation
-                echo "Clearing Docker Compose project state..."
-                rm -rf ~/.docker/compose/ 2>/dev/null || true
+                # Recreate with raw docker run (bypasses Compose state)
+                docker run -d \
+                  --name raglite-qdrant-test \
+                  -p 6335:6333 \
+                  -p 6336:6334 \
+                  -v "$(pwd)/qdrant_storage_test:/qdrant/storage" \
+                  -e QDRANT__SERVICE__HTTP_PORT=6333 \
+                  -e QDRANT__SERVICE__GRPC_PORT=6334 \
+                  --memory=1g \
+                  qdrant/qdrant:v1.15.0
 
-                docker compose up -d --force-recreate qdrant-test
                 sleep 5
-                echo "✅ Qdrant TEST container recreated with fresh storage"
+                echo "✅ Qdrant TEST container recreated with fresh storage (bypassed Docker Compose)"
               fi
 
               exit 0
@@ -784,8 +811,35 @@ jobs:
 
           echo "✅ Nuclear cleanup complete!"
 
-          # Start test services - Compose should find no existing containers now
-          docker compose up -d postgresql-test
+          # ========================================
+          # BYPASS DOCKER COMPOSE: Use raw docker run
+          # ========================================
+          # Docker Compose v2's label-based state tracking has persistent corruption
+          # (stale ID 324656797f5f in label index). Raw docker run bypasses this entirely.
+          # ========================================
+
+          echo "Starting PostgreSQL TEST using raw docker run (bypassing Compose state)..."
+
+          # Remove existing container by name (raw docker, ignores Compose labels)
+          docker rm -f raglite-postgresql-test 2>/dev/null || true
+
+          # Remove test data directory to ensure clean state
+          rm -rf ./postgresql_data_test 2>/dev/null || true
+          mkdir -p ./postgresql_data_test
+
+          # Start container with raw docker run (matches docker-compose.yml config)
+          docker run -d \
+            --name raglite-postgresql-test \
+            -p 5433:5432 \
+            -v "$(pwd)/postgresql_data_test:/var/lib/postgresql/data" \
+            -e POSTGRES_DB=raglite_ci \
+            -e POSTGRES_USER=raglite_ci \
+            -e POSTGRES_PASSWORD=raglite_ci \
+            --shm-size=256m \
+            --memory=512m \
+            postgres:16
+
+          echo "✅ PostgreSQL TEST container started (bypassed Docker Compose)"
 
           # CRITICAL FIX: Wait for PostgreSQL to FULLY initialize (2 "ready" messages)
           # PostgreSQL emits "ready to accept connections" TWICE during full initialization:
@@ -1281,8 +1335,35 @@ jobs:
 
           echo "✅ Nuclear cleanup complete!"
 
-          # Start test services - Compose should find no existing containers now
-          docker compose up -d postgresql-test
+          # ========================================
+          # BYPASS DOCKER COMPOSE: Use raw docker run
+          # ========================================
+          # Docker Compose v2's label-based state tracking has persistent corruption
+          # (stale ID 324656797f5f in label index). Raw docker run bypasses this entirely.
+          # ========================================
+
+          echo "Starting PostgreSQL TEST using raw docker run (bypassing Compose state)..."
+
+          # Remove existing container by name (raw docker, ignores Compose labels)
+          docker rm -f raglite-postgresql-test 2>/dev/null || true
+
+          # Remove test data directory to ensure clean state
+          rm -rf ./postgresql_data_test 2>/dev/null || true
+          mkdir -p ./postgresql_data_test
+
+          # Start container with raw docker run (matches docker-compose.yml config)
+          docker run -d \
+            --name raglite-postgresql-test \
+            -p 5433:5432 \
+            -v "$(pwd)/postgresql_data_test:/var/lib/postgresql/data" \
+            -e POSTGRES_DB=raglite_ci \
+            -e POSTGRES_USER=raglite_ci \
+            -e POSTGRES_PASSWORD=raglite_ci \
+            --shm-size=256m \
+            --memory=512m \
+            postgres:16
+
+          echo "✅ PostgreSQL TEST container started (bypassed Docker Compose)"
 
           # Wait for PostgreSQL to FULLY initialize (2 "ready" messages)
           echo "Waiting for PostgreSQL to fully initialize..."
