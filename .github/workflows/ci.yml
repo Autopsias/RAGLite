@@ -42,6 +42,73 @@ env:
 
 jobs:
   # ============================================================================
+  # INFRASTRUCTURE VERIFICATION
+  # ============================================================================
+
+  # ============================================================================
+  # JOB 0: Docker Daemon Health Check
+  # Ensures Docker is available before running jobs that require it
+  # ============================================================================
+  docker-health-check:
+    name: "🐳 Infrastructure: Docker Availability"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 5
+    outputs:
+      docker-available: ${{ steps.check-docker.outputs.available }}
+
+    steps:
+      - name: Check Docker daemon availability
+        id: check-docker
+        run: |
+          echo "========================================="
+          echo "Docker Daemon Health Check"
+          echo "========================================="
+
+          # Check if Docker command exists
+          if ! command -v docker &> /dev/null; then
+            echo "❌ Docker command not found"
+            echo "available=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Check if Docker daemon is running
+          if docker info &> /dev/null; then
+            echo "✅ Docker daemon is running"
+            docker version
+            echo ""
+            echo "Docker context:"
+            docker context ls
+            echo ""
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Docker daemon is not running"
+            echo ""
+            echo "Docker context:"
+            docker context ls || true
+            echo ""
+            echo "To fix this issue, start Docker Desktop:"
+            echo "  open -a Docker"
+            echo ""
+            echo "available=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Verify Docker socket
+        if: steps.check-docker.outputs.available == 'true'
+        run: |
+          echo "Verifying Docker socket accessibility..."
+
+          DOCKER_SOCKET=$(docker context inspect --format '{{.Endpoints.docker.Host}}' | sed 's|unix://||')
+          echo "Docker socket path: $DOCKER_SOCKET"
+
+          if [ -S "$DOCKER_SOCKET" ]; then
+            echo "✅ Docker socket is accessible at $DOCKER_SOCKET"
+          else
+            echo "❌ Docker socket not found at $DOCKER_SOCKET"
+            exit 1
+          fi
+
+  # ============================================================================
   # CODE QUALITY CHECKS
   # ============================================================================
 
@@ -370,7 +437,7 @@ jobs:
     name: "🔗 Tests: Integration (~115 tests)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 90  # Sequential execution requires 45-50 min + buffer for slow tests
-    needs: [test-unit]
+    needs: [docker-health-check, test-unit]
     # CRITICAL FIX: Set APP_ENV=test at job level for consistent test database routing
     # This ensures ALL steps (health check, init, tests) use the same test infrastructure:
     # - Qdrant: port 6335, collection financial_docs_ci
@@ -639,7 +706,7 @@ jobs:
     name: "🎯 Tests: E2E (~28 tests)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 15
-    needs: [test-unit]
+    needs: [docker-health-check, test-unit]
 
     env:
       APP_ENV: test
@@ -895,7 +962,7 @@ jobs:
     name: "📊 NFR: Epic 6 Accuracy Gate (MAPE <=12%)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 30
-    needs: [test-integration]
+    needs: [docker-health-check, test-integration]
     env:
       APP_ENV: test
       QDRANT_HOST: localhost
@@ -1027,7 +1094,7 @@ jobs:
     timeout-minutes: 120  # 22 queries × ~30s max + overhead
     # OPTIMIZED: Runs in parallel with test-integration (not blocked by it)
     # Has own PostgreSQL container (port 5438) to avoid dependency on integration setup
-    needs: [test-unit]
+    needs: [docker-health-check, test-unit]
 
     steps:
       - name: Checkout code
@@ -1457,7 +1524,7 @@ jobs:
     name: "🔢 NFR: Test Discovery Validation"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 5
-    needs: [test-unit]
+    needs: [docker-health-check, test-unit]
 
     steps:
       - name: Checkout code
@@ -1790,7 +1857,7 @@ jobs:
     # Only run on main branch post-merge (direct pushes to main)
     # Skip on: PRs to main, feature branches, develop branch
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [test-unit, test-integration, test-e2e]
+    needs: [docker-health-check, test-unit, test-integration, test-e2e]
 
     steps:
       - name: Checkout code
