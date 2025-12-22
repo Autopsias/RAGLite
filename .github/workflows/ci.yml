@@ -550,6 +550,9 @@ jobs:
 
           # ENHANCED CLEANUP: More aggressive for self-hosted runners
           echo "Cleaning up any containers using port $CONTAINER_PORT..."
+          # Use docker compose down to properly clear Compose state
+          docker compose down qdrant-test 2>/dev/null || true
+          # Also remove via docker in case container exists outside Compose
           docker ps -a --filter "name=raglite-qdrant-test" --format '{{.Names}}' | xargs -r docker rm -f 2>/dev/null || true
           docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":${CONTAINER_PORT}->" | awk '{print $1}' | xargs -r docker rm -f || true
           # macOS-specific: kill processes holding the port
@@ -644,6 +647,9 @@ jobs:
 
           # CRITICAL FIX: More aggressive cleanup to prevent port conflicts in CI
           echo "Cleaning up existing PostgreSQL test containers..."
+          # Use docker compose down to properly clear Compose state
+          docker compose down postgresql-test 2>/dev/null || true
+          # Also remove via docker in case container exists outside Compose
           docker rm -f raglite-postgresql-test 2>/dev/null || true
           sleep 3  # Increased wait time for Docker networking cleanup
 
@@ -929,6 +935,9 @@ jobs:
 
           # Stop and remove test containers to prevent port conflicts
           echo "Stopping test containers..."
+          # Use docker compose down to properly clear Compose state
+          docker compose down qdrant-test postgresql-test 2>/dev/null || true
+          # Also remove via docker in case containers exist outside Compose
           docker stop raglite-qdrant-test raglite-postgresql-test 2>/dev/null || true
           docker rm -f raglite-qdrant-test raglite-postgresql-test 2>/dev/null || true
 
@@ -1037,6 +1046,9 @@ jobs:
 
           # Clean up existing PostgreSQL test containers
           echo "Cleaning up existing PostgreSQL test containers..."
+          # Use docker compose down to properly clear Compose state
+          docker compose down postgresql-test 2>/dev/null || true
+          # Also remove via docker in case container exists outside Compose
           docker rm -f raglite-postgresql-test 2>/dev/null || true
           sleep 3
 
