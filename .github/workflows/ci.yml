@@ -458,6 +458,46 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Pre-test memory cleanup (OOM prevention)
+        run: |
+          echo "========================================="
+          echo "Pre-Test Memory Cleanup (Self-Hosted Runner)"
+          echo "========================================="
+
+          # Stop and remove any stale containers from previous runs
+          echo "Cleaning up stale containers..."
+          docker ps -a --filter "name=raglite-" --format '{{.Names}}' | xargs -r docker rm -f 2>/dev/null || true
+
+          # Prune Docker resources to free memory
+          echo "Pruning unused Docker resources..."
+          docker system prune -f --volumes 2>/dev/null || true
+
+          # Clear pip/uv caches if they're consuming too much memory
+          # These can grow over time on self-hosted runners
+          if [ -d ~/.cache/uv ]; then
+            CACHE_SIZE=$(du -sm ~/.cache/uv 2>/dev/null | cut -f1 || echo "0")
+            if [ "$CACHE_SIZE" -gt 2048 ]; then
+              echo "Pruning large uv cache (${CACHE_SIZE}MB > 2GB limit)..."
+              rm -rf ~/.cache/uv/builds-v0 2>/dev/null || true
+            fi
+          fi
+
+          # Report initial memory state
+          echo ""
+          echo "Initial memory state:"
+          if command -v vm_stat &> /dev/null; then
+            PAGE_SIZE=$(sysctl -n hw.pagesize 2>/dev/null || echo 4096)
+            FREE_PAGES=$(vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.')
+            INACTIVE_PAGES=$(vm_stat | grep "Pages inactive" | awk '{print $3}' | tr -d '.')
+            FREE_MB=$((FREE_PAGES * PAGE_SIZE / 1024 / 1024))
+            INACTIVE_MB=$((INACTIVE_PAGES * PAGE_SIZE / 1024 / 1024))
+            AVAILABLE_MB=$((FREE_MB + INACTIVE_MB))
+            echo "  Available: ${AVAILABLE_MB}MB"
+          fi
+
+          echo ""
+          echo "✅ Pre-test cleanup complete"
+
       - name: Install uv (network-resilient)
         run: |
           # Network-resilient uv installation with retry logic
@@ -669,6 +709,63 @@ jobs:
           python scripts/init-test-postgresql.py
           echo "✅ Schema initialized successfully"
 
+      - name: Memory diagnostics (pre-test baseline)
+        run: |
+          echo "========================================="
+          echo "Memory Diagnostics (Pre-Test Baseline)"
+          echo "========================================="
+
+          # System memory info (macOS)
+          echo "📊 System Memory:"
+          if command -v vm_stat &> /dev/null; then
+            # macOS memory stats
+            PAGE_SIZE=$(sysctl -n hw.pagesize 2>/dev/null || echo 4096)
+            FREE_PAGES=$(vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.')
+            INACTIVE_PAGES=$(vm_stat | grep "Pages inactive" | awk '{print $3}' | tr -d '.')
+            WIRED_PAGES=$(vm_stat | grep "Pages wired down" | awk '{print $4}' | tr -d '.')
+            ACTIVE_PAGES=$(vm_stat | grep "Pages active" | awk '{print $3}' | tr -d '.')
+            SPECULATIVE_PAGES=$(vm_stat | grep "Pages speculative" | awk '{print $3}' | tr -d '.')
+
+            FREE_MB=$((FREE_PAGES * PAGE_SIZE / 1024 / 1024))
+            INACTIVE_MB=$((INACTIVE_PAGES * PAGE_SIZE / 1024 / 1024))
+            WIRED_MB=$((WIRED_PAGES * PAGE_SIZE / 1024 / 1024))
+            ACTIVE_MB=$((ACTIVE_PAGES * PAGE_SIZE / 1024 / 1024))
+            SPECULATIVE_MB=$((SPECULATIVE_PAGES * PAGE_SIZE / 1024 / 1024))
+            AVAILABLE_MB=$((FREE_MB + INACTIVE_MB + SPECULATIVE_MB))
+
+            TOTAL_MEM=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
+            TOTAL_GB=$((TOTAL_MEM / 1024 / 1024 / 1024))
+
+            echo "  Total RAM: ${TOTAL_GB} GB"
+            echo "  Available: ${AVAILABLE_MB} MB (free: ${FREE_MB} MB + inactive: ${INACTIVE_MB} MB)"
+            echo "  Active: ${ACTIVE_MB} MB"
+            echo "  Wired: ${WIRED_MB} MB"
+
+            # OOM risk assessment
+            if [ $AVAILABLE_MB -lt 1024 ]; then
+              echo "  ⚠️  WARNING: Low available memory (${AVAILABLE_MB}MB < 1GB)"
+              echo "  ⚠️  Risk of OOM during tests - consider reducing parallelism"
+            elif [ $AVAILABLE_MB -lt 2048 ]; then
+              echo "  ⚠️  CAUTION: Memory available (${AVAILABLE_MB}MB) is moderate"
+            else
+              echo "  ✅ Memory looks healthy (${AVAILABLE_MB}MB available)"
+            fi
+          else
+            # Fallback for Linux
+            free -h 2>/dev/null || echo "Memory stats not available"
+          fi
+
+          echo ""
+          echo "📊 Docker Container Memory:"
+          docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}" 2>/dev/null | head -10 || echo "No containers running"
+
+          echo ""
+          echo "📊 Top Memory Processes:"
+          ps aux --sort=-%mem 2>/dev/null | head -6 || ps -eo pid,comm,%mem --sort=-%mem 2>/dev/null | head -6 || echo "Process stats not available"
+
+          echo ""
+          echo "========================================="
+
       - name: Validate integration test isolation markers
         run: |
           echo "========================================="
@@ -718,6 +815,38 @@ jobs:
           # Integration tests also import from scripts directory
           export PYTHONPATH="${PWD}:${PWD}/scripts:${PYTHONPATH}"
 
+          # Start background memory monitor (logs every 30s, captures OOM patterns)
+          echo "Starting background memory monitor..."
+          (
+            while true; do
+              TIMESTAMP=$(date +"%H:%M:%S")
+              if command -v vm_stat &> /dev/null; then
+                # macOS memory monitoring
+                PAGE_SIZE=$(sysctl -n hw.pagesize 2>/dev/null || echo 4096)
+                FREE_PAGES=$(vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.')
+                INACTIVE_PAGES=$(vm_stat | grep "Pages inactive" | awk '{print $3}' | tr -d '.')
+                WIRED_PAGES=$(vm_stat | grep "Pages wired down" | awk '{print $4}' | tr -d '.')
+                ACTIVE_PAGES=$(vm_stat | grep "Pages active" | awk '{print $3}' | tr -d '.')
+
+                FREE_MB=$((FREE_PAGES * PAGE_SIZE / 1024 / 1024))
+                INACTIVE_MB=$((INACTIVE_PAGES * PAGE_SIZE / 1024 / 1024))
+                AVAILABLE_MB=$((FREE_MB + INACTIVE_MB))
+                ACTIVE_MB=$((ACTIVE_PAGES * PAGE_SIZE / 1024 / 1024))
+                WIRED_MB=$((WIRED_PAGES * PAGE_SIZE / 1024 / 1024))
+
+                echo "[$TIMESTAMP] MEM: available=${AVAILABLE_MB}MB active=${ACTIVE_MB}MB wired=${WIRED_MB}MB" >> memory_monitor.log
+
+                # Alert if memory is critically low
+                if [ $AVAILABLE_MB -lt 512 ]; then
+                  echo "[$TIMESTAMP] ⚠️ CRITICAL: Only ${AVAILABLE_MB}MB available - OOM risk!" >> memory_monitor.log
+                fi
+              fi
+              sleep 30
+            done
+          ) &
+          MEMORY_MONITOR_PID=$!
+          echo "Memory monitor PID: $MEMORY_MONITOR_PID"
+
           # Determine marker filter based on branch
           # Main branch: run ALL tests including slow (thorough validation before release)
           # Other branches: skip slow tests (faster feedback during development)
@@ -739,6 +868,8 @@ jobs:
           echo "- Target: 45-50 minutes total (sequential due to shared state)"
           echo "- PYTHONPATH: ${PYTHONPATH}"
           echo "========================================="
+
+          TEST_EXIT_CODE=0
           if [ -d "tests/integration" ] && [ -n "$(find tests/integration -name 'test_*.py' -type f)" ]; then
             # CRITICAL FIX: Use sequential execution (-n 0) instead of parallel (-n 1)
             # pytest-xdist worker controller has internal errors with shared Qdrant collection state
@@ -752,10 +883,33 @@ jobs:
               --maxfail=3 \
               --capture=no \
               --enforce-isolation-markers \
-              --junitxml=pytest-integration-report.xml
+              --junitxml=pytest-integration-report.xml || TEST_EXIT_CODE=$?
           else
             echo "⚠️  No integration tests found, skipping..."
           fi
+
+          # Stop memory monitor
+          kill $MEMORY_MONITOR_PID 2>/dev/null || true
+
+          # Show memory log summary
+          echo ""
+          echo "========================================="
+          echo "Memory Monitor Summary"
+          echo "========================================="
+          if [ -f memory_monitor.log ]; then
+            echo "Memory samples during test run:"
+            cat memory_monitor.log
+            # Check for any critical warnings
+            if grep -q "CRITICAL" memory_monitor.log; then
+              echo ""
+              echo "⚠️ CRITICAL memory warnings detected during test run!"
+            fi
+          else
+            echo "No memory log generated"
+          fi
+
+          # Exit with test result
+          exit $TEST_EXIT_CODE
         continue-on-error: false
 
       - name: Upload integration test results
@@ -934,6 +1088,26 @@ jobs:
           echo "🔧 Initializing PostgreSQL schema for E2E tests..."
           python scripts/init-test-postgresql.py
           echo "✅ Schema initialized successfully"
+
+      - name: Memory diagnostics (E2E pre-test)
+        run: |
+          echo "📊 E2E Pre-Test Memory Check:"
+          if command -v vm_stat &> /dev/null; then
+            PAGE_SIZE=$(sysctl -n hw.pagesize 2>/dev/null || echo 4096)
+            FREE_PAGES=$(vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.')
+            INACTIVE_PAGES=$(vm_stat | grep "Pages inactive" | awk '{print $3}' | tr -d '.')
+            FREE_MB=$((FREE_PAGES * PAGE_SIZE / 1024 / 1024))
+            INACTIVE_MB=$((INACTIVE_PAGES * PAGE_SIZE / 1024 / 1024))
+            AVAILABLE_MB=$((FREE_MB + INACTIVE_MB))
+            echo "  Available memory: ${AVAILABLE_MB}MB"
+            if [ $AVAILABLE_MB -lt 1024 ]; then
+              echo "  ⚠️ WARNING: Low memory (${AVAILABLE_MB}MB < 1GB)"
+            else
+              echo "  ✅ Memory adequate for E2E tests"
+            fi
+          fi
+          echo ""
+          docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}" 2>/dev/null | head -5 || true
 
       - name: Run E2E tests
         run: |
