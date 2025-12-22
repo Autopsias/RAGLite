@@ -508,33 +508,52 @@ jobs:
 
           echo "Ensuring Qdrant TEST container on port ${CONTAINER_PORT}..."
 
-          # Clean up conflicting containers on test port 6335
+          # ENHANCED CLEANUP: More aggressive for self-hosted runners
           echo "Cleaning up any containers using port $CONTAINER_PORT..."
+          docker ps -a --filter "name=raglite-qdrant-test" --format '{{.Names}}' | xargs -r docker rm -f 2>/dev/null || true
           docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":${CONTAINER_PORT}->" | awk '{print $1}' | xargs -r docker rm -f || true
-          sleep 2
-
-          # PRE-FLIGHT: Check for corrupted storage from previous cancelled jobs
-          # Root cause analysis: cancel-in-progress can leave storage in bad state
-          if [ -d "./qdrant_storage_test" ]; then
-            echo "Checking Qdrant storage health..."
-            # Test if storage is usable by checking for lock files or corruption markers
-            if [ -f "./qdrant_storage_test/.lock" ] || \
-               find ./qdrant_storage_test -name "*.tmp" -type f 2>/dev/null | grep -q .; then
-              echo "⚠️  Detected potentially corrupted storage (lock files or temp files present)"
-              echo "Clearing storage for fresh start..."
-              rm -rf ./qdrant_storage_test
-            fi
+          # macOS-specific: kill processes holding the port
+          if command -v lsof > /dev/null 2>&1; then
+            lsof -ti:${CONTAINER_PORT} | xargs -r kill -9 2>/dev/null || true
           fi
+          sleep 5
+
+          # ENHANCED STORAGE HEALTH CHECK: More corruption detection
+          # Root cause: cancel-in-progress can leave storage in bad state
+          STORAGE_PATH="./qdrant_storage_test"
+          if [ -d "$STORAGE_PATH" ]; then
+            echo "Checking Qdrant storage health..."
+            NEEDS_CLEANUP=false
+            [ -f "$STORAGE_PATH/.lock" ] && NEEDS_CLEANUP=true && echo "⚠️  Stale lock file"
+            find "$STORAGE_PATH" -name "*.tmp" -type f 2>/dev/null | grep -q . && NEEDS_CLEANUP=true && echo "⚠️  Temp files"
+            [ ! -f "$STORAGE_PATH/raft_state.json" ] && [ ! -d "$STORAGE_PATH/collections" ] && NEEDS_CLEANUP=true && echo "⚠️  Missing files"
+            [ ! -w "$STORAGE_PATH" ] && NEEDS_CLEANUP=true && echo "⚠️  Permission issue"
+            [ "$NEEDS_CLEANUP" = true ] && rm -rf "$STORAGE_PATH" && echo "Removed corrupted storage"
+          fi
+          mkdir -p "$STORAGE_PATH" && chmod 755 "$STORAGE_PATH"
 
           # Start test services using docker-compose for consistency
           docker compose up -d qdrant-test
 
-          # Wait for Qdrant to be ready (max 30 seconds)
-          MAX_RETRIES=30
+          # Verify container started
+          if ! docker ps --filter "name=raglite-qdrant-test" --format '{{.Names}}' | grep -q "raglite-qdrant-test"; then
+            echo "❌ Container failed to start!"
+            docker logs raglite-qdrant-test --tail 50 || true
+            exit 1
+          fi
+
+          # ENHANCED HEALTH CHECK: Longer timeout with diagnostics
+          MAX_RETRIES=60
           RETRY_COUNT=0
 
           echo "Waiting for Qdrant TEST instance to be ready..."
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            # Verify container still running
+            if ! docker ps --filter "name=raglite-qdrant-test" --format '{{.Names}}' | grep -q "raglite-qdrant-test"; then
+              echo "❌ Container stopped unexpectedly!"
+              docker logs raglite-qdrant-test --tail 50 || true
+              exit 1
+            fi
             if curl -sf ${QDRANT_URL}/healthz > /dev/null 2>&1; then
               echo "✅ Qdrant TEST instance available at ${QDRANT_URL}"
 
@@ -569,7 +588,12 @@ jobs:
           done
 
           echo "❌ Qdrant TEST instance not available after ${MAX_RETRIES}s"
-          docker logs raglite-qdrant-test --tail 20 || true
+          echo "Container status:"
+          docker ps -a --filter "name=raglite-qdrant-test" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          echo "Container logs:"
+          docker logs raglite-qdrant-test --tail 50 || true
+          echo "Storage contents:"
+          ls -la "$STORAGE_PATH" 2>/dev/null || echo "Storage not accessible"
           exit 1
 
       - name: Start and verify PostgreSQL (Integration)
@@ -678,12 +702,14 @@ jobs:
             # CRITICAL FIX: Use sequential execution (-n 0) instead of parallel (-n 1)
             # pytest-xdist worker controller has internal errors with shared Qdrant collection state
             # Integration tests share session fixtures that don't work properly with worker processes
+            # FIX: Added --capture=no for live output to prevent 13min runner communication timeout
             pytest tests/integration/ \
               -n 0 \
               -m "$MARKER_FILTER" \
               -v \
               --tb=short \
               --maxfail=3 \
+              --capture=no \
               --enforce-isolation-markers \
               --junitxml=pytest-integration-report.xml
           else
@@ -705,8 +731,13 @@ jobs:
   test-e2e:
     name: "🎯 Tests: E2E (~28 tests)"
     runs-on: [self-hosted, raglite]
-    timeout-minutes: 15
+    timeout-minutes: 20  # Increased from 15 to prevent runner communication timeout
     needs: [docker-health-check, test-unit]
+
+    # FIX: Prevent parallel execution with resource-heavy jobs to avoid resource starvation
+    concurrency:
+      group: resource-heavy-tests-${{ github.ref }}
+      cancel-in-progress: false
 
     env:
       APP_ENV: test
@@ -842,10 +873,13 @@ jobs:
           echo "- Target: <15 minutes"
           echo "========================================="
           if [ -d "tests/e2e" ] && [ -n "$(find tests/e2e -name 'test_*.py' -type f)" ]; then
+            # FIX: Use --capture=no for live output to maintain runner connection
             pytest tests/e2e/ \
               -n 0 \
               -m "" \
               -v \
+              --tb=line \
+              --capture=no \
               --junitxml=pytest-e2e-report.xml
           else
             echo "⚠️  No E2E tests found, skipping..."
@@ -1091,10 +1125,15 @@ jobs:
   test-agentic-workflows:
     name: "🤖 Tests: Agentic Workflow Suite (Story 3.8)"
     runs-on: [self-hosted, raglite]
-    timeout-minutes: 120  # 22 queries × ~30s max + overhead
+    timeout-minutes: 150  # Increased from 120 to prevent runner communication timeout (30min buffer)
     # OPTIMIZED: Runs in parallel with test-integration (not blocked by it)
     # Has own PostgreSQL container (port 5438) to avoid dependency on integration setup
     needs: [docker-health-check, test-unit]
+
+    # FIX: Share concurrency group with E2E to prevent resource competition
+    concurrency:
+      group: resource-heavy-tests-${{ github.ref }}
+      cancel-in-progress: false
 
     steps:
       - name: Checkout code
@@ -1190,24 +1229,30 @@ jobs:
                 sleep 5
               fi
             else
-              echo "Recreating container with correct credentials..."
+              echo "Recreating container with correct credentials and resource limits..."
               docker rm -f $CONTAINER_NAME || true
               sleep 3
+              # FIX: Add resource limits to prevent container resource starvation
               docker run -d \
                 -p ${CONTAINER_PORT}:5432 \
                 -e POSTGRES_DB=raglite_ci \
                 -e POSTGRES_USER=raglite_ci \
                 -e POSTGRES_PASSWORD=raglite_ci \
+                --memory="2g" \
+                --cpus="2.0" \
                 --name $CONTAINER_NAME \
                 postgres:16
             fi
           else
-            echo "Creating new PostgreSQL container..."
+            echo "Creating new PostgreSQL container with resource limits..."
+            # FIX: Add resource limits to prevent container resource starvation
             docker run -d \
               -p ${CONTAINER_PORT}:5432 \
               -e POSTGRES_DB=raglite_ci \
               -e POSTGRES_USER=raglite_ci \
               -e POSTGRES_PASSWORD=raglite_ci \
+              --memory="2g" \
+              --cpus="2.0" \
               --name $CONTAINER_NAME \
               postgres:16
           fi
@@ -1626,39 +1671,56 @@ jobs:
         run: |
           echo "Ensuring Qdrant is available for test collection..."
 
-          # Check if Qdrant is already running
-          if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
-            echo "✅ Qdrant already running at localhost:6333"
+          # ENHANCED: More robust startup for self-hosted runners
+          QDRANT_PORT=6333
+          QDRANT_URL="http://localhost:${QDRANT_PORT}"
+
+          # Check if Qdrant is already running and healthy
+          if curl -sf ${QDRANT_URL}/healthz > /dev/null 2>&1; then
+            echo "✅ Qdrant already running and healthy at localhost:${QDRANT_PORT}"
           else
-            # Check if container exists but is stopped
-            if docker ps -a --format '{{.Names}}' | grep -q "^raglite-qdrant$"; then
-              echo "Qdrant container exists - starting..."
-              docker start raglite-qdrant
-            else
-              echo "Creating new Qdrant container..."
-              docker run -d \
-                -p 6333:6333 \
-                --name raglite-qdrant \
-                qdrant/qdrant:v1.15.0
+            echo "Qdrant not responsive - starting container..."
+
+            # Enhanced cleanup for self-hosted runners
+            docker ps -a --filter "name=raglite-qdrant" --format '{{.Names}}' | xargs -r docker rm -f 2>/dev/null || true
+            if command -v lsof > /dev/null 2>&1; then
+              lsof -ti:${QDRANT_PORT} | xargs -r kill -9 2>/dev/null || true
             fi
+            sleep 3
 
-            # Wait for Qdrant to be ready
-            echo "Waiting for Qdrant to be ready..."
-            sleep 5
+            # Start container
+            docker run -d \
+              -p ${QDRANT_PORT}:6333 \
+              --name raglite-qdrant \
+              qdrant/qdrant:v1.15.0
 
-            MAX_RETRIES=20
+            # Enhanced health check with timeout
+            echo "Waiting for Qdrant to be ready (max 30s)..."
+            MAX_RETRIES=30
             RETRY_COUNT=0
             while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-              if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
-                echo "✅ Qdrant is ready"
+              # Verify container is running
+              if ! docker ps --filter "name=raglite-qdrant" --format '{{.Names}}' | grep -q "raglite-qdrant"; then
+                echo "❌ Container stopped unexpectedly!"
+                docker logs raglite-qdrant --tail 30 || true
+                exit 1
+              fi
+
+              # Check health
+              if curl -sf ${QDRANT_URL}/healthz > /dev/null 2>&1; then
+                echo "✅ Qdrant is ready (${RETRY_COUNT}s)"
                 break
               fi
+
               RETRY_COUNT=$((RETRY_COUNT + 1))
+              [ $((RETRY_COUNT % 10)) -eq 0 ] && echo "Still waiting... (${RETRY_COUNT}s/${MAX_RETRIES}s)"
               sleep 1
             done
 
             if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-              echo "⚠️  Qdrant not ready after 20s, continuing anyway..."
+              echo "❌ Qdrant not ready after ${MAX_RETRIES}s"
+              docker logs raglite-qdrant --tail 50 || true
+              exit 1
             fi
           fi
 
