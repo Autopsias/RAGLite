@@ -1060,62 +1060,62 @@ jobs:
           echo "========================================="
 
           # ========================================
-          # NUCLEAR CLEANUP: Docker Compose Label-Based State Cleanup
+          # SAFE TEST CONTAINER CLEANUP
           # ========================================
-          # ROOT CAUSE: Docker Compose v2 stores container state as Docker Engine LABELS
-          # on containers, NOT in file-based storage. The stale container ID (324656797f5f)
-          # is referenced via labels: com.docker.compose.project=raglite
-          #
-          # SOLUTION: Query containers by Compose labels and force remove by ID
+          # SAFETY: Only targets containers with -test suffix to protect production
+          # - qdrant-test (CI test database)
+          # - postgresql-test (CI test database)
+          # - NEVER touches production containers (qdrant, postgresql)
           # ========================================
 
-          echo "🔥 Nuclear Docker Compose Label-Based Cleanup (All Services)"
+          echo "🧹 Safe Test Container Cleanup (Test Services Only)"
           PROJECT_NAME="raglite"
 
-          # Step 1: Remove ALL containers with project label (by ID, not name)
-          # This catches containers from ANY service in the project
-          echo "Step 1: Removing all containers with project label (${PROJECT_NAME})..."
-          CONTAINER_IDS=$(docker ps -a \
+          # Step 1: Remove qdrant-test containers by service label
+          echo "Step 1: Removing qdrant-test containers..."
+          QDRANT_TEST_IDS=$(docker ps -a \
             --filter "label=com.docker.compose.project=${PROJECT_NAME}" \
+            --filter "label=com.docker.compose.service=qdrant-test" \
             --format '{{.ID}}' 2>/dev/null || echo "")
-          if [ -n "$CONTAINER_IDS" ]; then
-            echo "  Found containers: $CONTAINER_IDS"
-            echo "$CONTAINER_IDS" | xargs -r docker rm -f 2>/dev/null || true
+          if [ -n "$QDRANT_TEST_IDS" ]; then
+            echo "  Found qdrant-test containers: $QDRANT_TEST_IDS"
+            echo "$QDRANT_TEST_IDS" | xargs -r docker rm -f 2>/dev/null || true
           else
-            echo "  No containers with matching labels"
+            echo "  No qdrant-test containers found"
           fi
 
-          # Step 2: Fallback - remove by name pattern (any raglite- prefixed containers)
-          echo "Step 2: Fallback cleanup by container name pattern..."
-          docker ps -a --filter "name=raglite-" --format '{{.ID}}' 2>/dev/null | xargs -r docker rm -f 2>/dev/null || true
-
-          # Step 3: Remove project-specific networks by label
-          echo "Step 3: Removing compose networks with project label..."
-          NETWORK_IDS=$(docker network ls --filter "label=com.docker.compose.project=${PROJECT_NAME}" -q 2>/dev/null || echo "")
-          if [ -n "$NETWORK_IDS" ]; then
-            echo "  Found networks: $NETWORK_IDS"
-            echo "$NETWORK_IDS" | xargs -r docker network rm 2>/dev/null || true
+          # Step 2: Remove postgresql-test containers by service label
+          echo "Step 2: Removing postgresql-test containers..."
+          PG_TEST_IDS=$(docker ps -a \
+            --filter "label=com.docker.compose.project=${PROJECT_NAME}" \
+            --filter "label=com.docker.compose.service=postgresql-test" \
+            --format '{{.ID}}' 2>/dev/null || echo "")
+          if [ -n "$PG_TEST_IDS" ]; then
+            echo "  Found postgresql-test containers: $PG_TEST_IDS"
+            echo "$PG_TEST_IDS" | xargs -r docker rm -f 2>/dev/null || true
+          else
+            echo "  No postgresql-test containers found"
           fi
 
-          # Step 4: Remove project-specific volumes by label
-          echo "Step 4: Removing compose volumes with project label..."
-          VOLUME_IDS=$(docker volume ls --filter "label=com.docker.compose.project=${PROJECT_NAME}" -q 2>/dev/null || echo "")
-          if [ -n "$VOLUME_IDS" ]; then
-            echo "  Found volumes: $VOLUME_IDS"
-            echo "$VOLUME_IDS" | xargs -r docker volume rm 2>/dev/null || true
-          fi
+          # Step 3: Fallback - remove by exact test container names
+          echo "Step 3: Fallback cleanup by exact test container names..."
+          docker ps -a --filter "name=raglite-qdrant-test" --format '{{.ID}}' 2>/dev/null | xargs -r docker rm -f 2>/dev/null || true
+          docker ps -a --filter "name=raglite-postgresql-test" --format '{{.ID}}' 2>/dev/null | xargs -r docker rm -f 2>/dev/null || true
 
-          # Step 5: System prune to clear orphaned metadata
-          echo "Step 5: Docker system prune..."
-          docker container prune -f 2>/dev/null || true
+          # Step 4: Remove ONLY unused networks (safe - won't remove networks with running containers)
+          echo "Step 4: Pruning unused networks..."
           docker network prune -f 2>/dev/null || true
-          docker volume prune -f 2>/dev/null || true
+
+          # Step 5: NO volume cleanup - test containers use bind mounts, not named volumes
+          # SAFETY: Skipping volume prune to protect any production data volumes
+          echo "Step 5: Skipping volume cleanup (protection for production data)"
 
           # Step 6: Wait for Docker to stabilize
           echo "Step 6: Waiting for Docker to stabilize..."
           sleep 3
 
-          echo "✅ Nuclear cleanup complete!"
+          echo "✅ Safe test container cleanup complete!"
+          echo "ℹ️  Production containers (raglite-qdrant, raglite-postgresql) were NOT touched"
 
           # Report disk space (early warning for storage issues)
           echo ""
