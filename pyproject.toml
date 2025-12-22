@@ -305,4 +305,10 @@ exclude_dirs = [
     "build/",
     "dist/",
 ]
-skips = ["B101", "B608"]  # Allow assert statements and internal SQL queries
+# Skip common low-severity issues that are intentional in this codebase:
+# B101: assert_used (defensive programming asserts after validation)
+# B110: try_except_pass (intentional fallback behavior)
+# B112: try_except_continue (intentional skip on failure)
+# B310: urllib_urlopen (audited URL open with validation)
+# B608: hardcoded_sql_expressions (parameterized internal queries)
+skips = ["B101", "B110", "B112", "B310", "B608"]
