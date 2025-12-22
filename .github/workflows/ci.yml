@@ -548,17 +548,36 @@ jobs:
 
           echo "Ensuring Qdrant TEST container on port ${CONTAINER_PORT}..."
 
-          # ENHANCED CLEANUP: More aggressive for self-hosted runners
-          echo "Cleaning up any containers using port $CONTAINER_PORT..."
-          # Use docker compose down to properly clear Compose state
-          docker compose down qdrant-test 2>/dev/null || true
-          # Also remove via docker in case container exists outside Compose
+          # AGGRESSIVE CLEANUP: Clear ALL Docker Compose state for qdrant-test
+          # Root cause: Persistent Compose state survives across workflow runs on self-hosted runners
+          echo "Performing aggressive Docker Compose state cleanup for Qdrant..."
+
+          # Step 1: Try to stop service gracefully (may fail if state is corrupted)
+          docker compose stop qdrant-test 2>/dev/null || true
+
+          # Step 2: Remove service with force and orphan cleanup
+          docker compose rm --force --stop qdrant-test 2>/dev/null || true
+
+          # Step 3: Down with all flags to clear all state
+          docker compose down --remove-orphans --volumes qdrant-test 2>/dev/null || true
+
+          # Step 4: Direct container removal as fallback
           docker ps -a --filter "name=raglite-qdrant-test" --format '{{.Names}}' | xargs -r docker rm -f 2>/dev/null || true
-          docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":${CONTAINER_PORT}->" | awk '{print $1}' | xargs -r docker rm -f || true
-          # macOS-specific: kill processes holding the port
+          docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":${CONTAINER_PORT}->" | awk '{print $1}' | xargs -r docker rm -f 2>/dev/null || true
+
+          # Step 5: CRITICAL - Clear any stale container references from Docker's state
+          # This removes containers that Compose thinks exist but don't
+          docker container prune -f 2>/dev/null || true
+
+          # Step 6: Clear any dangling volumes that might hold stale references
+          docker volume prune -f 2>/dev/null || true
+
+          # Step 7: macOS-specific - kill processes holding the port
           if command -v lsof > /dev/null 2>&1; then
             lsof -ti:${CONTAINER_PORT} | xargs -r kill -9 2>/dev/null || true
           fi
+
+          # Step 8: Wait for Docker networking to fully release
           sleep 5
 
           # ENHANCED STORAGE HEALTH CHECK: More corruption detection
@@ -611,9 +630,13 @@ jobs:
               if [ "$ERROR_500_COUNT" -gt 0 ]; then
                 echo "⚠️  Warning: Qdrant has $ERROR_500_COUNT recent 500 errors"
                 echo "Recreating Qdrant TEST container with fresh storage..."
-                # FIX: Full recreate instead of restart to clear corrupted storage
+                # AGGRESSIVE CLEANUP: Full state clear to prevent persistent corruption
                 # Root cause: bind mount storage corruption from interrupted operations
-                docker compose down qdrant-test || true
+                docker compose stop qdrant-test 2>/dev/null || true
+                docker compose rm --force --stop qdrant-test 2>/dev/null || true
+                docker compose down --remove-orphans --volumes qdrant-test 2>/dev/null || true
+                docker container prune -f 2>/dev/null || true
+                docker volume prune -f 2>/dev/null || true
                 rm -rf ./qdrant_storage_test
                 docker compose up -d qdrant-test
                 sleep 5
@@ -645,18 +668,36 @@ jobs:
           # Integration Tests: Ensure test databases and users are properly configured
           echo "Setting up PostgreSQL TEST environment..."
 
-          # CRITICAL FIX: More aggressive cleanup to prevent port conflicts in CI
-          echo "Cleaning up existing PostgreSQL test containers..."
-          # Use docker compose down to properly clear Compose state
-          docker compose down postgresql-test 2>/dev/null || true
-          # Also remove via docker in case container exists outside Compose
-          docker rm -f raglite-postgresql-test 2>/dev/null || true
-          sleep 3  # Increased wait time for Docker networking cleanup
+          # AGGRESSIVE CLEANUP: Clear ALL Docker Compose state for postgresql-test
+          # Root cause: Persistent Compose state survives across workflow runs on self-hosted runners
+          echo "Performing aggressive Docker Compose state cleanup for PostgreSQL..."
 
-          # Also kill any processes that might be holding port 5433
+          # Step 1: Try to stop service gracefully (may fail if state is corrupted)
+          docker compose stop postgresql-test 2>/dev/null || true
+
+          # Step 2: Remove service with force and orphan cleanup
+          docker compose rm --force --stop postgresql-test 2>/dev/null || true
+
+          # Step 3: Down with all flags to clear all state
+          docker compose down --remove-orphans --volumes postgresql-test 2>/dev/null || true
+
+          # Step 4: Direct container removal as fallback
+          docker rm -f raglite-postgresql-test 2>/dev/null || true
+
+          # Step 5: CRITICAL - Clear any stale container references from Docker's state
+          # This removes containers that Compose thinks exist but don't
+          docker container prune -f 2>/dev/null || true
+
+          # Step 6: Clear any dangling volumes that might hold stale references
+          docker volume prune -f 2>/dev/null || true
+
+          # Step 7: Kill any processes that might be holding port 5433
           if command -v lsof > /dev/null 2>&1; then
             lsof -ti:5433 | xargs -r kill -9 2>/dev/null || true
           fi
+
+          # Step 8: Wait for Docker networking to fully release
+          sleep 5
 
           # Start test services using docker-compose for consistency
           docker compose up -d postgresql-test
@@ -933,19 +974,37 @@ jobs:
           echo "Container Cleanup (Self-Hosted Runner)"
           echo "========================================="
 
-          # Stop and remove test containers to prevent port conflicts
-          echo "Stopping test containers..."
-          # Use docker compose down to properly clear Compose state
-          docker compose down qdrant-test postgresql-test 2>/dev/null || true
-          # Also remove via docker in case containers exist outside Compose
+          # AGGRESSIVE CLEANUP: Clear ALL Docker Compose state for test containers
+          # Root cause: Persistent Compose state survives across workflow runs on self-hosted runners
+          echo "Performing aggressive Docker Compose state cleanup for all test containers..."
+
+          # Step 1: Try to stop services gracefully (may fail if state is corrupted)
+          docker compose stop qdrant-test postgresql-test 2>/dev/null || true
+
+          # Step 2: Remove services with force and orphan cleanup
+          docker compose rm --force --stop qdrant-test postgresql-test 2>/dev/null || true
+
+          # Step 3: Down with all flags to clear all state
+          docker compose down --remove-orphans --volumes 2>/dev/null || true
+
+          # Step 4: Direct container removal as fallback
           docker stop raglite-qdrant-test raglite-postgresql-test 2>/dev/null || true
           docker rm -f raglite-qdrant-test raglite-postgresql-test 2>/dev/null || true
 
-          # Clean up any orphaned containers from this workflow
+          # Step 5: Clean up any orphaned containers from this workflow
           echo "Cleaning orphaned containers..."
           docker ps -a --filter "name=raglite-" --format '{{.Names}}' | xargs -r docker rm -f 2>/dev/null || true
 
-          # Prune unused networks (prevents network exhaustion)
+          # Step 6: CRITICAL - Clear any stale container references from Docker's state
+          # This removes containers that Compose thinks exist but don't
+          echo "Pruning stale container references..."
+          docker container prune -f 2>/dev/null || true
+
+          # Step 7: Clear any dangling volumes that might hold stale references
+          echo "Pruning dangling volumes..."
+          docker volume prune -f 2>/dev/null || true
+
+          # Step 8: Prune unused networks (prevents network exhaustion)
           echo "Pruning unused networks..."
           docker network prune -f 2>/dev/null || true
 
@@ -1044,18 +1103,36 @@ jobs:
             fi
           fi
 
-          # Clean up existing PostgreSQL test containers
-          echo "Cleaning up existing PostgreSQL test containers..."
-          # Use docker compose down to properly clear Compose state
-          docker compose down postgresql-test 2>/dev/null || true
-          # Also remove via docker in case container exists outside Compose
-          docker rm -f raglite-postgresql-test 2>/dev/null || true
-          sleep 3
+          # AGGRESSIVE CLEANUP: Clear ALL Docker Compose state for postgresql-test
+          # Root cause: Persistent Compose state survives across workflow runs on self-hosted runners
+          echo "Performing aggressive Docker Compose state cleanup for PostgreSQL..."
 
-          # Kill any processes holding port 5433
+          # Step 1: Try to stop service gracefully (may fail if state is corrupted)
+          docker compose stop postgresql-test 2>/dev/null || true
+
+          # Step 2: Remove service with force and orphan cleanup
+          docker compose rm --force --stop postgresql-test 2>/dev/null || true
+
+          # Step 3: Down with all flags to clear all state
+          docker compose down --remove-orphans --volumes postgresql-test 2>/dev/null || true
+
+          # Step 4: Direct container removal as fallback
+          docker rm -f raglite-postgresql-test 2>/dev/null || true
+
+          # Step 5: CRITICAL - Clear any stale container references from Docker's state
+          # This removes containers that Compose thinks exist but don't
+          docker container prune -f 2>/dev/null || true
+
+          # Step 6: Clear any dangling volumes that might hold stale references
+          docker volume prune -f 2>/dev/null || true
+
+          # Step 7: Kill any processes holding port 5433
           if command -v lsof > /dev/null 2>&1; then
             lsof -ti:5433 | xargs -r kill -9 2>/dev/null || true
           fi
+
+          # Step 8: Wait for Docker networking to fully release
+          sleep 5
 
           # Start test services using docker-compose
           docker compose up -d postgresql-test
