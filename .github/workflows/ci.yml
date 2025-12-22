@@ -594,8 +594,15 @@ jobs:
           fi
           mkdir -p "$STORAGE_PATH" && chmod 755 "$STORAGE_PATH"
 
+          # CRITICAL FIX: Clear Docker Compose project state to remove stale container ID references
+          # Root cause: Compose caches container IDs in ~/.docker/compose/ that persist across workflow runs
+          # This causes "No such container" errors when trying to recreate containers
+          echo "Clearing Docker Compose project state..."
+          rm -rf ~/.docker/compose/ 2>/dev/null || true
+
           # Start test services using docker-compose for consistency
-          docker compose up -d qdrant-test
+          # --force-recreate ensures fresh containers even if Compose thinks config is unchanged
+          docker compose up -d --force-recreate qdrant-test
 
           # Verify container started
           if ! docker ps --filter "name=raglite-qdrant-test" --format '{{.Names}}' | grep -q "raglite-qdrant-test"; then
@@ -638,7 +645,12 @@ jobs:
                 docker container prune -f 2>/dev/null || true
                 docker volume prune -f 2>/dev/null || true
                 rm -rf ./qdrant_storage_test
-                docker compose up -d qdrant-test
+
+                # Clear Docker Compose project state before recreation
+                echo "Clearing Docker Compose project state..."
+                rm -rf ~/.docker/compose/ 2>/dev/null || true
+
+                docker compose up -d --force-recreate qdrant-test
                 sleep 5
                 echo "✅ Qdrant TEST container recreated with fresh storage"
               fi
@@ -699,8 +711,15 @@ jobs:
           # Step 8: Wait for Docker networking to fully release
           sleep 5
 
+          # CRITICAL FIX: Clear Docker Compose project state to remove stale container ID references
+          # Root cause: Compose caches container IDs in ~/.docker/compose/ that persist across workflow runs
+          # This causes "No such container" errors when trying to recreate containers
+          echo "Clearing Docker Compose project state..."
+          rm -rf ~/.docker/compose/ 2>/dev/null || true
+
           # Start test services using docker-compose for consistency
-          docker compose up -d postgresql-test
+          # --force-recreate ensures fresh containers even if Compose thinks config is unchanged
+          docker compose up -d --force-recreate postgresql-test
 
           # CRITICAL FIX: Wait for PostgreSQL to FULLY initialize (2 "ready" messages)
           # PostgreSQL emits "ready to accept connections" TWICE during full initialization:
@@ -1134,8 +1153,15 @@ jobs:
           # Step 8: Wait for Docker networking to fully release
           sleep 5
 
+          # CRITICAL FIX: Clear Docker Compose project state to remove stale container ID references
+          # Root cause: Compose caches container IDs in ~/.docker/compose/ that persist across workflow runs
+          # This causes "No such container" errors when trying to recreate containers
+          echo "Clearing Docker Compose project state..."
+          rm -rf ~/.docker/compose/ 2>/dev/null || true
+
           # Start test services using docker-compose
-          docker compose up -d postgresql-test
+          # --force-recreate ensures fresh containers even if Compose thinks config is unchanged
+          docker compose up -d --force-recreate postgresql-test
 
           # Wait for PostgreSQL to FULLY initialize (2 "ready" messages)
           echo "Waiting for PostgreSQL to fully initialize..."
