@@ -641,6 +641,15 @@ jobs:
     timeout-minutes: 15
     needs: [test-unit]
 
+    env:
+      APP_ENV: test
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5433
+      POSTGRES_DB: raglite_ci
+      POSTGRES_USER: raglite_ci
+      POSTGRES_PASSWORD: raglite_ci
+      CI: "true"
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -686,6 +695,75 @@ jobs:
             "pytest-xdist>=3.5,<4.0" \
             "pytest-timeout>=2.0,<3.0" \
             pytest-mock>=3.15
+
+      - name: Start and verify PostgreSQL (E2E)
+        run: |
+          # E2E Tests: Ensure PostgreSQL test environment is available
+          echo "Setting up PostgreSQL TEST environment for E2E tests..."
+
+          # CRITICAL FIX: Clean up corrupted data directory from cancelled jobs
+          # Root cause: cancel-in-progress can leave pg_filenode.map in bad state
+          if [ -d "./postgresql_data_test" ]; then
+            echo "Checking PostgreSQL storage health..."
+            # Check for corruption markers
+            if [ ! -f "./postgresql_data_test/global/pg_filenode.map" ] || \
+               find ./postgresql_data_test -name "*.lock" -type f 2>/dev/null | grep -q .; then
+              echo "⚠️  Detected corrupted or locked PostgreSQL storage"
+              echo "Clearing storage for fresh start..."
+              rm -rf ./postgresql_data_test
+            fi
+          fi
+
+          # Clean up existing PostgreSQL test containers
+          echo "Cleaning up existing PostgreSQL test containers..."
+          docker rm -f raglite-postgresql-test 2>/dev/null || true
+          sleep 3
+
+          # Kill any processes holding port 5433
+          if command -v lsof > /dev/null 2>&1; then
+            lsof -ti:5433 | xargs -r kill -9 2>/dev/null || true
+          fi
+
+          # Start test services using docker-compose
+          docker compose up -d postgresql-test
+
+          # Wait for PostgreSQL to fully initialize
+          echo "Waiting for PostgreSQL to fully initialize..."
+          MAX_INIT_WAIT=60
+          INIT_COUNT=0
+
+          while [ $INIT_COUNT -lt $MAX_INIT_WAIT ]; do
+            if docker logs raglite-postgresql-test 2>&1 | grep -q "database system is ready to accept connections"; then
+              echo "✅ PostgreSQL initialization complete (${INIT_COUNT}s)"
+              sleep 2
+              break
+            fi
+
+            INIT_COUNT=$((INIT_COUNT + 1))
+            if [ $((INIT_COUNT % 10)) -eq 0 ]; then
+              echo "Waiting for PostgreSQL initialization... (${INIT_COUNT}s/${MAX_INIT_WAIT}s)"
+            fi
+            sleep 1
+          done
+
+          if [ $INIT_COUNT -eq $MAX_INIT_WAIT ]; then
+            echo "❌ PostgreSQL did not complete initialization after ${MAX_INIT_WAIT}s"
+            echo "Container logs:"
+            docker logs raglite-postgresql-test --tail 50
+            exit 1
+          fi
+
+          # Run database setup script to create users/databases
+          ./scripts/ci-database-setup.sh
+
+          echo "✅ PostgreSQL TEST environment ready for E2E tests"
+
+      - name: Initialize PostgreSQL schema (E2E)
+        run: |
+          source ci-venv/bin/activate
+          echo "🔧 Initializing PostgreSQL schema for E2E tests..."
+          python scripts/init-test-postgresql.py
+          echo "✅ Schema initialized successfully"
 
       - name: Run E2E tests
         run: |

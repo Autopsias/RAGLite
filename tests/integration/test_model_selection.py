@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     pass
 
 
-pytestmark = [pytest.mark.integration, pytest.mark.slow]
+pytestmark = [pytest.mark.integration, pytest.mark.slow, pytest.mark.preserve_collection]
 
 # -----------------------------------------------------------------------------
 # Test Fixtures
