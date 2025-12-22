@@ -109,6 +109,7 @@ def cleanup_model_selection(db_session: Session):
 class TestMigrationScript:
     """[P0] AC-7b.4.6: Migration script tests."""
 
+    @pytest.mark.preserve_collection
     def test_ac_7b_4_6_1_model_selection_table_exists(self, db_session: Session) -> None:
         """TEST-AC-7b.4.6.1: model_selection table exists after migration."""
         from sqlalchemy import inspect
@@ -122,6 +123,7 @@ class TestMigrationScript:
             "-f migrations/006_add_model_selection.sql"
         )
 
+    @pytest.mark.preserve_collection
     def test_ac_7b_4_6_2_table_has_correct_columns(self, db_session: Session) -> None:
         """TEST-AC-7b.4.6.2: model_selection table has correct columns."""
         from sqlalchemy import inspect
@@ -146,6 +148,7 @@ class TestMigrationScript:
         for col in required_columns:
             assert col in columns, f"Missing column: {col}"
 
+    @pytest.mark.preserve_collection
     def test_ac_7b_4_6_3_variable_name_index_exists(self, db_session: Session) -> None:
         """TEST-AC-7b.4.6.3: variable_name index exists.
 
@@ -161,6 +164,7 @@ class TestMigrationScript:
         # SQLAlchemy names the index ix_<table>_<column> when using index=True
         assert "ix_model_selection_variable_name" in index_names
 
+    @pytest.mark.preserve_collection
     def test_ac_7b_4_6_4_expires_at_index_exists(self, db_session: Session) -> None:
         """TEST-AC-7b.4.6.4: idx_model_selection_expires index exists."""
         from sqlalchemy import inspect
@@ -171,6 +175,7 @@ class TestMigrationScript:
 
         assert "idx_model_selection_expires" in index_names
 
+    @pytest.mark.manages_collection_state
     def test_ac_7b_4_6_5_migration_is_idempotent(self, db_session: Session) -> None:
         """TEST-AC-7b.4.6.5: Migration can run multiple times without error."""
         import subprocess
