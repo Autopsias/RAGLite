@@ -548,37 +548,79 @@ jobs:
 
           echo "Ensuring Qdrant TEST container on port ${CONTAINER_PORT}..."
 
-          # AGGRESSIVE CLEANUP: Clear ALL Docker Compose state for qdrant-test
-          # Root cause: Persistent Compose state survives across workflow runs on self-hosted runners
-          echo "Performing aggressive Docker Compose state cleanup for Qdrant..."
+          # ========================================
+          # NUCLEAR CLEANUP: Docker Compose Label-Based State Cleanup
+          # ========================================
+          # ROOT CAUSE: Docker Compose v2 stores container state as Docker Engine LABELS
+          # on containers, NOT in file-based storage. The stale container ID (324656797f5f)
+          # is referenced via labels: com.docker.compose.project=raglite
+          #
+          # FAILED FIXES:
+          # - rm -rf ~/.docker/compose/ (wrong location, Compose v2 doesn't use this)
+          # - docker container prune (only removes stopped containers, not stale label refs)
+          # - --force-recreate (still queries labels first, gets stale ID, fails)
+          #
+          # SOLUTION: Query containers by Compose labels and force remove by ID
+          # ========================================
 
-          # Step 1: Try to stop service gracefully (may fail if state is corrupted)
-          docker compose stop qdrant-test 2>/dev/null || true
+          echo "🔥 Nuclear Docker Compose Label-Based Cleanup (Qdrant)"
+          PROJECT_NAME="raglite"
+          SERVICE_NAME="qdrant-test"
 
-          # Step 2: Remove service with force and orphan cleanup
-          docker compose rm --force --stop qdrant-test 2>/dev/null || true
+          # Step 1: Remove ALL containers with project+service labels (by ID, not name)
+          echo "Step 1: Removing containers with labels (project=${PROJECT_NAME}, service=${SERVICE_NAME})..."
+          CONTAINER_IDS=$(docker ps -a \
+            --filter "label=com.docker.compose.project=${PROJECT_NAME}" \
+            --filter "label=com.docker.compose.service=${SERVICE_NAME}" \
+            --format '{{.ID}}' 2>/dev/null || echo "")
+          if [ -n "$CONTAINER_IDS" ]; then
+            echo "  Found containers: $CONTAINER_IDS"
+            echo "$CONTAINER_IDS" | xargs -r docker rm -f 2>/dev/null || true
+          else
+            echo "  No containers with matching labels"
+          fi
 
-          # Step 3: Down with all flags to clear all state
-          docker compose down --remove-orphans --volumes qdrant-test 2>/dev/null || true
+          # Step 2: Fallback - remove by name pattern
+          echo "Step 2: Fallback cleanup by container name..."
+          docker ps -a --filter "name=raglite-qdrant-test" --format '{{.ID}}' 2>/dev/null | xargs -r docker rm -f 2>/dev/null || true
 
-          # Step 4: Direct container removal as fallback
-          docker ps -a --filter "name=raglite-qdrant-test" --format '{{.Names}}' | xargs -r docker rm -f 2>/dev/null || true
+          # Step 3: Remove any containers using the target port
+          echo "Step 3: Removing containers using port ${CONTAINER_PORT}..."
           docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":${CONTAINER_PORT}->" | awk '{print $1}' | xargs -r docker rm -f 2>/dev/null || true
 
-          # Step 5: CRITICAL - Clear any stale container references from Docker's state
-          # This removes containers that Compose thinks exist but don't
-          docker container prune -f 2>/dev/null || true
+          # Step 4: Remove project-specific networks by label
+          echo "Step 4: Removing compose networks with project label..."
+          NETWORK_IDS=$(docker network ls --filter "label=com.docker.compose.project=${PROJECT_NAME}" -q 2>/dev/null || echo "")
+          if [ -n "$NETWORK_IDS" ]; then
+            echo "  Found networks: $NETWORK_IDS"
+            echo "$NETWORK_IDS" | xargs -r docker network rm 2>/dev/null || true
+          fi
 
-          # Step 6: Clear any dangling volumes that might hold stale references
+          # Step 5: Remove project-specific volumes by label
+          echo "Step 5: Removing compose volumes with project label..."
+          VOLUME_IDS=$(docker volume ls --filter "label=com.docker.compose.project=${PROJECT_NAME}" -q 2>/dev/null || echo "")
+          if [ -n "$VOLUME_IDS" ]; then
+            echo "  Found volumes: $VOLUME_IDS"
+            echo "$VOLUME_IDS" | xargs -r docker volume rm 2>/dev/null || true
+          fi
+
+          # Step 6: System prune to clear orphaned metadata
+          echo "Step 6: Docker system prune..."
+          docker container prune -f 2>/dev/null || true
+          docker network prune -f 2>/dev/null || true
           docker volume prune -f 2>/dev/null || true
 
           # Step 7: macOS-specific - kill processes holding the port
+          echo "Step 7: Killing processes on port ${CONTAINER_PORT}..."
           if command -v lsof > /dev/null 2>&1; then
             lsof -ti:${CONTAINER_PORT} | xargs -r kill -9 2>/dev/null || true
           fi
 
-          # Step 8: Wait for Docker networking to fully release
+          # Step 8: Wait for Docker to stabilize
+          echo "Step 8: Waiting for Docker to stabilize..."
           sleep 5
+
+          echo "✅ Nuclear cleanup complete!"
 
           # ENHANCED STORAGE HEALTH CHECK: More corruption detection
           # Root cause: cancel-in-progress can leave storage in bad state
@@ -594,15 +636,8 @@ jobs:
           fi
           mkdir -p "$STORAGE_PATH" && chmod 755 "$STORAGE_PATH"
 
-          # CRITICAL FIX: Clear Docker Compose project state to remove stale container ID references
-          # Root cause: Compose caches container IDs in ~/.docker/compose/ that persist across workflow runs
-          # This causes "No such container" errors when trying to recreate containers
-          echo "Clearing Docker Compose project state..."
-          rm -rf ~/.docker/compose/ 2>/dev/null || true
-
-          # Start test services using docker-compose for consistency
-          # --force-recreate ensures fresh containers even if Compose thinks config is unchanged
-          docker compose up -d --force-recreate qdrant-test
+          # Start test services - Compose should find no existing containers now
+          docker compose up -d qdrant-test
 
           # Verify container started
           if ! docker ps --filter "name=raglite-qdrant-test" --format '{{.Names}}' | grep -q "raglite-qdrant-test"; then
@@ -680,46 +715,77 @@ jobs:
           # Integration Tests: Ensure test databases and users are properly configured
           echo "Setting up PostgreSQL TEST environment..."
 
-          # AGGRESSIVE CLEANUP: Clear ALL Docker Compose state for postgresql-test
-          # Root cause: Persistent Compose state survives across workflow runs on self-hosted runners
-          echo "Performing aggressive Docker Compose state cleanup for PostgreSQL..."
+          # ========================================
+          # NUCLEAR CLEANUP: Docker Compose Label-Based State Cleanup
+          # ========================================
+          # ROOT CAUSE: Docker Compose v2 stores container state as Docker Engine LABELS
+          # on containers, NOT in file-based storage. The stale container ID (324656797f5f)
+          # is referenced via labels: com.docker.compose.project=raglite
+          #
+          # SOLUTION: Query containers by Compose labels and force remove by ID
+          # ========================================
 
-          # Step 1: Try to stop service gracefully (may fail if state is corrupted)
-          docker compose stop postgresql-test 2>/dev/null || true
+          echo "🔥 Nuclear Docker Compose Label-Based Cleanup (PostgreSQL)"
+          PROJECT_NAME="raglite"
+          SERVICE_NAME="postgresql-test"
 
-          # Step 2: Remove service with force and orphan cleanup
-          docker compose rm --force --stop postgresql-test 2>/dev/null || true
+          # Step 1: Remove ALL containers with project+service labels (by ID, not name)
+          echo "Step 1: Removing containers with labels (project=${PROJECT_NAME}, service=${SERVICE_NAME})..."
+          CONTAINER_IDS=$(docker ps -a \
+            --filter "label=com.docker.compose.project=${PROJECT_NAME}" \
+            --filter "label=com.docker.compose.service=${SERVICE_NAME}" \
+            --format '{{.ID}}' 2>/dev/null || echo "")
+          if [ -n "$CONTAINER_IDS" ]; then
+            echo "  Found containers: $CONTAINER_IDS"
+            echo "$CONTAINER_IDS" | xargs -r docker rm -f 2>/dev/null || true
+          else
+            echo "  No containers with matching labels"
+          fi
 
-          # Step 3: Down with all flags to clear all state
-          docker compose down --remove-orphans --volumes postgresql-test 2>/dev/null || true
+          # Step 2: Fallback - remove by name pattern
+          echo "Step 2: Fallback cleanup by container name..."
+          docker ps -a --filter "name=raglite-postgresql-test" --format '{{.ID}}' 2>/dev/null | xargs -r docker rm -f 2>/dev/null || true
 
-          # Step 4: Direct container removal as fallback
-          docker rm -f raglite-postgresql-test 2>/dev/null || true
+          # Step 3: Remove any containers using port 5433
+          echo "Step 3: Removing containers using port 5433..."
+          docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":5433->" | awk '{print $1}' | xargs -r docker rm -f 2>/dev/null || true
 
-          # Step 5: CRITICAL - Clear any stale container references from Docker's state
-          # This removes containers that Compose thinks exist but don't
+          # Step 4: Remove project-specific networks by label
+          echo "Step 4: Removing compose networks with project label..."
+          NETWORK_IDS=$(docker network ls --filter "label=com.docker.compose.project=${PROJECT_NAME}" -q 2>/dev/null || echo "")
+          if [ -n "$NETWORK_IDS" ]; then
+            echo "  Found networks: $NETWORK_IDS"
+            echo "$NETWORK_IDS" | xargs -r docker network rm 2>/dev/null || true
+          fi
+
+          # Step 5: Remove project-specific volumes by label
+          echo "Step 5: Removing compose volumes with project label..."
+          VOLUME_IDS=$(docker volume ls --filter "label=com.docker.compose.project=${PROJECT_NAME}" -q 2>/dev/null || echo "")
+          if [ -n "$VOLUME_IDS" ]; then
+            echo "  Found volumes: $VOLUME_IDS"
+            echo "$VOLUME_IDS" | xargs -r docker volume rm 2>/dev/null || true
+          fi
+
+          # Step 6: System prune to clear orphaned metadata
+          echo "Step 6: Docker system prune..."
           docker container prune -f 2>/dev/null || true
-
-          # Step 6: Clear any dangling volumes that might hold stale references
+          docker network prune -f 2>/dev/null || true
           docker volume prune -f 2>/dev/null || true
 
-          # Step 7: Kill any processes that might be holding port 5433
+          # Step 7: Kill any processes holding port 5433
+          echo "Step 7: Killing processes on port 5433..."
           if command -v lsof > /dev/null 2>&1; then
             lsof -ti:5433 | xargs -r kill -9 2>/dev/null || true
           fi
 
-          # Step 8: Wait for Docker networking to fully release
+          # Step 8: Wait for Docker to stabilize
+          echo "Step 8: Waiting for Docker to stabilize..."
           sleep 5
 
-          # CRITICAL FIX: Clear Docker Compose project state to remove stale container ID references
-          # Root cause: Compose caches container IDs in ~/.docker/compose/ that persist across workflow runs
-          # This causes "No such container" errors when trying to recreate containers
-          echo "Clearing Docker Compose project state..."
-          rm -rf ~/.docker/compose/ 2>/dev/null || true
+          echo "✅ Nuclear cleanup complete!"
 
-          # Start test services using docker-compose for consistency
-          # --force-recreate ensures fresh containers even if Compose thinks config is unchanged
-          docker compose up -d --force-recreate postgresql-test
+          # Start test services - Compose should find no existing containers now
+          docker compose up -d postgresql-test
 
           # CRITICAL FIX: Wait for PostgreSQL to FULLY initialize (2 "ready" messages)
           # PostgreSQL emits "ready to accept connections" TWICE during full initialization:
@@ -993,39 +1059,63 @@ jobs:
           echo "Container Cleanup (Self-Hosted Runner)"
           echo "========================================="
 
-          # AGGRESSIVE CLEANUP: Clear ALL Docker Compose state for test containers
-          # Root cause: Persistent Compose state survives across workflow runs on self-hosted runners
-          echo "Performing aggressive Docker Compose state cleanup for all test containers..."
+          # ========================================
+          # NUCLEAR CLEANUP: Docker Compose Label-Based State Cleanup
+          # ========================================
+          # ROOT CAUSE: Docker Compose v2 stores container state as Docker Engine LABELS
+          # on containers, NOT in file-based storage. The stale container ID (324656797f5f)
+          # is referenced via labels: com.docker.compose.project=raglite
+          #
+          # SOLUTION: Query containers by Compose labels and force remove by ID
+          # ========================================
 
-          # Step 1: Try to stop services gracefully (may fail if state is corrupted)
-          docker compose stop qdrant-test postgresql-test 2>/dev/null || true
+          echo "🔥 Nuclear Docker Compose Label-Based Cleanup (All Services)"
+          PROJECT_NAME="raglite"
 
-          # Step 2: Remove services with force and orphan cleanup
-          docker compose rm --force --stop qdrant-test postgresql-test 2>/dev/null || true
+          # Step 1: Remove ALL containers with project label (by ID, not name)
+          # This catches containers from ANY service in the project
+          echo "Step 1: Removing all containers with project label (${PROJECT_NAME})..."
+          CONTAINER_IDS=$(docker ps -a \
+            --filter "label=com.docker.compose.project=${PROJECT_NAME}" \
+            --format '{{.ID}}' 2>/dev/null || echo "")
+          if [ -n "$CONTAINER_IDS" ]; then
+            echo "  Found containers: $CONTAINER_IDS"
+            echo "$CONTAINER_IDS" | xargs -r docker rm -f 2>/dev/null || true
+          else
+            echo "  No containers with matching labels"
+          fi
 
-          # Step 3: Down with all flags to clear all state
-          docker compose down --remove-orphans --volumes 2>/dev/null || true
+          # Step 2: Fallback - remove by name pattern (any raglite- prefixed containers)
+          echo "Step 2: Fallback cleanup by container name pattern..."
+          docker ps -a --filter "name=raglite-" --format '{{.ID}}' 2>/dev/null | xargs -r docker rm -f 2>/dev/null || true
 
-          # Step 4: Direct container removal as fallback
-          docker stop raglite-qdrant-test raglite-postgresql-test 2>/dev/null || true
-          docker rm -f raglite-qdrant-test raglite-postgresql-test 2>/dev/null || true
+          # Step 3: Remove project-specific networks by label
+          echo "Step 3: Removing compose networks with project label..."
+          NETWORK_IDS=$(docker network ls --filter "label=com.docker.compose.project=${PROJECT_NAME}" -q 2>/dev/null || echo "")
+          if [ -n "$NETWORK_IDS" ]; then
+            echo "  Found networks: $NETWORK_IDS"
+            echo "$NETWORK_IDS" | xargs -r docker network rm 2>/dev/null || true
+          fi
 
-          # Step 5: Clean up any orphaned containers from this workflow
-          echo "Cleaning orphaned containers..."
-          docker ps -a --filter "name=raglite-" --format '{{.Names}}' | xargs -r docker rm -f 2>/dev/null || true
+          # Step 4: Remove project-specific volumes by label
+          echo "Step 4: Removing compose volumes with project label..."
+          VOLUME_IDS=$(docker volume ls --filter "label=com.docker.compose.project=${PROJECT_NAME}" -q 2>/dev/null || echo "")
+          if [ -n "$VOLUME_IDS" ]; then
+            echo "  Found volumes: $VOLUME_IDS"
+            echo "$VOLUME_IDS" | xargs -r docker volume rm 2>/dev/null || true
+          fi
 
-          # Step 6: CRITICAL - Clear any stale container references from Docker's state
-          # This removes containers that Compose thinks exist but don't
-          echo "Pruning stale container references..."
+          # Step 5: System prune to clear orphaned metadata
+          echo "Step 5: Docker system prune..."
           docker container prune -f 2>/dev/null || true
-
-          # Step 7: Clear any dangling volumes that might hold stale references
-          echo "Pruning dangling volumes..."
+          docker network prune -f 2>/dev/null || true
           docker volume prune -f 2>/dev/null || true
 
-          # Step 8: Prune unused networks (prevents network exhaustion)
-          echo "Pruning unused networks..."
-          docker network prune -f 2>/dev/null || true
+          # Step 6: Wait for Docker to stabilize
+          echo "Step 6: Waiting for Docker to stabilize..."
+          sleep 3
+
+          echo "✅ Nuclear cleanup complete!"
 
           # Report disk space (early warning for storage issues)
           echo ""
@@ -1122,46 +1212,77 @@ jobs:
             fi
           fi
 
-          # AGGRESSIVE CLEANUP: Clear ALL Docker Compose state for postgresql-test
-          # Root cause: Persistent Compose state survives across workflow runs on self-hosted runners
-          echo "Performing aggressive Docker Compose state cleanup for PostgreSQL..."
+          # ========================================
+          # NUCLEAR CLEANUP: Docker Compose Label-Based State Cleanup
+          # ========================================
+          # ROOT CAUSE: Docker Compose v2 stores container state as Docker Engine LABELS
+          # on containers, NOT in file-based storage. The stale container ID (324656797f5f)
+          # is referenced via labels: com.docker.compose.project=raglite
+          #
+          # SOLUTION: Query containers by Compose labels and force remove by ID
+          # ========================================
 
-          # Step 1: Try to stop service gracefully (may fail if state is corrupted)
-          docker compose stop postgresql-test 2>/dev/null || true
+          echo "🔥 Nuclear Docker Compose Label-Based Cleanup (PostgreSQL - E2E)"
+          PROJECT_NAME="raglite"
+          SERVICE_NAME="postgresql-test"
 
-          # Step 2: Remove service with force and orphan cleanup
-          docker compose rm --force --stop postgresql-test 2>/dev/null || true
+          # Step 1: Remove ALL containers with project+service labels (by ID, not name)
+          echo "Step 1: Removing containers with labels (project=${PROJECT_NAME}, service=${SERVICE_NAME})..."
+          CONTAINER_IDS=$(docker ps -a \
+            --filter "label=com.docker.compose.project=${PROJECT_NAME}" \
+            --filter "label=com.docker.compose.service=${SERVICE_NAME}" \
+            --format '{{.ID}}' 2>/dev/null || echo "")
+          if [ -n "$CONTAINER_IDS" ]; then
+            echo "  Found containers: $CONTAINER_IDS"
+            echo "$CONTAINER_IDS" | xargs -r docker rm -f 2>/dev/null || true
+          else
+            echo "  No containers with matching labels"
+          fi
 
-          # Step 3: Down with all flags to clear all state
-          docker compose down --remove-orphans --volumes postgresql-test 2>/dev/null || true
+          # Step 2: Fallback - remove by name pattern
+          echo "Step 2: Fallback cleanup by container name..."
+          docker ps -a --filter "name=raglite-postgresql-test" --format '{{.ID}}' 2>/dev/null | xargs -r docker rm -f 2>/dev/null || true
 
-          # Step 4: Direct container removal as fallback
-          docker rm -f raglite-postgresql-test 2>/dev/null || true
+          # Step 3: Remove any containers using port 5433
+          echo "Step 3: Removing containers using port 5433..."
+          docker ps -a --format '{{.Names}} {{.Ports}}' | grep ":5433->" | awk '{print $1}' | xargs -r docker rm -f 2>/dev/null || true
 
-          # Step 5: CRITICAL - Clear any stale container references from Docker's state
-          # This removes containers that Compose thinks exist but don't
+          # Step 4: Remove project-specific networks by label
+          echo "Step 4: Removing compose networks with project label..."
+          NETWORK_IDS=$(docker network ls --filter "label=com.docker.compose.project=${PROJECT_NAME}" -q 2>/dev/null || echo "")
+          if [ -n "$NETWORK_IDS" ]; then
+            echo "  Found networks: $NETWORK_IDS"
+            echo "$NETWORK_IDS" | xargs -r docker network rm 2>/dev/null || true
+          fi
+
+          # Step 5: Remove project-specific volumes by label
+          echo "Step 5: Removing compose volumes with project label..."
+          VOLUME_IDS=$(docker volume ls --filter "label=com.docker.compose.project=${PROJECT_NAME}" -q 2>/dev/null || echo "")
+          if [ -n "$VOLUME_IDS" ]; then
+            echo "  Found volumes: $VOLUME_IDS"
+            echo "$VOLUME_IDS" | xargs -r docker volume rm 2>/dev/null || true
+          fi
+
+          # Step 6: System prune to clear orphaned metadata
+          echo "Step 6: Docker system prune..."
           docker container prune -f 2>/dev/null || true
-
-          # Step 6: Clear any dangling volumes that might hold stale references
+          docker network prune -f 2>/dev/null || true
           docker volume prune -f 2>/dev/null || true
 
           # Step 7: Kill any processes holding port 5433
+          echo "Step 7: Killing processes on port 5433..."
           if command -v lsof > /dev/null 2>&1; then
             lsof -ti:5433 | xargs -r kill -9 2>/dev/null || true
           fi
 
-          # Step 8: Wait for Docker networking to fully release
+          # Step 8: Wait for Docker to stabilize
+          echo "Step 8: Waiting for Docker to stabilize..."
           sleep 5
 
-          # CRITICAL FIX: Clear Docker Compose project state to remove stale container ID references
-          # Root cause: Compose caches container IDs in ~/.docker/compose/ that persist across workflow runs
-          # This causes "No such container" errors when trying to recreate containers
-          echo "Clearing Docker Compose project state..."
-          rm -rf ~/.docker/compose/ 2>/dev/null || true
+          echo "✅ Nuclear cleanup complete!"
 
-          # Start test services using docker-compose
-          # --force-recreate ensures fresh containers even if Compose thinks config is unchanged
-          docker compose up -d --force-recreate postgresql-test
+          # Start test services - Compose should find no existing containers now
+          docker compose up -d postgresql-test
 
           # Wait for PostgreSQL to FULLY initialize (2 "ready" messages)
           echo "Waiting for PostgreSQL to fully initialize..."
