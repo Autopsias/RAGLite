@@ -36,6 +36,7 @@ import pytest
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.postgresql_only,  # Skip Qdrant fixtures - this module only uses PostgreSQL
+    pytest.mark.preserve_collection,  # Default for read-only tests (required by --enforce-isolation-markers)
 ]
 
 if TYPE_CHECKING:

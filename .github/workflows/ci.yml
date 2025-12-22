@@ -669,6 +669,45 @@ jobs:
           python scripts/init-test-postgresql.py
           echo "✅ Schema initialized successfully"
 
+      - name: Validate integration test isolation markers
+        run: |
+          echo "========================================="
+          echo "Validating integration test isolation markers"
+          echo "========================================="
+          python3 -c "
+          from pathlib import Path
+          import sys
+
+          errors = []
+          integration_dir = Path('tests/integration')
+
+          for test_file in integration_dir.glob('test_*.py'):
+              content = test_file.read_text()
+
+              # Skip if not an integration test file (check for pytest.mark.integration)
+              if 'pytest.mark.integration' not in content:
+                  continue
+
+              # Check for isolation markers in pytestmark (module level)
+              has_preserve = 'preserve_collection' in content
+              has_manages = 'manages_collection_state' in content
+
+              # Must have at least one isolation marker in the file
+              if not (has_preserve or has_manages):
+                  errors.append(f'{test_file}: Missing isolation marker (preserve_collection or manages_collection_state)')
+
+          if errors:
+              print('❌ Integration test files missing isolation markers:')
+              for err in errors:
+                  print(f'  - {err}')
+              print()
+              print('Fix: Add pytest.mark.preserve_collection or pytest.mark.manages_collection_state to pytestmark')
+              sys.exit(1)
+          else:
+              count = len(list(integration_dir.glob('test_*.py')))
+              print(f'✅ All {count} integration test files have proper isolation markers')
+          "
+
       - name: Run integration tests (CI fast mode)
         # NOTE: Environment variables are now set at job level (see test-integration.env)
         # This ensures ALL steps use consistent database configuration
@@ -726,6 +765,34 @@ jobs:
           name: integration-test-results
           path: pytest-integration-report.xml
           retention-days: 30
+
+      - name: Cleanup containers (self-hosted runner hygiene)
+        if: always()
+        run: |
+          echo "========================================="
+          echo "Container Cleanup (Self-Hosted Runner)"
+          echo "========================================="
+
+          # Stop and remove test containers to prevent port conflicts
+          echo "Stopping test containers..."
+          docker stop raglite-qdrant-test raglite-postgresql-test 2>/dev/null || true
+          docker rm -f raglite-qdrant-test raglite-postgresql-test 2>/dev/null || true
+
+          # Clean up any orphaned containers from this workflow
+          echo "Cleaning orphaned containers..."
+          docker ps -a --filter "name=raglite-" --format '{{.Names}}' | xargs -r docker rm -f 2>/dev/null || true
+
+          # Prune unused networks (prevents network exhaustion)
+          echo "Pruning unused networks..."
+          docker network prune -f 2>/dev/null || true
+
+          # Report disk space (early warning for storage issues)
+          echo ""
+          echo "Runner disk space:"
+          df -h / | tail -1
+
+          echo ""
+          echo "✅ Container cleanup complete"
 
   # ============================================================================
   # JOB 6: E2E Tests (~28 tests)
