@@ -1617,10 +1617,36 @@ jobs:
             "pytest-timeout>=2.0,<3.0" \
             pytest-mock>=3.15
 
-      - name: Verify Qdrant is available
+      - name: Start and verify Qdrant (Test Instance)
         run: |
-          echo "Checking Qdrant test instance..."
-          MAX_RETRIES=30
+          echo "Ensuring Qdrant test instance is running on port ${QDRANT_PORT}..."
+
+          # Check if Qdrant is already running
+          if curl -sf http://localhost:${QDRANT_PORT}/healthz > /dev/null 2>&1; then
+            echo "✅ Qdrant is already available at localhost:${QDRANT_PORT}"
+            exit 0
+          fi
+
+          echo "Qdrant not running, starting with raw docker run..."
+
+          # Clean up storage and container
+          docker rm -f raglite-qdrant-test 2>/dev/null || true
+          rm -rf ./qdrant_storage_test 2>/dev/null || true
+          mkdir -p ./qdrant_storage_test && chmod 755 ./qdrant_storage_test
+
+          # Start Qdrant test instance with raw docker run
+          docker run -d \
+            --name raglite-qdrant-test \
+            -p ${QDRANT_PORT}:6333 \
+            -p 6336:6334 \
+            -v "$(pwd)/qdrant_storage_test:/qdrant/storage" \
+            -e QDRANT__SERVICE__HTTP_PORT=6333 \
+            -e QDRANT__SERVICE__GRPC_PORT=6334 \
+            --memory=1g \
+            qdrant/qdrant:v1.15.0
+
+          echo "Waiting for Qdrant to be ready..."
+          MAX_RETRIES=60
           RETRY_COUNT=0
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             if curl -sf http://localhost:${QDRANT_PORT}/healthz > /dev/null 2>&1; then
@@ -1628,28 +1654,63 @@ jobs:
               exit 0
             fi
             RETRY_COUNT=$((RETRY_COUNT + 1))
-            echo "Waiting for Qdrant... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            if [ $((RETRY_COUNT % 10)) -eq 0 ]; then
+              echo "Waiting for Qdrant... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            fi
             sleep 1
           done
           echo "❌ Qdrant not available after ${MAX_RETRIES}s"
+          docker logs raglite-qdrant-test --tail 30 || true
           exit 1
 
-      - name: Verify PostgreSQL is available
+      - name: Start and verify PostgreSQL (Test Instance)
         run: |
           CONTAINER_NAME="raglite-postgresql-test"
-          echo "Checking PostgreSQL instance ($CONTAINER_NAME)..."
-          MAX_RETRIES=30
+          echo "Ensuring PostgreSQL test instance is running..."
+
+          # Check if PostgreSQL is already running
+          if docker exec $CONTAINER_NAME psql -U raglite_ci -d raglite_ci -c "SELECT 1" > /dev/null 2>&1; then
+            echo "✅ PostgreSQL is already available"
+            exit 0
+          fi
+
+          echo "PostgreSQL not running, starting with raw docker run..."
+
+          # Remove any stale container
+          docker rm -f $CONTAINER_NAME 2>/dev/null || true
+
+          # Clean up test data directory
+          rm -rf ./postgresql_data_test 2>/dev/null || true
+          mkdir -p ./postgresql_data_test
+
+          # Start container with raw docker run
+          docker run -d \
+            --name $CONTAINER_NAME \
+            -p ${POSTGRES_PORT}:5432 \
+            -v "$(pwd)/postgresql_data_test:/var/lib/postgresql/data" \
+            -e POSTGRES_DB=${POSTGRES_DB} \
+            -e POSTGRES_USER=${POSTGRES_USER} \
+            -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
+            --shm-size=256m \
+            --memory=512m \
+            postgres:16
+
+          echo "Waiting for PostgreSQL to be ready..."
+          MAX_RETRIES=60
           RETRY_COUNT=0
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            if docker exec $CONTAINER_NAME psql -U raglite_ci -d raglite_ci -c "SELECT 1" > /dev/null 2>&1; then
+            if docker exec $CONTAINER_NAME psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c "SELECT 1" > /dev/null 2>&1; then
               echo "✅ PostgreSQL is available"
               exit 0
             fi
             RETRY_COUNT=$((RETRY_COUNT + 1))
-            echo "Waiting for PostgreSQL... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            if [ $((RETRY_COUNT % 10)) -eq 0 ]; then
+              echo "Waiting for PostgreSQL... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            fi
             sleep 1
           done
           echo "❌ PostgreSQL not available after ${MAX_RETRIES}s"
+          docker logs $CONTAINER_NAME --tail 30 || true
           exit 1
 
       - name: Run Epic 6 accuracy regression tests
@@ -1746,21 +1807,51 @@ jobs:
             pytest-json-report \
             numpy
 
-      - name: Verify Qdrant is available
+      - name: Start and verify Qdrant (Production)
         run: |
-          echo "Checking persistent Qdrant instance..."
-          MAX_RETRIES=30
+          echo "Ensuring production Qdrant is running on port 6333..."
+
+          # Check if Qdrant is already running
+          if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
+            echo "✅ Qdrant is already available at localhost:6333"
+            exit 0
+          fi
+
+          echo "Qdrant not running, starting with raw docker run..."
+
+          # Remove any stale container (use raw docker to bypass Compose state)
+          docker rm -f raglite-qdrant 2>/dev/null || true
+
+          # Start Qdrant with raw docker run (bypasses Docker Compose state corruption)
+          docker run -d \
+            --name raglite-qdrant \
+            -p 6333:6333 \
+            -p 6334:6334 \
+            -v "$(pwd)/qdrant_storage:/qdrant/storage" \
+            -e QDRANT__SERVICE__HTTP_PORT=6333 \
+            -e QDRANT__SERVICE__GRPC_PORT=6334 \
+            qdrant/qdrant:v1.15.0
+
+          echo "Waiting for Qdrant to be ready..."
+          MAX_RETRIES=60
           RETRY_COUNT=0
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
               echo "✅ Qdrant is available at localhost:6333"
+
+              # Verify collection exists
+              COLLECTION_STATUS=$(curl -sf http://localhost:6333/collections/financial_docs 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('result',{}).get('status','unknown'))" 2>/dev/null || echo "not_found")
+              echo "financial_docs collection status: $COLLECTION_STATUS"
               exit 0
             fi
             RETRY_COUNT=$((RETRY_COUNT + 1))
-            echo "Waiting for Qdrant... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            if [ $((RETRY_COUNT % 10)) -eq 0 ]; then
+              echo "Waiting for Qdrant... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            fi
             sleep 1
           done
           echo "❌ Qdrant not available after ${MAX_RETRIES}s"
+          docker logs raglite-qdrant --tail 30 || true
           exit 1
 
       - name: Start and verify PostgreSQL (Agentic)
@@ -2536,10 +2627,33 @@ jobs:
             "pytest-timeout>=2.0,<3.0" \
             pytest-mock>=3.15
 
-      - name: Verify Qdrant is available
+      - name: Start and verify Qdrant (Production)
         run: |
-          echo "Checking persistent Qdrant instance..."
-          MAX_RETRIES=30
+          echo "Ensuring production Qdrant is running on port 6333..."
+
+          # Check if Qdrant is already running
+          if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
+            echo "✅ Qdrant is already available at localhost:6333"
+            exit 0
+          fi
+
+          echo "Qdrant not running, starting with raw docker run..."
+
+          # Remove any stale container (use raw docker to bypass Compose state)
+          docker rm -f raglite-qdrant 2>/dev/null || true
+
+          # Start Qdrant with raw docker run (bypasses Docker Compose state corruption)
+          docker run -d \
+            --name raglite-qdrant \
+            -p 6333:6333 \
+            -p 6334:6334 \
+            -v "$(pwd)/qdrant_storage:/qdrant/storage" \
+            -e QDRANT__SERVICE__HTTP_PORT=6333 \
+            -e QDRANT__SERVICE__GRPC_PORT=6334 \
+            qdrant/qdrant:v1.15.0
+
+          echo "Waiting for Qdrant to be ready..."
+          MAX_RETRIES=60
           RETRY_COUNT=0
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
@@ -2547,10 +2661,13 @@ jobs:
               exit 0
             fi
             RETRY_COUNT=$((RETRY_COUNT + 1))
-            echo "Waiting for Qdrant... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            if [ $((RETRY_COUNT % 10)) -eq 0 ]; then
+              echo "Waiting for Qdrant... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            fi
             sleep 1
           done
           echo "❌ Qdrant not available after ${MAX_RETRIES}s"
+          docker logs raglite-qdrant --tail 30 || true
           exit 1
 
       - name: Start and verify PostgreSQL (Burn-in)
