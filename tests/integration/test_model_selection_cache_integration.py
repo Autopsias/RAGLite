@@ -154,7 +154,7 @@ class TestMigrationScript:
         """TEST-AC-7b.4.6.3: variable_name index exists.
 
         Note: The migration uses explicit index naming (idx_model_selection_variable)
-        rather than SQLAlchemy auto-generated names.
+        while Alembic/SQLAlchemy auto-generates (ix_model_selection_variable_name).
         """
         from sqlalchemy import inspect
 
@@ -162,8 +162,15 @@ class TestMigrationScript:
         indexes = inspector.get_indexes("model_selection")
         index_names = {idx["name"] for idx in indexes}
 
-        # Migration creates explicit index idx_model_selection_variable
-        assert "idx_model_selection_variable" in index_names
+        # Accept either raw SQL migration name or Alembic/SQLAlchemy auto-generated name
+        variable_index_exists = (
+            "idx_model_selection_variable" in index_names
+            or "ix_model_selection_variable_name" in index_names
+        )
+        assert variable_index_exists, (
+            f"Neither idx_model_selection_variable nor ix_model_selection_variable_name "
+            f"found in indexes: {index_names}"
+        )
 
     @pytest.mark.preserve_collection
     def test_ac_7b_4_6_4_expires_at_index_exists(self, db_session: Session) -> None:
