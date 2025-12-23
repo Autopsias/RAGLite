@@ -582,6 +582,94 @@ class TestFitMLModel:
         assert isinstance(predictions, np.ndarray)
         assert len(predictions) == 1
 
+    @pytest.mark.asyncio
+    async def test_fit_ml_model_linear_with_regressors(self) -> None:
+        """[P0] Linear model handles regressors correctly.
+
+        Story 7b-6 Fix: Tests that Ridge regression works with external regressors
+        after NaN handling was added to regressor alignment.
+        """
+        from raglite.forecasting.model_selection_utils import fit_ml_model
+
+        dates = pd.date_range(start="2021-01-01", periods=24, freq="MS")
+        y_train = pd.Series([100 + i * 2 + (i % 3) for i in range(24)], index=dates, name="value")
+
+        # Create matching regressors
+        X_train = pd.DataFrame(
+            {"reg1": range(1, 25), "reg2": [x * 0.5 for x in range(1, 25)]},
+            index=dates,
+        )
+
+        # Create future regressors
+        X_future = pd.DataFrame({"reg1": range(25, 31), "reg2": [x * 0.5 for x in range(25, 31)]})
+
+        predictions = await fit_ml_model(
+            model_name="linear",
+            y_train=y_train,
+            X_train=X_train,
+            horizon=6,
+            X_future=X_future,
+        )
+
+        assert isinstance(predictions, np.ndarray)
+        assert len(predictions) == 6
+        assert not np.isnan(predictions).any(), "Predictions should not contain NaN"
+
+    @pytest.mark.asyncio
+    async def test_fit_ml_model_bounds_check_short_x_future(self) -> None:
+        """[P0] Test prediction loop handles short X_future gracefully.
+
+        Story 7b-6 Fix: Tests the bounds check that was added to prevent
+        IndexError when horizon > len(X_future).
+        """
+        from raglite.forecasting.model_selection_utils import fit_ml_model
+
+        dates = pd.date_range(start="2021-01-01", periods=24, freq="MS")
+        y_train = pd.Series(range(100, 124), index=dates, name="value")
+
+        # Create matching regressors for training
+        X_train = pd.DataFrame({"reg1": range(1, 25)}, index=dates)
+
+        # Create SHORT X_future (only 2 rows, but horizon=6)
+        # This used to cause IndexError: X_future.iloc[i] when i >= len(X_future)
+        X_future = pd.DataFrame({"reg1": [25, 26]})  # Only 2 rows!
+
+        predictions = await fit_ml_model(
+            model_name="linear",
+            y_train=y_train,
+            X_train=X_train,
+            horizon=6,  # 6 periods, but only 2 future regressor values
+            X_future=X_future,
+        )
+
+        # Should succeed and use last available row for periods 3-6
+        assert isinstance(predictions, np.ndarray)
+        assert len(predictions) == 6, "Should produce 6 predictions despite short X_future"
+        assert not np.isnan(predictions).any(), "Predictions should not contain NaN"
+
+    @pytest.mark.asyncio
+    async def test_fit_ml_model_catboost_with_regressors(self) -> None:
+        """[P1] CatBoost handles regressors correctly."""
+        from raglite.forecasting.model_selection_utils import fit_ml_model
+
+        dates = pd.date_range(start="2021-01-01", periods=24, freq="MS")
+        y_train = pd.Series(range(100, 124), index=dates, name="value")
+
+        X_train = pd.DataFrame({"reg1": range(1, 25)}, index=dates)
+        X_future = pd.DataFrame({"reg1": range(25, 31)})
+
+        predictions = await fit_ml_model(
+            model_name="catboost",
+            y_train=y_train,
+            X_train=X_train,
+            horizon=6,
+            X_future=X_future,
+        )
+
+        assert isinstance(predictions, np.ndarray)
+        assert len(predictions) == 6
+        assert not np.isnan(predictions).any()
+
 
 # -----------------------------------------------------------------------------
 # Tests for fit_chronos function

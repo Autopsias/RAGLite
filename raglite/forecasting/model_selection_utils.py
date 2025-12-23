@@ -60,13 +60,17 @@ async def fit_ml_model(
     # Create lagged features
     n_lags = min(12, len(y_train) // 2)
     X_train_ml = create_lagged_features(y_train, n_lags)
-
-    # Add external regressors if provided
-    if X_train is not None:
-        X_reg_aligned = X_train.iloc[n_lags:]
-        X_train_ml = pd.concat([X_train_ml, X_reg_aligned.reset_index(drop=True)], axis=1)
-
     y_train_ml = y_train.iloc[n_lags:].values
+
+    # Add external regressors if provided (must match lagged feature length)
+    if X_train is not None and len(X_train) == len(y_train):
+        X_reg_aligned = X_train.iloc[n_lags:].reset_index(drop=True)
+        # Ensure lengths match before concat
+        if len(X_reg_aligned) == len(X_train_ml):
+            X_train_ml = pd.concat([X_train_ml.reset_index(drop=True), X_reg_aligned], axis=1)
+        else:
+            # Skip regressors if alignment fails
+            pass
 
     # Choose and fit model
     if model_name == "xgboost":
@@ -102,9 +106,18 @@ async def fit_ml_model(
         )
 
         if X_future is not None:
-            X_pred = pd.concat(
-                [X_pred, pd.DataFrame([X_future.iloc[i].values], columns=X_future.columns)], axis=1
-            )
+            # Fix: Bounds check to prevent IndexError when horizon > len(X_future)
+            if i < len(X_future):
+                X_pred = pd.concat(
+                    [X_pred, pd.DataFrame([X_future.iloc[i].values], columns=X_future.columns)],
+                    axis=1,
+                )
+            else:
+                # Use last available row if beyond X_future length
+                X_pred = pd.concat(
+                    [X_pred, pd.DataFrame([X_future.iloc[-1].values], columns=X_future.columns)],
+                    axis=1,
+                )
 
         pred = model.predict(X_pred)[0]
         predictions.append(pred)
@@ -123,25 +136,166 @@ def create_lagged_features(y: pd.Series, n_lags: int) -> pd.DataFrame:
 
 
 async def fit_chronos(y_train: pd.Series, horizon: int) -> np.ndarray:
-    """Fit Chronos-2 model (zero-shot) and generate predictions."""
-    from raglite.forecasting.models.chronos_model import generate_chronos_cold_start_forecast
-    from raglite.shared.models import TimeSeriesData
+    """Fit Chronos-2 model (zero-shot) and generate predictions.
 
-    # Convert pd.Series to TimeSeriesData
-    time_series_data = TimeSeriesData(  # type: ignore[call-arg]
-        timestamps=y_train.index.tolist(), values=y_train.values.tolist()
-    )
+    Uses ProcessPoolExecutor to avoid GIL deadlocks with PyTorch.
+    Note: Chronos-2 inference typically takes 3-10 seconds per call.
+    """
+    import asyncio
+    from concurrent.futures import ProcessPoolExecutor
 
-    # Call with correct signature
-    forecast_result = await generate_chronos_cold_start_forecast(
-        metric="cv_metric",  # Placeholder metric name for CV
-        historical_data=time_series_data,
+    try:
+        # Use ProcessPoolExecutor to run in a separate process (avoids GIL)
+        loop = asyncio.get_running_loop()
+        with ProcessPoolExecutor(max_workers=1) as executor:
+            result = await loop.run_in_executor(
+                executor,
+                _run_chronos_inference,
+                y_train.index.tolist(),
+                y_train.values.tolist(),
+                horizon,
+            )
+    except Exception:
+        return np.full(horizon, np.nan)
+
+    # Handle case when Chronos fails
+    if result is None:
+        return np.full(horizon, np.nan)
+
+    predictions = result["values"]
+
+    # Pad if needed
+    if len(predictions) < horizon:
+        predictions = predictions + [predictions[-1]] * (horizon - len(predictions))
+
+    return np.array(predictions[:horizon])
+
+
+def _run_chronos_inference(dates: list, values: list, horizon: int) -> dict | None:
+    """Run Chronos inference in a subprocess (to avoid GIL issues)."""
+    import pandas as pd
+
+    from raglite.forecasting.models.chronos_model import fit_and_forecast_chronos
+
+    # Reconstruct the Series in the subprocess
+    y = pd.Series(values, index=pd.DatetimeIndex(dates))
+
+    return fit_and_forecast_chronos(
+        y=y,
         periods_ahead=horizon,
+        external_regressors=None,
     )
 
-    # Extract predictions from ForecastResult
-    predictions = [point.predicted_value for point in forecast_result.forecast]  # type: ignore[attr-defined]
-    return np.array(predictions)
+
+async def fit_tft(
+    y_train: pd.Series,
+    horizon: int,
+    external_regressors: dict[str, pd.Series] | None = None,
+) -> np.ndarray:
+    """Fit TFT model using pre-trained checkpoint and generate predictions.
+
+    TFT requires offline training - uses cached checkpoint for inference.
+    If no checkpoint available, returns array of NaN (model will be skipped).
+    Uses ProcessPoolExecutor to avoid GIL deadlocks with PyTorch.
+    Note: TFT inference typically takes 5-10 seconds per call.
+
+    Args:
+        y_train: Training time series
+        horizon: Forecast horizon
+        external_regressors: Optional dict of regressor name -> Series
+
+    Returns:
+        Array of predictions, or NaN array if no checkpoint available
+    """
+    import asyncio
+    from concurrent.futures import ProcessPoolExecutor
+
+    # TFT requires encoder_length + prediction_length data points
+    # Encoder needs 12 points, plus we need horizon points for prediction
+    # Fix #4: Add +1 to match tft_model.py requirement (encoder + horizon + 1)
+    min_encoder_length = 12
+    min_required = min_encoder_length + horizon + 1
+    if len(y_train) < min_required:
+        return np.full(horizon, np.nan)
+
+    # Serialize regressors for subprocess (convert Series to dict of lists)
+    regressors_data: dict[str, dict[str, list]] | None = None
+    if external_regressors:
+        regressors_data = {}
+        for name, series in external_regressors.items():
+            regressors_data[name] = {
+                "dates": [
+                    d.isoformat() if hasattr(d, "isoformat") else str(d) for d in series.index
+                ],
+                "values": series.values.tolist(),
+            }
+
+    try:
+        # Use ProcessPoolExecutor to run in a separate process (avoids GIL)
+        loop = asyncio.get_running_loop()
+        with ProcessPoolExecutor(max_workers=1) as executor:
+            result = await loop.run_in_executor(
+                executor,
+                _run_tft_inference,
+                y_train.index.tolist(),
+                y_train.values.tolist(),
+                horizon,
+                regressors_data,
+            )
+    except Exception:
+        return np.full(horizon, np.nan)
+
+    # Handle case when no checkpoint available
+    if result is None:
+        return np.full(horizon, np.nan)
+
+    predictions = result["values"]
+
+    # Pad if needed
+    if len(predictions) < horizon:
+        predictions = predictions + [predictions[-1]] * (horizon - len(predictions))
+
+    return np.array(predictions[:horizon])
+
+
+def _run_tft_inference(
+    dates: list,
+    values: list,
+    horizon: int,
+    regressors_data: dict[str, dict] | None = None,
+) -> dict | None:
+    """Run TFT inference in a subprocess (to avoid GIL issues).
+
+    Args:
+        dates: List of date strings
+        values: List of target values
+        horizon: Forecast horizon
+        regressors_data: Optional serialized regressors dict with 'dates' and 'values' for each
+
+    Returns:
+        Forecast result dict or None if failed
+    """
+    import pandas as pd
+
+    from raglite.forecasting.models.tft_model import fit_and_forecast_tft
+
+    # Reconstruct the Series in the subprocess
+    y = pd.Series(values, index=pd.DatetimeIndex(dates))
+
+    # Reconstruct external regressors if provided
+    external_regressors: dict[str, pd.Series] | None = None
+    if regressors_data:
+        external_regressors = {}
+        for name, data in regressors_data.items():
+            reg_dates = pd.DatetimeIndex(data["dates"])
+            reg_values = data["values"]
+            external_regressors[name] = pd.Series(reg_values, index=reg_dates)
+
+    return fit_and_forecast_tft(
+        y=y,
+        periods_ahead=horizon,
+        external_regressors=external_regressors,
+    )
 
 
 def calculate_mape(y_true: np.ndarray, y_pred: np.ndarray) -> float:

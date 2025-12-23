@@ -367,44 +367,60 @@ def get_default_regressors(metric: str) -> list[str]:
     Story 6.11.2 AC1-AC4: Auto-selection with keyword matching and fallback.
     Story 6.16: Modified to allow category-based selection when explicit mapping is empty.
     Story 6.16: Added metric normalization to handle underscores vs spaces.
+    Story 7b-3: Fixed data leakage by excluding self-referencing regressors.
 
     Selection priority:
     1. Explicit mapping in METRIC_REGRESSORS (if non-empty)
     2. Category-based keyword matching
     3. Default economic indicators fallback
 
+    CRITICAL: The returned list excludes the metric itself to prevent data leakage
+    during cross-validation (using future values of the target to predict itself).
+
     Args:
         metric: Target metric name (e.g., "revenue", "ebitda", "electricity_cost")
 
     Returns:
-        List of regressor names appropriate for the metric
+        List of regressor names appropriate for the metric (excluding self)
 
     Example:
         >>> get_default_regressors("revenue")
         ['euribor_3m', 'diesel', 'ttf_gas']
         >>> get_default_regressors("electricity_cost")
         ['eurostat_electricity']
-        >>> get_default_regressors("unknown_metric")
-        ['euribor_3m', 'diesel', 'ttf_gas']
+        >>> get_default_regressors("api2_coal")  # Self excluded
+        ['ttf_gas', 'industrial_production']
     """
     metric_lower = metric.lower().strip()
     # Normalize metric name: replace underscores with spaces for consistency
     metric_normalized = metric_lower.replace("_", " ")
 
+    regressors: list[str] = []
+
     # Priority 1: Check explicit mapping (only if non-empty)
     # Try both original and normalized forms
     if metric_lower in METRIC_REGRESSORS and METRIC_REGRESSORS[metric_lower]:
-        return METRIC_REGRESSORS[metric_lower]
+        regressors = METRIC_REGRESSORS[metric_lower].copy()
     elif metric_normalized in METRIC_REGRESSORS and METRIC_REGRESSORS[metric_normalized]:
-        return METRIC_REGRESSORS[metric_normalized]
+        regressors = METRIC_REGRESSORS[metric_normalized].copy()
+    else:
+        # Priority 2: Check category keywords
+        found_category = False
+        for _category_name, config in METRIC_CATEGORIES.items():
+            if any(kw in metric_normalized for kw in config["keywords"]):
+                regressors = config["regressors"].copy()
+                found_category = True
+                break
 
-    # Priority 2: Check category keywords
-    for _category_name, config in METRIC_CATEGORIES.items():
-        if any(kw in metric_normalized for kw in config["keywords"]):
-            return config["regressors"]
+        # Priority 3: Default fallback
+        if not found_category:
+            regressors = DEFAULT_REGRESSORS.copy()
 
-    # Priority 3: Default fallback
-    return DEFAULT_REGRESSORS
+    # Story 7b-3 FIX: Exclude self-referencing regressors to prevent data leakage
+    # A variable cannot use itself as a regressor (would allow future values to predict itself)
+    regressors = [r for r in regressors if r.lower() != metric_lower]
+
+    return regressors
 
 
 def get_available_regressors() -> list[str]:

@@ -76,9 +76,15 @@ def _get_tft_model() -> TemporalFusionTransformer | None:
                     map_location="cpu",
                     weights_only=False,
                 )
+                # Try Lightning-style loading first, fall back to manual if needed
+                hparams = checkpoint.get("hyper_parameters", checkpoint.get("hparams", {}))
+                if not hparams:
+                    raise ValueError("Checkpoint missing hyper_parameters/hparams")
+
                 # Create model from hparams and load state dict
-                _tft_model = TemporalFusionTransformer(**checkpoint["hparams"])
+                _tft_model = TemporalFusionTransformer(**hparams)
                 _tft_model.load_state_dict(checkpoint["state_dict"])
+                _tft_model.train(False)  # Set to evaluation mode (equivalent to .eval())
                 _tft_checkpoint_path = checkpoint_entry.checkpoint_path
                 logger.info("TFT model loaded successfully")
             except Exception as load_error:
@@ -196,9 +202,11 @@ def fit_and_forecast_tft(
         max_encoder_length = 12  # From settings.tft_encoder_length
         max_prediction_length = periods_ahead
 
-        # Need sufficient history for encoder
-        if len(y) < max_encoder_length:
-            logger.warning(f"Insufficient data for TFT (need {max_encoder_length}, have {len(y)})")
+        # Need sufficient history for encoder + prediction
+        # TimeSeriesDataSet requires encoder_length + prediction_length + 1 points minimum
+        min_required = max_encoder_length + max_prediction_length + 1
+        if len(y) < min_required:
+            logger.warning(f"Insufficient data for TFT (need {min_required}, have {len(y)})")
             return None
 
         # Create dataset for inference
@@ -228,47 +236,32 @@ def fit_and_forecast_tft(
 
         device = torch.device("cpu")
         model = model.to(device)
-        model.eval()
+        model.train(False)  # Set to inference mode
 
-        # Get predictions from model (using Trainer for consistent behavior)
-        import lightning.pytorch as pl
+        # Use direct model inference instead of Trainer.predict()
+        # This avoids Lightning callback issues
+        point_forecast = None
+        with torch.no_grad():
+            for batch in dataloader:
+                x, _ = batch  # x is input dict, y is target
 
-        trainer = pl.Trainer(accelerator="cpu", logger=False, enable_progress_bar=False)
-        predictions = trainer.predict(model, dataloader)
+                # Get prediction from model
+                output = model(x)
 
-        # Extract point forecast (median quantile, index 3 out of 7 quantiles)
-        # TFT outputs quantiles: [0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]
-        # trainer.predict returns a list of batch predictions
-        if predictions and len(predictions) > 0:
-            batch_pred = predictions[0]  # First batch
-            if hasattr(batch_pred, "prediction"):
-                # Raw output format
-                point_forecast = batch_pred.prediction[0, :, 3].cpu().numpy().tolist()
-            elif isinstance(batch_pred, dict) and "prediction" in batch_pred:
-                point_forecast = batch_pred["prediction"][0, :, 3].cpu().numpy().tolist()
-            else:
-                # Tensor output - check if it's actually a tensor-like object
-                if hasattr(batch_pred, "shape") and hasattr(batch_pred, "cpu"):
-                    # Tensor-like object (e.g., torch.Tensor)
-                    try:
-                        # MyPy can't infer this is a tensor, so we need to cast it
-                        point_forecast = batch_pred[0, :, 3].cpu().numpy().tolist()  # type: ignore[call-overload]
-                    except (IndexError, TypeError) as e:
-                        logger.warning(f"Failed to extract tensor data: {e}")
-                        return None
-                elif hasattr(batch_pred, "__getitem__") and isinstance(batch_pred, list):
-                    # List output
-                    try:
-                        point_forecast = (
-                            batch_pred[0][3] if isinstance(batch_pred[0], list) else batch_pred[0]
-                        )
-                    except (IndexError, TypeError) as e:
-                        logger.warning(f"Failed to extract list data: {e}")
-                        return None
+                # Extract point forecast (median quantile, index 3 out of 7 quantiles)
+                # TFT outputs quantiles: [0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]
+                if hasattr(output, "prediction"):
+                    pred = output.prediction
+                elif isinstance(output, dict) and "prediction" in output:
+                    pred = output["prediction"]
                 else:
-                    logger.warning("Unexpected batch_pred format for tensor output")
-                    return None
-        else:
+                    pred = output
+
+                # Extract median (index 3) from quantiles
+                point_forecast = pred[0, :, 3].cpu().numpy().tolist()
+                break  # Only need first batch
+
+        if point_forecast is None:
             logger.warning("TFT prediction returned empty results")
             return None
 

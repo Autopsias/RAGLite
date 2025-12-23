@@ -504,6 +504,18 @@
       "reason": "Story 7b.2 - Comprehensive statistical analysis module with ADF/KPSS/ACF/trend/volatility tests - cohesive implementation",
       "target_lines": 500,
       "directory": "raglite/"
+    },
+    "raglite/mcp/tools/forecast.py": {
+      "lines": 550,
+      "reason": "Epic 7 Story 7b.6 - MCP forecast tools with model selection cache integration - refactoring planned",
+      "target_lines": 500,
+      "directory": "raglite/"
+    },
+    "raglite/forecasting/model_selection_job.py": {
+      "lines": 533,
+      "reason": "Epic 7 Story 7b.5 - Model selection job runner with multi-variable support - refactoring planned",
+      "target_lines": 500,
+      "directory": "raglite/"
     }
   }
 }

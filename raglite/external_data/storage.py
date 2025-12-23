@@ -20,7 +20,8 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
-from typing import TYPE_CHECKING
+from enum import Enum
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
@@ -1322,6 +1323,57 @@ class CachedModelSelection:
         return now >= self.expires_at
 
 
+def _sanitize_for_json(obj: Any) -> Any:
+    """Sanitize a value for JSON serialization, handling Infinity, NaN, Enums, and numpy types.
+
+    Args:
+        obj: Any value that may not be JSON-serializable
+
+    Returns:
+        JSON-serializable version of the value
+    """
+    import math
+
+    import numpy as np
+
+    if isinstance(obj, dict):
+        return {k: _sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_sanitize_for_json(v) for v in obj]
+    elif isinstance(obj, Enum):
+        return obj.value
+    elif isinstance(obj, (np.integer, np.int64, np.int32)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, np.float64, np.float32)):
+        val = float(obj)
+        if math.isinf(val) or math.isnan(val):
+            return None
+        return val
+    elif isinstance(obj, float):
+        if math.isinf(obj) or math.isnan(obj):
+            return None
+        return obj
+    elif isinstance(obj, np.ndarray):
+        return [_sanitize_for_json(v) for v in obj.tolist()]
+    else:
+        return obj
+
+
+def _serialize_dataclass_with_enums(obj: Any) -> dict[str, Any]:
+    """Serialize a dataclass to dict, converting Enums and numpy types to JSON-serializable values.
+
+    Args:
+        obj: A dataclass instance that may contain Enum fields or numpy types
+
+    Returns:
+        Dictionary with all values converted to JSON-serializable types
+    """
+    result = dataclasses.asdict(obj)
+    sanitized = _sanitize_for_json(result)
+    # _sanitize_for_json preserves dict structure when input is dict
+    return dict(sanitized) if isinstance(sanitized, dict) else {"data": sanitized}
+
+
 async def cache_model_selection(result: ModelSelectionResult) -> None:
     """Cache model selection result in PostgreSQL.
 
@@ -1346,10 +1398,13 @@ async def cache_model_selection(result: ModelSelectionResult) -> None:
         selected_at = datetime.utcnow()  # Use naive datetime for PostgreSQL TIMESTAMP column
         expires_at = selected_at + timedelta(days=MODEL_SELECTION_TTL_DAYS)
 
-        # Serialize DataCharacteristics if present
+        # Serialize DataCharacteristics if present (with Enum->string conversion)
         data_chars_dict = None
         if result.data_characteristics:
-            data_chars_dict = dataclasses.asdict(result.data_characteristics)
+            data_chars_dict = _serialize_dataclass_with_enums(result.data_characteristics)
+
+        # Sanitize candidate_results (may contain Infinity/NaN from failed models)
+        sanitized_candidate_results = _sanitize_for_json(result.candidate_results)
 
         # Create new entry
         new_entry = ModelSelectionORM(
@@ -1359,7 +1414,7 @@ async def cache_model_selection(result: ModelSelectionResult) -> None:
             best_mase=Decimal(str(result.best_mase)),
             use_regressors=result.best_with_regressors,
             regressor_list=result.best_regressor_set,
-            candidate_results=result.candidate_results,
+            candidate_results=sanitized_candidate_results,
             data_characteristics=data_chars_dict,
             selected_at=selected_at,
             expires_at=expires_at,
@@ -1392,7 +1447,7 @@ async def cache_model_selection(result: ModelSelectionResult) -> None:
                 existing.best_mase = Decimal(str(result.best_mase))
                 existing.use_regressors = result.best_with_regressors
                 existing.regressor_list = result.best_regressor_set
-                existing.candidate_results = result.candidate_results
+                existing.candidate_results = sanitized_candidate_results
                 existing.data_characteristics = data_chars_dict
                 existing.selected_at = selected_at
                 existing.expires_at = expires_at

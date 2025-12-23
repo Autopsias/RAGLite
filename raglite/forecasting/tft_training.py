@@ -443,15 +443,18 @@ def save_tft_checkpoint(
     checkpoint_dir = Path(settings.tft_checkpoint_dir)
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save checkpoint using torch.save (TFT models don't have a .save() method)
+    # Save checkpoint using Lightning's built-in method for proper TFT compatibility
     checkpoint_path = checkpoint_dir / f"tft_{model_version}.ckpt"
+    # Use Lightning's save_hyperparameters for full compatibility with load_from_checkpoint
+    trainer_checkpoint = {
+        "state_dict": model.state_dict(),
+        "hyper_parameters": dict(model.hparams),  # Lightning expects 'hyper_parameters'
+        "hparams": dict(model.hparams),  # Also include as hparams for compatibility
+        "metrics": metrics,
+    }
     # Security: Saving trusted model checkpoint - data is generated internally, not user input
     torch.save(  # nosec B614 - PyTorch save operation with internally generated data only
-        {
-            "state_dict": model.state_dict(),
-            "hparams": model.hparams,
-            "metrics": metrics,
-        },
+        trainer_checkpoint,
         str(checkpoint_path),
     )
 

@@ -11,38 +11,215 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
+
 from raglite.external_data.storage import cache_model_selection
 from raglite.forecasting.model_selection import (
     CANDIDATE_MODELS,
     ModelSelectionResult,
     select_best_model,
 )
+from raglite.forecasting.regressor_config import get_default_regressors
+from raglite.forecasting.regressor_fetch import fetch_regressors_with_date_range
+from raglite.forecasting.timeseries_extract import (
+    extract_external_regressor_timeseries,
+    extract_external_timeseries,
+    extract_timeseries_from_sql,
+)
 
 logger = logging.getLogger(__name__)
 
-# All 20 forecasting variables
-ALL_VARIABLES = [
-    "revenue",
-    "turnover",
-    "ebitda",
-    "variable_cost",
-    "electricity_cost",
-    "thermal_cost",
-    "sales_volume",
-    "capacity_utilization",
-    "avg_selling_price",
-    "ttf_gas",
-    "api2_coal",
-    "diesel",
-    "eurostat_electricity",
-    "gdp_growth",
-    "inflation",
-    "euribor_3m",
-    "construction_output",
-    "building_permits",
-    "construction_confidence",
-    "co2_eua_price",
-]
+# Variable configuration for data fetching
+# Maps variable names to extraction method and DB aliases
+VARIABLE_CONFIG: dict[str, dict] = {
+    # Internal SECIL metrics (from financial_tables)
+    "revenue": {
+        "type": "internal",
+        "aliases": ["Turnover+VAT", "Turnover", "turnover", "revenue"],
+        "aggregation": "max",
+    },
+    "ebitda": {
+        "type": "internal",
+        "aliases": ["EBITDA", "ebitda", "Cement Unit Ebitda"],
+        "aggregation": "sum",
+    },
+    "sales_volume": {
+        "type": "internal",
+        "aliases": ["Sales Volumes", "sales volumes", "Volume IM - kton"],
+        "aggregation": "sum",
+    },
+    "thermal_cost": {
+        "type": "internal",
+        "aliases": ["Thermal Energy", "thermal energy", "fuel_cost"],
+        "aggregation": "sum",
+    },
+    "variable_cost": {
+        "type": "internal",
+        "aliases": ["Variable Cost", "variable cost"],
+        "aggregation": "sum",
+    },
+    "capacity_utilization": {
+        "type": "internal",
+        "aliases": ["Capacity Utilization", "capacity_utilization", "Ratio"],
+        "aggregation": "max",
+    },
+    "avg_selling_price": {
+        "type": "internal",
+        "aliases": ["Sales Price IM", "avg_selling_price", "Average Selling Price"],
+        "aggregation": "max",
+    },
+    # External database metrics (from external_data_points)
+    "ttf_gas_price": {
+        "type": "external_db",
+        "metric_name": "ttf_gas_price",
+        # HIGH UNCERTAINTY: 2022 energy crisis caused +211% mean shift, 99% CV
+        "uncertainty": "high",
+        "uncertainty_reason": "2022 energy crisis regime change",
+    },
+    "petcoke_price": {
+        "type": "external_db",
+        "metric_name": "petcoke_price",
+    },
+    "co2_eua_price": {
+        "type": "external_db",
+        "metric_name": "co2_eua_price",
+    },
+    # External API metrics (from regressor fetch)
+    "electricity_cost": {
+        "type": "external_api",
+        "metric_name": "ren_electricity",
+        # BEST PERFORMER: MASE 0.44 (56% better than naive)
+        "quality": "excellent",
+        "quality_note": "Best performing variable with MASE 0.44",
+    },
+    "diesel": {
+        "type": "external_api",
+        "metric_name": "diesel",
+    },
+    "api2_coal": {
+        "type": "external_api",
+        "metric_name": "api2_coal",
+        # HIGH UNCERTAINTY: Correlated with energy crisis, 54% CV
+        "uncertainty": "high",
+        "uncertainty_reason": "2022 energy crisis and geopolitical disruptions",
+    },
+    # NOTE: eurostat_electricity removed - only 9 semi-annual data points (need 12+)
+    # Use electricity_cost (ren_electricity) for Portuguese electricity prices instead
+    "gdp_growth": {
+        "type": "external_api",
+        "metric_name": "gdp_growth",
+    },
+    "inflation": {
+        "type": "external_api",
+        "metric_name": "inflation",
+    },
+    "euribor_3m": {
+        "type": "external_api",
+        "metric_name": "euribor_3m",
+        # HIGH UNCERTAINTY: ECB policy regime change from -0.5% to +4%
+        "uncertainty": "high",
+        "uncertainty_reason": "ECB rate policy regime change 2022-2023",
+    },
+    "construction_output": {
+        "type": "external_api",
+        "metric_name": "construction_output",
+    },
+    "building_permits": {
+        "type": "external_api",
+        "metric_name": "building_permits",
+        # BEST PERFORMER: MASE 0.79 (21% better than naive)
+        "quality": "excellent",
+        "quality_note": "Second best performing variable with MASE 0.79",
+    },
+    "construction_confidence": {
+        "type": "external_api",
+        "metric_name": "construction_confidence",
+    },
+    "industrial_production": {
+        "type": "external_api",
+        "metric_name": "industrial_production",
+    },
+}
+
+# All variables for batch processing
+ALL_VARIABLES = list(VARIABLE_CONFIG.keys())
+
+
+async def fetch_historical_data(var_name: str, min_points: int = 12) -> pd.Series | None:
+    """Fetch historical time series data for a variable.
+
+    Args:
+        var_name: Variable name from VARIABLE_CONFIG
+        min_points: Minimum data points required
+
+    Returns:
+        pandas Series with DatetimeIndex, or None if insufficient data
+    """
+    config = VARIABLE_CONFIG.get(var_name)
+    if not config:
+        logger.warning(f"Unknown variable: {var_name}")
+        return None
+
+    try:
+        var_type = config["type"]
+
+        if var_type == "internal":
+            # Extract from SECIL financial_tables
+            for alias in config["aliases"]:
+                try:
+                    ts_data = await extract_timeseries_from_sql(
+                        metric=alias,
+                        min_points=min_points,
+                        aggregation=config.get("aggregation", "sum"),
+                    )
+                    if ts_data and len(ts_data.points) >= min_points:
+                        # Convert to pandas Series
+                        dates = [p.date for p in ts_data.points]
+                        values = [p.value for p in ts_data.points]
+                        series = pd.Series(values, index=pd.DatetimeIndex(dates))
+                        series.name = var_name
+                        return series.sort_index()
+                except Exception as e:
+                    logger.debug(f"Alias {alias} failed: {e}")
+                    continue
+            logger.warning(f"No data found for internal variable {var_name}")
+            return None
+
+        elif var_type == "external_db":
+            # Extract from external_data_points table
+            ext_ts_data = await extract_external_timeseries(
+                metric=config["metric_name"],
+                min_points=min_points,
+            )
+            if ext_ts_data and len(ext_ts_data.points) >= min_points:
+                dates = [p.date for p in ext_ts_data.points]
+                values = [p.value for p in ext_ts_data.points]
+                series = pd.Series(values, index=pd.DatetimeIndex(dates))
+                series.name = var_name
+                return series.sort_index()
+            return None
+
+        elif var_type == "external_api":
+            # Extract via regressor fetch (API-backed)
+            api_ts_data = await extract_external_regressor_timeseries(
+                metric=config["metric_name"],
+                min_points=min_points,
+            )
+            if api_ts_data and len(api_ts_data.points) >= min_points:
+                dates = [p.date for p in api_ts_data.points]
+                values = [p.value for p in api_ts_data.points]
+                series = pd.Series(values, index=pd.DatetimeIndex(dates))
+                series.name = var_name
+                return series.sort_index()
+            return None
+
+        else:
+            logger.warning(f"Unknown variable type: {var_type}")
+            return None
+
+    except Exception as e:
+        logger.error(f"Error fetching data for {var_name}: {e}")
+        return None
 
 
 async def run_batch_model_selection(
@@ -80,14 +257,38 @@ async def run_batch_model_selection(
                 f"[{index}/{len(variables)}] {var_name}: Testing {len(CANDIDATE_MODELS)} models..."
             )
             try:
-                # TODO: Fetch historical_data for variable_name from storage
-                # For now this is a placeholder - Story 7b-6 will implement data fetching
-                import pandas as pd
+                # Fetch historical data for variable
+                historical_data = await fetch_historical_data(var_name, min_points=12)
 
-                historical_data = pd.Series()  # Placeholder
+                if historical_data is None or len(historical_data) < 12:
+                    msg = f"Insufficient data for {var_name} (need 12+ points)"
+                    logger.warning(msg)
+                    errors.append(msg)
+                    return var_name, None
+
+                print(f"  -> Loaded {len(historical_data)} data points")
+
+                # Fetch regressors for this variable
+                regressor_names = get_default_regressors(var_name)
+                external_regressors: dict[str, pd.Series] = {}
+                if regressor_names:
+                    try:
+                        external_regressors = await fetch_regressors_with_date_range(
+                            metric=var_name,
+                            historical_data_dates=list(historical_data.index),
+                            periods_ahead=3,  # Default forecast horizon
+                            regressor_names=regressor_names,
+                        )
+                        if external_regressors:
+                            print(f"  -> Fetched {len(external_regressors)} regressors")
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch regressors for {var_name}: {e}")
 
                 result = await select_best_model(
-                    var_name, historical_data=historical_data, force_refresh=force_refresh
+                    var_name,
+                    historical_data=historical_data,
+                    external_regressors=external_regressors if external_regressors else None,
+                    force_refresh=force_refresh,
                 )
                 print(
                     f"  -> Best: {result.best_model} | MAPE: {result.best_mape:.2%} | MASE: {result.best_mase:.2f}"
@@ -146,14 +347,38 @@ async def run_single_variable_selection(
     print(f"Testing {len(CANDIDATE_MODELS)} models...")
 
     try:
-        # TODO: Fetch historical_data for variable from storage
-        # For now this is a placeholder - Story 7b-6 will implement data fetching
-        import pandas as pd
+        # Fetch historical data for variable
+        historical_data = await fetch_historical_data(variable, min_points=12)
 
-        historical_data = pd.Series()  # Placeholder
+        if historical_data is None or len(historical_data) < 12:
+            print(f"Error: Insufficient data for {variable} (need 12+ points)")
+            return None
+
+        print(f"Loaded {len(historical_data)} data points")
+
+        # Fetch regressors for this variable
+        regressor_names = get_default_regressors(variable)
+        external_regressors: dict[str, pd.Series] = {}
+        if regressor_names:
+            try:
+                external_regressors = await fetch_regressors_with_date_range(
+                    metric=variable,
+                    historical_data_dates=list(historical_data.index),
+                    periods_ahead=3,  # Default forecast horizon
+                    regressor_names=regressor_names,
+                )
+                if external_regressors:
+                    print(
+                        f"Fetched {len(external_regressors)} regressors: {list(external_regressors.keys())}"
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to fetch regressors for {variable}: {e}")
 
         result = await select_best_model(
-            variable, historical_data=historical_data, force_refresh=force_refresh
+            variable,
+            historical_data=historical_data,
+            external_regressors=external_regressors if external_regressors else None,
+            force_refresh=force_refresh,
         )
 
         print(f"\n{variable.upper()} Model Selection Results:")
