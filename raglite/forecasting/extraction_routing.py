@@ -1,0 +1,84 @@
+"""Extraction routing for forecast data by variable type.
+
+Story 7b-6 AC-7b.6.3: Unified extraction for all variable types.
+This module routes data extraction based on the variable configuration
+(internal/external_db/external_api).
+"""
+
+from raglite.forecasting.model_selection_job import VARIABLE_CONFIG
+from raglite.forecasting.timeseries_extract import (
+    ExtractionError,
+    extract_external_regressor_timeseries,
+    extract_external_timeseries,
+    extract_timeseries_from_sql,
+)
+from raglite.shared.logging import get_logger
+from raglite.shared.models import TimeSeriesData
+
+logger = get_logger(__name__)
+
+
+async def extract_historical_data_by_type(
+    metric: str,
+    min_points: int = 6,
+) -> TimeSeriesData | None:
+    """Route extraction based on variable type (internal/external_db/external_api).
+
+    This function matches the routing logic in model_selection_job.fetch_historical_data()
+    to ensure MCP forecasts can access the same data sources as model selection.
+
+    Args:
+        metric: Metric name to extract
+        min_points: Minimum data points required
+
+    Returns:
+        TimeSeriesData if extraction succeeds, None otherwise
+
+    Raises:
+        ExtractionError: If extraction fails for known variable types
+    """
+    config = VARIABLE_CONFIG.get(metric.lower())
+
+    if config is None:
+        # Unknown metric - try SQL first (existing behavior)
+        logger.info(
+            "Unknown metric, using SQL extraction",
+            extra={"metric": metric, "var_type": "unknown"},
+        )
+        return await extract_timeseries_from_sql(metric=metric, min_points=min_points)
+
+    var_type = config.get("type", "internal")
+    metric_name = config.get("metric_name", metric)
+
+    logger.info(
+        "Routing extraction by variable type",
+        extra={"metric": metric, "var_type": var_type, "metric_name": metric_name},
+    )
+
+    if var_type == "internal":
+        # Internal SECIL metrics from PostgreSQL financial_tables
+        return await extract_timeseries_from_sql(metric=metric_name, min_points=min_points)
+
+    elif var_type == "external_db":
+        # External database metrics from PostgreSQL external_data_points
+        ts_data = await extract_external_timeseries(metric=metric_name, min_points=min_points)
+        if ts_data is None:
+            raise ExtractionError(f"No external_db data found for {metric_name}")
+        return ts_data
+
+    elif var_type == "external_api":
+        # External API metrics (ECB, Eurostat, REN, etc.)
+        ts_data = await extract_external_regressor_timeseries(
+            metric=metric_name, min_points=min_points
+        )
+        if ts_data is None:
+            raise ExtractionError(f"No external_api data found for {metric_name}")
+        return ts_data
+
+    else:
+        # Unknown type - fallback to SQL
+        logger.warning(
+            "Unknown variable type, falling back to SQL",
+            extra={"metric": metric, "var_type": var_type},
+        )
+        return await extract_timeseries_from_sql(metric=metric, min_points=min_points)

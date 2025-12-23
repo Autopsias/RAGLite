@@ -155,7 +155,7 @@ class TestModelSelectionCacheIntegration:
                 new_callable=AsyncMock,
             ) as mock_cache,
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
             patch(
@@ -197,7 +197,7 @@ class TestModelSelectionCacheIntegration:
                 new_callable=AsyncMock,
             ) as mock_cache,
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
             patch(
@@ -242,7 +242,7 @@ class TestModelSelectionCacheIntegration:
                 new_callable=AsyncMock,
             ) as mock_cache,
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
             patch(
@@ -288,7 +288,7 @@ class TestModelSelectionCacheIntegration:
                 new_callable=AsyncMock,
             ) as mock_cache,
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
             patch(
@@ -339,7 +339,7 @@ class TestModelSelectionCacheIntegration:
                 new_callable=AsyncMock,
             ) as mock_cache,
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
             patch(
@@ -378,7 +378,7 @@ class TestModelSelectionCacheIntegration:
                 new_callable=AsyncMock,
             ) as mock_cache,
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
             patch(

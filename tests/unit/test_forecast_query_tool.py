@@ -401,7 +401,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
@@ -461,7 +461,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
@@ -488,7 +488,7 @@ class TestGetFinancialForecast:
         # Mock SQL extraction to fail (no data for this metric)
         with (
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 side_effect=ExtractionError(
                     "No data found in financial_tables for metric 'invalid_metric'"
@@ -536,7 +536,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
@@ -563,7 +563,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 side_effect=ExtractionError("No data found in financial_tables"),
             ),
@@ -589,7 +589,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 side_effect=RuntimeError("Unexpected crash"),
             ),
@@ -644,7 +644,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
@@ -697,7 +697,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
@@ -742,7 +742,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
@@ -790,7 +790,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
@@ -836,7 +836,7 @@ class TestGetFinancialForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),

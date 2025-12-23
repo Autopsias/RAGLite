@@ -267,10 +267,12 @@ class TestRegressorFiltering:
         from raglite.forecasting.hybrid import generate_forecast
 
         # Create cache entry with use_regressors=False
+        # Use "arima" model (not "prophet") to test the _route_to_model path
+        # Prophet has a special code path that doesn't use _route_to_model
         now = datetime.utcnow()
         cached_no_regressors = CachedModelSelection(
             variable_name="ebitda",
-            best_model="prophet",
+            best_model="arima",  # Use ARIMA to test _route_to_model path
             best_mape=6.0,
             best_mase=0.9,
             use_regressors=False,  # Explicitly disabled

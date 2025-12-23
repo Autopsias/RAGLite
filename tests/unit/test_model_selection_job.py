@@ -36,6 +36,100 @@ if TYPE_CHECKING:
 pytestmark = [pytest.mark.unit]
 
 
+# Shared fixtures for mocking batch model selection dependencies
+@pytest.fixture
+def mock_historical_data():
+    """Provide mock historical data with 15 points."""
+    import pandas as pd
+
+    return pd.Series(
+        [100.0 + i * 5 for i in range(15)],
+        index=pd.date_range("2023-01-01", periods=15, freq="MS"),
+    )
+
+
+@pytest.fixture
+def mock_model_result():
+    """Provide mock model selection result."""
+    mock_result = MagicMock()
+    mock_result.best_model = "arima"
+    mock_result.best_mape = 0.05
+    mock_result.best_mase = 0.8
+    mock_result.best_with_regressors = False
+    mock_result.best_regressor_set = None
+    mock_result.cv_folds = 5
+    mock_result.runtime_seconds = 10.0
+    mock_result.candidate_results = {}
+    return mock_result
+
+
+@pytest.fixture
+def batch_selection_mocks(mock_historical_data, mock_model_result):
+    """Context manager providing all mocks needed for batch model selection tests."""
+    from contextlib import contextmanager
+
+    @contextmanager
+    def _mocks(output_dir: str):
+        with (
+            patch(
+                "raglite.forecasting.model_selection_job.fetch_historical_data",
+                new_callable=AsyncMock,
+                return_value=mock_historical_data,
+            ),
+            patch(
+                "raglite.forecasting.model_selection_job.fetch_regressors_with_date_range",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch(
+                "raglite.forecasting.model_selection_job.select_best_model",
+                new_callable=AsyncMock,
+                return_value=mock_model_result,
+            ),
+            patch(
+                "raglite.forecasting.model_selection_job.cache_model_selection",
+                new_callable=AsyncMock,
+            ),
+        ):
+            yield
+
+    return _mocks
+
+
+@pytest.fixture
+def single_selection_mocks(mock_historical_data, mock_model_result):
+    """Context manager for single variable selection tests with cache tracking."""
+    from contextlib import contextmanager
+
+    @contextmanager
+    def _mocks():
+        mock_cache = AsyncMock()
+        with (
+            patch(
+                "raglite.forecasting.model_selection_job.fetch_historical_data",
+                new_callable=AsyncMock,
+                return_value=mock_historical_data,
+            ),
+            patch(
+                "raglite.forecasting.model_selection_job.fetch_regressors_with_date_range",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch(
+                "raglite.forecasting.model_selection_job.select_best_model",
+                new_callable=AsyncMock,
+                return_value=mock_model_result,
+            ),
+            patch(
+                "raglite.forecasting.model_selection_job.cache_model_selection",
+                mock_cache,
+            ),
+        ):
+            yield mock_cache
+
+    return _mocks
+
+
 # -----------------------------------------------------------------------------
 # AC-7b.5.1: Slash Command Definition
 # -----------------------------------------------------------------------------
@@ -187,14 +281,14 @@ class TestRunBatchModelSelection:
 
         assert "ebitda" in ALL_VARIABLES, "Missing ebitda in ALL_VARIABLES"
         assert "revenue" in ALL_VARIABLES, "Missing revenue in ALL_VARIABLES"
-        assert "turnover" in ALL_VARIABLES, "Missing turnover in ALL_VARIABLES"
         assert "variable_cost" in ALL_VARIABLES, "Missing variable_cost in ALL_VARIABLES"
+        assert "sales_volume" in ALL_VARIABLES, "Missing sales_volume in ALL_VARIABLES"
 
     def test_all_variables_contains_key_external(self) -> None:
         """[P1][TEST-AC-7b.5.3.5] ALL_VARIABLES contains key external variables."""
         from raglite.forecasting.model_selection_job import ALL_VARIABLES
 
-        assert "ttf_gas" in ALL_VARIABLES, "Missing ttf_gas in ALL_VARIABLES"
+        assert "ttf_gas_price" in ALL_VARIABLES, "Missing ttf_gas_price in ALL_VARIABLES"
         assert "co2_eua_price" in ALL_VARIABLES, "Missing co2_eua_price in ALL_VARIABLES"
         assert "euribor_3m" in ALL_VARIABLES, "Missing euribor_3m in ALL_VARIABLES"
 
@@ -259,35 +353,12 @@ class TestParallelExecution:
         )
 
     @pytest.mark.asyncio
-    async def test_semaphore_limits_concurrency(self) -> None:
+    async def test_semaphore_limits_concurrency(self, batch_selection_mocks) -> None:
         """[P1][TEST-AC-7b.5.4.2] Semaphore limits to workers concurrent tasks."""
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
-        # This test verifies that semaphore is used by mocking and counting concurrent executions
-        # The actual implementation should use asyncio.Semaphore(workers)
-
-        mock_result = MagicMock()
-        mock_result.best_model = "arima"
-        mock_result.best_mape = 0.05
-        mock_result.best_mase = 0.8
-        mock_result.best_with_regressors = False
-        mock_result.best_regressor_set = None
-        mock_result.cv_folds = 5
-        mock_result.runtime_seconds = 10.0
-        mock_result.candidate_results = {}
-
         with tempfile.TemporaryDirectory() as tmpdir:
-            with (
-                patch(
-                    "raglite.forecasting.model_selection_job.select_best_model",
-                    new_callable=AsyncMock,
-                    return_value=mock_result,
-                ),
-                patch(
-                    "raglite.forecasting.model_selection_job.cache_model_selection",
-                    new_callable=AsyncMock,
-                ),
-            ):
+            with batch_selection_mocks(tmpdir):
                 results = await run_batch_model_selection(
                     variables=["var1", "var2", "var3"],
                     workers=2,  # Use 2 workers for faster test
@@ -308,6 +379,8 @@ class TestCacheResults:
     @pytest.mark.asyncio
     async def test_cache_called_for_each_result(self) -> None:
         """[P0][TEST-AC-7b.5.5.1] cache_model_selection called for each successful result."""
+        import pandas as pd
+
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
         mock_result = MagicMock()
@@ -321,9 +394,24 @@ class TestCacheResults:
         mock_result.candidate_results = {}
 
         mock_cache = AsyncMock()
+        # Mock historical data with 12+ points to pass validation
+        mock_historical = pd.Series(
+            [100.0] * 15,
+            index=pd.date_range("2023-01-01", periods=15, freq="MS"),
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with (
+                patch(
+                    "raglite.forecasting.model_selection_job.fetch_historical_data",
+                    new_callable=AsyncMock,
+                    return_value=mock_historical,
+                ),
+                patch(
+                    "raglite.forecasting.model_selection_job.fetch_regressors_with_date_range",
+                    new_callable=AsyncMock,
+                    return_value={},
+                ),
                 patch(
                     "raglite.forecasting.model_selection_job.select_best_model",
                     new_callable=AsyncMock,
@@ -367,32 +455,12 @@ class TestReportGeneration:
         assert inspect.iscoroutinefunction(_generate_reports), "_generate_reports must be async"
 
     @pytest.mark.asyncio
-    async def test_reports_created_in_output_dir(self) -> None:
+    async def test_reports_created_in_output_dir(self, batch_selection_mocks) -> None:
         """[P1][TEST-AC-7b.5.6.3] JSON and Markdown reports created in output_dir."""
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
-        mock_result = MagicMock()
-        mock_result.best_model = "arima"
-        mock_result.best_mape = 0.05
-        mock_result.best_mase = 0.8
-        mock_result.best_with_regressors = False
-        mock_result.best_regressor_set = None
-        mock_result.cv_folds = 5
-        mock_result.runtime_seconds = 10.0
-        mock_result.candidate_results = {}
-
         with tempfile.TemporaryDirectory() as tmpdir:
-            with (
-                patch(
-                    "raglite.forecasting.model_selection_job.select_best_model",
-                    new_callable=AsyncMock,
-                    return_value=mock_result,
-                ),
-                patch(
-                    "raglite.forecasting.model_selection_job.cache_model_selection",
-                    new_callable=AsyncMock,
-                ),
-            ):
+            with batch_selection_mocks(tmpdir):
                 await run_batch_model_selection(
                     variables=["test_var"],
                     workers=1,
@@ -408,34 +476,14 @@ class TestReportGeneration:
                 assert len(md_files) >= 1, "No Markdown report generated"
 
     @pytest.mark.asyncio
-    async def test_json_report_has_required_fields(self) -> None:
+    async def test_json_report_has_required_fields(self, batch_selection_mocks) -> None:
         """[P1][TEST-AC-7b.5.6.4] JSON report contains required fields."""
         import json
 
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
-        mock_result = MagicMock()
-        mock_result.best_model = "arima"
-        mock_result.best_mape = 0.05
-        mock_result.best_mase = 0.8
-        mock_result.best_with_regressors = False
-        mock_result.best_regressor_set = None
-        mock_result.cv_folds = 5
-        mock_result.runtime_seconds = 10.0
-        mock_result.candidate_results = {}
-
         with tempfile.TemporaryDirectory() as tmpdir:
-            with (
-                patch(
-                    "raglite.forecasting.model_selection_job.select_best_model",
-                    new_callable=AsyncMock,
-                    return_value=mock_result,
-                ),
-                patch(
-                    "raglite.forecasting.model_selection_job.cache_model_selection",
-                    new_callable=AsyncMock,
-                ),
-            ):
+            with batch_selection_mocks(tmpdir):
                 await run_batch_model_selection(
                     variables=["test_var"],
                     workers=1,
@@ -453,32 +501,12 @@ class TestReportGeneration:
                 assert "results" in report, "Missing results in JSON report"
 
     @pytest.mark.asyncio
-    async def test_markdown_report_has_summary_table(self) -> None:
+    async def test_markdown_report_has_summary_table(self, batch_selection_mocks) -> None:
         """[P1][TEST-AC-7b.5.6.5] Markdown report contains summary table."""
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
-        mock_result = MagicMock()
-        mock_result.best_model = "arima"
-        mock_result.best_mape = 0.05
-        mock_result.best_mase = 0.8
-        mock_result.best_with_regressors = False
-        mock_result.best_regressor_set = []
-        mock_result.cv_folds = 5
-        mock_result.runtime_seconds = 10.0
-        mock_result.candidate_results = {}
-
         with tempfile.TemporaryDirectory() as tmpdir:
-            with (
-                patch(
-                    "raglite.forecasting.model_selection_job.select_best_model",
-                    new_callable=AsyncMock,
-                    return_value=mock_result,
-                ),
-                patch(
-                    "raglite.forecasting.model_selection_job.cache_model_selection",
-                    new_callable=AsyncMock,
-                ),
-            ):
+            with batch_selection_mocks(tmpdir):
                 await run_batch_model_selection(
                     variables=["test_var"],
                     workers=1,
@@ -507,32 +535,12 @@ class TestProgressLogging:
     """[P1] AC-7b.5.7: Progress logging with status updates."""
 
     @pytest.mark.asyncio
-    async def test_progress_printed_for_each_variable(self, capsys) -> None:
+    async def test_progress_printed_for_each_variable(self, capsys, batch_selection_mocks) -> None:
         """[P1][TEST-AC-7b.5.7.1] Progress printed as each variable completes."""
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
-        mock_result = MagicMock()
-        mock_result.best_model = "arima"
-        mock_result.best_mape = 0.082
-        mock_result.best_mase = 0.42
-        mock_result.best_with_regressors = False
-        mock_result.best_regressor_set = None
-        mock_result.cv_folds = 5
-        mock_result.runtime_seconds = 10.0
-        mock_result.candidate_results = {}
-
         with tempfile.TemporaryDirectory() as tmpdir:
-            with (
-                patch(
-                    "raglite.forecasting.model_selection_job.select_best_model",
-                    new_callable=AsyncMock,
-                    return_value=mock_result,
-                ),
-                patch(
-                    "raglite.forecasting.model_selection_job.cache_model_selection",
-                    new_callable=AsyncMock,
-                ),
-            ):
+            with batch_selection_mocks(tmpdir):
                 await run_batch_model_selection(
                     variables=["var1", "var2"],
                     workers=1,
@@ -546,32 +554,12 @@ class TestProgressLogging:
                 )
 
     @pytest.mark.asyncio
-    async def test_summary_printed_at_completion(self, capsys) -> None:
+    async def test_summary_printed_at_completion(self, capsys, batch_selection_mocks) -> None:
         """[P1][TEST-AC-7b.5.7.2] Summary section printed at completion."""
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
-        mock_result = MagicMock()
-        mock_result.best_model = "arima"
-        mock_result.best_mape = 0.05
-        mock_result.best_mase = 0.8
-        mock_result.best_with_regressors = False
-        mock_result.best_regressor_set = None
-        mock_result.cv_folds = 5
-        mock_result.runtime_seconds = 10.0
-        mock_result.candidate_results = {}
-
         with tempfile.TemporaryDirectory() as tmpdir:
-            with (
-                patch(
-                    "raglite.forecasting.model_selection_job.select_best_model",
-                    new_callable=AsyncMock,
-                    return_value=mock_result,
-                ),
-                patch(
-                    "raglite.forecasting.model_selection_job.cache_model_selection",
-                    new_callable=AsyncMock,
-                ),
-            ):
+            with batch_selection_mocks(tmpdir):
                 await run_batch_model_selection(
                     variables=["test_var"],
                     workers=1,
@@ -624,33 +612,11 @@ class TestRunSingleVariableSelection:
         assert "force_refresh" in params, "Missing force_refresh parameter"
 
     @pytest.mark.asyncio
-    async def test_dry_run_skips_cache(self) -> None:
+    async def test_dry_run_skips_cache(self, single_selection_mocks) -> None:
         """[P1][TEST-AC-7b.5.3.15] dry_run=True skips caching."""
         from raglite.forecasting.model_selection_job import run_single_variable_selection
 
-        mock_result = MagicMock()
-        mock_result.best_model = "arima"
-        mock_result.best_mape = 0.05
-        mock_result.best_mase = 0.8
-        mock_result.best_with_regressors = False
-        mock_result.best_regressor_set = []
-        mock_result.cv_folds = 5
-        mock_result.runtime_seconds = 10.0
-        mock_result.candidate_results = {}
-
-        mock_cache = AsyncMock()
-
-        with (
-            patch(
-                "raglite.forecasting.model_selection_job.select_best_model",
-                new_callable=AsyncMock,
-                return_value=mock_result,
-            ),
-            patch(
-                "raglite.forecasting.model_selection_job.cache_model_selection",
-                mock_cache,
-            ),
-        ):
+        with single_selection_mocks() as mock_cache:
             # Run with dry_run=True
             await run_single_variable_selection(
                 variable="test_var", force_refresh=False, dry_run=True
@@ -662,33 +628,11 @@ class TestRunSingleVariableSelection:
             )
 
     @pytest.mark.asyncio
-    async def test_normal_mode_calls_cache(self) -> None:
+    async def test_normal_mode_calls_cache(self, single_selection_mocks) -> None:
         """[P1][TEST-AC-7b.5.3.16] dry_run=False calls cache."""
         from raglite.forecasting.model_selection_job import run_single_variable_selection
 
-        mock_result = MagicMock()
-        mock_result.best_model = "arima"
-        mock_result.best_mape = 0.05
-        mock_result.best_mase = 0.8
-        mock_result.best_with_regressors = False
-        mock_result.best_regressor_set = []
-        mock_result.cv_folds = 5
-        mock_result.runtime_seconds = 10.0
-        mock_result.candidate_results = {}
-
-        mock_cache = AsyncMock()
-
-        with (
-            patch(
-                "raglite.forecasting.model_selection_job.select_best_model",
-                new_callable=AsyncMock,
-                return_value=mock_result,
-            ),
-            patch(
-                "raglite.forecasting.model_selection_job.cache_model_selection",
-                mock_cache,
-            ),
-        ):
+        with single_selection_mocks() as mock_cache:
             # Run with dry_run=False
             await run_single_variable_selection(
                 variable="test_var", force_refresh=False, dry_run=False
@@ -766,8 +710,9 @@ class TestErrorHandling:
     """[P1] Error handling in batch model selection."""
 
     @pytest.mark.asyncio
-    async def test_individual_failures_dont_stop_batch(self) -> None:
+    async def test_individual_failures_dont_stop_batch(self, mock_historical_data) -> None:
         """[P1][TEST-ERR-1] Individual variable failures don't stop batch processing."""
+
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
         call_count = 0
@@ -791,6 +736,16 @@ class TestErrorHandling:
         with tempfile.TemporaryDirectory() as tmpdir:
             with (
                 patch(
+                    "raglite.forecasting.model_selection_job.fetch_historical_data",
+                    new_callable=AsyncMock,
+                    return_value=mock_historical_data,
+                ),
+                patch(
+                    "raglite.forecasting.model_selection_job.fetch_regressors_with_date_range",
+                    new_callable=AsyncMock,
+                    return_value={},
+                ),
+                patch(
                     "raglite.forecasting.model_selection_job.select_best_model",
                     side_effect=mock_select_best_model,
                 ),
@@ -811,32 +766,12 @@ class TestErrorHandling:
                 assert len(results) == 2, f"Expected 2 successful results, got {len(results)}"
 
     @pytest.mark.asyncio
-    async def test_returns_dict_on_success(self) -> None:
+    async def test_returns_dict_on_success(self, batch_selection_mocks) -> None:
         """[P0][TEST-RET-1] run_batch_model_selection returns dict of results."""
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
-        mock_result = MagicMock()
-        mock_result.best_model = "arima"
-        mock_result.best_mape = 0.05
-        mock_result.best_mase = 0.8
-        mock_result.best_with_regressors = False
-        mock_result.best_regressor_set = None
-        mock_result.cv_folds = 5
-        mock_result.runtime_seconds = 10.0
-        mock_result.candidate_results = {}
-
         with tempfile.TemporaryDirectory() as tmpdir:
-            with (
-                patch(
-                    "raglite.forecasting.model_selection_job.select_best_model",
-                    new_callable=AsyncMock,
-                    return_value=mock_result,
-                ),
-                patch(
-                    "raglite.forecasting.model_selection_job.cache_model_selection",
-                    new_callable=AsyncMock,
-                ),
-            ):
+            with batch_selection_mocks(tmpdir):
                 results = await run_batch_model_selection(
                     variables=["test_var"],
                     workers=1,
@@ -856,41 +791,22 @@ class TestEdgeCases:
     """[P2] Edge case tests for model_selection_job."""
 
     @pytest.mark.asyncio
-    async def test_empty_variables_list(self) -> None:
+    async def test_empty_variables_list(self, batch_selection_mocks) -> None:
         """[P2][TEST-EDGE-1] Empty variables list returns empty dict."""
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = await run_batch_model_selection(variables=[], output_dir=tmpdir)
-            assert result == {}, "Empty variables list should return empty dict"
+            with batch_selection_mocks(tmpdir):
+                result = await run_batch_model_selection(variables=[], output_dir=tmpdir)
+                assert result == {}, "Empty variables list should return empty dict"
 
     @pytest.mark.asyncio
-    async def test_single_variable_in_batch_mode(self) -> None:
+    async def test_single_variable_in_batch_mode(self, batch_selection_mocks) -> None:
         """[P1][TEST-EDGE-2] Single variable in batch mode works correctly."""
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
-        mock_result = MagicMock()
-        mock_result.best_model = "arima"
-        mock_result.best_mape = 0.05
-        mock_result.best_mase = 0.8
-        mock_result.best_with_regressors = False
-        mock_result.best_regressor_set = []
-        mock_result.cv_folds = 5
-        mock_result.runtime_seconds = 10.0
-        mock_result.candidate_results = {}
-
         with tempfile.TemporaryDirectory() as tmpdir:
-            with (
-                patch(
-                    "raglite.forecasting.model_selection_job.select_best_model",
-                    new_callable=AsyncMock,
-                    return_value=mock_result,
-                ),
-                patch(
-                    "raglite.forecasting.model_selection_job.cache_model_selection",
-                    new_callable=AsyncMock,
-                ),
-            ):
+            with batch_selection_mocks(tmpdir):
                 results = await run_batch_model_selection(
                     variables=["ebitda"],
                     workers=1,
@@ -901,35 +817,15 @@ class TestEdgeCases:
                 assert "ebitda" in results, "Result should contain the variable"
 
     @pytest.mark.asyncio
-    async def test_output_dir_created_if_missing(self) -> None:
+    async def test_output_dir_created_if_missing(self, batch_selection_mocks) -> None:
         """[P2][TEST-EDGE-3] Output directory is created if it doesn't exist."""
         from raglite.forecasting.model_selection_job import run_batch_model_selection
-
-        mock_result = MagicMock()
-        mock_result.best_model = "arima"
-        mock_result.best_mape = 0.05
-        mock_result.best_mase = 0.8
-        mock_result.best_with_regressors = False
-        mock_result.best_regressor_set = []
-        mock_result.cv_folds = 5
-        mock_result.runtime_seconds = 10.0
-        mock_result.candidate_results = {}
 
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "nonexistent_dir"
             assert not output_path.exists(), "Directory should not exist initially"
 
-            with (
-                patch(
-                    "raglite.forecasting.model_selection_job.select_best_model",
-                    new_callable=AsyncMock,
-                    return_value=mock_result,
-                ),
-                patch(
-                    "raglite.forecasting.model_selection_job.cache_model_selection",
-                    new_callable=AsyncMock,
-                ),
-            ):
+            with batch_selection_mocks(str(output_path)):
                 await run_batch_model_selection(
                     variables=["test_var"],
                     workers=1,
@@ -940,7 +836,7 @@ class TestEdgeCases:
                 assert output_path.is_dir(), "Output path should be a directory"
 
     @pytest.mark.asyncio
-    async def test_all_variables_fail(self) -> None:
+    async def test_all_variables_fail(self, mock_historical_data) -> None:
         """[P1][TEST-EDGE-4] All variables failing returns empty results dict."""
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
@@ -949,6 +845,16 @@ class TestEdgeCases:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with (
+                patch(
+                    "raglite.forecasting.model_selection_job.fetch_historical_data",
+                    new_callable=AsyncMock,
+                    return_value=mock_historical_data,
+                ),
+                patch(
+                    "raglite.forecasting.model_selection_job.fetch_regressors_with_date_range",
+                    new_callable=AsyncMock,
+                    return_value={},
+                ),
                 patch(
                     "raglite.forecasting.model_selection_job.select_best_model",
                     side_effect=mock_failing_select,
@@ -967,19 +873,11 @@ class TestEdgeCases:
                 assert len(results) == 0, "All failures should return empty dict"
 
     @pytest.mark.asyncio
-    async def test_cache_failure_doesnt_stop_processing(self) -> None:
+    async def test_cache_failure_doesnt_stop_processing(
+        self, mock_historical_data, mock_model_result
+    ) -> None:
         """[P1][TEST-EDGE-5] Cache failures don't stop batch processing."""
         from raglite.forecasting.model_selection_job import run_batch_model_selection
-
-        mock_result = MagicMock()
-        mock_result.best_model = "arima"
-        mock_result.best_mape = 0.05
-        mock_result.best_mase = 0.8
-        mock_result.best_with_regressors = False
-        mock_result.best_regressor_set = []
-        mock_result.cv_folds = 5
-        mock_result.runtime_seconds = 10.0
-        mock_result.candidate_results = {}
 
         async def failing_cache(*args, **kwargs):
             raise ValueError("Cache write failed")
@@ -987,9 +885,19 @@ class TestEdgeCases:
         with tempfile.TemporaryDirectory() as tmpdir:
             with (
                 patch(
+                    "raglite.forecasting.model_selection_job.fetch_historical_data",
+                    new_callable=AsyncMock,
+                    return_value=mock_historical_data,
+                ),
+                patch(
+                    "raglite.forecasting.model_selection_job.fetch_regressors_with_date_range",
+                    new_callable=AsyncMock,
+                    return_value={},
+                ),
+                patch(
                     "raglite.forecasting.model_selection_job.select_best_model",
                     new_callable=AsyncMock,
-                    return_value=mock_result,
+                    return_value=mock_model_result,
                 ),
                 patch(
                     "raglite.forecasting.model_selection_job.cache_model_selection",
@@ -1009,32 +917,12 @@ class TestEdgeCases:
                 )
 
     @pytest.mark.asyncio
-    async def test_workers_parameter_affects_concurrency(self) -> None:
+    async def test_workers_parameter_affects_concurrency(self, batch_selection_mocks) -> None:
         """[P1][TEST-EDGE-6] Workers parameter controls parallel execution."""
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
-        mock_result = MagicMock()
-        mock_result.best_model = "arima"
-        mock_result.best_mape = 0.05
-        mock_result.best_mase = 0.8
-        mock_result.best_with_regressors = False
-        mock_result.best_regressor_set = []
-        mock_result.cv_folds = 5
-        mock_result.runtime_seconds = 10.0
-        mock_result.candidate_results = {}
-
         with tempfile.TemporaryDirectory() as tmpdir:
-            with (
-                patch(
-                    "raglite.forecasting.model_selection_job.select_best_model",
-                    new_callable=AsyncMock,
-                    return_value=mock_result,
-                ),
-                patch(
-                    "raglite.forecasting.model_selection_job.cache_model_selection",
-                    new_callable=AsyncMock,
-                ),
-            ):
+            with batch_selection_mocks(tmpdir):
                 # Test with different worker counts
                 result_1_worker = await run_batch_model_selection(
                     variables=["var1", "var2", "var3"],
@@ -1056,7 +944,7 @@ class TestReportStructure:
     """[P2] Detailed tests for report structure and content."""
 
     @pytest.mark.asyncio
-    async def test_json_report_structure_validation(self) -> None:
+    async def test_json_report_structure_validation(self, mock_historical_data) -> None:
         """[P2][TEST-REPORT-1] JSON report has all required fields with correct types."""
         import json
 
@@ -1074,6 +962,16 @@ class TestReportStructure:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with (
+                patch(
+                    "raglite.forecasting.model_selection_job.fetch_historical_data",
+                    new_callable=AsyncMock,
+                    return_value=mock_historical_data,
+                ),
+                patch(
+                    "raglite.forecasting.model_selection_job.fetch_regressors_with_date_range",
+                    new_callable=AsyncMock,
+                    return_value={},
+                ),
                 patch(
                     "raglite.forecasting.model_selection_job.select_best_model",
                     new_callable=AsyncMock,
@@ -1113,32 +1011,12 @@ class TestReportStructure:
                 assert ebitda_result["regressor_set"] == ["euribor_3m", "diesel"]
 
     @pytest.mark.asyncio
-    async def test_markdown_report_structure_validation(self) -> None:
+    async def test_markdown_report_structure_validation(self, batch_selection_mocks) -> None:
         """[P2][TEST-REPORT-2] Markdown report has proper table formatting."""
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
-        mock_result = MagicMock()
-        mock_result.best_model = "prophet"
-        mock_result.best_mape = 0.038
-        mock_result.best_mase = 1.28
-        mock_result.best_with_regressors = True
-        mock_result.best_regressor_set = ["gdp_growth"]
-        mock_result.cv_folds = 5
-        mock_result.runtime_seconds = 30.0
-        mock_result.candidate_results = {}
-
         with tempfile.TemporaryDirectory() as tmpdir:
-            with (
-                patch(
-                    "raglite.forecasting.model_selection_job.select_best_model",
-                    new_callable=AsyncMock,
-                    return_value=mock_result,
-                ),
-                patch(
-                    "raglite.forecasting.model_selection_job.cache_model_selection",
-                    new_callable=AsyncMock,
-                ),
-            ):
+            with batch_selection_mocks(tmpdir):
                 await run_batch_model_selection(
                     variables=["revenue", "ebitda"],
                     workers=1,
@@ -1221,16 +1099,28 @@ class TestSingleVariableSelection:
     """[P1] Edge cases for run_single_variable_selection."""
 
     @pytest.mark.asyncio
-    async def test_single_variable_error_returns_none(self) -> None:
+    async def test_single_variable_error_returns_none(self, mock_historical_data) -> None:
         """[P1][TEST-SINGLE-1] Error in single variable selection returns None."""
         from raglite.forecasting.model_selection_job import run_single_variable_selection
 
         async def failing_select(*args, **kwargs):
             raise ValueError("Model selection failed")
 
-        with patch(
-            "raglite.forecasting.model_selection_job.select_best_model",
-            side_effect=failing_select,
+        with (
+            patch(
+                "raglite.forecasting.model_selection_job.fetch_historical_data",
+                new_callable=AsyncMock,
+                return_value=mock_historical_data,
+            ),
+            patch(
+                "raglite.forecasting.model_selection_job.fetch_regressors_with_date_range",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch(
+                "raglite.forecasting.model_selection_job.select_best_model",
+                side_effect=failing_select,
+            ),
         ):
             result = await run_single_variable_selection(
                 variable="ebitda", force_refresh=False, dry_run=False
@@ -1239,25 +1129,27 @@ class TestSingleVariableSelection:
             assert result is None, "Failed selection should return None"
 
     @pytest.mark.asyncio
-    async def test_single_variable_with_no_regressors(self, capsys) -> None:
+    async def test_single_variable_with_no_regressors(
+        self, mock_historical_data, mock_model_result, capsys
+    ) -> None:
         """[P1][TEST-SINGLE-2] Single variable with no regressors displays correctly."""
         from raglite.forecasting.model_selection_job import run_single_variable_selection
 
-        mock_result = MagicMock()
-        mock_result.best_model = "arima"
-        mock_result.best_mape = 0.05
-        mock_result.best_mase = 0.8
-        mock_result.best_with_regressors = False
-        mock_result.best_regressor_set = None
-        mock_result.cv_folds = 5
-        mock_result.runtime_seconds = 20.0
-        mock_result.candidate_results = {}
-
         with (
+            patch(
+                "raglite.forecasting.model_selection_job.fetch_historical_data",
+                new_callable=AsyncMock,
+                return_value=mock_historical_data,
+            ),
+            patch(
+                "raglite.forecasting.model_selection_job.fetch_regressors_with_date_range",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
             patch(
                 "raglite.forecasting.model_selection_job.select_best_model",
                 new_callable=AsyncMock,
-                return_value=mock_result,
+                return_value=mock_model_result,
             ),
             patch(
                 "raglite.forecasting.model_selection_job.cache_model_selection",
@@ -1273,7 +1165,9 @@ class TestSingleVariableSelection:
             assert "Use Regressors: False" in captured.out or "Regressors: None" in captured.out
 
     @pytest.mark.asyncio
-    async def test_single_variable_comparison_table_output(self, capsys) -> None:
+    async def test_single_variable_comparison_table_output(
+        self, mock_historical_data, capsys
+    ) -> None:
         """[P2][TEST-SINGLE-3] Single variable displays candidate comparison table."""
         from raglite.forecasting.model_selection_job import run_single_variable_selection
 
@@ -1292,6 +1186,16 @@ class TestSingleVariableSelection:
         }
 
         with (
+            patch(
+                "raglite.forecasting.model_selection_job.fetch_historical_data",
+                new_callable=AsyncMock,
+                return_value=mock_historical_data,
+            ),
+            patch(
+                "raglite.forecasting.model_selection_job.fetch_regressors_with_date_range",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
             patch(
                 "raglite.forecasting.model_selection_job.select_best_model",
                 new_callable=AsyncMock,

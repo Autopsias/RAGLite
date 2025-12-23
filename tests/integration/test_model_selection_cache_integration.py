@@ -153,8 +153,8 @@ class TestMigrationScript:
     def test_ac_7b_4_6_3_variable_name_index_exists(self, db_session: Session) -> None:
         """TEST-AC-7b.4.6.3: variable_name index exists.
 
-        Note: SQLAlchemy auto-generates index name as ix_model_selection_variable_name
-        when using index=True on the column definition.
+        Note: The migration uses explicit index naming (idx_model_selection_variable)
+        rather than SQLAlchemy auto-generated names.
         """
         from sqlalchemy import inspect
 
@@ -162,8 +162,8 @@ class TestMigrationScript:
         indexes = inspector.get_indexes("model_selection")
         index_names = {idx["name"] for idx in indexes}
 
-        # SQLAlchemy names the index ix_<table>_<column> when using index=True
-        assert "ix_model_selection_variable_name" in index_names
+        # Migration creates explicit index idx_model_selection_variable
+        assert "idx_model_selection_variable" in index_names
 
     @pytest.mark.preserve_collection
     def test_ac_7b_4_6_4_expires_at_index_exists(self, db_session: Session) -> None:

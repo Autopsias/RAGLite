@@ -242,7 +242,8 @@ async def run_batch_model_selection(
     import time
 
     start_time = time.time()
-    variables = variables or ALL_VARIABLES
+    if variables is None:
+        variables = ALL_VARIABLES
     results: dict[str, ModelSelectionResult] = {}
     errors: list[str] = []
 
