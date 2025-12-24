@@ -415,7 +415,7 @@ jobs:
   test-unit:
     name: "🧪 Tests: Unit (~200 tests)"
     runs-on: [self-hosted, raglite]
-    timeout-minutes: 10
+    timeout-minutes: 20  # Increased for serial execution (no parallelism to avoid OOM)
 
     steps:
       - name: Checkout code
@@ -491,18 +491,16 @@ jobs:
           echo "========================================="
           echo "CI MODE: Unit Tests with Coverage"
           echo "- Running ALL unit tests (including slow)"
-          echo "- Parallel workers: 2 (reduced for memory stability)"
-          echo "- Target: <10 minutes"
+          echo "- Serial execution (memory-safe for self-hosted runners)"
+          echo "- Target: <15 minutes"
           echo "- PYTHONPATH: ${PYTHONPATH}"
           echo "========================================="
+          # Serial execution without parallelism - prevents OOM on resource-constrained runners
+          # Coverage with minimal reports to reduce memory footprint
           pytest tests/unit/ \
-            -n 2 \
-            --dist loadfile \
             -m "" \
             --cov=raglite \
             --cov-report=xml \
-            --cov-report=term-missing \
-            --cov-report=html \
             --junitxml=pytest-unit-report.xml \
             -v
 
