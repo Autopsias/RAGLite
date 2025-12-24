@@ -979,7 +979,10 @@ jobs:
     name: "🎯 Tests: E2E (~28 tests)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 20  # Increased from 15 to prevent runner communication timeout
-    needs: [docker-health-check, test-unit]
+    # FIX: Depend on test-integration to prevent container conflict
+    # Both E2E and integration use "test" variant (same container name raglite-postgresql-test)
+    # E2E's container startup would kill integration's container if run in parallel
+    needs: [docker-health-check, test-integration]
 
     # FIX: Prevent parallel execution with resource-heavy jobs to avoid resource starvation
     concurrency:
