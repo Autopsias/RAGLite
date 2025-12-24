@@ -500,7 +500,32 @@ jobs:
           echo "Pre-Test Memory Cleanup (Self-Hosted Runner)"
           echo "========================================="
 
+          # CRITICAL FIX (2025-12-24): Kill orphaned resource_tracker processes
+          # These zombie processes from previous test runs prevent proper cleanup
+          # and cause SIGKILL (exit code 137) during pytest shutdown
+          echo ""
+          echo "Cleaning up orphaned resource_tracker processes..."
+
+          # List orphaned processes BEFORE cleanup (for diagnostics)
+          JOBLIB_PIDS=$(pgrep -f "joblib.externals.loky.backend.resource_tracker" || true)
+          MULTIPROC_PIDS=$(pgrep -f "multiprocessing.resource_tracker" || true)
+
+          if [ -n "$JOBLIB_PIDS" ]; then
+            echo "  Found orphaned joblib resource_tracker processes: $JOBLIB_PIDS"
+            pkill -9 -f "joblib.externals.loky.backend.resource_tracker" && echo "  ✅ Killed joblib resource_tracker processes" || echo "  ⚠️  Failed to kill joblib processes"
+          else
+            echo "  No orphaned joblib resource_tracker processes found"
+          fi
+
+          if [ -n "$MULTIPROC_PIDS" ]; then
+            echo "  Found orphaned multiprocessing resource_tracker processes: $MULTIPROC_PIDS"
+            pkill -9 -f "multiprocessing.resource_tracker" && echo "  ✅ Killed multiprocessing resource_tracker processes" || echo "  ⚠️  Failed to kill multiprocessing processes"
+          else
+            echo "  No orphaned multiprocessing resource_tracker processes found"
+          fi
+
           # Stop and remove any stale containers from previous runs
+          echo ""
           echo "Cleaning up stale containers..."
           docker ps -a --filter "name=raglite-" --format '{{.Names}}' | xargs -r docker rm -f 2>/dev/null || true
 

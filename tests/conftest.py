@@ -159,8 +159,11 @@ def disable_joblib_parallel_processing():
     causing Python's multiprocessing resource_tracker to issue warnings and
     trigger SIGKILL.
 
-    Fix: Configure joblib to use sequential backend (no multiprocessing) during
-    tests. This prevents resource leaks while maintaining test functionality.
+    Fix Strategy (Two-Part):
+    1. CI Workflow: Kills orphaned resource_tracker processes BEFORE pytest starts
+       (see .github/workflows/ci.yml "Pre-test memory cleanup" step)
+    2. This Fixture: Configures joblib to use threading instead of multiprocessing
+       to prevent NEW resource leaks during current test run
 
     Resource leak warnings before fix:
     - UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects
@@ -174,31 +177,6 @@ def disable_joblib_parallel_processing():
     - https://github.com/joblib/joblib/issues/945
     - https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
     """
-    import subprocess
-
-    # CRITICAL: Kill orphaned resource_tracker processes from previous test runs
-    # These zombie processes prevent proper cleanup and cause SIGKILL
-    try:
-        # Find and kill joblib resource_tracker processes
-        result = subprocess.run(
-            ["pkill", "-f", "joblib.externals.loky.backend.resource_tracker"],
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode == 0:
-            logger.info("Cleaned up orphaned joblib resource_tracker processes")
-
-        # Find and kill multiprocessing resource_tracker processes
-        result = subprocess.run(
-            ["pkill", "-f", "multiprocessing.resource_tracker"],
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode == 0:
-            logger.info("Cleaned up orphaned multiprocessing resource_tracker processes")
-    except Exception as e:
-        logger.warning(f"Could not cleanup orphaned resource trackers: {e}")
-
     # Configure environment variable to disable joblib parallel processing
     # This affects statsmodels, scikit-learn, and pmdarima which use joblib internally
     os.environ["JOBLIB_START_METHOD"] = "threading"  # Use threading instead of multiprocessing
