@@ -1,7 +1,9 @@
-"""Unit tests for Story 7b-6: Model Selection Cache MCP Integration.
+"""Integration tests for Story 7b-6: Model Selection Cache MCP Integration.
 
 Tests the integration between model selection cache and MCP forecast tool,
 including cache hits, cache misses, regressor filtering, and fallback behavior.
+
+NOTE: These tests require Qdrant and PostgreSQL to be running.
 """
 
 from datetime import datetime, timedelta
@@ -18,6 +20,11 @@ from raglite.shared.models import (
     TimeSeriesData,
     TimeSeriesPoint,
 )
+
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,  # Read-only tests, no DB modifications
+]
 
 # =============================================================================
 # Fixtures
