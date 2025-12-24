@@ -2,6 +2,7 @@
 
 Story 6.11.1: MCP Multi-Variate Forecasting Interface
 Story 7.0: REN Data Hub integration for electricity cost
+Story 7b-7: Demand-side regressors (housing transactions, dwelling completions)
 
 This module provides functions to fetch external regressor data from various APIs
 for use in multi-variate forecasting with Prophet.
@@ -13,6 +14,7 @@ Supported regressors:
 - diesel: Diesel price (EU Oil Bulletin)
 - eurostat_electricity: Industrial electricity price (Eurostat) - 9 points only
 - ren_electricity: Portuguese spot electricity (REN Data Hub) - 60+ monthly points
+- housing_transactions: Quarterly housing transactions (Eurostat) - Story 7b-7
 """
 
 from __future__ import annotations
@@ -28,6 +30,80 @@ from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def interpolate_quarterly_series_to_monthly(
+    quarterly_series: pd.Series,
+    method: str = "linear",
+) -> pd.Series:
+    """Interpolate quarterly data to monthly frequency.
+
+    Story 7b-7 AC3: Prophet and other models require monthly regressors.
+
+    Uses linear interpolation (default) to create monthly values from quarterly data.
+    This is more appropriate for economic indicators than cubic spline, which can
+    create unrealistic oscillations.
+
+    Note: This function is named with '_series_' to avoid shadowing the ECB module's
+    interpolate_quarterly_to_monthly which works with ECB-specific types.
+
+    Args:
+        quarterly_series: Series with quarterly DatetimeIndex (quarter-end dates)
+        method: Interpolation method ('linear', 'ffill', 'cubic')
+            - 'linear': Smooth linear interpolation (default, recommended)
+            - 'ffill': Forward-fill (step function, preserves original values)
+            - 'cubic': Cubic spline (smoother but can overshoot)
+
+    Returns:
+        Series with monthly DatetimeIndex
+
+    Example:
+        >>> q_data = pd.Series([100, 110, 105],
+        ...     index=pd.to_datetime(['2024-03-31', '2024-06-30', '2024-09-30']))
+        >>> monthly = interpolate_quarterly_series_to_monthly(q_data)
+        >>> len(monthly)  # 7 months (Mar-Sep)
+        7
+    """
+    if quarterly_series.empty:
+        return quarterly_series
+
+    # Ensure datetime index
+    if not isinstance(quarterly_series.index, pd.DatetimeIndex):
+        quarterly_series = quarterly_series.copy()
+        quarterly_series.index = pd.to_datetime(quarterly_series.index)
+
+    # Sort by date
+    quarterly_series = quarterly_series.sort_index()
+
+    # Resample to month-start frequency and interpolate
+    # Use 'MS' (month start) to align with typical financial data
+    monthly = quarterly_series.resample("MS").asfreq()
+
+    # Interpolate missing months
+    if method == "ffill":
+        monthly = monthly.ffill()
+    elif method == "cubic":
+        monthly = monthly.interpolate(method="cubic")
+    else:
+        # Default: linear interpolation
+        monthly = monthly.interpolate(method="linear")
+
+    # Fill any remaining NaNs at boundaries
+    monthly = monthly.bfill().ffill()
+
+    # Drop NaN values that couldn't be filled
+    monthly = monthly.dropna()
+
+    logger.debug(
+        "Interpolated quarterly to monthly",
+        extra={
+            "quarterly_points": len(quarterly_series),
+            "monthly_points": len(monthly),
+            "method": method,
+        },
+    )
+
+    return monthly
 
 
 async def fetch_single_regressor(
@@ -303,6 +379,66 @@ async def fetch_single_regressor(
                     extra={"source": "Eurostat (EC)", "data_points": len(series)},
                 )
                 return series
+
+            return None
+
+        elif reg_name == "housing_transactions":
+            # Story 7b-7: Housing transactions (demand-side regressor)
+            from raglite.external_data.clients.eurostat_housing import EurostatHousingClient
+
+            client_housing = EurostatHousingClient()
+            transactions_data = await client_housing.fetch_housing_transactions(
+                country="PT", start_date=start_date, end_date=end_date
+            )
+
+            if transactions_data:
+                # Create quarterly series from transaction data
+                quarterly_series = pd.Series(
+                    [d.transaction_count for d in transactions_data],
+                    index=pd.DatetimeIndex([d.date for d in transactions_data]),
+                )
+                quarterly_series = quarterly_series.groupby(level=0).sum()
+
+                # Interpolate quarterly to monthly for Prophet alignment
+                monthly_series = interpolate_quarterly_series_to_monthly(quarterly_series)
+
+                logger.info(
+                    "Fetched housing transactions regressor",
+                    extra={
+                        "source": "Eurostat (prc_hpi_inx)",
+                        "quarterly_points": len(quarterly_series),
+                        "monthly_points": len(monthly_series),
+                    },
+                )
+                return monthly_series
+
+            return None
+
+        elif reg_name == "dwelling_completions":
+            # Story 7b-7: Dwelling completions (demand-side regressor)
+            from raglite.external_data.clients.eurostat_housing import EurostatHousingClient
+
+            client_dwelling = EurostatHousingClient()
+            completions_data = await client_dwelling.fetch_dwelling_completions(
+                country="PT", start_date=start_date, end_date=end_date
+            )
+
+            if completions_data:
+                # Create monthly series from completion data
+                monthly_series = pd.Series(
+                    [d.completion_count for d in completions_data],
+                    index=pd.DatetimeIndex([d.date for d in completions_data]),
+                )
+                monthly_series = monthly_series.groupby(level=0).sum()
+
+                logger.info(
+                    "Fetched dwelling completions regressor",
+                    extra={
+                        "source": "Eurostat (sts_cobp_m)",
+                        "monthly_points": len(monthly_series),
+                    },
+                )
+                return monthly_series
 
             return None
 

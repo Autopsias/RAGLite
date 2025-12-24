@@ -183,18 +183,23 @@ class TestMetricRegressorMappingUpdates:
 
     def test_p1_sales_volume_includes_construction_and_industrial(self) -> None:
         """
-        [P1] sales_volume mapping should include both new indicators.
+        [P1] sales_volume mapping should include construction demand-side indicators.
 
-        Given: METRIC_REGRESSORS configuration
+        Given: METRIC_REGRESSORS configuration (Story 7b-7 updates)
         When: Checking "sales_volume" mapping
-        Then: Includes construction_output and industrial_production
+        Then: Includes construction_output and demand-side regressors
         """
         from raglite.forecasting.regressor_config import METRIC_REGRESSORS
 
         if "sales_volume" in METRIC_REGRESSORS:
             regressors = METRIC_REGRESSORS["sales_volume"]
+            # Story 7b-7: Pure demand-side regressors, removed industrial_production/euribor_3m
             assert "construction_output" in regressors
-            assert "industrial_production" in regressors
+            assert "building_permits" in regressors
+            assert "construction_confidence" in regressors
+            # Story 7b-7: New demand-side regressors
+            assert "housing_transactions" in regressors
+            assert "dwelling_completions" in regressors
 
     def test_p1_capacity_utilization_includes_industrial(self) -> None:
         """
@@ -459,17 +464,24 @@ class TestBackwardCompatibility:
 
     def test_p2_ebitda_still_has_energy_regressors(self) -> None:
         """
-        [P2] ebitda metric should still include ttf_gas, api2_coal.
+        [P2] ebitda metric should include both demand-side and cost-side regressors.
 
-        Given: Metric "ebitda"
+        Given: Metric "ebitda" (Story 7b-7 updates)
         When: get_default_regressors() is called
-        Then: Returns existing energy/financial regressors
+        Then: Returns demand-side (construction) and cost-side (energy) regressors
         """
         from raglite.forecasting.regressor_config import get_default_regressors
 
         regressors = get_default_regressors("ebitda")
-        assert "euribor_3m" in regressors
+        # Story 7b-7: Demand-side regressors (construction activity -> revenue)
+        assert "construction_output" in regressors
+        assert "building_permits" in regressors
+        assert "construction_confidence" in regressors
+        assert "housing_transactions" in regressors
+        # Story 7b-7: Cost-side regressors (energy costs -> margins)
         assert "ttf_gas" in regressors
+        assert "diesel" in regressors
+        # Story 7b-7 AC5: euribor_3m removed (less relevant to cement EBITDA)
 
     def test_p2_electricity_cost_uses_ren_electricity(self) -> None:
         """

@@ -364,11 +364,50 @@ def create_test_database_schema() -> None:
             indexes = cursor.fetchall()
             logger.info(f"✓ Index verification: {len(indexes)} total indexes created")
 
+            # Create ORM-based tables (Story 7b-4, 6.12, etc.)
+            # These tables are defined in raglite.external_data.orm_models
+            logger.info("Creating ORM-based tables (model_selection, model_weights, etc.)...")
+            try:
+                from sqlalchemy import create_engine
+
+                from raglite.external_data.orm_models import Base as ORMBase
+
+                # Build SQLAlchemy connection URL
+                db_url = f"postgresql://{settings.postgres_user}:{settings.postgres_password}@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+                engine = create_engine(db_url)
+
+                # Create all ORM tables that don't exist yet
+                ORMBase.metadata.create_all(engine)
+                logger.info(
+                    "✓ ORM tables created (model_selection, model_weights, external_data_*, model_registry)"
+                )
+
+                # Verify ORM tables
+                cursor.execute(
+                    """
+                    SELECT table_name FROM information_schema.tables
+                    WHERE table_schema = 'public'
+                    AND table_name IN ('model_selection', 'model_weights', 'external_data_sources', 'external_data_points', 'model_registry')
+                    ORDER BY table_name;
+                    """
+                )
+                orm_tables = [row[0] for row in cursor.fetchall()]
+                logger.info(f"✓ ORM tables verified: {orm_tables}")
+
+            except ImportError as e:
+                logger.warning(f"Could not import ORM models (optional): {e}")
+            except Exception as e:
+                logger.warning(f"ORM table creation failed (optional, may already exist): {e}")
+
             logger.info("✅ TEST PostgreSQL schema initialization complete!")
             logger.info(f"   - Database: {settings.postgres_db} (port {settings.postgres_port})")
             logger.info("   - financial_chunks (chunks with metadata)")
             logger.info("   - financial_tables (structured table data)")
             logger.info("   - entity_mappings (canonical entity names)")
+            logger.info("   - model_selection (model selection cache - Story 7b-4)")
+            logger.info("   - model_weights (adaptive ensemble weights - Story 6.12)")
+            logger.info("   - external_data_sources/points (regressor data)")
+            logger.info("   - model_registry (model metadata)")
 
         except psycopg2.Error as e:
             logger.error(f"❌ Database error: {e}")

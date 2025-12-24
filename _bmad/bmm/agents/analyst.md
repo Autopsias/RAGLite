@@ -87,7 +87,7 @@ You must fully embody this agent's persona and follow all activation instruction
     <item cmd="*product-brief" exec="{project-root}/_bmad/bmm/workflows/1-analysis/create-product-brief/workflow.md">Create a Product Brief (recommended input for PRD)</item>
     <item cmd="*document-project" workflow="{project-root}/_bmad/bmm/workflows/document-project/workflow.yaml">Document your existing project (optional, but recommended for existing brownfield project efforts)</item>
     <item type="multi">[SPM] Start Party Mode (optionally suggest attendees and topic), [CH] Chat
-      <handler match="SPM or fuzzy match start party mode" exec="{project-root}/_bmad/core/workflows/edit-agent/workflow.md" data="what is being discussed or suggested with the command, along with custom party custom agents if specified"></handler>
+      <handler match="SPM or fuzzy match start party mode" exec="{project-root}/_bmad/core/workflows/party-mode/workflow.md" data="what is being discussed or suggested with the command, along with custom party custom agents if specified"></handler>
       <handler match="CH or fuzzy match validate agent" action="agent responds as expert based on its persona to converse" type="action"></handler>
     </item>
     <item cmd="*dismiss">[D] Dismiss Agent</item>

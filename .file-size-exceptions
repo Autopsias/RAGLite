@@ -516,6 +516,18 @@
       "reason": "Epic 7 Story 7b.5 - Model selection job runner with multi-variable support - refactoring planned",
       "target_lines": 500,
       "directory": "raglite/"
+    },
+    "raglite/forecasting/regressor_fetch.py": {
+      "lines": 579,
+      "reason": "Epic 7 Story 7b.7 - Demand regressor fetching with multiple data sources - refactoring planned",
+      "target_lines": 500,
+      "directory": "raglite/"
+    },
+    "raglite/forecasting/regressor_config.py": {
+      "lines": 530,
+      "reason": "Epic 7 Story 7b.7 - Regressor configuration with demand-side indicators - refactoring planned",
+      "target_lines": 500,
+      "directory": "raglite/"
     }
   }
 }

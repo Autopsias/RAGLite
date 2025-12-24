@@ -76,11 +76,15 @@ async def fit_ml_model(
     if model_name == "xgboost":
         from xgboost import XGBRegressor
 
-        model = XGBRegressor(n_estimators=100, max_depth=3, learning_rate=0.1, random_state=42)
+        model = XGBRegressor(
+            n_estimators=100, max_depth=3, learning_rate=0.1, random_state=42, verbosity=0
+        )
     elif model_name == "lightgbm":
         from lightgbm import LGBMRegressor
 
-        model = LGBMRegressor(n_estimators=100, max_depth=3, learning_rate=0.1, random_state=42)
+        model = LGBMRegressor(
+            n_estimators=100, max_depth=3, learning_rate=0.1, random_state=42, verbosity=-1
+        )
     elif model_name == "catboost":
         from catboost import CatBoostRegressor
 

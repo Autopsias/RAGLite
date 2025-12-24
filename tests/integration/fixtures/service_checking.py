@@ -67,8 +67,52 @@ def get_service_availability() -> tuple[bool, bool]:
 # PERFORMANCE: Move service check to first fixture execution to avoid test discovery delay
 # Services will be checked when first test runs, not during module import
 def check_and_skip_if_unavailable():
-    """Check services and skip if unavailable - called from fixtures, not module import."""
+    """Check services and skip if unavailable - called from fixtures, not module import.
+
+    Enhanced (2025-12-24): Now attempts auto-restart of stopped containers before skipping.
+    This addresses the strategic recommendation from test-strategy-analyst.
+    """
     qdrant_avail, postgres_avail = get_service_availability()
+
+    if not qdrant_avail or not postgres_avail:
+        # Try auto-restart before giving up
+        pg_msg = ""
+        try:
+            from tests.integration.fixtures.container_lifecycle import ensure_container_running
+
+            if not postgres_avail:
+                pg_ok, pg_msg = ensure_container_running(
+                    "raglite-postgresql-test", POSTGRES_PORT, "PostgreSQL", auto_restart=True
+                )
+                if pg_ok:
+                    print(f"DEBUG: {pg_msg}", file=sys.stderr)
+                    postgres_avail = True
+                    # Reset cache
+                    global postgres_available
+                    postgres_available = True
+
+                    # If PostgreSQL was restarted, initialize schema
+                    if "restarted" in pg_msg:
+                        from tests.integration.fixtures.container_lifecycle import (
+                            initialize_test_database_schema,
+                        )
+
+                        initialize_test_database_schema()
+
+            if not qdrant_avail:
+                qd_ok, qd_msg = ensure_container_running(
+                    "raglite-qdrant-test", QDRANT_PORT, "Qdrant", auto_restart=True
+                )
+                if qd_ok:
+                    print(f"DEBUG: {qd_msg}", file=sys.stderr)
+                    qdrant_avail = True
+                    # Reset cache
+                    global qdrant_available
+                    qdrant_available = True
+
+        except ImportError:
+            # container_lifecycle not available, continue with original behavior
+            pass
 
     if not qdrant_avail or not postgres_avail:
         missing = []

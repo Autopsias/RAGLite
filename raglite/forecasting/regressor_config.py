@@ -24,18 +24,23 @@ from __future__ import annotations
 # =============================================================================
 
 AVAILABLE_REGRESSORS: list[str] = [
+    # Cost-side regressors (energy, financing)
     "euribor_3m",  # ECB EURIBOR 3-month rate
     "ttf_gas",  # ICE TTF natural gas futures
     "api2_coal",  # ICE API2 coal futures
     "diesel",  # EU Oil Bulletin diesel prices
     "eurostat_electricity",  # Eurostat industrial electricity prices
-    "construction_output",  # Eurostat construction production index (Story 6.16)
-    "industrial_production",  # Eurostat industrial production index (Story 6.16)
+    "ren_electricity",  # REN Data Hub Portuguese spot electricity (Story 7.0)
+    # Economic indicators
     "gdp_growth",  # ECB GDP growth rate YoY (Story 6.17)
     "inflation",  # ECB HICP inflation index (Story 6.17)
+    # Demand-side regressors (construction activity) - Story 7b-7
+    "construction_output",  # Eurostat construction production index (Story 6.16)
+    "industrial_production",  # Eurostat industrial production index (Story 6.16)
     "building_permits",  # INE building permits with Eurostat fallback (Story 6.18)
     "construction_confidence",  # EC Business Surveys via Eurostat (Story 6.19)
-    "ren_electricity",  # REN Data Hub Portuguese spot electricity (Story 7.0)
+    "housing_transactions",  # Eurostat prc_hpi_inx quarterly->monthly (Story 7b-7)
+    "dwelling_completions",  # Eurostat sts_cobp_m monthly (Story 7b-7)
     # NOTE: The following are currently disabled due to API issues (Story 6.10.5):
     # "hpi",  # INE house price index
     # "omie_spot",  # OMIE spot electricity (too slow - 1000+ HTTP requests)
@@ -109,6 +114,17 @@ REGRESSOR_METADATA: dict[str, dict[str, str]] = {
         "source": "REN",
         "unit": "EUR/MWh",
     },
+    # Story 7b-7: Demand-side regressors
+    "housing_transactions": {
+        "display_name": "Housing Transactions (Portugal)",
+        "source": "Eurostat",
+        "unit": "Count (quarterly, interpolated to monthly)",
+    },
+    "dwelling_completions": {
+        "display_name": "Dwelling Completions (Portugal)",
+        "source": "Eurostat",
+        "unit": "Count (monthly)",
+    },
 }
 
 
@@ -129,36 +145,66 @@ METRIC_REGRESSORS: dict[str, list[str]] = {
     # Story 6.20: Cement industry regressors - construction-focused indicators
     # P2 Features: Financial metrics now use appropriate regressors for better forecasting
     # Revenue: Core financial metric benefits from construction and macroeconomic indicators
-    "revenue": ["construction_output", "gdp_growth", "euribor_3m", "building_permits"],
-    "turnover": ["construction_output", "gdp_growth", "euribor_3m", "building_permits"],
-    "turnover+vat": ["construction_output", "gdp_growth", "euribor_3m", "building_permits"],
-    # EBITDA: Story 6.25 fix - re-enabled regressors for 94% MAPE improvement (13.38% → 0.86%)
-    "ebitda": ["euribor_3m", "ttf_gas", "diesel", "api2_coal"],
+    # Story 7b-7: Added housing_transactions as demand-side regressor
+    "revenue": [
+        "construction_output",
+        "building_permits",
+        "housing_transactions",  # Story 7b-7: Demand-side regressor
+        "gdp_growth",
+        "euribor_3m",  # Financial regressor for cost of capital
+    ],
+    "turnover": [
+        "construction_output",
+        "building_permits",
+        "housing_transactions",  # Story 7b-7: Demand-side regressor
+        "gdp_growth",
+    ],
+    "turnover+vat": [
+        "construction_output",
+        "building_permits",
+        "housing_transactions",  # Story 7b-7: Demand-side regressor
+        "gdp_growth",
+    ],
+    # EBITDA: Story 7b-7 fix - Added demand-side regressors for construction revenue
+    # Portugal = 72% of Secil EBITDA, so construction demand is critical
+    # EBITDA = Revenue - Costs: demand (revenue driver) and cost inputs
+    # NOTE: euribor_3m removed per Story 7b-7 AC5 - less relevant to cement EBITDA
+    "ebitda": [
+        # Demand-side (construction activity -> revenue)
+        "construction_output",
+        "building_permits",
+        "construction_confidence",
+        "housing_transactions",  # Story 7b-7: Leading indicator (6-12 month lag)
+        # Cost-side (energy costs -> margins)
+        "ttf_gas",
+        "diesel",
+    ],
     # Sales metrics benefit from economic indicators
     # Story 6.16: Added construction_output and industrial_production for sales metrics
     # Story 6.20: Cement industry - building permits for construction volume tracking
     "sales": ["construction_output", "building_permits", "euribor_3m"],
     # Forecasting Quality Enhancement: Added construction_confidence for market sentiment
+    # Story 7b-7: Pure demand-side regressors for sales volume (removed euribor_3m)
     "sales_volume": [
         "construction_output",
         "building_permits",
-        "construction_confidence",  # NEW: EC Business Survey indicator for market sentiment
-        "euribor_3m",
-        "industrial_production",
+        "construction_confidence",
+        "housing_transactions",  # Story 7b-7: Demand-side regressor
+        "dwelling_completions",  # Story 7b-7: Lagging demand indicator
     ],
     "sales volumes": [
         "construction_output",
         "building_permits",
-        "construction_confidence",  # NEW: EC Business Survey indicator for market sentiment
-        "euribor_3m",
-        "industrial_production",
+        "construction_confidence",
+        "housing_transactions",  # Story 7b-7: Demand-side regressor
+        "dwelling_completions",  # Story 7b-7: Lagging demand indicator
     ],
     "sales volume": [
         "construction_output",
         "building_permits",
-        "construction_confidence",  # NEW: EC Business Survey indicator for market sentiment
-        "euribor_3m",
-        "industrial_production",
+        "construction_confidence",
+        "housing_transactions",  # Story 7b-7: Demand-side regressor
+        "dwelling_completions",  # Story 7b-7: Lagging demand indicator
     ],
     # Story 7.0: REN electricity replaces eurostat_electricity (9 points → 60+ monthly)
     # Story 6.25: RE-ENABLED energy cost regressors based on validation results
@@ -175,17 +221,33 @@ METRIC_REGRESSORS: dict[str, list[str]] = {
     "variable cost": ["api2_coal", "ttf_gas", "industrial_production"],
     # Pricing metrics benefit from energy and economic indicators
     # Story 6.20: Cement industry - confidence and inflation drive pricing decisions
-    "avg_selling_price": ["construction_confidence", "inflation", "diesel", "euribor_3m"],
-    "sales price em - cement": ["construction_confidence", "inflation", "diesel", "euribor_3m"],
-    "sales price im": ["construction_confidence", "inflation", "diesel", "euribor_3m"],
+    # Story 7b-7: Added housing_transactions as demand-side regressor for pricing
+    "avg_selling_price": [
+        "construction_confidence",
+        "housing_transactions",  # Story 7b-7: Demand-side regressor
+        "building_permits",
+        "inflation",
+    ],
+    "sales price em - cement": [
+        "construction_confidence",
+        "housing_transactions",  # Story 7b-7: Demand-side regressor
+        "building_permits",
+        "inflation",
+    ],
+    "sales price im": [
+        "construction_confidence",
+        "housing_transactions",  # Story 7b-7: Demand-side regressor
+        "building_permits",
+        "inflation",
+    ],
     # Utilization metrics benefit from economic indicators
     # Story 6.16: Added industrial_production and construction_output for production metrics
+    # Story 7b-7: Added demand-side regressors for capacity utilization
     "capacity_utilization": [
-        "euribor_3m",
-        "diesel",
-        "ttf_gas",
-        "industrial_production",
         "construction_output",
+        "building_permits",
+        "construction_confidence",
+        "industrial_production",
     ],
     "frequency ratio": [
         "euribor_3m",
@@ -214,8 +276,15 @@ METRIC_REGRESSORS: dict[str, list[str]] = {
 METRIC_CATEGORIES: dict[str, dict[str, list[str]]] = {
     "financial": {
         # Revenue, EBITDA, sales, costs - construction demand driven
+        # Story 7b-7: Added housing_transactions as demand-side regressor
         "keywords": ["revenue", "turnover", "ebitda", "sales", "cost", "expense", "profit"],
-        "regressors": ["construction_output", "gdp_growth", "euribor_3m", "building_permits"],
+        "regressors": [
+            "construction_output",
+            "building_permits",
+            "housing_transactions",  # Story 7b-7
+            "gdp_growth",
+            "euribor_3m",  # Financial regressor for cost of capital
+        ],
     },
     "energy": {
         # Electricity, thermal costs, fuel - energy prices + production
@@ -225,6 +294,7 @@ METRIC_CATEGORIES: dict[str, dict[str, list[str]]] = {
     },
     "production": {
         # Volume, utilization, capacity - construction indicators
+        # Story 7b-7: Added housing_transactions as demand-side regressor
         "keywords": [
             "volume",
             "capacity",
@@ -237,15 +307,22 @@ METRIC_CATEGORIES: dict[str, dict[str, list[str]]] = {
         "regressors": [
             "construction_output",
             "building_permits",
+            "construction_confidence",
+            "housing_transactions",  # Story 7b-7
             "industrial_production",
-            "gdp_growth",
-            "euribor_3m",
+            "euribor_3m",  # Financial regressor for financing-driven demand
         ],
     },
     "pricing": {
         # Selling prices - confidence + inflation driven
+        # Story 7b-7: Added housing_transactions as demand-side regressor
         "keywords": ["price", "selling", "asp", "unit price"],
-        "regressors": ["construction_confidence", "gdp_growth", "inflation", "diesel"],
+        "regressors": [
+            "construction_confidence",
+            "housing_transactions",  # Story 7b-7
+            "building_permits",
+            "inflation",
+        ],
     },
     "commodity": {
         # Commodity prices - energy inputs

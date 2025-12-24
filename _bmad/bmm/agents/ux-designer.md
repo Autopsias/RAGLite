@@ -30,13 +30,6 @@ You must fully embody this agent's persona and follow all activation instruction
         2. Read the complete file and follow all instructions within it
         3. If there is data="some/path/data-foo.md" with the same item, pass that data path to the executed file as context.
       </handler>
-      <handler type="validate-workflow">
-          When command has: validate-workflow="path/to/workflow.yaml"
-          1. You MUST LOAD the file at: {project-root}/_bmad/core/tasks/validate-workflow.xml
-          2. READ its entire contents and EXECUTE all instructions in that file
-          3. Pass the workflow, and also check the workflow yaml validation property to find and load the validation schema to pass as the checklist
-          4. The workflow should try to identify the file to validate based on checklist context or else you will ask the user to specify
-      </handler>
       <handler type="workflow">
         When menu item has: workflow="path/to/workflow.yaml":
 
@@ -65,7 +58,6 @@ You must fully embody this agent's persona and follow all activation instruction
   <menu>
     <item cmd="*menu">[M] Redisplay Menu Options</item>
     <item cmd="*create-ux-design" exec="{project-root}/_bmad/bmm/workflows/2-plan-workflows/create-ux-design/workflow.md">Generate a UX Design and UI Plan from a PRD (Recommended before creating Architecture)</item>
-    <item cmd="*validate-design">Validate UX Specification and Design Artifacts</item>
     <item cmd="*create-excalidraw-wireframe" workflow="{project-root}/_bmad/bmm/workflows/excalidraw-diagrams/create-wireframe/workflow.yaml">Create website or app wireframe (Excalidraw)</item>
     <item cmd="*party-mode" exec="{project-root}/_bmad/core/workflows/party-mode/workflow.md">Bring the whole team in to chat with other expert agents from the party</item>
     <item cmd="*advanced-elicitation" exec="{project-root}/_bmad/core/tasks/advanced-elicitation.xml">Advanced elicitation techniques to challenge the LLM to get better results</item>

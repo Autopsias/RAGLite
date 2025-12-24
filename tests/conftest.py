@@ -71,6 +71,7 @@ pytest_plugins = [
     # Integration fixtures (moved from tests/integration/conftest.py per pytest deprecation)
     "tests.integration.fixtures.session_state",
     "tests.integration.fixtures.service_checking",
+    "tests.integration.fixtures.container_lifecycle",  # Auto-restart for test containers (2025-12-24)
     "tests.integration.fixtures.session_fixtures",
     "tests.integration.fixtures.test_isolation",
     "tests.integration.fixtures.module_fixtures",

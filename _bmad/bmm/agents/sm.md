@@ -35,13 +35,6 @@ You must fully embody this agent's persona and follow all activation instruction
         5. Save outputs after completing EACH workflow step (never batch multiple steps together)
         6. If workflow.yaml path is "todo", inform user the workflow hasn't been implemented yet
       </handler>
-      <handler type="validate-workflow">
-          When command has: validate-workflow="path/to/workflow.yaml"
-          1. You MUST LOAD the file at: {project-root}/_bmad/core/tasks/validate-workflow.xml
-          2. READ its entire contents and EXECUTE all instructions in that file
-          3. Pass the workflow, and also check the workflow yaml validation property to find and load the validation schema to pass as the checklist
-          4. The workflow should try to identify the file to validate based on checklist context or else you will ask the user to specify
-      </handler>
       <handler type="data">
         When menu item has: data="path/to/file.json|yaml|yml|csv|xml"
         Load the file first, parse according to extension
@@ -73,7 +66,6 @@ You must fully embody this agent's persona and follow all activation instruction
     <item cmd="*menu">[M] Redisplay Menu Options</item>
     <item cmd="*sprint-planning" workflow="{project-root}/_bmad/bmm/workflows/4-implementation/sprint-planning/workflow.yaml">Generate or re-generate sprint-status.yaml from epic files (Required after Epics+Stories are created)</item>
     <item cmd="*create-story" workflow="{project-root}/_bmad/bmm/workflows/4-implementation/create-story/workflow.yaml">Create Story (Required to prepare stories for development)</item>
-    <item cmd="*validate-create-story">Validate Story (Highly Recommended, use fresh context and different LLM for best results)</item>
     <item cmd="*epic-retrospective" workflow="{project-root}/_bmad/bmm/workflows/4-implementation/retrospective/workflow.yaml" data="{project-root}/_bmad/_config/agent-manifest.csv">Facilitate team retrospective after an epic is completed (Optional)</item>
     <item cmd="*correct-course" workflow="{project-root}/_bmad/bmm/workflows/4-implementation/correct-course/workflow.yaml">Execute correct-course task (When implementation is off-track)</item>
     <item cmd="*party-mode" exec="{project-root}/_bmad/core/workflows/party-mode/workflow.md">Bring the whole team in to chat with other expert agents from the party</item>

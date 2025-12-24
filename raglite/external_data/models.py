@@ -613,3 +613,54 @@ class RetrainResult(BaseModel):
     metrics: dict[str, float | str] | None = Field(default=None, description="Training metrics")
     duration_seconds: float = Field(description="Training duration")
     errors: list[str] = Field(default_factory=list, description="Errors encountered")
+
+
+# =============================================================================
+# Story 7b-7: Demand-Side Regressors for Cement Industry
+# =============================================================================
+
+
+class EurostatHousingTransactions(BaseModel):
+    """Housing market activity data from Eurostat prc_hpi_q.
+
+    Story 7b-7 AC1: Demand-side regressor for cement industry forecasting.
+
+    Dataset: prc_hpi_q (House Price Index, quarterly, 2015=100)
+    Source: INE Portugal via Eurostat
+    Coverage: Quarterly, 2005-present for Portugal
+    Frequency: Quarterly (Q1, Q2, Q3, Q4)
+
+    House Price Index is a proxy for housing market activity and cement demand:
+    - Rising prices indicate strong demand -> construction -> cement consumption
+    - 6-12 month lag between price growth and cement demand
+
+    Note: The field is named transaction_count for backward compatibility,
+    but stores index values (typically 150-280 range for Portugal).
+    """
+
+    date: date
+    transaction_count: int = Field(ge=0, description="House Price Index value (2015=100)")
+    country: str = Field(default="PT", description="ISO 2-letter country code")
+    period: str = Field(description="Original period string (e.g., '2024-Q3')")
+
+
+class EurostatDwellingCompletions(BaseModel):
+    """Dwelling completion data from INE Portugal / Eurostat.
+
+    Story 7b-7 AC2: Lagging demand indicator for construction activity.
+
+    Source: INE Portugal (Statistics Portugal)
+    Coverage: Quarterly, 1971-present
+    Frequency: Quarterly
+
+    Dwelling completions are a lagging indicator:
+    - Completions follow permits by 12-24 months
+    - Indicates actual construction activity completion
+    """
+
+    date: date
+    completion_count: int = Field(ge=0, description="Number of dwellings completed in quarter")
+    country: str = Field(default="PT", description="ISO 2-letter country code")
+    dwelling_type: str = Field(
+        default="TOTAL", description="Dwelling type (TOTAL, RES=residential, NRES=non-residential)"
+    )
