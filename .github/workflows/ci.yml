@@ -216,6 +216,11 @@ jobs:
               echo "Found corrupted cache entries, clearing..."
               rm -rf ~/.cache/uv
             fi
+            # Clear builds cache to prevent hatchling corruption
+            if [ -d ~/.cache/uv/builds-v0 ]; then
+              echo "Clearing UV builds cache to prevent hatchling corruption..."
+              rm -rf ~/.cache/uv/builds-v0
+            fi
           fi
 
       - name: Install dependencies with uv
@@ -319,6 +324,11 @@ jobs:
             if [ "$PARTIAL" -gt 0 ]; then
               echo "Found corrupted cache entries, clearing..."
               rm -rf ~/.cache/uv
+            fi
+            # Clear builds cache to prevent hatchling corruption
+            if [ -d ~/.cache/uv/builds-v0 ]; then
+              echo "Clearing UV builds cache to prevent hatchling corruption..."
+              rm -rf ~/.cache/uv/builds-v0
             fi
           fi
 
@@ -463,6 +473,11 @@ jobs:
             if [ "$PARTIAL" -gt 0 ]; then
               echo "Found corrupted cache entries, clearing..."
               rm -rf ~/.cache/uv
+            fi
+            # Clear builds cache to prevent hatchling corruption
+            if [ -d ~/.cache/uv/builds-v0 ]; then
+              echo "Clearing UV builds cache to prevent hatchling corruption..."
+              rm -rf ~/.cache/uv/builds-v0
             fi
           fi
 
@@ -657,6 +672,11 @@ jobs:
             if [ "$PARTIAL" -gt 0 ]; then
               echo "Found corrupted cache entries, clearing..."
               rm -rf ~/.cache/uv
+            fi
+            # Clear builds cache to prevent hatchling corruption
+            if [ -d ~/.cache/uv/builds-v0 ]; then
+              echo "Clearing UV builds cache to prevent hatchling corruption..."
+              rm -rf ~/.cache/uv/builds-v0
             fi
           fi
 
@@ -1043,6 +1063,11 @@ jobs:
               echo "Found corrupted cache entries, clearing..."
               rm -rf ~/.cache/uv
             fi
+            # Clear builds cache to prevent hatchling corruption
+            if [ -d ~/.cache/uv/builds-v0 ]; then
+              echo "Clearing UV builds cache to prevent hatchling corruption..."
+              rm -rf ~/.cache/uv/builds-v0
+            fi
           fi
 
       - name: Install dependencies with uv
@@ -1192,6 +1217,11 @@ jobs:
               echo "Found corrupted cache entries, clearing..."
               rm -rf ~/.cache/uv
             fi
+            # Clear builds cache to prevent hatchling corruption
+            if [ -d ~/.cache/uv/builds-v0 ]; then
+              echo "Clearing UV builds cache to prevent hatchling corruption..."
+              rm -rf ~/.cache/uv/builds-v0
+            fi
           fi
 
       - name: Install dependencies with uv
@@ -1302,6 +1332,11 @@ jobs:
             if [ "$PARTIAL" -gt 0 ]; then
               echo "Found corrupted cache entries, clearing..."
               rm -rf ~/.cache/uv
+            fi
+            # Clear builds cache to prevent hatchling corruption
+            if [ -d ~/.cache/uv/builds-v0 ]; then
+              echo "Clearing UV builds cache to prevent hatchling corruption..."
+              rm -rf ~/.cache/uv/builds-v0
             fi
           fi
 
@@ -1416,6 +1451,11 @@ jobs:
             if [ "$PARTIAL" -gt 0 ]; then
               echo "Found corrupted cache entries, clearing..."
               rm -rf ~/.cache/uv
+            fi
+            # Clear builds cache to prevent hatchling corruption
+            if [ -d ~/.cache/uv/builds-v0 ]; then
+              echo "Clearing UV builds cache to prevent hatchling corruption..."
+              rm -rf ~/.cache/uv/builds-v0
             fi
           fi
 
@@ -1756,6 +1796,11 @@ jobs:
               echo "Found corrupted cache entries, clearing..."
               rm -rf ~/.cache/uv
             fi
+            # Clear builds cache to prevent hatchling corruption
+            if [ -d ~/.cache/uv/builds-v0 ]; then
+              echo "Clearing UV builds cache to prevent hatchling corruption..."
+              rm -rf ~/.cache/uv/builds-v0
+            fi
           fi
 
       - name: Install dependencies with uv
@@ -2028,6 +2073,11 @@ jobs:
             if [ "$PARTIAL" -gt 0 ]; then
               echo "Found corrupted cache entries, clearing..."
               rm -rf ~/.cache/uv
+            fi
+            # Clear builds cache to prevent hatchling corruption
+            if [ -d ~/.cache/uv/builds-v0 ]; then
+              echo "Clearing UV builds cache to prevent hatchling corruption..."
+              rm -rf ~/.cache/uv/builds-v0
             fi
           fi
 
