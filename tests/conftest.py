@@ -147,6 +147,56 @@ def configure_test_environment():
             del os.environ[key]
 
 
+@pytest.fixture(scope="session", autouse=True)
+def disable_joblib_parallel_processing():
+    """Disable parallel processing in joblib to prevent resource leaks.
+
+    CRITICAL FIX (2025-12-24): Prevents SIGKILL during pytest shutdown.
+
+    Issue: Integration tests use forecasting models (statsmodels, pmdarima) which
+    use joblib for parallel processing. Joblib creates multiprocessing semaphores
+    and shared memory that aren't properly cleaned up during pytest shutdown,
+    causing Python's multiprocessing resource_tracker to issue warnings and
+    trigger SIGKILL.
+
+    Fix: Configure joblib to use sequential backend (no multiprocessing) during
+    tests. This prevents resource leaks while maintaining test functionality.
+
+    Resource leak warnings before fix:
+    - UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects
+    - UserWarning: resource_tracker: There appear to be 6 leaked semlock objects
+    - UserWarning: resource_tracker: There appear to be 2 leaked folder objects
+
+    Impact: Tests run successfully (159 passed) but pytest process was killed
+    with SIGKILL during cleanup phase.
+
+    References:
+    - https://github.com/joblib/joblib/issues/945
+    - https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
+    """
+    # Configure environment variable to disable joblib parallel processing
+    # This affects statsmodels, scikit-learn, and pmdarima which use joblib internally
+    os.environ["JOBLIB_START_METHOD"] = "threading"  # Use threading instead of multiprocessing
+    os.environ["LOKY_MAX_CPU_COUNT"] = "1"  # Limit loky (joblib backend) to single CPU
+
+    logger.info("Joblib parallel processing disabled: using threading backend")
+    logger.info("This prevents multiprocessing resource leaks during test cleanup")
+
+    yield
+
+    # Cleanup: restore to defaults
+    if "JOBLIB_START_METHOD" in os.environ:
+        del os.environ["JOBLIB_START_METHOD"]
+    if "LOKY_MAX_CPU_COUNT" in os.environ:
+        del os.environ["LOKY_MAX_CPU_COUNT"]
+
+    # Force garbage collection to cleanup any remaining resources
+    import gc
+
+    gc.collect()
+    logger.info("Joblib configuration cleaned up")
+
+
 def _timed_fixture(fixture_name: str, func, start_time: float) -> None:
     """Log fixture execution time (Phase 2.4 instrumentation).
 
