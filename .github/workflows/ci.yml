@@ -491,12 +491,12 @@ jobs:
           echo "========================================="
           echo "CI MODE: Unit Tests with Coverage"
           echo "- Running ALL unit tests (including slow)"
-          echo "- Parallel workers: 4 (safe parallelism, no shared state)"
+          echo "- Parallel workers: 2 (reduced for memory stability)"
           echo "- Target: <10 minutes"
           echo "- PYTHONPATH: ${PYTHONPATH}"
           echo "========================================="
           pytest tests/unit/ \
-            -n 4 \
+            -n 2 \
             --dist loadfile \
             -m "" \
             --cov=raglite \
