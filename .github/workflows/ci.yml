@@ -1708,7 +1708,7 @@ jobs:
   test-count-validation:
     name: "🔢 NFR: Test Discovery Validation"
     runs-on: [self-hosted, raglite]
-    timeout-minutes: 5
+    timeout-minutes: 10  # Increased from 5 - pytest --collect-only with ML dependencies takes ~5 mins
     needs: [docker-health-check, test-unit]
 
     steps:
