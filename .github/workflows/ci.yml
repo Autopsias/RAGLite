@@ -592,6 +592,55 @@ jobs:
               print(f'✅ All {count} integration test files have proper isolation markers')
           "
 
+      - name: 🔍 Pre-Test Diagnostics
+        run: |
+          echo "========================================="
+          echo "Pre-Test System Diagnostics"
+          echo "========================================="
+
+          echo ""
+          echo "=== System Resources ==="
+          if command -v vm_stat &> /dev/null; then
+            vm_stat | head -10
+            echo ""
+            echo "Memory Summary:"
+            PAGE_SIZE=$(sysctl -n hw.pagesize 2>/dev/null || echo 4096)
+            FREE_PAGES=$(vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.')
+            INACTIVE_PAGES=$(vm_stat | grep "Pages inactive" | awk '{print $3}' | tr -d '.')
+            WIRED_PAGES=$(vm_stat | grep "Pages wired down" | awk '{print $4}' | tr -d '.')
+            ACTIVE_PAGES=$(vm_stat | grep "Pages active" | awk '{print $3}' | tr -d '.')
+            FREE_MB=$((FREE_PAGES * PAGE_SIZE / 1024 / 1024))
+            INACTIVE_MB=$((INACTIVE_PAGES * PAGE_SIZE / 1024 / 1024))
+            AVAILABLE_MB=$((FREE_MB + INACTIVE_MB))
+            ACTIVE_MB=$((ACTIVE_PAGES * PAGE_SIZE / 1024 / 1024))
+            WIRED_MB=$((WIRED_PAGES * PAGE_SIZE / 1024 / 1024))
+            echo "  Available: ${AVAILABLE_MB}MB"
+            echo "  Active: ${ACTIVE_MB}MB"
+            echo "  Wired: ${WIRED_MB}MB"
+          fi
+
+          echo ""
+          echo "=== Running Docker Containers ==="
+          docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep raglite || echo "No raglite containers found"
+
+          echo ""
+          echo "=== Port Usage (Test Ports) ==="
+          echo "Qdrant (6335):"
+          lsof -i:6335 || echo "  Port 6335 not in use"
+          echo ""
+          echo "PostgreSQL (5433):"
+          lsof -i:5433 || echo "  Port 5433 not in use"
+
+          echo ""
+          echo "=== Process Tree ==="
+          ps aux | grep -E "(docker|pytest|python)" | grep -v grep | head -20
+
+          echo ""
+          echo "=== Disk Space ==="
+          df -h | grep -E "(Filesystem|/Users)"
+
+          echo "========================================="
+
       - name: Run integration tests (CI fast mode)
         # NOTE: Environment variables are now set at job level (see test-integration.env)
         # This ensures ALL steps use consistent database configuration
