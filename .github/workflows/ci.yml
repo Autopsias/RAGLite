@@ -841,37 +841,10 @@ jobs:
 
           echo "✅ PostgreSQL TEST container started (bypassed Docker Compose)"
 
-          # CRITICAL FIX: Wait for PostgreSQL to FULLY initialize (2 "ready" messages)
-          # PostgreSQL emits "ready to accept connections" TWICE during full initialization:
-          #   1st: After recovering WAL (NOT ready for queries yet)
-          #   2nd: After completing startup sequence (fully ready)
-          # Using docker logs to detect BOTH ready messages
-          echo "Waiting for PostgreSQL to fully initialize..."
-          MAX_INIT_WAIT=90  # Increased from 60s
-          INIT_COUNT=0
-
-          while [ $INIT_COUNT -lt $MAX_INIT_WAIT ]; do
-            # Count occurrences of "ready" message (need 2 for full init)
-            READY_COUNT=$(docker logs raglite-postgresql-test 2>&1 | grep -c "database system is ready to accept connections" || echo "0")
-
-            if [ "$READY_COUNT" -ge 2 ]; then
-              echo "✅ PostgreSQL fully initialized (${INIT_COUNT}s, ${READY_COUNT} ready messages)"
-              sleep 3  # Extra buffer after full init
-              break
-            fi
-
-            INIT_COUNT=$((INIT_COUNT + 1))
-            if [ $((INIT_COUNT % 10)) -eq 0 ]; then
-              echo "⏳ Waiting for full initialization... (${INIT_COUNT}s/${MAX_INIT_WAIT}s, ${READY_COUNT}/2 ready)"
-            fi
-            sleep 1
-          done
-
-          if [ $INIT_COUNT -eq $MAX_INIT_WAIT ]; then
-            echo "❌ PostgreSQL did not fully initialize after ${MAX_INIT_WAIT}s"
-            docker logs raglite-postgresql-test --tail 50
-            exit 1
-          fi
+          # PRIORITY 1 FIX: Use pg_isready instead of log parsing
+          # This is more reliable than parsing logs and directly checks database availability
+          echo "Waiting for PostgreSQL to be ready..."
+          ./scripts/ci/wait-for-service.sh postgresql raglite-postgresql-test 90
 
           # Run database setup script to create users/databases
           ./scripts/ci-database-setup.sh
@@ -1922,53 +1895,12 @@ jobs:
               postgres:16
           fi
 
-          # CRITICAL FIX: Wait for PostgreSQL to FULLY initialize (2 "ready" messages)
-          # PostgreSQL emits "ready to accept connections" TWICE during full initialization
-          echo "Waiting for PostgreSQL initialization..."
-          MAX_INIT_WAIT=90  # Increased from 60s
-          INIT_COUNT=0
+          # PRIORITY 1 FIX: Use pg_isready instead of log parsing
+          # This is more reliable than parsing logs and directly checks database availability
+          echo "Waiting for PostgreSQL to be ready..."
+          ./scripts/ci/wait-for-service.sh postgresql $CONTAINER_NAME 90
 
-          while [ $INIT_COUNT -lt $MAX_INIT_WAIT ]; do
-            # Count occurrences of "ready" message (need 2 for full init)
-            READY_COUNT=$(docker logs $CONTAINER_NAME 2>&1 | grep -c "database system is ready to accept connections" || echo "0")
-
-            if [ "$READY_COUNT" -ge 2 ]; then
-              echo "✅ PostgreSQL fully initialized (${INIT_COUNT}s, ${READY_COUNT} ready messages)"
-              sleep 3  # Extra buffer after full init
-              break
-            fi
-
-            INIT_COUNT=$((INIT_COUNT + 1))
-            if [ $((INIT_COUNT % 10)) -eq 0 ]; then
-              echo "⏳ Waiting for full initialization... (${INIT_COUNT}s/${MAX_INIT_WAIT}s, ${READY_COUNT}/2 ready)"
-            fi
-            sleep 1
-          done
-
-          if [ $INIT_COUNT -eq $MAX_INIT_WAIT ]; then
-            echo "❌ PostgreSQL did not initialize after ${MAX_INIT_WAIT}s"
-            docker logs $CONTAINER_NAME --tail 50
-            exit 1
-          fi
-
-          # Wait for PostgreSQL to be ready with enhanced error handling
-          MAX_RETRIES=30  # Reduced since we already waited for initialization
-          RETRY_COUNT=0
-          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            if docker exec $CONTAINER_NAME psql -U raglite_ci -d raglite_ci -c "SELECT 1" > /dev/null 2>&1; then
-              echo "✅ PostgreSQL is available at localhost:$CONTAINER_PORT"
-              exit 0
-            fi
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            if [ $((RETRY_COUNT % 5)) -eq 0 ]; then
-              echo "Waiting for PostgreSQL... (attempt $RETRY_COUNT/$MAX_RETRIES)"
-            fi
-            sleep 1
-          done
-          echo "❌ PostgreSQL not available after ${MAX_RETRIES}s"
-          echo "Container logs for debugging:"
-          docker logs $CONTAINER_NAME --tail 20 || true
-          exit 1
+          echo "✅ PostgreSQL is available at localhost:$CONTAINER_PORT"
 
       - name: Run agentic workflow test suite
         env:
@@ -2456,34 +2388,10 @@ jobs:
               postgres:16
           fi
 
-          # CRITICAL FIX: Wait for PostgreSQL to FULLY initialize (2 "ready" messages)
-          # PostgreSQL emits "ready to accept connections" TWICE during full initialization
-          echo "Waiting for PostgreSQL initialization..."
-          MAX_INIT_WAIT=90  # Increased from 60s
-          INIT_COUNT=0
-
-          while [ $INIT_COUNT -lt $MAX_INIT_WAIT ]; do
-            # Count occurrences of "ready" message (need 2 for full init)
-            READY_COUNT=$(docker logs $CONTAINER_NAME 2>&1 | grep -c "database system is ready to accept connections" || echo "0")
-
-            if [ "$READY_COUNT" -ge 2 ]; then
-              echo "✅ PostgreSQL fully initialized (${INIT_COUNT}s, ${READY_COUNT} ready messages)"
-              sleep 3  # Extra buffer after full init
-              break
-            fi
-
-            INIT_COUNT=$((INIT_COUNT + 1))
-            if [ $((INIT_COUNT % 10)) -eq 0 ]; then
-              echo "⏳ Waiting for full initialization... (${INIT_COUNT}s/${MAX_INIT_WAIT}s, ${READY_COUNT}/2 ready)"
-            fi
-            sleep 1
-          done
-
-          if [ $INIT_COUNT -eq $MAX_INIT_WAIT ]; then
-            echo "❌ PostgreSQL did not initialize after ${MAX_INIT_WAIT}s"
-            docker logs $CONTAINER_NAME --tail 50
-            exit 1
-          fi
+          # PRIORITY 1 FIX: Use pg_isready instead of log parsing
+          # This is more reliable than parsing logs and directly checks database availability
+          echo "Waiting for PostgreSQL to be ready..."
+          ./scripts/ci/wait-for-service.sh postgresql $CONTAINER_NAME 90
 
           echo "✅ PostgreSQL container ready"
 
@@ -2498,19 +2406,57 @@ jobs:
           set -e
           set -o pipefail
 
+          # PRIORITY 2 FIX: Verify services are ready BEFORE test collection
+          # Test collection imports conftest.py which connects to databases
+          echo "Verifying PostgreSQL is ready..."
+          until docker exec $CONTAINER_NAME pg_isready -h localhost -p 5432 -U raglite 2>/dev/null; do
+            echo "⏳ Waiting for PostgreSQL..."
+            sleep 2
+          done
+
+          echo "Verifying Qdrant is ready..."
+          QDRANT_PORT=$(docker port raglite-qdrant-discovery 6333/tcp 2>/dev/null | cut -d: -f2 || echo "6339")
+          until curl -sf "http://localhost:${QDRANT_PORT}/healthz" >/dev/null 2>&1; do
+            echo "⏳ Waiting for Qdrant..."
+            sleep 2
+          done
+
+          echo "✅ All services ready for test collection"
+          echo ""
+
           # Count total tests (including slow) - SHOW ERRORS for debugging
           # Updated 2025-12-18: Account for benchmark parametric tests (3000+ permutations)
           EXPECTED_MIN_TESTS=300
           EXPECTED_MAX_TESTS=5000
           echo "Collecting all tests (including slow)..."
 
-          # Capture full output for debugging
-          COLLECT_OUTPUT=$(python -m pytest --collect-only -q tests/ -m "" 2>&1 | tee /tmp/pytest-collect-total.log || true)
-          TOTAL_TESTS=$(echo "$COLLECT_OUTPUT" | tail -1 | grep -oE '[0-9]+' | head -1 || echo "")
+          # PRIORITY 3 FIX: Capture pytest exit code and fail fast on collection errors
+          python -m pytest --collect-only -q tests/ -m "" 2>&1 | tee /tmp/pytest-collect-total.log
+          PYTEST_EXIT=$?
 
-          # If collection failed or returned empty, show error and exit
+          # Exit codes: 0=success, 5=no tests collected, anything else=error
+          if [ $PYTEST_EXIT -ne 0 ] && [ $PYTEST_EXIT -ne 5 ]; then
+            echo "❌ PYTEST COLLECTION FAILED with exit code $PYTEST_EXIT"
+            echo ""
+            echo "Full pytest output:"
+            cat /tmp/pytest-collect-total.log
+            echo ""
+            echo "Debugging info:"
+            echo "  Python version: $(python --version)"
+            echo "  Pytest version: $(pytest --version)"
+            echo "  Working directory: $(pwd)"
+            echo "  Test directory exists: $([ -d tests ] && echo 'YES' || echo 'NO')"
+            echo "  PostgreSQL ready: $(docker exec $CONTAINER_NAME pg_isready -h localhost -p 5432 -U raglite 2>&1 || echo 'FAILED')"
+            echo "  Qdrant ready: $(curl -sf http://localhost:${QDRANT_PORT}/healthz && echo 'OK' || echo 'FAILED')"
+            exit 1
+          fi
+
+          # Extract test count from last line
+          TOTAL_TESTS=$(tail -1 /tmp/pytest-collect-total.log | grep -oE '[0-9]+' | head -1 || echo "")
+
+          # If collection succeeded but count is empty, something is wrong
           if [ -z "$TOTAL_TESTS" ]; then
-            echo "❌ PYTEST TEST COLLECTION FAILED!"
+            echo "❌ PYTEST COLLECTION SUCCEEDED BUT RETURNED NO TEST COUNT!"
             echo ""
             echo "Pytest output:"
             cat /tmp/pytest-collect-total.log
@@ -2750,34 +2696,10 @@ jobs:
               postgres:16
           fi
 
-          # CRITICAL FIX: Wait for PostgreSQL to FULLY initialize (2 "ready" messages)
-          # PostgreSQL emits "ready to accept connections" TWICE during full initialization
-          echo "Waiting for PostgreSQL initialization..."
-          MAX_INIT_WAIT=90  # Increased from 60s
-          INIT_COUNT=0
-
-          while [ $INIT_COUNT -lt $MAX_INIT_WAIT ]; do
-            # Count occurrences of "ready" message (need 2 for full init)
-            READY_COUNT=$(docker logs $CONTAINER_NAME 2>&1 | grep -c "database system is ready to accept connections" || echo "0")
-
-            if [ "$READY_COUNT" -ge 2 ]; then
-              echo "✅ PostgreSQL fully initialized (${INIT_COUNT}s, ${READY_COUNT} ready messages)"
-              sleep 3  # Extra buffer after full init
-              break
-            fi
-
-            INIT_COUNT=$((INIT_COUNT + 1))
-            if [ $((INIT_COUNT % 10)) -eq 0 ]; then
-              echo "⏳ Waiting for full initialization... (${INIT_COUNT}s/${MAX_INIT_WAIT}s, ${READY_COUNT}/2 ready)"
-            fi
-            sleep 1
-          done
-
-          if [ $INIT_COUNT -eq $MAX_INIT_WAIT ]; then
-            echo "❌ PostgreSQL did not initialize after ${MAX_INIT_WAIT}s"
-            docker logs $CONTAINER_NAME --tail 50
-            exit 1
-          fi
+          # PRIORITY 1 FIX: Use pg_isready instead of log parsing
+          # This is more reliable than parsing logs and directly checks database availability
+          echo "Waiting for PostgreSQL to be ready..."
+          ./scripts/ci/wait-for-service.sh postgresql $CONTAINER_NAME 90
 
           echo "✅ PostgreSQL container ready"
 
