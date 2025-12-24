@@ -16,7 +16,7 @@ declare -A QDRANT_PORTS=(
     ["test"]="6335"
     ["agentic"]="6337"
     ["discovery"]="6339"
-    ["burnin"]="6341"
+    ["burnin"]="6340"
 )
 
 # PostgreSQL ports (maps internal 5432 to external port)
@@ -208,7 +208,7 @@ Variants:
   test       - Unit/integration tests (ports 6335/5433)
   agentic    - Agentic workflow tests (ports 6337/5438)
   discovery  - Discovery tests (ports 6339/5434)
-  burnin     - Burn-in tests (ports 6341/5435)
+  burnin     - Burn-in tests (ports 6340/5435)
 
 Examples:
   # Export ports for test variant

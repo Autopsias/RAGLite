@@ -37,7 +37,7 @@ VARIANT (required):
   test       - Unit/integration tests (ports 6335/5433)
   agentic    - Agentic workflow tests (ports 6337/5438)
   discovery  - Discovery tests (ports 6339/5434)
-  burnin     - Burn-in tests (ports 6341/5435)
+  burnin     - Burn-in tests (ports 6340/5435)
 
 OPTIONS:
   --qdrant-only       Start only Qdrant container
