@@ -61,7 +61,7 @@ jobs:
         id: check-docker
         run: |
           echo "========================================="
-          echo "Docker Daemon Health Check"
+          echo "Docker Daemon Health Check (Colima)"
           echo "========================================="
 
           # Check if Docker command exists
@@ -71,9 +71,18 @@ jobs:
             exit 1
           fi
 
-          # Check if Docker daemon is running
+          # Check if Colima is installed
+          if ! command -v colima &> /dev/null; then
+            echo "❌ Colima not found - install with: brew install colima"
+            echo "available=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Check if Docker daemon is running (via Colima)
           if docker info &> /dev/null; then
-            echo "✅ Docker daemon is already running"
+            echo "✅ Docker daemon is running (via Colima)"
+            colima status 2>/dev/null || true
+            echo ""
             docker version
             echo ""
             echo "Docker context:"
@@ -81,17 +90,18 @@ jobs:
             echo ""
             echo "available=true" >> $GITHUB_OUTPUT
           else
-            echo "⚠️ Docker daemon is not running - attempting auto-restart..."
+            echo "⚠️ Docker daemon is not running - starting Colima..."
             echo ""
 
-            # SELF-HEALING: Attempt to start Docker Desktop
-            echo "Starting Docker Desktop..."
-            open -a Docker
+            # SELF-HEALING: Start Colima (replaces Docker Desktop)
+            # Colima is more stable for CI workloads than Docker Desktop
+            echo "Starting Colima..."
+            colima start --cpu 4 --memory 8 --disk 100 --runtime docker 2>&1 || true
 
-            # Wait for Docker daemon to become available (max 60 seconds)
+            # Wait for Docker daemon to become available (max 90 seconds)
             echo "Waiting for Docker daemon to start..."
-            MAX_WAIT=60
-            WAIT_INTERVAL=2
+            MAX_WAIT=90
+            WAIT_INTERVAL=3
             ELAPSED=0
 
             while [ $ELAPSED -lt $MAX_WAIT ]; do
@@ -100,7 +110,8 @@ jobs:
 
               if docker info &> /dev/null 2>&1; then
                 echo ""
-                echo "✅ Docker daemon started successfully (${ELAPSED}s)"
+                echo "✅ Docker daemon started via Colima (${ELAPSED}s)"
+                colima status 2>/dev/null || true
                 docker version
                 echo ""
                 echo "Docker context:"
@@ -113,16 +124,18 @@ jobs:
               echo -n "."
             done
 
-            # Timeout - Docker didn't start
+            # Timeout - Colima didn't start
             echo ""
-            echo "❌ Docker daemon failed to start after ${MAX_WAIT}s"
+            echo "❌ Colima failed to start after ${MAX_WAIT}s"
+            echo ""
+            colima status 2>/dev/null || echo "Colima status unavailable"
             echo ""
             echo "Docker context:"
             docker context ls || true
             echo ""
             echo "Manual intervention required:"
-            echo "  1. Check Docker Desktop application status"
-            echo "  2. Restart Docker Desktop manually: open -a Docker"
+            echo "  1. Check Colima status: colima status"
+            echo "  2. Restart Colima manually: colima start"
             echo "  3. Check system resources (CPU, memory, disk)"
             echo ""
             echo "available=false" >> $GITHUB_OUTPUT
