@@ -236,9 +236,9 @@ start_postgresql() {
         --label "com.raglite.variant=${VARIANT}" \
         --label "com.raglite.type=test" \
         -p "${POSTGRES_PORT}:5432" \
-        -e POSTGRES_USER=raglite \
-        -e POSTGRES_PASSWORD=raglite_test_password \
-        -e POSTGRES_DB=raglite \
+        -e POSTGRES_USER=raglite_ci \
+        -e POSTGRES_PASSWORD=raglite_ci \
+        -e POSTGRES_DB=raglite_ci \
         -v "$(pwd)/${storage_dir}:/var/lib/postgresql/data" \
         --memory="${POSTGRES_MEMORY}" \
         --shm-size="${POSTGRES_SHM}" \
@@ -253,7 +253,7 @@ start_postgresql() {
 
     echo -n "⏳ Waiting for PostgreSQL to be ready"
     while [[ $elapsed -lt $max_wait ]]; do
-        if docker exec "$POSTGRES_CONTAINER" pg_isready -U raglite > /dev/null 2>&1; then
+        if docker exec "$POSTGRES_CONTAINER" pg_isready -U raglite_ci > /dev/null 2>&1; then
             echo ""
             echo "✅ PostgreSQL ready (${elapsed}s)"
             return 0
