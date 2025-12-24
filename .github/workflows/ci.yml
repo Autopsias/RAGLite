@@ -1832,6 +1832,8 @@ jobs:
       - name: Validate test count
         run: |
           source ci-venv/bin/activate
+          source .ci-env  # Load container names and ports from previous step
+
           echo "========================================="
           echo "Validating test discovery..."
           echo "========================================="
@@ -1842,10 +1844,18 @@ jobs:
 
           # PRIORITY 2 FIX: Verify services are ready BEFORE test collection
           # Test collection imports conftest.py which connects to databases
-          echo "Verifying PostgreSQL is ready..."
-          until docker exec $CONTAINER_NAME pg_isready -h localhost -p 5432 -U raglite 2>/dev/null; do
+          echo "Verifying PostgreSQL is ready (container: $POSTGRES_CONTAINER)..."
+          TIMEOUT=60
+          ELAPSED=0
+          until docker exec $POSTGRES_CONTAINER pg_isready -h localhost -p 5432 -U raglite_ci 2>/dev/null; do
+            if [ $ELAPSED -ge $TIMEOUT ]; then
+              echo "❌ PostgreSQL failed to start within ${TIMEOUT}s"
+              docker ps -a --filter "name=raglite-postgresql" --format "table {{.Names}}\t{{.Status}}"
+              exit 1
+            fi
             echo "⏳ Waiting for PostgreSQL..."
             sleep 2
+            ELAPSED=$((ELAPSED + 2))
           done
 
           echo "Verifying Qdrant is ready..."
@@ -1880,7 +1890,7 @@ jobs:
             echo "  Pytest version: $(pytest --version)"
             echo "  Working directory: $(pwd)"
             echo "  Test directory exists: $([ -d tests ] && echo 'YES' || echo 'NO')"
-            echo "  PostgreSQL ready: $(docker exec $CONTAINER_NAME pg_isready -h localhost -p 5432 -U raglite 2>&1 || echo 'FAILED')"
+            echo "  PostgreSQL ready: $(docker exec $POSTGRES_CONTAINER pg_isready -h localhost -p 5432 -U raglite_ci 2>&1 || echo 'FAILED')"
             echo "  Qdrant ready: $(curl -sf http://localhost:${QDRANT_PORT}/healthz && echo 'OK' || echo 'FAILED')"
             exit 1
           fi
