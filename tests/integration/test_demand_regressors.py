@@ -21,6 +21,7 @@ import pytest
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.external_api,  # Tests hit real external APIs
+    pytest.mark.preserve_collection,  # Read-only tests, no DB modifications
 ]
 
 
