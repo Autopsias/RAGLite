@@ -504,18 +504,17 @@ jobs:
           export PYTHONPATH="${PWD}:${PWD}/scripts:${PYTHONPATH}"
 
           echo "========================================="
-          echo "CI MODE: Unit Tests with Coverage"
+          echo "CI MODE: Unit Tests (No Coverage)"
           echo "- Running ALL unit tests (including slow)"
           echo "- Serial execution (memory-safe for self-hosted runners)"
+          echo "- Coverage DISABLED to prevent OOM on self-hosted runners"
           echo "- Target: <15 minutes"
           echo "- PYTHONPATH: ${PYTHONPATH}"
           echo "========================================="
-          # Serial execution without parallelism - prevents OOM on resource-constrained runners
-          # Coverage with minimal reports to reduce memory footprint
+          # TEMPORARY: Run without coverage to diagnose OOM issues
+          # Coverage instrumentation adds significant memory overhead
           pytest tests/unit/ \
             -m "" \
-            --cov=raglite \
-            --cov-report=xml \
             --junitxml=pytest-unit-report.xml \
             -v
 
