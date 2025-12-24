@@ -410,16 +410,80 @@ When reporting a CI issue:
 
 ## Document Versions
 
-| File | Version | Last Updated | Status |
-|------|---------|--------------|--------|
-| troubleshooting-runbook.md | 1.0 | 2025-12-24 | Stable |
-| infrastructure-architecture.md | 1.0 | 2025-12-24 | Stable |
-| lessons-learned.md | 1.0 | 2025-12-24 | Stable |
-| README.md (this file) | 1.0 | 2025-12-24 | Stable |
+| File | Version | Last Updated | Status | Purpose |
+|------|---------|--------------|--------|---------|
+| troubleshooting-runbook.md | 1.0 | 2025-12-24 | Stable | Quick fix reference for 12+ failure categories |
+| infrastructure-architecture.md | 1.0 | 2025-12-24 | Stable | System design, container naming, port allocation |
+| lessons-learned.md | 1.0 | 2025-12-24 | Stable | Root cause analyses, strategic framework |
+| STRATEGY.md | 1.0 | 2025-12-24 | Stable | Memory architecture, CI strategy decisions |
+| failure-patterns.md | 1.0 | 2025-12-24 | Stable | 6 major failure patterns with Five Whys analysis |
+| prevention-rules.md | 1.0 | 2025-12-24 | Stable | 6 core + 15+ specific prevention rules |
+| success-metrics.md | 1.0 | 2025-12-24 | Stable | Improvement tracking, metrics over time |
+| README.md (this file) | 1.1 | 2025-12-24 | Stable | Navigation hub for all CI documentation |
 
 ---
 
-**Documentation Hub Version:** 1.0
-**Coverage:** 12 failure categories, 15+ root causes, 99%+ reliability
+## Document Series Map
+
+### Core Troubleshooting (Use When CI Fails)
+1. Start: **troubleshooting-runbook.md** (Quick Reference Table)
+2. Find: Error message in table
+3. Go to: Category section for detailed solution
+
+### Understanding Architecture (Use When Planning Changes)
+1. Start: **infrastructure-architecture.md** (Executive Summary)
+2. Read: Relevant section (ports, containers, health checks)
+3. Reference: Job dependency graph for timing
+
+### Learning Why Things Broke (Use When Preventing Recurrence)
+1. Start: **failure-patterns.md** (Pattern Summary Table)
+2. Understand: Root Cause (Five Whys) section
+3. Apply: Prevention Rules from that pattern
+
+### Strategic Decisions (Use When Adding Dependencies)
+1. Start: **STRATEGY.md** (Executive Summary)
+2. Review: Memory Budget Breakdown
+3. Check: Prevention Rules → Rule 1.1 (memory profiling)
+
+### Prevention Rules (Use During Code Review)
+1. Start: **prevention-rules.md** (Core Rules)
+2. Check: Prevention Rules Checklist against job
+3. Verify: All 6 core rules implemented
+
+### Success Metrics (Use for Status Reporting)
+1. Start: **success-metrics.md** (Executive Summary)
+2. Review: Current metrics and trends
+3. Track: Weekly/monthly improvement
+
+### Lessons Learned (Use for Training & Architecture Reviews)
+1. Start: **lessons-learned.md** (Three Phases of Maturity)
+2. Study: What Didn't Work section
+3. Apply: Prevention Rules from solutions
+
+---
+
+## Complete Feature Matrix
+
+| Feature | troubleshooting | architecture | lessons-learned | STRATEGY | failure-patterns | prevention-rules | success-metrics |
+|---------|---|---|---|---|---|---|---|
+| **Quick Reference Table** | ✓ | | | | ✓ | ✓ | ✓ |
+| **12+ Failure Categories** | ✓ | | ✓ | | ✓ | | |
+| **Root Cause Analysis (5W)** | ✓ | | ✓ | | ✓ | ✓ | |
+| **Step-by-Step Solutions** | ✓ | | | | ✓ | | |
+| **Prevention Rules** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Architecture Decisions** | | ✓ | ✓ | ✓ | | | |
+| **Container Strategy** | | ✓ | | ✓ | | | |
+| **Port Allocation** | | ✓ | | ✓ | | | |
+| **Health Checks** | | ✓ | | ✓ | | | |
+| **Memory Management** | | | | ✓ | | ✓ | |
+| **Performance Metrics** | | | | ✓ | | | ✓ |
+| **Improvement Tracking** | | | | | | | ✓ |
+| **Team Productivity** | | | | | | | ✓ |
+
+---
+
+**Documentation Hub Version:** 1.1
+**Coverage:** 12 failure categories, 6 major patterns, 21+ prevention rules, memory architecture
+**Total Documents:** 7 comprehensive guides
 **Last Validation:** 2025-12-24
-**Next Review:** 2025-01-24 (quarterly)
+**Next Review:** 2026-01-24 (monthly review), 2026-03-24 (quarterly deep dive)

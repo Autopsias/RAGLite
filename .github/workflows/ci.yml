@@ -426,6 +426,8 @@ jobs:
     name: "🧪 Tests: Unit (~200 tests)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 20  # Increased for serial execution (no parallelism to avoid OOM)
+    env:
+      LIGHTWEIGHT_TESTS: "true"  # Mock heavy ML dependencies to prevent OOM on CI runners
 
     steps:
       - name: Checkout code
@@ -496,6 +498,8 @@ jobs:
             pytest-mock>=3.15
 
       - name: Run unit tests with coverage
+        env:
+          LIGHTWEIGHT_TESTS: "true"
         run: |
           source ci-venv/bin/activate
 
@@ -504,37 +508,15 @@ jobs:
           export PYTHONPATH="${PWD}:${PWD}/scripts:${PYTHONPATH}"
 
           echo "========================================="
-          echo "CI MODE: Unit Tests (Batched)"
-          echo "- Running unit tests in memory-safe batches"
-          echo "- Serial execution per batch (prevents OOM on self-hosted runners)"
+          echo "CI MODE: Unit Tests (Lightweight)"
+          echo "- LIGHTWEIGHT_TESTS=true: Heavy ML deps mocked"
+          echo "- Serial execution (prevents OOM on CI runners)"
           echo "- Target: <20 minutes"
           echo "- PYTHONPATH: ${PYTHONPATH}"
           echo "========================================="
 
-          # Run tests in batches to prevent OOM on memory-constrained runners
-          # Each batch runs in a fresh pytest process to release memory
-          FAILED=0
-
-          echo "--- Batch 1: Subdirectory tests ---"
-          for dir in tests/unit/*/; do
-            if [ -d "$dir" ]; then
-              echo "Running tests in: $dir"
-              pytest "$dir" -m "" --junitxml="pytest-unit-$(basename $dir).xml" -v || FAILED=1
-            fi
-          done
-
-          echo "--- Batch 2: Top-level test files ---"
-          pytest tests/unit/test_*.py -m "" --junitxml=pytest-unit-toplevel.xml -v || FAILED=1
-
-          # Combine JUnit reports
-          echo "--- Combining test results ---"
-          cat pytest-unit-*.xml > pytest-unit-report.xml 2>/dev/null || true
-
-          if [ $FAILED -eq 1 ]; then
-            echo "❌ Some unit tests failed"
-            exit 1
-          fi
-          echo "✅ All unit tests passed"
+          # Run all unit tests in one go (lightweight mode prevents OOM)
+          pytest tests/unit/ -m "" --junitxml=pytest-unit-report.xml -v
 
       - name: Enforce coverage threshold (80%)
         run: |
@@ -1291,6 +1273,8 @@ jobs:
     runs-on: [self-hosted, raglite]
     timeout-minutes: 30
     continue-on-error: true  # TEMPORARY: Bypass until Story 6.8 fixes accuracy
+    # OPTIMIZATION: Only run on main branch or with [full-ci] commit message
+    if: github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full-ci]')
     needs: [docker-health-check, test-integration]
     env:
       APP_ENV: test
@@ -1415,6 +1399,8 @@ jobs:
     timeout-minutes: 150  # Increased from 120 to prevent runner communication timeout (30min buffer)
     # OPTIMIZED: Runs in parallel with test-integration (not blocked by it)
     # Has own PostgreSQL container (port 5438) to avoid dependency on integration setup
+    # OPTIMIZATION: Only run on main branch or with [full-ci] commit message
+    if: github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full-ci]')
     needs: [docker-health-check, test-unit]
 
     # FIX: Share concurrency group with E2E to prevent resource competition

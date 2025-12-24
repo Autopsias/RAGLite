@@ -16,12 +16,41 @@ Test Environment Configuration:
 - TESTING=true: Enables test-specific optimizations (connection timeouts)
 - PostgreSQL: raglite_ci database on port 5433
 - Qdrant: _test collection suffix on port 6335
+- LIGHTWEIGHT_TESTS=true: Mock heavy ML dependencies for unit tests (CI mode)
 """
+
+# CRITICAL: CI lightweight mode - mock heavy ML dependencies BEFORE any imports
+# This prevents loading 10-15GB of ML libraries during test collection on CI runners with ~6GB RAM
+import os
+import sys
+from unittest.mock import MagicMock
+
+if os.environ.get("LIGHTWEIGHT_TESTS") == "true":
+    # Mock heavy dependencies before they're imported
+    # These dependencies are only needed for forecasting/insights (not core RAG)
+    heavy_deps = [
+        "prophet",
+        "prophet.serialize",
+        "prophet.diagnostics",
+        "chronos",
+        "chronos_forecasting",
+        "pytorch_forecasting",
+        "pytorch_lightning",
+        "sentence_transformers",
+        "statsmodels",
+        "statsmodels.tsa",
+        "statsmodels.tsa.stattools",
+        "pmdarima",
+        "pmdarima.arima",
+    ]
+    for dep in heavy_deps:
+        if dep not in sys.modules:
+            sys.modules[dep] = MagicMock()
+    print(f"[LIGHTWEIGHT_TESTS] Mocked {len(heavy_deps)} heavy ML dependencies")
 
 # CRITICAL: Set APP_ENV=test BEFORE any raglite imports
 # This ensures the Settings singleton uses test database ports (6335, 5433)
 # Must be at module level before imports to take effect during module initialization
-import os
 
 os.environ["APP_ENV"] = "test"
 os.environ["TESTING"] = "true"
