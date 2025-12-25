@@ -155,10 +155,21 @@ class TestPypdfiumTableAccuracy:
         NFR9 Compliance: ≥97.9% table extraction accuracy (Docling TableFormerMode.ACCURATE)
         """
         # Lazy imports
+        from qdrant_client import QdrantClient
+        from qdrant_client.http.exceptions import UnexpectedResponse
+
         from raglite.retrieval.attribution import generate_citations
         from raglite.retrieval.search import search_documents
+        from raglite.shared.config import settings
         from scripts.accuracy_utils import check_retrieval_accuracy
         from tests.fixtures.table_accuracy_queries import TABLE_ACCURACY_QUERIES
+
+        # Check if Qdrant collection exists before running test
+        try:
+            client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
+            client.get_collection(settings.qdrant_collection_name)
+        except UnexpectedResponse as e:
+            pytest.skip(f"Qdrant collection not available: {e}")
 
         # AC3 Validation: Run 10 ground truth table queries
         correct_retrievals = 0

@@ -43,12 +43,11 @@ poetry.lock
 # Qdrant storage
 qdrant_storage/
 
-# Model cache
-models/
-.cache/
-
-# Keep data/models directory structure
+# Model cache (only in data/ and root, not source code)
+/models/
+data/models/*
 !data/models/.gitkeep
+.cache/
 
 # Claude Code audio files
 .claude/audio/
@@ -89,3 +88,4 @@ data/financial_docs_test_bm25.pkl
 backups/
 validation-*.txt
 lightning_logs/
+.ci-env

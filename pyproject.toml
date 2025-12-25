@@ -57,6 +57,7 @@ dependencies = [
     "pytorch-lightning>=2.0,<3.0",    # Story 6.14: TFT training dependency
     "sqlalchemy>=2.0,<3.0",    # Story 6.2: ORM for external data storage
     "apscheduler>=3.10,<4.0",  # Story 6.5: Automated data refresh scheduler
+    "pmdarima>=2.0,<3.0",      # Story 7.1: Auto-ARIMA model selection
     # TODO Epic 3: AWS Strands agentic framework - uncomment when implementing Story 3.1
     # "strands>=1.15.0,<2.0.0",  # Agentic orchestration (Story 3.1+)
 ]
@@ -153,6 +154,7 @@ exclude = [
     "venv",
 ]
 
+[tool.ruff.lint]
 # Enable specific rule sets
 select = [
     "E",   # pycodestyle errors
@@ -171,7 +173,7 @@ ignore = [
     "C901",  # Too complex (will address in Phase 4 refactoring)
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # Unused imports in __init__.py are OK
 "tests/integration/test_epic2_regression.py" = ["E402"]  # pytestmark before imports
 "tests/integration/test_fixed_chunking.py" = ["E402"]  # pytestmark before imports
@@ -180,6 +182,7 @@ ignore = [
 "raglite/forecasting/hybrid.py" = ["E402"]  # Lazy-loading pattern for Prophet
 "tests/integration/test_anomaly_detection_integration.py" = ["E402"]  # pytestmark before imports
 "scripts/validate-cement-forecasting-12vars.py" = ["I001"]  # Local imports with isort compatibility
+"raglite/shared/models.py" = ["I001"]  # isort prefers separate datetime imports with aliases
 
 # ============================================================================
 # ISORT CONFIGURATION (Import Sorting)
@@ -280,6 +283,8 @@ module = [
     "pytorch_lightning.*",
     "sklearn.*",
     "apscheduler.*",
+    "statsmodels.*",
+    "pmdarima.*",
 ]
 ignore_missing_imports = true
 follow_imports = "skip"
@@ -300,4 +305,10 @@ exclude_dirs = [
     "build/",
     "dist/",
 ]
-skips = ["B101", "B608"]  # Allow assert statements and internal SQL queries
+# Skip common low-severity issues that are intentional in this codebase:
+# B101: assert_used (defensive programming asserts after validation)
+# B110: try_except_pass (intentional fallback behavior)
+# B112: try_except_continue (intentional skip on failure)
+# B310: urllib_urlopen (audited URL open with validation)
+# B608: hardcoded_sql_expressions (parameterized internal queries)
+skips = ["B101", "B110", "B112", "B310", "B608"]

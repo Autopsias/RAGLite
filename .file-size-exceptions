@@ -14,8 +14,8 @@
       "directory": "tests/"
     },
     "raglite/main.py": {
-      "lines": 2998,
-      "reason": "Baseline: existing at time of enforcement",
+      "lines": 200,
+      "reason": "Epic 7 Story 7.4 - MCP module refactoring reduced from 2998 to 200 lines",
       "target_lines": 500,
       "directory": "raglite/"
     },
@@ -472,6 +472,72 @@
     "raglite/forecasting/data_quality/config.py": {
       "lines": 584,
       "reason": "Story 6.29 - Variable quality configs with thresholds (data-driven)",
+      "target_lines": 500,
+      "directory": "raglite/"
+    },
+    "raglite/forecasting/regime_detection.py": {
+      "lines": 600,
+      "reason": "Epic 7 Story 7.5 - Regime detection extraction from hybrid.py - refactoring planned",
+      "target_lines": 500,
+      "directory": "raglite/"
+    },
+    "raglite/forecasting/ensemble.py": {
+      "lines": 583,
+      "reason": "Epic 7 Story 7.5 - Ensemble forecasting extraction from hybrid.py - refactoring planned",
+      "target_lines": 500,
+      "directory": "raglite/"
+    },
+    "tests/unit/test_arima_model.py": {
+      "lines": 730,
+      "reason": "Story 7b.1 - Comprehensive ATDD tests for ARIMA model wrapper - refactoring planned to split by test category",
+      "target_lines": 500,
+      "directory": "tests/"
+    },
+    "tests/unit/test_ets_model.py": {
+      "lines": 537,
+      "reason": "Story 7b.1 - Comprehensive ATDD tests for ETS model wrapper - refactoring planned to split by test category",
+      "target_lines": 500,
+      "directory": "tests/"
+    },
+    "raglite/forecasting/data_analyzer.py": {
+      "lines": 550,
+      "reason": "Story 7b.2 - Comprehensive statistical analysis module with ADF/KPSS/ACF/trend/volatility tests - cohesive implementation",
+      "target_lines": 500,
+      "directory": "raglite/"
+    },
+    "raglite/mcp/tools/forecast.py": {
+      "lines": 550,
+      "reason": "Epic 7 Story 7b.6 - MCP forecast tools with model selection cache integration - refactoring planned",
+      "target_lines": 500,
+      "directory": "raglite/"
+    },
+    "raglite/forecasting/model_selection_job.py": {
+      "lines": 533,
+      "reason": "Epic 7 Story 7b.5 - Model selection job runner with multi-variable support - refactoring planned",
+      "target_lines": 500,
+      "directory": "raglite/"
+    },
+    "raglite/forecasting/regressor_fetch.py": {
+      "lines": 579,
+      "reason": "Epic 7 Story 7b.7 - Demand regressor fetching with multiple data sources - refactoring planned",
+      "target_lines": 500,
+      "directory": "raglite/"
+    },
+    "raglite/forecasting/regressor_config.py": {
+      "lines": 530,
+      "reason": "Epic 7 Story 7b.7 - Regressor configuration with demand-side indicators - refactoring planned",
+      "target_lines": 500,
+      "directory": "raglite/"
+    },
+    "raglite/forecasting/model_selection.py": {
+      "lines": 533,
+      "reason": "Epic 7 Story 7b.8 - Intelligent model selection with recency-weighted CV, lag optimization, and composite forecasting - refactoring planned",
+      "target_lines": 500,
+      "directory": "raglite/"
+    },
+    "raglite/forecasting/model_selection_utils.py": {
+      "lines": 535,
+      "reason": "Epic 7 Story 7b.8 - Model selection utilities with bias analysis, ensemble metrics, and adaptive regressor testing - refactoring planned",
       "target_lines": 500,
       "directory": "raglite/"
     }

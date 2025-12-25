@@ -251,6 +251,36 @@ jobs:
           # Start test services using docker-compose for consistency
           docker compose up -d postgresql-test
 
+          # CRITICAL FIX: Wait for PostgreSQL to FULLY initialize before running setup script
+          # PostgreSQL needs time to complete initialization (create default DB, setup users, etc.)
+          # Using docker logs to detect "database system is ready to accept connections"
+          echo "Waiting for PostgreSQL to fully initialize..."
+          MAX_INIT_WAIT=60
+          INIT_COUNT=0
+
+          while [ $INIT_COUNT -lt $MAX_INIT_WAIT ]; do
+            # Check if PostgreSQL has completed initialization by looking for the ready message
+            if docker logs raglite-postgresql-test 2>&1 | grep -q "database system is ready to accept connections"; then
+              echo "✅ PostgreSQL initialization complete (${INIT_COUNT}s)"
+              # Additional safety wait to ensure full readiness
+              sleep 2
+              break
+            fi
+
+            INIT_COUNT=$((INIT_COUNT + 1))
+            if [ $((INIT_COUNT % 10)) -eq 0 ]; then
+              echo "Waiting for PostgreSQL initialization... (${INIT_COUNT}s/${MAX_INIT_WAIT}s)"
+            fi
+            sleep 1
+          done
+
+          if [ $INIT_COUNT -eq $MAX_INIT_WAIT ]; then
+            echo "❌ PostgreSQL did not complete initialization after ${MAX_INIT_WAIT}s"
+            echo "Container logs:"
+            docker logs raglite-postgresql-test --tail 50
+            exit 1
+          fi
+
           # Run database setup script to create users/databases
           ./scripts/ci-database-setup.sh
 

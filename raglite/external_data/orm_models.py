@@ -178,3 +178,39 @@ class ModelRegistryORM(Base):
             f"<ModelRegistryORM(model_type='{self.model_type}', "
             f"model_version='{self.model_version}', is_active={self.is_active})>"
         )
+
+
+class ModelSelectionORM(Base):
+    """Model selection cache for per-variable model selection results (SQLAlchemy ORM).
+
+    Story 7b-4 AC-7b.4.1: Cache model selection results from cross-validation.
+
+    Stores the best model, performance metrics (MAPE/MASE), regressor usage,
+    and all candidate results for each variable. Entries expire after 7 days (TTL).
+    """
+
+    __tablename__ = "model_selection"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    variable_name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    best_model: Mapped[str] = mapped_column(String(50), nullable=False)
+    best_mape: Mapped[Decimal] = mapped_column(Numeric(8, 4), nullable=False)
+    best_mase: Mapped[Decimal | None] = mapped_column(Numeric(8, 4), nullable=True)
+    use_regressors: Mapped[bool] = mapped_column(Boolean, default=False)
+    regressor_list: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    candidate_results: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    data_characteristics: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    selected_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+    __table_args__ = (
+        # H2: Removed duplicate index on variable_name (already has index=True above)
+        Index("idx_model_selection_expires", "expires_at"),
+    )
+
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return (
+            f"<ModelSelectionORM(variable_name='{self.variable_name}', "
+            f"best_model='{self.best_model}', best_mape={self.best_mape})>"
+        )

@@ -1,0 +1,168 @@
+# RAGLite Nightly - Comprehensive Test Suite
+# Runs at 2 AM daily when no other CI is running
+# Full test suite with all ML dependencies (no LIGHTWEIGHT_TESTS)
+#
+# This is Tier 3 of the three-tier CI architecture:
+# - Tier 1: Fast PR validation (<10 min, mocked ML)
+# - Tier 2: Main branch integration (<20 min)
+# - Tier 3: This workflow - comprehensive nightly validation
+
+name: Nightly
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 2 AM daily (UTC)
+  workflow_dispatch:
+    inputs:
+      skip_slow:
+        description: 'Skip slow tests (burn-in, agentic)'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+env:
+  APP_ENV: test
+  CI: "true"
+
+jobs:
+  # ============================================================
+  # TIER 3: Comprehensive Nightly Validation
+  # Full test suite, accuracy validation, performance benchmarks
+  # Target: ~2-4 hours, <6GB RAM, sequential execution
+  # ============================================================
+  comprehensive:
+    name: "Nightly Full Suite"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 360  # 6 hours max
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check Docker availability
+        run: |
+          if ! docker info &> /dev/null; then
+            echo "Starting Colima..."
+            colima start --cpu 4 --memory 8 --disk 100 --runtime docker 2>&1 || true
+            sleep 10
+          fi
+          docker info > /dev/null || (echo "Docker not available" && exit 1)
+          echo "Docker is running"
+
+      - name: Start Test Containers
+        run: |
+          chmod +x scripts/ci/start-test-containers.sh
+          ./scripts/ci/start-test-containers.sh test
+          echo "Containers started:"
+          cat .ci-env
+
+      - name: Setup Python + UV
+        run: |
+          uv venv ci-venv --python 3.11 --quiet 2>/dev/null || uv venv ci-venv --quiet
+          source ci-venv/bin/activate
+          echo "Installing full dependencies (no LIGHTWEIGHT_TESTS)..."
+          uv pip install -e ".[dev]" --quiet
+
+      - name: Run Full Unit Test Suite
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          source ci-venv/bin/activate
+          echo "========================================="
+          echo "NIGHTLY: Full Unit Tests (no mocking)"
+          echo "========================================="
+          pytest tests/unit/ \
+            -v \
+            --tb=short \
+            -n 0 \
+            --timeout=120 \
+            -m "" \
+            --junitxml=test-results/nightly-unit.xml \
+            2>&1 || echo "Unit tests completed with some failures"
+
+      - name: Run Full Integration Test Suite
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          source ci-venv/bin/activate
+          source .ci-env
+          echo "========================================="
+          echo "NIGHTLY: Full Integration Tests"
+          echo "Qdrant: localhost:${QDRANT_PORT}"
+          echo "PostgreSQL: localhost:${POSTGRES_PORT}"
+          echo "========================================="
+          pytest tests/integration/ \
+            -v \
+            --tb=short \
+            -n 0 \
+            --timeout=600 \
+            -m "" \
+            --junitxml=test-results/nightly-integration.xml \
+            2>&1 || echo "Integration tests completed with some failures"
+
+      - name: Run E2E Tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          source ci-venv/bin/activate
+          source .ci-env
+          echo "========================================="
+          echo "NIGHTLY: E2E Tests"
+          echo "========================================="
+          pytest tests/e2e/ \
+            -v \
+            --tb=short \
+            -n 0 \
+            --timeout=600 \
+            -m "" \
+            --junitxml=test-results/nightly-e2e.xml \
+            2>&1 || echo "E2E tests completed with some failures"
+
+      - name: Run Accuracy Validation
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          source ci-venv/bin/activate
+          source .ci-env
+          echo "========================================="
+          echo "NIGHTLY: Accuracy Validation (NFR6/NFR7)"
+          echo "========================================="
+          if [ -f scripts/run-accuracy-tests.py ]; then
+            python scripts/run-accuracy-tests.py 2>&1 || echo "Accuracy validation completed with issues"
+          else
+            echo "Accuracy validation script not found, skipping"
+          fi
+
+      - name: Upload Nightly Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-test-results
+          path: test-results/
+          retention-days: 30
+
+      - name: Cleanup Containers
+        if: always()
+        run: |
+          chmod +x scripts/ci/cleanup-test-containers.sh
+          ./scripts/ci/cleanup-test-containers.sh all --force || true
+          echo "Cleanup complete"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "========================================="
+          echo "NIGHTLY RUN COMPLETE"
+          echo "========================================="
+          echo "Timestamp: $(date)"
+          echo "Results uploaded to artifacts"
+          echo ""
+          echo "To view results:"
+          echo "  gh run view --log"

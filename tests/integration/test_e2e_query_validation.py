@@ -352,6 +352,18 @@ async def test_e2e_integration_flow(session_ingested_collection):
       - Metadata preserved through pipeline (page_number from Story 1.2)
       - Latency meets targets (<5s p50)
     """
+    # Check if Qdrant collection exists before running test
+    from qdrant_client import QdrantClient
+    from qdrant_client.http.exceptions import UnexpectedResponse
+
+    from raglite.shared.config import settings
+
+    try:
+        client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
+        client.get_collection(settings.qdrant_collection_name)
+    except UnexpectedResponse as e:
+        pytest.skip(f"Qdrant collection not available: {e}")
+
     query = "What is the EBITDA IFRS for cement operations?"
 
     start_time = time.perf_counter()

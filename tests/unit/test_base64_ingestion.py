@@ -184,7 +184,7 @@ class TestIngestFinancialDocumentSync:
         )
 
         with patch(
-            "raglite.main.ingest_document",
+            "raglite.mcp.tools.ingestion.ingest_document",
             new_callable=AsyncMock,
             return_value=mock_metadata,
         ):
@@ -237,7 +237,7 @@ class TestIngestFinancialDocumentSync:
         )
 
         with patch(
-            "raglite.main.ingest_document",
+            "raglite.mcp.tools.ingestion.ingest_document",
             new_callable=AsyncMock,
             return_value=mock_metadata,
         ):
@@ -280,7 +280,7 @@ class TestIngestFinancialDocumentSync:
         )
 
         with patch(
-            "raglite.main.ingest_document",
+            "raglite.mcp.tools.ingestion.ingest_document",
             new_callable=AsyncMock,
             return_value=mock_metadata,
         ):
@@ -302,8 +302,8 @@ class TestIngestFinancialDocumentAsync:
     @pytest.mark.asyncio
     async def test_async_accepts_same_parameters_as_sync(self, valid_pdf_content: str) -> None:
         """AC8: Verify async tool accepts file_content and filename parameters."""
-        with patch("raglite.main.create_job", return_value="test-job-123"):
-            with patch("raglite.main.start_background_job"):
+        with patch("raglite.mcp.tools.ingestion.create_job", return_value="test-job-123"):
+            with patch("raglite.mcp.tools.ingestion.start_background_job"):
                 # Use .fn to access the underlying async function
                 result = await ingest_financial_document_async.fn(
                     file_content=valid_pdf_content, filename="report.pdf"
@@ -344,8 +344,8 @@ class TestIngestFinancialDocumentAsync:
         test_file = tmp_path / "test.pdf"
         test_file.write_bytes(b"%PDF-1.4\n")
 
-        with patch("raglite.main.create_job", return_value="test-job-456"):
-            with patch("raglite.main.start_background_job"):
+        with patch("raglite.mcp.tools.ingestion.create_job", return_value="test-job-456"):
+            with patch("raglite.mcp.tools.ingestion.start_background_job"):
                 result = await ingest_financial_document_async.fn(doc_path=str(test_file))
                 assert result.job_id == "test-job-456"
                 assert "test.pdf" in result.message
@@ -387,8 +387,10 @@ class TestIngestFinancialDocumentAsync:
             captured_args["temp_path_to_cleanup"] = temp_path_to_cleanup
             captured_args["original_filename"] = original_filename
 
-        with patch("raglite.main.create_job", return_value="test-job-789"):
-            with patch("raglite.main.start_background_job", side_effect=capture_start_job):
+        with patch("raglite.mcp.tools.ingestion.create_job", return_value="test-job-789"):
+            with patch(
+                "raglite.mcp.tools.ingestion.start_background_job", side_effect=capture_start_job
+            ):
                 await ingest_financial_document_async.fn(
                     file_content=valid_pdf_content, filename="quarterly_report.pdf"
                 )

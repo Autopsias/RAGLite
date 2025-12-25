@@ -37,13 +37,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Install uv (network-resilient)
+        run: |
+          # Network-resilient uv installation with retry logic
+          MAX_RETRIES=3
+          RETRY_DELAY=2
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "Installing uv (attempt $attempt/$MAX_RETRIES)..."
+
+            if curl --retry 3 --retry-delay 2 --retry-all-errors -LsSf https://astral.sh/uv/install.sh | sh; then
+              echo "✅ uv installed successfully"
+
+              # Verify installation
+              if command -v uv &> /dev/null; then
+                uv --version
+                exit 0
+              else
+                echo "⚠️  uv command not found after installation"
+              fi
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "⚠️  Installation attempt $attempt failed, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Failed to install uv after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Install dependencies with uv
         run: |
@@ -89,13 +111,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Install uv (network-resilient)
+        run: |
+          # Network-resilient uv installation with retry logic
+          MAX_RETRIES=3
+          RETRY_DELAY=2
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "Installing uv (attempt $attempt/$MAX_RETRIES)..."
+
+            if curl --retry 3 --retry-delay 2 --retry-all-errors -LsSf https://astral.sh/uv/install.sh | sh; then
+              echo "✅ uv installed successfully"
+
+              # Verify installation
+              if command -v uv &> /dev/null; then
+                uv --version
+                exit 0
+              else
+                echo "⚠️  uv command not found after installation"
+              fi
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "⚠️  Installation attempt $attempt failed, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Failed to install uv after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Install dependencies with uv
         run: |
@@ -160,13 +204,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Install uv (network-resilient)
+        run: |
+          # Network-resilient uv installation with retry logic
+          MAX_RETRIES=3
+          RETRY_DELAY=2
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "Installing uv (attempt $attempt/$MAX_RETRIES)..."
+
+            if curl --retry 3 --retry-delay 2 --retry-all-errors -LsSf https://astral.sh/uv/install.sh | sh; then
+              echo "✅ uv installed successfully"
+
+              # Verify installation
+              if command -v uv &> /dev/null; then
+                uv --version
+                exit 0
+              else
+                echo "⚠️  uv command not found after installation"
+              fi
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "⚠️  Installation attempt $attempt failed, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Failed to install uv after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Install dependencies with uv
         run: |

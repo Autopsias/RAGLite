@@ -1,0 +1,177 @@
+{
+  "timestamp": "20251225-103929",
+  "runtime_minutes": 30.964941283067066,
+  "variables_processed": 20,
+  "results": {
+    "revenue": {
+      "best_model": "ets",
+      "best_mape": 0.7976899701745201,
+      "best_mase": 1.0887452510180389,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "ebitda": {
+      "best_model": "chronos",
+      "best_mape": 158.35196308202325,
+      "best_mase": 1.837267802361712,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "sales_volume": {
+      "best_model": "xgboost",
+      "best_mape": 51.14330818834275,
+      "best_mase": 0.9757246841946443,
+      "use_regressors": true,
+      "regressor_set": [
+        "construction_output",
+        "building_permits",
+        "construction_confidence",
+        "housing_transactions",
+        "dwelling_completions"
+      ]
+    },
+    "thermal_cost": {
+      "best_model": "chronos",
+      "best_mape": 17.656406233733343,
+      "best_mase": 1.8983940136154318,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "variable_cost": {
+      "best_model": "chronos",
+      "best_mape": 13.056269984718522,
+      "best_mase": 1.8329302681427442,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "capacity_utilization": {
+      "best_model": "chronos",
+      "best_mape": 0.13101316414738756,
+      "best_mase": 1.233620753432765,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "avg_selling_price": {
+      "best_model": "ets",
+      "best_mape": 1.409079936892797,
+      "best_mase": 1.2898259528694247,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "ttf_gas_price": {
+      "best_model": "xgboost",
+      "best_mape": 39.48135289585992,
+      "best_mase": 5.910392220527486,
+      "use_regressors": true,
+      "regressor_set": [
+        "construction_confidence",
+        "housing_transactions",
+        "building_permits",
+        "inflation"
+      ]
+    },
+    "petcoke_price": {
+      "best_model": "chronos",
+      "best_mape": 25.77820145729392,
+      "best_mase": 1.9874366109626143,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "co2_eua_price": {
+      "best_model": "ets",
+      "best_mape": 13.167272332753518,
+      "best_mase": 1.2276081319896655,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "electricity_cost": {
+      "best_model": "linear",
+      "best_mape": 11.13401717489027,
+      "best_mase": 0.7650527969653301,
+      "use_regressors": true,
+      "regressor_set": [
+        "ren_electricity",
+        "ttf_gas"
+      ]
+    },
+    "diesel": {
+      "best_model": "arima",
+      "best_mape": 7.541319574920665,
+      "best_mase": 6.209078018290937,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "api2_coal": {
+      "best_model": "lightgbm",
+      "best_mape": 18.31095662854971,
+      "best_mase": 11.728206784686307,
+      "use_regressors": true,
+      "regressor_set": [
+        "ttf_gas",
+        "industrial_production"
+      ]
+    },
+    "gdp_growth": {
+      "best_model": "xgboost",
+      "best_mape": 22.545393145881345,
+      "best_mase": 0.8106402578862415,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "inflation": {
+      "best_model": "xgboost",
+      "best_mape": 2.4591105785312704,
+      "best_mase": 5.016743984320941,
+      "use_regressors": true,
+      "regressor_set": [
+        "construction_output",
+        "euribor_3m",
+        "gdp_growth"
+      ]
+    },
+    "euribor_3m": {
+      "best_model": "linear",
+      "best_mape": 49.560835300126094,
+      "best_mase": 16.24310351373825,
+      "use_regressors": true,
+      "regressor_set": [
+        "construction_output",
+        "gdp_growth"
+      ]
+    },
+    "construction_output": {
+      "best_model": "ets",
+      "best_mape": 1.8519211646166078,
+      "best_mase": 1.9298235409988649,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "building_permits": {
+      "best_model": "chronos",
+      "best_mape": 10.470827983885204,
+      "best_mase": 0.7692308285749384,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "construction_confidence": {
+      "best_model": "chronos",
+      "best_mape": 225.1357189824671,
+      "best_mase": 1.348193505676491,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "industrial_production": {
+      "best_model": "xgboost",
+      "best_mape": 2.527374413409645,
+      "best_mase": 1.678516236937551,
+      "use_regressors": true,
+      "regressor_set": [
+        "construction_output",
+        "building_permits",
+        "construction_confidence",
+        "housing_transactions",
+        "euribor_3m"
+      ]
+    }
+  }
+}

@@ -1,0 +1,9 @@
+Pre-Phase-2 Baseline: Wed Dec 24 09:52:53 WET 2025
+=== Recent CI Runs ===
+completed	success	Epic 7: Intelligent Model Selection Framework	External Data Health Check	epic-7-intelligent-model-selection	pull_request	20482700699	1m0s	2025-12-24T09:07:26Z
+completed	failure	Epic 7: Intelligent Model Selection Framework	CI	epic-7-intelligent-model-selection	pull_request	20482700696	3m27s	2025-12-24T09:07:26Z
+completed	success	Epic 7: Intelligent Model Selection Framework	Config Change Detection	epic-7-intelligent-model-selection	pull_request	20482700690	13s	2025-12-24T09:07:26Z
+completed	failure	Priority-Based Test Execution	Priority-Based Test Execution	main	schedule	20477245172	46s	2025-12-24T03:18:13Z
+completed	failure	Epic 7: Intelligent Model Selection Framework	CI	epic-7-intelligent-model-selection	pull_request	20476627236	18m50s	2025-12-24T02:35:58Z
+=== Baseline ci.yml Size ===
+    2927 .github/workflows/ci.yml

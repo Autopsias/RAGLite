@@ -1,0 +1,153 @@
+{
+  "timestamp": "20251223-141617",
+  "runtime_minutes": 17.00525606870651,
+  "variables_processed": 19,
+  "results": {
+    "revenue": {
+      "best_model": "ets",
+      "best_mape": 0.7976899701745201,
+      "best_mase": 1.0887452510180389,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "ebitda": {
+      "best_model": "chronos",
+      "best_mape": 194.43551964759794,
+      "best_mase": 2.2853199954676904,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "sales_volume": {
+      "best_model": "chronos",
+      "best_mape": 42.13803798513506,
+      "best_mase": 1.236294397192222,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "thermal_cost": {
+      "best_model": "chronos",
+      "best_mape": 17.6133525563147,
+      "best_mase": 1.5090848952487383,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "variable_cost": {
+      "best_model": "chronos",
+      "best_mape": 13.056269984718522,
+      "best_mase": 1.8329302681427442,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "capacity_utilization": {
+      "best_model": "chronos",
+      "best_mape": 0.13101316414738756,
+      "best_mase": 1.233620753432765,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "avg_selling_price": {
+      "best_model": "ets",
+      "best_mape": 1.409079936892797,
+      "best_mase": 1.2898259528694247,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "ttf_gas_price": {
+      "best_model": "ets",
+      "best_mape": 75.37655784212166,
+      "best_mase": 11.54633298285246,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "petcoke_price": {
+      "best_model": "chronos",
+      "best_mape": 31.073449137448584,
+      "best_mase": 2.4749477389194867,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "co2_eua_price": {
+      "best_model": "ets",
+      "best_mape": 13.167272332753518,
+      "best_mase": 1.2276081319896655,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "electricity_cost": {
+      "best_model": "linear",
+      "best_mape": 5.70671734243316,
+      "best_mase": 0.4350445326274673,
+      "use_regressors": true,
+      "regressor_set": [
+        "ren_electricity",
+        "ttf_gas"
+      ]
+    },
+    "diesel": {
+      "best_model": "arima",
+      "best_mape": 7.262610429958691,
+      "best_mase": 5.936152158591971,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "api2_coal": {
+      "best_model": "arima",
+      "best_mape": 23.234843229196677,
+      "best_mase": 11.461196534853219,
+      "use_regressors": true,
+      "regressor_set": [
+        "ttf_gas"
+      ]
+    },
+    "gdp_growth": {
+      "best_model": "catboost",
+      "best_mape": 38.85668872746062,
+      "best_mase": 1.2959815122145897,
+      "use_regressors": true,
+      "regressor_set": [
+        "construction_output",
+        "euribor_3m"
+      ]
+    },
+    "inflation": {
+      "best_model": "catboost",
+      "best_mape": 2.550195842160827,
+      "best_mase": 5.198689676422449,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "euribor_3m": {
+      "best_model": "ets",
+      "best_mape": 53.440629903925654,
+      "best_mase": 13.96658678051043,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "building_permits": {
+      "best_model": "chronos",
+      "best_mape": 10.470827983885204,
+      "best_mase": 0.7692308285749384,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "construction_confidence": {
+      "best_model": "lightgbm",
+      "best_mape": 143.9628473107446,
+      "best_mase": 1.5965175869672472,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "industrial_production": {
+      "best_model": "catboost",
+      "best_mape": 2.144519849927236,
+      "best_mase": 1.4615896675872702,
+      "use_regressors": true,
+      "regressor_set": [
+        "construction_output",
+        "building_permits",
+        "gdp_growth",
+        "euribor_3m"
+      ]
+    }
+  }
+}

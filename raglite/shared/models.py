@@ -3,10 +3,11 @@
 Defines core data structures used across ingestion and retrieval modules.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC
 from datetime import date as date_type
+from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -479,6 +480,16 @@ class ForecastResult(BaseModel):
         description="Model weights: {'prophet': 0.4, 'linear': 0.3, 'xgboost': 0.3}",
     )
 
+    # Story 7b-6: Model selection metadata
+    model_source: Literal["cached", "default", "fallback"] = Field(
+        default="default",
+        description="Source of model selection: 'cached' (from model_selection table), 'default' (no cache), 'fallback' (error recovery)",
+    )
+    model_selection_reason: str | None = Field(
+        default=None,
+        description="Human-readable explanation of why this model was selected",
+    )
+
 
 # Story 4.3: Automated forecast updates models
 class ForecastRefreshResult(BaseModel):
@@ -747,6 +758,11 @@ class ForecastQueryResponse(BaseModel):
         default=None,
         description="Explanation of why this model was selected (when model_type='auto' was used)",
     )
+    # Story 7b-6: Model selection source
+    model_source: str = Field(
+        default="default",
+        description="Source of model selection: 'cached', 'default', or 'fallback'",
+    )
     # Story 6.25: Accuracy metrics from Prophet cross-validation
     accuracy_metrics: dict[str, float] | None = Field(
         default=None,
@@ -767,6 +783,7 @@ class ForecastQueryResponse(BaseModel):
         Story 4.4 AC2/AC3: Factory method for MCP response creation.
         Story 6.11.1: Added regressors_used and model_type parameters.
         Story 6.11.6: Added model_selection_reason for auto-selection transparency.
+        Story 7b-6: Auto-populate model_source and model_selection_reason from ForecastResult.
 
         Args:
             result: ForecastResult from generate_forecast()
@@ -774,6 +791,7 @@ class ForecastQueryResponse(BaseModel):
             regressors_used: List of external regressors used in forecast
             model_type: Forecasting model type used
             model_selection_reason: Explanation for model selection (when auto-selected)
+                                   DEPRECATED: Use result.model_selection_reason instead
 
         Returns:
             ForecastQueryResponse with all fields populated
@@ -789,7 +807,9 @@ class ForecastQueryResponse(BaseModel):
             periods_ahead=result.periods_ahead,
             regressors_used=regressors_used,
             model_type=model_type,
-            model_selection_reason=model_selection_reason,
+            # Story 7b-6: Auto-populate from ForecastResult, fallback to parameter
+            model_selection_reason=result.model_selection_reason or model_selection_reason,
+            model_source=result.model_source,
             # Story 6.25: Include accuracy metrics from Prophet cross-validation
             accuracy_metrics=result.accuracy_metrics if result.accuracy_metrics else None,
         )

@@ -1,0 +1,21 @@
+{
+  "timestamp": "20251223-011748",
+  "runtime_minutes": 0.34040924310684206,
+  "variables_processed": 2,
+  "results": {
+    "ttf_gas_price": {
+      "best_model": "ets",
+      "best_mape": 75.37655784212166,
+      "best_mase": 11.54633298285246,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "petcoke_price": {
+      "best_model": "catboost",
+      "best_mape": 56.285669832336474,
+      "best_mase": 3.1089638526264256,
+      "use_regressors": false,
+      "regressor_set": []
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "timestamp": "20251225-100730",
+  "runtime_minutes": 4.964289581775665,
+  "variables_processed": 4,
+  "results": {
+    "ebitda": {
+      "best_model": "chronos",
+      "best_mape": 158.35196308202325,
+      "best_mase": 1.837267802361712,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "revenue": {
+      "best_model": "ets",
+      "best_mape": 0.7976899701745201,
+      "best_mase": 1.0887452510180389,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "variable_cost": {
+      "best_model": "chronos",
+      "best_mape": 13.056269984718522,
+      "best_mase": 1.8329302681427442,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "thermal_cost": {
+      "best_model": "chronos",
+      "best_mape": 17.656406233733343,
+      "best_mase": 1.8983940136154318,
+      "use_regressors": false,
+      "regressor_set": []
+    }
+  }
+}

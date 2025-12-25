@@ -66,7 +66,15 @@ from raglite.external_data.scheduler import (
     shutdown_scheduler,
     start_scheduler,
 )
-from raglite.external_data.storage import ExternalDataStorage
+from raglite.external_data.storage import (
+    CachedModelSelection,
+    ExternalDataStorage,
+    cache_model_selection,
+    cleanup_expired_model_selections,
+    get_cached_model_selection,
+    invalidate_all_model_selections,
+    invalidate_model_selection,
+)
 
 __all__ = [
     # Exceptions
@@ -76,6 +84,13 @@ __all__ = [
     "ExternalDataStaleError",
     # Storage
     "ExternalDataStorage",
+    # Model Selection Cache (Story 7b-4)
+    "CachedModelSelection",
+    "cache_model_selection",
+    "get_cached_model_selection",
+    "invalidate_model_selection",
+    "invalidate_all_model_selections",
+    "cleanup_expired_model_selections",
     # Enums
     "DataSource",
     "DataFrequency",

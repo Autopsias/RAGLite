@@ -19,7 +19,7 @@ class TestDateRangeParsing:
 
     def test_parse_iso_format(self) -> None:
         """Test ISO date range parsing."""
-        from raglite.main import _parse_date_range
+        from raglite.mcp.tools.external_data import _parse_date_range
 
         start, end = _parse_date_range("2024-01-01:2024-12-31")
         assert start == date(2024, 1, 1)
@@ -27,7 +27,7 @@ class TestDateRangeParsing:
 
     def test_parse_iso_format_with_spaces(self) -> None:
         """Test ISO date range parsing with spaces around dates."""
-        from raglite.main import _parse_date_range
+        from raglite.mcp.tools.external_data import _parse_date_range
 
         start, end = _parse_date_range("2024-01-01 : 2024-12-31")
         assert start == date(2024, 1, 1)
@@ -35,7 +35,7 @@ class TestDateRangeParsing:
 
     def test_parse_last_30_days(self) -> None:
         """Test last_30_days shortcut."""
-        from raglite.main import _parse_date_range
+        from raglite.mcp.tools.external_data import _parse_date_range
 
         start, end = _parse_date_range("last_30_days")
         assert end == date.today()
@@ -43,7 +43,7 @@ class TestDateRangeParsing:
 
     def test_parse_last_90_days(self) -> None:
         """Test last_90_days shortcut."""
-        from raglite.main import _parse_date_range
+        from raglite.mcp.tools.external_data import _parse_date_range
 
         start, end = _parse_date_range("last_90_days")
         assert end == date.today()
@@ -51,7 +51,7 @@ class TestDateRangeParsing:
 
     def test_parse_last_year(self) -> None:
         """Test last_year shortcut."""
-        from raglite.main import _parse_date_range
+        from raglite.mcp.tools.external_data import _parse_date_range
 
         start, end = _parse_date_range("last_year")
         assert end == date.today()
@@ -59,7 +59,7 @@ class TestDateRangeParsing:
 
     def test_parse_last_quarter(self) -> None:
         """Test last_quarter shortcut (90 days)."""
-        from raglite.main import _parse_date_range
+        from raglite.mcp.tools.external_data import _parse_date_range
 
         start, end = _parse_date_range("last_quarter")
         assert end == date.today()
@@ -67,7 +67,7 @@ class TestDateRangeParsing:
 
     def test_parse_ytd(self) -> None:
         """Test year-to-date shortcut."""
-        from raglite.main import _parse_date_range
+        from raglite.mcp.tools.external_data import _parse_date_range
 
         start, end = _parse_date_range("ytd")
         assert start == date(date.today().year, 1, 1)
@@ -75,7 +75,7 @@ class TestDateRangeParsing:
 
     def test_parse_shortcuts_case_insensitive(self) -> None:
         """Test shortcuts are case insensitive."""
-        from raglite.main import _parse_date_range
+        from raglite.mcp.tools.external_data import _parse_date_range
 
         start1, end1 = _parse_date_range("LAST_30_DAYS")
         start2, end2 = _parse_date_range("Last_30_Days")
@@ -86,28 +86,28 @@ class TestDateRangeParsing:
 
     def test_parse_invalid_format(self) -> None:
         """Test invalid format raises ValueError."""
-        from raglite.main import _parse_date_range
+        from raglite.mcp.tools.external_data import _parse_date_range
 
         with pytest.raises(ValueError, match="Invalid date_range"):
             _parse_date_range("invalid")
 
     def test_parse_invalid_shortcut(self) -> None:
         """Test unknown shortcut raises ValueError."""
-        from raglite.main import _parse_date_range
+        from raglite.mcp.tools.external_data import _parse_date_range
 
         with pytest.raises(ValueError, match="Invalid date_range"):
             _parse_date_range("last_week")
 
     def test_parse_invalid_iso_date(self) -> None:
         """Test invalid ISO date raises ValueError."""
-        from raglite.main import _parse_date_range
+        from raglite.mcp.tools.external_data import _parse_date_range
 
         with pytest.raises(ValueError, match="Invalid date format"):
             _parse_date_range("2024-13-01:2024-12-31")  # Invalid month
 
     def test_parse_invalid_iso_format_wrong_parts(self) -> None:
         """Test malformed ISO format raises ValueError."""
-        from raglite.main import _parse_date_range
+        from raglite.mcp.tools.external_data import _parse_date_range
 
         with pytest.raises(ValueError, match="Invalid date range format"):
             _parse_date_range("2024-01-01:2024-06-30:2024-12-31")  # Too many parts
@@ -118,42 +118,42 @@ class TestVisualizationHints:
 
     def test_empty_data(self) -> None:
         """Test hint for empty dataset."""
-        from raglite.main import _get_visualization_hint
+        from raglite.mcp.tools.external_data import _get_visualization_hint
 
         hint = _get_visualization_hint(0, "time_series")
         assert "No data" in hint
 
     def test_single_value(self) -> None:
         """Test hint for single data point."""
-        from raglite.main import _get_visualization_hint
+        from raglite.mcp.tools.external_data import _get_visualization_hint
 
         hint = _get_visualization_hint(1, "time_series")
         assert "card" in hint.lower() or "gauge" in hint.lower()
 
     def test_small_dataset(self) -> None:
         """Test hint for small dataset (<=12 records)."""
-        from raglite.main import _get_visualization_hint
+        from raglite.mcp.tools.external_data import _get_visualization_hint
 
         hint = _get_visualization_hint(10, "index")
         assert "bar" in hint.lower()
 
     def test_exactly_12_records(self) -> None:
         """Test hint for exactly 12 records (bar chart boundary)."""
-        from raglite.main import _get_visualization_hint
+        from raglite.mcp.tools.external_data import _get_visualization_hint
 
         hint = _get_visualization_hint(12, "index")
         assert "bar" in hint.lower()
 
     def test_time_series_large_dataset(self) -> None:
         """Test hint for time series data with many records."""
-        from raglite.main import _get_visualization_hint
+        from raglite.mcp.tools.external_data import _get_visualization_hint
 
         hint = _get_visualization_hint(100, "time_series")
         assert "line" in hint.lower()
 
     def test_large_non_timeseries(self) -> None:
         """Test hint for large non-time-series dataset."""
-        from raglite.main import _get_visualization_hint
+        from raglite.mcp.tools.external_data import _get_visualization_hint
 
         hint = _get_visualization_hint(50, "index")
         assert "line" in hint.lower() or "area" in hint.lower()
@@ -178,7 +178,7 @@ class TestQueryHelpers:
 
     def test_query_single_source_not_found(self, mock_storage: Mock) -> None:
         """Test error when source not found."""
-        from raglite.main import _query_single_source
+        from raglite.mcp.tools.external_data import _query_single_source
 
         mock_storage.get_source.return_value = None
 
@@ -193,7 +193,7 @@ class TestQueryHelpers:
 
     def test_query_single_source_empty_results(self, mock_storage: Mock) -> None:
         """Test empty results handling."""
-        from raglite.main import _query_single_source
+        from raglite.mcp.tools.external_data import _query_single_source
 
         mock_storage.query_data_range.return_value = []
 
@@ -211,7 +211,7 @@ class TestQueryHelpers:
 
     def test_query_single_source_with_data(self, mock_storage: Mock) -> None:
         """Test query with actual data points."""
-        from raglite.main import _query_single_source
+        from raglite.mcp.tools.external_data import _query_single_source
 
         mock_data_point = Mock()
         mock_data_point.date = date(2024, 1, 1)
@@ -236,7 +236,7 @@ class TestQueryHelpers:
 
     def test_query_all_sources_empty(self, mock_storage: Mock) -> None:
         """Test querying all sources when none exist."""
-        from raglite.main import _query_all_sources
+        from raglite.mcp.tools.external_data import _query_all_sources
 
         mock_storage.list_sources.return_value = []
 
@@ -251,7 +251,7 @@ class TestQueryHelpers:
 
     def test_query_all_sources_aggregates_results(self, mock_storage: Mock) -> None:
         """Test querying all sources aggregates results."""
-        from raglite.main import _query_all_sources
+        from raglite.mcp.tools.external_data import _query_all_sources
 
         source1 = Mock(
             source_name="Source1",
@@ -289,7 +289,7 @@ class TestResponseFormatting:
         """Test formatting with no results."""
         import json
 
-        from raglite.main import _format_response
+        from raglite.mcp.tools.external_data import _format_response
 
         response = _format_response([], "NonExistent")
         data = json.loads(response)
@@ -301,7 +301,8 @@ class TestResponseFormatting:
         """Test formatting single source response."""
         import json
 
-        from raglite.main import ExternalDataPoint, ExternalDataQueryResponse, _format_response
+        from raglite.mcp.models import ExternalDataPoint, ExternalDataQueryResponse
+        from raglite.mcp.tools.external_data import _format_response
 
         result = ExternalDataQueryResponse(
             source_name="INE_BuildingPermits",
@@ -332,7 +333,8 @@ class TestResponseFormatting:
         """Test formatting multi-source response (for 'all' query)."""
         import json
 
-        from raglite.main import ExternalDataPoint, ExternalDataQueryResponse, _format_response
+        from raglite.mcp.models import ExternalDataPoint, ExternalDataQueryResponse
+        from raglite.mcp.tools.external_data import _format_response
 
         results = [
             ExternalDataQueryResponse(
@@ -372,7 +374,8 @@ class TestResponseFormatting:
         """Test that multi-source responses truncate data per source."""
         import json
 
-        from raglite.main import ExternalDataPoint, ExternalDataQueryResponse, _format_response
+        from raglite.mcp.models import ExternalDataPoint, ExternalDataQueryResponse
+        from raglite.mcp.tools.external_data import _format_response
 
         # Create result with 15 data points
         data_points = [
@@ -408,7 +411,7 @@ class TestPydanticModels:
 
     def test_external_data_query_request_required_fields(self) -> None:
         """Test ExternalDataQueryRequest requires source and date_range."""
-        from raglite.main import ExternalDataQueryRequest
+        from raglite.mcp.models import ExternalDataQueryRequest
 
         # Valid request
         request = ExternalDataQueryRequest(
@@ -420,7 +423,7 @@ class TestPydanticModels:
 
     def test_external_data_query_request_with_metric(self) -> None:
         """Test ExternalDataQueryRequest with optional metric."""
-        from raglite.main import ExternalDataQueryRequest
+        from raglite.mcp.models import ExternalDataQueryRequest
 
         request = ExternalDataQueryRequest(
             source="INE_BuildingPermits",
@@ -431,7 +434,7 @@ class TestPydanticModels:
 
     def test_external_data_point_model(self) -> None:
         """Test ExternalDataPoint model."""
-        from raglite.main import ExternalDataPoint
+        from raglite.mcp.models import ExternalDataPoint
 
         point = ExternalDataPoint(
             date=date(2024, 1, 1),
@@ -444,7 +447,7 @@ class TestPydanticModels:
 
     def test_external_data_query_response_model(self) -> None:
         """Test ExternalDataQueryResponse model."""
-        from raglite.main import ExternalDataQueryResponse
+        from raglite.mcp.models import ExternalDataQueryResponse
 
         response = ExternalDataQueryResponse(
             source_name="INE_BuildingPermits",

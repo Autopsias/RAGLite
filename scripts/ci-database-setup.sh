@@ -46,8 +46,32 @@ echo "📦 Step 1: Ensure test container is running..."
 if ! docker ps --format '{{.Names}}' | grep -q "^${TEST_CONTAINER}$"; then
     echo "Container $TEST_CONTAINER not running, starting..."
     docker compose up -d postgresql-test
-    echo "Waiting for PostgreSQL to be ready..."
-    sleep 8
+
+    # CRITICAL FIX: Wait for PostgreSQL to FULLY initialize
+    # Check docker logs for "database system is ready to accept connections"
+    echo "Waiting for PostgreSQL initialization..."
+    MAX_INIT_WAIT=60
+    INIT_COUNT=0
+
+    while [ $INIT_COUNT -lt $MAX_INIT_WAIT ]; do
+        if docker logs "$TEST_CONTAINER" 2>&1 | grep -q "database system is ready to accept connections"; then
+            echo "✅ PostgreSQL initialization complete (${INIT_COUNT}s)"
+            sleep 2  # Additional safety buffer
+            break
+        fi
+
+        INIT_COUNT=$((INIT_COUNT + 1))
+        if [ $((INIT_COUNT % 10)) -eq 0 ]; then
+            echo "Waiting for initialization... (${INIT_COUNT}s/${MAX_INIT_WAIT}s)"
+        fi
+        sleep 1
+    done
+
+    if [ $INIT_COUNT -eq $MAX_INIT_WAIT ]; then
+        echo "❌ PostgreSQL did not initialize after ${MAX_INIT_WAIT}s"
+        docker logs "$TEST_CONTAINER" --tail 50
+        exit 1
+    fi
 else
     echo "✅ Container $TEST_CONTAINER is running"
 fi
