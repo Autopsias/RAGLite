@@ -16,12 +16,20 @@ Test IDs:
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
 import pytest
+
+# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
+# These tests require real statsmodels for ETS model fitting
+pytestmark = pytest.mark.skipif(
+    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
+    reason="ETS tests require real statsmodels (not mocked)",
+)
 
 if TYPE_CHECKING:
     pass

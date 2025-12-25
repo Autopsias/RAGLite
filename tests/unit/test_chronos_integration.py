@@ -12,21 +12,33 @@ Test Coverage:
 
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-import torch
 
-from raglite.forecasting.adaptive_weights import _adjust_weights_no_regressors, _get_static_weights
-from raglite.forecasting.hybrid import generate_forecast
-from raglite.forecasting.models.base import MIN_DATA_POINTS, InsufficientDataError
-from raglite.forecasting.models.chronos_model import (
+# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
+# These tests require real PyTorch/Chronos libraries
+pytestmark = pytest.mark.skipif(
+    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
+    reason="Chronos tests require real PyTorch/Chronos (not mocked)",
+)
+
+import torch  # noqa: E402
+
+from raglite.forecasting.adaptive_weights import (  # noqa: E402
+    _adjust_weights_no_regressors,
+    _get_static_weights,
+)
+from raglite.forecasting.hybrid import generate_forecast  # noqa: E402
+from raglite.forecasting.models.base import MIN_DATA_POINTS, InsufficientDataError  # noqa: E402
+from raglite.forecasting.models.chronos_model import (  # noqa: E402
     _get_chronos_pipeline,
     generate_chronos_cold_start_forecast,
 )
-from raglite.shared.config import settings
-from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
+from raglite.shared.config import settings  # noqa: E402
+from raglite.shared.models import TimeSeriesData, TimeSeriesPoint  # noqa: E402
 
 # =============================================================================
 # AC1, AC5: Lazy-Loading Pattern and Caching

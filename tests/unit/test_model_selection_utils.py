@@ -15,12 +15,21 @@ Priority levels:
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pandas as pd
 import pytest
 
-# Mark all tests in this module as unit tests
-pytestmark = [pytest.mark.unit]
+# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
+# These tests require real Prophet/statsmodels for model fitting
+pytestmark = [
+    pytest.mark.unit,
+    pytest.mark.skipif(
+        os.environ.get("LIGHTWEIGHT_TESTS") == "true",
+        reason="Model selection tests require real Prophet/statsmodels (not mocked)",
+    ),
+]
 
 
 # -----------------------------------------------------------------------------

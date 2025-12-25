@@ -16,11 +16,19 @@ Test Organization:
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import pytest
+
+# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
+# These tests require real pmdarima/statsmodels for ARIMA/ETS model fitting
+pytestmark = pytest.mark.skipif(
+    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
+    reason="ARIMA/ETS tests require real pmdarima/statsmodels (not mocked)",
+)
 
 if TYPE_CHECKING:
     pass

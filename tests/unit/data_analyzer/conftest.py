@@ -8,13 +8,38 @@ This conftest provides 37 fixtures for testing the data analyzer module:
 - Short series (cold-start testing)
 - Edge cases (constant, NaNs, outliers, negative values)
 - Boundary conditions (CV thresholds, seasonal strength boundaries)
+
+NOTE: All data_analyzer tests are skipped in LIGHTWEIGHT_TESTS mode because they
+require real statsmodels (adfuller, kpss, acf) functions. The mocked versions
+don't return values that match statistical expectations.
 """
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pandas as pd
 import pytest
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Skip all data_analyzer tests when LIGHTWEIGHT_TESTS=true.
+
+    These tests require real statsmodels functions (adfuller, kpss, acf) that
+    cannot be meaningfully mocked - the tests verify statistical properties.
+    """
+    if os.environ.get("LIGHTWEIGHT_TESTS") != "true":
+        return
+
+    skip_lightweight = pytest.mark.skip(
+        reason="Data analyzer tests require real statsmodels (not mocked)"
+    )
+    for item in items:
+        # Only skip tests in this directory
+        if "data_analyzer" in str(item.fspath):
+            item.add_marker(skip_lightweight)
+
 
 # -----------------------------------------------------------------------------
 # Basic Stationarity Fixtures

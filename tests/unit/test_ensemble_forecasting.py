@@ -17,6 +17,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
+# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
+# These tests require real XGBoost/sklearn for ensemble model fitting
+pytestmark = pytest.mark.skipif(
+    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
+    reason="Ensemble forecasting tests require real XGBoost/sklearn (not mocked)",
+)
+
 if TYPE_CHECKING:
     from raglite.shared.models import TimeSeriesData
 
