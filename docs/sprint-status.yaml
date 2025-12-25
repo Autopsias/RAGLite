@@ -153,27 +153,40 @@ development_status:
   6-24-forecasting-validation-coverage: done  # ✅ Validation test coverage
   epic-6-retrospective: done  # ✅ Retrospective complete, led to Epic 7
 
-  # Epic 7: Intelligent Model Selection Framework 🟡 READY FOR IMPLEMENTATION
+  # Epic 7: Intelligent Model Selection Framework ✅ COMPLETE
   # Sprint Change Proposal: APPROVED-2025-12-17 (correct-course)
   # Goal: Per-variable model selection via cross-validation across 9 models
-  # Timeline: 10 development days (2 weeks)
+  # Result: All 9 models (ARIMA, ETS, Prophet, XGBoost, LightGBM, CatBoost, Chronos-2, TFT, Linear) integrated
   # Dependencies: Epic 6 (COMPLETE)
-  epic-7: contexted
+  epic-7: done
 
   # Epic 7 Prerequisite (Hotfix - P0)
-  7-0-electricity-cost-data-fix: blocked  # BLOCKED: EntityMatchMode hypothesis refuted, MASE 10.04 unchanged, needs architecture review
+  7-0-electricity-cost-data-fix: done  # ✅ COMPLETE: Data quality fix implemented
 
-  # Epic 7 Stories (6 stories, P0 priority)
-  7-1-add-arima-ets-model-wrappers: backlog  # NEW: pmdarima Auto-ARIMA + statsmodels ETS
-  7-2-data-characteristics-analyzer: backlog  # NEW: ADF/KPSS stationarity, ACF seasonality
-  7-3-per-variable-model-selection-cross-validation: backlog  # NEW: 9 models, TimeSeriesSplit CV
-  7-4-model-selection-cache-postgresql: backlog  # NEW: PostgreSQL table, 7-day TTL
-  7-5-model-selection-slash-commands-subagent: backlog  # NEW: /model-selection command
-  7-6-mcp-integration-model-selection: backlog  # NEW: MCP query-time routing
+  # Epic 7 Stories (6 stories, P0 priority) - ALL COMPLETE
+  7-1-add-arima-ets-model-wrappers: done  # ✅ arima_model.py, ets_model.py implemented
+  7-2-data-characteristics-analyzer: done  # ✅ data_analyzer.py: ADF/KPSS stationarity, ACF seasonality
+  7-3-per-variable-model-selection-cross-validation: done  # ✅ model_selection.py: 9 models, TimeSeriesSplit CV
+  7-4-model-selection-cache-postgresql: done  # ✅ migration 006, ORM models, storage.py cache methods
+  7-5-model-selection-slash-commands-subagent: done  # ✅ /model-selection command, model_selection_job.py
+  7-6-mcp-integration-model-selection: done  # ✅ hybrid.py: use_model_selection, get_cached_model_selection
   epic-7-retrospective: optional
 
   # Epic 7b Extension Stories (Correct-Course additions)
   7b-7-demand-side-regressors: done  # SCP-2025-12-24: Housing transactions, EBITDA mapping fix - COMPLETE
+
+  # Epic 8: Technical Debt Reduction (SCP-2025-12-25-001 APPROVED)
+  # Goal: Comprehensive file size refactoring - 84 files exceed 500 LOC limit
+  # Objective: Split production AND test files, maintain test-to-production structure mirroring
+  # Dependencies: None (can run in parallel with Epic 5)
+  epic-8: backlog
+
+  # Epic 8 Stories (4 stories, comprehensive refactoring)
+  8-1-critical-forecasting-module-refactoring: backlog  # timeseries_extract.py (3178 LOC), hybrid.py (2780 LOC) + related tests
+  8-2-external-data-client-refactoring: backlog  # basegov, ecb, eurostat, storage + test_external_data_clients.py (3025 LOC)
+  8-3-ingestion-module-refactoring: backlog  # document_ingestion.py, unit_inference.py + related tests
+  8-4-remaining-modules-and-tests: backlog  # retrieval, agentic, remaining test files
+  epic-8-retrospective: optional
 
   # Epic 5: Production Readiness & Real-Time Operations
   # ⚠️ BLOCKED by Epic 6 until data pipeline components ready for cloud deployment

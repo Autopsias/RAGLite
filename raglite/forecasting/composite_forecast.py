@@ -243,7 +243,7 @@ def _aggregate_forecasts(
     if aggregation == "sum":
         # Simple sum of all components
         result = sum(aligned_components)
-        return result  # type: ignore
+        return result
 
     elif aggregation == "difference":
         # First component minus all others
@@ -251,7 +251,7 @@ def _aggregate_forecasts(
         if len(aligned_components) < 2:
             return aligned_components[0]
         result = aligned_components[0] - sum(aligned_components[1:])
-        return result  # type: ignore
+        return result
 
     elif aggregation == "weighted_sum":
         # Weighted sum using provided weights
@@ -259,7 +259,7 @@ def _aggregate_forecasts(
             logger.warning("Invalid weights for weighted_sum, using equal weights")
             weights = [1.0 / len(aligned_components)] * len(aligned_components)
         result = sum(w * c for w, c in zip(weights, aligned_components, strict=False))
-        return result  # type: ignore
+        return result
 
     else:
         raise ValueError(f"Unknown aggregation method: {aggregation}")
