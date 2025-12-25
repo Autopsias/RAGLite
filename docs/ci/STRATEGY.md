@@ -1,9 +1,10 @@
 # CI/CD Strategy & Memory Architecture
 
-**Last Updated:** 2025-12-24
-**Strategic Focus:** Monolithic dependency architecture and memory budgeting
+**Last Updated:** 2025-12-25
+**Strategic Focus:** Simplified single-workflow architecture with memory budgeting
 **CI Reliability Target:** 99%+ (currently 98%)
 **Documentation Series:** Part of CI Knowledge Base
+**Workflow:** `.github/workflows/ci.yml` (single consolidated file)
 
 ---
 
@@ -27,15 +28,30 @@ Three-tier approach:
 
 ## CI Architecture Overview
 
-### Current State (2024-12-24)
+### Current State (2025-12-25) - Simplified
 
-| Component | Value | Status |
-|-----------|-------|--------|
-| CI workflow size | 2,364 lines | Needs reduction |
-| Number of jobs | 13+ | Too many |
-| Memory per test job | 6-8 GB | Constrained |
-| Success rate | 98% | Target: 99%+ |
-| MTTR | <1 hour | Target: <30 min |
+| Component | Before | After | Status |
+|-----------|--------|-------|--------|
+| Workflow files | 7 files (2,187 lines) | 1 file (291 lines) | ✅ 87% reduction |
+| Number of jobs | 11+ | 3 | ✅ Aligned with best practices |
+| Memory per test job | 6-8 GB | 6-8 GB | Constrained (managed) |
+| Success rate | 98% | Target: 99%+ | Improving |
+| MTTR | <1 hour | Target: <30 min | Improving |
+
+### Workflow Structure (Single File)
+
+```
+ci.yml (291 lines, 3 jobs)
+├── validate      # Every push/PR, <10 min, mocked ML
+├── integration   # Main branch only, <20 min, with containers
+└── accuracy-gate # Main branch only, AC3 >=70% validation
+```
+
+**Best Practices Applied:**
+- Single workflow file (industry standard for <1000 LOC projects)
+- Job dependencies via `needs:` (not `workflow_run`)
+- Concurrency control with `cancel-in-progress: true`
+- Simplified caching (removed complex PDF hash system)
 
 ### Test Execution Modes
 
@@ -149,25 +165,27 @@ jobs:
 
 ---
 
-### AD3: Composite Actions for Code Reuse
+### AD3: Workflow Consolidation (Completed 2025-12-25)
 
-**Decision:** Extract common workflows into reusable composite actions.
+**Decision:** Consolidate 7 workflow files into single ci.yml with 3 focused jobs.
 
 **Rationale:**
-- CI workflow at 2,364 lines is unmaintainable
-- PostgreSQL health checks duplicated 4+ times
-- Container startup logic duplicated across jobs
-- Reduces error surface (one source of truth)
+- CI infrastructure (2,187 lines) exceeded application size (600-800 lines)
+- Industry best practices recommend 1-2 files, 3-5 jobs for <1000 LOC projects
+- Simplified maintenance and debugging
+- Job dependencies (`needs:`) preferred over `workflow_run` triggers
 
-**Composite Actions Created:**
-| Action | Purpose | Size | Reused In |
-|--------|---------|------|-----------|
-| start-containers | Start test containers | 120 lines | 5+ jobs |
-| wait-for-postgres | Health check Postgres | 50 lines | 6+ jobs |
-| wait-for-qdrant | Health check Qdrant | 50 lines | 6+ jobs |
-| test-collection | Pytest discovery | 100 lines | 4+ jobs |
+**Deleted Workflows:**
+| Workflow | Lines | Reason |
+|----------|-------|--------|
+| accuracy-validation.yml | 482 | Inlined as accuracy-gate job |
+| nightly-performance.yml | 727 | Deferred to Phase 4 |
+| test-priority-based.yml | 315 | Redundant with ci.yml |
+| nightly.yml | 168 | Merged into ci.yml |
+| config-change-detection.yml | 166 | Nice-to-have, not MVP |
+| external-data-health.yml | 136 | Epic 3+ concern |
 
-**Expected Reduction:** 2,364 lines → ~1,200 lines (50% reduction)
+**Achieved Reduction:** 2,187 lines → 291 lines (87% reduction)
 
 ---
 
@@ -402,7 +420,8 @@ Track these weekly to monitor CI health:
 ### Phase 1: Immediate (2025-12-24 - 2025-12-31)
 - [x] Document memory architecture
 - [x] Implement LIGHTWEIGHT_TESTS mode
-- [ ] Extract composite actions (50% reduction in workflow size)
+- [x] Consolidate 7 workflows → 1 workflow (87% reduction, 2,187 → 291 lines)
+- [x] Inline accuracy-gate job (replaced workflow_run with `needs:`)
 - [ ] Add memory monitoring to CI output
 
 ### Phase 2: Short-term (2026-01-01 - 2026-01-31)
@@ -496,6 +515,7 @@ Example: "How do I fix OOM (Exit 137) error?"
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 1.0 | 2025-12-24 | Initial creation - Memory architecture strategy | Claude Agent |
+| 1.1 | 2025-12-25 | CI consolidation: 7 workflows → 1 (87% reduction) | Claude Agent |
 
 ---
 

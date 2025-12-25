@@ -1,13 +1,13 @@
-# RAGLite CI - Simplified Pipeline
-# Designed for self-hosted runners with 24GB RAM shared across multiple projects
+# RAGLite CI - Consolidated Pipeline (Best Practices Aligned)
+# Self-hosted runners with 24GB RAM shared across projects
 #
-# Architecture: Three-Tier CI
-# - Tier 1 (validate): Every push/PR, <10 min, no containers, mocked ML deps
-# - Tier 2 (integration): Main branch only, <20 min, with containers
-# - Tier 3: See nightly.yml for comprehensive validation
+# Architecture: 3 focused jobs in single workflow
+# - validate: Every push/PR, <10 min, mocked ML deps
+# - integration: Main branch only, <20 min, with containers
+# - accuracy-gate: Main branch only, AC3 >=70% validation
 #
-# Resource Budget: <4GB RAM for Tier 1, <6GB RAM for Tier 2
-# This allows 2-3 projects to run CI simultaneously on shared runner
+# Aligned with industry best practices for <1000 LOC Python projects
+# See: docs/ci/STRATEGY.md for full documentation
 
 name: CI
 
@@ -38,7 +38,7 @@ jobs:
   # Target: <10 minutes, <4GB RAM, NO containers
   # ============================================================
   validate:
-    name: "Validate"
+    name: "📝 Code Quality: Lint & Format"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 15
 
@@ -124,7 +124,7 @@ jobs:
   # Target: <20 minutes, <6GB RAM, with containers
   # ============================================================
   integration:
-    name: "Integration"
+    name: "🔗 Tests: Integration (~115 tests)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 30
     needs: validate
@@ -185,6 +185,104 @@ jobs:
           name: test-results-tier2
           path: test-results/
           retention-days: 7
+
+      - name: Cleanup Containers
+        if: always()
+        run: |
+          chmod +x scripts/ci/cleanup-test-containers.sh
+          ./scripts/ci/cleanup-test-containers.sh test --force || true
+
+  # ============================================================
+  # TIER 3: Accuracy Gate (AC3 Validation)
+  # Runs ONLY on main branch after integration passes
+  # Target: <45 minutes, validates >=70% accuracy
+  # Simplified from accuracy-validation.yml (482 lines -> ~45 lines)
+  # ============================================================
+  accuracy-gate:
+    name: "✅ NFR: Accuracy Validation (NFR6/NFR7)"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 45
+    needs: integration
+    if: github.ref == 'refs/heads/main'
+
+    env:
+      QDRANT_HOST: localhost
+      QDRANT_PORT: "6335"
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5433"
+      POSTGRES_DB: raglite_test
+      POSTGRES_USER: raglite
+      POSTGRES_PASSWORD: raglite
+
+    steps:
+      - name: Production Safety Check
+        run: |
+          echo "Verifying test database ports..."
+          if [ "$QDRANT_PORT" = "6333" ] || [ "$POSTGRES_PORT" = "5432" ]; then
+            echo "FATAL: Production ports detected!"
+            echo "QDRANT_PORT=$QDRANT_PORT (should be 6335)"
+            echo "POSTGRES_PORT=$POSTGRES_PORT (should be 5433)"
+            exit 1
+          fi
+          echo "Safety check passed: Using test ports"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Start Test Containers
+        run: |
+          chmod +x scripts/ci/start-test-containers.sh
+          ./scripts/ci/start-test-containers.sh test
+          source .ci-env
+
+      - name: Setup Python + UV
+        run: |
+          uv venv ci-venv --python 3.11 --quiet 2>/dev/null || uv venv ci-venv --quiet
+          source ci-venv/bin/activate
+          uv pip install -e ".[dev]" --quiet
+
+      - name: Initialize Databases
+        run: |
+          source ci-venv/bin/activate
+          echo "Initializing Qdrant collection..."
+          python scripts/init-qdrant.py
+          echo "Initializing PostgreSQL schema..."
+          python scripts/init-test-postgresql.py
+
+      - name: Ingest PDF for Validation
+        run: |
+          source ci-venv/bin/activate
+          echo "Ingesting validation PDF (~15 minutes)..."
+          python scripts/ingest-for-validation.py
+
+      - name: Run AC3 Validation (>=70%)
+        run: |
+          source ci-venv/bin/activate
+          echo "========================================="
+          echo "Epic 2 AC3 Validation (>=70% threshold)"
+          echo "========================================="
+          python scripts/validate-epic-2-final.py
+
+          # Extract accuracy and validate threshold
+          ACCURACY=$(python -c "import json; print(json.load(open('docs/validation/epic-2-final-validation.json'))['metrics']['overall_accuracy'])")
+          echo "Accuracy: ${ACCURACY}%"
+
+          if (( $(echo "$ACCURACY >= 70" | bc -l) )); then
+            echo "PASS: AC3 accuracy gate passed (${ACCURACY}% >= 70%)"
+          else
+            echo "FAIL: AC3 accuracy below threshold (${ACCURACY}% < 70%)"
+            exit 1
+          fi
+
+      - name: Upload Accuracy Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accuracy-validation-results
+          path: docs/validation/
+          retention-days: 30
 
       - name: Cleanup Containers
         if: always()
