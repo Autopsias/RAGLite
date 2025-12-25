@@ -28,39 +28,93 @@ from unittest.mock import MagicMock
 if os.environ.get("LIGHTWEIGHT_TESTS") == "true":
     # Mock heavy dependencies before they're imported
     # These dependencies are only needed for forecasting/insights (not core RAG)
-    # CRITICAL: Must include ALL submodules that are directly imported
-    heavy_deps = [
-        # Prophet (~1-2GB)
-        "prophet",
-        "prophet.serialize",
-        "prophet.diagnostics",
-        # Chronos/PyTorch (~2-3GB combined)
-        "chronos",
-        "chronos_forecasting",
-        "pytorch_forecasting",
-        "pytorch_lightning",
-        "torch",
-        "torch.nn",
-        "transformers",
-        # Sentence Transformers (~2-3GB)
-        "sentence_transformers",
-        # Statsmodels (~500MB) - must include all imported submodules
-        "statsmodels",
-        "statsmodels.tsa",
-        "statsmodels.tsa.stattools",
-        "statsmodels.tsa.holtwinters",  # ExponentialSmoothing
-        # PMDARIMA (~200MB)
-        "pmdarima",
-        "pmdarima.arima",
-        # Boosting libraries (~500MB each)
-        "catboost",
-        "lightgbm",
-        "xgboost",
-    ]
-    for dep in heavy_deps:
-        if dep not in sys.modules:
-            sys.modules[dep] = MagicMock()
-    print(f"[LIGHTWEIGHT_TESTS] Mocked {len(heavy_deps)} heavy ML dependencies")
+    #
+    # CRITICAL: Use hierarchical mocking where parent modules have submodules as attributes
+    # This is required because Python's import system expects:
+    #   statsmodels.tsa.holtwinters to be accessible via statsmodels.tsa.holtwinters
+    # Simple flat mocking breaks this chain.
+
+    def create_mock_module(name: str) -> MagicMock:
+        """Create a MagicMock that behaves like a module."""
+        mock = MagicMock()
+        mock.__name__ = name
+        mock.__file__ = f"<mocked {name}>"
+        mock.__loader__ = None
+        mock.__spec__ = None
+        return mock
+
+    # Create hierarchical mocks
+    # Statsmodels (~500MB) - complex hierarchy
+    statsmodels = create_mock_module("statsmodels")
+    statsmodels.tsa = create_mock_module("statsmodels.tsa")
+    statsmodels.tsa.holtwinters = create_mock_module("statsmodels.tsa.holtwinters")
+    statsmodels.tsa.holtwinters.ExponentialSmoothing = MagicMock()
+    statsmodels.tsa.stattools = create_mock_module("statsmodels.tsa.stattools")
+    statsmodels.tsa.stattools.adfuller = MagicMock(return_value=(0, 0.05, 0, 0, {}, 0))
+    statsmodels.tsa.stattools.kpss = MagicMock(return_value=(0, 0.05, 0, {}))
+    statsmodels.tsa.stattools.acf = MagicMock(return_value=[1.0, 0.5, 0.25])
+    sys.modules["statsmodels"] = statsmodels
+    sys.modules["statsmodels.tsa"] = statsmodels.tsa
+    sys.modules["statsmodels.tsa.holtwinters"] = statsmodels.tsa.holtwinters
+    sys.modules["statsmodels.tsa.stattools"] = statsmodels.tsa.stattools
+
+    # Prophet (~1-2GB)
+    prophet = create_mock_module("prophet")
+    prophet.Prophet = MagicMock()
+    prophet.serialize = create_mock_module("prophet.serialize")
+    prophet.diagnostics = create_mock_module("prophet.diagnostics")
+    sys.modules["prophet"] = prophet
+    sys.modules["prophet.serialize"] = prophet.serialize
+    sys.modules["prophet.diagnostics"] = prophet.diagnostics
+
+    # PyTorch/Chronos (~2-3GB combined)
+    torch = create_mock_module("torch")
+    torch.nn = create_mock_module("torch.nn")
+    torch.cuda = create_mock_module("torch.cuda")
+    torch.cuda.is_available = MagicMock(return_value=False)
+    sys.modules["torch"] = torch
+    sys.modules["torch.nn"] = torch.nn
+    sys.modules["torch.cuda"] = torch.cuda
+
+    transformers = create_mock_module("transformers")
+    sys.modules["transformers"] = transformers
+
+    chronos = create_mock_module("chronos")
+    sys.modules["chronos"] = chronos
+    sys.modules["chronos_forecasting"] = create_mock_module("chronos_forecasting")
+
+    pytorch_forecasting = create_mock_module("pytorch_forecasting")
+    sys.modules["pytorch_forecasting"] = pytorch_forecasting
+
+    pytorch_lightning = create_mock_module("pytorch_lightning")
+    sys.modules["pytorch_lightning"] = pytorch_lightning
+
+    # Sentence Transformers (~2-3GB)
+    sentence_transformers = create_mock_module("sentence_transformers")
+    sentence_transformers.SentenceTransformer = MagicMock()
+    sys.modules["sentence_transformers"] = sentence_transformers
+
+    # PMDARIMA (~200MB)
+    pmdarima = create_mock_module("pmdarima")
+    pmdarima.arima = create_mock_module("pmdarima.arima")
+    pmdarima.arima.auto_arima = MagicMock()
+    sys.modules["pmdarima"] = pmdarima
+    sys.modules["pmdarima.arima"] = pmdarima.arima
+
+    # Boosting libraries (~500MB each)
+    catboost = create_mock_module("catboost")
+    catboost.CatBoostRegressor = MagicMock()
+    sys.modules["catboost"] = catboost
+
+    lightgbm = create_mock_module("lightgbm")
+    lightgbm.LGBMRegressor = MagicMock()
+    sys.modules["lightgbm"] = lightgbm
+
+    xgboost = create_mock_module("xgboost")
+    xgboost.XGBRegressor = MagicMock()
+    sys.modules["xgboost"] = xgboost
+
+    print("[LIGHTWEIGHT_TESTS] Mocked 15 heavy ML dependency trees (hierarchical)")
 
 # CRITICAL: Set APP_ENV=test BEFORE any raglite imports
 # This ensures the Settings singleton uses test database ports (6335, 5433)
