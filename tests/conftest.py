@@ -28,20 +28,34 @@ from unittest.mock import MagicMock
 if os.environ.get("LIGHTWEIGHT_TESTS") == "true":
     # Mock heavy dependencies before they're imported
     # These dependencies are only needed for forecasting/insights (not core RAG)
+    # CRITICAL: Must include ALL submodules that are directly imported
     heavy_deps = [
+        # Prophet (~1-2GB)
         "prophet",
         "prophet.serialize",
         "prophet.diagnostics",
+        # Chronos/PyTorch (~2-3GB combined)
         "chronos",
         "chronos_forecasting",
         "pytorch_forecasting",
         "pytorch_lightning",
+        "torch",
+        "torch.nn",
+        "transformers",
+        # Sentence Transformers (~2-3GB)
         "sentence_transformers",
+        # Statsmodels (~500MB) - must include all imported submodules
         "statsmodels",
         "statsmodels.tsa",
         "statsmodels.tsa.stattools",
+        "statsmodels.tsa.holtwinters",  # ExponentialSmoothing
+        # PMDARIMA (~200MB)
         "pmdarima",
         "pmdarima.arima",
+        # Boosting libraries (~500MB each)
+        "catboost",
+        "lightgbm",
+        "xgboost",
     ]
     for dep in heavy_deps:
         if dep not in sys.modules:
