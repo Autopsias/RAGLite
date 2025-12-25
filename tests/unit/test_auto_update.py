@@ -414,12 +414,12 @@ class TestTriggerForecastRefresh:
 
 
 # =============================================================================
-# Test _perform_forecast_refresh helper (from main.py)
+# Test _perform_forecast_refresh helper (from mcp.tools.ingestion)
 # =============================================================================
 
 
 class TestPerformForecastRefresh:
-    """Tests for the _perform_forecast_refresh helper in main.py."""
+    """Tests for the _perform_forecast_refresh helper in mcp.tools.ingestion."""
 
     @pytest.mark.asyncio
     async def test_auto_forecast_disabled(self):
@@ -455,7 +455,7 @@ class TestPerformForecastRefresh:
             chunk_count=30,
         )
 
-        with patch("raglite.main.settings") as mock_settings:
+        with patch("raglite.mcp.tools.ingestion.settings") as mock_settings:
             mock_settings.enable_forecast_auto_update = False
             result = await _perform_forecast_refresh(metadata, auto_forecast=True)
 
@@ -485,9 +485,9 @@ class TestPerformForecastRefresh:
         )
 
         with (
-            patch("raglite.main.settings") as mock_settings,
+            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
             patch(
-                "raglite.main.trigger_forecast_refresh",
+                "raglite.mcp.tools.ingestion.trigger_forecast_refresh",
                 new_callable=AsyncMock,
                 return_value=mock_refresh_result,
             ),
@@ -523,9 +523,9 @@ class TestPerformForecastRefresh:
         )
 
         with (
-            patch("raglite.main.settings") as mock_settings,
+            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
             patch(
-                "raglite.main.trigger_forecast_refresh",
+                "raglite.mcp.tools.ingestion.trigger_forecast_refresh",
                 new_callable=AsyncMock,
                 return_value=mock_refresh_result,
             ),
@@ -552,9 +552,9 @@ class TestPerformForecastRefresh:
         )
 
         with (
-            patch("raglite.main.settings") as mock_settings,
+            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
             patch(
-                "raglite.main.trigger_forecast_refresh",
+                "raglite.mcp.tools.ingestion.trigger_forecast_refresh",
                 new_callable=AsyncMock,
                 side_effect=RuntimeError("Unexpected crash"),
             ),

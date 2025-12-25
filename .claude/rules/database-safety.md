@@ -101,3 +101,62 @@ results = qdrant.search(collection_name='financial_docs', query_vector=embedding
 # PostgreSQL (structured queries) - via Docker
 # docker exec raglite-postgresql psql -U raglite -d raglite -c "SELECT * FROM financial_tables LIMIT 5"
 ```
+
+---
+
+## Container Volume Mount Issues
+
+### Problem: "Databases Empty" Despite Data on Disk
+
+If Qdrant/PostgreSQL report empty databases but `qdrant_storage/` or `postgresql_data/` contain data:
+
+**Root cause:** Docker containers have stale volume mounts pointing to wrong paths (often from CI runs).
+
+### Diagnosis
+
+```bash
+# Check current mount paths
+docker inspect raglite-qdrant --format='{{range .Mounts}}{{.Source}}{{end}}'
+docker inspect raglite-postgresql --format='{{range .Mounts}}{{.Source}}{{end}}'
+
+# Run verification script
+./scripts/verify-containers.sh
+```
+
+### Fix
+
+```bash
+# Recreate containers with correct mounts
+docker stop raglite-qdrant raglite-postgresql
+docker rm raglite-qdrant raglite-postgresql
+docker-compose up -d qdrant postgresql
+```
+
+### Prevention
+
+**Development Startup (recommended):**
+```bash
+# Run this when starting a new dev session
+./scripts/start-dev.sh
+```
+
+This script:
+1. Verifies container volume mounts are correct
+2. Recreates containers if mounts are wrong
+3. Waits for services to be ready
+4. Confirms data is accessible
+
+**CI Isolation (automatic):**
+- CI jobs use unique container names: `-test`, `-agentic`, `-discovery`, `-burnin`
+- CI containers use ephemeral storage (tmpfs), NOT production volumes
+- CI cleanup removes all CI containers after each job
+- Production containers (`raglite-qdrant`, `raglite-postgresql`) are NEVER touched by CI
+
+**Container Naming Convention:**
+| Context | Qdrant Container | PostgreSQL Container |
+|---------|------------------|----------------------|
+| **Production** | `raglite-qdrant` | `raglite-postgresql` |
+| **Unit Tests** | `raglite-qdrant-test` | `raglite-postgresql-test` |
+| **CI Agentic** | `raglite-qdrant-agentic` | `raglite-postgresql-agentic` |
+| **CI Discovery** | `raglite-qdrant-discovery` | `raglite-postgresql-discovery` |
+| **CI Burn-in** | `raglite-qdrant-burnin` | `raglite-postgresql-burnin` |

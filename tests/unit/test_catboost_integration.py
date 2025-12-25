@@ -9,6 +9,7 @@ Tests:
 
 from __future__ import annotations
 
+import os
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
@@ -16,9 +17,16 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from raglite.external_data.models import ModelWeight
-from raglite.external_data.orm_models import ModelWeightORM
-from raglite.forecasting.adaptive_weights import (
+# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
+# These tests require real CatBoost library
+pytestmark = pytest.mark.skipif(
+    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
+    reason="CatBoost tests require real CatBoost library (not mocked)",
+)
+
+from raglite.external_data.models import ModelWeight  # noqa: E402
+from raglite.external_data.orm_models import ModelWeightORM  # noqa: E402
+from raglite.forecasting.adaptive_weights import (  # noqa: E402
     _adjust_weights_no_regressors,
     _calculate_weights_from_rmse,
     _get_static_weights,

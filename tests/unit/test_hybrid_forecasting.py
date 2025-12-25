@@ -8,19 +8,32 @@ Tests cover:
 - AC6: 80%+ coverage on new code
 """
 
+import os
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
 
-from raglite.forecasting.hybrid import (
+# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
+# These tests require real Prophet for hybrid forecasting
+pytestmark = pytest.mark.skipif(
+    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
+    reason="Hybrid forecasting tests require real Prophet (not mocked)",
+)
+
+from raglite.forecasting.hybrid import (  # noqa: E402
     MIN_DATA_POINTS,
     InsufficientDataError,
     explain_forecast,
     generate_forecast,
 )
-from raglite.shared.models import ForecastPoint, ForecastResult, TimeSeriesData, TimeSeriesPoint
+from raglite.shared.models import (  # noqa: E402
+    ForecastPoint,
+    ForecastResult,
+    TimeSeriesData,
+    TimeSeriesPoint,
+)
 
 
 class TestForecastModels:

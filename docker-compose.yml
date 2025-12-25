@@ -43,6 +43,12 @@ services:
     environment:
       - QDRANT__SERVICE__HTTP_PORT=6333
       - QDRANT__SERVICE__GRPC_PORT=6334
+    # OOM Prevention: Limit memory to prevent container from consuming all RAM
+    # macOS M1 runners have 7GB total; reserve space for OS and tests
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     restart: unless-stopped
 
   postgresql-test:
@@ -57,4 +63,9 @@ services:
       - POSTGRES_USER=raglite_ci  # CI expects raglite_ci user
       - POSTGRES_PASSWORD=raglite_ci  # CI expects raglite_ci password
     shm_size: 256m  # Required for VACUUM operations (default 64m is too small)
+    # OOM Prevention: Limit memory (includes shm_size allocation)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     restart: unless-stopped

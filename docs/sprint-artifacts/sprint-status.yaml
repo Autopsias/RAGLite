@@ -191,21 +191,34 @@ development_status:
   5-14-knowledge-transfer-team-onboarding-documentation: backlog
   epic-5-retrospective: optional
 
-  # Epic 7: Technical Debt & Code Quality
+  # Epic 7B: Intelligent Model Selection Framework (PRIORITY)
+  # Goal: Implement intelligent per-variable model selection using ALL available models
+  # PRD: docs/prd/epic-7-intelligent-model-selection.md
+  # Timeline: 10 development days (2 weeks)
+  # Dependencies: Epic 6 (Advanced Forecasting) - provides model inventory
+  # Target: EBITDA MAPE from 84.77% to <15%, 15/20 variables meeting MAPE target
+  epic-7b: done
+  7b-1-add-arima-ets-model-wrappers: done
+  7b-2-data-characteristics-analyzer: done
+  7b-3-per-variable-model-selection-cv: done  # Phase 8 PASS - 2025-12-21
+  7b-4-model-selection-cache-postgresql: done  # Phase 8 PASS - 2025-12-21
+  7b-5-model-selection-slash-commands: done  # Phase 8 PASS - 2025-12-21
+  7b-6-mcp-integration-model-selection: done  # Complete - 2025-12-21 (48/48 tests passing)
+  epic-7b-retrospective: optional
+
+  # Epic 7: Technical Debt & Code Quality (ON HOLD - Resume after Epic 7B)
   # Sprint Change Proposal: SCP-2025-12-10-002 APPROVED
   # Goal: Reduce ALL files to <500 LOC for optimal AI comprehension
   # Timeline: ~90 days total (~30-45 days with parallelization)
   # Blockers: None (can run in parallel with Epic 5/6)
   # Reference: docs/analysis/file-size-refactoring-briefing.md
-  epic-7: backlog
-  # Batch 1: Enable Other Refactoring (Test Infrastructure)
-  7-1-split-test-external-data-clients: backlog
-  7-2-split-root-conftest: backlog
-  7-3-split-integration-conftest: backlog
-  # Batch 2: Largest Production Files
-  7-4-refactor-main-py-mcp-module: backlog
-  7-5-refactor-hybrid-py-forecasting-modules: backlog
-  # Batch 3: Ingestion Module (stories 7.6-7.9 to be drafted)
-  # Batch 4: External Data Module (stories 7.10-7.14 to be drafted)
-  # Batch 5: Remaining Tier 2-3 Files (stories 7.15-7.45 to be drafted)
+  epic-7: done
+  # Batch 1: Enable Other Refactoring (Test Infrastructure) - COMPLETE
+  7-1-split-test-external-data-clients: done
+  7-2-split-root-conftest: done
+  7-3-split-integration-conftest: done
+  # Batch 2: Largest Production Files - COMPLETE
+  7-4-refactor-main-py-mcp-module: done
+  7-5-refactor-hybrid-py-forecasting-modules: done
+  # Batch 3-5: Remaining files (stories 7.6-7.45 to be drafted when resumed)
   epic-7-retrospective: optional

@@ -8,6 +8,7 @@ Story 6.21: Unified Validation Script
 """
 
 from raglite.forecasting.auto_update import identify_affected_metrics, trigger_forecast_refresh
+from raglite.forecasting.ensemble import generate_ensemble_forecast
 from raglite.forecasting.hybrid import InsufficientDataError, explain_forecast, generate_forecast
 from raglite.forecasting.timeseries_extract import (
     ExtractionError,
@@ -41,6 +42,8 @@ __all__ = [
     # Story 4.3: Automated forecast updates
     "trigger_forecast_refresh",
     "identify_affected_metrics",
+    # Story 6.4/6.21: Ensemble forecasting
+    "generate_ensemble_forecast",
     # Story 6.21: Validation
     "calculate_holdout_mape",
     "calculate_walkforward_mape",

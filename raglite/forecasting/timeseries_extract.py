@@ -1823,6 +1823,22 @@ async def extract_timeseries_from_sql(
             # - Priority: GROUP (1) > SECIL Group (2) > others (3)
             # - Normalization: if value > 1000 assume kEUR, divide by 1000 to get EUR M
             # - For each period, select only the highest-priority entity that has data
+            #
+            # FIX (2025-12-22): Only apply entity priority when entity_filter is configured
+            # Without this, metrics like Turnover get filtered to GROUP (2 rows) instead of
+            # keeping all entities (2759 rows). When no entity_filter, use constant priority
+            # so all rows pass the MIN(entity_priority) filter in best_entity_per_period.
+            use_entity_priority = bool(entity_filter.strip())
+            entity_priority_expr = (
+                """CASE
+                            WHEN UPPER(entity) = 'GROUP' THEN 1
+                            WHEN entity = 'SECIL Group' THEN 2
+                            ELSE 3
+                        END"""
+                if use_entity_priority
+                else "1"
+            )  # Constant when no filter
+
             return f"""
                 WITH periods_with_year AS (
                     -- Extract fiscal year from period when fiscal_year is NULL
@@ -1845,11 +1861,8 @@ async def extract_timeseries_from_sql(
                         entity,
                         metric,
                         -- Entity priority for selection: prefer GROUP over SECIL Group
-                        CASE
-                            WHEN UPPER(entity) = 'GROUP' THEN 1
-                            WHEN entity = 'SECIL Group' THEN 2
-                            ELSE 3
-                        END as entity_priority
+                        -- FIX (2025-12-22): Only when entity_filter configured, else constant 1
+                        {entity_priority_expr} as entity_priority
                     FROM financial_tables
                     WHERE {metric_condition}
                       AND period IS NOT NULL
@@ -1901,7 +1914,18 @@ async def extract_timeseries_from_sql(
                 -- FIX (2025-12-09): Changed from > 0 to <> 0 to support cost metrics (negative values)
                 -- FIX (2025-12-01): Sort chronologically, not alphabetically
                 -- "Apr-25" should come AFTER "Feb-25", not before
-                ORDER BY ft.inferred_fiscal_year, TO_DATE(ft.clean_period, 'Mon-YY')
+                -- FIX (2025-12-22): Handle Portuguese month abbreviations (Fev, Abr, etc.) before TO_DATE
+                ORDER BY ft.inferred_fiscal_year, TO_DATE(
+                    CASE SUBSTRING(ft.clean_period FROM 1 FOR 3)
+                        WHEN 'Fev' THEN 'Feb' || SUBSTRING(ft.clean_period FROM 4)
+                        WHEN 'Abr' THEN 'Apr' || SUBSTRING(ft.clean_period FROM 4)
+                        WHEN 'Mai' THEN 'May' || SUBSTRING(ft.clean_period FROM 4)
+                        WHEN 'Ago' THEN 'Aug' || SUBSTRING(ft.clean_period FROM 4)
+                        WHEN 'Set' THEN 'Sep' || SUBSTRING(ft.clean_period FROM 4)
+                        WHEN 'Out' THEN 'Oct' || SUBSTRING(ft.clean_period FROM 4)
+                        WHEN 'Dez' THEN 'Dec' || SUBSTRING(ft.clean_period FROM 4)
+                        ELSE ft.clean_period
+                    END, 'Mon-YY')
             """
 
         # Try exact match first

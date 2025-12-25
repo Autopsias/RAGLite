@@ -85,9 +85,13 @@ async def classify_query_complexity(query: str) -> QueryComplexity:
         "determine",
         # Growth/change keywords
         "growth",
+        "grow",
+        "grew",
         "change",
         "increase",
+        "increased",
         "decrease",
+        "decreased",
         "yoy",
         "year-over-year",
         "quarter-over-quarter",

@@ -46,6 +46,7 @@ jobs:
       - name: Install dependencies
         run: |
           uv sync --all-groups
+          uv pip install pytest-html
 
       - name: Run health checks
         id: health_checks
@@ -59,9 +60,12 @@ jobs:
             --self-contained-html \
             2>&1 | tee health-output.txt || true
 
-          # Count failures
-          FAILED=$(grep -c "FAILED" health-output.txt || echo "0")
-          PASSED=$(grep -c "PASSED" health-output.txt || echo "0")
+          # Count failures - use robust pattern to handle zero matches
+          FAILED=$(grep -c "FAILED" health-output.txt 2>/dev/null || true)
+          PASSED=$(grep -c "PASSED" health-output.txt 2>/dev/null || true)
+          # Ensure variables are numeric (default to 0 if empty)
+          FAILED=${FAILED:-0}
+          PASSED=${PASSED:-0}
           TOTAL=$((FAILED + PASSED))
 
           echo "failed=$FAILED" >> $GITHUB_OUTPUT

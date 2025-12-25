@@ -14,6 +14,11 @@ from raglite.main import (
     mcp,
     query_financial_documents,
 )
+
+# Import modules (not functions) for reliable patch.object usage in CI
+# This avoids import-time binding issues with string-based patching
+from raglite.mcp.tools import ingestion as ingestion_module
+from raglite.mcp.tools import query as query_module
 from raglite.retrieval.multi_index_search import MultiIndexSearchError, SearchResult
 from raglite.retrieval.search import QueryError
 from raglite.shared.models import (
@@ -61,9 +66,13 @@ class TestIngestFinancialDocumentTool:
             chunk_count=42,
         )
 
+        # Use patch.object for more reliable patching in CI environments
+        # This patches the actual module object rather than relying on string-based lookup
         with (
-            patch("raglite.main.ingest_document", new_callable=AsyncMock) as mock_ingest,
-            patch("raglite.main.settings") as mock_settings,
+            patch.object(
+                ingestion_module, "ingest_document", new_callable=AsyncMock
+            ) as mock_ingest,
+            patch.object(ingestion_module, "settings") as mock_settings,
         ):
             mock_ingest.return_value = mock_metadata
             mock_settings.enable_forecast_auto_update = False  # Disable for simpler test
@@ -81,7 +90,9 @@ class TestIngestFinancialDocumentTool:
     @pytest.mark.asyncio
     async def test_ingest_tool_file_not_found(self):
         """Test ingestion with missing file raises DocumentProcessingError."""
-        with patch("raglite.main.ingest_document", new_callable=AsyncMock) as mock_ingest:
+        with patch.object(
+            ingestion_module, "ingest_document", new_callable=AsyncMock
+        ) as mock_ingest:
             mock_ingest.side_effect = FileNotFoundError("File not found")
 
             with pytest.raises(DocumentProcessingError) as exc_info:
@@ -93,7 +104,9 @@ class TestIngestFinancialDocumentTool:
     @pytest.mark.asyncio
     async def test_ingest_tool_processing_error(self):
         """Test ingestion with processing error raises DocumentProcessingError."""
-        with patch("raglite.main.ingest_document", new_callable=AsyncMock) as mock_ingest:
+        with patch.object(
+            ingestion_module, "ingest_document", new_callable=AsyncMock
+        ) as mock_ingest:
             mock_ingest.side_effect = Exception("PDF parsing failed")
 
             with pytest.raises(DocumentProcessingError) as exc_info:
@@ -113,7 +126,9 @@ class TestIngestFinancialDocumentTool:
             chunk_count=20,
         )
 
-        with patch("raglite.main.ingest_document", new_callable=AsyncMock) as mock_ingest:
+        with patch.object(
+            ingestion_module, "ingest_document", new_callable=AsyncMock
+        ) as mock_ingest:
             mock_ingest.return_value = mock_metadata
 
             with caplog.at_level("INFO"):
@@ -181,9 +196,14 @@ class TestQueryFinancialDocumentsTool:
             ),
         ]
 
+        # Use patch.object for more reliable patching in CI environments
         with (
-            patch("raglite.main.multi_index_search", new_callable=AsyncMock) as mock_multi_search,
-            patch("raglite.main.generate_citations", new_callable=AsyncMock) as mock_citations,
+            patch.object(
+                query_module, "multi_index_search", new_callable=AsyncMock
+            ) as mock_multi_search,
+            patch.object(
+                query_module, "generate_citations", new_callable=AsyncMock
+            ) as mock_citations,
         ):
             mock_multi_search.return_value = mock_search_results
             mock_citations.return_value = mock_cited_results
@@ -229,7 +249,9 @@ class TestQueryFinancialDocumentsTool:
     @pytest.mark.asyncio
     async def test_query_tool_search_error(self):
         """Test query with multi-index search failure re-raises QueryError."""
-        with patch("raglite.main.multi_index_search", new_callable=AsyncMock) as mock_multi_search:
+        with patch.object(
+            query_module, "multi_index_search", new_callable=AsyncMock
+        ) as mock_multi_search:
             mock_multi_search.side_effect = MultiIndexSearchError("Qdrant connection failed")
 
             request = QueryRequest(query="valid query", top_k=5)
@@ -243,7 +265,9 @@ class TestQueryFinancialDocumentsTool:
     @pytest.mark.asyncio
     async def test_query_tool_unexpected_error(self):
         """Test query with unexpected error wraps in QueryError."""
-        with patch("raglite.main.multi_index_search", new_callable=AsyncMock) as mock_multi_search:
+        with patch.object(
+            query_module, "multi_index_search", new_callable=AsyncMock
+        ) as mock_multi_search:
             mock_multi_search.side_effect = Exception("Unexpected failure")
 
             request = QueryRequest(query="valid query", top_k=5)
@@ -286,9 +310,14 @@ class TestQueryFinancialDocumentsTool:
             )
         ]
 
+        # Use patch.object for more reliable patching in CI environments
         with (
-            patch("raglite.main.multi_index_search", new_callable=AsyncMock) as mock_multi_search,
-            patch("raglite.main.generate_citations", new_callable=AsyncMock) as mock_citations,
+            patch.object(
+                query_module, "multi_index_search", new_callable=AsyncMock
+            ) as mock_multi_search,
+            patch.object(
+                query_module, "generate_citations", new_callable=AsyncMock
+            ) as mock_citations,
         ):
             mock_multi_search.return_value = mock_search_results
             mock_citations.return_value = mock_cited_results

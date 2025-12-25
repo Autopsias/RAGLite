@@ -71,7 +71,13 @@ repos:
     rev: 1.8.0
     hooks:
       - id: bandit
-        args: [-r, raglite/, -f, screen, -s, B101, -s, B608]
+        # Skip common low-severity issues that are intentional in this codebase:
+        # B101: assert_used (defensive programming asserts after validation)
+        # B110: try_except_pass (intentional fallback behavior)
+        # B112: try_except_continue (intentional skip on failure)
+        # B310: urllib_urlopen (audited URL open with validation)
+        # B608: hardcoded_sql_expressions (parameterized internal queries)
+        args: [-r, raglite/, -f, screen, "-s", "B101,B110,B112,B310,B608"]
         exclude: (raglite/tests/|raglite/ingestion/(adaptive_table_extraction|table_extraction|chunking_strategy|adaptive_table/).*\.py)
         pass_filenames: false
 

@@ -47,14 +47,22 @@ class TestRegressorConfig:
         assert "euribor_3m" in regressors
 
     def test_get_default_regressors_ebitda(self) -> None:
-        """Story 6.11.2 AC2: Explicit mapping for ebitda returns appropriate regressors."""
+        """Story 6.11.2 AC2: Explicit mapping for ebitda returns appropriate regressors.
+
+        Story 7b-7: Updated to reflect demand-side + cost-side regressor mix.
+        """
         from raglite.forecasting.regressor_config import get_default_regressors
 
         regressors = get_default_regressors("ebitda")
         assert isinstance(regressors, list)
         assert len(regressors) >= 3
-        assert "euribor_3m" in regressors
+        # Story 7b-7: Demand-side (construction) and cost-side (energy) regressors
+        assert "construction_output" in regressors
+        assert "building_permits" in regressors
+        assert "construction_confidence" in regressors
+        assert "housing_transactions" in regressors
         assert "ttf_gas" in regressors
+        assert "diesel" in regressors
 
     def test_get_default_regressors_electricity_cost(self) -> None:
         """Story 6.11.2 AC2: Energy metrics should include electricity regressors."""

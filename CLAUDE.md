@@ -207,6 +207,37 @@ Workflows: `bmad/core/workflows/`, `bmad/bmm/workflows/`
 
 ---
 
+## Test Reliability Rules
+
+These rules prevent recurring test failures. Follow them for ALL test-related changes.
+
+### Import Patterns
+- **ALWAYS** use lazy-load wrapper functions for external ML libraries (statsmodels, pmdarima, etc.)
+- **NEVER** define dataclasses in large utility modules; use dedicated `models.py` files
+- **ALWAYS** use `TYPE_CHECKING` guards for cross-module type hints that could cause circular imports
+
+### Mock Patterns
+- **ALWAYS** patch wrapper functions, not direct class imports
+- **NEVER** patch at the definition location; patch where the object is USED
+- **ALWAYS** verify mock call counts match expected behavior
+
+### Test Isolation
+- **ALWAYS** use explicit `@pytest.mark.integration` for integration tests
+- **NEVER** rely on file path heuristics for fixture activation
+- **ALWAYS** ensure session fixtures have explicit skip conditions for unit-only runs
+
+### Docker/Infrastructure
+- **ALWAYS** verify Docker container volume mounts before running tests
+- **NEVER** assume containers have correct mounts after CI runs (may have stale paths)
+- Run `docker inspect <container> --format='{{json .Mounts}}'` to verify
+
+### File Size
+- **NEVER** add code to a file already at 450+ LOC without splitting first
+- **ALWAYS** split before adding new functionality to large files
+- **NEVER** commit new files exceeding 500 LOC without approved exception
+
+---
+
 ## Current Next Steps
 
 1. **Epic 2 Phase 1:** pypdfium backend + page parallelism

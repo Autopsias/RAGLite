@@ -172,6 +172,9 @@ development_status:
   7-6-mcp-integration-model-selection: backlog  # NEW: MCP query-time routing
   epic-7-retrospective: optional
 
+  # Epic 7b Extension Stories (Correct-Course additions)
+  7b-7-demand-side-regressors: done  # SCP-2025-12-24: Housing transactions, EBITDA mapping fix - COMPLETE
+
   # Epic 5: Production Readiness & Real-Time Operations
   # ⚠️ BLOCKED by Epic 6 until data pipeline components ready for cloud deployment
   epic-5: backlog

@@ -1,0 +1,148 @@
+{
+  "timestamp": "20251223-144930",
+  "runtime_minutes": 12.488451135158538,
+  "variables_processed": 18,
+  "results": {
+    "revenue": {
+      "best_model": "ets",
+      "best_mape": 0.7976899701745201,
+      "best_mase": 1.0887452510180389,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "ebitda": {
+      "best_model": "lightgbm",
+      "best_mape": 209.9700907238592,
+      "best_mase": 2.210963134587547,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "sales_volume": {
+      "best_model": "lightgbm",
+      "best_mape": 65.31342775723411,
+      "best_mase": 1.411226690370805,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "thermal_cost": {
+      "best_model": "ets",
+      "best_mape": 19.642259797727462,
+      "best_mase": 1.6818450046127793,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "variable_cost": {
+      "best_model": "catboost",
+      "best_mape": 13.32649661354946,
+      "best_mase": 1.6220133414379876,
+      "use_regressors": true,
+      "regressor_set": [
+        "api2_coal",
+        "ttf_gas"
+      ]
+    },
+    "capacity_utilization": {
+      "best_model": "ets",
+      "best_mape": 0.20326022214308112,
+      "best_mase": 1.8118935681467172,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "avg_selling_price": {
+      "best_model": "ets",
+      "best_mape": 1.409079936892797,
+      "best_mase": 1.2898259528694247,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "ttf_gas_price": {
+      "best_model": "ets",
+      "best_mape": 75.37655784212166,
+      "best_mase": 11.54633298285246,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "petcoke_price": {
+      "best_model": "xgboost",
+      "best_mape": 45.474284524512846,
+      "best_mase": 2.78710636563081,
+      "use_regressors": true,
+      "regressor_set": [
+        "gdp_growth",
+        "inflation",
+        "diesel"
+      ]
+    },
+    "co2_eua_price": {
+      "best_model": "ets",
+      "best_mape": 13.167272332753518,
+      "best_mase": 1.2276081319896655,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "electricity_cost": {
+      "best_model": "linear",
+      "best_mape": 5.70671734243316,
+      "best_mase": 0.4350445326274673,
+      "use_regressors": true,
+      "regressor_set": [
+        "ren_electricity",
+        "ttf_gas"
+      ]
+    },
+    "diesel": {
+      "best_model": "arima",
+      "best_mape": 7.262610429958691,
+      "best_mase": 5.936152158591971,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "api2_coal": {
+      "best_model": "arima",
+      "best_mape": 23.234843229196677,
+      "best_mase": 11.461196534853219,
+      "use_regressors": true,
+      "regressor_set": [
+        "ttf_gas"
+      ]
+    },
+    "gdp_growth": {
+      "best_model": "catboost",
+      "best_mape": 38.85668872746062,
+      "best_mase": 1.2959815122145897,
+      "use_regressors": true,
+      "regressor_set": [
+        "construction_output",
+        "euribor_3m"
+      ]
+    },
+    "inflation": {
+      "best_model": "catboost",
+      "best_mape": 2.550195842160827,
+      "best_mase": 5.198689676422449,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "euribor_3m": {
+      "best_model": "ets",
+      "best_mape": 53.440629903925654,
+      "best_mase": 13.96658678051043,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "construction_output": {
+      "best_model": "ets",
+      "best_mape": 1.8519211646166078,
+      "best_mase": 1.9298235409988649,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "building_permits": {
+      "best_model": "lightgbm",
+      "best_mape": 10.619100790746995,
+      "best_mase": 0.7871574252148552,
+      "use_regressors": false,
+      "regressor_set": []
+    }
+  }
+}

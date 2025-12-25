@@ -128,3 +128,118 @@ uv run python scripts/run-accuracy-tests.py
 # With coverage
 uv run pytest --cov=raglite --cov-report=html
 ```
+
+---
+
+## Container Lifecycle Management (2025-12-24)
+
+**Strategic recommendation:** Test fixtures now auto-restart stopped containers to prevent infrastructure failures.
+
+### Auto-Restart Behavior
+
+When integration tests start, the fixture system:
+1. Checks if test containers (`raglite-postgresql-test`, `raglite-qdrant-test`) are running
+2. If containers are stopped, attempts automatic restart via `docker start`
+3. If PostgreSQL was restarted, initializes database schema (ORM tables)
+4. Only skips tests if restart fails
+
+### Container Status Commands
+
+```bash
+# Check container status
+docker ps -a --filter "name=raglite-postgresql-test" --format "{{.Names}}\t{{.Status}}"
+docker ps -a --filter "name=raglite-qdrant-test" --format "{{.Names}}\t{{.Status}}"
+
+# Manual restart if needed
+docker start raglite-postgresql-test raglite-qdrant-test
+
+# Initialize database schema after restart
+APP_ENV=test uv run python scripts/init-test-postgresql.py
+```
+
+### Fixture: `ensure_test_infrastructure`
+
+Use for explicit infrastructure validation:
+
+```python
+@pytest.mark.usefixtures("ensure_test_infrastructure")
+class TestMyIntegration:
+    def test_something(self):
+        ...
+```
+
+---
+
+## Configuration Testing Rules (2025-12-24)
+
+**Strategic recommendation:** Prevent config-test drift where tests hardcode values that configuration changes.
+
+### Config Change Detection
+
+A CI workflow (`config-change-detection.yml`) monitors changes to:
+- `raglite/forecasting/regressor_config.py`
+- `raglite/forecasting/model_selection.py`
+- `raglite/external_data/orm_models.py`
+- `raglite/shared/config.py`
+
+When these files change without related test updates, the workflow posts a review reminder.
+
+### Best Practices for Config Tests
+
+```python
+# WRONG: Hardcoded expected values
+def test_ebitda_has_euribor():
+    regressors = get_default_regressors("ebitda")
+    assert "euribor_3m" in regressors  # Breaks when config changes!
+
+# CORRECT: Test behavior, not implementation
+def test_ebitda_has_cost_side_regressors():
+    """EBITDA should have cost-side regressors (energy prices)."""
+    regressors = get_default_regressors("ebitda")
+    cost_side = {"ttf_gas", "diesel", "api2_coal", "eurostat_electricity"}
+    assert bool(set(regressors) & cost_side), "EBITDA needs cost-side regressors"
+
+# CORRECT: Data-driven from source of truth
+@pytest.mark.parametrize("metric,expected", [
+    (m, r) for m, r in METRIC_REGRESSORS.items()
+])
+def test_metric_returns_configured_regressors(metric, expected):
+    assert set(get_default_regressors(metric)) == set(expected)
+```
+
+### When Changing Configuration
+
+1. **Review related tests** for hardcoded expectations
+2. **Update tests** to match new configuration OR use data-driven patterns
+3. **Add Story reference** in test docstrings explaining why values changed
+
+---
+
+## Database Schema Initialization
+
+**Critical:** Test database must have ALL tables before running integration tests.
+
+### Schema Initialization Script
+
+```bash
+# Initialize test database (creates all tables including ORM models)
+APP_ENV=test uv run python scripts/init-test-postgresql.py
+```
+
+This script now creates:
+- `financial_chunks` (core RAG table)
+- `financial_tables` (structured data)
+- `entity_mappings` (entity resolution)
+- `model_selection` (Story 7b-4 cache)
+- `model_weights` (Story 6.12 ensemble)
+- `external_data_sources/points` (regressors)
+- `model_registry` (model metadata)
+
+### After Container Restart
+
+The auto-restart fixture calls `initialize_test_database_schema()` which ensures ORM tables exist. However, for manual restarts:
+
+```bash
+docker start raglite-postgresql-test
+APP_ENV=test uv run python scripts/init-test-postgresql.py
+```

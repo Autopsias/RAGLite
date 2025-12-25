@@ -1,26 +1,124 @@
-"""Pytest configuration and shared fixtures for RAGLite tests.
+"""Root pytest configuration for RAGLite tests.
 
-Provides test fixtures for configuration, mock clients, and test data.
+This is the root conftest.py that sets up the test environment and loads
+fixture modules via pytest_plugins. The fixture modules are organized in
+tests/fixtures/ for better maintainability and AI comprehension.
 
-Performance Optimization:
-- Session-scoped fixtures for expensive operations (mock clients)
-- Module-scoped fixtures for shared test data
-- Function-scoped fixtures only when test isolation is required
+Fixture Modules Loaded:
+- database_fixtures: Session-scoped database fixtures (Qdrant, PostgreSQL)
+- mock_clients: Mock Qdrant, Claude, Mistral clients
+- sample_data: Sample document metadata and chunks
+- pytest_hooks: Custom pytest hooks (options, collection modification)
+- performance_monitoring: Session timing and budget validation
 
-Test Isolation Enforcement:
-- Integration tests must have @pytest.mark.preserve_collection or
-  @pytest.mark.manages_collection_state to prevent expensive cleanup
-- This hook validates markers during test collection to prevent regressions
-
-Fixture Timing (Phase 2.4):
-- Session fixtures log start/completion time to identify bottlenecks
-- Useful for diagnosing test performance issues
+Test Environment Configuration:
+- APP_ENV=test: Uses test database ports (Qdrant 6335, PostgreSQL 5433)
+- TESTING=true: Enables test-specific optimizations (connection timeouts)
+- PostgreSQL: raglite_ci database on port 5433
+- Qdrant: _test collection suffix on port 6335
+- LIGHTWEIGHT_TESTS=true: Mock heavy ML dependencies for unit tests (CI mode)
 """
+
+# CRITICAL: CI lightweight mode - mock heavy ML dependencies BEFORE any imports
+# This prevents loading 10-15GB of ML libraries during test collection on CI runners with ~6GB RAM
+import os
+import sys
+from unittest.mock import MagicMock
+
+if os.environ.get("LIGHTWEIGHT_TESTS") == "true":
+    # Mock heavy dependencies before they're imported
+    # These dependencies are only needed for forecasting/insights (not core RAG)
+    #
+    # CRITICAL: Use hierarchical mocking where parent modules have submodules as attributes
+    # This is required because Python's import system expects:
+    #   statsmodels.tsa.holtwinters to be accessible via statsmodels.tsa.holtwinters
+    # Simple flat mocking breaks this chain.
+
+    def create_mock_module(name: str) -> MagicMock:
+        """Create a MagicMock that behaves like a module."""
+        mock = MagicMock()
+        mock.__name__ = name
+        mock.__file__ = f"<mocked {name}>"
+        mock.__loader__ = None
+        mock.__spec__ = None
+        return mock
+
+    # Create hierarchical mocks
+    # Statsmodels (~500MB) - complex hierarchy
+    statsmodels = create_mock_module("statsmodels")
+    statsmodels.tsa = create_mock_module("statsmodels.tsa")
+    statsmodels.tsa.holtwinters = create_mock_module("statsmodels.tsa.holtwinters")
+    statsmodels.tsa.holtwinters.ExponentialSmoothing = MagicMock()
+    statsmodels.tsa.stattools = create_mock_module("statsmodels.tsa.stattools")
+    statsmodels.tsa.stattools.adfuller = MagicMock(return_value=(0, 0.05, 0, 0, {}, 0))
+    statsmodels.tsa.stattools.kpss = MagicMock(return_value=(0, 0.05, 0, {}))
+    statsmodels.tsa.stattools.acf = MagicMock(return_value=[1.0, 0.5, 0.25])
+    sys.modules["statsmodels"] = statsmodels
+    sys.modules["statsmodels.tsa"] = statsmodels.tsa
+    sys.modules["statsmodels.tsa.holtwinters"] = statsmodels.tsa.holtwinters
+    sys.modules["statsmodels.tsa.stattools"] = statsmodels.tsa.stattools
+
+    # Prophet (~1-2GB)
+    prophet = create_mock_module("prophet")
+    prophet.Prophet = MagicMock()
+    prophet.serialize = create_mock_module("prophet.serialize")
+    prophet.diagnostics = create_mock_module("prophet.diagnostics")
+    sys.modules["prophet"] = prophet
+    sys.modules["prophet.serialize"] = prophet.serialize
+    sys.modules["prophet.diagnostics"] = prophet.diagnostics
+
+    # PyTorch/Chronos (~2-3GB combined)
+    torch = create_mock_module("torch")
+    torch.nn = create_mock_module("torch.nn")
+    torch.cuda = create_mock_module("torch.cuda")
+    torch.cuda.is_available = MagicMock(return_value=False)
+    sys.modules["torch"] = torch
+    sys.modules["torch.nn"] = torch.nn
+    sys.modules["torch.cuda"] = torch.cuda
+
+    transformers = create_mock_module("transformers")
+    sys.modules["transformers"] = transformers
+
+    chronos = create_mock_module("chronos")
+    sys.modules["chronos"] = chronos
+    sys.modules["chronos_forecasting"] = create_mock_module("chronos_forecasting")
+
+    pytorch_forecasting = create_mock_module("pytorch_forecasting")
+    sys.modules["pytorch_forecasting"] = pytorch_forecasting
+
+    pytorch_lightning = create_mock_module("pytorch_lightning")
+    sys.modules["pytorch_lightning"] = pytorch_lightning
+
+    # Sentence Transformers (~2-3GB)
+    sentence_transformers = create_mock_module("sentence_transformers")
+    sentence_transformers.SentenceTransformer = MagicMock()
+    sys.modules["sentence_transformers"] = sentence_transformers
+
+    # PMDARIMA (~200MB)
+    pmdarima = create_mock_module("pmdarima")
+    pmdarima.arima = create_mock_module("pmdarima.arima")
+    pmdarima.arima.auto_arima = MagicMock()
+    sys.modules["pmdarima"] = pmdarima
+    sys.modules["pmdarima.arima"] = pmdarima.arima
+
+    # Boosting libraries (~500MB each)
+    catboost = create_mock_module("catboost")
+    catboost.CatBoostRegressor = MagicMock()
+    sys.modules["catboost"] = catboost
+
+    lightgbm = create_mock_module("lightgbm")
+    lightgbm.LGBMRegressor = MagicMock()
+    sys.modules["lightgbm"] = lightgbm
+
+    xgboost = create_mock_module("xgboost")
+    xgboost.XGBRegressor = MagicMock()
+    sys.modules["xgboost"] = xgboost
+
+    print("[LIGHTWEIGHT_TESTS] Mocked 15 heavy ML dependency trees (hierarchical)")
 
 # CRITICAL: Set APP_ENV=test BEFORE any raglite imports
 # This ensures the Settings singleton uses test database ports (6335, 5433)
 # Must be at module level before imports to take effect during module initialization
-import os
 
 os.environ["APP_ENV"] = "test"
 os.environ["TESTING"] = "true"
@@ -42,8 +140,6 @@ os.environ.setdefault("MISTRAL_API_KEY", "test-mistral-api-key-for-ci")
 
 import logging
 import time
-from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 from pytest import MonkeyPatch
@@ -53,15 +149,31 @@ from pytest import MonkeyPatch
 # If config.py was imported before conftest.py set test env vars, we need to recreate it.
 import raglite.shared.config
 from raglite.shared.config import Settings
-from raglite.shared.models import Chunk, DocumentMetadata
 
 raglite.shared.config.settings = Settings()  # Recreate singleton with test env vars
 
 logger = logging.getLogger(__name__)
 
-# Load database fixtures module to make test_financial_data fixture available
-# Note: Moved from tests/integration/conftest.py to avoid non-top-level conftest issue
-pytest_plugins = ["tests.fixtures.database_fixtures"]
+# Load fixture modules via pytest_plugins
+# NOTE: Order matters for hooks - pytest_hooks must load BEFORE other plugins
+# NOTE: pytest_plugins MUST be defined at root conftest only (pytest deprecation)
+pytest_plugins = [
+    # Root fixtures (for all tests)
+    "tests.fixtures.pytest_hooks",  # Load hooks first (pytest_addoption, etc.)
+    "tests.fixtures.performance_monitoring",  # Session timing hooks
+    "tests.fixtures.database_fixtures",  # Database fixtures
+    "tests.fixtures.mistral_mock_helpers",  # Mistral mock helper functions (must be before mock_clients)
+    "tests.fixtures.mock_clients",  # Mock clients (includes autouse Mistral mock)
+    "tests.fixtures.sample_data",  # Sample metadata and chunks
+    # Integration fixtures (moved from tests/integration/conftest.py per pytest deprecation)
+    "tests.integration.fixtures.session_state",
+    "tests.integration.fixtures.service_checking",
+    "tests.integration.fixtures.container_lifecycle",  # Auto-restart for test containers (2025-12-24)
+    "tests.integration.fixtures.session_fixtures",
+    "tests.integration.fixtures.test_isolation",
+    "tests.integration.fixtures.module_fixtures",
+    "tests.integration.fixtures.helper_fixtures",
+]
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -132,6 +244,59 @@ def configure_test_environment():
             del os.environ[key]
 
 
+@pytest.fixture(scope="session", autouse=True)
+def disable_joblib_parallel_processing():
+    """Disable parallel processing in joblib to prevent resource leaks.
+
+    CRITICAL FIX (2025-12-24): Prevents SIGKILL during pytest shutdown.
+
+    Issue: Integration tests use forecasting models (statsmodels, pmdarima) which
+    use joblib for parallel processing. Joblib creates multiprocessing semaphores
+    and shared memory that aren't properly cleaned up during pytest shutdown,
+    causing Python's multiprocessing resource_tracker to issue warnings and
+    trigger SIGKILL.
+
+    Fix Strategy (Two-Part):
+    1. CI Workflow: Kills orphaned resource_tracker processes BEFORE pytest starts
+       (see .github/workflows/ci.yml "Pre-test memory cleanup" step)
+    2. This Fixture: Configures joblib to use threading instead of multiprocessing
+       to prevent NEW resource leaks during current test run
+
+    Resource leak warnings before fix:
+    - UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects
+    - UserWarning: resource_tracker: There appear to be 6 leaked semlock objects
+    - UserWarning: resource_tracker: There appear to be 2 leaked folder objects
+
+    Impact: Tests run successfully (159 passed) but pytest process was killed
+    with SIGKILL during cleanup phase.
+
+    References:
+    - https://github.com/joblib/joblib/issues/945
+    - https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
+    """
+    # Configure environment variable to disable joblib parallel processing
+    # This affects statsmodels, scikit-learn, and pmdarima which use joblib internally
+    os.environ["JOBLIB_START_METHOD"] = "threading"  # Use threading instead of multiprocessing
+    os.environ["LOKY_MAX_CPU_COUNT"] = "1"  # Limit loky (joblib backend) to single CPU
+
+    logger.info("Joblib parallel processing disabled: using threading backend")
+    logger.info("This prevents multiprocessing resource leaks during test cleanup")
+
+    yield
+
+    # Cleanup: restore to defaults
+    if "JOBLIB_START_METHOD" in os.environ:
+        del os.environ["JOBLIB_START_METHOD"]
+    if "LOKY_MAX_CPU_COUNT" in os.environ:
+        del os.environ["LOKY_MAX_CPU_COUNT"]
+
+    # Force garbage collection to cleanup any remaining resources
+    import gc
+
+    gc.collect()
+    logger.info("Joblib configuration cleaned up")
+
+
 def _timed_fixture(fixture_name: str, func, start_time: float) -> None:
     """Log fixture execution time (Phase 2.4 instrumentation).
 
@@ -161,8 +326,6 @@ def session_test_settings() -> Settings:
     Returns:
         Settings instance with test configuration
     """
-    import os
-
     start_time = time.time()
     logger.info("Fixture 'session_test_settings' starting")
 
@@ -205,653 +368,3 @@ def test_settings(monkeypatch: MonkeyPatch) -> Settings:
     monkeypatch.setenv("EMBEDDING_MODEL", "intfloat/e5-large-v2")
     monkeypatch.setenv("EMBEDDING_DIMENSION", "1024")
     return Settings()
-
-
-@pytest.fixture(scope="module")
-def mock_qdrant_client() -> MagicMock:
-    """Provide a mock Qdrant client for unit tests (module-scoped).
-
-    Module-scoped to avoid recreating mock for every test.
-    Safe because unit tests don't modify the mock state.
-
-    Returns:
-        MagicMock instance configured with typical Qdrant methods
-    """
-    start_time = time.time()
-    logger.info("Fixture 'mock_qdrant_client' starting")
-
-    mock_client = MagicMock()
-    mock_client.get_collections.return_value = []
-    mock_client.search.return_value = []
-    mock_client.query_points.return_value.points = []
-
-    _timed_fixture("mock_qdrant_client", mock_qdrant_client, start_time)
-    return mock_client
-
-
-@pytest.fixture(scope="module")
-def mock_claude_client() -> MagicMock:
-    """Provide a mock Anthropic Claude client for unit tests (module-scoped).
-
-    Module-scoped to avoid recreating mock for every test.
-
-    Returns:
-        MagicMock instance configured with typical Claude API methods
-    """
-    start_time = time.time()
-    logger.info("Fixture 'mock_claude_client' starting")
-
-    mock_client = MagicMock()
-
-    _timed_fixture("mock_claude_client", mock_claude_client, start_time)
-    return mock_client
-
-
-@pytest.fixture(scope="module")
-def sample_document_metadata() -> DocumentMetadata:
-    """Provide sample document metadata for testing (module-scoped).
-
-    Module-scoped because metadata is immutable and can be shared.
-
-    Returns:
-        DocumentMetadata instance with test data
-    """
-    start_time = time.time()
-    logger.info("Fixture 'sample_document_metadata' starting")
-
-    metadata = DocumentMetadata(
-        filename="test_financial_report.pdf",
-        doc_type="PDF",
-        ingestion_timestamp="2025-10-04T12:00:00Z",
-        page_count=10,
-        source_path="/tmp/test_financial_report.pdf",
-    )
-
-    _timed_fixture("sample_document_metadata", sample_document_metadata, start_time)
-    return metadata
-
-
-@pytest.fixture
-def sample_chunk(sample_document_metadata: DocumentMetadata) -> Chunk:
-    """Provide sample chunk for testing (function-scoped for isolation).
-
-    Function-scoped because tests may modify chunk content.
-
-    Args:
-        sample_document_metadata: Fixture providing document metadata
-
-    Returns:
-        Chunk instance with test data
-    """
-    return Chunk(
-        chunk_id="chunk-001",
-        content="Q3 revenue was $50M, up 20% YoY.",
-        metadata=sample_document_metadata,
-        page_number=5,
-        embedding=[0.1] * 1024,  # Mock embedding vector
-    )
-
-
-@pytest.fixture(scope="session", autouse=True)
-def mock_mistral_api_globally():
-    """Session-scoped autouse mock - BLOCKS ALL Mistral API calls in entire test suite.
-
-    CRITICAL PERFORMANCE & COST FIX:
-    - Prevents real Mistral API calls during session fixture ingestion (metadata extraction)
-    - Prevents real Mistral API calls during integration tests (SQL generation, query classification)
-    - Eliminates 660-1100 seconds of API latency overhead
-    - Eliminates ALL Mistral API token costs during testing
-
-    This fixture runs ONCE per pytest invocation at session start, BEFORE any tests or
-    other fixtures execute, ensuring NO real API calls occur anywhere in the test suite.
-
-    Protects:
-    - Session fixture PDF ingestion with metadata extraction
-    - All integration tests calling hybrid_search() → classify_query() → Mistral API
-    - All unit tests that may use Mistral API
-    - Any async tasks spawned by tests
-
-    Technical Details:
-    - Patches ALL possible import paths where get_mistral_client() is used
-    - Returns realistic mock responses for SQL generation and metadata extraction
-    - Session-scoped ensures patch persists across entire test session
-    - autouse=True ensures protection even if tests don't explicitly request mock
-    """
-    from unittest.mock import MagicMock, patch
-
-    def generate_mock_sql(messages, **kwargs):
-        """Mock SQL generation for table search - returns query-aware realistic SQL.
-
-        Extracts entity, metric, and period filters from the natural language query
-        to generate SQL with appropriate WHERE clauses, ensuring tests retrieve
-        relevant table data instead of all rows.
-        """
-        # Extract query from messages (last user message)
-        query_text = ""
-        if messages and len(messages) > 0:
-            # Handle both dict and object message formats
-            last_msg = messages[-1]
-            if isinstance(last_msg, dict):
-                full_content = last_msg.get("content", "")
-            else:
-                full_content = getattr(last_msg, "content", "")
-
-            # For SQL generation, extract actual query from the prompt template
-            # The prompt contains: "**USER QUERY:**\n{query}\n\n**INSTRUCTIONS:**"
-            if "**USER QUERY:**" in full_content:
-                # Extract text after "**USER QUERY:**" and before "**INSTRUCTIONS:**"
-                start_marker = "**USER QUERY:**"
-                end_marker = "**INSTRUCTIONS:**"
-                start_idx = full_content.find(start_marker) + len(start_marker)
-                end_idx = full_content.find(end_marker)
-                if end_idx > start_idx:
-                    query_text = full_content[start_idx:end_idx].strip()
-                else:
-                    query_text = full_content[start_idx:].strip()
-            else:
-                # Fallback: use full content for non-SQL generation calls
-                query_text = full_content
-
-        query_lower = query_text.lower()
-
-        # Build WHERE clause filters based on query content
-        where_conditions = []
-
-        # Entity filters (country names) - handle multiple entities for comparison queries
-        entities = []
-        if "portugal" in query_lower:
-            entities.append("entity ILIKE '%Portugal%'")
-        if "tunisia" in query_lower:
-            entities.append("entity ILIKE '%Tunisia%'")
-        if "angola" in query_lower:
-            entities.append("entity ILIKE '%Angola%'")
-        if "brazil" in query_lower:
-            entities.append("entity ILIKE '%Brazil%'")
-
-        # Add entity filter (OR if multiple entities for comparison)
-        if entities:
-            if len(entities) == 1:
-                where_conditions.append(entities[0])
-            else:
-                where_conditions.append("(" + " OR ".join(entities) + ")")
-
-        # Metric filters - handle multiple metrics with OR
-        # For "table for X" queries, be flexible with metric matching to handle test data
-        metrics = []
-        if "ebitda" in query_lower:
-            metrics.append("metric ILIKE '%EBITDA%'")
-        if "revenue" in query_lower or "turnover" in query_lower:
-            metrics.append("metric ILIKE '%Revenue%'")
-        # CRITICAL FIX (2025-11-24): "operating" should match BOTH "operational" AND "operating"
-        # Test query "operating expenses" needs to match test data which may use either term
-        if "operating" in query_lower:
-            # Use OR to match both variations (operational OR operating)
-            metrics.append("(metric ILIKE '%operational%' OR metric ILIKE '%operating%')")
-        if "variable cost" in query_lower:
-            metrics.append("metric ILIKE '%variable cost%'")
-        if "currency" in query_lower:
-            metrics.append("metric ILIKE '%Currency%'")
-        if "frequency" in query_lower:
-            metrics.append("metric ILIKE '%frequency%'")
-
-        # Add metric filter (OR if multiple metrics)
-        if metrics:
-            if len(metrics) == 1:
-                where_conditions.append(metrics[0])
-            else:
-                where_conditions.append("(" + " OR ".join(metrics) + ")")
-
-        # Period filters (month/year)
-        if "august" in query_lower or "aug" in query_lower:
-            where_conditions.append("period ILIKE '%Aug%'")
-        if "2025" in query_lower:
-            where_conditions.append("(fiscal_year = 2025 OR fiscal_year IS NULL)")
-
-        # Construct WHERE clause
-        where_clause = ""
-        if where_conditions:
-            where_clause = "\nWHERE " + " AND ".join(where_conditions)
-
-        # CRITICAL FIX (2025-11-24): For queries with ONLY metric filters and no temporal/entity filters,
-        # use a more permissive query to ensure CI has matching data.
-        # This prevents SQL returning 0 results which triggers vector fallback.
-        # Root cause: CI test database may have different metric naming than local
-        # ("operating expenses" vs "operational costs" vs "operating costs")
-        is_generic_table_query = (
-            "table" in query_lower
-            and len(where_conditions) <= 1  # Only metric filter, no entity/period
-            and metrics  # Has metric filter
-            and not entities  # No entity filter
-            and not (
-                "august" in query_lower or "aug" in query_lower or "2025" in query_lower
-            )  # No period filter
-        )
-
-        if is_generic_table_query:
-            # PERMISSIVE QUERY: Return ANY data for generic "table for X" queries
-            # This ensures SQL search returns results in CI environment
-            where_clause = ""  # Remove restrictive filters
-            sql = """SELECT document_id, entity, metric, value, unit, period, fiscal_year, page_number, table_caption
-FROM financial_tables
-ORDER BY page_number DESC
-LIMIT 10;""".strip()
-        else:
-            # Normal query with filters
-            sql = f"""SELECT document_id, entity, metric, value, unit, period, fiscal_year, page_number, table_caption
-FROM financial_tables{where_clause}
-ORDER BY page_number DESC
-LIMIT 50;""".strip()
-
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message = MagicMock()
-        mock_response.choices[0].message.content = sql
-        return mock_response
-
-    def generate_mock_metadata(messages, **kwargs):
-        """Mock metadata extraction for chunk enrichment - returns realistic JSON."""
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message = MagicMock()
-        mock_response.choices[
-            0
-        ].message.content = '{"metric_category": "Revenue", "time_period": "Q3 2025"}'
-        return mock_response
-
-    # CRITICAL APPROACH CHANGE (2025-11-22):
-    # Instead of patching get_mistral_client() everywhere, patch the Mistral class itself.
-    # This allows test-specific mocks to override while still preventing real API calls.
-    #
-    # Why this works better:
-    # 1. Tests can mock raglite.shared.clients.Mistral for specific behavior
-    # 2. Session mock catches ANY instantiation of Mistral class
-    # 3. No conflict between session-scoped and test-scoped mocks
-
-    # Import AsyncMock for async Mistral client methods
-    from unittest.mock import AsyncMock
-
-    # Create a single shared mock client with both sync and async methods configured
-    mock_client_instance = MagicMock()
-    # Sync method for SQL generation (query classifier)
-    mock_client_instance.chat.complete.side_effect = generate_mock_sql
-    # Async method for metadata extraction (embedding generation)
-    mock_client_instance.chat.complete_async = AsyncMock(side_effect=generate_mock_metadata)
-
-    # Patch the Mistral class constructor to return our mock
-    with patch("raglite.shared.clients.Mistral") as mock_mistral_class:
-        mock_mistral_class.return_value = mock_client_instance
-        yield
-
-
-@pytest.fixture
-def mock_mistral_client():
-    """Mock Mistral API client for SQL generation tests.
-
-    Prevents real API calls in CI when MISTRAL_API_KEY is not set.
-    Returns query-aware mock that generates SQL with WHERE clauses based on query content.
-
-    Fixture returns (mock_client_instance, mock_class) tuple for flexibility.
-
-    Usage:
-        @pytest.mark.asyncio
-        async def test_sql_generation(mock_mistral_client):
-            mock_client, mock_class = mock_mistral_client
-            # Mock automatically generates query-specific SQL
-            sql = await generate_sql_query("What is revenue for Portugal?")
-            # SQL will contain: WHERE entity ILIKE '%Portugal%' AND metric ILIKE '%Revenue%'
-    """
-    from unittest.mock import MagicMock, patch
-
-    def generate_query_aware_sql(messages, **kwargs):
-        """Generate query-specific SQL based on natural language query content.
-
-        This mock inspects the query to extract entity, metric, and period filters,
-        then generates realistic SQL with appropriate WHERE clauses.
-
-        Args:
-            messages: List of message dicts with 'content' containing the natural language query
-
-        Returns:
-            Mock response object with SQL query string in choices[0].message.content
-        """
-        # Extract query from messages (last user message)
-        query_text = ""
-        if messages and len(messages) > 0:
-            # Handle both dict and object message formats
-            last_msg = messages[-1]
-            if isinstance(last_msg, dict):
-                full_content = last_msg.get("content", "")
-            else:
-                full_content = getattr(last_msg, "content", "")
-
-            # For SQL generation, extract actual query from the prompt template
-            # The prompt contains: "**USER QUERY:**\n{query}\n\n**INSTRUCTIONS:**"
-            if "**USER QUERY:**" in full_content:
-                # Extract text after "**USER QUERY:**" and before "**INSTRUCTIONS:**"
-                start_marker = "**USER QUERY:**"
-                end_marker = "**INSTRUCTIONS:**"
-                start_idx = full_content.find(start_marker) + len(start_marker)
-                end_idx = full_content.find(end_marker)
-                if end_idx > start_idx:
-                    query_text = full_content[start_idx:end_idx].strip()
-                else:
-                    query_text = full_content[start_idx:].strip()
-            else:
-                # Fallback: use full content for non-SQL generation calls
-                query_text = full_content
-
-        query_lower = query_text.lower()
-
-        # Build WHERE clause filters based on query content
-        where_conditions = []
-
-        # Entity filters (country names) - handle multiple entities for comparison queries
-        entities = []
-        if "portugal" in query_lower:
-            entities.append("entity ILIKE '%Portugal%'")
-        if "tunisia" in query_lower:
-            entities.append("entity ILIKE '%Tunisia%'")
-        if "angola" in query_lower:
-            entities.append("entity ILIKE '%Angola%'")
-        if "brazil" in query_lower:
-            entities.append("entity ILIKE '%Brazil%'")
-
-        # Add entity filter (OR if multiple entities for comparison)
-        if entities:
-            if len(entities) == 1:
-                where_conditions.append(entities[0])
-            else:
-                where_conditions.append("(" + " OR ".join(entities) + ")")
-
-        # Metric filters - handle multiple metrics with OR
-        # For "table for X" queries, be flexible with metric matching to handle test data
-        metrics = []
-        if "ebitda" in query_lower:
-            metrics.append("metric ILIKE '%EBITDA%'")
-        if "revenue" in query_lower or "turnover" in query_lower:
-            metrics.append("metric ILIKE '%Revenue%'")
-        # CRITICAL FIX (2025-11-24): "operating" should match BOTH "operational" AND "operating"
-        # Test query "operating expenses" needs to match test data which may use either term
-        if "operating" in query_lower:
-            # Use OR to match both variations (operational OR operating)
-            metrics.append("(metric ILIKE '%operational%' OR metric ILIKE '%operating%')")
-        if "variable cost" in query_lower:
-            metrics.append("metric ILIKE '%variable cost%'")
-        if "currency" in query_lower:
-            metrics.append("metric ILIKE '%Currency%'")
-        if "frequency" in query_lower:
-            metrics.append("metric ILIKE '%frequency%'")
-
-        # Add metric filter (OR if multiple metrics)
-        if metrics:
-            if len(metrics) == 1:
-                where_conditions.append(metrics[0])
-            else:
-                where_conditions.append("(" + " OR ".join(metrics) + ")")
-
-        # Period filters (month/year)
-        if "august" in query_lower or "aug" in query_lower:
-            where_conditions.append("period ILIKE '%Aug%'")
-        if "2025" in query_lower:
-            where_conditions.append("(fiscal_year = 2025 OR fiscal_year IS NULL)")
-
-        # Construct WHERE clause
-        where_clause = ""
-        if where_conditions:
-            where_clause = "\nWHERE " + " AND ".join(where_conditions)
-
-        # CRITICAL FIX (2025-11-24): For queries with ONLY metric filters and no temporal/entity filters,
-        # use a more permissive query to ensure CI has matching data.
-        # This prevents SQL returning 0 results which triggers vector fallback.
-        # Root cause: CI test database may have different metric naming than local
-        # ("operating expenses" vs "operational costs" vs "operating costs")
-        is_generic_table_query = (
-            "table" in query_lower
-            and len(where_conditions) <= 1  # Only metric filter, no entity/period
-            and metrics  # Has metric filter
-            and not entities  # No entity filter
-            and not (
-                "august" in query_lower or "aug" in query_lower or "2025" in query_lower
-            )  # No period filter
-        )
-
-        if is_generic_table_query:
-            # PERMISSIVE QUERY: Return ANY data for generic "table for X" queries
-            # This ensures SQL search returns results in CI environment
-            where_clause = ""  # Remove restrictive filters
-            sql = """SELECT document_id, entity, metric, value, unit, period, fiscal_year, page_number, table_caption
-FROM financial_tables
-ORDER BY page_number DESC
-LIMIT 10;""".strip()
-        else:
-            # Normal query with filters
-            sql = f"""SELECT document_id, entity, metric, value, unit, period, fiscal_year, page_number, table_caption
-FROM financial_tables{where_clause}
-ORDER BY page_number DESC
-LIMIT 50;""".strip()
-
-        # Create mock response structure matching mistralai SDK
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message = MagicMock()
-        mock_response.choices[0].message.content = sql
-
-        return mock_response
-
-    # CRITICAL: Patch where the function is USED, not where it's DEFINED
-    # query_classifier does: from raglite.shared.clients import get_mistral_client
-    # So we must patch: raglite.retrieval.query_classifier.get_mistral_client
-    with patch("raglite.retrieval.query_classifier.get_mistral_client") as mock_get_client:
-        # Create mock client instance
-        mock_client = MagicMock()
-
-        # Configure mock to use query-aware SQL generation
-        mock_client.chat.complete.side_effect = generate_query_aware_sql
-        mock_get_client.return_value = mock_client
-
-        yield mock_client, mock_get_client
-
-
-# pytest-xdist parallel execution hooks
-def pytest_addoption(parser):
-    """Add custom command line options for pytest.
-
-    This allows us to control slow test execution, ingestion behavior, and test isolation
-    enforcement via CLI flags.
-    """
-    parser.addoption(
-        "--run-slow",
-        action="store_true",
-        default=False,
-        help="Run slow tests (data-dependent tests requiring full 160-page PDF)",
-    )
-    parser.addoption(
-        "--skip-ingestion",
-        action="store_true",
-        default=False,
-        help="Skip session fixture ingestion and use existing Qdrant/PostgreSQL data (saves ~25 min)",
-    )
-    parser.addoption(
-        "--enforce-isolation-markers",
-        action="store_true",
-        default=False,
-        help="Enforce @pytest.mark.preserve_collection or @pytest.mark.manages_collection_state "
-        "on all integration tests (prevents expensive cleanup regressions)",
-    )
-
-
-def pytest_configure(config):
-    """Configure pytest for optimal parallel execution and custom options.
-
-    This hook is called once per worker process in pytest-xdist.
-    Makes the run_slow and skip_ingestion options available to all tests.
-    """
-    # Store flags globally so tests can access them
-    pytest.run_slow = config.getoption("--run-slow")
-    pytest.skip_ingestion = config.getoption("--skip-ingestion")
-
-    # Only set workerinput if we're actually in xdist mode
-    # DO NOT create empty workerinput - it confuses pytest-cov!
-    # pytest-xdist will create workerinput if running with -n flag
-
-
-def pytest_collection_modifyitems(config, items):
-    """Modify test collection to optimize execution order and prevent race conditions.
-
-    1. Groups all integration tests to run in the same xdist worker (prevents Qdrant race conditions)
-    2. Reorders tests to run fast tests first for quicker feedback
-
-    CRITICAL FIX (2025-12-18): Fixed pytest internal errors by avoiding direct keyword/marker manipulation.
-    Use a safer approach that doesn't modify pytest internal data structures directly.
-    """
-
-    # Force ALL integration tests into the EXISTING "embedding_model" xdist worker group
-    # CRITICAL (2025-11-21): MUST force override ALL xdist groups to "embedding_model"
-    # - pytest-xdist creates separate PROCESS per xdist group
-    # - Session-scoped fixtures run ONCE PER PROCESS (not once globally)
-    # - Split groups = duplicate session fixture runs = 2x slowdown (50s × N workers)
-    # - Database tests previously used xdist_group(name="database") creating 2nd worker
-    # - Result: Session fixture ran TWICE (1600s total vs 600s expected)
-    enforce_markers = config.getoption("--enforce-isolation-markers", default=False)
-
-    # Create new lists for processed items to avoid modifying during iteration
-    integration_items = []
-    other_items = []
-
-    for item in items:
-        if "integration" in str(item.fspath):
-            integration_items.append(item)
-        else:
-            other_items.append(item)
-
-    # Process integration tests separately
-    for item in integration_items:
-        # PERFORMANCE FIX (2025-12-06): Apply default preserve_collection marker
-        # Integration tests that don't explicitly have a marker get preserve_collection
-        # by default, eliminating unnecessary cleanup checks (42+ seconds overhead).
-        #
-        # Tests that modify data should explicitly use @pytest.mark.manages_collection_state
-        # to override this default.
-        has_preserve = item.get_closest_marker("preserve_collection")
-        has_manages = item.get_closest_marker("manages_collection_state")
-
-        if not (has_preserve or has_manages):
-            # DEFAULT: Apply preserve_collection marker for read-only tests
-            # This prevents expensive cleanup after each test (100ms × 425 tests = 42s)
-            item.add_marker(pytest.mark.preserve_collection)
-
-            # In strict CI mode, still require explicit markers
-            if enforce_markers:
-                raise ValueError(
-                    f"{item.nodeid}: Integration test missing isolation marker. "
-                    "Add @pytest.mark.preserve_collection (read-only) or "
-                    "@pytest.mark.manages_collection_state (modifies data)."
-                )
-
-    # Add xdist_group marker to all integration tests
-    # Do this in a separate loop to avoid collection modification issues
-    for item in integration_items:
-        # Force embedding_model group (single worker for all integration tests)
-        # This will override any existing xdist_group marker automatically
-        item.add_marker(pytest.mark.xdist_group(name="embedding_model"))
-
-    # Sort tests: unit tests first, then integration, then e2e/slow
-    def test_priority(item):
-        """Calculate test priority (lower = run first)."""
-        if "unit" in item.keywords:
-            return 0
-        elif "integration" in item.keywords:
-            return 1
-        elif "slow" in item.keywords or "e2e" in item.keywords:
-            return 2
-        else:
-            return 1  # Default: medium priority
-
-    # Sort the original items list (not our separated lists)
-    items.sort(key=test_priority)
-
-
-# =============================================================================
-# PERFORMANCE MONITORING HOOK (2025-12-07)
-# =============================================================================
-# Checks test suite duration against performance_baseline.json budget.
-# Warns if budget is exceeded, fails CI if exceeded by >50%.
-# =============================================================================
-
-# Track session start time for performance monitoring
-_session_start_time = None
-
-
-def pytest_sessionstart(session):
-    """Record session start time for performance monitoring."""
-    global _session_start_time
-    _session_start_time = time.time()
-
-
-def pytest_sessionfinish(session, exitstatus):
-    """Check test suite duration against performance budget.
-
-    PERFORMANCE MONITORING (2025-12-07):
-    - Compares actual duration against tests/performance_baseline.json
-    - Warns if budget exceeded by >25%
-    - Provides actionable guidance for performance regressions
-
-    This hook prevents recurring performance regressions by making
-    slowdowns visible immediately after test runs.
-    """
-    global _session_start_time
-    if _session_start_time is None:
-        return
-
-    elapsed_seconds = time.time() - _session_start_time
-
-    # Load performance baseline
-    baseline_path = Path(__file__).parent / "performance_baseline.json"
-    if not baseline_path.exists():
-        return
-
-    try:
-        import json
-
-        with open(baseline_path) as f:
-            baseline = json.load(f)
-
-        # Determine which budget to check based on test count
-        passed = session.testscollected - session.testsfailed - getattr(session, "skipped", 0)
-
-        # Check integration tests budget (most common)
-        budget_name = "integration_skip_ingestion"
-        if budget_name in baseline.get("budgets", {}):
-            budget = baseline["budgets"][budget_name]
-            max_seconds = budget["max_seconds"]
-
-            # Only check if we ran a significant number of tests
-            if passed > 50:  # Likely running integration suite
-                if elapsed_seconds > max_seconds:
-                    overage_pct = ((elapsed_seconds - max_seconds) / max_seconds) * 100
-
-                    print(f"\n{'=' * 80}")
-                    print("PERFORMANCE WARNING: Test suite exceeded time budget")
-                    print(f"{'=' * 80}")
-                    print(f"  Actual time:    {elapsed_seconds:.1f}s")
-                    print(f"  Budget:         {max_seconds}s ({budget['description']})")
-                    print(f"  Overage:        +{overage_pct:.1f}%")
-                    print("")
-                    print("  Possible causes:")
-                    print("    - Missing @pytest.mark.preserve_collection on read-only tests")
-                    print("    - Over-aggressive restoration in ensure_qdrant_test_isolation")
-                    print("    - New slow tests without @pytest.mark.slow marker")
-                    print("")
-                    print("  To investigate:")
-                    print("    pytest tests/integration/ --skip-ingestion --durations=20")
-                    print(f"{'=' * 80}\n")
-
-                elif elapsed_seconds < max_seconds * 0.7:
-                    # Test suite was faster than expected - good!
-                    print(
-                        f"\n✅ Test suite completed in {elapsed_seconds:.1f}s (budget: {max_seconds}s)"
-                    )
-
-    except Exception as e:
-        # Don't fail tests due to performance monitoring errors
-        logger.debug(f"Performance monitoring skipped: {e}")

@@ -14,11 +14,11 @@ class TestTFTLazyLoading:
     def test_get_tft_model_no_checkpoint(self):
         """Test TFT loading returns None when no checkpoint available."""
         # Reset global cache first
-        import raglite.forecasting.hybrid as hybrid_module
-        from raglite.forecasting.hybrid import _get_tft_model
+        import raglite.forecasting.models.tft_model as tft_module
+        from raglite.forecasting.models.tft_model import _get_tft_model
 
-        original_model = hybrid_module._tft_model
-        hybrid_module._tft_model = None
+        original_model = tft_module._tft_model
+        tft_module._tft_model = None
 
         try:
             with patch("raglite.external_data.storage.ExternalDataStorage") as mock_storage:
@@ -32,7 +32,7 @@ class TestTFTLazyLoading:
                 assert result is None
         finally:
             # Reset global cache
-            hybrid_module._tft_model = original_model
+            tft_module._tft_model = original_model
 
     def test_get_tft_model_with_checkpoint(self):
         """Test TFT loading attempts to load from checkpoint."""
@@ -99,9 +99,9 @@ class TestGracefulDegradation:
         """Test ensemble continues when TFT is unavailable."""
         # This test verifies the ensemble doesn't fail when TFT returns None
         # Integration test will verify full behavior
-        from raglite.forecasting.hybrid import _fit_and_forecast_tft
+        from raglite.forecasting.models.tft_model import fit_and_forecast_tft
 
-        with patch("raglite.forecasting.hybrid._get_tft_model") as mock_get_tft:
+        with patch("raglite.forecasting.models.tft_model._get_tft_model") as mock_get_tft:
             # Mock no TFT model available
             mock_get_tft.return_value = None
 
@@ -110,7 +110,7 @@ class TestGracefulDegradation:
             y = pd.Series([100, 105, 110, 115, 120])
 
             # Should return None gracefully
-            result = _fit_and_forecast_tft(y, periods_ahead=3)
+            result = fit_and_forecast_tft(y, periods_ahead=3)
             assert result is None
 
 

@@ -12,22 +12,33 @@ Test Coverage:
 
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-import torch
 
-from raglite.forecasting.adaptive_weights import _adjust_weights_no_regressors, _get_static_weights
-from raglite.forecasting.hybrid import (
-    MIN_DATA_POINTS,
-    InsufficientDataError,
-    _generate_chronos_cold_start_forecast,
-    _get_chronos_pipeline,
-    generate_forecast,
+# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
+# These tests require real PyTorch/Chronos libraries
+pytestmark = pytest.mark.skipif(
+    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
+    reason="Chronos tests require real PyTorch/Chronos (not mocked)",
 )
-from raglite.shared.config import settings
-from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
+
+import torch  # noqa: E402
+
+from raglite.forecasting.adaptive_weights import (  # noqa: E402
+    _adjust_weights_no_regressors,
+    _get_static_weights,
+)
+from raglite.forecasting.hybrid import generate_forecast  # noqa: E402
+from raglite.forecasting.models.base import MIN_DATA_POINTS, InsufficientDataError  # noqa: E402
+from raglite.forecasting.models.chronos_model import (  # noqa: E402
+    _get_chronos_pipeline,
+    generate_chronos_cold_start_forecast,
+)
+from raglite.shared.config import settings  # noqa: E402
+from raglite.shared.models import TimeSeriesData, TimeSeriesPoint  # noqa: E402
 
 # =============================================================================
 # AC1, AC5: Lazy-Loading Pattern and Caching
@@ -37,10 +48,10 @@ from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
 def test_chronos_pipeline_lazy_loading() -> None:
     """Test Chronos-2 pipeline lazy-loads on first use."""
     # Reset global cache for test isolation
-    import raglite.forecasting.hybrid as hybrid_module
+    import raglite.forecasting.models.chronos_model as chronos_module
 
-    original_pipeline = hybrid_module._chronos_pipeline
-    hybrid_module._chronos_pipeline = None
+    original_pipeline = chronos_module._chronos_pipeline
+    chronos_module._chronos_pipeline = None
 
     try:
         with patch("chronos.BaseChronosPipeline") as mock_class:
@@ -61,15 +72,15 @@ def test_chronos_pipeline_lazy_loading() -> None:
             assert mock_class.from_pretrained.call_count == 1  # Still 1, not 2
 
     finally:
-        hybrid_module._chronos_pipeline = original_pipeline
+        chronos_module._chronos_pipeline = original_pipeline
 
 
 def test_chronos_pipeline_import_error() -> None:
     """Test Chronos-2 raises helpful error if package not installed."""
-    import raglite.forecasting.hybrid as hybrid_module
+    import raglite.forecasting.models.chronos_model as chronos_module
 
-    original_pipeline = hybrid_module._chronos_pipeline
-    hybrid_module._chronos_pipeline = None
+    original_pipeline = chronos_module._chronos_pipeline
+    chronos_module._chronos_pipeline = None
 
     try:
         # Patch the import itself to simulate ImportError
@@ -78,7 +89,7 @@ def test_chronos_pipeline_import_error() -> None:
                 _get_chronos_pipeline()
 
     finally:
-        hybrid_module._chronos_pipeline = original_pipeline
+        chronos_module._chronos_pipeline = original_pipeline
 
 
 # =============================================================================
@@ -97,7 +108,7 @@ async def test_cold_start_detection_with_insufficient_data() -> None:
     data = TimeSeriesData(metric_name="test_metric", points=points, interval="monthly")
 
     with patch(
-        "raglite.forecasting.hybrid._generate_chronos_cold_start_forecast"
+        "raglite.forecasting.hybrid.generate_chronos_cold_start_forecast"
     ) as mock_cold_start:
         # Mock return value
         from raglite.shared.models import ForecastResult
@@ -129,7 +140,9 @@ async def test_cold_start_with_absolute_minimum() -> None:
     ]
     data = TimeSeriesData(metric_name="test_metric", points=points, interval="monthly")
 
-    with patch("raglite.forecasting.hybrid._get_chronos_pipeline") as mock_get_pipeline:
+    with patch(
+        "raglite.forecasting.models.chronos_model._get_chronos_pipeline"
+    ) as mock_get_pipeline:
         mock_pipeline = MagicMock()
         mock_get_pipeline.return_value = mock_pipeline
 
@@ -137,7 +150,7 @@ async def test_cold_start_with_absolute_minimum() -> None:
         mock_forecast = torch.randn(1, 100, 3)  # (batch, samples, periods)
         mock_pipeline.predict.return_value = mock_forecast
 
-        result = await _generate_chronos_cold_start_forecast(
+        result = await generate_chronos_cold_start_forecast(
             metric="test_metric",
             historical_data=data,
             periods_ahead=3,
@@ -159,7 +172,7 @@ async def test_cold_start_fails_below_absolute_minimum() -> None:
     data = TimeSeriesData(metric_name="test_metric", points=points, interval="monthly")
 
     with pytest.raises(InsufficientDataError, match="minimum 3 data points"):
-        await _generate_chronos_cold_start_forecast(
+        await generate_chronos_cold_start_forecast(
             metric="test_metric",
             historical_data=data,
             periods_ahead=3,

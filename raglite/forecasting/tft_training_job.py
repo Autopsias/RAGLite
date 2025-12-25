@@ -84,12 +84,13 @@ async def run_weekly_tft_training() -> None:
 
                     if len(data_points) >= MIN_DATA_POINTS:
                         # Convert to DataFrame format
+                        # CRITICAL: Convert Decimal to float for TFT compatibility
                         for idx, point in enumerate(data_points):
                             all_data.append(
                                 {
                                     "metric_name": f"{source.source_name}_{metric}",
                                     "date": point.date,
-                                    "value": point.value,
+                                    "value": float(point.value),  # Convert Decimal to float
                                     "time_idx": idx,
                                 }
                             )
