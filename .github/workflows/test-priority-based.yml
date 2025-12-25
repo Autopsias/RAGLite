@@ -91,7 +91,7 @@ jobs:
             --cov=raglite \
             --cov-report=xml \
             --cov-report=term-missing \
-            -m "not slow and priority(P0)"
+            -m "not slow and priority('P0')"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -168,7 +168,7 @@ jobs:
             --cov-report=term-missing \
             -n auto \
             --dist loadfile \
-            -m "not slow and (priority(P0) or priority(P1))"
+            -m "not slow and (priority('P0') or priority('P1'))"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

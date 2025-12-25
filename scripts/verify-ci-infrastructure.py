@@ -43,7 +43,7 @@ def verify_priority_workflow():
         return False
 
     # Check 2: Priority markers use correct syntax
-    if "priority(P0)" in content and "priority(P1)" in content:
+    if "priority('P0')" in content and "priority('P1')" in content:
         print("✅ Priority markers use correct pytest syntax")
     else:
         print("❌ Priority markers not found or incorrect syntax")

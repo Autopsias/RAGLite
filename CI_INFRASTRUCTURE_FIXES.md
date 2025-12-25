@@ -16,9 +16,9 @@ Fixed critical CI/CD pipeline failures across multiple workflows, addressing job
 - Inconsistent with main CI workflow runner configuration
 
 **Fixes Applied:**
-- Updated pytest commands to use proper marker syntax: `-m "not slow and priority(P0)"`
+- Updated pytest commands to use proper marker syntax: `-m "not slow and priority('P0')"`
 - Changed all jobs to use `[self-hosted, raglite]` runners
-- Fixed P0+P1 combined filter: `-m "not slow and (priority(P0) or priority(P1))"`
+- Fixed P0+P1 combined filter: `-m "not slow and (priority('P0') or priority('P1'))"`
 
 **Files Modified:**
 - `.github/workflows/test-priority-based.yml`

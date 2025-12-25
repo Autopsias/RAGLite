@@ -22,6 +22,8 @@ from pathlib import Path
 
 import pytest
 
+from raglite.forecasting.regressor_config import METRIC_REGRESSORS
+
 # =============================================================================
 # Test Markers and Configuration
 # =============================================================================
@@ -669,19 +671,22 @@ class TestAC5MCPToolsFunctional:
             len(filtered_result) if hasattr(filtered_result, "__len__") else 0,
         )
 
-        EXPECTED_VARIABLE_COST_REGRESSORS = 3  # variable_cost has 3 regressors configured
+        # Data-driven approach: derive expected count from configuration (Story 7 - Epic 7)
+        # This prevents config-test drift when regressor configuration changes
+        EXPECTED_VARIABLE_COST_REGRESSORS = len(METRIC_REGRESSORS.get("variable_cost", []))
         assert filtered_count == EXPECTED_VARIABLE_COST_REGRESSORS, (
             f"Expected {EXPECTED_VARIABLE_COST_REGRESSORS} variable_cost regressors, got {filtered_count}"
         )
 
-        # Verify the specific variable_cost regressors
+        # Verify the specific variable_cost regressors match configuration
         if hasattr(filtered_result, "regressors"):
             filtered_names = [r.name for r in filtered_result.regressors]
         else:
             filtered_names = [r.get("name", r) for r in filtered_result]
 
-        # variable_cost should have: api2_coal, ttf_gas, industrial_production
-        for expected in ["api2_coal", "ttf_gas", "industrial_production"]:
+        # Verify all configured regressors are returned
+        configured_regressors = METRIC_REGRESSORS.get("variable_cost", [])
+        for expected in configured_regressors:
             assert expected in filtered_names, (
                 f"Expected variable_cost regressor '{expected}' not found in {filtered_names}"
             )
