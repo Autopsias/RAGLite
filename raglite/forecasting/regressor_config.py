@@ -169,15 +169,19 @@ METRIC_REGRESSORS: dict[str, list[str]] = {
     # Portugal = 72% of Secil EBITDA, so construction demand is critical
     # EBITDA = Revenue - Costs: demand (revenue driver) and cost inputs
     # NOTE: euribor_3m removed per Story 7b-7 AC5 - less relevant to cement EBITDA
+    # Epic 7 Enhancement: Added sales_volume and capacity_utilization per McKinsey research
+    # EBITDA forecasting benefits from demand-linked regressors (inventory, utilization)
     "ebitda": [
         # Demand-side (construction activity -> revenue)
         "construction_output",
         "building_permits",
         "construction_confidence",
         "housing_transactions",  # Story 7b-7: Leading indicator (6-12 month lag)
+        "sales_volume",  # Epic 7: Direct demand indicator for Portugal operations
         # Cost-side (energy costs -> margins)
         "ttf_gas",
         "diesel",
+        "capacity_utilization",  # Epic 7: Efficiency factor affecting margins
     ],
     # Sales metrics benefit from economic indicators
     # Story 6.16: Added construction_output and industrial_production for sales metrics
@@ -217,8 +221,24 @@ METRIC_REGRESSORS: dict[str, list[str]] = {
     "thermal energy": ["api2_coal", "ttf_gas", "industrial_production"],
     # Variable Cost: Story 6.20: Cement industry - energy and industrial activity
     # Story 6.25 fix - re-enabled energy regressors for 66% MAPE improvement
-    "variable_cost": ["api2_coal", "ttf_gas", "industrial_production"],
-    "variable cost": ["api2_coal", "ttf_gas", "industrial_production"],
+    # Epic 7 Enhancement: Multi-factor approach per manufacturing research
+    # Variable costs depend on: raw materials, labor, energy, logistics
+    "variable_cost": [
+        "api2_coal",
+        "ttf_gas",
+        "industrial_production",
+        "sales_volume",  # Epic 7: Volume affects unit cost (economies of scale)
+        "diesel",  # Epic 7: Logistics/transport costs
+        "capacity_utilization",  # Epic 7: Efficiency factor
+    ],
+    "variable cost": [
+        "api2_coal",
+        "ttf_gas",
+        "industrial_production",
+        "sales_volume",  # Epic 7: Volume affects unit cost (economies of scale)
+        "diesel",  # Epic 7: Logistics/transport costs
+        "capacity_utilization",  # Epic 7: Efficiency factor
+    ],
     # Pricing metrics benefit from energy and economic indicators
     # Story 6.20: Cement industry - confidence and inflation drive pricing decisions
     # Story 7b-7: Added housing_transactions as demand-side regressor for pricing

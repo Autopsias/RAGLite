@@ -18,6 +18,47 @@ from raglite.shared.models import TimeSeriesData
 logger = get_logger(__name__)
 
 
+def resolve_variable_alias(metric: str) -> str:
+    """Resolve variable alias to normalized name for cache/config lookup.
+
+    Epic 7 Fix: Ensures MCP queries using DB aliases (e.g., "Turnover+VAT")
+    are normalized to cache keys (e.g., "revenue") for model selection lookup.
+
+    Args:
+        metric: Raw metric name (may be an alias like "Turnover+VAT")
+
+    Returns:
+        Normalized variable name for cache/config lookup (e.g., "revenue")
+
+    Examples:
+        >>> resolve_variable_alias("Turnover+VAT")
+        "revenue"
+        >>> resolve_variable_alias("EBITDA")
+        "ebitda"
+        >>> resolve_variable_alias("revenue")
+        "revenue"
+    """
+    metric_lower = metric.lower()
+
+    # Direct match in VARIABLE_CONFIG?
+    if metric_lower in VARIABLE_CONFIG:
+        return metric_lower
+
+    # Search aliases for reverse lookup
+    for var_name, config in VARIABLE_CONFIG.items():
+        aliases = config.get("aliases", [])
+        for alias in aliases:
+            if alias.lower() == metric_lower:
+                logger.debug(
+                    "Resolved variable alias",
+                    extra={"original": metric, "normalized": var_name},
+                )
+                return var_name
+
+    # No match - return lowercased original
+    return metric_lower
+
+
 async def extract_historical_data_by_type(
     metric: str,
     min_points: int = 6,

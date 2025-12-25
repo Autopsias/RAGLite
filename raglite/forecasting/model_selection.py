@@ -170,11 +170,23 @@ async def select_best_model(
                 extra={"regressors": list(aligned_regressors.keys())},
             )
 
+    # Epic 7: Determine if recency-weighted CV should be used for volatile series
+    from raglite.forecasting.data_analyzer import VolatilityLevel
+
+    use_recency_weights = data_chars.volatility_level == VolatilityLevel.HIGH
+    if use_recency_weights:
+        logger.info(
+            f"Using recency-weighted CV for volatile variable {variable_name}",
+            extra={"cv": data_chars.coefficient_of_variation},
+        )
+
     for model_name in models_to_test:
         # Test without regressors
         config_key_no_regs = f"{model_name}_False"
         try:
-            cv_metrics = await _cv_evaluate(model_name, historical_data, None, tscv)
+            cv_metrics = await _cv_evaluate(
+                model_name, historical_data, None, tscv, use_recency_weights
+            )
             results[config_key_no_regs] = {
                 **cv_metrics,
                 "with_regressors": False,
@@ -205,7 +217,7 @@ async def select_best_model(
             config_key_with_regs = f"{model_name}_True"
             try:
                 cv_metrics = await _cv_evaluate(
-                    model_name, historical_data, aligned_regressors, tscv
+                    model_name, historical_data, aligned_regressors, tscv, use_recency_weights
                 )
                 results[config_key_with_regs] = {
                     **cv_metrics,
@@ -247,9 +259,46 @@ async def select_best_model(
         valid_results.keys(), key=lambda k: (valid_results[k]["mase"], valid_results[k]["mape"])
     )
     best_result = valid_results[best_key]
-
-    # Parse model name from key
     best_model_name = best_key.rsplit("_", 1)[0]
+
+    # Epic 7 Enhancement: MASE >= 1.0 Fallback Rule (Hyndman 2006 best practice)
+    # Research: "Never deploy a model with MASE >= 1.0 when naive is available"
+    # If best model is worse than naive, try simpler models as fallback
+    if best_result["mase"] >= 1.0:
+        logger.warning(
+            f"Best model {best_model_name} has MASE >= 1.0 ({best_result['mase']:.2f}), "
+            "attempting fallback to simpler models (Hyndman 2006 best practice)",
+            extra={"variable": variable_name, "mase": best_result["mase"]},
+        )
+
+        # Try fallback models in order of typical stability
+        fallback_models = ["ets", "arima", "linear", "prophet"]
+        for fallback in fallback_models:
+            fallback_key = f"{fallback}_False"  # Try without regressors first
+            if fallback_key in valid_results:
+                fallback_result = valid_results[fallback_key]
+                if fallback_result["mase"] < 1.0:
+                    logger.info(
+                        f"Fallback successful: {fallback} has MASE {fallback_result['mase']:.2f} < 1.0",
+                        extra={
+                            "variable": variable_name,
+                            "original_model": best_model_name,
+                            "fallback_model": fallback,
+                        },
+                    )
+                    best_model_name = fallback
+                    best_result = fallback_result
+                    best_key = fallback_key
+                    break
+
+        # If still >= 1.0, log warning but keep the best available
+        if best_result["mase"] >= 1.0:
+            logger.warning(
+                f"No fallback model achieved MASE < 1.0 for {variable_name}. "
+                f"Keeping {best_model_name} with MASE {best_result['mase']:.2f}. "
+                "Consider using naive forecast for this variable.",
+                extra={"variable": variable_name, "mase": best_result["mase"]},
+            )
 
     runtime = time.time() - start_time
 
@@ -273,8 +322,9 @@ def _filter_candidates(
 ) -> list[str]:
     """Pre-filter models based on data characteristics.
 
-    Currently returns all candidates, but can be enhanced later for
-    performance optimization by skipping unsuitable models.
+    Epic 7 Enhancement: Smart model pre-filtering to skip unsuitable models
+    based on data characteristics, improving efficiency and avoiding known
+    failure modes for certain model/data combinations.
 
     Args:
         data_chars: Analyzed characteristics of the time series data
@@ -283,9 +333,77 @@ def _filter_candidates(
     Returns:
         Filtered list of model names suitable for the data characteristics
     """
-    # For now, return all candidates
-    # Future: filter based on stationarity, seasonality, volatility
-    return candidates
+    from raglite.forecasting.data_analyzer import VolatilityLevel
+
+    filtered = candidates.copy()
+
+    # 1. High volatility: Skip ETS (struggles with regime changes/structural breaks)
+    # Research: ETS assumes smooth exponential decay, fails on sudden regime shifts
+    if data_chars.volatility_level == VolatilityLevel.HIGH:
+        if "ets" in filtered:
+            filtered.remove("ets")
+            logger.debug(
+                "Filtered out ETS: high volatility data",
+                extra={"cv": data_chars.coefficient_of_variation},
+            )
+
+    # 2. Short series (<36 points): Skip TFT (needs encoder_length + horizon)
+    # Research: TFT requires 24+ historical points for encoder, plus forecast horizon
+    if data_chars.data_length < 36:
+        if "tft" in filtered:
+            filtered.remove("tft")
+            logger.debug(
+                "Filtered out TFT: series too short",
+                extra={"data_length": data_chars.data_length},
+            )
+
+    # 3. Very short series (<18 points): Skip complex ML models
+    # These need enough data for feature engineering and training
+    if data_chars.data_length < 18:
+        for model in ["xgboost", "lightgbm", "catboost"]:
+            if model in filtered:
+                filtered.remove(model)
+                logger.debug(
+                    f"Filtered out {model}: series too short for ML",
+                    extra={"data_length": data_chars.data_length},
+                )
+
+    # 4. High volatility + non-stationary: Prioritize ML models
+    # Add ML models to front of list if not already present (won't remove anything)
+    if (
+        data_chars.volatility_level == VolatilityLevel.HIGH
+        and data_chars.coefficient_of_variation > 0.5
+    ):
+        # ML models handle non-linear patterns and regime changes better
+        ml_priority = ["xgboost", "lightgbm", "catboost"]
+        for model in reversed(ml_priority):
+            if model in filtered:
+                filtered.remove(model)
+                filtered.insert(0, model)
+        logger.debug(
+            "Prioritized ML models for high volatility series",
+            extra={"cv": data_chars.coefficient_of_variation},
+        )
+
+    # 5. Very few data points (<12): Only keep robust models
+    # Chronos excels at cold-start, Prophet handles short series
+    if data_chars.data_length < 12:
+        robust_models = ["chronos", "prophet", "ets", "arima", "linear"]
+        filtered = [m for m in filtered if m in robust_models]
+        logger.debug(
+            "Limited to robust models for very short series",
+            extra={"data_length": data_chars.data_length},
+        )
+
+    # Ensure we don't filter out everything - always keep at least one model
+    if not filtered:
+        logger.warning(
+            "All models filtered out - falling back to prophet",
+            extra={"original_count": len(candidates)},
+        )
+        filtered = ["prophet"]
+
+    return filtered
 
 
 async def _cv_evaluate(
@@ -293,17 +411,23 @@ async def _cv_evaluate(
     y: pd.Series,
     regressors: dict[str, pd.Series] | None,
     tscv: TimeSeriesSplit,
+    use_recency_weights: bool = False,
 ) -> dict[str, float]:
     """Cross-validate a single model and return average metrics.
 
     Performs time-series cross-validation using the provided TimeSeriesSplit object,
-    calculating MAPE and MASE for each fold and returning the average.
+    calculating MAPE and MASE for each fold and returning the (weighted) average.
+
+    Epic 7 Enhancement: Supports recency-weighted averaging for volatile series.
+    Recent folds get higher weights since recent patterns are more predictive
+    for volatile time series.
 
     Args:
         model_name: Name of the model to evaluate (e.g., 'arima', 'prophet')
         y: Time series data with DatetimeIndex
         regressors: Optional dictionary mapping regressor names to aligned Series
         tscv: TimeSeriesSplit object for cross-validation fold generation
+        use_recency_weights: If True, weight recent folds higher (for volatile series)
 
     Returns:
         Dictionary with average 'mape' and 'mase' scores across all folds
@@ -333,6 +457,20 @@ async def _cv_evaluate(
 
         mape_scores.append(mape)
         mase_scores.append(mase)
+
+    # Epic 7: Apply recency weights for volatile series
+    # Weight scheme: older folds = 1.0, second-to-last = 1.5, last fold = 2.0
+    if use_recency_weights and len(mape_scores) >= 3:
+        n_folds = len(mape_scores)
+        weights = [1.0] * (n_folds - 2) + [1.5, 2.0]
+        logger.debug(
+            "Using recency-weighted CV averaging",
+            extra={"n_folds": n_folds, "weights": weights},
+        )
+        return {
+            "mape": float(np.average(mape_scores, weights=weights)),
+            "mase": float(np.average(mase_scores, weights=weights)),
+        }
 
     return {
         "mape": float(np.mean(mape_scores)),

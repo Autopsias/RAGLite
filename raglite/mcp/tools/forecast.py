@@ -1,7 +1,10 @@
 """Forecast MCP tools."""
 
 from raglite.external_data.storage import CachedModelSelection, get_cached_model_selection
-from raglite.forecasting.extraction_routing import extract_historical_data_by_type
+from raglite.forecasting.extraction_routing import (
+    extract_historical_data_by_type,
+    resolve_variable_alias,
+)
 from raglite.forecasting.hybrid import (
     InsufficientDataError,
     _route_to_model,
@@ -142,7 +145,8 @@ async def get_financial_forecast(
         )
         logger.warning("Forecast query failed - no metric", extra={"query": request.query})
         raise QueryError(error_msg)
-    metric = metric.lower()
+    # Epic 7 Fix: Normalize aliases (e.g., "Turnover+VAT" -> "revenue") for cache lookup
+    metric = resolve_variable_alias(metric)
     try:
         logger.info(
             "Extracting time-series data",

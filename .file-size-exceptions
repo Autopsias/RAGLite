@@ -528,6 +528,18 @@
       "reason": "Epic 7 Story 7b.7 - Regressor configuration with demand-side indicators - refactoring planned",
       "target_lines": 500,
       "directory": "raglite/"
+    },
+    "raglite/forecasting/model_selection.py": {
+      "lines": 533,
+      "reason": "Epic 7 Story 7b.8 - Intelligent model selection with recency-weighted CV, lag optimization, and composite forecasting - refactoring planned",
+      "target_lines": 500,
+      "directory": "raglite/"
+    },
+    "raglite/forecasting/model_selection_utils.py": {
+      "lines": 535,
+      "reason": "Epic 7 Story 7b.8 - Model selection utilities with bias analysis, ensemble metrics, and adaptive regressor testing - refactoring planned",
+      "target_lines": 500,
+      "directory": "raglite/"
     }
   }
 }

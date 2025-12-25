@@ -607,6 +607,7 @@ async def run_forecast_with_method(
     config: VariableConfig,
     mape_method: str,
     external_regressors: dict[str, pd.Series] | None = None,
+    cache_metric_name: str | None = None,
 ) -> ForecastValidationData:
     """Run forecast and calculate MAPE using specified method.
 
@@ -614,10 +615,12 @@ async def run_forecast_with_method(
     for multi-metric calculation (MASE, SMAPE, RMSE, MAE, Bias).
 
     Args:
-        metric_name: DB metric name or variable name
+        metric_name: DB metric name (e.g., "Turnover+VAT") for data extraction
         config: Variable configuration
         mape_method: One of 'holdout', 'walkforward', 'cv'
         external_regressors: Optional external regressor data
+        cache_metric_name: Normalized name for model selection cache lookup
+            (e.g., "revenue"). If None, uses metric_name.
 
     Returns:
         ForecastValidationData with MAPE and arrays for multi-metric calculation
@@ -626,6 +629,8 @@ async def run_forecast_with_method(
         Walk-forward and CV methods are MVP implementations that fall back to
         holdout validation. Full async implementation is planned for future.
     """
+    # Epic 7 Fix: Use cache_metric_name for model selection cache lookup
+    model_cache_name = cache_metric_name or metric_name
     from raglite.forecasting.hybrid import generate_forecast
     from raglite.forecasting.timeseries_extract import (
         extract_external_timeseries,
@@ -712,8 +717,9 @@ async def run_forecast_with_method(
                 trimmed_regressors = trim_regressors_for_holdout(external_regressors, holdout_size)
 
                 # Forecast on training data with trimmed regressors
+                # Epic 7: Use model_cache_name for model selection cache lookup
                 result = await generate_forecast(
-                    metric=metric_name,
+                    metric=model_cache_name,
                     historical_data=train_data,  # SPLIT: N-4 points
                     periods_ahead=holdout_size,
                     external_regressors=trimmed_regressors,
@@ -748,8 +754,9 @@ async def run_forecast_with_method(
             )
 
             # Forecast on training data only
+            # Epic 7: Use model_cache_name for model selection cache lookup
             result = await generate_forecast(
-                metric=metric_name,
+                metric=model_cache_name,
                 historical_data=train_data,
                 periods_ahead=holdout_size,
                 external_regressors=external_regressors,
@@ -783,8 +790,9 @@ async def run_forecast_with_method(
                 interval=historical_data.interval,
                 source_documents=historical_data.source_documents,
             )
+            # Epic 7: Use model_cache_name for model selection cache lookup
             result = await generate_forecast(
-                metric=metric_name,
+                metric=model_cache_name,
                 historical_data=train_data,
                 periods_ahead=holdout_size,
                 external_regressors=external_regressors,
@@ -814,8 +822,9 @@ async def run_forecast_with_method(
                 interval=historical_data.interval,
                 source_documents=historical_data.source_documents,
             )
+            # Epic 7: Use model_cache_name for model selection cache lookup
             result = await generate_forecast(
-                metric=metric_name,
+                metric=model_cache_name,
                 historical_data=train_data,
                 periods_ahead=holdout_size,
                 external_regressors=external_regressors,
@@ -966,13 +975,16 @@ async def run_unified_validation(
             continue
 
         # Run forecast with specified MAPE method (regressors fetched automatically)
-        # For external variables, use the variable name directly
-        metric_for_forecast = var_name if is_external else (db_metric or var_name)
+        # Epic 7 Fix: Pass db_metric for data extraction AND var_name for cache lookup
+        # - db_metric: Raw database name (e.g., "Turnover+VAT") for SQL data extraction
+        # - var_name: Normalized name (e.g., "revenue") for model selection cache lookup
+        db_metric_for_extraction = db_metric if not is_external else var_name
         forecast_data = await run_forecast_with_method(
-            metric_name=metric_for_forecast,
+            metric_name=db_metric_for_extraction or var_name,
             config=config,
             mape_method=mape_method,
             external_regressors=None,  # Will be fetched based on config.regressors
+            cache_metric_name=var_name,  # Epic 7: Always use normalized name for cache
         )
 
         # Story 6.26: Calculate all metrics if we have actuals/predictions arrays
