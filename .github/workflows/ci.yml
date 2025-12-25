@@ -38,7 +38,7 @@ jobs:
   # Target: <10 minutes, <4GB RAM, NO containers
   # ============================================================
   validate:
-    name: "Validate"
+    name: "📝 Code Quality: Lint & Format"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 15
 
@@ -124,7 +124,7 @@ jobs:
   # Target: <20 minutes, <6GB RAM, with containers
   # ============================================================
   integration:
-    name: "Integration"
+    name: "🔗 Tests: Integration (~115 tests)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 30
     needs: validate
@@ -199,7 +199,7 @@ jobs:
   # Simplified from accuracy-validation.yml (482 lines -> ~45 lines)
   # ============================================================
   accuracy-gate:
-    name: "AC3 Accuracy Gate"
+    name: "✅ NFR: Accuracy Validation (NFR6/NFR7)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 45
     needs: integration
