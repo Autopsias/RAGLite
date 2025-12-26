@@ -10,15 +10,15 @@ runs:
           CACHE_SIZE=$(du -sm ~/.cache/uv 2>/dev/null | cut -f1 || echo "0")
           if [ "$CACHE_SIZE" -gt 4096 ]; then
             echo "Clearing oversized UV cache (${CACHE_SIZE}MB)..."
-            rm -rf ~/.cache/uv
+            rm -rf ~/.cache/uv 2>/dev/null || find ~/.cache/uv -delete 2>/dev/null || true
           fi
           PARTIAL=$(find ~/.cache/uv -name "*.partial" -o -name "*.tmp" 2>/dev/null | wc -l || echo "0")
           if [ "$PARTIAL" -gt 0 ]; then
             echo "Found corrupted cache entries, clearing..."
-            rm -rf ~/.cache/uv
+            rm -rf ~/.cache/uv 2>/dev/null || find ~/.cache/uv -delete 2>/dev/null || true
           fi
           if [ -d ~/.cache/uv/builds-v0 ]; then
             echo "Clearing builds-v0 cache..."
-            rm -rf ~/.cache/uv/builds-v0
+            rm -rf ~/.cache/uv/builds-v0 2>/dev/null || find ~/.cache/uv/builds-v0 -delete 2>/dev/null || true
           fi
         fi
