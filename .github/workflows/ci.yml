@@ -81,13 +81,13 @@ jobs:
         run: |
           source ci-venv/bin/activate
           echo "Running mypy type checker..."
-          mypy raglite/ --ignore-missing-imports --no-error-summary || true
+          mypy raglite/ --ignore-missing-imports --no-error-summary
 
       - name: Security Scan (bandit)
         run: |
           source ci-venv/bin/activate
           echo "Running security scan..."
-          bandit -r raglite/ -ll -q -f txt || true
+          bandit -r raglite/ -ll -q -f txt
 
       - name: Unit Tests (Lightweight Mode)
         env:

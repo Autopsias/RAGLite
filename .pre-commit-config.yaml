@@ -30,6 +30,15 @@ repos:
       - id: mixed-line-ending
 
   # ============ PYTHON-SPECIFIC CHECKS ============
+  # AST syntax validation - HIGHEST PRIORITY: Catches syntax errors before commit
+  # This prevents broken code from reaching CI (root cause fix)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-ast
+        name: Check Python syntax (AST)
+        language: python
+
   # Ruff - Fast linting and formatting
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.13.0
@@ -91,6 +100,15 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-commit]
+
+      # Pytest marker validation - prevent CI failures from marker syntax errors
+      - id: validate-pytest-markers
+        name: validate-pytest-markers
+        entry: python scripts/validate-pytest-markers.py
+        language: python
+        pass_filenames: false
+        stages: [pre-commit]
+        files: ^tests/.*\.py$
 
       # File size limits - prevent large file proliferation
       - id: check-file-sizes

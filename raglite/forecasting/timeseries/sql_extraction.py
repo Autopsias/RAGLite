@@ -6,6 +6,22 @@ Part of Story 8.1 refactoring to split timeseries_extract.py.
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from raglite.forecasting.timeseries.metadata import (
+    ExtractionError,
+    MetricValidationError,
+)
+from raglite.forecasting.timeseries.parsing import (
+    parse_period_to_date,
+)
+from raglite.forecasting.timeseries.qdrant_ebitda import (
+    extract_ebitda_from_qdrant_chunks,
+)
+from raglite.forecasting.timeseries.qdrant_metric import (
+    extract_metric_from_qdrant_chunks,
+)
+from raglite.forecasting.timeseries.qdrant_variable_cost import (
+    extract_variable_cost_from_qdrant_chunks,
+)
 from raglite.ingestion.entity_normalizer import (
     get_entity_exact_match_clause,
     normalize_entity,
@@ -17,19 +33,6 @@ if TYPE_CHECKING:
     pass
 
 logger = get_logger(__name__)
-
-from raglite.forecasting.timeseries.metadata import (  # noqa: E402
-    ExtractionError,
-    MetricValidationError,
-)
-from raglite.forecasting.timeseries.parsing import (  # noqa: E402
-    parse_period_to_date,
-)
-from raglite.forecasting.timeseries.qdrant_ebitda import extract_ebitda_from_qdrant_chunks  # noqa: E402
-from raglite.forecasting.timeseries.qdrant_metric import extract_metric_from_qdrant_chunks  # noqa: E402
-from raglite.forecasting.timeseries.qdrant_variable_cost import (  # noqa: E402
-    extract_variable_cost_from_qdrant_chunks,
-)
 
 
 def prefer_group_level(entity: str | None, metric: str) -> str | None:

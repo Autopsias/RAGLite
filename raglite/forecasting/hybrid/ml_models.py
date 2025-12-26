@@ -21,6 +21,14 @@ if TYPE_CHECKING:
     from catboost import CatBoostRegressor
     from sklearn.linear_model import LinearRegression
 
+from raglite.forecasting.hybrid.lazy_imports import (
+    _get_catboost_class,
+    _get_grid_search_cv,
+    _get_lasso_regression,
+    _get_linear_regression,
+    _get_ridge_regression,
+    _get_time_series_split,
+)  # noqa: E402
 from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
@@ -41,15 +49,6 @@ CATBOOST_PARAM_GRID_FAST = {
     "depth": [6],
     "l2_leaf_reg": [3],
 }
-
-from raglite.forecasting.hybrid.lazy_imports import  # noqa: E402 (
-    _get_catboost_class,
-    _get_grid_search_cv,
-    _get_lasso_regression,
-    _get_linear_regression,
-    _get_ridge_regression,
-    _get_time_series_split,
-)
 
 
 def fit_linear_regression(

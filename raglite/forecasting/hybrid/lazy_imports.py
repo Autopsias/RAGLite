@@ -28,9 +28,15 @@ _sklearn_executor = ThreadPoolExecutor(max_workers=2)
 # Lazy-load Prophet to avoid import-time penalty during test collection
 # Prophet takes 3-5s to import due to Stan backend dependencies
 _prophet_class = None
-_sklearn_loaded = False
-_xgboost_loaded = False
 _catboost_class = None
+
+# Cached sklearn classes
+_linear_regression_class = None
+_ridge_class = None
+_lasso_class = None
+_time_series_split_class = None
+_grid_search_cv_class = None
+_xgboost_class = None
 
 
 def _get_prophet_class() -> type[Prophet]:
@@ -49,15 +55,12 @@ def _get_prophet_class() -> type[Prophet]:
 
 def _get_linear_regression() -> Any:
     """Lazy-load LinearRegression from sklearn."""
-    global _sklearn_loaded
-    if not _sklearn_loaded:
+    global _linear_regression_class
+    if _linear_regression_class is None:
         from sklearn.linear_model import LinearRegression
 
-        _sklearn_loaded = True
-        return LinearRegression
-    from sklearn.linear_model import LinearRegression
-
-    return LinearRegression
+        _linear_regression_class = LinearRegression
+    return _linear_regression_class
 
 
 def _get_ridge_regression() -> Any:
@@ -65,9 +68,12 @@ def _get_ridge_regression() -> Any:
 
     Story 6.8 AC5: Ridge regression for regularized linear models.
     """
-    from sklearn.linear_model import Ridge
+    global _ridge_class
+    if _ridge_class is None:
+        from sklearn.linear_model import Ridge
 
-    return Ridge
+        _ridge_class = Ridge
+    return _ridge_class
 
 
 def _get_lasso_regression() -> Any:
@@ -75,36 +81,42 @@ def _get_lasso_regression() -> Any:
 
     Story 6.8 AC5: Lasso regression for L1 regularization (feature selection).
     """
-    from sklearn.linear_model import Lasso
+    global _lasso_class
+    if _lasso_class is None:
+        from sklearn.linear_model import Lasso
 
-    return Lasso
+        _lasso_class = Lasso
+    return _lasso_class
 
 
 def _get_time_series_split() -> Any:
     """Lazy-load TimeSeriesSplit from sklearn."""
-    from sklearn.model_selection import TimeSeriesSplit
+    global _time_series_split_class
+    if _time_series_split_class is None:
+        from sklearn.model_selection import TimeSeriesSplit
 
-    return TimeSeriesSplit
+        _time_series_split_class = TimeSeriesSplit
+    return _time_series_split_class
 
 
 def _get_xgboost_regressor() -> Any:
     """Lazy-load XGBRegressor from xgboost."""
-    global _xgboost_loaded
-    if not _xgboost_loaded:
+    global _xgboost_class
+    if _xgboost_class is None:
         from xgboost import XGBRegressor
 
-        _xgboost_loaded = True
-        return XGBRegressor
-    from xgboost import XGBRegressor
-
-    return XGBRegressor
+        _xgboost_class = XGBRegressor
+    return _xgboost_class
 
 
 def _get_grid_search_cv() -> Any:
     """Lazy-load GridSearchCV from sklearn."""
-    from sklearn.model_selection import GridSearchCV
+    global _grid_search_cv_class
+    if _grid_search_cv_class is None:
+        from sklearn.model_selection import GridSearchCV
 
-    return GridSearchCV
+        _grid_search_cv_class = GridSearchCV
+    return _grid_search_cv_class
 
 
 def _get_catboost_class() -> type[CatBoostRegressor]:

@@ -19,8 +19,16 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 if TYPE_CHECKING:
-    pass
+    from prophet import Prophet
 
+from raglite.forecasting.hybrid.lazy_imports import _get_prophet_class
+from raglite.forecasting.hybrid.model_generators import _route_to_model
+from raglite.forecasting.hybrid.preprocessing import (
+    _generate_future_regressors,
+    prepare_regressors,
+    select_regressors,
+    validate_timeseries_for_forecast,
+)
 from raglite.forecasting.models.base import MIN_DATA_POINTS, InsufficientDataError
 from raglite.forecasting.models.chronos_model import (
     generate_chronos_cold_start_forecast,
@@ -40,16 +48,6 @@ try:
 except ImportError:
     # Storage module may not be available in some test scenarios
     get_cached_model_selection = None  # type: ignore
-
-from raglite.forecasting.hybrid.lazy_imports import  # noqa: E402
- _get_prophet_class
-from raglite.forecasting.hybrid.model_generators import _route_to_model
-from raglite.forecasting.hybrid.preprocessing import (
-    _generate_future_regressors,
-    prepare_regressors,
-    select_regressors,
-    validate_timeseries_for_forecast,
-)
 
 
 async def generate_forecast(
@@ -798,7 +796,7 @@ Format your response as JSON:
     )
 
 
-def calculate_accuracy(model: "Prophet", df: pd.DataFrame) -> dict[str, float]:
+def calculate_accuracy(model: Prophet, df: pd.DataFrame) -> dict[str, float]:
     """Calculate RMSE, MAE, MAPE using Prophet cross-validation.
 
     Story 6.3 AC5: Accuracy metrics calculation.
