@@ -212,6 +212,17 @@ ensure_newline_before_comments = true
 asyncio_mode = "auto"
 
 # ============================================================================
+# UV PACKAGE MANAGER CONFIGURATION
+# ============================================================================
+# CI reliability: Prevent unbounded cache growth on shared runners
+# UV_CACHE_SIZE_LIMIT environment variable should be set to 2GB (2048 MB)
+# This prevents cache corruption issues when multiple projects share runners
+[tool.uv]
+# Cache limit in MB (default: unlimited, causes corruption on shared runners)
+# Set via environment variable UV_CACHE_SIZE_LIMIT=2048 in CI workflows
+cache_dir = ".uv-cache"  # Project-local cache instead of global ~/.cache/uv
+
+# ============================================================================
 # COVERAGE CONFIGURATION
 # ============================================================================
 [tool.coverage.run]

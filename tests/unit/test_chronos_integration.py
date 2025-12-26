@@ -17,14 +17,6 @@ from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
-# These tests require real PyTorch/Chronos libraries
-pytestmark = pytest.mark.skipif(
-    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
-    reason="Chronos tests require real PyTorch/Chronos (not mocked)",
-)
-
 import torch  # noqa: E402
 
 from raglite.forecasting.adaptive_weights import (  # noqa: E402
@@ -39,6 +31,13 @@ from raglite.forecasting.models.chronos_model import (  # noqa: E402
 )
 from raglite.shared.config import settings  # noqa: E402
 from raglite.shared.models import TimeSeriesData, TimeSeriesPoint  # noqa: E402
+
+# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
+# These tests require real PyTorch/Chronos libraries
+pytestmark = pytest.mark.skipif(
+    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
+    reason="Chronos tests require real PyTorch/Chronos (not mocked)",
+)
 
 # =============================================================================
 # AC1, AC5: Lazy-Loading Pattern and Caching

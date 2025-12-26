@@ -11,7 +11,7 @@
 
 name: CI
 
-on:
+'on':
   push:
     branches: [main, develop, "story/**", "epic/**"]
   pull_request:
@@ -33,49 +33,95 @@ env:
 
 jobs:
   # ============================================================
-  # TIER 1: Fast PR Validation
+  # GATE 0: Linting (fastest feedback, must pass before tests)
   # Runs on every push/PR
+  # Target: <2 minutes, <1GB RAM
+  # ============================================================
+  lint-gate:
+    name: "🔒 Lint Gate: Ruff + Black"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Proactive UV Cache Cleanup (Pre-Install)
+        run: |
+          echo "=== UV Cache Proactive Cleanup ==="
+          UV_CACHE_DIR="${HOME}/.cache/uv"
+          UV_CACHE_LIMIT_MB=2048  # 2GB limit
+
+          # Cache size check
+          if [ -d "$UV_CACHE_DIR" ]; then
+            CACHE_SIZE_MB=$(du -sm "$UV_CACHE_DIR" 2>/dev/null | cut -f1 || echo "0")
+            echo "Current UV cache size: ${CACHE_SIZE_MB}MB"
+
+            # Prune if exceeding limit
+            if [ "$CACHE_SIZE_MB" -gt "$UV_CACHE_LIMIT_MB" ]; then
+              echo "Cache exceeds ${UV_CACHE_LIMIT_MB}MB, pruning..."
+              rm -rf "${UV_CACHE_DIR}"
+              echo "UV cache pruned to 0MB"
+            fi
+
+            # Remove corrupted partial files
+            find "$UV_CACHE_DIR" -name "*.partial" -delete 2>/dev/null || true
+            find "$UV_CACHE_DIR" -name "*.tmp" -delete 2>/dev/null || true
+          fi
+
+          # Set UV cache limit for this job
+          echo "UV_CACHE_SIZE_LIMIT=${UV_CACHE_LIMIT_MB}" >> $GITHUB_ENV
+
+      - name: Setup UV (Minimal Install)
+        run: |
+          echo "Installing UV package manager..."
+          pip install uv --quiet
+
+          echo "Installing dependencies (linting only)..."
+          uv pip install ruff black --system --quiet
+
+      - name: Check E402 pytestmark Violations
+        run: |
+          echo "=== Checking for pytestmark E402 violations ==="
+          python scripts/fix-pytestmark-e402.py --check
+          echo "No pytestmark E402 violations found"
+
+      - name: Lint Check (ruff)
+        run: |
+          echo "=== Running ruff linter ==="
+          ruff check raglite/ tests/ --output-format=github
+          echo "Ruff linting passed"
+
+      - name: Format Check (black)
+        run: |
+          echo "=== Checking code formatting ==="
+          ruff format raglite/ tests/ --check
+          echo "Black formatting passed"
+
+  # ============================================================
+  # TIER 1: Fast PR Validation
+  # Runs on every push/PR, AFTER lint-gate passes
   # Target: <10 minutes, <4GB RAM, NO containers
   # ============================================================
   validate:
     name: "📝 Code Quality: Lint & Format"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 15
+    needs: lint-gate
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Validate UV Cache
-        run: |
-          if [ -d ~/.cache/uv ]; then
-            CACHE_SIZE=$(du -sm ~/.cache/uv 2>/dev/null | cut -f1 || echo "0")
-            if [ "$CACHE_SIZE" -gt 4096 ]; then
-              echo "Clearing oversized UV cache (${CACHE_SIZE}MB)..."
-              rm -rf ~/.cache/uv
-            fi
-            PARTIAL=$(find ~/.cache/uv -name "*.partial" -o -name "*.tmp" 2>/dev/null | wc -l || echo "0")
-            if [ "$PARTIAL" -gt 0 ]; then
-              echo "Found corrupted cache entries, clearing..."
-              rm -rf ~/.cache/uv
-            fi
-          fi
-
       - name: Setup Python + UV
+        env:
+          UV_CACHE_SIZE_LIMIT: 2048  # 2GB limit
         run: |
           echo "Creating virtual environment..."
           uv venv ci-venv --python 3.11 --quiet 2>/dev/null || uv venv ci-venv --quiet
           source ci-venv/bin/activate
           echo "Installing dependencies (lightweight mode)..."
           uv pip install -e ".[dev]" --quiet
-
-      - name: Lint + Format Check
-        run: |
-          source ci-venv/bin/activate
-          echo "Running ruff linter..."
-          ruff check raglite/ tests/ --output-format=github
-          echo "Checking code formatting..."
-          ruff format raglite/ tests/ --check
 
       - name: Type Check (mypy)
         run: |
@@ -149,6 +195,34 @@ jobs:
           ./scripts/ci/start-test-containers.sh test
           echo "Containers started, loading environment..."
           cat .ci-env
+
+      - name: Verify Container Health
+        run: |
+          source ci-venv/bin/activate
+          source .ci-env
+          echo "=== Checking Qdrant connectivity ==="
+          python -c "
+          from qdrant_client import QdrantClient
+          client = QdrantClient(host='localhost', port=${QDRANT_PORT})
+          client.get_collections()
+          print('Qdrant is healthy')
+          "
+
+          echo "=== Checking PostgreSQL connectivity ==="
+          python -c "
+          import psycopg2
+          conn = psycopg2.connect(
+            host='localhost',
+            port=${POSTGRES_PORT},
+            database='raglite_test',
+            user='raglite',
+            password='raglite'
+          )
+          cur = conn.cursor()
+          cur.execute('SELECT 1')
+          print('PostgreSQL is healthy')
+          conn.close()
+          "
 
       - name: Setup Python + UV
         run: |

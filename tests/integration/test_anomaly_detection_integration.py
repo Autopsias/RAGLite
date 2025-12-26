@@ -10,16 +10,16 @@ from typing import NamedTuple
 import pytest
 
 from raglite.insights.anomalies import detect_anomalies
-
-# Mark all tests as preserve_collection - these are read-only tests
-# that don't modify the Qdrant collection (performance optimization)
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 from raglite.shared.models import (
     AnomalyDetectionResult,
     AnomalySeverity,
     TimeSeriesData,
     TimeSeriesPoint,
 )
+
+# Mark all tests as preserve_collection - these are read-only tests
+# that don't modify the Qdrant collection (performance optimization)
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 # =============================================================================
 # Test Dataset with Expert-Labeled Anomalies

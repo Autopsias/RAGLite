@@ -99,6 +99,46 @@ Per-Test Fixture (ensure_qdrant_test_isolation)
 
 ---
 
+## Import Organization Rules (CRITICAL)
+
+### pytestmark Placement (E402 Violations)
+
+**pytestmark MUST be placed AFTER all imports, never before or between imports.**
+
+```python
+# WRONG: pytestmark before imports (violates ruff E402)
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+
+import pytest
+from raglite.ingestion import ingest_pdf
+
+# WRONG: pytestmark between imports (violates ruff E402)
+import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+
+from raglite.ingestion import ingest_pdf
+
+# CORRECT: All imports first, then pytestmark
+import pytest
+from raglite.ingestion import ingest_pdf
+
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+```
+
+**Why this matters:**
+- ruff E402 rule bans module-level code before imports
+- pytestmark is module-level code (assigns to module variable)
+- Placing it before/between imports causes CI linting failures
+- This is the #1 cause of E402 violations in test files
+
+**Quick fix:**
+1. Move ALL `import` and `from` statements to top of file
+2. Place `pytestmark` after ALL imports
+3. Run `ruff check --fix` to auto-fix remaining issues
+
+---
+
 ## Mock Patching Rules (CRITICAL)
 
 ### Patch Where Used, Not Where Defined
@@ -137,6 +177,60 @@ When you patch a non-existent module attribute:
 ### Test Classification Rule
 
 **If a test mocks ALL external dependencies (database, API, etc.), it should be a UNIT test, not an integration test.**
+
+---
+
+## pytest-xdist Parallel Execution Rules (CRITICAL)
+
+### Worker Isolation Requirements
+
+**Tests using pytest-xdist (-n > 0) must ensure state isolation between workers.**
+
+```python
+# WRONG: Shared state causes race conditions
+@pytest.fixture(scope="session")
+def shared_counter():
+    return 0  # All workers share this - DATA RACE!
+
+# CORRECT: Worker-scoped or use xdist_group
+@pytest.fixture(scope="function")
+def worker_isolated_counter():
+    return 0  # Each worker gets its own
+
+# CORRECT: Use xdist_group to force single-worker execution
+@pytest.mark.xdist_group(name="qdrant_session")
+@pytest.fixture(scope="session")
+def session_collection():
+    # Only ONE worker runs this, others wait
+    return create_collection()
+```
+
+### Container State Pollution Prevention
+
+When using xdist with Docker containers:
+
+1. **Each worker needs unique container names** (not yet implemented - use `-n 0` or `-n 1` for now)
+2. **Test fixtures must detect worker ID** and adjust ports/names accordingly
+3. **Session fixtures must use xdist_group** to prevent concurrent initialization
+
+```python
+# Current workaround: Use single worker or sequential
+pytest tests/integration/ -n 0  # Sequential (safe but slow)
+pytest tests/integration/ -n 1  # Single worker (fast but no parallelism)
+
+# Future implementation (requires container naming changes):
+@pytest.fixture
+def worker_containers(worker_id):
+    port = 6335 + hash(worker_id) % 100  # Unique port per worker
+    return start_test_container(port)
+```
+
+### Current Best Practices
+
+1. **Unit tests**: `-n auto` safe (no shared state)
+2. **Integration tests**: `-n 1` (session fixture, single worker)
+3. **E2E tests**: `-n 0` (sequential, full isolation)
+4. **Avoid**: `-n 4` on integration tests (container state pollution)
 
 ```python
 # This belongs in tests/unit/, NOT tests/integration/

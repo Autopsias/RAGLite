@@ -110,6 +110,17 @@ repos:
         stages: [pre-commit]
         files: ^tests/.*\.py$
 
+      # Pytestmark E402 violation check - prevent pytestmark-before-imports anti-pattern
+      # Root cause: pytestmark placed before/between imports violates ruff E402
+      # This prevents the #1 recurring CI failure pattern
+      - id: check-pytestmark-e402
+        name: check-pytestmark-e402-violations
+        entry: python scripts/fix-pytestmark-e402.py --check
+        language: python
+        pass_filenames: false
+        stages: [pre-commit]
+        files: ^tests/.*\.py$
+
       # File size limits - prevent large file proliferation
       - id: check-file-sizes
         name: check-python-file-sizes

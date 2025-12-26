@@ -15,13 +15,6 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
-# These tests require real Prophet for hybrid forecasting
-pytestmark = pytest.mark.skipif(
-    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
-    reason="Hybrid forecasting tests require real Prophet (not mocked)",
-)
-
 from raglite.forecasting.hybrid import (  # noqa: E402
     MIN_DATA_POINTS,
     InsufficientDataError,
@@ -33,6 +26,13 @@ from raglite.shared.models import (  # noqa: E402
     ForecastResult,
     TimeSeriesData,
     TimeSeriesPoint,
+)
+
+# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
+# These tests require real Prophet for hybrid forecasting
+pytestmark = pytest.mark.skipif(
+    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
+    reason="Hybrid forecasting tests require real Prophet (not mocked)",
 )
 
 

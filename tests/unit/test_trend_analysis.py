@@ -11,13 +11,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
-# These tests use scipy which interacts with torch type checking - mocked torch breaks this
-pytestmark = pytest.mark.skipif(
-    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
-    reason="Trend analysis tests use scipy which breaks with mocked torch",
-)
-
 from raglite.shared.models import (  # noqa: E402
     CorrelationResult,
     TimeSeriesData,
@@ -25,6 +18,13 @@ from raglite.shared.models import (  # noqa: E402
     Trend,
     TrendAnalysisResult,
     TrendDirection,
+)
+
+# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
+# These tests use scipy which interacts with torch type checking - mocked torch breaks this
+pytestmark = pytest.mark.skipif(
+    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
+    reason="Trend analysis tests use scipy which breaks with mocked torch",
 )
 
 # =============================================================================
