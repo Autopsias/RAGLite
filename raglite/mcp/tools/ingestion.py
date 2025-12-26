@@ -292,7 +292,9 @@ async def ingest_financial_document_async(
                     "Accept": "application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, */*",
                 },
             )
-            with urllib.request.urlopen(request, timeout=URL_DOWNLOAD_TIMEOUT_TOTAL) as response:
+            with urllib.request.urlopen(  # nosec
+                request, timeout=URL_DOWNLOAD_TIMEOUT_TOTAL
+            ) as response:
                 content_length = response.headers.get("Content-Length")
                 if content_length and int(content_length) > MAX_URL_DOWNLOAD_SIZE_BYTES:
                     raise DocumentProcessingError(

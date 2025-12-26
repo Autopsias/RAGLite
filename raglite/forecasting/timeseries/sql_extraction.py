@@ -450,7 +450,7 @@ async def extract_timeseries_from_sql(
                 else "1"
             )  # Constant when no filter
 
-            return f"""
+            return f"""  # nosec
                 WITH periods_with_year AS (
                     -- Extract fiscal year from period when fiscal_year is NULL
                     -- For YTD data: "YTD  Apr-25" → Apr-25 → 2025

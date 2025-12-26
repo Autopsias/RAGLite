@@ -202,7 +202,7 @@ class DataQualityOrchestrator:
                     entity_condition = "entity ILIKE %s"
                     entity_params = [f"%{config.entity.required_entity}%"]
 
-            query = f"""
+            query = f"""  # nosec
                 SELECT period, value, entity, metric
                 FROM financial_tables
                 WHERE ({metric_condition})

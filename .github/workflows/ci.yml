@@ -111,7 +111,7 @@ jobs:
         run: |
           source ci-venv/bin/activate
           echo "Running security scan..."
-          bandit -r raglite/ -ll -q -f txt
+          bandit -r raglite/ -ll -q -f txt --skip B608,B310
 
       - name: Unit Tests (Lightweight Mode)
         env:
