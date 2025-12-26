@@ -47,36 +47,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Proactive UV Cache Cleanup (Pre-Install)
+        uses: ./.github/actions/validate-cache
+
+      - name: Setup UV
+        uses: ./.github/actions/setup-uv
+
+      - name: Install linting dependencies
         run: |
-          echo "=== UV Cache Proactive Cleanup ==="
-          UV_CACHE_DIR="${HOME}/.cache/uv"
-          UV_CACHE_LIMIT_MB=2048  # 2GB limit
-
-          # Cache size check
-          if [ -d "$UV_CACHE_DIR" ]; then
-            CACHE_SIZE_MB=$(du -sm "$UV_CACHE_DIR" 2>/dev/null | cut -f1 || echo "0")
-            echo "Current UV cache size: ${CACHE_SIZE_MB}MB"
-
-            # Prune if exceeding limit
-            if [ "$CACHE_SIZE_MB" -gt "$UV_CACHE_LIMIT_MB" ]; then
-              echo "Cache exceeds ${UV_CACHE_LIMIT_MB}MB, pruning..."
-              rm -rf "${UV_CACHE_DIR}"
-              echo "UV cache pruned to 0MB"
-            fi
-
-            # Remove corrupted partial files
-            find "$UV_CACHE_DIR" -name "*.partial" -delete 2>/dev/null || true
-            find "$UV_CACHE_DIR" -name "*.tmp" -delete 2>/dev/null || true
-          fi
-
-          # Set UV cache limit for this job
-          echo "UV_CACHE_SIZE_LIMIT=${UV_CACHE_LIMIT_MB}" >> $GITHUB_ENV
-
-      - name: Setup UV (Minimal Install)
-        run: |
-          echo "Installing UV package manager..."
-          pip install uv --quiet
-
           echo "Installing dependencies (linting only)..."
           uv pip install ruff black --system --quiet
 
@@ -113,9 +90,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup UV
+        uses: ./.github/actions/setup-uv
+
       - name: Setup Python + UV
-        env:
-          UV_CACHE_SIZE_LIMIT: 2048  # 2GB limit
         run: |
           echo "Creating virtual environment..."
           uv venv ci-venv --python 3.11 --quiet 2>/dev/null || uv venv ci-venv --quiet
@@ -224,6 +202,9 @@ jobs:
           conn.close()
           "
 
+      - name: Setup UV
+        uses: ./.github/actions/setup-uv
+
       - name: Setup Python + UV
         run: |
           uv venv ci-venv --python 3.11 --quiet 2>/dev/null || uv venv ci-venv --quiet
@@ -310,6 +291,9 @@ jobs:
           chmod +x scripts/ci/start-test-containers.sh
           ./scripts/ci/start-test-containers.sh test
           source .ci-env
+
+      - name: Setup UV
+        uses: ./.github/actions/setup-uv
 
       - name: Setup Python + UV
         run: |
