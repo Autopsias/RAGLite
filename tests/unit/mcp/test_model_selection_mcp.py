@@ -1,9 +1,9 @@
-"""Integration tests for Story 7b-6: Model Selection Cache MCP Integration.
+"""Unit tests for Story 7b-6: Model Selection Cache MCP Integration.
 
 Tests the integration between model selection cache and MCP forecast tool,
 including cache hits, cache misses, regressor filtering, and fallback behavior.
 
-NOTE: These tests require Qdrant and PostgreSQL to be running.
+NOTE: All dependencies are mocked - no database required.
 """
 
 from datetime import datetime, timedelta
@@ -21,10 +21,8 @@ from raglite.shared.models import (
     TimeSeriesPoint,
 )
 
-pytestmark = [
-    pytest.mark.integration,
-    pytest.mark.preserve_collection,  # Read-only tests, no DB modifications
-]
+# Unit tests - all external dependencies are mocked
+pytestmark = []
 
 # =============================================================================
 # Fixtures
@@ -155,16 +153,23 @@ class TestModelSelectionCacheIntegration:
     ):
         """When cache hit, should use cached model instead of default."""
         from raglite.main import get_financial_forecast
+        from raglite.mcp.tools import forecast
 
         with (
             patch(
                 "raglite.mcp.tools.forecast.get_cached_model_selection",
                 new_callable=AsyncMock,
             ) as mock_cache,
-            patch(
-                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
+            patch.object(
+                forecast,
+                "extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
+            patch.object(
+                forecast,
+                "extract_timeseries",
+                new_callable=AsyncMock,
+            ) as mock_extract_timeseries,
             patch(
                 "raglite.mcp.tools.forecast._route_to_model",
                 new_callable=AsyncMock,
@@ -173,6 +178,7 @@ class TestModelSelectionCacheIntegration:
             # Setup mocks
             mock_cache.return_value = cached_selection_without_regressors
             mock_extract.return_value = sample_historical_data
+            mock_extract_timeseries.return_value = sample_historical_data
             mock_route.return_value = sample_forecast_result
 
             request = ForecastQueryRequest(metric="sales_volume", periods_ahead=4)
@@ -197,16 +203,23 @@ class TestModelSelectionCacheIntegration:
     ):
         """When cache miss, should fall back to select_model_type()."""
         from raglite.main import get_financial_forecast
+        from raglite.mcp.tools import forecast
 
         with (
             patch(
                 "raglite.mcp.tools.forecast.get_cached_model_selection",
                 new_callable=AsyncMock,
             ) as mock_cache,
-            patch(
-                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
+            patch.object(
+                forecast,
+                "extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
+            patch.object(
+                forecast,
+                "extract_timeseries",
+                new_callable=AsyncMock,
+            ) as mock_extract_timeseries,
             patch(
                 "raglite.forecasting.regressor_config.select_model_type",
             ) as mock_select,
@@ -218,6 +231,7 @@ class TestModelSelectionCacheIntegration:
             # Setup mocks - cache returns None (miss)
             mock_cache.return_value = None
             mock_extract.return_value = sample_historical_data
+            mock_extract_timeseries.return_value = sample_historical_data
             mock_select.return_value = ("prophet", "Default selection")
             mock_forecast.return_value = sample_forecast_result
 
@@ -242,16 +256,23 @@ class TestModelSelectionCacheIntegration:
     ):
         """Expired cache entries should trigger fallback."""
         from raglite.main import get_financial_forecast
+        from raglite.mcp.tools import forecast
 
         with (
             patch(
                 "raglite.mcp.tools.forecast.get_cached_model_selection",
                 new_callable=AsyncMock,
             ) as mock_cache,
-            patch(
-                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
+            patch.object(
+                forecast,
+                "extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
+            patch.object(
+                forecast,
+                "extract_timeseries",
+                new_callable=AsyncMock,
+            ) as mock_extract_timeseries,
             patch(
                 "raglite.forecasting.regressor_config.select_model_type",
             ) as mock_select,
@@ -263,6 +284,7 @@ class TestModelSelectionCacheIntegration:
             # Setup mocks - cache returns expired entry
             mock_cache.return_value = expired_cached_selection
             mock_extract.return_value = sample_historical_data
+            mock_extract_timeseries.return_value = sample_historical_data
             mock_select.return_value = ("prophet", "Fallback selection")
             mock_forecast.return_value = sample_forecast_result
 
@@ -281,6 +303,7 @@ class TestModelSelectionCacheIntegration:
     ):
         """Only regressors in cached.regressor_list should be passed."""
         from raglite.main import get_financial_forecast
+        from raglite.mcp.tools import forecast
 
         # Create mock regressor data
         mock_regressors = {
@@ -294,10 +317,16 @@ class TestModelSelectionCacheIntegration:
                 "raglite.mcp.tools.forecast.get_cached_model_selection",
                 new_callable=AsyncMock,
             ) as mock_cache,
-            patch(
-                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
+            patch.object(
+                forecast,
+                "extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
+            patch.object(
+                forecast,
+                "extract_timeseries",
+                new_callable=AsyncMock,
+            ) as mock_extract_timeseries,
             patch(
                 "raglite.mcp.tools.forecast._route_to_model",
                 new_callable=AsyncMock,
@@ -310,6 +339,7 @@ class TestModelSelectionCacheIntegration:
             # Setup mocks
             mock_cache.return_value = cached_selection_with_regressors
             mock_extract.return_value = sample_historical_data
+            mock_extract_timeseries.return_value = sample_historical_data
             mock_route.return_value = sample_forecast_result
             mock_fetch_regressors.return_value = mock_regressors
 
@@ -339,16 +369,23 @@ class TestModelSelectionCacheIntegration:
     ):
         """Cache lookup errors should not break forecasting."""
         from raglite.main import get_financial_forecast
+        from raglite.mcp.tools import forecast
 
         with (
             patch(
                 "raglite.mcp.tools.forecast.get_cached_model_selection",
                 new_callable=AsyncMock,
             ) as mock_cache,
-            patch(
-                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
+            patch.object(
+                forecast,
+                "extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
+            patch.object(
+                forecast,
+                "extract_timeseries",
+                new_callable=AsyncMock,
+            ) as mock_extract_timeseries,
             patch(
                 "raglite.forecasting.regressor_config.select_model_type",
             ) as mock_select,
@@ -360,6 +397,7 @@ class TestModelSelectionCacheIntegration:
             # Setup mocks - cache throws exception
             mock_cache.side_effect = Exception("Database connection failed")
             mock_extract.return_value = sample_historical_data
+            mock_extract_timeseries.return_value = sample_historical_data
             mock_select.return_value = ("prophet", "Fallback after error")
             mock_forecast.return_value = sample_forecast_result
 
@@ -378,22 +416,30 @@ class TestModelSelectionCacheIntegration:
     ):
         """Explicit model_type should bypass cache lookup."""
         from raglite.main import get_financial_forecast
+        from raglite.mcp.tools import forecast
 
         with (
             patch(
                 "raglite.mcp.tools.forecast.get_cached_model_selection",
                 new_callable=AsyncMock,
             ) as mock_cache,
-            patch(
-                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
+            patch.object(
+                forecast,
+                "extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
+            patch.object(
+                forecast,
+                "extract_timeseries",
+                new_callable=AsyncMock,
+            ) as mock_extract_timeseries,
             patch(
                 "raglite.mcp.tools.forecast.generate_ensemble_forecast",
                 new_callable=AsyncMock,
             ) as mock_ensemble,
         ):
             mock_extract.return_value = sample_historical_data
+            mock_extract_timeseries.return_value = sample_historical_data
             mock_ensemble.return_value = sample_forecast_result
 
             # Explicitly request ensemble - should bypass cache
@@ -429,7 +475,7 @@ class TestModelRouters:
         from raglite.forecasting.hybrid import _generate_prophet_forecast
 
         with patch(
-            "raglite.forecasting.hybrid.generate_forecast",
+            "raglite.forecasting.hybrid.ensemble.generate_forecast",
             new_callable=AsyncMock,
         ) as mock_forecast:
             mock_forecast.return_value = sample_forecast_result
@@ -455,8 +501,9 @@ class TestModelRouters:
         """Chronos router should delegate to generate_chronos_cold_start_forecast."""
         from raglite.forecasting.hybrid import _generate_chronos_forecast
 
+        # Patch where the function is used (imported at module level in model_generators)
         with patch(
-            "raglite.forecasting.hybrid.generate_chronos_cold_start_forecast",
+            "raglite.forecasting.hybrid.model_generators.generate_chronos_cold_start_forecast",
             new_callable=AsyncMock,
         ) as mock_chronos:
             mock_chronos.return_value = sample_forecast_result

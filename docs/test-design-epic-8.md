@@ -13,9 +13,9 @@
 
 **Risk Summary:**
 
-- Total risks identified: 15
-- High-priority risks (>=6): 5 + 1 CRITICAL
-- Critical categories: TECH (8), DATA (3 including 1 CRITICAL), OPS (4)
+- Total risks identified: 16
+- High-priority risks (>=6): 5 + 2 CRITICAL
+- Critical categories: TECH (9 including 1 CRITICAL), DATA (3 including 1 CRITICAL), OPS (4)
 
 **Coverage Summary:**
 
@@ -48,6 +48,7 @@ This is a **refactoring epic** focused on reducing file sizes to enable AI compr
 | R-013 | TECH | Backward compatibility breaks across refactored modules - affects MCP server and all consumers | 2 | 3 | 6 | Shim pattern for all public exports; deprecation warnings; integration test validation | Dev | All stories |
 | R-011 | TECH | Fixture dependency issues during conftest.py refactoring (1,411 LOC) - load-bearing fixtures affect 264 test files | 2 | 3 | 6 | Document fixture dependencies; phased extraction; validate fixture resolution order | QA | Story 8.4 |
 | R-015 | DATA | **Production database corruption during testing** - 6,625 vectors + 78K rows at risk | 1 | 3 | **CRITICAL** | SafetyGuard enforcement; test ports only (6335/5433); APP_ENV=test required | ALL | All stories |
+| R-016 | TECH | **Test isolation corruption via sys.modules manipulation** - ATDD tests that delete modules from sys.modules cause isinstance() failures across 145+ unrelated tests | 3 | 3 | **CRITICAL** | NEVER use `del sys.modules[...]` in tests; use subprocess for isolated import testing; run full test suite before marking story "done" | ALL | All stories |
 
 ### Medium-Priority Risks (Score 3-4)
 

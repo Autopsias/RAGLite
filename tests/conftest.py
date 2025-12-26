@@ -276,17 +276,14 @@ def disable_joblib_parallel_processing():
     """
     # Configure environment variable to disable joblib parallel processing
     # This affects statsmodels, scikit-learn, and pmdarima which use joblib internally
-    os.environ["JOBLIB_START_METHOD"] = "threading"  # Use threading instead of multiprocessing
     os.environ["LOKY_MAX_CPU_COUNT"] = "1"  # Limit loky (joblib backend) to single CPU
 
-    logger.info("Joblib parallel processing disabled: using threading backend")
+    logger.info("Joblib parallel processing disabled: single CPU mode")
     logger.info("This prevents multiprocessing resource leaks during test cleanup")
 
     yield
 
     # Cleanup: restore to defaults
-    if "JOBLIB_START_METHOD" in os.environ:
-        del os.environ["JOBLIB_START_METHOD"]
     if "LOKY_MAX_CPU_COUNT" in os.environ:
         del os.environ["LOKY_MAX_CPU_COUNT"]
 

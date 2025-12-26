@@ -216,7 +216,7 @@ class ForecastAccuracyValidator:
         periods_ahead = len(test_df)
 
         # Mock LLM call for faster validation
-        with patch("raglite.forecasting.hybrid.get_mistral_client") as mock_client:
+        with patch("raglite.forecasting.hybrid.ensemble.get_mistral_client") as mock_client:
             mock_response = AsyncMock()
             mock_response.choices = [
                 AsyncMock(message=AsyncMock(content='{"summary": "Test forecast"}'))

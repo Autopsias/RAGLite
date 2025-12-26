@@ -75,20 +75,22 @@ def mock_mistral_api_globally() -> Generator[None, None, None]:
     - Any async tasks spawned by tests
 
     Technical Details:
-    - Patches ALL possible import paths where get_mistral_client() is used
+    - Patches get_mistral_client() function instead of Mistral class
+    - This allows test-specific function-level patches to override the session mock
     - Returns realistic mock responses for SQL generation and metadata extraction
     - Session-scoped ensures patch persists across entire test session
     - autouse=True ensures protection even if tests don't explicitly request mock
-    """
-    # CRITICAL APPROACH CHANGE (2025-11-22):
-    # Instead of patching get_mistral_client() everywhere, patch the Mistral class itself.
-    # This allows test-specific mocks to override while still preventing real API calls.
-    #
-    # Why this works better:
-    # 1. Tests can mock raglite.shared.clients.Mistral for specific behavior
-    # 2. Session mock catches ANY instantiation of Mistral class
-    # 3. No conflict between session-scoped and test-scoped mocks
 
+    CRITICAL FIX (2025-12-26):
+    Changed from patching Mistral class to patching get_mistral_client() function.
+    This resolves mock interference where test-specific function patches conflicted
+    with session-level class patches, causing 145 test failures.
+
+    Patching at function level allows tests to:
+    1. Completely override with their own get_mistral_client patches
+    2. Use test-specific mock responses
+    3. Still maintain protection against real API calls
+    """
     # Create a single shared mock client with both sync and async methods configured
     mock_client_instance = MagicMock()
     # Sync method for SQL generation (query classifier)
@@ -96,9 +98,15 @@ def mock_mistral_api_globally() -> Generator[None, None, None]:
     # Async method for metadata extraction (embedding generation)
     mock_client_instance.chat.complete_async = AsyncMock(side_effect=generate_mock_metadata)
 
-    # Patch the Mistral class constructor to return our mock
-    with patch("raglite.shared.clients.Mistral") as mock_mistral_class:
-        mock_mistral_class.return_value = mock_client_instance
+    # Patch the get_mistral_client function to return our mock
+    # This allows test-specific patches to override by patching the same function
+    # CRITICAL: Patch ALL import locations where get_mistral_client is used
+    with (
+        patch("raglite.shared.clients.get_mistral_client") as mock_get_client,
+        patch("raglite.ingestion.embedding_generation.get_mistral_client") as mock_emb,
+    ):
+        mock_get_client.return_value = mock_client_instance
+        mock_emb.return_value = mock_client_instance
         yield
 
 

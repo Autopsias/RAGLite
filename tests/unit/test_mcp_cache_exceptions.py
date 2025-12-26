@@ -63,18 +63,22 @@ class TestCacheExceptionHandling:
         """[P0] Cache lookup exception should not break forecasting, fall back to Prophet."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             # Simulate database connection error
             mock_get_cache.side_effect = ConnectionError("Database unavailable")
 
-            with patch("raglite.forecasting.hybrid._get_prophet_class") as mock_prophet_class:
+            with patch(
+                "raglite.forecasting.hybrid.ensemble._get_prophet_class"
+            ) as mock_prophet_class:
                 mock_prophet = MagicMock()
                 mock_prophet.fit.return_value = None
                 mock_prophet.make_future_dataframe.return_value = MagicMock()
                 mock_prophet.predict.return_value = MagicMock()
                 mock_prophet_class.return_value = mock_prophet
 
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
                     # Should not raise - should gracefully fall back
@@ -93,18 +97,22 @@ class TestCacheExceptionHandling:
         """[P0] Cache lookup timeout should fall back gracefully."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             # Simulate timeout
             mock_get_cache.side_effect = TimeoutError("Cache lookup timeout")
 
-            with patch("raglite.forecasting.hybrid._get_prophet_class") as mock_prophet_class:
+            with patch(
+                "raglite.forecasting.hybrid.ensemble._get_prophet_class"
+            ) as mock_prophet_class:
                 mock_prophet = MagicMock()
                 mock_prophet.fit.return_value = None
                 mock_prophet.make_future_dataframe.return_value = MagicMock()
                 mock_prophet.predict.return_value = MagicMock()
                 mock_prophet_class.return_value = mock_prophet
 
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
                     result = await generate_forecast(
@@ -136,10 +144,14 @@ class TestCacheExceptionHandling:
             expires_at=now + timedelta(days=7),
         )
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = cached_no_characteristics
 
-            with patch("raglite.forecasting.hybrid._generate_prophet_forecast") as mock_prophet:
+            with patch(
+                "raglite.forecasting.hybrid.model_generators._generate_prophet_forecast"
+            ) as mock_prophet:
                 from raglite.shared.models import ForecastPoint, ForecastResult
 
                 mock_result = ForecastResult(
@@ -157,7 +169,7 @@ class TestCacheExceptionHandling:
                 )
                 mock_prophet.return_value = mock_result
 
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
                     result = await generate_forecast(
@@ -205,13 +217,15 @@ class TestRegressorFilteringEdgeCases:
             "different_reg": pd.Series([1.0, 2.0, 3.0]),
         }
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = cached_with_regressors
 
-            with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                 mock_route.return_value = MagicMock()
 
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
                     await generate_forecast(
@@ -252,13 +266,15 @@ class TestRegressorFilteringEdgeCases:
             "euribor": pd.Series([0.5, 0.6, 0.7]),  # Not in cached list
         }
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = cached_with_regressors
 
-            with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                 mock_route.return_value = MagicMock()
 
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
                     await generate_forecast(
@@ -300,17 +316,21 @@ class TestRegressorFilteringEdgeCases:
             "gas_price": pd.Series([1.0, 2.0, 3.0]),
         }
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = cached_empty_list
 
-            with patch("raglite.forecasting.hybrid._get_prophet_class") as mock_prophet_class:
+            with patch(
+                "raglite.forecasting.hybrid.ensemble._get_prophet_class"
+            ) as mock_prophet_class:
                 mock_prophet = MagicMock()
                 mock_prophet.fit.return_value = None
                 mock_prophet.make_future_dataframe.return_value = MagicMock()
                 mock_prophet.predict.return_value = MagicMock()
                 mock_prophet_class.return_value = mock_prophet
 
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
                     await generate_forecast(

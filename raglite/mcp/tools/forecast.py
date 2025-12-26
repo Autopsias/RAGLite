@@ -11,7 +11,7 @@ from raglite.forecasting.hybrid import (
     generate_ensemble_forecast,
     generate_forecast,
 )
-from raglite.forecasting.timeseries_extract import (
+from raglite.forecasting.timeseries import (
     ExtractionError,
     MetricValidationError,
     extract_timeseries,

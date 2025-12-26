@@ -214,7 +214,7 @@ class TestAC2DataCoefficientOfVariation:
         """
         import numpy as np
 
-        from raglite.forecasting.timeseries_extract import extract_timeseries
+        from raglite.forecasting.timeseries import extract_timeseries
         from raglite.shared.clients import get_postgresql_connection
 
         # GIVEN: PostgreSQL connection available
@@ -258,7 +258,7 @@ class TestAC2DataCoefficientOfVariation:
         WHEN: Extracting variable_cost data
         THEN: Only Portugal entities should be included
         """
-        from raglite.forecasting.timeseries_extract import extract_timeseries
+        from raglite.forecasting.timeseries import extract_timeseries
 
         try:
             # Extract with explicit Portugal filter
@@ -285,7 +285,7 @@ class TestAC2DataCoefficientOfVariation:
         WHEN: Checking value units
         THEN: Values should be normalized EUR/ton (range: -150 to -350)
         """
-        from raglite.forecasting.timeseries_extract import extract_timeseries
+        from raglite.forecasting.timeseries import extract_timeseries
 
         try:
             timeseries_data = extract_timeseries(metric_name="variable_cost")

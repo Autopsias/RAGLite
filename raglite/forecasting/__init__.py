@@ -10,7 +10,7 @@ Story 6.21: Unified Validation Script
 from raglite.forecasting.auto_update import identify_affected_metrics, trigger_forecast_refresh
 from raglite.forecasting.ensemble import generate_ensemble_forecast
 from raglite.forecasting.hybrid import InsufficientDataError, explain_forecast, generate_forecast
-from raglite.forecasting.timeseries_extract import (
+from raglite.forecasting.timeseries import (
     ExtractionError,
     extract_timeseries,
     normalize_to_interval,

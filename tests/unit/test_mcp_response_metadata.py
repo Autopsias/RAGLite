@@ -130,15 +130,17 @@ class TestResponseMetadata:
         """TEST-AC-7b.6.5.6: Cached selection populates model_selection_reason."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = mock_cached_model_selection
 
-            with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                 mock_result = MagicMock()
                 mock_result.model_source = "cached"
                 mock_route.return_value = mock_result
 
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
                     result = await generate_forecast(

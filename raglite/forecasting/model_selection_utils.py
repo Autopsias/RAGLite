@@ -217,19 +217,25 @@ def create_lagged_features(y: pd.Series, n_lags: int) -> pd.DataFrame:
         features[f"lag_{i}"] = y.shift(i)
 
     # 2. Rolling statistics (NEW - shifted to prevent data leakage)
+    # For very short series, only create rolling features that preserve training samples
+    # Require: (window + shift) + n_lags < len(y) to ensure at least 1 training sample
     for window in [3, 6, 12]:
-        if len(y) >= window:
+        # Ensure rolling window won't eliminate all training samples
+        # Need: window (for rolling) + 1 (for shift) + n_lags (for lags) <= len(y)
+        if len(y) > (window + 1 + n_lags):
             features[f"rolling_mean_{window}"] = y.rolling(window=window).mean().shift(1)
             features[f"rolling_std_{window}"] = y.rolling(window=window).std().shift(1)
 
     # 3. Momentum features (NEW - shifted to prevent data leakage)
     features["diff_1"] = y.diff(1).shift(1)
     features["pct_change_1"] = y.pct_change(1).shift(1)
-    if len(y) >= 12:
+    # For diff_12, we need: 12 (diff period) + 1 (shift) + n_lags <= len(y)
+    if len(y) > (12 + 1 + n_lags):
         features["diff_12"] = y.diff(12).shift(1)  # YoY momentum
 
     # 4. Volatility features (NEW - shifted to prevent data leakage)
-    if len(y) >= 6:
+    # Same check as rolling features to preserve training samples
+    if len(y) > (6 + 1 + n_lags):
         features["rolling_range_6"] = (y.rolling(6).max() - y.rolling(6).min()).shift(1)
 
     df = pd.DataFrame(features)

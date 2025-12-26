@@ -102,12 +102,12 @@ class TestForecastQueryIntegration:
 
         with (
             patch(
-                "raglite.main.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ) as mock_extract_sql,
             patch(
-                "raglite.main.generate_forecast",
+                "raglite.mcp.tools.forecast.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ) as mock_generate,
@@ -162,12 +162,12 @@ class TestForecastQueryIntegration:
     @pytest.mark.asyncio
     async def test_error_propagation_from_timeseries(self):
         """Test that errors from time-series extraction propagate correctly (AC5)."""
-        from raglite.forecasting.timeseries_extract import ExtractionError
+        from raglite.forecasting.timeseries import ExtractionError
         from raglite.main import get_financial_forecast
         from raglite.retrieval.search import QueryError
 
         with patch(
-            "raglite.main.extract_timeseries",
+            "raglite.mcp.tools.forecast.extract_timeseries",
             new_callable=AsyncMock,
             side_effect=ExtractionError("No revenue data found in documents"),
         ):
@@ -204,12 +204,12 @@ class TestForecastQueryIntegration:
 
         with (
             patch(
-                "raglite.main.extract_timeseries",
+                "raglite.mcp.tools.forecast.extract_timeseries",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
             patch(
-                "raglite.main.generate_forecast",
+                "raglite.mcp.tools.forecast.generate_forecast",
                 new_callable=AsyncMock,
                 side_effect=InsufficientDataError("Need at least 8 data points, got 2"),
             ),
@@ -271,12 +271,12 @@ class TestForecastQueryIntegration:
 
         with (
             patch(
-                "raglite.main.extract_timeseries",
+                "raglite.mcp.tools.forecast.extract_timeseries",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ) as mock_extract,
             patch(
-                "raglite.main.generate_forecast",
+                "raglite.mcp.tools.forecast.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ) as mock_generate,
@@ -347,12 +347,12 @@ class TestForecastQueryScenarios:
 
         with (
             patch(
-                "raglite.main.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
             patch(
-                "raglite.main.generate_forecast",
+                "raglite.mcp.tools.forecast.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -416,12 +416,12 @@ class TestForecastQueryScenarios:
 
         with (
             patch(
-                "raglite.main.extract_timeseries",
+                "raglite.mcp.tools.forecast.extract_timeseries",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
             patch(
-                "raglite.main.generate_forecast",
+                "raglite.mcp.tools.forecast.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -457,12 +457,12 @@ class TestForecastQueryScenarios:
 
         with (
             patch(
-                "raglite.main.extract_timeseries",
+                "raglite.mcp.tools.forecast.extract_timeseries",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
             patch(
-                "raglite.main.generate_forecast",
+                "raglite.mcp.tools.forecast.generate_forecast",
                 new_callable=AsyncMock,
                 side_effect=InsufficientDataError(
                     "Insufficient data. Minimum 8 data points required."
@@ -537,12 +537,12 @@ class TestForecastResponseFormat:
 
         with (
             patch(
-                "raglite.main.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
             patch(
-                "raglite.main.generate_forecast",
+                "raglite.mcp.tools.forecast.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -606,12 +606,12 @@ class TestForecastResponseFormat:
 
         with (
             patch(
-                "raglite.main.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
             patch(
-                "raglite.main.generate_forecast",
+                "raglite.mcp.tools.forecast.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -659,7 +659,7 @@ class TestSQLTimeseriesExtraction:
     async def test_sql_extraction_with_real_database(self):
         """Test SQL extraction with real PostgreSQL test database."""
 
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             extract_timeseries_from_sql,
         )
@@ -692,7 +692,7 @@ class TestSQLTimeseriesExtraction:
     @pytest.mark.asyncio
     async def test_sql_extraction_no_data_raises_error(self):
         """Test that SQL extraction raises ExtractionError when no data found."""
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             extract_timeseries_from_sql,
         )
@@ -709,7 +709,7 @@ class TestSQLTimeseriesExtraction:
     @pytest.mark.asyncio
     async def test_sql_extraction_insufficient_data_raises_error(self):
         """Test that SQL extraction raises ExtractionError with <min_points data."""
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             extract_timeseries_from_sql,
         )
@@ -737,7 +737,7 @@ class TestSQLFirstExtractionFallback:
         """Test that MCP tool tries SQL first, then falls back to hybrid search."""
         from unittest.mock import AsyncMock, patch
 
-        from raglite.forecasting.timeseries_extract import ExtractionError
+        from raglite.forecasting.timeseries import ExtractionError
         from raglite.main import get_financial_forecast
         from raglite.shared.models import (
             ForecastPoint,
@@ -775,17 +775,17 @@ class TestSQLFirstExtractionFallback:
 
         with (
             patch(
-                "raglite.main.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 side_effect=ExtractionError("SQL extraction failed - no data"),
             ) as mock_sql,
             patch(
-                "raglite.main.extract_timeseries",
+                "raglite.mcp.tools.forecast.extract_timeseries",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ) as mock_hybrid,
             patch(
-                "raglite.main.generate_forecast",
+                "raglite.mcp.tools.forecast.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -846,13 +846,15 @@ class TestSQLFirstExtractionFallback:
 
         with (
             patch(
-                "raglite.main.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ) as mock_sql,
-            patch("raglite.main.extract_timeseries", new_callable=AsyncMock) as mock_hybrid,
             patch(
-                "raglite.main.generate_forecast",
+                "raglite.mcp.tools.forecast.extract_timeseries", new_callable=AsyncMock
+            ) as mock_hybrid,
+            patch(
+                "raglite.mcp.tools.forecast.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -875,7 +877,7 @@ class TestSQLFirstExtractionFallback:
         """Test fallback behavior with different SQL error types."""
         from unittest.mock import AsyncMock, patch
 
-        from raglite.forecasting.timeseries_extract import ExtractionError
+        from raglite.forecasting.timeseries import ExtractionError
         from raglite.main import get_financial_forecast
         from raglite.shared.models import (
             ForecastPoint,
@@ -918,17 +920,17 @@ class TestSQLFirstExtractionFallback:
         for error in error_scenarios:
             with (
                 patch(
-                    "raglite.main.extract_timeseries_from_sql",
+                    "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                     new_callable=AsyncMock,
                     side_effect=error,
                 ),
                 patch(
-                    "raglite.main.extract_timeseries",
+                    "raglite.mcp.tools.forecast.extract_timeseries",
                     new_callable=AsyncMock,
                     return_value=mock_ts_data,
                 ),
                 patch(
-                    "raglite.main.generate_forecast",
+                    "raglite.mcp.tools.forecast.generate_forecast",
                     new_callable=AsyncMock,
                     return_value=mock_forecast,
                 ),
@@ -996,12 +998,12 @@ class TestDynamicMetricForecasting:
 
         with (
             patch(
-                "raglite.main.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ) as mock_sql,
             patch(
-                "raglite.main.generate_forecast",
+                "raglite.mcp.tools.forecast.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -1057,12 +1059,12 @@ class TestDynamicMetricForecasting:
 
         with (
             patch(
-                "raglite.main.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
             patch(
-                "raglite.main.generate_forecast",
+                "raglite.mcp.tools.forecast.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -1076,7 +1078,7 @@ class TestDynamicMetricForecasting:
     @pytest.mark.asyncio
     async def test_metric_validation_error_with_suggestions(self):
         """Test that MetricValidationError provides available metric suggestions."""
-        from raglite.forecasting.timeseries_extract import MetricValidationError
+        from raglite.forecasting.timeseries import MetricValidationError
         from raglite.main import get_financial_forecast
         from raglite.retrieval.search import QueryError
 
@@ -1089,7 +1091,7 @@ class TestDynamicMetricForecasting:
         )
 
         with patch(
-            "raglite.main.extract_timeseries_from_sql",
+            "raglite.mcp.tools.forecast.extract_historical_data_by_type",
             new_callable=AsyncMock,
             side_effect=validation_error,
         ):
@@ -1143,12 +1145,12 @@ class TestDynamicMetricForecasting:
 
         with (
             patch(
-                "raglite.main.extract_timeseries_from_sql",
+                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ) as mock_sql,
             patch(
-                "raglite.main.generate_forecast",
+                "raglite.mcp.tools.forecast.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),

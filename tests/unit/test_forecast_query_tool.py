@@ -481,7 +481,7 @@ class TestGetFinancialForecast:
     @pytest.mark.asyncio
     async def test_invalid_metric_error(self):
         """Test error handling for metric with no data."""
-        from raglite.forecasting.timeseries_extract import ExtractionError
+        from raglite.forecasting.timeseries import ExtractionError
         from raglite.main import get_financial_forecast
         from raglite.retrieval.search import QueryError
 
@@ -557,7 +557,7 @@ class TestGetFinancialForecast:
     @pytest.mark.asyncio
     async def test_extraction_error(self):
         """Test error handling for ExtractionError."""
-        from raglite.forecasting.timeseries_extract import ExtractionError
+        from raglite.forecasting.timeseries import ExtractionError
         from raglite.main import get_financial_forecast
         from raglite.retrieval.search import QueryError
 

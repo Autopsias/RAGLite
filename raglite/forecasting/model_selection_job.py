@@ -21,7 +21,7 @@ from raglite.forecasting.model_selection import (
 )
 from raglite.forecasting.regressor_config import get_default_regressors
 from raglite.forecasting.regressor_fetch import fetch_regressors_with_date_range
-from raglite.forecasting.timeseries_extract import (
+from raglite.forecasting.timeseries import (
     extract_external_regressor_timeseries,
     extract_external_timeseries,
     extract_timeseries_from_sql,

@@ -99,6 +99,60 @@ Per-Test Fixture (ensure_qdrant_test_isolation)
 
 ---
 
+## Mock Patching Rules (CRITICAL)
+
+### Patch Where Used, Not Where Defined
+
+**ALWAYS patch at the module where the function is IMPORTED and USED, not where it's defined.**
+
+```python
+# WRONG: Patches a non-existent attribute (causes silent pollution)
+patch("raglite.main.extract_timeseries", ...)  # Function doesn't exist in raglite.main!
+
+# CORRECT: Patch where the function is imported and used
+patch("raglite.mcp.tools.forecast.extract_timeseries", ...)
+
+# BEST: Use patch.object for type safety
+from raglite.mcp.tools import forecast
+patch.object(forecast, "extract_timeseries", new_callable=AsyncMock)
+```
+
+### Common Patch Target Mappings
+
+| Function | Wrong Target | Correct Target |
+|----------|--------------|----------------|
+| `extract_historical_data_by_type` | `raglite.main.*` | `raglite.mcp.tools.forecast.extract_historical_data_by_type` |
+| `extract_timeseries` | `raglite.main.*` | `raglite.mcp.tools.forecast.extract_timeseries` |
+| `generate_forecast` | `raglite.main.*` | `raglite.mcp.tools.forecast.generate_forecast` |
+| `get_mistral_client` | `raglite.shared.clients.*` | Where function is imported (e.g., `raglite.retrieval.query_classifier.get_mistral_client`) |
+
+### Why This Matters
+
+When you patch a non-existent module attribute:
+1. Python's `patch` creates the attribute temporarily
+2. After the test, it removes the attribute
+3. **BUT** other tests may have cached module references
+4. This causes **test pollution** where tests pass in isolation but fail in suite
+
+### Test Classification Rule
+
+**If a test mocks ALL external dependencies (database, API, etc.), it should be a UNIT test, not an integration test.**
+
+```python
+# This belongs in tests/unit/, NOT tests/integration/
+# All dependencies are mocked, no real infrastructure needed
+@pytest.mark.asyncio
+async def test_cache_hit_uses_cached_model():
+    with (
+        patch("raglite.mcp.tools.forecast.get_cached_model_selection", ...),
+        patch("raglite.mcp.tools.forecast.extract_historical_data_by_type", ...),
+        patch("raglite.mcp.tools.forecast.generate_forecast", ...),
+    ):
+        # Test logic here
+```
+
+---
+
 ## Test Organization
 
 - **Unit Tests** (`tests/unit/`): ~200 tests, no external dependencies

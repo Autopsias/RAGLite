@@ -19,7 +19,7 @@ except ImportError:
 
 
 from raglite.forecasting.hybrid import InsufficientDataError, generate_forecast
-from raglite.forecasting.timeseries_extract import ExtractionError, extract_timeseries
+from raglite.forecasting.timeseries import ExtractionError, extract_timeseries
 from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)

@@ -27,4 +27,9 @@
 **Epic 5: Production Readiness & Real-Time Operations**
 *Goal:* Deploy production-ready cloud infrastructure with real-time document updates, performance optimization, and monitoring to deliver a reliable, scalable system ready for daily use and team rollout.
 
+**Epic 8: Technical Debt Reduction** 🟢 **IN PROGRESS**
+*Goal:* Reduce ALL files to <500 LOC for optimal AI comprehension and maintainability. Refactoring epic focused on file size reduction without changing functionality.
+
+*Priority:* P1 | *Status:* IN PROGRESS | *Timeline:* 4-7 weeks | *Dependencies:* Epic 6-7 (COMPLETE - main source of debt) | *Target:* 84 files exceeding limit -> 0 files exceeding limit | *Stories:* 4 (8.1-8.4)
+
 ---

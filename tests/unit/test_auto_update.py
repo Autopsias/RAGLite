@@ -317,7 +317,7 @@ class TestTriggerForecastRefresh:
     @pytest.mark.asyncio
     async def test_refresh_with_extraction_error(self):
         """Test refresh when timeseries extraction fails."""
-        from raglite.forecasting.timeseries_extract import ExtractionError
+        from raglite.forecasting.timeseries import ExtractionError
 
         metadata = DocumentMetadata(
             filename="Bad_Report.pdf",

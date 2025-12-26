@@ -27,7 +27,7 @@ class TestDetectEntityFunction:
         When: detect_entity() is called
         Then: Returns 'portugal' as the detected entity
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "Portugal | Variable Costs | (281,1) EUR/ton"
         result = detect_entity(text)
@@ -40,7 +40,7 @@ class TestDetectEntityFunction:
         When: detect_entity() is called
         Then: Returns 'portugal' (EUR/ton implies Portugal)
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "Variable Cost | EUR/ton | (281.1)"
         result = detect_entity(text)
@@ -53,7 +53,7 @@ class TestDetectEntityFunction:
         When: detect_entity() is called
         Then: Returns 'portugal' (Portuguese text implies Portugal)
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "Custos Variáveis | (260.5)"
         result = detect_entity(text)
@@ -66,7 +66,7 @@ class TestDetectEntityFunction:
         When: detect_entity() is called
         Then: Returns 'portugal'
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "PT Variable Cost (285.0) EUR/ton"
         result = detect_entity(text)
@@ -79,7 +79,7 @@ class TestDetectEntityFunction:
         When: detect_entity() is called
         Then: Returns 'tunisia' as the detected entity
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "Tunisia Variable Cost TND/ton"
         result = detect_entity(text)
@@ -92,7 +92,7 @@ class TestDetectEntityFunction:
         When: detect_entity() is called
         Then: Returns 'tunisia' (TND implies Tunisia)
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "Variable Cost | TND/ton | (350.2)"
         result = detect_entity(text)
@@ -105,7 +105,7 @@ class TestDetectEntityFunction:
         When: detect_entity() is called
         Then: Returns 'tunisia'
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "TN Variable Costs (320.5) TND"
         result = detect_entity(text)
@@ -118,7 +118,7 @@ class TestDetectEntityFunction:
         When: detect_entity() is called
         Then: Returns 'brazil' as the detected entity
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "Brazil Custos Variáveis BRL/ton"
         result = detect_entity(text)
@@ -131,7 +131,7 @@ class TestDetectEntityFunction:
         When: detect_entity() is called
         Then: Returns 'brazil' (BRL implies Brazil)
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "Variable Cost | BRL/ton | (580.0)"
         result = detect_entity(text)
@@ -144,7 +144,7 @@ class TestDetectEntityFunction:
         When: detect_entity() is called
         Then: Returns 'brazil'
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "Brasil Custos Variáveis (600.0) BRL"
         result = detect_entity(text)
@@ -157,7 +157,7 @@ class TestDetectEntityFunction:
         When: detect_entity() is called
         Then: Returns 'brazil'
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "BR Variable Cost (590.0) BRL/ton"
         result = detect_entity(text)
@@ -170,7 +170,7 @@ class TestDetectEntityFunction:
         When: detect_entity() is called
         Then: Returns None (unknown entity)
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "Some random text without entity indicators"
         result = detect_entity(text)
@@ -183,7 +183,7 @@ class TestDetectEntityFunction:
         When: detect_entity() is called
         Then: Correctly identifies entity regardless of case
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         test_cases = [
             ("PORTUGAL variable cost", "portugal"),
@@ -211,7 +211,7 @@ class TestEntityPatternsConstant:
         When: Importing ENTITY_PATTERNS
         Then: Constant is accessible and is a dictionary
         """
-        from raglite.forecasting.timeseries_extract import ENTITY_PATTERNS
+        from raglite.forecasting.timeseries import ENTITY_PATTERNS
 
         assert isinstance(ENTITY_PATTERNS, dict), "ENTITY_PATTERNS should be a dictionary"
 
@@ -222,7 +222,7 @@ class TestEntityPatternsConstant:
         When: Checking for 'portugal' key
         Then: Key exists with list of patterns including 'Portugal', 'PT', 'EUR/ton'
         """
-        from raglite.forecasting.timeseries_extract import ENTITY_PATTERNS
+        from raglite.forecasting.timeseries import ENTITY_PATTERNS
 
         assert "portugal" in ENTITY_PATTERNS, "ENTITY_PATTERNS missing 'portugal' key"
 
@@ -244,7 +244,7 @@ class TestEntityPatternsConstant:
         When: Checking for 'tunisia' key
         Then: Key exists with list of patterns including 'Tunisia', 'TN', 'TND'
         """
-        from raglite.forecasting.timeseries_extract import ENTITY_PATTERNS
+        from raglite.forecasting.timeseries import ENTITY_PATTERNS
 
         assert "tunisia" in ENTITY_PATTERNS, "ENTITY_PATTERNS missing 'tunisia' key"
 
@@ -263,7 +263,7 @@ class TestEntityPatternsConstant:
         When: Checking for 'brazil' key
         Then: Key exists with list of patterns including 'Brazil', 'BR', 'BRL'
         """
-        from raglite.forecasting.timeseries_extract import ENTITY_PATTERNS
+        from raglite.forecasting.timeseries import ENTITY_PATTERNS
 
         assert "brazil" in ENTITY_PATTERNS, "ENTITY_PATTERNS missing 'brazil' key"
 
@@ -291,7 +291,7 @@ class TestEntityDetectionAccuracy:
         When: detect_entity() is called on each chunk
         Then: Accuracy is >95% (correctly identifies >=19 of 20 test cases)
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         # Test corpus with labeled entity context (chunk_text, expected_entity)
         test_corpus = [

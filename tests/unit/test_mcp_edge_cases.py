@@ -120,21 +120,29 @@ class TestModelRoutingEdgeCases:
             expires_at=now + timedelta(days=7),
         )
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = cached_unimplemented_model
 
-            with patch("raglite.forecasting.hybrid._generate_tft_forecast") as mock_tft:
+            with patch(
+                "raglite.forecasting.hybrid.model_generators._generate_tft_forecast"
+            ) as mock_tft:
                 # Simulate NotImplementedError
                 mock_tft.side_effect = NotImplementedError("TFT not yet implemented")
 
-                with patch("raglite.forecasting.hybrid._get_prophet_class") as mock_prophet_class:
+                with patch(
+                    "raglite.forecasting.hybrid.ensemble._get_prophet_class"
+                ) as mock_prophet_class:
                     mock_prophet = MagicMock()
                     mock_prophet.fit.return_value = None
                     mock_prophet.make_future_dataframe.return_value = MagicMock()
                     mock_prophet.predict.return_value = MagicMock()
                     mock_prophet_class.return_value = mock_prophet
 
-                    with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                    with patch(
+                        "raglite.forecasting.hybrid.ensemble.explain_forecast"
+                    ) as mock_explain:
                         mock_explain.return_value = "Test explanation"
 
                         result = await generate_forecast(
@@ -177,16 +185,20 @@ class TestMetadataPopulation:
             expires_at=now + timedelta(days=7),
         )
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = cached
 
-            with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                 # Detailed error
                 mock_route.side_effect = RuntimeError(
                     "ARIMA convergence failed: data is non-stationary"
                 )
 
-                with patch("raglite.forecasting.hybrid._generate_prophet_forecast") as mock_prophet:
+                with patch(
+                    "raglite.forecasting.hybrid.model_generators._generate_prophet_forecast"
+                ) as mock_prophet:
                     mock_result = MagicMock()
                     mock_result.model_source = "fallback"
                     mock_prophet.return_value = mock_result
@@ -231,14 +243,16 @@ class TestMetadataPopulation:
             expires_at=now + timedelta(days=7),
         )
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = cached
 
-            with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                 mock_result = MagicMock()
                 mock_route.return_value = mock_result
 
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
                     result = await generate_forecast(
@@ -283,10 +297,14 @@ class TestConcurrentRequests:
             expires_at=now + timedelta(days=7),
         )
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = cached
 
-            with patch("raglite.forecasting.hybrid._generate_prophet_forecast") as mock_prophet:
+            with patch(
+                "raglite.forecasting.hybrid.model_generators._generate_prophet_forecast"
+            ) as mock_prophet:
                 mock_result = ForecastResult(
                     metric_name="ebitda",
                     forecast=[
@@ -302,7 +320,7 @@ class TestConcurrentRequests:
                 )
                 mock_prophet.return_value = mock_result
 
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
                     # Launch 5 concurrent forecasts
@@ -352,13 +370,15 @@ class TestLoggingAndObservability:
             expires_at=now + timedelta(days=7),
         )
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = cached
 
-            with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                 mock_route.return_value = MagicMock()
 
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
                     import logging
@@ -394,13 +414,17 @@ class TestLoggingAndObservability:
             expires_at=now + timedelta(days=7),
         )
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = cached
 
-            with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                 mock_route.side_effect = Exception("ARIMA convergence failed")
 
-                with patch("raglite.forecasting.hybrid._generate_prophet_forecast") as mock_prophet:
+                with patch(
+                    "raglite.forecasting.hybrid.model_generators._generate_prophet_forecast"
+                ) as mock_prophet:
                     mock_result = MagicMock()
                     mock_result.model_source = "fallback"
                     mock_prophet.return_value = mock_result

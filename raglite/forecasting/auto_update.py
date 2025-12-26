@@ -8,7 +8,7 @@ import asyncio
 import time
 
 from raglite.forecasting.hybrid import InsufficientDataError, generate_forecast
-from raglite.forecasting.timeseries_extract import ExtractionError, extract_timeseries
+from raglite.forecasting.timeseries import ExtractionError, extract_timeseries
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 from raglite.shared.models import DocumentMetadata, ForecastRefreshResult

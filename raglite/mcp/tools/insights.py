@@ -112,7 +112,7 @@ async def get_financial_insights(
             },
         )
     try:
-        from raglite.forecasting.timeseries_extract import extract_timeseries
+        from raglite.forecasting.timeseries import extract_timeseries
         from raglite.insights.anomalies import detect_anomalies
         from raglite.insights.proactive import filter_insights, generate_insights
         from raglite.insights.recommendations import generate_recommendations

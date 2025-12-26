@@ -95,7 +95,7 @@ async def collect_training_data(
     """
     from raglite.external_data.clients.ecb import ECBClient
     from raglite.external_data.clients.eu_oil_bulletin import EUOilBulletinClient
-    from raglite.forecasting.timeseries_extract import extract_timeseries_from_sql
+    from raglite.forecasting.timeseries import extract_timeseries_from_sql
 
     if metrics is None:
         metrics = ["ebitda", "revenue", "sales_volume"]

@@ -222,3 +222,16 @@ development_status:
   7-5-refactor-hybrid-py-forecasting-modules: done
   # Batch 3-5: Remaining files (stories 7.6-7.45 to be drafted when resumed)
   epic-7-retrospective: optional
+
+  # Epic 8: Technical Debt Reduction (NEW)
+  # Sprint Change Proposal: SCP-2025-12-25-001 APPROVED
+  # Test Design: docs/test-design-epic-8.md
+  # Goal: Reduce ALL files to <500 LOC for optimal AI comprehension
+  # Target: 84 files exceeding limit -> 0 files exceeding limit
+  # Phases: 4 (Critical -> Severe -> Moderate -> Tests)
+  epic-8: in-progress
+  8-1-critical-forecasting-module-refactoring: done  # Phase 8 PASS - 2025-12-26
+  8-2-external-data-client-refactoring: backlog
+  8-3-ingestion-module-refactoring: backlog
+  8-4-test-file-consolidation: backlog
+  epic-8-retrospective: optional

@@ -51,7 +51,7 @@ class TestVariableCostCoefficientOfVariation:
         Note: Requires production data with Variable Cost information.
         Use TEST_USE_FULL_PDF=true to run with 160-page production PDF.
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         # Extract Variable Cost with Portugal entity filter
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
@@ -90,7 +90,7 @@ class TestVariableCostCoefficientOfVariation:
         When: Comparing CV values
         Then: Filtered CV < Unfiltered CV (proves entity mixing causes variance)
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         # Extract with Portugal filter
         portugal_data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
@@ -135,7 +135,7 @@ class TestEurTonRangeValidation:
         When: Validating each value
         Then: All values fall within -350 <= value <= -150
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 
@@ -162,7 +162,7 @@ class TestEurTonRangeValidation:
         When: Checking value signs
         Then: All values are negative (representing cost outflows)
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 
@@ -187,7 +187,7 @@ class TestEurTonRangeValidation:
         Note: Based on actual data showing Portugal cement variable costs
         typically range from -250 to -300 EUR/ton.
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 
@@ -220,7 +220,7 @@ class TestSufficientDataPoints:
         When: Counting data points
         Then: At least 6 data points are returned (minimum for forecasting)
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal", min_points=6)
 
@@ -245,7 +245,7 @@ class TestSufficientDataPoints:
         """
         from datetime import datetime
 
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 
@@ -269,7 +269,7 @@ class TestSufficientDataPoints:
         When: Checking date order
         Then: Points are sorted from earliest to latest date
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 
@@ -306,7 +306,7 @@ class TestVariableCostMAPEImprovement:
         When: Calling with entity='portugal' parameter
         Then: Function accepts the parameter and returns filtered data
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         # This test verifies the interface change for AC4
         # The function must accept 'entity' parameter
@@ -327,7 +327,7 @@ class TestVariableCostMAPEImprovement:
         When: Analyzing data consistency metrics
         Then: Data shows lower variance suitable for accurate forecasting
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 
@@ -370,7 +370,7 @@ class TestNoRegressionOtherMetrics:
         Note: This test validates that entity detection changes didn't break revenue extraction.
         If revenue data isn't available in test PDF, test skips (not a regression).
         """
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             MetricValidationError,
             extract_timeseries_from_sql,
@@ -397,7 +397,7 @@ class TestNoRegressionOtherMetrics:
         Note: This test validates that entity detection changes didn't break EBITDA extraction.
         If EBITDA data isn't available in test PDF, test skips (not a regression).
         """
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             MetricValidationError,
             extract_timeseries_from_sql,
@@ -421,7 +421,7 @@ class TestNoRegressionOtherMetrics:
         When: Extracting sales_volume time series
         Then: Extraction succeeds or fails gracefully (not regression error)
         """
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             MetricValidationError,
             extract_timeseries_from_sql,
@@ -484,7 +484,7 @@ class TestEntityParameterIntegration:
         When: Extracting Variable Cost data
         Then: All returned data is from Portugal (EUR/ton values)
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 
@@ -506,7 +506,7 @@ class TestEntityParameterIntegration:
         When: Extracting Variable Cost data
         Then: Defaults to Portugal data (same as explicit entity='portugal')
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         # Call without entity parameter
         default_data = await extract_variable_cost_from_qdrant_chunks()
