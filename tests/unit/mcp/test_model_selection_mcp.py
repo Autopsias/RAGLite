@@ -158,7 +158,6 @@ class TestModelSelectionCacheIntegration:
         with (
             patch(
                 "raglite.mcp.tools.forecast.get_cached_model_selection",
-                new_callable=AsyncMock,
             ) as mock_cache,
             patch.object(
                 forecast,
@@ -208,7 +207,6 @@ class TestModelSelectionCacheIntegration:
         with (
             patch(
                 "raglite.mcp.tools.forecast.get_cached_model_selection",
-                new_callable=AsyncMock,
             ) as mock_cache,
             patch.object(
                 forecast,
@@ -261,7 +259,6 @@ class TestModelSelectionCacheIntegration:
         with (
             patch(
                 "raglite.mcp.tools.forecast.get_cached_model_selection",
-                new_callable=AsyncMock,
             ) as mock_cache,
             patch.object(
                 forecast,
@@ -315,7 +312,6 @@ class TestModelSelectionCacheIntegration:
         with (
             patch(
                 "raglite.mcp.tools.forecast.get_cached_model_selection",
-                new_callable=AsyncMock,
             ) as mock_cache,
             patch.object(
                 forecast,
@@ -374,7 +370,6 @@ class TestModelSelectionCacheIntegration:
         with (
             patch(
                 "raglite.mcp.tools.forecast.get_cached_model_selection",
-                new_callable=AsyncMock,
             ) as mock_cache,
             patch.object(
                 forecast,
@@ -421,7 +416,6 @@ class TestModelSelectionCacheIntegration:
         with (
             patch(
                 "raglite.mcp.tools.forecast.get_cached_model_selection",
-                new_callable=AsyncMock,
             ) as mock_cache,
             patch.object(
                 forecast,
