@@ -25,7 +25,7 @@ import inspect
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
@@ -88,7 +88,7 @@ def batch_selection_mocks(mock_historical_data, mock_model_result):
             ),
             patch(
                 "raglite.forecasting.model_selection_job.cache_model_selection",
-                new_callable=AsyncMock,
+                new_callable=Mock,
             ),
         ):
             yield
@@ -103,7 +103,7 @@ def single_selection_mocks(mock_historical_data, mock_model_result):
 
     @contextmanager
     def _mocks():
-        mock_cache = AsyncMock()
+        mock_cache = Mock()
         with (
             patch(
                 "raglite.forecasting.model_selection_job.fetch_historical_data",
@@ -393,7 +393,7 @@ class TestCacheResults:
         mock_result.runtime_seconds = 10.0
         mock_result.candidate_results = {}
 
-        mock_cache = AsyncMock()
+        mock_cache = Mock()
         # Mock historical data with 12+ points to pass validation
         mock_historical = pd.Series(
             [100.0] * 15,
@@ -751,7 +751,7 @@ class TestErrorHandling:
                 ),
                 patch(
                     "raglite.forecasting.model_selection_job.cache_model_selection",
-                    new_callable=AsyncMock,
+                    new_callable=Mock,
                 ),
             ):
                 results = await run_batch_model_selection(
@@ -861,7 +861,7 @@ class TestEdgeCases:
                 ),
                 patch(
                     "raglite.forecasting.model_selection_job.cache_model_selection",
-                    new_callable=AsyncMock,
+                    new_callable=Mock,
                 ),
             ):
                 results = await run_batch_model_selection(
@@ -879,7 +879,7 @@ class TestEdgeCases:
         """[P1][TEST-EDGE-5] Cache failures don't stop batch processing."""
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
-        async def failing_cache(*args, **kwargs):
+        def failing_cache(*args, **kwargs):
             raise ValueError("Cache write failed")
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -979,7 +979,7 @@ class TestReportStructure:
                 ),
                 patch(
                     "raglite.forecasting.model_selection_job.cache_model_selection",
-                    new_callable=AsyncMock,
+                    new_callable=Mock,
                 ),
             ):
                 await run_batch_model_selection(
@@ -1153,7 +1153,7 @@ class TestSingleVariableSelection:
             ),
             patch(
                 "raglite.forecasting.model_selection_job.cache_model_selection",
-                new_callable=AsyncMock,
+                new_callable=Mock,
             ),
         ):
             result = await run_single_variable_selection(
@@ -1203,7 +1203,7 @@ class TestSingleVariableSelection:
             ),
             patch(
                 "raglite.forecasting.model_selection_job.cache_model_selection",
-                new_callable=AsyncMock,
+                new_callable=Mock,
             ),
         ):
             await run_single_variable_selection(
