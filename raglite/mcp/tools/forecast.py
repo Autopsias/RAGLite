@@ -240,7 +240,7 @@ async def get_financial_forecast(
         cached_selection: CachedModelSelection | None = None
         if requested_model_type == "auto":
             try:
-                cached_selection = await get_cached_model_selection(metric)
+                cached_selection = get_cached_model_selection(metric)
                 if cached_selection and not cached_selection.is_expired:
                     logger.info(
                         "Using cached model selection",

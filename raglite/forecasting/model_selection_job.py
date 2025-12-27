@@ -363,7 +363,7 @@ async def run_batch_model_selection(
                 )
 
                 # Cache result
-                await cache_model_selection(result)
+                cache_model_selection(result)
                 return var_name, result
             except Exception as e:
                 logger.error(f"Error processing {var_name}: {e}")
@@ -480,7 +480,7 @@ async def run_single_variable_selection(
 
         # Cache unless dry run
         if not dry_run:
-            await cache_model_selection(result)
+            cache_model_selection(result)
             print("\nResult cached to PostgreSQL.")
         else:
             print("\n[DRY RUN] Result not cached.")
