@@ -109,7 +109,8 @@ class EurostatHousingClient(EurostatClient):
             params["untilTimePeriod"] = until_period
 
         try:
-            data = await self._fetch_with_retry(url, params)
+            response = await self._fetch_with_retry(url, params)
+            data = response.json()
         except (TimeoutError, ConnectionError, ValueError) as e:
             logger.error(
                 "Failed to fetch housing transactions",
@@ -364,7 +365,8 @@ class EurostatHousingClient(EurostatClient):
         }
 
         try:
-            data = await self._fetch_with_retry(url, params)
+            response = await self._fetch_with_retry(url, params)
+            data = response.json()
         except (TimeoutError, ConnectionError, ValueError) as e:
             logger.error(
                 "Failed to fetch dwelling completions",

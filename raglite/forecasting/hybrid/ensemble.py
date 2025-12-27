@@ -114,7 +114,7 @@ async def generate_forecast(
 
     if use_model_selection and get_cached_model_selection is not None:
         try:
-            cached = await get_cached_model_selection(metric)
+            cached = get_cached_model_selection(metric)
             if cached and not cached.is_expired:
                 selected_model = cached.best_model
                 selected_regressors = cached.regressor_list if cached.use_regressors else None

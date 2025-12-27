@@ -104,10 +104,10 @@ HARD_LIMIT_LOC = 500
 IDEAL_MAX_LOC = 400
 CONFTEST_MAX_LOC = 200
 
-# Baseline test count from original file (176 tests, excluding acceptance tests)
-# Note: Original estimate was 131, updated to 197, now 176 client tests after Story 7.1 refactoring
+# Baseline test count from original file (188 tests, excluding acceptance tests)
+# Note: Original estimate was 131, updated to 197, now 188 client tests after Story 7.1 refactoring
 # (2025-12-18): Excludes test_refactoring_acceptance.py (~72 tests) for stable baseline
-BASELINE_TEST_COUNT = 176
+BASELINE_TEST_COUNT = 188
 
 
 class TestAC1FileSizeReduction:

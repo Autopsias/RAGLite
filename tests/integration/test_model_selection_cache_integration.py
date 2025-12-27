@@ -223,9 +223,8 @@ class TestMigrationScript:
 class TestCacheModelSelectionIntegration:
     """[P0] AC-7b.4.2: Integration tests for cache_model_selection."""
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_ac_7b_4_2_4_cache_stores_result_in_database(
+    def test_ac_7b_4_2_4_cache_stores_result_in_database(
         self,
         db_session: Session,
         sample_model_selection_result,
@@ -235,7 +234,7 @@ class TestCacheModelSelectionIntegration:
         from raglite.external_data.orm_models import ModelSelectionORM
         from raglite.external_data.storage import cache_model_selection
 
-        await cache_model_selection(sample_model_selection_result)
+        cache_model_selection(sample_model_selection_result)
 
         # Verify record exists
         record = (
@@ -251,9 +250,8 @@ class TestCacheModelSelectionIntegration:
         assert float(record.best_mase) == pytest.approx(0.8, rel=0.01)
         assert record.use_regressors is True
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_ac_7b_4_2_5_cache_upsert_updates_existing(
+    def test_ac_7b_4_2_5_cache_upsert_updates_existing(
         self,
         db_session: Session,
         sample_model_selection_result,
@@ -265,7 +263,7 @@ class TestCacheModelSelectionIntegration:
         from raglite.forecasting.model_selection import ModelSelectionResult
 
         # First cache
-        await cache_model_selection(sample_model_selection_result)
+        cache_model_selection(sample_model_selection_result)
 
         # Modify and cache again
         updated_result = ModelSelectionResult(
@@ -280,7 +278,7 @@ class TestCacheModelSelectionIntegration:
             cv_folds=5,
             runtime_seconds=30.0,
         )
-        await cache_model_selection(updated_result)
+        cache_model_selection(updated_result)
 
         # Verify only one record exists
         count = (
@@ -299,9 +297,8 @@ class TestCacheModelSelectionIntegration:
         assert record.best_model == "xgboost"
         assert float(record.best_mape) == pytest.approx(4.5, rel=0.01)
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_ac_7b_4_2_6_cache_stores_regressor_list_as_json(
+    def test_ac_7b_4_2_6_cache_stores_regressor_list_as_json(
         self,
         db_session: Session,
         sample_model_selection_result,
@@ -311,7 +308,7 @@ class TestCacheModelSelectionIntegration:
         from raglite.external_data.orm_models import ModelSelectionORM
         from raglite.external_data.storage import cache_model_selection
 
-        await cache_model_selection(sample_model_selection_result)
+        cache_model_selection(sample_model_selection_result)
 
         record = (
             db_session.query(ModelSelectionORM)
@@ -321,9 +318,8 @@ class TestCacheModelSelectionIntegration:
 
         assert record.regressor_list == ["gas_price", "euribor"]
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_ac_7b_4_2_7_cache_stores_candidate_results_as_json(
+    def test_ac_7b_4_2_7_cache_stores_candidate_results_as_json(
         self,
         db_session: Session,
         sample_model_selection_result,
@@ -333,7 +329,7 @@ class TestCacheModelSelectionIntegration:
         from raglite.external_data.orm_models import ModelSelectionORM
         from raglite.external_data.storage import cache_model_selection
 
-        await cache_model_selection(sample_model_selection_result)
+        cache_model_selection(sample_model_selection_result)
 
         record = (
             db_session.query(ModelSelectionORM)
@@ -353,9 +349,8 @@ class TestCacheModelSelectionIntegration:
 class TestGetCachedModelSelectionIntegration:
     """[P0] AC-7b.4.3: Integration tests for get_cached_model_selection."""
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_ac_7b_4_3_7_get_returns_cached_model_selection(
+    def test_ac_7b_4_3_7_get_returns_cached_model_selection(
         self,
         db_session: Session,
         sample_model_selection_result,
@@ -368,8 +363,8 @@ class TestGetCachedModelSelectionIntegration:
             get_cached_model_selection,
         )
 
-        await cache_model_selection(sample_model_selection_result)
-        result = await get_cached_model_selection("ebitda")
+        cache_model_selection(sample_model_selection_result)
+        result = get_cached_model_selection("ebitda")
 
         assert result is not None
         assert isinstance(result, CachedModelSelection)
@@ -379,20 +374,18 @@ class TestGetCachedModelSelectionIntegration:
         assert result.use_regressors is True
         assert result.regressor_list == ["gas_price", "euribor"]
 
-    @pytest.mark.asyncio
-    async def test_ac_7b_4_3_8_get_returns_none_for_missing(
+    def test_ac_7b_4_3_8_get_returns_none_for_missing(
         self,
         cleanup_model_selection,
     ) -> None:
         """TEST-AC-7b.4.3.8: get_cached_model_selection returns None for missing."""
         from raglite.external_data.storage import get_cached_model_selection
 
-        result = await get_cached_model_selection("nonexistent_variable")
+        result = get_cached_model_selection("nonexistent_variable")
         assert result is None
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_ac_7b_4_3_9_get_performance_under_100ms(
+    def test_ac_7b_4_3_9_get_performance_under_100ms(
         self,
         db_session: Session,
         sample_model_selection_result,
@@ -405,19 +398,18 @@ class TestGetCachedModelSelectionIntegration:
         )
 
         # First cache the result
-        await cache_model_selection(sample_model_selection_result)
+        cache_model_selection(sample_model_selection_result)
 
         # Measure lookup time
         start = time.time()
-        result = await get_cached_model_selection("ebitda")
+        result = get_cached_model_selection("ebitda")
         elapsed_ms = (time.time() - start) * 1000
 
         assert result is not None
         assert elapsed_ms < 100, f"Lookup took {elapsed_ms:.1f}ms, exceeds 100ms target"
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_ac_7b_4_3_10_get_returns_expired_with_flag(
+    def test_ac_7b_4_3_10_get_returns_expired_with_flag(
         self,
         db_session: Session,
         cleanup_model_selection,
@@ -443,7 +435,7 @@ class TestGetCachedModelSelectionIntegration:
         db_session.add(expired_entry)
         db_session.commit()
 
-        result = await get_cached_model_selection("expired_var")
+        result = get_cached_model_selection("expired_var")
 
         assert result is not None
         assert result.is_expired is True
@@ -457,9 +449,8 @@ class TestGetCachedModelSelectionIntegration:
 class TestInvalidateModelSelectionIntegration:
     """[P0] AC-7b.4.4: Integration tests for invalidate_model_selection."""
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_ac_7b_4_4_5_invalidate_deletes_single_variable(
+    def test_ac_7b_4_4_5_invalidate_deletes_single_variable(
         self,
         db_session: Session,
         sample_model_selection_result,
@@ -473,23 +464,22 @@ class TestInvalidateModelSelectionIntegration:
         )
 
         # Cache the result
-        await cache_model_selection(sample_model_selection_result)
+        cache_model_selection(sample_model_selection_result)
 
         # Verify it exists
-        result = await get_cached_model_selection("ebitda")
+        result = get_cached_model_selection("ebitda")
         assert result is not None
 
         # Invalidate
-        count = await invalidate_model_selection("ebitda")
+        count = invalidate_model_selection("ebitda")
         assert count == 1
 
         # Verify it's gone
-        result = await get_cached_model_selection("ebitda")
+        result = get_cached_model_selection("ebitda")
         assert result is None
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_ac_7b_4_4_6_invalidate_all_deletes_all_entries(
+    def test_ac_7b_4_4_6_invalidate_all_deletes_all_entries(
         self,
         db_session: Session,
         cleanup_model_selection,
@@ -516,26 +506,25 @@ class TestInvalidateModelSelectionIntegration:
                 cv_folds=5,
                 runtime_seconds=30.0,
             )
-            await cache_model_selection(result)
+            cache_model_selection(result)
 
         # Invalidate all
-        count = await invalidate_model_selection(None)
+        count = invalidate_model_selection(None)
         assert count == 3
 
         # Verify all are gone
         for var in ["var1", "var2", "var3"]:
-            result = await get_cached_model_selection(var)
+            result = get_cached_model_selection(var)
             assert result is None
 
-    @pytest.mark.asyncio
-    async def test_ac_7b_4_4_7_invalidate_returns_zero_for_nonexistent(
+    def test_ac_7b_4_4_7_invalidate_returns_zero_for_nonexistent(
         self,
         cleanup_model_selection,
     ) -> None:
         """TEST-AC-7b.4.4.7: invalidate_model_selection returns 0 for nonexistent variable."""
         from raglite.external_data.storage import invalidate_model_selection
 
-        count = await invalidate_model_selection("nonexistent")
+        count = invalidate_model_selection("nonexistent")
         assert count == 0
 
 
@@ -547,9 +536,8 @@ class TestInvalidateModelSelectionIntegration:
 class TestTTLExpirationIntegration:
     """[P0] AC-7b.4.5: Integration tests for TTL and expiration."""
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_ac_7b_4_5_10_expires_at_set_correctly(
+    def test_ac_7b_4_5_10_expires_at_set_correctly(
         self,
         db_session: Session,
         sample_model_selection_result,
@@ -563,7 +551,7 @@ class TestTTLExpirationIntegration:
         )
 
         before = datetime.utcnow()
-        await cache_model_selection(sample_model_selection_result)
+        cache_model_selection(sample_model_selection_result)
         after = datetime.utcnow()
 
         record = (
@@ -579,9 +567,8 @@ class TestTTLExpirationIntegration:
         expected_expires = record.selected_at + timedelta(days=MODEL_SELECTION_TTL_DAYS)
         assert record.expires_at == expected_expires
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_ac_7b_4_5_11_cleanup_removes_expired_entries(
+    def test_ac_7b_4_5_11_cleanup_removes_expired_entries(
         self,
         db_session: Session,
         cleanup_model_selection,
@@ -625,20 +612,19 @@ class TestTTLExpirationIntegration:
         db_session.commit()
 
         # Cleanup
-        count = await cleanup_expired_model_selections()
+        count = cleanup_expired_model_selections()
         assert count == 1
 
         # Verify fresh still exists
-        fresh = await get_cached_model_selection("fresh_var")
+        fresh = get_cached_model_selection("fresh_var")
         assert fresh is not None
 
         # Verify expired is gone
-        expired = await get_cached_model_selection("expired_var")
+        expired = get_cached_model_selection("expired_var")
         assert expired is None
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_ac_7b_4_5_12_cleanup_returns_zero_when_none_expired(
+    def test_ac_7b_4_5_12_cleanup_returns_zero_when_none_expired(
         self,
         db_session: Session,
         sample_model_selection_result,
@@ -651,10 +637,10 @@ class TestTTLExpirationIntegration:
         )
 
         # Cache fresh entry
-        await cache_model_selection(sample_model_selection_result)
+        cache_model_selection(sample_model_selection_result)
 
         # Cleanup should find nothing
-        count = await cleanup_expired_model_selections()
+        count = cleanup_expired_model_selections()
         assert count == 0
 
 
@@ -666,8 +652,7 @@ class TestTTLExpirationIntegration:
 class TestInputValidationIntegration:
     """[P0] M4 input validation integration tests with real database."""
 
-    @pytest.mark.asyncio
-    async def test_m4_get_cached_empty_variable_name_integration(
+    def test_m4_get_cached_empty_variable_name_integration(
         self,
         cleanup_model_selection,
     ) -> None:
@@ -675,10 +660,9 @@ class TestInputValidationIntegration:
         from raglite.external_data.storage import get_cached_model_selection
 
         with pytest.raises(ValueError, match="variable_name cannot be empty"):
-            await get_cached_model_selection("")
+            get_cached_model_selection("")
 
-    @pytest.mark.asyncio
-    async def test_m4_get_cached_whitespace_only_integration(
+    def test_m4_get_cached_whitespace_only_integration(
         self,
         cleanup_model_selection,
     ) -> None:
@@ -686,10 +670,9 @@ class TestInputValidationIntegration:
         from raglite.external_data.storage import get_cached_model_selection
 
         with pytest.raises(ValueError, match="variable_name cannot be empty"):
-            await get_cached_model_selection("   \t\n  ")
+            get_cached_model_selection("   \t\n  ")
 
-    @pytest.mark.asyncio
-    async def test_m4_get_cached_exceeds_100_chars_integration(
+    def test_m4_get_cached_exceeds_100_chars_integration(
         self,
         cleanup_model_selection,
     ) -> None:
@@ -698,10 +681,9 @@ class TestInputValidationIntegration:
 
         long_name = "a" * 101
         with pytest.raises(ValueError, match="variable_name cannot exceed 100 characters"):
-            await get_cached_model_selection(long_name)
+            get_cached_model_selection(long_name)
 
-    @pytest.mark.asyncio
-    async def test_m4_invalidate_empty_variable_name_integration(
+    def test_m4_invalidate_empty_variable_name_integration(
         self,
         cleanup_model_selection,
     ) -> None:
@@ -709,10 +691,9 @@ class TestInputValidationIntegration:
         from raglite.external_data.storage import invalidate_model_selection
 
         with pytest.raises(ValueError, match="variable_name cannot be empty"):
-            await invalidate_model_selection("")
+            invalidate_model_selection("")
 
-    @pytest.mark.asyncio
-    async def test_m4_invalidate_whitespace_only_integration(
+    def test_m4_invalidate_whitespace_only_integration(
         self,
         cleanup_model_selection,
     ) -> None:
@@ -720,10 +701,9 @@ class TestInputValidationIntegration:
         from raglite.external_data.storage import invalidate_model_selection
 
         with pytest.raises(ValueError, match="variable_name cannot be empty"):
-            await invalidate_model_selection("   \t\n  ")
+            invalidate_model_selection("   \t\n  ")
 
-    @pytest.mark.asyncio
-    async def test_m4_invalidate_exceeds_100_chars_integration(
+    def test_m4_invalidate_exceeds_100_chars_integration(
         self,
         cleanup_model_selection,
     ) -> None:
@@ -732,7 +712,7 @@ class TestInputValidationIntegration:
 
         long_name = "a" * 101
         with pytest.raises(ValueError, match="variable_name cannot exceed 100 characters"):
-            await invalidate_model_selection(long_name)
+            invalidate_model_selection(long_name)
 
 
 # -----------------------------------------------------------------------------
@@ -743,9 +723,8 @@ class TestInputValidationIntegration:
 class TestEdgeCasesIntegration:
     """[P1] Edge case integration tests with real database."""
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_cache_and_retrieve_with_none_data_characteristics(
+    def test_cache_and_retrieve_with_none_data_characteristics(
         self,
         db_session: Session,
         cleanup_model_selection,
@@ -770,15 +749,14 @@ class TestEdgeCasesIntegration:
             runtime_seconds=30.0,
         )
 
-        await cache_model_selection(result)
+        cache_model_selection(result)
 
-        cached = await get_cached_model_selection("test_none_chars")
+        cached = get_cached_model_selection("test_none_chars")
         assert cached is not None
         assert cached.data_characteristics is None
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_cache_and_retrieve_with_empty_regressor_list(
+    def test_cache_and_retrieve_with_empty_regressor_list(
         self,
         db_session: Session,
         cleanup_model_selection,
@@ -803,15 +781,14 @@ class TestEdgeCasesIntegration:
             runtime_seconds=30.0,
         )
 
-        await cache_model_selection(result)
+        cache_model_selection(result)
 
-        cached = await get_cached_model_selection("test_empty_regressors")
+        cached = get_cached_model_selection("test_empty_regressors")
         assert cached is not None
         assert cached.regressor_list == []
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_cache_and_retrieve_with_large_candidate_results(
+    def test_cache_and_retrieve_with_large_candidate_results(
         self,
         db_session: Session,
         cleanup_model_selection,
@@ -842,15 +819,14 @@ class TestEdgeCasesIntegration:
             runtime_seconds=30.0,
         )
 
-        await cache_model_selection(result)
+        cache_model_selection(result)
 
-        cached = await get_cached_model_selection("test_large_results")
+        cached = get_cached_model_selection("test_large_results")
         assert cached is not None
         assert len(cached.candidate_results) == 50
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_cache_and_retrieve_with_very_long_regressor_list(
+    def test_cache_and_retrieve_with_very_long_regressor_list(
         self,
         db_session: Session,
         cleanup_model_selection,
@@ -878,15 +854,14 @@ class TestEdgeCasesIntegration:
             runtime_seconds=30.0,
         )
 
-        await cache_model_selection(result)
+        cache_model_selection(result)
 
-        cached = await get_cached_model_selection("test_long_regressors")
+        cached = get_cached_model_selection("test_long_regressors")
         assert cached is not None
         assert len(cached.regressor_list) == 20
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_cache_and_retrieve_with_unicode_variable_name(
+    def test_cache_and_retrieve_with_unicode_variable_name(
         self,
         db_session: Session,
         cleanup_model_selection,
@@ -913,15 +888,14 @@ class TestEdgeCasesIntegration:
             runtime_seconds=30.0,
         )
 
-        await cache_model_selection(result)
+        cache_model_selection(result)
 
-        cached = await get_cached_model_selection(unicode_name)
+        cached = get_cached_model_selection(unicode_name)
         assert cached is not None
         assert cached.variable_name == unicode_name
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_cache_and_retrieve_with_special_chars_variable_name(
+    def test_cache_and_retrieve_with_special_chars_variable_name(
         self,
         db_session: Session,
         cleanup_model_selection,
@@ -948,15 +922,14 @@ class TestEdgeCasesIntegration:
             runtime_seconds=30.0,
         )
 
-        await cache_model_selection(result)
+        cache_model_selection(result)
 
-        cached = await get_cached_model_selection(special_name)
+        cached = get_cached_model_selection(special_name)
         assert cached is not None
         assert cached.variable_name == special_name
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_cache_and_retrieve_with_none_best_mase(
+    def test_cache_and_retrieve_with_none_best_mase(
         self,
         db_session: Session,
         cleanup_model_selection,
@@ -983,13 +956,12 @@ class TestEdgeCasesIntegration:
         db_session.add(entry)
         db_session.commit()
 
-        cached = await get_cached_model_selection("test_none_mase")
+        cached = get_cached_model_selection("test_none_mase")
         assert cached is not None
         assert cached.best_mase is None
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_variable_name_exactly_100_chars(
+    def test_variable_name_exactly_100_chars(
         self,
         db_session: Session,
         cleanup_model_selection,
@@ -1016,9 +988,9 @@ class TestEdgeCasesIntegration:
             runtime_seconds=30.0,
         )
 
-        await cache_model_selection(result)
+        cache_model_selection(result)
 
-        cached = await get_cached_model_selection(exactly_100)
+        cached = get_cached_model_selection(exactly_100)
         assert cached is not None
         assert cached.variable_name == exactly_100
         assert len(cached.variable_name) == 100
@@ -1032,9 +1004,8 @@ class TestEdgeCasesIntegration:
 class TestErrorHandlingIntegration:
     """[P1] Error handling integration tests with real database."""
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_get_cached_returns_none_after_invalidation(
+    def test_get_cached_returns_none_after_invalidation(
         self,
         db_session: Session,
         sample_model_selection_result,
@@ -1047,33 +1018,31 @@ class TestErrorHandlingIntegration:
             invalidate_model_selection,
         )
 
-        await cache_model_selection(sample_model_selection_result)
+        cache_model_selection(sample_model_selection_result)
 
         # Verify it exists
-        cached = await get_cached_model_selection("ebitda")
+        cached = get_cached_model_selection("ebitda")
         assert cached is not None
 
         # Invalidate
-        await invalidate_model_selection("ebitda")
+        invalidate_model_selection("ebitda")
 
         # Verify it's gone
-        cached_after = await get_cached_model_selection("ebitda")
+        cached_after = get_cached_model_selection("ebitda")
         assert cached_after is None
 
-    @pytest.mark.asyncio
-    async def test_invalidate_nonexistent_variable_returns_zero(
+    def test_invalidate_nonexistent_variable_returns_zero(
         self,
         cleanup_model_selection,
     ) -> None:
         """[P1] invalidate_model_selection returns 0 for nonexistent variable."""
         from raglite.external_data.storage import invalidate_model_selection
 
-        count = await invalidate_model_selection("nonexistent_variable_xyz")
+        count = invalidate_model_selection("nonexistent_variable_xyz")
         assert count == 0
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_cleanup_with_mixed_fresh_and_expired(
+    def test_cleanup_with_mixed_fresh_and_expired(
         self,
         db_session: Session,
         cleanup_model_selection,
@@ -1112,17 +1081,17 @@ class TestErrorHandlingIntegration:
         db_session.commit()
 
         # Cleanup
-        count = await cleanup_expired_model_selections()
+        count = cleanup_expired_model_selections()
         assert count == 2
 
         # Verify fresh entries still exist
         for i in range(3):
-            cached = await get_cached_model_selection(f"var_{i}")
+            cached = get_cached_model_selection(f"var_{i}")
             assert cached is not None
 
         # Verify expired entries are gone
         for i in range(3, 5):
-            cached = await get_cached_model_selection(f"var_{i}")
+            cached = get_cached_model_selection(f"var_{i}")
             assert cached is None
 
 
@@ -1134,9 +1103,8 @@ class TestErrorHandlingIntegration:
 class TestPerformance:
     """[P0] Performance tests for cache operations."""
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_cache_performance_under_500ms(
+    def test_cache_performance_under_500ms(
         self,
         sample_model_selection_result,
         cleanup_model_selection,
@@ -1145,14 +1113,13 @@ class TestPerformance:
         from raglite.external_data.storage import cache_model_selection
 
         start = time.time()
-        await cache_model_selection(sample_model_selection_result)
+        cache_model_selection(sample_model_selection_result)
         elapsed_ms = (time.time() - start) * 1000
 
         assert elapsed_ms < 500, f"Cache took {elapsed_ms:.1f}ms, exceeds 500ms target"
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_invalidate_performance_under_200ms(
+    def test_invalidate_performance_under_200ms(
         self,
         sample_model_selection_result,
         cleanup_model_selection,
@@ -1163,17 +1130,16 @@ class TestPerformance:
             invalidate_model_selection,
         )
 
-        await cache_model_selection(sample_model_selection_result)
+        cache_model_selection(sample_model_selection_result)
 
         start = time.time()
-        await invalidate_model_selection("ebitda")
+        invalidate_model_selection("ebitda")
         elapsed_ms = (time.time() - start) * 1000
 
         assert elapsed_ms < 200, f"Invalidate took {elapsed_ms:.1f}ms, exceeds 200ms target"
 
-    @pytest.mark.asyncio
     @pytest.mark.manages_collection_state
-    async def test_cleanup_performance_under_1s(
+    def test_cleanup_performance_under_1s(
         self,
         db_session: Session,
         cleanup_model_selection,
@@ -1202,7 +1168,7 @@ class TestPerformance:
         db_session.commit()
 
         start = time.time()
-        count = await cleanup_expired_model_selections()
+        count = cleanup_expired_model_selections()
         elapsed_ms = (time.time() - start) * 1000
 
         assert count == 50

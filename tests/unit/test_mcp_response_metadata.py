@@ -199,14 +199,13 @@ class TestMCPResponseSchema:
 class TestPerformance:
     """[P1] AC-7b.6.6: Maintain Less Than 5s Query Time with Cache Hit."""
 
-    @pytest.mark.asyncio
-    async def test_ac_7b_6_6_1_cache_lookup_under_100ms(self) -> None:
+    def test_ac_7b_6_6_1_cache_lookup_under_100ms(self) -> None:
         """TEST-AC-7b.6.6.1: Cache lookup adds <100ms overhead."""
         import time
 
         from raglite.external_data.storage import get_cached_model_selection
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.first.return_value = None
@@ -214,7 +213,7 @@ class TestPerformance:
             mock_get_session.return_value = mock_session
 
             start = time.time()
-            await get_cached_model_selection("test_variable")
+            get_cached_model_selection("test_variable")
             elapsed_ms = (time.time() - start) * 1000
 
             # Cache lookup should be very fast (mocked)

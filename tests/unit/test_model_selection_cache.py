@@ -225,8 +225,7 @@ class TestCacheModelSelectionMocked:
 
         assert callable(cache_model_selection)
 
-    @pytest.mark.asyncio
-    async def test_ac_7b_4_2_2_cache_model_selection_accepts_model_selection_result(
+    def test_ac_7b_4_2_2_cache_model_selection_accepts_model_selection_result(
         self,
     ) -> None:
         """TEST-AC-7b.4.2.2: cache_model_selection accepts ModelSelectionResult."""
@@ -248,15 +247,14 @@ class TestCacheModelSelectionMocked:
         )
 
         # Mock the database session
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_get_session.return_value = mock_session
 
             # Function should not raise
-            await cache_model_selection(mock_result)
+            cache_model_selection(mock_result)
 
-    @pytest.mark.asyncio
-    async def test_ac_7b_4_2_3_cache_model_selection_sets_expires_at(self) -> None:
+    def test_ac_7b_4_2_3_cache_model_selection_sets_expires_at(self) -> None:
         """TEST-AC-7b.4.2.3: cache_model_selection sets expires_at correctly."""
         from raglite.external_data.storage import (
             MODEL_SELECTION_TTL_DAYS,
@@ -277,11 +275,11 @@ class TestCacheModelSelectionMocked:
             runtime_seconds=30.0,
         )
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_get_session.return_value = mock_session
 
-            await cache_model_selection(mock_result)
+            cache_model_selection(mock_result)
 
             # Verify session.add was called with correct expires_at
             call_args = mock_session.add.call_args
@@ -310,26 +308,24 @@ class TestGetCachedModelSelectionMocked:
 
         assert callable(get_cached_model_selection)
 
-    @pytest.mark.asyncio
-    async def test_ac_7b_4_3_5_get_cached_model_selection_returns_none_for_missing(
+    def test_ac_7b_4_3_5_get_cached_model_selection_returns_none_for_missing(
         self,
     ) -> None:
         """TEST-AC-7b.4.3.5: get_cached_model_selection returns None for missing variable."""
         from raglite.external_data.storage import get_cached_model_selection
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.first.return_value = None
             mock_session.query.return_value = mock_query
             mock_get_session.return_value = mock_session
 
-            result = await get_cached_model_selection("nonexistent_variable")
+            result = get_cached_model_selection("nonexistent_variable")
 
             assert result is None
 
-    @pytest.mark.asyncio
-    async def test_ac_7b_4_3_6_get_cached_model_selection_returns_cached_data(
+    def test_ac_7b_4_3_6_get_cached_model_selection_returns_cached_data(
         self,
     ) -> None:
         """TEST-AC-7b.4.3.6: get_cached_model_selection returns CachedModelSelection."""
@@ -352,14 +348,14 @@ class TestGetCachedModelSelectionMocked:
         mock_orm.selected_at = now
         mock_orm.expires_at = now + timedelta(days=7)
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.first.return_value = mock_orm
             mock_session.query.return_value = mock_query
             mock_get_session.return_value = mock_session
 
-            result = await get_cached_model_selection("ebitda")
+            result = get_cached_model_selection("ebitda")
 
             assert result is not None
             assert isinstance(result, CachedModelSelection)
@@ -381,53 +377,50 @@ class TestInvalidateModelSelectionMocked:
 
         assert callable(invalidate_model_selection)
 
-    @pytest.mark.asyncio
-    async def test_ac_7b_4_4_2_invalidate_single_variable(self) -> None:
+    def test_ac_7b_4_4_2_invalidate_single_variable(self) -> None:
         """TEST-AC-7b.4.4.2: invalidate_model_selection deletes single variable."""
         from raglite.external_data.storage import invalidate_model_selection
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.delete.return_value = 1
             mock_session.query.return_value = mock_query
             mock_get_session.return_value = mock_session
 
-            count = await invalidate_model_selection("ebitda")
+            count = invalidate_model_selection("ebitda")
 
             assert count == 1
             mock_session.commit.assert_called_once()
 
-    @pytest.mark.asyncio
-    async def test_ac_7b_4_4_3_invalidate_all_variables(self) -> None:
+    def test_ac_7b_4_4_3_invalidate_all_variables(self) -> None:
         """TEST-AC-7b.4.4.3: invalidate_model_selection(None) deletes all."""
         from raglite.external_data.storage import invalidate_model_selection
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.delete.return_value = 5
             mock_session.query.return_value = mock_query
             mock_get_session.return_value = mock_session
 
-            count = await invalidate_model_selection(None)
+            count = invalidate_model_selection(None)
 
             assert count == 5
             mock_session.commit.assert_called_once()
 
-    @pytest.mark.asyncio
-    async def test_ac_7b_4_4_4_invalidate_returns_zero_for_missing(self) -> None:
+    def test_ac_7b_4_4_4_invalidate_returns_zero_for_missing(self) -> None:
         """TEST-AC-7b.4.4.4: invalidate_model_selection returns 0 for missing variable."""
         from raglite.external_data.storage import invalidate_model_selection
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.delete.return_value = 0
             mock_session.query.return_value = mock_query
             mock_get_session.return_value = mock_session
 
-            count = await invalidate_model_selection("nonexistent")
+            count = invalidate_model_selection("nonexistent")
 
             assert count == 0
 
@@ -446,36 +439,34 @@ class TestCleanupExpiredModelSelectionsMocked:
 
         assert callable(cleanup_expired_model_selections)
 
-    @pytest.mark.asyncio
-    async def test_ac_7b_4_5_8_cleanup_deletes_expired_entries(self) -> None:
+    def test_ac_7b_4_5_8_cleanup_deletes_expired_entries(self) -> None:
         """TEST-AC-7b.4.5.8: cleanup_expired_model_selections removes expired entries."""
         from raglite.external_data.storage import cleanup_expired_model_selections
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.delete.return_value = 3
             mock_session.query.return_value = mock_query
             mock_get_session.return_value = mock_session
 
-            count = await cleanup_expired_model_selections()
+            count = cleanup_expired_model_selections()
 
             assert count == 3
             mock_session.commit.assert_called_once()
 
-    @pytest.mark.asyncio
-    async def test_ac_7b_4_5_9_cleanup_returns_zero_when_none_expired(self) -> None:
+    def test_ac_7b_4_5_9_cleanup_returns_zero_when_none_expired(self) -> None:
         """TEST-AC-7b.4.5.9: cleanup_expired_model_selections returns 0 when none expired."""
         from raglite.external_data.storage import cleanup_expired_model_selections
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.delete.return_value = 0
             mock_session.query.return_value = mock_query
             mock_get_session.return_value = mock_session
 
-            count = await cleanup_expired_model_selections()
+            count = cleanup_expired_model_selections()
 
             assert count == 0
 
@@ -641,37 +632,33 @@ class TestJSONSerialization:
 class TestInputValidation:
     """[P0] M4 input validation tests for get_cached_model_selection and invalidate_model_selection."""
 
-    @pytest.mark.asyncio
-    async def test_m4_get_cached_empty_variable_name(self) -> None:
+    def test_m4_get_cached_empty_variable_name(self) -> None:
         """[P0] M4: get_cached_model_selection rejects empty variable_name."""
         from raglite.external_data.storage import get_cached_model_selection
 
         with pytest.raises(ValueError, match="variable_name cannot be empty"):
-            await get_cached_model_selection("")
+            get_cached_model_selection("")
 
-    @pytest.mark.asyncio
-    async def test_m4_get_cached_whitespace_only_variable_name(self) -> None:
+    def test_m4_get_cached_whitespace_only_variable_name(self) -> None:
         """[P0] M4: get_cached_model_selection rejects whitespace-only variable_name."""
         from raglite.external_data.storage import get_cached_model_selection
 
         with pytest.raises(ValueError, match="variable_name cannot be empty"):
-            await get_cached_model_selection("   ")
+            get_cached_model_selection("   ")
 
-    @pytest.mark.asyncio
-    async def test_m4_get_cached_exceeds_100_chars(self) -> None:
+    def test_m4_get_cached_exceeds_100_chars(self) -> None:
         """[P0] M4: get_cached_model_selection rejects variable_name exceeding 100 chars."""
         from raglite.external_data.storage import get_cached_model_selection
 
         long_name = "a" * 101
         with pytest.raises(ValueError, match="variable_name cannot exceed 100 characters"):
-            await get_cached_model_selection(long_name)
+            get_cached_model_selection(long_name)
 
-    @pytest.mark.asyncio
-    async def test_m4_get_cached_exactly_100_chars(self) -> None:
+    def test_m4_get_cached_exactly_100_chars(self) -> None:
         """[P1] M4: get_cached_model_selection accepts variable_name at 100 char limit."""
         from raglite.external_data.storage import get_cached_model_selection
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.first.return_value = None
@@ -679,41 +666,37 @@ class TestInputValidation:
             mock_get_session.return_value = mock_session
 
             exactly_100 = "a" * 100
-            result = await get_cached_model_selection(exactly_100)
+            result = get_cached_model_selection(exactly_100)
 
             assert result is None  # Should not raise
 
-    @pytest.mark.asyncio
-    async def test_m4_invalidate_empty_variable_name(self) -> None:
+    def test_m4_invalidate_empty_variable_name(self) -> None:
         """[P0] M4: invalidate_model_selection rejects empty variable_name."""
         from raglite.external_data.storage import invalidate_model_selection
 
         with pytest.raises(ValueError, match="variable_name cannot be empty"):
-            await invalidate_model_selection("")
+            invalidate_model_selection("")
 
-    @pytest.mark.asyncio
-    async def test_m4_invalidate_whitespace_only_variable_name(self) -> None:
+    def test_m4_invalidate_whitespace_only_variable_name(self) -> None:
         """[P0] M4: invalidate_model_selection rejects whitespace-only variable_name."""
         from raglite.external_data.storage import invalidate_model_selection
 
         with pytest.raises(ValueError, match="variable_name cannot be empty"):
-            await invalidate_model_selection("   ")
+            invalidate_model_selection("   ")
 
-    @pytest.mark.asyncio
-    async def test_m4_invalidate_exceeds_100_chars(self) -> None:
+    def test_m4_invalidate_exceeds_100_chars(self) -> None:
         """[P0] M4: invalidate_model_selection rejects variable_name exceeding 100 chars."""
         from raglite.external_data.storage import invalidate_model_selection
 
         long_name = "a" * 101
         with pytest.raises(ValueError, match="variable_name cannot exceed 100 characters"):
-            await invalidate_model_selection(long_name)
+            invalidate_model_selection(long_name)
 
-    @pytest.mark.asyncio
-    async def test_m4_invalidate_exactly_100_chars(self) -> None:
+    def test_m4_invalidate_exactly_100_chars(self) -> None:
         """[P1] M4: invalidate_model_selection accepts variable_name at 100 char limit."""
         from raglite.external_data.storage import invalidate_model_selection
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.delete.return_value = 0
@@ -721,23 +704,22 @@ class TestInputValidation:
             mock_get_session.return_value = mock_session
 
             exactly_100 = "a" * 100
-            count = await invalidate_model_selection(exactly_100)
+            count = invalidate_model_selection(exactly_100)
 
             assert count == 0  # Should not raise
 
-    @pytest.mark.asyncio
-    async def test_m4_invalidate_none_allows_all(self) -> None:
+    def test_m4_invalidate_none_allows_all(self) -> None:
         """[P0] M4: invalidate_model_selection(None) allows invalidating all entries."""
         from raglite.external_data.storage import invalidate_model_selection
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.delete.return_value = 5
             mock_session.query.return_value = mock_query
             mock_get_session.return_value = mock_session
 
-            count = await invalidate_model_selection(None)
+            count = invalidate_model_selection(None)
 
             assert count == 5  # Should not raise
 
@@ -750,8 +732,7 @@ class TestInputValidation:
 class TestEdgeCases:
     """[P1] Edge case tests for model selection cache."""
 
-    @pytest.mark.asyncio
-    async def test_cache_result_with_none_data_characteristics(self) -> None:
+    def test_cache_result_with_none_data_characteristics(self) -> None:
         """[P1] cache_model_selection handles None data_characteristics."""
         from raglite.external_data.storage import cache_model_selection
         from raglite.forecasting.model_selection import ModelSelectionResult
@@ -769,19 +750,18 @@ class TestEdgeCases:
             runtime_seconds=30.0,
         )
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_get_session.return_value = mock_session
 
-            await cache_model_selection(result)
+            cache_model_selection(result)
 
             call_args = mock_session.add.call_args
             assert call_args is not None
             orm_obj = call_args[0][0]
             assert orm_obj.data_characteristics is None
 
-    @pytest.mark.asyncio
-    async def test_cache_result_with_empty_regressor_list(self) -> None:
+    def test_cache_result_with_empty_regressor_list(self) -> None:
         """[P1] cache_model_selection handles empty regressor_list."""
         from raglite.external_data.storage import cache_model_selection
         from raglite.forecasting.model_selection import ModelSelectionResult
@@ -799,19 +779,18 @@ class TestEdgeCases:
             runtime_seconds=30.0,
         )
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_get_session.return_value = mock_session
 
-            await cache_model_selection(result)
+            cache_model_selection(result)
 
             call_args = mock_session.add.call_args
             assert call_args is not None
             orm_obj = call_args[0][0]
             assert orm_obj.regressor_list == []
 
-    @pytest.mark.asyncio
-    async def test_cache_result_with_large_candidate_results(self) -> None:
+    def test_cache_result_with_large_candidate_results(self) -> None:
         """[P2] cache_model_selection handles large candidate_results JSON."""
         from raglite.external_data.storage import cache_model_selection
         from raglite.forecasting.model_selection import ModelSelectionResult
@@ -835,19 +814,18 @@ class TestEdgeCases:
             runtime_seconds=30.0,
         )
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_get_session.return_value = mock_session
 
-            await cache_model_selection(result)
+            cache_model_selection(result)
 
             call_args = mock_session.add.call_args
             assert call_args is not None
             orm_obj = call_args[0][0]
             assert len(orm_obj.candidate_results) == 100
 
-    @pytest.mark.asyncio
-    async def test_cache_result_with_very_long_regressor_list(self) -> None:
+    def test_cache_result_with_very_long_regressor_list(self) -> None:
         """[P2] cache_model_selection handles very long regressor list."""
         from raglite.external_data.storage import cache_model_selection
         from raglite.forecasting.model_selection import ModelSelectionResult
@@ -868,23 +846,22 @@ class TestEdgeCases:
             runtime_seconds=30.0,
         )
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_get_session.return_value = mock_session
 
-            await cache_model_selection(result)
+            cache_model_selection(result)
 
             call_args = mock_session.add.call_args
             assert call_args is not None
             orm_obj = call_args[0][0]
             assert len(orm_obj.regressor_list) == 25
 
-    @pytest.mark.asyncio
-    async def test_get_cached_with_unicode_variable_name(self) -> None:
+    def test_get_cached_with_unicode_variable_name(self) -> None:
         """[P2] get_cached_model_selection handles Unicode variable names."""
         from raglite.external_data.storage import get_cached_model_selection
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.first.return_value = None
@@ -892,16 +869,15 @@ class TestEdgeCases:
             mock_get_session.return_value = mock_session
 
             unicode_name = "变量名称"  # Chinese characters
-            result = await get_cached_model_selection(unicode_name)
+            result = get_cached_model_selection(unicode_name)
 
             assert result is None  # Should not raise
 
-    @pytest.mark.asyncio
-    async def test_get_cached_with_special_chars_variable_name(self) -> None:
+    def test_get_cached_with_special_chars_variable_name(self) -> None:
         """[P2] get_cached_model_selection handles special characters in variable name."""
         from raglite.external_data.storage import get_cached_model_selection
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.first.return_value = None
@@ -909,7 +885,7 @@ class TestEdgeCases:
             mock_get_session.return_value = mock_session
 
             special_name = "var_name-with.special@chars#123"
-            result = await get_cached_model_selection(special_name)
+            result = get_cached_model_selection(special_name)
 
             assert result is None  # Should not raise
 
@@ -935,8 +911,7 @@ class TestEdgeCases:
         assert cached.best_mase is None
         assert cached.is_expired is False
 
-    @pytest.mark.asyncio
-    async def test_is_expired_boundary_1_second_before_expiry(self) -> None:
+    def test_is_expired_boundary_1_second_before_expiry(self) -> None:
         """[P2] is_expired boundary: 1 second before expiry returns False."""
         from raglite.external_data.storage import CachedModelSelection
 
@@ -968,8 +943,7 @@ class TestEdgeCases:
 class TestConcurrentScenarios:
     """[P2] Tests for concurrent cache operations (mocked)."""
 
-    @pytest.mark.asyncio
-    async def test_concurrent_cache_same_variable(self) -> None:
+    def test_concurrent_cache_same_variable(self) -> None:
         """[P2] cache_model_selection handles concurrent writes to same variable."""
         from raglite.external_data.storage import cache_model_selection
         from raglite.forecasting.model_selection import ModelSelectionResult
@@ -987,7 +961,7 @@ class TestConcurrentScenarios:
             runtime_seconds=30.0,
         )
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
 
             # Simulate IntegrityError on first commit (concurrent insert)
@@ -1006,7 +980,7 @@ class TestConcurrentScenarios:
             mock_get_session.return_value = mock_session
 
             # Should handle IntegrityError and update existing record
-            await cache_model_selection(result)
+            cache_model_selection(result)
 
             # Verify rollback was called after IntegrityError
             assert mock_session.rollback.called

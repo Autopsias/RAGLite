@@ -14,7 +14,7 @@ Run with: pytest tests/unit/test_housing_transactions.py -v
 from __future__ import annotations
 
 from datetime import date
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pandas as pd
 import pytest
@@ -229,7 +229,10 @@ class TestEurostatHousingClient:
         Then: API is called with correct parameters
         """
         with patch.object(client, "_fetch_with_retry", new_callable=AsyncMock) as mock_fetch:
-            mock_fetch.return_value = mock_housing_transactions_response
+            # Create a mock response with .json() method
+            mock_response = Mock()
+            mock_response.json.return_value = mock_housing_transactions_response
+            mock_fetch.return_value = mock_response
 
             result = await client.fetch_housing_transactions(
                 country="PT",
@@ -645,7 +648,10 @@ class TestDwellingCompletions:
     ) -> None:
         """AC2: fetch_dwelling_completions() calls API correctly."""
         with patch.object(client, "_fetch_with_retry", new_callable=AsyncMock) as mock_fetch:
-            mock_fetch.return_value = mock_dwelling_completions_response
+            # Create a mock response with .json() method
+            mock_response = Mock()
+            mock_response.json.return_value = mock_dwelling_completions_response
+            mock_fetch.return_value = mock_response
 
             result = await client.fetch_dwelling_completions(
                 country="PT",
