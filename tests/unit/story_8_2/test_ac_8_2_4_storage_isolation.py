@@ -132,42 +132,42 @@ class TestAC824IndependentImports:
         Then no import errors occur
         """
         try:
-            import raglite.external_data.storage.core  # type: ignore[attr-defined]
+            import raglite.external_data.storage.core  # noqa: F401  # type: ignore[attr-defined]
         except ImportError as e:
             pytest.fail(f"Failed to import storage.core: {e}")
 
     def test_ac_8_2_4_freshness_importable(self) -> None:
         """[TEST-AC-8.2.4-I] storage.freshness can be imported independently."""
         try:
-            import raglite.external_data.storage.freshness  # type: ignore[attr-defined]
+            import raglite.external_data.storage.freshness  # noqa: F401  # type: ignore[attr-defined]
         except ImportError as e:
             pytest.fail(f"Failed to import storage.freshness: {e}")
 
     def test_ac_8_2_4_tier2_importable(self) -> None:
         """[TEST-AC-8.2.4-J] storage.tier2 can be imported independently."""
         try:
-            import raglite.external_data.storage.tier2  # type: ignore[attr-defined]
+            import raglite.external_data.storage.tier2  # noqa: F401  # type: ignore[attr-defined]
         except ImportError as e:
             pytest.fail(f"Failed to import storage.tier2: {e}")
 
     def test_ac_8_2_4_model_weights_importable(self) -> None:
         """[TEST-AC-8.2.4-K] storage.model_weights can be imported independently."""
         try:
-            import raglite.external_data.storage.model_weights  # type: ignore[attr-defined]
+            import raglite.external_data.storage.model_weights  # noqa: F401  # type: ignore[attr-defined]
         except ImportError as e:
             pytest.fail(f"Failed to import storage.model_weights: {e}")
 
     def test_ac_8_2_4_model_selection_importable(self) -> None:
         """[TEST-AC-8.2.4-L] storage.model_selection can be imported independently."""
         try:
-            import raglite.external_data.storage.model_selection  # type: ignore[attr-defined]
+            import raglite.external_data.storage.model_selection  # noqa: F401  # type: ignore[attr-defined]
         except ImportError as e:
             pytest.fail(f"Failed to import storage.model_selection: {e}")
 
     def test_ac_8_2_4_constants_importable(self) -> None:
         """[TEST-AC-8.2.4-M] storage.constants can be imported independently."""
         try:
-            import raglite.external_data.storage.constants  # type: ignore[attr-defined]
+            import raglite.external_data.storage.constants  # noqa: F401  # type: ignore[attr-defined]
         except ImportError as e:
             pytest.fail(f"Failed to import storage.constants: {e}")
 

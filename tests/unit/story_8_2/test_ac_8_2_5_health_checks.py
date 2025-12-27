@@ -78,7 +78,9 @@ class TestAC825ClientImportability:
         Then no import errors occur
         """
         try:
-            from raglite.external_data.clients.basegov import BaseGovClient  # type: ignore[attr-defined]
+            from raglite.external_data.clients.basegov import (
+                BaseGovClient,  # noqa: F401  # type: ignore[attr-defined]
+            )
         except ImportError as e:
             pytest.fail(f"Failed to import BaseGovClient: {e}")
 
@@ -90,7 +92,9 @@ class TestAC825ClientImportability:
         Then no import errors occur
         """
         try:
-            from raglite.external_data.clients.ecb import ECBClient  # type: ignore[attr-defined]
+            from raglite.external_data.clients.ecb import (
+                ECBClient,  # noqa: F401  # type: ignore[attr-defined]
+            )
         except ImportError as e:
             pytest.fail(f"Failed to import ECBClient: {e}")
 
@@ -102,7 +106,9 @@ class TestAC825ClientImportability:
         Then no import errors occur
         """
         try:
-            from raglite.external_data.clients.eurostat import EurostatClient  # type: ignore[attr-defined]
+            from raglite.external_data.clients.eurostat import (
+                EurostatClient,  # noqa: F401  # type: ignore[attr-defined]
+            )
         except ImportError as e:
             pytest.fail(f"Failed to import EurostatClient: {e}")
 
@@ -114,7 +120,9 @@ class TestAC825ClientImportability:
         Then no import errors occur
         """
         try:
-            from raglite.external_data.storage import ExternalDataStorage  # type: ignore[attr-defined]
+            from raglite.external_data.storage import (
+                ExternalDataStorage,  # noqa: F401  # type: ignore[attr-defined]
+            )
         except ImportError as e:
             pytest.fail(f"Failed to import ExternalDataStorage: {e}")
 

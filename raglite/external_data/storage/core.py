@@ -266,7 +266,7 @@ def list_sources(session: Session, include_deleted: bool = False) -> list[Extern
 def update_last_refresh(
     session: Session,
     source_name: str,
-    refresh_time: datetime | None = None,
+    refresh_time: datetime.datetime | None = None,
 ) -> bool:
     """Update the last_refresh_at timestamp for a source.
 

@@ -299,7 +299,7 @@ class ExternalDataStorage:
 
     def register_tier2_source(self, source_key: str) -> ExternalDataSourceORM:
         """Register a Tier 2 data source from configuration."""
-        return register_tier2_source(  # type: ignore[no-any-return]self.session, source_key, TIER2_SOURCES)
+        return register_tier2_source(self.session, source_key, TIER2_SOURCES)  # type: ignore[no-any-return]
 
     def store_api2_coal_prices(
         self,
