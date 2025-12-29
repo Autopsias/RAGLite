@@ -482,12 +482,10 @@ class TestModelRouters:
         """Prophet router should delegate to generate_forecast."""
         from raglite.forecasting.hybrid import _generate_prophet_forecast
 
-        with (
-            patch(
-                "raglite.forecasting.hybrid.generate_forecast",  # Patch at import location within function
-                new_callable=AsyncMock,
-            ) as mock_forecast
-        ):
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.generate_forecast",  # Patch where used in ensemble
+            new_callable=AsyncMock,
+        ) as mock_forecast:
             mock_forecast.return_value = sample_forecast_result
 
             await _generate_prophet_forecast(
@@ -511,10 +509,12 @@ class TestModelRouters:
         """Chronos router should delegate to generate_chronos_cold_start_forecast."""
         from raglite.forecasting.hybrid import _generate_chronos_forecast
 
-        with patch(
-            "raglite.forecasting.hybrid.generate_chronos_cold_start_forecast",  # Patch where used
-            new_callable=AsyncMock,
-        ) as mock_chronos:
+        with (
+            patch(
+                "raglite.forecasting.hybrid.model_generators.generate_chronos_cold_start_forecast",  # Patch where used in model_generators
+                new_callable=AsyncMock,
+            ) as mock_chronos
+        ):
             mock_chronos.return_value = sample_forecast_result
 
             await _generate_chronos_forecast(

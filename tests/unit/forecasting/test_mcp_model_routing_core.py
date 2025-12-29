@@ -186,10 +186,12 @@ class TestRegressorFiltering:
             "electricity": pd.Series([10, 11, 12]),  # Not in cached selection
         }
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = mock_cached_model_selection
 
-            with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                 mock_route.return_value = MagicMock()
 
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
@@ -246,10 +248,12 @@ class TestRegressorFiltering:
             "euribor": pd.Series([0.5, 0.6, 0.7]),
         }
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = cached_no_regressors
 
-            with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                 mock_route.return_value = MagicMock()
 
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
@@ -289,10 +293,12 @@ class TestRegressorFiltering:
             # "euribor" is missing but in cached regressor_list
         }
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = mock_cached_model_selection
 
-            with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                 mock_route.return_value = MagicMock()
 
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
@@ -333,7 +339,9 @@ class TestFallbackHandling:
         """TEST-AC-7b.6.4.1: Falls back to Prophet when no cache exists."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = None  # Cache miss
 
             with patch("raglite.forecasting.hybrid._get_prophet_class") as mock_prophet_class:
@@ -368,10 +376,12 @@ class TestFallbackHandling:
         """TEST-AC-7b.6.4.2: Falls back to Prophet when selected model fails."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = mock_cached_model_selection
 
-            with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                 # ARIMA fails
                 mock_route.side_effect = Exception("ARIMA convergence failed")
 
@@ -402,10 +412,12 @@ class TestFallbackHandling:
         """TEST-AC-7b.6.4.3: Fallback model_selection_reason includes error context."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = mock_cached_model_selection
 
-            with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                 mock_route.side_effect = Exception("ARIMA convergence failed")
 
                 with patch(

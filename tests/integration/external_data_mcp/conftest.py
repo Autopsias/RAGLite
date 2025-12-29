@@ -17,9 +17,6 @@ import pytest
 # Set test environment before importing
 os.environ["APP_ENV"] = "test"
 
-# Import shared fixtures from parent conftest
-from tests.conftest import db_session
-
 # Skip all tests in this module if not running integration tests
 pytestmark = [
     pytest.mark.integration,
@@ -86,7 +83,7 @@ def populated_db(mcp_db_session):
         import logging
 
         logging.getLogger(__name__).warning(f"Fixture setup issue (source creation): {e}")
-        db_session.rollback()
+        mcp_db_session.rollback()
         source = storage.get_source("TEST_MCP_BuildingPermits")
         created1 = source is None
         if created1:
@@ -114,7 +111,7 @@ def populated_db(mcp_db_session):
         import logging
 
         logging.getLogger(__name__).warning(f"Fixture setup issue (data insert): {e}")
-        db_session.rollback()
+        mcp_db_session.rollback()
 
     # Create second source for multi-source testing
     try:
@@ -127,7 +124,7 @@ def populated_db(mcp_db_session):
         import logging
 
         logging.getLogger(__name__).warning(f"Fixture setup issue (source2 creation): {e}")
-        db_session.rollback()
+        mcp_db_session.rollback()
         source2 = storage.get_source("TEST_MCP_ElectricityPrices")
         if source2 is None:
             source2, _ = storage.get_or_create_source(
@@ -159,7 +156,7 @@ def populated_db(mcp_db_session):
         import logging
 
         logging.getLogger(__name__).warning(f"Fixture setup issue (electricity data): {e}")
-        db_session.rollback()
+        mcp_db_session.rollback()
 
     yield storage
 

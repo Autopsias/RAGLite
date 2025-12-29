@@ -137,16 +137,16 @@ class TestCacheLookup:
         from raglite.forecasting.hybrid import generate_forecast
 
         with patch(
-            "raglite.external_data.storage.model_selection.get_cached_model_selection"
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = mock_cached_model_selection
 
             # Mock the model routing to avoid actual model execution
-            with patch("raglite.forecasting.hybrid.model_generators._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                 mock_route.return_value = MagicMock()
 
                 # Mock explain_forecast to avoid LLM calls
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
                     with patch(
@@ -170,7 +170,7 @@ class TestCacheLookup:
         from raglite.forecasting.hybrid import generate_forecast
 
         with patch(
-            "raglite.external_data.storage.model_selection.get_cached_model_selection"
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
         ) as mock_get_cache:
             # Mock Prophet to avoid actual model execution
             with patch(
@@ -183,7 +183,7 @@ class TestCacheLookup:
                 mock_prophet_class.return_value = mock_prophet
 
                 # Mock explain_forecast
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
                     with patch(
@@ -208,21 +208,23 @@ class TestCacheLookup:
         from raglite.forecasting.hybrid import generate_forecast
 
         with patch(
-            "raglite.external_data.storage.model_selection.get_cached_model_selection"
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = mock_cached_model_selection
 
             # Mock ensure_historical_data to return our sample data (Story 8.1: historical_data required)
-            with patch("raglite.forecasting.hybrid.ensure_historical_data") as mock_ensure_data:
+            with patch(
+                "raglite.forecasting.hybrid.ensemble.ensure_historical_data"
+            ) as mock_ensure_data:
                 mock_ensure_data.return_value = sample_time_series_data
 
-                with patch(
-                    "raglite.forecasting.hybrid.model_generators._route_to_model"
-                ) as mock_route:
+                with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                     mock_result = MagicMock()
                     mock_route.return_value = mock_result
 
-                    with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                    with patch(
+                        "raglite.forecasting.hybrid.ensemble.explain_forecast"
+                    ) as mock_explain:
                         mock_explain.return_value = "Test explanation"
 
                         await generate_forecast(
@@ -246,7 +248,7 @@ class TestCacheLookup:
         from raglite.forecasting.hybrid import generate_forecast
 
         with patch(
-            "raglite.external_data.storage.model_selection.get_cached_model_selection"
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = expired_cached_model_selection
 
@@ -260,7 +262,7 @@ class TestCacheLookup:
                 mock_prophet.predict.return_value = MagicMock()
                 mock_prophet_class.return_value = mock_prophet
 
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
                     with patch(

@@ -107,7 +107,7 @@ async def test_cold_start_detection_with_insufficient_data() -> None:
     data = TimeSeriesData(metric_name="test_metric", points=points, interval="monthly")
 
     with patch(
-        "raglite.forecasting.hybrid.generate_chronos_cold_start_forecast"
+        "raglite.forecasting.hybrid.ensemble.generate_chronos_cold_start_forecast"
     ) as mock_cold_start:
         # Mock return value
         from raglite.shared.models import ForecastResult

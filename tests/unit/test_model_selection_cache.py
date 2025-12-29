@@ -247,7 +247,7 @@ class TestCacheModelSelectionMocked:
         )
 
         # Mock the database session
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_get_session.return_value = mock_session
 
@@ -275,7 +275,8 @@ class TestCacheModelSelectionMocked:
             runtime_seconds=30.0,
         )
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        # Patch where get_session is USED, not where it's defined
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_get_session.return_value = mock_session
 
@@ -314,7 +315,7 @@ class TestGetCachedModelSelectionMocked:
         """TEST-AC-7b.4.3.5: get_cached_model_selection returns None for missing variable."""
         from raglite.external_data.storage import get_cached_model_selection
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.first.return_value = None
@@ -348,7 +349,7 @@ class TestGetCachedModelSelectionMocked:
         mock_orm.selected_at = now
         mock_orm.expires_at = now + timedelta(days=7)
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.first.return_value = mock_orm
@@ -381,7 +382,7 @@ class TestInvalidateModelSelectionMocked:
         """TEST-AC-7b.4.4.2: invalidate_model_selection deletes single variable."""
         from raglite.external_data.storage import invalidate_model_selection
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.delete.return_value = 1
@@ -397,7 +398,7 @@ class TestInvalidateModelSelectionMocked:
         """TEST-AC-7b.4.4.3: invalidate_model_selection(None) deletes all."""
         from raglite.external_data.storage import invalidate_model_selection
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.delete.return_value = 5
@@ -413,7 +414,7 @@ class TestInvalidateModelSelectionMocked:
         """TEST-AC-7b.4.4.4: invalidate_model_selection returns 0 for missing variable."""
         from raglite.external_data.storage import invalidate_model_selection
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.delete.return_value = 0
@@ -443,7 +444,7 @@ class TestCleanupExpiredModelSelectionsMocked:
         """TEST-AC-7b.4.5.8: cleanup_expired_model_selections removes expired entries."""
         from raglite.external_data.storage import cleanup_expired_model_selections
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.delete.return_value = 3
@@ -459,7 +460,7 @@ class TestCleanupExpiredModelSelectionsMocked:
         """TEST-AC-7b.4.5.9: cleanup_expired_model_selections returns 0 when none expired."""
         from raglite.external_data.storage import cleanup_expired_model_selections
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.delete.return_value = 0
@@ -658,7 +659,7 @@ class TestInputValidation:
         """[P1] M4: get_cached_model_selection accepts variable_name at 100 char limit."""
         from raglite.external_data.storage import get_cached_model_selection
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.first.return_value = None
@@ -696,7 +697,7 @@ class TestInputValidation:
         """[P1] M4: invalidate_model_selection accepts variable_name at 100 char limit."""
         from raglite.external_data.storage import invalidate_model_selection
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.delete.return_value = 0
@@ -712,7 +713,7 @@ class TestInputValidation:
         """[P0] M4: invalidate_model_selection(None) allows invalidating all entries."""
         from raglite.external_data.storage import invalidate_model_selection
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.delete.return_value = 5
@@ -750,7 +751,7 @@ class TestEdgeCases:
             runtime_seconds=30.0,
         )
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_get_session.return_value = mock_session
 
@@ -779,7 +780,7 @@ class TestEdgeCases:
             runtime_seconds=30.0,
         )
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_get_session.return_value = mock_session
 
@@ -814,7 +815,7 @@ class TestEdgeCases:
             runtime_seconds=30.0,
         )
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_get_session.return_value = mock_session
 
@@ -846,7 +847,7 @@ class TestEdgeCases:
             runtime_seconds=30.0,
         )
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_get_session.return_value = mock_session
 
@@ -861,7 +862,7 @@ class TestEdgeCases:
         """[P2] get_cached_model_selection handles Unicode variable names."""
         from raglite.external_data.storage import get_cached_model_selection
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.first.return_value = None
@@ -877,7 +878,7 @@ class TestEdgeCases:
         """[P2] get_cached_model_selection handles special characters in variable name."""
         from raglite.external_data.storage import get_cached_model_selection
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.first.return_value = None
@@ -961,7 +962,7 @@ class TestConcurrentScenarios:
             runtime_seconds=30.0,
         )
 
-        with patch("raglite.shared.database.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
 
             # Simulate IntegrityError on first commit (concurrent insert)

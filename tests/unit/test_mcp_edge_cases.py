@@ -121,7 +121,7 @@ class TestModelRoutingEdgeCases:
         )
 
         with patch(
-            "raglite.external_data.storage.model_selection.get_cached_model_selection"
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = cached_unimplemented_model
 
@@ -140,7 +140,9 @@ class TestModelRoutingEdgeCases:
                     mock_prophet.predict.return_value = MagicMock()
                     mock_prophet_class.return_value = mock_prophet
 
-                    with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                    with patch(
+                        "raglite.forecasting.hybrid.ensemble.explain_forecast"
+                    ) as mock_explain:
                         mock_explain.return_value = "Test explanation"
 
                         with patch(
@@ -187,11 +189,11 @@ class TestMetadataPopulation:
         )
 
         with patch(
-            "raglite.external_data.storage.model_selection.get_cached_model_selection"
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = cached
 
-            with patch("raglite.forecasting.hybrid.model_generators._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                 # Detailed error
                 mock_route.side_effect = RuntimeError(
                     "ARIMA convergence failed: data is non-stationary"
@@ -248,15 +250,23 @@ class TestMetadataPopulation:
         )
 
         with patch(
-            "raglite.external_data.storage.model_selection.get_cached_model_selection"
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = cached
 
-            with patch("raglite.forecasting.hybrid.model_generators._route_to_model") as mock_route:
-                mock_result = MagicMock()
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
+                from raglite.shared.models import ForecastResult
+
+                # Return a proper ForecastResult
+                mock_result = ForecastResult(
+                    metric_name="ebitda",
+                    forecast=[],
+                    model_source="cached",
+                    model_selection_reason=expected_rationale,
+                )
                 mock_route.return_value = mock_result
 
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
                     with patch(
@@ -305,7 +315,7 @@ class TestConcurrentRequests:
         )
 
         with patch(
-            "raglite.external_data.storage.model_selection.get_cached_model_selection"
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = cached
 
@@ -332,7 +342,9 @@ class TestConcurrentRequests:
                     )
                     mock_prophet.return_value = mock_result
 
-                    with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                    with patch(
+                        "raglite.forecasting.hybrid.ensemble.explain_forecast"
+                    ) as mock_explain:
                         mock_explain.return_value = "Test explanation"
 
                         # Launch 5 concurrent forecasts
@@ -382,11 +394,11 @@ class TestLoggingAndObservability:
         )
 
         with patch(
-            "raglite.external_data.storage.model_selection.get_cached_model_selection"
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = cached
 
-            with patch("raglite.forecasting.hybrid.model_generators._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                 mock_route.return_value = MagicMock()
 
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
@@ -429,11 +441,11 @@ class TestLoggingAndObservability:
         )
 
         with patch(
-            "raglite.external_data.storage.model_selection.get_cached_model_selection"
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = cached
 
-            with patch("raglite.forecasting.hybrid.model_generators._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
                 mock_route.side_effect = Exception("ARIMA convergence failed")
 
                 with patch(
