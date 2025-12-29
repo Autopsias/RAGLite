@@ -11,7 +11,19 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from raglite.ingestion.table_extraction import TableExtractor
+# Lazy import pattern: defer heavy module import until test execution
+# raglite.ingestion.table_extraction imports Docling which is slow
+_TableExtractor = None
+
+
+def _get_table_extractor():
+    """Lazy load TableExtractor to avoid slow import during test collection."""
+    global _TableExtractor
+    if _TableExtractor is None:
+        from raglite.ingestion.table_extraction import TableExtractor
+
+        _TableExtractor = TableExtractor
+    return _TableExtractor
 
 
 class TestTableExtractor:
@@ -19,6 +31,7 @@ class TestTableExtractor:
 
     def setup_method(self):
         """Simple setup - create extractor with mock converter."""
+        TableExtractor = _get_table_extractor()
         self.mock_converter = Mock()
         self.extractor = TableExtractor(converter=self.mock_converter)
 
@@ -609,6 +622,7 @@ class TestTableExtractor:
     def test_init_with_provided_converter(self):
         """Test TableExtractor initialization with custom converter."""
         # Arrange
+        TableExtractor = _get_table_extractor()
         custom_converter = Mock()
 
         # Act
@@ -621,6 +635,7 @@ class TestTableExtractor:
         """Test TableExtractor creates default converter when none provided."""
         # Act - create extractor without converter
         # This will import Docling modules (lazy loading)
+        TableExtractor = _get_table_extractor()
         extractor = TableExtractor(converter=None)
 
         # Assert - converter should be created
@@ -744,30 +759,30 @@ class TestEntityValidation:
 
     def test_validate_entity_rejects_currency_descriptor(self):
         """Test that 'Currency (1000 EUR)' fails entity validation."""
-        from raglite.ingestion.adaptive_table.core import _validate_entity
+        from raglite.ingestion.adaptive_table.core import validate_entity
 
-        assert _validate_entity("Currency (1000 EUR)") is False, (
+        assert validate_entity("Currency (1000 EUR)") is False, (
             "Unit descriptor should not be a valid entity"
         )
 
     def test_validate_entity_accepts_group(self):
         """Test that 'GROUP' passes entity validation."""
-        from raglite.ingestion.adaptive_table.core import _validate_entity
+        from raglite.ingestion.adaptive_table.core import validate_entity
 
-        assert _validate_entity("GROUP") is True, "GROUP should be a valid entity"
+        assert validate_entity("GROUP") is True, "GROUP should be a valid entity"
 
     def test_validate_entity_accepts_country_names(self):
         """Test that country names pass entity validation."""
-        from raglite.ingestion.adaptive_table.core import _validate_entity
+        from raglite.ingestion.adaptive_table.core import validate_entity
 
         valid_entities = ["Portugal", "Tunisia", "Angola", "Botswana", "GROUP"]
 
         for entity in valid_entities:
-            assert _validate_entity(entity) is True, f"Expected '{entity}' to be a valid entity"
+            assert validate_entity(entity) is True, f"Expected '{entity}' to be a valid entity"
 
     def test_validate_entity_rejects_unit_patterns(self):
         """Test that unit patterns fail entity validation."""
-        from raglite.ingestion.adaptive_table.core import _validate_entity
+        from raglite.ingestion.adaptive_table.core import validate_entity
 
         invalid_entities = [
             "Currency (1000 EUR)",
@@ -782,15 +797,15 @@ class TestEntityValidation:
         ]
 
         for entity in invalid_entities:
-            assert _validate_entity(entity) is False, f"Expected '{entity}' to be an invalid entity"
+            assert validate_entity(entity) is False, f"Expected '{entity}' to be an invalid entity"
 
     def test_validate_entity_handles_none_and_empty(self):
         """Test that None and empty strings fail validation."""
-        from raglite.ingestion.adaptive_table.core import _validate_entity
+        from raglite.ingestion.adaptive_table.core import validate_entity
 
-        assert _validate_entity(None) is False, "None should be invalid"
-        assert _validate_entity("") is False, "Empty string should be invalid"
-        assert _validate_entity("   ") is False, "Whitespace should be invalid"
+        assert validate_entity(None) is False, "None should be invalid"
+        assert validate_entity("") is False, "Empty string should be invalid"
+        assert validate_entity("   ") is False, "Whitespace should be invalid"
 
 
 class TestEntityValidationIntegration(unittest.TestCase):

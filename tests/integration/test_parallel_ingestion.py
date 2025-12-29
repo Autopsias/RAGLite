@@ -17,7 +17,7 @@ from raglite.shared.config import settings
 from raglite.shared.safety import SafetyGuard
 
 # Mark all tests in this module as integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 
 @pytest.mark.slow  # Takes ~60s, actual PDF ingestion

@@ -105,10 +105,14 @@ class TestMCPPerformance:
         """TEST-AC-7b.6.6.3: E2E response time is <5s with cache hit."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.external_data.storage.model_selection.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = populated_cache["ebitda"]
 
-            with patch("raglite.forecasting.hybrid._generate_arima_forecast") as mock_arima:
+            with patch(
+                "raglite.forecasting.hybrid.model_generators._generate_arima_forecast"
+            ) as mock_arima:
                 from raglite.shared.models import ForecastPoint, ForecastResult
 
                 mock_result = ForecastResult(
@@ -129,12 +133,15 @@ class TestMCPPerformance:
                     mock_explain.return_value = "Test explanation"
 
                     start = time.time()
-                    result = await generate_forecast(
-                        metric="ebitda",
-                        historical_data=e2e_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.model_selection_job.fetch_historical_data"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = e2e_time_series_data
+                        result = await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
                     elapsed = time.time() - start
 
                     assert result.model_source == "cached"
@@ -153,10 +160,14 @@ class TestMCPPerformance:
 
         timings = []
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.external_data.storage.model_selection.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = populated_cache["ebitda"]
 
-            with patch("raglite.forecasting.hybrid._generate_arima_forecast") as mock_arima:
+            with patch(
+                "raglite.forecasting.hybrid.model_generators._generate_arima_forecast"
+            ) as mock_arima:
                 from raglite.shared.models import ForecastPoint, ForecastResult
 
                 mock_result = ForecastResult(
@@ -179,12 +190,15 @@ class TestMCPPerformance:
                     # Run 10 iterations to measure p50
                     for _ in range(10):
                         start = time.time()
-                        await generate_forecast(
-                            metric="ebitda",
-                            historical_data=e2e_time_series_data,
-                            periods_ahead=4,
-                            use_model_selection=True,
-                        )
+                        with patch(
+                            "raglite.forecasting.model_selection_job.fetch_historical_data"
+                        ) as mock_fetch:
+                            mock_fetch.return_value = e2e_time_series_data
+                            await generate_forecast(
+                                metric="ebitda",
+                                periods_ahead=4,
+                                use_model_selection=True,
+                            )
                         timings.append(time.time() - start)
 
         p50 = statistics.median(timings)

@@ -13,18 +13,32 @@ from unittest.mock import patch
 
 import pytest
 
-# Import MCP tools by accessing the underlying functions
-import raglite.main as main_module
+# Lazy import pattern: import raglite.shared.models only (fast)
+# raglite.main is imported inside get_tool_function() to avoid slow module-level import
 from raglite.shared.models import (
     RegressorDataResponse,
     RegressorListResponse,
     ValidationResponse,
 )
 
+# Module-level cache for lazy-loaded main_module
+_main_module = None
+
+
+def _get_main_module():
+    """Lazy load raglite.main to avoid slow module-level import during test collection."""
+    global _main_module
+    if _main_module is None:
+        import raglite.main as main_module
+
+        _main_module = main_module
+    return _main_module
+
 
 # Get the actual tool functions from FastMCP-wrapped tools
 def get_tool_function(tool_name: str):
     """Extract the underlying function from a FastMCP FunctionTool."""
+    main_module = _get_main_module()
 
     # Map tool names to their FunctionTool objects
     func_map = {

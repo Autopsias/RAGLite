@@ -62,6 +62,31 @@ async def test_bad_example(session_ingested_collection):
 2. Choose appropriate marker (`preserve_collection` or `manages_collection_state`)
 3. Add `@pytest.mark.slow` if test takes >30 seconds
 
+### CRITICAL: Fixture Definition Rule (Story 8 Strategic Fix)
+
+**When copying tests from other files, ALWAYS copy fixture definitions too.**
+
+Root cause from Story 8 analysis: 78 tests failed because fixture references were copied
+without copying the fixture definitions from conftest.py files.
+
+```python
+# WRONG: Copying test that uses db_session without copying the fixture
+def test_something(db_session):  # NameError: fixture 'db_session' not found
+    ...
+
+# CORRECT: When copying tests, also add the required fixture to conftest.py
+# In tests/integration/your_module/conftest.py:
+@pytest.fixture
+def db_session():
+    """Database session for tests."""
+    engine = create_engine(TEST_DATABASE_URL)
+    with Session(engine) as session:
+        yield session
+```
+
+**Prevention:** Pre-commit hook `validate-pytest-fixtures` runs `pytest --collect-only`
+to catch missing fixtures before commit.
+
 ### AFTER modifying tests:
 1. Run: `pytest tests/integration/ --skip-ingestion -v --durations=20`
 2. Verify total time is within budget (<10 minutes)
@@ -391,3 +416,29 @@ The auto-restart fixture calls `initialize_test_database_schema()` which ensures
 docker start raglite-postgresql-test
 APP_ENV=test uv run python scripts/init-test-postgresql.py
 ```
+
+---
+
+## Epic 8 Migration Guide
+
+**See:** `docs/sprint-artifacts/epic-8-migration-notes.md` for comprehensive migration documentation.
+
+### Key Breaking Changes (Epic 8)
+
+| Story | Change | Impact |
+|-------|--------|--------|
+| 8.1 | `historical_data` now required in `generate_ensemble_forecast` | Update all callers to pass data explicitly |
+| 8.2 | `get_cached_model_selection` now sync (was async) | Remove `await` and use `Mock` not `AsyncMock` |
+| 8.3 | `document_ingestion.py` split into package | Update mock targets to new module paths |
+| 8.4 | `db_session` fixture consolidated | Remove duplicate fixtures from subdirectories |
+
+### Mock Target Validation
+
+Run before committing test changes:
+
+```bash
+# Validate all mock targets exist
+python scripts/validate-mock-targets.py --verbose --fix-suggestions
+```
+
+This hook is also included in pre-commit and will block commits with stale mock targets.

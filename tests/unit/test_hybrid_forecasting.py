@@ -138,7 +138,11 @@ class TestInsufficientDataError:
         )
 
         with pytest.raises(InsufficientDataError, match="minimum 3 data points"):
-            await generate_forecast(metric="revenue", historical_data=data)
+            with patch(
+                "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+            ) as mock_fetch:
+                mock_fetch.return_value = data
+                await generate_forecast(metric="revenue")
 
     @pytest.mark.asyncio
     async def test_insufficient_data_error_message(self) -> None:
@@ -150,7 +154,11 @@ class TestInsufficientDataError:
         data = TimeSeriesData(metric_name="revenue", points=points, interval="quarterly")
 
         with pytest.raises(InsufficientDataError, match="Got 2"):
-            await generate_forecast(metric="revenue", historical_data=data)
+            with patch(
+                "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+            ) as mock_fetch:
+                mock_fetch.return_value = data
+                await generate_forecast(metric="revenue")
 
 
 class TestGenerateForecast:
@@ -249,15 +257,18 @@ class TestGenerateForecast:
 
         with (
             patch("prophet.Prophet", return_value=mock_prophet),
-            patch("raglite.forecasting.hybrid.ensemble.get_mistral_client") as mock_mistral_client,
+            patch("raglite.forecasting.hybrid.explain_forecast") as mock_mistral_client,
         ):
             mock_mistral_client.return_value.chat.complete.return_value = mock_mistral_response
 
-            result = await generate_forecast(
-                metric="revenue",
-                historical_data=historical_data,
-                periods_ahead=4,
-            )
+            with patch(
+                "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+            ) as mock_fetch:
+                mock_fetch.return_value = historical_data
+                result = await generate_forecast(
+                    metric="revenue",
+                    periods_ahead=4,
+                )
 
             # Verify result structure (AC3)
             assert result.metric_name == "revenue"
@@ -277,7 +288,7 @@ class TestGenerateForecast:
 
         with (
             patch("prophet.Prophet") as mock_prophet_class,
-            patch("raglite.forecasting.hybrid.ensemble.get_mistral_client") as mock_mistral,
+            patch("raglite.forecasting.hybrid.explain_forecast") as mock_mistral,
         ):
             # Setup mock Prophet
             mock_prophet = MagicMock()
@@ -313,7 +324,11 @@ class TestGenerateForecast:
             mock_response.choices[0].message.content = '{"summary": "Revenue forecast"}'
             mock_mistral.return_value.chat.complete.return_value = mock_response
 
-            result = await generate_forecast(metric="revenue", historical_data=historical_data)
+            with patch(
+                "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+            ) as mock_fetch:
+                mock_fetch.return_value = historical_data
+                result = await generate_forecast(metric="revenue")
 
             assert result.metric_name == "revenue"
 
@@ -324,7 +339,7 @@ class TestGenerateForecast:
 
         with (
             patch("prophet.Prophet") as mock_prophet_class,
-            patch("raglite.forecasting.hybrid.ensemble.get_mistral_client") as mock_mistral,
+            patch("raglite.forecasting.hybrid.explain_forecast") as mock_mistral,
         ):
             mock_prophet = MagicMock()
             mock_prophet_class.return_value = mock_prophet
@@ -358,7 +373,11 @@ class TestGenerateForecast:
             mock_response.choices[0].message.content = '{"summary": "Cash flow forecast"}'
             mock_mistral.return_value.chat.complete.return_value = mock_response
 
-            result = await generate_forecast(metric="cash_flow", historical_data=historical_data)
+            with patch(
+                "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+            ) as mock_fetch:
+                mock_fetch.return_value = historical_data
+                result = await generate_forecast(metric="cash_flow")
 
             assert result.metric_name == "cash_flow"
 
@@ -369,7 +388,7 @@ class TestGenerateForecast:
 
         with (
             patch("prophet.Prophet") as mock_prophet_class,
-            patch("raglite.forecasting.hybrid.ensemble.get_mistral_client") as mock_mistral,
+            patch("raglite.forecasting.hybrid.explain_forecast") as mock_mistral,
         ):
             mock_prophet = MagicMock()
             mock_prophet_class.return_value = mock_prophet
@@ -403,7 +422,11 @@ class TestGenerateForecast:
             mock_response.choices[0].message.content = '{"summary": "Expenses forecast"}'
             mock_mistral.return_value.chat.complete.return_value = mock_response
 
-            result = await generate_forecast(metric="expenses", historical_data=historical_data)
+            with patch(
+                "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+            ) as mock_fetch:
+                mock_fetch.return_value = historical_data
+                result = await generate_forecast(metric="expenses")
 
             assert result.metric_name == "expenses"
 
@@ -437,7 +460,7 @@ class TestExplainForecast:
             0
         ].message.content = '{"summary": "Revenue is projected to grow by 50%.", "confidence_rationale": "Based on historical trends."}'
 
-        with patch("raglite.forecasting.hybrid.ensemble.get_mistral_client") as mock_client:
+        with patch("raglite.forecasting.hybrid.explain_forecast") as mock_client:
             mock_client.return_value.chat.complete.return_value = mock_response
 
             explanation = await explain_forecast(forecast, "Financial context")
@@ -457,7 +480,7 @@ class TestExplainForecast:
             periods_ahead=4,
         )
 
-        with patch("raglite.forecasting.hybrid.ensemble.get_mistral_client") as mock_client:
+        with patch("raglite.forecasting.hybrid.explain_forecast") as mock_client:
             mock_client.return_value.chat.complete.side_effect = Exception("API error")
 
             explanation = await explain_forecast(forecast, "Context")
@@ -480,7 +503,7 @@ class TestExplainForecast:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "Not valid JSON - just plain text explanation"
 
-        with patch("raglite.forecasting.hybrid.ensemble.get_mistral_client") as mock_client:
+        with patch("raglite.forecasting.hybrid.explain_forecast") as mock_client:
             mock_client.return_value.chat.complete.return_value = mock_response
 
             explanation = await explain_forecast(forecast, "Context")

@@ -55,7 +55,7 @@ def _extract_multi_header_metric_entity(
     """
     # Import helper functions from other modules
     # These are imported locally to avoid circular dependencies
-    from .core import _extract_year, _get_table_caption, _get_table_markdown
+    from .core import extract_year, get_table_caption, get_table_markdown
     from .unit_inference import _parse_value_unit
 
     # Phase 2: Import safe wrapper functions from centralized validation module
@@ -146,7 +146,7 @@ def _extract_multi_header_metric_entity(
         # Parse value + unit
         value, unit = _parse_value_unit(cell.text)
 
-        fiscal_year = _extract_year(period) if period else None
+        fiscal_year = extract_year(period) if period else None
 
         row_dict = {
             "entity": cell_entity,
@@ -157,10 +157,10 @@ def _extract_multi_header_metric_entity(
             "unit": unit,
             "page_number": page_number,
             "table_index": table_index,
-            "table_caption": _get_table_caption(table_item),
+            "table_caption": get_table_caption(table_item),
             "row_index": row_idx,
             "column_name": f"{cell_metric}_{cell_entity}" if cell_metric and cell_entity else None,
-            "chunk_text": _get_table_markdown(table_item, result)[:500],
+            "chunk_text": get_table_markdown(table_item, result)[:500],
             "document_id": document_id,
         }
 

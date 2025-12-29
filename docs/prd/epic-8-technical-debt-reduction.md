@@ -109,19 +109,116 @@ The RAGLite codebase has accumulated significant technical debt in file sizes, w
 
 ---
 
-### Story 8.4: Test File Consolidation
+### Story 8.4: Test File Consolidation (UMBRELLA STORY)
 
-**Goal:** Reduce 45 test files below 500 LOC limits
+**Note:** Story 8.4 has been broken down into sub-stories per `docs/stories/8-4-story-breakdown-recommendation.md`
+
+**Sub-Stories:**
+- **Story 8.4a:** Unit Test File Consolidation (~60 files, 2-3 days)
+- **Story 8.4b:** Integration Test File Consolidation (~25 files, 1-2 days)
+- **Story 8.4c:** ATDD/E2E Test File Consolidation (~11 files, 1-2 days)
+
+---
+
+#### Story 8.4a: Unit Test File Consolidation (UMBRELLA - BROKEN DOWN)
+
+**Note:** Story 8.4a broken down into micro-stories due to scope (39 files, ~16,000 LOC)
+
+**Micro-Stories:**
+- **Story 8.4a-1:** Critical Unit Test Files (3 files, 4,447 LOC, 1-2 days)
+- **Story 8.4a-2:** Severe Unit Test Files (5 files, 5,071 LOC, 1 day)
+- **Story 8.4a-3:** Moderate Unit Test Files (31 files, ~10,000 LOC, 2-3 days)
+
+---
+
+##### Story 8.4a-1: Critical Unit Test Files
+
+**Goal:** Split 3 critical priority unit test files (>1000 LOC) to <500 LOC each
 
 **Files to refactor:**
-- `tests/unit/test_ingestion.py` (1,817 LOC -> split by ingestion type)
-- `tests/integration/conftest.py` (1,411 LOC)
-- All test files >500 LOC (45 files)
+- `tests/unit/test_ingestion.py` (1,817 LOC -> 4-5 files)
+- `tests/unit/test_timeseries_extract.py` (1,413 LOC -> 3-4 files)
+- `tests/unit/test_model_selection_job.py` (1,217 LOC -> 3-4 files)
 
 **Acceptance Criteria:**
-- AC1: All test files under 500 LOC
+- AC1: All 3 files split into modules <500 LOC each
 - AC2: Test count unchanged or increased
 - AC3: Coverage maintained at 80%+
+- AC4: All unit tests pass
+- AC5: All resulting files <500 LOC verified
+
+**Risk Links:** R-011
+
+---
+
+##### Story 8.4a-2: Severe Unit Test Files
+
+**Goal:** Split 5 severe priority unit test files (750-1000 LOC) to <500 LOC each
+
+**Files to refactor:**
+- `tests/unit/test_proactive_insights.py` (1,128 LOC -> 3 files)
+- `tests/unit/test_trend_analysis.py` (1,061 LOC -> 3 files)
+- `tests/unit/test_model_selection_cache.py` (1,012 LOC -> 3 files)
+- `tests/unit/test_strategic_recommendations.py` (949 LOC -> 2 files)
+- `tests/unit/test_table_extraction.py` (921 LOC -> 2 files)
+
+**Acceptance Criteria:**
+- AC1: All 5 files split into modules <500 LOC each
+- AC2: Test count unchanged or increased
+- AC3: Coverage maintained at 80%+
+- AC4: All unit tests pass
+- AC5: All resulting files <500 LOC verified
+
+**Risk Links:** R-011
+
+---
+
+##### Story 8.4a-3: Moderate Unit Test Files
+
+**Goal:** Split 31 moderate priority unit test files (500-750 LOC) to <500 LOC each
+
+**Files to refactor:** 31 unit test files (503-815 LOC each)
+
+**Acceptance Criteria:**
+- AC1: All 31 files split or refactored to <500 LOC each
+- AC2: Test count unchanged or increased
+- AC3: Coverage maintained at 80%+
+- AC4: All unit tests pass
+- AC5: All resulting files <500 LOC verified
+
+**Risk Links:** R-011
+
+---
+
+#### Story 8.4b: Integration Test File Consolidation
+
+**Goal:** Reduce all integration test files to <500 LOC
+
+**Files to refactor:** ~25 integration test files
+- `tests/integration/conftest.py` (1,411 LOC)
+- Critical and severe priority integration test files
+
+**Acceptance Criteria:**
+- AC1: All integration test files under 500 LOC
+- AC2: Test count unchanged or increased
+- AC3: Coverage maintained at 80%+
+- AC4: All integration tests pass
+- AC5: Fixture dependencies preserved
+
+**Risk Links:** R-011
+
+---
+
+#### Story 8.4c: ATDD/E2E Test File Consolidation
+
+**Goal:** Reduce all ATDD and E2E test files to <500 LOC
+
+**Files to refactor:** ~11 ATDD/E2E test files
+
+**Acceptance Criteria:**
+- AC1: All ATDD/E2E test files under 500 LOC
+- AC2: Test count unchanged or increased
+- AC3: All ATDD/E2E tests pass
 - AC4: CI pipeline runs successfully
 
 **Risk Links:** R-011

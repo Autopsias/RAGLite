@@ -25,11 +25,12 @@ from raglite.forecasting.hybrid.lazy_imports import _get_prophet_class
 from raglite.forecasting.hybrid.model_generators import _route_to_model
 from raglite.forecasting.hybrid.preprocessing import (
     _generate_future_regressors,
+    ensure_historical_data,
     prepare_regressors,
     select_regressors,
     validate_timeseries_for_forecast,
 )
-from raglite.forecasting.models.base import MIN_DATA_POINTS, InsufficientDataError
+from raglite.forecasting.models.base import MIN_DATA_POINTS
 from raglite.forecasting.models.chronos_model import (
     generate_chronos_cold_start_forecast,
 )
@@ -161,11 +162,8 @@ async def generate_forecast(
     )
 
     # Validate minimum data requirement (AC4: 6+ data points for reliability)
-    if historical_data is None:
-        raise InsufficientDataError(
-            "No historical data provided. Either pass historical_data "
-            "or use fetch_historical_metric() to load from PostgreSQL."
-        )
+    # Story 8.5: Auto-fetch historical data when not provided
+    historical_data = await ensure_historical_data(metric, historical_data, logger)
 
     # Story 6.13 AC2: Cold-start path for insufficient data
     # Route to Chronos-2 zero-shot when < MIN_DATA_POINTS

@@ -113,21 +113,38 @@ jobs:
           echo "Running security scan..."
           bandit -r raglite/ -ll -q -f txt --skip B608,B310
 
-      - name: Unit Tests (Lightweight Mode)
+      - name: Validate Pytest Fixtures
+        run: |
+          source ci-venv/bin/activate
+          echo "========================================="
+          echo "Validating pytest fixture resolution"
+          echo "Prevents 'fixture not found' errors in CI"
+          echo "========================================="
+          pytest --collect-only -q tests/ 2>&1 | head -50
+          # Check for fixture errors in collection
+          if pytest --collect-only -q tests/ 2>&1 | grep -i "fixture.*not found"; then
+            echo "FAIL: Fixture references without definitions detected!"
+            exit 1
+          fi
+          echo "Fixture validation passed"
+
+      - name: Tests (Fast - excludes slow/health_check)
         env:
           LIGHTWEIGHT_TESTS: "true"
           PYTHONPATH: ${{ github.workspace }}
         run: |
           source ci-venv/bin/activate
           echo "========================================="
-          echo "Running Unit Tests (LIGHTWEIGHT_TESTS=true)"
-          echo "ML dependencies are mocked to save memory"
+          echo "Running Tests (same as VS Code Test Explorer)"
+          echo "Excludes: slow, health_check markers"
           echo "========================================="
-          pytest tests/unit/ \
-            -x \
+          pytest tests/ \
+            -m "not slow and not health_check" \
             --tb=short \
             -q \
             --timeout=120 \
+            -n 4 \
+            --dist loadfile \
             --junitxml=test-results/junit.xml \
             2>&1 || exit_code=$?
 
@@ -211,22 +228,23 @@ jobs:
           source ci-venv/bin/activate
           uv pip install -e ".[dev]" --quiet
 
-      - name: Run Integration Tests
+      - name: Run Integration Tests (includes slow)
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           source ci-venv/bin/activate
           source .ci-env
           echo "========================================="
-          echo "Running Integration Tests"
+          echo "Running Integration Tests (main branch - full)"
+          echo "Includes slow tests, excludes health_check"
           echo "Qdrant: localhost:${QDRANT_PORT}"
           echo "PostgreSQL: localhost:${POSTGRES_PORT}"
           echo "========================================="
           pytest tests/integration/ \
-            -x \
+            -m "not health_check" \
             --tb=short \
             -q \
-            -n 0 \
+            -n 1 \
             --timeout=300 \
             --junitxml=test-results/integration-junit.xml \
             2>&1 || exit_code=$?

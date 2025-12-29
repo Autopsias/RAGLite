@@ -121,7 +121,7 @@ class TestModelRoutingEdgeCases:
         )
 
         with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+            "raglite.external_data.storage.model_selection.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = cached_unimplemented_model
 
@@ -132,7 +132,7 @@ class TestModelRoutingEdgeCases:
                 mock_tft.side_effect = NotImplementedError("TFT not yet implemented")
 
                 with patch(
-                    "raglite.forecasting.hybrid.ensemble._get_prophet_class"
+                    "raglite.forecasting.hybrid.lazy_imports._get_prophet_class"
                 ) as mock_prophet_class:
                     mock_prophet = MagicMock()
                     mock_prophet.fit.return_value = None
@@ -140,17 +140,18 @@ class TestModelRoutingEdgeCases:
                     mock_prophet.predict.return_value = MagicMock()
                     mock_prophet_class.return_value = mock_prophet
 
-                    with patch(
-                        "raglite.forecasting.hybrid.ensemble.explain_forecast"
-                    ) as mock_explain:
+                    with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                         mock_explain.return_value = "Test explanation"
 
-                        result = await generate_forecast(
-                            metric="ebitda",
-                            historical_data=sample_time_series_data,
-                            periods_ahead=4,
-                            use_model_selection=True,
-                        )
+                        with patch(
+                            "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                        ) as mock_fetch:
+                            mock_fetch.return_value = sample_time_series_data
+                            result = await generate_forecast(
+                                metric="ebitda",
+                                periods_ahead=4,
+                                use_model_selection=True,
+                            )
 
                         # Should fall back to Prophet
                         assert result.model_source == "fallback"
@@ -186,11 +187,11 @@ class TestMetadataPopulation:
         )
 
         with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+            "raglite.external_data.storage.model_selection.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = cached
 
-            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.model_generators._route_to_model") as mock_route:
                 # Detailed error
                 mock_route.side_effect = RuntimeError(
                     "ARIMA convergence failed: data is non-stationary"
@@ -203,12 +204,15 @@ class TestMetadataPopulation:
                     mock_result.model_source = "fallback"
                     mock_prophet.return_value = mock_result
 
-                    result = await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
+                        result = await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
 
                     # Reason should include the error details
                     assert "arima" in result.model_selection_reason.lower()
@@ -244,23 +248,26 @@ class TestMetadataPopulation:
         )
 
         with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+            "raglite.external_data.storage.model_selection.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = cached
 
-            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.model_generators._route_to_model") as mock_route:
                 mock_result = MagicMock()
                 mock_route.return_value = mock_result
 
-                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    result = await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
+                        result = await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
 
                     # Should preserve exact rationale
                     assert result.model_selection_reason == expected_rationale
@@ -298,41 +305,45 @@ class TestConcurrentRequests:
         )
 
         with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+            "raglite.external_data.storage.model_selection.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = cached
 
             with patch(
-                "raglite.forecasting.hybrid.model_generators._generate_prophet_forecast"
-            ) as mock_prophet:
-                mock_result = ForecastResult(
-                    metric_name="ebitda",
-                    forecast=[
-                        ForecastPoint(
-                            date=datetime(2025, 1, 1),
-                            value=16000000,
-                            lower=15000000,
-                            upper=17000000,
-                            label="Jan 2025",
-                        ),
-                    ],
-                    model_type="prophet_univariate",
-                )
-                mock_prophet.return_value = mock_result
+                "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+            ) as mock_fetch:
+                mock_fetch.return_value = sample_time_series_data
 
-                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
-                    mock_explain.return_value = "Test explanation"
+                with patch(
+                    "raglite.forecasting.hybrid.model_generators._generate_prophet_forecast"
+                ) as mock_prophet:
+                    mock_result = ForecastResult(
+                        metric_name="ebitda",
+                        forecast=[
+                            ForecastPoint(
+                                date=datetime(2025, 1, 1),
+                                value=16000000,
+                                lower=15000000,
+                                upper=17000000,
+                                label="Jan 2025",
+                            ),
+                        ],
+                        model_type="prophet_univariate",
+                    )
+                    mock_prophet.return_value = mock_result
 
-                    # Launch 5 concurrent forecasts
-                    tasks = [
-                        generate_forecast(
-                            metric="ebitda",
-                            historical_data=sample_time_series_data,
-                            periods_ahead=4,
-                            use_model_selection=True,
-                        )
-                        for _ in range(5)
-                    ]
+                    with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                        mock_explain.return_value = "Test explanation"
+
+                        # Launch 5 concurrent forecasts
+                        tasks = [
+                            generate_forecast(
+                                metric="ebitda",
+                                periods_ahead=4,
+                                use_model_selection=True,
+                            )
+                            for _ in range(5)
+                        ]
 
                     results = await asyncio.gather(*tasks)
 
@@ -371,25 +382,28 @@ class TestLoggingAndObservability:
         )
 
         with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+            "raglite.external_data.storage.model_selection.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = cached
 
-            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.model_generators._route_to_model") as mock_route:
                 mock_route.return_value = MagicMock()
 
-                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
                     import logging
 
                     with caplog.at_level(logging.INFO):
-                        await generate_forecast(
-                            metric="ebitda",
-                            historical_data=sample_time_series_data,
-                            periods_ahead=4,
-                            use_model_selection=True,
-                        )
+                        with patch(
+                            "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                        ) as mock_fetch:
+                            mock_fetch.return_value = sample_time_series_data
+                            await generate_forecast(
+                                metric="ebitda",
+                                periods_ahead=4,
+                                use_model_selection=True,
+                            )
 
                     # Verify logging occurred (implementation should log cache hit)
                     assert len(caplog.records) > 0
@@ -415,11 +429,11 @@ class TestLoggingAndObservability:
         )
 
         with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+            "raglite.external_data.storage.model_selection.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = cached
 
-            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.model_generators._route_to_model") as mock_route:
                 mock_route.side_effect = Exception("ARIMA convergence failed")
 
                 with patch(
@@ -432,12 +446,15 @@ class TestLoggingAndObservability:
                     import logging
 
                     with caplog.at_level(logging.WARNING):
-                        await generate_forecast(
-                            metric="ebitda",
-                            historical_data=sample_time_series_data,
-                            periods_ahead=4,
-                            use_model_selection=True,
-                        )
+                        with patch(
+                            "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                        ) as mock_fetch:
+                            mock_fetch.return_value = sample_time_series_data
+                            await generate_forecast(
+                                metric="ebitda",
+                                periods_ahead=4,
+                                use_model_selection=True,
+                            )
 
                     # Should have warning log
                     assert any(

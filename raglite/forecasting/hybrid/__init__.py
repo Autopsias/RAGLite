@@ -50,6 +50,7 @@ from raglite.forecasting.hybrid.model_generators import (
 from raglite.forecasting.hybrid.preprocessing import (
     _generate_future_regressors,
     detect_yoy_percentage,
+    ensure_historical_data,
     fetch_historical_metric,
     prepare_regressors,
     select_regressors,
@@ -66,20 +67,26 @@ from raglite.forecasting.models.chronos_model import (
     _get_chronos_pipeline,
     generate_chronos_cold_start_forecast,
 )
-
-# Re-export constants from other modules
 from raglite.forecasting.models.xgboost_model import (
     XGBOOST_PARAM_GRID,
     XGBOOST_PARAM_GRID_FAST,
     _run_xgboost_forecast,
     fit_xgboost,
 )
+from raglite.shared.clients import get_mistral_client  # noqa: F401
+from raglite.shared.logging import get_logger
 
-# Alias for backward compatibility
+# Story 7b-6: Model selection cache integration (re-export for backward compatibility)
+try:
+    from raglite.external_data.storage import get_cached_model_selection
+except ImportError:
+    # Storage module may not be available in some test scenarios
+    get_cached_model_selection = None  # type: ignore
+
+# Backward compatibility aliases
+# The actual function is ensure_historical_data (Story 8.5 rename)
+fetch_historical_data = ensure_historical_data
 _generate_chronos_cold_start_forecast = generate_chronos_cold_start_forecast
-
-# Module-level constants for backward compatibility
-from raglite.shared.logging import get_logger  # noqa: E402
 
 logger = get_logger(__name__)
 MAX_MISSING_RATIO = 0.30  # Maximum 30% missing data allowed
@@ -104,6 +111,11 @@ __all__ = [
     "transform_yoy_to_index",
     "fetch_historical_metric",
     "validate_timeseries_for_forecast",
+    # Story 8.5: Data fetching functions
+    "ensure_historical_data",
+    "fetch_historical_data",  # Backward compatibility alias
+    "get_cached_model_selection",
+    "get_mistral_client",
     "fit_linear_regression",
     "fit_ridge_regression",
     "fit_lasso_regression",

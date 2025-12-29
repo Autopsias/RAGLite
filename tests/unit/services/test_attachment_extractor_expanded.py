@@ -40,12 +40,14 @@ class TestAttachmentExtractorExpanded:
             patch("docling.datamodel.base_models.InputFormat"),
             patch("docling.document_converter.PdfFormatOption"),
             patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
-            patch("raglite.ingestion.document_ingestion.get_qdrant_client"),
+            patch("raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client"),
             patch("raglite.ingestion.storage_operations.get_qdrant_client"),
             patch("raglite.ingestion.embedding_generation.get_embedding_model"),
-            patch("raglite.ingestion.document_ingestion.store_metadata_in_postgresql"),
-            patch("raglite.ingestion.document_ingestion.store_tables_in_postgresql"),
-            patch("raglite.ingestion.document_ingestion.store_vectors_in_qdrant"),
+            patch(
+                "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql"
+            ),
+            patch("raglite.ingestion.document_ingestion.pdf_processing.store_tables_in_postgresql"),
+            patch("raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant"),
         ):
             mock_converter_instance = MockConverter.return_value
             # FIXED: Simulate the actual error message that would be returned
@@ -79,12 +81,14 @@ class TestAttachmentExtractorExpanded:
             patch("docling.datamodel.base_models.InputFormat"),
             patch("docling.document_converter.PdfFormatOption"),
             patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
-            patch("raglite.ingestion.document_ingestion.get_qdrant_client"),
+            patch("raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client"),
             patch("raglite.ingestion.storage_operations.get_qdrant_client"),
             patch("raglite.ingestion.embedding_generation.get_embedding_model"),
-            patch("raglite.ingestion.document_ingestion.store_metadata_in_postgresql"),
-            patch("raglite.ingestion.document_ingestion.store_tables_in_postgresql"),
-            patch("raglite.ingestion.document_ingestion.store_vectors_in_qdrant"),
+            patch(
+                "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql"
+            ),
+            patch("raglite.ingestion.document_ingestion.pdf_processing.store_tables_in_postgresql"),
+            patch("raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant"),
         ):
             mock_converter_instance = MockConverter.return_value
             # FIXED: Simulate the actual error message or use a more flexible assertion
@@ -123,19 +127,20 @@ class TestAttachmentExtractorExpanded:
             patch("docling.datamodel.base_models.InputFormat"),
             patch("docling.document_converter.PdfFormatOption"),
             patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
-            patch("raglite.ingestion.document_ingestion.get_qdrant_client"),
+            patch("raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client"),
             patch("raglite.ingestion.storage_operations.get_qdrant_client"),
             patch("raglite.ingestion.embedding_generation.get_embedding_model"),
             patch(
-                "raglite.ingestion.document_ingestion.store_metadata_in_postgresql",
+                "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.store_tables_in_postgresql",
+                "raglite.ingestion.document_ingestion.pdf_processing.store_tables_in_postgresql",
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.store_vectors_in_qdrant", return_value=None
+                "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant",
+                return_value=None,
             ),
         ):
             mock_converter_instance = MockConverter.return_value
@@ -171,7 +176,7 @@ class TestAttachmentExtractorExpanded:
                 )
 
                 with patch(
-                    "raglite.ingestion.document_ingestion.get_qdrant_client",
+                    "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
                     return_value=mock_qdrant_client,
                 ):
                     with patch(

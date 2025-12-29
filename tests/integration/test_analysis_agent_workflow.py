@@ -22,7 +22,7 @@ from raglite.agentic.agents.synthesis_agent import synthesis_agent
 from raglite.agentic.state import AnalysisResult, SynthesisResult
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 
 class TestAnalysisAgentWorkflow:

@@ -131,24 +131,26 @@ class TestResponseMetadata:
         from raglite.forecasting.hybrid import generate_forecast
 
         with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
-        ) as mock_get_cache:
-            mock_get_cache.return_value = mock_cached_model_selection
+            "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+        ) as mock_fetch:
+            mock_fetch.return_value = sample_time_series_data
 
-            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
-                mock_result = MagicMock()
-                mock_result.model_source = "cached"
-                mock_route.return_value = mock_result
+            with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+                mock_get_cache.return_value = mock_cached_model_selection
 
-                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
-                    mock_explain.return_value = "Test explanation"
+                with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
+                    mock_result = MagicMock()
+                    mock_result.model_source = "cached"
+                    mock_route.return_value = mock_result
 
-                    result = await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                        mock_explain.return_value = "Test explanation"
+
+                        result = await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
 
                     # Should have model_selection_reason from cache
                     assert result.model_selection_reason is not None

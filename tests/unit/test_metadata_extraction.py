@@ -115,11 +115,11 @@ class TestExtractChunkMetadata:
                 "test-key-123",
             ),
             patch(
-                "raglite.ingestion.embedding_generation.settings.mistral_api_key",
+                "raglite.shared.config.settings.mistral_api_key",
                 "test-key-123",
             ),
             patch(
-                "raglite.ingestion.embedding_generation.settings.metadata_extraction_model",
+                "raglite.shared.config.settings.metadata_extraction_model",
                 "mistral-small-latest",
             ),
         ):

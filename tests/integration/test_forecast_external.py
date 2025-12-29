@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 from datetime import date, datetime
 from decimal import Decimal
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
@@ -20,7 +21,7 @@ from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
 os.environ["APP_ENV"] = "test"
 
 # Skip all tests in this module if not running integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 
 @pytest.fixture(scope="module")
@@ -354,14 +355,15 @@ class TestEndToEndForecastingFlow:
         # Generate forecast (should trigger deprecation warning)
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            result = await generate_forecast(
-                metric="cement_consumption",
-                historical_data=historical_data,
-                periods_ahead=3,
-                external_regressors=external_regressors,
-                frequency="M",
-                future_regressor_strategy="constant",
-            )
+            with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
+                mock_fetch.return_value = historical_data
+                result = await generate_forecast(
+                    metric="cement_consumption",
+                    periods_ahead=3,
+                    external_regressors=external_regressors,
+                    frequency="M",
+                    future_regressor_strategy="constant",
+                )
 
             # Should have deprecation warning
             assert any("deprecated" in str(warning.message).lower() for warning in w)
@@ -412,12 +414,13 @@ class TestForecastAccuracyComparison:
         # Univariate forecast
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            univariate_result = await generate_forecast(
-                metric="cement_consumption",
-                historical_data=historical_data,
-                periods_ahead=3,
-                external_regressors=None,  # No regressors
-            )
+            with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
+                mock_fetch.return_value = historical_data
+                univariate_result = await generate_forecast(
+                    metric="cement_consumption",
+                    periods_ahead=3,
+                    external_regressors=None,  # No regressors
+                )
 
         assert univariate_result.model_type == "prophet_univariate"
         assert len(univariate_result.forecast) == 3  # Fixed: was 'forecasts'
@@ -440,12 +443,13 @@ class TestForecastAccuracyComparison:
         # Multivariate forecast
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            multivariate_result = await generate_forecast(
-                metric="cement_consumption",
-                historical_data=historical_data,
-                periods_ahead=3,
-                external_regressors=external_regressors,
-            )
+            with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
+                mock_fetch.return_value = historical_data
+                multivariate_result = await generate_forecast(
+                    metric="cement_consumption",
+                    periods_ahead=3,
+                    external_regressors=external_regressors,
+                )
 
         assert multivariate_result.model_type == "prophet_multivariate"
         assert "building_permits" in multivariate_result.regressors_used

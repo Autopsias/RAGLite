@@ -27,8 +27,10 @@ from .chunking_strategy import chunk_by_docling_items, chunk_document, split_lar
 
 # Re-export all functions from focused modules
 # This ensures backward compatibility with existing test imports
-# Document Ingestion Module
-from .document_ingestion import extract_excel, ingest_document, ingest_pdf
+# Document Ingestion Module (import from submodules to avoid deprecation warning)
+from .document_ingestion.core import ingest_document
+from .document_ingestion.excel_processing import extract_excel
+from .document_ingestion.pdf_processing import ingest_pdf
 
 # Embedding Generation Module
 from .embedding_generation import (

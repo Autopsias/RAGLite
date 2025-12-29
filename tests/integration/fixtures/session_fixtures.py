@@ -100,19 +100,65 @@ def _has_integration_tests(request) -> bool:
             return True
 
     # PRIORITY 3: Fall back to session items if available (single-process runs)
+    # FIX (2025-12-29): Use THRESHOLD-based detection instead of ANY integration test
+    # Previously returned True if ANY integration test existed, triggering expensive
+    # fixtures (embedding model: 60-70s, PDF ingestion: 60-150s) for FULL suite runs.
+    # This caused 1465s runtime when VS Code Test Explorer ran all tests.
+    #
+    # New logic: Only load integration fixtures if:
+    # - Integration tests are >30% of total tests, OR
+    # - Total tests are few (<50) and any are integration (likely targeted run)
     if hasattr(request, "session") and hasattr(request.session, "items"):
-        for item in request.session.items:
-            if "integration" in str(item.fspath):
-                return True
+        total_tests = len(request.session.items)
+        integration_count = sum(
+            1 for item in request.session.items if "integration" in str(item.fspath)
+        )
+
+        if total_tests == 0:
+            return False
+
+        # If running a small targeted set, any integration test triggers fixtures
+        if total_tests < 50 and integration_count > 0:
+            return True
+
+        # For large test runs (full suite), only load fixtures if primarily integration
+        integration_ratio = integration_count / total_tests
+        if integration_ratio > 0.30:  # >30% integration tests
+            return True
+
+        # Full suite with mostly unit tests - skip expensive fixtures
+        # Unit tests will pass, integration tests will skip with clear message
         return False
 
     # PRIORITY 4: In xdist workers, check current node's file path
     if hasattr(request, "node") and hasattr(request.node, "fspath"):
         return "integration" in str(request.node.fspath)
 
-    # PRIORITY 5: Conservative default - assume integration tests
-    # This ensures integration fixtures load when we can't determine
-    return True
+    # PRIORITY 5: Check for VS Code Test Explorer patterns
+    # VS Code passes different arguments than CLI pytest
+    if hasattr(request, "config"):
+        # VS Code Test Explorer uses --rootdir and specific test paths
+        invocation_dir = getattr(request.config, "invocation_dir", None)
+        if invocation_dir:
+            # If invocation is from project root without explicit path, VS Code is discovering
+            pass  # Fall through to default
+
+        # Check if we're in pytest discovery mode (VS Code Test Explorer)
+        # During discovery, we don't want to load heavy fixtures
+        workerinput = getattr(request.config, "workerinput", None)
+        if workerinput is None:
+            # Not in xdist worker - check if this looks like VS Code discovery
+            # VS Code often runs with just "tests" as the path
+            args = getattr(request.config, "args", [])
+            if args and len(args) == 1 and args[0] == "tests":
+                # Generic "tests" directory - could be VS Code, default to safe (no fixtures)
+                return False
+
+    # PRIORITY 6: Safe default - DON'T assume integration tests (FIX: 2025-12-29)
+    # Previously returned True, causing 60-70s fixture overhead on unit-only runs
+    # VS Code Test Explorer often doesn't pass clear integration paths
+    # Better to skip fixtures and let tests fail fast than load 2GB model unnecessarily
+    return False
 
 
 @pytest.fixture(scope="session", autouse=True)

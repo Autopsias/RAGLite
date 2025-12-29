@@ -64,13 +64,13 @@ class TestCacheExceptionHandling:
         from raglite.forecasting.hybrid import generate_forecast
 
         with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+            "raglite.external_data.storage.model_selection.get_cached_model_selection"
         ) as mock_get_cache:
             # Simulate database connection error
             mock_get_cache.side_effect = ConnectionError("Database unavailable")
 
             with patch(
-                "raglite.forecasting.hybrid.ensemble._get_prophet_class"
+                "raglite.forecasting.hybrid.lazy_imports._get_prophet_class"
             ) as mock_prophet_class:
                 mock_prophet = MagicMock()
                 mock_prophet.fit.return_value = None
@@ -78,16 +78,19 @@ class TestCacheExceptionHandling:
                 mock_prophet.predict.return_value = MagicMock()
                 mock_prophet_class.return_value = mock_prophet
 
-                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
                     # Should not raise - should gracefully fall back
-                    result = await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
+                        result = await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
 
                     # Verify fallback to default Prophet
                     assert result.model_source == "default"
@@ -98,13 +101,13 @@ class TestCacheExceptionHandling:
         from raglite.forecasting.hybrid import generate_forecast
 
         with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+            "raglite.external_data.storage.model_selection.get_cached_model_selection"
         ) as mock_get_cache:
             # Simulate timeout
             mock_get_cache.side_effect = TimeoutError("Cache lookup timeout")
 
             with patch(
-                "raglite.forecasting.hybrid.ensemble._get_prophet_class"
+                "raglite.forecasting.hybrid.lazy_imports._get_prophet_class"
             ) as mock_prophet_class:
                 mock_prophet = MagicMock()
                 mock_prophet.fit.return_value = None
@@ -112,15 +115,18 @@ class TestCacheExceptionHandling:
                 mock_prophet.predict.return_value = MagicMock()
                 mock_prophet_class.return_value = mock_prophet
 
-                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    result = await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
+                        result = await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
 
                     assert result.model_source == "default"
 
@@ -145,7 +151,7 @@ class TestCacheExceptionHandling:
         )
 
         with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+            "raglite.external_data.storage.model_selection.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = cached_no_characteristics
 
@@ -169,15 +175,18 @@ class TestCacheExceptionHandling:
                 )
                 mock_prophet.return_value = mock_result
 
-                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    result = await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
+                        result = await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
 
                     # Should handle None gracefully
                     assert result.model_source == "cached"
@@ -218,23 +227,26 @@ class TestRegressorFilteringEdgeCases:
         }
 
         with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+            "raglite.external_data.storage.model_selection.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = cached_with_regressors
 
-            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.model_generators._route_to_model") as mock_route:
                 mock_route.return_value = MagicMock()
 
-                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        external_regressors=actual_regressors,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
+                        await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            external_regressors=actual_regressors,
+                            use_model_selection=True,
+                        )
 
                     # Should pass None when no intersection
                     call_kwargs = mock_route.call_args[1]
@@ -267,23 +279,26 @@ class TestRegressorFilteringEdgeCases:
         }
 
         with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+            "raglite.external_data.storage.model_selection.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = cached_with_regressors
 
-            with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid.model_generators._route_to_model") as mock_route:
                 mock_route.return_value = MagicMock()
 
-                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        external_regressors=actual_regressors,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
+                        await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            external_regressors=actual_regressors,
+                            use_model_selection=True,
+                        )
 
                     # Should only pass gas_price
                     call_kwargs = mock_route.call_args[1]
@@ -317,12 +332,12 @@ class TestRegressorFilteringEdgeCases:
         }
 
         with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+            "raglite.external_data.storage.model_selection.get_cached_model_selection"
         ) as mock_get_cache:
             mock_get_cache.return_value = cached_empty_list
 
             with patch(
-                "raglite.forecasting.hybrid.ensemble._get_prophet_class"
+                "raglite.forecasting.hybrid.lazy_imports._get_prophet_class"
             ) as mock_prophet_class:
                 mock_prophet = MagicMock()
                 mock_prophet.fit.return_value = None
@@ -330,16 +345,19 @@ class TestRegressorFilteringEdgeCases:
                 mock_prophet.predict.return_value = MagicMock()
                 mock_prophet_class.return_value = mock_prophet
 
-                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        external_regressors=actual_regressors,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
+                        await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            external_regressors=actual_regressors,
+                            use_model_selection=True,
+                        )
 
                     # Should pass None (empty list means no regressors)
                     # This test verifies correct handling

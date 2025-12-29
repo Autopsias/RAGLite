@@ -32,7 +32,7 @@ from raglite.retrieval.search import hybrid_search
 from tests.fixtures.ground_truth import GROUND_TRUTH_QA, GroundTruthQuestion
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 
 @dataclass

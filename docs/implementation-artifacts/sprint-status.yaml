@@ -177,12 +177,19 @@ development_status:
   # EPIC 8: Technical Debt Reduction (NEW)
   # Sprint Change Proposal: SCP-2025-12-25-001
   # ==========================================
-  epic-8: in-progress
+  epic-8: done
 
   8-1-critical-forecasting-module-refactoring: done
   8-2-external-data-client-refactoring: done
-  8-3-ingestion-module-refactoring: backlog
-  8-4-test-file-consolidation: backlog
+  8-3-ingestion-module-refactoring: done
+  8-4-test-file-consolidation: backlog  # Broken down into sub-stories 8.4a, 8.4b, 8.4c
+  8-4a-unit-test-file-consolidation: in-progress  # Broken down into 8.4a-1, 8.4a-2, 8.4a-3
+  8-4a-1-critical-unit-test-files: done
+  8-4a-2-severe-unit-test-files: done
+  8-4a-3-moderate-unit-test-files: done  # Completed - PASS quality gate
+  8-4b-integration-test-file-consolidation: done  # Completed - PASS quality gate
+  8-4c-atdd-e2e-test-file-consolidation: done  # All files <500 LOC verified
+  8-5-deprecation-cleanup: done  # Completed - PASS quality gate
 
   epic-8-retrospective: optional
 
@@ -191,21 +198,21 @@ development_status:
 # ==========================================
 epic_dev_session:
   epic: 8
-  current_story: "8-3-ingestion-module-refactoring"
-  phase: "starting"
+  current_story: "8-4b-integration-test-file-consolidation"
+  phase: "testarch_trace"
 
   # Validation tracking (Phase 2)
-  validation_iteration: 0
+  validation_iteration: 1
   validation_issues_count: 0
   validation_last_pass_rate: 100
 
   # TDD tracking (Phases 3-4)
-  tdd_phase: "red"
-  atdd_checklist_file: null
-  atdd_tests_count: 0
+  tdd_phase: "complete"
+  atdd_checklist_file: "/Users/ricardocarvalho/DeveloperFolder/RAGLite/docs/qa/atdd-checklist-story-8-4b.md"
+  atdd_tests_count: 56
 
   # Code review tracking (Phase 5)
-  review_iteration: 0
+  review_iteration: 1
 
   # Quality gate tracking (Phase 8)
   gate_decision: null
@@ -215,8 +222,65 @@ epic_dev_session:
   overall_coverage: 0
 
   # Timestamps
-  started: "2025-12-27T00:15:00"
-  last_updated: "2025-12-27T00:15:00"
+  started: "2025-12-28T20:30:00"
+  last_updated: "2025-12-28T23:00:00"
+
+# Story 8-4b Completion Record
+story_8_4b_complete:
+  gate_decision: "PASS"
+  p0_coverage: 100
+  p1_coverage: 100
+  overall_coverage: 98
+  completed_at: "2025-12-28T23:00:00"
+  files_refactored: 18
+  new_files_created: 50
+  test_count: 56
+  test_quality_score: 98
+
+# Story 8-5 Completion Record
+story_8_5_complete:
+  gate_decision: "PASS"
+  p0_coverage: 100
+  p1_coverage: 100
+  overall_coverage: 100
+  completed_at: "2025-12-28T20:30:00"
+  deprecation_warnings_fixed: 125
+  files_modified: 13
+  test_count: 32
+  test_quality_score: 100
+
+# Story 8.4a-3 Completion Record
+story_8_4a_3_complete:
+  gate_decision: "PASS"
+  p0_coverage: 100
+  p1_coverage: 100
+  overall_coverage: 98
+  completed_at: "2025-12-28T19:30:00"
+  files_deleted: 30
+  files_reduced: 1
+  files_created: 0
+  test_count: 62
+  test_quality_score: 82
+
+# Story 8.4a-2 Completion Record
+story_8_4a_2_complete:
+  gate_decision: "PASS"
+  p0_coverage: 100
+  p1_coverage: 100
+  overall_coverage: 100
+  completed_at: "2025-12-27T23:59:00"
+  files_split: 5
+  files_created: 26
+  test_count_increase: 69
+  test_quality_score: 92
+
+# Story 8.3 Completion Record (Added)
+story_8_3_complete:
+  gate_decision: "PASS"
+  p0_coverage: 100
+  p1_coverage: 100
+  overall_coverage: 100
+  completed_at: "2025-12-27T00:15:00"
 
 # Story 8.2 Completion Record
 story_8_2_complete:

@@ -159,12 +159,16 @@ exclude = [
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
-    "F",   # pyflakes
+    "F",   # pyflakes (includes F821 undefined-name - CRITICAL for catching missing imports)
     "I",   # isort
     "C",   # flake8-comprehensions
     "B",   # flake8-bugbear
     "UP",  # pyupgrade
 ]
+# NOTE: F821 (undefined-name) is enabled to catch errors like:
+#   - NameError: name 'patch' is not defined
+#   - Missing imports that only fail at runtime
+# Strategic recommendation from Story 8 test failure analysis
 
 # Ignore specific rules
 ignore = [
@@ -220,7 +224,7 @@ asyncio_mode = "auto"
 [tool.uv]
 # Cache limit in MB (default: unlimited, causes corruption on shared runners)
 # Set via environment variable UV_CACHE_SIZE_LIMIT=2048 in CI workflows
-cache_dir = ".uv-cache"  # Project-local cache instead of global ~/.cache/uv
+cache-dir = ".uv-cache"  # Project-local cache instead of global ~/.cache/uv
 
 # ============================================================================
 # COVERAGE CONFIGURATION

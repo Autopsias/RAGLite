@@ -170,7 +170,6 @@ pytest_plugins = [
     "tests.integration.fixtures.service_checking",
     "tests.integration.fixtures.container_lifecycle",  # Auto-restart for test containers (2025-12-24)
     "tests.integration.fixtures.session_fixtures",
-    "tests.integration.fixtures.test_isolation",
     "tests.integration.fixtures.module_fixtures",
     "tests.integration.fixtures.helper_fixtures",
 ]

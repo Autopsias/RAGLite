@@ -3,6 +3,8 @@
 Story 6.14 AC9: Test training workflow, model registry, and ensemble integration.
 """
 
+from unittest.mock import patch
+
 import pytest
 
 # Mark all tests as integration tests
@@ -161,12 +163,13 @@ class TestGracefulDegradation:
         from raglite.forecasting.hybrid import generate_ensemble_forecast
 
         # This should work even without TFT checkpoint (graceful degradation)
-        result = await generate_ensemble_forecast(
-            metric="test_tft_fallback",
-            historical_data=sample_time_series_data,
-            external_regressors=None,
-            periods_ahead=3,
-        )
+        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
+            mock_fetch.return_value = sample_time_series_data
+            result = await generate_ensemble_forecast(
+                metric="test_tft_fallback",
+                external_regressors=None,
+                periods_ahead=3,
+            )
 
         assert result is not None
         assert len(result.forecast) == 3

@@ -129,3 +129,26 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
         always_run: true
+
+      # Pytest fixture validation - catch missing fixtures before commit
+      # Root cause fix: Story 8 strategic analysis identified 78 tests failing
+      # due to fixture references without fixture definitions being copied
+      - id: validate-pytest-fixtures
+        name: validate-pytest-fixtures
+        entry: python scripts/validate-pytest-fixtures.py
+        language: python
+        pass_filenames: false
+        stages: [pre-commit]
+        files: ^tests/.*\.py$
+
+      # Mock target validation - catch stale patch() targets after refactoring
+      # Root cause fix: Story 8 strategic analysis identified 45+ test failures
+      # caused by mock targets pointing to moved/renamed modules after refactoring
+      # NOTE: Uses language: system to access local raglite package for validation
+      - id: validate-mock-targets
+        name: validate-mock-targets
+        entry: python scripts/validate-mock-targets.py
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+        files: ^tests/.*\.py$

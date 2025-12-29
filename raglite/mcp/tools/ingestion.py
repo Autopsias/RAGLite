@@ -7,13 +7,15 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 
 from raglite.forecasting.auto_update import trigger_forecast_refresh
-from raglite.ingestion.document_ingestion import (
+from raglite.ingestion.document_ingestion.constants import (
     ALLOWED_URL_SCHEMES,
     MAX_BASE64_CONTENT_SIZE_BYTES,
     MAX_URL_DOWNLOAD_SIZE_BYTES,
     SUPPORTED_EXTENSIONS,
     URL_DOMAIN_ALLOWLIST,
     URL_DOWNLOAD_TIMEOUT_TOTAL,
+)
+from raglite.ingestion.document_ingestion.temp_files import (
     temp_file_from_base64,
     temp_file_from_url,
 )

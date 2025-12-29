@@ -20,8 +20,18 @@ Tests that modify data are marked with @pytest.mark.manages_collection_state.
 
 import os
 import sys
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 import pytest
+
+import raglite.shared.config
+from raglite.shared.config import Settings
+from raglite.shared.models import (
+    Insight,
+    InsightCategory,
+    RecommendationCategory,
+)
 
 # Debug: Track module load
 print("DEBUG: conftest.py loading...", file=sys.stderr)
@@ -48,9 +58,6 @@ print("DEBUG: Test environment variables set before raglite imports", file=sys.s
 
 # CRITICAL: Import raglite.shared.config to force Settings singleton reload
 # This ensures Settings uses the test environment variables set above
-import raglite.shared.config  # noqa: E402
-from raglite.shared.config import Settings  # noqa: E402
-
 raglite.shared.config.settings = Settings()  # Recreate singleton with test env vars
 
 # ============================================================================
@@ -90,3 +97,204 @@ pytestmark = pytest.mark.preserve_collection
 # Session state is managed via tests.integration.fixtures.session_state module
 # which is imported by dependent fixture modules.
 # ============================================================================
+
+# ============================================================================
+# SHARED TEST FIXTURES
+# ============================================================================
+# Shared fixtures for chunking tests (L3: Fix code duplication)
+
+
+@pytest.fixture
+def test_pdf_path():
+    """Path to 160-page test PDF."""
+    from pathlib import Path
+
+    pdf_path = Path("docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf")
+    if not pdf_path.exists():
+        pytest.skip(f"Test PDF not found: {pdf_path}")
+    return str(pdf_path)
+
+
+@pytest.fixture
+def encoding():
+    """Tiktoken cl100k_base encoding for token counting."""
+    import tiktoken
+
+    return tiktoken.get_encoding("cl100k_base")
+
+
+# =============================================================================
+# Shared Database Fixtures (Story 8.4b Fix)
+# =============================================================================
+
+
+@pytest.fixture(scope="module")
+def db_session():
+    """PostgreSQL session for integration tests.
+
+    Creates tables in test database and yields session.
+    Rolls back after tests complete.
+
+    This fixture is shared across all integration test subdirectories
+    to prevent duplication (forecasting/catboost, model_selection, etc.).
+    """
+    from raglite.shared.safety import SafetyGuard
+
+    guard = SafetyGuard()
+    guard.validate_test_environment("integration_db_session")
+
+    # IMPORTANT: Import ORM models BEFORE create_all() so they register with Base
+    from raglite.external_data.orm_models import (  # noqa: F401
+        ExternalDataPointORM,
+        ExternalDataSourceORM,
+        ModelSelectionORM,
+        ModelWeightORM,
+    )
+    from raglite.shared.database import Base, get_engine, get_session, reset_engine
+
+    # Reset engine to pick up test environment settings
+    reset_engine()
+
+    # Create tables in test database
+    engine = get_engine()
+    Base.metadata.create_all(engine)
+
+    session = get_session()
+    yield session
+
+    session.rollback()
+    session.close()
+
+
+@pytest.fixture
+def clean_session(db_session):
+    """Clean session that rolls back after each test.
+
+    Depends on db_session fixture for database setup.
+    """
+    yield db_session
+    db_session.rollback()
+
+
+# =============================================================================
+# Shared Data for Cross-Test Usage (Issue 6 Fix)
+# =============================================================================
+
+
+# From test_strategic_recommendations_core.py - shared with extended tests
+
+EXPERT_LABELED_SCENARIOS = {
+    "cloud_cost_over_budget": {
+        "insight": Insight(
+            category=InsightCategory.RISK,
+            priority=1,
+            summary="Cloud infrastructure costs trending 40% over budget with minimal usage increase",
+            supporting_data={
+                "cloud_budget": 5000000,
+                "cloud_actual": 7000000,
+                "budget_variance": 0.40,
+                "usage_increase": 0.05,
+            },
+            rationale="Cloud spending has significantly exceeded budget without corresponding usage increase",
+            sources=["cloud_costs", "infrastructure_budget"],
+            recommended_action="Focus on reducing cloud infrastructure costs",
+            created_at=datetime.now(UTC),
+        ),
+        "expected_category": RecommendationCategory.RISK_MITIGATION,
+        "expected_impact_min": 8,
+        "expected_urgency": "high",
+        "expected_title_keywords": ["cloud", "cost", "infrastructure", "reduce"],
+    },
+}
+
+
+# From test_excerpt_validation_core.py - shared validation function
+
+
+@dataclass
+class ExcerptTestResult:
+    """Result of excerpt test query."""
+
+    query_id: str
+    category: str
+    natural_query: str
+    expected_min: int
+    expected_max: int
+    actual_results: int
+    passed: bool
+    error: str | None
+    confidence: float
+
+
+async def validate_excerpt_query(test_def: dict, mock_client=None) -> ExcerptTestResult:
+    """Validate a single excerpt test query.
+
+    Args:
+        test_def: Test definition dict with query and expected results
+        mock_client: Optional mock Mistral client (used in tests to avoid API calls)
+    """
+    from raglite.retrieval.query_classifier import generate_sql_query
+    from raglite.retrieval.sql_table_search import search_tables_sql
+
+    query_id = test_def["id"]
+    category = test_def["category"]
+    query = test_def["query"]
+    expected_min = test_def["expected_result_min"]
+    expected_max = test_def["expected_result_max"]
+
+    try:
+        # Generate SQL
+        sql = await generate_sql_query(query)
+        if not sql:
+            return ExcerptTestResult(
+                query_id=query_id,
+                category=category,
+                natural_query=query,
+                expected_min=expected_min,
+                expected_max=expected_max,
+                actual_results=0,
+                passed=False,
+                error="SQL generation failed",
+                confidence=0.0,
+            )
+
+        # Execute SQL
+        results = await search_tables_sql(sql)
+        actual_results = len(results)
+
+        # Validation: Check if within expected range
+        passed = expected_min <= actual_results <= expected_max
+
+        # Calculate confidence
+        if actual_results == 0:
+            confidence = 0.0
+        elif actual_results < expected_min:
+            confidence = actual_results / expected_min
+        elif actual_results > expected_max:
+            confidence = expected_max / actual_results
+        else:
+            confidence = 1.0
+
+        return ExcerptTestResult(
+            query_id=query_id,
+            category=category,
+            natural_query=query,
+            expected_min=expected_min,
+            expected_max=expected_max,
+            actual_results=actual_results,
+            passed=passed,
+            error=None,
+            confidence=confidence,
+        )
+    except Exception as e:
+        return ExcerptTestResult(
+            query_id=query_id,
+            category=category,
+            natural_query=query,
+            expected_min=expected_min,
+            expected_max=expected_max,
+            actual_results=0,
+            passed=False,
+            error=str(e),
+            confidence=0.0,
+        )

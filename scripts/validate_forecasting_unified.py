@@ -632,7 +632,7 @@ async def run_forecast_with_method(
     # Epic 7 Fix: Use cache_metric_name for model selection cache lookup
     model_cache_name = cache_metric_name or metric_name
     from raglite.forecasting.hybrid import generate_forecast
-    from raglite.forecasting.timeseries_extract import (
+    from raglite.forecasting.timeseries import (
         extract_external_timeseries,
         extract_timeseries_from_sql,
     )

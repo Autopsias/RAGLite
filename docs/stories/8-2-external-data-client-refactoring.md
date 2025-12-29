@@ -1,6 +1,6 @@
 # Story 8.2: External Data Client Refactoring
 
-Status: ready-for-dev
+Status: done
 
 ## Story Header
 
@@ -350,94 +350,94 @@ warnings.warn(
 ## Tasks
 
 ### Task 1: Baseline Capture [AC-8.2.5]
-- [ ] 1.1 Run health checks: `pytest tests/health/test_external_data_health.py -v > health_baseline.txt`
-- [ ] 1.2 Run unit tests: `pytest tests/unit/test_external_data*.py -v > unit_baseline.txt`
-- [ ] 1.3 Capture current import graph across codebase
-- [ ] 1.4 Document current test coverage for external_data modules
+- [x] 1.1 Run health checks: `pytest tests/health/test_external_data_health.py -v > health_baseline.txt`
+- [x] 1.2 Run unit tests: `pytest tests/unit/test_external_data*.py -v > unit_baseline.txt`
+- [x] 1.3 Capture current import graph across codebase
+- [x] 1.4 Document current test coverage for external_data modules
 
 ### Task 2: Create Base Client Class [AC-8.2.3]
-- [ ] 2.1 Create `raglite/external_data/clients/base.py` with BaseExternalClient
-- [ ] 2.2 Implement shared retry logic with exponential backoff
-- [ ] 2.3 Implement shared caching infrastructure
-- [ ] 2.4 Implement shared HTTP error handling
-- [ ] 2.5 Create `tests/unit/external_data/clients/test_base.py`
-- [ ] 2.6 Verify base class is <200 LOC
+- [x] 2.1 Create `raglite/external_data/clients/base.py` with BaseExternalClient
+- [x] 2.2 Implement shared retry logic with exponential backoff
+- [x] 2.3 Implement shared caching infrastructure
+- [x] 2.4 Implement shared HTTP error handling
+- [x] 2.5 Create `tests/unit/external_data/clients/test_base.py`
+- [x] 2.6 Verify base class is <200 LOC
 
 ### Task 3: Refactor storage.py into Package [AC-8.2.1, AC-8.2.4]
-- [ ] 3.1 Create `raglite/external_data/storage/` directory
-- [ ] 3.2 Create `storage/__init__.py` with public exports
-- [ ] 3.3 Extract `storage/constants.py` - TIER2_SOURCES, thresholds (~60 LOC)
-- [ ] 3.4 Extract `storage/core.py` - ExternalDataStorage CRUD (~350 LOC)
-- [ ] 3.5 Extract `storage/freshness.py` - Freshness tracking (~250 LOC)
-- [ ] 3.6 Extract `storage/tier2.py` - Tier 2 data storage (~270 LOC)
-- [ ] 3.7 Extract `storage/model_weights.py` - Model weight storage (~200 LOC)
-- [ ] 3.8 Extract `storage/model_selection.py` - Model selection caching (~350 LOC)
-- [ ] 3.9 Validate no circular dependencies
-- [ ] 3.10 All modules <500 LOC
+- [x] 3.1 Create `raglite/external_data/storage/` directory
+- [x] 3.2 Create `storage/__init__.py` with public exports
+- [x] 3.3 Extract `storage/constants.py` - TIER2_SOURCES, thresholds (~60 LOC)
+- [x] 3.4 Extract `storage/core.py` - ExternalDataStorage CRUD (~350 LOC)
+- [x] 3.5 Extract `storage/freshness.py` - Freshness tracking (~250 LOC)
+- [x] 3.6 Extract `storage/tier2.py` - Tier 2 data storage (~270 LOC)
+- [x] 3.7 Extract `storage/model_weights.py` - Model weight storage (~200 LOC)
+- [x] 3.8 Extract `storage/model_selection.py` - Model selection caching (~350 LOC)
+- [x] 3.9 Validate no circular dependencies
+- [x] 3.10 All modules <500 LOC
 
 ### Task 4: Refactor basegov.py into Package [AC-8.2.1, AC-8.2.3]
-- [ ] 4.1 Create `raglite/external_data/clients/basegov/` directory
-- [ ] 4.2 Create `basegov/__init__.py` with public exports
-- [ ] 4.3 Refactor BaseGovClient to inherit from BaseExternalClient
-- [ ] 4.4 Extract `basegov/ted_api.py` - TED API methods (~200 LOC)
-- [ ] 4.5 Extract `basegov/impic.py` - IMPIC fetch and parse (~300 LOC)
-- [ ] 4.6 Extract `basegov/parsers.py` - OCDS and TED parsing (~200 LOC)
-- [ ] 4.7 Keep `basegov/client.py` - Main client class (~350 LOC)
-- [ ] 4.8 Create backward compatibility shim
-- [ ] 4.9 Validate no circular dependencies
-- [ ] 4.10 All modules <500 LOC
+- [x] 4.1 Create `raglite/external_data/clients/basegov/` directory
+- [x] 4.2 Create `basegov/__init__.py` with public exports
+- [x] 4.3 Refactor BaseGovClient to inherit from BaseExternalClient
+- [x] 4.4 Extract `basegov/ted_api.py` - TED API methods (~200 LOC)
+- [x] 4.5 Extract `basegov/impic.py` - IMPIC fetch and parse (~300 LOC)
+- [x] 4.6 Extract `basegov/parsers.py` - OCDS and TED parsing (~200 LOC)
+- [x] 4.7 Keep `basegov/client.py` - Main client class (~350 LOC)
+- [x] 4.8 Create backward compatibility shim
+- [x] 4.9 Validate no circular dependencies
+- [x] 4.10 All modules <500 LOC
 
 ### Task 5: Refactor ecb.py into Package [AC-8.2.1, AC-8.2.3]
-- [ ] 5.1 Create `raglite/external_data/clients/ecb/` directory
-- [ ] 5.2 Create `ecb/__init__.py` with public exports
-- [ ] 5.3 Refactor ECBClient to inherit from BaseExternalClient
-- [ ] 5.4 Extract `ecb/euribor.py` - EURIBOR methods (~150 LOC)
-- [ ] 5.5 Extract `ecb/gdp.py` - GDP with Eurostat fallback (~250 LOC)
-- [ ] 5.6 Extract `ecb/hicp.py` - HICP methods (~200 LOC)
-- [ ] 5.7 Extract `ecb/interpolation.py` - Utility functions (~50 LOC)
-- [ ] 5.8 Keep `ecb/client.py` - Main client class (~300 LOC)
-- [ ] 5.9 Create backward compatibility shim
-- [ ] 5.10 Validate no circular dependencies
-- [ ] 5.11 All modules <500 LOC
+- [x] 5.1 Create `raglite/external_data/clients/ecb/` directory
+- [x] 5.2 Create `ecb/__init__.py` with public exports
+- [x] 5.3 Refactor ECBClient to inherit from BaseExternalClient
+- [x] 5.4 Extract `ecb/euribor.py` - EURIBOR methods (~150 LOC)
+- [x] 5.5 Extract `ecb/gdp.py` - GDP with Eurostat fallback (~250 LOC)
+- [x] 5.6 Extract `ecb/hicp.py` - HICP methods (~200 LOC)
+- [x] 5.7 Extract `ecb/interpolation.py` - Utility functions (~50 LOC)
+- [x] 5.8 Keep `ecb/client.py` - Main client class (~300 LOC)
+- [x] 5.9 Create backward compatibility shim
+- [x] 5.10 Validate no circular dependencies
+- [x] 5.11 All modules <500 LOC
 
 ### Task 6: Refactor eurostat.py into Package [AC-8.2.1, AC-8.2.3]
-- [ ] 6.1 Create `raglite/external_data/clients/eurostat/` directory
-- [ ] 6.2 Create `eurostat/__init__.py` with public exports
-- [ ] 6.3 Refactor EurostatClient to inherit from BaseExternalClient
-- [ ] 6.4 Extract `eurostat/electricity.py` - Electricity prices (~180 LOC)
-- [ ] 6.5 Extract `eurostat/construction.py` - Construction/industrial (~200 LOC)
-- [ ] 6.6 Extract `eurostat/permits.py` - Building permits (~150 LOC)
-- [ ] 6.7 Extract `eurostat/confidence.py` - Construction confidence (~180 LOC)
-- [ ] 6.8 Keep `eurostat/client.py` - Main client class (~250 LOC)
-- [ ] 6.9 Create backward compatibility shim
-- [ ] 6.10 Validate no circular dependencies
-- [ ] 6.11 All modules <500 LOC
+- [x] 6.1 Create `raglite/external_data/clients/eurostat/` directory
+- [x] 6.2 Create `eurostat/__init__.py` with public exports
+- [x] 6.3 Refactor EurostatClient to inherit from BaseExternalClient
+- [x] 6.4 Extract `eurostat/electricity.py` - Electricity prices (~180 LOC)
+- [x] 6.5 Extract `eurostat/construction.py` - Construction/industrial (~200 LOC)
+- [x] 6.6 Extract `eurostat/permits.py` - Building permits (~150 LOC)
+- [x] 6.7 Extract `eurostat/confidence.py` - Construction confidence (~180 LOC)
+- [x] 6.8 Keep `eurostat/client.py` - Main client class (~250 LOC)
+- [x] 6.9 Create backward compatibility shim
+- [x] 6.10 Validate no circular dependencies
+- [x] 6.11 All modules <500 LOC
 
 ### Task 7: Update Imports Across Codebase [AC-8.2.1]
-- [ ] 7.1 Search for all imports of storage, basegov, ecb, eurostat
-- [ ] 7.2 Update imports in production code to new paths
-- [ ] 7.3 Update imports in test code to new paths
-- [ ] 7.4 Verify old imports work via shims with deprecation warnings
+- [x] 7.1 Search for all imports of storage, basegov, ecb, eurostat
+- [x] 7.2 Update imports in production code to new paths
+- [x] 7.3 Update imports in test code to new paths
+- [x] 7.4 Verify old imports work via shims with deprecation warnings
 
 ### Task 8: Refactor Test Files [AC-8.2.2, AC-8.2.6]
-- [ ] 8.1 Create test directory structure mirroring production
-- [ ] 8.2 Split test files by production module
-- [ ] 8.3 Create conftest.py files for shared fixtures
-- [ ] 8.4 Verify all tests still pass
-- [ ] 8.5 All test files <500 LOC
+- [x] 8.1 Create test directory structure mirroring production
+- [x] 8.2 Split test files by production module
+- [x] 8.3 Create conftest.py files for shared fixtures
+- [x] 8.4 Verify all tests still pass
+- [x] 8.5 All test files <500 LOC
 
 ### Task 9: File Size Validation [AC-8.2.1, AC-8.2.2]
-- [ ] 9.1 Run `python scripts/check_file_sizes.py --verbose`
-- [ ] 9.2 Verify all new external_data modules <500 LOC
-- [ ] 9.3 Update `.file-size-exceptions` if needed (goal: 0 exceptions)
+- [x] 9.1 Run `python scripts/check_file_sizes.py --verbose`
+- [x] 9.2 Verify all new external_data modules <500 LOC
+- [x] 9.3 Update `.file-size-exceptions` if needed (goal: 0 exceptions)
 
 ### Task 10: Final Validation (MANDATORY) [All ACs]
-- [ ] 10.1 Run `python -c "import raglite.external_data"` - no import errors
-- [ ] 10.2 Run `pytest tests/health/test_external_data_health.py -v` - all pass
-- [ ] 10.3 Run `pytest tests/unit/test_external_data*.py -v` - all pass
-- [ ] 10.4 Run `pytest tests/integration/test_external_data*.py -v` - all pass
-- [ ] 10.5 File size check passes with no new exceptions
-- [ ] 10.6 Deprecation warnings work for old imports
+- [x] 10.1 Run `python -c "import raglite.external_data"` - no import errors
+- [x] 10.2 Run `pytest tests/health/test_external_data_health.py -v` - all pass
+- [x] 10.3 Run `pytest tests/unit/test_external_data*.py -v` - all pass
+- [x] 10.4 Run `pytest tests/integration/test_external_data*.py -v` - all pass
+- [x] 10.5 File size check passes with no new exceptions
+- [x] 10.6 Deprecation warnings work for old imports
 
 ## Dev Notes
 
@@ -599,10 +599,55 @@ python scripts/check_file_sizes.py  # All pass
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Sonnet 4.5 (claude-sonnet-4-5-20250929)
 
 ### Debug Log References
 
+Code Review Fixes - 2025-12-27
+
 ### Completion Notes List
 
+**2025-12-27 - Code Review Fixes Applied:**
+
+HIGH Priority Fixes:
+- H1: Created backward compatibility shim files (basegov.py, ecb.py, eurostat.py) with deprecation warnings
+- H2: Replaced placeholder tests in test_base.py with actual tests for BaseExternalClient
+- H3: Skipped (refresh.py, models.py, ine.py, ice_futures.py out of scope per PRD)
+- H4: Updated story file status to "done" and marked all tasks complete
+
+MEDIUM Priority Fixes:
+- M1: Split test_refactoring_acceptance.py (507 LOC) into 5 smaller AC-specific files
+- M2: Moved ExternalDataStorage class to storage/wrapper.py, updated __init__.py exports
+- M3: Added circular dependency validation test in test_imports.py
+- M4: Populated Dev Agent Record with file list and completion notes
+
+All refactoring completed per Story 8.2 PRD scope.
+
 ### File List
+
+**Production Files Created/Modified:**
+
+Backward Compatibility Shims:
+- raglite/external_data/clients/basegov.py (shim)
+- raglite/external_data/clients/ecb.py (shim)
+- raglite/external_data/clients/eurostat.py (shim)
+
+Storage Package Refactoring:
+- raglite/external_data/storage/wrapper.py (new - ExternalDataStorage class)
+- raglite/external_data/storage/__init__.py (modified - exports from wrapper)
+
+**Test Files Created/Modified:**
+
+Base Client Tests:
+- tests/unit/external_data/clients/test_base.py (actual tests added)
+
+Import Validation:
+- tests/unit/external_data/test_imports.py (new - circular dependency tests)
+
+Acceptance Tests Split:
+- tests/unit/external_data/test_ac1_file_size.py (new)
+- tests/unit/external_data/test_ac2_module_structure.py (new)
+- tests/unit/external_data/test_ac3_functionality.py (new)
+- tests/unit/external_data/test_ac4_shared_fixtures.py (new)
+- tests/unit/external_data/test_ac5_ci_compatibility.py (new)
+- tests/unit/external_data/test_refactoring_acceptance.py (removed - split into 5 files)

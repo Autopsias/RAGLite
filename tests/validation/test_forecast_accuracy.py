@@ -216,18 +216,21 @@ class ForecastAccuracyValidator:
         periods_ahead = len(test_df)
 
         # Mock LLM call for faster validation
-        with patch("raglite.forecasting.hybrid.ensemble.get_mistral_client") as mock_client:
+        with patch("raglite.forecasting.hybrid.get_mistral_client") as mock_client:
             mock_response = AsyncMock()
             mock_response.choices = [
                 AsyncMock(message=AsyncMock(content='{"summary": "Test forecast"}'))
             ]
             mock_client.return_value.chat.complete.return_value = mock_response
 
-            forecast_result = await generate_forecast(
-                metric=metric_name,
-                historical_data=train_data,
-                periods_ahead=periods_ahead,
-            )
+            with patch(
+                "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+            ) as mock_fetch:
+                mock_fetch.return_value = train_data
+                forecast_result = await generate_forecast(
+                    metric=metric_name,
+                    periods_ahead=periods_ahead,
+                )
 
         # Extract predictions and actuals
         predictions = [p.value for p in forecast_result.forecast]
