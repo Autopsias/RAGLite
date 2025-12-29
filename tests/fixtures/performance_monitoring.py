@@ -22,13 +22,35 @@ _session_start_time: float | None = None
 
 
 def pytest_sessionstart(session: Session) -> None:
-    """Record session start time for performance monitoring.
+    """Record session start time and clean up stale junit.xml files.
+
+    GHOST FAILURE PREVENTION (2025-12-29):
+    Deletes junit.xml files at session START to prevent VS Code Test Explorer
+    from reading stale/incomplete results that cause "ghost failures" - tests
+    that appear failed in Test Explorer but pass when run from terminal.
+
+    This is critical for long-running tests (UAT, E2E) where Test Explorer
+    may timeout while reading mid-execution results.
 
     Args:
         session: pytest session object
     """
     global _session_start_time
     _session_start_time = time.time()
+
+    # Clean up stale junit.xml files to prevent ghost failures in VS Code Test Explorer
+    junit_paths = [
+        Path(__file__).parent.parent.parent / "test-results" / "pytest" / "junit.xml",
+        Path(__file__).parent.parent / "integration" / "test-results" / "pytest" / "junit.xml",
+    ]
+
+    for junit_path in junit_paths:
+        if junit_path.exists():
+            try:
+                junit_path.unlink()
+                logger.info(f"Deleted stale junit.xml at session start: {junit_path}")
+            except OSError as e:
+                logger.warning(f"Could not delete stale junit.xml {junit_path}: {e}")
 
 
 def pytest_sessionfinish(session: Session, exitstatus: int) -> None:

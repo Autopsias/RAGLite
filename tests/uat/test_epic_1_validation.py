@@ -11,6 +11,11 @@ Story 1.7: Email Episode Validation Workflow
 
 Created: 2025-12-15
 Purpose: Fix authentication/authorization issues causing 401 errors in UAT validation
+
+IMPORTANT: UAT tests should NEVER be run via VS Code Test Explorer.
+Use the "Test: UAT (User Acceptance Tests)" task in VS Code instead.
+This is because Test Explorer is designed for fast unit tests (<30s) and
+will cause ghost failures with long-running UAT tests.
 """
 
 import asyncio
@@ -24,6 +29,14 @@ from raglite.shared.logging import get_logger
 from raglite.shared.models import QueryResult
 
 logger = get_logger(__name__)
+
+# Mark ALL tests in this module as UAT and slow (excluded from Test Explorer)
+# Defense-in-depth: Both marker exclusion AND --ignore path ensure these never run in Test Explorer
+pytestmark = [
+    pytest.mark.uat,
+    pytest.mark.slow,  # Excluded from default runs via -m "not slow"
+    pytest.mark.timeout(600),  # 10 minute timeout for UAT tests
+]
 
 
 class TestEpic1EmailEpisodeValidation:
