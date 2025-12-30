@@ -230,15 +230,21 @@ start_postgresql() {
     local storage_dir="postgresql_data_${VARIANT}"
     mkdir -p "$storage_dir"
 
+    # Use consistent test credentials from centralized config
+    # SINGLE SOURCE OF TRUTH: scripts/ci/container-config.sh
+    local db_user="$CI_POSTGRES_USER"
+    local db_password="$CI_POSTGRES_PASSWORD"
+    local db_name="$CI_POSTGRES_DB"
+
     # Start container
     docker run -d \
         --name "$POSTGRES_CONTAINER" \
         --label "com.raglite.variant=${VARIANT}" \
         --label "com.raglite.type=test" \
         -p "${POSTGRES_PORT}:5432" \
-        -e POSTGRES_USER=raglite_ci \
-        -e POSTGRES_PASSWORD=raglite_ci \
-        -e POSTGRES_DB=raglite_ci \
+        -e POSTGRES_USER="${db_user}" \
+        -e POSTGRES_PASSWORD="${db_password}" \
+        -e POSTGRES_DB="${db_name}" \
         -v "$(pwd)/${storage_dir}:/var/lib/postgresql/data" \
         --memory="${POSTGRES_MEMORY}" \
         --shm-size="${POSTGRES_SHM}" \
@@ -253,7 +259,7 @@ start_postgresql() {
 
     echo -n "⏳ Waiting for PostgreSQL to be ready"
     while [[ $elapsed -lt $max_wait ]]; do
-        if docker exec "$POSTGRES_CONTAINER" pg_isready -U raglite_ci > /dev/null 2>&1; then
+        if docker exec "$POSTGRES_CONTAINER" pg_isready -U "${db_user}" > /dev/null 2>&1; then
             echo ""
             echo "✅ PostgreSQL ready (${elapsed}s)"
             return 0
