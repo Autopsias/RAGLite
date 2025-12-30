@@ -1,12 +1,20 @@
 # RAGLite CI - Consolidated Pipeline (Best Practices Aligned)
 # Self-hosted runners with 24GB RAM shared across projects
 #
-# Architecture: 3 focused jobs in single workflow
+# Architecture: 4 focused jobs in single workflow
+# - lint-gate: Every push/PR, <2 min, fast feedback
 # - validate: Every push/PR, <10 min, mocked ML deps
-# - integration: Main branch only, <20 min, with containers
-# - accuracy-gate: Main branch only, AC3 >=70% validation
+# - integration: PRs targeting main + main pushes, <20 min, with containers
+# - accuracy-gate: Main pushes only (post-merge), <45 min, AC3 >=70% validation
 #
-# Aligned with industry best practices for <1000 LOC Python projects
+# Execution Matrix:
+# | Event              | lint | validate | integration | accuracy |
+# |--------------------|------|----------|-------------|----------|
+# | PR to main         |  ✓   |    ✓     |      ✓      |    ✗     |
+# | PR to develop      |  ✓   |    ✓     |      ✗      |    ✗     |
+# | Push to main       |  ✓   |    ✓     |      ✓      |    ✓     |
+# | Push to feature    |  ✓   |    ✓     |      ✗      |    ✗     |
+#
 # See: docs/ci/STRATEGY.md for full documentation
 
 name: CI
@@ -160,8 +168,8 @@ jobs:
           retention-days: 7
 
   # ============================================================
-  # TIER 2: Main Branch Integration Gate
-  # Runs ONLY on main branch pushes
+  # TIER 2: Integration Gate
+  # Runs on: PRs targeting main (pre-merge validation) + main pushes (post-merge)
   # Target: <20 minutes, <6GB RAM, with containers
   # ============================================================
   integration:
@@ -169,7 +177,9 @@ jobs:
     runs-on: [self-hosted, raglite]
     timeout-minutes: 30
     needs: validate
-    if: github.ref == 'refs/heads/main'
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && github.base_ref == 'main')
 
     steps:
       - name: Checkout code
@@ -270,16 +280,16 @@ jobs:
 
   # ============================================================
   # TIER 3: Accuracy Gate (AC3 Validation)
-  # Runs ONLY on main branch after integration passes
+  # Runs ONLY on main branch pushes (post-merge validation)
   # Target: <45 minutes, validates >=70% accuracy
-  # Simplified from accuracy-validation.yml (482 lines -> ~45 lines)
+  # Note: Resource-intensive, so not run on PRs - integration tests provide pre-merge validation
   # ============================================================
   accuracy-gate:
     name: "✅ NFR: Accuracy Validation (NFR6/NFR7)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 45
     needs: integration
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     env:
       QDRANT_HOST: localhost
