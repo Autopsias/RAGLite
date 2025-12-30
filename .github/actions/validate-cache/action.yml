@@ -1,11 +1,33 @@
 name: 'Validate UV Cache'
-description: 'Clear corrupted UV cache to prevent build failures'
+description: 'Clear corrupted UV cache and Python bytecode to prevent build/test failures'
 runs:
   using: 'composite'
   steps:
-    - name: Validate cache
+    - name: Clear Python bytecode cache
       shell: bash
       run: |
+        echo "=== Clearing Python bytecode cache ==="
+        # Remove __pycache__ directories (prevent fixture resolution issues)
+        find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+
+        # Remove .pyc files (prevent stale bytecode)
+        find . -type f -name "*.pyc" -delete 2>/dev/null || true
+
+        # Remove pytest cache (prevent stale test collection)
+        rm -rf .pytest_cache 2>/dev/null || true
+
+        # Remove .venv to ensure fresh environment
+        if [ -d .venv ]; then
+          echo "Removing existing .venv to prevent stale dependencies..."
+          rm -rf .venv 2>/dev/null || true
+        fi
+
+        echo "Python bytecode cache cleared"
+
+    - name: Validate UV cache
+      shell: bash
+      run: |
+        echo "=== Validating UV cache ==="
         if [ -d ~/.cache/uv ]; then
           CACHE_SIZE=$(du -sm ~/.cache/uv 2>/dev/null | cut -f1 || echo "0")
           if [ "$CACHE_SIZE" -gt 4096 ]; then
@@ -22,3 +44,4 @@ runs:
             rm -rf ~/.cache/uv/builds-v0 2>/dev/null || find ~/.cache/uv/builds-v0 -delete 2>/dev/null || true
           fi
         fi
+        echo "UV cache validation complete"
