@@ -260,29 +260,29 @@ jobs:
         run: |
           source ci-venv/bin/activate
           source .ci-env
-          echo "=== Checking Qdrant connectivity ==="
-          python -c "
-          from qdrant_client import QdrantClient
-          client = QdrantClient(host='localhost', port=${QDRANT_PORT})
-          client.get_collections()
-          print('Qdrant is healthy')
-          "
 
-          echo "=== Checking PostgreSQL connectivity ==="
-          python -c "
-          import psycopg2
-          conn = psycopg2.connect(
-            host='localhost',
-            port=${POSTGRES_PORT},
-            database='raglite_test',
-            user='raglite',
-            password='raglite'
-          )
-          cur = conn.cursor()
-          cur.execute('SELECT 1')
-          print('PostgreSQL is healthy')
-          conn.close()
-          "
+          echo "=== Waiting for containers to be fully ready ==="
+          sleep 5
+
+          echo "=== Checking Qdrant connectivity (with retry) ==="
+          for i in 1 2 3 4 5; do
+            if python -c "from qdrant_client import QdrantClient; c = QdrantClient(host='localhost', port=${QDRANT_PORT}); c.get_collections(); print('Qdrant is healthy')" 2>/dev/null; then
+              break
+            fi
+            echo "Qdrant not ready, attempt $i/5, waiting 5s..."
+            sleep 5
+          done
+
+          echo "=== Checking PostgreSQL connectivity (with retry) ==="
+          for i in 1 2 3 4 5; do
+            if python -c "import psycopg2; conn = psycopg2.connect(host='localhost', port=${POSTGRES_PORT}, database='raglite_test', user='raglite', password='raglite'); cur = conn.cursor(); cur.execute('SELECT 1'); print('PostgreSQL is healthy'); conn.close()" 2>/dev/null; then
+              break
+            fi
+            echo "PostgreSQL not ready, attempt $i/5, waiting 5s..."
+            sleep 5
+          done
+
+          echo "=== Container health verification complete ==="
 
       - name: Run Integration Tests (includes slow)
         env:
