@@ -27,6 +27,9 @@ class TestExtractExcel:
 
         Verifies extract_excel returns correct DocumentMetadata
         when openpyxl successfully parses an Excel file.
+
+        NOTE: Patches at usage location (excel_processing) not definition
+        location (storage_operations) per .claude/rules/testing.md.
         """
         # Create a temporary Excel file
         excel_file = tmp_path / "test_financials.xlsx"
@@ -73,17 +76,13 @@ class TestExtractExcel:
 
         with (
             patch("openpyxl.load_workbook") as mock_load,
-            patch(
-                "raglite.ingestion.storage_operations.get_qdrant_client",
-                return_value=mock_qdrant_client,
-            ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
-                "raglite.ingestion.storage_operations.store_metadata_in_postgresql",
+                "raglite.ingestion.document_ingestion.excel_processing.store_metadata_in_postgresql",
                 return_value=(3, 0),
             ),
             patch(
-                "raglite.ingestion.storage_operations.store_vectors_in_qdrant",
+                "raglite.ingestion.document_ingestion.excel_processing.store_vectors_in_qdrant",
                 return_value=None,
             ),
         ):
@@ -154,11 +153,11 @@ class TestExtractExcel:
             ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
-                "raglite.ingestion.storage_operations.store_metadata_in_postgresql",
+                "raglite.ingestion.document_ingestion.excel_processing.store_metadata_in_postgresql",
                 return_value=(3, 0),
             ),
             patch(
-                "raglite.ingestion.storage_operations.store_vectors_in_qdrant",
+                "raglite.ingestion.document_ingestion.excel_processing.store_vectors_in_qdrant",
                 return_value=None,
             ),
         ):
@@ -213,11 +212,11 @@ class TestExtractExcel:
             ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
-                "raglite.ingestion.storage_operations.store_metadata_in_postgresql",
+                "raglite.ingestion.document_ingestion.excel_processing.store_metadata_in_postgresql",
                 return_value=(1, 0),
             ),
             patch(
-                "raglite.ingestion.storage_operations.store_vectors_in_qdrant",
+                "raglite.ingestion.document_ingestion.excel_processing.store_vectors_in_qdrant",
                 return_value=None,
             ),
         ):
@@ -330,11 +329,11 @@ class TestExtractExcel:
             ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
-                "raglite.ingestion.storage_operations.store_metadata_in_postgresql",
+                "raglite.ingestion.document_ingestion.excel_processing.store_metadata_in_postgresql",
                 return_value=(2, 0),
             ),
             patch(
-                "raglite.ingestion.storage_operations.store_vectors_in_qdrant",
+                "raglite.ingestion.document_ingestion.excel_processing.store_vectors_in_qdrant",
                 return_value=None,
             ),
         ):
