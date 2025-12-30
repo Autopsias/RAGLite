@@ -504,6 +504,7 @@ class TestPerPeriodErrors:
         assert errors[2] == pytest.approx(0.0)  # 0% error
 
 
+@pytest.mark.slow  # Real Prophet fitting + mock isolation issues in xdist parallel
 @pytest.mark.xdist_group(name="forecast_validation")
 class TestBacktestingWorkflow:
     """Tests for backtesting validation workflow (Story 4.10 AC1/AC2).
