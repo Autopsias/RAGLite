@@ -224,8 +224,11 @@ class ForecastAccuracyValidator:
             mock_client.return_value.chat.complete.return_value = mock_response
 
             # Story 8 fix: Patch ensure_historical_data where it's used in ensemble.py
-            with patch("raglite.forecasting.hybrid.ensemble.ensure_historical_data") as mock_fetch:
-                # Return coroutine for async function
+            with patch(
+                "raglite.forecasting.hybrid.ensemble.ensure_historical_data",
+                new_callable=AsyncMock,
+            ) as mock_fetch:
+                # Use AsyncMock for async function
                 mock_fetch.return_value = train_data
                 forecast_result = await generate_forecast(
                     metric=metric_name,

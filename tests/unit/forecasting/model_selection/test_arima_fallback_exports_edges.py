@@ -207,6 +207,7 @@ class TestEdgeCasesArima:
         with pytest.raises((ValueError, Exception)):
             await fit_arima(empty_series, forecast_horizon=4, frequency="M")
 
+    @pytest.mark.slow  # Real ARIMA fitting, 2.5s+ duration
     @pytest.mark.asyncio
     async def test_edge_case_single_forecast_horizon(self, monthly_series: pd.Series) -> None:
         """Test forecast horizon of 1.
@@ -224,6 +225,7 @@ class TestEdgeCasesArima:
         assert len(predictions) == 1
         assert conf_int.shape[0] == 1
 
+    @pytest.mark.slow  # Real ARIMA fitting, 3s+ duration
     @pytest.mark.asyncio
     async def test_edge_case_custom_confidence_level(self, monthly_series: pd.Series) -> None:
         """Test custom confidence level.
