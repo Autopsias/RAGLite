@@ -501,8 +501,12 @@ class TestPerPeriodErrors:
         assert errors[2] == pytest.approx(0.0)  # 0% error
 
 
+@pytest.mark.xdist_group(name="forecast_validation")
 class TestBacktestingWorkflow:
-    """Tests for backtesting validation workflow (Story 4.10 AC1/AC2)."""
+    """Tests for backtesting validation workflow (Story 4.10 AC1/AC2).
+
+    xdist_group ensures all tests run on same worker to prevent mock isolation issues.
+    """
 
     @pytest.mark.asyncio
     @pytest.mark.validation

@@ -30,6 +30,7 @@ pytestmark = pytest.mark.integration
 
 @pytest.mark.preserve_collection
 @pytest.mark.asyncio
+@pytest.mark.slow
 @pytest.mark.skipif(
     os.getenv("SKIP_CHRONOS_TESTS") == "true",
     reason="Chronos-2 model loading is slow in CI",
@@ -71,6 +72,7 @@ async def test_cold_start_scenario_minimal_data() -> None:
 
 @pytest.mark.preserve_collection
 @pytest.mark.asyncio
+@pytest.mark.slow
 @pytest.mark.skipif(
     os.getenv("SKIP_CHRONOS_TESTS") == "true",
     reason="Chronos-2 model loading is slow in CI",
@@ -103,6 +105,7 @@ async def test_full_ensemble_with_chronos(cement_time_series: TimeSeriesData) ->
 
 @pytest.mark.preserve_collection
 @pytest.mark.asyncio
+@pytest.mark.slow
 @pytest.mark.skipif(
     os.getenv("SKIP_CHRONOS_TESTS") == "true",
     reason="Chronos-2 model loading is slow in CI",
@@ -136,6 +139,7 @@ async def test_no_regressors_fallback(cement_time_series: TimeSeriesData) -> Non
 
 @pytest.mark.manages_collection_state
 @pytest.mark.asyncio
+@pytest.mark.slow
 @pytest.mark.skipif(
     os.getenv("SKIP_CHRONOS_TESTS") == "true",
     reason="Chronos-2 model loading is slow in CI",
