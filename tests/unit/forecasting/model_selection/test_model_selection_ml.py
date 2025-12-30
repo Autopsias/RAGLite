@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+pytestmark = pytest.mark.xdist_group(name="ml_models")
+
 
 class TestFitMLModel:
     """Unit tests for fit_ml_model function."""

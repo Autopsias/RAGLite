@@ -124,7 +124,10 @@ async def fit_ml_model(
                 reg_row = pd.DataFrame([X_future.iloc[-1].values], columns=X_future.columns)
             X_pred = pd.concat([X_pred.reset_index(drop=True), reg_row], axis=1)
 
-        pred = model.predict(X_pred)[0]
+        # Fix: Extract scalar value explicitly (xdist worker isolation issue)
+        # Some ML models (CatBoost) can return arrays instead of scalars in workers
+        pred_raw = model.predict(X_pred)[0]
+        pred = float(pred_raw) if hasattr(pred_raw, "__iter__") else float(pred_raw)
         predictions.append(pred)
         history.append(pred)
 

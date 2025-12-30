@@ -184,8 +184,13 @@ class TestModuleExportsArima:
 # -----------------------------------------------------------------------------
 
 
+@pytest.mark.xdist_group(name="arima_edge")
 class TestEdgeCasesArima:
-    """Additional edge case tests for ARIMA robustness."""
+    """Additional edge case tests for ARIMA robustness.
+
+    Note: Grouped for serial execution to prevent pmdarima state pollution
+    under parallel test execution (pytest-xdist).
+    """
 
     @pytest.mark.asyncio
     async def test_edge_case_empty_series(self) -> None:
