@@ -247,6 +247,15 @@ jobs:
 
           echo "Volume mount verification complete"
 
+      - name: Setup UV
+        uses: ./.github/actions/setup-uv
+
+      - name: Setup Python + UV
+        run: |
+          uv venv ci-venv --python 3.11 --quiet 2>/dev/null || uv venv ci-venv --quiet
+          source ci-venv/bin/activate
+          uv pip install -e ".[dev]" --quiet
+
       - name: Verify Container Health
         run: |
           source ci-venv/bin/activate
@@ -274,15 +283,6 @@ jobs:
           print('PostgreSQL is healthy')
           conn.close()
           "
-
-      - name: Setup UV
-        uses: ./.github/actions/setup-uv
-
-      - name: Setup Python + UV
-        run: |
-          uv venv ci-venv --python 3.11 --quiet 2>/dev/null || uv venv ci-venv --quiet
-          source ci-venv/bin/activate
-          uv pip install -e ".[dev]" --quiet
 
       - name: Run Integration Tests (includes slow)
         env:
