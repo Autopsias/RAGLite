@@ -2,7 +2,33 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
+import numpy as np
+import pandas as pd
 import pytest
+
+
+# Shared fixtures for mocking batch model selection dependencies
+@pytest.fixture
+def monthly_series() -> pd.Series:
+    """Create a monthly time series with 36 data points (3 years).
+
+    Simulates financial data with trend and seasonality.
+    """
+    dates = pd.date_range(start="2022-01-01", periods=36, freq="MS")
+    # Trend + seasonality + noise
+    trend = np.linspace(100, 200, 36)
+    seasonality = 20 * np.sin(np.linspace(0, 6 * np.pi, 36))
+    noise = np.random.default_rng(42).normal(0, 5, 36)
+    values = trend + seasonality + noise
+    return pd.Series(values, index=dates, name="revenue")
+
+
+@pytest.fixture
+def short_series() -> pd.Series:
+    """Create a short time series (only 4 data points) for edge case testing."""
+    dates = pd.date_range(start="2024-01-01", periods=4, freq="MS")
+    values = [100, 110, 105, 115]
+    return pd.Series(values, index=dates, name="metric")
 
 
 # Shared fixtures for mocking batch model selection dependencies

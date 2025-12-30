@@ -25,6 +25,7 @@ class TestAC5FixtureDependencies:
         assert root_conftest.exists(), "Root conftest.py missing"
 
     @pytest.mark.atdd
+    @pytest.mark.timeout(0)  # Disable timeout - subprocess has own timeout
     def test_ac_8_4b_5_2_fixtures_available(self, tests_integration_path: Path) -> None:
         """TEST-AC-8.4b.5.2: All fixtures available via pytest --fixtures."""
         result = subprocess.run(
@@ -39,6 +40,7 @@ class TestAC5FixtureDependencies:
             capture_output=True,
             text=True,
             cwd=tests_integration_path.parent.parent,
+            timeout=180,  # 3 min subprocess timeout
         )
 
         output = result.stdout + result.stderr
@@ -117,6 +119,7 @@ class TestAC5FixtureDependencies:
         for subdir in subdirs:
             if directory_exists(tests_integration_path, subdir):
                 subdir_path = tests_integration_path / subdir
+                # Use a timeout for subprocess call to prevent hanging
                 result = subprocess.run(
                     [
                         "uv",
@@ -129,6 +132,7 @@ class TestAC5FixtureDependencies:
                     capture_output=True,
                     text=True,
                     cwd=tests_integration_path.parent.parent,
+                    timeout=180,  # 3 min subprocess timeout
                 )
 
                 output = result.stdout + result.stderr

@@ -25,6 +25,7 @@ class TestAC2TestCountPreservation:
     """[P0] Tests for AC-8.4b.2 - Test count preservation."""
 
     @pytest.mark.atdd
+    @pytest.mark.timeout(0)  # Disable timeout - subprocess has own timeout
     def test_ac_8_4b_2_1_test_count_meets_baseline(
         self, tests_integration_path: Path, test_count_baseline: int
     ) -> None:
@@ -43,6 +44,7 @@ class TestAC2TestCountPreservation:
             capture_output=True,
             text=True,
             cwd=tests_integration_path.parent.parent,
+            timeout=180,  # 3 min subprocess timeout
         )
 
         # Parse test count from output
@@ -84,6 +86,7 @@ class TestAC2TestCountPreservation:
         assert len(empty_files) == 0, f"Empty test files found: {empty_files}"
 
     @pytest.mark.atdd
+    @pytest.mark.timeout(0)  # Disable timeout - subprocess has own timeout
     def test_ac_8_4b_2_3_all_test_modules_importable(self, tests_integration_path: Path) -> None:
         """TEST-AC-8.4b.2.3: All test modules are importable without errors."""
         result = subprocess.run(
@@ -99,6 +102,7 @@ class TestAC2TestCountPreservation:
             capture_output=True,
             text=True,
             cwd=tests_integration_path.parent.parent,
+            timeout=180,  # 3 min subprocess timeout
         )
 
         # Check for import errors
