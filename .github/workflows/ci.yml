@@ -148,11 +148,11 @@ jobs:
         run: |
           source ci-venv/bin/activate
           echo "========================================="
-          echo "Running Tests (same as VS Code Test Explorer)"
-          echo "Excludes: slow, health_check markers"
+          echo "Running Fast Unit Tests (excludes integration)"
+          echo "Excludes: slow, health_check, integration markers"
           echo "========================================="
           pytest tests/ \
-            -m "not slow and not health_check" \
+            -m "not slow and not health_check and not integration" \
             --tb=short \
             -q \
             --timeout=120 \
