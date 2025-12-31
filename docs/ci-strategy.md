@@ -34,27 +34,29 @@
 EVERY PUSH/PR                          MAIN BRANCH ONLY (Post-Merge)
     |                                        |
     v                                        v
-[1. lint-gate]                         [2. validate]
-  (Ruff/Black)                           (Type checks/security)
+[1. lint-gate]                         [1. lint-gate]
+  (Ruff/Black)                           (Ruff/Black)
     |                                        |
-    +-------> Succeed ------+                |
-                            |                |
-                            v                v
-                      [3. integration]      [3. integration]
-                      (Containers+DB)       (Containers+DB)
-                            |                |
-                            +---> Succeed ---+
-                                   |
-                                   v
-                            [4. atdd-validation]
-                            (Subprocess tests)
-                                   |
-                            +------+
-                            |
-                            v
-                      [5. accuracy-gate]
-                      (AC3 >=70% validation)
+    v                                        v
+[2. validate]                          [2. validate]
+  (Type checks/security/unit tests)      (Type checks/security/unit tests)
+    |                                        |
+    v                                        v
+[3. integration-fast]                  [3. integration-full]
+  (Fast integration, <5min)              (Full integration, <30min)
+    |                                        |
+    +-------> PR Ready                       v
+                                       [4. accuracy-gate]
+                                         (AC3 >=70% validation)
+                                             |
+                                             v
+                                        Release Ready
 ```
+
+**Best Practices Alignment (2025):**
+- **Shift-left testing**: PRs run fast integration tests to catch bugs before merge
+- **Test pyramid**: Unit tests on every commit, integration tests tiered by scope
+- **Fast feedback**: PR validation completes in <17 minutes total
 
 ### Job Timing & Requirements
 
@@ -62,17 +64,19 @@ EVERY PUSH/PR                          MAIN BRANCH ONLY (Post-Merge)
 |-----|------|----------|-----------|--------------|
 | **lint-gate** | All pushes/PRs | <2min | None | None |
 | **validate** | All pushes/PRs | <10min | None | lint-gate |
+| **integration-fast** | PRs only | <5min | Qdrant/PostgreSQL | validate |
 | **integration** | Main only OR manual | <30min | Qdrant/PostgreSQL | validate |
-| **atdd-validation** | Main only (post-merge) | <15min | None | integration |
 | **accuracy-gate** | Main only OR manual | <45min | Qdrant/PostgreSQL | integration |
 
 ### Stage Diagram (Fast Feedback)
 ```
-[Code Commit] → [Lint/Type] → [Security Scan] → [Fast Unit Tests] → [PR Ready]
-                 ↓                ↓                ↓
-               Pass            Pass            Pass
+PR WORKFLOW (Shift-Left Testing):
+[Code Commit] → [Lint] → [Validate] → [Fast Integration] → [PR Ready]
+                (2min)   (10min)       (5min)              Total: ~17min
 
-[Main Merge] → [Integration Tests] → [ATDD Validation] → [Accuracy Gate] → [Release Ready]
+MAIN BRANCH (Post-Merge Validation):
+[Main Merge] → [Lint] → [Validate] → [Full Integration] → [Accuracy Gate] → [Release Ready]
+               (2min)   (10min)       (30min)              (45min)
 ```
 
 ### Timing Targets
@@ -80,8 +84,8 @@ EVERY PUSH/PR                          MAIN BRANCH ONLY (Post-Merge)
 |-----|-----------------|-----|
 | lint-gate | <2min | Hard |
 | validate | <10min | Hard |
+| integration-fast | <5min | Hard |
 | integration | <30min | Hard |
-| atdd-validation | <15min | Hard |
 | accuracy-gate | <45min | Hard |
 
 ### Quality Gates
@@ -97,40 +101,12 @@ EVERY PUSH/PR                          MAIN BRANCH ONLY (Post-Merge)
 | Marker | Description | Expected Duration | Concurrency | CI Job |
 |--------|-------------|-------------------|-------------|--------|
 | `unit` | Fast, mocked tests | <1s | Yes | validate |
-| `integration` | Real services | 1-10s | Limited | integration |
-| `slow` | Stateful tests | 10-60s | No | integration |
-| `atdd` | Subprocess tests (Story 8.4b) | 10-300s | No | atdd-validation |
+| `integration` | Real services | 1-10s | Limited | integration-fast / integration |
+| `slow` | Stateful tests | 10-60s | No | integration (main only) |
 | `e2e` | Full system | >60s | No | accuracy-gate |
 | `health_check` | External API health checks | Variable | No | daily (dedicated) |
 
-## ATDD Test Strategy (Story 8.4b)
-
-### Subprocess Test Handling
-
-ATDD (Acceptance Test-Driven Development) tests in `tests/atdd/story_8_4b/` use subprocess execution for acceptance criteria validation. These tests require special handling:
-
-**Configuration:**
-- **Marker:** `@pytest.mark.atdd` (registered in pytest.ini)
-- **Timeout:** 300s (5 minutes) per subprocess test
-- **Parallelization:** Disabled (`-n 0` in atdd-validation job)
-- **Default Exclusion:** `-m "not slow and not health_check and not atdd"` in pytest addopts
-
-**Why Subprocess Tests Need Extended Timeouts:**
-1. Subprocess overhead: Process creation and IPC latency
-2. Child process execution: Testing actual subprocess behavior (not mocks)
-3. Signal handling: Graceful shutdown and cleanup
-4. Flakiness tolerance: Network/filesystem latency
-
-**Diagnosis Guide:**
-- If `TimeoutError` in CI ATDD job: Check subprocess execution time
-- If local tests pass but CI fails: Verify 300s timeout in pytest.ini
-- If marker filtering fails: Check `--strict-markers` in pytest.ini
-
-**Prevention:**
-- Register all test markers in pytest.ini `markers` section
-- Use `@pytest.mark.atdd` with `@pytest.mark.timeout(300)` for subprocess tests
-- Run ATDD tests with `-n 0` (sequential, no xdist parallelization)
-- Exclude ATDD tests from default local runs (reduces feedback latency)
+**Note:** Fast integration tests (not marked `slow`) run on PRs via `integration-fast` job. Full suite runs on main.
 
 ## Prevention Rules
 

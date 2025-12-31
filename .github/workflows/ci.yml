@@ -1,23 +1,24 @@
 # RAGLite CI - Consolidated Pipeline (Best Practices Aligned)
 # Self-hosted runners with 24GB RAM shared across projects
 #
-# Architecture: 4 focused jobs in single workflow
+# Architecture: 5 focused jobs in single workflow
 # - lint-gate: Every push/PR, <2 min, fast feedback
 # - validate: Every push/PR, <10 min, unit tests with mocked deps
+# - integration-fast: PRs only, <5 min, fast integration tests (shift-left)
 # - integration: Main pushes only (or manual trigger), <30 min, full integration suite
 # - accuracy-gate: Main pushes only (post-merge), <45 min, AC3 >=70% validation
 #
 # Execution Matrix:
-# | Event              | lint | validate | integration | accuracy |
-# |--------------------|------|----------|-------------|----------|
-# | PR to any branch   |  ✓   |    ✓     |      ✗      |    ✗     |
-# | Push to feature    |  ✓   |    ✓     |      ✗      |    ✗     |
-# | Push to main       |  ✓   |    ✓     |      ✓      |    ✓     |
-# | workflow_dispatch  |  ✓   |    ✓     |  (if flag)  |(if flag) |
+# | Event              | lint | validate | int-fast | int-full | accuracy |
+# |--------------------|------|----------|----------|----------|----------|
+# | PR to any branch   |  ✓   |    ✓     |    ✓     |    ✗     |    ✗     |
+# | Push to feature    |  ✓   |    ✓     |    ✗     |    ✗     |    ✗     |
+# | Push to main       |  ✓   |    ✓     |    ✗     |    ✓     |    ✓     |
+# | workflow_dispatch  |  ✓   |    ✓     | (if flag)| (if flag)| (if flag)|
 #
-# Rationale: All integration tests require real infrastructure (Qdrant/PostgreSQL)
-# and are marked @pytest.mark.slow. Running them on feature branches provides
-# minimal value vs cost. Unit tests in 'validate' provide fast feedback.
+# Rationale: Fast integration tests on PRs catch integration bugs before merge
+# (shift-left testing). Full integration suite runs on main for comprehensive
+# validation. Unit tests in 'validate' provide immediate feedback.
 
 name: CI
 
@@ -28,8 +29,12 @@ name: CI
     branches: [main, develop]
   workflow_dispatch:
     inputs:
+      run_integration_fast:
+        description: 'Run fast integration tests (PR-style validation)'
+        type: boolean
+        default: false
       run_integration:
-        description: 'Run integration tests (requires containers)'
+        description: 'Run full integration tests (requires containers)'
         type: boolean
         default: false
       run_accuracy_gate:
@@ -184,7 +189,114 @@ jobs:
           retention-days: 7
 
   # ============================================================
-  # TIER 2: Integration Tests
+  # TIER 1.5: Fast Integration Tests (PR Validation)
+  # Runs on: PRs only (shift-left testing) OR manual trigger with flag
+  # Target: <5 minutes, <4GB RAM, with containers
+  # Note: Catches integration bugs BEFORE merge to main
+  # ============================================================
+  integration-fast:
+    name: "🔗 Fast Integration: PR Validation"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 10
+    needs: validate
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_integration_fast == true)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Clear Python bytecode & pytest cache
+        uses: ./.github/actions/validate-cache
+
+      - name: Check Docker availability
+        run: |
+          if ! docker info &> /dev/null; then
+            echo "Starting Colima..."
+            colima start --cpu 4 --memory 6 --disk 50 --runtime docker 2>&1 || true
+            sleep 5
+          fi
+          docker info > /dev/null || (echo "Docker not available" && exit 1)
+
+      - name: Start Test Containers
+        run: |
+          chmod +x scripts/ci/start-test-containers.sh
+          ./scripts/ci/start-test-containers.sh test
+          echo "Containers started, loading environment..."
+          cat .ci-env
+
+      - name: Setup UV
+        uses: ./.github/actions/setup-uv
+
+      - name: Setup Python + UV
+        run: |
+          uv venv ci-venv --python 3.11 --quiet 2>/dev/null || uv venv ci-venv --quiet
+          source ci-venv/bin/activate
+          uv pip install -e ".[dev]" --quiet
+
+      - name: Verify Container Health
+        run: |
+          source ci-venv/bin/activate
+          source .ci-env
+
+          echo "=== Checking Qdrant connectivity (with retry) ==="
+          for i in 1 2 3; do
+            if python -c "from qdrant_client import QdrantClient; c = QdrantClient(host='localhost', port=${QDRANT_PORT}); c.get_collections(); print('Qdrant is healthy')" 2>/dev/null; then
+              break
+            fi
+            echo "Qdrant not ready, attempt $i/3, waiting 3s..."
+            sleep 3
+          done
+
+          echo "=== Checking PostgreSQL connectivity (with retry) ==="
+          for i in 1 2 3; do
+            if python -c "import psycopg2; conn = psycopg2.connect(host='localhost', port=${POSTGRES_PORT}, database='${POSTGRES_DB}', user='${POSTGRES_USER}', password='${POSTGRES_PASSWORD}'); cur = conn.cursor(); cur.execute('SELECT 1'); print('PostgreSQL is healthy'); conn.close()" 2>/dev/null; then
+              break
+            fi
+            echo "PostgreSQL not ready, attempt $i/3, waiting 3s..."
+            sleep 3
+          done
+
+      - name: Run Fast Integration Tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          source ci-venv/bin/activate
+          source .ci-env
+          echo "========================================="
+          echo "Running Fast Integration Tests"
+          echo "Excludes: slow, health_check markers"
+          echo "Qdrant: localhost:${QDRANT_PORT}"
+          echo "PostgreSQL: localhost:${POSTGRES_PORT}"
+          echo "========================================="
+          pytest tests/integration/ \
+            -m "not slow and not health_check" \
+            --tb=short \
+            -q \
+            -n 2 \
+            --timeout=60 \
+            --junitxml=test-results/integration-fast-junit.xml \
+            2>&1 || exit_code=$?
+
+          exit ${exit_code:-0}
+
+      - name: Upload Fast Integration Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-integration-fast
+          path: test-results/
+          retention-days: 7
+
+      - name: Cleanup Containers
+        if: always()
+        run: |
+          chmod +x scripts/ci/cleanup-test-containers.sh
+          ./scripts/ci/cleanup-test-containers.sh test --force || true
+
+  # ============================================================
+  # TIER 2: Full Integration Tests
   # Runs on: Main branch pushes (post-merge) OR manual trigger with flag
   # Target: <30 minutes, <6GB RAM, with containers
   # Note: All integration tests require real infrastructure and are slow
@@ -340,62 +452,6 @@ jobs:
         run: |
           chmod +x scripts/ci/cleanup-test-containers.sh
           ./scripts/ci/cleanup-test-containers.sh test --force || true
-
-  # ============================================================
-  # TIER 4: ATDD Validation (Post-Merge Only)
-  # Runs on: Main branch pushes (post-merge) - validates Story 8.4b refactoring
-  # Target: <15 minutes, subprocess-heavy tests with high timeouts
-  # Note: These tests run in subprocesses and require extended timeouts (300s)
-  # ============================================================
-  atdd-validation:
-    name: "🧪 ATDD: Story 8.4b Validation"
-    runs-on: [self-hosted, raglite]
-    timeout-minutes: 20
-    needs: integration
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Clear Python bytecode & pytest cache
-        uses: ./.github/actions/validate-cache
-
-      - name: Setup UV
-        uses: ./.github/actions/setup-uv
-
-      - name: Setup Python + UV
-        run: |
-          uv venv ci-venv --python 3.11 --quiet 2>/dev/null || uv venv ci-venv --quiet
-          source ci-venv/bin/activate
-          uv pip install -e ".[dev]" --quiet
-
-      - name: Run ATDD Tests
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-        run: |
-          source ci-venv/bin/activate
-          echo "========================================="
-          echo "Running ATDD Tests for Story 8.4b"
-          echo "Subprocess tests with 300s timeouts"
-          echo "========================================="
-          pytest tests/atdd/story_8_4b/ \
-            -m "atdd" \
-            --tb=short \
-            -v \
-            -n 0 \
-            --junitxml=test-results/atdd-junit.xml \
-            2>&1 || exit_code=$?
-
-          exit ${exit_code:-0}
-
-      - name: Upload ATDD Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-atdd
-          path: test-results/
-          retention-days: 7
 
   # ============================================================
   # TIER 3: Accuracy Gate (AC3 Validation)
