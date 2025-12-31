@@ -25,6 +25,7 @@ class TestAC5FixtureDependencies:
         assert root_conftest.exists(), "Root conftest.py missing"
 
     @pytest.mark.atdd
+    @pytest.mark.slow
     @pytest.mark.timeout(0)  # Disable timeout - subprocess has own timeout
     def test_ac_8_4b_5_2_fixtures_available(self, tests_integration_path: Path) -> None:
         """TEST-AC-8.4b.5.2: All fixtures available via pytest --fixtures."""
@@ -111,6 +112,7 @@ class TestAC5FixtureDependencies:
         assert len(invalid_conftest) == 0, f"Conftest issues: {invalid_conftest}"
 
     @pytest.mark.atdd
+    @pytest.mark.slow
     def test_ac_8_4b_5_6_shared_fixtures_accessible(self, tests_integration_path: Path) -> None:
         """TEST-AC-8.4b.5.6: Shared fixtures accessible from subdirectories."""
         # Run a quick collection to verify fixture inheritance works

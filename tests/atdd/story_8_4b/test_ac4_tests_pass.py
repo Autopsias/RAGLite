@@ -47,6 +47,7 @@ class TestAC4TestsPassing:
         assert result.returncode == 0 or "passed" in output.lower(), f"Test run failed: {output}"
 
     @pytest.mark.atdd
+    @pytest.mark.slow
     def test_ac_8_4b_4_2_no_import_errors(self, tests_integration_path: Path) -> None:
         """TEST-AC-8.4b.4.2: No import errors during test collection."""
         result = subprocess.run(
@@ -69,6 +70,7 @@ class TestAC4TestsPassing:
         assert "SyntaxError" not in output, f"Syntax errors found: {output}"
 
     @pytest.mark.atdd
+    @pytest.mark.slow
     def test_ac_8_4b_4_3_no_fixture_errors(self, tests_integration_path: Path) -> None:
         """TEST-AC-8.4b.4.3: No fixture resolution errors."""
         result = subprocess.run(
@@ -94,6 +96,7 @@ class TestAC4TestsPassing:
         assert not has_fixture_error, f"Fixture errors found: {output}"
 
     @pytest.mark.atdd
+    @pytest.mark.slow
     def test_ac_8_4b_4_4_pytest_markers_valid(self, tests_integration_path: Path) -> None:
         """TEST-AC-8.4b.4.4: All pytest markers are valid."""
         result = subprocess.run(
