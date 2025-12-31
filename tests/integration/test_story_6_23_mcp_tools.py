@@ -26,6 +26,7 @@ from raglite.forecasting.regressor_config import METRIC_REGRESSORS
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,  # Read-only tests
+    pytest.mark.slow,  # Tests take 30+ seconds
 ]
 
 

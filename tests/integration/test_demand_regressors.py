@@ -22,6 +22,7 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.external_api,  # Tests hit real external APIs
     pytest.mark.preserve_collection,  # Read-only tests, no DB modifications
+    pytest.mark.slow,  # External API calls have variable latency
 ]
 
 

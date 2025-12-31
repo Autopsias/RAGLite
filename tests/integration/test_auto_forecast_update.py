@@ -10,7 +10,11 @@ import pytest
 from raglite.shared.models import DocumentMetadata, IngestionResult
 
 # All tests in this file use mocks and don't modify Qdrant collection state
-pytestmark = pytest.mark.preserve_collection
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,  # Tests involve async pipeline operations
+]
 
 # =============================================================================
 # Test MCP Ingestion with Forecast Refresh

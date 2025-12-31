@@ -25,6 +25,7 @@ import pytest
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,  # Read-only tests
+    pytest.mark.slow,  # Tests take 60+ seconds
 ]
 
 
