@@ -16,6 +16,8 @@ Quick reference for diagnosing and resolving CI failures.
 | `Joblib multiprocessing deadlock` | Process conflicts with pytest | Set `LOKY_MAX_CPU_COUNT=1` | Enabled globally in CI |
 | `TimeoutError` in async | Timing too aggressive | Increase `--timeout` | Review test performance |
 | `APIConnectionError` | Missing mock | Check wrapper function mock | Patch at usage location |
+| `ATDD subprocess TimeoutError` | 180s timeout insufficient for subprocess | Increase to 300s timeout | Register marker, exclude from defaults |
+| `pytest.mark.atdd unregistered` | Marker not in pytest.ini | Add to `markers` section | Always register markers with --strict-markers |
 
 ---
 
@@ -195,6 +197,47 @@ Quick reference for diagnosing and resolving CI failures.
 - Always set `LOKY_MAX_CPU_COUNT=1` in CI `env:`
 - Reduce parallelism for tests using joblib/statsmodels
 - Monitor resource usage during test runs
+
+### 8. ATDD Subprocess Timeout (Story 8.4b)
+
+#### Symptoms
+- `TimeoutError: Test took too long (180s)` in ATDD validation job
+- ATDD tests pass locally but fail in CI
+- Subprocess tests hanging or taking >3 minutes
+- `pytest.mark.atdd unregistered` error with `--strict-markers`
+
+#### Root Cause (Five Whys)
+1. Why? → ATDD tests spawn subprocesses that run code dynamically
+2. Why? → Subprocess execution includes process creation overhead (~5-10s)
+3. Why? → Default timeout (120s-180s) insufficient for subprocess lifecycle
+4. Why? → ATDD marker not registered when test suite changed
+5. Why? → Marker filtering didn't skip ATDD in default validation job
+
+#### Solution
+- Increased timeout from 180s to 300s for subprocess tests (commit `cb20a3b`)
+- Registered `atdd` marker in pytest.ini `markers` section
+- Excluded ATDD tests from default runs: `-m "not slow and not health_check and not atdd"`
+- Created dedicated `atdd-validation` CI job (main branch only)
+
+#### Verification
+```bash
+# Verify marker registration
+grep "atdd:" pytest.ini
+
+# Run ATDD tests locally with 300s timeout
+pytest tests/atdd/story_8_4b/ -m atdd --timeout=300 -n 0
+
+# Check marker filtering in validation job
+pytest tests/ -m "not atdd" --collect-only | grep atdd | wc -l  # Should be 0
+```
+
+#### Prevention
+- Always register pytest markers in pytest.ini when creating new test categories
+- Use `--strict-markers` in CI to catch unregistered markers
+- Set appropriate timeouts for subprocess tests (300s minimum)
+- Run subprocess-heavy tests sequentially (`-n 0`) to avoid resource contention
+- Exclude subprocess tests from default runs to maintain fast feedback loop
+- Document timeout rationale in pytest.ini comments
 
 ---
 

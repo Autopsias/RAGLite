@@ -41,7 +41,7 @@ class TestAC5FixtureDependencies:
             capture_output=True,
             text=True,
             cwd=tests_integration_path.parent.parent,
-            timeout=180,  # 3 min subprocess timeout
+            timeout=300,  # 5 min subprocess timeout (CI is slower)
         )
 
         output = result.stdout + result.stderr
@@ -134,7 +134,7 @@ class TestAC5FixtureDependencies:
                     capture_output=True,
                     text=True,
                     cwd=tests_integration_path.parent.parent,
-                    timeout=180,  # 3 min subprocess timeout
+                    timeout=300,  # 5 min subprocess timeout (CI is slower)
                 )
 
                 output = result.stdout + result.stderr

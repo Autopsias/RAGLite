@@ -28,23 +28,61 @@
 
 ## Pipeline Architecture
 
-### Stage Diagram
+### CI Job Execution Model
+
 ```
-[Code Commit] → [Lint/Type] → [Security Scan] → [Unit Tests] → [Integration Tests] → [Performance Tests]
-                 ↓                ↓                ↓                ↓
-               Pass            Pass            Pass            Pass
-                 ↓                ↓                ↓                ↓
-[CI Quality Gates] → [Container Validation] → [Test Execution] → [Results]
+EVERY PUSH/PR                          MAIN BRANCH ONLY (Post-Merge)
+    |                                        |
+    v                                        v
+[1. lint-gate]                         [2. validate]
+  (Ruff/Black)                           (Type checks/security)
+    |                                        |
+    +-------> Succeed ------+                |
+                            |                |
+                            v                v
+                      [3. integration]      [3. integration]
+                      (Containers+DB)       (Containers+DB)
+                            |                |
+                            +---> Succeed ---+
+                                   |
+                                   v
+                            [4. atdd-validation]
+                            (Subprocess tests)
+                                   |
+                            +------+
+                            |
+                            v
+                      [5. accuracy-gate]
+                      (AC3 >=70% validation)
+```
+
+### Job Timing & Requirements
+
+| Job | When | Duration | Containers | Dependencies |
+|-----|------|----------|-----------|--------------|
+| **lint-gate** | All pushes/PRs | <2min | None | None |
+| **validate** | All pushes/PRs | <10min | None | lint-gate |
+| **integration** | Main only OR manual | <30min | Qdrant/PostgreSQL | validate |
+| **atdd-validation** | Main only (post-merge) | <15min | None | integration |
+| **accuracy-gate** | Main only OR manual | <45min | Qdrant/PostgreSQL | integration |
+
+### Stage Diagram (Fast Feedback)
+```
+[Code Commit] → [Lint/Type] → [Security Scan] → [Fast Unit Tests] → [PR Ready]
+                 ↓                ↓                ↓
+               Pass            Pass            Pass
+
+[Main Merge] → [Integration Tests] → [ATDD Validation] → [Accuracy Gate] → [Release Ready]
 ```
 
 ### Timing Targets
-| Stage | Target Duration | SLA |
-|-------|-----------------|-----|
-| Linting | <30s | Hard |
-| Security | <60s | Hard |
-| Unit Tests | <2m | Soft |
-| Integration Tests | <10m | Hard |
-| Performance | <5m | Soft |
+| Job | Target Duration | SLA |
+|-----|-----------------|-----|
+| lint-gate | <2min | Hard |
+| validate | <10min | Hard |
+| integration | <30min | Hard |
+| atdd-validation | <15min | Hard |
+| accuracy-gate | <45min | Hard |
 
 ### Quality Gates
 - **Test Coverage**: 80%+ (enforced)
@@ -56,12 +94,43 @@
 
 ## Test Categorization
 
-| Marker | Description | Expected Duration | Concurrency |
-|--------|-------------|-------------------|-------------|
-| `unit` | Fast, mocked tests | <1s | Yes |
-| `integration` | Real services | 1-10s | Limited |
-| `slow` | Stateful tests | 10-60s | No |
-| `e2e` | Full system | >60s | No |
+| Marker | Description | Expected Duration | Concurrency | CI Job |
+|--------|-------------|-------------------|-------------|--------|
+| `unit` | Fast, mocked tests | <1s | Yes | validate |
+| `integration` | Real services | 1-10s | Limited | integration |
+| `slow` | Stateful tests | 10-60s | No | integration |
+| `atdd` | Subprocess tests (Story 8.4b) | 10-300s | No | atdd-validation |
+| `e2e` | Full system | >60s | No | accuracy-gate |
+| `health_check` | External API health checks | Variable | No | daily (dedicated) |
+
+## ATDD Test Strategy (Story 8.4b)
+
+### Subprocess Test Handling
+
+ATDD (Acceptance Test-Driven Development) tests in `tests/atdd/story_8_4b/` use subprocess execution for acceptance criteria validation. These tests require special handling:
+
+**Configuration:**
+- **Marker:** `@pytest.mark.atdd` (registered in pytest.ini)
+- **Timeout:** 300s (5 minutes) per subprocess test
+- **Parallelization:** Disabled (`-n 0` in atdd-validation job)
+- **Default Exclusion:** `-m "not slow and not health_check and not atdd"` in pytest addopts
+
+**Why Subprocess Tests Need Extended Timeouts:**
+1. Subprocess overhead: Process creation and IPC latency
+2. Child process execution: Testing actual subprocess behavior (not mocks)
+3. Signal handling: Graceful shutdown and cleanup
+4. Flakiness tolerance: Network/filesystem latency
+
+**Diagnosis Guide:**
+- If `TimeoutError` in CI ATDD job: Check subprocess execution time
+- If local tests pass but CI fails: Verify 300s timeout in pytest.ini
+- If marker filtering fails: Check `--strict-markers` in pytest.ini
+
+**Prevention:**
+- Register all test markers in pytest.ini `markers` section
+- Use `@pytest.mark.atdd` with `@pytest.mark.timeout(300)` for subprocess tests
+- Run ATDD tests with `-n 0` (sequential, no xdist parallelization)
+- Exclude ATDD tests from default local runs (reduces feedback latency)
 
 ## Prevention Rules
 

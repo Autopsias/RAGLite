@@ -14,6 +14,7 @@ Comprehensive documentation for RAGLite CI/CD infrastructure and practices.
 - **CI Failing?** → [CI Failure Runbook](/docs/ci-failure-runbook.md)
 - **Environment Issues?** → [Self-Hosted Runner Guide](/docs/ci-knowledge/self-hosted-runner-guide.md)
 - **Known Patterns?** → [Failure Patterns](/docs/ci-knowledge/failure-patterns.md)
+- **ATDD Test Issues?** → [ATDD Subprocess Timeout](/docs/ci-knowledge/atdd-subprocess-timeouts.md)
 
 ### For Implementation
 - **Writing Tests?** → [Prevention Rules](/docs/ci-knowledge/prevention-rules.md)
@@ -55,7 +56,7 @@ Comprehensive documentation for RAGLite CI/CD infrastructure and practices.
 **Link:** `/docs/ci-strategy.md`
 
 ### 3. Failure Patterns
-**Knowledge extraction from 15 CI fix commits**
+**Knowledge extraction from 15+ CI fix commits**
 
 - pytest-xdist worker state pollution
 - Resource tracker SIGKILL
@@ -64,6 +65,7 @@ Comprehensive documentation for RAGLite CI/CD infrastructure and practices.
 - AsyncMock requirements
 - Bytecode cache pollution
 - Joblib multiprocessing deadlocks
+- ATDD subprocess timeout (Story 8.4b)
 
 Each pattern includes:
 - Frequency and affected files
@@ -73,6 +75,24 @@ Each pattern includes:
 - Prevention checklist
 
 **Link:** `/docs/ci-knowledge/failure-patterns.md`
+
+### 3b. ATDD Subprocess Timeout Knowledge
+**Systemic fix for Story 8.4b validation tests**
+
+Detailed analysis of subprocess test timeout issue:
+- 15+ previous fix attempts (symptomatic treatments)
+- Root cause: 3-part systemic issue (timeout + marker registration + job isolation)
+- Increases subprocess timeout from 180s to 300s
+- Registers `atdd` marker in pytest.ini
+- Excludes ATDD from default runs
+- Creates dedicated atdd-validation CI job
+
+Special focus on:
+- Why subprocess tests need extended timeouts
+- How to properly categorize subprocess-heavy test suites
+- Prevention checklist for future subprocess test development
+
+**Link:** `/docs/ci-knowledge/atdd-subprocess-timeouts.md`
 
 ### 4. Prevention Rules
 **Best practices to avoid known failures**
@@ -122,7 +142,7 @@ Each rule includes:
 
 ## Root Cause Summary
 
-### The 5 Root Causes
+### The 5 Core Root Causes
 
 | # | Problem | Environment Variable | Impact | Status |
 |---|---------|----------------------|--------|--------|
@@ -131,6 +151,12 @@ Each rule includes:
 | 3 | Bytecode cache pollution | `PYTHONDONTWRITEBYTECODE=1` | 5-8 failures/week | Global env var, cache cleanup |
 | 4 | Joblib multiprocessing conflicts | `LOKY_MAX_CPU_COUNT=1` | 2-3 failures/week | Global env var |
 | 5 | Fixture dependency invisibility | Explicit test markers | Hidden failures | `@pytest.mark.integration` standard |
+
+### Recent Systemic Issue: ATDD Subprocess Timeouts
+
+| # | Problem | Root Cause | Impact | Status |
+|---|---------|-----------|--------|--------|
+| 6 | ATDD tests timeout in CI | 3-part issue: timeout (180s insufficient) + marker unregistered + job isolation missing | 15+ failed CI runs | Fixed: 300s timeout + marker registration + dedicated job |
 
 ### Combined Impact
 
@@ -342,6 +368,7 @@ To add to this knowledge base:
 | [CI Failure Runbook](/docs/ci-failure-runbook.md) | Quick troubleshooting | All engineers |
 | [CI Strategy](/docs/ci-strategy.md) | Long-term approach | Architects, DevOps |
 | [Failure Patterns](/docs/ci-knowledge/failure-patterns.md) | Known issues | Test engineers |
+| [ATDD Subprocess Timeouts](/docs/ci-knowledge/atdd-subprocess-timeouts.md) | Subprocess test strategy | Test authors, architects |
 | [Prevention Rules](/docs/ci-knowledge/prevention-rules.md) | Best practices | Test authors |
 | [Self-Hosted Runner Guide](/docs/ci-knowledge/self-hosted-runner-guide.md) | Operations | DevOps, SRE |
 | [Success Metrics](/docs/ci-knowledge/success-metrics.md) | Monitoring | Engineering leads |

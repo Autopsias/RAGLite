@@ -342,6 +342,62 @@ jobs:
           ./scripts/ci/cleanup-test-containers.sh test --force || true
 
   # ============================================================
+  # TIER 4: ATDD Validation (Post-Merge Only)
+  # Runs on: Main branch pushes (post-merge) - validates Story 8.4b refactoring
+  # Target: <15 minutes, subprocess-heavy tests with high timeouts
+  # Note: These tests run in subprocesses and require extended timeouts (300s)
+  # ============================================================
+  atdd-validation:
+    name: "🧪 ATDD: Story 8.4b Validation"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 20
+    needs: integration
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Clear Python bytecode & pytest cache
+        uses: ./.github/actions/validate-cache
+
+      - name: Setup UV
+        uses: ./.github/actions/setup-uv
+
+      - name: Setup Python + UV
+        run: |
+          uv venv ci-venv --python 3.11 --quiet 2>/dev/null || uv venv ci-venv --quiet
+          source ci-venv/bin/activate
+          uv pip install -e ".[dev]" --quiet
+
+      - name: Run ATDD Tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          source ci-venv/bin/activate
+          echo "========================================="
+          echo "Running ATDD Tests for Story 8.4b"
+          echo "Subprocess tests with 300s timeouts"
+          echo "========================================="
+          pytest tests/atdd/story_8_4b/ \
+            -m "atdd" \
+            --tb=short \
+            -v \
+            -n 0 \
+            --junitxml=test-results/atdd-junit.xml \
+            2>&1 || exit_code=$?
+
+          exit ${exit_code:-0}
+
+      - name: Upload ATDD Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-atdd
+          path: test-results/
+          retention-days: 7
+
+  # ============================================================
   # TIER 3: Accuracy Gate (AC3 Validation)
   # Runs on: Main branch pushes (post-merge) OR manual trigger with flag
   # Target: <45 minutes, validates >=70% accuracy
