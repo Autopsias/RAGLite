@@ -1,19 +1,20 @@
 # RAGLite CI - Consolidated Pipeline (Best Practices Aligned)
 # Self-hosted runners with 24GB RAM shared across projects
 #
-# Architecture: 4 focused jobs in single workflow
+# Architecture: 5 focused jobs in single workflow
 # - lint-gate: Every push/PR, <2 min, fast feedback
 # - validate: Every push/PR, <10 min, mocked ML deps
-# - integration: PRs targeting main + main pushes, <20 min, with containers
+# - integration-fast: All branches except main push, <10 min, fast integration tests
+# - integration-full: Main pushes only (or manual trigger), <30 min, includes slow tests
 # - accuracy-gate: Main pushes only (post-merge), <45 min, AC3 >=70% validation
 #
 # Execution Matrix:
-# | Event              | lint | validate | integration | accuracy |
-# |--------------------|------|----------|-------------|----------|
-# | PR to main         |  ✓   |    ✓     |      ✓      |    ✗     |
-# | PR to develop      |  ✓   |    ✓     |      ✗      |    ✗     |
-# | Push to main       |  ✓   |    ✓     |      ✓      |    ✓     |
-# | Push to feature    |  ✓   |    ✓     |      ✗      |    ✗     |
+# | Event              | lint | validate | integration-fast | integration-full | accuracy |
+# |--------------------|------|----------|------------------|------------------|----------|
+# | PR to any branch   |  ✓   |    ✓     |        ✓         |        ✗         |    ✗     |
+# | Push to feature    |  ✓   |    ✓     |        ✓         |        ✗         |    ✗     |
+# | Push to main       |  ✓   |    ✓     |        ✗         |        ✓         |    ✓     |
+# | workflow_dispatch  |  ✓   |    ✓     |    (default)     |    (if flag)     |(if flag) |
 #
 # See: docs/ci/STRATEGY.md for full documentation
 
@@ -25,6 +26,15 @@ name: CI
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
+    inputs:
+      run_full_integration:
+        description: 'Run full integration tests (including slow)'
+        type: boolean
+        default: false
+      run_accuracy_gate:
+        description: 'Run accuracy validation (NFR6/NFR7)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -173,18 +183,19 @@ jobs:
           retention-days: 7
 
   # ============================================================
-  # TIER 2: Integration Gate
-  # Runs on: PRs targeting main (pre-merge validation) + main pushes (post-merge)
-  # Target: <20 minutes, <6GB RAM, with containers
+  # TIER 2A: Fast Integration Tests
+  # Runs on: All PRs and feature pushes (NOT main push)
+  # Target: <10 minutes, <6GB RAM, with containers
   # ============================================================
-  integration:
-    name: "🔗 Tests: Integration (~115 tests)"
+  integration-fast:
+    name: "🔗 Tests: Integration Fast (~90 tests)"
     runs-on: [self-hosted, raglite]
-    timeout-minutes: 30
+    timeout-minutes: 15
     needs: validate
     if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'pull_request' && github.base_ref == 'main')
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && github.ref != 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_full_integration != true)
 
     steps:
       - name: Checkout code
@@ -292,14 +303,171 @@ jobs:
 
           echo "=== Container health verification complete ==="
 
-      - name: Run Integration Tests (includes slow)
+      - name: Run Fast Integration Tests (excludes slow)
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           source ci-venv/bin/activate
           source .ci-env
           echo "========================================="
-          echo "Running Integration Tests (main branch - full)"
+          echo "Running Fast Integration Tests"
+          echo "Excludes slow and health_check tests"
+          echo "Qdrant: localhost:${QDRANT_PORT}"
+          echo "PostgreSQL: localhost:${POSTGRES_PORT}"
+          echo "========================================="
+          pytest tests/integration/ \
+            -m "integration and not slow and not health_check" \
+            --tb=short \
+            -q \
+            -n 2 \
+            --timeout=300 \
+            --junitxml=test-results/integration-fast-junit.xml \
+            2>&1 || exit_code=$?
+
+          exit ${exit_code:-0}
+
+      - name: Upload Integration Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-integration-fast
+          path: test-results/
+          retention-days: 7
+
+      - name: Cleanup Containers
+        if: always()
+        run: |
+          chmod +x scripts/ci/cleanup-test-containers.sh
+          ./scripts/ci/cleanup-test-containers.sh test --force || true
+
+  # ============================================================
+  # TIER 2B: Full Integration Tests
+  # Runs on: Main branch pushes (post-merge) OR manual trigger with flag
+  # Target: <30 minutes, <6GB RAM, with containers
+  # ============================================================
+  integration-full:
+    name: "🔗 Tests: Integration Full (~115 tests)"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 30
+    needs: validate
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_full_integration == true)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cleanup Orphaned Processes (P0 Fix)
+        run: |
+          echo "=== Cleanup orphaned resource_tracker processes ==="
+          pkill -9 -f "resource_tracker" 2>/dev/null || echo "No orphaned resource_tracker processes"
+          pkill -9 -f "multiprocessing" 2>/dev/null || echo "No orphaned multiprocessing processes"
+          echo "Process cleanup complete"
+
+      - name: Clear Python bytecode & pytest cache
+        uses: ./.github/actions/validate-cache
+
+      - name: Check Docker availability
+        run: |
+          if ! docker info &> /dev/null; then
+            echo "Starting Colima..."
+            colima start --cpu 4 --memory 6 --disk 50 --runtime docker 2>&1 || true
+            sleep 5
+          fi
+          docker info > /dev/null || (echo "Docker not available" && exit 1)
+
+      - name: Start Test Containers
+        run: |
+          chmod +x scripts/ci/start-test-containers.sh
+          ./scripts/ci/start-test-containers.sh test
+          echo "Containers started, loading environment..."
+          cat .ci-env
+
+      - name: Validate CI Credential Consistency
+        run: |
+          echo "=== Validating CI credentials against centralized config ==="
+          source scripts/ci/container-config.sh
+          validate_ci_credentials .github/workflows/ci.yml
+          echo "Credential validation passed"
+
+      - name: Verify Container Volume Mounts (P0 Fix)
+        run: |
+          echo "=== Verifying container volume mounts ==="
+          source .ci-env
+
+          # Check Qdrant mount
+          QDRANT_MOUNT=$(docker inspect raglite-qdrant-test --format='{{range .Mounts}}{{println .Source}}{{end}}' 2>/dev/null || echo "")
+          if [[ "$QDRANT_MOUNT" != *"/raglite/qdrant_storage_test"* ]]; then
+            echo "WARNING: Qdrant volume mount incorrect: $QDRANT_MOUNT"
+            echo "Recreating Qdrant container..."
+            docker stop raglite-qdrant-test 2>/dev/null || true
+            docker rm raglite-qdrant-test 2>/dev/null || true
+            ./scripts/ci/start-test-containers.sh test --qdrant-only --skip-cleanup
+          else
+            echo "Qdrant mount OK: $QDRANT_MOUNT"
+          fi
+
+          # Check PostgreSQL mount
+          PG_MOUNT=$(docker inspect raglite-postgresql-test --format='{{range .Mounts}}{{println .Source}}{{end}}' 2>/dev/null || echo "")
+          if [[ "$PG_MOUNT" != *"/raglite/postgresql_data_test"* ]]; then
+            echo "WARNING: PostgreSQL volume mount incorrect: $PG_MOUNT"
+            echo "Recreating PostgreSQL container..."
+            docker stop raglite-postgresql-test 2>/dev/null || true
+            docker rm raglite-postgresql-test 2>/dev/null || true
+            ./scripts/ci/start-test-containers.sh test --postgresql-only --skip-cleanup
+          else
+            echo "PostgreSQL mount OK: $PG_MOUNT"
+          fi
+
+          echo "Volume mount verification complete"
+
+      - name: Setup UV
+        uses: ./.github/actions/setup-uv
+
+      - name: Setup Python + UV
+        run: |
+          uv venv ci-venv --python 3.11 --quiet 2>/dev/null || uv venv ci-venv --quiet
+          source ci-venv/bin/activate
+          uv pip install -e ".[dev]" --quiet
+
+      - name: Verify Container Health
+        run: |
+          source ci-venv/bin/activate
+          source .ci-env
+
+          echo "=== Waiting for containers to be fully ready ==="
+          sleep 5
+
+          echo "=== Checking Qdrant connectivity (with retry) ==="
+          for i in 1 2 3 4 5; do
+            if python -c "from qdrant_client import QdrantClient; c = QdrantClient(host='localhost', port=${QDRANT_PORT}); c.get_collections(); print('Qdrant is healthy')" 2>/dev/null; then
+              break
+            fi
+            echo "Qdrant not ready, attempt $i/5, waiting 5s..."
+            sleep 5
+          done
+
+          echo "=== Checking PostgreSQL connectivity (with retry) ==="
+          # Credentials sourced from .ci-env (generated by container-config.sh)
+          for i in 1 2 3 4 5; do
+            if python -c "import psycopg2; conn = psycopg2.connect(host='localhost', port=${POSTGRES_PORT}, database='${POSTGRES_DB}', user='${POSTGRES_USER}', password='${POSTGRES_PASSWORD}'); cur = conn.cursor(); cur.execute('SELECT 1'); print('PostgreSQL is healthy'); conn.close()" 2>/dev/null; then
+              break
+            fi
+            echo "PostgreSQL not ready, attempt $i/5, waiting 5s..."
+            sleep 5
+          done
+
+          echo "=== Container health verification complete ==="
+
+      - name: Run Full Integration Tests (includes slow)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          source ci-venv/bin/activate
+          source .ci-env
+          echo "========================================="
+          echo "Running Full Integration Tests"
           echo "Includes slow tests, excludes health_check"
           echo "Qdrant: localhost:${QDRANT_PORT}"
           echo "PostgreSQL: localhost:${POSTGRES_PORT}"
@@ -310,7 +478,7 @@ jobs:
             -q \
             -n 1 \
             --timeout=300 \
-            --junitxml=test-results/integration-junit.xml \
+            --junitxml=test-results/integration-full-junit.xml \
             2>&1 || exit_code=$?
 
           exit ${exit_code:-0}
@@ -319,7 +487,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-tier2
+          name: test-results-integration-full
           path: test-results/
           retention-days: 7
 
@@ -331,7 +499,7 @@ jobs:
 
   # ============================================================
   # TIER 3: Accuracy Gate (AC3 Validation)
-  # Runs ONLY on main branch pushes (post-merge validation)
+  # Runs on: Main branch pushes (post-merge) OR manual trigger with flag
   # Target: <45 minutes, validates >=70% accuracy
   # Note: Resource-intensive, so not run on PRs - integration tests provide pre-merge validation
   # ============================================================
@@ -339,8 +507,10 @@ jobs:
     name: "✅ NFR: Accuracy Validation (NFR6/NFR7)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 45
-    needs: integration
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: integration-full
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_accuracy_gate == true)
 
     env:
       QDRANT_HOST: localhost
