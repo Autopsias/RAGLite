@@ -169,6 +169,135 @@ class FixedTokenChunker:
         return chunks
 
 
+def _validate_chunk_parameters(chunk_size: int, overlap: int) -> None:
+    """Validate chunking parameters.
+
+    Args:
+        chunk_size: Target chunk size in words
+        overlap: Word overlap between consecutive chunks
+
+    Raises:
+        ValueError: If parameters are invalid
+    """
+    if chunk_size <= 0:
+        raise ValueError(f"chunk_size must be positive, got: {chunk_size}")
+    if overlap < 0:
+        raise ValueError(f"overlap must be non-negative, got: {overlap}")
+    if overlap >= chunk_size:
+        raise ValueError(f"overlap ({overlap}) must be less than chunk_size ({chunk_size})")
+
+
+def _create_single_chunk(
+    full_text: str,
+    doc_metadata: DocumentMetadata,
+    word_count: int,
+) -> Chunk:
+    """Create a single chunk for short documents.
+
+    Args:
+        full_text: Complete document text
+        doc_metadata: Document metadata for provenance
+        word_count: Number of words in document
+
+    Returns:
+        Single Chunk object containing entire document
+    """
+    estimated_page = 1 if doc_metadata.page_count > 0 else 0
+    chunk = Chunk(
+        chunk_id=f"{doc_metadata.filename}_0",
+        content=full_text.strip(),
+        metadata=doc_metadata,
+        page_number=estimated_page,
+        chunk_index=0,
+        embedding=[],
+    )
+    logger.info(
+        "Document shorter than chunk size - created single chunk",
+        extra={"doc_filename": doc_metadata.filename, "word_count": word_count},
+    )
+    return chunk
+
+
+def _estimate_page_number(
+    words: list[str],
+    current_idx: int,
+    full_text: str,
+    doc_metadata: DocumentMetadata,
+) -> int:
+    """Estimate page number based on character position.
+
+    Args:
+        words: List of all words in document
+        current_idx: Current word index
+        full_text: Original document text
+        doc_metadata: Document metadata with page_count
+
+    Returns:
+        Estimated page number (1-indexed)
+    """
+    # Calculate estimated chars per page for page number estimation
+    estimated_chars_per_page = len(full_text) / max(doc_metadata.page_count, 1)
+
+    # Calculate position of the start of this chunk in the original text
+    char_pos = len(" ".join(words[:current_idx]))
+
+    # Estimate page number (1-indexed)
+    estimated_page = int(char_pos / estimated_chars_per_page) + 1
+    estimated_page = min(estimated_page, doc_metadata.page_count)  # Cap at max pages
+    estimated_page = max(estimated_page, 1)  # Ensure at least page 1
+
+    return estimated_page
+
+
+def _generate_chunks(
+    words: list[str],
+    full_text: str,
+    doc_metadata: DocumentMetadata,
+    chunk_size: int,
+    overlap: int,
+) -> list[Chunk]:
+    """Generate chunks from word list using sliding window.
+
+    Args:
+        words: List of words to chunk
+        full_text: Original document text (for page estimation)
+        doc_metadata: Document metadata for provenance
+        chunk_size: Target chunk size in words
+        overlap: Word overlap between consecutive chunks
+
+    Returns:
+        List of Chunk objects with estimated page numbers
+    """
+    chunks = []
+    idx = 0
+    chunk_index = 0
+
+    while idx < len(words):
+        # Extract chunk words
+        chunk_words = words[idx : idx + chunk_size]
+        chunk_text = " ".join(chunk_words)
+
+        # Estimate page number
+        estimated_page = _estimate_page_number(words, idx, full_text, doc_metadata)
+
+        # Create Chunk object
+        chunk = Chunk(
+            chunk_id=f"{doc_metadata.filename}_{chunk_index}",
+            content=chunk_text,
+            metadata=doc_metadata,
+            page_number=estimated_page,
+            chunk_index=chunk_index,
+            embedding=[],  # Populated later by Story 1.5
+        )
+        chunks.append(chunk)
+
+        # Move to next chunk with overlap
+        idx += chunk_size - overlap
+        chunk_index += 1
+
+    return chunks
+
+
 async def chunk_document(
     full_text: str,
     doc_metadata: DocumentMetadata,
@@ -222,12 +351,7 @@ async def chunk_document(
     start_time = time.time()
 
     # Validate parameters
-    if chunk_size <= 0:
-        raise ValueError(f"chunk_size must be positive, got: {chunk_size}")
-    if overlap < 0:
-        raise ValueError(f"overlap must be non-negative, got: {overlap}")
-    if overlap >= chunk_size:
-        raise ValueError(f"overlap ({overlap}) must be less than chunk_size ({chunk_size})")
+    _validate_chunk_parameters(chunk_size, overlap)
 
     logger.info(
         "Chunking document",
@@ -252,59 +376,10 @@ async def chunk_document(
 
     # Handle document shorter than chunk size
     if len(words) <= chunk_size:
-        # Single chunk for short document
-        estimated_page = 1 if doc_metadata.page_count > 0 else 0
-        chunk = Chunk(
-            chunk_id=f"{doc_metadata.filename}_0",
-            content=full_text.strip(),
-            metadata=doc_metadata,
-            page_number=estimated_page,
-            chunk_index=0,
-            embedding=[],
-        )
-        logger.info(
-            "Document shorter than chunk size - created single chunk",
-            extra={"doc_filename": doc_metadata.filename, "word_count": len(words)},
-        )
-        return [chunk]
+        return [_create_single_chunk(full_text, doc_metadata, len(words))]
 
-    chunks = []
-
-    # Calculate estimated chars per page for page number estimation
-    # Avoid division by zero if page_count is 0
-    estimated_chars_per_page = len(full_text) / max(doc_metadata.page_count, 1)
-
-    idx = 0
-    chunk_index = 0
-
-    while idx < len(words):
-        # Extract chunk words
-        chunk_words = words[idx : idx + chunk_size]
-        chunk_text = " ".join(chunk_words)
-
-        # Estimate page number based on character position
-        # Calculate position of the start of this chunk in the original text
-        char_pos = len(" ".join(words[:idx]))
-
-        # Estimate page number (1-indexed)
-        estimated_page = int(char_pos / estimated_chars_per_page) + 1
-        estimated_page = min(estimated_page, doc_metadata.page_count)  # Cap at max pages
-        estimated_page = max(estimated_page, 1)  # Ensure at least page 1
-
-        # Create Chunk object
-        chunk = Chunk(
-            chunk_id=f"{doc_metadata.filename}_{chunk_index}",
-            content=chunk_text,
-            metadata=doc_metadata,
-            page_number=estimated_page,
-            chunk_index=chunk_index,
-            embedding=[],  # Populated later by Story 1.5
-        )
-        chunks.append(chunk)
-
-        # Move to next chunk with overlap
-        idx += chunk_size - overlap
-        chunk_index += 1
+    # Generate chunks using sliding window
+    chunks = _generate_chunks(words, full_text, doc_metadata, chunk_size, overlap)
 
     # Calculate metrics
     duration_ms = int((time.time() - start_time) * 1000)

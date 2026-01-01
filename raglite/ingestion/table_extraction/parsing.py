@@ -19,34 +19,19 @@ from raglite.shared.logging import get_logger
 logger = get_logger(__name__)
 
 
-def parse_table_structure(
-    table_item: TableItem,
-    result: ConversionResult,
-    table_index: int,
-    document_id: str,
-) -> list[dict[str, Any]]:
-    """Parse table into structured rows for SQL insertion using table_cells API.
-
-    Strategy (AC1 - REVISED for multi-header tables):
-    1. Access table.data.table_cells directly (production-proven 80%+ accuracy)
-    2. Detect multi-header structure via column_header flags
-    3. Build hierarchical column mapping (metric -> entity)
-    4. Extract data cells using column mapping
-    5. Parse each cell: extract value + unit
-
-    Research validation: Salesforce, fintechs use this approach (≥80% accuracy)
+def extract_table_metadata(
+    table_item: TableItem, result: ConversionResult, table_index: int
+) -> dict[str, Any] | None:
+    """Extract table metadata (caption, page, cells).
 
     Args:
         table_item: Docling TableItem object
         result: ConversionResult (for markdown context)
         table_index: Index of table in document
-        document_id: Document filename (without extension)
 
     Returns:
-        List of structured row dicts
+        Dictionary with metadata or None if table is empty
     """
-    rows: list[dict[str, Any]] = []
-
     # Get table caption (from markdown export for context)
     table_markdown = table_item.export_to_markdown(doc=result.document)
     caption = extract_caption(table_markdown)
@@ -64,25 +49,31 @@ def parse_table_structure(
             f"Skipping empty table {table_index}",
             extra={"table_index": table_index},
         )
-        return rows
+        return None
 
+    return {
+        "caption": caption,
+        "page_number": page_number,
+        "table_cells": table_cells,
+        "num_rows": num_rows,
+        "num_cols": num_cols,
+        "table_markdown": table_markdown,
+    }
+
+
+def categorize_table_cells(table_cells: list) -> dict[str, Any]:
+    """Categorize table cells by type and detect multi-header structure.
+
+    Args:
+        table_cells: List of table cells from Docling API
+
+    Returns:
+        Dictionary with categorized cells and multi-header detection
+    """
     # Detect multi-header structure
     column_headers = [cell for cell in table_cells if cell.column_header]
     header_rows = {cell.start_row_offset_idx for cell in column_headers}
     is_multi_header = len(header_rows) > 1
-
-    logger.debug(
-        f"Table {table_index} structure",
-        extra={
-            "table_index": table_index,
-            "dimensions": f"{num_rows}x{num_cols}",
-            "header_rows": sorted(header_rows),
-            "multi_header": is_multi_header,
-        },
-    )
-
-    # Build column mapping (col_idx -> (metric, entity))
-    column_mapping = build_column_mapping(column_headers, is_multi_header)
 
     # Get row headers (for period extraction)
     row_headers = [cell for cell in table_cells if cell.row_header]
@@ -90,7 +81,38 @@ def parse_table_structure(
     # Extract data cells
     data_cells = [cell for cell in table_cells if not cell.column_header and not cell.row_header]
 
-    # Parse each data cell
+    return {
+        "column_headers": column_headers,
+        "row_headers": row_headers,
+        "data_cells": data_cells,
+        "is_multi_header": is_multi_header,
+        "header_rows": header_rows,
+    }
+
+
+def parse_data_cells(
+    data_cells: list,
+    row_headers: list,
+    column_mapping: dict[int, tuple[str | None, str | None]],
+    metadata: dict[str, Any],
+    table_index: int,
+    document_id: str,
+) -> list[dict[str, Any]]:
+    """Parse data cells into structured row dictionaries.
+
+    Args:
+        data_cells: List of data cells to parse
+        row_headers: List of row header cells
+        column_mapping: Column index to (metric, entity) mapping
+        metadata: Table metadata (caption, page, markdown)
+        table_index: Index of table in document
+        document_id: Document filename (without extension)
+
+    Returns:
+        List of structured row dicts
+    """
+    rows: list[dict[str, Any]] = []
+
     for cell in data_cells:
         if not cell.text or not cell.text.strip():
             continue
@@ -118,25 +140,77 @@ def parse_table_structure(
             "fiscal_year": fiscal_year,
             "value": value,
             "unit": unit,
-            "page_number": page_number,
+            "page_number": metadata["page_number"],
             "table_index": table_index,
-            "table_caption": caption,
+            "table_caption": metadata["caption"],
             "row_index": row_idx,
             "column_name": f"{metric}_{entity}" if metric and entity else None,
-            "chunk_text": table_markdown[:500],
+            "chunk_text": metadata["table_markdown"][:500],
             "document_id": document_id,
         }
 
         rows.append(row_dict)
 
+    return rows
+
+
+def parse_table_structure(
+    table_item: TableItem,
+    result: ConversionResult,
+    table_index: int,
+    document_id: str,
+) -> list[dict[str, Any]]:
+    """Parse table into structured rows for SQL insertion using table_cells API.
+
+    Strategy (AC1 - REVISED for multi-header tables):
+    1. Access table.data.table_cells directly (production-proven 80%+ accuracy)
+    2. Detect multi-header structure via column_header flags
+    3. Build hierarchical column mapping (metric -> entity)
+    4. Extract data cells using column mapping
+    5. Parse each cell: extract value + unit
+
+    Research validation: Salesforce, fintechs use this approach (≥80% accuracy)
+
+    Args:
+        table_item: Docling TableItem object
+        result: ConversionResult (for markdown context)
+        table_index: Index of table in document
+        document_id: Document filename (without extension)
+
+    Returns:
+        List of structured row dicts
+    """
+    # Extract table metadata and validate
+    metadata = extract_table_metadata(table_item, result, table_index)
+    if metadata is None:
+        return []
+
+    # Separate cells by type and detect multi-header
+    cell_groups = categorize_table_cells(metadata["table_cells"])
+
+    # Build column mapping
+    column_mapping = build_column_mapping(
+        cell_groups["column_headers"], cell_groups["is_multi_header"]
+    )
+
+    # Parse data cells into structured rows
+    rows = parse_data_cells(
+        data_cells=cell_groups["data_cells"],
+        row_headers=cell_groups["row_headers"],
+        column_mapping=column_mapping,
+        metadata=metadata,
+        table_index=table_index,
+        document_id=document_id,
+    )
+
     logger.debug(
         f"Parsed table {table_index} via table_cells API",
         extra={
             "table_index": table_index,
-            "page": page_number,
+            "page": metadata["page_number"],
             "rows": len(rows),
-            "caption": caption,
-            "multi_header": is_multi_header,
+            "caption": metadata["caption"],
+            "multi_header": cell_groups["is_multi_header"],
         },
     )
 

@@ -8,6 +8,7 @@ This module handles tables with:
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -93,6 +94,32 @@ def _extract_temporal_cols_metric_rows(
     return rows
 
 
+def _infer_period_from_caption(
+    caption: str | None, extract_year_fn: Callable[[str], int | None]
+) -> tuple[str | None, int | None]:
+    """Infer period and fiscal year from table caption.
+
+    Args:
+        caption: Table caption text
+        extract_year_fn: Function to extract year from text
+
+    Returns:
+        Tuple of (period, fiscal_year)
+    """
+    period = None
+    fiscal_year = None
+    if caption:
+        # Extract year if present
+        fiscal_year = extract_year_fn(caption)
+        # Use caption as period if it contains temporal info
+        if fiscal_year or any(
+            keyword in caption.lower()
+            for keyword in ["ytd", "q1", "q2", "q3", "q4", "budget", "forecast"]
+        ):
+            period = caption
+    return period, fiscal_year
+
+
 def _extract_entity_cols_metric_rows(
     table_cells: list,
     num_rows: int,
@@ -150,17 +177,7 @@ def _extract_entity_cols_metric_rows(
 
     # Try to infer period from table caption
     caption = get_table_caption(table_item)
-    period = None
-    fiscal_year = None
-    if caption:
-        # Extract year if present
-        fiscal_year = extract_year(caption)
-        # Use caption as period if it contains temporal info
-        if fiscal_year or any(
-            keyword in caption.lower()
-            for keyword in ["ytd", "q1", "q2", "q3", "q4", "budget", "forecast"]
-        ):
-            period = caption
+    period, fiscal_year = _infer_period_from_caption(caption, extract_year)
 
     # Extract data cells
     for cell in data_cells:

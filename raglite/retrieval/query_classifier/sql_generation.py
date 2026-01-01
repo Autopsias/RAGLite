@@ -6,6 +6,7 @@ Story 2.13: Text-to-SQL generation for financial table search.
 import logging
 import re
 import time
+from typing import Any
 
 from raglite.retrieval.period_normalizer import detect_period_in_query, normalize_period
 from raglite.retrieval.query_classifier.classification import (
@@ -18,81 +19,13 @@ from raglite.shared.config import settings
 logger = logging.getLogger(__name__)
 
 
-async def generate_sql_query(query: str) -> str | None:
-    """Generate SQL query from natural language using Mistral API.
-
-    Story 2.13 AC2: Text-to-SQL generation for structured table queries.
-    Uses Mistral Small (same model as metadata extraction) for SQL generation against financial_tables schema.
-
-    Production Validation:
-        - FinRAG (EMNLP 2024): SQL-based retrieval achieves 70-80% accuracy on financial tables
-        - TableRAG (2024): Outperforms semantic search by 25-30% on structured queries
-        - Bloomberg NLP: SQL search reduces hallucinations by 40%
-        - Mistral Small: FREE, 91% accuracy on metadata extraction (Story 2.4)
-
-    Args:
-        query: Natural language query (e.g., "What is the variable cost per ton for
-               Portugal Cement in August 2025 YTD?")
+def _get_database_schema() -> str:
+    """Get database schema description for SQL prompt.
 
     Returns:
-        SQL query string or None if generation fails.
-
-        Example:
-            SELECT entity, metric, value, unit, period
-            FROM financial_tables
-            WHERE entity ILIKE '%Portugal Cement%'
-              AND metric ILIKE '%variable cost%'
-              AND period ILIKE '%Aug-25%'
-              AND fiscal_year = 2025
-            ORDER BY page_number, table_index, row_index
-            LIMIT 50;
-
-    Raises:
-        Exception: If Mistral API call fails (gracefully degrades to None)
+        Formatted database schema section
     """
-    logger.debug("Generating SQL query from natural language", extra={"query": query[:100]})
-
-    start_time = time.time()
-
-    try:
-        # Story 2.15 AC2: Detect and normalize period format
-        detected_period = detect_period_in_query(query)
-        period_variants = normalize_period(detected_period) if detected_period else []
-
-        # Log period normalization results
-        if period_variants:
-            logger.debug(
-                "Period normalized for SQL generation",
-                extra={
-                    "query_period": detected_period,
-                    "database_variants": period_variants,
-                },
-            )
-
-        # Phase 1.3: Expand metric synonyms for better SQL matching
-        expanded_metrics = expand_metric_synonyms(query)
-        metric_ilike_pattern = (
-            get_metric_ilike_pattern(expanded_metrics) if expanded_metrics else ""
-        )
-
-        # Log metric synonym expansion results
-        if expanded_metrics:
-            logger.debug(
-                "Metric synonyms expanded for SQL generation",
-                extra={
-                    "query": query[:100],
-                    "expanded_count": len(expanded_metrics),
-                    "metric_pattern": metric_ilike_pattern[:100] if metric_ilike_pattern else "",
-                },
-            )
-
-        # Initialize Mistral client with timeout configuration
-        client = get_mistral_client()
-
-        # SQL generation prompt with schema (prompt template for LLM, not SQL construction)
-        sql_prompt = f"""You are a SQL expert
-
-**DATABASE SCHEMA:**
+    return """**DATABASE SCHEMA:**
 
 Table: financial_tables
 Columns:
@@ -117,11 +50,16 @@ Indexes:
   - idx_metric ON metric
   - idx_period ON period
   - idx_fiscal_year ON fiscal_year
-  - idx_document_page ON (document_id, page_number)
+  - idx_document_page ON (document_id, page_number)"""
 
-**QUERY GENERATION RULES:**
 
-1. **ENTITY MATCHING** (Use ILIKE for fuzzy text matching):
+def _get_core_query_rules() -> str:
+    """Get core SQL query generation rules.
+
+    Returns:
+        Formatted core rules section
+    """
+    return """1. **ENTITY MATCHING** (Use ILIKE for fuzzy text matching):
    For entity queries, use ILIKE for case-insensitive pattern matching:
 
    SINGLE ENTITY:
@@ -171,9 +109,27 @@ Indexes:
    - "August 2025" → period ILIKE '%Aug-25%' AND (fiscal_year = 2025 OR fiscal_year IS NULL)
    - "Q3 2024" → period ILIKE '%Q3%' AND (fiscal_year = 2024 OR fiscal_year IS NULL)
    - "YTD" → period ILIKE '%YTD%'
-   - **CRITICAL**: Many tables have fiscal_year=NULL. Always use (fiscal_year = YYYY OR fiscal_year IS NULL) pattern.
+   - **CRITICAL**: Many tables have fiscal_year=NULL. Always use (fiscal_year = YYYY OR fiscal_year IS NULL) pattern."""
 
-9. **Story 2.15 AC2: Period Normalization** (USE WHEN PERIOD VARIANTS PROVIDED):
+
+def _get_context_rules(
+    detected_period: str | None,
+    period_variants: list[str],
+    expanded_metrics: list[str],
+    metric_ilike_pattern: str,
+) -> str:
+    """Get dynamic context-aware rules for period and metric handling.
+
+    Args:
+        detected_period: Detected period from query
+        period_variants: Normalized period variants
+        expanded_metrics: Expanded metric synonyms
+        metric_ilike_pattern: SQL ILIKE pattern for metrics
+
+    Returns:
+        Formatted context-aware rules section
+    """
+    return f"""9. **Story 2.15 AC2: Period Normalization** (USE WHEN PERIOD VARIANTS PROVIDED):
    {f"   - Detected period: {detected_period}" if detected_period else "   - No period detected in query"}
    {f"   - Use period IN {tuple(period_variants)} for exact matching" if period_variants else "   - No period variants available - use ILIKE pattern matching"}
    - **WHEN period variants provided**: Use IN clause instead of ILIKE for exact period matching
@@ -195,11 +151,16 @@ Indexes:
    - User says "debt" → Use: metric ILIKE ANY(ARRAY['%Financial net debt%', '%Net Debt%', '%Gross Debt%', '%Bank Debt%'])
    - User says "working capital" → Use: metric ILIKE ANY(ARRAY['%Trade Working Capital%', '%Net Working Capital%', '%WC%', '%Receivables%', '%Payables%'])
    - User says "clinker" → Use: metric ILIKE ANY(ARRAY['%Clinker%', '%Clinker Factor%', '%Clinker Ratio%'])
-   - User says "emissions" or "co2" → Use: metric ILIKE ANY(ARRAY['%CO2%', '%Emissions%', '%Carbon%', '%Scope 1%', '%Scope 2%'])
+   - User says "emissions" or "co2" → Use: metric ILIKE ANY(ARRAY['%CO2%', '%Emissions%', '%Carbon%', '%Scope 1%', '%Scope 2%'])"""
 
-**EXAMPLES:**
 
-Query: "What is the variable cost per ton for Portugal Cement in August 2025 YTD?"
+def _get_sql_examples() -> str:
+    """Get example SQL queries for reference.
+
+    Returns:
+        Formatted examples section
+    """
+    return """Query: "What is the variable cost per ton for Portugal Cement in August 2025 YTD?"
 SQL:
 SELECT document_id, entity, metric, value, unit, period, fiscal_year, page_number, table_caption
 FROM financial_tables
@@ -239,7 +200,89 @@ WHERE (entity ILIKE '%Portugal%' OR entity ILIKE '%Portugal Cement%'
     OR entity ILIKE '%Tunisia%' OR entity ILIKE '%Tunisia Cement%')
   AND metric ILIKE '%variable cost%'
 ORDER BY page_number DESC
-LIMIT 50;
+LIMIT 50;"""
+
+
+def _extract_query_context(query: str) -> tuple[str | None, list[str], list[str], str]:
+    """Extract period and metric context from query.
+
+    Args:
+        query: Natural language query
+
+    Returns:
+        Tuple of (detected_period, period_variants, expanded_metrics, metric_ilike_pattern)
+    """
+    # Story 2.15 AC2: Detect and normalize period format
+    detected_period = detect_period_in_query(query)
+    period_variants = normalize_period(detected_period) if detected_period else []
+
+    # Log period normalization results
+    if period_variants:
+        logger.debug(
+            "Period normalized for SQL generation",
+            extra={
+                "query_period": detected_period,
+                "database_variants": period_variants,
+            },
+        )
+
+    # Phase 1.3: Expand metric synonyms for better SQL matching
+    expanded_metrics = expand_metric_synonyms(query)
+    metric_ilike_pattern = get_metric_ilike_pattern(expanded_metrics) if expanded_metrics else ""
+
+    # Log metric synonym expansion results
+    if expanded_metrics:
+        logger.debug(
+            "Metric synonyms expanded for SQL generation",
+            extra={
+                "query": query[:100],
+                "expanded_count": len(expanded_metrics),
+                "metric_pattern": metric_ilike_pattern[:100] if metric_ilike_pattern else "",
+            },
+        )
+
+    return detected_period, period_variants, expanded_metrics, metric_ilike_pattern
+
+
+def _build_full_prompt(
+    query: str,
+    detected_period: str | None,
+    period_variants: list[str],
+    expanded_metrics: list[str],
+    metric_ilike_pattern: str,
+) -> str:
+    """Build complete SQL generation prompt.
+
+    Args:
+        query: Natural language query
+        detected_period: Detected period from query
+        period_variants: Normalized period variants
+        expanded_metrics: Expanded metric synonyms
+        metric_ilike_pattern: SQL ILIKE pattern for metrics
+
+    Returns:
+        Complete formatted prompt
+    """
+    schema = _get_database_schema()
+    core_rules = _get_core_query_rules()
+    context_rules = _get_context_rules(
+        detected_period, period_variants, expanded_metrics, metric_ilike_pattern
+    )
+    examples = _get_sql_examples()
+
+    return f"""You are a SQL expert
+
+{schema}
+
+**QUERY GENERATION RULES:**
+
+{core_rules}
+
+{context_rules}
+
+**EXAMPLES:**
+
+{examples}
 
 **USER QUERY:**
 {query}
@@ -255,43 +298,123 @@ LIMIT 50;
 - Use simple ORDER BY patterns: page_number DESC, value DESC, or fiscal_year DESC
 """  # nosec B608
 
-        # Call Mistral API (using same pattern as metadata extraction)
-        from mistralai.models import AssistantMessage, SystemMessage, ToolMessage, UserMessage
 
-        messages: list[AssistantMessage | SystemMessage | ToolMessage | UserMessage] = [
-            SystemMessage(
-                content="You are a SQL expert specializing in financial data queries. "
-                "Generate ONLY valid PostgreSQL queries. Return the SQL query without "
-                "explanations, markdown, or code blocks."
-            ),
-            UserMessage(content=sql_prompt),
-        ]
-        response = client.chat.complete(
-            model=settings.metadata_extraction_model,  # mistral-small-latest
-            max_tokens=500,
-            temperature=0,  # Deterministic SQL generation
-            messages=messages,
+async def _call_mistral_for_sql(client: Any, prompt: str) -> str | None:
+    """Call Mistral API to generate SQL.
+
+    Args:
+        client: Mistral client instance
+        prompt: Formatted SQL generation prompt
+
+    Returns:
+        SQL query string or None if generation fails
+    """
+    from mistralai.models import AssistantMessage, SystemMessage, ToolMessage, UserMessage
+
+    messages: list[AssistantMessage | SystemMessage | ToolMessage | UserMessage] = [
+        SystemMessage(
+            content="You are a SQL expert specializing in financial data queries. "
+            "Generate ONLY valid PostgreSQL queries. Return the SQL query without "
+            "explanations, markdown, or code blocks."
+        ),
+        UserMessage(content=prompt),
+    ]
+    response = client.chat.complete(
+        model=settings.metadata_extraction_model,  # mistral-small-latest
+        max_tokens=500,
+        temperature=0,  # Deterministic SQL generation
+        messages=messages,
+    )
+
+    response_content = response.choices[0].message.content
+    return response_content if isinstance(response_content, str) else None
+
+
+def _parse_and_validate_sql(response_content: str | None, query: str) -> str | None:
+    """Parse and validate SQL from API response.
+
+    Args:
+        response_content: Raw API response content
+        query: Original query (for logging)
+
+    Returns:
+        Validated SQL query or None if invalid
+    """
+    if not response_content:
+        return None
+
+    sql_query = response_content.strip()
+
+    # Remove markdown code blocks if present
+    sql_query = re.sub(r"```sql\n?", "", sql_query)
+    sql_query = re.sub(r"```\n?", "", sql_query)
+    sql_query = sql_query.strip()
+
+    # Validate SQL starts with SELECT
+    if not sql_query.upper().startswith("SELECT"):
+        logger.warning(
+            "Generated SQL does not start with SELECT",
+            extra={"query": query[:100], "sql": sql_query[:100]},
+        )
+        return None
+
+    return sql_query
+
+
+async def generate_sql_query(query: str) -> str | None:
+    """Generate SQL query from natural language using Mistral API.
+
+    Story 2.13 AC2: Text-to-SQL generation for structured table queries.
+    Uses Mistral Small (same model as metadata extraction) for SQL generation against financial_tables schema.
+
+    Production Validation:
+        - FinRAG (EMNLP 2024): SQL-based retrieval achieves 70-80% accuracy on financial tables
+        - TableRAG (2024): Outperforms semantic search by 25-30% on structured queries
+        - Bloomberg NLP: SQL search reduces hallucinations by 40%
+        - Mistral Small: FREE, 91% accuracy on metadata extraction (Story 2.4)
+
+    Args:
+        query: Natural language query (e.g., "What is the variable cost per ton for
+               Portugal Cement in August 2025 YTD?")
+
+    Returns:
+        SQL query string or None if generation fails.
+
+        Example:
+            SELECT entity, metric, value, unit, period
+            FROM financial_tables
+            WHERE entity ILIKE '%Portugal Cement%'
+              AND metric ILIKE '%variable cost%'
+              AND period ILIKE '%Aug-25%'
+              AND fiscal_year = 2025
+            ORDER BY page_number, table_index, row_index
+            LIMIT 50;
+
+    Raises:
+        Exception: If Mistral API call fails (gracefully degrades to None)
+    """
+    logger.debug("Generating SQL query from natural language", extra={"query": query[:100]})
+
+    start_time = time.time()
+
+    try:
+        # Extract period and metric context from query
+        detected_period, period_variants, expanded_metrics, metric_ilike_pattern = (
+            _extract_query_context(query)
         )
 
-        # Extract SQL from response
-        response_content = response.choices[0].message.content
-        sql_query: str | None = response_content if isinstance(response_content, str) else None
-        if sql_query:
-            sql_query = sql_query.strip()
-        else:
-            return None
+        # Initialize Mistral client and build prompt
+        client = get_mistral_client()
+        sql_prompt = _build_full_prompt(
+            query, detected_period, period_variants, expanded_metrics, metric_ilike_pattern
+        )
 
-        # Remove markdown code blocks if present
-        sql_query = re.sub(r"```sql\n?", "", sql_query)
-        sql_query = re.sub(r"```\n?", "", sql_query)
-        sql_query = sql_query.strip()
+        # Call Mistral API to generate SQL
+        response_content = await _call_mistral_for_sql(client, sql_prompt)
 
-        # Validate SQL starts with SELECT
-        if not sql_query.upper().startswith("SELECT"):
-            logger.warning(
-                "Generated SQL does not start with SELECT",
-                extra={"query": query[:100], "sql": sql_query[:100]},
-            )
+        # Parse and validate SQL response
+        sql_query = _parse_and_validate_sql(response_content, query)
+        if not sql_query:
             return None
 
         duration_ms = (time.time() - start_time) * 1000

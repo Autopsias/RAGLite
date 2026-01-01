@@ -107,6 +107,158 @@ def fuse_sql_vector_results(
     return fused_results_sorted[:top_k]
 
 
+def _build_bm25_position_map(
+    chunk_metadata: list[dict[str, Any]],
+) -> dict[tuple[str, int], int]:
+    """Build mapping from (source_document, chunk_index) to BM25 array position.
+
+    Args:
+        chunk_metadata: Metadata mapping BM25 positions to chunks
+
+    Returns:
+        Dictionary mapping (source_doc, chunk_idx) to BM25 position
+    """
+    chunk_to_bm25_pos: dict[tuple[str, int], int] = {}
+    for bm25_pos, metadata in enumerate(chunk_metadata):
+        source_doc = metadata.get("source_document", "")
+        chunk_idx = metadata.get("chunk_index", 0)
+        key = (source_doc, chunk_idx)
+        chunk_to_bm25_pos[key] = bm25_pos
+    return chunk_to_bm25_pos
+
+
+def _create_bm25_rank_map(bm25_scores: list[float]) -> dict[int, int]:
+    """Create rank mapping for BM25 scores.
+
+    Args:
+        bm25_scores: BM25 scores for all chunks in corpus
+
+    Returns:
+        Dictionary mapping BM25 position to rank (1-indexed)
+    """
+    bm25_ranking = sorted(enumerate(bm25_scores), key=lambda x: x[1], reverse=True)
+    return {bm25_pos: rank + 1 for rank, (bm25_pos, _) in enumerate(bm25_ranking)}
+
+
+def _calculate_rrf_scores(
+    semantic_results: list[QueryResult],
+    chunk_to_bm25_pos: dict[tuple[str, int], int],
+    bm25_rank_map: dict[int, int],
+    alpha: float,
+    k: int = 60,
+) -> tuple[dict[tuple[str, int], float], dict[tuple[str, int], QueryResult]]:
+    """Calculate Reciprocal Rank Fusion scores for semantic and BM25 results.
+
+    Args:
+        semantic_results: Results from semantic search (already sorted)
+        chunk_to_bm25_pos: Mapping from chunk key to BM25 position
+        bm25_rank_map: Mapping from BM25 position to rank
+        alpha: Fusion weight (0.7 = 70% semantic, 30% BM25)
+        k: RRF constant (default: 60)
+
+    Returns:
+        Tuple of (rrf_scores dict, result_map dict)
+    """
+    rrf_scores: dict[tuple[str, int], float] = {}
+    result_map: dict[tuple[str, int], QueryResult] = {}
+
+    # Add semantic ranking contributions (weighted by alpha)
+    for semantic_rank, result in enumerate(semantic_results, 1):
+        doc_key = (result.source_document, result.chunk_index)
+        rrf_scores[doc_key] = rrf_scores.get(doc_key, 0.0) + alpha / (k + semantic_rank)
+        result_map[doc_key] = result
+
+    # Add BM25 ranking contributions (weighted by 1-alpha)
+    for result in semantic_results:
+        doc_key = (result.source_document, result.chunk_index)
+        bm25_pos_opt = chunk_to_bm25_pos.get(doc_key)
+
+        if bm25_pos_opt is not None and bm25_pos_opt in bm25_rank_map:
+            bm25_rank: int = bm25_rank_map[bm25_pos_opt]
+            rrf_scores[doc_key] = rrf_scores.get(doc_key, 0.0) + (1 - alpha) / (k + bm25_rank)
+
+    return rrf_scores, result_map
+
+
+def _apply_metadata_boosting(
+    rrf_scores: dict[tuple[str, int], float],
+    metadata_boost: dict[str, str],
+    chunk_metadata: list[dict[str, Any]],
+    chunk_to_bm25_pos: dict[tuple[str, int], int],
+) -> None:
+    """Apply metadata boosting to RRF scores (modifies rrf_scores in-place).
+
+    Args:
+        rrf_scores: RRF scores to boost (modified in-place)
+        metadata_boost: Query metadata for soft boosting
+        chunk_metadata: Chunk metadata to match against
+        chunk_to_bm25_pos: Mapping from chunk key to BM25 position
+    """
+    for doc_key, rrf_score in list(rrf_scores.items()):
+        bm25_pos_opt = chunk_to_bm25_pos.get(doc_key)
+        if bm25_pos_opt is not None and bm25_pos_opt < len(chunk_metadata):
+            chunk_meta: dict[str, Any] = chunk_metadata[bm25_pos_opt]
+            boost_multiplier = 1.0
+            matches = []
+
+            # Check each metadata field for fuzzy matches
+            for field, query_value in metadata_boost.items():
+                chunk_value = chunk_meta.get(field)
+                if chunk_value and query_value:
+                    query_lower = str(query_value).lower()
+                    chunk_lower = str(chunk_value).lower()
+
+                    if query_lower in chunk_lower or chunk_lower in query_lower:
+                        boost_multiplier *= 1.2
+                        matches.append(field)
+
+            # Apply boost
+            if matches:
+                original_score = rrf_score
+                rrf_scores[doc_key] *= boost_multiplier
+                logger.debug(
+                    "Metadata boost applied",
+                    extra={
+                        "chunk": f"{doc_key[0]}:{doc_key[1]}",
+                        "matched_fields": matches,
+                        "boost_multiplier": round(boost_multiplier, 2),
+                        "original_score": round(original_score, 6),
+                        "boosted_score": round(rrf_scores[doc_key], 6),
+                    },
+                )
+
+
+def _create_fused_results(
+    rrf_scores: dict[tuple[str, int], float],
+    result_map: dict[tuple[str, int], QueryResult],
+) -> list[QueryResult]:
+    """Create QueryResult objects from RRF scores.
+
+    Args:
+        rrf_scores: RRF scores for each chunk
+        result_map: Mapping from chunk key to QueryResult
+
+    Returns:
+        List of QueryResult objects with RRF scores
+    """
+    fused_results = []
+    for doc_key, rrf_score in rrf_scores.items():
+        result = result_map[doc_key]
+        # Clamp to [0,1] range for Pydantic validation (RRF scores are typically <<1.0)
+        clamped_score = min(rrf_score, 1.0)
+        fused_results.append(
+            QueryResult(
+                score=clamped_score,
+                text=result.text,
+                source_document=result.source_document,
+                page_number=result.page_number,
+                chunk_index=result.chunk_index,
+                word_count=result.word_count,
+            )
+        )
+    return fused_results
+
+
 def fuse_search_results(
     semantic_results: list[QueryResult],
     bm25_scores: list[float],
@@ -171,103 +323,27 @@ def fuse_search_results(
     )
 
     # Build mapping from (source_document, chunk_index) to BM25 array position
-    chunk_to_bm25_pos: dict[tuple[str, int], int] = {}
-    if chunk_metadata:
-        for bm25_pos, metadata in enumerate(chunk_metadata):
-            source_doc = metadata.get("source_document", "")
-            chunk_idx = metadata.get("chunk_index", 0)
-            key = (source_doc, chunk_idx)
-            chunk_to_bm25_pos[key] = bm25_pos
+    chunk_to_bm25_pos = _build_bm25_position_map(chunk_metadata) if chunk_metadata else {}
 
     # Create BM25 ranking by sorting scores (descending)
-    bm25_ranking = sorted(
-        enumerate(bm25_scores), key=lambda x: x[1], reverse=True
-    )  # List of (bm25_pos, score) tuples
-
-    # Build rank mappings for RRF
-    # Semantic ranking: already sorted by score (rank = index + 1)
-    # BM25 ranking: sort by score and assign ranks
-    bm25_rank_map: dict[int, int] = {
-        bm25_pos: rank + 1 for rank, (bm25_pos, _) in enumerate(bm25_ranking)
-    }
+    bm25_rank_map = _create_bm25_rank_map(bm25_scores)
 
     # Reciprocal Rank Fusion (RRF) with k=60 (standard constant)
     k = 60  # RRF constant from Cormack et al.
-    rrf_scores: dict[tuple[str, int], float] = {}  # Map: (source_doc, chunk_idx) -> RRF score
-    result_map = {}  # Map: (source_doc, chunk_idx) -> QueryResult
-
-    # Add semantic ranking contributions (weighted by alpha)
-    for semantic_rank, result in enumerate(semantic_results, 1):
-        doc_key = (result.source_document, result.chunk_index)
-        # RRF contribution from semantic ranking
-        rrf_scores[doc_key] = rrf_scores.get(doc_key, 0.0) + alpha / (k + semantic_rank)
-        result_map[doc_key] = result
-
-    # Add BM25 ranking contributions (weighted by 1-alpha)
-    for result in semantic_results:
-        doc_key = (result.source_document, result.chunk_index)
-        bm25_pos_opt = chunk_to_bm25_pos.get(doc_key)
-
-        if bm25_pos_opt is not None and bm25_pos_opt in bm25_rank_map:
-            bm25_rank: int = bm25_rank_map[bm25_pos_opt]
-            # RRF contribution from BM25 ranking
-            rrf_scores[doc_key] = rrf_scores.get(doc_key, 0.0) + (1 - alpha) / (k + bm25_rank)
+    rrf_scores, result_map = _calculate_rrf_scores(
+        semantic_results, chunk_to_bm25_pos, bm25_rank_map, alpha, k
+    )
 
     # Apply metadata boosting if provided (1.2x multiplier per field match)
     if metadata_boost and chunk_metadata:
-        for doc_key, rrf_score in list(rrf_scores.items()):
-            bm25_pos_opt = chunk_to_bm25_pos.get(doc_key)
-            if bm25_pos_opt is not None and bm25_pos_opt < len(chunk_metadata):
-                chunk_meta: dict[str, Any] = chunk_metadata[bm25_pos_opt]
-                boost_multiplier = 1.0
-                matches = []
-
-                # Check each metadata field for fuzzy matches
-                for field, query_value in metadata_boost.items():
-                    chunk_value = chunk_meta.get(field)
-                    if chunk_value and query_value:
-                        query_lower = str(query_value).lower()
-                        chunk_lower = str(chunk_value).lower()
-
-                        if query_lower in chunk_lower or chunk_lower in query_lower:
-                            boost_multiplier *= 1.2
-                            matches.append(field)
-
-                # Apply boost
-                if matches:
-                    original_score = rrf_score
-                    rrf_scores[doc_key] *= boost_multiplier
-                    logger.debug(
-                        "Metadata boost applied",
-                        extra={
-                            "chunk": f"{doc_key[0]}:{doc_key[1]}",
-                            "matched_fields": matches,
-                            "boost_multiplier": round(boost_multiplier, 2),
-                            "original_score": round(original_score, 6),
-                            "boosted_score": round(rrf_scores[doc_key], 6),
-                        },
-                    )
+        _apply_metadata_boosting(rrf_scores, metadata_boost, chunk_metadata, chunk_to_bm25_pos)
 
     # Story 2.11 FIX: NO score normalization - preserve raw RRF scores
     # RRF scores are naturally small (0.0-0.02 range) and maintain relative ranking
     # This fixes the score=1.0 normalization bug from Story 2.4
 
     # Create QueryResult objects with RRF scores
-    fused_results = []
-    for doc_key, rrf_score in rrf_scores.items():
-        result = result_map[doc_key]
-        # Clamp to [0,1] range for Pydantic validation (RRF scores are typically <<1.0)
-        clamped_score = min(rrf_score, 1.0)
-        fused_results.append(
-            QueryResult(
-                score=clamped_score,
-                text=result.text,
-                source_document=result.source_document,
-                page_number=result.page_number,
-                chunk_index=result.chunk_index,
-                word_count=result.word_count,
-            )
-        )
+    fused_results = _create_fused_results(rrf_scores, result_map)
 
     # Sort by RRF score (descending) and return top-k
     fused_results_sorted = sorted(fused_results, key=lambda x: x.score, reverse=True)

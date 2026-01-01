@@ -13,6 +13,111 @@ from raglite.shared.config import settings
 logger = logging.getLogger(__name__)
 
 
+def _build_metadata_extraction_prompt(query: str) -> list:
+    """Build Mistral chat messages for metadata extraction.
+
+    Args:
+        query: Natural language financial query
+
+    Returns:
+        List of SystemMessage and UserMessage for Mistral API
+    """
+    from typing import Any
+
+    from mistralai.models import SystemMessage, UserMessage
+
+    messages: list[Any] = [
+        SystemMessage(
+            content=(
+                "Extract metadata filters from financial document queries for RAG retrieval.\n"
+                "Return ONLY valid JSON with relevant fields. Use ONLY fields with clear evidence in query.\n"
+                "Omit fields with no evidence. Return {} if no metadata detected.\n\n"
+                "AVAILABLE FIELDS (15 total - only use when query clearly indicates):\n\n"
+                "DOCUMENT-LEVEL (7 fields):\n"
+                "- document_type: Income Statement | Balance Sheet | Cash Flow Statement | "
+                "Operational Report | Earnings Call | Management Discussion | Financial Notes\n"
+                "- reporting_period: Q1 2024 | Aug-25 | Aug-25 YTD | FY 2023 | 2024 Annual | H1 2025\n"
+                "- time_granularity: Daily | Weekly | Monthly | Quarterly | YTD | Annual | Rolling 12-Month\n"
+                "- company_name: Portugal Cement | CIMPOR | Cimpor Trading | InterCement | Secil | "
+                "Secil Group | Tunisia Cement\n"
+                "- geographic_jurisdiction: Portugal | EU | APAC | Americas | Global | Tunisia | Angola | Lebanon\n"
+                "- data_source_type: Audited | Internal Report | Regulatory Filing | Management Estimate | Preliminary\n"
+                "- version_date: 2025-08-15 | 2024-Q3-Final | 2024-12-31-Revised\n\n"
+                "SECTION-LEVEL (5 fields):\n"
+                "- section_type: Narrative | Table | Footnote | Chart Caption | Summary | List | Formula\n"
+                "- metric_category: Revenue | EBITDA | Operating Expenses | Capital Expenditure | Cash Flow | "
+                "Assets | Liabilities | Equity | Ratios | Production Volume | Cost per Unit\n"
+                "- units: EUR | USD | GBP | EUR/ton | USD/MWh | Percentage | Count | Tonnes | MWh | m³\n"
+                "- department_scope: Operations | Finance | Production | Sales | Corporate | HR | IT | Supply Chain\n\n"
+                "TABLE-SPECIFIC (3 fields - ONLY for explicit table requests):\n"
+                "- table_context: Brief keywords about table content (NOT full description)\n"
+                "- table_name: Table title keywords (e.g., 'Variable Costs', 'EBITDA Breakdown')\n"
+                "- statistical_summary: Statistical keywords (e.g., 'Mean', 'Trend', 'Variance')\n\n"
+                "EXAMPLES:\n\n"
+                "Query: 'What is the variable cost per ton for Portugal Cement in August 2025 YTD?'\n"
+                'Output: {"metric_category": "Operating Expenses", "company_name": "Portugal Cement", '
+                '"time_granularity": "YTD", "reporting_period": "Aug-25", "units": "EUR/ton"}\n\n'
+                "Query: 'Show me EBITDA margin for Portugal operations'\n"
+                'Output: {"metric_category": "EBITDA", "geographic_jurisdiction": "Portugal"}\n\n'
+                "Query: 'What are the thermal energy costs?'\n"
+                'Output: {"metric_category": "Operating Expenses"}\n\n'
+                "Query: 'What is the total revenue?'\n"
+                'Output: {"metric_category": "Revenue"}\n\n'
+                "Query: 'Show financial tables'\n"
+                'Output: {"section_type": "Table"}\n\n'
+                "Query: 'How many employees work in Tunisia?'\n"
+                'Output: {"geographic_jurisdiction": "Tunisia", "department_scope": "HR"}\n\n'
+                "Query: 'Explain the cash flow statement'\n"
+                'Output: {"document_type": "Cash Flow Statement"}\n\n'
+                "RULES:\n"
+                "- Only include fields with CLEAR evidence in query\n"
+                "- Cost/expense queries → metric_category: 'Operating Expenses'\n"
+                "- Revenue queries → metric_category: 'Revenue'\n"
+                "- Margin/profitability queries → metric_category: 'EBITDA'\n"
+                "- Company names → Exact match from list above\n"
+                "- Dates → Normalize to format (e.g., 'August 2025' → 'Aug-25')\n"
+                "- YTD/Annual/Quarterly → time_granularity field\n"
+                "- Return {} if query is too general or no metadata evident"
+            )
+        ),
+        UserMessage(content=f"Extract metadata filters from this query:\n\n{query}"),
+    ]
+    return messages
+
+
+def _parse_metadata_response(response_content: str | None, query: str) -> dict[str, str]:
+    """Parse and validate Mistral metadata extraction response.
+
+    Args:
+        response_content: Raw response from Mistral API
+        query: Original query (for logging)
+
+    Returns:
+        Dictionary of metadata filters (empty dict if parsing fails)
+    """
+    if not response_content:
+        logger.warning("Empty response from Mistral query classifier")
+        return {}
+
+    # Type guard: ensure response_content is a string before json.loads
+    if not isinstance(response_content, str):
+        logger.warning("Response content is not a string, cannot parse JSON")
+        return {}
+
+    try:
+        filters = json.loads(response_content)
+        # Remove None/null values
+        filters = {k: v for k, v in filters.items() if v is not None and v != ""}
+        return dict(filters)  # Explicitly convert to dict for mypy
+
+    except json.JSONDecodeError as e:
+        logger.warning(
+            "Failed to parse metadata filters from Mistral response",
+            extra={"error": str(e), "query": query[:100]},
+        )
+        return {}
+
+
 async def classify_query_metadata(query: str) -> dict[str, str]:
     """Extract metadata filters from natural language query using Mistral Small.
 
@@ -47,68 +152,10 @@ async def classify_query_metadata(query: str) -> dict[str, str]:
         # Initialize Mistral client with timeout configuration
         client = get_mistral_client()
 
-        # Query classification prompt (optimized for financial document metadata)
-        from typing import Any
+        # Build prompt messages
+        messages = _build_metadata_extraction_prompt(query)
 
-        from mistralai.models import SystemMessage, UserMessage
-
-        messages: list[Any] = [
-            SystemMessage(
-                content=(
-                    "Extract metadata filters from financial document queries for RAG retrieval.\n"
-                    "Return ONLY valid JSON with relevant fields. Use ONLY fields with clear evidence in query.\n"
-                    "Omit fields with no evidence. Return {} if no metadata detected.\n\n"
-                    "AVAILABLE FIELDS (15 total - only use when query clearly indicates):\n\n"
-                    "DOCUMENT-LEVEL (7 fields):\n"
-                    "- document_type: Income Statement | Balance Sheet | Cash Flow Statement | "
-                    "Operational Report | Earnings Call | Management Discussion | Financial Notes\n"
-                    "- reporting_period: Q1 2024 | Aug-25 | Aug-25 YTD | FY 2023 | 2024 Annual | H1 2025\n"
-                    "- time_granularity: Daily | Weekly | Monthly | Quarterly | YTD | Annual | Rolling 12-Month\n"
-                    "- company_name: Portugal Cement | CIMPOR | Cimpor Trading | InterCement | Secil | "
-                    "Secil Group | Tunisia Cement\n"
-                    "- geographic_jurisdiction: Portugal | EU | APAC | Americas | Global | Tunisia | Angola | Lebanon\n"
-                    "- data_source_type: Audited | Internal Report | Regulatory Filing | Management Estimate | Preliminary\n"
-                    "- version_date: 2025-08-15 | 2024-Q3-Final | 2024-12-31-Revised\n\n"
-                    "SECTION-LEVEL (5 fields):\n"
-                    "- section_type: Narrative | Table | Footnote | Chart Caption | Summary | List | Formula\n"
-                    "- metric_category: Revenue | EBITDA | Operating Expenses | Capital Expenditure | Cash Flow | "
-                    "Assets | Liabilities | Equity | Ratios | Production Volume | Cost per Unit\n"
-                    "- units: EUR | USD | GBP | EUR/ton | USD/MWh | Percentage | Count | Tonnes | MWh | m³\n"
-                    "- department_scope: Operations | Finance | Production | Sales | Corporate | HR | IT | Supply Chain\n\n"
-                    "TABLE-SPECIFIC (3 fields - ONLY for explicit table requests):\n"
-                    "- table_context: Brief keywords about table content (NOT full description)\n"
-                    "- table_name: Table title keywords (e.g., 'Variable Costs', 'EBITDA Breakdown')\n"
-                    "- statistical_summary: Statistical keywords (e.g., 'Mean', 'Trend', 'Variance')\n\n"
-                    "EXAMPLES:\n\n"
-                    "Query: 'What is the variable cost per ton for Portugal Cement in August 2025 YTD?'\n"
-                    'Output: {"metric_category": "Operating Expenses", "company_name": "Portugal Cement", '
-                    '"time_granularity": "YTD", "reporting_period": "Aug-25", "units": "EUR/ton"}\n\n'
-                    "Query: 'Show me EBITDA margin for Portugal operations'\n"
-                    'Output: {"metric_category": "EBITDA", "geographic_jurisdiction": "Portugal"}\n\n'
-                    "Query: 'What are the thermal energy costs?'\n"
-                    'Output: {"metric_category": "Operating Expenses"}\n\n'
-                    "Query: 'What is the total revenue?'\n"
-                    'Output: {"metric_category": "Revenue"}\n\n'
-                    "Query: 'Show financial tables'\n"
-                    'Output: {"section_type": "Table"}\n\n'
-                    "Query: 'How many employees work in Tunisia?'\n"
-                    'Output: {"geographic_jurisdiction": "Tunisia", "department_scope": "HR"}\n\n'
-                    "Query: 'Explain the cash flow statement'\n"
-                    'Output: {"document_type": "Cash Flow Statement"}\n\n'
-                    "RULES:\n"
-                    "- Only include fields with CLEAR evidence in query\n"
-                    "- Cost/expense queries → metric_category: 'Operating Expenses'\n"
-                    "- Revenue queries → metric_category: 'Revenue'\n"
-                    "- Margin/profitability queries → metric_category: 'EBITDA'\n"
-                    "- Company names → Exact match from list above\n"
-                    "- Dates → Normalize to format (e.g., 'August 2025' → 'Aug-25')\n"
-                    "- YTD/Annual/Quarterly → time_granularity field\n"
-                    "- Return {} if query is too general or no metadata evident"
-                )
-            ),
-            UserMessage(content=f"Extract metadata filters from this query:\n\n{query}"),
-        ]
-
+        # Call Mistral API
         response = client.chat.complete(
             model=settings.metadata_extraction_model,  # "mistral-small-latest" (FREE)
             messages=messages,
@@ -117,24 +164,12 @@ async def classify_query_metadata(query: str) -> dict[str, str]:
             max_tokens=300,  # Sufficient for filter dict
         )
 
-        # Parse JSON response
+        # Parse and validate response
         response_content = response.choices[0].message.content
-        if not response_content:
-            logger.warning("Empty response from Mistral query classifier")
-            return {}
+        filters = _parse_metadata_response(response_content, query)
 
-        # Type guard: ensure response_content is a string before json.loads
-        if not isinstance(response_content, str):
-            logger.warning("Response content is not a string, cannot parse JSON")
-            return {}
-
-        filters = json.loads(response_content)
-
-        # Remove None/null values
-        filters = {k: v for k, v in filters.items() if v is not None and v != ""}
-
+        # Log success metrics
         duration_ms = (time.time() - start_time) * 1000
-
         logger.info(
             "Query metadata classification complete",
             extra={
@@ -147,14 +182,7 @@ async def classify_query_metadata(query: str) -> dict[str, str]:
             },
         )
 
-        return dict(filters)  # Explicitly convert to dict for mypy
-
-    except json.JSONDecodeError as e:
-        logger.warning(
-            "Failed to parse metadata filters from Mistral response",
-            extra={"error": str(e), "query": query[:100]},
-        )
-        return {}
+        return filters
 
     except Exception as e:
         logger.error(

@@ -12,6 +12,7 @@ import re
 from collections import Counter
 
 from .header import HeaderType, classify_header
+from .patterns import get_entity_patterns, get_metric_patterns, get_temporal_patterns
 
 logger = logging.getLogger(__name__)
 
@@ -193,6 +194,77 @@ def _analyze_column(
     }
 
 
+def _analyze_table_headers(
+    table_cells: list, entity_patterns: list[str], temporal_patterns: list[str]
+) -> tuple[int, int]:
+    """Analyze header patterns for entity and temporal content.
+
+    Args:
+        table_cells: List of table cells
+        entity_patterns: List of entity pattern strings
+        temporal_patterns: List of temporal pattern strings
+
+    Returns:
+        Tuple of (entity_header_count, temporal_header_count)
+    """
+    col_headers = [c for c in table_cells if c.column_header]
+
+    entity_header_count = sum(
+        1
+        for h in col_headers
+        if h.text and any(p.upper() in h.text.upper() for p in entity_patterns)
+    )
+    temporal_header_count = sum(
+        1 for h in col_headers if h.text and any(p in h.text for p in temporal_patterns)
+    )
+
+    return entity_header_count, temporal_header_count
+
+
+def _determine_orientation_type(
+    col_0: dict,
+    col_1: dict,
+    aspect_ratio: float,
+    entity_header_count: int,
+    temporal_header_count: int,
+) -> tuple[str, float]:
+    """Determine table orientation using 4-type taxonomy decision tree.
+
+    Args:
+        col_0: Column 0 analysis results
+        col_1: Column 1 analysis results
+        aspect_ratio: Table aspect ratio (rows/cols)
+        entity_header_count: Count of entity headers
+        temporal_header_count: Count of temporal headers
+
+    Returns:
+        Tuple of (orientation, confidence)
+    """
+    # TYPE A: Transposed Metric-Entity (metrics in col 0, units in col 1)
+    if col_0["metric_ratio"] > 0.4 and col_1["unit_ratio"] > 0.5:
+        return "transposed_metric", min(col_0["metric_ratio"] + col_1["unit_ratio"], 0.95)
+
+    # TYPE B: Entity-Column with Junk Column 0 (numeric junk in col 0, entities in col 1)
+    if col_0["numeric_ratio"] > 0.7 and col_1["entity_ratio"] > 0.5 and aspect_ratio > 1.5:
+        return "entity_column_junk", 0.90
+
+    # TYPE C: Normal Metric-Entity (metrics in col 0, data in col 1+)
+    if col_0["metric_ratio"] > 0.3 and col_1["numeric_ratio"] > 0.5:
+        return "normal_metric", 0.85
+
+    # Additional heuristics for edge cases
+    if col_0["metric_ratio"] > 0.5 and (entity_header_count > 0 or temporal_header_count > 0):
+        # Strong metric patterns + entity/temporal headers = TRANSPOSED
+        return "transposed_metric", 0.85
+
+    if aspect_ratio < 0.7 and entity_header_count > 0:
+        # More columns than rows + entity headers = TRANSPOSED
+        return "transposed_metric", 0.70
+
+    # Unknown/ambiguous
+    return "unknown", 0.50
+
+
 def _detect_table_orientation(
     table_cells: list, num_rows: int, num_cols: int, unit_patterns: list[str]
 ) -> tuple[str, float]:
@@ -219,133 +291,10 @@ def _detect_table_orientation(
     Returns:
         Tuple of (orientation, confidence)
     """
-    # Expanded patterns based on research (ENTRANT dataset, financial docs)
-    metric_patterns = [
-        # Core financial metrics
-        "EBITDA",
-        "EBIT",
-        "Revenue",
-        "Sales",
-        "Turnover",
-        "Margin",
-        "Profit",
-        "Loss",
-        "Cost",
-        "Expense",
-        "Income",
-        "Debt",
-        "Cash",
-        "Asset",
-        "Liability",
-        "Equity",
-        # Operational metrics
-        "Volume",
-        "Production",
-        "Capacity",
-        "Utilization",
-        "Efficiency",
-        "Productivity",
-        # Investment metrics
-        "CAPEX",
-        "OPEX",
-        "Investment",
-        "Expenditure",
-        "Spending",
-        # Market metrics
-        "Price",
-        "Rate",
-        "Ratio",
-        "Yield",
-        "Return",
-        # Performance metrics
-        "ROE",
-        "ROA",
-        "ROI",
-        "ROCE",
-        "EPS",
-        "P/E",
-        "Dividend",
-        "FCF",
-        # Tax & accounting
-        "Tax",
-        "Depreciation",
-        "Amortization",
-        "Impairment",
-        # Working capital
-        "Receivable",
-        "Payable",
-        "Inventory",
-        "Working Capital",
-        # Additional patterns
-        "Interest",
-        "Net",
-        "Gross",
-        "Operating",
-        "COGS",
-        "SG&A",
-        # ====== CEMENT INDUSTRY SPECIFIC (Phase 1.1) ======
-        # Fuels - CRITICAL for petcoke queries
-        "Petcoke",
-        "Pet Coke",
-        "Petroleum Coke",
-        "Coal",
-        "Lignite",
-        "Natural Gas",
-        "Fuel Oil",
-        "Alternative Fuel",
-        "AF Rate",
-        "Biomass",
-        # Production metrics
-        "Clinker",
-        "Clinker Factor",
-        "Clinker Ratio",
-        "Slag",
-        "Fly Ash",
-        "Gypsum",
-        "Limestone",
-        "Kiln",
-        "Raw Mill",
-        "Cement Mill",
-        # Sustainability
-        "CO2",
-        "Emissions",
-        "Carbon",
-        "Scope 1",
-        "Scope 2",
-        "Scope 3",
-        "TSR",
-        "Thermal Substitution",
-        # Units
-        "kcal/kg",
-        "GJ/ton",
-        "kWh/ton",
-        "MTPA",
-        "TPD",
-    ]
-
-    entity_patterns = [
-        "GROUP",
-        "PORTUGAL",
-        "ANGOLA",
-        "TUNISIA",
-        "LEBANON",
-        "BRAZIL",
-        "Entity",
-        "Company",
-        "Country",
-        "Region",
-        "Division",
-        "Segment",
-        "Business",
-        "Unit",
-        "Branch",
-        "Subsidiary",
-        "Cement",
-        "Madeira",
-        "Cape Verde",
-        "Nederland",
-        "Secil",
-    ]
+    # Get pattern lists
+    metric_patterns = get_metric_patterns()
+    entity_patterns = get_entity_patterns()
+    temporal_patterns = get_temporal_patterns()
 
     # Calculate aspect ratio
     aspect_ratio = num_rows / num_cols if num_cols > 0 else 1.0
@@ -353,81 +302,16 @@ def _detect_table_orientation(
     # Multi-column analysis (industry best practice)
     col_0 = _analyze_column(table_cells, 0, metric_patterns, entity_patterns, unit_patterns)
     col_1 = _analyze_column(table_cells, 1, metric_patterns, entity_patterns, unit_patterns)
+
     # Header analysis
-    col_headers = [c for c in table_cells if c.column_header]
-    temporal_patterns = [
-        "YTD",
-        "Q1",
-        "Q2",
-        "Q3",
-        "Q4",
-        "2024",
-        "2025",
-        "2023",
-        "2022",
-        "2021",
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-        "Year",
-        "Period",
-        "Month",
-        "Quarter",
-        "Budget",
-        "B ",
-        "Aug-",
-    ]
-
-    entity_header_count = sum(
-        1
-        for h in col_headers
-        if h.text and any(p.upper() in h.text.upper() for p in entity_patterns)
-    )
-    temporal_header_count = sum(
-        1 for h in col_headers if h.text and any(p in h.text for p in temporal_patterns)
+    entity_header_count, temporal_header_count = _analyze_table_headers(
+        table_cells, entity_patterns, temporal_patterns
     )
 
-    # ENHANCED DECISION TREE (4-type taxonomy)
-
-    # TYPE A: Transposed Metric-Entity (metrics in col 0, units in col 1)
-    if col_0["metric_ratio"] > 0.4 and col_1["unit_ratio"] > 0.5:  # LOWERED threshold from 0.5
-        orientation = "transposed_metric"
-        confidence = min(col_0["metric_ratio"] + col_1["unit_ratio"], 0.95)
-
-    # TYPE B: Entity-Column with Junk Column 0 (numeric junk in col 0, entities in col 1)
-    elif col_0["numeric_ratio"] > 0.7 and col_1["entity_ratio"] > 0.5 and aspect_ratio > 1.5:
-        orientation = "entity_column_junk"
-        confidence = 0.90
-
-    # TYPE C: Normal Metric-Entity (metrics in col 0, data in col 1+)
-    elif col_0["metric_ratio"] > 0.3 and col_1["numeric_ratio"] > 0.5:  # LOWERED threshold from 0.5
-        orientation = "normal_metric"
-        confidence = 0.85
-
-    # Additional heuristics for edge cases
-    elif col_0["metric_ratio"] > 0.5 and (entity_header_count > 0 or temporal_header_count > 0):
-        # Strong metric patterns + entity/temporal headers = TRANSPOSED
-        orientation = "transposed_metric"
-        confidence = 0.85
-
-    elif aspect_ratio < 0.7 and entity_header_count > 0:
-        # More columns than rows + entity headers = TRANSPOSED
-        orientation = "transposed_metric"
-        confidence = 0.70
-
-    else:
-        # Unknown/ambiguous
-        orientation = "unknown"
-        confidence = 0.50
+    # Determine orientation using decision tree
+    orientation, confidence = _determine_orientation_type(
+        col_0, col_1, aspect_ratio, entity_header_count, temporal_header_count
+    )
 
     # Logging with detailed metrics
     logger.info(

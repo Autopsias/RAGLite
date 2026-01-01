@@ -5,13 +5,104 @@ ingestion-time metadata extraction.
 """
 
 import time
-from typing import cast
+from typing import Any
 
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 from raglite.shared.models import QueryResult
 
 logger = get_logger(__name__)
+
+
+def _should_skip_enrichment(results: list[QueryResult]) -> bool:
+    """Check if metadata enrichment should be skipped.
+
+    Args:
+        results: List of QueryResult objects
+
+    Returns:
+        True if enrichment should be skipped, False otherwise
+    """
+    # AC5: Only enrich if enabled in config
+    if not settings.query_time_metadata_enabled:
+        logger.debug("Query-time metadata enrichment disabled (skip)")
+        return True
+
+    # AC5: Graceful degradation if no API key
+    if not settings.mistral_api_key:
+        logger.debug("Mistral API key not configured - skipping metadata enrichment")
+        return True
+
+    if not results:
+        return True
+
+    return False
+
+
+async def _enrich_single_result(result: QueryResult, index: int, client: Any) -> QueryResult:
+    """Extract metadata for a single result with error handling.
+
+    Args:
+        result: QueryResult to enrich
+        index: Result index for logging
+        client: Mistral client for metadata extraction
+
+    Returns:
+        QueryResult with metadata attached (or unchanged if extraction fails)
+    """
+    from raglite.ingestion.embedding_generation import extract_chunk_metadata
+
+    try:
+        # Extract metadata using existing function (reuses 15-field rich schema)
+        chunk_id = f"query_result_{index}"
+        metadata = await extract_chunk_metadata(result.text, chunk_id, client)
+
+        # Story 5.0.6 AC5: Attach extracted metadata to QueryResult
+        result.metadata = metadata
+
+        logger.debug(
+            "Metadata extracted and attached for result",
+            extra={
+                "index": index,
+                "company_name": metadata.company_name,
+                "reporting_period": metadata.reporting_period,
+                "metric_category": metadata.metric_category,
+            },
+        )
+
+        return result
+
+    except Exception as e:
+        logger.warning(
+            "Metadata extraction failed for result (graceful degradation)",
+            extra={"index": index, "error": str(e)},
+        )
+        return result
+
+
+def _collect_enriched_results(
+    enriched_results: list[QueryResult | BaseException], original_results: list[QueryResult]
+) -> list[QueryResult]:
+    """Filter exceptions and collect valid results.
+
+    Args:
+        enriched_results: Results from asyncio.gather (may contain exceptions)
+        original_results: Original results for fallback on exceptions
+
+    Returns:
+        List of QueryResult objects with exceptions replaced by originals
+    """
+    final_results: list[QueryResult] = []
+    for i, result in enumerate(enriched_results):
+        if isinstance(result, BaseException):
+            logger.warning(f"Enrichment task failed: {result}")
+            # Use original result (not the exception)
+            final_results.append(original_results[i])
+        else:
+            # Type narrowing: result is QueryResult here
+            final_results.append(result)
+
+    return final_results
 
 
 async def enrich_results_with_metadata(results: list[QueryResult]) -> list[QueryResult]:
@@ -49,20 +140,10 @@ async def enrich_results_with_metadata(results: list[QueryResult]) -> list[Query
     """
     import asyncio
 
-    from raglite.ingestion.embedding_generation import extract_chunk_metadata
     from raglite.shared.clients import get_mistral_client
 
-    # AC5: Only enrich if enabled in config
-    if not settings.query_time_metadata_enabled:
-        logger.debug("Query-time metadata enrichment disabled (skip)")
-        return results
-
-    # AC5: Graceful degradation if no API key
-    if not settings.mistral_api_key:
-        logger.debug("Mistral API key not configured - skipping metadata enrichment")
-        return results
-
-    if not results:
+    # Check if enrichment should be skipped
+    if _should_skip_enrichment(results):
         return results
 
     logger.info(
@@ -75,53 +156,15 @@ async def enrich_results_with_metadata(results: list[QueryResult]) -> list[Query
     # Create shared Mistral client for connection pooling
     client = get_mistral_client()
 
-    # AC5: Extract metadata for all results in parallel with timeout
-    async def enrich_single_result(result: QueryResult, index: int) -> QueryResult:
-        """Extract metadata for a single result with error handling."""
-        try:
-            # Extract metadata using existing function (reuses 15-field rich schema)
-            chunk_id = f"query_result_{index}"
-            metadata = await extract_chunk_metadata(result.text, chunk_id, client)
-
-            # Story 5.0.6 AC5: Attach extracted metadata to QueryResult
-            result.metadata = metadata
-
-            logger.debug(
-                "Metadata extracted and attached for result",
-                extra={
-                    "index": index,
-                    "company_name": metadata.company_name,
-                    "reporting_period": metadata.reporting_period,
-                    "metric_category": metadata.metric_category,
-                },
-            )
-
-            return result
-
-        except Exception as e:
-            logger.warning(
-                "Metadata extraction failed for result (graceful degradation)",
-                extra={"index": index, "error": str(e)},
-            )
-            return result
-
     try:
         # AC5: Parallel enrichment with 2.5s timeout
-        enrichment_tasks = [enrich_single_result(r, i) for i, r in enumerate(results)]
+        enrichment_tasks = [_enrich_single_result(r, i, client) for i, r in enumerate(results)]
         enriched_results = await asyncio.wait_for(
             asyncio.gather(*enrichment_tasks, return_exceptions=True), timeout=2.5
         )
 
         # Filter out exceptions from gather
-        final_results: list[QueryResult] = []
-        for i, result in enumerate(enriched_results):
-            if isinstance(result, Exception):
-                logger.warning(f"Enrichment task failed: {result}")
-                # Use original result (not the exception)
-                final_results.append(results[i])
-            else:
-                # Type narrowing: result is QueryResult here
-                final_results.append(cast(QueryResult, result))
+        final_results = _collect_enriched_results(enriched_results, results)
 
         elapsed_ms = (time.time() - start_time) * 1000
         logger.info(

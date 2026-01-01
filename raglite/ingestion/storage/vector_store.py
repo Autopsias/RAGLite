@@ -136,6 +136,203 @@ def create_collection(
         raise VectorStorageError(f"Failed to create collection {collection_name}: {e}") from e
 
 
+def _create_chunk_metadata_list(chunks: list[Chunk]) -> list[dict]:
+    """Extract metadata from chunks for BM25 index storage.
+
+    Args:
+        chunks: List of Chunk objects
+
+    Returns:
+        List of metadata dictionaries with 15 fields per chunk
+    """
+    return [
+        {
+            "source_document": chunk.metadata.filename,
+            "chunk_index": chunk.chunk_index,
+            "page_number": chunk.page_number,
+            # Document-Level (7 fields)
+            "document_type": chunk.document_type,
+            "reporting_period": chunk.reporting_period,
+            "time_granularity": chunk.time_granularity,
+            "company_name": chunk.company_name,
+            "geographic_jurisdiction": chunk.geographic_jurisdiction,
+            "data_source_type": chunk.data_source_type,
+            "version_date": chunk.version_date,
+            # Section-Level (5 fields)
+            "section_type": chunk.section_type,
+            "metric_category": chunk.metric_category,
+            "units": chunk.units,
+            "department_scope": chunk.department_scope,
+            # Table-Specific (3 fields)
+            "table_context": chunk.table_context,
+            "table_name": chunk.table_name,
+            "statistical_summary": chunk.statistical_summary,
+        }
+        for chunk in chunks
+    ]
+
+
+def _create_bm25_index_for_chunks(chunks: list[Chunk], collection_name: str) -> None:
+    """Create and save BM25 index for hybrid search.
+
+    Args:
+        chunks: List of Chunk objects
+        collection_name: Qdrant collection name for logging
+
+    Note:
+        Logs warning on failure but does not raise - allows semantic-only search
+    """
+    try:
+        bm25, tokenized_docs = create_bm25_index(chunks, k1=1.7, b=0.6)
+        chunk_metadata = _create_chunk_metadata_list(chunks)
+        save_bm25_index(bm25, tokenized_docs, chunk_metadata=chunk_metadata)
+        logger.info(
+            "BM25 index created and saved",
+            extra={"chunk_count": len(chunks), "collection": collection_name},
+        )
+    except Exception as e:
+        logger.warning(
+            "BM25 index creation failed - continuing with semantic-only",
+            extra={"error": str(e), "collection": collection_name},
+        )
+
+
+def _prepare_qdrant_points(chunks: list[Chunk], collection_name: str) -> list[PointStruct]:
+    """Convert chunks to Qdrant PointStruct objects with embeddings and metadata.
+
+    Args:
+        chunks: List of Chunk objects with embeddings
+        collection_name: Qdrant collection name for logging
+
+    Returns:
+        List of PointStruct objects ready for upload
+    """
+    points = []
+    for chunk in chunks:
+        if not chunk.embedding:
+            logger.warning(
+                "Chunk has no embedding, skipping",
+                extra={"chunk_id": chunk.chunk_id, "collection": collection_name},
+            )
+            continue
+
+        # Calculate word count from content (use chunk.word_count if available from Story 2.2)
+        word_count = (
+            chunk.word_count
+            if hasattr(chunk, "word_count") and chunk.word_count > 0
+            else len(chunk.content.split())
+        )
+
+        point = PointStruct(
+            id=str(uuid.uuid4()),
+            vector={"text-dense": chunk.embedding},  # Named vector for Story 2.1 sparse support
+            payload={
+                "chunk_id": chunk.chunk_id,
+                "text": chunk.content,
+                "word_count": word_count,
+                "source_document": chunk.metadata.filename,
+                "page_number": chunk.page_number,
+                "chunk_index": chunk.chunk_index,
+                # Story 2.4 REVISION: RICH SCHEMA (15 fields) for metadata-driven retrieval
+                # Document-Level (7 fields)
+                "document_type": chunk.document_type,
+                "reporting_period": chunk.reporting_period,
+                "time_granularity": chunk.time_granularity,
+                "company_name": chunk.company_name,
+                "geographic_jurisdiction": chunk.geographic_jurisdiction,
+                "data_source_type": chunk.data_source_type,
+                "version_date": chunk.version_date,
+                # Section-Level (5 fields)
+                "section_type": chunk.section_type,
+                "metric_category": chunk.metric_category,
+                "units": chunk.units,
+                "department_scope": chunk.department_scope,
+                # Table-Specific (3 fields)
+                "table_context": chunk.table_context,
+                "table_name": chunk.table_name,
+                "statistical_summary": chunk.statistical_summary,
+            },
+        )
+        points.append(point)
+    return points
+
+
+def _upload_points_in_batches(
+    points: list[PointStruct], collection_name: str, batch_size: int
+) -> None:
+    """Upload points to Qdrant in batches for memory efficiency.
+
+    Args:
+        points: List of PointStruct objects to upload
+        collection_name: Qdrant collection name
+        batch_size: Number of points per batch
+
+    Raises:
+        VectorStorageError: If upload fails
+    """
+    client = get_qdrant_client()
+    total_batches = (len(points) + batch_size - 1) // batch_size
+
+    for i in range(0, len(points), batch_size):
+        batch_num = (i // batch_size) + 1
+        batch_points = points[i : i + batch_size]
+
+        logger.info(
+            f"Uploading batch {batch_num}/{total_batches}",
+            extra={
+                "batch_num": batch_num,
+                "batch_size": len(batch_points),
+                "total_batches": total_batches,
+                "collection": collection_name,
+            },
+        )
+
+        client.upsert(collection_name=collection_name, points=batch_points)
+
+
+def _verify_storage_and_log(collection_name: str, expected_chunks: int, start_time: float) -> int:
+    """Verify storage completion and log results.
+
+    Args:
+        collection_name: Qdrant collection name
+        expected_chunks: Number of chunks that should be stored
+        start_time: Start time for duration calculation
+
+    Returns:
+        Number of points actually stored in collection
+    """
+    client = get_qdrant_client()
+    collection_info = client.get_collection(collection_name)
+    points_stored: int = collection_info.points_count or 0  # Handle None case
+
+    duration_ms = int((time.time() - start_time) * 1000)
+
+    logger.info(
+        "Vector storage complete",
+        extra={
+            "points_stored": points_stored,
+            "collection": collection_name,
+            "duration_ms": duration_ms,
+            "chunks_per_second": (
+                round(expected_chunks / (duration_ms / 1000), 2) if duration_ms > 0 else 0
+            ),
+        },
+    )
+
+    # Critical validation: points_count should match chunk_count (AC9)
+    if points_stored < expected_chunks:
+        logger.warning(
+            "Storage count mismatch - some chunks may not be stored",
+            extra={
+                "expected": expected_chunks,
+                "actual": points_stored,
+                "missing": expected_chunks - points_stored,
+            },
+        )
+
+    return points_stored
+
+
 async def store_vectors_in_qdrant(
     chunks: list[Chunk], collection_name: str | None = None, batch_size: int = 100
 ) -> int:
@@ -196,97 +393,10 @@ async def store_vectors_in_qdrant(
     create_collection(collection_name, vector_size=settings.embedding_dimension)
 
     # Create BM25 index for hybrid search (Story 2.1 AC1.2)
-    try:
-        bm25, tokenized_docs = create_bm25_index(chunks, k1=1.7, b=0.6)
-
-        # Story 2.4 Enhancement: Include rich metadata (15 fields) for metadata score boosting
-        chunk_metadata = [
-            {
-                "source_document": chunk.metadata.filename,
-                "chunk_index": chunk.chunk_index,
-                "page_number": chunk.page_number,
-                # Document-Level (7 fields)
-                "document_type": chunk.document_type,
-                "reporting_period": chunk.reporting_period,
-                "time_granularity": chunk.time_granularity,
-                "company_name": chunk.company_name,
-                "geographic_jurisdiction": chunk.geographic_jurisdiction,
-                "data_source_type": chunk.data_source_type,
-                "version_date": chunk.version_date,
-                # Section-Level (5 fields)
-                "section_type": chunk.section_type,
-                "metric_category": chunk.metric_category,
-                "units": chunk.units,
-                "department_scope": chunk.department_scope,
-                # Table-Specific (3 fields)
-                "table_context": chunk.table_context,
-                "table_name": chunk.table_name,
-                "statistical_summary": chunk.statistical_summary,
-            }
-            for chunk in chunks
-        ]
-
-        save_bm25_index(bm25, tokenized_docs, chunk_metadata=chunk_metadata)
-        logger.info(
-            "BM25 index created and saved",
-            extra={"chunk_count": len(chunks), "collection": collection_name},
-        )
-    except Exception as e:
-        logger.warning(
-            "BM25 index creation failed - continuing with semantic-only",
-            extra={"error": str(e), "collection": collection_name},
-        )
-
-    client = get_qdrant_client()
+    _create_bm25_index_for_chunks(chunks, collection_name)
 
     # Prepare points for upload
-    points = []
-    for chunk in chunks:
-        if not chunk.embedding:
-            logger.warning(
-                "Chunk has no embedding, skipping",
-                extra={"chunk_id": chunk.chunk_id, "collection": collection_name},
-            )
-            continue
-
-        # Calculate word count from content (use chunk.word_count if available from Story 2.2)
-        word_count = (
-            chunk.word_count
-            if hasattr(chunk, "word_count") and chunk.word_count > 0
-            else len(chunk.content.split())
-        )
-
-        point = PointStruct(
-            id=str(uuid.uuid4()),
-            vector={"text-dense": chunk.embedding},  # Named vector for Story 2.1 sparse support
-            payload={
-                "chunk_id": chunk.chunk_id,
-                "text": chunk.content,
-                "word_count": word_count,
-                "source_document": chunk.metadata.filename,
-                "page_number": chunk.page_number,
-                "chunk_index": chunk.chunk_index,
-                # Story 2.4 REVISION: RICH SCHEMA (15 fields) for metadata-driven retrieval
-                # Document-Level (7 fields)
-                "document_type": chunk.document_type,
-                "reporting_period": chunk.reporting_period,
-                "time_granularity": chunk.time_granularity,
-                "company_name": chunk.company_name,
-                "geographic_jurisdiction": chunk.geographic_jurisdiction,
-                "data_source_type": chunk.data_source_type,
-                "version_date": chunk.version_date,
-                # Section-Level (5 fields)
-                "section_type": chunk.section_type,
-                "metric_category": chunk.metric_category,
-                "units": chunk.units,
-                "department_scope": chunk.department_scope,
-                # Table-Specific (3 fields)
-                "table_context": chunk.table_context,
-                "table_name": chunk.table_name,
-                "statistical_summary": chunk.statistical_summary,
-            },
-        )
-        points.append(point)
+    points = _prepare_qdrant_points(chunks, collection_name)
 
     if not points:
         logger.warning(
@@ -296,56 +406,9 @@ async def store_vectors_in_qdrant(
         return 0
 
     # Upload in batches
-    total_batches = (len(points) + batch_size - 1) // batch_size
-
     try:
-        for i in range(0, len(points), batch_size):
-            batch_num = (i // batch_size) + 1
-            batch_points = points[i : i + batch_size]
-
-            logger.info(
-                f"Uploading batch {batch_num}/{total_batches}",
-                extra={
-                    "batch_num": batch_num,
-                    "batch_size": len(batch_points),
-                    "total_batches": total_batches,
-                    "collection": collection_name,
-                },
-            )
-
-            client.upsert(collection_name=collection_name, points=batch_points)
-
-        # Verify storage (critical validation for AC9)
-        collection_info = client.get_collection(collection_name)
-        points_stored: int = collection_info.points_count or 0  # Handle None case
-
-        duration_ms = int((time.time() - start_time) * 1000)
-
-        logger.info(
-            "Vector storage complete",
-            extra={
-                "points_stored": points_stored,
-                "collection": collection_name,
-                "duration_ms": duration_ms,
-                "chunks_per_second": (
-                    round(len(chunks) / (duration_ms / 1000), 2) if duration_ms > 0 else 0
-                ),
-            },
-        )
-
-        # Critical validation: points_count should match chunk_count (AC9)
-        if points_stored < len(chunks):
-            logger.warning(
-                "Storage count mismatch - some chunks may not be stored",
-                extra={
-                    "expected": len(chunks),
-                    "actual": points_stored,
-                    "missing": len(chunks) - points_stored,
-                },
-            )
-
-        return points_stored
-
+        _upload_points_in_batches(points, collection_name, batch_size)
+        return _verify_storage_and_log(collection_name, len(chunks), start_time)
     except Exception as e:
         logger.error(
             "Vector storage failed",

@@ -4,12 +4,18 @@ Provides fundamental vector search operations, embedding generation,
 and metric discovery.
 """
 
+from __future__ import annotations
+
 import time
+from typing import TYPE_CHECKING
 
 from raglite.shared.clients import get_embedding_model, get_qdrant_client
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 from raglite.shared.models import QueryResult
+
+if TYPE_CHECKING:
+    from qdrant_client.models import Filter
 
 logger = get_logger(__name__)
 
@@ -93,6 +99,114 @@ async def generate_query_embedding(query: str) -> list[float]:
         raise QueryError(f"Failed to generate query embedding: {e}") from e
 
 
+def _build_qdrant_filter(filters: dict[str, str] | None) -> Filter | None:
+    """Build Qdrant filter from metadata dictionary.
+
+    Args:
+        filters: Dictionary of metadata field names to values, or None
+
+    Returns:
+        Qdrant Filter object with conditions, or None if no valid filters
+
+    Strategy:
+        - Supports all 15 rich metadata fields from Story 2.4
+        - Uses MatchValue for exact string matching
+        - Returns None if no valid filter fields provided
+    """
+    from qdrant_client.models import FieldCondition, Filter, MatchValue
+
+    if not filters:
+        return None
+
+    conditions: list[FieldCondition] = []
+
+    # Supported filter fields (all 15 rich metadata fields + legacy source_document)
+    supported_fields = [
+        # Document-Level (7)
+        "document_type",
+        "reporting_period",
+        "time_granularity",
+        "company_name",
+        "geographic_jurisdiction",
+        "data_source_type",
+        "version_date",
+        # Section-Level (5)
+        "section_type",
+        "metric_category",
+        "units",
+        "department_scope",
+        # Table-Specific (3)
+        "table_context",
+        "table_name",
+        "statistical_summary",
+        # Legacy
+        "source_document",
+    ]
+
+    for field in supported_fields:
+        if field in filters:
+            conditions.append(FieldCondition(key=field, match=MatchValue(value=filters[field])))
+
+    if conditions:
+        return Filter(must=conditions)
+
+    return None
+
+
+def _convert_points_to_results(points: list) -> list[QueryResult]:
+    """Convert Qdrant search points to QueryResult objects.
+
+    Args:
+        points: List of Qdrant ScoredPoint objects with payloads
+
+    Returns:
+        List of QueryResult objects with validated metadata
+
+    Strategy:
+        - Validates required metadata (page_number, source_document)
+        - Logs warnings for missing metadata but creates results anyway
+        - Skips points with no payload (defensive programming)
+    """
+    results = []
+
+    for point in points:
+        payload = point.payload
+
+        # Type guard: Qdrant with_payload=True should always return dict
+        if payload is None:
+            logger.warning(
+                f"Point {point.id} has no payload, skipping",
+                extra={"point_id": str(point.id)},
+            )
+            continue
+
+        # Validate required metadata (CRITICAL for Story 1.8 source attribution)
+        if payload.get("page_number") is None:
+            logger.warning(
+                f"Chunk {payload.get('chunk_id')} missing page_number",
+                extra={"chunk_id": payload.get("chunk_id")},
+            )
+
+        if not payload.get("source_document"):
+            logger.warning(
+                f"Chunk {payload.get('chunk_id')} missing source_document",
+                extra={"chunk_id": payload.get("chunk_id")},
+            )
+
+        results.append(
+            QueryResult(
+                score=point.score,
+                text=payload["text"],
+                source_document=payload["source_document"],
+                page_number=payload["page_number"],
+                chunk_index=payload["chunk_index"],
+                word_count=payload["word_count"],
+            )
+        )
+
+    return results
+
+
 async def search_documents(
     query: str, top_k: int = 5, filters: dict[str, str] | None = None
 ) -> list[QueryResult]:
@@ -129,8 +243,6 @@ async def search_documents(
         >>> results[0].score
         0.87
     """
-    from qdrant_client.models import FieldCondition, Filter, MatchValue
-
     logger.info(
         "Searching documents",
         extra={
@@ -149,42 +261,7 @@ async def search_documents(
         qdrant = get_qdrant_client()
 
         # Build Qdrant filter (if provided) - Story 2.4 REVISION: 15 Rich Metadata Fields
-        qdrant_filter = None
-        if filters:
-            conditions: list[FieldCondition] = []
-
-            # Supported filter fields (all 15 rich metadata fields + legacy source_document)
-            supported_fields = [
-                # Document-Level (7)
-                "document_type",
-                "reporting_period",
-                "time_granularity",
-                "company_name",
-                "geographic_jurisdiction",
-                "data_source_type",
-                "version_date",
-                # Section-Level (5)
-                "section_type",
-                "metric_category",
-                "units",
-                "department_scope",
-                # Table-Specific (3)
-                "table_context",
-                "table_name",
-                "statistical_summary",
-                # Legacy
-                "source_document",
-            ]
-
-            for field in supported_fields:
-                if field in filters:
-                    conditions.append(
-                        FieldCondition(key=field, match=MatchValue(value=filters[field]))
-                    )
-
-            if conditions:
-                # Cast to list union type for mypy compatibility
-                qdrant_filter = Filter(must=conditions)
+        qdrant_filter = _build_qdrant_filter(filters)
 
         # Perform vector search
         search_result = qdrant.query_points(
@@ -197,41 +274,7 @@ async def search_documents(
         )
 
         # Convert to QueryResult objects
-        results = []
-        for point in search_result.points:
-            payload = point.payload
-
-            # Type guard: Qdrant with_payload=True should always return dict
-            if payload is None:
-                logger.warning(
-                    f"Point {point.id} has no payload, skipping",
-                    extra={"point_id": str(point.id)},
-                )
-                continue
-
-            # Validate required metadata (CRITICAL for Story 1.8 source attribution)
-            if payload.get("page_number") is None:
-                logger.warning(
-                    f"Chunk {payload.get('chunk_id')} missing page_number",
-                    extra={"chunk_id": payload.get("chunk_id")},
-                )
-
-            if not payload.get("source_document"):
-                logger.warning(
-                    f"Chunk {payload.get('chunk_id')} missing source_document",
-                    extra={"chunk_id": payload.get("chunk_id")},
-                )
-
-            results.append(
-                QueryResult(
-                    score=point.score,
-                    text=payload["text"],
-                    source_document=payload["source_document"],
-                    page_number=payload["page_number"],
-                    chunk_index=payload["chunk_index"],
-                    word_count=payload["word_count"],
-                )
-            )
+        results = _convert_points_to_results(search_result.points)
 
         elapsed_ms = (time.time() - start_time) * 1000
         logger.info(

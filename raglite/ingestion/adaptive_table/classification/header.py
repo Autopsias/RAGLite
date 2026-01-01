@@ -22,27 +22,18 @@ class HeaderType(Enum):
     UNKNOWN = "unknown"  # Cannot classify
 
 
-def classify_header(text: str) -> HeaderType:
-    """Classify header cell content using pattern matching.
+def _is_unit_descriptor(text_lower: str) -> bool:
+    """Check if text is a unit descriptor (should return UNKNOWN).
 
-    Uses comprehensive pattern matching for financial document headers.
-    Temporal indicators take precedence (strongest signal for layout detection).
+    Headers like "Currency (1000 EUR)" describe units, NOT actual data categories.
+    These should return UNKNOWN early to prevent misclassification as METRIC.
 
     Args:
-        text: Cell text content
+        text_lower: Lowercase text content
 
     Returns:
-        HeaderType classification
+        True if text matches unit descriptor patterns
     """
-    if not text or not text.strip():
-        return HeaderType.UNKNOWN
-
-    text_lower = text.lower().strip()
-
-    # UNIT DESCRIPTOR patterns - check FIRST before any other classification
-    # Headers like "Currency (1000 EUR)" describe units, NOT actual data categories
-    # These should return UNKNOWN early to prevent misclassification as METRIC
-    # (Fix for June 2025 PDF table extraction bug)
     unit_descriptor_patterns = [
         r"currency\s*\([^)]*\)",  # "Currency (1000 EUR)", "Currency (EUR million)"
         r"\b\d+\s*eur\b",  # "1000 EUR" standalone
@@ -51,13 +42,12 @@ def classify_header(text: str) -> HeaderType:
         r"^\s*uom\s*$",  # "UOM" (Unit of Measure)
     ]
 
-    # If this is a unit descriptor, return UNKNOWN early (not a data category)
-    for pattern in unit_descriptor_patterns:
-        if re.search(pattern, text_lower):
-            return HeaderType.UNKNOWN
+    return any(re.search(pattern, text_lower) for pattern in unit_descriptor_patterns)
 
-    # TEMPORAL patterns (highest priority - strongest layout signal)
-    temporal_patterns = [
+
+def _get_temporal_patterns() -> list[str]:
+    """Get temporal header patterns (dates, periods, quarters, years)."""
+    return [
         # Years
         r"\b(20\d{2}|19\d{2})\b",
         # Quarters, halves, periods
@@ -92,8 +82,10 @@ def classify_header(text: str) -> HeaderType:
         r"\blast\s+\d+\s+(months|years)\b",
     ]
 
-    # ENTITY patterns (countries, divisions, business units)
-    entity_patterns = [
+
+def _get_entity_patterns() -> list[str]:
+    """Get entity header patterns (countries, divisions, business units)."""
+    return [
         # Common European countries (universal pattern)
         r"\b(portugal|spain|france|italy|germany|uk|belgium|netherlands|poland|greece)\b",
         # Common non-European countries (universal pattern)
@@ -113,8 +105,10 @@ def classify_header(text: str) -> HeaderType:
         r"\b(others|other|misc|miscellaneous)\b",
     ]
 
-    # METRIC patterns (financial/operational metrics)
-    metric_patterns = [
+
+def _get_metric_patterns() -> list[str]:
+    """Get metric header patterns (financial/operational metrics)."""
+    return [
         # Core financial metrics (universal)
         r"\b(ebitda|ebit|revenue|turnover|sales|margin)\b",
         r"\b(cost|expense|opex|capex)\b",
@@ -180,12 +174,20 @@ def classify_header(text: str) -> HeaderType:
         r"\b(dispatch|delivery|transport)\b",
     ]
 
-    # Count pattern matches
-    temporal_score = sum(1 for p in temporal_patterns if re.search(p, text_lower))
-    entity_score = sum(1 for p in entity_patterns if re.search(p, text_lower))
-    metric_score = sum(1 for p in metric_patterns if re.search(p, text_lower))
 
-    # Classify based on strongest signal (temporal has priority)
+def _classify_from_scores(temporal_score: int, entity_score: int, metric_score: int) -> HeaderType:
+    """Classify header based on pattern match scores.
+
+    Temporal has highest priority (strongest layout signal).
+
+    Args:
+        temporal_score: Count of temporal pattern matches
+        entity_score: Count of entity pattern matches
+        metric_score: Count of metric pattern matches
+
+    Returns:
+        HeaderType classification based on strongest signal
+    """
     if temporal_score > 0:
         return HeaderType.TEMPORAL
     elif metric_score > entity_score:
@@ -194,3 +196,38 @@ def classify_header(text: str) -> HeaderType:
         return HeaderType.ENTITY
     else:
         return HeaderType.UNKNOWN
+
+
+def classify_header(text: str) -> HeaderType:
+    """Classify header cell content using pattern matching.
+
+    Uses comprehensive pattern matching for financial document headers.
+    Temporal indicators take precedence (strongest signal for layout detection).
+
+    Args:
+        text: Cell text content
+
+    Returns:
+        HeaderType classification
+    """
+    if not text or not text.strip():
+        return HeaderType.UNKNOWN
+
+    text_lower = text.lower().strip()
+
+    # Check for unit descriptors first (return UNKNOWN early)
+    if _is_unit_descriptor(text_lower):
+        return HeaderType.UNKNOWN
+
+    # Get pattern lists
+    temporal_patterns = _get_temporal_patterns()
+    entity_patterns = _get_entity_patterns()
+    metric_patterns = _get_metric_patterns()
+
+    # Count pattern matches
+    temporal_score = sum(1 for p in temporal_patterns if re.search(p, text_lower))
+    entity_score = sum(1 for p in entity_patterns if re.search(p, text_lower))
+    metric_score = sum(1 for p in metric_patterns if re.search(p, text_lower))
+
+    # Classify based on strongest signal
+    return _classify_from_scores(temporal_score, entity_score, metric_score)
