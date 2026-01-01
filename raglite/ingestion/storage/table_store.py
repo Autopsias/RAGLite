@@ -291,7 +291,7 @@ async def store_tables_in_postgresql(
     # Validate and filter rows (returns early if no valid rows)
     result = _validate_and_filter_rows(table_rows)
     if result[0] is None:
-        return result[1]  # type: ignore
+        return result[1]
     valid_rows, skipped_count = result
 
     try:
