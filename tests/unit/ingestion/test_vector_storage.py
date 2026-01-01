@@ -29,7 +29,7 @@ class TestQdrantStorage:
 
         Verifies create_collection creates collection with correct parameters. AC2.
         """
-        with patch("raglite.ingestion.storage_operations.get_qdrant_client") as mock_get_client:
+        with patch("raglite.ingestion.storage.vector_store.get_qdrant_client") as mock_get_client:
             mock_client = Mock()
             mock_collections = Mock()
             mock_collections.collections = []
@@ -63,7 +63,7 @@ class TestQdrantStorage:
 
         Verifies calling create_collection twice doesn't raise error. AC2.
         """
-        with patch("raglite.ingestion.storage_operations.get_qdrant_client") as mock_get_client:
+        with patch("raglite.ingestion.storage.vector_store.get_qdrant_client") as mock_get_client:
             mock_client = Mock()
             mock_collection = Mock()
             mock_collection.name = "financial_docs"
@@ -104,7 +104,7 @@ class TestQdrantStorage:
             for i in range(10)
         ]
 
-        with patch("raglite.ingestion.storage_operations.get_qdrant_client") as mock_get_client:
+        with patch("raglite.ingestion.storage.vector_store.get_qdrant_client") as mock_get_client:
             mock_client = Mock()
             mock_collections = Mock()
             mock_collections.collections = []
@@ -167,7 +167,7 @@ class TestQdrantStorage:
             for i in range(250)
         ]
 
-        with patch("raglite.ingestion.storage_operations.get_qdrant_client") as mock_get_client:
+        with patch("raglite.ingestion.storage.vector_store.get_qdrant_client") as mock_get_client:
             mock_client = Mock()
             mock_collections = Mock()
             mock_collections.collections = []
@@ -219,7 +219,7 @@ class TestQdrantStorage:
             for i in range(3)
         ]
 
-        with patch("raglite.ingestion.storage_operations.get_qdrant_client") as mock_get_client:
+        with patch("raglite.ingestion.storage.vector_store.get_qdrant_client") as mock_get_client:
             mock_client = Mock()
             mock_collections = Mock()
             mock_collections.collections = []
@@ -254,7 +254,7 @@ class TestQdrantStorage:
 
         Verifies function returns 0 and doesn't call Qdrant for empty input. AC7.
         """
-        with patch("raglite.ingestion.storage_operations.get_qdrant_client") as mock_get_client:
+        with patch("raglite.ingestion.storage.vector_store.get_qdrant_client") as mock_get_client:
             mock_client = Mock()
             mock_get_client.return_value = mock_client
 
@@ -290,7 +290,7 @@ class TestQdrantStorage:
             )
         ]
 
-        with patch("raglite.ingestion.storage_operations.get_qdrant_client") as mock_get_client:
+        with patch("raglite.ingestion.storage.vector_store.get_qdrant_client") as mock_get_client:
             mock_client = Mock()
             mock_collections = Mock()
             mock_collections.collections = []

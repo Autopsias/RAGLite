@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from qdrant_client.models import Distance  # noqa: E402
 
-from raglite.ingestion.storage_operations import create_collection  # noqa: E402
+from raglite.ingestion.storage import create_collection  # noqa: E402
 from raglite.shared.config import settings  # noqa: E402
 from raglite.shared.safety import SafetyGuard  # noqa: E402
 

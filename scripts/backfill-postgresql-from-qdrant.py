@@ -35,7 +35,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from qdrant_client import QdrantClient
 from qdrant_client.models import FieldCondition, Filter, MatchValue
 
-from raglite.ingestion.storage_operations import store_tables_in_postgresql
+from raglite.ingestion.storage import store_tables_in_postgresql
 from raglite.shared.clients import get_mistral_client
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger

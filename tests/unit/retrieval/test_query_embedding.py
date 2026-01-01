@@ -31,7 +31,7 @@ class TestGenerateQueryEmbedding:
         mock_embedding = np.array([0.1] * 1024)
         mock_model.encode.return_value = np.array([mock_embedding])
 
-        with patch("raglite.retrieval.search.get_embedding_model", return_value=mock_model):
+        with patch("raglite.retrieval.search.core.get_embedding_model", return_value=mock_model):
             embedding = await generate_query_embedding(query)
 
             # Assertions
@@ -66,6 +66,6 @@ class TestGenerateQueryEmbedding:
         mock_model = Mock()
         mock_model.encode.side_effect = RuntimeError("Model inference failed")
 
-        with patch("raglite.retrieval.search.get_embedding_model", return_value=mock_model):
+        with patch("raglite.retrieval.search.core.get_embedding_model", return_value=mock_model):
             with pytest.raises(QueryError, match="Failed to generate query embedding"):
                 await generate_query_embedding(query)

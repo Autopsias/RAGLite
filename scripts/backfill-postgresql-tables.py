@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from qdrant_client import QdrantClient
 from sqlalchemy import create_engine, text
 
-from raglite.ingestion.storage_operations import store_tables_in_postgresql
+from raglite.ingestion.storage import store_tables_in_postgresql
 from raglite.ingestion.table_extraction import TableExtractor
 from raglite.shared.logging import get_logger
 

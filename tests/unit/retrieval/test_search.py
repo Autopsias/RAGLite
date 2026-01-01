@@ -69,7 +69,7 @@ class TestSearchDocuments:
                 "raglite.retrieval.search.generate_query_embedding",
                 return_value=mock_embedding,
             ),
-            patch("raglite.retrieval.search.get_qdrant_client", return_value=mock_qdrant),
+            patch("raglite.retrieval.search.core.get_qdrant_client", return_value=mock_qdrant),
         ):
             results = await search_documents(query, top_k=5)
 
@@ -118,7 +118,7 @@ class TestSearchDocuments:
                 "raglite.retrieval.search.generate_query_embedding",
                 return_value=mock_embedding,
             ),
-            patch("raglite.retrieval.search.get_qdrant_client", return_value=mock_qdrant),
+            patch("raglite.retrieval.search.core.get_qdrant_client", return_value=mock_qdrant),
         ):
             # Test top_k=10
             results = await search_documents(query, top_k=10)
@@ -165,7 +165,7 @@ class TestSearchDocuments:
                 "raglite.retrieval.search.generate_query_embedding",
                 return_value=mock_embedding,
             ),
-            patch("raglite.retrieval.search.get_qdrant_client", return_value=mock_qdrant),
+            patch("raglite.retrieval.search.core.get_qdrant_client", return_value=mock_qdrant),
         ):
             results = await search_documents(query, top_k=5, filters=filters)
 
@@ -230,7 +230,7 @@ class TestSearchDocuments:
                 "raglite.retrieval.search.generate_query_embedding",
                 return_value=mock_embedding,
             ),
-            patch("raglite.retrieval.search.get_qdrant_client", return_value=mock_qdrant),
+            patch("raglite.retrieval.search.core.get_qdrant_client", return_value=mock_qdrant),
         ):
             results = await search_documents(query, top_k=5)
 
@@ -261,7 +261,7 @@ class TestSearchDocuments:
                 "raglite.retrieval.search.generate_query_embedding",
                 return_value=mock_embedding,
             ),
-            patch("raglite.retrieval.search.get_qdrant_client", return_value=mock_qdrant),
+            patch("raglite.retrieval.search.core.get_qdrant_client", return_value=mock_qdrant),
         ):
             with pytest.raises(QueryError, match="Vector search failed"):
                 await search_documents(query, top_k=5)
@@ -302,7 +302,7 @@ class TestSearchDocuments:
                 "raglite.retrieval.search.generate_query_embedding",
                 return_value=mock_embedding,
             ),
-            patch("raglite.retrieval.search.get_qdrant_client", return_value=mock_qdrant),
+            patch("raglite.retrieval.search.core.get_qdrant_client", return_value=mock_qdrant),
         ):
             results = await search_documents(query, top_k=5)
 
@@ -353,7 +353,7 @@ class TestSearchDocuments:
                 "raglite.retrieval.search.generate_query_embedding",
                 return_value=mock_embedding,
             ),
-            patch("raglite.retrieval.search.get_qdrant_client", return_value=mock_qdrant),
+            patch("raglite.retrieval.search.core.get_qdrant_client", return_value=mock_qdrant),
         ):
             # Should not raise error, but logs warning
             results = await search_documents(query, top_k=5)

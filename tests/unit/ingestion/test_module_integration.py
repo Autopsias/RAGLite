@@ -37,10 +37,10 @@ class TestTempFilesAndPDFProcessingIntegration:
             patch("docling.document_converter.DocumentConverter") as mock_converter_class,
             patch("raglite.ingestion.chunking_strategy.chunk_document") as mock_chunk,
             patch("raglite.ingestion.embedding_generation.generate_embeddings") as mock_embed,
-            patch("raglite.ingestion.storage_operations.store_vectors_in_qdrant"),
+            patch("raglite.ingestion.storage.vector_store.store_vectors_in_qdrant"),
             patch("raglite.ingestion.document_ingestion.pdf_utils.extract_metadata_for_chunks"),
             patch(
-                "raglite.ingestion.storage_operations.store_metadata_in_postgresql"
+                "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql"
             ) as mock_store_pg,
             patch("raglite.ingestion.table_extraction.TableExtractor") as mock_table_extractor,
             patch("raglite.ingestion.table_extraction.TableExtractor") as mock_table_extractor,
@@ -95,10 +95,10 @@ class TestTempFilesAndPDFProcessingIntegration:
             patch("docling.document_converter.DocumentConverter") as mock_converter_class,
             patch("raglite.ingestion.chunking_strategy.chunk_document") as mock_chunk,
             patch("raglite.ingestion.embedding_generation.generate_embeddings") as mock_embed,
-            patch("raglite.ingestion.storage_operations.store_vectors_in_qdrant"),
+            patch("raglite.ingestion.storage.vector_store.store_vectors_in_qdrant"),
             patch("raglite.ingestion.document_ingestion.pdf_utils.extract_metadata_for_chunks"),
             patch(
-                "raglite.ingestion.storage_operations.store_metadata_in_postgresql"
+                "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql"
             ) as mock_store_pg,
             patch("raglite.ingestion.table_extraction.TableExtractor") as mock_table_extractor,
         ):
@@ -332,10 +332,10 @@ class TestFullIngestionPipelineIntegration:
             patch("docling.document_converter.DocumentConverter") as mock_converter_class,
             patch("raglite.ingestion.chunking_strategy.chunk_document") as mock_chunk,
             patch("raglite.ingestion.embedding_generation.generate_embeddings") as mock_embed,
-            patch("raglite.ingestion.storage_operations.store_vectors_in_qdrant") as mock_store,
+            patch("raglite.ingestion.storage.vector_store.store_vectors_in_qdrant") as mock_store,
             patch("raglite.ingestion.document_ingestion.pdf_utils.extract_metadata_for_chunks"),
             patch(
-                "raglite.ingestion.storage_operations.store_metadata_in_postgresql"
+                "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql"
             ) as mock_store_pg,
         ):
             # Mock file exists

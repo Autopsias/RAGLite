@@ -128,14 +128,25 @@ def mock_mistral_client() -> Generator[tuple[MagicMock, MagicMock], None, None]:
             # SQL will contain: WHERE entity ILIKE '%Portugal%' AND metric ILIKE '%Revenue%'
     """
     # CRITICAL: Patch where the function is USED, not where it's DEFINED
-    # query_classifier does: from raglite.shared.clients import get_mistral_client
-    # So we must patch: raglite.retrieval.query_classifier.get_mistral_client
-    with patch("raglite.retrieval.query_classifier.get_mistral_client") as mock_get_client:
+    # After refactoring, get_mistral_client is imported in submodules:
+    # - raglite.retrieval.query_classifier.sql_generation
+    # - raglite.retrieval.query_classifier.metadata_filter
+    with (
+        patch(
+            "raglite.retrieval.query_classifier.sql_generation.get_mistral_client"
+        ) as mock_sql_gen,
+        patch(
+            "raglite.retrieval.query_classifier.metadata_filter.get_mistral_client"
+        ) as mock_metadata,
+    ):
         # Create mock client instance
         mock_client = MagicMock()
 
         # Configure mock to use query-aware SQL generation (imported from mistral_mock_helpers)
         mock_client.chat.complete.side_effect = generate_query_aware_sql
-        mock_get_client.return_value = mock_client
 
-        yield mock_client, mock_get_client
+        # Both patches return the same mock instance
+        mock_sql_gen.return_value = mock_client
+        mock_metadata.return_value = mock_client
+
+        yield mock_client, mock_sql_gen

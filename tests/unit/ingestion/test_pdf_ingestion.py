@@ -84,7 +84,7 @@ class TestIngestPDF:
                 return_value=mock_qdrant_client,
             ),
             patch(
-                "raglite.ingestion.storage_operations.get_qdrant_client",
+                "raglite.ingestion.storage.vector_store.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
@@ -213,7 +213,7 @@ class TestIngestPDF:
                 return_value=mock_qdrant_client,
             ),
             patch(
-                "raglite.ingestion.storage_operations.get_qdrant_client",
+                "raglite.ingestion.storage.vector_store.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
@@ -288,7 +288,7 @@ class TestIngestPDF:
                 return_value=mock_qdrant_client,
             ),
             patch(
-                "raglite.ingestion.storage_operations.get_qdrant_client",
+                "raglite.ingestion.storage.vector_store.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
@@ -393,7 +393,7 @@ class TestIngestPDF:
                 return_value=mock_qdrant_client,
             ),
             patch(
-                "raglite.ingestion.storage_operations.get_qdrant_client",
+                "raglite.ingestion.storage.vector_store.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,

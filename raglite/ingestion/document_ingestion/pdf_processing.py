@@ -16,7 +16,7 @@ from raglite.ingestion.document_ingestion.pdf_utils import (
     extract_metadata_for_chunks,
 )
 from raglite.ingestion.embedding_generation import generate_embeddings
-from raglite.ingestion.storage_operations import (
+from raglite.ingestion.storage import (
     store_metadata_in_postgresql,
     store_tables_in_postgresql,
     store_vectors_in_qdrant,

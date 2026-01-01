@@ -14,7 +14,7 @@ import pandas as pd
 
 from raglite.ingestion.chunking_strategy import chunk_document
 from raglite.ingestion.embedding_generation import generate_embeddings
-from raglite.ingestion.storage_operations import (
+from raglite.ingestion.storage import (
     store_metadata_in_postgresql,
     store_vectors_in_qdrant,
 )

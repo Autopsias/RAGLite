@@ -41,7 +41,7 @@ class TestAttachmentExtractorExpanded:
             patch("docling.document_converter.PdfFormatOption"),
             patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
             patch("raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client"),
-            patch("raglite.ingestion.storage_operations.get_qdrant_client"),
+            patch("raglite.ingestion.storage.vector_store.get_qdrant_client"),
             patch("raglite.ingestion.embedding_generation.get_embedding_model"),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql"
@@ -82,7 +82,7 @@ class TestAttachmentExtractorExpanded:
             patch("docling.document_converter.PdfFormatOption"),
             patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
             patch("raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client"),
-            patch("raglite.ingestion.storage_operations.get_qdrant_client"),
+            patch("raglite.ingestion.storage.vector_store.get_qdrant_client"),
             patch("raglite.ingestion.embedding_generation.get_embedding_model"),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql"
@@ -128,7 +128,7 @@ class TestAttachmentExtractorExpanded:
             patch("docling.document_converter.PdfFormatOption"),
             patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
             patch("raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client"),
-            patch("raglite.ingestion.storage_operations.get_qdrant_client"),
+            patch("raglite.ingestion.storage.vector_store.get_qdrant_client"),
             patch("raglite.ingestion.embedding_generation.get_embedding_model"),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
@@ -180,7 +180,7 @@ class TestAttachmentExtractorExpanded:
                     return_value=mock_qdrant_client,
                 ):
                     with patch(
-                        "raglite.ingestion.storage_operations.get_qdrant_client",
+                        "raglite.ingestion.storage.vector_store.get_qdrant_client",
                         return_value=mock_qdrant_client,
                     ):
                         # FIXED: Should process without error and handle image-only content
