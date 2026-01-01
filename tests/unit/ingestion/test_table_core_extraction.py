@@ -87,8 +87,16 @@ class TestTableExtractorCoreExtraction:
         mock_result = Mock()
         mock_table1 = Mock(spec=TableItem)
         mock_table1.prov = [Mock(page_no=1)]
+        mock_table1.data = Mock()
+        mock_table1.data.table_cells = []
+        mock_table1.data.num_rows = 1
+        mock_table1.data.num_cols = 1
         mock_table2 = Mock(spec=TableItem)
         mock_table2.prov = [Mock(page_no=2)]
+        mock_table2.data = Mock()
+        mock_table2.data.table_cells = []
+        mock_table2.data.num_rows = 1
+        mock_table2.data.num_cols = 1
 
         # Mock iteration to return 2 tables
         mock_result.document.iterate_items.return_value = [
@@ -104,7 +112,7 @@ class TestTableExtractorCoreExtraction:
 
         # Patch the adaptive extraction function
         with patch(
-            "raglite.ingestion.table_extraction.extract_table_data_adaptive",
+            "raglite.ingestion.table_extraction.extraction.extract_table_data_adaptive",
             side_effect=mock_extract,
         ):
             # Act
@@ -127,6 +135,10 @@ class TestTableExtractorCoreExtraction:
         mock_text_item = Mock()  # Not a TableItem
         mock_table_item = Mock(spec=TableItem)
         mock_table_item.prov = [Mock(page_no=1)]
+        mock_table_item.data = Mock()
+        mock_table_item.data.table_cells = []
+        mock_table_item.data.num_rows = 1
+        mock_table_item.data.num_cols = 1
 
         mock_result.document.iterate_items.return_value = [
             (mock_text_item, Mock()),  # Should be skipped
@@ -140,7 +152,7 @@ class TestTableExtractorCoreExtraction:
             return [{"table_index": table_index}]
 
         with patch(
-            "raglite.ingestion.table_extraction.extract_table_data_adaptive",
+            "raglite.ingestion.table_extraction.extraction.extract_table_data_adaptive",
             side_effect=mock_extract,
         ):
             # Act

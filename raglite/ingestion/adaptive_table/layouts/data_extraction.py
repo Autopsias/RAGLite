@@ -16,7 +16,7 @@ def _get_unit_and_value(
     row_unit_map: dict[int, str],
     column_unit_map: dict[int, str | None],
     col_unit_map_normal: dict[int, str],
-) -> tuple[str | None, str | None]:
+) -> tuple[float | None, str | None]:
     """Get unit and value from cell using priority order.
 
     Priority order:
@@ -54,9 +54,8 @@ def _get_unit_and_value(
         # Fallback: parse value + unit from data cell
         value, unit = _parse_value_unit(cell_text)
 
-    # Convert value to string for consistent return type
-    value_str = str(value) if value is not None else None
-    return value_str, unit
+    # Return parsed value (float or None) - don't convert to string
+    return value, unit
 
 
 def _build_column_name(
