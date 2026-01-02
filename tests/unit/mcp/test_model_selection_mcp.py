@@ -13,8 +13,7 @@ import pandas as pd
 import pytest
 
 from raglite.external_data.storage import CachedModelSelection
-from raglite.forecasting import regressor_config as regressor_config_module
-from raglite.mcp.tools import forecast as forecast_module
+from raglite.mcp.tools import forecast_helpers as forecast_helpers_module
 from raglite.shared.models import (
     ForecastPoint,
     ForecastQueryRequest,
@@ -168,22 +167,21 @@ class TestModelSelectionCacheIntegration:
         from raglite.main import get_financial_forecast
 
         with (
-            patch.object(
-                forecast_module,
-                "get_cached_model_selection",
+            patch(
+                "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
             ) as mock_cache,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_timeseries",
                 new_callable=AsyncMock,
             ) as mock_extract_timeseries,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "_route_to_model",
                 new_callable=AsyncMock,
             ) as mock_route,
@@ -218,26 +216,24 @@ class TestModelSelectionCacheIntegration:
         from raglite.main import get_financial_forecast
 
         with (
-            patch.object(
-                forecast_module,
-                "get_cached_model_selection",
+            patch(
+                "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
             ) as mock_cache,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_timeseries",
                 new_callable=AsyncMock,
             ) as mock_extract_timeseries,
-            patch.object(
-                regressor_config_module,
-                "select_model_type",
+            patch(
+                "raglite.mcp.tools.forecast_helpers.select_model_type",
             ) as mock_select,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "generate_forecast",
                 new_callable=AsyncMock,
             ) as mock_forecast,
@@ -272,26 +268,24 @@ class TestModelSelectionCacheIntegration:
         from raglite.main import get_financial_forecast
 
         with (
-            patch.object(
-                forecast_module,
-                "get_cached_model_selection",
+            patch(
+                "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
             ) as mock_cache,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_timeseries",
                 new_callable=AsyncMock,
             ) as mock_extract_timeseries,
-            patch.object(
-                regressor_config_module,
-                "select_model_type",
+            patch(
+                "raglite.mcp.tools.forecast_helpers.select_model_type",
             ) as mock_select,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "generate_forecast",
                 new_callable=AsyncMock,
             ) as mock_forecast,
@@ -328,22 +322,21 @@ class TestModelSelectionCacheIntegration:
         }
 
         with (
-            patch.object(
-                forecast_module,
-                "get_cached_model_selection",
+            patch(
+                "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
             ) as mock_cache,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_timeseries",
                 new_callable=AsyncMock,
             ) as mock_extract_timeseries,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "_route_to_model",
                 new_callable=AsyncMock,
             ) as mock_route,
@@ -388,26 +381,24 @@ class TestModelSelectionCacheIntegration:
         from raglite.main import get_financial_forecast
 
         with (
-            patch.object(
-                forecast_module,
-                "get_cached_model_selection",
+            patch(
+                "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
             ) as mock_cache,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_timeseries",
                 new_callable=AsyncMock,
             ) as mock_extract_timeseries,
-            patch.object(
-                regressor_config_module,
-                "select_model_type",
+            patch(
+                "raglite.mcp.tools.forecast_helpers.select_model_type",
             ) as mock_select,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "generate_forecast",
                 new_callable=AsyncMock,
             ) as mock_forecast,
@@ -436,22 +427,21 @@ class TestModelSelectionCacheIntegration:
         from raglite.main import get_financial_forecast
 
         with (
-            patch.object(
-                forecast_module,
-                "get_cached_model_selection",
+            patch(
+                "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
             ) as mock_cache,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_timeseries",
                 new_callable=AsyncMock,
             ) as mock_extract_timeseries,
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "generate_ensemble_forecast",
                 new_callable=AsyncMock,
             ) as mock_ensemble,
@@ -527,9 +517,9 @@ class TestModelRouters:
         """Chronos router should delegate to generate_chronos_cold_start_forecast."""
         from raglite.forecasting.hybrid import _generate_chronos_forecast
 
-        # Patch where the function is used (imported at module level in model_generators)
+        # Patch where the function is used (imported at module level in ensemble)
         with patch(
-            "raglite.forecasting.hybrid.model_generators.generate_chronos_cold_start_forecast",
+            "raglite.forecasting.hybrid.ensemble.generate_chronos_cold_start_forecast",
             new_callable=AsyncMock,
         ) as mock_chronos:
             mock_chronos.return_value = sample_forecast_result

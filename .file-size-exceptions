@@ -7,12 +7,6 @@
     "hard_limit": 500
   },
   "exceptions": {
-    "raglite/forecasting/timeseries/sql_extraction.py": {
-      "lines": 1398,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
     "raglite/retrieval/search.py": {
       "lines": 1146,
       "reason": "Baseline: existing at time of enforcement",

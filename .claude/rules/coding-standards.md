@@ -150,9 +150,14 @@ async def ingest_document(doc_path: str):
 
 ### Validation
 
+**Quality Scripts Location:** `~/.claude/scripts/quality/` (centralized, requires Python 3.10+)
+
 ```bash
 # Check all file sizes
 python scripts/check_file_sizes.py --verbose
+
+# Check function lengths (use uv for Python 3.10+ syntax)
+uv run python ~/.claude/scripts/quality/check_function_lengths.py --project "$PWD"
 
 # Quick check for specific file
 wc -l raglite/path/to/file.py

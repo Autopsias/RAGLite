@@ -63,16 +63,14 @@ class TestRetryWithBackoff:
     @pytest.mark.asyncio
     async def test_retry_success_first_attempt(self) -> None:
         """Test successful operation on first attempt."""
-        from raglite.external_data.refresh import _retry_with_backoff
+        from raglite.external_data.refresh_helpers import retry_with_backoff
 
         async def success_func() -> int:
             return 42
 
-        with patch("raglite.external_data.refresh.settings") as mock_settings:
+        with patch("raglite.external_data.refresh_helpers.settings") as mock_settings:
             mock_settings.external_data_retry_attempts = 3
-            success, attempts, error, result = await _retry_with_backoff(
-                success_func, "test_source"
-            )
+            success, attempts, error, result = await retry_with_backoff(success_func, "test_source")
 
         assert success is True
         assert attempts == 1
@@ -83,7 +81,7 @@ class TestRetryWithBackoff:
     async def test_retry_success_second_attempt(self) -> None:
         """Test successful operation after first retry."""
         from raglite.external_data.exceptions import ExternalDataFetchError
-        from raglite.external_data.refresh import _retry_with_backoff
+        from raglite.external_data.refresh_helpers import retry_with_backoff
 
         call_count = 0
 
@@ -94,10 +92,10 @@ class TestRetryWithBackoff:
                 raise ExternalDataFetchError("test", "First attempt fails")
             return 7
 
-        with patch("raglite.external_data.refresh.settings") as mock_settings:
+        with patch("raglite.external_data.refresh_helpers.settings") as mock_settings:
             mock_settings.external_data_retry_attempts = 3
-            with patch("raglite.external_data.refresh.asyncio.sleep", new=AsyncMock()):
-                success, attempts, error, result = await _retry_with_backoff(
+            with patch("raglite.external_data.refresh_helpers.asyncio.sleep", new=AsyncMock()):
+                success, attempts, error, result = await retry_with_backoff(
                     fail_then_success, "test_source"
                 )
 
@@ -110,15 +108,15 @@ class TestRetryWithBackoff:
     async def test_retry_all_attempts_fail(self) -> None:
         """Test failure after all retry attempts (AC3)."""
         from raglite.external_data.exceptions import ExternalDataFetchError
-        from raglite.external_data.refresh import _retry_with_backoff
+        from raglite.external_data.refresh_helpers import retry_with_backoff
 
         async def always_fails() -> int:
             raise ExternalDataFetchError("test", "Always fails")
 
-        with patch("raglite.external_data.refresh.settings") as mock_settings:
+        with patch("raglite.external_data.refresh_helpers.settings") as mock_settings:
             mock_settings.external_data_retry_attempts = 3
-            with patch("raglite.external_data.refresh.asyncio.sleep", new=AsyncMock()):
-                success, attempts, error, result = await _retry_with_backoff(
+            with patch("raglite.external_data.refresh_helpers.asyncio.sleep", new=AsyncMock()):
+                success, attempts, error, result = await retry_with_backoff(
                     always_fails, "test_source"
                 )
 
@@ -130,15 +128,15 @@ class TestRetryWithBackoff:
     @pytest.mark.asyncio
     async def test_retry_unexpected_error(self) -> None:
         """Test retry behavior with unexpected exception."""
-        from raglite.external_data.refresh import _retry_with_backoff
+        from raglite.external_data.refresh_helpers import retry_with_backoff
 
         async def raises_unexpected() -> int:
             raise RuntimeError("Unexpected error")
 
-        with patch("raglite.external_data.refresh.settings") as mock_settings:
+        with patch("raglite.external_data.refresh_helpers.settings") as mock_settings:
             mock_settings.external_data_retry_attempts = 3
-            with patch("raglite.external_data.refresh.asyncio.sleep", new=AsyncMock()):
-                success, attempts, error, result = await _retry_with_backoff(
+            with patch("raglite.external_data.refresh_helpers.asyncio.sleep", new=AsyncMock()):
+                success, attempts, error, result = await retry_with_backoff(
                     raises_unexpected, "test_source"
                 )
 
@@ -164,20 +162,23 @@ class TestRefreshSource:
         """Test that refresh_source returns RefreshResult."""
         from raglite.external_data.refresh import refresh_source
 
-        # Mock the entire refresh chain
+        # Mock the refresh function via the SOURCE_REFRESH_FUNCTIONS mapping
+        mock_refresh_result = RefreshResult(
+            source_name="IPMA",
+            success=True,
+            records_updated=7,
+        )
+
+        async def mock_ipma_refresh(storage):
+            return mock_refresh_result
+
         with patch("raglite.external_data.refresh.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_get_session.return_value = mock_session
 
             with patch(
-                "raglite.external_data.refresh._refresh_ipma",
-                new=AsyncMock(
-                    return_value=RefreshResult(
-                        source_name="IPMA",
-                        success=True,
-                        records_updated=7,
-                    )
-                ),
+                "raglite.external_data.refresh.SOURCE_REFRESH_FUNCTIONS",
+                {"IPMA": mock_ipma_refresh},
             ):
                 with patch(
                     "raglite.external_data.refresh.ExternalDataStorage"

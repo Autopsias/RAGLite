@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from raglite.mcp.tools import forecast as forecast_module
+from raglite.mcp.tools import forecast_helpers as forecast_helpers_module
 from raglite.shared.models import (
     ForecastPoint,
     ForecastQueryRequest,
@@ -86,13 +86,13 @@ class TestGetFinancialForecast:
 
         with (
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
@@ -148,13 +148,13 @@ class TestGetFinancialForecast:
 
         with (
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
@@ -177,7 +177,7 @@ class TestGetFinancialForecast:
         # Mock SQL extraction to fail (no data for this metric)
         with (
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 side_effect=ExtractionError(
@@ -185,7 +185,7 @@ class TestGetFinancialForecast:
                 ),
             ),
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_timeseries",  # Fallback also fails
                 new_callable=AsyncMock,
                 side_effect=ExtractionError("No documents found"),
@@ -227,13 +227,13 @@ class TestGetFinancialForecast:
 
         with (
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "generate_forecast",
                 new_callable=AsyncMock,
                 side_effect=InsufficientDataError("Need at least 8 data points"),
@@ -256,13 +256,13 @@ class TestGetFinancialForecast:
 
         with (
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 side_effect=ExtractionError("No data found in financial_tables"),
             ),
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_timeseries",
                 new_callable=AsyncMock,
                 side_effect=ExtractionError("No documents found"),
@@ -284,13 +284,13 @@ class TestGetFinancialForecast:
 
         with (
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 side_effect=RuntimeError("Unexpected crash"),
             ),
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_timeseries",
                 new_callable=AsyncMock,
                 side_effect=RuntimeError("Fallback also crashed"),

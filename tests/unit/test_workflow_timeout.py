@@ -267,7 +267,7 @@ class TestHandleWorkflowFailure:
         assert len(response.partial_results) == 2
 
     @pytest.mark.asyncio
-    @patch("raglite.agentic.fallback.fallback_to_basic_retrieval")
+    @patch("raglite.agentic.fallback_recovery.fallback_to_basic_retrieval")
     async def test_handle_failure_falls_back_to_epic1(self, mock_fallback):
         """Test fallback to Epic 1 when all agents failed."""
         # Arrange
@@ -298,7 +298,7 @@ class TestHandleWorkflowFailure:
         mock_fallback.assert_called_once_with("Test query")
 
     @pytest.mark.asyncio
-    @patch("raglite.agentic.fallback.fallback_to_basic_retrieval")
+    @patch("raglite.agentic.fallback_recovery.fallback_to_basic_retrieval")
     async def test_handle_failure_handles_complete_failure(self, mock_fallback):
         """Test complete failure when even Epic 1 fallback fails."""
         # Arrange
@@ -352,7 +352,7 @@ class TestWorkflowExecutorTimeoutIntegration:
         assert result.execution_time_ms >= 100  # At least timeout duration
 
     @pytest.mark.asyncio
-    @patch("raglite.agentic.orchestrator.settings")
+    @patch("raglite.agentic.orchestrator_workflow.settings")
     async def test_executor_continues_after_timeout(self, mock_settings):
         """Test WorkflowExecutor continues with other tasks after a timeout."""
         # Arrange

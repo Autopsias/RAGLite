@@ -150,7 +150,7 @@ class TestCacheLookup:
                     mock_explain.return_value = "Test explanation"
 
                     with patch(
-                        "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
                     ) as mock_fetch:
                         mock_fetch.return_value = sample_time_series_data
                         await generate_forecast(
@@ -187,7 +187,7 @@ class TestCacheLookup:
                     mock_explain.return_value = "Test explanation"
 
                     with patch(
-                        "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
                     ) as mock_fetch:
                         mock_fetch.return_value = sample_time_series_data
                         await generate_forecast(
@@ -218,7 +218,9 @@ class TestCacheLookup:
             ) as mock_ensure_data:
                 mock_ensure_data.return_value = sample_time_series_data
 
-                with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
+                with patch(
+                    "raglite.forecasting.hybrid.model_generators._route_to_model"
+                ) as mock_route:
                     mock_result = MagicMock()
                     mock_route.return_value = mock_result
 
@@ -266,7 +268,7 @@ class TestCacheLookup:
                     mock_explain.return_value = "Test explanation"
 
                     with patch(
-                        "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
                     ) as mock_fetch:
                         mock_fetch.return_value = sample_time_series_data
                         result = await generate_forecast(

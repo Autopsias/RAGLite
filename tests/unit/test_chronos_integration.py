@@ -119,15 +119,12 @@ async def test_cold_start_detection_with_insufficient_data() -> None:
             confidence_reasoning="Cold-start test",
         )
 
-        # Call generate_forecast with insufficient data
-        with patch(
-            "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
-        ) as mock_fetch:
-            mock_fetch.return_value = data  # Use the data variable defined above
-            result = await generate_forecast(
-                metric="test_metric",
-                periods_ahead=3,
-            )
+        # Pass historical_data directly to bypass data fetching
+        result = await generate_forecast(
+            metric="test_metric",
+            historical_data=data,  # Provide data directly
+            periods_ahead=3,
+        )
 
         # Verify cold-start path was triggered
         mock_cold_start.assert_called_once()

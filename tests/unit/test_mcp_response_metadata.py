@@ -131,9 +131,9 @@ class TestResponseMetadata:
         from raglite.forecasting.hybrid import generate_forecast
 
         with patch(
-            "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
-        ) as mock_fetch:
-            mock_fetch.return_value = sample_time_series_data
+            "raglite.forecasting.hybrid.ensemble.ensure_historical_data"
+        ) as mock_ensure_data:
+            mock_ensure_data.return_value = sample_time_series_data
 
             with patch(
                 "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
@@ -156,12 +156,12 @@ class TestResponseMetadata:
                             use_model_selection=True,
                         )
 
-                    # Should have model_selection_reason from cache
-                    assert result.model_selection_reason is not None
-                    assert (
-                        "ARIMA" in result.model_selection_reason
-                        or "arima" in result.model_selection_reason.lower()
-                    )
+                        # Should have model_selection_reason from cache
+                        assert result.model_selection_reason is not None
+                        assert (
+                            "ARIMA" in result.model_selection_reason
+                            or "arima" in result.model_selection_reason.lower()
+                        )
 
 
 # -----------------------------------------------------------------------------

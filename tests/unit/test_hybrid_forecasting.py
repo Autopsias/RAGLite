@@ -10,7 +10,7 @@ Tests cover:
 
 import os
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -139,9 +139,10 @@ class TestInsufficientDataError:
 
         with pytest.raises(InsufficientDataError, match="minimum 3 data points"):
             with patch(
-                "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
-            ) as mock_fetch:
-                mock_fetch.return_value = data
+                "raglite.forecasting.hybrid.ensemble.ensure_historical_data",
+                new_callable=AsyncMock,
+            ) as mock_ensure:
+                mock_ensure.return_value = data
                 await generate_forecast(metric="revenue")
 
     @pytest.mark.asyncio
@@ -155,9 +156,10 @@ class TestInsufficientDataError:
 
         with pytest.raises(InsufficientDataError, match="Got 2"):
             with patch(
-                "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
-            ) as mock_fetch:
-                mock_fetch.return_value = data
+                "raglite.forecasting.hybrid.ensemble.ensure_historical_data",
+                new_callable=AsyncMock,
+            ) as mock_ensure:
+                mock_ensure.return_value = data
                 await generate_forecast(metric="revenue")
 
 
@@ -258,17 +260,18 @@ class TestGenerateForecast:
         with (
             patch("prophet.Prophet", return_value=mock_prophet),
             patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain,
+            patch(
+                "raglite.forecasting.hybrid.ensemble.ensure_historical_data",
+                new_callable=AsyncMock,
+            ) as mock_ensure,
         ):
             mock_explain.return_value = '{"summary": "Forecast shows growth.", "confidence_rationale": "Based on 8 quarters of data."}'
+            mock_ensure.return_value = historical_data
 
-            with patch(
-                "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
-            ) as mock_fetch:
-                mock_fetch.return_value = historical_data
-                result = await generate_forecast(
-                    metric="revenue",
-                    periods_ahead=4,
-                )
+            result = await generate_forecast(
+                metric="revenue",
+                periods_ahead=4,
+            )
 
             # Verify result structure (AC3)
             assert result.metric_name == "revenue"
@@ -289,6 +292,10 @@ class TestGenerateForecast:
         with (
             patch("prophet.Prophet") as mock_prophet_class,
             patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_mistral,
+            patch(
+                "raglite.forecasting.hybrid.ensemble.ensure_historical_data",
+                new_callable=AsyncMock,
+            ) as mock_ensure,
         ):
             # Setup mock Prophet
             mock_prophet = MagicMock()
@@ -324,11 +331,8 @@ class TestGenerateForecast:
             mock_response.choices[0].message.content = '{"summary": "Revenue forecast"}'
             mock_mistral.return_value.chat.complete.return_value = mock_response
 
-            with patch(
-                "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
-            ) as mock_fetch:
-                mock_fetch.return_value = historical_data
-                result = await generate_forecast(metric="revenue")
+            mock_ensure.return_value = historical_data
+            result = await generate_forecast(metric="revenue")
 
             assert result.metric_name == "revenue"
 
@@ -340,6 +344,10 @@ class TestGenerateForecast:
         with (
             patch("prophet.Prophet") as mock_prophet_class,
             patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_mistral,
+            patch(
+                "raglite.forecasting.hybrid.ensemble.ensure_historical_data",
+                new_callable=AsyncMock,
+            ) as mock_ensure,
         ):
             mock_prophet = MagicMock()
             mock_prophet_class.return_value = mock_prophet
@@ -373,11 +381,8 @@ class TestGenerateForecast:
             mock_response.choices[0].message.content = '{"summary": "Cash flow forecast"}'
             mock_mistral.return_value.chat.complete.return_value = mock_response
 
-            with patch(
-                "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
-            ) as mock_fetch:
-                mock_fetch.return_value = historical_data
-                result = await generate_forecast(metric="cash_flow")
+            mock_ensure.return_value = historical_data
+            result = await generate_forecast(metric="cash_flow")
 
             assert result.metric_name == "cash_flow"
 
@@ -389,6 +394,10 @@ class TestGenerateForecast:
         with (
             patch("prophet.Prophet") as mock_prophet_class,
             patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_mistral,
+            patch(
+                "raglite.forecasting.hybrid.ensemble.ensure_historical_data",
+                new_callable=AsyncMock,
+            ) as mock_ensure,
         ):
             mock_prophet = MagicMock()
             mock_prophet_class.return_value = mock_prophet
@@ -422,11 +431,8 @@ class TestGenerateForecast:
             mock_response.choices[0].message.content = '{"summary": "Expenses forecast"}'
             mock_mistral.return_value.chat.complete.return_value = mock_response
 
-            with patch(
-                "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
-            ) as mock_fetch:
-                mock_fetch.return_value = historical_data
-                result = await generate_forecast(metric="expenses")
+            mock_ensure.return_value = historical_data
+            result = await generate_forecast(metric="expenses")
 
             assert result.metric_name == "expenses"
 

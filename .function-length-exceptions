@@ -7,12 +7,12 @@
     "hard_limit": 100
   },
   "exceptions": {
-    "raglite/forecasting/timeseries/sql_extraction.py:77:extract_timeseries_from_sql": {
-      "length": 1322,
+    "raglite/forecasting/timeseries/sql_extraction.py:484:extract_timeseries_from_sql": {
+      "length": 128,
       "function": "extract_timeseries_from_sql",
       "file": "raglite/forecasting/timeseries/sql_extraction.py",
-      "line": 77,
-      "reason": "Baseline: existing at time of enforcement",
+      "line": 484,
+      "reason": "Refactored from 1322 to 128 LOC. Remaining 128 LOC includes 52-line docstring (actual code: 76 LOC). Complex SQL extraction function with Qdrant fallback.",
       "target_lines": 100,
       "directory": "raglite/"
     },

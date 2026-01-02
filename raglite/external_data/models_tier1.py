@@ -1,0 +1,257 @@
+"""Tier 1 external data source models.
+
+Story 6.1: Tier 1 External Data Source Integration
+
+Models for Portuguese and EU economic data sources:
+- INE: Building permits, construction output/cost index
+- ATIC: Cement consumption
+- BPstat: Mortgage loans
+- OMIE: Electricity prices
+- EU Oil Bulletin: Diesel prices
+- IPMA: Weather data
+- Base.gov.pt: Public works contracts
+- Commodities: Coal, petcoke, CO2 EUA prices
+"""
+
+from __future__ import annotations
+
+from datetime import date
+
+from pydantic import BaseModel, Field
+
+from .models_base import DataSource
+
+# =============================================================================
+# INE (Instituto Nacional de Estatistica) Models
+# =============================================================================
+
+
+class INEBuildingPermits(BaseModel):
+    """Building permits data from INE.
+
+    Source: https://www.ine.pt/xportal/xmain?xpgid=ine_api
+    Dataset: Licenças de construção
+    """
+
+    date: date
+    permits_count: int = Field(ge=0, description="Number of building permits issued")
+    region: str = Field(default="Portugal", description="Geographic region")
+    permit_type: str | None = Field(
+        default=None, description="Type of permit (new, renovation, etc.)"
+    )
+    source: DataSource = Field(default=DataSource.INE)
+
+
+class INEConstructionOutput(BaseModel):
+    """Construction output index from INE.
+
+    Source: https://www.ine.pt/xportal/xmain?xpgid=ine_api
+    Dataset: Índice de Produção na Construção
+    """
+
+    date: date
+    index_value: float = Field(description="Construction output index (base=100)")
+    yoy_change_pct: float | None = Field(
+        default=None, description="Year-over-year change percentage"
+    )
+    source: DataSource = Field(default=DataSource.INE)
+
+
+class INEConstructionCostIndex(BaseModel):
+    """Construction cost index from INE.
+
+    Source: https://www.ine.pt/xportal/xmain?xpgid=ine_api
+    Dataset: Índice de Custos de Construção de Habitação Nova
+    """
+
+    date: date
+    total_index: float = Field(description="Total construction cost index")
+    materials_index: float | None = Field(default=None, description="Materials cost component")
+    labor_index: float | None = Field(default=None, description="Labor cost component")
+    source: DataSource = Field(default=DataSource.INE)
+
+
+# =============================================================================
+# ATIC (Cement Industry) Models
+# =============================================================================
+
+
+class ATICCementConsumption(BaseModel):
+    """Cement consumption data from ATIC.
+
+    Source: ATIC (Associação Técnica da Indústria de Cimento)
+    Note: Data provided via CSV upload, no public API
+    """
+
+    date: date
+    consumption_tonnes: float = Field(ge=0, description="Cement consumption in tonnes")
+    region: str = Field(default="Portugal", description="Geographic region")
+    cement_type: str | None = Field(default=None, description="Type of cement (gray, white, etc.)")
+    source: DataSource = Field(default=DataSource.ATIC)
+
+
+# =============================================================================
+# BPstat (Banco de Portugal) Models
+# =============================================================================
+
+
+class BPstatMortgageLoans(BaseModel):
+    """Mortgage loan data from Banco de Portugal.
+
+    Source: https://bpstat.bportugal.pt/data/v1/
+    Dataset: Housing loans to households
+    """
+
+    date: date
+    total_loans_eur: float = Field(description="Total outstanding mortgage loans (EUR)")
+    new_loans_eur: float | None = Field(
+        default=None, description="New mortgage loans in period (EUR)"
+    )
+    avg_interest_rate_pct: float | None = Field(
+        default=None, description="Average interest rate percentage"
+    )
+    source: DataSource = Field(default=DataSource.BPSTAT)
+
+
+# =============================================================================
+# OMIE (Electricity Market) Models
+# =============================================================================
+
+
+class OMIEElectricityPrice(BaseModel):
+    """Electricity spot price from OMIE.
+
+    Source: https://www.omie.es/sites/default/files/dados/
+    Market: MIBEL (Mercado Ibérico de Electricidade)
+    """
+
+    date: date
+    hour: int | None = Field(
+        default=None, ge=0, le=23, description="Hour of day (0-23) for hourly prices"
+    )
+    price_eur_mwh: float = Field(description="Electricity price in EUR/MWh")
+    market: str = Field(default="MIBEL", description="Electricity market identifier")
+    price_type: str = Field(default="spot", description="Price type (spot, futures, etc.)")
+    source: DataSource = Field(default=DataSource.OMIE)
+
+
+# =============================================================================
+# EU Oil Bulletin Models
+# =============================================================================
+
+
+class EUDieselPrice(BaseModel):
+    """Diesel price from EU Oil Bulletin.
+
+    Source: https://ec.europa.eu/energy/observatory/reports/
+    Coverage: Weekly prices for EU member states
+    """
+
+    date: date
+    price_eur_litre: float = Field(description="Diesel price in EUR per litre")
+    country: str = Field(default="Portugal", description="Country code or name")
+    tax_included: bool = Field(default=True, description="Whether price includes taxes")
+    source: DataSource = Field(default=DataSource.EU_OIL_BULLETIN)
+
+
+# =============================================================================
+# IPMA (Weather) Models
+# =============================================================================
+
+
+class IPMAWeatherData(BaseModel):
+    """Weather observation from IPMA.
+
+    Source: https://api.ipma.pt/open-data/
+    Coverage: Portugal weather stations
+    """
+
+    date: date
+    station_id: str = Field(description="Weather station identifier")
+    station_name: str | None = Field(default=None, description="Weather station name")
+    temperature_c: float | None = Field(default=None, description="Temperature in Celsius")
+    temperature_max_c: float | None = Field(
+        default=None, description="Maximum temperature in Celsius"
+    )
+    temperature_min_c: float | None = Field(
+        default=None, description="Minimum temperature in Celsius"
+    )
+    precipitation_mm: float | None = Field(
+        default=None, ge=0, description="Precipitation in millimeters"
+    )
+    humidity_pct: float | None = Field(
+        default=None, ge=0, le=100, description="Relative humidity percentage"
+    )
+    wind_speed_kmh: float | None = Field(default=None, ge=0, description="Wind speed in km/h")
+    source: DataSource = Field(default=DataSource.IPMA)
+
+
+# =============================================================================
+# Base.gov.pt (Public Works) Models
+# =============================================================================
+
+
+class BaseGovContract(BaseModel):
+    """Public works contract from Base.gov.pt.
+
+    Source: https://www.base.gov.pt/Base4/pt/
+    Coverage: Portuguese public procurement contracts
+    """
+
+    publication_date: date = Field(description="Contract publication date")
+    contract_id: str = Field(description="Unique contract identifier")
+    description: str | None = Field(default=None, description="Contract description")
+    contract_value_eur: float = Field(ge=0, description="Contract value in EUR")
+    contracting_entity: str | None = Field(default=None, description="Public entity name")
+    contractor: str | None = Field(default=None, description="Winning contractor name")
+    cpv_code: str | None = Field(default=None, description="Common Procurement Vocabulary code")
+    execution_location: str | None = Field(
+        default=None, description="Location of contract execution"
+    )
+    source: DataSource = Field(default=DataSource.BASEGOV)
+
+
+# =============================================================================
+# Commodities Models
+# =============================================================================
+
+
+class CommodityPrice(BaseModel):
+    """Commodity price data (Coal, Petcoke, CO2 EUA).
+
+    Sources: Various (web scraping targets for manual data entry)
+    """
+
+    date: date
+    commodity: str = Field(description="Commodity type (coal, petcoke, co2_eua)")
+    price: float = Field(ge=0, description="Price value")
+    currency: str = Field(default="EUR", description="Price currency")
+    unit: str = Field(description="Unit of measurement (tonne, MWh, etc.)")
+    source: DataSource = Field(default=DataSource.COMMODITIES)
+
+
+class CoalPrice(CommodityPrice):
+    """Coal price data."""
+
+    commodity: str = Field(default="coal")
+    unit: str = Field(default="EUR/tonne")
+    grade: str | None = Field(default=None, description="Coal grade/type")
+
+
+class PetcokePrice(CommodityPrice):
+    """Petcoke (petroleum coke) price data."""
+
+    commodity: str = Field(default="petcoke")
+    unit: str = Field(default="EUR/tonne")
+    sulfur_content_pct: float | None = Field(default=None, description="Sulfur content percentage")
+
+
+class CO2EUAPrice(CommodityPrice):
+    """EU Emissions Trading System (ETS) carbon credit price.
+
+    EUA = European Union Allowance
+    """
+
+    commodity: str = Field(default="co2_eua")
+    unit: str = Field(default="EUR/tonne")
+    market: str = Field(default="EU_ETS", description="Emissions trading system")

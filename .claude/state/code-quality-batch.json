@@ -1,0 +1,76 @@
+{
+  "session_id": "1735689600",
+  "created_at": "2026-01-01T12:00:00Z",
+  "updated_at": "2026-01-01T16:00:00Z",
+  "project_path": "/Users/ricardocarvalho/DeveloperFolder/RAGLite",
+  "total_violations": 31,
+  "current_batch": 7,
+  "total_batches": 7,
+  "status": "all_complete",
+  "clusters": [
+    {
+      "id": "cluster_c",
+      "files": ["refresh.py", "classification.py", "chunking_strategy.py", "report_generator.py", "ine.py", "storage_operations.py"],
+      "mode": "parallel",
+      "status": "completed"
+    },
+    {
+      "id": "cluster_d",
+      "files": ["ice_futures.py", "commodities.py", "eu_oil_bulletin.py"],
+      "mode": "parallel",
+      "status": "completed"
+    },
+    {
+      "id": "cluster_f",
+      "files": ["models.py", "preprocessing.py", "model_generators.py", "model_selection_job.py", "regime_detection.py"],
+      "mode": "parallel",
+      "status": "completed"
+    },
+    {
+      "id": "cluster_a",
+      "files": ["sql_extraction.py", "hybrid/ensemble.py"],
+      "mode": "serial",
+      "status": "completed"
+    },
+    {
+      "id": "cluster_b",
+      "files": ["search.py", "query_classifier.py"],
+      "mode": "serial",
+      "status": "completed"
+    },
+    {
+      "id": "cluster_e",
+      "files": ["orchestrator.py", "fallback.py", "planner.py"],
+      "mode": "serial",
+      "status": "completed"
+    }
+  ],
+  "completed_files": [
+    {"file": "raglite/external_data/refresh.py", "original_loc": 969, "new_loc": 293, "status": "fixed"},
+    {"file": "raglite/ingestion/adaptive_table/classification.py", "original_loc": 853, "new_loc": 45, "status": "fixed"},
+    {"file": "raglite/ingestion/chunking_strategy.py", "original_loc": 826, "new_loc": 23, "status": "fixed"},
+    {"file": "raglite/forecasting/report_generator.py", "original_loc": 807, "new_loc": 157, "status": "fixed"},
+    {"file": "raglite/external_data/clients/ice_futures.py", "original_loc": 707, "new_loc": 238, "status": "fixed"},
+    {"file": "raglite/external_data/clients/commodities.py", "original_loc": 607, "new_loc": 290, "status": "fixed"},
+    {"file": "raglite/external_data/clients/eu_oil_bulletin.py", "original_loc": 536, "new_loc": 385, "status": "fixed"},
+    {"file": "raglite/external_data/models.py", "original_loc": 666, "new_loc": 101, "status": "fixed"},
+    {"file": "raglite/forecasting/hybrid/preprocessing.py", "original_loc": 692, "new_loc": 153, "status": "fixed"},
+    {"file": "raglite/forecasting/hybrid/model_generators.py", "original_loc": 602, "new_loc": 142, "status": "fixed"},
+    {"file": "raglite/forecasting/model_selection_job.py", "original_loc": 601, "new_loc": 255, "status": "fixed"},
+    {"file": "raglite/forecasting/regime_detection.py", "original_loc": 600, "new_loc": 301, "status": "fixed"},
+    {"file": "raglite/forecasting/timeseries/sql_extraction.py", "original_loc": 611, "new_loc": 167, "status": "fixed"},
+    {"file": "raglite/agentic/orchestrator.py", "original_loc": 705, "new_loc": 273, "status": "fixed"},
+    {"file": "raglite/agentic/fallback.py", "original_loc": 686, "new_loc": 66, "status": "fixed"},
+    {"file": "raglite/agentic/planner.py", "original_loc": 543, "new_loc": 34, "status": "fixed"}
+  ],
+  "pending_files": [],
+  "failed_files": [],
+  "skipped_files": [
+    {"file": "raglite/ingestion/storage_operations.py", "reason": "Already below threshold (418 LOC)"},
+    {"file": "raglite/external_data/clients/ine.py", "reason": "Refactored in batch 1 (280 LOC)"},
+    {"file": "raglite/forecasting/ensemble.py", "reason": "Already below threshold (225 LOC)"},
+    {"file": "raglite/forecasting/hybrid/ensemble.py", "reason": "Already below threshold (327 LOC)"},
+    {"file": "raglite/retrieval/search.py", "reason": "Already refactored into submodule package"},
+    {"file": "raglite/retrieval/query_classifier.py", "reason": "Already refactored into submodule package"}
+  ]
+}

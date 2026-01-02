@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from raglite.mcp.tools import forecast as forecast_module
+from raglite.mcp.tools import forecast_helpers as forecast_helpers_module
 from raglite.shared.models import (
     ForecastPoint,
     ForecastQueryRequest,
@@ -59,13 +59,13 @@ class TestForecastToolPart2:
 
         with (
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
@@ -114,13 +114,13 @@ class TestForecastToolPart2:
 
         with (
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
@@ -161,13 +161,13 @@ class TestForecastToolPart2:
 
         with (
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
@@ -211,13 +211,13 @@ class TestForecastToolPart2:
 
         with (
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
@@ -259,13 +259,13 @@ class TestForecastToolPart2:
 
         with (
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
             patch.object(
-                forecast_module,
+                forecast_helpers_module,
                 "generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,

@@ -19,51 +19,300 @@ from raglite.forecasting.timeseries.metadata import (  # noqa: E402
     METRIC_SEARCH_PATTERNS,
 )
 
+# Metric type constants
+PERCENTAGE_METRICS = {
+    "frequency ratio",
+    "capacity_utilization",
+    "capacity utilization",
+    "utilization",
+}
 
-async def extract_metric_from_qdrant_chunks(
-    metric: str,
-    min_points: int = 6,
-    entity: str = "portugal",
-) -> TimeSeriesData | None:
-    """Extract ANY financial metric from Qdrant chunks.
+COST_METRICS = {
+    "electrical energy",
+    "electricity",
+    "electricity_cost",
+    "thermal energy",
+    "thermal",
+    "thermal_cost",
+    "fuel_cost",
+    "variable cost",
+    "variable_cost",
+}
 
-    Story 6.15: Generalizes the EBITDA-only fallback to support all metrics.
-    Uses metric_category payload filtering + text search patterns.
+
+def _parse_chunk_metadata(
+    point,
+    search_patterns: list[str],
+) -> tuple[str | None, float | None, str]:
+    """Extract metadata and numeric value from a Qdrant chunk.
 
     Args:
-        metric: Metric name (e.g., "revenue", "sales_volume", "ebitda")
-        min_points: Minimum required data points
-        entity: Geographic entity filter (default: portugal)
+        point: Qdrant point with payload
+        search_patterns: List of patterns to search for in text
 
     Returns:
-        TimeSeriesData or None if insufficient data
+        Tuple of (period, value, source_document)
     """
     import re
 
+    text = point.payload.get("text", "")
+    source_doc = point.payload.get("source_document", "unknown")
+    reporting_period = point.payload.get("reporting_period", "")
+
+    # Extract document period from filename (e.g., "2025-10 Performance Review" → Oct-25)
+    doc_match = re.search(r"(\d{4})-(\d{2})", source_doc)
+    if not doc_match:
+        # Try to get from reporting_period payload
+        if reporting_period:  # Fix: Check None before regex
+            period_match = re.search(r"([A-Za-z]{3})-(\d{2})", reporting_period)
+        else:
+            period_match = None
+        if period_match:
+            period = f"{period_match.group(1).title()}-{period_match.group(2)}"
+            # Extract first numeric value from text
+            value = _extract_numeric_from_text(text, search_patterns)
+            return (period, value, source_doc)
+        return (None, None, source_doc)
+
+    doc_year = int(doc_match.group(1))
+    doc_month = int(doc_match.group(2))
+
+    # Find lines containing our search patterns
+    lines = text.split("\n")
+    for line in lines:
+        for search_pattern in search_patterns:
+            if search_pattern.lower() in line.lower():
+                # Parse the markdown table row
+                cells = [c.strip() for c in line.split("|") if c.strip()]
+
+                # Extract numeric values
+                numeric_values = []
+                for cell in cells:
+                    clean = cell.replace(",", "").replace(".", "").replace("€", "").strip()
+                    num_match = re.match(r"^-?\d+$", clean)
+                    if num_match:
+                        try:
+                            val = int(num_match.group(0))
+                            numeric_values.append(val)
+                        except ValueError:
+                            continue
+
+                if numeric_values:
+                    # Convert to period format (Oct-25)
+                    month_abbr = [
+                        "Jan",
+                        "Feb",
+                        "Mar",
+                        "Apr",
+                        "May",
+                        "Jun",
+                        "Jul",
+                        "Aug",
+                        "Sep",
+                        "Oct",
+                        "Nov",
+                        "Dec",
+                    ][doc_month - 1]
+                    period = f"{month_abbr}-{doc_year % 100:02d}"
+
+                    # Use the largest absolute value
+                    best_value = max(numeric_values, key=abs)
+
+                    return (period, float(best_value), source_doc)
+
+    return (None, None, source_doc)
+
+
+def _extract_numeric_from_text(text: str, search_patterns: list[str]) -> float | None:
+    """Extract numeric value from text matching search patterns.
+
+    Args:
+        text: Text to search
+        search_patterns: Patterns to match
+
+    Returns:
+        Numeric value or None
+    """
+    import re
+
+    lines = text.split("\n")
+    for line in lines:
+        for search_pattern in search_patterns:
+            if search_pattern.lower() in line.lower():
+                cells = [c.strip() for c in line.split("|") if c.strip()]
+                for cell in cells:
+                    clean = cell.replace(",", "").replace("€", "").strip()
+                    num_match = re.match(r"^-?[\d.]+$", clean)
+                    if num_match:
+                        try:
+                            val = float(num_match.group(0))
+                            if abs(val) > 0.01:  # Skip zero values
+                                return val
+                        except ValueError:
+                            continue
+    return None
+
+
+def _aggregate_by_period(
+    results,
+    search_patterns: list[str],
+) -> tuple[dict[str, float], set[str]]:
+    """Aggregate values by time period from Qdrant chunks.
+
+    Args:
+        results: List of Qdrant points
+        search_patterns: Search patterns for the metric
+
+    Returns:
+        Tuple of (metric_data dict, source_documents set)
+    """
+    metric_data: dict[str, float] = {}  # period -> value
+    source_documents: set[str] = set()
+
+    for point in results:
+        period, value, source_doc = _parse_chunk_metadata(point, search_patterns)
+
+        if period and value is not None:
+            # Keep the largest absolute value for each period
+            if period not in metric_data or abs(value) > abs(metric_data[period]):
+                metric_data[period] = value
+                source_documents.add(source_doc)
+
+    return (metric_data, source_documents)
+
+
+def _normalize_and_filter_outliers(
+    points: list[TimeSeriesPoint],
+    metric: str,
+) -> list[TimeSeriesPoint]:
+    """Apply unit normalization and outlier filtering.
+
+    BUG FIX (P0 Fix #3): Unit Normalization + Outlier Detection (Story 6.23).
+    Strategy: 1) Normalize values >5x median (kEUR→EUR), 2) Filter outliers >2.5σ.
+    """
+    import statistics
+
+    if not points:
+        return points
+
+    values = [abs(p.value) for p in points if p.value is not None]
+    if not values or len(values) < 6:
+        return points
+
+    # Step 1: Normalize unit inconsistencies (kEUR vs EUR)
+    median_value = statistics.median(values)
+    normalized_points = []
+    for p in points:
+        if p.value is None:
+            continue
+        abs_val = abs(p.value)
+        ratio = abs_val / median_value if median_value > 0 else 0
+        if ratio > 5.0:
+            normalized_value = p.value / 1000
+            logger.info(
+                f"Normalized kEUR to EUR: {p.value:.0f} → {normalized_value:.2f}",
+                extra={"metric": metric, "date": p.date.strftime("%Y-%m-%d"), "ratio": ratio},
+            )
+            normalized_points.append(
+                TimeSeriesPoint(
+                    date=p.date, value=normalized_value, label=f"{p.label} (normalized)"
+                )
+            )
+        else:
+            normalized_points.append(p)
+    points = normalized_points
+
+    # Step 2: Filter extreme outliers after normalization
+    normalized_values = [abs(p.value) for p in points if p.value is not None]
+    if not normalized_values or len(normalized_values) < 6:
+        return points
+
+    new_median = statistics.median(normalized_values)
+    new_std = statistics.stdev(normalized_values) if len(normalized_values) > 1 else 0
+    filtered_points = []
+    outlier_count = 0
+    for p in points:
+        if p.value is None:
+            continue
+        abs_val = abs(p.value)
+        deviation = abs(abs_val - new_median)
+        if deviation <= 2.5 * new_std or new_std == 0:
+            filtered_points.append(p)
+        else:
+            outlier_count += 1
+            logger.warning(
+                f"Filtered outlier: {p.value:.2f}",
+                extra={"metric": metric, "date": p.date.strftime("%Y-%m-%d")},
+            )
+
+    if outlier_count > 0:
+        logger.info(f"Removed {outlier_count} outliers from {metric}")
+
+    return filtered_points
+
+
+def _apply_metric_specific_transformations(
+    points: list[TimeSeriesPoint],
+    metric: str,
+) -> list[TimeSeriesPoint]:
+    """Apply metric-specific transformations (percentage bounds, cost absolute values)."""
+    metric_lower = metric.lower().strip()
+
+    # BUG FIX (P0 Fix #4): Clamp percentage metrics to 0-100 range
+    if metric_lower in PERCENTAGE_METRICS:
+        original_points = points
+        points = [
+            TimeSeriesPoint(
+                date=p.date,
+                value=min(max(p.value, 0), 100) if p.value is not None else None,
+                label=p.label,
+            )
+            for p in points
+            if p.value is not None
+        ]
+        clamped_count = sum(
+            1 for orig, new in zip(original_points, points, strict=False) if orig.value != new.value
+        )
+        if clamped_count > 0:
+            logger.warning(f"Clamped {clamped_count} percentage values to 0-100 range")
+
+    # Story 6.23: Convert cost metrics from negative to absolute values
+    if metric_lower in COST_METRICS:
+        original_points = points
+        points = [
+            TimeSeriesPoint(
+                date=p.date, value=abs(p.value) if p.value is not None else None, label=p.label
+            )
+            for p in points
+            if p.value is not None
+        ]
+        negative_count = sum(1 for p in original_points if p.value is not None and p.value < 0)
+        if negative_count > 0:
+            logger.info(f"Converted {negative_count} negative cost values to absolute values")
+
+    return points
+
+
+def _query_qdrant_for_metric(
+    category: str | None,
+    search_patterns: list[str],
+    collection: str,
+) -> list:
+    """Query Qdrant using category filter or text search.
+
+    Args:
+        category: Metric category for filtering (optional)
+        search_patterns: Text patterns to search for
+        collection: Qdrant collection name
+
+    Returns:
+        List of Qdrant points matching the query
+    """
     from qdrant_client.models import FieldCondition, Filter, MatchText, MatchValue
 
     from raglite.shared.clients import get_qdrant_client
-    from raglite.shared.config import settings
-
-    metric_lower = metric.lower().strip()
-
-    # Map metric to category and search patterns
-    category = METRIC_CATEGORY_MAP.get(metric_lower)
-    search_patterns = METRIC_SEARCH_PATTERNS.get(metric_lower, [metric])
-
-    logger.info(
-        "Extracting metric from Qdrant chunks (fallback)",
-        extra={
-            "metric": metric,
-            "category": category,
-            "search_patterns": search_patterns,
-            "min_points": min_points,
-        },
-    )
 
     client = get_qdrant_client()
-    collection = settings.qdrant_collection_name
-
     results = []
 
     # Try category-based filter first (more precise)
@@ -115,112 +364,22 @@ async def extract_metric_from_qdrant_chunks(
             except Exception as e:
                 logger.warning(f"Text search failed for pattern '{pattern}': {e}")
 
-    if not results:
-        logger.warning(
-            f"No Qdrant chunks found for metric: {metric}",
-            extra={"category": category, "patterns": search_patterns},
-        )
-        return None
+    return results
 
-    # Parse values from markdown table rows
-    # Extract (period, value) pairs from chunks
-    metric_data: dict[str, float] = {}  # period -> value
-    source_documents: set[str] = set()
 
-    for point in results:
-        text = point.payload.get("text", "")
-        source_doc = point.payload.get("source_document", "unknown")
-        reporting_period = point.payload.get("reporting_period", "")
+def _convert_to_timeseries_points(
+    metric_data: dict[str, float],
+    metric: str,
+) -> list[TimeSeriesPoint]:
+    """Convert period-value pairs to TimeSeriesPoint objects.
 
-        # Extract document period from filename (e.g., "2025-10 Performance Review" → Oct-25)
-        doc_match = re.search(r"(\d{4})-(\d{2})", source_doc)
-        if not doc_match:
-            # Try to get from reporting_period payload
-            if reporting_period:  # Fix: Check None before regex
-                period_match = re.search(r"([A-Za-z]{3})-(\d{2})", reporting_period)
-            else:
-                period_match = None
-            if period_match:
-                period = f"{period_match.group(1).title()}-{period_match.group(2)}"
-                # Extract first numeric value from text
-                lines = text.split("\n")
-                for line in lines:
-                    for search_pattern in search_patterns:
-                        if search_pattern.lower() in line.lower():
-                            cells = [c.strip() for c in line.split("|") if c.strip()]
-                            for cell in cells:
-                                clean = cell.replace(",", "").replace("€", "").strip()
-                                num_match = re.match(r"^-?[\d.]+$", clean)
-                                if num_match:
-                                    try:
-                                        val = float(num_match.group(0))
-                                        if abs(val) > 0.01:  # Skip zero values
-                                            if period not in metric_data or abs(val) > abs(
-                                                metric_data[period]
-                                            ):
-                                                metric_data[period] = val
-                                                source_documents.add(source_doc)
-                                            break
-                                    except ValueError:
-                                        continue
-            continue
+    Args:
+        metric_data: Dictionary of period -> value
+        metric: Metric name for labeling
 
-        doc_year = int(doc_match.group(1))
-        doc_month = int(doc_match.group(2))
-
-        # Find lines containing our search patterns
-        lines = text.split("\n")
-        for line in lines:
-            for search_pattern in search_patterns:
-                if search_pattern.lower() in line.lower():
-                    # Parse the markdown table row
-                    cells = [c.strip() for c in line.split("|") if c.strip()]
-
-                    # Extract numeric values
-                    numeric_values = []
-                    for cell in cells:
-                        clean = cell.replace(",", "").replace(".", "").replace("€", "").strip()
-                        num_match = re.match(r"^-?\d+$", clean)
-                        if num_match:
-                            try:
-                                val = int(num_match.group(0))
-                                numeric_values.append(val)
-                            except ValueError:
-                                continue
-
-                    if numeric_values:
-                        # Convert to period format (Oct-25)
-                        month_abbr = [
-                            "Jan",
-                            "Feb",
-                            "Mar",
-                            "Apr",
-                            "May",
-                            "Jun",
-                            "Jul",
-                            "Aug",
-                            "Sep",
-                            "Oct",
-                            "Nov",
-                            "Dec",
-                        ][doc_month - 1]
-                        period = f"{month_abbr}-{doc_year % 100:02d}"
-
-                        # Use the largest absolute value
-                        best_value = max(numeric_values, key=abs)
-
-                        if period not in metric_data or abs(best_value) > abs(metric_data[period]):
-                            metric_data[period] = float(best_value)
-                            source_documents.add(source_doc)
-
-    if not metric_data:
-        logger.warning(
-            f"No values extracted from Qdrant chunks for metric: {metric}",
-            extra={"chunks_found": len(results)},
-        )
-        return None
-
-    # Convert to TimeSeriesPoint objects
+    Returns:
+        List of TimeSeriesPoint objects sorted by date
+    """
     points = []
     for period_str, value in metric_data.items():
         try:
@@ -238,6 +397,70 @@ async def extract_metric_from_qdrant_chunks(
                 extra={"period": period_str, "value": value, "error": str(e)},
             )
 
+    # Sort by date
+    points.sort(key=lambda p: p.date)
+    return points
+
+
+async def extract_metric_from_qdrant_chunks(
+    metric: str,
+    min_points: int = 6,
+    entity: str = "portugal",
+) -> TimeSeriesData | None:
+    """Extract ANY financial metric from Qdrant chunks.
+
+    Story 6.15: Generalizes the EBITDA-only fallback to support all metrics.
+    Uses metric_category payload filtering + text search patterns.
+
+    Args:
+        metric: Metric name (e.g., "revenue", "sales_volume", "ebitda")
+        min_points: Minimum required data points
+        entity: Geographic entity filter (default: portugal)
+
+    Returns:
+        TimeSeriesData or None if insufficient data
+    """
+    from raglite.shared.config import settings
+
+    metric_lower = metric.lower().strip()
+
+    # Map metric to category and search patterns
+    category = METRIC_CATEGORY_MAP.get(metric_lower)
+    search_patterns = METRIC_SEARCH_PATTERNS.get(metric_lower, [metric])
+
+    logger.info(
+        "Extracting metric from Qdrant chunks (fallback)",
+        extra={
+            "metric": metric,
+            "category": category,
+            "search_patterns": search_patterns,
+            "min_points": min_points,
+        },
+    )
+
+    # Query Qdrant for matching chunks
+    results = _query_qdrant_for_metric(category, search_patterns, settings.qdrant_collection_name)
+
+    if not results:
+        logger.warning(
+            f"No Qdrant chunks found for metric: {metric}",
+            extra={"category": category, "patterns": search_patterns},
+        )
+        return None
+
+    # Aggregate values by period from chunks
+    metric_data, source_documents = _aggregate_by_period(results, search_patterns)
+
+    if not metric_data:
+        logger.warning(
+            f"No values extracted from Qdrant chunks for metric: {metric}",
+            extra={"chunks_found": len(results)},
+        )
+        return None
+
+    # Convert to TimeSeriesPoint objects
+    points = _convert_to_timeseries_points(metric_data, metric)
+
     if len(points) < min_points:
         logger.warning(
             f"Insufficient data from Qdrant for {metric}: found {len(points)} points, need {min_points}",
@@ -245,187 +468,16 @@ async def extract_metric_from_qdrant_chunks(
         )
         return None
 
-    # Sort by date
-    points.sort(key=lambda p: p.date)
-
-    # BUG FIX (P0 Fix #3): Unit Normalization + Outlier Detection (Story 6.23)
-    # Electricity Cost (650% MAPE) and Thermal Energy (276% MAPE) have mixed units:
-    # - Most values: -400 to -600 (EUR/ton, correct units)
-    # - Outliers: -7,023, -21,203 (kEUR thousands, wrong units)
-    # - Dec-23 extreme: -17,801 (database corruption)
-    #
-    # Strategy:
-    # 1. Detect outliers >3σ from median (not mean, to avoid outlier influence)
-    # 2. For outliers >1000x median, divide by 1000 (kEUR → EUR normalization)
-    # 3. Filter remaining outliers >3σ after normalization
-    import statistics
-
-    if points:
-        values = [abs(p.value) for p in points if p.value is not None]
-        if values and len(values) >= 6:
-            median_value = statistics.median(values)
-
-            # Step 1: Identify unit inconsistency outliers (kEUR vs EUR)
-            # If a value is >5x median, it's likely in wrong units (kEUR instead of EUR)
-            # Example: median=-431, outlier=-21,203 → ratio=49x → normalize
-            normalized_points = []
-            for p in points:
-                if p.value is None:
-                    continue
-
-                abs_val = abs(p.value)
-                ratio = abs_val / median_value if median_value > 0 else 0
-
-                # BUG FIX: Normalize values >5x median (likely kEUR → EUR)
-                if ratio > 5.0:
-                    # Divide by 1000 to convert kEUR to EUR
-                    normalized_value = p.value / 1000
-                    logger.info(
-                        f"Normalized kEUR to EUR: {p.value:.0f} → {normalized_value:.2f} ({ratio:.1f}x median)",
-                        extra={
-                            "metric": metric,
-                            "date": p.date.strftime("%Y-%m-%d"),
-                            "original": p.value,
-                            "normalized": normalized_value,
-                            "ratio": ratio,
-                        },
-                    )
-                    normalized_points.append(
-                        TimeSeriesPoint(
-                            date=p.date,
-                            value=normalized_value,
-                            label=f"{p.label} (normalized kEUR→EUR)",
-                        )
-                    )
-                else:
-                    normalized_points.append(p)
-
-            points = normalized_points
-
-            # Step 2: Filter extreme outliers after normalization
-            # Recalculate median after normalization
-            normalized_values = [abs(p.value) for p in points if p.value is not None]
-            if normalized_values and len(normalized_values) >= 6:
-                new_median = statistics.median(normalized_values)
-                new_std = statistics.stdev(normalized_values) if len(normalized_values) > 1 else 0
-
-                # Filter points >2.5σ from median (extreme outliers indicating data corruption)
-                # Story 6.23: Using 2.5σ instead of 3σ for energy costs due to high volatility
-                # and data quality issues (mixed units, database corruption)
-                filtered_points = []
-                outlier_count = 0
-                for p in points:
-                    if p.value is None:
-                        continue
-
-                    abs_val = abs(p.value)
-                    deviation = abs(abs_val - new_median)
-
-                    # Keep points within 2.5σ of median (stricter for energy cost metrics)
-                    if deviation <= 2.5 * new_std or new_std == 0:
-                        filtered_points.append(p)
-                    else:
-                        outlier_count += 1
-                        logger.warning(
-                            f"Filtered extreme outlier: {p.value:.2f} (deviation: {deviation:.2f}, threshold: {2.5 * new_std:.2f})",
-                            extra={
-                                "metric": metric,
-                                "date": p.date.strftime("%Y-%m-%d"),
-                                "value": p.value,
-                                "median": new_median,
-                                "std": new_std,
-                            },
-                        )
-
-                if outlier_count > 0:
-                    logger.info(
-                        f"Removed {outlier_count} extreme outliers from {metric}",
-                        extra={
-                            "metric": metric,
-                            "outliers_removed": outlier_count,
-                            "points_remaining": len(filtered_points),
-                        },
-                    )
-                    points = filtered_points
-
-    # BUG FIX (P0 Fix #4): Capacity Utilization Bounds
-    # Percentage metrics cannot exceed 100% (physically impossible)
-    # Enforce 0-100 range for percentage-based metrics
-    PERCENTAGE_METRICS = {
-        "frequency ratio",
-        "capacity_utilization",
-        "capacity utilization",
-        "utilization",
-    }
-    if metric_lower in PERCENTAGE_METRICS:
-        original_points = points
-        points = [
-            TimeSeriesPoint(
-                date=p.date,
-                value=min(max(p.value, 0), 100) if p.value is not None else None,
-                label=p.label,
-            )
-            for p in points
-            if p.value is not None
-        ]
-        # Log if any values were clamped
-        clamped_count = sum(
-            1 for orig, new in zip(original_points, points, strict=False) if orig.value != new.value
-        )
-        if clamped_count > 0:
-            logger.warning(
-                f"Clamped {clamped_count} percentage values to 0-100 range",
-                extra={
-                    "metric": metric,
-                    "clamped_count": clamped_count,
-                    "total_points": len(points),
-                },
-            )
-
-    # Story 6.23: Cost metrics absolute value transformation (Qdrant fallback)
-    # Cost metrics (electricity, thermal, variable cost) are recorded as negative values
-    # in financial statements, but forecasting requires positive magnitudes
-    COST_METRICS = {
-        "electrical energy",
-        "electricity",
-        "electricity_cost",
-        "thermal energy",
-        "thermal",
-        "thermal_cost",
-        "fuel_cost",
-        "variable cost",
-        "variable_cost",
-    }
-    if metric_lower in COST_METRICS:
-        original_points = points
-        points = [
-            TimeSeriesPoint(
-                date=p.date, value=abs(p.value) if p.value is not None else None, label=p.label
-            )
-            for p in points
-            if p.value is not None
-        ]
-        # Log transformation stats
-        negative_count = sum(1 for p in original_points if p.value is not None and p.value < 0)
-        if negative_count > 0:
-            logger.info(
-                f"Converted {negative_count} negative cost values to absolute values (Qdrant)",
-                extra={
-                    "metric": metric,
-                    "negative_values": negative_count,
-                    "total_points": len(points),
-                    "avg_before": sum(p.value for p in original_points if p.value is not None)
-                    / len(original_points),
-                    "avg_after": sum(p.value for p in points if p.value is not None) / len(points),
-                },
-            )
+    # Apply data quality transformations
+    points = _normalize_and_filter_outliers(points, metric)
+    points = _apply_metric_specific_transformations(points, metric)
 
     logger.info(
         f"Qdrant extraction successful for {metric}",
         extra={
             "metric": metric,
             "points": len(points),
-            "date_range": f"{points[0].date} to {points[-1].date}",
+            "date_range": f"{points[0].date} to {points[-1].date}" if points else "empty",
             "source_documents": list(source_documents)[:5],
         },
     )
