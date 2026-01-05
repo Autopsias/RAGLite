@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-05T20:11:07.069133",
+  "baseline_date": "2026-01-05T20:59:43.126292",
   "description": "Grandfathered file size violations - reduce gradually",
   "thresholds": {
     "warning": 400,
@@ -126,12 +126,6 @@
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"
-    },
-    "raglite/forecasting/model_selection.py": {
-      "lines": 533,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
     },
     "tests/unit/test_hybrid_forecasting.py": {
       "lines": 524,

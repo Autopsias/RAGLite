@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-05T20:11:08.574485",
+  "baseline_date": "2026-01-05T20:59:44.441347",
   "description": "Grandfathered function length violations - refactor gradually",
   "thresholds": {
     "warning": 50,
@@ -48,15 +48,6 @@
       "function": "analytical_query_financial_documents",
       "file": "raglite/mcp/tools/query.py",
       "line": 133,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/model_selection.py:81:select_best_model": {
-      "length": 236,
-      "function": "select_best_model",
-      "file": "raglite/forecasting/model_selection.py",
-      "line": 81,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -484,6 +475,15 @@
       "target_lines": 100,
       "directory": "tests/"
     },
+    "raglite/forecasting/hybrid/ensemble.py:58:generate_forecast": {
+      "length": 129,
+      "function": "generate_forecast",
+      "file": "raglite/forecasting/hybrid/ensemble.py",
+      "line": 58,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "raglite/"
+    },
     "tests/integration/test_chunking_extended.py:29:test_ac6_fast_chunk_size_consistency": {
       "length": 129,
       "function": "test_ac6_fast_chunk_size_consistency",
@@ -525,15 +525,6 @@
       "function": "extract_external_timeseries",
       "file": "raglite/forecasting/timeseries/external.py",
       "line": 28,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/hybrid/ensemble.py:58:generate_forecast": {
-      "length": 125,
-      "function": "generate_forecast",
-      "file": "raglite/forecasting/hybrid/ensemble.py",
-      "line": 58,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
