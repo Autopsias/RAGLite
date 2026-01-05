@@ -298,3 +298,106 @@ async def validate_excerpt_query(test_def: dict, mock_client=None) -> ExcerptTes
             error=str(e),
             confidence=0.0,
         )
+
+
+# =============================================================================
+# Shared Chunking Validation Helpers (Story 2.3 AC6 Deduplication)
+# =============================================================================
+
+
+def _collect_chunk_sizes(all_points, encoding):
+    """Collect and separate text vs table chunk token counts.
+
+    Args:
+        all_points: List of Qdrant points with payloads
+        encoding: Tiktoken encoding for token counting
+
+    Returns:
+        Tuple of (text_token_counts, table_chunks)
+        - text_token_counts: List of token counts for text chunks
+        - table_chunks: List of tuples (point_id, token_count, preview) for tables
+    """
+    text_token_counts = []
+    table_chunks = []
+
+    for point in all_points:
+        chunk_text = point.payload.get("text", "")
+        token_count = len(encoding.encode(chunk_text))
+
+        # Detect table chunks (contain markdown table syntax)
+        if "|" in chunk_text and chunk_text.count("|") > 10:
+            table_chunks.append((point.id, token_count, chunk_text[:100]))
+        else:
+            text_token_counts.append(token_count)
+
+    return text_token_counts, table_chunks
+
+
+def _validate_chunk_size_distribution(
+    text_token_counts, text_mean, text_std, percentile_95, in_range_percentage
+):
+    """Validate chunk size statistics against AC6 thresholds.
+
+    Args:
+        text_token_counts: List of text chunk token counts
+        text_mean: Mean token count
+        text_std: Standard deviation
+        percentile_95: 95th percentile token count
+        in_range_percentage: Percentage of chunks in 462-562 range
+
+    Raises:
+        AssertionError: If any metric fails validation
+    """
+    assert 390 <= text_mean <= 562, (
+        f"Mean TEXT chunk size {text_mean:.1f} not within 390-562 "
+        f"(target: 512, adjusted for sentence boundary preservation)"
+    )
+
+    assert text_std < 160, (
+        f"TEXT chunk std deviation {text_std:.1f} exceeds 160-token limit "
+        f"(adjusted for sentence variance)"
+    )
+
+    assert percentile_95 <= 562, (
+        f"95th percentile of TEXT chunks {percentile_95} exceeds 562-token limit"
+    )
+
+
+def _report_consistency_metrics(
+    test_label, text_token_counts, text_mean, text_std, percentile_95, table_chunks
+):
+    """Report chunk size consistency metrics.
+
+    Args:
+        test_label: Label for the test (e.g., "AC6 SLOW PASS")
+        text_token_counts: List of text chunk token counts
+        text_mean: Mean token count
+        text_std: Standard deviation
+        percentile_95: 95th percentile token count
+        table_chunks: List of table chunk tuples
+    """
+    in_range_count = sum(1 for tc in text_token_counts if 462 <= tc <= 562)
+    in_range_percentage = (
+        (in_range_count / len(text_token_counts)) * 100 if text_token_counts else 0
+    )
+
+    print(f"\n✅ {test_label}: Chunk Size Consistency")
+    print(f"   - TEXT chunks: {len(text_token_counts)} total")
+    print(f"     • Mean: {text_mean:.1f} tokens (target: 512±10)")
+    print(f"     • Std: {text_std:.1f} tokens (limit: <50)")
+    print(f"     • 95th percentile: {percentile_95} tokens (limit: ≤562)")
+    print(
+        f"     • In range (462-562): {in_range_percentage:.1f}% "
+        f"({in_range_count}/{len(text_token_counts)})"
+    )
+    print(f"   - TABLE chunks: {len(table_chunks)} total (preserved per AC3)")
+
+    if table_chunks:
+        table_tokens = [tc for _, tc, _ in table_chunks]
+        print(f"     • Range: {min(table_tokens)}-{max(table_tokens)} tokens")
+        print(f"     • Mean: {sum(table_tokens) / len(table_tokens):.1f} tokens")
+        print("     • Example large tables:")
+        for _point_id, token_count, preview in sorted(
+            table_chunks, key=lambda x: x[1], reverse=True
+        )[:3]:
+            print(f"       • {token_count} tokens: {preview}...")

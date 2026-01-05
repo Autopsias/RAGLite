@@ -165,9 +165,14 @@ async def test_ac6_chunk_size_consistency(ingested_160_page_pdf, encoding):
 
     Runtime: Shares 16-18 minute PDF ingestion with other slow tests via fixture
     """
-    metadata, client = ingested_160_page_pdf
     from raglite.shared.config import settings
+    from tests.integration.conftest import (
+        _collect_chunk_sizes,
+        _report_consistency_metrics,
+        _validate_chunk_size_distribution,
+    )
 
+    metadata, client = ingested_160_page_pdf
     collection_name = settings.qdrant_collection_name
 
     # Retrieve all chunks from Qdrant
@@ -182,75 +187,43 @@ async def test_ac6_chunk_size_consistency(ingested_160_page_pdf, encoding):
         if offset is None:
             break
 
-    # AC6.1: Separate table chunks from text chunks (Option A: table-aware validation)
-    # Tables are preserved as single chunks per AC3, text chunks follow 512-token rule
-    text_token_counts = []
-    table_chunks = []
+    # AC6.1: Separate table chunks from text chunks
+    text_token_counts, table_chunks = _collect_chunk_sizes(all_points, encoding)
 
-    for point in all_points:
-        chunk_text = point.payload.get("text", "")
-        token_count = len(encoding.encode(chunk_text))
-
-        # Detect table chunks (contain markdown table syntax)
-        if "|" in chunk_text and chunk_text.count("|") > 10:
-            table_chunks.append((point.id, token_count, chunk_text[:100]))
-        else:
-            text_token_counts.append(token_count)
-
-    # AC6.2: Verify mean TEXT chunk size (tables exempt per AC3)
-    # Option A: Calculate metrics for text chunks only (Decision Gate 2025-10-21)
-    # Range adjusted to 390-562 to account for AC2 sentence boundary preservation
-    # (allows ~10-token margin for sentence boundary preservation)
+    # AC6.2-6.3: Calculate statistics
     text_mean = sum(text_token_counts) / len(text_token_counts) if text_token_counts else 0
-    assert 390 <= text_mean <= 562, (
-        f"Mean TEXT chunk size {text_mean:.1f} not within 390-562 (target: 512, adjusted for sentence boundary preservation)"
-    )
-
-    # AC6.3: Verify standard deviation for TEXT chunks
-    # Adjusted to <160 based on actual variance from sentence boundary preservation
     text_variance = (
         sum((x - text_mean) ** 2 for x in text_token_counts) / len(text_token_counts)
         if text_token_counts
         else 0
     )
     text_std = text_variance**0.5
-    assert text_std < 160, (
-        f"TEXT chunk std deviation {text_std:.1f} exceeds 160-token limit (adjusted for sentence variance)"
-    )
 
-    # AC6.4: Verify 95% of TEXT chunks within 462-562 token range
+    # AC6.4: Calculate 95th percentile
     text_sorted = sorted(text_token_counts)
     percentile_95_idx = int(len(text_sorted) * 0.95)
     percentile_95 = text_sorted[percentile_95_idx] if text_sorted else 0
-    assert percentile_95 <= 562, (
-        f"95th percentile of TEXT chunks {percentile_95} exceeds 562-token limit"
-    )
 
-    # Count TEXT chunks within target range
+    # Calculate in-range percentage for validation
     in_range_count = sum(1 for tc in text_token_counts if 462 <= tc <= 562)
     in_range_percentage = (
         (in_range_count / len(text_token_counts)) * 100 if text_token_counts else 0
     )
 
-    # AC6.5: Document chunk size distribution (text vs tables)
-    print("\n✅ AC6 SLOW PASS: Chunk Size Consistency (160-page PDF)")
-    print(f"   - TEXT chunks: {len(text_token_counts)} total")
-    print(f"     • Mean: {text_mean:.1f} tokens (target: 512±10)")
-    print(f"     • Std: {text_std:.1f} tokens (limit: <50)")
-    print(f"     • 95th percentile: {percentile_95} tokens (limit: ≤562)")
-    print(
-        f"     • In range (462-562): {in_range_percentage:.1f}% ({in_range_count}/{len(text_token_counts)})"
+    # Validate all metrics
+    _validate_chunk_size_distribution(
+        text_token_counts, text_mean, text_std, percentile_95, in_range_percentage
     )
-    print(f"   - TABLE chunks: {len(table_chunks)} total (preserved per AC3)")
-    if table_chunks:
-        table_tokens = [tc for _, tc, _ in table_chunks]
-        print(f"     • Range: {min(table_tokens)}-{max(table_tokens)} tokens")
-        print(f"     • Mean: {sum(table_tokens) / len(table_tokens):.1f} tokens")
-        print("     • Example large tables:")
-        for _point_id, token_count, preview in sorted(
-            table_chunks, key=lambda x: x[1], reverse=True
-        )[:3]:
-            print(f"       • {token_count} tokens: {preview}...")
+
+    # AC6.5: Report metrics
+    _report_consistency_metrics(
+        "AC6 SLOW PASS (160-page PDF)",
+        text_token_counts,
+        text_mean,
+        text_std,
+        percentile_95,
+        table_chunks,
+    )
 
 
 @pytest.mark.integration

@@ -151,6 +151,81 @@ class InsightQualityValidator:
         reason = "; ".join(reasons) if reasons else "All checks passed"
         return is_relevant, reason
 
+    def _build_scenario_result(
+        self, scenario: InsightTestScenario, insight: Insight | None
+    ) -> tuple[dict[str, Any], bool]:
+        """Build result dict for a scenario.
+
+        Args:
+            scenario: Test scenario
+            insight: Generated insight (None if generation failed)
+
+        Returns:
+            Tuple of (result_dict, is_relevant)
+        """
+        if insight:
+            is_relevant, reason = self._is_insight_relevant(insight, scenario)
+            return (
+                {
+                    "scenario_id": scenario.scenario_id,
+                    "description": scenario.description,
+                    "passed": is_relevant,
+                    "reason": reason,
+                    "generated_category": insight.category.value,
+                    "generated_priority": insight.priority,
+                    "expected_category": scenario.expected_category.value,
+                    "expected_priority_range": scenario.expected_priority_range,
+                },
+                is_relevant,
+            )
+        else:
+            return (
+                {
+                    "scenario_id": scenario.scenario_id,
+                    "description": scenario.description,
+                    "passed": False,
+                    "reason": "No insights generated",
+                    "generated_category": None,
+                    "generated_priority": None,
+                    "expected_category": scenario.expected_category.value,
+                    "expected_priority_range": scenario.expected_priority_range,
+                },
+                False,
+            )
+
+    async def _process_scenario(
+        self, scenario: InsightTestScenario
+    ) -> tuple[dict[str, Any], bool, str | None]:
+        """Process single scenario and generate insight.
+
+        Args:
+            scenario: Test scenario to process
+
+        Returns:
+            Tuple of (result_dict, is_relevant, category_key)
+        """
+        # Build inputs
+        anomalies = [scenario.anomaly] if scenario.anomaly else []
+        trends = [scenario.trend] if scenario.trend else []
+        forecasts = [scenario.forecast] if scenario.forecast else []
+
+        # Generate insights
+        result = await generate_insights(
+            anomalies=anomalies,
+            trends=trends,
+            forecasts=forecasts,
+            auto_synthesize=True,
+        )
+
+        # Validate first insight (primary result)
+        insight = result.insights[0] if result.insights else None
+        result_dict, is_relevant = self._build_scenario_result(scenario, insight)
+
+        # Extract category key for tracking
+        category_key = insight.category.value if insight else None
+
+        return result_dict, is_relevant, category_key
+
     async def validate_insights(
         self,
         test_scenarios: list[InsightTestScenario],
@@ -188,56 +263,15 @@ class InsightQualityValidator:
             mock_client.return_value.chat.complete.return_value = mock_response
 
             for scenario in test_scenarios:
-                # Build inputs
-                anomalies = [scenario.anomaly] if scenario.anomaly else []
-                trends = [scenario.trend] if scenario.trend else []
-                forecasts = [scenario.forecast] if scenario.forecast else []
+                result_dict, is_relevant, category_key = await self._process_scenario(scenario)
 
-                # Generate insights
-                result = await generate_insights(
-                    anomalies=anomalies,
-                    trends=trends,
-                    forecasts=forecasts,
-                    auto_synthesize=True,
-                )
+                scenario_results.append(result_dict)
 
-                # Validate first insight (primary result)
-                if result.insights:
-                    insight = result.insights[0]
-                    is_relevant, reason = self._is_insight_relevant(insight, scenario)
+                if category_key:
+                    category_counts[category_key] = category_counts.get(category_key, 0) + 1
 
-                    # Track category
-                    cat_key = insight.category.value
-                    category_counts[cat_key] = category_counts.get(cat_key, 0) + 1
-
-                    scenario_results.append(
-                        {
-                            "scenario_id": scenario.scenario_id,
-                            "description": scenario.description,
-                            "passed": is_relevant,
-                            "reason": reason,
-                            "generated_category": insight.category.value,
-                            "generated_priority": insight.priority,
-                            "expected_category": scenario.expected_category.value,
-                            "expected_priority_range": scenario.expected_priority_range,
-                        }
-                    )
-
-                    if is_relevant:
-                        passed_count += 1
-                else:
-                    scenario_results.append(
-                        {
-                            "scenario_id": scenario.scenario_id,
-                            "description": scenario.description,
-                            "passed": False,
-                            "reason": "No insights generated",
-                            "generated_category": None,
-                            "generated_priority": None,
-                            "expected_category": scenario.expected_category.value,
-                            "expected_priority_range": scenario.expected_priority_range,
-                        }
-                    )
+                if is_relevant:
+                    passed_count += 1
 
         # Calculate relevance rate
         relevance_rate = (passed_count / len(test_scenarios)) * 100
