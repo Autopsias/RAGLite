@@ -1,0 +1,243 @@
+"""Test fixtures and data models for recommendation alignment tests.
+
+Story 4.10 AC4: Validates recommendation alignment with expert analysis.
+Target: 80%+ alignment rate with expert-labeled ground truth.
+"""
+
+from dataclasses import dataclass, field
+
+from raglite.shared.models import Insight, InsightCategory, RecommendationCategory
+
+
+@dataclass
+class RecommendationTestScenario:
+    """Expert-labeled test scenario for recommendation validation.
+
+    Story 4.10 AC4: Each scenario has expected recommendation labeled by expert.
+
+    Attributes:
+        scenario_id: Unique identifier (e.g., "cost_reduction")
+        description: Human-readable scenario description
+        insight: Input insight that triggers recommendation
+        expected_category: Expected RecommendationCategory
+        expected_impact_range: Acceptable impact score range (min, max inclusive)
+        expected_urgency: Expected urgency level (high, medium, low)
+        expected_action_keywords: Keywords expected in action steps
+    """
+
+    scenario_id: str
+    description: str
+    insight: Insight
+    expected_category: RecommendationCategory = RecommendationCategory.OPERATIONAL_EFFICIENCY
+    expected_impact_range: tuple[int, int] = (1, 10)
+    expected_urgency: str = "medium"
+    expected_action_keywords: list[str] = field(default_factory=list)
+
+
+@dataclass
+class RecommendationValidationResult:
+    """Result of recommendation alignment validation.
+
+    Story 4.10 AC4: Structured validation result for recommendation alignment.
+
+    Attributes:
+        total_scenarios: Total number of test scenarios
+        aligned_scenarios: Number of scenarios with aligned recommendations
+        alignment_rate: Percentage of scenarios with aligned recommendations (0-100)
+        passed: Whether alignment rate meets 80% threshold
+        scenario_results: Per-scenario pass/fail details
+        category_breakdown: Count of recommendations per category
+    """
+
+    total_scenarios: int
+    aligned_scenarios: int
+    alignment_rate: float
+    passed: bool
+    scenario_results: list[dict[str, any]]
+    category_breakdown: dict[str, int]
+
+
+# ============================================================================
+# Expert-Labeled Test Scenarios (Story 4.10 Task 3.2)
+# ============================================================================
+
+RECOMMENDATION_TEST_SCENARIOS: list[RecommendationTestScenario] = [
+    # Scenario 1: Cost reduction for overspending
+    RecommendationTestScenario(
+        scenario_id="cost_overrun",
+        description="Cloud costs 40% over budget require cost reduction",
+        insight=Insight(
+            category=InsightCategory.RISK,
+            priority=1,
+            summary="Cloud costs 40% over budget",
+            supporting_data={
+                "metric": "cloud_costs",
+                "value": 140000,
+                "budget": 100000,
+                "overage_pct": 40.0,
+            },
+            rationale="Cloud infrastructure costs exceeding budget significantly",
+            sources=["cloud_costs"],
+            recommended_action="Review cloud resource allocation",
+        ),
+        expected_category=RecommendationCategory.RISK_MITIGATION,
+        expected_impact_range=(8, 10),
+        expected_urgency="high",
+        expected_action_keywords=["review", "reduce", "optimize"],
+    ),
+    # Scenario 2: Investment recommendation for growth opportunity
+    RecommendationTestScenario(
+        scenario_id="growth_opportunity",
+        description="Revenue growth opportunity in new market segment",
+        insight=Insight(
+            category=InsightCategory.OPPORTUNITY,
+            priority=2,
+            summary="New market segment shows 25% growth potential",
+            supporting_data={
+                "metric": "revenue",
+                "growth_rate": 0.25,
+                "market_segment": "enterprise",
+            },
+            rationale="Enterprise segment showing strong demand signals",
+            sources=["revenue"],
+            recommended_action="Expand enterprise sales team",
+        ),
+        expected_category=RecommendationCategory.REVENUE_GROWTH,
+        expected_impact_range=(7, 10),
+        expected_urgency="medium",
+        expected_action_keywords=["expand", "invest", "develop"],
+    ),
+    # Scenario 3: Risk mitigation for volatility
+    RecommendationTestScenario(
+        scenario_id="volatility_risk",
+        description="Cash flow volatility requires risk mitigation",
+        insight=Insight(
+            category=InsightCategory.RISK,
+            priority=1,
+            summary="Cash flow volatility increased 30%",
+            supporting_data={
+                "metric": "cash_flow",
+                "volatility": 0.30,
+                "trend": "increasing",
+            },
+            rationale="High cash flow volatility indicates operational risk",
+            sources=["cash_flow"],
+            recommended_action="Establish cash reserves",
+        ),
+        expected_category=RecommendationCategory.RISK_MITIGATION,
+        expected_impact_range=(8, 10),
+        expected_urgency="high",
+        expected_action_keywords=["establish", "monitor", "hedge"],
+    ),
+    # Scenario 4: Process improvement for inefficiencies
+    RecommendationTestScenario(
+        scenario_id="process_inefficiency",
+        description="Manufacturing inefficiency detected",
+        insight=Insight(
+            category=InsightCategory.ANOMALY,
+            priority=3,
+            summary="Production efficiency dropped 15%",
+            supporting_data={
+                "metric": "production_efficiency",
+                "value": 0.72,
+                "expected": 0.85,
+                "drop_pct": 15.0,
+            },
+            rationale="Equipment downtime causing production delays",
+            sources=["production_efficiency"],
+            recommended_action="Implement preventive maintenance",
+        ),
+        expected_category=RecommendationCategory.OPERATIONAL_EFFICIENCY,
+        expected_impact_range=(5, 8),
+        expected_urgency="medium",
+        expected_action_keywords=["implement", "optimize", "automate"],
+    ),
+    # Scenario 5: Strategic investment decision
+    RecommendationTestScenario(
+        scenario_id="strategic_investment",
+        description="R&D investment opportunity identified",
+        insight=Insight(
+            category=InsightCategory.STRATEGIC_PRIORITY,
+            priority=2,
+            summary="R&D pipeline shows promising ROI potential",
+            supporting_data={
+                "metric": "r&d_pipeline",
+                "projected_roi": 2.5,
+                "investment_required": 500000,
+            },
+            rationale="Strong product pipeline with high ROI potential",
+            sources=["r&d_pipeline"],
+            recommended_action="Allocate additional R&D budget",
+        ),
+        expected_category=RecommendationCategory.STRATEGIC_INVESTMENT,
+        expected_impact_range=(6, 9),
+        expected_urgency="medium",
+        expected_action_keywords=["allocate", "invest", "prioritize"],
+    ),
+    # Scenario 6: Cost reduction opportunity in operations
+    RecommendationTestScenario(
+        scenario_id="ops_cost_reduction",
+        description="Operational costs have reduction opportunity",
+        insight=Insight(
+            category=InsightCategory.OPPORTUNITY,
+            priority=2,
+            summary="Operational costs can be reduced 20% through automation",
+            supporting_data={
+                "metric": "operating_expenses",
+                "potential_savings": 200000,
+                "savings_pct": 20.0,
+            },
+            rationale="Manual processes can be automated for cost savings",
+            sources=["operating_expenses"],
+            recommended_action="Implement automation solutions",
+        ),
+        expected_category=RecommendationCategory.COST_REDUCTION,
+        expected_impact_range=(7, 10),
+        expected_urgency="medium",
+        expected_action_keywords=["implement", "automate", "reduce"],
+    ),
+    # Scenario 7: Revenue growth through pricing optimization
+    RecommendationTestScenario(
+        scenario_id="pricing_opportunity",
+        description="Pricing optimization opportunity identified",
+        insight=Insight(
+            category=InsightCategory.OPPORTUNITY,
+            priority=2,
+            summary="Pricing analysis shows 10% revenue increase potential",
+            supporting_data={
+                "metric": "revenue",
+                "price_elasticity": 0.8,
+                "potential_increase": 0.10,
+            },
+            rationale="Market analysis shows room for price adjustment",
+            sources=["revenue", "pricing_analysis"],
+            recommended_action="Implement tiered pricing strategy",
+        ),
+        expected_category=RecommendationCategory.REVENUE_GROWTH,
+        expected_impact_range=(6, 9),
+        expected_urgency="medium",
+        expected_action_keywords=["implement", "adjust", "analyze"],
+    ),
+    # Scenario 8: Risk mitigation for supply chain
+    RecommendationTestScenario(
+        scenario_id="supply_chain_risk",
+        description="Supply chain concentration risk identified",
+        insight=Insight(
+            category=InsightCategory.RISK,
+            priority=2,
+            summary="70% of supply from single vendor",
+            supporting_data={
+                "metric": "supply_chain",
+                "vendor_concentration": 0.70,
+                "risk_level": "high",
+            },
+            rationale="Single vendor dependency creates operational risk",
+            sources=["supply_chain"],
+            recommended_action="Diversify supplier base",
+        ),
+        expected_category=RecommendationCategory.RISK_MITIGATION,
+        expected_impact_range=(6, 9),
+        expected_urgency="medium",
+        expected_action_keywords=["diversify", "evaluate", "establish"],
+    ),
+]

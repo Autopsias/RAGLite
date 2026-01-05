@@ -47,7 +47,6 @@ class TestCacheResults:
     async def test_cache_called_for_each_result(self) -> None:
         """[P0][TEST-AC-7b.5.5.1] cache_model_selection called for each successful result."""
         import pandas as pd
-
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
         mock_result = MagicMock()
@@ -70,22 +69,22 @@ class TestCacheResults:
         with tempfile.TemporaryDirectory() as tmpdir:
             with (
                 patch(
-                    "raglite.forecasting.model_selection_job.fetch_historical_data",
+                    "raglite.forecasting.model_selection.fetch_historical_data",
                     new_callable=AsyncMock,
                     return_value=mock_historical,
                 ),
                 patch(
-                    "raglite.forecasting.model_selection_job.fetch_regressors_with_date_range",
+                    "raglite.forecasting.model_selection.fetch_regressors_with_date_range",
                     new_callable=AsyncMock,
                     return_value={},
                 ),
                 patch(
-                    "raglite.forecasting.model_selection_job.select_best_model",
+                    "raglite.forecasting.model_selection.select_best_model",
                     new_callable=AsyncMock,
                     return_value=mock_result,
                 ),
                 patch(
-                    "raglite.forecasting.model_selection_job.cache_model_selection",
+                    "raglite.forecasting.model_selection.cache_model_selection",
                     mock_cache,
                 ),
             ):

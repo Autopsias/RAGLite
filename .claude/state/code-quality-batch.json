@@ -1,31 +1,38 @@
 {
-  "session_id": "1736126400",
-  "created_at": "2025-01-05T18:00:00Z",
+  "session_id": "1704067200",
+  "created_at": "2025-01-05T10:00:00Z",
+  "updated_at": "2025-01-05T20:00:00Z",
+  "project_path": "/Users/ricardocarvalho/DeveloperFolder/RAGLite",
+  "total_violations": 7,
   "current_batch": 1,
   "total_batches": 2,
   "clusters": [
     {
-      "id": "batch_1_parallel",
-      "files": ["regressor_fetch.py", "data_quality/config.py", "data_analyzer.py", "regressor_config.py", "model_selection_utils.py", "model_selection.py"],
+      "id": "batch_1_completed",
+      "files": ["test_ingestion.py", "test_model_selection_job.py", "test_proactive_insights.py", "test_trend_analysis.py", "test_model_selection_cache.py"],
       "mode": "parallel",
-      "status": "completed"
+      "status": "completed",
+      "notes": "All 5 files successfully split into smaller modules"
     },
     {
-      "id": "batch_2_parallel",
-      "files": ["tft_training.py", "shared/clients.py", "insights/proactive.py"],
+      "id": "batch_2_pending",
+      "files": ["test_strategic_recommendations.py", "test_table_extraction.py"],
       "mode": "parallel",
-      "status": "pending"
+      "status": "pending",
+      "notes": "2 files remain, both ~950 LOC"
     }
   ],
   "completed_files": [
-    {"file": "raglite/forecasting/regressor_fetch.py", "original_loc": 579, "new_loc": 329, "status": "fixed"},
-    {"file": "raglite/forecasting/data_quality/config.py", "original_loc": 578, "new_loc": 88, "status": "fixed"},
-    {"file": "raglite/forecasting/data_analyzer.py", "original_loc": 568, "new_loc": 134, "status": "fixed"},
-    {"file": "raglite/forecasting/regressor_config.py", "original_loc": 550, "new_loc": 228, "status": "fixed"},
-    {"file": "raglite/forecasting/model_selection_utils.py", "original_loc": 544, "new_loc": 44, "status": "fixed"},
-    {"file": "raglite/forecasting/model_selection.py", "original_loc": 533, "new_loc": 533, "status": "conflict"}
+    {"file": "test_ingestion.py", "original_loc": 1787, "new_files": 6, "largest_loc": 435, "status": "fixed"},
+    {"file": "test_model_selection_job.py", "original_loc": 1217, "new_files": 5, "largest_loc": 346, "status": "fixed"},
+    {"file": "test_proactive_insights.py", "original_loc": 1128, "new_files": 5, "largest_loc": 326, "status": "fixed"},
+    {"file": "test_trend_analysis.py", "original_loc": 1061, "new_files": 5, "largest_loc": 390, "status": "fixed"},
+    {"file": "test_model_selection_cache.py", "original_loc": 987, "new_files": 7, "largest_loc": 271, "status": "fixed"}
   ],
-  "pending_files": ["raglite/forecasting/tft_training.py", "raglite/shared/clients.py", "raglite/insights/proactive.py"],
+  "pending_files": [
+    "test_strategic_recommendations.py",
+    "test_table_extraction.py"
+  ],
   "failed_files": [],
-  "skipped_files": ["raglite/forecasting/model_selection.py"]
+  "skipped_files": []
 }

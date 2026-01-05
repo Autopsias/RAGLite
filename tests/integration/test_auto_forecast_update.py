@@ -41,7 +41,7 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.ingestion.ingest_document",
+                "raglite.ingestion.document_ingestion.ingest_document",
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
@@ -83,7 +83,7 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.ingestion.ingest_document",
+                "raglite.ingestion.document_ingestion.ingest_document",
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
@@ -123,7 +123,7 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.ingestion.ingest_document",
+                "raglite.ingestion.document_ingestion.ingest_document",
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
@@ -163,7 +163,7 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.ingestion.ingest_document",
+                "raglite.ingestion.document_ingestion.ingest_document",
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),

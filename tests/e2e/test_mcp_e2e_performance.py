@@ -134,7 +134,7 @@ class TestMCPPerformance:
 
                     start = time.time()
                     with patch(
-                        "raglite.forecasting.model_selection_job.fetch_historical_data"
+                        "raglite.forecasting.model_selection.fetch_historical_data"
                     ) as mock_fetch:
                         mock_fetch.return_value = e2e_time_series_data
                         result = await generate_forecast(
@@ -191,7 +191,7 @@ class TestMCPPerformance:
                     for _ in range(10):
                         start = time.time()
                         with patch(
-                            "raglite.forecasting.model_selection_job.fetch_historical_data"
+                            "raglite.forecasting.model_selection.fetch_historical_data"
                         ) as mock_fetch:
                             mock_fetch.return_value = e2e_time_series_data
                             await generate_forecast(

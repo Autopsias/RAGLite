@@ -140,7 +140,7 @@ class TestResponseMetadata:
             ) as mock_get_cache:
                 mock_get_cache.return_value = mock_cached_model_selection
 
-                with patch("raglite.forecasting.hybrid.ensemble._route_to_model") as mock_route:
+                with patch("raglite.forecasting.model_selection.select_model_type") as mock_route:
                     mock_result = MagicMock()
                     mock_result.model_source = "cached"
                     mock_route.return_value = mock_result

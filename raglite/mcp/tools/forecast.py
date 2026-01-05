@@ -195,6 +195,7 @@ async def get_financial_forecast(
 
     except Exception as e:
         handle_forecast_error(e, metric, logger)
+        raise  # Re-raise after handling (mypy requires explicit error path)
 
 
 # Re-exports for backward compatibility with tests

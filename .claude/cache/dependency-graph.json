@@ -1,0 +1,47 @@
+{
+  "clusters": [
+    {
+      "files": [
+        "raglite/forecasting/model_selection.py"
+      ],
+      "tests": [
+        "tests/integration/model_selection/test_validation_edge_cases.py",
+        "tests/integration/model_selection/test_selection_performance.py",
+        "tests/integration/model_selection/test_selection_integration.py",
+        "tests/integration/model_selection/test_cache_invalidation.py",
+        "tests/integration/model_selection/test_selection_edge_cases.py",
+        "tests/unit/story_8_2/test_ac_8_2_4_storage_isolation.py",
+        "tests/unit/forecasting/model_selection/test_cache_error_paths.py",
+        "tests/integration/model_selection/test_selection_algorithms.py",
+        "tests/unit/forecasting/model_selection/test_cache_edge_cases.py",
+        "tests/integration/model_selection/test_cache_operations.py",
+        "tests/unit/forecasting/model_selection/test_cache_dataclass.py",
+        "tests/unit/test_model_selection_cache.py"
+      ],
+      "priority": 24
+    }
+  ],
+  "production_files": [
+    "raglite/forecasting/model_selection.py"
+  ],
+  "test_dependencies": {
+    "raglite/forecasting/model_selection.py": [
+      "tests/integration/model_selection/test_cache_invalidation.py",
+      "tests/integration/model_selection/test_cache_operations.py",
+      "tests/integration/model_selection/test_selection_algorithms.py",
+      "tests/integration/model_selection/test_selection_edge_cases.py",
+      "tests/integration/model_selection/test_selection_integration.py",
+      "tests/integration/model_selection/test_selection_performance.py",
+      "tests/integration/model_selection/test_validation_edge_cases.py",
+      "tests/unit/forecasting/model_selection/test_cache_dataclass.py",
+      "tests/unit/forecasting/model_selection/test_cache_edge_cases.py",
+      "tests/unit/forecasting/model_selection/test_cache_error_paths.py",
+      "tests/unit/story_8_2/test_ac_8_2_4_storage_isolation.py",
+      "tests/unit/test_model_selection_cache.py"
+    ]
+  },
+  "metadata": {
+    "total_files": 1,
+    "total_clusters": 1
+  }
+}
