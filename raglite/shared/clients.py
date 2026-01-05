@@ -84,32 +84,19 @@ _mistral_client: Mistral | None = None
 
 
 def get_qdrant_client() -> QdrantClient:
-    """Lazy-load Qdrant client (singleton pattern with connection pooling and retry logic).
-
-    Creates client on first call and caches it for reuse. Provides connection
-    pooling for efficient resource management across multiple storage operations.
-    Implements exponential backoff retry logic for transient connection failures.
+    """Get Qdrant client with singleton caching, connection pooling, and retry logic.
 
     Returns:
         Cached QdrantClient instance connected to local or cloud Qdrant
 
     Raises:
-        ConnectionError: If Qdrant connection fails after all retries
+        ConnectionError: If Qdrant connection fails after 3 retries
         ImportError: If qdrant-client package is not installed
 
     Note:
-        Connection parameters:
-        - Host: settings.qdrant_host (default: localhost)
-        - Port: settings.qdrant_port (default: 6333)
-        - Timeout: 30 seconds for production, 1 second for tests
-        - Retry policy: 3 attempts with exponential backoff (1s, 2s, 4s)
-
-    Example:
-        >>> client = get_qdrant_client()
-        >>> client.get_collections()
-        >>> # Subsequent calls return same cached instance
-        >>> same_client = get_qdrant_client()
-        >>> assert client is same_client
+        Connection: Host=settings.qdrant_host, Port=settings.qdrant_port
+        Timeout: 30s (production), 1s (tests)
+        Retry: 3 attempts with exponential backoff (1s, 2s, 4s)
     """
     if not QDRANT_AVAILABLE:
         raise ImportError(
@@ -194,18 +181,14 @@ def get_qdrant_client() -> QdrantClient:
 
 
 def get_claude_client() -> Anthropic:
-    """Factory function for Anthropic Claude API client.
+    """Get Anthropic Claude API client.
 
     Returns:
         Configured Anthropic client instance
 
     Raises:
-        ValueError: If ANTHROPIC_API_KEY not set in environment
+        ValueError: If ANTHROPIC_API_KEY not set or using placeholder
         ImportError: If anthropic package is not installed
-
-    Example:
-        >>> client = get_claude_client()
-        >>> response = client.messages.create(...)
     """
     if not ANTHROPIC_AVAILABLE:
         raise ImportError("anthropic package not installed. Install with: pip install anthropic")
@@ -226,30 +209,18 @@ def get_claude_client() -> Anthropic:
 
 
 def get_embedding_model() -> Any:
-    """Lazy-load Fin-E5 embedding model (singleton pattern).
-
-    Loads intfloat/e5-large-v2 model on first call and caches it for reuse.
-    Model is downloaded once and cached locally by sentence-transformers.
+    """Get Fin-E5 embedding model (singleton pattern).
 
     Returns:
-        SentenceTransformer: Cached Fin-E5 model instance (1024 dimensions)
+        SentenceTransformer: Cached intfloat/e5-large-v2 model (1024 dimensions)
 
     Raises:
         RuntimeError: If model loading fails
         ImportError: If sentence-transformers package is not installed
 
     Note:
-        Model specifications:
-        - Name: intfloat/e5-large-v2 (marketed as "Fin-E5")
-        - Dimensions: 1024
-        - Domain: Financial text optimization
-        - Week 0 validation: 0.84 avg similarity score, 71.05% NDCG@10
-
-    Example:
-        >>> model = get_embedding_model()
-        >>> embedding = model.encode(["financial query text"])[0]
-        >>> len(embedding)
-        1024
+        Model: Fin-E5 (intfloat/e5-large-v2), 1024 dimensions, financial domain optimization
+        Week 0 validation: 0.84 avg similarity, 71.05% NDCG@10
     """
     # Lazy-load the SentenceTransformer class (avoids slow PyTorch import at startup)
     SentenceTransformerClass = _get_sentence_transformer_class()
@@ -284,24 +255,7 @@ def get_embedding_model() -> Any:
 
 
 def get_postgresql_connection() -> Any:
-    """Lazy-load PostgreSQL connection (singleton pattern with connection pooling).
-
-    Creates connection on first call and caches it for reuse. Provides connection
-    pooling for efficient resource management across multiple storage operations.
-
-    **Connection Lifecycle (MVP):**
-    - Singleton pattern: One connection per application lifetime
-    - Connection persists for entire application runtime
-    - Automatically reconnects if connection closes (checked via `conn.closed`)
-    - No explicit cleanup required - connection closes on application shutdown
-
-    **Phase 4 Upgrade Path:**
-    For production deployment, migrate to proper connection pooling:
-    - Use `psycopg2.pool.ThreadedConnectionPool` for multi-threaded applications
-    - Configure pool size based on expected concurrent query load
-    - Add explicit connection release and cleanup methods
-    - Implement connection health checks and automatic reconnection
-    - Reference: https://www.psycopg.org/docs/pool.html
+    """Get PostgreSQL connection with singleton caching and auto-reconnect.
 
     Returns:
         Cached psycopg2 connection instance
@@ -311,20 +265,11 @@ def get_postgresql_connection() -> Any:
         ImportError: If psycopg2 is not installed
 
     Note:
-        Connection parameters from settings:
-        - Host: settings.postgres_host (default: localhost)
-        - Port: settings.postgres_port (default: 5432)
-        - Database: settings.postgres_db (default: raglite)
-        - User: settings.postgres_user (default: raglite)
-        - Password: settings.postgres_password (default: raglite)
+        Connection: Host/settings.postgres_host, Port/settings.postgres_port
+        Timeout: 10s connect, 30s statement (production); 1s/5s (tests)
+        Auto-reconnect: Detects closed/failed connections and recreates them
 
-    Example:
-        >>> conn = get_postgresql_connection()
-        >>> cursor = conn.cursor()
-        >>> cursor.execute("SELECT COUNT(*) FROM financial_chunks")
-        >>> # Subsequent calls return same cached instance
-        >>> same_conn = get_postgresql_connection()
-        >>> assert conn is same_conn
+    **Phase 4 Upgrade:** Use `psycopg2.pool.ThreadedConnectionPool` for production
     """
     if not PSYCOPG2_AVAILABLE:
         raise ImportError("psycopg2 not installed - PostgreSQL support unavailable")
@@ -437,21 +382,7 @@ def reset_postgresql_connection() -> None:
 
 
 def get_mistral_client() -> Mistral:
-    """Lazy-load Mistral AI client (singleton pattern with timeout configuration).
-
-    Creates client on first call and caches it for reuse. Configures HTTP timeout
-    to prevent indefinite hangs on slow/unresponsive API calls.
-
-    **Timeout Configuration:**
-    - Connect timeout: 10 seconds (time to establish connection)
-    - Read timeout: 60 seconds (time to receive response)
-    - Write timeout: 10 seconds (time to send request)
-    - Pool timeout: 10 seconds (time to acquire connection from pool)
-    - Test environment: 1 second timeout for all operations
-
-    **Use Cases:**
-    - Story 2.4: LLM-generated contextual metadata extraction
-    - Story 2.13: Text-to-SQL query generation for structured table search
+    """Get Mistral AI client with singleton caching and timeout configuration.
 
     Returns:
         Cached Mistral client instance with configured timeouts
@@ -460,19 +391,9 @@ def get_mistral_client() -> Mistral:
         ValueError: If MISTRAL_API_KEY not set in environment
         ImportError: If mistralai package is not installed
 
-    Example:
-        >>> client = get_mistral_client()
-        >>> response = client.chat.complete(model="mistral-small-latest", messages=[...])
-        >>> # Subsequent calls return same cached instance
-        >>> same_client = get_mistral_client()
-        >>> assert client is same_client
-
     Note:
-        The timeout prevents tests from hanging indefinitely when Mistral API
-        is slow or unresponsive. Without timeout, pytest can hang for 1700+ seconds
-        waiting for response (observed in VS Code Test Explorer).
-
-        OPTIMIZATION: In test environment, short timeouts prevent test hangs.
+        Timeout: 1s (tests), varies (production) to prevent hangs
+        Use cases: Story 2.4 (metadata), Story 2.13 (text-to-SQL)
     """
     if not MISTRAL_AVAILABLE:
         raise ImportError("mistralai package not installed. Install with: pip install mistralai")

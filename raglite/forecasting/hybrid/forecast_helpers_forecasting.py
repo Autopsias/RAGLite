@@ -39,11 +39,11 @@ def detect_input_frequency(df: pd.DataFrame) -> bool:
     # Use last 5 date differences (or all if fewer than 5)
     num_recent = min(5, len(df) - 1)
     start_idx = len(df) - 1 - num_recent
-    date_diffs = [
+    date_diffs: list[int] = [
         (df["ds"].iloc[i + 1] - df["ds"].iloc[i]).days for i in range(start_idx, len(df) - 1)
     ]
-    median_diff = sorted(date_diffs)[len(date_diffs) // 2]
-    return 25 <= median_diff <= 35
+    median_diff: int = sorted(date_diffs)[len(date_diffs) // 2]
+    return bool(25 <= median_diff <= 35)
 
 
 def generate_monthly_forecast_points(

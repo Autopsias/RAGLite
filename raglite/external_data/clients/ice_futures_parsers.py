@@ -152,7 +152,7 @@ def load_from_cache(
     commodity: str,
     start_date: date | None = None,
     end_date: date | None = None,
-) -> list[CommodityPrice]:
+) -> list[CommodityPrice | API2CoalPrice | TTFGasPrice]:
     """Load commodity prices from local cache.
 
     Args:

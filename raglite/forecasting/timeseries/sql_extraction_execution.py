@@ -4,6 +4,8 @@ Handles SQL query execution, entity filtering, and configuration logic.
 Part of Story 8.1 refactoring to split sql_extraction.py.
 """
 
+from typing import Any
+
 from raglite.forecasting.timeseries.sql_extraction_config import (
     determine_aggregation_function,
     get_entity_filters,
@@ -125,7 +127,7 @@ async def execute_sql_with_fallback(
     entity_filter: str,
     prefer_ytd: bool,
     aggregation: str,
-) -> list[tuple]:
+) -> list[tuple[Any, ...]]:
     """Execute SQL query with exact match first, wildcard fallback.
 
     Args:
@@ -164,7 +166,7 @@ async def execute_sql_with_fallback(
     )
 
     cursor.execute(query, (metric_param,))
-    rows = cursor.fetchall()
+    rows: list[tuple[Any, ...]] = cursor.fetchall()
 
     # If no results with exact match, try wildcard as fallback
     if not rows and match_type == "exact":

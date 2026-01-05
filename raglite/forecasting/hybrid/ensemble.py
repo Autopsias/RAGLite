@@ -108,6 +108,10 @@ async def generate_forecast(
         MIN_DATA_POINTS,
     )
 
+    # Historical data should always be loaded at this point
+    if historical_data is None:
+        raise ValueError(f"Failed to load historical data for {metric}")
+
     # Cold-start check
     if len(historical_data.points) < MIN_DATA_POINTS:
         logger.info("Cold-start detected: routing to Chronos-2", extra={"metric": metric})

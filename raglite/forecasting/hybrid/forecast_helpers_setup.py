@@ -98,7 +98,13 @@ async def handle_initial_setup(
     logger: Logger,
     min_data_points: int,
 ) -> tuple[
-    str, str | None, str | None, list[str] | None, TimeSeriesData, dict[str, Any] | None, bool
+    str,
+    str | None,
+    str | None,
+    list[str] | None,
+    TimeSeriesData | None,
+    dict[str, Any] | None,
+    bool,
 ]:
     """Handle deprecation, cache check, data loading, and cold-start detection.
 

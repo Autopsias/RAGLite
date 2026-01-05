@@ -3,7 +3,7 @@
 Part of Story 8.1 refactoring to split timeseries_extract.py.
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from raglite.forecasting.timeseries.parsing import parse_period_to_date  # noqa: E402
 from raglite.shared.logging import get_logger
@@ -286,7 +286,7 @@ def _remove_outliers(points: list["TimeSeriesPoint"]) -> list["TimeSeriesPoint"]
     return filtered_points
 
 
-def _query_qdrant_for_ebitda(search_pattern: str, entity: str) -> list:
+def _query_qdrant_for_ebitda(search_pattern: str, entity: str) -> list[Any]:
     """Query Qdrant for chunks containing EBITDA data.
 
     Args:
@@ -304,6 +304,7 @@ def _query_qdrant_for_ebitda(search_pattern: str, entity: str) -> list:
     client = get_qdrant_client()
     collection = settings.qdrant_collection_name
 
+    results: list[Any]
     results, _ = client.scroll(
         collection_name=collection,
         scroll_filter=Filter(

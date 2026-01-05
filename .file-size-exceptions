@@ -1,59 +1,53 @@
 {
   "version": 1,
-  "baseline_date": "2025-12-28T01:17:20.116651",
+  "baseline_date": "2026-01-05T20:11:07.069133",
   "description": "Grandfathered file size violations - reduce gradually",
   "thresholds": {
     "warning": 400,
     "hard_limit": 500
   },
   "exceptions": {
-    "raglite/retrieval/search.py": {
-      "lines": 1146,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "raglite/external_data/refresh.py": {
-      "lines": 969,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "raglite/retrieval/query_classifier.py": {
-      "lines": 928,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/hybrid/ensemble.py": {
-      "lines": 884,
-      "reason": "Story 8.5: Reduced from 891 by extracting auto-fetch logic to preprocessing.py",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "tests/integration/test_model_selection.py": {
-      "lines": 855,
+    "tests/unit/test_ingestion.py": {
+      "lines": 1787,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"
     },
-    "raglite/ingestion/adaptive_table/classification.py": {
-      "lines": 853,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "tests/integration/test_story_6_23_final_validation.py": {
-      "lines": 837,
+    "tests/unit/test_model_selection_job.py": {
+      "lines": 1217,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"
     },
-    "raglite/ingestion/chunking_strategy.py": {
-      "lines": 826,
+    "tests/unit/test_proactive_insights.py": {
+      "lines": 1128,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
-      "directory": "raglite/"
+      "directory": "tests/"
+    },
+    "tests/unit/test_trend_analysis.py": {
+      "lines": 1061,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 500,
+      "directory": "tests/"
+    },
+    "tests/unit/test_model_selection_cache.py": {
+      "lines": 987,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 500,
+      "directory": "tests/"
+    },
+    "tests/unit/test_strategic_recommendations.py": {
+      "lines": 949,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 500,
+      "directory": "tests/"
+    },
+    "tests/unit/test_table_extraction.py": {
+      "lines": 948,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 500,
+      "directory": "tests/"
     },
     "tests/validation/test_recommendation_alignment.py": {
       "lines": 825,
@@ -61,44 +55,20 @@
       "target_lines": 500,
       "directory": "tests/"
     },
-    "raglite/forecasting/report_generator.py": {
-      "lines": 807,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
     "tests/fixtures/ground_truth.py": {
       "lines": 802,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"
     },
-    "tests/integration/test_epic3_p0_scenarios.py": {
-      "lines": 780,
+    "tests/validation/test_insight_quality.py": {
+      "lines": 772,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"
-    },
-    "raglite/external_data/clients/ine.py": {
-      "lines": 768,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
     },
     "tests/fixtures/ground_truth_old_backup.py": {
       "lines": 762,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/validation/test_insight_quality.py": {
-      "lines": 738,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/integration/test_catboost_adaptive_weights.py": {
-      "lines": 732,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"
@@ -109,131 +79,17 @@
       "target_lines": 500,
       "directory": "tests/"
     },
-    "raglite/ingestion/storage_operations.py": {
-      "lines": 711,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "raglite/external_data/clients/ice_futures.py": {
-      "lines": 707,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "raglite/agentic/orchestrator.py": {
-      "lines": 705,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "tests/integration/test_ecb_macroeconomic_integration.py": {
-      "lines": 698,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "raglite/agentic/fallback.py": {
-      "lines": 686,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "tests/integration/test_fixed_chunking.py": {
-      "lines": 674,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/integration/test_eurostat_api.py": {
-      "lines": 672,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "raglite/external_data/models.py": {
-      "lines": 666,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
     "tests/validation/test_forecast_accuracy.py": {
-      "lines": 662,
+      "lines": 673,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"
     },
-    "raglite/forecasting/hybrid/preprocessing.py": {
-      "lines": 656,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "tests/integration/test_metadata_injection.py": {
-      "lines": 640,
+    "tests/atdd/test_story_8_5_deprecation_cleanup.py": {
+      "lines": 636,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"
-    },
-    "tests/integration/test_epic6_accuracy_regression.py": {
-      "lines": 640,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "raglite/ingestion/adaptive_table/standard_layouts.py": {
-      "lines": 635,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "tests/integration/test_analytical_query_tool.py": {
-      "lines": 633,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/atdd/story_8_4a_3/test_ac1_file_size_limits.py": {
-      "lines": 630,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/integration/test_external_data_integration.py": {
-      "lines": 612,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "raglite/external_data/clients/commodities.py": {
-      "lines": 607,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "tests/integration/test_proactive_insights_integration.py": {
-      "lines": 605,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "raglite/forecasting/hybrid/model_generators.py": {
-      "lines": 602,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/model_selection_job.py": {
-      "lines": 601,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/regime_detection.py": {
-      "lines": 600,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
     },
     "tests/health/test_external_data_health.py": {
       "lines": 587,
@@ -241,56 +97,8 @@
       "target_lines": 500,
       "directory": "tests/"
     },
-    "raglite/forecasting/ensemble.py": {
-      "lines": 583,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/regressor_fetch.py": {
-      "lines": 579,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/data_quality/config.py": {
-      "lines": 578,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/data_analyzer.py": {
-      "lines": 568,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "tests/integration/test_story_2_14_excerpt_validation.py": {
-      "lines": 568,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/integration/test_strategic_recommendations_integration.py": {
-      "lines": 557,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "raglite/forecasting/regressor_config.py": {
-      "lines": 550,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "tests/integration/test_retrieval_integration.py": {
-      "lines": 549,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
     "tests/uat/test_epic_1_validation.py": {
-      "lines": 544,
+      "lines": 557,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"
@@ -301,25 +109,19 @@
       "target_lines": 500,
       "directory": "tests/"
     },
-    "raglite/agentic/planner.py": {
-      "lines": 543,
+    "tests/unit/mcp/test_model_selection_mcp.py": {
+      "lines": 537,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
-      "directory": "raglite/"
+      "directory": "tests/"
     },
-    "raglite/forecasting/model_selection_utils.py": {
-      "lines": 541,
+    "tests/unit/forecasting/test_mcp_model_routing_core.py": {
+      "lines": 534,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
-      "directory": "raglite/"
+      "directory": "tests/"
     },
-    "raglite/external_data/clients/eu_oil_bulletin.py": {
-      "lines": 536,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "tests/atdd/test_story_8_2.py": {
+    "tests/integration/fixtures/session_fixtures.py": {
       "lines": 534,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
@@ -331,65 +133,17 @@
       "target_lines": 500,
       "directory": "raglite/"
     },
-    "tests/unit/forecasting/test_forecast_query_mcp.py": {
-      "lines": 533,
+    "tests/unit/test_hybrid_forecasting.py": {
+      "lines": 524,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"
     },
-    "tests/integration/test_variable_cost_extraction.py": {
-      "lines": 522,
+    "tests/unit/test_model_selection_cache_mcp.py": {
+      "lines": 520,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"
-    },
-    "raglite/ingestion/table_extraction.py": {
-      "lines": 517,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "tests/integration/test_workflow_orchestration.py": {
-      "lines": 517,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/unit/mcp/test_model_selection_mcp.py": {
-      "lines": 515,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "raglite/forecasting/tft_training.py": {
-      "lines": 512,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "tests/integration/test_regressor_fetch_story_6_16.py": {
-      "lines": 511,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/integration/test_external_data_mcp.py": {
-      "lines": 510,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "raglite/shared/clients.py": {
-      "lines": 509,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "raglite/insights/proactive.py": {
-      "lines": 503,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
     }
   }
 }

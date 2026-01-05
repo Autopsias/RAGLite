@@ -31,7 +31,7 @@ from raglite.forecasting.hybrid.forecast_helpers_setup import (
 if TYPE_CHECKING:
     from logging import Logger
 
-    from raglite.shared.models import TimeSeriesData
+    from raglite.shared.models import ForecastResult, TimeSeriesData
 
 
 async def try_non_prophet_model(
@@ -45,7 +45,7 @@ async def try_non_prophet_model(
     model_selection_reason: str | None,
     explain_forecast_func: Any,
     logger: Logger,
-) -> tuple[Any | None, str, str | None, dict[str, pd.Series] | None]:
+) -> tuple[ForecastResult | None, str, str | None, dict[str, pd.Series] | None]:
     """Try non-Prophet model with fallback to Prophet on failure.
 
     Story 8.1: Extracted from generate_forecast (Steps 3-4).
@@ -110,7 +110,7 @@ async def route_to_non_prophet_model(
     model_selection_reason: str | None,
     explain_forecast_func: Any,
     logger: Logger,
-) -> Any:
+) -> ForecastResult:
     """Route to non-Prophet model and add LLM explanation.
 
     Story 8.1: Extracted from generate_forecast to reduce function length.
@@ -196,7 +196,7 @@ def build_forecast_result(
     improvement_vs_baseline: float | None,
     model_source: str,
     model_selection_reason: str | None,
-) -> Any:
+) -> ForecastResult:
     """Build ForecastResult object from components.
 
     Story 8.1: Extracted from generate_forecast to reduce function length.

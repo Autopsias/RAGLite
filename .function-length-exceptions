@@ -1,84 +1,12 @@
 {
   "version": 1,
-  "baseline_date": "2025-12-31T19:01:48.760193",
+  "baseline_date": "2026-01-05T20:11:08.574485",
   "description": "Grandfathered function length violations - refactor gradually",
   "thresholds": {
     "warning": 50,
     "hard_limit": 100
   },
   "exceptions": {
-    "raglite/forecasting/timeseries/sql_extraction.py:484:extract_timeseries_from_sql": {
-      "length": 128,
-      "function": "extract_timeseries_from_sql",
-      "file": "raglite/forecasting/timeseries/sql_extraction.py",
-      "line": 484,
-      "reason": "Refactored from 1322 to 128 LOC. Remaining 128 LOC includes 52-line docstring (actual code: 76 LOC). Complex SQL extraction function with Qdrant fallback.",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/hybrid/ensemble.py:54:generate_forecast": {
-      "length": 659,
-      "function": "generate_forecast",
-      "file": "raglite/forecasting/hybrid/ensemble.py",
-      "line": 54,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/mcp/tools/forecast.py:29:get_financial_forecast": {
-      "length": 456,
-      "function": "get_financial_forecast",
-      "file": "raglite/mcp/tools/forecast.py",
-      "line": 29,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/ensemble.py:132:generate_ensemble_forecast": {
-      "length": 452,
-      "function": "generate_ensemble_forecast",
-      "file": "raglite/forecasting/ensemble.py",
-      "line": 132,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/ingestion/adaptive_table/standard_layouts.py:203:_extract_transposed_entity_cols_metric_row_labels": {
-      "length": 433,
-      "function": "_extract_transposed_entity_cols_metric_row_labels",
-      "file": "raglite/ingestion/adaptive_table/standard_layouts.py",
-      "line": 203,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/timeseries/qdrant_metric.py:23:extract_metric_from_qdrant_chunks": {
-      "length": 416,
-      "function": "extract_metric_from_qdrant_chunks",
-      "file": "raglite/forecasting/timeseries/qdrant_metric.py",
-      "line": 23,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/ingestion/chunking_strategy.py:467:chunk_by_docling_items": {
-      "length": 360,
-      "function": "chunk_by_docling_items",
-      "file": "raglite/ingestion/chunking_strategy.py",
-      "line": 467,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/regressor_fetch.py:109:fetch_single_regressor": {
-      "length": 351,
-      "function": "fetch_single_regressor",
-      "file": "raglite/forecasting/regressor_fetch.py",
-      "line": 109,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/ingestion/document_ingestion/pdf_processing.py:33:ingest_pdf": {
       "length": 334,
       "function": "ingest_pdf",
@@ -97,33 +25,6 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/agentic/planner.py:242:decompose_query": {
-      "length": 302,
-      "function": "decompose_query",
-      "file": "raglite/agentic/planner.py",
-      "line": 242,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/retrieval/query_classifier.py:443:generate_sql_query": {
-      "length": 298,
-      "function": "generate_sql_query",
-      "file": "raglite/retrieval/query_classifier.py",
-      "line": 443,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/timeseries/qdrant_ebitda.py:24:extract_ebitda_from_qdrant_chunks": {
-      "length": 291,
-      "function": "extract_ebitda_from_qdrant_chunks",
-      "file": "raglite/forecasting/timeseries/qdrant_ebitda.py",
-      "line": 24,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "tests/integration/fixtures/session_fixtures.py:260:session_ingested_collection": {
       "length": 275,
       "function": "session_ingested_collection",
@@ -133,29 +34,11 @@
       "target_lines": 100,
       "directory": "tests/"
     },
-    "raglite/retrieval/search.py:878:hybrid_search": {
-      "length": 269,
-      "function": "hybrid_search",
-      "file": "raglite/retrieval/search.py",
-      "line": 878,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/forecasting/timeseries/qdrant_variable_cost.py:23:extract_variable_cost_from_qdrant_chunks": {
       "length": 254,
       "function": "extract_variable_cost_from_qdrant_chunks",
       "file": "raglite/forecasting/timeseries/qdrant_variable_cost.py",
       "line": 23,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/ingestion/adaptive_table/classification.py:609:_detect_table_orientation": {
-      "length": 245,
-      "function": "_detect_table_orientation",
-      "file": "raglite/ingestion/adaptive_table/classification.py",
-      "line": 609,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -196,29 +79,29 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/mcp/tools/insights.py:36:get_financial_insights": {
+    "raglite/mcp/tools/insights.py:25:get_financial_insights": {
       "length": 218,
       "function": "get_financial_insights",
       "file": "raglite/mcp/tools/insights.py",
-      "line": 36,
+      "line": 25,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/ingestion/storage_operations.py:141:store_vectors_in_qdrant": {
-      "length": 217,
-      "function": "store_vectors_in_qdrant",
-      "file": "raglite/ingestion/storage_operations.py",
-      "line": 141,
+    "raglite/ingestion/embedding_generation/metadata.py:28:extract_chunk_metadata": {
+      "length": 214,
+      "function": "extract_chunk_metadata",
+      "file": "raglite/ingestion/embedding_generation/metadata.py",
+      "line": 28,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/insights/proactive.py:292:generate_insights": {
+    "raglite/insights/proactive_modules/generation.py:24:generate_insights": {
       "length": 212,
       "function": "generate_insights",
-      "file": "raglite/insights/proactive.py",
-      "line": 292,
+      "file": "raglite/insights/proactive_modules/generation.py",
+      "line": 24,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -228,15 +111,6 @@
       "function": "extract_chunk_metadata",
       "file": "raglite/ingestion/embedding_generation.py",
       "line": 130,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/regime_detection.py:342:detect_regime_changes": {
-      "length": 210,
-      "function": "detect_regime_changes",
-      "file": "raglite/forecasting/regime_detection.py",
-      "line": 342,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -259,14 +133,14 @@
       "target_lines": 100,
       "directory": "tests/"
     },
-    "raglite/ingestion/adaptive_table/classification.py:227:detect_table_layout": {
-      "length": 203,
-      "function": "detect_table_layout",
-      "file": "raglite/ingestion/adaptive_table/classification.py",
-      "line": 227,
+    "tests/integration/ac3_ground_truth/test_ac1_execution.py:26:test_ac1_full_ground_truth_execution": {
+      "length": 205,
+      "function": "test_ac1_full_ground_truth_execution",
+      "file": "tests/integration/ac3_ground_truth/test_ac1_execution.py",
+      "line": 26,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
-      "directory": "raglite/"
+      "directory": "tests/"
     },
     "raglite/mcp/tools/ingestion.py:245:ingest_financial_document_async": {
       "length": 197,
@@ -295,24 +169,6 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/retrieval/query_classifier.py:743:classify_query": {
-      "length": 186,
-      "function": "classify_query",
-      "file": "raglite/retrieval/query_classifier.py",
-      "line": 743,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/external_data/clients/eu_oil_bulletin.py:278:_parse_xlsx": {
-      "length": 186,
-      "function": "_parse_xlsx",
-      "file": "raglite/external_data/clients/eu_oil_bulletin.py",
-      "line": 278,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/forecasting/data_quality/checks/entity_checks.py:21:check_entity_contamination": {
       "length": 180,
       "function": "check_entity_contamination",
@@ -331,15 +187,6 @@
       "target_lines": 100,
       "directory": "tests/"
     },
-    "raglite/ingestion/storage_operations.py:360:store_metadata_in_postgresql": {
-      "length": 176,
-      "function": "store_metadata_in_postgresql",
-      "file": "raglite/ingestion/storage_operations.py",
-      "line": 360,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "tests/integration/test_parallel_ingestion.py:28:test_parallel_ingestion_three_documents": {
       "length": 176,
       "function": "test_parallel_ingestion_three_documents",
@@ -349,23 +196,14 @@
       "target_lines": 100,
       "directory": "tests/"
     },
-    "raglite/retrieval/search.py:570:fuse_search_results": {
-      "length": 175,
-      "function": "fuse_search_results",
-      "file": "raglite/retrieval/search.py",
-      "line": 570,
+    "tests/integration/parallel_ingestion/test_parallel_ingestion_core.py:28:test_parallel_ingestion_three_documents": {
+      "length": 176,
+      "function": "test_parallel_ingestion_three_documents",
+      "file": "tests/integration/parallel_ingestion/test_parallel_ingestion_core.py",
+      "line": 28,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/ingestion/storage_operations.py:538:store_tables_in_postgresql": {
-      "length": 174,
-      "function": "store_tables_in_postgresql",
-      "file": "raglite/ingestion/storage_operations.py",
-      "line": 538,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
+      "directory": "tests/"
     },
     "raglite/agentic/agents/analysis_agent.py:129:analysis_agent": {
       "length": 174,
@@ -381,15 +219,6 @@
       "function": "retrain_forecasting_models",
       "file": "raglite/mcp/tools/admin.py",
       "line": 117,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/ingestion/adaptive_table/classification.py:53:classify_header": {
-      "length": 172,
-      "function": "classify_header",
-      "file": "raglite/ingestion/adaptive_table/classification.py",
-      "line": 53,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -439,15 +268,6 @@
       "target_lines": 100,
       "directory": "tests/"
     },
-    "raglite/retrieval/search.py:315:search_documents": {
-      "length": 158,
-      "function": "search_documents",
-      "file": "raglite/retrieval/search.py",
-      "line": 315,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/insights/anomalies.py:15:detect_anomalies": {
       "length": 156,
       "function": "detect_anomalies",
@@ -462,15 +282,6 @@
       "function": "ingest_financial_document",
       "file": "raglite/mcp/tools/ingestion.py",
       "line": 89,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/ingestion/chunking_strategy.py:173:chunk_document": {
-      "length": 152,
-      "function": "chunk_document",
-      "file": "raglite/ingestion/chunking_strategy.py",
-      "line": 173,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -502,15 +313,6 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/retrieval/query_classifier.py:292:classify_query_metadata": {
-      "length": 149,
-      "function": "classify_query_metadata",
-      "file": "raglite/retrieval/query_classifier.py",
-      "line": 292,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/forecasting/models/tft_model.py:147:fit_and_forecast_tft": {
       "length": 149,
       "function": "fit_and_forecast_tft",
@@ -520,11 +322,11 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/forecasting/timeseries/sql_extraction.py:393:build_query": {
-      "length": 148,
-      "function": "build_query",
-      "file": "raglite/forecasting/timeseries/sql_extraction.py",
-      "line": 393,
+    "raglite/forecasting/models/tft/_legacy.py:147:fit_and_forecast_tft": {
+      "length": 149,
+      "function": "fit_and_forecast_tft",
+      "file": "raglite/forecasting/models/tft/_legacy.py",
+      "line": 147,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -565,15 +367,6 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/agentic/planner.py:58:classify_query_complexity": {
-      "length": 139,
-      "function": "classify_query_complexity",
-      "file": "raglite/agentic/planner.py",
-      "line": 58,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "tests/integration/test_chunking_core.py:130:test_ac5_fast_chunk_count_validation": {
       "length": 139,
       "function": "test_ac5_fast_chunk_count_validation",
@@ -582,15 +375,6 @@
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "tests/"
-    },
-    "raglite/ingestion/chunking_strategy.py:327:split_large_table_by_rows": {
-      "length": 138,
-      "function": "split_large_table_by_rows",
-      "file": "raglite/ingestion/chunking_strategy.py",
-      "line": 327,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
     },
     "raglite/forecasting/auto_update.py:73:trigger_forecast_refresh": {
       "length": 137,
@@ -637,6 +421,15 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
+    "tests/integration/chunking/test_ac5_validation.py:26:test_ac5_fast_chunk_count_validation": {
+      "length": 136,
+      "function": "test_ac5_fast_chunk_count_validation",
+      "file": "tests/integration/chunking/test_ac5_validation.py",
+      "line": 26,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "tests/"
+    },
     "tests/fixtures/mistral_mock_helpers.py:16:generate_mock_sql": {
       "length": 135,
       "function": "generate_mock_sql",
@@ -655,29 +448,11 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/external_data/clients/ine.py:144:_fetch_with_retry": {
-      "length": 134,
-      "function": "_fetch_with_retry",
-      "file": "raglite/external_data/clients/ine.py",
-      "line": 144,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/hybrid/preprocessing.py:288:prepare_regressors": {
+    "raglite/mcp/tools/forecast.py:66:get_financial_forecast": {
       "length": 132,
-      "function": "prepare_regressors",
-      "file": "raglite/forecasting/hybrid/preprocessing.py",
-      "line": 288,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/agentic/orchestrator.py:455:_execute_task": {
-      "length": 131,
-      "function": "_execute_task",
-      "file": "raglite/agentic/orchestrator.py",
-      "line": 455,
+      "function": "get_financial_forecast",
+      "file": "raglite/mcp/tools/forecast.py",
+      "line": 66,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -709,15 +484,6 @@
       "target_lines": 100,
       "directory": "tests/"
     },
-    "raglite/retrieval/search.py:747:enrich_results_with_metadata": {
-      "length": 129,
-      "function": "enrich_results_with_metadata",
-      "file": "raglite/retrieval/search.py",
-      "line": 747,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "tests/integration/test_chunking_extended.py:29:test_ac6_fast_chunk_size_consistency": {
       "length": 129,
       "function": "test_ac6_fast_chunk_size_consistency",
@@ -745,11 +511,11 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/ingestion/table_extraction.py:185:_parse_table_structure": {
-      "length": 125,
-      "function": "_parse_table_structure",
-      "file": "raglite/ingestion/table_extraction.py",
-      "line": 185,
+    "raglite/external_data/clients/basegov/ted/client.py:21:fetch_ted_notices": {
+      "length": 128,
+      "function": "fetch_ted_notices",
+      "file": "raglite/external_data/clients/basegov/ted/client.py",
+      "line": 21,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -763,11 +529,11 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/shared/clients.py:286:get_postgresql_connection": {
-      "length": 122,
-      "function": "get_postgresql_connection",
-      "file": "raglite/shared/clients.py",
-      "line": 286,
+    "raglite/forecasting/hybrid/ensemble.py:58:generate_forecast": {
+      "length": 125,
+      "function": "generate_forecast",
+      "file": "raglite/forecasting/hybrid/ensemble.py",
+      "line": 58,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -781,6 +547,15 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
+    "raglite/external_data/clients/entsoe/csv_parser.py:21:fetch_daily_csv": {
+      "length": 122,
+      "function": "fetch_daily_csv",
+      "file": "raglite/external_data/clients/entsoe/csv_parser.py",
+      "line": 21,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "raglite/"
+    },
     "raglite/insights/recommendations.py:106:synthesize_recommendation": {
       "length": 120,
       "function": "synthesize_recommendation",
@@ -790,11 +565,11 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/insights/proactive.py:121:synthesize_insight": {
-      "length": 119,
-      "function": "synthesize_insight",
-      "file": "raglite/insights/proactive.py",
-      "line": 121,
+    "raglite/insights/recommendations/synthesis.py:12:synthesize_recommendation": {
+      "length": 120,
+      "function": "synthesize_recommendation",
+      "file": "raglite/insights/recommendations/synthesis.py",
+      "line": 12,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -808,11 +583,20 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/agentic/orchestrator.py:587:execute_workflow": {
+    "raglite/insights/recommendations/generation.py:23:generate_recommendations": {
       "length": 119,
-      "function": "execute_workflow",
-      "file": "raglite/agentic/orchestrator.py",
-      "line": 587,
+      "function": "generate_recommendations",
+      "file": "raglite/insights/recommendations/generation.py",
+      "line": 23,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "raglite/"
+    },
+    "raglite/insights/proactive_modules/synthesis.py:12:synthesize_insight": {
+      "length": 119,
+      "function": "synthesize_insight",
+      "file": "raglite/insights/proactive_modules/synthesis.py",
+      "line": 12,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -853,6 +637,15 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
+    "raglite/forecasting/tft_training_job/weekly_training.py:28:run_weekly_tft_training": {
+      "length": 117,
+      "function": "run_weekly_tft_training",
+      "file": "raglite/forecasting/tft_training_job/weekly_training.py",
+      "line": 28,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "raglite/"
+    },
     "raglite/forecasting/composite_forecast.py:100:forecast_composite": {
       "length": 116,
       "function": "forecast_composite",
@@ -889,20 +682,20 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/agentic/fallback.py:392:handle_workflow_failure": {
-      "length": 114,
-      "function": "handle_workflow_failure",
-      "file": "raglite/agentic/fallback.py",
-      "line": 392,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/ingestion/adaptive_table/unit_inference/extraction.py:218:_detect_unit_column_statistical": {
       "length": 113,
       "function": "_detect_unit_column_statistical",
       "file": "raglite/ingestion/adaptive_table/unit_inference/extraction.py",
       "line": 218,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "raglite/"
+    },
+    "raglite/mcp/tools/external_data/tools.py:24:refresh_external_data": {
+      "length": 113,
+      "function": "refresh_external_data",
+      "file": "raglite/mcp/tools/external_data/tools.py",
+      "line": 24,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -921,6 +714,24 @@
       "function": "_get_tft_model",
       "file": "raglite/forecasting/models/tft_model.py",
       "line": 32,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "raglite/"
+    },
+    "raglite/forecasting/models/tft/_legacy.py:32:_get_tft_model": {
+      "length": 113,
+      "function": "_get_tft_model",
+      "file": "raglite/forecasting/models/tft/_legacy.py",
+      "line": 32,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "raglite/"
+    },
+    "raglite/forecasting/ensemble.py:130:generate_ensemble_forecast": {
+      "length": 112,
+      "function": "generate_ensemble_forecast",
+      "file": "raglite/forecasting/ensemble.py",
+      "line": 130,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -970,29 +781,20 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/shared/clients.py:86:get_qdrant_client": {
-      "length": 108,
-      "function": "get_qdrant_client",
-      "file": "raglite/shared/clients.py",
-      "line": 86,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/tft_training.py:275:train_tft_model": {
-      "length": 108,
-      "function": "train_tft_model",
-      "file": "raglite/forecasting/tft_training.py",
-      "line": 275,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/forecasting/models/chronos_model.py:166:fit_and_forecast_chronos": {
       "length": 108,
       "function": "fit_and_forecast_chronos",
       "file": "raglite/forecasting/models/chronos_model.py",
       "line": 166,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "raglite/"
+    },
+    "raglite/forecasting/tft_training/training.py:24:train_tft_model": {
+      "length": 108,
+      "function": "train_tft_model",
+      "file": "raglite/forecasting/tft_training/training.py",
+      "line": 24,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -1024,6 +826,15 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
+    "raglite/forecasting/models/catboost/fitting.py:31:fit_catboost": {
+      "length": 106,
+      "function": "fit_catboost",
+      "file": "raglite/forecasting/models/catboost/fitting.py",
+      "line": 31,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "raglite/"
+    },
     "raglite/forecasting/hybrid/ml_models.py:305:fit_catboost": {
       "length": 106,
       "function": "fit_catboost",
@@ -1051,24 +862,6 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/forecasting/model_selection_job.py:292:run_batch_model_selection": {
-      "length": 105,
-      "function": "run_batch_model_selection",
-      "file": "raglite/forecasting/model_selection_job.py",
-      "line": 292,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/report_generator.py:254:generate_variable_assessment": {
-      "length": 105,
-      "function": "generate_variable_assessment",
-      "file": "raglite/forecasting/report_generator.py",
-      "line": 254,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "tests/validation/test_recommendation_alignment.py:201:validate_recommendations": {
       "length": 105,
       "function": "validate_recommendations",
@@ -1078,11 +871,29 @@
       "target_lines": 100,
       "directory": "tests/"
     },
+    "tests/validation/test_recommendation_alignment_modules/validator.py:148:validate_recommendations": {
+      "length": 105,
+      "function": "validate_recommendations",
+      "file": "tests/validation/test_recommendation_alignment_modules/validator.py",
+      "line": 148,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "tests/"
+    },
     "raglite/external_data/clients/eurostat/parsers.py:98:parse_sdmx_index_data": {
       "length": 104,
       "function": "parse_sdmx_index_data",
       "file": "raglite/external_data/clients/eurostat/parsers.py",
       "line": 98,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "raglite/"
+    },
+    "raglite/external_data/clients/eurostat/parsers_internal/sdmx_parsers.py:18:parse_sdmx_index_data": {
+      "length": 104,
+      "function": "parse_sdmx_index_data",
+      "file": "raglite/external_data/clients/eurostat/parsers_internal/sdmx_parsers.py",
+      "line": 18,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -1105,15 +916,6 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/ingestion/adaptive_table/standard_layouts.py:100:_extract_entity_cols_metric_rows": {
-      "length": 101,
-      "function": "_extract_entity_cols_metric_rows",
-      "file": "raglite/ingestion/adaptive_table/standard_layouts.py",
-      "line": 100,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/forecasting/metrics.py:186:list_external_metrics": {
       "length": 101,
       "function": "list_external_metrics",
@@ -1123,11 +925,29 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
+    "raglite/forecasting/timeseries/sql_extraction_normalization.py:225:normalize_units_and_filter_outliers": {
+      "length": 101,
+      "function": "normalize_units_and_filter_outliers",
+      "file": "raglite/forecasting/timeseries/sql_extraction_normalization.py",
+      "line": 225,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "raglite/"
+    },
     "raglite/external_data/clients/eurostat/parsers.py:335:parse_construction_confidence_data": {
       "length": 101,
       "function": "parse_construction_confidence_data",
       "file": "raglite/external_data/clients/eurostat/parsers.py",
       "line": 335,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "raglite/"
+    },
+    "raglite/external_data/clients/eurostat/parsers_internal/simple_parsers.py:159:parse_construction_confidence_data": {
+      "length": 101,
+      "function": "parse_construction_confidence_data",
+      "file": "raglite/external_data/clients/eurostat/parsers_internal/simple_parsers.py",
+      "line": 159,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"

@@ -3,7 +3,7 @@
 Part of Story 8.1 refactoring to split timeseries_extract.py.
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from raglite.forecasting.timeseries.parsing import parse_period_to_date  # noqa: E402
 from raglite.shared.logging import get_logger
@@ -41,7 +41,7 @@ COST_METRICS = {
 
 
 def _parse_chunk_metadata(
-    point,
+    point: Any,
     search_patterns: list[str],
 ) -> tuple[str | None, float | None, str]:
     """Extract metadata and numeric value from a Qdrant chunk.
@@ -154,7 +154,7 @@ def _extract_numeric_from_text(text: str, search_patterns: list[str]) -> float |
 
 
 def _aggregate_by_period(
-    results,
+    results: list[Any],
     search_patterns: list[str],
 ) -> tuple[dict[str, float], set[str]]:
     """Aggregate values by time period from Qdrant chunks.

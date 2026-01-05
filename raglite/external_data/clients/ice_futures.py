@@ -16,6 +16,7 @@ from __future__ import annotations
 import os
 from datetime import date
 from pathlib import Path
+from typing import cast
 
 from raglite.external_data.clients.ice_futures_http import (
     fetch_quandl_data,
@@ -222,7 +223,9 @@ class ICEFuturesClient:
         Returns:
             List of cached price records
         """
-        return load_from_cache(self.cache_dir, commodity, start_date, end_date)
+        return cast(
+            list[CommodityPrice], load_from_cache(self.cache_dir, commodity, start_date, end_date)
+        )
 
     def save_to_cache(
         self,
