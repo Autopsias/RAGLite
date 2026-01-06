@@ -6,6 +6,7 @@ Provides MCP tools for refreshing and querying external financial data sources.
 import json
 import time
 
+from raglite.external_data.refresh import BulkRefreshResult, RefreshResult
 from raglite.external_data.storage import ExternalDataStorage
 from raglite.main import mcp
 from raglite.mcp.models import ExternalDataQueryRequest
@@ -17,6 +18,53 @@ from .query_helpers import _query_all_sources, _query_single_source
 from .response_formatters import _format_response
 
 logger = get_logger(__name__)
+
+
+def _format_bulk_refresh_response(bulk_result: BulkRefreshResult) -> dict:
+    """Format bulk refresh result for MCP response.
+
+    Args:
+        bulk_result: BulkRefreshResult from refresh_all_sources
+
+    Returns:
+        Formatted response dictionary
+    """
+    return {
+        "total_sources": bulk_result.total_sources,
+        "successful": bulk_result.successful,
+        "failed": bulk_result.failed,
+        "total_duration_seconds": round(bulk_result.total_duration_seconds, 2),
+        "results": [
+            {
+                "source_name": r.source_name,
+                "success": r.success,
+                "records_updated": r.records_updated,
+                "duration_seconds": round(r.duration_seconds, 2),
+                "error_message": r.error_message,
+                "attempts": r.attempts,
+            }
+            for r in bulk_result.results
+        ],
+    }
+
+
+def _format_single_refresh_response(single_result: RefreshResult) -> dict:
+    """Format single source refresh result for MCP response.
+
+    Args:
+        single_result: RefreshResult from refresh_source
+
+    Returns:
+        Formatted response dictionary
+    """
+    return {
+        "source_name": single_result.source_name,
+        "success": single_result.success,
+        "records_updated": single_result.records_updated,
+        "duration_seconds": round(single_result.duration_seconds, 2),
+        "error_message": single_result.error_message,
+        "attempts": single_result.attempts,
+    }
 
 
 @mcp.tool()
@@ -77,33 +125,10 @@ async def refresh_external_data(source_name: str | None = None) -> str:
     try:
         if source_name is None:
             bulk_result = await refresh_all_sources()
-            response = {
-                "total_sources": bulk_result.total_sources,
-                "successful": bulk_result.successful,
-                "failed": bulk_result.failed,
-                "total_duration_seconds": round(bulk_result.total_duration_seconds, 2),
-                "results": [
-                    {
-                        "source_name": r.source_name,
-                        "success": r.success,
-                        "records_updated": r.records_updated,
-                        "duration_seconds": round(r.duration_seconds, 2),
-                        "error_message": r.error_message,
-                        "attempts": r.attempts,
-                    }
-                    for r in bulk_result.results
-                ],
-            }
+            response = _format_bulk_refresh_response(bulk_result)
         else:
             single_result = await refresh_source(source_name)
-            response = {
-                "source_name": single_result.source_name,
-                "success": single_result.success,
-                "records_updated": single_result.records_updated,
-                "duration_seconds": round(single_result.duration_seconds, 2),
-                "error_message": single_result.error_message,
-                "attempts": single_result.attempts,
-            }
+            response = _format_single_refresh_response(single_result)
         if source_name is None:
             success_status = bulk_result.successful == bulk_result.total_sources
         else:

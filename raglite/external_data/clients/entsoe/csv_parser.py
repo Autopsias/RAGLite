@@ -17,6 +17,76 @@ from raglite.shared.logging import get_logger
 logger = get_logger(__name__)
 
 
+def _normalize_csv_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize Ember CSV column names to lowercase with underscores.
+
+    Args:
+        df: DataFrame with original Ember column names
+
+    Returns:
+        DataFrame with normalized column names
+    """
+    # Ember CSV actual columns: 'Country', 'ISO3 Code', 'Date', 'Price (EUR/MWhe)'
+    # Normalize column names to lowercase with underscores
+    df.columns = (
+        df.columns.str.lower()
+        .str.replace(" ", "_")
+        .str.replace("(", "")
+        .str.replace(")", "")
+        .str.replace("/", "_")
+    )
+    return df
+
+
+def _validate_csv_columns(df: pd.DataFrame) -> None:
+    """Validate that required columns exist in normalized DataFrame.
+
+    Args:
+        df: DataFrame with normalized columns
+
+    Raises:
+        ExternalDataFetchError: If required columns are missing
+    """
+    # Expected normalized: country, iso3_code, date, price_eur_mwhe
+    required_cols = ["iso3_code", "date", "price_eur_mwhe"]
+    missing = [col for col in required_cols if col not in df.columns]
+    if missing:
+        raise ExternalDataFetchError(
+            source="Ember",
+            message=f"Missing columns: {missing}. Found: {df.columns.tolist()}",
+        )
+
+
+def _transform_csv_data(df: pd.DataFrame) -> pd.DataFrame:
+    """Transform parsed CSV data to standard format.
+
+    Args:
+        df: DataFrame with normalized columns
+
+    Returns:
+        Transformed DataFrame ready for use
+    """
+    # Rename price column for consistency
+    df = df.rename(columns={"price_eur_mwhe": "price_eur_mwh"})
+
+    # Parse dates
+    df["date"] = pd.to_datetime(df["date"]).dt.date
+
+    # Filter out null prices
+    df = df[df["price_eur_mwh"].notna()]
+
+    logger.info(
+        "Fetched Ember daily CSV",
+        extra={
+            "total_records": len(df),
+            "countries": df["country"].nunique(),
+            "date_range": f"{df['date'].min()} to {df['date'].max()}",
+        },
+    )
+
+    return df
+
+
 async def fetch_daily_csv(
     daily_csv_url: str,
     timeout: float,
@@ -56,42 +126,10 @@ async def fetch_daily_csv(
                 csv_text = response.text
                 df = pd.read_csv(StringIO(csv_text))
 
-                # Ember CSV actual columns: 'Country', 'ISO3 Code', 'Date', 'Price (EUR/MWhe)'
-                # Normalize column names to lowercase with underscores
-                df.columns = (
-                    df.columns.str.lower()
-                    .str.replace(" ", "_")
-                    .str.replace("(", "")
-                    .str.replace(")", "")
-                    .str.replace("/", "_")
-                )
-
-                # Expected normalized: country, iso3_code, date, price_eur_mwhe
-                required_cols = ["iso3_code", "date", "price_eur_mwhe"]
-                missing = [col for col in required_cols if col not in df.columns]
-                if missing:
-                    raise ExternalDataFetchError(
-                        source="Ember",
-                        message=f"Missing columns: {missing}. Found: {df.columns.tolist()}",
-                    )
-
-                # Rename price column for consistency
-                df = df.rename(columns={"price_eur_mwhe": "price_eur_mwh"})
-
-                # Parse dates
-                df["date"] = pd.to_datetime(df["date"]).dt.date
-
-                # Filter out null prices
-                df = df[df["price_eur_mwh"].notna()]
-
-                logger.info(
-                    "Fetched Ember daily CSV",
-                    extra={
-                        "total_records": len(df),
-                        "countries": df["country"].nunique(),
-                        "date_range": f"{df['date'].min()} to {df['date'].max()}",
-                    },
-                )
+                # Normalize, validate, and transform data
+                df = _normalize_csv_columns(df)
+                _validate_csv_columns(df)
+                df = _transform_csv_data(df)
 
                 return df
 

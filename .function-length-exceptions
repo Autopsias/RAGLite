@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-05T20:59:44.441347",
+  "baseline_date": "2026-01-05T23:47:39.539562",
   "description": "Grandfathered function length violations - refactor gradually",
   "thresholds": {
     "warning": 50,
@@ -440,7 +440,7 @@
       "directory": "raglite/"
     },
     "raglite/mcp/tools/forecast.py:66:get_financial_forecast": {
-      "length": 132,
+      "length": 133,
       "function": "get_financial_forecast",
       "file": "raglite/mcp/tools/forecast.py",
       "line": 66,
@@ -534,15 +534,6 @@
       "function": "check_entity_coverage",
       "file": "raglite/forecasting/data_quality/checks/entity_checks.py",
       "line": 203,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/external_data/clients/entsoe/csv_parser.py:21:fetch_daily_csv": {
-      "length": 122,
-      "function": "fetch_daily_csv",
-      "file": "raglite/external_data/clients/entsoe/csv_parser.py",
-      "line": 21,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -678,15 +669,6 @@
       "function": "_detect_unit_column_statistical",
       "file": "raglite/ingestion/adaptive_table/unit_inference/extraction.py",
       "line": 218,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/mcp/tools/external_data/tools.py:24:refresh_external_data": {
-      "length": 113,
-      "function": "refresh_external_data",
-      "file": "raglite/mcp/tools/external_data/tools.py",
-      "line": 24,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
