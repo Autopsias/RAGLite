@@ -4,7 +4,6 @@ import re
 
 from raglite.shared.models import Insight, InsightCategory, Recommendation
 
-
 # Constants for insight categories and time periods
 SUPPORTED_INSIGHT_CATEGORIES = {
     "RISK",

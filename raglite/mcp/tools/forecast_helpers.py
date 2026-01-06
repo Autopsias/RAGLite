@@ -292,7 +292,6 @@ async def generate_forecast_with_cache(
             fast_mode=True,
             external_regressors=filtered_regressors,
         )
-        model_desc = "Ensemble (cached)"
         actual_model_type = "ensemble"
     else:
         try:

@@ -167,6 +167,7 @@ class BPstatClient:
         """
         # Retry logic with exponential backoff: 2s, 4s, 8s
         # Note: Retry logic with exponential backoff (2s, 4s, 8s) is handled by http_client
+        return {}
 
     def _parse_interest_rate_data(
         self,

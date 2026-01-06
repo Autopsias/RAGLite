@@ -1,56 +1,14 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-05T20:59:43.126292",
+  "baseline_date": "2026-01-06T16:58:16.970912",
   "description": "Grandfathered file size violations - reduce gradually",
   "thresholds": {
     "warning": 400,
     "hard_limit": 500
   },
   "exceptions": {
-    "tests/unit/test_ingestion.py": {
-      "lines": 1787,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/unit/test_model_selection_job.py": {
-      "lines": 1217,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/unit/test_proactive_insights.py": {
-      "lines": 1128,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/unit/test_trend_analysis.py": {
-      "lines": 1061,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/unit/test_model_selection_cache.py": {
-      "lines": 987,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
     "tests/unit/test_strategic_recommendations.py": {
       "lines": 949,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/unit/test_table_extraction.py": {
-      "lines": 948,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/validation/test_recommendation_alignment.py": {
-      "lines": 825,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"
@@ -61,26 +19,14 @@
       "target_lines": 500,
       "directory": "tests/"
     },
-    "tests/validation/test_insight_quality.py": {
-      "lines": 772,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
     "tests/fixtures/ground_truth_old_backup.py": {
       "lines": 762,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"
     },
-    "tests/validation/test_epic4_e2e_validation.py": {
-      "lines": 728,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/validation/test_forecast_accuracy.py": {
-      "lines": 673,
+    "tests/fixtures/archive/ground_truth_old_backup.py": {
+      "lines": 762,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"
@@ -99,12 +45,6 @@
     },
     "tests/uat/test_epic_1_validation.py": {
       "lines": 557,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/support/factories.py": {
-      "lines": 544,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"

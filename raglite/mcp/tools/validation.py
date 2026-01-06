@@ -171,9 +171,10 @@ async def list_available_regressors(
     metric: str | None = None,
 ) -> RegressorListResponse:
     try:
-        from raglite.forecasting.regressor_config import (
+        from raglite.forecasting.regressor_config import METRIC_REGRESSORS
+        from raglite.forecasting.regressor_config_data.regressor_metadata import (
             AVAILABLE_REGRESSORS,
-            METRIC_REGRESSORS,
+            REGRESSOR_METADATA,
         )
     except ImportError as e:
         logger.error("Failed to import regressor config", extra={"error": str(e)})
@@ -184,12 +185,13 @@ async def list_available_regressors(
     )
     if metric:
         metric_lower = metric.lower()
+        # METRIC_REGRESSORS is dict[str, list[str]], returns list of regressor names
         relevant_regressors = METRIC_REGRESSORS.get(metric_lower, AVAILABLE_REGRESSORS)
     else:
         relevant_regressors = AVAILABLE_REGRESSORS
     regressors_info = []
     for reg_name in relevant_regressors:
-        metadata = AVAILABLE_REGRESSORS.get(reg_name, {})
+        metadata = REGRESSOR_METADATA.get(reg_name, {})
         regressor_info = RegressorInfo(
             name=reg_name,
             display_name=metadata.get("display_name", reg_name.replace("_", " ").title()),
@@ -215,7 +217,9 @@ async def get_regressor_data(
     start_date: str | None = None,
     end_date: str | None = None,
 ) -> RegressorDataResponse:
-    from raglite.forecasting.regressor_config import AVAILABLE_REGRESSORS
+    from raglite.forecasting.regressor_config_data.regressor_metadata import (
+        REGRESSOR_METADATA,
+    )
     from raglite.forecasting.regressor_fetch import fetch_single_regressor
 
     logger.info(
@@ -230,7 +234,7 @@ async def get_regressor_data(
         end = date.fromisoformat(end_date)
     else:
         end = date.today()
-    metadata = AVAILABLE_REGRESSORS.get(regressor)
+    metadata = REGRESSOR_METADATA.get(regressor)
     if not metadata:
         raise ValueError(f"Unknown regressor: {regressor}")
     try:

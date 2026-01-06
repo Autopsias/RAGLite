@@ -9,13 +9,15 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from mistralai import Mistral
 
+# Import from parent facade for test compatibility
+# Tests patch the facade, so we must import from there at runtime
+from typing import Any
+
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 from raglite.shared.models import ExtractedMetadata
 
-# Import from parent facade for test compatibility
-# Tests patch the facade, so we must import from there at runtime
-get_mistral_client = None  # type: ignore[assignment]
+get_mistral_client: Any | None = None
 
 # Use parent module name for logger to maintain backward compatibility with tests
 logger = get_logger("raglite.ingestion.embedding_generation")

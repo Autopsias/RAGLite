@@ -20,6 +20,7 @@ os.environ["POSTGRES_PASSWORD"] = "raglite"
 sys.path.insert(0, str(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from raglite.forecasting.model_selection_job import run_batch_model_selection
+
 from raglite.shared.config import settings
 
 

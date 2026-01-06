@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     pass
@@ -13,7 +13,7 @@ from raglite.shared.models import Chunk
 
 # Import from parent facade for test compatibility
 # Tests patch the facade, so we must import from there at runtime
-get_embedding_model = None  # type: ignore[assignment]
+get_embedding_model: Any | None = None
 
 # Use parent module name for logger to maintain backward compatibility with tests
 logger = get_logger("raglite.ingestion.embedding_generation")

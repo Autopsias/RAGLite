@@ -3,7 +3,7 @@
 Generates semantic embeddings and extracts contextual metadata for RAG retrieval.
 """
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 # Import shared client functions first (for re-export and test compatibility)
 from raglite.shared.clients import get_embedding_model, get_mistral_client
@@ -16,8 +16,9 @@ if TYPE_CHECKING:
 import raglite.ingestion.embedding_generation.embeddings as _embeddings_module
 import raglite.ingestion.embedding_generation.metadata as _metadata_module
 
-_embeddings_module.get_embedding_model = get_embedding_model  # type: ignore[assignment]
-_metadata_module.get_mistral_client = get_mistral_client  # type: ignore[assignment]
+# Use setattr to avoid type errors with module attribute assignment
+_embeddings_module.get_embedding_model = get_embedding_model
+_metadata_module.get_mistral_client = get_mistral_client
 
 # Now import from submodules (which have the injected functions)
 from .embeddings import EmbeddingGenerationError, generate_embeddings  # noqa: E402

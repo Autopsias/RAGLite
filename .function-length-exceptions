@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-06T13:03:46.422705",
+  "baseline_date": "2026-01-06T16:58:17.981035",
   "description": "Grandfathered function length violations - refactor gradually",
   "thresholds": {
     "warning": 50,
@@ -30,6 +30,15 @@
       "function": "session_ingested_collection",
       "file": "tests/integration/fixtures/session_fixtures.py",
       "line": 260,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "tests/"
+    },
+    "tests/integration/fixtures/session/_legacy.py:120:session_ingested_collection": {
+      "length": 275,
+      "function": "session_ingested_collection",
+      "file": "tests/integration/fixtures/session/_legacy.py",
+      "line": 120,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "tests/"
@@ -70,29 +79,11 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/mcp/tools/insights.py:25:get_financial_insights": {
-      "length": 218,
-      "function": "get_financial_insights",
-      "file": "raglite/mcp/tools/insights.py",
-      "line": 25,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/ingestion/embedding_generation/metadata.py:28:extract_chunk_metadata": {
       "length": 214,
       "function": "extract_chunk_metadata",
       "file": "raglite/ingestion/embedding_generation/metadata.py",
       "line": 28,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/insights/proactive_modules/generation.py:24:generate_insights": {
-      "length": 212,
-      "function": "generate_insights",
-      "file": "raglite/insights/proactive_modules/generation.py",
-      "line": 24,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -601,6 +592,15 @@
       "target_lines": 100,
       "directory": "tests/"
     },
+    "tests/integration/fixtures/session/test_detection.py:33:_has_integration_tests": {
+      "length": 119,
+      "function": "_has_integration_tests",
+      "file": "tests/integration/fixtures/session/test_detection.py",
+      "line": 33,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "tests/"
+    },
     "tests/integration/test_excerpt_validation_core.py:173:test_excerpt_query": {
       "length": 118,
       "function": "test_excerpt_query",
@@ -790,6 +790,15 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
+    "raglite/mcp/tools/insights.py:220:get_financial_insights": {
+      "length": 106,
+      "function": "get_financial_insights",
+      "file": "raglite/mcp/tools/insights.py",
+      "line": 220,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "raglite/"
+    },
     "raglite/forecasting/models/catboost_model.py:114:fit_catboost": {
       "length": 106,
       "function": "fit_catboost",
@@ -849,6 +858,15 @@
       "function": "parse_sdmx_index_data",
       "file": "raglite/external_data/clients/eurostat/parsers_internal/sdmx_parsers.py",
       "line": 18,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "raglite/"
+    },
+    "raglite/insights/proactive_modules/generation.py:180:generate_insights": {
+      "length": 103,
+      "function": "generate_insights",
+      "file": "raglite/insights/proactive_modules/generation.py",
+      "line": 180,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
