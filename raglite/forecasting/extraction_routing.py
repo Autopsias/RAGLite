@@ -5,7 +5,7 @@ This module routes data extraction based on the variable configuration
 (internal/external_db/external_api).
 """
 
-from raglite.forecasting.model_selection_job import VARIABLE_CONFIG
+from raglite.forecasting.model_selection_job_config import VARIABLE_CONFIG
 from raglite.forecasting.timeseries import (
     ExtractionError,
     extract_external_regressor_timeseries,
