@@ -145,6 +145,59 @@ class RecommendationAlignmentValidator:
         # Fallback: any step with length > 5 words is likely actionable
         return any(len(step.split()) >= 5 for step in action_steps)
 
+    async def _process_scenario(
+        self,
+        scenario: RecommendationTestScenario,
+    ) -> dict[str, Any]:
+        """Process a single test scenario and validate its recommendation.
+
+        Story 4.10 Task 3.3: Generate and validate recommendation for scenario.
+
+        Args:
+            scenario: Test scenario with expected recommendation
+
+        Returns:
+            Dictionary with validation result including alignment status,
+            generated vs expected values, and reason for alignment/non-alignment
+        """
+        # Generate recommendations from insight
+        result = await generate_recommendations(
+            insights=[scenario.insight],
+            context=scenario.description,
+            auto_synthesize=True,
+        )
+
+        # Validate first recommendation (primary result)
+        if result.recommendations:
+            rec = result.recommendations[0]
+            is_aligned, reason = self._is_recommendation_aligned(rec, scenario)
+
+            return {
+                "scenario_id": scenario.scenario_id,
+                "description": scenario.description,
+                "aligned": is_aligned,
+                "reason": reason,
+                "generated_category": rec.category.value,
+                "generated_impact": rec.impact_score,
+                "generated_urgency": rec.urgency,
+                "expected_category": scenario.expected_category.value,
+                "expected_impact_range": scenario.expected_impact_range,
+                "expected_urgency": scenario.expected_urgency,
+            }
+        else:
+            return {
+                "scenario_id": scenario.scenario_id,
+                "description": scenario.description,
+                "aligned": False,
+                "reason": "No recommendations generated",
+                "generated_category": None,
+                "generated_impact": None,
+                "generated_urgency": None,
+                "expected_category": scenario.expected_category.value,
+                "expected_impact_range": scenario.expected_impact_range,
+                "expected_urgency": scenario.expected_urgency,
+            }
+
     async def validate_recommendations(
         self,
         test_scenarios: list[RecommendationTestScenario],
@@ -190,54 +243,18 @@ class RecommendationAlignmentValidator:
             mock_client.return_value.chat.complete.return_value = mock_response
 
             for scenario in test_scenarios:
-                # Generate recommendations from insight
-                result = await generate_recommendations(
-                    insights=[scenario.insight],
-                    context=scenario.description,
-                    auto_synthesize=True,
-                )
+                # Process scenario and validate result
+                result_dict = await self._process_scenario(scenario)
+                scenario_results.append(result_dict)
 
-                # Validate first recommendation (primary result)
-                if result.recommendations:
-                    rec = result.recommendations[0]
-                    is_aligned, reason = self._is_recommendation_aligned(rec, scenario)
-
-                    # Track category
-                    cat_key = rec.category.value
+                # Track category counts
+                if result_dict["generated_category"]:
+                    cat_key = result_dict["generated_category"]
                     category_counts[cat_key] = category_counts.get(cat_key, 0) + 1
 
-                    scenario_results.append(
-                        {
-                            "scenario_id": scenario.scenario_id,
-                            "description": scenario.description,
-                            "aligned": is_aligned,
-                            "reason": reason,
-                            "generated_category": rec.category.value,
-                            "generated_impact": rec.impact_score,
-                            "generated_urgency": rec.urgency,
-                            "expected_category": scenario.expected_category.value,
-                            "expected_impact_range": scenario.expected_impact_range,
-                            "expected_urgency": scenario.expected_urgency,
-                        }
-                    )
-
-                    if is_aligned:
-                        aligned_count += 1
-                else:
-                    scenario_results.append(
-                        {
-                            "scenario_id": scenario.scenario_id,
-                            "description": scenario.description,
-                            "aligned": False,
-                            "reason": "No recommendations generated",
-                            "generated_category": None,
-                            "generated_impact": None,
-                            "generated_urgency": None,
-                            "expected_category": scenario.expected_category.value,
-                            "expected_impact_range": scenario.expected_impact_range,
-                            "expected_urgency": scenario.expected_urgency,
-                        }
-                    )
+                # Count aligned scenarios
+                if result_dict["aligned"]:
+                    aligned_count += 1
 
         # Calculate alignment rate
         alignment_rate = (aligned_count / len(test_scenarios)) * 100

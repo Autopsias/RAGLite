@@ -1,29 +1,87 @@
 {
-  "session_id": "1736179200",
-  "created_at": "2025-01-06T00:00:00Z",
-  "updated_at": "2025-01-06T12:00:00Z",
+  "schema_version": "2.0",
+  "session_id": "1736150400",
+  "created_at": "2025-01-06T10:00:00Z",
+  "updated_at": "2025-01-06T10:20:00Z",
   "project_path": "/Users/ricardocarvalho/DeveloperFolder/RAGLite",
-  "current_batch": 12,
-  "total_batches": 12,
-  "status": "completed",
-  "total_functions": 82,
-  "total_files": 67,
-  "completed_files": [
-    "raglite/ingestion/document_ingestion/pdf_processing.py",
-    "raglite/ingestion/adaptive_table/core/fallback.py",
-    "raglite/mcp/tools/ingestion.py",
-    "raglite/forecasting/timeseries/qdrant_variable_cost.py",
-    "raglite/mcp/tools/query.py",
-    "raglite/ingestion/adaptive_table/unit_inference/async_batch.py"
+
+  "analysis": {
+    "total_violations": 3,
+    "file_size_violations": 0,
+    "function_length_violations": 3
+  },
+
+  "execution_plan": {
+    "total_batches": 2,
+    "current_batch": 2,
+    "batches": [
+      {
+        "batch_number": 1,
+        "cluster_id": "cluster_a_serial",
+        "files": ["tests/integration/fixtures/test_detection.py", "tests/integration/fixtures/ingestion_fixtures.py"],
+        "mode": "serial",
+        "status": "completed",
+        "completed_at": "2025-01-06T10:12:00Z",
+        "reason": "ingestion_fixtures.py imports from test_detection.py"
+      },
+      {
+        "batch_number": 2,
+        "cluster_id": "cluster_b_parallel",
+        "files": ["tests/validation/test_recommendation_alignment/validator.py"],
+        "mode": "parallel",
+        "status": "completed",
+        "completed_at": "2025-01-06T10:20:00Z",
+        "reason": null
+      }
+    ]
+  },
+
+  "clusters": [
+    {
+      "id": "cluster_a_serial",
+      "files": ["tests/integration/fixtures/test_detection.py", "tests/integration/fixtures/ingestion_fixtures.py"],
+      "mode": "serial",
+      "shared_tests": ["tests/atdd/story_8_4b/test_ac5_fixture_dependencies.py"],
+      "priority_score": 25
+    },
+    {
+      "id": "cluster_b_parallel",
+      "files": ["tests/validation/test_recommendation_alignment/validator.py"],
+      "mode": "parallel",
+      "shared_tests": [],
+      "priority_score": 10
+    }
   ],
-  "pending_files": [],
-  "failed_files": [],
-  "skipped_files": [],
-  "summary": {
-    "file_size_violations_before": 8,
-    "file_size_violations_after": 0,
-    "function_length_violations": 103,
-    "files_refactored": 6,
-    "exceptions_refreshed": true
+
+  "file_status": {
+    "completed": [
+      {
+        "file": "tests/integration/fixtures/test_detection.py",
+        "original_loc": 152,
+        "new_loc": 49,
+        "largest_function_before": 119,
+        "largest_function_after": 49,
+        "batch": 1
+      },
+      {
+        "file": "tests/integration/fixtures/ingestion_fixtures.py",
+        "original_loc": 294,
+        "new_loc": 67,
+        "largest_function_before": 275,
+        "largest_function_after": 67,
+        "batch": 1
+      },
+      {
+        "file": "tests/validation/test_recommendation_alignment/validator.py",
+        "original_loc": 252,
+        "new_loc": 269,
+        "largest_function_before": 105,
+        "largest_function_after": 69,
+        "batch": 2
+      }
+    ],
+    "pending": [],
+    "failed": [],
+    "skipped": []
   }
 }

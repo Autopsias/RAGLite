@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-06T01:41:13.926329",
+  "baseline_date": "2026-01-06T13:03:46.422705",
   "description": "Grandfathered function length violations - refactor gradually",
   "thresholds": {
     "warning": 50,
@@ -834,24 +834,6 @@
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
-    },
-    "tests/validation/test_recommendation_alignment.py:201:validate_recommendations": {
-      "length": 105,
-      "function": "validate_recommendations",
-      "file": "tests/validation/test_recommendation_alignment.py",
-      "line": 201,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "tests/"
-    },
-    "tests/validation/test_recommendation_alignment_modules/validator.py:148:validate_recommendations": {
-      "length": 105,
-      "function": "validate_recommendations",
-      "file": "tests/validation/test_recommendation_alignment_modules/validator.py",
-      "line": 148,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "tests/"
     },
     "raglite/external_data/clients/eurostat/parsers.py:98:parse_sdmx_index_data": {
       "length": 104,
