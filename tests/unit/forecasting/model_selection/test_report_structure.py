@@ -28,6 +28,8 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
+from raglite.external_data.clients.atic import ATICClient
+
 if TYPE_CHECKING:
     pass
 
@@ -57,13 +59,14 @@ class TestReportStructure:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with (
-                patch(
-                    "raglite.forecasting.model_selection.fetch_historical_data",
+                patch.object(
+                    ATICClient,
+                    "fetch_historical_data",
                     new_callable=AsyncMock,
                     return_value=mock_historical_data,
                 ),
                 patch(
-                    "raglite.forecasting.model_selection.fetch_regressors_with_date_range",
+                    "raglite.forecasting.regressor_fetch.fetch_regressors_with_date_range",
                     new_callable=AsyncMock,
                     return_value={},
                 ),
@@ -73,7 +76,7 @@ class TestReportStructure:
                     return_value=mock_result,
                 ),
                 patch(
-                    "raglite.forecasting.model_selection.cache_model_selection",
+                    "raglite.external_data.storage.model_selection.cache_model_selection",
                     new_callable=Mock,
                 ),
             ):

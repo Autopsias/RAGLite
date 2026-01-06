@@ -120,7 +120,7 @@ class TestCostValidation:
             mock_client.chat.complete_async = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            with patch("raglite.ingestion.embedding_generation.settings") as mock_settings:
+            with patch("raglite.ingestion.embedding_generation.metadata.settings") as mock_settings:
                 mock_settings.mistral_api_key = "test-key"
                 mock_settings.metadata_extraction_model = "mistral-small-latest"
 
@@ -174,7 +174,7 @@ class TestCostValidationMocked:
             mock_get_client.return_value = mock_client
 
             # Mock settings (correct path: embedding_generation imports settings from shared.config)
-            with patch("raglite.ingestion.embedding_generation.settings") as mock_settings:
+            with patch("raglite.ingestion.embedding_generation.metadata.settings") as mock_settings:
                 mock_settings.mistral_api_key = "test-key-mocked"
                 mock_settings.metadata_extraction_model = "mistral-small-latest"
 
@@ -240,7 +240,7 @@ class TestCostValidationMocked:
             mock_client.chat.complete_async = AsyncMock(return_value=mock_response)
             mock_get_client.return_value = mock_client
 
-            with patch("raglite.ingestion.embedding_generation.settings") as mock_settings:
+            with patch("raglite.ingestion.embedding_generation.metadata.settings") as mock_settings:
                 mock_settings.mistral_api_key = "test-key-budget"
                 mock_settings.metadata_extraction_model = "mistral-small-latest"
 

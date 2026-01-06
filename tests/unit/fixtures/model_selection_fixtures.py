@@ -50,12 +50,12 @@ def batch_selection_mocks(mock_historical_data, mock_model_result):
     def _mocks(output_dir: str):
         with (
             patch(
-                "raglite.forecasting.model_selection.fetch_historical_data",
+                "raglite.external_data.clients.atic.ATIClient.fetch_historical_data",
                 new_callable=AsyncMock,
                 return_value=mock_historical_data,
             ),
             patch(
-                "raglite.forecasting.model_selection.fetch_regressors_with_date_range",
+                "raglite.forecasting.regressor_fetch.fetch_regressors_with_date_range",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -65,7 +65,7 @@ def batch_selection_mocks(mock_historical_data, mock_model_result):
                 return_value=mock_model_result,
             ),
             patch(
-                "raglite.forecasting.model_selection.cache_model_selection",
+                "raglite.external_data.storage.model_selection.cache_model_selection",
                 new_callable=Mock,
             ),
         ):
@@ -83,12 +83,12 @@ def single_selection_mocks(mock_historical_data, mock_model_result):
         mock_cache = Mock()
         with (
             patch(
-                "raglite.forecasting.model_selection.fetch_historical_data",
+                "raglite.external_data.clients.atic.ATIClient.fetch_historical_data",
                 new_callable=AsyncMock,
                 return_value=mock_historical_data,
             ),
             patch(
-                "raglite.forecasting.model_selection.fetch_regressors_with_date_range",
+                "raglite.forecasting.regressor_fetch.fetch_regressors_with_date_range",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -98,7 +98,7 @@ def single_selection_mocks(mock_historical_data, mock_model_result):
                 return_value=mock_model_result,
             ),
             patch(
-                "raglite.forecasting.model_selection.cache_model_selection",
+                "raglite.external_data.storage.model_selection.cache_model_selection",
                 mock_cache,
             ),
         ):

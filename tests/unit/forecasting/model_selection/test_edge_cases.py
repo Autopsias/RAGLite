@@ -28,6 +28,8 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+from raglite.external_data.clients.atic import ATICClient
+
 if TYPE_CHECKING:
     pass
 
@@ -93,22 +95,23 @@ class TestEdgeCases:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with (
-                patch(
-                    "raglite.forecasting.model_selection.fetch_historical_data",
+                patch.object(
+                    ATICClient,
+                    "fetch_historical_data",
                     new_callable=AsyncMock,
                     return_value=mock_historical_data,
                 ),
-                patch(
-                    "raglite.forecasting.model_selection.fetch_regressors_with_date_range",
+                patch.object(
+                    "raglite.forecasting.regressor_fetch.fetch_regressors_with_date_range",
                     new_callable=AsyncMock,
                     return_value={},
                 ),
-                patch(
+                patch.object(
                     "raglite.forecasting.model_selection.select_best_model",
                     side_effect=mock_failing_select,
                 ),
-                patch(
-                    "raglite.forecasting.model_selection.cache_model_selection",
+                patch.object(
+                    "raglite.external_data.storage.model_selection.cache_model_selection",
                     new_callable=Mock,
                 ),
             ):
@@ -132,23 +135,24 @@ class TestEdgeCases:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with (
-                patch(
-                    "raglite.forecasting.model_selection.fetch_historical_data",
+                patch.object(
+                    ATICClient,
+                    "fetch_historical_data",
                     new_callable=AsyncMock,
                     return_value=mock_historical_data,
                 ),
-                patch(
-                    "raglite.forecasting.model_selection.fetch_regressors_with_date_range",
+                patch.object(
+                    "raglite.forecasting.regressor_fetch.fetch_regressors_with_date_range",
                     new_callable=AsyncMock,
                     return_value={},
                 ),
-                patch(
+                patch.object(
                     "raglite.forecasting.model_selection.select_best_model",
                     new_callable=AsyncMock,
                     return_value=mock_model_result,
                 ),
-                patch(
-                    "raglite.forecasting.model_selection.cache_model_selection",
+                patch.object(
+                    "raglite.external_data.storage.model_selection.cache_model_selection",
                     side_effect=failing_cache,
                 ),
             ):

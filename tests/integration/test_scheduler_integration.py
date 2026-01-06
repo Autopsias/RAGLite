@@ -100,20 +100,19 @@ class TestScheduledRefreshExecution:
                 mock_storage_class.return_value = mock_storage
 
                 # Mock individual refresh functions to avoid external API calls
+                # Patch SOURCE_REFRESH_FUNCTIONS dict to control which functions are called
                 with patch(
-                    "raglite.external_data.refresh._refresh_ipma",
-                    new=AsyncMock(
-                        return_value=MagicMock(
-                            success=True,
-                            source_name="IPMA",
-                            records_updated=7,
-                            duration_seconds=1.0,
-                        )
-                    ),
-                ):
-                    with patch(
-                        "raglite.external_data.refresh._refresh_omie",
-                        new=AsyncMock(
+                    "raglite.external_data.refresh.SOURCE_REFRESH_FUNCTIONS",
+                    new={
+                        "IPMA": AsyncMock(
+                            return_value=MagicMock(
+                                success=True,
+                                source_name="IPMA",
+                                records_updated=7,
+                                duration_seconds=1.0,
+                            )
+                        ),
+                        "OMIE": AsyncMock(
                             return_value=MagicMock(
                                 success=True,
                                 source_name="OMIE",
@@ -121,19 +120,17 @@ class TestScheduledRefreshExecution:
                                 duration_seconds=0.8,
                             )
                         ),
-                    ):
-                        with patch(
-                            "raglite.external_data.refresh._refresh_commodities_co2",
-                            new=AsyncMock(
-                                return_value=MagicMock(
-                                    success=True,
-                                    source_name="CO2_EUA",
-                                    records_updated=3,
-                                    duration_seconds=0.5,
-                                )
-                            ),
-                        ):
-                            result = await refresh_sources_by_frequency(RefreshFrequency.DAILY)
+                        "CO2_EUA": AsyncMock(
+                            return_value=MagicMock(
+                                success=True,
+                                source_name="CO2_EUA",
+                                records_updated=3,
+                                duration_seconds=0.5,
+                            )
+                        ),
+                    },
+                ):
+                    result = await refresh_sources_by_frequency(RefreshFrequency.DAILY)
 
         assert result.total_sources == 3
         assert result.successful == 3
@@ -207,25 +204,31 @@ class TestScheduledRefreshExecution:
                 mock_storage.get_source.return_value = None
                 mock_storage_class.return_value = mock_storage
 
+                # Mock SOURCE_REFRESH_FUNCTIONS dict to control which functions are called
                 with patch(
-                    "raglite.external_data.refresh._refresh_ine_construction",
-                    new=AsyncMock(
-                        return_value=MagicMock(
-                            success=True,
-                            source_name="INE_ConstructionOutput",
-                        )
-                    ),
-                ):
-                    with patch(
-                        "raglite.external_data.refresh._refresh_atic_cement",
-                        new=AsyncMock(
+                    "raglite.external_data.refresh.SOURCE_REFRESH_FUNCTIONS",
+                    new={
+                        "INE_ConstructionOutput": AsyncMock(
+                            return_value=MagicMock(
+                                success=True,
+                                source_name="INE_ConstructionOutput",
+                            )
+                        ),
+                        "INE_ConstructionCostIndex": AsyncMock(
+                            return_value=MagicMock(
+                                success=True,
+                                source_name="INE_ConstructionCostIndex",
+                            )
+                        ),
+                        "ATIC_CementConsumption": AsyncMock(
                             return_value=MagicMock(
                                 success=True,
                                 source_name="ATIC_CementConsumption",
                             )
                         ),
-                    ):
-                        result = await refresh_sources_by_frequency(RefreshFrequency.MONTHLY)
+                    },
+                ):
+                    result = await refresh_sources_by_frequency(RefreshFrequency.MONTHLY)
 
         # INE_ConstructionOutput and INE_ConstructionCostIndex both map to same function
         assert result.total_sources >= 2

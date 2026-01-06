@@ -12,9 +12,11 @@ import json
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+
+from raglite.external_data.clients.atic import ATICClient
 
 if TYPE_CHECKING:
     pass
@@ -168,17 +170,16 @@ class TestReportStructure:
         mock_result.runtime_seconds = 45.2
         mock_result.candidate_results = {"arima_True": {"mape": 0.082, "mase": 0.42}}
 
-        from unittest.mock import AsyncMock, Mock, patch
-
         with tempfile.TemporaryDirectory() as tmpdir:
             with (
-                patch(
-                    "raglite.forecasting.model_selection.fetch_historical_data",
+                patch.object(
+                    ATICClient,
+                    "fetch_historical_data",
                     new_callable=AsyncMock,
                     return_value=mock_historical_data,
                 ),
                 patch(
-                    "raglite.forecasting.model_selection.fetch_regressors_with_date_range",
+                    "raglite.forecasting.regressor_fetch.fetch_regressors_with_date_range",
                     new_callable=AsyncMock,
                     return_value={},
                 ),
@@ -188,7 +189,7 @@ class TestReportStructure:
                     return_value=mock_result,
                 ),
                 patch(
-                    "raglite.forecasting.model_selection.cache_model_selection",
+                    "raglite.external_data.storage.model_selection.cache_model_selection",
                     new_callable=Mock,
                 ),
             ):

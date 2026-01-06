@@ -142,7 +142,7 @@ class TestCacheLookup:
             mock_get_cache.return_value = mock_cached_model_selection
 
             # Mock the model routing to avoid actual model execution
-            with patch("raglite.forecasting.model_selection.select_model_type") as mock_route:
+            with patch("raglite.forecasting.regressor_config.select_model_type") as mock_route:
                 mock_route.return_value = MagicMock()
 
                 # Mock explain_forecast to avoid LLM calls
