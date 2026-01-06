@@ -144,10 +144,11 @@ repos:
       # Mock target validation - catch stale patch() targets after refactoring
       # Root cause fix: Story 8 strategic analysis identified 45+ test failures
       # caused by mock targets pointing to moved/renamed modules after refactoring
-      # NOTE: Uses language: system to access local raglite package for validation
+      # NOTE: Uses uv run to ensure project dependencies are available for validation
+      # This prevents false positives when system Python lacks pandas, openpyxl, etc.
       - id: validate-mock-targets
         name: validate-mock-targets
-        entry: python scripts/validate-mock-targets.py
+        entry: uv run python3 scripts/validate-mock-targets.py
         language: system
         pass_filenames: false
         stages: [pre-commit]

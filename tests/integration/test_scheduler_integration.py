@@ -270,7 +270,7 @@ class TestStalenessDetectionIntegration:
 
         with patch("raglite.external_data.refresh.settings") as mock_settings:
             mock_settings.external_data_stale_days = 30
-            with patch("raglite.external_data.refresh.logger") as mock_logger:
+            with patch("raglite.external_data.refresh_helpers.logger") as mock_logger:
                 is_stale = check_staleness("TEST_SOURCE", old_refresh)
 
                 # Verify WARNING was logged
@@ -360,7 +360,7 @@ class TestRetryWithExternalAPIs:
     async def test_retry_on_api_timeout(self) -> None:
         """Test that API timeout triggers retry with backoff."""
         from raglite.external_data.exceptions import ExternalDataFetchError
-        from raglite.external_data.refresh import _retry_with_backoff
+        from raglite.external_data.refresh_helpers import retry_with_backoff
 
         call_count = 0
 
@@ -373,11 +373,9 @@ class TestRetryWithExternalAPIs:
 
         with patch("raglite.external_data.refresh.settings") as mock_settings:
             mock_settings.external_data_retry_attempts = 3
-            with patch(
-                "raglite.external_data.refresh.asyncio.sleep", new=AsyncMock()
-            ) as mock_sleep:
-                # _retry_with_backoff returns 4 values: (success, attempts, error, result)
-                success, attempts, error, result = await _retry_with_backoff(
+            with patch("asyncio.sleep", new=AsyncMock()) as mock_sleep:
+                # retry_with_backoff returns 4 values: (success, attempts, error, result)
+                success, attempts, error, result = await retry_with_backoff(
                     timeout_then_success, "test_source"
                 )
 
@@ -394,17 +392,17 @@ class TestRetryWithExternalAPIs:
     async def test_error_logged_after_all_retries_fail(self) -> None:
         """Test that ERROR level log is emitted after all retries fail (AC3)."""
         from raglite.external_data.exceptions import ExternalDataFetchError
-        from raglite.external_data.refresh import _retry_with_backoff
+        from raglite.external_data.refresh_helpers import retry_with_backoff
 
         async def always_fails() -> None:
             raise ExternalDataFetchError("test", "Persistent failure")
 
         with patch("raglite.external_data.refresh.settings") as mock_settings:
             mock_settings.external_data_retry_attempts = 3
-            with patch("raglite.external_data.refresh.asyncio.sleep", new=AsyncMock()):
-                with patch("raglite.external_data.refresh.logger") as mock_logger:
-                    # _retry_with_backoff returns 4 values: (success, attempts, error, result)
-                    success, attempts, error, result = await _retry_with_backoff(
+            with patch("asyncio.sleep", new=AsyncMock()):
+                with patch("raglite.external_data.refresh_helpers.logger") as mock_logger:
+                    # retry_with_backoff returns 4 values: (success, attempts, error, result)
+                    success, attempts, error, result = await retry_with_backoff(
                         always_fails, "test_source"
                     )
 

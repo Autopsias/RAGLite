@@ -6,7 +6,6 @@ Tests the ingest_pdf function with mocked dependencies.
 from datetime import datetime
 from unittest.mock import Mock, patch
 
-import numpy as np
 import pytest
 
 from raglite.ingestion.pipeline import ingest_pdf
@@ -80,11 +79,6 @@ class TestIngestPDF:
                 return_value=mock_qdrant_client,
             ),
             patch(
-                "raglite.shared.clients.get_qdrant_client",
-                return_value=mock_qdrant_client,
-            ),
-            patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
-            patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
                 return_value=(1, 0),
             ),
@@ -96,13 +90,53 @@ class TestIngestPDF:
                 "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant",
                 return_value=None,
             ),
+            patch(
+                "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings",
+                return_value=[
+                    type(
+                        "MockChunk",
+                        (),
+                        {
+                            "chunk_id": "chunk1",
+                            "content": "Financial Report Q4 2024",
+                            "metadata": DocumentMetadata(
+                                filename="test_report.pdf",
+                                doc_type="PDF",
+                                ingestion_timestamp="2024-01-01T00:00:00",
+                                page_count=2,
+                            ),
+                            "page_number": 1,
+                            "chunk_index": 0,
+                            "embedding": [0.1] * 1024,
+                            "word_count": 4,
+                        },
+                    )(),
+                    type(
+                        "MockChunk",
+                        (),
+                        {
+                            "chunk_id": "chunk2",
+                            "content": "Revenue Summary",
+                            "metadata": DocumentMetadata(
+                                filename="test_report.pdf",
+                                doc_type="PDF",
+                                ingestion_timestamp="2024-01-01T00:00:00",
+                                page_count=2,
+                            ),
+                            "page_number": 2,
+                            "chunk_index": 1,
+                            "embedding": [0.2] * 1024,
+                            "word_count": 2,
+                        },
+                    )(),
+                ],
+            ),
         ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
 
-            # Mock embedding model
-            mock_embedding_instance = MockEmbedding.return_value
-            mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024, [0.2] * 1024])
+            # Mock embedding model - now directly mocked via generate_embeddings
+            # No need for separate mock instance since generate_embeddings is directly patched
 
             # Execute ingestion
             result = await ingest_pdf(str(pdf_file))
@@ -209,11 +243,6 @@ class TestIngestPDF:
                 return_value=mock_qdrant_client,
             ),
             patch(
-                "raglite.shared.clients.get_qdrant_client",
-                return_value=mock_qdrant_client,
-            ),
-            patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
-            patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
                 return_value=(5, 0),
             ),
@@ -225,13 +254,36 @@ class TestIngestPDF:
                 "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant",
                 return_value=None,
             ),
+            patch(
+                "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings",
+                return_value=[
+                    type(
+                        "MockChunk",
+                        (),
+                        {
+                            "chunk_id": f"chunk{i}",
+                            "content": f"Content from page {i % 3 + 1}",
+                            "metadata": DocumentMetadata(
+                                filename="multipage.pdf",
+                                doc_type="PDF",
+                                ingestion_timestamp="2024-01-01T00:00:00",
+                                page_count=3,
+                            ),
+                            "page_number": i % 3 + 1,
+                            "chunk_index": i,
+                            "embedding": [0.1] * 1024,
+                            "word_count": 5,
+                        },
+                    )()
+                    for i in range(5)
+                ],
+            ),
         ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
 
-            # Mock embedding model
-            mock_embedding_instance = MockEmbedding.return_value
-            mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024] * 5)
+            # Mock embedding model - now directly mocked via generate_embeddings
+            # No need for separate mock instance since generate_embeddings is directly patched
 
             result = await ingest_pdf(str(pdf_file))
 
@@ -284,11 +336,6 @@ class TestIngestPDF:
                 return_value=mock_qdrant_client,
             ),
             patch(
-                "raglite.shared.clients.get_qdrant_client",
-                return_value=mock_qdrant_client,
-            ),
-            patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
-            patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
                 return_value=(1, 0),
             ),
@@ -300,13 +347,35 @@ class TestIngestPDF:
                 "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant",
                 return_value=None,
             ),
+            patch(
+                "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings",
+                return_value=[
+                    type(
+                        "MockChunk",
+                        (),
+                        {
+                            "chunk_id": "chunk1",
+                            "content": "Content without page info",
+                            "metadata": DocumentMetadata(
+                                filename="no_pages.pdf",
+                                doc_type="PDF",
+                                ingestion_timestamp="2024-01-01T00:00:00",
+                                page_count=0,
+                            ),
+                            "page_number": 0,
+                            "chunk_index": 0,
+                            "embedding": [0.1] * 1024,
+                            "word_count": 4,
+                        },
+                    )()
+                ],
+            ),
         ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
 
-            # Mock embedding model
-            mock_embedding_instance = MockEmbedding.return_value
-            mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024])
+            # Mock embedding model - now directly mocked via generate_embeddings
+            # No need for separate mock instance since generate_embeddings is directly patched
 
             result = await ingest_pdf(str(pdf_file))
 
@@ -389,11 +458,6 @@ class TestIngestPDF:
                 return_value=mock_qdrant_client,
             ),
             patch(
-                "raglite.shared.clients.get_qdrant_client",
-                return_value=mock_qdrant_client,
-            ),
-            patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
-            patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
                 return_value=(1, 0),
             ),
@@ -405,13 +469,35 @@ class TestIngestPDF:
                 "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant",
                 return_value=None,
             ),
+            patch(
+                "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings",
+                return_value=[
+                    type(
+                        "MockChunk",
+                        (),
+                        {
+                            "chunk_id": "chunk1",
+                            "content": "Test PDF content",
+                            "metadata": DocumentMetadata(
+                                filename="logging_test.pdf",
+                                doc_type="PDF",
+                                ingestion_timestamp="2024-01-01T00:00:00",
+                                page_count=1,
+                            ),
+                            "page_number": 1,
+                            "chunk_index": 0,
+                            "embedding": [0.1] * 1024,
+                            "word_count": 3,
+                        },
+                    )()
+                ],
+            ),
         ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
 
-            # Mock embedding model
-            mock_embedding_instance = MockEmbedding.return_value
-            mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024])
+            # Mock embedding model - now directly mocked via generate_embeddings
+            # No need for separate mock instance since generate_embeddings is directly patched
 
             await ingest_pdf(str(pdf_file))
 

@@ -221,13 +221,18 @@ async def extract_metadata_for_chunks(
             chunk.statistical_summary = extracted_metadata.statistical_summary
             successful_extractions += 1
 
+    # Calculate success rate, handling empty chunks case
+    success_rate = (
+        "0.0%" if len(chunks) == 0 else f"{successful_extractions / len(chunks) * 100:.1f}%"
+    )
+
     logger.info(
         "Per-chunk metadata extraction complete",
         extra={
             "doc_filename": doc_filename,
             "total_chunks": len(chunks),
             "successful_extractions": successful_extractions,
-            "success_rate": f"{successful_extractions / len(chunks) * 100:.1f}%",
+            "success_rate": success_rate,
         },
     )
 

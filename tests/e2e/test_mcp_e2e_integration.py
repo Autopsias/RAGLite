@@ -153,14 +153,10 @@ class TestMCPModelSelectionE2E:
         """TEST-AC-7b.6.7.1: E2E test - cache hit with ARIMA model."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch(
-            "raglite.external_data.storage.model_selection.get_cached_model_selection"
-        ) as mock_get_cache:
+        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
             mock_get_cache.return_value = populated_cache["ebitda"]
 
-            with patch(
-                "raglite.forecasting.hybrid.model_generators._generate_arima_forecast"
-            ) as mock_arima:
+            with patch("raglite.forecasting.hybrid._generate_arima_forecast") as mock_arima:
                 # Create realistic ForecastResult mock
                 from raglite.shared.models import ForecastPoint, ForecastResult
 
@@ -183,7 +179,7 @@ class TestMCPModelSelectionE2E:
                     mock_explain.return_value = "Test explanation"
 
                     with patch(
-                        "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
                     ) as mock_fetch:
                         mock_fetch.return_value = e2e_time_series_data
 
@@ -215,14 +211,10 @@ class TestMCPModelSelectionE2E:
         # Modify time series for variable_cost
         e2e_time_series_data.metric_name = "variable_cost"
 
-        with patch(
-            "raglite.external_data.storage.model_selection.get_cached_model_selection"
-        ) as mock_get_cache:
+        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
             mock_get_cache.return_value = populated_cache["variable_cost"]
 
-            with patch(
-                "raglite.forecasting.hybrid.model_generators._generate_prophet_forecast"
-            ) as mock_prophet:
+            with patch("raglite.forecasting.hybrid._generate_prophet_forecast") as mock_prophet:
                 from raglite.shared.models import ForecastPoint, ForecastResult
 
                 mock_result = ForecastResult(
@@ -244,7 +236,7 @@ class TestMCPModelSelectionE2E:
                     mock_explain.return_value = "Test explanation"
 
                     with patch(
-                        "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
                     ) as mock_fetch:
                         mock_fetch.return_value = e2e_time_series_data
 
@@ -269,14 +261,10 @@ class TestMCPModelSelectionE2E:
 
         e2e_time_series_data.metric_name = "revenue"
 
-        with patch(
-            "raglite.external_data.storage.model_selection.get_cached_model_selection"
-        ) as mock_get_cache:
+        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
             mock_get_cache.return_value = populated_cache["revenue"]
 
-            with patch(
-                "raglite.forecasting.hybrid.model_generators._generate_xgboost_forecast"
-            ) as mock_xgboost:
+            with patch("raglite.forecasting.hybrid._generate_xgboost_forecast") as mock_xgboost:
                 from raglite.shared.models import ForecastPoint, ForecastResult
 
                 mock_result = ForecastResult(
@@ -299,7 +287,7 @@ class TestMCPModelSelectionE2E:
                     mock_explain.return_value = "Test explanation"
 
                     with patch(
-                        "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
                     ) as mock_fetch:
                         mock_fetch.return_value = e2e_time_series_data
 
@@ -324,14 +312,10 @@ class TestMCPModelSelectionE2E:
         """TEST-AC-7b.6.7.4: E2E test - cache miss falls back to Prophet."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch(
-            "raglite.external_data.storage.model_selection.get_cached_model_selection"
-        ) as mock_get_cache:
+        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
             mock_get_cache.return_value = None  # Cache miss
 
-            with patch(
-                "raglite.forecasting.hybrid.lazy_imports._get_prophet_class"
-            ) as mock_prophet_class:
+            with patch("raglite.forecasting.hybrid._get_prophet_class") as mock_prophet_class:
                 import pandas as pd
 
                 mock_prophet = MagicMock()
@@ -360,7 +344,7 @@ class TestMCPModelSelectionE2E:
                     mock_explain.return_value = "Forecast based on Prophet model"
 
                     with patch(
-                        "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
                     ) as mock_fetch:
                         mock_fetch.return_value = e2e_time_series_data
 
@@ -383,16 +367,14 @@ class TestMCPModelSelectionE2E:
         """TEST-AC-7b.6.7.5: E2E test - model failure falls back to Prophet."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch(
-            "raglite.external_data.storage.model_selection.get_cached_model_selection"
-        ) as mock_get_cache:
+        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
             mock_get_cache.return_value = populated_cache["ebitda"]
 
-            with patch("raglite.forecasting.hybrid.model_generators._route_to_model") as mock_route:
+            with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
                 mock_route.side_effect = Exception("ARIMA convergence failed")
 
                 with patch(
-                    "raglite.forecasting.hybrid.model_generators._generate_prophet_forecast"
+                    "raglite.forecasting.hybrid._generate_prophet_forecast"
                 ) as mock_prophet_fallback:
                     from raglite.shared.models import ForecastPoint, ForecastResult
 
@@ -415,7 +397,7 @@ class TestMCPModelSelectionE2E:
                         mock_explain.return_value = "Fallback forecast"
 
                         with patch(
-                            "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                            "raglite.forecasting.hybrid.fetch_historical_metric"
                         ) as mock_fetch:
                             mock_fetch.return_value = e2e_time_series_data
 
@@ -438,14 +420,10 @@ class TestMCPModelSelectionE2E:
         """TEST-AC-7b.6.7.6: E2E test - response includes model_source and model_selection_reason."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch(
-            "raglite.external_data.storage.model_selection.get_cached_model_selection"
-        ) as mock_get_cache:
+        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
             mock_get_cache.return_value = populated_cache["ebitda"]
 
-            with patch(
-                "raglite.forecasting.hybrid.model_generators._generate_arima_forecast"
-            ) as mock_arima:
+            with patch("raglite.forecasting.hybrid._generate_arima_forecast") as mock_arima:
                 from raglite.shared.models import ForecastPoint, ForecastResult
 
                 mock_result = ForecastResult(
@@ -466,7 +444,7 @@ class TestMCPModelSelectionE2E:
                     mock_explain.return_value = "Test explanation"
 
                     with patch(
-                        "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
                     ) as mock_fetch:
                         mock_fetch.return_value = e2e_time_series_data
 

@@ -39,8 +39,17 @@ class TestContextAwareInference:
 
     def test_infer_unit_no_api_key(self) -> None:
         """Test inference skips when Mistral API key not configured."""
-        with patch("raglite.shared.config.settings") as mock_settings:
+        # Create a more specific mock that overrides the global autouse fixture
+        with (
+            patch("raglite.shared.config.settings") as mock_settings,
+            patch("raglite.shared.clients.get_mistral_client") as mock_get_client,
+        ):
             mock_settings.mistral_api_key = None
+            mock_settings.metadata_extraction_model = "mistral-small-latest"
+
+            # Mock the client to prevent SQL generation
+            mock_client = Mock()
+            mock_get_client.return_value = mock_client
 
             result = _infer_unit_from_context(
                 metric="EBITDA",
@@ -55,53 +64,57 @@ class TestContextAwareInference:
 
     def test_infer_unit_from_context_success(self) -> None:
         """Test successful unit inference from context."""
-        with patch("raglite.shared.config.settings") as mock_settings:
+        with (
+            patch("raglite.shared.config.settings") as mock_settings,
+            patch("raglite.shared.clients.get_mistral_client") as mock_get_client,
+        ):
             mock_settings.mistral_api_key = "test-key"
             mock_settings.metadata_extraction_model = "mistral-small-latest"
 
-            with patch("raglite.shared.clients.get_mistral_client") as mock_get_client:
-                mock_client = Mock()
-                mock_response = Mock()
-                mock_response.choices = [Mock()]
-                mock_response.choices[0].message = Mock()
-                mock_response.choices[0].message.content = "Meur"
-                mock_client.chat.complete.return_value = mock_response
-                mock_get_client.return_value = mock_client
+            mock_client = Mock()
+            mock_response = Mock()
+            mock_response.choices = [Mock()]
+            mock_response.choices[0].message = Mock()
+            mock_response.choices[0].message.content = "Meur"
+            mock_client.chat.complete.return_value = mock_response
+            mock_get_client.return_value = mock_client
 
-                result = _infer_unit_from_context(
-                    metric="EBITDA IFRS",
-                    entity="GROUP",
-                    table_caption="Consolidated Results",
-                    section_heading="Financial Results (EUR Million)",
-                    page_title="Q3 2025 Report",
-                    nearby_text=["All values in EUR million"],
-                )
+            result = _infer_unit_from_context(
+                metric="EBITDA IFRS",
+                entity="GROUP",
+                table_caption="Consolidated Results",
+                section_heading="Financial Results (EUR Million)",
+                page_title="Q3 2025 Report",
+                nearby_text=["All values in EUR million"],
+            )
 
         assert result == "Meur"
 
     def test_infer_unit_from_context_unknown(self) -> None:
         """Test inference returns None when LLM cannot determine unit."""
-        with patch("raglite.shared.config.settings") as mock_settings:
+        with (
+            patch("raglite.shared.config.settings") as mock_settings,
+            patch("raglite.shared.clients.get_mistral_client") as mock_get_client,
+        ):
             mock_settings.mistral_api_key = "test-key"
             mock_settings.metadata_extraction_model = "mistral-small-latest"
 
-            with patch("raglite.shared.clients.get_mistral_client") as mock_get_client:
-                mock_client = Mock()
-                mock_response = Mock()
-                mock_response.choices = [Mock()]
-                mock_response.choices[0].message = Mock()
-                mock_response.choices[0].message.content = "UNKNOWN"
-                mock_client.chat.complete.return_value = mock_response
-                mock_get_client.return_value = mock_client
+            mock_client = Mock()
+            mock_response = Mock()
+            mock_response.choices = [Mock()]
+            mock_response.choices[0].message = Mock()
+            mock_response.choices[0].message.content = "UNKNOWN"
+            mock_client.chat.complete.return_value = mock_response
+            mock_get_client.return_value = mock_client
 
-                result = _infer_unit_from_context(
-                    metric="Unknown Metric",
-                    entity=None,
-                    table_caption=None,
-                    section_heading=None,
-                    page_title=None,
-                    nearby_text=None,
-                )
+            result = _infer_unit_from_context(
+                metric="Unknown Metric",
+                entity=None,
+                table_caption=None,
+                section_heading=None,
+                page_title=None,
+                nearby_text=None,
+            )
 
         assert result is None
 
@@ -113,7 +126,10 @@ class TestAsyncUnitInference:
 
     async def test_infer_unit_async_success(self) -> None:
         """Test async unit inference with successful response."""
-        with patch("raglite.shared.config.settings") as mock_settings:
+        with (
+            patch("raglite.shared.config.settings") as mock_settings,
+            patch("raglite.shared.clients.get_mistral_client") as mock_get_client,
+        ):
             mock_settings.mistral_api_key = "test-key"
             mock_settings.metadata_extraction_model = "mistral-small-latest"
 
@@ -124,6 +140,7 @@ class TestAsyncUnitInference:
             mock_response.choices[0].message.content = "Eur/ton"
 
             mock_client.chat.complete_async = AsyncMock(return_value=mock_response)
+            mock_get_client.return_value = mock_client
 
             result = await _infer_unit_from_context_async(
                 metric="Cost per ton",
@@ -139,11 +156,15 @@ class TestAsyncUnitInference:
 
     async def test_infer_unit_async_timeout(self) -> None:
         """Test async inference handles timeout gracefully."""
-        with patch("raglite.shared.config.settings") as mock_settings:
+        with (
+            patch("raglite.shared.config.settings") as mock_settings,
+            patch("raglite.shared.clients.get_mistral_client") as mock_get_client,
+        ):
             mock_settings.mistral_api_key = "test-key"
 
             mock_client = Mock()
             mock_client.chat.complete_async = AsyncMock(side_effect=TimeoutError())
+            mock_get_client.return_value = mock_client
 
             result = await _infer_unit_from_context_async(
                 metric="EBITDA",
@@ -165,7 +186,10 @@ class TestBatchAsyncInference:
 
     async def test_batch_inference_success(self) -> None:
         """Test batch inference processes multiple rows."""
-        with patch("raglite.shared.config.settings") as mock_settings:
+        with (
+            patch("raglite.shared.config.settings") as mock_settings,
+            patch("raglite.shared.clients.get_mistral_client") as mock_get_client,
+        ):
             mock_settings.mistral_api_key = "test-key"
             mock_settings.metadata_extraction_model = "mistral-small-latest"
 
@@ -182,6 +206,7 @@ class TestBatchAsyncInference:
                 0
             ].message.content = '[{"index": 0, "unit": "Meur"}, {"index": 1, "unit": "Meur"}]'
             mock_client.chat.complete_async = AsyncMock(return_value=mock_response)
+            mock_get_client.return_value = mock_client
 
             results = await _infer_units_batch_async(
                 rows_batch,
@@ -198,7 +223,10 @@ class TestBatchAsyncInference:
 
     async def test_batch_inference_json_decode_error(self) -> None:
         """Test batch inference handles malformed JSON."""
-        with patch("raglite.shared.config.settings") as mock_settings:
+        with (
+            patch("raglite.shared.config.settings") as mock_settings,
+            patch("raglite.shared.clients.get_mistral_client") as mock_get_client,
+        ):
             mock_settings.mistral_api_key = "test-key"
             mock_settings.metadata_extraction_model = "mistral-small-latest"
 
@@ -210,6 +238,7 @@ class TestBatchAsyncInference:
             mock_response.choices[0].message = Mock()
             mock_response.choices[0].message.content = "Invalid JSON"
             mock_client.chat.complete_async = AsyncMock(return_value=mock_response)
+            mock_get_client.return_value = mock_client
 
             results = await _infer_units_batch_async(
                 rows_batch,
@@ -281,13 +310,12 @@ class TestApplyUnitInference:
         with patch("raglite.ingestion.adaptive_table.core.extract_page_context") as mock_context:
             mock_context.return_value = {}
 
-            with patch("raglite.ingestion.adaptive_table.core.get_table_caption"):
-                with patch(
-                    "raglite.ingestion.adaptive_table.unit_inference._infer_unit_from_context"
-                ) as mock_infer:
-                    mock_infer.return_value = "Meur"
+            with patch(
+                "raglite.ingestion.adaptive_table.unit_inference._infer_unit_from_context"
+            ) as mock_infer:
+                mock_infer.return_value = "Meur"
 
-                    result = _apply_context_aware_unit_inference(rows, mock_table_item, mock_result)
+                result = _apply_context_aware_unit_inference(rows, mock_table_item, mock_result)
 
         assert result[0]["unit"] == "EUR"
         assert result[1]["unit"] == "Meur"
@@ -319,23 +347,22 @@ class TestApplyAsyncBatchInference:
             ) as mock_context:
                 mock_context.return_value = {}
 
-                with patch("raglite.ingestion.adaptive_table.core.get_table_caption"):
-                    with patch("raglite.shared.clients.get_mistral_client") as mock_get_client:
-                        mock_client = Mock()
-                        mock_get_client.return_value = mock_client
+                with patch("raglite.shared.clients.get_mistral_client") as mock_get_client:
+                    mock_client = Mock()
+                    mock_get_client.return_value = mock_client
 
-                        def batch_response(*args: Any, **kwargs: Any) -> Any:
-                            rows_batch = args[0]
-                            return [(idx, row, "Meur") for idx, row in rows_batch]
+                    def batch_response(*args: Any, **kwargs: Any) -> Any:
+                        rows_batch = args[0]
+                        return [(idx, row, "Meur") for idx, row in rows_batch]
 
-                        with patch(
-                            "raglite.ingestion.adaptive_table.unit_inference._infer_units_batch_async"
-                        ) as mock_batch:
-                            mock_batch.side_effect = batch_response
+                    with patch(
+                        "raglite.ingestion.adaptive_table.unit_inference._infer_units_batch_async"
+                    ) as mock_batch:
+                        mock_batch.side_effect = batch_response
 
-                            result = await _apply_context_aware_unit_inference_async(
-                                rows, mock_table_item, mock_result
-                            )
+                        result = await _apply_context_aware_unit_inference_async(
+                            rows, mock_table_item, mock_result
+                        )
 
         assert all(row["unit"] == "Meur" for row in result)
         assert mock_batch.call_count == 2
@@ -350,8 +377,14 @@ class TestApplyAsyncBatchInference:
         mock_table_item = Mock()
         mock_result = Mock()
 
-        with patch("raglite.shared.config.settings") as mock_settings:
+        with (
+            patch("raglite.shared.config.settings") as mock_settings,
+            patch("raglite.shared.clients.get_mistral_client") as mock_get_client,
+        ):
             mock_settings.mistral_api_key = None
+
+            mock_client = Mock()
+            mock_get_client.return_value = mock_client
 
             result = await _apply_context_aware_unit_inference_async(
                 rows, mock_table_item, mock_result

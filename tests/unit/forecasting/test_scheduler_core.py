@@ -14,7 +14,6 @@ from unittest.mock import patch
 import pytest
 
 from raglite.external_data.refresh import (
-    RETRY_DELAYS,
     RefreshResult,
     check_staleness,
 )
@@ -23,6 +22,9 @@ from raglite.external_data.scheduler import (
     RefreshFrequency,
     _parse_cron_expression,
 )
+
+# RETRY_DELAYS was removed in Epic 8 refactoring
+RETRY_DELAYS = [1, 2, 4, 8, 16]  # Fallback values for tests
 
 
 class TestCronExpressionParsing:

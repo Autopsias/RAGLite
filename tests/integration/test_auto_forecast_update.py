@@ -41,7 +41,7 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.ingestion.document_ingestion.ingest_document",
+                "raglite.mcp.tools.ingestion.ingest_document",
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
@@ -83,7 +83,7 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.ingestion.document_ingestion.ingest_document",
+                "raglite.mcp.tools.ingestion.ingest_document",
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
@@ -123,7 +123,7 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.ingestion.document_ingestion.ingest_document",
+                "raglite.mcp.tools.ingestion.ingest_document",
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
@@ -163,7 +163,7 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.ingestion.document_ingestion.ingest_document",
+                "raglite.mcp.tools.ingestion.ingest_document",
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
@@ -274,7 +274,7 @@ class TestForecastRefreshPipeline:
     async def test_pipeline_partial_success(self):
         """Test pipeline handles partial success (some metrics fail)."""
         from raglite.forecasting.auto_update import trigger_forecast_refresh
-        from raglite.forecasting.hybrid import InsufficientDataError
+        from raglite.forecasting.models.base import InsufficientDataError
 
         metadata = DocumentMetadata(
             filename="Quarterly_Report.pdf",

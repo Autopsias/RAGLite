@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from docling.document_converter import ConversionResult
     from docling_core.types.doc import TableItem
 
+from raglite.ingestion.adaptive_table.core import extract_page_context, get_table_caption
 from raglite.ingestion.adaptive_table.unit_inference.batch_helpers import (
     build_batch_metrics_list,
     build_context_string,
@@ -30,6 +31,7 @@ from raglite.ingestion.adaptive_table.unit_inference.batch_helpers import (
     parse_batch_json_response,
     validate_single_inference_response,
 )
+from raglite.shared.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -284,9 +286,6 @@ async def _apply_context_aware_unit_inference_async(
         >>> cache['EBITDA IFRS']
         'Meur'  # Cached for next document
     """
-    from raglite.ingestion.adaptive_table.core import extract_page_context, get_table_caption
-    from raglite.shared.config import settings
-
     # Check if Mistral API key is configured
     if not settings.mistral_api_key:
         logger.debug("Mistral API key not configured - skipping async unit inference")

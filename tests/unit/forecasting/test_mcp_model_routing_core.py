@@ -119,9 +119,7 @@ class TestModelRouting:
         """TEST-AC-7b.6.2.3: _route_to_model routes arima to _generate_arima_forecast."""
         from raglite.forecasting.hybrid import _route_to_model
 
-        with patch(
-            "raglite.forecasting.hybrid.model_generators._generate_arima_forecast"
-        ) as mock_arima:
+        with patch("raglite.forecasting.hybrid._generate_arima_forecast") as mock_arima:
             mock_arima.return_value = MagicMock()
 
             await _route_to_model(
@@ -139,9 +137,7 @@ class TestModelRouting:
         """TEST-AC-7b.6.2.4: _route_to_model routes ets to _generate_ets_forecast."""
         from raglite.forecasting.hybrid import _route_to_model
 
-        with patch(
-            "raglite.forecasting.hybrid.model_generators._generate_ets_forecast"
-        ) as mock_ets:
+        with patch("raglite.forecasting.hybrid._generate_ets_forecast") as mock_ets:
             mock_ets.return_value = MagicMock()
 
             await _route_to_model(
@@ -159,9 +155,7 @@ class TestModelRouting:
         """TEST-AC-7b.6.2.5: _route_to_model routes prophet to _generate_prophet_forecast."""
         from raglite.forecasting.hybrid import _route_to_model
 
-        with patch(
-            "raglite.forecasting.hybrid.model_generators._generate_prophet_forecast"
-        ) as mock_prophet:
+        with patch("raglite.forecasting.hybrid._generate_prophet_forecast") as mock_prophet:
             mock_prophet.return_value = MagicMock()
 
             await _route_to_model(
@@ -179,9 +173,7 @@ class TestModelRouting:
         """TEST-AC-7b.6.2.6: _route_to_model routes xgboost to _generate_xgboost_forecast."""
         from raglite.forecasting.hybrid import _route_to_model
 
-        with patch(
-            "raglite.forecasting.hybrid.model_generators._generate_xgboost_forecast"
-        ) as mock_xgboost:
+        with patch("raglite.forecasting.hybrid._generate_xgboost_forecast") as mock_xgboost:
             mock_xgboost.return_value = MagicMock()
 
             await _route_to_model(
@@ -238,25 +230,17 @@ class TestRegressorFiltering:
             "electricity": pd.Series([10, 11, 12]),  # Not in cached selection
         }
 
-        with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
-        ) as mock_get_cache:
+        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
             mock_get_cache.return_value = mock_cached_model_selection
 
-            with patch(
-                "raglite.forecasting.hybrid.ensemble.ensure_historical_data"
-            ) as mock_ensure_data:
+            with patch("raglite.forecasting.hybrid.ensure_historical_data") as mock_ensure_data:
                 mock_ensure_data.return_value = sample_time_series_data
 
                 # Mock _route_to_model at its definition location (used inside forecast_helpers)
-                with patch(
-                    "raglite.forecasting.hybrid.model_generators._route_to_model"
-                ) as mock_route:
+                with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
                     mock_route.return_value = MagicMock()
 
-                    with patch(
-                        "raglite.forecasting.hybrid.ensemble.explain_forecast"
-                    ) as mock_explain:
+                    with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                         mock_explain.return_value = "Test explanation"
 
                         await generate_forecast(
@@ -310,24 +294,16 @@ class TestRegressorFiltering:
             "euribor": pd.Series([0.5, 0.6, 0.7]),
         }
 
-        with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
-        ) as mock_get_cache:
+        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
             mock_get_cache.return_value = cached_no_regressors
 
-            with patch(
-                "raglite.forecasting.hybrid.ensemble.ensure_historical_data"
-            ) as mock_ensure_data:
+            with patch("raglite.forecasting.hybrid.ensure_historical_data") as mock_ensure_data:
                 mock_ensure_data.return_value = sample_time_series_data
 
-                with patch(
-                    "raglite.forecasting.hybrid.model_generators._route_to_model"
-                ) as mock_route:
+                with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
                     mock_route.return_value = MagicMock()
 
-                    with patch(
-                        "raglite.forecasting.hybrid.ensemble.explain_forecast"
-                    ) as mock_explain:
+                    with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                         mock_explain.return_value = "Test explanation"
 
                         await generate_forecast(
@@ -361,24 +337,16 @@ class TestRegressorFiltering:
             # "euribor" is missing but in cached regressor_list
         }
 
-        with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
-        ) as mock_get_cache:
+        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
             mock_get_cache.return_value = mock_cached_model_selection
 
-            with patch(
-                "raglite.forecasting.hybrid.ensemble.ensure_historical_data"
-            ) as mock_ensure_data:
+            with patch("raglite.forecasting.hybrid.ensure_historical_data") as mock_ensure_data:
                 mock_ensure_data.return_value = sample_time_series_data
 
-                with patch(
-                    "raglite.forecasting.hybrid.model_generators._route_to_model"
-                ) as mock_route:
+                with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
                     mock_route.return_value = MagicMock()
 
-                    with patch(
-                        "raglite.forecasting.hybrid.ensemble.explain_forecast"
-                    ) as mock_explain:
+                    with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                         mock_explain.return_value = "Test explanation"
 
                         # Should not raise - handles missing regressor gracefully
@@ -416,14 +384,10 @@ class TestFallbackHandling:
         """TEST-AC-7b.6.4.1: Falls back to Prophet when no cache exists."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
-        ) as mock_get_cache:
+        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
             mock_get_cache.return_value = None  # Cache miss
 
-            with patch(
-                "raglite.forecasting.hybrid.ensemble.ensure_historical_data"
-            ) as mock_ensure_data:
+            with patch("raglite.forecasting.hybrid.ensure_historical_data") as mock_ensure_data:
                 mock_ensure_data.return_value = sample_time_series_data
 
                 with patch("raglite.forecasting.hybrid._get_prophet_class") as mock_prophet_class:
@@ -454,25 +418,17 @@ class TestFallbackHandling:
         """TEST-AC-7b.6.4.2: Falls back to Prophet when selected model fails."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
-        ) as mock_get_cache:
+        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
             mock_get_cache.return_value = mock_cached_model_selection
 
-            with patch(
-                "raglite.forecasting.hybrid.ensemble.ensure_historical_data"
-            ) as mock_ensure_data:
+            with patch("raglite.forecasting.hybrid.ensure_historical_data") as mock_ensure_data:
                 mock_ensure_data.return_value = sample_time_series_data
 
-                with patch(
-                    "raglite.forecasting.hybrid.model_generators._route_to_model"
-                ) as mock_route:
+                with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
                     # ARIMA fails
                     mock_route.side_effect = Exception("Failed to fit ARIMA: convergence failed")
 
-                    with patch(
-                        "raglite.forecasting.hybrid.ensemble.explain_forecast"
-                    ) as mock_explain:
+                    with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                         mock_explain.return_value = "Test explanation"
 
                         result = await generate_forecast(
@@ -498,23 +454,17 @@ class TestFallbackHandling:
         """TEST-AC-7b.6.4.3: Fallback model_selection_reason includes error context."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch(
-            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
-        ) as mock_get_cache:
+        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
             mock_get_cache.return_value = mock_cached_model_selection
 
-            with patch(
-                "raglite.forecasting.hybrid.ensemble.ensure_historical_data"
-            ) as mock_ensure_data:
+            with patch("raglite.forecasting.hybrid.ensure_historical_data") as mock_ensure_data:
                 mock_ensure_data.return_value = sample_time_series_data
 
-                with patch(
-                    "raglite.forecasting.hybrid.model_generators._route_to_model"
-                ) as mock_route:
+                with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
                     mock_route.side_effect = Exception("ARIMA convergence failed")
 
                     with patch(
-                        "raglite.forecasting.hybrid.model_generators._generate_prophet_forecast"
+                        "raglite.forecasting.hybrid._generate_prophet_forecast"
                     ) as mock_prophet:
                         mock_result = MagicMock()
                         mock_result.model_source = "fallback"

@@ -43,7 +43,6 @@ class TestTempFilesAndPDFProcessingIntegration:
                 "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql"
             ) as mock_store_pg,
             patch("raglite.ingestion.table_extraction.TableExtractor") as mock_table_extractor,
-            patch("raglite.ingestion.table_extraction.TableExtractor") as mock_table_extractor,
         ):
             # Mock PDF processing pipeline
             mock_result = MagicMock()

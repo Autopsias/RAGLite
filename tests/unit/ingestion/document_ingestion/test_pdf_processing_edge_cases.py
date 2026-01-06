@@ -108,17 +108,13 @@ class TestPDFProcessingErrorHandling:
         try:
             with (
                 patch("docling.document_converter.DocumentConverter") as mock_converter_class,
+                patch("raglite.ingestion.chunking_strategy.chunk_by_docling_items") as mock_chunk,
                 patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.chunk_by_docling_items"
-                ) as mock_chunk,
-                patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.extract_metadata_for_chunks"
+                    "raglite.ingestion.document_ingestion.pdf_utils.extract_metadata_for_chunks"
                 ) as mock_extract_meta,
+                patch("raglite.ingestion.embedding_generation.generate_embeddings") as mock_embed,
                 patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings"
-                ) as mock_embed,
-                patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant"
+                    "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant"
                 ) as mock_store,
             ):
                 # Mock successful conversion but zero pages
@@ -156,23 +152,17 @@ class TestPDFProcessingErrorHandling:
         try:
             with (
                 patch("docling.document_converter.DocumentConverter") as mock_converter_class,
+                patch("raglite.ingestion.table_extraction.TableExtractor") as mock_extractor_class,
+                patch("raglite.ingestion.chunking_strategy.chunk_by_docling_items") as mock_chunk,
                 patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.TableExtractor"
-                ) as mock_extractor_class,
-                patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.chunk_by_docling_items"
-                ) as mock_chunk,
-                patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.extract_metadata_for_chunks"
+                    "raglite.ingestion.document_ingestion.pdf_utils.extract_metadata_for_chunks"
                 ) as mock_extract_meta,
+                patch("raglite.ingestion.embedding_generation.generate_embeddings") as mock_embed,
                 patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings"
-                ) as mock_embed,
-                patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant"
+                    "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant"
                 ) as mock_store,
                 patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql"
+                    "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql"
                 ) as mock_store_pg,
             ):
                 # Mock successful PDF conversion
@@ -223,20 +213,16 @@ class TestPDFProcessingErrorHandling:
         try:
             with (
                 patch("docling.document_converter.DocumentConverter") as mock_converter_class,
+                patch("raglite.ingestion.chunking_strategy.chunk_by_docling_items") as mock_chunk,
                 patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.chunk_by_docling_items"
-                ) as mock_chunk,
-                patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.extract_metadata_for_chunks"
+                    "raglite.ingestion.document_ingestion.pdf_utils.extract_metadata_for_chunks"
                 ) as mock_extract_meta,
+                patch("raglite.ingestion.embedding_generation.generate_embeddings") as mock_embed,
                 patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings"
-                ) as mock_embed,
-                patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant"
+                    "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant"
                 ) as mock_store,
                 patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql"
+                    "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql"
                 ) as mock_store_pg,
             ):
                 # Mock successful conversion
@@ -285,20 +271,16 @@ class TestPDFProcessingBoundaryConditions:
         try:
             with (
                 patch("docling.document_converter.DocumentConverter") as mock_converter_class,
+                patch("raglite.ingestion.chunking_strategy.chunk_by_docling_items") as mock_chunk,
                 patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.chunk_by_docling_items"
-                ) as mock_chunk,
-                patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.extract_metadata_for_chunks"
+                    "raglite.ingestion.document_ingestion.pdf_utils.extract_metadata_for_chunks"
                 ) as mock_extract_meta,
+                patch("raglite.ingestion.embedding_generation.generate_embeddings") as mock_embed,
                 patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings"
-                ) as mock_embed,
-                patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant"
+                    "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant"
                 ) as mock_store,
                 patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql"
+                    "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql"
                 ) as mock_store_pg,
             ):
                 # Mock single-page conversion
@@ -338,17 +320,13 @@ class TestPDFProcessingBoundaryConditions:
         try:
             with (
                 patch("docling.document_converter.DocumentConverter") as mock_converter_class,
+                patch("raglite.ingestion.chunking_strategy.chunk_by_docling_items") as mock_chunk,
                 patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.chunk_by_docling_items"
-                ) as mock_chunk,
-                patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.extract_metadata_for_chunks"
+                    "raglite.ingestion.document_ingestion.pdf_utils.extract_metadata_for_chunks"
                 ) as mock_extract_meta,
+                patch("raglite.ingestion.embedding_generation.generate_embeddings") as mock_embed,
                 patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings"
-                ) as mock_embed,
-                patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant"
+                    "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant"
                 ) as mock_store,
             ):
                 # Mock conversion with no text items
@@ -386,15 +364,42 @@ class TestPDFProcessingBoundaryConditions:
             tmp_path = tmp.name
 
         try:
-            with patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.clear_existing_data"
-            ) as mock_clear:
+            with (
+                patch("docling.document_converter.DocumentConverter") as mock_converter_class,
+                patch("raglite.ingestion.chunking_strategy.chunk_by_docling_items") as mock_chunk,
+                patch("raglite.ingestion.document_ingestion.pdf_utils.extract_metadata_for_chunks"),
+                patch("raglite.ingestion.embedding_generation.generate_embeddings"),
+                patch("raglite.ingestion.storage.vector_store.store_vectors_in_qdrant"),
+                patch("raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql"),
+                patch(
+                    "raglite.ingestion.document_ingestion.pdf_processing.clear_existing_data"
+                ) as mock_clear,
+            ):
                 # Mock clear_existing_data to raise ProductionProtectionError
                 from raglite.shared.safety import ProductionProtectionError
 
                 mock_clear.side_effect = ProductionProtectionError(
                     "Refusing to delete production collection"
                 )
+
+                # Mock successful PDF conversion (so we reach the clear_existing check)
+                from unittest.mock import MagicMock
+
+                # Create mock element with proper provenance
+                mock_prov = MagicMock()
+                mock_prov.page_no = 1
+                mock_element = MagicMock()
+                mock_element.prov = [mock_prov]
+                mock_element.text = "Test content"
+
+                mock_result = MagicMock()
+                mock_result.document.num_pages.return_value = 1
+                # iterate_items returns list of 2-tuples (item, _)
+                mock_result.document.iterate_items.return_value = [(mock_element, 1)]
+                mock_result.export_to_markdown.return_value = "Test content"
+
+                mock_converter_class.return_value.convert.return_value = mock_result
+                mock_chunk.return_value = []
 
                 # When ingesting with clear_existing=True on production
                 # Then raise ProductionProtectionError

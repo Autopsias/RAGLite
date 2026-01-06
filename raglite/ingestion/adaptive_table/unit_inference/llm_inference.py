@@ -13,6 +13,9 @@ if TYPE_CHECKING:
     from docling.document_converter import ConversionResult
     from docling_core.types.doc import TableItem
 
+from raglite.ingestion.adaptive_table.core import extract_page_context, get_table_caption
+from raglite.shared.config import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -55,8 +58,6 @@ def _infer_unit_from_context(
         >>> print(unit)
         'Meur'  # Inferred from section heading and context
     """
-    from raglite.shared.config import settings
-
     # Check if Mistral API key is configured
     if not settings.mistral_api_key:
         logger.debug(
@@ -197,7 +198,6 @@ def _apply_context_aware_unit_inference(
         >>> rows_out[0]['unit']
         'Meur'  # Inferred from context
     """
-    from raglite.ingestion.adaptive_table.core import extract_page_context, get_table_caption
 
     # Extract document context
     page_context = extract_page_context(table_item, result)
