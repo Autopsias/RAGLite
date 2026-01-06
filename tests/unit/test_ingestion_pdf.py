@@ -10,6 +10,12 @@ import pytest
 
 from raglite.ingestion.pipeline import ingest_pdf
 from raglite.shared.models import DocumentMetadata
+from tests.unit.pdf_ingestion_helpers import (
+    create_mock_chunk,
+    create_mock_element,
+    create_mock_qdrant_client,
+    create_standard_docling_patches,
+)
 
 
 class TestIngestPDF:
@@ -27,18 +33,9 @@ class TestIngestPDF:
         pdf_file = tmp_path / "test_report.pdf"
         pdf_file.write_bytes(b"%PDF-1.4 fake pdf content")
 
-        # Mock Docling converter and result
-        mock_element1 = Mock()
-        mock_element1.text = "Financial Report Q4 2024"
-        mock_prov1 = Mock()
-        mock_prov1.page_no = 1
-        mock_element1.prov = [mock_prov1]
-
-        mock_element2 = Mock()
-        mock_element2.text = "Revenue Summary"
-        mock_prov2 = Mock()
-        mock_prov2.page_no = 2
-        mock_element2.prov = [mock_prov2]
+        # Mock Docling elements and document
+        mock_element1 = create_mock_element("Financial Report Q4 2024", 1)
+        mock_element2 = create_mock_element("Revenue Summary", 2)
 
         mock_document = Mock()
         mock_document.num_pages.return_value = 2
@@ -51,29 +48,40 @@ class TestIngestPDF:
         mock_result = Mock()
         mock_result.document = mock_document
 
-        # Mock Qdrant client to prevent real database calls in unit tests
-        mock_qdrant_client = Mock()
-        mock_qdrant_client.delete_collection = Mock()
-        mock_qdrant_client.create_collection = Mock()
-        mock_qdrant_client.upsert = Mock()
-        # Mock get_collections() for create_collection() idempotency check
-        mock_collections_response = Mock()
-        mock_collections_response.collections = []
-        mock_qdrant_client.get_collections = Mock(return_value=mock_collections_response)
-        # Mock get_collection() for points_count validation after upsert
-        mock_collection_info = Mock()
-        mock_collection_info.points_count = 2  # Match number of mock chunks
-        mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
+        # Mock Qdrant client
+        mock_qdrant_client = create_mock_qdrant_client(points_count=2)
+
+        # Mock chunks
+        mock_chunks = [
+            create_mock_chunk(
+                chunk_id="chunk1",
+                content="Financial Report Q4 2024",
+                filename="test_report.pdf",
+                page_number=1,
+                chunk_index=0,
+                page_count=2,
+                word_count=4,
+            ),
+            create_mock_chunk(
+                chunk_id="chunk2",
+                content="Revenue Summary",
+                filename="test_report.pdf",
+                page_number=2,
+                chunk_index=1,
+                page_count=2,
+                word_count=2,
+            ),
+        ]
 
         # Patch Docling at the source for lazy imports inside ingest_pdf()
-        # Critical: patch both DocumentConverter and the required imports
+        docling_patches = create_standard_docling_patches()
         with (
-            patch("docling.document_converter.DocumentConverter") as MockConverter,
-            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
-            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
-            patch("docling.datamodel.base_models.InputFormat"),
-            patch("docling.document_converter.PdfFormatOption"),
-            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+            patch(docling_patches[0]) as MockConverter,
+            patch(docling_patches[1]),
+            patch(docling_patches[2]),
+            patch(docling_patches[3]),
+            patch(docling_patches[4]),
+            patch(docling_patches[5]),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
                 return_value=mock_qdrant_client,
@@ -92,51 +100,11 @@ class TestIngestPDF:
             ),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings",
-                return_value=[
-                    type(
-                        "MockChunk",
-                        (),
-                        {
-                            "chunk_id": "chunk1",
-                            "content": "Financial Report Q4 2024",
-                            "metadata": DocumentMetadata(
-                                filename="test_report.pdf",
-                                doc_type="PDF",
-                                ingestion_timestamp="2024-01-01T00:00:00",
-                                page_count=2,
-                            ),
-                            "page_number": 1,
-                            "chunk_index": 0,
-                            "embedding": [0.1] * 1024,
-                            "word_count": 4,
-                        },
-                    )(),
-                    type(
-                        "MockChunk",
-                        (),
-                        {
-                            "chunk_id": "chunk2",
-                            "content": "Revenue Summary",
-                            "metadata": DocumentMetadata(
-                                filename="test_report.pdf",
-                                doc_type="PDF",
-                                ingestion_timestamp="2024-01-01T00:00:00",
-                                page_count=2,
-                            ),
-                            "page_number": 2,
-                            "chunk_index": 1,
-                            "embedding": [0.2] * 1024,
-                            "word_count": 2,
-                        },
-                    )(),
-                ],
+                return_value=mock_chunks,
             ),
         ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
-
-            # Mock embedding model - now directly mocked via generate_embeddings
-            # No need for separate mock instance since generate_embeddings is directly patched
 
             # Execute ingestion
             result = await ingest_pdf(str(pdf_file))
@@ -202,14 +170,10 @@ class TestIngestPDF:
         pdf_file.write_bytes(b"%PDF-1.4 multipage content")
 
         # Mock elements with page numbers 1, 2, 3
-        mock_elements = []
-        for page_num in [1, 2, 3, 2, 3]:  # Includes duplicates
-            element = Mock()
-            element.text = f"Content from page {page_num}"
-            prov = Mock()
-            prov.page_no = page_num
-            element.prov = [prov]
-            mock_elements.append(element)
+        mock_elements = [
+            create_mock_element(f"Content from page {page_num}", page_num)
+            for page_num in [1, 2, 3, 2, 3]  # Includes duplicates
+        ]
 
         mock_document = Mock()
         mock_document.num_pages.return_value = 3  # Unique pages
@@ -222,22 +186,31 @@ class TestIngestPDF:
         mock_result.document = mock_document
 
         # Mock Qdrant client
-        mock_qdrant_client = Mock()
-        mock_collections_response = Mock()
-        mock_collections_response.collections = []
-        mock_qdrant_client.get_collections = Mock(return_value=mock_collections_response)
-        mock_collection_info = Mock()
-        mock_collection_info.points_count = 5  # 5 mock elements
-        mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
+        mock_qdrant_client = create_mock_qdrant_client(points_count=5)
+
+        # Mock chunks
+        mock_chunks = [
+            create_mock_chunk(
+                chunk_id=f"chunk{i}",
+                content=f"Content from page {i % 3 + 1}",
+                filename="multipage.pdf",
+                page_number=i % 3 + 1,
+                chunk_index=i,
+                page_count=3,
+                word_count=5,
+            )
+            for i in range(5)
+        ]
 
         # Patch Docling at the source for lazy imports inside ingest_pdf()
+        docling_patches = create_standard_docling_patches()
         with (
-            patch("docling.document_converter.DocumentConverter") as MockConverter,
-            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
-            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
-            patch("docling.datamodel.base_models.InputFormat"),
-            patch("docling.document_converter.PdfFormatOption"),
-            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+            patch(docling_patches[0]) as MockConverter,
+            patch(docling_patches[1]),
+            patch(docling_patches[2]),
+            patch(docling_patches[3]),
+            patch(docling_patches[4]),
+            patch(docling_patches[5]),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
                 return_value=mock_qdrant_client,
@@ -256,34 +229,11 @@ class TestIngestPDF:
             ),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings",
-                return_value=[
-                    type(
-                        "MockChunk",
-                        (),
-                        {
-                            "chunk_id": f"chunk{i}",
-                            "content": f"Content from page {i % 3 + 1}",
-                            "metadata": DocumentMetadata(
-                                filename="multipage.pdf",
-                                doc_type="PDF",
-                                ingestion_timestamp="2024-01-01T00:00:00",
-                                page_count=3,
-                            ),
-                            "page_number": i % 3 + 1,
-                            "chunk_index": i,
-                            "embedding": [0.1] * 1024,
-                            "word_count": 5,
-                        },
-                    )()
-                    for i in range(5)
-                ],
+                return_value=mock_chunks,
             ),
         ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
-
-            # Mock embedding model - now directly mocked via generate_embeddings
-            # No need for separate mock instance since generate_embeddings is directly patched
 
             result = await ingest_pdf(str(pdf_file))
 
@@ -315,22 +265,30 @@ class TestIngestPDF:
         mock_result.document = mock_document
 
         # Mock Qdrant client
-        mock_qdrant_client = Mock()
-        mock_collections_response = Mock()
-        mock_collections_response.collections = []
-        mock_qdrant_client.get_collections = Mock(return_value=mock_collections_response)
-        mock_collection_info = Mock()
-        mock_collection_info.points_count = 1
-        mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
+        mock_qdrant_client = create_mock_qdrant_client(points_count=1)
+
+        # Mock chunks
+        mock_chunks = [
+            create_mock_chunk(
+                chunk_id="chunk1",
+                content="Content without page info",
+                filename="no_pages.pdf",
+                page_number=0,
+                chunk_index=0,
+                page_count=0,
+                word_count=4,
+            ),
+        ]
 
         # Patch Docling at the source for lazy imports inside ingest_pdf()
+        docling_patches = create_standard_docling_patches()
         with (
-            patch("docling.document_converter.DocumentConverter") as MockConverter,
-            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
-            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
-            patch("docling.datamodel.base_models.InputFormat"),
-            patch("docling.document_converter.PdfFormatOption"),
-            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+            patch(docling_patches[0]) as MockConverter,
+            patch(docling_patches[1]),
+            patch(docling_patches[2]),
+            patch(docling_patches[3]),
+            patch(docling_patches[4]),
+            patch(docling_patches[5]),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
                 return_value=mock_qdrant_client,
@@ -349,33 +307,11 @@ class TestIngestPDF:
             ),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings",
-                return_value=[
-                    type(
-                        "MockChunk",
-                        (),
-                        {
-                            "chunk_id": "chunk1",
-                            "content": "Content without page info",
-                            "metadata": DocumentMetadata(
-                                filename="no_pages.pdf",
-                                doc_type="PDF",
-                                ingestion_timestamp="2024-01-01T00:00:00",
-                                page_count=0,
-                            ),
-                            "page_number": 0,
-                            "chunk_index": 0,
-                            "embedding": [0.1] * 1024,
-                            "word_count": 4,
-                        },
-                    )()
-                ],
+                return_value=mock_chunks,
             ),
         ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
-
-            # Mock embedding model - now directly mocked via generate_embeddings
-            # No need for separate mock instance since generate_embeddings is directly patched
 
             result = await ingest_pdf(str(pdf_file))
 
@@ -421,11 +357,7 @@ class TestIngestPDF:
         pdf_file.write_bytes(b"%PDF-1.4")
 
         # Mock minimal Docling response
-        mock_element = Mock()
-        mock_element.text = "Test PDF content"  # Story 1.13: chunk_by_docling_items needs item.text
-        mock_prov = Mock()
-        mock_prov.page_no = 1
-        mock_element.prov = [mock_prov]
+        mock_element = create_mock_element("Test PDF content", 1)
 
         mock_document = Mock()
         mock_document.num_pages.return_value = 1
@@ -436,23 +368,31 @@ class TestIngestPDF:
         mock_result.document = mock_document
 
         # Mock Qdrant client
-        mock_qdrant_client = Mock()
-        mock_collections_response = Mock()
-        mock_collections_response.collections = []
-        mock_qdrant_client.get_collections = Mock(return_value=mock_collections_response)
-        mock_collection_info = Mock()
-        mock_collection_info.points_count = 1
-        mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
+        mock_qdrant_client = create_mock_qdrant_client(points_count=1)
+
+        # Mock chunks
+        mock_chunks = [
+            create_mock_chunk(
+                chunk_id="chunk1",
+                content="Test PDF content",
+                filename="logging_test.pdf",
+                page_number=1,
+                chunk_index=0,
+                page_count=1,
+                word_count=3,
+            ),
+        ]
 
         # Patch Docling at the source for lazy imports inside ingest_pdf()
         # Story 3.0.1: Patch new module locations after refactoring
+        docling_patches = create_standard_docling_patches()
         with (
-            patch("docling.document_converter.DocumentConverter") as MockConverter,
-            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
-            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
-            patch("docling.datamodel.base_models.InputFormat"),
-            patch("docling.document_converter.PdfFormatOption"),
-            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+            patch(docling_patches[0]) as MockConverter,
+            patch(docling_patches[1]),
+            patch(docling_patches[2]),
+            patch(docling_patches[3]),
+            patch(docling_patches[4]),
+            patch(docling_patches[5]),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
                 return_value=mock_qdrant_client,
@@ -471,33 +411,11 @@ class TestIngestPDF:
             ),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings",
-                return_value=[
-                    type(
-                        "MockChunk",
-                        (),
-                        {
-                            "chunk_id": "chunk1",
-                            "content": "Test PDF content",
-                            "metadata": DocumentMetadata(
-                                filename="logging_test.pdf",
-                                doc_type="PDF",
-                                ingestion_timestamp="2024-01-01T00:00:00",
-                                page_count=1,
-                            ),
-                            "page_number": 1,
-                            "chunk_index": 0,
-                            "embedding": [0.1] * 1024,
-                            "word_count": 3,
-                        },
-                    )()
-                ],
+                return_value=mock_chunks,
             ),
         ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.return_value = mock_result
-
-            # Mock embedding model - now directly mocked via generate_embeddings
-            # No need for separate mock instance since generate_embeddings is directly patched
 
             await ingest_pdf(str(pdf_file))
 

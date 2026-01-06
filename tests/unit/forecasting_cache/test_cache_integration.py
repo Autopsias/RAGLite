@@ -2,150 +2,16 @@
 
 Tests the integration between model selection cache and MCP forecast tool,
 including cache hits, cache misses, regressor filtering, and fallback behavior.
-
-NOTE: These tests require Qdrant and PostgreSQL to be running.
 """
 
-from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 
 import pandas as pd
 import pytest
 
-from raglite.external_data.storage import CachedModelSelection
 from raglite.forecasting import regressor_fetch as regressor_fetch_module
 from raglite.mcp.tools import forecast_helpers as forecast_helpers_module
-from raglite.shared.models import (
-    ForecastPoint,
-    ForecastQueryRequest,
-    ForecastResult,
-    TimeSeriesData,
-    TimeSeriesPoint,
-)
-
-pytestmark = [
-    pytest.mark.unit,  # All dependencies mocked - should be unit tests
-]
-
-# =============================================================================
-# Fixtures
-# =============================================================================
-
-
-@pytest.fixture
-def sample_historical_data() -> TimeSeriesData:
-    """Create sample time series data for testing."""
-    points = [
-        TimeSeriesPoint(date=datetime(2024, 1, 1), value=100.0),
-        TimeSeriesPoint(date=datetime(2024, 2, 1), value=105.0),
-        TimeSeriesPoint(date=datetime(2024, 3, 1), value=110.0),
-        TimeSeriesPoint(date=datetime(2024, 4, 1), value=108.0),
-        TimeSeriesPoint(date=datetime(2024, 5, 1), value=115.0),
-        TimeSeriesPoint(date=datetime(2024, 6, 1), value=120.0),
-        TimeSeriesPoint(date=datetime(2024, 7, 1), value=118.0),
-        TimeSeriesPoint(date=datetime(2024, 8, 1), value=125.0),
-    ]
-    return TimeSeriesData(
-        metric_name="test_metric",
-        points=points,
-        source_documents=["test_doc.pdf"],
-    )
-
-
-@pytest.fixture
-def sample_forecast_result() -> ForecastResult:
-    """Create sample forecast result for mocking."""
-    return ForecastResult(
-        metric_name="test_metric",
-        forecast=[
-            ForecastPoint(
-                date=datetime(2024, 10, 1),
-                value=130.0,
-                lower=120.0,
-                upper=140.0,
-                label="2024-Q4",
-            ),
-        ],
-        basis="Test model",
-        confidence_reasoning="High confidence",
-    )
-
-
-@pytest.fixture
-def cached_selection_with_regressors() -> CachedModelSelection:
-    """Create cached model selection with regressors."""
-    return CachedModelSelection(
-        variable_name="revenue",
-        best_model="catboost",
-        best_mape=5.5,
-        best_mase=0.85,
-        use_regressors=True,
-        regressor_list=["gdp_growth", "inflation"],
-        candidate_results={},
-        data_characteristics=None,
-        selected_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() + timedelta(days=7),
-    )
-
-
-@pytest.fixture
-def cached_selection_without_regressors() -> CachedModelSelection:
-    """Create cached model selection without regressors."""
-    return CachedModelSelection(
-        variable_name="sales_volume",
-        best_model="chronos",
-        best_mape=12.5,
-        best_mase=1.24,
-        use_regressors=False,
-        regressor_list=[],
-        candidate_results={},
-        data_characteristics=None,
-        selected_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() + timedelta(days=7),
-    )
-
-
-@pytest.fixture
-def expired_cached_selection() -> CachedModelSelection:
-    """Create expired cached model selection."""
-    return CachedModelSelection(
-        variable_name="revenue",
-        best_model="catboost",
-        best_mape=5.5,
-        best_mase=0.85,
-        use_regressors=True,
-        regressor_list=["gdp_growth"],
-        candidate_results={},
-        data_characteristics=None,
-        selected_at=datetime.utcnow() - timedelta(days=10),
-        expires_at=datetime.utcnow() - timedelta(days=3),  # Expired
-    )
-
-
-# =============================================================================
-# Test CachedModelSelection
-# =============================================================================
-
-
-class TestCachedModelSelection:
-    """Tests for CachedModelSelection dataclass."""
-
-    def test_is_expired_returns_false_for_valid(
-        self, cached_selection_with_regressors: CachedModelSelection
-    ) -> None:
-        """Non-expired selection returns is_expired=False."""
-        assert not cached_selection_with_regressors.is_expired
-
-    def test_is_expired_returns_true_for_expired(
-        self, expired_cached_selection: CachedModelSelection
-    ) -> None:
-        """Expired selection returns is_expired=True."""
-        assert expired_cached_selection.is_expired
-
-
-# =============================================================================
-# Test Model Selection Cache Integration
-# =============================================================================
+from raglite.shared.models import ForecastQueryRequest, ForecastResult, TimeSeriesData
 
 
 class TestModelSelectionCacheIntegration:
@@ -156,7 +22,7 @@ class TestModelSelectionCacheIntegration:
         self,
         sample_historical_data: TimeSeriesData,
         sample_forecast_result: ForecastResult,
-        cached_selection_without_regressors: CachedModelSelection,
+        cached_selection_without_regressors,
     ) -> None:
         """When cache hit, should use cached model instead of default."""
         from raglite.main import get_financial_forecast
@@ -263,7 +129,6 @@ class TestModelSelectionCacheIntegration:
         self,
         sample_historical_data: TimeSeriesData,
         sample_forecast_result: ForecastResult,
-        expired_cached_selection: CachedModelSelection,
     ) -> None:
         """Expired cache entries should trigger fallback."""
         from raglite.main import get_financial_forecast
@@ -311,7 +176,7 @@ class TestModelSelectionCacheIntegration:
         self,
         sample_historical_data: TimeSeriesData,
         sample_forecast_result: ForecastResult,
-        cached_selection_with_regressors: CachedModelSelection,
+        cached_selection_with_regressors,
     ) -> None:
         """Only regressors in cached.regressor_list should be passed."""
         from raglite.main import get_financial_forecast
@@ -466,68 +331,3 @@ class TestModelSelectionCacheIntegration:
 
             # Ensemble should be used as explicitly requested
             mock_ensemble.assert_called_once()
-
-
-# =============================================================================
-# Test Model Routers
-# =============================================================================
-
-
-class TestModelRouters:
-    """Tests for model router implementations."""
-
-    @pytest.mark.asyncio
-    async def test_prophet_router_delegates_to_generate_forecast(
-        self,
-        sample_historical_data: TimeSeriesData,
-        sample_forecast_result: ForecastResult,
-    ) -> None:
-        """Prophet router should delegate to generate_forecast."""
-        from raglite.forecasting.hybrid import _generate_prophet_forecast
-
-        with patch(
-            "raglite.forecasting.hybrid.ensemble.generate_forecast",  # Patch where used in ensemble
-            new_callable=AsyncMock,
-        ) as mock_forecast:
-            mock_forecast.return_value = sample_forecast_result
-
-            await _generate_prophet_forecast(
-                metric="test_metric",
-                historical_data=sample_historical_data,
-                periods_ahead=4,
-                external_regressors=None,
-            )
-
-            # Verify generate_forecast was called with use_model_selection=False
-            mock_forecast.assert_called_once()
-            call_kwargs = mock_forecast.call_args.kwargs
-            assert call_kwargs["use_model_selection"] is False
-
-    @pytest.mark.asyncio
-    async def test_chronos_router_delegates_to_cold_start(
-        self,
-        sample_historical_data: TimeSeriesData,
-        sample_forecast_result: ForecastResult,
-    ) -> None:
-        """Chronos router should delegate to generate_chronos_cold_start_forecast."""
-        from raglite.forecasting.hybrid import _generate_chronos_forecast
-
-        with (
-            patch(
-                "raglite.forecasting.hybrid.model_generators_deep.generate_chronos_cold_start_forecast",  # Patch where used in model_generators_deep
-                new_callable=AsyncMock,
-            ) as mock_chronos
-        ):
-            mock_chronos.return_value = sample_forecast_result
-
-            await _generate_chronos_forecast(
-                metric="test_metric",
-                historical_data=sample_historical_data,
-                periods_ahead=4,
-                external_regressors={"ignored": pd.Series([1, 2, 3])},  # Should be ignored
-            )
-
-            # Verify cold_start was called (regressors ignored for Chronos)
-            mock_chronos.assert_called_once()
-            call_kwargs = mock_chronos.call_args.kwargs
-            assert "external_regressors" not in call_kwargs

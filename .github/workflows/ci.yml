@@ -96,6 +96,12 @@ jobs:
           ruff format raglite/ tests/ --check
           echo "Black formatting passed"
 
+      - name: File Size Check
+        run: |
+          echo "=== Checking file sizes (500 LOC limit) ==="
+          python scripts/check_file_sizes.py
+          echo "File size check passed - no violations"
+
   # ============================================================
   # TIER 1: Fast PR Validation
   # Runs on every push/PR, AFTER lint-gate passes

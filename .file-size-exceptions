@@ -1,71 +1,10 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-06T19:37:28.447538",
+  "baseline_date": "2026-01-06T23:18:03.083596",
   "description": "Grandfathered file size violations - reduce gradually",
   "thresholds": {
     "warning": 400,
     "hard_limit": 500
   },
-  "exceptions": {
-    "tests/unit/test_strategic_recommendations.py": {
-      "lines": 949,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/fixtures/ground_truth.py": {
-      "lines": 802,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/fixtures/ground_truth_old_backup.py": {
-      "lines": 762,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/fixtures/archive/ground_truth_old_backup.py": {
-      "lines": 762,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/atdd/test_story_8_5_deprecation_cleanup.py": {
-      "lines": 636,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/uat/test_epic_1_validation.py": {
-      "lines": 557,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/unit/mcp/test_model_selection_mcp.py": {
-      "lines": 537,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/unit/forecasting/test_mcp_model_routing_core.py": {
-      "lines": 534,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/integration/fixtures/session_fixtures.py": {
-      "lines": 534,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/unit/test_model_selection_cache_mcp.py": {
-      "lines": 529,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    }
-  }
+  "exceptions": {}
 }
