@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-05T23:47:39.539562",
+  "baseline_date": "2026-01-06T01:41:13.926329",
   "description": "Grandfathered function length violations - refactor gradually",
   "thresholds": {
     "warning": 50,

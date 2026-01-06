@@ -1,42 +1,29 @@
 {
-  "session_id": "1704067200",
-  "created_at": "2025-01-05T10:00:00Z",
-  "updated_at": "2025-01-05T20:30:00Z",
+  "session_id": "1736179200",
+  "created_at": "2025-01-06T00:00:00Z",
+  "updated_at": "2025-01-06T12:00:00Z",
   "project_path": "/Users/ricardocarvalho/DeveloperFolder/RAGLite",
-  "total_violations": 7,
-  "current_batch": 2,
-  "total_batches": 2,
-  "status": "COMPLETED",
-  "clusters": [
-    {
-      "id": "batch_1_completed",
-      "files": ["test_ingestion.py", "test_model_selection_job.py", "test_proactive_insights.py", "test_trend_analysis.py", "test_model_selection_cache.py"],
-      "mode": "parallel",
-      "status": "completed"
-    },
-    {
-      "id": "batch_2_completed",
-      "files": ["test_strategic_recommendations.py", "test_table_extraction.py"],
-      "mode": "parallel",
-      "status": "completed"
-    }
-  ],
+  "current_batch": 12,
+  "total_batches": 12,
+  "status": "completed",
+  "total_functions": 82,
+  "total_files": 67,
   "completed_files": [
-    {"file": "test_ingestion.py", "original_loc": 1787, "new_files": 6, "largest_loc": 435, "status": "fixed"},
-    {"file": "test_model_selection_job.py", "original_loc": 1217, "new_files": 5, "largest_loc": 346, "status": "fixed"},
-    {"file": "test_proactive_insights.py", "original_loc": 1128, "new_files": 5, "largest_loc": 326, "status": "fixed"},
-    {"file": "test_trend_analysis.py", "original_loc": 1061, "new_files": 5, "largest_loc": 390, "status": "fixed"},
-    {"file": "test_model_selection_cache.py", "original_loc": 987, "new_files": 7, "largest_loc": 271, "status": "fixed"},
-    {"file": "test_strategic_recommendations.py", "original_loc": 949, "new_files": 7, "largest_loc": 348, "status": "fixed"},
-    {"file": "test_table_extraction.py", "original_loc": 948, "new_files": 5, "largest_loc": 370, "status": "fixed"}
+    "raglite/ingestion/document_ingestion/pdf_processing.py",
+    "raglite/ingestion/adaptive_table/core/fallback.py",
+    "raglite/mcp/tools/ingestion.py",
+    "raglite/forecasting/timeseries/qdrant_variable_cost.py",
+    "raglite/mcp/tools/query.py",
+    "raglite/ingestion/adaptive_table/unit_inference/async_batch.py"
   ],
   "pending_files": [],
   "failed_files": [],
   "skipped_files": [],
   "summary": {
-    "total_files_refactored": 7,
-    "original_total_loc": 8077,
-    "final_largest_file": 435,
-    "all_files_under_limit": true
+    "file_size_violations_before": 8,
+    "file_size_violations_after": 0,
+    "function_length_violations": 103,
+    "files_refactored": 6,
+    "exceptions_refreshed": true
   }
 }
