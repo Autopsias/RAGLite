@@ -21,69 +21,17 @@ from raglite.shared.models import (
 logger = get_logger(__name__)
 
 
-@mcp.tool()
-async def get_financial_insights(
+async def _parse_query_filters(
     request: InsightsQueryRequest,
-) -> InsightsQueryResponse:
-    """Request proactive financial insights via MCP.
-    Story 4.9 AC1-AC5: MCP tool for conversational insight queries combining
-    anomaly detection, trend analysis, and strategic recommendations.
-    **Supported Categories:** RISK, OPPORTUNITY, ANOMALY, TREND, STRATEGIC_PRIORITY
-    **Input Modes:**
-    1. **Structured Query (Programmatic):**
-       Provide explicit `category` and `time_period` parameters.
-       Example:
-           >>> request = InsightsQueryRequest(category="RISK", limit=3)
-           >>> response = await get_financial_insights(request)
-    2. **Natural Language Query (Conversational):**
-       Provide a `query` parameter and let the system extract filters.
-       Example:
-           >>> request = InsightsQueryRequest(query="What risks should I know about?")
-           >>> response = await get_financial_insights(request)
-    **How It Works:**
-    1. Parse query to extract category and time period (if using natural language)
-    2. Retrieve anomaly detection results (Story 4.5)
-    3. Retrieve trend analysis results (Story 4.6)
-    4. Generate insights from anomalies and trends (Story 4.7)
-    5. Generate strategic recommendations (Story 4.8)
-    6. Filter and rank results by priority/impact
-    7. Format for conversational display
+) -> tuple[str | None, str | None]:
+    """Parse query to extract category and time period filters.
+
     Args:
-        request: Insights query parameters containing:
-          - category: Optional filter by insight category
-          - time_period: Optional time period filter (last_quarter, ytd, etc.)
-          - limit: Max insights to return (default 5, max 20)
-          - include_recommendations: Include strategic recommendations (default True)
-          - query: Optional natural language query
+        request: Insights query request
+
     Returns:
-        InsightsQueryResponse containing:
-          - insights: Ranked list of Insight objects
-          - recommendations: List of Recommendation objects (if requested)
-          - formatted_summary: LLM-friendly summary text
-          - source_documents: Documents analyzed
-    Raises:
-        QueryError: If no documents available or insight generation fails
-    Example - Structured Query:
-        >>> request = InsightsQueryRequest(category="RISK", limit=5)
-        >>> response = await get_financial_insights(request)
-        >>> print(f"Found {len(response.insights)} risk insights")
-    Example - Natural Language Query:
-        >>> request = InsightsQueryRequest(query="What should I focus on?")
-        >>> response = await get_financial_insights(request)
-        >>> print(response.formatted_summary)
-        "🔴 Critical: Marketing spend increased 30% with no revenue increase..."
+        Tuple of (category_filter, time_period)
     """
-    start_time = time.perf_counter()
-    logger.info(
-        "Insights query received",
-        extra={
-            "category_filter": request.category,
-            "time_period": request.time_period,
-            "limit": request.limit,
-            "include_recommendations": request.include_recommendations,
-            "query": request.query,
-        },
-    )
     category_filter = request.category
     time_period = request.time_period
     if request.query and not category_filter:
@@ -100,105 +48,240 @@ async def get_financial_insights(
                 "parsed_period": time_period,
             },
         )
-    try:
-        from raglite.forecasting.timeseries import extract_timeseries
-        from raglite.insights.anomalies import detect_anomalies
-        from raglite.insights.proactive import filter_insights, generate_insights
-        from raglite.insights.recommendations import generate_recommendations
-        from raglite.insights.trends import analyze_trends
+    return category_filter, time_period
 
-        source_documents: list[str] = []
-        all_anomalies = []
-        all_trends = []
+
+async def _collect_anomalies_and_trends() -> tuple[list, list, list[str]]:
+    """Collect anomalies and trends from available time-series metrics.
+
+    Returns:
+        Tuple of (all_anomalies, all_trends, source_documents)
+    """
+    from raglite.forecasting.timeseries import extract_timeseries
+    from raglite.insights.anomalies import detect_anomalies
+    from raglite.insights.trends import analyze_trends
+
+    source_documents: list[str] = []
+    all_anomalies = []
+    all_trends = []
+
+    # Collect anomalies
+    for metric in ["revenue", "expenses", "cash_flow"]:
+        try:
+            ts_data = await extract_timeseries(docs=[], metric=metric)
+            if ts_data.points:
+                source_documents.extend(ts_data.source_documents)
+                anomaly_result = await detect_anomalies(metric, ts_data)
+                all_anomalies.extend(anomaly_result.anomalies)
+        except Exception as e:
+            logger.debug(
+                f"Skipping metric {metric} for anomaly detection",
+                extra={"error": str(e)},
+            )
+
+    # Collect trends
+    try:
+        ts_list = []
         for metric in ["revenue", "expenses", "cash_flow"]:
             try:
                 ts_data = await extract_timeseries(docs=[], metric=metric)
                 if ts_data.points:
-                    source_documents.extend(ts_data.source_documents)
-                    anomaly_result = await detect_anomalies(metric, ts_data)
-                    all_anomalies.extend(anomaly_result.anomalies)
-            except Exception as e:
-                logger.debug(
-                    f"Skipping metric {metric} for anomaly detection",
-                    extra={"error": str(e)},
-                )
+                    ts_list.append(ts_data)
+            except Exception:
+                continue
+        if ts_list:
+            ts_dict = {ts.metric_name: ts for ts in ts_list}
+            metrics_list = list(ts_dict.keys())
+            trend_result = await analyze_trends(metrics_list, ts_dict)
+            all_trends.extend(trend_result.trends)
+    except Exception as e:
+        logger.debug(
+            "Trend analysis skipped",
+            extra={"error": str(e)},
+        )
+
+    source_documents = list(set(source_documents))
+    return all_anomalies, all_trends, source_documents
+
+
+def _create_empty_response(
+    source_documents: list[str],
+    time_period: str | None,
+    generation_time_ms: float,
+) -> InsightsQueryResponse:
+    """Create response when no insights could be generated.
+
+    Args:
+        source_documents: List of source documents analyzed
+        time_period: Time period filter
+        generation_time_ms: Time taken to generate response
+
+    Returns:
+        InsightsQueryResponse with empty insights
+    """
+    return InsightsQueryResponse(
+        insights=[],
+        recommendations=[],
+        total_insights=0,
+        total_recommendations=0,
+        formatted_summary=(
+            "**No insights available.** Please ingest financial documents "
+            "containing time-series data (revenue, expenses, cash flow) to "
+            "enable proactive insight generation."
+        ),
+        time_period_analyzed=TIME_PERIOD_MAPPINGS.get(
+            time_period or "all_time", "All available data"
+        ),
+        generation_time_ms=generation_time_ms,
+        source_documents=source_documents,
+    )
+
+
+async def _generate_and_filter_insights(
+    all_anomalies: list,
+    all_trends: list,
+    category_filter: str | None,
+    limit: int,
+) -> tuple:
+    """Generate insights from anomalies/trends and apply filters.
+
+    Args:
+        all_anomalies: Detected anomalies
+        all_trends: Detected trends
+        category_filter: Optional category filter
+        limit: Max insights to return
+
+    Returns:
+        Tuple of (filtered_insights, insight_result)
+    """
+    from raglite.insights.proactive import filter_insights, generate_insights
+
+    insight_result = await generate_insights(
+        anomalies=all_anomalies,
+        trends=all_trends,
+        forecasts=[],
+        auto_synthesize=True,
+    )
+    filtered_insights = insight_result.insights
+
+    if category_filter:
         try:
-            ts_list = []
-            for metric in ["revenue", "expenses", "cash_flow"]:
-                try:
-                    ts_data = await extract_timeseries(docs=[], metric=metric)
-                    if ts_data.points:
-                        ts_list.append(ts_data)
-                except Exception:
-                    continue
-            if ts_list:
-                ts_dict = {ts.metric_name: ts for ts in ts_list}
-                metrics_list = list(ts_dict.keys())
-                trend_result = await analyze_trends(metrics_list, ts_dict)
-                all_trends.extend(trend_result.trends)
+            category_enum = InsightCategory(category_filter.lower())
+            filtered_insights = filter_insights(
+                filtered_insights,
+                category=category_enum,
+            )
+        except ValueError:
+            logger.warning(
+                f"Invalid category filter: {category_filter}",
+                extra={"valid_categories": list(SUPPORTED_INSIGHT_CATEGORIES)},
+            )
+
+    filtered_insights = filtered_insights[:limit]
+    return filtered_insights, insight_result
+
+
+async def _generate_recommendations_if_requested(
+    insights: list,
+    include_recommendations: bool,
+) -> tuple[list[Recommendation], int]:
+    """Generate recommendations for insights if requested.
+
+    Args:
+        insights: Filtered insights
+        include_recommendations: Whether to generate recommendations
+
+    Returns:
+        Tuple of (recommendations, total_recommendations)
+    """
+    from raglite.insights.recommendations import generate_recommendations
+
+    recommendations: list[Recommendation] = []
+    total_recommendations = 0
+
+    if include_recommendations and insights:
+        try:
+            rec_result = await generate_recommendations(
+                insights=insights,
+                auto_synthesize=True,
+            )
+            recommendations = rec_result.recommendations[:5]
+            total_recommendations = rec_result.total_generated
         except Exception as e:
-            logger.debug(
-                "Trend analysis skipped",
+            logger.warning(
+                "Recommendation generation failed",
                 extra={"error": str(e)},
             )
-        source_documents = list(set(source_documents))
+
+    return recommendations, total_recommendations
+
+
+@mcp.tool()
+async def get_financial_insights(
+    request: InsightsQueryRequest,
+) -> InsightsQueryResponse:
+    """Request proactive financial insights via MCP (Story 4.9).
+
+    Combines anomaly detection, trend analysis, and strategic recommendations.
+    Supports both structured queries (category/time_period filters) and
+    natural language queries.
+
+    Args:
+        request: Query parameters (category, time_period, limit, recommendations)
+
+    Returns:
+        InsightsQueryResponse with ranked insights, recommendations, and summary
+
+    Raises:
+        QueryError: If insight generation fails
+
+    Examples:
+        >>> await get_financial_insights(InsightsQueryRequest(category="RISK"))
+        >>> await get_financial_insights(InsightsQueryRequest(query="What risks?"))
+    """
+    start_time = time.perf_counter()
+    logger.info(
+        "Insights query received",
+        extra={
+            "category_filter": request.category,
+            "time_period": request.time_period,
+            "limit": request.limit,
+            "include_recommendations": request.include_recommendations,
+            "query": request.query,
+        },
+    )
+
+    try:
+        # Parse query filters
+        category_filter, time_period = await _parse_query_filters(request)
+
+        # Collect anomalies and trends
+        all_anomalies, all_trends, source_documents = await _collect_anomalies_and_trends()
+
+        # Check if we have any data
         if not all_anomalies and not all_trends:
             logger.info(
                 "No insights generated - insufficient data",
                 extra={"anomalies_count": 0, "trends_count": 0},
             )
             generation_time_ms = (time.perf_counter() - start_time) * 1000
-            return InsightsQueryResponse(
-                insights=[],
-                recommendations=[],
-                total_insights=0,
-                total_recommendations=0,
-                formatted_summary=(
-                    "**No insights available.** Please ingest financial documents "
-                    "containing time-series data (revenue, expenses, cash flow) to "
-                    "enable proactive insight generation."
-                ),
-                time_period_analyzed=TIME_PERIOD_MAPPINGS.get(
-                    time_period or "all_time", "All available data"
-                ),
-                generation_time_ms=generation_time_ms,
-                source_documents=source_documents,
-            )
-        insight_result = await generate_insights(
-            anomalies=all_anomalies,
-            trends=all_trends,
-            forecasts=[],
-            auto_synthesize=True,
+            return _create_empty_response(source_documents, time_period, generation_time_ms)
+
+        # Generate and filter insights
+        filtered_insights, insight_result = await _generate_and_filter_insights(
+            all_anomalies=all_anomalies,
+            all_trends=all_trends,
+            category_filter=category_filter,
+            limit=request.limit,
         )
-        filtered_insights = insight_result.insights
-        if category_filter:
-            try:
-                category_enum = InsightCategory(category_filter.lower())
-                filtered_insights = filter_insights(
-                    filtered_insights,
-                    category=category_enum,
-                )
-            except ValueError:
-                logger.warning(
-                    f"Invalid category filter: {category_filter}",
-                    extra={"valid_categories": list(SUPPORTED_INSIGHT_CATEGORIES)},
-                )
-        filtered_insights = filtered_insights[: request.limit]
-        recommendations: list[Recommendation] = []
-        total_recommendations = 0
-        if request.include_recommendations and filtered_insights:
-            try:
-                rec_result = await generate_recommendations(
-                    insights=filtered_insights,
-                    auto_synthesize=True,
-                )
-                recommendations = rec_result.recommendations[:5]
-                total_recommendations = rec_result.total_generated
-            except Exception as e:
-                logger.warning(
-                    "Recommendation generation failed",
-                    extra={"error": str(e)},
-                )
+
+        # Generate recommendations if requested
+        recommendations, total_recommendations = await _generate_recommendations_if_requested(
+            insights=filtered_insights,
+            include_recommendations=request.include_recommendations,
+        )
+
+        # Format and return response
         formatted_summary = format_insights_for_display(filtered_insights, recommendations)
         generation_time_ms = (time.perf_counter() - start_time) * 1000
         logger.info(
@@ -231,8 +314,8 @@ async def get_financial_insights(
         logger.error(
             "Insights query failed",
             extra={
-                "category_filter": category_filter,
-                "time_period": time_period,
+                "category_filter": request.category,
+                "time_period": request.time_period,
                 "error": str(e),
                 "error_type": type(e).__name__,
                 "generation_time_ms": f"{generation_time_ms:.2f}",

@@ -21,6 +21,162 @@ from .synthesis import synthesize_insight
 logger = get_logger(__name__)
 
 
+async def _process_anomaly(
+    anomaly: Anomaly,
+    auto_synthesize: bool,
+) -> Insight:
+    """Process a single anomaly into an insight.
+
+    Args:
+        anomaly: Anomaly data to process
+        auto_synthesize: If True, generate LLM summary
+
+    Returns:
+        Insight object with category, priority, and synthesized summary
+    """
+    category = categorize_insight(anomaly=anomaly)
+    priority = calculate_insight_priority(anomaly=anomaly)
+
+    if auto_synthesize:
+        summary, rationale, action = await synthesize_insight(anomaly=anomaly)
+    else:
+        summary = f"{anomaly.metric} shows {anomaly.severity.value} deviation"
+        rationale = ""
+        action = ""
+
+    insight = Insight(
+        category=category,
+        priority=priority,
+        summary=summary,
+        supporting_data={
+            "metric": anomaly.metric,
+            "value": anomaly.value,
+            "expected_value": anomaly.expected_value,
+            "z_score": anomaly.z_score,
+            "magnitude_pct": anomaly.magnitude_pct,
+            "severity": anomaly.severity.value,
+        },
+        rationale=rationale,
+        sources=[anomaly.metric],
+        recommended_action=action,
+        created_at=datetime.now(UTC),
+    )
+
+    logger.info(
+        "Insight generated from anomaly",
+        extra={
+            "category": category.value,
+            "priority": priority,
+            "metric": anomaly.metric,
+        },
+    )
+
+    return insight
+
+
+async def _process_trend(
+    trend: Trend,
+    auto_synthesize: bool,
+) -> Insight:
+    """Process a single trend into an insight.
+
+    Args:
+        trend: Trend data to process
+        auto_synthesize: If True, generate LLM summary
+
+    Returns:
+        Insight object with category, priority, and synthesized summary
+    """
+    category = categorize_insight(trend=trend)
+    priority = calculate_insight_priority(trend=trend)
+
+    if auto_synthesize:
+        summary, rationale, action = await synthesize_insight(trend=trend)
+    else:
+        summary = f"{trend.metric} shows {trend.direction.value} trend"
+        rationale = ""
+        action = ""
+
+    insight = Insight(
+        category=category,
+        priority=priority,
+        summary=summary,
+        supporting_data={
+            "metric": trend.metric,
+            "direction": trend.direction.value,
+            "magnitude": trend.magnitude,
+            "cagr": trend.cagr,
+            "qoq_growth": trend.qoq_growth,
+            "confidence": trend.confidence,
+        },
+        rationale=rationale,
+        sources=[trend.metric],
+        recommended_action=action,
+        created_at=datetime.now(UTC),
+    )
+
+    logger.info(
+        "Insight generated from trend",
+        extra={
+            "category": category.value,
+            "priority": priority,
+            "metric": trend.metric,
+        },
+    )
+
+    return insight
+
+
+async def _process_forecast(
+    forecast: ForecastResult,
+    auto_synthesize: bool,
+) -> Insight:
+    """Process a single forecast into an insight.
+
+    Args:
+        forecast: Forecast data to process
+        auto_synthesize: If True, generate LLM summary
+
+    Returns:
+        Insight object with category, priority, and synthesized summary
+    """
+    category = categorize_insight(forecast=forecast)
+    priority = calculate_insight_priority(forecast=forecast)
+
+    if auto_synthesize:
+        summary, rationale, action = await synthesize_insight(forecast=forecast)
+    else:
+        summary = f"{forecast.metric_name} forecast for {forecast.periods_ahead} periods"
+        rationale = ""
+        action = ""
+
+    insight = Insight(
+        category=category,
+        priority=priority,
+        summary=summary,
+        supporting_data={
+            "metric": forecast.metric_name,
+            "periods_ahead": forecast.periods_ahead,
+            "accuracy_estimate": forecast.accuracy_estimate,
+        },
+        rationale=rationale,
+        sources=[forecast.metric_name],
+        recommended_action=action,
+        created_at=datetime.now(UTC),
+    )
+
+    logger.info(
+        "Insight generated from forecast",
+        extra={
+            "category": category.value,
+            "priority": priority,
+            "metric": forecast.metric_name,
+        },
+    )
+
+    return insight
+
+
 async def generate_insights(
     anomalies: list[Anomaly],
     trends: list[Trend],
@@ -28,32 +184,25 @@ async def generate_insights(
     *,
     auto_synthesize: bool = True,
 ) -> InsightGenerationResult:
-    """Generate prioritized insights from anomalies, trends, and forecasts.
+    """Generate prioritized insights from anomalies, trends, and forecasts (Story 4.7).
 
-    Story 4.7 AC1-AC6: Proactive insight generation with LLM synthesis.
+    Processes each unique metric to create insights with LLM synthesis support.
 
     Args:
-        anomalies: List of detected anomalies from Story 4.5
-        trends: List of identified trends from Story 4.6
-        forecasts: List of forecast results from Story 4.2
-        auto_synthesize: If True, generate LLM summaries. Default True.
+        anomalies: Detected anomalies from Story 4.5
+        trends: Identified trends from Story 4.6
+        forecasts: Forecast results from Story 4.2
+        auto_synthesize: Generate LLM summaries (default True)
 
     Returns:
-        InsightGenerationResult containing:
-          - insights: List of Insight objects sorted by priority
-          - total_generated: Count before filtering
-          - generation_method: "LLM synthesis (Mistral Large)"
-          - metrics_analyzed: Number of unique metrics processed
+        InsightGenerationResult with insights sorted by priority
 
     Raises:
-        ValueError: If all inputs are empty (nothing to analyze)
+        ValueError: If all inputs are empty
 
     Example:
-        >>> from raglite.insights.anomalies import Anomaly
-        >>> anomalies = [Anomaly(metric="marketing_spend", severity="critical", ...)]
         >>> result = await generate_insights(anomalies, [], [])
-        >>> print(result.insights[0].category)
-        InsightCategory.RISK
+        >>> print(result.insights[0].category)  # InsightCategory.RISK
     """
     start_time = time.time()
 
@@ -80,43 +229,8 @@ async def generate_insights(
             continue
         seen_metrics.add(metric_key)
 
-        category = categorize_insight(anomaly=anomaly)
-        priority = calculate_insight_priority(anomaly=anomaly)
-
-        if auto_synthesize:
-            summary, rationale, action = await synthesize_insight(anomaly=anomaly)
-        else:
-            summary = f"{anomaly.metric} shows {anomaly.severity.value} deviation"
-            rationale = ""
-            action = ""
-
-        insight = Insight(
-            category=category,
-            priority=priority,
-            summary=summary,
-            supporting_data={
-                "metric": anomaly.metric,
-                "value": anomaly.value,
-                "expected_value": anomaly.expected_value,
-                "z_score": anomaly.z_score,
-                "magnitude_pct": anomaly.magnitude_pct,
-                "severity": anomaly.severity.value,
-            },
-            rationale=rationale,
-            sources=[anomaly.metric],
-            recommended_action=action,
-            created_at=datetime.now(UTC),
-        )
+        insight = await _process_anomaly(anomaly, auto_synthesize)
         insights.append(insight)
-
-        logger.info(
-            "Insight generated from anomaly",
-            extra={
-                "category": category.value,
-                "priority": priority,
-                "metric": anomaly.metric,
-            },
-        )
 
     # Process trends
     for trend in trends:
@@ -125,43 +239,8 @@ async def generate_insights(
             continue
         seen_metrics.add(metric_key)
 
-        category = categorize_insight(trend=trend)
-        priority = calculate_insight_priority(trend=trend)
-
-        if auto_synthesize:
-            summary, rationale, action = await synthesize_insight(trend=trend)
-        else:
-            summary = f"{trend.metric} shows {trend.direction.value} trend"
-            rationale = ""
-            action = ""
-
-        insight = Insight(
-            category=category,
-            priority=priority,
-            summary=summary,
-            supporting_data={
-                "metric": trend.metric,
-                "direction": trend.direction.value,
-                "magnitude": trend.magnitude,
-                "cagr": trend.cagr,
-                "qoq_growth": trend.qoq_growth,
-                "confidence": trend.confidence,
-            },
-            rationale=rationale,
-            sources=[trend.metric],
-            recommended_action=action,
-            created_at=datetime.now(UTC),
-        )
+        insight = await _process_trend(trend, auto_synthesize)
         insights.append(insight)
-
-        logger.info(
-            "Insight generated from trend",
-            extra={
-                "category": category.value,
-                "priority": priority,
-                "metric": trend.metric,
-            },
-        )
 
     # Process forecasts
     for forecast in forecasts:
@@ -170,40 +249,8 @@ async def generate_insights(
             continue
         seen_metrics.add(metric_key)
 
-        category = categorize_insight(forecast=forecast)
-        priority = calculate_insight_priority(forecast=forecast)
-
-        if auto_synthesize:
-            summary, rationale, action = await synthesize_insight(forecast=forecast)
-        else:
-            summary = f"{forecast.metric_name} forecast for {forecast.periods_ahead} periods"
-            rationale = ""
-            action = ""
-
-        insight = Insight(
-            category=category,
-            priority=priority,
-            summary=summary,
-            supporting_data={
-                "metric": forecast.metric_name,
-                "periods_ahead": forecast.periods_ahead,
-                "accuracy_estimate": forecast.accuracy_estimate,
-            },
-            rationale=rationale,
-            sources=[forecast.metric_name],
-            recommended_action=action,
-            created_at=datetime.now(UTC),
-        )
+        insight = await _process_forecast(forecast, auto_synthesize)
         insights.append(insight)
-
-        logger.info(
-            "Insight generated from forecast",
-            extra={
-                "category": category.value,
-                "priority": priority,
-                "metric": forecast.metric_name,
-            },
-        )
 
     # Sort by priority (1=critical first)
     insights.sort(key=lambda x: x.priority)
