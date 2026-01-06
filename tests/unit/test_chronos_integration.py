@@ -106,9 +106,17 @@ async def test_cold_start_detection_with_insufficient_data() -> None:
     ]
     data = TimeSeriesData(metric_name="test_metric", points=points, interval="monthly")
 
-    with patch(
-        "raglite.forecasting.hybrid.ensemble.generate_chronos_cold_start_forecast"
-    ) as mock_cold_start:
+    with (
+        patch(
+            "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+        ) as mock_fetch,
+        patch(
+            "raglite.forecasting.hybrid.ensemble.generate_chronos_cold_start_forecast"
+        ) as mock_cold_start,
+    ):
+        # Mock fetch_historical_metric to return test data
+        mock_fetch.return_value = data
+
         # Mock return value
         from raglite.shared.models import ForecastResult
 
@@ -119,14 +127,14 @@ async def test_cold_start_detection_with_insufficient_data() -> None:
             confidence_reasoning="Cold-start test",
         )
 
-        # Pass historical_data directly to bypass data fetching
+        # Call without historical_data parameter - fetch_historical_metric will provide it
         result = await generate_forecast(
             metric="test_metric",
-            historical_data=data,  # Provide data directly
             periods_ahead=3,
         )
 
         # Verify cold-start path was triggered
+        mock_fetch.assert_called_once_with("test_metric")
         mock_cold_start.assert_called_once()
         assert result.model_type == "chronos-2-zero-shot"
 

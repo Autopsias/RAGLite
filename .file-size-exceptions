@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-06T16:58:16.970912",
+  "baseline_date": "2026-01-06T19:37:28.447538",
   "description": "Grandfathered file size violations - reduce gradually",
   "thresholds": {
     "warning": 400,
@@ -37,12 +37,6 @@
       "target_lines": 500,
       "directory": "tests/"
     },
-    "tests/health/test_external_data_health.py": {
-      "lines": 587,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
     "tests/uat/test_epic_1_validation.py": {
       "lines": 557,
       "reason": "Baseline: existing at time of enforcement",
@@ -67,14 +61,8 @@
       "target_lines": 500,
       "directory": "tests/"
     },
-    "tests/unit/test_hybrid_forecasting.py": {
-      "lines": 524,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
     "tests/unit/test_model_selection_cache_mcp.py": {
-      "lines": 520,
+      "lines": 529,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
       "directory": "tests/"

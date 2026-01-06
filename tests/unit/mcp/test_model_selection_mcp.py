@@ -6,6 +6,7 @@ including cache hits, cache misses, regressor filtering, and fallback behavior.
 NOTE: All dependencies are mocked - no database required.
 """
 
+from collections.abc import Generator
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
@@ -23,7 +24,7 @@ from raglite.shared.models import (
 )
 
 # Unit tests - all external dependencies are mocked
-pytestmark = []
+pytestmark: list[object] = []
 
 # =============================================================================
 # Fixtures
@@ -31,7 +32,7 @@ pytestmark = []
 
 
 @pytest.fixture(autouse=True)
-def mock_regressor_fetch():
+def mock_regressor_fetch() -> Generator[None, None, None]:
     """Auto-mock regressor fetch to prevent real API calls in unit tests."""
     with patch(
         "raglite.forecasting.regressor_fetch.fetch_regressors_for_metric",
@@ -42,7 +43,7 @@ def mock_regressor_fetch():
 
 
 @pytest.fixture
-def sample_historical_data():
+def sample_historical_data() -> TimeSeriesData:
     """Create sample time series data for testing."""
     points = [
         TimeSeriesPoint(date=datetime(2024, 1, 1), value=100.0),
@@ -62,7 +63,7 @@ def sample_historical_data():
 
 
 @pytest.fixture
-def sample_forecast_result():
+def sample_forecast_result() -> ForecastResult:
     """Create sample forecast result for mocking."""
     return ForecastResult(
         metric_name="test_metric",
@@ -81,7 +82,7 @@ def sample_forecast_result():
 
 
 @pytest.fixture
-def cached_selection_with_regressors():
+def cached_selection_with_regressors() -> CachedModelSelection:
     """Create cached model selection with regressors."""
     return CachedModelSelection(
         variable_name="revenue",
@@ -98,7 +99,7 @@ def cached_selection_with_regressors():
 
 
 @pytest.fixture
-def cached_selection_without_regressors():
+def cached_selection_without_regressors() -> CachedModelSelection:
     """Create cached model selection without regressors."""
     return CachedModelSelection(
         variable_name="sales_volume",
@@ -115,7 +116,7 @@ def cached_selection_without_regressors():
 
 
 @pytest.fixture
-def expired_cached_selection():
+def expired_cached_selection() -> CachedModelSelection:
     """Create expired cached model selection."""
     return CachedModelSelection(
         variable_name="revenue",
@@ -139,11 +140,15 @@ def expired_cached_selection():
 class TestCachedModelSelection:
     """Tests for CachedModelSelection dataclass."""
 
-    def test_is_expired_returns_false_for_valid(self, cached_selection_with_regressors):
+    def test_is_expired_returns_false_for_valid(
+        self, cached_selection_with_regressors: CachedModelSelection
+    ) -> None:
         """Non-expired selection returns is_expired=False."""
         assert not cached_selection_with_regressors.is_expired
 
-    def test_is_expired_returns_true_for_expired(self, expired_cached_selection):
+    def test_is_expired_returns_true_for_expired(
+        self, expired_cached_selection: CachedModelSelection
+    ) -> None:
         """Expired selection returns is_expired=True."""
         assert expired_cached_selection.is_expired
 
@@ -159,16 +164,16 @@ class TestModelSelectionCacheIntegration:
     @pytest.mark.asyncio
     async def test_cache_hit_uses_cached_model(
         self,
-        sample_historical_data,
-        sample_forecast_result,
-        cached_selection_without_regressors,
-    ):
+        sample_historical_data: TimeSeriesData,
+        sample_forecast_result: ForecastResult,
+        cached_selection_without_regressors: CachedModelSelection,
+    ) -> None:
         """When cache hit, should use cached model instead of default."""
         from raglite.main import get_financial_forecast
 
         with (
             patch(
-                "raglite.forecasting.model_selection.get_cached_model_selection",
+                "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
             ) as mock_cache,
             patch.object(
                 forecast_helpers_module,
@@ -209,15 +214,15 @@ class TestModelSelectionCacheIntegration:
     @pytest.mark.asyncio
     async def test_cache_miss_falls_back_to_select_model_type(
         self,
-        sample_historical_data,
-        sample_forecast_result,
-    ):
+        sample_historical_data: TimeSeriesData,
+        sample_forecast_result: ForecastResult,
+    ) -> None:
         """When cache miss, should fall back to select_model_type()."""
         from raglite.main import get_financial_forecast
 
         with (
             patch(
-                "raglite.forecasting.model_selection.get_cached_model_selection",
+                "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
             ) as mock_cache,
             patch.object(
                 forecast_helpers_module,
@@ -230,7 +235,7 @@ class TestModelSelectionCacheIntegration:
                 new_callable=AsyncMock,
             ) as mock_extract_timeseries,
             patch(
-                "raglite.forecasting.model_selection.select_model_type",
+                "raglite.mcp.tools.forecast_helpers.select_model_type",
             ) as mock_select,
             patch.object(
                 forecast_helpers_module,
@@ -260,16 +265,16 @@ class TestModelSelectionCacheIntegration:
     @pytest.mark.asyncio
     async def test_expired_cache_treated_as_miss(
         self,
-        sample_historical_data,
-        sample_forecast_result,
-        expired_cached_selection,
-    ):
+        sample_historical_data: TimeSeriesData,
+        sample_forecast_result: ForecastResult,
+        expired_cached_selection: CachedModelSelection,
+    ) -> None:
         """Expired cache entries should trigger fallback."""
         from raglite.main import get_financial_forecast
 
         with (
             patch(
-                "raglite.forecasting.model_selection.get_cached_model_selection",
+                "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
             ) as mock_cache,
             patch.object(
                 forecast_helpers_module,
@@ -282,7 +287,7 @@ class TestModelSelectionCacheIntegration:
                 new_callable=AsyncMock,
             ) as mock_extract_timeseries,
             patch(
-                "raglite.forecasting.model_selection.select_model_type",
+                "raglite.mcp.tools.forecast_helpers.select_model_type",
             ) as mock_select,
             patch.object(
                 forecast_helpers_module,
@@ -306,10 +311,10 @@ class TestModelSelectionCacheIntegration:
     @pytest.mark.asyncio
     async def test_regressors_filtered_to_cached_list(
         self,
-        sample_historical_data,
-        sample_forecast_result,
-        cached_selection_with_regressors,
-    ):
+        sample_historical_data: TimeSeriesData,
+        sample_forecast_result: ForecastResult,
+        cached_selection_with_regressors: CachedModelSelection,
+    ) -> None:
         """Only regressors in cached.regressor_list should be passed."""
         from raglite.forecasting import regressor_fetch as regressor_fetch_module
         from raglite.main import get_financial_forecast
@@ -323,7 +328,7 @@ class TestModelSelectionCacheIntegration:
 
         with (
             patch(
-                "raglite.forecasting.model_selection.get_cached_model_selection",
+                "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
             ) as mock_cache,
             patch.object(
                 forecast_helpers_module,
@@ -374,15 +379,15 @@ class TestModelSelectionCacheIntegration:
     @pytest.mark.asyncio
     async def test_cache_error_gracefully_falls_back(
         self,
-        sample_historical_data,
-        sample_forecast_result,
-    ):
+        sample_historical_data: TimeSeriesData,
+        sample_forecast_result: ForecastResult,
+    ) -> None:
         """Cache lookup errors should not break forecasting."""
         from raglite.main import get_financial_forecast
 
         with (
             patch(
-                "raglite.forecasting.model_selection.get_cached_model_selection",
+                "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
             ) as mock_cache,
             patch.object(
                 forecast_helpers_module,
@@ -395,7 +400,7 @@ class TestModelSelectionCacheIntegration:
                 new_callable=AsyncMock,
             ) as mock_extract_timeseries,
             patch(
-                "raglite.forecasting.model_selection.select_model_type",
+                "raglite.mcp.tools.forecast_helpers.select_model_type",
             ) as mock_select,
             patch.object(
                 forecast_helpers_module,
@@ -420,15 +425,15 @@ class TestModelSelectionCacheIntegration:
     @pytest.mark.asyncio
     async def test_explicit_model_type_bypasses_cache(
         self,
-        sample_historical_data,
-        sample_forecast_result,
-    ):
+        sample_historical_data: TimeSeriesData,
+        sample_forecast_result: ForecastResult,
+    ) -> None:
         """Explicit model_type should bypass cache lookup."""
         from raglite.main import get_financial_forecast
 
         with (
             patch(
-                "raglite.forecasting.model_selection.get_cached_model_selection",
+                "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
             ) as mock_cache,
             patch.object(
                 forecast_helpers_module,
@@ -480,9 +485,9 @@ class TestModelRouters:
     @pytest.mark.asyncio
     async def test_prophet_router_delegates_to_generate_forecast(
         self,
-        sample_historical_data,
-        sample_forecast_result,
-    ):
+        sample_historical_data: TimeSeriesData,
+        sample_forecast_result: ForecastResult,
+    ) -> None:
         """Prophet router should delegate to generate_forecast."""
         from raglite.forecasting.hybrid import _generate_prophet_forecast
 
@@ -511,9 +516,9 @@ class TestModelRouters:
     @pytest.mark.asyncio
     async def test_chronos_router_delegates_to_cold_start(
         self,
-        sample_historical_data,
-        sample_forecast_result,
-    ):
+        sample_historical_data: TimeSeriesData,
+        sample_forecast_result: ForecastResult,
+    ) -> None:
         """Chronos router should delegate to generate_chronos_cold_start_forecast."""
         from raglite.forecasting.hybrid import _generate_chronos_forecast
 

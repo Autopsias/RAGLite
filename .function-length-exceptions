@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-06T16:58:17.981035",
+  "baseline_date": "2026-01-06T19:37:30.229300",
   "description": "Grandfathered function length violations - refactor gradually",
   "thresholds": {
     "warning": 50,
@@ -79,11 +79,11 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/ingestion/embedding_generation/metadata.py:28:extract_chunk_metadata": {
+    "raglite/ingestion/embedding_generation/metadata.py:30:extract_chunk_metadata": {
       "length": 214,
       "function": "extract_chunk_metadata",
       "file": "raglite/ingestion/embedding_generation/metadata.py",
-      "line": 28,
+      "line": 30,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"

@@ -38,6 +38,11 @@ class TestAC825HealthCheckInfrastructure:
         """[TEST-AC-8.2.5-B] Health test file should have test classes.
 
         Expected classes: TestINEHealth, TestOMIEHealth, TestBPstatHealth, etc.
+
+        Note: After Epic 8 refactoring, test_external_data_health.py is a facade that
+        imports classes from external_data/ package. This test checks for both patterns:
+        1. Direct class definitions (old pattern)
+        2. Import statements from external_data (new facade pattern)
         """
         health_file = TESTS_ROOT / "health" / "test_external_data_health.py"
         if not health_file.exists():
@@ -48,11 +53,23 @@ class TestAC825HealthCheckInfrastructure:
         content = health_file.read_text()
         tree = ast.parse(content)
 
-        test_classes = [
+        # Check for imported test classes (facade pattern)
+        imported_classes = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                if node.module and "external_data" in node.module:
+                    for alias in node.names:
+                        imported_classes.append(alias.name)
+
+        # Check for direct class definitions (old pattern)
+        defined_classes = [
             node.name
             for node in ast.walk(tree)
             if isinstance(node, ast.ClassDef) and node.name.startswith("Test")
         ]
+
+        # Combine both sources
+        test_classes = list(set(imported_classes + defined_classes))
 
         expected_classes = [
             "TestINEHealth",
