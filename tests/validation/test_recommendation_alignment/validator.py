@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, patch
 from raglite.insights.recommendations import generate_recommendations
 from raglite.shared.models import Recommendation
 
-from .fixtures import RecommendationTestScenario, RecommendationValidationResult
+from .models import RecommendationTestScenario, RecommendationValidationResult
 
 
 class RecommendationAlignmentValidator:

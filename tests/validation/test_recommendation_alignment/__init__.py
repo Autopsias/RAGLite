@@ -8,11 +8,11 @@ from the original test_recommendation_alignment.py module.
 """
 
 # Re-export all public API for backward compatibility
-from .fixtures import (
-    RECOMMENDATION_TEST_SCENARIOS,
+from .models import (
     RecommendationTestScenario,
     RecommendationValidationResult,
 )
+from .scenarios import RECOMMENDATION_TEST_SCENARIOS
 from .validator import RecommendationAlignmentValidator
 
 __all__ = [
