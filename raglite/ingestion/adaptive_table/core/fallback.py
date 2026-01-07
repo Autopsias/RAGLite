@@ -83,7 +83,8 @@ def extract_fallback(
     caption_period = None
     caption_year = None
     if caption:
-        caption_year = extract_year(caption)
+        year = extract_year(caption)
+        caption_year = str(year) if year is not None else None
         if caption_year or any(
             kw in caption.lower() for kw in ["ytd", "q1", "q2", "q3", "q4", "budget", "forecast"]
         ):
@@ -92,7 +93,8 @@ def extract_fallback(
     # Also try to extract period from section heading
     if not caption_period and page_context.get("section_heading"):
         section_heading = page_context["section_heading"]
-        section_year = extract_year(section_heading)
+        year = extract_year(section_heading)
+        section_year = str(year) if year is not None else None
         if section_year or any(
             kw in section_heading.lower()
             for kw in ["ytd", "q1", "q2", "q3", "q4", "budget", "forecast"]
@@ -157,90 +159,11 @@ def extract_fallback(
         row_header = row_header_map.get(row_idx)
 
         # PHASE 2: Apply orientation-specific field assignment
-        entity = None
-        metric = None
-        period = None
-        fiscal_year = None
-        confidence = "medium"
+        from .field_assignment import _assign_fields_by_orientation
 
-        if orientation == "temporal_rows_entity_cols":
-            # Dates in rows, entities in columns
-            period = row_header
-            entity = col_header
-            metric = None  # May be inferred from caption
-            fiscal_year = extract_year(row_header) if row_header else None
-            confidence = "high"
-
-        elif orientation == "metric_rows_temporal_cols":
-            # Metrics in rows, periods in columns
-            metric = row_header
-            period = col_header
-            entity = None  # May be inferred from caption
-            fiscal_year = extract_year(col_header) if col_header else None
-            confidence = "high"
-
-        elif orientation == "metric_rows_entity_cols":
-            # Metrics in rows, entities in columns
-            metric = row_header
-            entity = col_header
-            period = caption_period  # From caption
-            fiscal_year = caption_year
-            confidence = "high"
-
-        elif orientation == "entity_rows_metric_cols":
-            # Entities in rows, metrics in columns
-            entity = row_header
-            metric = col_header
-            period = caption_period  # From caption
-            fiscal_year = caption_year
-            confidence = "high"
-
-        elif orientation == "entity_rows_temporal_cols":
-            # Entities in rows, periods in columns
-            entity = row_header
-            period = col_header
-            metric = None  # May be inferred from caption
-            fiscal_year = extract_year(col_header) if col_header else None
-            confidence = "high"
-
-        elif orientation == "temporal_rows_temporal_cols":
-            # Both temporal - row as period, column as comparison
-            period = row_header
-            # Column might be "YTD", "LY", etc. - treat as part of period
-            if col_header:
-                period = f"{row_header} {col_header}" if row_header else col_header
-            metric = None
-            entity = None
-            fiscal_year = extract_year(row_header) if row_header else None
-            confidence = "medium"
-
-        else:
-            # Unknown orientation - fallback to classification-based assignment
-            col_type = classify_header(col_header) if col_header else HeaderType.UNKNOWN
-            row_type = classify_header(row_header) if row_header else HeaderType.UNKNOWN
-
-            if col_type == HeaderType.ENTITY:
-                entity = col_header
-            elif col_type == HeaderType.METRIC:
-                metric = col_header
-            elif col_type == HeaderType.TEMPORAL:
-                period = col_header
-                fiscal_year = extract_year(col_header) if col_header else None
-
-            if row_type == HeaderType.ENTITY and not entity:
-                entity = row_header
-            elif row_type == HeaderType.METRIC and not metric:
-                metric = row_header
-            elif row_type == HeaderType.TEMPORAL and not period:
-                period = row_header
-                fiscal_year = extract_year(row_header) if row_header else None
-
-            # Last resort: use caption
-            if not period and caption_period:
-                period = caption_period
-                fiscal_year = caption_year
-
-            confidence = "low"
+        entity, metric, period, fiscal_year, confidence = _assign_fields_by_orientation(
+            orientation, col_header, row_header, caption_period, caption_year
+        )
 
         # SAFETY NET: Validate entity before context inference (June 2025 fix)
         # If entity is invalid (e.g., "Currency (1000 EUR)"), clear it so

@@ -2,16 +2,16 @@
   "schema_version": "2.0",
   "session_id": "1736162400",
   "created_at": "2025-01-06T00:00:00Z",
-  "updated_at": "2026-01-07T16:31:16.951003Z",
+  "updated_at": "2026-01-07T22:30:00.000000Z",
   "project_path": "/Users/ricardocarvalho/DeveloperFolder/RAGLite",
   "analysis": {
-    "total_violations": 4,
+    "total_violations": 0,
     "file_size_violations": 0,
-    "function_length_violations": 4
+    "function_length_violations": 0
   },
   "execution_plan": {
-    "total_batches": 2,
-    "current_batch": 8,
+    "total_batches": 3,
+    "current_batch": 3,
     "batches": [
       {
         "batch_number": 1,
@@ -37,6 +37,17 @@
         "status": "completed",
         "completed_at": "2025-01-06T00:18:00Z",
         "reason": "same module with potential cross-dependencies"
+      },
+      {
+        "batch_number": 3,
+        "cluster_id": "single_file_cluster",
+        "files": [
+          "raglite/ingestion/adaptive_table/core/fallback.py"
+        ],
+        "mode": "serial",
+        "status": "completed",
+        "completed_at": "2026-01-07T22:30:00Z",
+        "reason": "final file size violation"
       }
     ]
   },
@@ -70,8 +81,19 @@
         "tests/integration/fixtures/session_fixtures.py"
       ],
       "mode": "parallel",
-      "shared_hosts": [],
+      "shared_tests": [],
       "priority_score": 5
+    },
+    {
+      "id": "single_file_cluster",
+      "files": [
+        "raglite/ingestion/adaptive_table/core/fallback.py"
+      ],
+      "mode": "serial",
+      "shared_tests": [
+        "tests/unit/ingestion/adaptive_table/core/"
+      ],
+      "priority_score": 15
     }
   ],
   "file_status": {
@@ -165,6 +187,18 @@
         "original_loc": 145,
         "new_loc": 55,
         "batch": 7
+      },
+      {
+        "file": "raglite/ingestion/document_ingestion/excel_processing.py",
+        "original_loc": 233,
+        "new_loc": 86,
+        "batch": 1
+      },
+      {
+        "file": "raglite/ingestion/adaptive_table/core/fallback.py",
+        "original_loc": 644,
+        "new_loc": 263,
+        "batch": 3
       }
     ],
     "pending": [],
