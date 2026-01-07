@@ -1,23 +1,10 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-06T23:18:03.083596",
+  "baseline_date": "2026-01-07T20:31:10.479825",
   "description": "Grandfathered file size violations - reduce gradually",
   "thresholds": {
     "warning": 400,
     "hard_limit": 500
   },
-  "exceptions": {
-    "raglite/agentic/agents/analysis_agent.py": {
-      "lines": 530,
-      "reason": "Successfully reduced analysis_agent() from 173 LOC to <100 LOC by extracting helper functions. File LOC increased by ~10% due to helper extraction, but all functions now meet <100 LOC quality gate.",
-      "target_lines": 450,
-      "directory": "raglite/agentic/agents/"
-    },
-    "raglite/agentic/agents/synthesis_agent.py": {
-      "lines": 542,
-      "reason": "Successfully reduced synthesis_agent() from 186 LOC to <100 LOC by extracting helper functions. File LOC increased by ~8% due to helper extraction, but all functions now meet <100 LOC quality gate.",
-      "target_lines": 450,
-      "directory": "raglite/agentic/agents/"
-    }
-  }
+  "exceptions": {}
 }

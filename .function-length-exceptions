@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-07T16:55:45.056717",
+  "baseline_date": "2026-01-07T20:51:09.590571",
   "description": "Grandfathered function length violations - refactor gradually",
   "thresholds": {
     "warning": 50,
@@ -696,15 +696,6 @@
       "function": "fit_catboost",
       "file": "raglite/forecasting/hybrid/ml_models.py",
       "line": 305,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/agentic/agents/synthesis_agent.py:180:_synthesize_with_openai": {
-      "length": 105,
-      "function": "_synthesize_with_openai",
-      "file": "raglite/agentic/agents/synthesis_agent.py",
-      "line": 180,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
