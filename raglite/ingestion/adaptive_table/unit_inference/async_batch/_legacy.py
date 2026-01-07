@@ -90,19 +90,15 @@ async def _call_mistral_api_async(
     return validate_single_inference_response(response_content)
 
 
-async def _infer_unit_from_context_async(
+def _build_unit_inference_prompts(
     metric: str,
     entity: str | None,
     table_caption: str | None,
     section_heading: str | None,
     page_title: str | None,
     nearby_text: list[str] | None,
-    client: Any,  # Mistral client for connection pooling
-) -> str | None:
-    """Async version of _infer_unit_from_context with rate limiting and timeout.
-
-    Uses asyncio semaphore to limit concurrent API calls to 10, preventing rate limit errors
-    while achieving 10x speedup through parallelization.
+) -> tuple[str, str] | None:
+    """Build system and user prompts for unit inference.
 
     Args:
         metric: Metric name (e.g., "EBITDA IFRS", "Variable Cost")
@@ -111,25 +107,14 @@ async def _infer_unit_from_context_async(
         section_heading: Section header above table
         page_title: Page title or largest text on page
         nearby_text: List of text elements near table
-        client: Shared Mistral client for connection pooling
 
     Returns:
-        Inferred unit string (e.g., "EUR million", "Eur/ton"), or None if inference fails
-
-    Performance:
-        - Concurrent execution with semaphore rate limiting
-        - 5-second timeout per call to prevent hangs
-        - Connection pooling via shared client
-        - Expected: 62 min → 6 min (10x speedup for 942 rows)
+        Tuple of (system_prompt, user_prompt) or None if API key not configured
     """
     from raglite.shared.config import settings
 
     # Check if Mistral API key is configured
     if not settings.mistral_api_key:
-        logger.debug(
-            "Mistral API key not configured - skipping unit inference",
-            extra={"metric": metric},
-        )
         return None
 
     # Build context and metric strings
@@ -140,7 +125,28 @@ async def _infer_unit_from_context_async(
     system_prompt = get_single_inference_system_prompt()
     user_prompt = build_user_prompt(context_str, metric_str)
 
-    # Acquire semaphore for rate limiting + apply timeout
+    return system_prompt, user_prompt
+
+
+async def _execute_single_inference_with_timeout(
+    system_prompt: str,
+    user_prompt: str,
+    metric: str,
+    entity: str | None,
+    client: Any,
+) -> str | None:
+    """Execute single unit inference with timeout and error handling.
+
+    Args:
+        system_prompt: System prompt for Mistral
+        user_prompt: User prompt for Mistral
+        metric: Metric name (for logging)
+        entity: Entity name (for logging)
+        client: Shared Mistral client
+
+    Returns:
+        Inferred unit string or None if inference fails
+    """
     async with MISTRAL_SEMAPHORE:
         try:
             async with asyncio.timeout(5.0):  # 5-second timeout per call
@@ -177,6 +183,58 @@ async def _infer_unit_from_context_async(
                 extra={"metric": metric, "entity": entity, "error": str(e)},
             )
             return None
+
+
+async def _infer_unit_from_context_async(
+    metric: str,
+    entity: str | None,
+    table_caption: str | None,
+    section_heading: str | None,
+    page_title: str | None,
+    nearby_text: list[str] | None,
+    client: Any,  # Mistral client for connection pooling
+) -> str | None:
+    """Async version of _infer_unit_from_context with rate limiting and timeout.
+
+    Uses asyncio semaphore to limit concurrent API calls to 10, preventing rate limit errors
+    while achieving 10x speedup through parallelization.
+
+    Args:
+        metric: Metric name (e.g., "EBITDA IFRS", "Variable Cost")
+        entity: Entity name if available (e.g., "GROUP", "Portugal")
+        table_caption: Table caption/title from Docling
+        section_heading: Section header above table
+        page_title: Page title or largest text on page
+        nearby_text: List of text elements near table
+        client: Shared Mistral client for connection pooling
+
+    Returns:
+        Inferred unit string (e.g., "EUR million", "Eur/ton"), or None if inference fails
+
+    Performance:
+        - Concurrent execution with semaphore rate limiting
+        - 5-second timeout per call to prevent hangs
+        - Connection pooling via shared client
+        - Expected: 62 min → 6 min (10x speedup for 942 rows)
+    """
+    # Build prompts
+    prompts = _build_unit_inference_prompts(
+        metric, entity, table_caption, section_heading, page_title, nearby_text
+    )
+
+    if not prompts:
+        logger.debug(
+            "Mistral API key not configured - skipping unit inference",
+            extra={"metric": metric},
+        )
+        return None
+
+    system_prompt, user_prompt = prompts
+
+    # Execute inference with timeout and error handling
+    return await _execute_single_inference_with_timeout(
+        system_prompt, user_prompt, metric, entity, client
+    )
 
 
 async def _infer_units_batch_async(
@@ -263,6 +321,54 @@ async def _infer_units_batch_async(
             return [(idx, row, None) for idx, row in rows_batch]
 
 
+def _extract_table_context(
+    table_item: TableItem,
+    result: ConversionResult,
+) -> tuple[str | None, str | None, list[str], str | None]:
+    """Extract context from table_item and ConversionResult.
+
+    Args:
+        table_item: Docling TableItem (for context extraction)
+        result: Docling ConversionResult (for document-level context)
+
+    Returns:
+        Tuple of (table_caption, section_heading, nearby_text, page_title)
+    """
+    # Extract document context
+    page_context = extract_page_context(table_item, result)
+    section_heading = page_context.get("section_heading")
+    nearby_text = page_context.get("nearby_text", [])
+    page_title = page_context.get("page_title")
+
+    # Get table caption from Docling
+    table_caption = get_table_caption(table_item)
+
+    return table_caption, section_heading, nearby_text, page_title
+
+
+def _initialize_inference_client_and_cache(
+    unit_cache: dict[str, str] | None,
+) -> tuple[Any, dict[str, str]]:
+    """Initialize Mistral client and cache for inference.
+
+    Args:
+        unit_cache: Optional shared cache for cross-document unit inference
+
+    Returns:
+        Tuple of (client, cache)
+    """
+    # Create shared Mistral client for connection pooling
+    from raglite.shared.clients import get_mistral_client
+
+    client = get_mistral_client()
+
+    # AC3: Use provided cache or create local one (backward compatible)
+    if unit_cache is None:
+        unit_cache = {}
+
+    return client, unit_cache
+
+
 async def _apply_context_aware_unit_inference_async(
     rows: list[dict[str, Any]],
     table_item: TableItem,
@@ -319,23 +425,13 @@ async def _apply_context_aware_unit_inference_async(
         logger.debug("Mistral API key not configured - skipping async unit inference")
         return rows
 
-    # Extract document context
-    page_context = extract_page_context(table_item, result)
-    section_heading = page_context.get("section_heading")
-    nearby_text = page_context.get("nearby_text", [])
-    page_title = page_context.get("page_title")
+    # Extract table context
+    table_caption, section_heading, nearby_text, page_title = _extract_table_context(
+        table_item, result
+    )
 
-    # Get table caption from Docling
-    table_caption = get_table_caption(table_item)
-
-    # Create shared Mistral client for connection pooling with timeout configuration
-    from raglite.shared.clients import get_mistral_client
-
-    client = get_mistral_client()
-
-    # AC3: Use provided cache or create local one (backward compatible)
-    if unit_cache is None:
-        unit_cache = {}
+    # Initialize client and cache
+    client, unit_cache = _initialize_inference_client_and_cache(unit_cache)
 
     # First pass: Try rule-based inference, check cache, build list for LLM inference
     rows_needing_inference, cache_hit_count, rule_inferred_count = _prepare_rows_for_inference(

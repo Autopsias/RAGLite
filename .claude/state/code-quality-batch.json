@@ -2,7 +2,7 @@
   "schema_version": "2.0",
   "session_id": "1736162400",
   "created_at": "2025-01-06T00:00:00Z",
-  "updated_at": "2025-01-06T00:18:00Z",
+  "updated_at": "2026-01-07T16:31:16.951003Z",
   "project_path": "/Users/ricardocarvalho/DeveloperFolder/RAGLite",
   "analysis": {
     "total_violations": 4,
@@ -11,7 +11,7 @@
   },
   "execution_plan": {
     "total_batches": 2,
-    "current_batch": 2,
+    "current_batch": 8,
     "batches": [
       {
         "batch_number": 1,
@@ -53,7 +53,9 @@
     },
     {
       "id": "cluster_b",
-      "files": ["raglite/ingestion/document_ingestion/pdf_utils.py"],
+      "files": [
+        "raglite/ingestion/document_ingestion/pdf_utils.py"
+      ],
       "mode": "parallel",
       "shared_tests": [
         "tests/unit/ingestion/document_ingestion/test_pdf_processing_edge_cases.py",
@@ -103,6 +105,66 @@
         "original_loc": 149,
         "new_loc": 94,
         "batch": 2
+      },
+      {
+        "file": "raglite/structured/table_retrieval.py",
+        "functions": [
+          {
+            "function": "search_tables_with_metadata_filter",
+            "original_loc": 152,
+            "new_loc": 58
+          },
+          {
+            "function": "search_tables",
+            "original_loc": 142,
+            "new_loc": 68
+          }
+        ],
+        "batch": 7
+      },
+      {
+        "file": "raglite/retrieval/sql_table_search.py",
+        "original_function": "search_tables_sql",
+        "original_loc": 149,
+        "new_loc": 86,
+        "batch": 7
+      },
+      {
+        "file": "raglite/ingestion/adaptive_table/unit_inference/async_batch.py",
+        "functions": [
+          {
+            "function": "_apply_context_aware_unit_inference_async",
+            "original_loc": 194,
+            "new_loc": 87
+          },
+          {
+            "function": "_infer_unit_from_context_async",
+            "original_loc": 109,
+            "new_loc": 50
+          }
+        ],
+        "batch": 7
+      },
+      {
+        "file": "raglite/ingestion/adaptive_table/unit_inference/llm_inference.py",
+        "original_function": "_infer_unit_from_context",
+        "original_loc": 151,
+        "new_loc": 69,
+        "batch": 7
+      },
+      {
+        "file": "raglite/ingestion/adaptive_table/multi_header.py",
+        "original_function": "_extract_multi_header_metric_entity",
+        "original_loc": 146,
+        "new_loc": 79,
+        "batch": 7
+      },
+      {
+        "file": "raglite/mcp/tools/validation.py",
+        "original_function": "validate_forecasting_accuracy",
+        "original_loc": 145,
+        "new_loc": 55,
+        "batch": 7
       }
     ],
     "pending": [],

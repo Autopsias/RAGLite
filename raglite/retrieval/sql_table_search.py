@@ -125,6 +125,112 @@ def _execute_sql_query_sync(sql_query: str) -> tuple[list[tuple], list[str]]:
     return rows, column_names
 
 
+def _log_sql_execution_details(
+    rows: list[tuple],
+    column_names: list[str],
+    sql_query: str,
+    execution_ms: float,
+) -> None:
+    """Log SQL execution details and first row sample.
+
+    Args:
+        rows: Query result rows
+        column_names: Column names from result
+        sql_query: Executed SQL query
+        execution_ms: Execution time in milliseconds
+    """
+    logger.info(
+        "SQL query executed successfully",
+        extra={
+            "row_count": len(rows),
+            "columns": column_names,
+            "sql_preview": sql_query[:200],
+            "execution_ms": round(execution_ms, 2),
+            "thread_pool_used": True,
+        },
+    )
+
+    # Log first row sample if results exist
+    if rows:
+        first_row_dict = dict(zip(column_names, rows[0], strict=False))
+        logger.debug(
+            "SQL table search first row sample",
+            extra={
+                "first_row": first_row_dict,
+                "entity": first_row_dict.get("entity"),
+                "metric": first_row_dict.get("metric"),
+                "value": first_row_dict.get("value"),
+            },
+        )
+
+
+def _convert_rows_to_query_results(
+    rows: list[tuple],
+    column_names: list[str],
+    top_k: int,
+) -> list[QueryResult]:
+    """Convert SQL rows to QueryResult objects.
+
+    Args:
+        rows: SQL query result rows
+        column_names: Column names from query result
+        top_k: Maximum number of results to return
+
+    Returns:
+        List of QueryResult objects with formatted text and metadata
+    """
+    results: list[QueryResult] = []
+
+    for row_idx, row in enumerate(rows[:top_k]):
+        # Create dict from row
+        row_dict = dict(zip(column_names, row, strict=False))
+
+        # Format text representation
+        text = _format_table_row(row_dict)
+
+        # Extract attribution metadata
+        source_document = row_dict.get("document_id", "unknown")
+        page_number = row_dict.get("page_number")
+
+        # EXC-006: Log warning if document_id is missing
+        if source_document == "unknown":
+            logger.warning(
+                "SQL result missing document_id - source attribution will fail",
+                extra={
+                    "row_index": row_idx,
+                    "columns_available": column_names,
+                    "entity": row_dict.get("entity"),
+                    "metric": row_dict.get("metric"),
+                    "row_sample": str(row_dict)[:200],
+                },
+            )
+
+        # Create QueryResult
+        # Note: SQL results use score=1.0 (exact match semantics)
+        # chunk_index uses row_idx for ordering
+        result = QueryResult(
+            score=1.0,  # Exact match score
+            text=text,
+            source_document=source_document,
+            page_number=page_number,
+            chunk_index=row_idx,
+            word_count=len(text.split()),
+        )
+        results.append(result)
+
+    return results
+
+
+async def _rollback_transaction() -> None:
+    """Rollback PostgreSQL transaction after error.
+
+    This helper function runs synchronously and is called via asyncio.to_thread
+    to prevent event loop blocking.
+    """
+    conn = get_postgresql_connection()
+    conn.rollback()
+
+
 async def search_tables_sql(sql_query: str, top_k: int = 50) -> list[QueryResult]:
     """Execute SQL query against financial_tables and return formatted results.
 
@@ -167,30 +273,7 @@ async def search_tables_sql(sql_query: str, top_k: int = 50) -> list[QueryResult
 
         # Log execution details
         execution_ms = (time.time() - start_time) * 1000
-        logger.info(
-            "SQL query executed successfully",
-            extra={
-                "row_count": len(rows),
-                "columns": column_names,
-                "sql_preview": sql_query[:200],
-                "execution_ms": round(execution_ms, 2),
-                "thread_pool_used": True,
-            },
-        )
-
-        # Log first row sample if results exist
-        if rows:
-            first_row_dict = dict(zip(column_names, rows[0], strict=False))
-            # Use logger only - print() pollutes stdout and breaks MCP JSON parsing
-            logger.debug(
-                "SQL table search first row sample",
-                extra={
-                    "first_row": first_row_dict,
-                    "entity": first_row_dict.get("entity"),
-                    "metric": first_row_dict.get("metric"),
-                    "value": first_row_dict.get("value"),
-                },
-            )
+        _log_sql_execution_details(rows, column_names, sql_query, execution_ms)
 
         if not rows:
             logger.warning(
@@ -203,44 +286,7 @@ async def search_tables_sql(sql_query: str, top_k: int = 50) -> list[QueryResult
             return []
 
         # Convert SQL rows to QueryResult objects
-        results: list[QueryResult] = []
-
-        for row_idx, row in enumerate(rows[:top_k]):  # Additional top_k safety check
-            # Create dict from row
-            row_dict = dict(zip(column_names, row, strict=False))
-
-            # Format text representation
-            text = _format_table_row(row_dict)
-
-            # Extract attribution metadata
-            source_document = row_dict.get("document_id", "unknown")
-            page_number = row_dict.get("page_number")
-
-            # EXC-006: Log warning if document_id is missing
-            if source_document == "unknown":
-                logger.warning(
-                    "SQL result missing document_id - source attribution will fail",
-                    extra={
-                        "row_index": row_idx,
-                        "columns_available": column_names,
-                        "entity": row_dict.get("entity"),
-                        "metric": row_dict.get("metric"),
-                        "row_sample": str(row_dict)[:200],
-                    },
-                )
-
-            # Create QueryResult
-            # Note: SQL results use score=1.0 (exact match semantics)
-            # chunk_index uses row_idx for ordering
-            result = QueryResult(
-                score=1.0,  # Exact match score
-                text=text,
-                source_document=source_document,
-                page_number=page_number,
-                chunk_index=row_idx,
-                word_count=len(text.split()),
-            )
-            results.append(result)
+        results = _convert_rows_to_query_results(rows, column_names, top_k)
 
         duration_ms = (time.time() - start_time) * 1000
 
@@ -258,12 +304,7 @@ async def search_tables_sql(sql_query: str, top_k: int = 50) -> list[QueryResult
     except Exception as e:
         # Rollback transaction to prevent "transaction is aborted" errors
         try:
-
-            def _rollback_sync() -> None:
-                conn = get_postgresql_connection()
-                conn.rollback()
-
-            await asyncio.to_thread(_rollback_sync)
+            await _rollback_transaction()
             logger.debug("Rolled back PostgreSQL transaction after SQL error")
         except Exception as rollback_error:
             logger.warning(f"Failed to rollback transaction: {rollback_error}")
