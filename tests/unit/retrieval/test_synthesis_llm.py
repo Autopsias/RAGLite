@@ -9,10 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from raglite.agentic.agents.synthesis_agent import (
-    _synthesize_with_openai,
-    synthesis_agent,
-)
+from raglite.agentic.agents.synthesis_agent import synthesis_agent
+from raglite.agentic.agents.synthesis_methods import _synthesize_with_openai
 from raglite.agentic.state import SynthesisResult
 
 
@@ -23,7 +21,7 @@ class TestOpenAISynthesis:
     async def test_openai_synthesis_not_available(self):
         """Test OpenAI synthesis when openai package not installed."""
         # Temporarily make OPENAI_AVAILABLE False
-        with patch("raglite.agentic.agents.synthesis_agent.OPENAI_AVAILABLE", False):
+        with patch("raglite.agentic.agents.synthesis_methods.OPENAI_AVAILABLE", False):
             with pytest.raises(ImportError, match="openai package not installed"):
                 await _synthesize_with_openai([], [], "test query")
 
@@ -43,7 +41,7 @@ class TestOpenAISynthesis:
         mock_client.chat.completions.create.return_value = mock_response
 
         with patch(
-            "raglite.agentic.agents.synthesis_agent.AsyncOpenAI",
+            "raglite.agentic.agents.synthesis_methods.AsyncOpenAI",
             return_value=mock_client,
         ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
@@ -75,7 +73,7 @@ class TestOpenAISynthesis:
         mock_client.chat.completions.create.return_value = mock_response
 
         with patch(
-            "raglite.agentic.agents.synthesis_agent.AsyncOpenAI",
+            "raglite.agentic.agents.synthesis_methods.AsyncOpenAI",
             return_value=mock_client,
         ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
@@ -99,7 +97,7 @@ class TestOpenAISynthesis:
         mock_client.chat.completions.create.return_value = mock_response
 
         with patch(
-            "raglite.agentic.agents.synthesis_agent.AsyncOpenAI",
+            "raglite.agentic.agents.synthesis_methods.AsyncOpenAI",
             return_value=mock_client,
         ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
@@ -180,12 +178,12 @@ class TestSynthesisAgent:
 
         # Mock OpenAI failure and bypass test mode
         with patch(
-            "raglite.agentic.agents.synthesis_agent._synthesize_with_openai",
+            "raglite.agentic.agents.synthesis_methods._synthesize_with_openai",
             side_effect=Exception("OpenAI API error"),
         ):
             # Mock successful Mistral fallback
             with patch(
-                "raglite.agentic.agents.synthesis_agent._synthesize_with_mistral"
+                "raglite.agentic.agents.synthesis_methods._synthesize_with_mistral"
             ) as mock_mistral:
                 mock_mistral.return_value = (
                     "Mistral answer",
@@ -218,7 +216,7 @@ class TestSynthesisAgent:
         mock_client.chat.completions.create.return_value = mock_response
 
         with patch(
-            "raglite.agentic.agents.synthesis_agent.AsyncOpenAI",
+            "raglite.agentic.agents.synthesis_methods.AsyncOpenAI",
             return_value=mock_client,
         ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
@@ -249,7 +247,7 @@ class TestSynthesisAgent:
         mock_client.chat.completions.create.return_value = mock_response
 
         with patch(
-            "raglite.agentic.agents.synthesis_agent.AsyncOpenAI",
+            "raglite.agentic.agents.synthesis_methods.AsyncOpenAI",
             return_value=mock_client,
         ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
@@ -272,7 +270,7 @@ class TestSynthesisAgent:
         mock_client.chat.completions.create.return_value = mock_response
 
         with patch(
-            "raglite.agentic.agents.synthesis_agent.AsyncOpenAI",
+            "raglite.agentic.agents.synthesis_methods.AsyncOpenAI",
             return_value=mock_client,
         ):
             # Bypass test mode to test OpenAI synthesis

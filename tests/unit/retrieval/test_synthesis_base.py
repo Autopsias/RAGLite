@@ -9,9 +9,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from raglite.agentic.agents.synthesis_agent import (
-    _synthesize_simple,
+from raglite.agentic.agents.synthesis_methods import (
     _synthesize_with_mistral,
+)
+from raglite.agentic.agents.synthesis_utils import (
+    _synthesize_simple,
 )
 
 
@@ -130,7 +132,7 @@ class TestMistralSynthesis:
         mock_client.chat.complete.return_value = mock_response
 
         with patch(
-            "raglite.agentic.agents.synthesis_agent.get_mistral_client",
+            "raglite.agentic.agents.synthesis_methods.get_mistral_client",
             return_value=mock_client,
         ):
             answer, reasoning, sources = await _synthesize_with_mistral(
@@ -155,7 +157,7 @@ class TestMistralSynthesis:
         mock_client.chat.complete.return_value = mock_response
 
         with patch(
-            "raglite.agentic.agents.synthesis_agent.get_mistral_client",
+            "raglite.agentic.agents.synthesis_methods.get_mistral_client",
             return_value=mock_client,
         ):
             answer, reasoning, sources = await _synthesize_with_mistral(
@@ -182,7 +184,7 @@ class TestMistralSynthesis:
         mock_client.chat.complete.return_value = mock_response
 
         with patch(
-            "raglite.agentic.agents.synthesis_agent.get_mistral_client",
+            "raglite.agentic.agents.synthesis_methods.get_mistral_client",
             return_value=mock_client,
         ):
             _, _, sources = await _synthesize_with_mistral(retrieval_results, [], query)
@@ -206,7 +208,7 @@ class TestMistralSynthesis:
         mock_client.chat.complete.return_value = mock_response
 
         with patch(
-            "raglite.agentic.agents.synthesis_agent.get_mistral_client",
+            "raglite.agentic.agents.synthesis_methods.get_mistral_client",
             return_value=mock_client,
         ):
             answer, reasoning, sources = await _synthesize_with_mistral(
