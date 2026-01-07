@@ -9,6 +9,8 @@ __all__ = [
     "clear_existing_data",
     "create_qdrant_collection",
     "extract_metadata_for_chunks",
+    "_inject_metadata_into_chunk",
+    "_extract_metadata_for_single_chunk",
 ]
 
 import asyncio
@@ -132,6 +134,68 @@ def create_qdrant_collection(client: QdrantClient) -> None:
         )
 
 
+def _inject_metadata_into_chunk(
+    chunk: Chunk,
+    extracted_metadata: ExtractedMetadata,
+) -> None:
+    """Inject extracted metadata into a chunk (15 RICH SCHEMA fields).
+
+    Args:
+        chunk: Target chunk to update
+        extracted_metadata: Metadata to inject
+    """
+    # Document-Level (7 fields)
+    chunk.document_type = extracted_metadata.document_type
+    chunk.reporting_period = extracted_metadata.reporting_period
+    chunk.time_granularity = extracted_metadata.time_granularity
+    chunk.company_name = extracted_metadata.company_name
+    chunk.geographic_jurisdiction = extracted_metadata.geographic_jurisdiction
+    chunk.data_source_type = extracted_metadata.data_source_type
+    chunk.version_date = extracted_metadata.version_date
+    # Section-Level (5 fields)
+    chunk.section_type = extracted_metadata.section_type
+    chunk.metric_category = extracted_metadata.metric_category
+    chunk.units = extracted_metadata.units
+    chunk.department_scope = extracted_metadata.department_scope
+    # Table-Specific (3 fields)
+    chunk.table_context = extracted_metadata.table_context
+    chunk.table_name = extracted_metadata.table_name
+    chunk.statistical_summary = extracted_metadata.statistical_summary
+
+
+async def _extract_metadata_for_single_chunk(
+    chunk: Chunk,
+    semaphore: asyncio.Semaphore,
+    mistral_client: Any,
+) -> tuple[Chunk, ExtractedMetadata | None]:
+    """Extract metadata for a single chunk with error handling and rate limiting.
+
+    Args:
+        chunk: Chunk to extract metadata for
+        semaphore: Semaphore for rate limiting
+        mistral_client: Shared Mistral client instance
+
+    Returns:
+        Tuple of (chunk, extracted_metadata or None)
+    """
+    async with semaphore:  # Limit concurrent requests
+        try:
+            # Story 2.6 AC6 FIX: Pass shared client instance to enable connection pooling
+            extracted = await extract_chunk_metadata(
+                text=chunk.content,
+                chunk_id=chunk.chunk_id,
+                client=mistral_client,
+            )
+            return (chunk, extracted)
+        except Exception as e:
+            # Graceful degradation - continue without metadata for this chunk
+            logger.debug(
+                "Chunk metadata extraction failed (graceful degradation)",
+                extra={"chunk_id": chunk.chunk_id, "error": str(e)},
+            )
+            return (chunk, None)
+
+
 async def extract_metadata_for_chunks(
     chunks: list[Chunk],
     doc_filename: str,
@@ -174,51 +238,17 @@ async def extract_metadata_for_chunks(
     # RATE LIMIT FIX: Reduced from 20 to 5 concurrent requests to avoid 429 errors
     semaphore = asyncio.Semaphore(5)  # Max 5 concurrent requests to Mistral API
 
-    async def extract_for_chunk(
-        chunk: Chunk,
-    ) -> tuple[Chunk, ExtractedMetadata | None]:
-        """Extract metadata for a single chunk with error handling and rate limiting."""
-        async with semaphore:  # Limit concurrent requests
-            try:
-                # Story 2.6 AC6 FIX: Pass shared client instance to enable connection pooling
-                extracted = await extract_chunk_metadata(
-                    text=chunk.content,
-                    chunk_id=chunk.chunk_id,
-                    client=mistral_client,
-                )
-                return (chunk, extracted)
-            except Exception as e:
-                # Graceful degradation - continue without metadata for this chunk
-                logger.debug(
-                    "Chunk metadata extraction failed (graceful degradation)",
-                    extra={"chunk_id": chunk.chunk_id, "error": str(e)},
-                )
-                return (chunk, None)
-
     # Process chunks with rate-limited concurrency
-    results = await asyncio.gather(*[extract_for_chunk(chunk) for chunk in chunks])
+    extraction_tasks = [
+        _extract_metadata_for_single_chunk(chunk, semaphore, mistral_client) for chunk in chunks
+    ]
+    results = await asyncio.gather(*extraction_tasks)
 
-    # Inject extracted metadata into chunks (15 RICH SCHEMA fields)
+    # Inject extracted metadata into chunks and count successes
     successful_extractions = 0
     for chunk, extracted_metadata in results:
         if extracted_metadata:
-            # Document-Level (7 fields)
-            chunk.document_type = extracted_metadata.document_type
-            chunk.reporting_period = extracted_metadata.reporting_period
-            chunk.time_granularity = extracted_metadata.time_granularity
-            chunk.company_name = extracted_metadata.company_name
-            chunk.geographic_jurisdiction = extracted_metadata.geographic_jurisdiction
-            chunk.data_source_type = extracted_metadata.data_source_type
-            chunk.version_date = extracted_metadata.version_date
-            # Section-Level (5 fields)
-            chunk.section_type = extracted_metadata.section_type
-            chunk.metric_category = extracted_metadata.metric_category
-            chunk.units = extracted_metadata.units
-            chunk.department_scope = extracted_metadata.department_scope
-            # Table-Specific (3 fields)
-            chunk.table_context = extracted_metadata.table_context
-            chunk.table_name = extracted_metadata.table_name
-            chunk.statistical_summary = extracted_metadata.statistical_summary
+            _inject_metadata_into_chunk(chunk, extracted_metadata)
             successful_extractions += 1
 
     # Calculate success rate, handling empty chunks case

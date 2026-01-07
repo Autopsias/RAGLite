@@ -21,6 +21,12 @@ if TYPE_CHECKING:
     from docling_core.types.doc import TableItem
 
 from raglite.ingestion.adaptive_table.core import extract_page_context, get_table_caption
+from raglite.ingestion.adaptive_table.unit_inference.async_batch.helpers import (
+    _execute_batch_inference,
+    _log_inference_statistics,
+    _prepare_rows_for_inference,
+    _process_batch_inference_results,
+)
 from raglite.ingestion.adaptive_table.unit_inference.batch_helpers import (
     build_batch_metrics_list,
     build_context_string,
@@ -38,6 +44,50 @@ logger = logging.getLogger(__name__)
 # Global semaphore for rate limiting Mistral API calls (max 10 concurrent)
 # Prevents hitting rate limits while allowing significant parallelization
 MISTRAL_SEMAPHORE = asyncio.Semaphore(10)
+
+
+async def _call_mistral_api_async(
+    system_prompt: str,
+    user_prompt: str,
+    client: Any,
+) -> str | None:
+    """Call Mistral API with timeout and error handling.
+
+    Args:
+        system_prompt: System prompt for Mistral
+        user_prompt: User prompt for Mistral
+        client: Shared Mistral client
+
+    Returns:
+        Inferred unit string or None if inference fails
+
+    Raises:
+        TimeoutError: If API call times out
+        Exception: For other API errors
+    """
+    from mistralai.models import (
+        AssistantMessage,
+        SystemMessage,
+        ToolMessage,
+        UserMessage,
+    )
+
+    messages: list[AssistantMessage | SystemMessage | ToolMessage | UserMessage] = [
+        SystemMessage(content=system_prompt),
+        UserMessage(content=user_prompt),
+    ]
+
+    # Call Mistral async API
+    response = await client.chat.complete_async(
+        model=settings.metadata_extraction_model,
+        messages=messages,
+        temperature=0.0,  # Deterministic inference
+        max_tokens=50,
+    )
+
+    # Extract and validate response
+    response_content = response.choices[0].message.content
+    return validate_single_inference_response(response_content)
 
 
 async def _infer_unit_from_context_async(
@@ -94,29 +144,7 @@ async def _infer_unit_from_context_async(
     async with MISTRAL_SEMAPHORE:
         try:
             async with asyncio.timeout(5.0):  # 5-second timeout per call
-                from mistralai.models import (
-                    AssistantMessage,
-                    SystemMessage,
-                    ToolMessage,
-                    UserMessage,
-                )
-
-                messages: list[AssistantMessage | SystemMessage | ToolMessage | UserMessage] = [
-                    SystemMessage(content=system_prompt),
-                    UserMessage(content=user_prompt),
-                ]
-
-                # Call Mistral async API
-                response = await client.chat.complete_async(
-                    model=settings.metadata_extraction_model,  # "mistral-small-latest"
-                    messages=messages,
-                    temperature=0.0,  # Deterministic inference
-                    max_tokens=50,
-                )
-
-                # Extract and validate response
-                response_content = response.choices[0].message.content
-                inferred_unit = validate_single_inference_response(response_content)
+                inferred_unit = await _call_mistral_api_async(system_prompt, user_prompt, client)
 
                 if not inferred_unit:
                     logger.debug(
@@ -309,120 +337,26 @@ async def _apply_context_aware_unit_inference_async(
     if unit_cache is None:
         unit_cache = {}
 
-    # Statistics (AC2: Track rule vs LLM inference counts)
-    inference_count = 0
-    cache_hit_count = 0
-    rule_inferred_count = 0
-
     # First pass: Try rule-based inference, check cache, build list for LLM inference
-    rows_needing_inference: list[tuple[int, dict[str, Any]]] = []
-
-    from raglite.ingestion.adaptive_table.unit_inference.rules import infer_unit_from_rules
-
-    for idx, row in enumerate(rows):
-        # Skip rows that already have explicit units
-        if row.get("unit") is not None:
-            continue
-
-        metric = row.get("metric")
-
-        if not metric:
-            continue  # Cannot infer without metric
-
-        # Strategy 1: Try rule-based inference FIRST (AC2: 80% API reduction)
-        rule_unit = infer_unit_from_rules(metric)
-        if rule_unit:
-            row["unit"] = rule_unit
-            row["unit_source"] = "rule"
-            unit_cache[metric] = rule_unit  # Cache for consistency
-            rule_inferred_count += 1
-            continue
-
-        # Strategy 2: Check cache (metric-based consistency)
-        cache_key = metric
-        if cache_key in unit_cache:
-            row["unit"] = unit_cache[cache_key]
-            row["unit_source"] = "cached_inference"
-            cache_hit_count += 1
-            continue
-
-        # Strategy 3: Add to LLM inference queue (fallback for tables only if configured)
-        # Only use LLM for table chunks if unit_inference_llm_tables_only is True
-        if settings.unit_inference_llm_tables_only:
-            # Check if this row is from a table chunk
-            # For now, add to inference queue (table detection happens at caller level)
-            rows_needing_inference.append((idx, row))
-        else:
-            # Use LLM for all chunks
-            rows_needing_inference.append((idx, row))
+    rows_needing_inference, cache_hit_count, rule_inferred_count = _prepare_rows_for_inference(
+        rows, unit_cache
+    )
 
     # Second pass: Batch inference for uncached rows (Milestone 2)
     if rows_needing_inference:
-        # Group rows into batches of 20 for efficient API usage
-        BATCH_SIZE = 20
-        batches = []
-        for i in range(0, len(rows_needing_inference), BATCH_SIZE):
-            batch = rows_needing_inference[i : i + BATCH_SIZE]
-            batches.append(batch)
-
-        logger.info(
-            f"Processing {len(rows_needing_inference)} rows in {len(batches)} batches (batch_size={BATCH_SIZE})"
+        batch_results = await _execute_batch_inference(
+            rows_needing_inference, table_caption, section_heading, page_title, nearby_text, client
         )
-
-        # Process batches concurrently (rate-limited by semaphore)
-        batch_tasks = [
-            _infer_units_batch_async(
-                batch, table_caption, section_heading, page_title, nearby_text, client
-            )
-            for batch in batches
-        ]
-        batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
-
-        # Flatten batch results
-        results: list[tuple[int, dict[str, Any], str | None]] = []
-        for batch_result in batch_results:
-            if isinstance(batch_result, BaseException):
-                logger.warning(f"Batch inference failed: {batch_result}")
-                continue
-            results.extend(batch_result)
-
-        # Process results
-        for result_item in results:
-            if isinstance(result_item, Exception):
-                logger.warning(f"Unit inference task failed: {result_item}")
-                continue
-
-            idx, row, inferred_unit = result_item
-
-            if inferred_unit:
-                row["unit"] = inferred_unit
-                row["unit_source"] = "llm_inference"
-                # Cache for consistency across rows with same metric
-                metric = row.get("metric")
-                if metric:
-                    unit_cache[metric] = inferred_unit
-                inference_count += 1
+        # Process batch results and update rows with inferred units
+        inference_count = _process_batch_inference_results(
+            batch_results, rows_needing_inference, unit_cache
+        )
+    else:
+        inference_count = 0
 
     # Log statistics (AC2 & AC6: Report API call reduction)
-    total_null_units = sum(1 for row in rows if row.get("unit") is None)
-    batch_count = (len(rows_needing_inference) + 19) // 20 if rows_needing_inference else 0
-    total_with_units = len(rows) - total_null_units
-    api_calls_avoided = rule_inferred_count + cache_hit_count
-
-    logger.info(
-        "Unit inference complete (Rule-based + LLM hybrid)",
-        extra={
-            "total_rows": len(rows),
-            "rule_inferred_count": rule_inferred_count,
-            "llm_inferred_count": inference_count,
-            "cache_hits": cache_hit_count,
-            "remaining_null": total_null_units,
-            "total_with_units": total_with_units,
-            "batch_count": batch_count,
-            "batch_size": 20,
-            "api_calls_avoided": api_calls_avoided,
-            "api_reduction_pct": round(100 * api_calls_avoided / max(total_with_units, 1), 1),
-        },
+    _log_inference_statistics(
+        rows, rows_needing_inference, inference_count, cache_hit_count, rule_inferred_count
     )
 
     return rows

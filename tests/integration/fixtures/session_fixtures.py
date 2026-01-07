@@ -9,11 +9,14 @@ import pytest
 # Import session state globals
 from . import session_state
 from ._ingestion_helpers import (
+    _check_existing_collection,
     _create_qdrant_snapshot,
     _get_test_pdf_path,
     _ingest_test_pdf,
     _initialize_qdrant_collection,
     _setup_skip_ingestion_mode,
+    _should_skip_session_fixture,
+    _validate_test_environment_for_session,
     _verify_postgresql_data,
     _verify_qdrant_data,
 )
@@ -123,16 +126,8 @@ def session_ingested_collection(request, warmup_embedding_model):
         yield
         return
 
-    # PERFORMANCE FIX (2025-12-18): Skip for unit-only test runs
-    if not _has_integration_tests(request):
-        print("⚡ UNIT TESTS ONLY: Skipping PDF ingestion fixture", file=sys.stderr)
-        yield
-        return
-
-    # PERFORMANCE FIX (2025-12-21): Skip for PostgreSQL-only tests (Story 7b-4)
-    # These tests don't need Qdrant at all
-    if _is_postgresql_only_tests(request):
-        print("⚡ POSTGRESQL ONLY TESTS: Skipping PDF ingestion fixture", file=sys.stderr)
+    # Early exit checks (unit-only, postgresql-only)
+    if _should_skip_session_fixture(request):
         yield
         return
 
@@ -150,39 +145,13 @@ def session_ingested_collection(request, warmup_embedding_model):
 
     from raglite.shared.clients import get_qdrant_client
     from raglite.shared.config import settings
-    from raglite.shared.safety import ProductionProtectionError, SafetyGuard
 
-    guard = SafetyGuard()
-    try:
-        guard.validate_test_environment("session_ingested_collection fixture")
-        print(
-            f"DEBUG: Test environment validated - Qdrant:{settings.qdrant_port}, PostgreSQL:{settings.postgres_port}",
-            file=sys.stderr,
-        )
-    except ProductionProtectionError as e:
-        pytest.fail(
-            f"CRITICAL: TEST ISOLATION FAILURE\n{e}\nSet APP_ENV=test or use --skip-ingestion"
-        )
+    # Validate test environment
+    _validate_test_environment_for_session(request, settings)
 
+    # Check for existing collection
     qdrant_check = get_qdrant_client()
-    try:
-        existing_count = qdrant_check.count(collection_name=settings.qdrant_collection_name).count
-        if existing_count > 0:
-            is_ci = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
-            if is_ci:
-                print("DEBUG: CI mode - proceeding with re-ingestion", file=sys.stderr)
-            elif not sys.stdin.isatty():
-                print(
-                    "DEBUG: Non-interactive (VS Code/IDE) - proceeding with re-ingestion",
-                    file=sys.stderr,
-                )
-            else:
-                print(
-                    f"⚠️  WARNING: Collection has {existing_count} chunks - will delete and re-ingest",
-                    file=sys.stderr,
-                )
-    except Exception as e:
-        print(f"DEBUG: No existing collection ({e}) - safe to create", file=sys.stderr)
+    _check_existing_collection(qdrant_check, settings)
 
     # Get test PDF path
     use_full_pdf = os.getenv("TEST_USE_FULL_PDF", "false").lower() == "true"
@@ -198,6 +167,9 @@ def session_ingested_collection(request, warmup_embedding_model):
     qdrant = get_qdrant_client()
 
     # Initialize Qdrant collection
+    from raglite.shared.safety import SafetyGuard
+
+    guard = SafetyGuard()
     _initialize_qdrant_collection(settings, guard, qdrant)
 
     # Ingest test PDF
@@ -207,7 +179,7 @@ def session_ingested_collection(request, warmup_embedding_model):
     # Verify Qdrant data
     expected_range = (150, 220) if use_full_pdf else (10, 30)
     count_after = _verify_qdrant_data(qdrant, settings, expected_range)
-    session_state.session_sample_pdf_chunk_count = count_after.count
+    session_state.session_sample_pdf_chunk_count = count_after
 
     # Verify PostgreSQL data
     _verify_postgresql_data(use_full_pdf, session_state)

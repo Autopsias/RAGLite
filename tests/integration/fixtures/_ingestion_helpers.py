@@ -4,10 +4,93 @@ This module contains helper functions extracted from the large
 session_ingested_collection fixture to improve maintainability.
 """
 
+import os
+import sys
 import time
 from pathlib import Path
 
 import pytest
+
+
+def _should_skip_session_fixture(request) -> bool:
+    """Check if session fixture should skip (early exit conditions).
+
+    Args:
+        request: pytest request fixture
+
+    Returns:
+        True if should skip, False otherwise
+    """
+    from ._test_detection import _has_integration_tests, _is_postgresql_only_tests
+
+    # PERFORMANCE FIX (2025-12-18): Skip for unit-only test runs
+    if not _has_integration_tests(request):
+        print("⚡ UNIT TESTS ONLY: Skipping PDF ingestion fixture", file=sys.stderr)
+        return True
+
+    # PERFORMANCE FIX (2025-12-21): Skip for PostgreSQL-only tests (Story 7b-4)
+    if _is_postgresql_only_tests(request):
+        print("⚡ POSTGRESQL ONLY TESTS: Skipping PDF ingestion fixture", file=sys.stderr)
+        return True
+
+    return False
+
+
+def _validate_test_environment_for_session(request, settings) -> None:
+    """Validate test environment before session fixture setup.
+
+    Args:
+        request: pytest request fixture
+        settings: Application settings
+
+    Raises:
+        pytest.fail: If environment validation fails
+    """
+    from raglite.shared.safety import ProductionProtectionError, SafetyGuard
+
+    guard = SafetyGuard()
+    try:
+        guard.validate_test_environment("session_ingested_collection fixture")
+        print(
+            f"DEBUG: Test environment validated - Qdrant:{settings.qdrant_port}, PostgreSQL:{settings.postgres_port}",
+            file=sys.stderr,
+        )
+    except ProductionProtectionError as e:
+        pytest.fail(
+            f"CRITICAL: TEST ISOLATION FAILURE\n{e}\nSet APP_ENV=test or use --skip-ingestion"
+        )
+
+
+def _check_existing_collection(qdrant_check, settings) -> bool:
+    """Check for existing Qdrant collection and prompt user.
+
+    Args:
+        qdrant_check: Qdrant client
+        settings: Application settings
+
+    Returns:
+        True if collection exists, False otherwise
+    """
+    try:
+        existing_count = qdrant_check.count(collection_name=settings.qdrant_collection_name).count
+        if existing_count > 0:
+            is_ci = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
+            if is_ci:
+                print("DEBUG: CI mode - proceeding with re-ingestion", file=sys.stderr)
+            elif not sys.stdin.isatty():
+                print(
+                    "DEBUG: Non-interactive (VS Code/IDE) - proceeding with re-ingestion",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    f"⚠️  WARNING: Collection has {existing_count} chunks - will delete and re-ingest",
+                    file=sys.stderr,
+                )
+            return True
+    except Exception as e:
+        print(f"DEBUG: No existing collection ({e}) - safe to create", file=sys.stderr)
+    return False
 
 
 def _get_test_pdf_path(use_full_pdf: bool = False) -> tuple[Path, str, str]:

@@ -1,70 +1,42 @@
 {
   "schema_version": "2.0",
-  "session_id": "1736179200",
-  "created_at": "2025-01-06T10:00:00Z",
-  "updated_at": "2026-01-06T19:15:00Z",
+  "session_id": "1736162400",
+  "created_at": "2025-01-06T00:00:00Z",
+  "updated_at": "2025-01-06T00:18:00Z",
   "project_path": "/Users/ricardocarvalho/DeveloperFolder/RAGLite",
   "analysis": {
-    "total_violations": 13,
-    "file_size_violations": 12,
-    "function_length_violations": 1
+    "total_violations": 4,
+    "file_size_violations": 0,
+    "function_length_violations": 4
   },
   "execution_plan": {
-    "total_batches": 4,
-    "current_batch": 5,
+    "total_batches": 2,
+    "current_batch": 2,
     "batches": [
       {
         "batch_number": 1,
-        "cluster_id": "cluster_a",
+        "cluster_id": "parallel_batch",
         "files": [
-          "tests/fixtures/ground_truth.py",
-          "tests/fixtures/ground_truth_old_backup.py",
-          "tests/fixtures/archive/ground_truth_old_backup.py",
+          "raglite/ingestion/document_ingestion/pdf_utils.py",
+          "tests/integration/fixtures/_test_detection.py",
           "tests/integration/fixtures/session_fixtures.py"
         ],
-        "mode": "serial",
+        "mode": "parallel",
         "status": "completed",
-        "completed_at": "2025-01-06T11:30:00Z",
-        "reason": "fixture files imported by many tests"
+        "completed_at": "2025-01-06T00:08:00Z",
+        "reason": null
       },
       {
         "batch_number": 2,
-        "cluster_id": "cluster_b",
+        "cluster_id": "cluster_a",
         "files": [
-          "tests/unit/test_strategic_recommendations.py",
-          "tests/attd/test_story_8_5_deprecation_cleanup.py",
-          "tests/health/test_external_data_health.py",
-          "tests/uat/test_epic_1_validation.py",
-          "tests/unit/mcp/test_model_selection_mcp.py",
-          "tests/unit/forecasting/test_mcp_model_routing_core.py"
-        ],
-        "mode": "parallel",
-        "status": "completed",
-        "completed_at": "2026-01-06T18:47:26.920961Z",
-        "reason": null
-      },
-      {
-        "batch_number": 3,
-        "cluster_id": "cluster_c",
-        "files": [
-          "tests/unit/test_hybrid_forecasting.py",
-          "tests/unit/test_model_selection_cache_mcp.py"
-        ],
-        "mode": "parallel",
-        "status": "completed",
-        "completed_at": "2026-01-06T19:00:00Z",
-        "reason": null
-      },
-      {
-        "batch_number": 4,
-        "cluster_id": "cluster_d",
-        "files": [
-          "raglite/ingestion/embedding_generation/metadata.py"
+          "raglite/ingestion/adaptive_table/unit_inference/async_batch.py",
+          "raglite/ingestion/adaptive_table/unit_inference/llm_inference.py"
         ],
         "mode": "serial",
         "status": "completed",
-        "completed_at": "2026-01-06T19:15:00Z",
-        "reason": "production code - already compliant (243 LOC, no function length violations)"
+        "completed_at": "2025-01-06T00:18:00Z",
+        "reason": "same module with potential cross-dependencies"
       }
     ]
   },
@@ -72,10 +44,8 @@
     {
       "id": "cluster_a",
       "files": [
-        "tests/fixtures/ground_truth.py",
-        "tests/fixtures/ground_truth_old_backup.py",
-        "tests/fixtures/archive/ground_truth_old_backup.py",
-        "tests/integration/fixtures/session_fixtures.py"
+        "raglite/ingestion/adaptive_table/unit_inference/async_batch.py",
+        "raglite/ingestion/adaptive_table/unit_inference/llm_inference.py"
       ],
       "mode": "serial",
       "shared_tests": [],
@@ -83,139 +53,60 @@
     },
     {
       "id": "cluster_b",
-      "files": [
-        "tests/unit/test_strategic_recommendations.py",
-        "tests/attd/test_story_8_5_deprecation_cleanup.py",
-        "tests/health/test_external_data_health.py",
-        "tests/uat/test_epic_1_validation.py",
-        "tests/unit/mcp/test_model_selection_mcp.py",
-        "tests/unit/forecasting/test_mcp_model_routing_core.py"
-      ],
+      "files": ["raglite/ingestion/document_ingestion/pdf_utils.py"],
       "mode": "parallel",
-      "shared_tests": [],
+      "shared_tests": [
+        "tests/unit/ingestion/document_ingestion/test_pdf_processing_edge_cases.py",
+        "tests/unit/ingestion/test_module_integration.py"
+      ],
       "priority_score": 10
     },
     {
       "id": "cluster_c",
       "files": [
-        "tests/unit/test_hybrid_forecasting.py",
-        "tests/unit/test_model_selection_cache_mcp.py"
+        "tests/integration/fixtures/_test_detection.py",
+        "tests/integration/fixtures/session_fixtures.py"
       ],
       "mode": "parallel",
-      "shared_tests": [],
-      "priority_score": 8
-    },
-    {
-      "id": "cluster_d",
-      "files": [
-        "raglite/ingestion/embedding_generation/metadata.py"
-      ],
-      "mode": "serial",
-      "shared_tests": [
-        "tests/unit/ingestion/test_query_metadata_enrichment.py",
-        "tests/unit/story_8_1/test_ac_8_1_4_imports.py",
-        "tests/unit/test_metadata_extraction.py"
-      ],
-      "priority_score": 25
+      "shared_hosts": [],
+      "priority_score": 5
     }
   ],
   "file_status": {
     "completed": [
       {
-        "file": "tests/fixtures/ground_truth.py",
-        "original_loc": 802,
-        "new_loc": 173,
+        "file": "raglite/ingestion/document_ingestion/pdf_utils.py",
+        "original_loc": 105,
+        "new_loc": 73,
         "batch": 1
       },
       {
-        "file": "tests/fixtures/ground_truth_old_backup.py",
-        "original_loc": 762,
-        "new_loc": 153,
-        "batch": 1
-      },
-      {
-        "file": "tests/fixtures/archive/ground_truth_old_backup.py",
-        "original_loc": 762,
-        "new_loc": 153,
+        "file": "tests/integration/fixtures/_test_detection.py",
+        "original_loc": 119,
+        "new_loc": 51,
         "batch": 1
       },
       {
         "file": "tests/integration/fixtures/session_fixtures.py",
-        "original_loc": 534,
-        "new_loc": 394,
+        "original_loc": 112,
+        "new_loc": 83,
         "batch": 1
       },
       {
-        "file": "tests/unit/test_strategic_recommendations.py",
-        "original_loc": 949,
-        "new_loc": 347,
+        "file": "raglite/ingestion/adaptive_table/unit_inference/async_batch.py",
+        "original_loc": 191,
+        "new_loc": 97,
         "batch": 2
       },
       {
-        "file": "tests/health/test_external_data_health.py",
-        "original_loc": 511,
-        "new_loc": 39,
+        "file": "raglite/ingestion/adaptive_table/unit_inference/llm_inference.py",
+        "original_loc": 149,
+        "new_loc": 94,
         "batch": 2
-      },
-      {
-        "file": "tests/uat/test_epic_1_validation.py",
-        "original_loc": 557,
-        "new_loc": 168,
-        "batch": 2
-      },
-      {
-        "file": "tests/unit/forecasting/test_mcp_model_routing_core.py",
-        "original_loc": 534,
-        "new_loc": 202,
-        "batch": 2
-      },
-      {
-        "file": "tests/attd/test_story_8_5_deprecation_cleanup.py",
-        "original_loc": 289,
-        "new_loc": 289,
-        "batch": 2,
-        "note": "ATDD tests working as designed - excluded from default runs by pytest.ini line 79"
-      },
-      {
-        "file": "tests/unit/mcp/test_model_selection_mcp.py",
-        "original_loc": 514,
-        "new_loc": 514,
-        "batch": 2,
-        "note": "Fixed Epic 8.2 breaking changes - updated mock targets from old to new module paths"
-      },
-      {
-        "file": "tests/unit/test_chronos_integration.py",
-        "original_loc": 285,
-        "new_loc": 285,
-        "batch": 2,
-        "note": "Fixed deprecated historical_data parameter usage - now uses fetch_historical_metric mock"
-      },
-      {
-        "file": "tests/unit/test_hybrid_forecasting.py",
-        "original_loc": 524,
-        "new_loc": 449,
-        "batch": 3,
-        "note": "Converted to package structure with largest file test_legacy.py at 449 LOC (meets threshold)"
-      },
-      {
-        "file": "raglite/ingestion/embedding_generation/metadata.py",
-        "original_loc": 243,
-        "new_loc": 243,
-        "batch": 4,
-        "note": "Already compliant - 243 LOC (<500 threshold), no function length violations"
       }
     ],
     "pending": [],
     "failed": [],
-    "test_fixes": [
-      {
-        "file": "tests/unit/test_model_selection_cache_mcp.py",
-        "error": "Fixed 6 stale mock targets - updated from wrong path 'raglite.forecasting.model_selection.get_cached_model_selection' to correct usage path 'raglite.mcp.tools.forecast.check_model_selection_cache_for_forecast'",
-        "batch": 3,
-        "tests_before": "6 failed, 4 passed",
-        "tests_after": "10 passed"
-      }
-    ],
     "skipped": []
   }
 }
