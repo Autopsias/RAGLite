@@ -284,6 +284,162 @@ Format your response as JSON with the following structure:
     return answer, reasoning_steps, sources
 
 
+def _extract_context_data(
+    context: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
+    """Extract retrieval results, analysis results, and query from context.
+
+    Args:
+        context: Context dictionary containing task results
+
+    Returns:
+        Tuple of (retrieval_results, analysis_results, query)
+    """
+    retrieval_results: list[dict[str, Any]] = []
+    analysis_results: list[dict[str, Any]] = []
+    query = ""
+
+    if not context:
+        return retrieval_results, analysis_results, query
+
+    for _task_id, task_result in context.items():
+        if not task_result:
+            continue
+
+        try:
+            if isinstance(task_result, str):
+                result_data = json.loads(task_result)
+            else:
+                result_data = task_result
+
+            if isinstance(result_data, dict) and "chunks" in result_data:
+                retrieval_results.extend(result_data.get("chunks", []))
+                if not query:
+                    query = result_data.get("query", "")
+            elif isinstance(result_data, dict) and "calculation" in result_data:
+                analysis_results.append(result_data)
+
+        except (json.JSONDecodeError, TypeError, AttributeError):
+            continue
+
+    return retrieval_results, analysis_results, query
+
+
+async def _perform_synthesis(
+    retrieval_results: list[dict[str, Any]],
+    analysis_results: list[dict[str, Any]],
+    query: str,
+) -> tuple[str, list[str], list[str], str]:
+    """Perform synthesis using appropriate method (OpenAI, Mistral, or simple).
+
+    Args:
+        retrieval_results: Document chunks from retrieval
+        analysis_results: Calculation results from analysis
+        query: Original user query
+
+    Returns:
+        Tuple of (answer, reasoning_steps, sources, synthesis_method)
+    """
+    import os
+
+    is_test = os.getenv("PYTEST_CURRENT_TEST") is not None
+
+    if is_test:
+        synthesis_method = "simple"
+        return *_synthesize_simple(
+            retrieval_results=retrieval_results or [],
+            analysis_results=analysis_results or [],
+            query=query,
+        ), synthesis_method
+
+    synthesis_method = "gpt-4o"
+    try:
+        result = await _synthesize_with_openai(
+            retrieval_results=retrieval_results or [],
+            analysis_results=analysis_results or [],
+            query=query,
+            context=None,
+            model="gpt-4o",
+        )
+        return *result, synthesis_method
+    except Exception as openai_error:
+        logger.warning(
+            "OpenAI synthesis failed, falling back to Mistral",
+            extra={"error": str(openai_error)},
+        )
+        synthesis_method = "mistral-large"
+        result = await _synthesize_with_mistral(
+            retrieval_results=retrieval_results or [],
+            analysis_results=analysis_results or [],
+            query=query,
+            context=None,
+        )
+        return *result, synthesis_method
+
+
+def _build_synthesis_result(
+    answer: str,
+    reasoning_steps: list[str],
+    sources: list[str],
+    synthesis_method: str,
+    retrieval_count: int,
+    analysis_count: int,
+) -> str:
+    """Build SynthesisResult and return JSON string.
+
+    Args:
+        answer: Synthesized answer
+        reasoning_steps: List of reasoning steps
+        sources: Source citations
+        synthesis_method: Method used for synthesis
+        retrieval_count: Number of retrieval results
+        analysis_count: Number of analysis results
+
+    Returns:
+        JSON-serialized SynthesisResult
+    """
+    result = SynthesisResult(
+        answer=answer,
+        reasoning_steps=reasoning_steps,
+        sources=sources,
+        metadata={
+            "retrieval_count": retrieval_count,
+            "analysis_count": analysis_count,
+            "synthesis_type": synthesis_method,
+            "source_count": len(sources),
+        },
+    )
+
+    return result.model_dump_json()
+
+
+def _build_synthesis_error(
+    error_msg: str,
+    execution_time: float,
+) -> str:
+    """Build error result for synthesis agent.
+
+    Args:
+        error_msg: Error message
+        execution_time: Execution time in milliseconds
+
+    Returns:
+        JSON-serialized error result
+    """
+    error_result = SynthesisResult(
+        answer="Error during synthesis",
+        reasoning_steps=[f"Error: {error_msg}"],
+        sources=[],
+        metadata={
+            "error": True,
+            "error_message": error_msg,
+            "execution_time_ms": execution_time,
+        },
+    )
+
+    return error_result.model_dump_json()
+
+
 @tool
 async def synthesis_agent(
     instruction: str,
@@ -320,43 +476,9 @@ async def synthesis_agent(
     error_msg = None
 
     try:
-        # Extract data from context (orchestrator passes previous agent results here)
-        context = context or {}
+        retrieval_results, analysis_results, query = _extract_context_data(context)
 
-        # Parse context to extract retrieval results, analysis results, and query
-        retrieval_results: list[dict[str, Any]] = []
-        analysis_results: list[dict[str, Any]] = []
-        query = ""
-
-        # Iterate through context values to find agent results
-        for _task_id, task_result in context.items():
-            if not task_result:
-                continue
-
-            # Try to parse JSON result
-            try:
-                if isinstance(task_result, str):
-                    result_data = json.loads(task_result)
-                else:
-                    result_data = task_result
-
-                # Check if this is retrieval results
-                if isinstance(result_data, dict) and "chunks" in result_data:
-                    retrieval_results.extend(result_data.get("chunks", []))
-                    if not query:
-                        query = result_data.get("query", "")
-
-                # Check if this is analysis results
-                elif isinstance(result_data, dict) and "calculation" in result_data:
-                    analysis_results.append(result_data)
-
-            except (json.JSONDecodeError, TypeError, AttributeError):
-                # Skip results that can't be parsed
-                continue
-
-        # If query not found in context, extract from instruction
         if not query:
-            # Instruction typically contains the original query
             query = instruction
 
         logger.info(
@@ -370,63 +492,14 @@ async def synthesis_agent(
             },
         )
 
-        # Validate inputs
         if not query:
             raise ValueError("Query cannot be empty")
 
         if not retrieval_results and not analysis_results:
             raise ValueError("Synthesis requires at least retrieval_results or analysis_results")
 
-        # Check if we're in test mode and use simple synthesis
-        import os
-
-        is_test = os.getenv("PYTEST_CURRENT_TEST") is not None
-
-        if is_test:
-            # Test mode - use simple synthesis without LLM calls
-            synthesis_method = "simple"
-            answer, reasoning_steps, sources = _synthesize_simple(
-                retrieval_results=retrieval_results or [],
-                analysis_results=analysis_results or [],
-                query=query,
-            )
-        else:
-            # Use OpenAI GPT-4o as primary synthesis (stable, proven quality)
-            # GPT-4o: 75.9% MATH, lower hallucination, $15/M output - reliable for production
-            synthesis_method = "gpt-4o"
-            try:
-                answer, reasoning_steps, sources = await _synthesize_with_openai(
-                    retrieval_results=retrieval_results or [],
-                    analysis_results=analysis_results or [],
-                    query=query,
-                    context=None,
-                    model="gpt-4o",
-                )
-            except Exception as openai_error:
-                # OpenAI failed - try Mistral as fallback (reverse fallback)
-                logger.warning(
-                    "OpenAI synthesis failed, falling back to Mistral",
-                    extra={"error": str(openai_error)},
-                )
-                synthesis_method = "mistral-large"
-                answer, reasoning_steps, sources = await _synthesize_with_mistral(
-                    retrieval_results=retrieval_results or [],
-                    analysis_results=analysis_results or [],
-                    query=query,
-                    context=None,
-                )
-
-        # Build result
-        result = SynthesisResult(
-            answer=answer,
-            reasoning_steps=reasoning_steps,
-            sources=sources,
-            metadata={
-                "retrieval_count": len(retrieval_results or []),
-                "analysis_count": len(analysis_results or []),
-                "synthesis_type": synthesis_method,  # Track which synthesis was used
-                "source_count": len(sources),
-            },
+        answer, reasoning_steps, sources, synthesis_method = await _perform_synthesis(
+            retrieval_results, analysis_results, query
         )
 
         success = True
@@ -443,7 +516,14 @@ async def synthesis_agent(
             },
         )
 
-        return result.model_dump_json()
+        return _build_synthesis_result(
+            answer,
+            reasoning_steps,
+            sources,
+            synthesis_method,
+            len(retrieval_results),
+            len(analysis_results),
+        )
 
     except Exception as e:
         execution_time = (time.time() - start_time) * 1000
@@ -459,16 +539,4 @@ async def synthesis_agent(
             },
         )
 
-        # Return error metadata
-        error_result = SynthesisResult(
-            answer="Error during synthesis",
-            reasoning_steps=[f"Error: {error_msg}"],
-            sources=[],
-            metadata={
-                "error": True,
-                "error_message": error_msg,
-                "execution_time_ms": execution_time,
-            },
-        )
-
-        return error_result.model_dump_json()
+        return _build_synthesis_error(error_msg, execution_time)

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-06T19:37:30.229300",
+  "baseline_date": "2026-01-07T16:55:45.056717",
   "description": "Grandfathered function length violations - refactor gradually",
   "thresholds": {
     "warning": 50,
@@ -24,15 +24,6 @@
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
-    },
-    "tests/integration/fixtures/session_fixtures.py:260:session_ingested_collection": {
-      "length": 275,
-      "function": "session_ingested_collection",
-      "file": "tests/integration/fixtures/session_fixtures.py",
-      "line": 260,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "tests/"
     },
     "tests/integration/fixtures/session/_legacy.py:120:session_ingested_collection": {
       "length": 275,
@@ -133,24 +124,6 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/ingestion/adaptive_table/unit_inference/async_batch.py:236:_apply_context_aware_unit_inference_async": {
-      "length": 194,
-      "function": "_apply_context_aware_unit_inference_async",
-      "file": "raglite/ingestion/adaptive_table/unit_inference/async_batch.py",
-      "line": 236,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/agentic/agents/synthesis_agent.py:288:synthesis_agent": {
-      "length": 187,
-      "function": "synthesis_agent",
-      "file": "raglite/agentic/agents/synthesis_agent.py",
-      "line": 288,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/forecasting/data_quality/checks/entity_checks.py:21:check_entity_contamination": {
       "length": 180,
       "function": "check_entity_contamination",
@@ -187,15 +160,6 @@
       "target_lines": 100,
       "directory": "tests/"
     },
-    "raglite/agentic/agents/analysis_agent.py:129:analysis_agent": {
-      "length": 174,
-      "function": "analysis_agent",
-      "file": "raglite/agentic/agents/analysis_agent.py",
-      "line": 129,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/mcp/tools/admin.py:117:retrain_forecasting_models": {
       "length": 174,
       "function": "retrain_forecasting_models",
@@ -219,24 +183,6 @@
       "function": "ingest_documents_parallel",
       "file": "raglite/ingestion/document_ingestion/collection.py",
       "line": 18,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/agentic/agents/retrieval_agent.py:30:retrieval_agent": {
-      "length": 164,
-      "function": "retrieval_agent",
-      "file": "raglite/agentic/agents/retrieval_agent.py",
-      "line": 30,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/agentic/agents/forecasting_agent.py:29:forecasting_agent": {
-      "length": 163,
-      "function": "forecasting_agent",
-      "file": "raglite/agentic/agents/forecasting_agent.py",
-      "line": 29,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -268,33 +214,6 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/structured/table_retrieval.py:171:search_tables_with_metadata_filter": {
-      "length": 152,
-      "function": "search_tables_with_metadata_filter",
-      "file": "raglite/structured/table_retrieval.py",
-      "line": 171,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/ingestion/adaptive_table/unit_inference/llm_inference.py:19:_infer_unit_from_context": {
-      "length": 151,
-      "function": "_infer_unit_from_context",
-      "file": "raglite/ingestion/adaptive_table/unit_inference/llm_inference.py",
-      "line": 19,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/retrieval/sql_table_search.py:128:search_tables_sql": {
-      "length": 149,
-      "function": "search_tables_sql",
-      "file": "raglite/retrieval/sql_table_search.py",
-      "line": 128,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/forecasting/models/tft_model.py:147:fit_and_forecast_tft": {
       "length": 149,
       "function": "fit_and_forecast_tft",
@@ -318,33 +237,6 @@
       "function": "merge_results",
       "file": "raglite/retrieval/multi_index_search.py",
       "line": 341,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/ingestion/adaptive_table/multi_header.py:24:_extract_multi_header_metric_entity": {
-      "length": 146,
-      "function": "_extract_multi_header_metric_entity",
-      "file": "raglite/ingestion/adaptive_table/multi_header.py",
-      "line": 24,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/mcp/tools/validation.py:22:validate_forecasting_accuracy": {
-      "length": 145,
-      "function": "validate_forecasting_accuracy",
-      "file": "raglite/mcp/tools/validation.py",
-      "line": 22,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/structured/table_retrieval.py:27:search_tables": {
-      "length": 142,
-      "function": "search_tables",
-      "file": "raglite/structured/table_retrieval.py",
-      "line": 27,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -583,15 +475,6 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "tests/integration/fixtures/session_fixtures.py:43:_has_integration_tests": {
-      "length": 119,
-      "function": "_has_integration_tests",
-      "file": "tests/integration/fixtures/session_fixtures.py",
-      "line": 43,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "tests/"
-    },
     "tests/integration/fixtures/session/test_detection.py:33:_has_integration_tests": {
       "length": 119,
       "function": "_has_integration_tests",
@@ -723,15 +606,6 @@
       "function": "fetch_contracts",
       "file": "raglite/external_data/clients/basegov/client.py",
       "line": 87,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/ingestion/adaptive_table/unit_inference/async_batch.py:41:_infer_unit_from_context_async": {
-      "length": 109,
-      "function": "_infer_unit_from_context_async",
-      "file": "raglite/ingestion/adaptive_table/unit_inference/async_batch.py",
-      "line": 41,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
