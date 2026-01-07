@@ -124,15 +124,13 @@ def create_mock_chunk(
 def create_standard_docling_patches() -> tuple:
     """Create standard Docling patches for PDF ingestion tests.
 
+    After refactoring, we patch the converter creation function in the _legacy module.
+    This is more maintainable and works with lazy imports.
+
     Returns:
-        Tuple of (patch_targets, patch_kwargs) for use with patch()
+        Tuple of patch targets for use with patch()
     """
     base_patches = [
-        "docling.document_converter.DocumentConverter",
-        "docling.datamodel.pipeline_options.PdfPipelineOptions",
-        "docling.datamodel.accelerator_options.AcceleratorOptions",
-        "docling.datamodel.base_models.InputFormat",
-        "docling.document_converter.PdfFormatOption",
-        "docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend",
+        "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
     ]
     return tuple(base_patches)

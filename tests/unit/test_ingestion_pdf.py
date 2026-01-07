@@ -77,11 +77,6 @@ class TestIngestPDF:
         docling_patches = create_standard_docling_patches()
         with (
             patch(docling_patches[0]) as MockConverter,
-            patch(docling_patches[1]),
-            patch(docling_patches[2]),
-            patch(docling_patches[3]),
-            patch(docling_patches[4]),
-            patch(docling_patches[5]),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
                 return_value=mock_qdrant_client,
@@ -89,10 +84,6 @@ class TestIngestPDF:
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
                 return_value=(1, 0),
-            ),
-            patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_tables_in_postgresql",
-                return_value=(0, 0),
             ),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant",
@@ -144,13 +135,9 @@ class TestIngestPDF:
         corrupt_pdf.write_bytes(b"not a real pdf")
 
         # Patch Docling at the source for lazy imports inside ingest_pdf()
+        docling_patches = create_standard_docling_patches()
         with (
-            patch("docling.document_converter.DocumentConverter") as MockConverter,
-            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
-            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
-            patch("docling.datamodel.base_models.InputFormat"),
-            patch("docling.document_converter.PdfFormatOption"),
-            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+            patch(docling_patches[0]) as MockConverter,
         ):
             mock_converter_instance = MockConverter.return_value
             mock_converter_instance.convert.side_effect = Exception("PDF parsing error")
@@ -206,11 +193,6 @@ class TestIngestPDF:
         docling_patches = create_standard_docling_patches()
         with (
             patch(docling_patches[0]) as MockConverter,
-            patch(docling_patches[1]),
-            patch(docling_patches[2]),
-            patch(docling_patches[3]),
-            patch(docling_patches[4]),
-            patch(docling_patches[5]),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
                 return_value=mock_qdrant_client,
@@ -284,11 +266,6 @@ class TestIngestPDF:
         docling_patches = create_standard_docling_patches()
         with (
             patch(docling_patches[0]) as MockConverter,
-            patch(docling_patches[1]),
-            patch(docling_patches[2]),
-            patch(docling_patches[3]),
-            patch(docling_patches[4]),
-            patch(docling_patches[5]),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
                 return_value=mock_qdrant_client,
@@ -388,11 +365,6 @@ class TestIngestPDF:
         docling_patches = create_standard_docling_patches()
         with (
             patch(docling_patches[0]) as MockConverter,
-            patch(docling_patches[1]),
-            patch(docling_patches[2]),
-            patch(docling_patches[3]),
-            patch(docling_patches[4]),
-            patch(docling_patches[5]),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
                 return_value=mock_qdrant_client,
