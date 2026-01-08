@@ -18,22 +18,18 @@ from raglite.shared.logging import get_logger
 logger = get_logger(__name__)
 
 
-async def check_value_range(
+def _validate_data_for_range_check(
     variable: str,
-    config: VariableQualityConfig,
     data: pd.DataFrame,
-) -> CheckResult:
-    """Check if values fall within expected range.
-
-    Validates values against configured min/max bounds and sign constraints.
+) -> CheckResult | None:
+    """Validate input data for range checking.
 
     Args:
         variable: Variable name
-        config: Variable quality configuration
         data: DataFrame with 'value' column
 
     Returns:
-        CheckResult with range validation status
+        CheckResult if validation fails, None if data is valid
     """
     if data is None or data.empty:
         return CheckResult(
@@ -52,6 +48,161 @@ async def check_value_range(
             severity=3,
         )
 
+    return None
+
+
+def _check_min_bound(
+    values: pd.Series,
+    min_value: float,
+    total_count: int,
+) -> tuple[list[str], list[dict]]:
+    """Check if values violate minimum bound.
+
+    Args:
+        values: Series of values to check
+        min_value: Minimum acceptable value
+        total_count: Total number of values (for percentage calculation)
+
+    Returns:
+        Tuple of (issue messages, sample violations)
+    """
+    below_min = values[values < min_value]
+    if len(below_min) == 0:
+        return [], []
+
+    pct = len(below_min) / total_count * 100
+    issues = [f"{len(below_min)} values ({pct:.1f}%) below min {min_value}"]
+    sample_violations = [{"value": v, "issue": "below_min"} for v in below_min.head(3).tolist()]
+    return issues, sample_violations
+
+
+def _check_max_bound(
+    values: pd.Series,
+    max_value: float,
+    total_count: int,
+) -> tuple[list[str], list[dict]]:
+    """Check if values violate maximum bound.
+
+    Args:
+        values: Series of values to check
+        max_value: Maximum acceptable value
+        total_count: Total number of values (for percentage calculation)
+
+    Returns:
+        Tuple of (issue messages, sample violations)
+    """
+    above_max = values[values > max_value]
+    if len(above_max) == 0:
+        return [], []
+
+    pct = len(above_max) / total_count * 100
+    issues = [f"{len(above_max)} values ({pct:.1f}%) above max {max_value}"]
+    sample_violations = [{"value": v, "issue": "above_max"} for v in above_max.head(3).tolist()]
+    return issues, sample_violations
+
+
+def _check_sign_constraint(
+    values: pd.Series,
+    expected_sign: ExpectedSign,
+    total_count: int,
+) -> tuple[list[str], list[dict]]:
+    """Check if values violate sign constraint.
+
+    Args:
+        values: Series of values to check
+        expected_sign: Expected sign constraint
+        total_count: Total number of values (for percentage calculation)
+
+    Returns:
+        Tuple of (issue messages, sample violations)
+    """
+    if expected_sign == ExpectedSign.POSITIVE:
+        non_positive = values[values <= 0]
+        if len(non_positive) == 0:
+            return [], []
+        pct = len(non_positive) / total_count * 100
+        issues = [f"{len(non_positive)} values ({pct:.1f}%) non-positive"]
+        sample_violations = [
+            {"value": v, "issue": "non_positive"} for v in non_positive.head(3).tolist()
+        ]
+    elif expected_sign == ExpectedSign.NEGATIVE:
+        non_negative = values[values >= 0]
+        if len(non_negative) == 0:
+            return [], []
+        pct = len(non_negative) / total_count * 100
+        issues = [f"{len(non_negative)} values ({pct:.1f}%) non-negative"]
+        sample_violations = [
+            {"value": v, "issue": "non_negative"} for v in non_negative.head(3).tolist()
+        ]
+    else:
+        return [], []
+
+    return issues, sample_violations
+
+
+def _build_range_check_result(
+    variable: str,
+    values: pd.Series,
+    issues: list[str],
+    sample_violations: list[dict],
+) -> CheckResult:
+    """Build CheckResult from range validation findings.
+
+    Args:
+        variable: Variable name
+        values: Series of validated values
+        issues: List of issue messages
+        sample_violations: List of sample violation details
+
+    Returns:
+        CheckResult with appropriate status and severity
+    """
+    if not issues:
+        return CheckResult(
+            check_name="value_range",
+            status=CheckStatus.PASS,
+            message=f"All {len(values)} values within expected range",
+            variable=variable,
+            actual_value={"min": float(values.min()), "max": float(values.max())},
+        )
+
+    # Determine severity based on violation rate
+    violation_rate = len(sample_violations) / len(values)
+    severity = 5 if violation_rate > 0.2 else (4 if violation_rate > 0.1 else 3)
+
+    return CheckResult(
+        check_name="value_range",
+        status=CheckStatus.FAIL,
+        message="; ".join(issues),
+        variable=variable,
+        severity=severity,
+        actual_value={"min": float(values.min()), "max": float(values.max())},
+        sample_rows=sample_violations[:5],
+    )
+
+
+async def check_value_range(
+    variable: str,
+    config: VariableQualityConfig,
+    data: pd.DataFrame,
+) -> CheckResult:
+    """Check if values fall within expected range.
+
+    Validates values against configured min/max bounds and sign constraints.
+
+    Args:
+        variable: Variable name
+        config: Variable quality configuration
+        data: DataFrame with 'value' column
+
+    Returns:
+        CheckResult with range validation status
+    """
+    # Validate input data
+    validation_result = _validate_data_for_range_check(variable, data)
+    if validation_result is not None:
+        return validation_result
+
     values = data["value"].dropna()
     if len(values) == 0:
         return CheckResult(
@@ -68,69 +219,24 @@ async def check_value_range(
 
     # Check minimum bound
     if range_config.min_value is not None:
-        below_min = values[values < range_config.min_value]
-        if len(below_min) > 0:
-            pct = len(below_min) / len(values) * 100
-            issues.append(
-                f"{len(below_min)} values ({pct:.1f}%) below min {range_config.min_value}"
-            )
-            sample_violations.extend(
-                [{"value": v, "issue": "below_min"} for v in below_min.head(3).tolist()]
-            )
+        min_issues, min_samples = _check_min_bound(values, range_config.min_value, len(values))
+        issues.extend(min_issues)
+        sample_violations.extend(min_samples)
 
     # Check maximum bound
     if range_config.max_value is not None:
-        above_max = values[values > range_config.max_value]
-        if len(above_max) > 0:
-            pct = len(above_max) / len(values) * 100
-            issues.append(
-                f"{len(above_max)} values ({pct:.1f}%) above max {range_config.max_value}"
-            )
-            sample_violations.extend(
-                [{"value": v, "issue": "above_max"} for v in above_max.head(3).tolist()]
-            )
+        max_issues, max_samples = _check_max_bound(values, range_config.max_value, len(values))
+        issues.extend(max_issues)
+        sample_violations.extend(max_samples)
 
     # Check sign constraint
-    if range_config.expected_sign == ExpectedSign.POSITIVE:
-        non_positive = values[values <= 0]
-        if len(non_positive) > 0:
-            pct = len(non_positive) / len(values) * 100
-            issues.append(f"{len(non_positive)} values ({pct:.1f}%) non-positive")
-            sample_violations.extend(
-                [{"value": v, "issue": "non_positive"} for v in non_positive.head(3).tolist()]
-            )
-    elif range_config.expected_sign == ExpectedSign.NEGATIVE:
-        non_negative = values[values >= 0]
-        if len(non_negative) > 0:
-            pct = len(non_negative) / len(values) * 100
-            issues.append(f"{len(non_negative)} values ({pct:.1f}%) non-negative")
-            sample_violations.extend(
-                [{"value": v, "issue": "non_negative"} for v in non_negative.head(3).tolist()]
-            )
-
-    if not issues:
-        return CheckResult(
-            check_name="value_range",
-            status=CheckStatus.PASS,
-            message=f"All {len(values)} values within expected range",
-            variable=variable,
-            actual_value={"min": float(values.min()), "max": float(values.max())},
-        )
-
-    # Determine severity
-    total_violations = len(sample_violations)
-    violation_rate = total_violations / len(values)
-    severity = 5 if violation_rate > 0.2 else (4 if violation_rate > 0.1 else 3)
-
-    return CheckResult(
-        check_name="value_range",
-        status=CheckStatus.FAIL,
-        message="; ".join(issues),
-        variable=variable,
-        severity=severity,
-        actual_value={"min": float(values.min()), "max": float(values.max())},
-        sample_rows=sample_violations[:5],
+    sign_issues, sign_samples = _check_sign_constraint(
+        values, range_config.expected_sign, len(values)
     )
+    issues.extend(sign_issues)
+    sample_violations.extend(sign_samples)
+
+    return _build_range_check_result(variable, values, issues, sample_violations)
 
 
 async def check_unit_consistency(

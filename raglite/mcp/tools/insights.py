@@ -59,7 +59,7 @@ async def _collect_anomalies_and_trends() -> tuple[list, list, list[str]]:
     """
     from raglite.forecasting.timeseries import extract_timeseries
     from raglite.insights.anomalies import detect_anomalies
-    from raglite.insights.trends import analyze_trends
+    from raglite.insights.trend_analysis import analyze_trends
 
     source_documents: list[str] = []
     all_anomalies = []

@@ -127,6 +127,139 @@ async def generate_embeddings(chunks: list[Chunk]) -> list[Chunk]:
     return chunks
 
 
+def _build_metadata_extraction_messages(text: str) -> str:
+    """Build system prompt for metadata extraction with 15-field rich schema.
+
+    Args:
+        text: Chunk text content to extract metadata from
+
+    Returns:
+        System message content with extraction instructions
+    """
+    return (
+        "Extract 15 metadata fields from financial document chunks for RAG retrieval optimization.\n"
+        "Return ONLY valid JSON with these exact fields. Use null for missing values.\n\n"
+        "DOCUMENT-LEVEL (7 fields):\n"
+        "- document_type: Income Statement | Balance Sheet | Cash Flow Statement | Operational Report | "
+        "Earnings Call | Management Discussion | Financial Notes\n"
+        "- reporting_period: Q1 2024 | Aug-25 YTD | FY 2023 | 2024 Annual | H1 2025\n"
+        "- time_granularity: Daily | Weekly | Monthly | Quarterly | YTD | Annual | Rolling 12-Month\n"
+        "- company_name: Portugal Cement | CIMPOR | Cimpor Trading | InterCement\n"
+        "- geographic_jurisdiction: Portugal | EU | APAC | Americas | Global\n"
+        "- data_source_type: Audited | Internal Report | Regulatory Filing | Management Estimate | Preliminary\n"
+        "- version_date: 2025-08-15 | 2024-Q3-Final | 2024-12-31-Revised\n\n"
+        "SECTION-LEVEL (5 fields):\n"
+        "- section_type: Narrative | Table | Footnote | Chart Caption | Summary | List | Formula\n"
+        "- metric_category: Revenue | EBITDA | Operating Expenses | Capital Expenditure | Cash Flow | "
+        "Assets | Liabilities | Equity | Ratios | Production Volume | Cost per Unit\n"
+        "- units: EUR | USD | GBP | EUR/ton | USD/MWh | Percentage | Count | Tonnes | MWh | m³\n"
+        "- department_scope: Operations | Finance | Production | Sales | Corporate | HR | IT | Supply Chain\n\n"
+        "TABLE-SPECIFIC (3 fields - ONLY for table chunks):\n"
+        "- table_context: Brief description of table purpose and contents (1-2 sentences)\n"
+        "- table_name: Actual table title from document\n"
+        "- statistical_summary: Key statistics if numerical (e.g., 'Mean=5.8, Range=3.5-61.4')\n\n"
+        "EXAMPLES:\n"
+        "Narrative chunk: {document_type: 'Operational Report', reporting_period: 'Aug-25 YTD', "
+        "time_granularity: 'YTD', company_name: 'Portugal Cement', section_type: 'Narrative', "
+        "metric_category: 'EBITDA', department_scope: 'Operations', ...}\n\n"
+        "Table chunk: {document_type: 'Operational Report', reporting_period: 'Aug-25 YTD', "
+        "section_type: 'Table', metric_category: 'Operating Expenses', units: 'EUR/ton', "
+        "table_name: 'Variable Costs Summary', table_context: 'Breakdown of variable costs by category', ...}"
+    )
+
+
+def _validate_api_key() -> None:
+    """Validate that Mistral API key is configured.
+
+    Raises:
+        RuntimeError: If API key is not configured
+    """
+    if not settings.mistral_api_key:
+        error_msg = "Mistral API key not configured. Set MISTRAL_API_KEY environment variable."
+        logger.warning(
+            "Metadata extraction skipped - API key not configured (graceful degradation)",
+            extra={"metadata_extraction": "disabled"},
+        )
+        raise RuntimeError(error_msg)
+
+
+def _validate_response_content(response_content: str | None, chunk_id: str) -> None:
+    """Validate that Mistral API returned valid response content.
+
+    Args:
+        response_content: Content from Mistral API response
+        chunk_id: Unique chunk identifier for logging
+
+    Raises:
+        RuntimeError: If response is empty or not a string
+    """
+    if not response_content:
+        logger.error(
+            "Empty response from Mistral Small 3.2",
+            extra={"chunk_id": chunk_id},
+        )
+        raise RuntimeError("Empty response from Mistral API")
+
+    if not isinstance(response_content, str):
+        logger.error(
+            "Response content is not a string, cannot parse JSON",
+            extra={
+                "chunk_id": chunk_id,
+                "content_type": type(response_content).__name__,
+            },
+        )
+        raise RuntimeError("Response content is not a string")
+
+
+def _parse_metadata_from_response(response_content: str, chunk_id: str) -> ExtractedMetadata:
+    """Parse JSON response into ExtractedMetadata with 15-field rich schema.
+
+    Args:
+        response_content: JSON string from Mistral API
+        chunk_id: Unique chunk identifier for logging
+
+    Returns:
+        ExtractedMetadata with all 15 fields populated
+
+    Raises:
+        RuntimeError: If JSON parsing fails or schema is invalid
+    """
+    try:
+        metadata_dict = json.loads(response_content)
+    except json.JSONDecodeError as e:
+        error_msg = f"Invalid JSON response from Mistral for {chunk_id}: {e}"
+        logger.warning(
+            "Mistral API returned invalid JSON (graceful degradation)",
+            extra={
+                "chunk_id": chunk_id,
+                "error": str(e),
+                "response": response_content,
+            },
+            exc_info=True,
+        )
+        raise RuntimeError(error_msg) from e
+
+    return ExtractedMetadata(
+        # Document-Level (7 fields)
+        document_type=metadata_dict.get("document_type"),
+        reporting_period=metadata_dict.get("reporting_period"),
+        time_granularity=metadata_dict.get("time_granularity"),
+        company_name=metadata_dict.get("company_name"),
+        geographic_jurisdiction=metadata_dict.get("geographic_jurisdiction"),
+        data_source_type=metadata_dict.get("data_source_type"),
+        version_date=metadata_dict.get("version_date"),
+        # Section-Level (5 fields)
+        section_type=metadata_dict.get("section_type"),
+        metric_category=metadata_dict.get("metric_category"),
+        units=metadata_dict.get("units"),
+        department_scope=metadata_dict.get("department_scope"),
+        # Table-Specific (3 fields)
+        table_context=metadata_dict.get("table_context"),
+        table_name=metadata_dict.get("table_name"),
+        statistical_summary=metadata_dict.get("statistical_summary"),
+    )
+
+
 async def extract_chunk_metadata(
     text: str, chunk_id: str, client: Mistral | None = None
 ) -> ExtractedMetadata:
@@ -173,13 +306,7 @@ async def extract_chunk_metadata(
     start_time = time.time()
 
     # Validate Mistral API key is configured
-    if not settings.mistral_api_key:
-        error_msg = "Mistral API key not configured. Set MISTRAL_API_KEY environment variable."
-        logger.warning(
-            "Metadata extraction skipped - API key not configured (graceful degradation)",
-            extra={"chunk_id": chunk_id, "metadata_extraction": "disabled"},
-        )
-        raise RuntimeError(error_msg)
+    _validate_api_key()
 
     logger.debug(
         "Extracting chunk metadata with Mistral Small 3.2",
@@ -192,7 +319,7 @@ async def extract_chunk_metadata(
 
     try:
         # Import dependencies (lazy import to avoid startup overhead)
-        from mistralai.models import AssistantMessage, SystemMessage, ToolMessage, UserMessage
+        from mistralai.models import SystemMessage, UserMessage
 
         # Story 2.6 AC6 FIX: Client pooling - accept pre-created client or create new one
         # This enables caller to reuse single client instance across all chunks (10-15x speedup)
@@ -205,39 +332,8 @@ async def extract_chunk_metadata(
         # AC1 REVISION: Call Mistral Small API with RICH SCHEMA (15 fields)
         # Based on INEXDA, FinRAG, RAF research showing 20-25% accuracy gains
         # Story 2.6 AC6 FIX: Add await (async client) + timeout=30 (fail fast)
-        messages: list[AssistantMessage | SystemMessage | ToolMessage | UserMessage] = [
-            SystemMessage(
-                content=(
-                    "Extract 15 metadata fields from financial document chunks for RAG retrieval optimization.\n"
-                    "Return ONLY valid JSON with these exact fields. Use null for missing values.\n\n"
-                    "DOCUMENT-LEVEL (7 fields):\n"
-                    "- document_type: Income Statement | Balance Sheet | Cash Flow Statement | Operational Report | "
-                    "Earnings Call | Management Discussion | Financial Notes\n"
-                    "- reporting_period: Q1 2024 | Aug-25 YTD | FY 2023 | 2024 Annual | H1 2025\n"
-                    "- time_granularity: Daily | Weekly | Monthly | Quarterly | YTD | Annual | Rolling 12-Month\n"
-                    "- company_name: Portugal Cement | CIMPOR | Cimpor Trading | InterCement\n"
-                    "- geographic_jurisdiction: Portugal | EU | APAC | Americas | Global\n"
-                    "- data_source_type: Audited | Internal Report | Regulatory Filing | Management Estimate | Preliminary\n"
-                    "- version_date: 2025-08-15 | 2024-Q3-Final | 2024-12-31-Revised\n\n"
-                    "SECTION-LEVEL (5 fields):\n"
-                    "- section_type: Narrative | Table | Footnote | Chart Caption | Summary | List | Formula\n"
-                    "- metric_category: Revenue | EBITDA | Operating Expenses | Capital Expenditure | Cash Flow | "
-                    "Assets | Liabilities | Equity | Ratios | Production Volume | Cost per Unit\n"
-                    "- units: EUR | USD | GBP | EUR/ton | USD/MWh | Percentage | Count | Tonnes | MWh | m³\n"
-                    "- department_scope: Operations | Finance | Production | Sales | Corporate | HR | IT | Supply Chain\n\n"
-                    "TABLE-SPECIFIC (3 fields - ONLY for table chunks):\n"
-                    "- table_context: Brief description of table purpose and contents (1-2 sentences)\n"
-                    "- table_name: Actual table title from document\n"
-                    "- statistical_summary: Key statistics if numerical (e.g., 'Mean=5.8, Range=3.5-61.4')\n\n"
-                    "EXAMPLES:\n"
-                    "Narrative chunk: {document_type: 'Operational Report', reporting_period: 'Aug-25 YTD', "
-                    "time_granularity: 'YTD', company_name: 'Portugal Cement', section_type: 'Narrative', "
-                    "metric_category: 'EBITDA', department_scope: 'Operations', ...}\n\n"
-                    "Table chunk: {document_type: 'Operational Report', reporting_period: 'Aug-25 YTD', "
-                    "section_type: 'Table', metric_category: 'Operating Expenses', units: 'EUR/ton', "
-                    "table_name: 'Variable Costs Summary', table_context: 'Breakdown of variable costs by category', ...}"
-                )
-            ),
+        messages = [
+            SystemMessage(content=_build_metadata_extraction_messages(text)),
             UserMessage(
                 content=f"Extract all 15 metadata fields from this financial document chunk:\n\n{text}"
             ),
@@ -250,48 +346,10 @@ async def extract_chunk_metadata(
             max_tokens=400,  # Increased from 150 to accommodate 15 fields
         )
 
-        # Parse response
+        # Parse and validate response
         response_content = response.choices[0].message.content
-
-        if not response_content:
-            logger.error(
-                "Empty response from Mistral Small 3.2",
-                extra={"chunk_id": chunk_id},
-            )
-            raise RuntimeError("Empty response from Mistral API")
-
-        # Type guard: ensure response_content is a string before json.loads
-        if not isinstance(response_content, str):
-            logger.error(
-                "Response content is not a string, cannot parse JSON",
-                extra={
-                    "chunk_id": chunk_id,
-                    "content_type": type(response_content).__name__,
-                },
-            )
-            raise RuntimeError("Response content is not a string")
-
-        # Parse JSON response into ExtractedMetadata (15 fields - RICH SCHEMA)
-        metadata_dict = json.loads(response_content)
-        extracted_metadata = ExtractedMetadata(
-            # Document-Level (7 fields)
-            document_type=metadata_dict.get("document_type"),
-            reporting_period=metadata_dict.get("reporting_period"),
-            time_granularity=metadata_dict.get("time_granularity"),
-            company_name=metadata_dict.get("company_name"),
-            geographic_jurisdiction=metadata_dict.get("geographic_jurisdiction"),
-            data_source_type=metadata_dict.get("data_source_type"),
-            version_date=metadata_dict.get("version_date"),
-            # Section-Level (5 fields)
-            section_type=metadata_dict.get("section_type"),
-            metric_category=metadata_dict.get("metric_category"),
-            units=metadata_dict.get("units"),
-            department_scope=metadata_dict.get("department_scope"),
-            # Table-Specific (3 fields)
-            table_context=metadata_dict.get("table_context"),
-            table_name=metadata_dict.get("table_name"),
-            statistical_summary=metadata_dict.get("statistical_summary"),
-        )
+        _validate_response_content(response_content, chunk_id)
+        extracted_metadata = _parse_metadata_from_response(response_content, chunk_id)
 
         # Calculate duration for logging
         duration_ms = int((time.time() - start_time) * 1000)
@@ -311,19 +369,6 @@ async def extract_chunk_metadata(
         )
 
         return extracted_metadata
-
-    except json.JSONDecodeError as e:
-        error_msg = f"Invalid JSON response from Mistral for {chunk_id}: {e}"
-        logger.warning(
-            "Mistral API returned invalid JSON (graceful degradation)",
-            extra={
-                "chunk_id": chunk_id,
-                "error": str(e),
-                "response": response_content if "response_content" in locals() else None,
-            },
-            exc_info=True,
-        )
-        raise RuntimeError(error_msg) from e
 
     except Exception as e:
         error_msg = f"Chunk metadata extraction failed for {chunk_id}: {e}"

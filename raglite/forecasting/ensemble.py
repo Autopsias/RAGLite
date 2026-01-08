@@ -127,6 +127,89 @@ async def explain_forecast(result: ForecastResult, context: str) -> str:
     return await explain_impl(result, context)
 
 
+def _generate_explanation_context(
+    metric: str, successful_models: list[str], selected: list[str] | None
+) -> str:
+    """Generate explanation context string for LLM.
+
+    Args:
+        metric: Metric name
+        successful_models: List of successfully fitted model names
+        selected: List of selected external regressor names
+
+    Returns:
+        Context string for LLM explanation
+    """
+    context = f"Ensemble forecast for {metric} using {', '.join(successful_models)}"
+    if selected:
+        context += f" with external regressors: {', '.join(selected)}"
+    return context
+
+
+def _build_historical_dataframe(historical_data: TimeSeriesData) -> pd.DataFrame:
+    """Build DataFrame from historical time series data.
+
+    Args:
+        historical_data: Time-series data from extraction
+
+    Returns:
+        DataFrame with 'ds' (date) and 'y' (value) columns
+    """
+    return pd.DataFrame(
+        {
+            "ds": [p.date for p in historical_data.points],
+            "y": [p.value for p in historical_data.points],
+        }
+    )
+
+
+async def _finalize_ensemble_result(
+    metric: str,
+    historical_data: TimeSeriesData,
+    forecast_points: list,
+    successful_models: list[str],
+    predictions: dict[str, list[float]],
+    weights: dict[str, float],
+    combined_metrics: dict[str, float],
+    selected: list[str] | None,
+    periods_ahead: int,
+) -> ForecastResult:
+    """Build final ensemble result with LLM explanation.
+
+    Args:
+        metric: Metric name
+        historical_data: Time-series data from extraction
+        forecast_points: List of forecast points
+        successful_models: List of successfully fitted model names
+        predictions: Dict of model predictions
+        weights: Dict of model weights
+        combined_metrics: Aggregated metrics
+        selected: List of selected external regressor names
+        periods_ahead: Number of forecast periods
+
+    Returns:
+        Complete ForecastResult with LLM explanation
+    """
+    # Build result object
+    result = build_ensemble_result(
+        metric,
+        historical_data,
+        forecast_points,
+        successful_models,
+        predictions,
+        weights,
+        combined_metrics,
+        selected or [],
+        periods_ahead,
+    )
+
+    # Generate LLM explanation
+    context = _generate_explanation_context(metric, successful_models, selected)
+    result.confidence_reasoning = await explain_forecast(result, context)
+
+    return result
+
+
 async def generate_ensemble_forecast(
     metric: str,
     historical_data: TimeSeriesData,
@@ -174,12 +257,7 @@ async def generate_ensemble_forecast(
     X, y, selected, prepared = prepare_ensemble_data(historical_data, external_regressors, logger)
 
     # Build DataFrame for forecast point generation
-    df = pd.DataFrame(
-        {
-            "ds": [p.date for p in historical_data.points],
-            "y": [p.value for p in historical_data.points],
-        }
-    )
+    df = _build_historical_dataframe(historical_data)
 
     # Step 3: Build parallel tasks
     loop = asyncio.get_event_loop()
@@ -219,8 +297,8 @@ async def generate_ensemble_forecast(
     # Step 9: Aggregate metrics
     combined_metrics = aggregate_metrics(metrics_results)
 
-    # Step 10: Build result
-    result = build_ensemble_result(
+    # Step 10: Finalize result with LLM explanation
+    return await _finalize_ensemble_result(
         metric,
         historical_data,
         forecast_points,
@@ -231,11 +309,3 @@ async def generate_ensemble_forecast(
         selected,
         periods_ahead,
     )
-
-    # Step 11: Generate LLM explanation
-    context = f"Ensemble forecast for {metric} using {', '.join(successful_models)}"
-    if selected:
-        context += f" with external regressors: {', '.join(selected)}"
-    result.confidence_reasoning = await explain_forecast(result, context)
-
-    return result

@@ -188,101 +188,220 @@ class ENTSOEClient:
         retry_delays = [2, 4, 8]
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            for attempt in range(max_retries):
-                try:
-                    response = await client.get(self.daily_csv_url)
-                    response.raise_for_status()
+            df = await self._fetch_with_retry(client, max_retries, retry_delays)
 
-                    # Parse CSV
-                    csv_text = response.text
-                    df = pd.read_csv(StringIO(csv_text))
+        # Cache and return
+        self._daily_cache = df
+        self._log_fetch_success(df)
+        return df
 
-                    # Ember CSV actual columns: 'Country', 'ISO3 Code', 'Date', 'Price (EUR/MWhe)'
-                    # Normalize column names to lowercase with underscores
-                    df.columns = (
-                        df.columns.str.lower()
-                        .str.replace(" ", "_")
-                        .str.replace("(", "")
-                        .str.replace(")", "")
-                        .str.replace("/", "_")
-                    )
+    async def _fetch_with_retry(
+        self, client: httpx.AsyncClient, max_retries: int, retry_delays: list[int]
+    ) -> pd.DataFrame:
+        """Fetch CSV with retry logic.
 
-                    # Expected normalized: country, iso3_code, date, price_eur_mwhe
-                    required_cols = ["iso3_code", "date", "price_eur_mwhe"]
-                    missing = [col for col in required_cols if col not in df.columns]
-                    if missing:
-                        raise ExternalDataFetchError(
-                            source="Ember",
-                            message=f"Missing columns: {missing}. Found: {df.columns.tolist()}",
-                        )
+        Args:
+            client: HTTP client
+            max_retries: Maximum retry attempts
+            retry_delays: Exponential backoff delays
 
-                    # Rename price column for consistency
-                    df = df.rename(columns={"price_eur_mwhe": "price_eur_mwh"})
+        Returns:
+            Parsed DataFrame
 
-                    # Parse dates
-                    df["date"] = pd.to_datetime(df["date"]).dt.date
+        Raises:
+            ExternalDataFetchError: If all retries fail
+        """
+        for attempt in range(max_retries):
+            try:
+                response = await client.get(self.daily_csv_url)
+                response.raise_for_status()
+                return self._parse_daily_csv(response.text)
 
-                    # Filter out null prices
-                    df = df[df["price_eur_mwh"].notna()]
+            except (httpx.TimeoutException, httpx.HTTPStatusError) as e:
+                should_retry = await self._handle_fetch_error(e, attempt, max_retries, retry_delays)
+                if should_retry:
+                    continue
+                raise
 
-                    # Cache the result
-                    self._daily_cache = df
-
-                    logger.info(
-                        "Fetched Ember daily CSV",
-                        extra={
-                            "total_records": len(df),
-                            "countries": df["country"].nunique(),
-                            "date_range": f"{df['date'].min()} to {df['date'].max()}",
-                        },
-                    )
-
-                    return df
-
-                except httpx.TimeoutException as e:
-                    if attempt < max_retries - 1:
-                        delay = retry_delays[min(attempt, len(retry_delays) - 1)]
-                        logger.warning(
-                            "Ember CSV download timeout, retrying",
-                            extra={"attempt": attempt + 1, "delay": delay},
-                        )
-                        await asyncio.sleep(delay)
-                        continue
-                    raise ExternalDataFetchError(
-                        source="Ember",
-                        message=f"CSV download timeout after {max_retries} attempts",
-                    ) from e
-
-                except httpx.HTTPStatusError as e:
-                    # Retry on server errors (5xx) or rate limit (429)
-                    should_retry = e.response.status_code >= 500 or e.response.status_code == 429
-                    if attempt < max_retries - 1 and should_retry:
-                        delay = retry_delays[min(attempt, len(retry_delays) - 1)]
-                        logger.warning(
-                            "Ember CSV download failed, retrying",
-                            extra={
-                                "status": e.response.status_code,
-                                "attempt": attempt + 1,
-                                "delay": delay,
-                            },
-                        )
-                        await asyncio.sleep(delay)
-                        continue
-                    raise ExternalDataFetchError(
-                        source="Ember",
-                        message=f"HTTP error: {e.response.status_code}",
-                    ) from e
-
-                except Exception as e:
-                    raise ExternalDataFetchError(
-                        source="Ember",
-                        message=f"Failed to parse CSV: {e}",
-                    ) from e
+            except Exception as e:
+                raise ExternalDataFetchError(
+                    source="Ember",
+                    message=f"Failed to parse CSV: {e}",
+                ) from e
 
         raise ExternalDataFetchError(
             source="Ember",
             message="Failed to fetch CSV after retries",
         )
+
+    def _parse_daily_csv(self, csv_text: str) -> pd.DataFrame:
+        """Parse and normalize Ember daily CSV data.
+
+        Args:
+            csv_text: Raw CSV text from API
+
+        Returns:
+            Normalized DataFrame with columns: country, iso3_code, date, price_eur_mwh
+
+        Raises:
+            ExternalDataFetchError: If required columns are missing
+        """
+        df = pd.read_csv(StringIO(csv_text))
+
+        # Normalize column names: 'Country', 'ISO3 Code', 'Date', 'Price (EUR/MWhe)'
+        # to: country, iso3_code, date, price_eur_mwhe
+        df.columns = (
+            df.columns.str.lower()
+            .str.replace(" ", "_")
+            .str.replace("(", "")
+            .str.replace(")", "")
+            .str.replace("/", "_")
+        )
+
+        # Validate required columns
+        required_cols = ["iso3_code", "date", "price_eur_mwhe"]
+        missing = [col for col in required_cols if col not in df.columns]
+        if missing:
+            raise ExternalDataFetchError(
+                source="Ember",
+                message=f"Missing columns: {missing}. Found: {df.columns.tolist()}",
+            )
+
+        # Normalize price column name
+        df = df.rename(columns={"price_eur_mwhe": "price_eur_mwh"})
+
+        # Parse dates and filter null prices
+        df["date"] = pd.to_datetime(df["date"]).dt.date
+        df = df[df["price_eur_mwh"].notna()]
+
+        return df
+
+    def _log_fetch_success(self, df: pd.DataFrame) -> None:
+        """Log successful CSV fetch with summary statistics.
+
+        Args:
+            df: Parsed DataFrame
+        """
+        logger.info(
+            "Fetched Ember daily CSV",
+            extra={
+                "total_records": len(df),
+                "countries": df["country"].nunique(),
+                "date_range": f"{df['date'].min()} to {df['date'].max()}",
+            },
+        )
+
+    async def _handle_fetch_error(
+        self,
+        error: httpx.TimeoutException | httpx.HTTPStatusError,
+        attempt: int,
+        max_retries: int,
+        retry_delays: list[int],
+    ) -> bool:
+        """Handle fetch errors with retry logic.
+
+        Args:
+            error: The HTTP error that occurred
+            attempt: Current attempt number (0-indexed)
+            max_retries: Maximum number of retry attempts
+            retry_delays: List of delay seconds for each retry
+
+        Returns:
+            True if should retry, False if should raise
+
+        Raises:
+            ExternalDataFetchError: If error is not retryable or retries exhausted
+        """
+        is_timeout = isinstance(error, httpx.TimeoutException)
+        is_http_error = isinstance(error, httpx.HTTPStatusError)
+
+        # Determine if error is retryable
+        should_retry_error = is_timeout or self._is_retryable_http_error(is_http_error, error)
+
+        if attempt < max_retries - 1 and should_retry_error:
+            await self._retry_with_backoff(is_timeout, error, attempt, retry_delays)
+            return True
+
+        # Retries exhausted or non-retryable error - raise
+        self._raise_fetch_error(is_timeout, error, max_retries)
+        # Never returns (always raises)
+        return False  # Type checker hint (unreachable)
+
+    def _is_retryable_http_error(
+        self, is_http_error: bool, error: httpx.TimeoutException | httpx.HTTPStatusError
+    ) -> bool:
+        """Check if HTTP error is retryable (5xx or 429).
+
+        Args:
+            is_http_error: Whether error is HTTPStatusError
+            error: The error object
+
+        Returns:
+            True if error is retryable
+        """
+        if not is_http_error:
+            return False
+        # Type narrowing: error is HTTPStatusError here
+        assert isinstance(error, httpx.HTTPStatusError)
+        return error.response.status_code >= 500 or error.response.status_code == 429
+
+    async def _retry_with_backoff(
+        self,
+        is_timeout: bool,
+        error: httpx.TimeoutException | httpx.HTTPStatusError,
+        attempt: int,
+        retry_delays: list[int],
+    ) -> None:
+        """Log retry and wait with exponential backoff.
+
+        Args:
+            is_timeout: Whether error was a timeout
+            error: The error that occurred
+            attempt: Current attempt number (0-indexed)
+            retry_delays: List of delay seconds
+        """
+        delay = retry_delays[min(attempt, len(retry_delays) - 1)]
+        if is_timeout:
+            logger.warning(
+                "Ember CSV download timeout, retrying",
+                extra={"attempt": attempt + 1, "delay": delay},
+            )
+        else:
+            # Type narrowing: error is HTTPStatusError when not timeout
+            assert isinstance(error, httpx.HTTPStatusError)
+            logger.warning(
+                "Ember CSV download failed, retrying",
+                extra={
+                    "status": error.response.status_code,
+                    "attempt": attempt + 1,
+                    "delay": delay,
+                },
+            )
+        await asyncio.sleep(delay)
+
+    def _raise_fetch_error(
+        self,
+        is_timeout: bool,
+        error: httpx.TimeoutException | httpx.HTTPStatusError,
+        max_retries: int,
+    ) -> None:
+        """Raise appropriate ExternalDataFetchError for exhausted retries.
+
+        Args:
+            is_timeout: Whether error was a timeout
+            error: The error that occurred
+            max_retries: Maximum number of retry attempts
+
+        Raises:
+            ExternalDataFetchError: Always raises
+        """
+        if is_timeout:
+            message = f"CSV download timeout after {max_retries} attempts"
+        else:
+            # Type narrowing: error is HTTPStatusError when not timeout
+            assert isinstance(error, httpx.HTTPStatusError)
+            message = f"HTTP error: {error.response.status_code}"
+        raise ExternalDataFetchError(source="Ember", message=message) from error
 
     async def fetch_monthly_average(
         self,

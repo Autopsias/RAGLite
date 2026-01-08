@@ -12,6 +12,184 @@ from raglite.shared.models import Anomaly, AnomalyDetectionResult, AnomalySeveri
 logger = get_logger(__name__)
 
 
+def _extract_timeseries_data(timeseries: TimeSeriesData) -> tuple[list[float], list[str]]:
+    """Extract values and date labels from time-series data.
+
+    Args:
+        timeseries: Time-series data with points
+
+    Returns:
+        Tuple of (values list, date labels list)
+    """
+    values = [p.value for p in timeseries.points]
+    dates = [p.label or p.date.strftime("%Y-%m-%d") for p in timeseries.points]
+    return values, dates
+
+
+def _calculate_statistics(values: list[float]) -> tuple[float, float]:
+    """Calculate mean and standard deviation.
+
+    Args:
+        values: List of numerical values
+
+    Returns:
+        Tuple of (mean, standard_deviation)
+    """
+    mean = float(np.mean(values))
+    std = float(np.std(values))
+    return mean, std
+
+
+def _determine_severity(abs_z: float, include_minor: bool) -> AnomalySeverity | None:
+    """Determine anomaly severity based on Z-score.
+
+    Args:
+        abs_z: Absolute value of Z-score
+        include_minor: Whether to include MINOR severity (1.5 < |z| <= 2)
+
+    Returns:
+        AnomalySeverity if threshold met, None otherwise
+    """
+    if abs_z > 3:
+        return AnomalySeverity.CRITICAL
+    elif abs_z > 2:
+        return AnomalySeverity.MODERATE
+    elif include_minor and abs_z > 1.5:
+        return AnomalySeverity.MINOR
+    return None
+
+
+def _get_detection_method(include_minor: bool) -> str:
+    """Get detection method description based on threshold.
+
+    Args:
+        include_minor: Whether minor anomalies are included
+
+    Returns:
+        Detection method description string
+    """
+    threshold = "|z| > 1.5" if include_minor else "|z| > 2"
+    return f"Z-score analysis (threshold: {threshold})"
+
+
+def _log_detection_start(
+    metric: str,
+    data_points: int,
+    mean: float,
+    std: float,
+    include_minor: bool,
+    auto_explain: bool,
+) -> None:
+    """Log the start of anomaly detection process.
+
+    Args:
+        metric: Metric name
+        data_points: Number of data points
+        mean: Mean value
+        std: Standard deviation
+        include_minor: Whether minor anomalies included
+        auto_explain: Whether auto-explanation enabled
+    """
+    min_threshold = 1.5 if include_minor else 2.0
+    logger.info(
+        "Detecting anomalies",
+        extra={
+            "metric": metric,
+            "data_points": data_points,
+            "mean": round(mean, 2),
+            "std": round(std, 2),
+            "include_minor": include_minor,
+            "auto_explain": auto_explain,
+            "min_threshold": min_threshold,
+        },
+    )
+
+
+def _log_anomaly_detected(
+    metric: str,
+    date: str,
+    value: float,
+    z_score: float,
+    severity: AnomalySeverity,
+    magnitude_pct: float,
+) -> None:
+    """Log a detected anomaly.
+
+    Args:
+        metric: Metric name
+        date: Date label
+        value: Observed value
+        z_score: Z-score
+        severity: Anomaly severity
+        magnitude_pct: Magnitude percentage
+    """
+    logger.info(
+        "Anomaly detected",
+        extra={
+            "metric": metric,
+            "date": date,
+            "value": value,
+            "z_score": round(z_score, 2),
+            "severity": severity.value,
+            "magnitude_pct": round(magnitude_pct, 1),
+        },
+    )
+
+
+async def _detect_anomalies_in_data(
+    values: list[float],
+    dates: list[str],
+    metric: str,
+    mean: float,
+    std: float,
+    include_minor: bool,
+    auto_explain: bool,
+) -> list[Anomaly]:
+    """Detect anomalies in time-series data.
+
+    Args:
+        values: List of values
+        dates: List of date labels
+        metric: Metric name
+        mean: Mean of distribution
+        std: Standard deviation
+        include_minor: Whether to include minor anomalies
+        auto_explain: Whether to generate explanations
+
+    Returns:
+        List of detected anomalies
+    """
+    anomalies = []
+    for value, date in zip(values, dates, strict=True):
+        z_score = (value - mean) / std
+        abs_z = abs(z_score)
+
+        # AC2/AC3: Z-score thresholds for severity
+        severity = _determine_severity(abs_z, include_minor)
+        if severity is None:
+            continue
+
+        magnitude_pct = ((value - mean) / mean * 100) if mean != 0 else 0.0
+
+        anomaly = Anomaly(
+            date=date,
+            metric=metric,
+            value=value,
+            expected_value=round(mean, 2),
+            z_score=round(z_score, 2),
+            severity=severity,
+            magnitude_pct=round(magnitude_pct, 1),
+        )
+
+        if auto_explain:
+            anomaly.reason = await explain_anomaly(anomaly)
+
+        anomalies.append(anomaly)
+        _log_anomaly_detected(metric, date, value, z_score, severity, magnitude_pct)
+
+    return anomalies
+
+
 async def detect_anomalies(
     metric: str,
     timeseries: TimeSeriesData,
@@ -60,27 +238,10 @@ async def detect_anomalies(
             f"Insufficient data: {len(timeseries.points)} points. Minimum 3 required for statistical analysis."
         )
 
-    values = [p.value for p in timeseries.points]
-    dates = [p.label or p.date.strftime("%Y-%m-%d") for p in timeseries.points]
+    values, dates = _extract_timeseries_data(timeseries)
+    mean, std = _calculate_statistics(values)
 
-    mean = float(np.mean(values))
-    std = float(np.std(values))
-
-    # Determine threshold based on include_minor flag
-    min_threshold = 1.5 if include_minor else 2.0
-
-    logger.info(
-        "Detecting anomalies",
-        extra={
-            "metric": metric,
-            "data_points": len(values),
-            "mean": round(mean, 2),
-            "std": round(std, 2),
-            "include_minor": include_minor,
-            "auto_explain": auto_explain,
-            "min_threshold": min_threshold,
-        },
-    )
+    _log_detection_start(metric, len(values), mean, std, include_minor, auto_explain)
 
     # No variance = no anomalies
     if std == 0:
@@ -96,53 +257,10 @@ async def detect_anomalies(
             std_deviation=std,
         )
 
-    # Calculate Z-scores and identify anomalies
-    anomalies = []
-    for value, date in zip(values, dates, strict=True):
-        z_score = (value - mean) / std
-        abs_z = abs(z_score)
-
-        # AC2/AC3: Z-score thresholds for severity
-        # CRITICAL: |z| > 3.0, MODERATE: |z| > 2.0, MINOR: |z| > 1.5 (if include_minor)
-        if abs_z > 3:
-            severity = AnomalySeverity.CRITICAL
-        elif abs_z > 2:
-            severity = AnomalySeverity.MODERATE
-        elif include_minor and abs_z > 1.5:
-            severity = AnomalySeverity.MINOR
-        else:
-            continue  # Not an anomaly
-
-        magnitude_pct = ((value - mean) / mean * 100) if mean != 0 else 0.0
-
-        anomaly = Anomaly(
-            date=date,
-            metric=metric,
-            value=value,
-            expected_value=round(mean, 2),
-            z_score=round(z_score, 2),
-            severity=severity,
-            magnitude_pct=round(magnitude_pct, 1),
-        )
-
-        # Auto-explain if requested (reduces LLM API calls when False)
-        if auto_explain:
-            anomaly.reason = await explain_anomaly(anomaly)
-
-        anomalies.append(anomaly)
-
-        # AC4: Structured logging for each detected anomaly
-        logger.info(
-            "Anomaly detected",
-            extra={
-                "metric": metric,
-                "date": date,
-                "value": value,
-                "z_score": round(z_score, 2),
-                "severity": severity.value,
-                "magnitude_pct": round(magnitude_pct, 1),
-            },
-        )
+    # Detect anomalies
+    anomalies = await _detect_anomalies_in_data(
+        values, dates, metric, mean, std, include_minor, auto_explain
+    )
 
     logger.info(
         "Anomaly detection complete",
@@ -153,12 +271,7 @@ async def detect_anomalies(
         },
     )
 
-    # Set detection method based on threshold used
-    detection_method = (
-        "Z-score analysis (threshold: |z| > 1.5)"
-        if include_minor
-        else "Z-score analysis (threshold: |z| > 2)"
-    )
+    detection_method = _get_detection_method(include_minor)
 
     return AnomalyDetectionResult(
         metric_name=metric,

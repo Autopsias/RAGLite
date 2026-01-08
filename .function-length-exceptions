@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-08T08:20:06.111177",
+  "baseline_date": "2026-01-08T10:45:16.601501",
   "description": "Grandfathered function length violations - refactor gradually",
   "thresholds": {
     "warning": 50,
@@ -30,15 +30,6 @@
       "function": "extract_variable_cost_from_qdrant_chunks",
       "file": "raglite/forecasting/timeseries/qdrant_variable_cost.py",
       "line": 23,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/mcp/tools/query.py:133:analytical_query_financial_documents": {
-      "length": 244,
-      "function": "analytical_query_financial_documents",
-      "file": "raglite/mcp/tools/query.py",
-      "line": 133,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -115,15 +106,6 @@
       "target_lines": 100,
       "directory": "tests/"
     },
-    "raglite/mcp/tools/ingestion.py:245:ingest_financial_document_async": {
-      "length": 197,
-      "function": "ingest_financial_document_async",
-      "file": "raglite/mcp/tools/ingestion.py",
-      "line": 245,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/forecasting/data_quality/checks/entity_checks.py:21:check_entity_contamination": {
       "length": 180,
       "function": "check_entity_contamination",
@@ -169,15 +151,6 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/insights/trends.py:217:analyze_trends": {
-      "length": 170,
-      "function": "analyze_trends",
-      "file": "raglite/insights/trends.py",
-      "line": 217,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/ingestion/document_ingestion/collection.py:18:ingest_documents_parallel": {
       "length": 164,
       "function": "ingest_documents_parallel",
@@ -205,15 +178,6 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/mcp/tools/ingestion.py:89:ingest_financial_document": {
-      "length": 153,
-      "function": "ingest_financial_document",
-      "file": "raglite/mcp/tools/ingestion.py",
-      "line": 89,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/forecasting/models/tft_model.py:147:fit_and_forecast_tft": {
       "length": 149,
       "function": "fit_and_forecast_tft",
@@ -228,15 +192,6 @@
       "function": "fit_and_forecast_tft",
       "file": "raglite/forecasting/models/tft/_legacy.py",
       "line": 147,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/retrieval/multi_index_search.py:341:merge_results": {
-      "length": 147,
-      "function": "merge_results",
-      "file": "raglite/retrieval/multi_index_search.py",
-      "line": 341,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -502,15 +457,6 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/external_data/clients/entsoe.py:171:_fetch_daily_csv": {
-      "length": 115,
-      "function": "_fetch_daily_csv",
-      "file": "raglite/external_data/clients/entsoe.py",
-      "line": 171,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/ingestion/adaptive_table/unit_inference/extraction.py:218:_detect_unit_column_statistical": {
       "length": 113,
       "function": "_detect_unit_column_statistical",
@@ -651,15 +597,6 @@
       "function": "fit_catboost",
       "file": "raglite/forecasting/hybrid/ml_models.py",
       "line": 305,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/mcp/tools/query.py:25:query_financial_documents": {
-      "length": 105,
-      "function": "query_financial_documents",
-      "file": "raglite/mcp/tools/query.py",
-      "line": 25,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
