@@ -23,7 +23,7 @@ from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 
 # NFR1: Exponential backoff retry delays (seconds)
-RETRY_DELAYS = [2, 4, 8]
+RETRY_DELAYS: list[float] = [2, 4, 8]
 
 
 class BaseExternalClient:
@@ -68,6 +68,165 @@ class BaseExternalClient:
         """
         pass
 
+    async def _execute_http_request(
+        self,
+        client: httpx.AsyncClient,
+        url: str,
+        params: dict[str, Any] | None,
+        method: str,
+        json_body: dict[str, Any] | None,
+        headers: dict[str, str] | None,
+    ) -> httpx.Response:
+        """Execute HTTP request based on method.
+
+        Args:
+            client: httpx async client
+            url: Request URL
+            params: Query parameters for GET requests
+            method: HTTP method ("GET" or "POST")
+            json_body: JSON body for POST requests
+            headers: Request headers
+
+        Returns:
+            httpx.Response object
+
+        Raises:
+            ValueError: If HTTP method is not supported
+        """
+        if method == "GET":
+            response = await client.get(url, params=params, headers=headers)
+        elif method == "POST":
+            response = await client.post(url, json=json_body, headers=headers)
+        else:
+            raise ValueError(f"Unsupported HTTP method: {method}")
+        return response
+
+    async def _handle_timeout_exception(
+        self,
+        e: httpx.TimeoutException,
+        attempt: int,
+        max_retries: int,
+        retry_delays: list[float],
+        url: str,
+        method: str,
+    ) -> None:
+        """Handle timeout exception with retry logic.
+
+        Args:
+            e: Timeout exception
+            attempt: Current attempt number
+            max_retries: Maximum retry attempts
+            retry_delays: List of delay values for backoff
+            url: Request URL
+            method: HTTP method
+
+        Raises:
+            ExternalDataFetchError: If all retries exhausted
+        """
+        if attempt < max_retries - 1:
+            delay = retry_delays[attempt]
+            self.logger.warning(
+                "API timeout, retrying",
+                extra={
+                    "attempt": attempt + 1,
+                    "delay": delay,
+                    "url": url,
+                    "method": method,
+                },
+            )
+            await asyncio.sleep(delay)
+        else:
+            raise ExternalDataFetchError(
+                source=self.__class__.__name__,
+                message=f"Timeout after {max_retries} attempts for {url}",
+                original_error=e,
+            ) from e
+
+    async def _handle_http_status_error(
+        self,
+        e: httpx.HTTPStatusError,
+        attempt: int,
+        max_retries: int,
+        retry_delays: list[float],
+        url: str,
+        method: str,
+    ) -> None:
+        """Handle HTTP status error with retry logic.
+
+        Args:
+            e: HTTP status error
+            attempt: Current attempt number
+            max_retries: Maximum retry attempts
+            retry_delays: List of delay values for backoff
+            url: Request URL
+            method: HTTP method
+
+        Raises:
+            ExternalDataFetchError: If all retries exhausted or non-retryable error
+        """
+        should_retry = e.response.status_code >= 500 or e.response.status_code == 429
+        if attempt < max_retries - 1 and should_retry:
+            delay = retry_delays[attempt]
+            self.logger.warning(
+                "API error, retrying",
+                extra={
+                    "attempt": attempt + 1,
+                    "delay": delay,
+                    "status_code": e.response.status_code,
+                    "url": url,
+                    "method": method,
+                },
+            )
+            await asyncio.sleep(delay)
+        else:
+            raise ExternalDataFetchError(
+                source=self.__class__.__name__,
+                message=f"HTTP {e.response.status_code} for {url}",
+                original_error=e,
+            ) from e
+
+    async def _handle_request_error(
+        self,
+        e: httpx.RequestError,
+        attempt: int,
+        max_retries: int,
+        retry_delays: list[float],
+        url: str,
+        method: str,
+    ) -> None:
+        """Handle request error with retry logic.
+
+        Args:
+            e: Request error
+            attempt: Current attempt number
+            max_retries: Maximum retry attempts
+            retry_delays: List of delay values for backoff
+            url: Request URL
+            method: HTTP method
+
+        Raises:
+            ExternalDataFetchError: If all retries exhausted
+        """
+        if attempt < max_retries - 1:
+            delay = retry_delays[attempt]
+            self.logger.warning(
+                "Request error, retrying",
+                extra={
+                    "attempt": attempt + 1,
+                    "delay": delay,
+                    "error": str(e),
+                    "url": url,
+                    "method": method,
+                },
+            )
+            await asyncio.sleep(delay)
+        else:
+            raise ExternalDataFetchError(
+                source=self.__class__.__name__,
+                message=f"Request failed after {max_retries} attempts: {e}",
+                original_error=e,
+            ) from e
+
     async def _fetch_with_retry(
         self,
         url: str,
@@ -102,85 +261,51 @@ class BaseExternalClient:
             ExternalDataFetchError: If all retries fail
         """
         max_retries = settings.external_data_retry_attempts
-        retry_delays = RETRY_DELAYS
+        retry_delays: list[float] = RETRY_DELAYS
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             for attempt in range(max_retries):
                 try:
-                    if method == "GET":
-                        response = await client.get(url, params=params, headers=headers)
-                    elif method == "POST":
-                        response = await client.post(url, json=json_body, headers=headers)
-                    else:
-                        raise ValueError(f"Unsupported HTTP method: {method}")
-
+                    response = await self._execute_http_request(
+                        client=client,
+                        url=url,
+                        params=params,
+                        method=method,
+                        json_body=json_body,
+                        headers=headers,
+                    )
                     response.raise_for_status()
                     return response
 
                 except httpx.TimeoutException as e:
-                    if attempt < max_retries - 1:
-                        delay = retry_delays[attempt]
-                        self.logger.warning(
-                            "API timeout, retrying",
-                            extra={
-                                "attempt": attempt + 1,
-                                "delay": delay,
-                                "url": url,
-                                "method": method,
-                            },
-                        )
-                        await asyncio.sleep(delay)
-                    else:
-                        raise ExternalDataFetchError(
-                            source=self.__class__.__name__,
-                            message=f"Timeout after {max_retries} attempts for {url}",
-                            original_error=e,
-                        ) from e
+                    await self._handle_timeout_exception(
+                        e=e,
+                        attempt=attempt,
+                        max_retries=max_retries,
+                        retry_delays=retry_delays,
+                        url=url,
+                        method=method,
+                    )
 
                 except httpx.HTTPStatusError as e:
-                    # Retry on server errors (5xx) or rate limiting (429)
-                    should_retry = e.response.status_code >= 500 or e.response.status_code == 429
-                    if attempt < max_retries - 1 and should_retry:
-                        delay = retry_delays[attempt]
-                        self.logger.warning(
-                            "API error, retrying",
-                            extra={
-                                "attempt": attempt + 1,
-                                "delay": delay,
-                                "status_code": e.response.status_code,
-                                "url": url,
-                                "method": method,
-                            },
-                        )
-                        await asyncio.sleep(delay)
-                    else:
-                        raise ExternalDataFetchError(
-                            source=self.__class__.__name__,
-                            message=f"HTTP {e.response.status_code} for {url}",
-                            original_error=e,
-                        ) from e
+                    await self._handle_http_status_error(
+                        e=e,
+                        attempt=attempt,
+                        max_retries=max_retries,
+                        retry_delays=retry_delays,
+                        url=url,
+                        method=method,
+                    )
 
                 except httpx.RequestError as e:
-                    # Network errors, connection errors, etc.
-                    if attempt < max_retries - 1:
-                        delay = retry_delays[attempt]
-                        self.logger.warning(
-                            "Request error, retrying",
-                            extra={
-                                "attempt": attempt + 1,
-                                "delay": delay,
-                                "error": str(e),
-                                "url": url,
-                                "method": method,
-                            },
-                        )
-                        await asyncio.sleep(delay)
-                    else:
-                        raise ExternalDataFetchError(
-                            source=self.__class__.__name__,
-                            message=f"Request failed after {max_retries} attempts: {e}",
-                            original_error=e,
-                        ) from e
+                    await self._handle_request_error(
+                        e=e,
+                        attempt=attempt,
+                        max_retries=max_retries,
+                        retry_delays=retry_delays,
+                        url=url,
+                        method=method,
+                    )
 
         # Should never reach here
         raise ExternalDataFetchError(

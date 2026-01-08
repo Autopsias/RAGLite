@@ -6,6 +6,7 @@ Story 6.14 AC3: Weekly TFT training job (Sunday 2am UTC, before backtest at 3am)
 from __future__ import annotations
 
 from datetime import date, timedelta
+from typing import TYPE_CHECKING
 
 import pandas as pd
 
@@ -19,10 +20,71 @@ from raglite.shared.config import settings
 from raglite.shared.database import get_session
 from raglite.shared.logging import get_logger
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from raglite.external_data.orm_models import ExternalDataSourceORM
+
 logger = get_logger(__name__)
 
 # Minimum data points required for TFT training
 MIN_DATA_POINTS = 24  # 2 years of monthly data minimum
+
+
+def _collect_training_data(
+    sources: Sequence[ExternalDataSourceORM],
+    storage: ExternalDataStorage,
+) -> list[dict]:
+    """Collect time series data from all sources for TFT training.
+
+    Args:
+        sources: List of external data sources
+        storage: ExternalDataStorage instance for querying data
+
+    Returns:
+        List of dictionaries containing training data points
+    """
+    all_data = []
+    end_date = date.today()
+    buffer_days = settings.regressor_buffer_years * 365
+    start_date = end_date - timedelta(days=buffer_days)
+
+    for source in sources:
+        try:
+            source_metrics = storage.get_metrics_for_source(source.source_name)
+            for metric in source_metrics:
+                data_points = storage.query_data_range(
+                    source_name=source.source_name,
+                    start_date=start_date,
+                    end_date=end_date,
+                    metric_name=metric,
+                )
+
+                if len(data_points) >= MIN_DATA_POINTS:
+                    # Convert to DataFrame format
+                    # CRITICAL: Convert Decimal to float for TFT compatibility
+                    for idx, point in enumerate(data_points):
+                        all_data.append(
+                            {
+                                "metric_name": f"{source.source_name}_{metric}",
+                                "date": point.date,
+                                "value": float(point.value),  # Convert Decimal to float
+                                "time_idx": idx,
+                            }
+                        )
+                    logger.info(
+                        f"Included metric for training: {source.source_name}_{metric} ({len(data_points)} points)"
+                    )
+                else:
+                    logger.debug(
+                        f"Skipped metric (insufficient data): {source.source_name}_{metric} ({len(data_points)} < {MIN_DATA_POINTS})"
+                    )
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch data for source {source.source_name}: {e}")
+            continue
+
+    return all_data
 
 
 async def run_weekly_tft_training() -> None:
@@ -58,45 +120,7 @@ async def run_weekly_tft_training() -> None:
             return
 
         # Collect all time series data with sufficient history
-        all_data = []
-        end_date = date.today()
-        buffer_days = settings.regressor_buffer_years * 365
-        start_date = end_date - timedelta(days=buffer_days)
-
-        for source in sources:
-            try:
-                source_metrics = storage.get_metrics_for_source(source.source_name)
-                for metric in source_metrics:
-                    data_points = storage.query_data_range(
-                        source_name=source.source_name,
-                        start_date=start_date,
-                        end_date=end_date,
-                        metric_name=metric,
-                    )
-
-                    if len(data_points) >= MIN_DATA_POINTS:
-                        # Convert to DataFrame format
-                        # CRITICAL: Convert Decimal to float for TFT compatibility
-                        for idx, point in enumerate(data_points):
-                            all_data.append(
-                                {
-                                    "metric_name": f"{source.source_name}_{metric}",
-                                    "date": point.date,
-                                    "value": float(point.value),  # Convert Decimal to float
-                                    "time_idx": idx,
-                                }
-                            )
-                        logger.info(
-                            f"Included metric for training: {source.source_name}_{metric} ({len(data_points)} points)"
-                        )
-                    else:
-                        logger.debug(
-                            f"Skipped metric (insufficient data): {source.source_name}_{metric} ({len(data_points)} < {MIN_DATA_POINTS})"
-                        )
-
-            except Exception as e:
-                logger.warning(f"Failed to fetch data for source {source.source_name}: {e}")
-                continue
+        all_data = _collect_training_data(sources, storage)
 
         if not all_data:
             logger.warning("No metrics with sufficient historical data - skipping TFT training")

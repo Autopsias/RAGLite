@@ -21,6 +21,75 @@ from raglite.shared.logging import get_logger
 logger = get_logger(__name__)
 
 
+def _build_ted_query(
+    start_date: date,
+    end_date: date,
+    cpv_code: str | None = None,
+) -> str:
+    """Build TED API query string.
+
+    Args:
+        start_date: Start of date range
+        end_date: End of date range
+        cpv_code: Optional CPV code filter
+
+    Returns:
+        TED query string
+    """
+    query_parts = [
+        "(place-of-performance = PT)",  # Portugal
+        f"(publication-date >= {start_date.isoformat()})",
+        f"(publication-date <= {end_date.isoformat()})",
+    ]
+
+    if cpv_code:
+        query_parts.append(f"(cpv = {cpv_code}*)")
+
+    return " AND ".join(query_parts)
+
+
+def _prepare_ted_request_payload(
+    query: str,
+    page: int = 1,
+    limit: int = 100,
+) -> tuple[dict, dict]:
+    """Prepare TED API request payload and headers.
+
+    Args:
+        query: TED query string
+        page: Page number
+        limit: Results per page
+
+    Returns:
+        Tuple of (payload, headers)
+    """
+    payload = {
+        "query": query,
+        "fields": [
+            "publication-number",
+            "publication-date",
+            "notice-title",
+            "buyer-name",
+            "winner-name",
+            "total-value",
+            "cpv",
+            "place-of-performance",
+            "contract-nature",
+        ],
+        "page": page,
+        "limit": limit,
+        "scope": "ALL",  # Include historical and active
+        "onlyLatestVersions": True,
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+    return payload, headers
+
+
 async def fetch_ted_notices(
     start_date: date,
     end_date: date,
@@ -53,42 +122,9 @@ async def fetch_ted_notices(
 
     url = f"{TED_API_BASE}/notices/search"
 
-    # Build TED query
-    # TED uses its own query language
-    query_parts = [
-        "(place-of-performance = PT)",  # Portugal
-        f"(publication-date >= {start_date.isoformat()})",
-        f"(publication-date <= {end_date.isoformat()})",
-    ]
-
-    if cpv_code:
-        query_parts.append(f"(cpv = {cpv_code}*)")
-
-    query = " AND ".join(query_parts)
-
-    payload = {
-        "query": query,
-        "fields": [
-            "publication-number",
-            "publication-date",
-            "notice-title",
-            "buyer-name",
-            "winner-name",
-            "total-value",
-            "cpv",
-            "place-of-performance",
-            "contract-nature",
-        ],
-        "page": page,
-        "limit": limit,
-        "scope": "ALL",  # Include historical and active
-        "onlyLatestVersions": True,
-    }
-
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
+    # Build query and prepare request
+    query = _build_ted_query(start_date, end_date, cpv_code)
+    payload, headers = _prepare_ted_request_payload(query, page, limit)
 
     async with httpx.AsyncClient(timeout=timeout) as client:
         for attempt in range(max_retries):

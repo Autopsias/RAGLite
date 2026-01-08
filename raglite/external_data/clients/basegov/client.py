@@ -84,6 +84,105 @@ class BaseGovClient(BaseExternalClient):
         if not is_test:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
 
+    async def _fetch_from_impic(
+        self,
+        start_date: date,
+        end_date: date,
+        cpv_code: str,
+    ) -> list[BaseGovContract]:
+        """Fetch contracts from IMPIC XLSX dataset (primary source).
+
+        Args:
+            start_date: Start of date range
+            end_date: End of date range
+            cpv_code: CPV code filter
+
+        Returns:
+            List of contract records from IMPIC
+        """
+        try:
+            impic_results = await impic.fetch_impic_contracts(
+                start_date=start_date,
+                end_date=end_date,
+                cpv_code=cpv_code,
+                timeout=self.timeout,
+                cache_dir=self.cache_dir,
+            )
+            logger.info(
+                "Fetched contracts from IMPIC XLSX",
+                extra={"count": len(impic_results)},
+            )
+            return impic_results
+        except Exception as e:
+            logger.warning(
+                "IMPIC dataset unavailable, trying TED API fallback",
+                extra={"error": str(e)},
+            )
+            return []
+
+    async def _fetch_from_ted_fallback(
+        self,
+        start_date: date,
+        end_date: date,
+        cpv_code: str,
+        page: int,
+        page_size: int,
+    ) -> list[BaseGovContract]:
+        """Fetch contracts from TED API (fallback source).
+
+        Args:
+            start_date: Start of date range
+            end_date: End of date range
+            cpv_code: CPV code filter
+            page: Page number for pagination
+            page_size: Results per page
+
+        Returns:
+            List of contract records from TED
+        """
+        try:
+            ted_results = await ted_api.fetch_ted_contracts(
+                start_date=start_date,
+                end_date=end_date,
+                cpv_code=cpv_code,
+                page=page,
+                page_size=page_size,
+                timeout=self.timeout,
+            )
+            logger.info(
+                "Fetched contracts from TED API (fallback)",
+                extra={"count": len(ted_results)},
+            )
+            return ted_results
+        except ExternalDataFetchError as e:
+            logger.warning(
+                "TED API also unavailable",
+                extra={"error": str(e)},
+            )
+            return []
+
+    def _apply_value_filters(
+        self,
+        results: list[BaseGovContract],
+        min_value: float | None,
+        max_value: float | None,
+    ) -> list[BaseGovContract]:
+        """Apply min/max value filters to results.
+
+        Args:
+            results: List of contract records
+            min_value: Minimum contract value in EUR
+            max_value: Maximum contract value in EUR
+
+        Returns:
+            Filtered list of contract records
+        """
+        if min_value is not None:
+            results = [r for r in results if r.contract_value_eur >= min_value]
+        if max_value is not None:
+            results = [r for r in results if r.contract_value_eur <= max_value]
+        return results
+
     async def fetch_contracts(
         self,
         start_date: date,
@@ -132,52 +231,22 @@ class BaseGovClient(BaseExternalClient):
         results: list[BaseGovContract] = []
 
         # Try IMPIC XLSX first (primary source - ALL Portuguese contracts)
-        try:
-            impic_results = await impic.fetch_impic_contracts(
-                start_date=start_date,
-                end_date=end_date,
-                cpv_code=cpv_code,
-                timeout=self.timeout,
-                cache_dir=self.cache_dir,
-            )
-            results.extend(impic_results)
-            logger.info(
-                "Fetched contracts from IMPIC XLSX",
-                extra={"count": len(results)},
-            )
-        except Exception as e:
-            logger.warning(
-                "IMPIC dataset unavailable, trying TED API fallback",
-                extra={"error": str(e)},
-            )
+        impic_results = await self._fetch_from_impic(start_date, end_date, cpv_code)
+        results.extend(impic_results)
 
         # Try TED API as fallback if IMPIC returned no results
         if not results:
-            try:
-                ted_results = await ted_api.fetch_ted_contracts(
-                    start_date=start_date,
-                    end_date=end_date,
-                    cpv_code=cpv_code,
-                    page=page,
-                    page_size=page_size,
-                    timeout=self.timeout,
-                )
-                results.extend(ted_results)
-                logger.info(
-                    "Fetched contracts from TED API (fallback)",
-                    extra={"count": len(results)},
-                )
-            except ExternalDataFetchError as e:
-                logger.warning(
-                    "TED API also unavailable",
-                    extra={"error": str(e)},
-                )
+            ted_results = await self._fetch_from_ted_fallback(
+                start_date=start_date,
+                end_date=end_date,
+                cpv_code=cpv_code,
+                page=page,
+                page_size=page_size,
+            )
+            results.extend(ted_results)
 
         # Apply value filters if specified
-        if min_value is not None:
-            results = [r for r in results if r.contract_value_eur >= min_value]
-        if max_value is not None:
-            results = [r for r in results if r.contract_value_eur <= max_value]
+        results = self._apply_value_filters(results, min_value, max_value)
 
         # Story 6.9.5 AC7: Document limitations
         if not results:

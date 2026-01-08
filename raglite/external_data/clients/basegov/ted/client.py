@@ -18,6 +18,201 @@ from raglite.shared.logging import get_logger
 logger = get_logger(__name__)
 
 
+def _build_ted_query(
+    start_date: date,
+    end_date: date,
+    cpv_code: str | None = None,
+) -> str:
+    """Build TED API query string.
+
+    Args:
+        start_date: Start of date range
+        end_date: End of date range
+        cpv_code: Optional CPV code filter
+
+    Returns:
+        TED query string
+    """
+    query_parts = [
+        "(place-of-performance = PT)",  # Portugal
+        f"(publication-date >= {start_date.isoformat()})",
+        f"(publication-date <= {end_date.isoformat()})",
+    ]
+
+    if cpv_code:
+        query_parts.append(f"(cpv = {cpv_code}*)")
+
+    return " AND ".join(query_parts)
+
+
+def _prepare_ted_request(
+    query: str,
+    page: int,
+    limit: int,
+) -> tuple[dict, dict]:
+    """Prepare TED API request payload and headers.
+
+    Args:
+        query: TED query string
+        page: Page number
+        limit: Results per page
+
+    Returns:
+        Tuple of (payload, headers)
+    """
+    payload = {
+        "query": query,
+        "fields": [
+            "publication-number",
+            "publication-date",
+            "notice-title",
+            "buyer-name",
+            "winner-name",
+            "total-value",
+            "cpv",
+            "place-of-performance",
+            "contract-nature",
+        ],
+        "page": page,
+        "limit": limit,
+        "scope": "ALL",  # Include historical and active
+        "onlyLatestVersions": True,
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+    return payload, headers
+
+
+async def _execute_ted_request(
+    client: httpx.AsyncClient,
+    url: str,
+    payload: dict,
+    headers: dict,
+    query: str,
+    page: int,
+    attempt: int,
+) -> dict:
+    """Execute single TED API request with logging.
+
+    Args:
+        client: HTTPX async client
+        url: TED API URL
+        payload: Request payload
+        headers: Request headers
+        query: Query string for logging
+        page: Page number for logging
+        attempt: Attempt number for logging
+
+    Returns:
+        TED API response dict
+
+    Raises:
+        httpx.TimeoutException: If request times out
+        httpx.HTTPStatusError: If HTTP error occurs
+    """
+    logger.info(
+        "Fetching TED notices",
+        extra={
+            "query": query[:100],
+            "page": page,
+            "attempt": attempt + 1,
+        },
+    )
+
+    response = await client.post(
+        url,
+        json=payload,
+        headers=headers,
+    )
+    response.raise_for_status()
+    return dict(response.json())  # type: ignore[no-any-return]
+
+
+async def _fetch_with_retry(
+    client: httpx.AsyncClient,
+    url: str,
+    payload: dict,
+    headers: dict,
+    query: str,
+    page: int,
+    max_retries: int,
+    retry_delays: list[int],
+) -> dict:
+    """Execute TED API request with retry logic.
+
+    Args:
+        client: HTTPX async client
+        url: TED API URL
+        payload: Request payload
+        headers: Request headers
+        query: Query string for logging
+        page: Page number for logging
+        max_retries: Maximum retry attempts
+        retry_delays: Delay between retries in seconds
+
+    Returns:
+        TED API response dict
+
+    Raises:
+        ExternalDataFetchError: If all retries fail
+    """
+    for attempt in range(max_retries):
+        try:
+            return await _execute_ted_request(
+                client=client,
+                url=url,
+                payload=payload,
+                headers=headers,
+                query=query,
+                page=page,
+                attempt=attempt,
+            )
+
+        except httpx.TimeoutException as e:
+            if attempt < max_retries - 1:
+                delay = retry_delays[attempt]
+                logger.warning(
+                    "TED API timeout, retrying",
+                    extra={"attempt": attempt + 1, "delay": delay},
+                )
+                await asyncio.sleep(delay)
+            else:
+                raise ExternalDataFetchError(
+                    source="BaseGov_TED",
+                    message=f"TED API timeout after {max_retries} attempts",
+                    original_error=e,
+                ) from e
+
+        except httpx.HTTPStatusError as e:
+            # Retry on server errors (5xx) or rate limit (429)
+            should_retry = e.response.status_code >= 500 or e.response.status_code == 429
+            if attempt < max_retries - 1 and should_retry:
+                delay = retry_delays[attempt]
+                logger.warning(
+                    "TED API error, retrying",
+                    extra={
+                        "attempt": attempt + 1,
+                        "status": e.response.status_code,
+                    },
+                )
+                await asyncio.sleep(delay)
+            else:
+                raise ExternalDataFetchError(
+                    source="BaseGov_TED",
+                    message=f"TED API HTTP {e.response.status_code}",
+                    original_error=e,
+                ) from e
+
+    raise ExternalDataFetchError(
+        source="BaseGov_TED",
+        message="Unexpected retry loop exit",
+    )
+
+
 async def fetch_ted_notices(
     start_date: date,
     end_date: date,
@@ -50,99 +245,29 @@ async def fetch_ted_notices(
 
     url = f"{TED_API_BASE}/notices/search"
 
-    # Build TED query
-    # TED uses its own query language
-    query_parts = [
-        "(place-of-performance = PT)",  # Portugal
-        f"(publication-date >= {start_date.isoformat()})",
-        f"(publication-date <= {end_date.isoformat()})",
-    ]
-
-    if cpv_code:
-        query_parts.append(f"(cpv = {cpv_code}*)")
-
-    query = " AND ".join(query_parts)
-
-    payload = {
-        "query": query,
-        "fields": [
-            "publication-number",
-            "publication-date",
-            "notice-title",
-            "buyer-name",
-            "winner-name",
-            "total-value",
-            "cpv",
-            "place-of-performance",
-            "contract-nature",
-        ],
-        "page": page,
-        "limit": limit,
-        "scope": "ALL",  # Include historical and active
-        "onlyLatestVersions": True,
-    }
-
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
-
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        for attempt in range(max_retries):
-            try:
-                logger.info(
-                    "Fetching TED notices",
-                    extra={
-                        "query": query[:100],
-                        "page": page,
-                        "attempt": attempt + 1,
-                    },
-                )
-
-                response = await client.post(
-                    url,
-                    json=payload,
-                    headers=headers,
-                )
-                response.raise_for_status()
-                return dict(response.json())  # type: ignore[no-any-return]
-
-            except httpx.TimeoutException as e:
-                if attempt < max_retries - 1:
-                    delay = retry_delays[attempt]
-                    logger.warning(
-                        "TED API timeout, retrying",
-                        extra={"attempt": attempt + 1, "delay": delay},
-                    )
-                    await asyncio.sleep(delay)
-                else:
-                    raise ExternalDataFetchError(
-                        source="BaseGov_TED",
-                        message=f"TED API timeout after {max_retries} attempts",
-                        original_error=e,
-                    ) from e
-
-            except httpx.HTTPStatusError as e:
-                # Retry on server errors (5xx) or rate limit (429)
-                should_retry = e.response.status_code >= 500 or e.response.status_code == 429
-                if attempt < max_retries - 1 and should_retry:
-                    delay = retry_delays[attempt]
-                    logger.warning(
-                        "TED API error, retrying",
-                        extra={
-                            "attempt": attempt + 1,
-                            "status": e.response.status_code,
-                        },
-                    )
-                    await asyncio.sleep(delay)
-                else:
-                    raise ExternalDataFetchError(
-                        source="BaseGov_TED",
-                        message=f"TED API HTTP {e.response.status_code}",
-                        original_error=e,
-                    ) from e
-
-    raise ExternalDataFetchError(
-        source="BaseGov_TED",
-        message="Unexpected retry loop exit",
+    # Build query
+    query = _build_ted_query(
+        start_date=start_date,
+        end_date=end_date,
+        cpv_code=cpv_code,
     )
+
+    # Prepare request
+    payload, headers = _prepare_ted_request(
+        query=query,
+        page=page,
+        limit=limit,
+    )
+
+    # Execute with retry
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        return await _fetch_with_retry(
+            client=client,
+            url=url,
+            payload=payload,
+            headers=headers,
+            query=query,
+            page=page,
+            max_retries=max_retries,
+            retry_delays=retry_delays,
+        )

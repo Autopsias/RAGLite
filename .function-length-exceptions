@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-07T23:00:16.515821",
+  "baseline_date": "2026-01-08T08:20:06.111177",
   "description": "Grandfathered function length violations - refactor gradually",
   "thresholds": {
     "warning": 50,
@@ -44,7 +44,7 @@
       "directory": "raglite/"
     },
     "raglite/ingestion/adaptive_table/core/fallback.py:25:extract_fallback": {
-      "length": 239,
+      "length": 241,
       "function": "extract_fallback",
       "file": "raglite/ingestion/adaptive_table/core/fallback.py",
       "line": 25,
@@ -385,24 +385,6 @@
       "target_lines": 100,
       "directory": "tests/"
     },
-    "raglite/external_data/clients/basegov/ted_api.py:24:fetch_ted_notices": {
-      "length": 128,
-      "function": "fetch_ted_notices",
-      "file": "raglite/external_data/clients/basegov/ted_api.py",
-      "line": 24,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/external_data/clients/basegov/ted/client.py:21:fetch_ted_notices": {
-      "length": 128,
-      "function": "fetch_ted_notices",
-      "file": "raglite/external_data/clients/basegov/ted/client.py",
-      "line": 21,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/forecasting/timeseries/external.py:28:extract_external_timeseries": {
       "length": 125,
       "function": "extract_external_timeseries",
@@ -466,15 +448,6 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/external_data/clients/base.py:71:_fetch_with_retry": {
-      "length": 119,
-      "function": "_fetch_with_retry",
-      "file": "raglite/external_data/clients/base.py",
-      "line": 71,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "tests/integration/fixtures/session/test_detection.py:33:_has_integration_tests": {
       "length": 119,
       "function": "_has_integration_tests",
@@ -498,15 +471,6 @@
       "function": "run_weekly_tft_training",
       "file": "raglite/forecasting/tft_training_job.py",
       "line": 36,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/tft_training_job/weekly_training.py:28:run_weekly_tft_training": {
-      "length": 117,
-      "function": "run_weekly_tft_training",
-      "file": "raglite/forecasting/tft_training_job/weekly_training.py",
-      "line": 28,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -597,15 +561,6 @@
       "function": "extract_external_regressor_timeseries",
       "file": "raglite/forecasting/timeseries/external.py",
       "line": 155,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/external_data/clients/basegov/client.py:87:fetch_contracts": {
-      "length": 112,
-      "function": "fetch_contracts",
-      "file": "raglite/external_data/clients/basegov/client.py",
-      "line": 87,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
