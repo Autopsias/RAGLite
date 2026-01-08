@@ -1,12 +1,18 @@
 """Query MCP tools."""
 
-import json
 import time
 
-from raglite.agentic.fallback import FallbackResponse, handle_workflow_failure
-from raglite.agentic.orchestrator import WorkflowExecutor
-from raglite.agentic.planner import QueryComplexity, classify_query_complexity, decompose_query
+from raglite.agentic.fallback import handle_workflow_failure
+from raglite.agentic.planner import QueryComplexity, classify_query_complexity
 from raglite.main import mcp
+from raglite.mcp.tools.query_helpers import (
+    _build_analytical_response,
+    _build_simple_query_response,
+    _execute_complex_workflow,
+    _handle_fallback_response,
+    _log_query_completion,
+    _transform_search_results_to_query_results,
+)
 from raglite.retrieval.attribution import generate_citations
 from raglite.retrieval.multi_index_search import MultiIndexSearchError, multi_index_search
 from raglite.retrieval.search import QueryError
@@ -72,33 +78,15 @@ async def query_financial_documents(request: QueryRequest) -> QueryResponse:
         start_time = time.perf_counter()
         search_results = await multi_index_search(request.query, top_k=request.top_k)
         search_duration_ms = (time.perf_counter() - start_time) * 1000
-        from raglite.shared.models import QueryResult
 
-        query_results = [
-            QueryResult(
-                score=r.score,
-                text=r.text,
-                source_document=r.document_id,
-                page_number=r.page_number,
-                chunk_index=r.metadata.get("chunk_index", 0),
-                word_count=r.metadata.get("word_count", 0),
-            )
-            for r in search_results
-        ]
+        query_results = _transform_search_results_to_query_results(search_results)
         cited_results = await generate_citations(query_results)
         total_duration_ms = (time.perf_counter() - start_time) * 1000
-        retrieval_sources = {r.source for r in search_results}
-        logger.info(
-            "Query complete (multi-index)",
-            extra={
-                "query": request.query,
-                "results_count": len(cited_results),
-                "retrieval_sources": list(retrieval_sources),
-                "search_time_ms": f"{search_duration_ms:.2f}",
-                "total_time_ms": f"{total_duration_ms:.2f}",
-                "retrieval_method": "multi-index",
-            },
+
+        _log_query_completion(
+            request.query, cited_results, search_results, search_duration_ms, total_duration_ms
         )
+
         return QueryResponse(
             results=cited_results,
             query=request.query,
@@ -129,7 +117,6 @@ async def query_financial_documents(request: QueryRequest) -> QueryResponse:
         raise QueryError(f"Query failed: {e}") from e
 
 
-@mcp.tool()
 async def analytical_query_financial_documents(
     request: AnalyticalQueryRequest,
 ) -> AnalyticalQueryResponse:
@@ -159,17 +146,7 @@ async def analytical_query_financial_documents(
             basic_request = QueryRequest(query=request.query, top_k=request.top_k)
             basic_response = await query_financial_documents.fn(basic_request)
             workflow_duration_ms = (time.perf_counter() - workflow_start_time) * 1000
-            reasoning_steps = [
-                "1. Classified query as simple (direct retrieval)",
-                f"2. Retrieved {len(basic_response.results)} relevant documents via vector search",
-                "3. Ranked results by similarity score",
-            ]
-            sources = [
-                f"{r.source_document} (page {r.page_number})"
-                if r.page_number is not None
-                else r.source_document
-                for r in basic_response.results
-            ]
+
             logger.info(
                 "Simple query complete (Epic 2 routing)",
                 extra={
@@ -179,142 +156,33 @@ async def analytical_query_financial_documents(
                     "routing": "epic2_basic_retrieval",
                 },
             )
-            answer_parts = ["Based on the retrieved documents:\n"]
-            for i, result in enumerate(basic_response.results[:3], 1):
-                text_preview = result.text[:200] + "..." if len(result.text) > 200 else result.text
-                answer_parts.append(f"{i}. {text_preview}")
-            return AnalyticalQueryResponse(
-                answer="\n".join(answer_parts),
-                complexity=complexity.value,
-                workflow_metadata={
-                    "task_count": 1,
-                    "execution_time_ms": int(workflow_duration_ms),
-                    "workflow_pattern": "simple_retrieval",
-                    "fallback_tier": "basic_retrieval",
-                },
-                confidence="high",
-                limitations=[],
-                reasoning_steps=reasoning_steps,
-                sources=sources,
+
+            return _build_simple_query_response(
+                basic_response,
+                workflow_duration_ms,
+                complexity.value,
             )
-        plan = await decompose_query(request.query, complexity)
-        logger.info(
-            "Query decomposed",
-            extra={
-                "query": request.query,
-                "task_count": len(plan.tasks),
-                "pattern": plan.metadata.get("pattern", "unknown"),
-            },
-        )
-        executor = WorkflowExecutor()
-        results = await executor.execute_workflow(plan)
-        workflow_duration_ms = (time.perf_counter() - workflow_start_time) * 1000
+
+        # Complex query workflow
+        plan, results, workflow_duration_ms = await _execute_complex_workflow(request, complexity)
+
         synthesis_result = next(
             (r for r in reversed(results) if r.success and r.agent_type == "synthesis"),
             None,
         )
+
         if synthesis_result:
             answer = str(synthesis_result.result)
-            fallback_tier = "full_orchestration"
-            confidence = "high"
-            limitations: list[str] = []
-            reasoning_steps = []
-            pattern = plan.metadata.get("pattern", "unknown")
-            reasoning_steps.append(f"1. Classified query as analytical ({pattern} pattern)")
-            retrieval_results = [r for r in results if r.agent_type == "retrieval" and r.success]
-            for i, r in enumerate(retrieval_results, start=2):
-                task_desc = next(
-                    (t.instruction for t in plan.tasks if t.task_id == r.task_id),
-                    "retrieval task",
-                )
-                # Retrieval agent returns JSON string - parse to get chunk count
-                doc_count: str | int = "relevant"
-                if isinstance(r.result, str):
-                    try:
-                        result_data = json.loads(r.result)
-                        if isinstance(result_data, dict) and "chunks" in result_data:
-                            doc_count = len(result_data["chunks"])
-                    except (json.JSONDecodeError, KeyError):
-                        pass
-                elif isinstance(r.result, list):
-                    doc_count = len(r.result)
-                reasoning_steps.append(f"{i}. Retrieved {doc_count} documents: {task_desc}")
-            analysis_results = [r for r in results if r.agent_type == "analysis" and r.success]
-            step_num = len(reasoning_steps) + 1
-            for r in analysis_results:
-                task_desc = next(
-                    (t.instruction for t in plan.tasks if t.task_id == r.task_id),
-                    "analysis task",
-                )
-                reasoning_steps.append(f"{step_num}. Performed analysis: {task_desc}")
-                step_num += 1
-            task_count = len(results)
-            reasoning_steps.append(
-                f"{step_num}. Synthesized final answer from {task_count} workflow tasks"
-            )
-            sources = []
-            for r in retrieval_results:
-                # Retrieval agent returns JSON string - parse to extract sources
-                if isinstance(r.result, str):
-                    try:
-                        result_data = json.loads(r.result)
-                        if isinstance(result_data, dict) and "chunks" in result_data:
-                            for chunk in result_data["chunks"]:
-                                # Extract document ID and page number from chunk
-                                doc_id = chunk.get("id") or chunk.get("source_document")
-                                page_num = chunk.get("page_number")
-                                if doc_id:
-                                    page_ref = f" (page {page_num})" if page_num is not None else ""
-                                    source = f"{doc_id}{page_ref}"
-                                    if source not in sources:
-                                        sources.append(source)
-                    except (json.JSONDecodeError, KeyError, TypeError):
-                        logger.warning(
-                            "Failed to parse retrieval result for sources",
-                            extra={"task_id": r.task_id, "result_type": type(r.result).__name__},
-                        )
-                elif isinstance(r.result, list):
-                    # Legacy support for list results (if any agents return this format)
-                    for doc in r.result:
-                        if hasattr(doc, "document_id"):
-                            has_page = hasattr(doc, "page_number") and doc.page_number is not None
-                            page_ref = f" (page {doc.page_number})" if has_page else ""
-                            source = f"{doc.document_id}{page_ref}"
-                        elif hasattr(doc, "source_document"):
-                            has_page_num = doc.page_number is not None
-                            page_ref = f" (page {doc.page_number})" if has_page_num else ""
-                            source = f"{doc.source_document}{page_ref}"
-                        else:
-                            continue
-                        if source not in sources:
-                            sources.append(source)
-            logger.info(
-                "Analytical query complete",
-                extra={
-                    "query": request.query,
-                    "task_count": len(results),
-                    "success_count": sum(1 for r in results if r.success),
-                    "duration_ms": f"{workflow_duration_ms:.2f}",
-                    "fallback_tier": fallback_tier,
-                    "sources_count": len(sources),
-                },
-            )
-            return AnalyticalQueryResponse(
-                answer=answer,
-                complexity=complexity.value,
-                workflow_metadata={
-                    "task_count": len(results),
-                    "execution_time_ms": int(workflow_duration_ms),
-                    "workflow_pattern": plan.metadata.get("pattern", "unknown"),
-                    "fallback_tier": fallback_tier,
-                },
-                confidence=confidence,
-                limitations=limitations,
-                reasoning_steps=reasoning_steps,
-                sources=sources,
+            return _build_analytical_response(
+                answer,
+                plan,
+                results,
+                complexity.value,
+                workflow_duration_ms,
             )
         else:
             raise RuntimeError("No synthesis result available from workflow")
+
     except Exception as e:
         workflow_duration_ms = (time.perf_counter() - workflow_start_time) * 1000
         logger.warning(
@@ -326,53 +194,24 @@ async def analytical_query_financial_documents(
                 "duration_ms": f"{workflow_duration_ms:.2f}",
             },
         )
+
         partial_results = []
         if "results" in locals():
             partial_results = results
-        fallback_response: FallbackResponse = await handle_workflow_failure(
+
+        fallback_response = await handle_workflow_failure(
             query=request.query,
             complexity=complexity if "complexity" in locals() else QueryComplexity.ANALYTICAL,
             partial_results=partial_results,
             error=e,
             total_time_ms=int(workflow_duration_ms),
         )
-        logger.info(
-            "Graceful degradation complete",
-            extra={
-                "query": request.query,
-                "fallback_tier": fallback_response.tier.value,
-                "confidence": fallback_response.confidence,
-                "duration_ms": f"{workflow_duration_ms:.2f}",
-            },
-        )
-        fallback_reasoning = [
-            "1. Classified query as analytical",
-            f"2. Attempted multi-step workflow ({len(partial_results)} tasks started)",
-            f"3. Workflow failed: {str(e)[:100]}...",
-            f"4. Gracefully degraded to {fallback_response.tier.value} tier",
-        ]
-        fallback_sources = []
-        if hasattr(fallback_response, "sources"):
-            fallback_sources = fallback_response.sources
-        elif hasattr(fallback_response, "results"):
-            for result in fallback_response.results[:5]:
-                if hasattr(result, "source_document"):
-                    has_page = result.page_number is not None
-                    page_ref = f" (page {result.page_number})" if has_page else ""
-                    fallback_sources.append(f"{result.source_document}{page_ref}")
-        return AnalyticalQueryResponse(
-            answer=fallback_response.answer,
-            complexity=complexity.value if "complexity" in locals() else "analytical",
-            workflow_metadata={
-                "task_count": len(partial_results),
-                "execution_time_ms": fallback_response.execution_time_ms,
-                "workflow_pattern": "fallback",
-                "fallback_tier": fallback_response.tier.value,
-            },
-            confidence=fallback_response.confidence,
-            limitations=fallback_response.limitations,
-            reasoning_steps=fallback_reasoning,
-            sources=fallback_sources,
+
+        return _handle_fallback_response(
+            fallback_response,
+            complexity.value if "complexity" in locals() else "analytical",
+            partial_results,
+            workflow_duration_ms,
         )
 
 
