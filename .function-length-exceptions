@@ -1,21 +1,12 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-08T21:40:22.494643",
+  "baseline_date": "2026-01-08T23:35:03.514002",
   "description": "Grandfathered function length violations - refactor gradually",
   "thresholds": {
     "warning": 50,
     "hard_limit": 100
   },
   "exceptions": {
-    "raglite/ingestion/document_ingestion/pdf_processing.py:33:ingest_pdf": {
-      "length": 334,
-      "function": "ingest_pdf",
-      "file": "raglite/ingestion/document_ingestion/pdf_processing.py",
-      "line": 33,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "tests/integration/fixtures/session/_legacy.py:120:session_ingested_collection": {
       "length": 275,
       "function": "session_ingested_collection",
@@ -24,33 +15,6 @@
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "tests/"
-    },
-    "raglite/ingestion/document_ingestion/excel_processing.py:28:extract_excel": {
-      "length": 233,
-      "function": "extract_excel",
-      "file": "raglite/ingestion/document_ingestion/excel_processing.py",
-      "line": 28,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/adaptive_weights.py:43:calculate_backtest_weights": {
-      "length": 233,
-      "function": "calculate_backtest_weights",
-      "file": "raglite/forecasting/adaptive_weights.py",
-      "line": 43,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/ingestion/document_ingestion/temp_files.py:112:temp_file_from_url": {
-      "length": 207,
-      "function": "temp_file_from_url",
-      "file": "raglite/ingestion/document_ingestion/temp_files.py",
-      "line": 112,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
     },
     "tests/integration/test_ac3_ground_truth.py:100:test_ac1_full_ground_truth_execution": {
       "length": 205,
@@ -97,15 +61,6 @@
       "target_lines": 100,
       "directory": "tests/"
     },
-    "raglite/ingestion/document_ingestion/collection.py:18:ingest_documents_parallel": {
-      "length": 164,
-      "function": "ingest_documents_parallel",
-      "file": "raglite/ingestion/document_ingestion/collection.py",
-      "line": 18,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "tests/integration/ingestion/test_embedding_storage.py:34:test_embedding_generation_end_to_end": {
       "length": 162,
       "function": "test_embedding_generation_end_to_end",
@@ -114,15 +69,6 @@
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "tests/"
-    },
-    "raglite/forecasting/models/tft/_legacy.py:147:fit_and_forecast_tft": {
-      "length": 149,
-      "function": "fit_and_forecast_tft",
-      "file": "raglite/forecasting/models/tft/_legacy.py",
-      "line": 147,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
     },
     "tests/integration/test_chunking_core.py:130:test_ac5_fast_chunk_count_validation": {
       "length": 139,
@@ -150,24 +96,6 @@
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "tests/"
-    },
-    "raglite/forecasting/timeseries/core.py:22:extract_timeseries": {
-      "length": 136,
-      "function": "extract_timeseries",
-      "file": "raglite/forecasting/timeseries/core.py",
-      "line": 22,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/external_data/clients/basegov/parsers.py:20:parse_impic_xlsx": {
-      "length": 136,
-      "function": "parse_impic_xlsx",
-      "file": "raglite/external_data/clients/basegov/parsers.py",
-      "line": 20,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
     },
     "tests/integration/chunking/test_ac5_validation.py:26:test_ac5_fast_chunk_count_validation": {
       "length": 136,
@@ -268,15 +196,6 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/insights/recommendations.py:270:generate_recommendations": {
-      "length": 119,
-      "function": "generate_recommendations",
-      "file": "raglite/insights/recommendations.py",
-      "line": 270,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/insights/recommendations/generation.py:23:generate_recommendations": {
       "length": 119,
       "function": "generate_recommendations",
@@ -322,15 +241,6 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/forecasting/timeseries/external.py:155:extract_external_regressor_timeseries": {
-      "length": 112,
-      "function": "extract_external_regressor_timeseries",
-      "file": "raglite/forecasting/timeseries/external.py",
-      "line": 155,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/forecasting/tft_training/training.py:24:train_tft_model": {
       "length": 108,
       "function": "train_tft_model",
@@ -349,11 +259,11 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/external_data/clients/basegov/parsers.py:158:parse_ocds_data": {
+    "raglite/external_data/clients/basegov/parsers.py:316:parse_ocds_data": {
       "length": 107,
       "function": "parse_ocds_data",
       "file": "raglite/external_data/clients/basegov/parsers.py",
-      "line": 158,
+      "line": 316,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -408,6 +318,15 @@
       "function": "list_available_metrics",
       "file": "raglite/forecasting/metrics.py",
       "line": 69,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 100,
+      "directory": "raglite/"
+    },
+    "raglite/ingestion/document_ingestion/temp_files/url_download.py:125:temp_file_from_url": {
+      "length": 102,
+      "function": "temp_file_from_url",
+      "file": "raglite/ingestion/document_ingestion/temp_files/url_download.py",
+      "line": 125,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"

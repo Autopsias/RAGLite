@@ -121,12 +121,28 @@ async def _extract_and_store_tables(
 
     try:
         if not skip_table_extraction:
-            from raglite.ingestion.adaptive_table.core.extractor import TableExtractor
+            from docling_core.types.doc import TableItem
 
-            extractor = TableExtractor(converter=converter)
-            table_rows = await extractor.extract_tables_from_result(
-                result, pdf_path.name, unit_cache=unit_cache
-            )
+            from raglite.ingestion.adaptive_table.core import extract_table_data_adaptive
+
+            # Iterate through all document items and extract tables
+            table_index = 0
+            for item, _ in result.document.iterate_items():
+                if isinstance(item, TableItem):
+                    # Get page number from table provenance
+                    page_number = item.prov[0].page_no if item.prov else 1
+
+                    # Extract using adaptive table extraction with async unit inference
+                    parsed_rows = await extract_table_data_adaptive(
+                        table_item=item,
+                        result=result,
+                        table_index=table_index,
+                        document_id=pdf_path.stem,  # Document filename without extension
+                        page_number=page_number,
+                        unit_cache=unit_cache,
+                    )
+                    table_rows.extend(parsed_rows)
+                    table_index += 1
 
         if table_rows:
             logger.info(
@@ -139,7 +155,7 @@ async def _extract_and_store_tables(
             )
 
             # Store tables in PostgreSQL
-            from raglite.ingestion.storage.postgresql_store import store_tables_in_postgresql
+            from raglite.ingestion.storage.table_store import store_tables_in_postgresql
 
             rows_stored, rows_skipped = await store_tables_in_postgresql(table_rows)
             logger.info(

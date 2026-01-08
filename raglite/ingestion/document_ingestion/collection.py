@@ -193,6 +193,44 @@ def _create_process_document_function(
     return process_document
 
 
+async def _execute_parallel_tasks(
+    file_paths: list[str],
+    max_concurrent: int,
+    total_docs: int,
+) -> tuple[list[DocumentMetadata], list[dict[str, str]]]:
+    """Execute parallel document ingestion tasks.
+
+    Args:
+        file_paths: List of document paths to ingest
+        max_concurrent: Maximum concurrent documents
+        total_docs: Total number of documents
+
+    Returns:
+        Tuple of (successful_results, error_details)
+    """
+    from raglite.ingestion.document_ingestion.core import ingest_document
+
+    semaphore = asyncio.Semaphore(max_concurrent)
+    shared_unit_cache: dict[str, str] = {}
+    successful_results: list[DocumentMetadata] = []
+    error_details: list[dict[str, str]] = []
+
+    process_document = _create_process_document_function(
+        semaphore=semaphore,
+        ingest_document_func=ingest_document,
+        shared_unit_cache=shared_unit_cache,
+        total_docs=total_docs,
+        max_concurrent=max_concurrent,
+        successful_results=successful_results,
+        error_details=error_details,
+    )
+
+    tasks = [process_document(path, idx) for idx, path in enumerate(file_paths)]
+    await asyncio.gather(*tasks)
+
+    return successful_results, error_details
+
+
 async def ingest_documents_parallel(
     file_paths: list[str],
     max_concurrent: int | None = None,
@@ -226,9 +264,6 @@ async def ingest_documents_parallel(
         - Parallel (max_concurrent=2): ~45 minutes for 10 PDFs (6-10x speedup target)
         - Memory usage: ~4GB per concurrent document, max 8GB with default limit
     """
-    # Import here to avoid circular dependency
-    from raglite.ingestion.document_ingestion.core import ingest_document
-
     # AC1: Validation
     max_concurrent = _validate_parallel_ingestion_params(file_paths, max_concurrent)
 
@@ -245,31 +280,10 @@ async def ingest_documents_parallel(
         },
     )
 
-    # AC1: Semaphore for concurrency control (max 2 by default to stay within 8GB memory)
-    semaphore = asyncio.Semaphore(max_concurrent)
-
-    # AC3: Create shared unit cache for cross-document inference (30% API reduction)
-    # Cache persists across all documents in the batch, enabling metric unit reuse
-    shared_unit_cache: dict[str, str] = {}
-
-    # Results tracking
-    successful_results: list[DocumentMetadata] = []
-    error_details: list[dict[str, str]] = []
-
-    # Create document processor function
-    process_document = _create_process_document_function(
-        semaphore=semaphore,
-        ingest_document_func=ingest_document,
-        shared_unit_cache=shared_unit_cache,
-        total_docs=total_docs,
-        max_concurrent=max_concurrent,
-        successful_results=successful_results,
-        error_details=error_details,
+    # Execute parallel ingestion
+    successful_results, error_details = await _execute_parallel_tasks(
+        file_paths, max_concurrent, total_docs
     )
-
-    # AC1: Launch all ingestion tasks (asyncio schedules them with semaphore control)
-    tasks = [process_document(path, idx) for idx, path in enumerate(file_paths)]
-    await asyncio.gather(*tasks)
 
     # Calculate batch duration
     batch_duration = time.time() - batch_start

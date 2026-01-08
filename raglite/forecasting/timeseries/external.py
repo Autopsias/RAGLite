@@ -177,7 +177,6 @@ async def extract_external_regressor_timeseries(
         All external regressors are assumed to be monthly frequency.
         NaN and infinite values are filtered out during conversion.
     """
-    import math
     from datetime import timedelta
 
     try:
@@ -208,31 +207,11 @@ async def extract_external_regressor_timeseries(
             return None
 
         # Convert pandas Series to TimeSeriesData, filtering NaN/Inf values
-        points = []
-        filtered_count = 0
-        for idx, val in series.items():
-            # Filter out NaN and infinite values (Issue #4 fix)
-            if not isinstance(val, (int, float)) or math.isnan(val) or math.isinf(val):
-                filtered_count += 1
-                logger.debug(
-                    "Filtered invalid value from external regressor",
-                    extra={"metric": metric, "date": idx, "value": val},
-                )
-                continue
+        from raglite.forecasting.timeseries._external_regressor_validation import (
+            filter_invalid_values,
+        )
 
-            points.append(
-                TimeSeriesPoint(
-                    date=idx.to_pydatetime(),
-                    value=float(val),
-                    label=f"{metric}_{idx.strftime('%Y-%m')}",
-                )
-            )
-
-        if filtered_count > 0:
-            logger.warning(
-                "Filtered NaN/Inf values from external regressor",
-                extra={"metric": metric, "filtered": filtered_count, "retained": len(points)},
-            )
+        points, _filtered_count = filter_invalid_values(series, metric)
 
         if len(points) < min_points:
             logger.warning(

@@ -267,6 +267,74 @@ def filter_recommendations(
     return result
 
 
+async def _process_single_insight(
+    insight: Insight,
+    seen_keys: set[str],
+    *,
+    auto_synthesize: bool = True,
+) -> Recommendation | None:
+    """Process a single insight into a recommendation.
+
+    Args:
+        insight: Input insight to process
+        seen_keys: Set of already-processed insight keys for deduplication
+        auto_synthesize: Whether to use LLM synthesis
+
+    Returns:
+        Recommendation object or None if deduplicated
+
+    Story 4.8: Extracted from generate_recommendations() for function size management.
+    """
+    # Deduplication
+    insight_key = _get_insight_key(insight)
+    if insight_key in seen_keys:
+        return None
+    seen_keys.add(insight_key)
+
+    # Calculate scores and category
+    category = categorize_recommendation(insight)
+    impact_score = calculate_impact_score(insight)
+    urgency = determine_urgency(insight, impact_score)
+
+    if auto_synthesize:
+        (
+            title,
+            description,
+            rationale,
+            action_steps,
+        ) = await synthesize_recommendation(insight, category)
+    else:
+        title = f"{category.value.replace('_', ' ').title()} Recommendation"
+        description = insight.summary
+        rationale = ""
+        action_steps = []
+
+    recommendation = Recommendation(
+        category=category,
+        impact_score=impact_score,
+        title=title,
+        description=description,
+        rationale=rationale,
+        supporting_evidence=insight.supporting_data,
+        action_steps=action_steps,
+        urgency=urgency,
+        sources=insight.sources,
+        created_at=datetime.now(UTC),
+    )
+
+    logger.info(
+        "Recommendation generated",
+        extra={
+            "category": category.value,
+            "impact_score": impact_score,
+            "urgency": urgency,
+            "sources_count": len(insight.sources),
+        },
+    )
+
+    return recommendation
+
+
 async def generate_recommendations(
     insights: list[Insight],
     context: str | None = None,
@@ -317,53 +385,11 @@ async def generate_recommendations(
     seen_keys: set[str] = set()
 
     for insight in insights:
-        # Deduplication
-        insight_key = _get_insight_key(insight)
-        if insight_key in seen_keys:
-            continue
-        seen_keys.add(insight_key)
-
-        # Calculate scores and category
-        category = categorize_recommendation(insight)
-        impact_score = calculate_impact_score(insight)
-        urgency = determine_urgency(insight, impact_score)
-
-        if auto_synthesize:
-            (
-                title,
-                description,
-                rationale,
-                action_steps,
-            ) = await synthesize_recommendation(insight, category)
-        else:
-            title = f"{category.value.replace('_', ' ').title()} Recommendation"
-            description = insight.summary
-            rationale = ""
-            action_steps = []
-
-        recommendation = Recommendation(
-            category=category,
-            impact_score=impact_score,
-            title=title,
-            description=description,
-            rationale=rationale,
-            supporting_evidence=insight.supporting_data,
-            action_steps=action_steps,
-            urgency=urgency,
-            sources=insight.sources,
-            created_at=datetime.now(UTC),
+        recommendation = await _process_single_insight(
+            insight, seen_keys, auto_synthesize=auto_synthesize
         )
-        recommendations.append(recommendation)
-
-        logger.info(
-            "Recommendation generated",
-            extra={
-                "category": category.value,
-                "impact_score": impact_score,
-                "urgency": urgency,
-                "sources_count": len(insight.sources),
-            },
-        )
+        if recommendation:
+            recommendations.append(recommendation)
 
     # Sort by impact score descending (10=highest first)
     recommendations.sort(key=lambda x: x.impact_score, reverse=True)

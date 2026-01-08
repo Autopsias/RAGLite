@@ -111,7 +111,7 @@ class TestTempFileFromBase64EdgeCases:
         content_b64 = base64.b64encode(b"test content").decode()
 
         # When cleanup fails due to permission error
-        with patch("raglite.ingestion.document_ingestion.temp_files.logger"):
+        with patch("raglite.ingestion.document_ingestion.temp_files.base64_handler.logger"):
             try:
                 with temp_file_from_base64(content_b64, "test.pdf") as tmp_path:
                     # Make file read-only before cleanup (simulate permission error)
@@ -359,7 +359,7 @@ class TestTempFileFromURLEdgeCases:
         url = "https://untrusted-domain.com/report.pdf"
 
         with patch(
-            "raglite.ingestion.document_ingestion.temp_files.URL_DOMAIN_ALLOWLIST",
+            "raglite.ingestion.document_ingestion.temp_files.url_validation.URL_DOMAIN_ALLOWLIST",
             new=["trusted-domain.com"],
         ):
             # When downloading
