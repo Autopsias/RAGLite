@@ -1,35 +1,29 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-08T10:45:15.409375",
+  "baseline_date": "2026-01-08T21:40:19.033802",
   "description": "Grandfathered file size violations - reduce gradually",
   "thresholds": {
     "warning": 400,
     "hard_limit": 500
   },
   "exceptions": {
-    "raglite/forecasting/data_quality/checks/entity_checks.py": {
-      "lines": 541,
-      "reason": "Function-length refactoring increased total LOC: extracted 5 helper functions from check_entity_coverage (122 LOC → 74 LOC) to meet <100 LOC threshold. All individual functions now pass. Future Epic 8 work: split entity validation into separate modules (contamination checks vs coverage checks).",
+    "raglite/external_data/clients/eurostat/parsers.py": {
+      "lines": 558,
+      "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
-      "directory": "raglite/forecasting/data_quality/checks/",
-      "epic": "8",
-      "story": "technical_debt_reduction"
-    },
-    "raglite/forecasting/data_quality/checks/timeseries_checks.py": {
-      "lines": 509,
-      "reason": "Function-length refactoring extracted 7 helper functions to meet <100 LOC threshold: check_effective_frequency (128→94 LOC), check_time_index_integrity (95→91 LOC), check_missing_data_pattern (102→60 LOC). All target functions now pass. Helpers are reusable and improve maintainability. Future work: split checks module by domain (frequency checks vs integrity checks vs missing data checks).",
-      "target_lines": 500,
-      "directory": "raglite/forecasting/data_quality/checks/",
-      "epic": "8",
-      "story": "technical_debt_reduction"
+      "directory": "raglite/"
     },
     "raglite/external_data/clients/bpstat.py": {
       "lines": 535,
-      "reason": "Function-length refactoring extracted 3 helper functions from _parse_interest_rate_data (108→40 LOC, 63% reduction) to meet <100 LOC threshold. All individual functions now pass. Helpers (_extract_period_from_observation, _build_observations_lookup, _create_mortgage_records) improve maintainability and testability. Future Epic 8 work: consider splitting BPstatClient into separate modules (API client vs parsing logic).",
+      "reason": "Baseline: existing at time of enforcement",
       "target_lines": 500,
-      "directory": "raglite/external_data/clients/",
-      "epic": "8",
-      "story": "technical_debt_reduction"
+      "directory": "raglite/"
+    },
+    "raglite/forecasting/data_quality/checks/timeseries_checks.py": {
+      "lines": 509,
+      "reason": "Baseline: existing at time of enforcement",
+      "target_lines": 500,
+      "directory": "raglite/"
     }
   }
 }

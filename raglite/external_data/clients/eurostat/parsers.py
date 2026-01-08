@@ -277,8 +277,8 @@ def parse_sdmx_index_data(
             )
 
         # Calculate stride for each dimension (product of all following dimensions)
-        time_stride, geo_stride, unit_stride, s_adj_stride, nace_stride = (
-            _calculate_sdmx_strides(size)
+        time_stride, geo_stride, unit_stride, s_adj_stride, nace_stride = _calculate_sdmx_strides(
+            size
         )
 
         # Extract time-series values

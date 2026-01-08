@@ -183,9 +183,7 @@ def parse_sdmx_index_data(
     period_by_index = {v: k for k, v in time_dim.items()}
 
     # Extract dimension indices
-    dimension_indices = _extract_dimension_indices(
-        data, country, nace_sector, seasonal_adjustment
-    )
+    dimension_indices = _extract_dimension_indices(data, country, nace_sector, seasonal_adjustment)
     if dimension_indices is None:
         return results
 
@@ -203,8 +201,8 @@ def parse_sdmx_index_data(
             )
 
         # Calculate stride for each dimension (product of all following dimensions)
-        time_stride, geo_stride, unit_stride, s_adj_stride, nace_stride = (
-            _calculate_sdmx_strides(size)
+        time_stride, geo_stride, unit_stride, s_adj_stride, nace_stride = _calculate_sdmx_strides(
+            size
         )
 
         # Process time periods
