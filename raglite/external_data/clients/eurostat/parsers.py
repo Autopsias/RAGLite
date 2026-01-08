@@ -95,6 +95,133 @@ def parse_electricity_data(
     return results
 
 
+def _get_sdmx_dimension_indices(
+    data: dict,
+    country: str,
+    nace_sector: str,
+    seasonal_adjustment: str,
+) -> tuple[int | None, int | None, int | None, int | None]:
+    """Extract dimension indices from SDMX-JSON data.
+
+    Args:
+        data: JSON response from Eurostat
+        country: Country code
+        nace_sector: NACE sector code
+        seasonal_adjustment: Seasonal adjustment type
+
+    Returns:
+        Tuple of (nace_idx, s_adj_idx, unit_idx, geo_idx) or None values if not found
+    """
+    dimensions = data.get("dimension", {})
+
+    # Get dimension indices for our filters
+    nace_indices = dimensions.get("nace_r2", {}).get("category", {}).get("index", {})
+    s_adj_indices = dimensions.get("s_adj", {}).get("category", {}).get("index", {})
+    unit_indices = dimensions.get("unit", {}).get("category", {}).get("index", {})
+    geo_indices = dimensions.get("geo", {}).get("category", {}).get("index", {})
+
+    # Get the dimension indices for our query
+    nace_idx = nace_indices.get(nace_sector)
+    s_adj_idx = s_adj_indices.get(seasonal_adjustment)
+    unit_idx = unit_indices.get("I21")
+    geo_idx = geo_indices.get(country)
+
+    return nace_idx, s_adj_idx, unit_idx, geo_idx
+
+
+def _calculate_sdmx_strides(size: list[int]) -> tuple[int, int, int, int, int]:
+    """Calculate stride values for SDMX multi-dimensional indexing.
+
+    Args:
+        size: Array of dimension sizes
+
+    Returns:
+        Tuple of (time_stride, geo_stride, unit_stride, s_adj_stride, nace_stride)
+    """
+    time_stride = 1
+    geo_stride = size[6]  # time
+    unit_stride = size[6] * size[5]  # time * geo
+    s_adj_stride = size[6] * size[5] * size[4]  # time * geo * unit
+    nace_stride = size[6] * size[5] * size[4] * size[3]  # time * geo * unit * s_adj
+
+    return time_stride, geo_stride, unit_stride, s_adj_stride, nace_stride
+
+
+def _extract_sdmx_time_values(
+    data: dict,
+    values: dict,
+    nace_idx: int,
+    s_adj_idx: int,
+    unit_idx: int,
+    geo_idx: int,
+    time_stride: int,
+    geo_stride: int,
+    unit_stride: int,
+    s_adj_stride: int,
+    nace_stride: int,
+    start_date: date | None,
+    end_date: date | None,
+) -> list[tuple[date, float]]:
+    """Extract time-series values from SDMX-JSON data using calculated indices.
+
+    Args:
+        data: JSON response from Eurostat
+        values: Value dictionary from SDMX response
+        nace_idx: NACE sector dimension index
+        s_adj_idx: Seasonal adjustment dimension index
+        unit_idx: Unit dimension index
+        geo_idx: Geographic dimension index
+        time_stride: Time dimension stride
+        geo_stride: Geographic dimension stride
+        unit_stride: Unit dimension stride
+        s_adj_stride: Seasonal adjustment stride
+        nace_stride: NACE sector stride
+        start_date: Filter start date
+        end_date: Filter end date
+
+    Returns:
+        List of (date, index_value) tuples
+    """
+    results: list[tuple[date, float]] = []
+
+    # Get time dimension
+    dimensions = data.get("dimension", {})
+    time_dim = dimensions.get("time", {}).get("category", {}).get("index", {})
+    period_by_index = {v: k for k, v in time_dim.items()}
+
+    # For each time period, calculate the flat index
+    for time_idx, period in period_by_index.items():
+        # Calculate flat index assuming freq_idx=0, indic_bt_idx=0
+        flat_idx = (
+            nace_idx * nace_stride
+            + s_adj_idx * s_adj_stride
+            + unit_idx * unit_stride
+            + geo_idx * geo_stride
+            + time_idx * time_stride
+        )
+
+        idx_str = str(flat_idx)
+        index_value = values.get(idx_str)
+
+        if index_value is None:
+            continue
+
+        # Parse period
+        record_date = parse_eurostat_period(period)
+        if record_date is None:
+            continue
+
+        # Apply date filters
+        if start_date and record_date < start_date.replace(day=1):
+            continue
+        if end_date and record_date > end_date:
+            continue
+
+        results.append((record_date, float(index_value)))
+
+    return results
+
+
 def parse_sdmx_index_data(
     data: dict,
     country: str,
@@ -120,24 +247,12 @@ def parse_sdmx_index_data(
 
     # Get values and dimensions
     values = data.get("value", {})
-    dimensions = data.get("dimension", {})
     size = data.get("size", [])
 
-    # Get time dimension
-    time_dim = dimensions.get("time", {}).get("category", {}).get("index", {})
-    period_by_index = {v: k for k, v in time_dim.items()}
-
-    # Get dimension indices for our filters
-    nace_indices = dimensions.get("nace_r2", {}).get("category", {}).get("index", {})
-    s_adj_indices = dimensions.get("s_adj", {}).get("category", {}).get("index", {})
-    unit_indices = dimensions.get("unit", {}).get("category", {}).get("index", {})
-    geo_indices = dimensions.get("geo", {}).get("category", {}).get("index", {})
-
-    # Get the dimension indices for our query
-    nace_idx = nace_indices.get(nace_sector)
-    s_adj_idx = s_adj_indices.get(seasonal_adjustment)
-    unit_idx = unit_indices.get("I21")
-    geo_idx = geo_indices.get(country)
+    # Get dimension indices
+    nace_idx, s_adj_idx, unit_idx, geo_idx = _get_sdmx_dimension_indices(
+        data, country, nace_sector, seasonal_adjustment
+    )
 
     if nace_idx is None or s_adj_idx is None or unit_idx is None or geo_idx is None:
         logger.warning(
@@ -162,41 +277,26 @@ def parse_sdmx_index_data(
             )
 
         # Calculate stride for each dimension (product of all following dimensions)
-        time_stride = 1
-        geo_stride = size[6]  # time
-        unit_stride = size[6] * size[5]  # time * geo
-        s_adj_stride = size[6] * size[5] * size[4]  # time * geo * unit
-        nace_stride = size[6] * size[5] * size[4] * size[3]  # time * geo * unit * s_adj
+        time_stride, geo_stride, unit_stride, s_adj_stride, nace_stride = (
+            _calculate_sdmx_strides(size)
+        )
 
-        # For each time period, calculate the flat index
-        for time_idx, period in period_by_index.items():
-            # Calculate flat index assuming freq_idx=0, indic_bt_idx=0
-            flat_idx = (
-                nace_idx * nace_stride
-                + s_adj_idx * s_adj_stride
-                + unit_idx * unit_stride
-                + geo_idx * geo_stride
-                + time_idx * time_stride
-            )
-
-            idx_str = str(flat_idx)
-            index_value = values.get(idx_str)
-
-            if index_value is None:
-                continue
-
-            # Parse period
-            record_date = parse_eurostat_period(period)
-            if record_date is None:
-                continue
-
-            # Apply date filters
-            if start_date and record_date < start_date.replace(day=1):
-                continue
-            if end_date and record_date > end_date:
-                continue
-
-            results.append((record_date, float(index_value)))
+        # Extract time-series values
+        results = _extract_sdmx_time_values(
+            data,
+            values,
+            nace_idx,
+            s_adj_idx,
+            unit_idx,
+            geo_idx,
+            time_stride,
+            geo_stride,
+            unit_stride,
+            s_adj_stride,
+            nace_stride,
+            start_date,
+            end_date,
+        )
 
     return results
 
@@ -332,42 +432,25 @@ def parse_building_permits_data(
     return results
 
 
-def parse_construction_confidence_data(
-    data: dict,
-    country: str,
-    start_date: date | None = None,
-    end_date: date | None = None,
-) -> list[ECConstructionConfidence]:
-    """Parse EC construction confidence JSON-stat response.
+def _build_confidence_period_data(
+    time_index: dict,
+    indic_index: dict,
+    values: dict,
+) -> dict[str, dict[str, float | None]]:
+    """Build period-level data dictionary for construction confidence indicators.
 
-    The data is organized with a flat value dictionary indexed by position.
-    Position = indic_index * time_count + time_index
+    Args:
+        time_index: Time period index mapping
+        indic_index: Indicator index mapping
+        values: Flat value dictionary from JSON-stat response
+
+    Returns:
+        Dictionary mapping period to indicator values
     """
-    results: list[ECConstructionConfidence] = []
-
-    # Get dimensions
-    dimensions = data.get("dimension", {})
-    time_dim = dimensions.get("time", {}).get("category", {})
-    indic_dim = dimensions.get("indic", {}).get("category", {})
-
-    time_index = time_dim.get("index", {})
-    indic_index = indic_dim.get("index", {})
-
-    # Get values
-    values = data.get("value", {})
-
-    if not time_index or not values:
-        logger.warning("No time periods or values in EC construction confidence response")
-        return results
-
     # Map indicator codes
     cci_idx = indic_index.get("BS-CCI-BAL")
     employment_idx = indic_index.get("BS-CEME-BAL")
     order_books_idx = indic_index.get("BS-COB-BAL")
-
-    if cci_idx is None:
-        logger.warning("Construction confidence indicator (BS-CCI-BAL) not found")
-        return results
 
     time_count = len(time_index)
 
@@ -398,6 +481,46 @@ def parse_construction_confidence_data(
             pos = order_books_idx * time_count + t_idx
             if str(pos) in values:
                 period_data[period]["order_books"] = values[str(pos)]
+
+    return period_data
+
+
+def parse_construction_confidence_data(
+    data: dict,
+    country: str,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> list[ECConstructionConfidence]:
+    """Parse EC construction confidence JSON-stat response.
+
+    The data is organized with a flat value dictionary indexed by position.
+    Position = indic_index * time_count + time_index
+    """
+    results: list[ECConstructionConfidence] = []
+
+    # Get dimensions
+    dimensions = data.get("dimension", {})
+    time_dim = dimensions.get("time", {}).get("category", {})
+    indic_dim = dimensions.get("indic", {}).get("category", {})
+
+    time_index = time_dim.get("index", {})
+    indic_index = indic_dim.get("index", {})
+
+    # Get values
+    values = data.get("value", {})
+
+    if not time_index or not values:
+        logger.warning("No time periods or values in EC construction confidence response")
+        return results
+
+    # Check for required confidence index
+    cci_idx = indic_index.get("BS-CCI-BAL")
+    if cci_idx is None:
+        logger.warning("Construction confidence indicator (BS-CCI-BAL) not found")
+        return results
+
+    # Build period-level data
+    period_data = _build_confidence_period_data(time_index, indic_index, values)
 
     # Convert to records
     for period, indicators in period_data.items():

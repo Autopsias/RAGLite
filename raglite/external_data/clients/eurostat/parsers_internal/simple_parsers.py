@@ -156,46 +156,31 @@ def parse_building_permits_data(
     return results
 
 
-def parse_construction_confidence_data(
-    data: dict,
-    country: str,
-    start_date: date | None = None,
-    end_date: date | None = None,
-) -> list[ECConstructionConfidence]:
-    """Parse EC construction confidence JSON-stat response.
+def _build_period_data_for_confidence(
+    time_index: dict,
+    indic_index: dict,
+    values: dict,
+) -> dict[str, dict[str, float | None]]:
+    """Build period-wise indicator data for construction confidence.
 
-    The data is organized with a flat value dictionary indexed by position.
-    Position = indic_index * time_count + time_index
+    Args:
+        time_index: Mapping of period codes to position indices
+        indic_index: Mapping of indicator codes to position indices
+        values: Flat value array keyed by position
+
+    Returns:
+        Dictionary mapping periods to their indicator values
     """
-    results: list[ECConstructionConfidence] = []
-
-    # Get dimensions
-    dimensions = data.get("dimension", {})
-    time_dim = dimensions.get("time", {}).get("category", {})
-    indic_dim = dimensions.get("indic", {}).get("category", {})
-
-    time_index = time_dim.get("index", {})
-    indic_index = indic_dim.get("index", {})
-
-    # Get values
-    values = data.get("value", {})
-
-    if not time_index or not values:
-        logger.warning("No time periods or values in EC construction confidence response")
-        return results
-
-    # Map indicator codes
+    # Map indicator codes to indices
     cci_idx = indic_index.get("BS-CCI-BAL")
     employment_idx = indic_index.get("BS-CEME-BAL")
     order_books_idx = indic_index.get("BS-COB-BAL")
 
     if cci_idx is None:
         logger.warning("Construction confidence indicator (BS-CCI-BAL) not found")
-        return results
+        return {}
 
     time_count = len(time_index)
-
-    # Build data by time period
     period_data: dict[str, dict[str, float | None]] = {}
 
     for period, t_idx in time_index.items():
@@ -222,6 +207,41 @@ def parse_construction_confidence_data(
             pos = order_books_idx * time_count + t_idx
             if str(pos) in values:
                 period_data[period]["order_books"] = values[str(pos)]
+
+    return period_data
+
+
+def parse_construction_confidence_data(
+    data: dict,
+    country: str,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> list[ECConstructionConfidence]:
+    """Parse EC construction confidence JSON-stat response.
+
+    The data is organized with a flat value dictionary indexed by position.
+    Position = indic_index * time_count + time_index
+    """
+    results: list[ECConstructionConfidence] = []
+
+    # Get dimensions
+    dimensions = data.get("dimension", {})
+    time_dim = dimensions.get("time", {}).get("category", {})
+    indic_dim = dimensions.get("indic", {}).get("category", {})
+
+    time_index = time_dim.get("index", {})
+    indic_index = indic_dim.get("index", {})
+    values = data.get("value", {})
+
+    if not time_index or not values:
+        logger.warning("No time periods or values in EC construction confidence response")
+        return results
+
+    # Build data by time period
+    period_data = _build_period_data_for_confidence(time_index, indic_index, values)
+
+    if not period_data:
+        return results
 
     # Convert to records
     for period, indicators in period_data.items():

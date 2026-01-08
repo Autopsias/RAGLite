@@ -113,11 +113,11 @@ async def generate_forecast(
         raise ValueError(f"Failed to load historical data for {metric}")
 
     # Cold-start check
-    if len(historical_data.points) < MIN_DATA_POINTS:
-        logger.info("Cold-start detected: routing to Chronos-2", extra={"metric": metric})
-        return await generate_chronos_cold_start_forecast(
-            metric=metric, historical_data=historical_data, periods_ahead=periods_ahead
-        )
+    result = await handle_cold_start_scenario(
+        metric, historical_data, periods_ahead, logger, MIN_DATA_POINTS
+    )
+    if result is not None:
+        return result
 
     # Steps 3-4: Try non-Prophet model with fallback
     result, model_source, model_selection_reason, external_regressors = await try_non_prophet_model(
@@ -135,52 +135,19 @@ async def generate_forecast(
     if result is not None:
         return result
 
-    # Step 5: Pre-flight validation
-    is_valid, validation_issues = validate_timeseries_for_forecast(
-        metric=metric, points=historical_data.points
-    )
-    if not is_valid:
-        logger.warning(f"Validation issues for {metric}: {validation_issues[:3]}")
-
-    # Steps 6-7: Prepare data, configure model, add regressors, and fit
-    model, df, regressors_used = prepare_and_fit_prophet_model(
-        historical_data, metric, external_regressors, logger
-    )
-
-    # Step 8: Generate forecast based on frequency
-    forecast_points = generate_forecast_points_by_frequency(
-        model,
-        df,
-        periods_ahead,
-        regressors_used,
-        external_regressors,
-        future_regressor_strategy,
-        frequency,
-        metric,
-        logger,
-    )
-
-    # Step 9: Calculate accuracy metrics
-    accuracy_metrics, improvement_vs_baseline = calculate_accuracy_and_improvement(
-        is_multivariate, model, df, metric, get_baseline_rmse
-    )
-
-    # Step 10: Build result
-    result = build_forecast_result(
+    # Run Prophet forecasting pipeline
+    result = await run_prophet_forecasting_pipeline(
         metric=metric,
         historical_data=historical_data,
-        forecast_points=forecast_points,
+        external_regressors=external_regressors,
         periods_ahead=periods_ahead,
-        regressors_used=regressors_used,
-        accuracy_metrics=accuracy_metrics,
-        improvement_vs_baseline=improvement_vs_baseline,
+        frequency=frequency,
+        future_regressor_strategy=future_regressor_strategy,
+        is_multivariate=is_multivariate,
         model_source=model_source,
         model_selection_reason=model_selection_reason,
+        logger=logger,
     )
-
-    # Step 11: Generate LLM explanation
-    context = build_explanation_context(metric, historical_data, regressors_used)
-    result.confidence_reasoning = await explain_forecast(result, context)
 
     logger.info("Forecast generated", extra={"metric": metric, "model_type": result.model_type})
     return result
@@ -356,3 +323,131 @@ def get_baseline_rmse(metric: str) -> float | None:
             pass
 
     return None
+
+
+async def handle_cold_start_scenario(
+    metric: str,
+    historical_data: TimeSeriesData,
+    periods_ahead: int,
+    logger,
+    min_data_points: int,
+) -> ForecastResult | None:
+    """Handle cold-start scenario with insufficient data.
+
+    Args:
+        metric: Metric name
+        historical_data: Time-series data
+        periods_ahead: Number of periods to forecast
+        logger: Logger instance
+        min_data_points: Minimum required data points
+
+    Returns:
+        ForecastResult if cold-start detected, None otherwise
+    """
+    if len(historical_data.points) < min_data_points:
+        logger.info("Cold-start detected: routing to Chronos-2", extra={"metric": metric})
+        return await generate_chronos_cold_start_forecast(
+            metric=metric, historical_data=historical_data, periods_ahead=periods_ahead
+        )
+    return None
+
+
+async def attach_llm_explanation(
+    result: ForecastResult,
+    metric: str,
+    historical_data: TimeSeriesData,
+    regressors_used: list[str],
+) -> ForecastResult:
+    """Attach LLM-generated explanation to forecast result.
+
+    Args:
+        result: Forecast result without explanation
+        metric: Metric name
+        historical_data: Historical time-series data
+        regressors_used: List of regressors used in forecast
+
+    Returns:
+        ForecastResult with confidence_reasoning attached
+    """
+    context = build_explanation_context(metric, historical_data, regressors_used)
+    result.confidence_reasoning = await explain_forecast(result, context)
+    return result
+
+
+async def run_prophet_forecasting_pipeline(
+    metric: str,
+    historical_data: TimeSeriesData,
+    external_regressors: dict[str, pd.Series] | None,
+    periods_ahead: int,
+    frequency: str,
+    future_regressor_strategy: str,
+    is_multivariate: bool,
+    model_source: str,
+    model_selection_reason: str,
+    logger,
+) -> ForecastResult:
+    """Run complete Prophet forecasting pipeline.
+
+    Args:
+        metric: Metric name
+        historical_data: Time-series data
+        external_regressors: Optional external regressors
+        periods_ahead: Number of periods to forecast
+        frequency: Data frequency
+        future_regressor_strategy: Strategy for future regressor values
+        is_multivariate: Whether using multivariate model
+        model_source: Model source description
+        model_selection_reason: Model selection reason
+        logger: Logger instance
+
+    Returns:
+        ForecastResult with predictions and explanation
+    """
+    # Step 5: Pre-flight validation
+    is_valid, validation_issues = validate_timeseries_for_forecast(
+        metric=metric, points=historical_data.points
+    )
+    if not is_valid:
+        logger.warning(f"Validation issues for {metric}: {validation_issues[:3]}")
+
+    # Steps 6-7: Prepare data, configure model, add regressors, and fit
+    model, df, regressors_used = prepare_and_fit_prophet_model(
+        historical_data, metric, external_regressors, logger
+    )
+
+    # Step 8: Generate forecast based on frequency
+    forecast_points = generate_forecast_points_by_frequency(
+        model,
+        df,
+        periods_ahead,
+        regressors_used,
+        external_regressors,
+        future_regressor_strategy,
+        frequency,
+        metric,
+        logger,
+    )
+
+    # Step 9: Calculate accuracy metrics
+    accuracy_metrics, improvement_vs_baseline = calculate_accuracy_and_improvement(
+        is_multivariate, model, df, metric, get_baseline_rmse
+    )
+
+    # Step 10: Build result
+    result = build_forecast_result(
+        metric=metric,
+        historical_data=historical_data,
+        forecast_points=forecast_points,
+        periods_ahead=periods_ahead,
+        regressors_used=regressors_used,
+        accuracy_metrics=accuracy_metrics,
+        improvement_vs_baseline=improvement_vs_baseline,
+        model_source=model_source,
+        model_selection_reason=model_selection_reason,
+    )
+
+    # Step 11: Generate LLM explanation
+    result = await attach_llm_explanation(result, metric, historical_data, regressors_used)
+
+    return result
+

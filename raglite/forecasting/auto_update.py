@@ -70,6 +70,126 @@ async def identify_affected_metrics(document_metadata: DocumentMetadata) -> list
     return default_metrics
 
 
+async def _refresh_single_metric(
+    metric: str,
+    document_metadata: DocumentMetadata,
+) -> tuple[str, str | None]:
+    """Refresh forecast for a single metric.
+
+    Args:
+        metric: Metric name to refresh
+        document_metadata: Metadata from ingested document
+
+    Returns:
+        Tuple of (metric_name, skip_reason) where skip_reason is None if successful
+
+    Raises:
+        InsufficientDataError: If not enough data points for forecasting
+        ExtractionError: If time-series extraction fails
+    """
+    # Extract time-series data from the document
+    ts_data = await extract_timeseries(
+        docs=[document_metadata.filename],
+        metric=metric,
+    )
+
+    # Generate forecast for this metric
+    await generate_forecast(
+        metric=metric,
+        historical_data=ts_data,
+        periods_ahead=4,
+    )
+
+    logger.info(
+        "Metric forecast refreshed",
+        extra={"metric": metric, "data_points": len(ts_data.points)},
+    )
+    return (metric, None)
+
+
+async def _process_metric_with_error_handling(
+    metric: str,
+    document_metadata: DocumentMetadata,
+) -> tuple[str, str | None]:
+    """Process a single metric forecast refresh with error handling.
+
+    Args:
+        metric: Metric name to refresh
+        document_metadata: Metadata from ingested document
+
+    Returns:
+        Tuple of (metric_name, skip_reason) where skip_reason is None if successful
+    """
+    try:
+        return await _refresh_single_metric(metric, document_metadata)
+
+    except InsufficientDataError as e:
+        reason = f"{metric}: insufficient data ({e})"
+        logger.debug(
+            "Metric skipped - insufficient data",
+            extra={"metric": metric, "error": str(e)},
+        )
+        return (metric, reason)
+
+    except ExtractionError as e:
+        reason = f"{metric}: extraction failed ({e})"
+        logger.debug(
+            "Metric skipped - extraction failed",
+            extra={"metric": metric, "error": str(e)},
+        )
+        return (metric, reason)
+
+    except Exception as e:
+        reason = f"{metric}: {type(e).__name__}"
+        logger.warning(
+            "Metric forecast refresh failed",
+            extra={"metric": metric, "error": str(e)},
+        )
+        return (metric, reason)
+
+
+def _build_refresh_result(
+    document_metadata: DocumentMetadata,
+    metrics_refreshed: list[str],
+    metrics_skipped: list[str],
+    duration_ms: int,
+    error_message: str | None = None,
+) -> ForecastRefreshResult:
+    """Build forecast refresh result from execution outcomes.
+
+    Args:
+        document_metadata: Metadata from ingested document
+        metrics_refreshed: List of successfully refreshed metrics
+        metrics_skipped: List of skipped metrics with reasons
+        duration_ms: Total refresh duration in milliseconds
+        error_message: Overall error message if refresh failed
+
+    Returns:
+        ForecastRefreshResult with refresh summary
+    """
+    result = ForecastRefreshResult(
+        document_id=document_metadata.filename,
+        metrics_refreshed=metrics_refreshed,
+        metrics_skipped=metrics_skipped,
+        refresh_duration_ms=duration_ms,
+        success=len(metrics_refreshed) > 0 or error_message is None,
+        error_message=error_message,
+    )
+
+    logger.info(
+        "Forecast refresh complete",
+        extra={
+            "doc_filename": document_metadata.filename,
+            "metrics_refreshed": metrics_refreshed,
+            "metrics_skipped_count": len(metrics_skipped),
+            "duration_ms": duration_ms,
+            "success": result.success,
+        },
+    )
+
+    return result
+
+
 async def trigger_forecast_refresh(
     document_metadata: DocumentMetadata,
     timeout_seconds: int | None = None,
@@ -121,49 +241,13 @@ async def trigger_forecast_refresh(
 
             # Step 2: Extract time-series and refresh each metric
             for metric in affected_metrics:
-                try:
-                    # Extract time-series data from the document
-                    ts_data = await extract_timeseries(
-                        docs=[document_metadata.filename],
-                        metric=metric,
-                    )
-
-                    # Generate forecast for this metric
-                    await generate_forecast(
-                        metric=metric,
-                        historical_data=ts_data,
-                        periods_ahead=4,
-                    )
-
-                    metrics_refreshed.append(metric)
-                    logger.info(
-                        "Metric forecast refreshed",
-                        extra={"metric": metric, "data_points": len(ts_data.points)},
-                    )
-
-                except InsufficientDataError as e:
-                    reason = f"{metric}: insufficient data ({e})"
-                    metrics_skipped.append(reason)
-                    logger.debug(
-                        "Metric skipped - insufficient data",
-                        extra={"metric": metric, "error": str(e)},
-                    )
-
-                except ExtractionError as e:
-                    reason = f"{metric}: extraction failed ({e})"
-                    metrics_skipped.append(reason)
-                    logger.debug(
-                        "Metric skipped - extraction failed",
-                        extra={"metric": metric, "error": str(e)},
-                    )
-
-                except Exception as e:
-                    reason = f"{metric}: {type(e).__name__}"
-                    metrics_skipped.append(reason)
-                    logger.warning(
-                        "Metric forecast refresh failed",
-                        extra={"metric": metric, "error": str(e)},
-                    )
+                metric_name, skip_reason = await _process_metric_with_error_handling(
+                    metric, document_metadata
+                )
+                if skip_reason is None:
+                    metrics_refreshed.append(metric_name)
+                else:
+                    metrics_skipped.append(skip_reason)
 
     except TimeoutError:
         error_message = f"Forecast refresh timed out after {timeout} seconds"
@@ -185,25 +269,6 @@ async def trigger_forecast_refresh(
         )
 
     duration_ms = int((time.time() - start_time) * 1000)
-
-    result = ForecastRefreshResult(
-        document_id=document_metadata.filename,
-        metrics_refreshed=metrics_refreshed,
-        metrics_skipped=metrics_skipped,
-        refresh_duration_ms=duration_ms,
-        success=len(metrics_refreshed) > 0 or error_message is None,
-        error_message=error_message,
+    return _build_refresh_result(
+        document_metadata, metrics_refreshed, metrics_skipped, duration_ms, error_message
     )
-
-    logger.info(
-        "Forecast refresh complete",
-        extra={
-            "doc_filename": document_metadata.filename,
-            "metrics_refreshed": metrics_refreshed,
-            "metrics_skipped_count": len(metrics_skipped),
-            "duration_ms": duration_ms,
-            "success": result.success,
-        },
-    )
-
-    return result
