@@ -6,5 +6,14 @@
     "warning": 400,
     "hard_limit": 500
   },
-  "exceptions": {}
+  "exceptions": {
+    "raglite/forecasting/data_quality/checks/entity_checks.py": {
+      "lines": 541,
+      "reason": "Function-length refactoring increased total LOC: extracted 5 helper functions from check_entity_coverage (122 LOC → 74 LOC) to meet <100 LOC threshold. All individual functions now pass. Future Epic 8 work: split entity validation into separate modules (contamination checks vs coverage checks).",
+      "target_lines": 500,
+      "directory": "raglite/forecasting/data_quality/checks/",
+      "epic": "8",
+      "story": "technical_debt_reduction"
+    }
+  }
 }

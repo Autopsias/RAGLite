@@ -260,6 +260,96 @@ def _parse_metadata_from_response(response_content: str, chunk_id: str) -> Extra
     )
 
 
+def _build_metadata_api_messages(text: str) -> tuple[str, str]:
+    """Build Mistral API messages for metadata extraction.
+
+    Args:
+        text: Chunk text content (~512 tokens from fixed chunking)
+
+    Returns:
+        Tuple of (system_message, user_message) for Mistral API
+    """
+
+    return (
+        _build_metadata_extraction_messages(text),
+        f"Extract all 15 metadata fields from this financial document chunk:\n\n{text}",
+    )
+
+
+async def _call_mistral_metadata_api(text: str, client: Mistral | None = None) -> str:
+    """Call Mistral Small 3.2 API for metadata extraction.
+
+    Args:
+        text: Chunk text content (~512 tokens from fixed chunking)
+        client: Optional pre-created Mistral client for connection pooling
+
+    Returns:
+        Response content string from Mistral API
+
+    Raises:
+        RuntimeError: If Mistral API call fails
+    """
+    # Story 2.6 AC6 FIX: Client pooling - accept pre-created client or create new one
+    # This enables caller to reuse single client instance across all chunks (10-15x speedup)
+    if client is None:
+        client = get_mistral_client()
+
+    # NO TRUNCATION NEEDED: Chunks are already fixed at ~512 tokens (Story 2.3)
+    # This is the perfect size for metadata extraction
+
+    # AC1 REVISION: Call Mistral Small API with RICH SCHEMA (15 fields)
+    # Based on INEXDA, FinRAG, RAF research showing 20-25% accuracy gains
+    # Story 2.6 AC6 FIX: Add await (async client) + timeout=30 (fail fast)
+    system_message, user_message = _build_metadata_api_messages(text)
+
+    from mistralai.models import SystemMessage, UserMessage
+
+    messages = [
+        SystemMessage(content=system_message),
+        UserMessage(content=user_message),
+    ]
+
+    response = await client.chat.complete_async(
+        model=settings.metadata_extraction_model,  # "mistral-small-latest"
+        messages=messages,
+        response_format={"type": "json_object"},  # JSON mode (Mistral's structured output)
+        temperature=0,  # Deterministic extraction
+        max_tokens=400,  # Increased from 150 to accommodate 15 fields
+    )
+
+    content: str | None = response.choices[0].message.content
+    if content is None:
+        raise RuntimeError("Mistral API returned empty response")
+    return content
+
+
+def _log_metadata_extraction_success(
+    chunk_id: str,
+    extracted_metadata: ExtractedMetadata,
+    duration_ms: int,
+) -> None:
+    """Log successful metadata extraction with metrics.
+
+    Args:
+        chunk_id: Unique chunk identifier for logging
+        extracted_metadata: Successfully extracted metadata
+        duration_ms: Extraction duration in milliseconds
+    """
+    logger.debug(
+        "Chunk metadata extraction complete (15-field rich schema)",
+        extra={
+            "chunk_id": chunk_id,
+            "document_type": extracted_metadata.document_type,
+            "reporting_period": extracted_metadata.reporting_period,
+            "section_type": extracted_metadata.section_type,
+            "metric_category": extracted_metadata.metric_category,
+            "model": settings.metadata_extraction_model,
+            "estimated_cost_usd": 0.0,  # FREE with Mistral Small 3.2
+            "duration_ms": duration_ms,
+        },
+    )
+
+
 async def extract_chunk_metadata(
     text: str, chunk_id: str, client: Mistral | None = None
 ) -> ExtractedMetadata:
@@ -318,55 +408,16 @@ async def extract_chunk_metadata(
     )
 
     try:
-        # Import dependencies (lazy import to avoid startup overhead)
-        from mistralai.models import SystemMessage, UserMessage
-
-        # Story 2.6 AC6 FIX: Client pooling - accept pre-created client or create new one
-        # This enables caller to reuse single client instance across all chunks (10-15x speedup)
-        if client is None:
-            client = get_mistral_client()
-
-        # NO TRUNCATION NEEDED: Chunks are already fixed at ~512 tokens (Story 2.3)
-        # This is the perfect size for metadata extraction
-
-        # AC1 REVISION: Call Mistral Small API with RICH SCHEMA (15 fields)
-        # Based on INEXDA, FinRAG, RAF research showing 20-25% accuracy gains
-        # Story 2.6 AC6 FIX: Add await (async client) + timeout=30 (fail fast)
-        messages = [
-            SystemMessage(content=_build_metadata_extraction_messages(text)),
-            UserMessage(
-                content=f"Extract all 15 metadata fields from this financial document chunk:\n\n{text}"
-            ),
-        ]
-        response = await client.chat.complete_async(
-            model=settings.metadata_extraction_model,  # "mistral-small-latest"
-            messages=messages,
-            response_format={"type": "json_object"},  # JSON mode (Mistral's structured output)
-            temperature=0,  # Deterministic extraction
-            max_tokens=400,  # Increased from 150 to accommodate 15 fields
-        )
+        # Call Mistral API for metadata extraction
+        response_content = await _call_mistral_metadata_api(text, client)
 
         # Parse and validate response
-        response_content = response.choices[0].message.content
         _validate_response_content(response_content, chunk_id)
         extracted_metadata = _parse_metadata_from_response(response_content, chunk_id)
 
-        # Calculate duration for logging
+        # Log success metrics
         duration_ms = int((time.time() - start_time) * 1000)
-
-        logger.debug(
-            "Chunk metadata extraction complete (15-field rich schema)",
-            extra={
-                "chunk_id": chunk_id,
-                "document_type": extracted_metadata.document_type,
-                "reporting_period": extracted_metadata.reporting_period,
-                "section_type": extracted_metadata.section_type,
-                "metric_category": extracted_metadata.metric_category,
-                "model": settings.metadata_extraction_model,
-                "estimated_cost_usd": 0.0,  # FREE with Mistral Small 3.2
-                "duration_ms": duration_ms,
-            },
-        )
+        _log_metadata_extraction_success(chunk_id, extracted_metadata, duration_ms)
 
         return extracted_metadata
 

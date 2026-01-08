@@ -320,6 +320,151 @@ async def check_entity_contamination(
     )
 
 
+def _build_coverage_metric_condition(
+    variable: str, config: VariableQualityConfig
+) -> tuple[str, list[str]]:
+    """Build SQL condition and parameters for metric matching in coverage check.
+
+    Args:
+        variable: Variable name
+        config: Variable quality configuration
+
+    Returns:
+        Tuple of (SQL condition string, parameter list)
+    """
+    aliases = config.db_metric_aliases or [variable]
+    metric_condition = " OR ".join(["metric ILIKE %s"] * len(aliases))
+    metric_params = [f"%{alias}%" for alias in aliases]
+    return metric_condition, metric_params
+
+
+def _check_entity_normalized_available(cursor: Any) -> bool:
+    """Check if entity_normalized column exists and has data.
+
+    Args:
+        cursor: PostgreSQL cursor
+
+    Returns:
+        True if entity_normalized has data, False otherwise
+    """
+    check_normalized_query = """
+        SELECT COUNT(*) FROM financial_tables WHERE entity_normalized IS NOT NULL LIMIT 1
+    """
+    cursor.execute(check_normalized_query)
+    result = cursor.fetchone()[0]
+    return bool(result > 0) if isinstance(result, int) else False
+
+
+def _build_coverage_entity_condition(
+    entity: str,
+    canonical_entity: str,
+    has_normalized: bool,
+    match_mode: EntityMatchMode,
+) -> tuple[str, str]:
+    """Build SQL condition and parameter for entity matching in coverage check.
+
+    Args:
+        entity: Original entity name
+        canonical_entity: Normalized entity name
+        has_normalized: Whether entity_normalized column has data
+        match_mode: Entity match mode (EXACT, ILIKE, ANY)
+
+    Returns:
+        Tuple of (SQL condition string, entity parameter)
+    """
+    if has_normalized and match_mode == EntityMatchMode.EXACT:
+        # Use entity_normalized for exact match
+        entity_condition = "entity_normalized = %s"
+        entity_param = canonical_entity or entity
+    elif match_mode == EntityMatchMode.EXACT:
+        entity_condition = "entity = %s"
+        entity_param = entity
+    else:  # ILIKE
+        entity_condition = "entity ILIKE %s"
+        entity_param = f"%{entity}%"
+
+    return entity_condition, entity_param
+
+
+def _execute_coverage_count_query(
+    cursor: Any,
+    metric_condition: str,
+    metric_params: list[str],
+    entity_condition: str,
+    entity_param: str,
+) -> int:
+    """Execute query to count distinct periods for entity coverage.
+
+    Args:
+        cursor: PostgreSQL cursor
+        metric_condition: SQL condition for metric matching
+        metric_params: Parameters for metric condition
+        entity_condition: SQL condition for entity matching
+        entity_param: Parameter for entity condition
+
+    Returns:
+        Count of distinct periods
+    """
+    query = f"""  # nosec
+        SELECT COUNT(DISTINCT period) FROM financial_tables
+        WHERE ({metric_condition})
+        AND {entity_condition}
+        AND period IS NOT NULL
+    """
+    cursor.execute(query, metric_params + [entity_param])
+    result = cursor.fetchone()[0]
+    return int(result) if isinstance(result, int) else 0
+
+
+def _evaluate_coverage_result(
+    variable: str,
+    entity: str,
+    period_count: int,
+    min_required: int,
+) -> CheckResult:
+    """Evaluate coverage check results and return appropriate status.
+
+    Args:
+        variable: Variable name
+        entity: Entity name
+        period_count: Number of periods found
+        min_required: Minimum required periods
+
+    Returns:
+        CheckResult with appropriate status based on coverage level
+    """
+    if period_count >= min_required:
+        return CheckResult(
+            check_name="entity_coverage",
+            status=CheckStatus.PASS,
+            message=f"Entity '{entity}' has {period_count} periods (>= {min_required})",
+            variable=variable,
+            actual_value=period_count,
+            threshold=min_required,
+        )
+
+    if period_count > 0:
+        return CheckResult(
+            check_name="entity_coverage",
+            status=CheckStatus.WARN,
+            message=f"Low coverage: {period_count} periods (need {min_required})",
+            variable=variable,
+            actual_value=period_count,
+            threshold=min_required,
+            severity=2,
+        )
+
+    return CheckResult(
+        check_name="entity_coverage",
+        status=CheckStatus.FAIL,
+        message=f"No data for entity '{entity}'",
+        variable=variable,
+        actual_value=0,
+        threshold=min_required,
+        severity=4,
+    )
+
+
 async def check_entity_coverage(
     variable: str,
     config: VariableQualityConfig,
@@ -358,42 +503,24 @@ async def check_entity_coverage(
     cursor = conn.cursor()
 
     try:
-        aliases = config.db_metric_aliases or [variable]
-        metric_condition = " OR ".join(["metric ILIKE %s"] * len(aliases))
-        metric_params = [f"%{alias}%" for alias in aliases]
+        # Build metric condition
+        metric_condition, metric_params = _build_coverage_metric_condition(variable, config)
 
         # Story 6.28: Use entity_normalized column if available
         from raglite.ingestion.entity_normalizer import normalize_entity
 
-        canonical_entity = normalize_entity(entity)
-
-        # Check if entity_normalized column has data
-        check_normalized_query = """
-            SELECT COUNT(*) FROM financial_tables WHERE entity_normalized IS NOT NULL LIMIT 1
-        """
-        cursor.execute(check_normalized_query)
-        has_normalized = cursor.fetchone()[0] > 0
+        canonical_entity = normalize_entity(entity) or entity
+        has_normalized = _check_entity_normalized_available(cursor)
 
         # Build entity condition based on match mode
-        if has_normalized and config.entity.match_mode == EntityMatchMode.EXACT:
-            # Use entity_normalized for exact match
-            entity_condition = "entity_normalized = %s"
-            entity_param = canonical_entity or entity
-        elif config.entity.match_mode == EntityMatchMode.EXACT:
-            entity_condition = "entity = %s"
-            entity_param = entity
-        else:  # ILIKE
-            entity_condition = "entity ILIKE %s"
-            entity_param = f"%{entity}%"
+        entity_condition, entity_param = _build_coverage_entity_condition(
+            entity, canonical_entity, has_normalized, config.entity.match_mode
+        )
 
-        query = f"""  # nosec
-            SELECT COUNT(DISTINCT period) FROM financial_tables
-            WHERE ({metric_condition})
-            AND {entity_condition}
-            AND period IS NOT NULL
-        """
-        cursor.execute(query, metric_params + [entity_param])
-        period_count = cursor.fetchone()[0]
+        # Execute query
+        period_count = _execute_coverage_count_query(
+            cursor, metric_condition, metric_params, entity_condition, entity_param
+        )
 
     except Exception as e:
         logger.error(
@@ -411,34 +538,4 @@ async def check_entity_coverage(
         cursor.close()
 
     min_required = config.min_data_points
-
-    if period_count >= min_required:
-        return CheckResult(
-            check_name="entity_coverage",
-            status=CheckStatus.PASS,
-            message=f"Entity '{entity}' has {period_count} periods (>= {min_required})",
-            variable=variable,
-            actual_value=period_count,
-            threshold=min_required,
-        )
-
-    if period_count > 0:
-        return CheckResult(
-            check_name="entity_coverage",
-            status=CheckStatus.WARN,
-            message=f"Low coverage: {period_count} periods (need {min_required})",
-            variable=variable,
-            actual_value=period_count,
-            threshold=min_required,
-            severity=2,
-        )
-
-    return CheckResult(
-        check_name="entity_coverage",
-        status=CheckStatus.FAIL,
-        message=f"No data for entity '{entity}'",
-        variable=variable,
-        actual_value=0,
-        threshold=min_required,
-        severity=4,
-    )
+    return _evaluate_coverage_result(variable, entity, period_count, min_required)

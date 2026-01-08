@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-08T10:45:16.601501",
+  "baseline_date": "2026-01-08T13:11:24.231551",
   "description": "Grandfathered function length violations - refactor gradually",
   "thresholds": {
     "warning": 50,
@@ -25,24 +25,6 @@
       "target_lines": 100,
       "directory": "tests/"
     },
-    "raglite/forecasting/timeseries/qdrant_variable_cost.py:23:extract_variable_cost_from_qdrant_chunks": {
-      "length": 254,
-      "function": "extract_variable_cost_from_qdrant_chunks",
-      "file": "raglite/forecasting/timeseries/qdrant_variable_cost.py",
-      "line": 23,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/ingestion/adaptive_table/core/fallback.py:25:extract_fallback": {
-      "length": 241,
-      "function": "extract_fallback",
-      "file": "raglite/ingestion/adaptive_table/core/fallback.py",
-      "line": 25,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/ingestion/document_ingestion/excel_processing.py:28:extract_excel": {
       "length": 233,
       "function": "extract_excel",
@@ -57,24 +39,6 @@
       "function": "calculate_backtest_weights",
       "file": "raglite/forecasting/adaptive_weights.py",
       "line": 43,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/ingestion/embedding_generation/metadata.py:30:extract_chunk_metadata": {
-      "length": 214,
-      "function": "extract_chunk_metadata",
-      "file": "raglite/ingestion/embedding_generation/metadata.py",
-      "line": 30,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/ingestion/embedding_generation.py:130:extract_chunk_metadata": {
-      "length": 210,
-      "function": "extract_chunk_metadata",
-      "file": "raglite/ingestion/embedding_generation.py",
-      "line": 130,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -106,15 +70,6 @@
       "target_lines": 100,
       "directory": "tests/"
     },
-    "raglite/forecasting/data_quality/checks/entity_checks.py:21:check_entity_contamination": {
-      "length": 180,
-      "function": "check_entity_contamination",
-      "file": "raglite/forecasting/data_quality/checks/entity_checks.py",
-      "line": 21,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "tests/integration/test_hybrid_search_integration.py:226:test_hybrid_search_full_ground_truth": {
       "length": 178,
       "function": "test_hybrid_search_full_ground_truth",
@@ -142,15 +97,6 @@
       "target_lines": 100,
       "directory": "tests/"
     },
-    "raglite/mcp/tools/admin.py:117:retrain_forecasting_models": {
-      "length": 174,
-      "function": "retrain_forecasting_models",
-      "file": "raglite/mcp/tools/admin.py",
-      "line": 117,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/ingestion/document_ingestion/collection.py:18:ingest_documents_parallel": {
       "length": 164,
       "function": "ingest_documents_parallel",
@@ -168,24 +114,6 @@
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "tests/"
-    },
-    "raglite/insights/anomalies.py:15:detect_anomalies": {
-      "length": 156,
-      "function": "detect_anomalies",
-      "file": "raglite/insights/anomalies.py",
-      "line": 15,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/models/tft_model.py:147:fit_and_forecast_tft": {
-      "length": 149,
-      "function": "fit_and_forecast_tft",
-      "file": "raglite/forecasting/models/tft_model.py",
-      "line": 147,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
     },
     "raglite/forecasting/models/tft/_legacy.py:147:fit_and_forecast_tft": {
       "length": 149,
@@ -349,15 +277,6 @@
       "target_lines": 100,
       "directory": "raglite/"
     },
-    "raglite/forecasting/data_quality/checks/entity_checks.py:203:check_entity_coverage": {
-      "length": 122,
-      "function": "check_entity_coverage",
-      "file": "raglite/forecasting/data_quality/checks/entity_checks.py",
-      "line": 203,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/insights/recommendations.py:106:synthesize_recommendation": {
       "length": 120,
       "function": "synthesize_recommendation",
@@ -421,83 +340,11 @@
       "target_lines": 100,
       "directory": "tests/"
     },
-    "raglite/forecasting/tft_training_job.py:36:run_weekly_tft_training": {
-      "length": 117,
-      "function": "run_weekly_tft_training",
-      "file": "raglite/forecasting/tft_training_job.py",
-      "line": 36,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/composite_forecast.py:100:forecast_composite": {
-      "length": 116,
-      "function": "forecast_composite",
-      "file": "raglite/forecasting/composite_forecast.py",
-      "line": 100,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/models/arima_model.py:40:fit_arima": {
-      "length": 116,
-      "function": "fit_arima",
-      "file": "raglite/forecasting/models/arima_model.py",
-      "line": 40,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/backtest_job.py:36:run_weekly_backtest": {
-      "length": 115,
-      "function": "run_weekly_backtest",
-      "file": "raglite/forecasting/backtest_job.py",
-      "line": 36,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/ingestion/adaptive_table/unit_inference/extraction.py:218:_detect_unit_column_statistical": {
-      "length": 113,
-      "function": "_detect_unit_column_statistical",
-      "file": "raglite/ingestion/adaptive_table/unit_inference/extraction.py",
-      "line": 218,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/data_quality/checks/value_checks.py:21:check_value_range": {
-      "length": 113,
-      "function": "check_value_range",
-      "file": "raglite/forecasting/data_quality/checks/value_checks.py",
-      "line": 21,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/models/tft_model.py:32:_get_tft_model": {
-      "length": 113,
-      "function": "_get_tft_model",
-      "file": "raglite/forecasting/models/tft_model.py",
-      "line": 32,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
     "raglite/forecasting/models/tft/_legacy.py:32:_get_tft_model": {
       "length": 113,
       "function": "_get_tft_model",
       "file": "raglite/forecasting/models/tft/_legacy.py",
       "line": 32,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/ensemble.py:130:generate_ensemble_forecast": {
-      "length": 112,
-      "function": "generate_ensemble_forecast",
-      "file": "raglite/forecasting/ensemble.py",
-      "line": 130,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"
@@ -516,15 +363,6 @@
       "function": "_parse_interest_rate_data",
       "file": "raglite/external_data/clients/bpstat.py",
       "line": 309,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/ingestion/adaptive_table/unit_inference/extraction.py:17:_extract_units_normal": {
-      "length": 108,
-      "function": "_extract_units_normal",
-      "file": "raglite/ingestion/adaptive_table/unit_inference/extraction.py",
-      "line": 17,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "raglite/"

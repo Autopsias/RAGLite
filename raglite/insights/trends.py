@@ -4,13 +4,17 @@ Story 4.6: Statistical trend analysis with CAGR, QoQ growth, and Pearson correla
 Target: ~50-80 lines per Tech Spec Section 3.4 (comprehensive docstrings acceptable per Story 4.5).
 """
 
+from itertools import combinations
+
 import numpy as np
 from scipy.stats import pearsonr
 
 from raglite.shared.logging import get_logger
 from raglite.shared.models import (
     CorrelationResult,
+    TimeSeriesData,
     Trend,
+    TrendAnalysisResult,
     TrendDirection,
 )
 
@@ -208,3 +212,230 @@ Provide possible business implications of this trend. Be specific but concise.""
             f"Trend detected: {trend.metric} shows {trend.direction.value} trend "
             f"with {trend.cagr:.1%} CAGR from {trend.start_date} to {trend.end_date}."
         )
+
+
+def _extract_metric_data(ts: TimeSeriesData) -> tuple[list[float], list[str]]:
+    """Extract values and dates from timeseries data.
+
+    Args:
+        ts: TimeSeriesData to extract from
+
+    Returns:
+        Tuple of (values list, dates list)
+    """
+    values = [p.value for p in ts.points]
+    dates = [p.label or p.date.strftime("%Y-%m-%d") for p in ts.points]
+    return values, dates
+
+
+def _calculate_confidence(values: list[float]) -> float:
+    """Calculate trend confidence based on data consistency.
+
+    Higher confidence if QoQ growth is consistent (low std deviation).
+
+    Args:
+        values: Time series values
+
+    Returns:
+        Confidence score between 0.0 and 1.0
+    """
+    if len(values) <= 1:
+        return 0.0
+
+    growth_std = float(
+        np.std(
+            [
+                (values[i] - values[i - 1]) / values[i - 1]
+                for i in range(1, len(values))
+                if values[i - 1] != 0
+            ]
+        )
+    )
+    return round(max(0.0, min(1.0, 1.0 - growth_std)), 2)
+
+
+def _create_trend(
+    metric: str,
+    values: list[float],
+    dates: list[str],
+    auto_explain: bool,
+) -> Trend:
+    """Create a Trend object from timeseries data.
+
+    Args:
+        metric: Metric name
+        values: Time series values
+        dates: Corresponding dates
+        auto_explain: Whether to generate LLM explanation
+
+    Returns:
+        Trend object with calculated metrics
+    """
+    years = len(values) * 0.25  # Assume quarterly data
+    cagr = calculate_cagr(values[0], values[-1], years)
+    qoq = calculate_qoq_growth(values)
+    direction = classify_direction(cagr)
+    magnitude = abs(cagr) * 100
+
+    trend = Trend(
+        metric=metric,
+        direction=direction,
+        magnitude=round(magnitude, 1),
+        confidence=_calculate_confidence(values),
+        start_date=dates[0],
+        end_date=dates[-1],
+        cagr=round(cagr, 4),
+        qoq_growth=round(qoq, 2),
+    )
+
+    logger.info(
+        "Trend detected",
+        extra={
+            "metric": metric,
+            "direction": direction.value,
+            "magnitude": round(magnitude, 1),
+            "cagr": round(cagr, 4),
+            "qoq_growth": round(qoq, 2),
+            "confidence": trend.confidence,
+            "start_date": dates[0],
+            "end_date": dates[-1],
+            "data_points": len(values),
+        },
+    )
+
+    return trend
+
+
+def _find_significant_correlations(
+    metrics_values: dict[str, list[float]],
+) -> list[CorrelationResult]:
+    """Find all significant correlations between metric pairs.
+
+    Args:
+        metrics_values: Dict mapping metric names to value lists
+
+    Returns:
+        List of significant CorrelationResult objects (|r| > 0.4, p < 0.1)
+    """
+    correlations: list[CorrelationResult] = []
+
+    for metric_a, metric_b in combinations(metrics_values.keys(), 2):
+        values_a = metrics_values[metric_a]
+        values_b = metrics_values[metric_b]
+
+        min_len = min(len(values_a), len(values_b))
+        if min_len < 3:
+            continue
+
+        try:
+            corr = detect_correlation(metric_a, metric_b, values_a[:min_len], values_b[:min_len])
+            if abs(corr.correlation_coefficient) > 0.4 and corr.p_value < 0.1:
+                correlations.append(corr)
+                logger.info(
+                    "Correlation detected",
+                    extra={
+                        "metric_a": metric_a,
+                        "metric_b": metric_b,
+                        "correlation": corr.correlation_coefficient,
+                        "p_value": corr.p_value,
+                        "interpretation": corr.interpretation,
+                    },
+                )
+        except ValueError as e:
+            logger.warning(f"Correlation detection failed for {metric_a}/{metric_b}: {e}")
+
+    return correlations
+
+
+async def analyze_trends(
+    metrics: list[str],
+    timeseries_data: dict[str, TimeSeriesData],
+    *,
+    auto_explain: bool = False,
+) -> TrendAnalysisResult:
+    """Analyze trends and patterns in financial data.
+
+    Story 4.6 AC1-AC5: Statistical trend analysis with growth patterns and correlations.
+
+    Args:
+        metrics: List of metric names to analyze (e.g., ["revenue", "expenses", "cash_flow"])
+        timeseries_data: Dict mapping metric names to their TimeSeriesData
+        auto_explain: If True, automatically generate LLM explanations for each trend.
+            Default False to reduce API calls in bulk processing.
+
+    Returns:
+        TrendAnalysisResult containing:
+          - trends: List of detected Trend objects
+          - correlations: List of CorrelationResult objects
+          - metrics_analyzed: Number of metrics processed
+          - analysis_method: "Statistical analysis (CAGR, QoQ, Pearson correlation)"
+
+    Raises:
+        ValueError: If timeseries has fewer than 3 data points for any metric
+
+    Example:
+        >>> from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
+        >>> from datetime import datetime
+        >>> revenue = TimeSeriesData(metric_name="revenue", points=[...])
+        >>> expenses = TimeSeriesData(metric_name="expenses", points=[...])
+        >>> result = await analyze_trends(
+        ...     ["revenue", "expenses"],
+        ...     {"revenue": revenue, "expenses": expenses}
+        ... )
+        >>> print(result.trends[0])
+        Trend(metric="revenue", direction=INCREASING, magnitude=15.2, ...)
+    """
+    trends: list[Trend] = []
+    metrics_values: dict[str, list[float]] = {}
+
+    logger.info(
+        "Starting trend analysis",
+        extra={
+            "metrics": metrics,
+            "metrics_count": len(metrics),
+            "auto_explain": auto_explain,
+        },
+    )
+
+    # Analyze each metric for trends
+    for metric in metrics:
+        if metric not in timeseries_data:
+            logger.warning(f"Metric '{metric}' not found in timeseries_data")
+            continue
+
+        ts = timeseries_data[metric]
+        if len(ts.points) < 3:
+            raise ValueError(
+                f"Insufficient data for metric '{metric}': {len(ts.points)} points. "
+                "Minimum 3 required for trend analysis."
+            )
+
+        values, dates = _extract_metric_data(ts)
+        metrics_values[metric] = values
+
+        trend = _create_trend(metric, values, dates, auto_explain)
+
+        if auto_explain:
+            trend.description = await explain_trend(trend)
+
+        trends.append(trend)
+
+    # Detect correlations between all metric pairs
+    correlations = (
+        _find_significant_correlations(metrics_values) if len(metrics_values) >= 2 else []
+    )
+
+    logger.info(
+        "Trend analysis complete",
+        extra={
+            "trends_found": len(trends),
+            "correlations_found": len(correlations),
+            "metrics_analyzed": len(metrics_values),
+        },
+    )
+
+    return TrendAnalysisResult(
+        trends=trends,
+        correlations=correlations,
+        metrics_analyzed=len(metrics_values),
+    )
