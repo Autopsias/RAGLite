@@ -14,6 +14,14 @@
       "directory": "raglite/forecasting/data_quality/checks/",
       "epic": "8",
       "story": "technical_debt_reduction"
+    },
+    "raglite/forecasting/data_quality/checks/timeseries_checks.py": {
+      "lines": 509,
+      "reason": "Function-length refactoring extracted 7 helper functions to meet <100 LOC threshold: check_effective_frequency (128→94 LOC), check_time_index_integrity (95→91 LOC), check_missing_data_pattern (102→60 LOC). All target functions now pass. Helpers are reusable and improve maintainability. Future work: split checks module by domain (frequency checks vs integrity checks vs missing data checks).",
+      "target_lines": 500,
+      "directory": "raglite/forecasting/data_quality/checks/",
+      "epic": "8",
+      "story": "technical_debt_reduction"
     }
   }
 }
