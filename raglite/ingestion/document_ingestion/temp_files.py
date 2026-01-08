@@ -7,6 +7,8 @@ Handles base64 and URL-based temporary file creation with automatic cleanup.
 from __future__ import annotations
 
 import base64
+import http.client
+import re
 import tempfile
 import urllib.parse
 import urllib.request
@@ -108,6 +110,203 @@ def temp_file_from_base64(content_b64: str, filename: str) -> Generator[str, Non
                 )
 
 
+def _validate_url(url: str, parsed: urllib.parse.ParseResult) -> tuple[str, str]:
+    """Validate URL scheme, domain, and extract filename.
+
+    Args:
+        url: Original URL string
+        parsed: Parsed URL components
+
+    Returns:
+        tuple[str, str]: (url_path, filename_from_url)
+
+    Raises:
+        ValueError: If URL scheme not allowed, domain not in allowlist,
+                    or extension not supported.
+    """
+    # AC1: Scheme validation (security)
+    if parsed.scheme.lower() not in ALLOWED_URL_SCHEMES:
+        raise ValueError(
+            f"URL scheme '{parsed.scheme}' not allowed. "
+            f"Supported schemes: {', '.join(sorted(ALLOWED_URL_SCHEMES))}"
+        )
+
+    # AC2: Domain allowlist check (if configured)
+    if URL_DOMAIN_ALLOWLIST and parsed.netloc.lower() not in URL_DOMAIN_ALLOWLIST:
+        raise ValueError(
+            f"Domain '{parsed.netloc}' not in allowlist. "
+            "Contact administrator to add trusted domains."
+        )
+
+    # Extract filename from URL path
+    url_path = urllib.parse.unquote(parsed.path)
+    filename_from_url = Path(url_path).name if url_path else ""
+
+    # Validate extension from URL (preliminary check)
+    if filename_from_url:
+        suffix = Path(filename_from_url).suffix.lower()
+        if suffix and suffix not in SUPPORTED_EXTENSIONS:
+            supported = ", ".join(sorted(SUPPORTED_EXTENSIONS))
+            raise ValueError(
+                f"Unsupported file type from URL: {suffix}. Supported extensions: {supported}"
+            )
+
+    return url_path, filename_from_url
+
+
+def _create_download_request(url: str) -> urllib.request.Request:
+    """Create HTTP request with appropriate headers.
+
+    Args:
+        url: URL to download from
+
+    Returns:
+        urllib.request.Request: Configured request object
+    """
+    return urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "RAGLite/1.0 (Financial Document Ingestion)",
+            "Accept": "application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, */*",
+        },
+    )
+
+
+def _determine_filename_and_extension(
+    response: http.client.HTTPResponse, filename_from_url: str
+) -> tuple[str, str]:
+    """Determine filename and file extension from response headers.
+
+    Args:
+        response: HTTP response object
+        filename_from_url: Filename extracted from URL path
+
+    Returns:
+        tuple[str, str]: (filename, suffix)
+
+    Raises:
+        ValueError: If file type cannot be determined or extension not supported
+    """
+    # Try to get filename from Content-Disposition header
+    content_disposition = response.headers.get("Content-Disposition", "")
+    if "filename=" in content_disposition:
+        match = re.search(r'filename[*]?=["\']?([^"\';\n]+)', content_disposition)
+        if match:
+            filename_from_url = match.group(1).strip()
+
+    # Determine file extension
+    suffix = ""
+    if filename_from_url:
+        suffix = Path(filename_from_url).suffix.lower()
+
+    # If no extension from URL/headers, try Content-Type
+    if not suffix:
+        content_type = response.headers.get("Content-Type", "")
+        if "pdf" in content_type:
+            suffix = ".pdf"
+            filename_from_url = "downloaded_document.pdf"
+        elif "spreadsheet" in content_type or "excel" in content_type:
+            suffix = ".xlsx"
+            filename_from_url = "downloaded_document.xlsx"
+        elif not filename_from_url:
+            raise ValueError(
+                "Cannot determine file type from URL. "
+                "Ensure URL ends with .pdf, .xlsx, or .xls, "
+                "or server provides Content-Type header."
+            )
+
+    # Final extension validation
+    if suffix not in SUPPORTED_EXTENSIONS:
+        supported = ", ".join(sorted(SUPPORTED_EXTENSIONS))
+        raise ValueError(f"Unsupported file type: {suffix}. Supported: {supported}")
+
+    return filename_from_url, suffix
+
+
+def _download_file_streaming(
+    response: http.client.HTTPResponse, tmp_path: str, parsed: urllib.parse.ParseResult
+) -> int:
+    """Download file content with streaming and size validation.
+
+    Args:
+        response: HTTP response object
+        tmp_path: Temporary file path to write to
+        parsed: Parsed URL for logging
+
+    Returns:
+        int: Total downloaded size in bytes
+
+    Raises:
+        ValueError: If download exceeds size limit
+    """
+    downloaded_size = 0
+    chunk_size = 8192  # 8KB chunks
+
+    with open(tmp_path, "wb") as tmp:
+        while True:
+            chunk = response.read(chunk_size)
+            if not chunk:
+                break
+            downloaded_size += len(chunk)
+
+            # Check size limit during download
+            if downloaded_size > MAX_URL_DOWNLOAD_SIZE_BYTES:
+                raise ValueError(
+                    f"Download exceeded size limit during transfer. "
+                    f"Maximum: {MAX_URL_DOWNLOAD_SIZE_BYTES / (1024 * 1024):.0f}MB"
+                )
+
+            tmp.write(chunk)
+
+    return downloaded_size
+
+
+def _handle_download_error(e: Exception, parsed: urllib.parse.ParseResult) -> None:
+    """Handle and log download errors with appropriate error messages.
+
+    Args:
+        e: The exception that occurred
+        parsed: Parsed URL for logging
+
+    Raises:
+        RuntimeError: Always raises with appropriate error message
+    """
+    if isinstance(e, HTTPError):
+        logger.error(
+            "HTTP error during URL download",
+            extra={
+                "url_domain": parsed.netloc,
+                "status_code": e.code,
+                "reason": e.reason,
+            },
+        )
+        raise RuntimeError(f"Failed to download from URL: HTTP {e.code} {e.reason}") from e
+
+    elif isinstance(e, URLError):
+        logger.error(
+            "Network error during URL download",
+            extra={"url_domain": parsed.netloc, "error": str(e.reason)},
+        )
+        raise RuntimeError(f"Failed to download from URL: {e.reason}") from e
+
+    elif isinstance(e, TimeoutError):
+        logger.error(
+            "Timeout during URL download",
+            extra={
+                "url_domain": parsed.netloc,
+                "timeout_seconds": URL_DOWNLOAD_TIMEOUT_TOTAL,
+            },
+        )
+        raise RuntimeError(
+            f"Download timed out after {URL_DOWNLOAD_TIMEOUT_TOTAL} seconds. "
+            "Try a faster connection or smaller file."
+        ) from None
+
+    else:
+        # Re-raise unexpected errors
+        raise
+
+
 @contextmanager
 def temp_file_from_url(url: str) -> Generator[tuple[str, str], None, None]:
     """Download file from URL to temporary file with automatic cleanup.
@@ -143,33 +342,7 @@ def temp_file_from_url(url: str) -> Generator[tuple[str, str], None, None]:
     """
     # Parse and validate URL
     parsed = urllib.parse.urlparse(url)
-
-    # AC1: Scheme validation (security)
-    if parsed.scheme.lower() not in ALLOWED_URL_SCHEMES:
-        raise ValueError(
-            f"URL scheme '{parsed.scheme}' not allowed. "
-            f"Supported schemes: {', '.join(sorted(ALLOWED_URL_SCHEMES))}"
-        )
-
-    # AC2: Domain allowlist check (if configured)
-    if URL_DOMAIN_ALLOWLIST and parsed.netloc.lower() not in URL_DOMAIN_ALLOWLIST:
-        raise ValueError(
-            f"Domain '{parsed.netloc}' not in allowlist. "
-            "Contact administrator to add trusted domains."
-        )
-
-    # Extract filename from URL path or Content-Disposition header
-    url_path = urllib.parse.unquote(parsed.path)
-    filename_from_url = Path(url_path).name if url_path else ""
-
-    # Validate extension from URL (preliminary check)
-    if filename_from_url:
-        suffix = Path(filename_from_url).suffix.lower()
-        if suffix and suffix not in SUPPORTED_EXTENSIONS:
-            supported = ", ".join(sorted(SUPPORTED_EXTENSIONS))
-            raise ValueError(
-                f"Unsupported file type from URL: {suffix}. Supported extensions: {supported}"
-            )
+    url_path, filename_from_url = _validate_url(url, parsed)
 
     logger.info(
         "Starting URL download",
@@ -183,13 +356,7 @@ def temp_file_from_url(url: str) -> Generator[tuple[str, str], None, None]:
     tmp_path = None
     try:
         # Create request with timeout and headers
-        request = urllib.request.Request(
-            url,
-            headers={
-                "User-Agent": "RAGLite/1.0 (Financial Document Ingestion)",
-                "Accept": "application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, */*",
-            },
-        )
+        request = _create_download_request(url)
 
         # Download with streaming to handle large files
         with urllib.request.urlopen(request, timeout=URL_DOWNLOAD_TIMEOUT_TOTAL) as response:  # nosec B310 - URL scheme validated above
@@ -202,62 +369,17 @@ def temp_file_from_url(url: str) -> Generator[tuple[str, str], None, None]:
                     f"{MAX_URL_DOWNLOAD_SIZE_BYTES / (1024 * 1024):.0f}MB"
                 )
 
-            # Try to get filename from Content-Disposition header
-            content_disposition = response.headers.get("Content-Disposition", "")
-            if "filename=" in content_disposition:
-                # Extract filename from header
-                import re
+            # Determine filename and extension from headers
+            filename_from_url, suffix = _determine_filename_and_extension(
+                response, filename_from_url
+            )
 
-                match = re.search(r'filename[*]?=["\']?([^"\';\n]+)', content_disposition)
-                if match:
-                    filename_from_url = match.group(1).strip()
-
-            # Determine file extension
-            suffix = ""
-            if filename_from_url:
-                suffix = Path(filename_from_url).suffix.lower()
-
-            # If no extension from URL/headers, try Content-Type
-            if not suffix:
-                content_type = response.headers.get("Content-Type", "")
-                if "pdf" in content_type:
-                    suffix = ".pdf"
-                    filename_from_url = "downloaded_document.pdf"
-                elif "spreadsheet" in content_type or "excel" in content_type:
-                    suffix = ".xlsx"
-                    filename_from_url = "downloaded_document.xlsx"
-                elif not filename_from_url:
-                    raise ValueError(
-                        "Cannot determine file type from URL. "
-                        "Ensure URL ends with .pdf, .xlsx, or .xls, "
-                        "or server provides Content-Type header."
-                    )
-
-            # Final extension validation
-            if suffix not in SUPPORTED_EXTENSIONS:
-                supported = ", ".join(sorted(SUPPORTED_EXTENSIONS))
-                raise ValueError(f"Unsupported file type: {suffix}. Supported: {supported}")
-
-            # Create temp file and download content
+            # Create temp file
             with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
                 tmp_path = tmp.name
-                downloaded_size = 0
-                chunk_size = 8192  # 8KB chunks
 
-                while True:
-                    chunk = response.read(chunk_size)
-                    if not chunk:
-                        break
-                    downloaded_size += len(chunk)
-
-                    # Check size limit during download
-                    if downloaded_size > MAX_URL_DOWNLOAD_SIZE_BYTES:
-                        raise ValueError(
-                            f"Download exceeded size limit during transfer. "
-                            f"Maximum: {MAX_URL_DOWNLOAD_SIZE_BYTES / (1024 * 1024):.0f}MB"
-                        )
-
-                    tmp.write(chunk)
+            # Download file content with streaming
+            downloaded_size = _download_file_streaming(response, tmp_path, parsed)
 
             logger.info(
                 "URL download complete",
@@ -271,36 +393,8 @@ def temp_file_from_url(url: str) -> Generator[tuple[str, str], None, None]:
 
             yield tmp_path, filename_from_url
 
-    except HTTPError as e:
-        logger.error(
-            "HTTP error during URL download",
-            extra={
-                "url_domain": parsed.netloc,
-                "status_code": e.code,
-                "reason": e.reason,
-            },
-        )
-        raise RuntimeError(f"Failed to download from URL: HTTP {e.code} {e.reason}") from e
-
-    except URLError as e:
-        logger.error(
-            "Network error during URL download",
-            extra={"url_domain": parsed.netloc, "error": str(e.reason)},
-        )
-        raise RuntimeError(f"Failed to download from URL: {e.reason}") from e
-
-    except TimeoutError:
-        logger.error(
-            "Timeout during URL download",
-            extra={
-                "url_domain": parsed.netloc,
-                "timeout_seconds": URL_DOWNLOAD_TIMEOUT_TOTAL,
-            },
-        )
-        raise RuntimeError(
-            f"Download timed out after {URL_DOWNLOAD_TIMEOUT_TOTAL} seconds. "
-            "Try a faster connection or smaller file."
-        ) from None
+    except Exception as e:
+        _handle_download_error(e, parsed)
 
     finally:
         # Cleanup temp file
