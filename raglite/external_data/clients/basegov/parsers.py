@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from io import BytesIO
+from typing import Any
 
 import openpyxl
 
@@ -15,6 +16,214 @@ from raglite.external_data.models import BaseGovContract
 from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _parse_publication_date(
+    pub_date_val: Any,
+    contract_date_val: Any,
+) -> date | None:
+    """Parse publication date from IMPIC row.
+
+    Args:
+        pub_date_val: Publication date value
+        contract_date_val: Contract date value (fallback)
+
+    Returns:
+        Parsed date or None if parsing fails
+    """
+    # Try publication date first, fallback to contract date
+    date_val = pub_date_val if pub_date_val else contract_date_val
+
+    if not date_val:
+        return None
+
+    # Parse date based on type
+    if isinstance(date_val, datetime):
+        return date_val.date()
+    elif isinstance(date_val, date):
+        return date_val
+    elif isinstance(date_val, str):
+        return date.fromisoformat(date_val[:10])
+
+    return None
+
+
+def _parse_contract_value(row_value: Any) -> float:
+    """Parse contract value from IMPIC row.
+
+    Args:
+        row_value: Value from spreadsheet cell
+
+    Returns:
+        Parsed float value or 0.0 if parsing fails
+    """
+    if not row_value:
+        return 0.0
+
+    try:
+        if isinstance(row_value, (int, float)):
+            return float(row_value)
+        elif isinstance(row_value, str):
+            return float(row_value.replace(",", ".").replace(" ", ""))
+    except (ValueError, TypeError):
+        pass
+
+    return 0.0
+
+
+def _extract_description(
+    row: tuple,
+    obj_col: int | None,
+    desc_col: int | None,
+) -> str:
+    """Extract contract description from IMPIC row.
+
+    Args:
+        row: Spreadsheet row data
+        obj_col: Object/title column index
+        desc_col: Description column index
+
+    Returns:
+        Description string (max 500 chars)
+    """
+    if obj_col is not None and row[obj_col]:
+        return str(row[obj_col])[:500]
+    elif desc_col is not None and row[desc_col]:
+        return str(row[desc_col])[:500]
+
+    return ""
+
+
+def _check_cpv_filter(item_cpv: str, cpv_code: str | None) -> bool:
+    """Check if CPV code matches filter.
+
+    Args:
+        item_cpv: CPV code from row
+        cpv_code: Required CPV prefix (or None for no filter)
+
+    Returns:
+        True if CPV matches or no filter specified
+    """
+    if not cpv_code or not item_cpv:
+        return True
+
+    # Extract main CPV code (before dash)
+    main_cpv = item_cpv.split("-")[0].split()[0] if item_cpv else ""
+    return main_cpv.startswith(cpv_code[:2])
+
+
+def _create_contract_from_row(
+    row: tuple,
+    pub_date: date,
+    description: str,
+    value: float,
+    buyer: str,
+    winner: str,
+    item_cpv: str,
+    id_col: int,
+) -> BaseGovContract:
+    """Create BaseGovContract from parsed IMPIC row data.
+
+    Args:
+        row: Spreadsheet row data
+        pub_date: Parsed publication date
+        description: Contract description
+        value: Contract value in EUR
+        buyer: Contracting entity
+        winner: Contractor
+        item_cpv: CPV code
+        id_col: Contract ID column index
+
+    Returns:
+        BaseGovContract instance
+    """
+    return BaseGovContract(
+        publication_date=pub_date,
+        contract_id=str(row[id_col]) if row[id_col] else "",
+        description=description,
+        contract_value_eur=value,
+        contracting_entity=buyer,
+        contractor=winner,
+        cpv_code=item_cpv.split("\n")[0] if item_cpv else "",  # First CPV only
+        execution_location="Portugal",
+    )
+
+
+def _process_impic_row(
+    row: tuple,
+    start_date: date,
+    end_date: date,
+    cpv_code: str | None,
+    id_col: int,
+    obj_col: int | None,
+    desc_col: int | None,
+    buyer_col: int | None,
+    winner_col: int | None,
+    pub_date_col: int | None,
+    contract_date_col: int | None,
+    value_col: int | None,
+    cpv_col: int | None,
+) -> BaseGovContract | None:
+    """Process a single IMPIC spreadsheet row.
+
+    Args:
+        row: Spreadsheet row data
+        start_date: Filter start date
+        end_date: Filter end date
+        cpv_code: CPV code filter (prefix match)
+        id_col: Contract ID column index
+        obj_col: Object/title column index
+        desc_col: Description column index
+        buyer_col: Buyer column index
+        winner_col: Winner column index
+        pub_date_col: Publication date column index
+        contract_date_col: Contract date column index
+        value_col: Value column index
+        cpv_col: CPV column index
+
+    Returns:
+        BaseGovContract or None if row should be skipped
+    """
+    # Get and parse publication date
+    pub_date_val = row[pub_date_col] if pub_date_col is not None else None
+    contract_date_val = row[contract_date_col] if contract_date_col is not None else None
+    pub_date = _parse_publication_date(pub_date_val, contract_date_val)
+
+    if not pub_date:
+        return None
+
+    # Filter by date range
+    if not (start_date <= pub_date <= end_date):
+        return None
+
+    # Get CPV code
+    item_cpv = str(row[cpv_col]) if cpv_col is not None and row[cpv_col] else ""
+
+    # Filter by CPV if specified (prefix match)
+    if not _check_cpv_filter(item_cpv, cpv_code):
+        return None
+
+    # Parse contract value
+    value = _parse_contract_value(row[value_col] if value_col is not None else None)
+
+    # Extract description
+    description = _extract_description(row, obj_col, desc_col)
+
+    # Parse buyer/winner (format: "NIF - Name")
+    buyer = str(row[buyer_col]) if buyer_col is not None and row[buyer_col] else ""
+    winner = str(row[winner_col]) if winner_col is not None and row[winner_col] else ""
+
+    # Create contract object
+    return _create_contract_from_row(
+        row=row,
+        pub_date=pub_date,
+        description=description,
+        value=value,
+        buyer=buyer,
+        winner=winner,
+        item_cpv=item_cpv,
+        id_col=id_col,
+    )
 
 
 def parse_impic_xlsx(
@@ -74,74 +283,23 @@ def parse_impic_xlsx(
         # Parse data rows
         for row in ws.iter_rows(min_row=2, values_only=True):
             try:
-                # Get publication date
-                pub_date_val = row[pub_date_col] if pub_date_col is not None else None
-                if not pub_date_val:
-                    pub_date_val = row[contract_date_col] if contract_date_col is not None else None
-
-                if not pub_date_val:
-                    continue
-
-                # Parse date
-                if isinstance(pub_date_val, datetime):
-                    pub_date = pub_date_val.date()
-                elif isinstance(pub_date_val, date):
-                    pub_date = pub_date_val
-                elif isinstance(pub_date_val, str):
-                    pub_date = date.fromisoformat(pub_date_val[:10])
-                else:
-                    continue
-
-                # Filter by date range
-                if not (start_date <= pub_date <= end_date):
-                    continue
-
-                # Get CPV code
-                item_cpv = str(row[cpv_col]) if cpv_col is not None and row[cpv_col] else ""
-
-                # Filter by CPV if specified (prefix match)
-                if cpv_code and item_cpv:
-                    # Extract main CPV code (before dash)
-                    main_cpv = item_cpv.split("-")[0].split()[0] if item_cpv else ""
-                    if not main_cpv.startswith(cpv_code[:2]):
-                        continue
-
-                # Get contract value
-                value = 0.0
-                if value_col is not None and row[value_col]:
-                    try:
-                        val = row[value_col]
-                        if isinstance(val, (int, float)):
-                            value = float(val)
-                        elif isinstance(val, str):
-                            value = float(val.replace(",", ".").replace(" ", ""))
-                    except (ValueError, TypeError):
-                        value = 0.0
-
-                # Get description
-                description = ""
-                if obj_col is not None and row[obj_col]:
-                    description = str(row[obj_col])[:500]
-                elif desc_col is not None and row[desc_col]:
-                    description = str(row[desc_col])[:500]
-
-                # Parse buyer/winner (format: "NIF - Name")
-                buyer = str(row[buyer_col]) if buyer_col is not None and row[buyer_col] else ""
-                winner = str(row[winner_col]) if winner_col is not None and row[winner_col] else ""
-
-                results.append(
-                    BaseGovContract(
-                        publication_date=pub_date,
-                        contract_id=str(row[id_col]) if row[id_col] else "",
-                        description=description,
-                        contract_value_eur=value,
-                        contracting_entity=buyer,
-                        contractor=winner,
-                        cpv_code=item_cpv.split("\n")[0] if item_cpv else "",  # First CPV only
-                        execution_location="Portugal",
-                    )
+                contract = _process_impic_row(
+                    row=row,
+                    start_date=start_date,
+                    end_date=end_date,
+                    cpv_code=cpv_code,
+                    id_col=id_col,
+                    obj_col=obj_col,
+                    desc_col=desc_col,
+                    buyer_col=buyer_col,
+                    winner_col=winner_col,
+                    pub_date_col=pub_date_col,
+                    contract_date_col=contract_date_col,
+                    value_col=value_col,
+                    cpv_col=cpv_col,
                 )
-
+                if contract:
+                    results.append(contract)
             except (IndexError, TypeError, ValueError):
                 # Skip malformed rows
                 continue
