@@ -163,6 +163,110 @@ async def generate_chronos_cold_start_forecast(
     )
 
 
+def _validate_chronos_input(
+    y: pd.Series,
+    external_regressors: pd.DataFrame | None,
+    periods_ahead: int,
+) -> bool:
+    """Validate Chronos-2 input data.
+
+    Args:
+        y: Target time-series values
+        external_regressors: Optional external covariates
+        periods_ahead: Number of periods to forecast
+
+    Returns:
+        True if input is valid, False otherwise
+    """
+    if y is None or len(y) == 0:
+        logger.warning("Chronos-2 received empty input array", extra={"data_points": 0})
+        return False
+
+    if y.isna().all():
+        logger.warning(
+            "Chronos-2 received all-NaN input",
+            extra={"data_points": len(y), "nan_count": y.isna().sum()},
+        )
+        return False
+
+    logger.info(
+        "Starting Chronos-2 inference",
+        extra={
+            "data_points": len(y),
+            "periods_ahead": periods_ahead,
+            "has_regressors": external_regressors is not None,
+        },
+    )
+    return True
+
+
+def _execute_chronos_inference(
+    y: pd.Series,
+    periods_ahead: int,
+) -> np.ndarray:
+    """Execute Chronos-2 inference and return median forecast.
+
+    Args:
+        y: Target time-series values
+        periods_ahead: Number of periods to forecast
+
+    Returns:
+        Median forecast values as numpy array
+    """
+    import time
+
+    import torch
+
+    from raglite.shared.config import settings
+
+    start_time = time.time()
+
+    # Load Chronos-2 pipeline (cached singleton)
+    pipeline = _get_chronos_pipeline()
+
+    # Prepare input tensor
+    inputs = torch.tensor(y.values, dtype=torch.float32).unsqueeze(0)  # Shape: (1, T)
+
+    # Generate forecast (zero-shot, no training)
+    # Chronos-Bolt uses simplified API: predict(inputs, prediction_length)
+    # NOTE: Chronos-2 DOES support covariates in v2.0+, but we use simple
+    # time-series only for ensemble consistency. Future story can add covariates.
+    forecast = pipeline.predict(
+        inputs=inputs,
+        prediction_length=periods_ahead,
+    )
+
+    # Extract median forecast (50th percentile)
+    forecast_samples = forecast.squeeze(0).numpy()  # Shape: (num_samples, prediction_length)
+    median_forecast: np.ndarray = np.percentile(forecast_samples, 50, axis=0)
+
+    # Calculate elapsed time
+    elapsed = time.time() - start_time
+
+    # Log completion with timing (AC6: timeout monitoring)
+    logger.info(
+        "Chronos-2 inference completed",
+        extra={
+            "elapsed_seconds": round(elapsed, 3),
+            "periods_ahead": periods_ahead,
+            "timeout_threshold": settings.chronos_inference_timeout,
+        },
+    )
+
+    # Warn if inference exceeded timeout threshold (AC6)
+    if elapsed > settings.chronos_inference_timeout:
+        logger.warning(
+            "Chronos-2 inference exceeded timeout threshold",
+            extra={
+                "elapsed_seconds": round(elapsed, 3),
+                "timeout_threshold": settings.chronos_inference_timeout,
+                "overage_seconds": round(elapsed - settings.chronos_inference_timeout, 3),
+            },
+        )
+
+    return median_forecast
+
+
 def fit_and_forecast_chronos(
     y: pd.Series,
     periods_ahead: int,
@@ -181,78 +285,13 @@ def fit_and_forecast_chronos(
     Returns:
         Dict with 'values' list and 'metrics' dict, or None if inference fails
     """
-    import time
-
-    import torch
-
-    from raglite.shared.config import settings
-
-    # Input validation: Check for NaN or empty arrays
-    if y is None or len(y) == 0:
-        logger.warning("Chronos-2 received empty input array", extra={"data_points": 0})
+    # Input validation
+    if not _validate_chronos_input(y, external_regressors, periods_ahead):
         return None
-
-    if y.isna().all():
-        logger.warning(
-            "Chronos-2 received all-NaN input",
-            extra={"data_points": len(y), "nan_count": y.isna().sum()},
-        )
-        return None
-
-    logger.info(
-        "Starting Chronos-2 inference",
-        extra={
-            "data_points": len(y),
-            "periods_ahead": periods_ahead,
-            "has_regressors": external_regressors is not None,
-        },
-    )
 
     try:
-        start_time = time.time()
-
-        # Load Chronos-2 pipeline (cached singleton)
-        pipeline = _get_chronos_pipeline()
-
-        # Prepare input tensor
-        inputs = torch.tensor(y.values, dtype=torch.float32).unsqueeze(0)  # Shape: (1, T)
-
-        # Generate forecast (zero-shot, no training)
-        # Chronos-Bolt uses simplified API: predict(inputs, prediction_length)
-        # NOTE: Chronos-2 DOES support covariates in v2.0+, but we use simple
-        # time-series only for ensemble consistency. Future story can add covariates.
-        forecast = pipeline.predict(
-            inputs=inputs,
-            prediction_length=periods_ahead,
-        )
-
-        # Extract median forecast (50th percentile)
-        forecast_samples = forecast.squeeze(0).numpy()  # Shape: (num_samples, prediction_length)
-        median_forecast = np.percentile(forecast_samples, 50, axis=0)
-
-        # Calculate elapsed time
-        elapsed = time.time() - start_time
-
-        # Log completion with timing (AC6: timeout monitoring)
-        logger.info(
-            "Chronos-2 inference completed",
-            extra={
-                "elapsed_seconds": round(elapsed, 3),
-                "periods_ahead": periods_ahead,
-                "timeout_threshold": settings.chronos_inference_timeout,
-            },
-        )
-
-        # Warn if inference exceeded timeout threshold (AC6)
-        if elapsed > settings.chronos_inference_timeout:
-            logger.warning(
-                "Chronos-2 inference exceeded timeout threshold",
-                extra={
-                    "elapsed_seconds": round(elapsed, 3),
-                    "timeout_threshold": settings.chronos_inference_timeout,
-                    "overage_seconds": round(elapsed - settings.chronos_inference_timeout, 3),
-                },
-            )
+        # Execute inference
+        median_forecast = _execute_chronos_inference(y, periods_ahead)
 
         # Return format matching other models
         return {

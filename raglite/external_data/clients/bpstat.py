@@ -306,53 +306,41 @@ class BPstatClient:
         )
         return results
 
-    def _parse_interest_rate_data(
-        self,
-        response_data: dict,
-        series_ids: list[str],
-    ) -> list[BPstatMortgageLoans]:
-        """Parse interest rate data from new API response.
+    def _extract_period_from_observation(self, obs: dict) -> str | None:
+        """Extract period from observation dict.
 
-        Story 6.9.3 AC3: Updated parser for new API structure
+        Handles both old ("period": "2024-01") and new ("reference_date": "2024-01-31") formats.
 
         Args:
-            response_data: JSON response from BPstat API
-            series_ids: List of series IDs that were requested
+            obs: Single observation from API response
 
         Returns:
-            List of mortgage interest rate records
+            Period string (YYYY-MM) or None if not found
         """
-        results = []
+        period: str | None = obs.get("period", obs.get("refPeriod"))
+        if not period:
+            ref_date = obs.get("reference_date")
+            if ref_date:
+                # Convert "2024-01-31" to "2024-01"
+                period = ref_date[:7]
+        return period
 
-        # New API response structure:
-        # {
-        #   "data": {
-        #     "series_id": { ... series metadata ... },
-        #     ...
-        #   },
-        #   "observations": [
-        #     { "period": "2024-01", "value": 3.45, "series_id": "12710733" },
-        #     ...
-        #   ]
-        # }
+    def _build_observations_lookup(
+        self, raw_observations: list[dict]
+    ) -> dict[str, dict[str, float]]:
+        """Build lookup dict for observations by period and series.
 
-        # Build lookup for observations by period and series
+        Args:
+            raw_observations: List of observation dicts from API
+
+        Returns:
+            Nested dict: {period: {series_id: value}}
+        """
         observations_by_period: dict[str, dict[str, float]] = {}
-
-        # Story 6.9.4: BPstat API returns data in "data" array (not "observations")
-        # Each item has "reference_date" (YYYY-MM-DD format) instead of "period"
-        raw_observations = response_data.get("data", response_data.get("observations", []))
 
         for obs in raw_observations:
             try:
-                # Handle both old ("period": "2024-01") and new ("reference_date": "2024-01-31") formats
-                period = obs.get("period", obs.get("refPeriod"))
-                if not period:
-                    ref_date = obs.get("reference_date")
-                    if ref_date:
-                        # Convert "2024-01-31" to "2024-01"
-                        period = ref_date[:7]
-
+                period = self._extract_period_from_observation(obs)
                 series_id = str(obs.get("series_id", obs.get("seriesId", "")))
                 value = obs.get("value")
 
@@ -371,7 +359,21 @@ class BPstatClient:
                 )
                 continue
 
-        # Create records for each period where we have data
+        return observations_by_period
+
+    def _create_mortgage_records(
+        self, observations_by_period: dict[str, dict[str, float]]
+    ) -> list[BPstatMortgageLoans]:
+        """Create mortgage loan records from observations lookup.
+
+        Args:
+            observations_by_period: Nested dict from _build_observations_lookup
+
+        Returns:
+            List of BPstatMortgageLoans records
+        """
+        results = []
+
         for period, series_values in sorted(observations_by_period.items()):
             try:
                 # Parse period (format: YYYY-MM)
@@ -409,6 +411,44 @@ class BPstatClient:
                     extra={"period": period, "error": str(e)},
                 )
                 continue
+
+        return results
+
+    def _parse_interest_rate_data(
+        self,
+        response_data: dict,
+        series_ids: list[str],
+    ) -> list[BPstatMortgageLoans]:
+        """Parse interest rate data from new API response.
+
+        Story 6.9.3 AC3: Updated parser for new API structure
+
+        Args:
+            response_data: JSON response from BPstat API
+            series_ids: List of series IDs that were requested
+
+        Returns:
+            List of mortgage interest rate records
+        """
+        # New API response structure:
+        # {
+        #   "data": {
+        #     "series_id": { ... series metadata ... },
+        #     ...
+        #   },
+        #   "observations": [
+        #     { "period": "2024-01", "value": 3.45, "series_id": "12710733" },
+        #     ...
+        #   ]
+        # }
+
+        # Story 6.9.4: BPstat API returns data in "data" array (not "observations")
+        # Each item has "reference_date" (YYYY-MM-DD format) instead of "period"
+        raw_observations = response_data.get("data", response_data.get("observations", []))
+
+        # Build lookup and create records
+        observations_by_period = self._build_observations_lookup(raw_observations)
+        results = self._create_mortgage_records(observations_by_period)
 
         logger.info(
             "Parsed BPstat mortgage interest rates",

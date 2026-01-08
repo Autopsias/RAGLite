@@ -22,6 +22,14 @@
       "directory": "raglite/forecasting/data_quality/checks/",
       "epic": "8",
       "story": "technical_debt_reduction"
+    },
+    "raglite/external_data/clients/bpstat.py": {
+      "lines": 535,
+      "reason": "Function-length refactoring extracted 3 helper functions from _parse_interest_rate_data (108→40 LOC, 63% reduction) to meet <100 LOC threshold. All individual functions now pass. Helpers (_extract_period_from_observation, _build_observations_lookup, _create_mortgage_records) improve maintainability and testability. Future Epic 8 work: consider splitting BPstatClient into separate modules (API client vs parsing logic).",
+      "target_lines": 500,
+      "directory": "raglite/external_data/clients/",
+      "epic": "8",
+      "story": "technical_debt_reduction"
     }
   }
 }
