@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
@@ -145,7 +145,7 @@ async def generate_forecast(
         future_regressor_strategy=future_regressor_strategy,
         is_multivariate=is_multivariate,
         model_source=model_source,
-        model_selection_reason=model_selection_reason,
+        model_selection_reason=model_selection_reason or "default",
         logger=logger,
     )
 
@@ -329,7 +329,7 @@ async def handle_cold_start_scenario(
     metric: str,
     historical_data: TimeSeriesData,
     periods_ahead: int,
-    logger,
+    logger: Any,
     min_data_points: int,
 ) -> ForecastResult | None:
     """Handle cold-start scenario with insufficient data.
@@ -384,7 +384,7 @@ async def run_prophet_forecasting_pipeline(
     is_multivariate: bool,
     model_source: str,
     model_selection_reason: str,
-    logger,
+    logger: Any,
 ) -> ForecastResult:
     """Run complete Prophet forecasting pipeline.
 
@@ -450,4 +450,3 @@ async def run_prophet_forecasting_pipeline(
     result = await attach_llm_explanation(result, metric, historical_data, regressors_used)
 
     return result
-

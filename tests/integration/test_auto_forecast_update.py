@@ -45,8 +45,10 @@ class TestMCPIngestionWithForecast:
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
-            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
-            patch("raglite.mcp.tools.ingestion.trigger_forecast_refresh", new_callable=AsyncMock),
+            patch("raglite.shared.config.settings") as mock_settings,
+            patch(
+                "raglite.forecasting.auto_update.trigger_forecast_refresh", new_callable=AsyncMock
+            ),
             patch("pathlib.Path.exists", return_value=True),
         ):
             mock_settings.enable_forecast_auto_update = False  # Disable to simplify test
@@ -87,9 +89,9 @@ class TestMCPIngestionWithForecast:
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
-            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
+            patch("raglite.shared.config.settings") as mock_settings,
             patch(
-                "raglite.mcp.tools.ingestion.trigger_forecast_refresh",
+                "raglite.forecasting.auto_update.trigger_forecast_refresh",
                 new_callable=AsyncMock,
                 return_value=mock_refresh_result,
             ) as mock_refresh,
@@ -127,9 +129,9 @@ class TestMCPIngestionWithForecast:
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
-            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
+            patch("raglite.shared.config.settings") as mock_settings,
             patch(
-                "raglite.mcp.tools.ingestion.trigger_forecast_refresh", new_callable=AsyncMock
+                "raglite.forecasting.auto_update.trigger_forecast_refresh", new_callable=AsyncMock
             ) as mock_refresh,
             patch("pathlib.Path.exists", return_value=True),
         ):
@@ -167,9 +169,9 @@ class TestMCPIngestionWithForecast:
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
-            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
+            patch("raglite.shared.config.settings") as mock_settings,
             patch(
-                "raglite.mcp.tools.ingestion.trigger_forecast_refresh", new_callable=AsyncMock
+                "raglite.forecasting.auto_update.trigger_forecast_refresh", new_callable=AsyncMock
             ) as mock_refresh,
             patch("pathlib.Path.exists", return_value=True),
         ):
@@ -375,9 +377,9 @@ class TestTimeoutBehavior:
             )
 
         with (
-            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
+            patch("raglite.shared.config.settings") as mock_settings,
             patch(
-                "raglite.mcp.tools.ingestion.trigger_forecast_refresh",
+                "raglite.forecasting.auto_update.trigger_forecast_refresh",
                 new_callable=AsyncMock,
                 side_effect=slow_refresh,
             ),

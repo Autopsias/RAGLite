@@ -219,7 +219,8 @@ def _check_entity_normalized_available(cursor: Any) -> bool:
     Returns:
         True if entity_normalized has data, False otherwise
     """
-    return check_entity_column_has_normalized(cursor)
+    result = check_entity_column_has_normalized(cursor)
+    return bool(result) if isinstance(result, int) else result
 
 
 def _evaluate_coverage_result(

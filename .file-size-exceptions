@@ -1,29 +1,10 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-08T21:40:19.033802",
+  "baseline_date": "2026-01-08T21:48:56.410563",
   "description": "Grandfathered file size violations - reduce gradually",
   "thresholds": {
     "warning": 400,
     "hard_limit": 500
   },
-  "exceptions": {
-    "raglite/external_data/clients/eurostat/parsers.py": {
-      "lines": 558,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "raglite/external_data/clients/bpstat.py": {
-      "lines": 535,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/data_quality/checks/timeseries_checks.py": {
-      "lines": 509,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 500,
-      "directory": "raglite/"
-    }
-  }
+  "exceptions": {}
 }
