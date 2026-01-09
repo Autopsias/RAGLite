@@ -4,12 +4,129 @@ Tests generate_embeddings and store_vectors_in_qdrant with real infrastructure.
 """
 
 import time
+from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 
 # Lazy imports for expensive modules - DO NOT import raglite modules at module level!
+
+
+def _create_mock_docling_document() -> Mock:
+    """Create realistic Docling mock with proper API structure.
+
+    Returns:
+        Mock: Document mock with pages, markdown export, and element iteration.
+    """
+    from docling_core.types.doc import TableItem, TextItem
+
+    # Simulate realistic text content that will generate ~13 chunks
+    page_content = " ".join(["Financial data content word"] * 200)  # ~200 words per page
+    full_markdown = "\n\n".join([f"# Page {i}\n\n{page_content}" for i in range(1, 11)])
+
+    mock_document = Mock()
+    mock_document.num_pages.return_value = 10
+    mock_document.export_to_markdown.return_value = full_markdown
+
+    def create_mock_items() -> Generator[tuple[Mock, None], None, None]:
+        """Generator yielding fresh mock items for iterate_items() calls."""
+        for i in range(20):
+            # Distribute items across 10 pages
+            page_no = (i % 10) + 1
+            mock_prov = Mock(page_no=page_no)
+
+            # Every 5th item is a table, rest are text paragraphs
+            if i % 5 == 0:
+                mock_item = Mock(spec=TableItem)
+                mock_item.text = (
+                    f"Table {i} | Column 1 | Column 2 |\n| --- | --- |\n| Data {i} | Value {i} |"
+                )
+                mock_item.export_to_markdown.return_value = mock_item.text
+                mock_item.prov = [mock_prov]
+            else:
+                mock_item = Mock(spec=TextItem)
+                mock_item.text = f"Financial content for element {i} with realistic text about revenue growth and market analysis showing positive trends in Q{(i % 4) + 1} performance indicators."
+                mock_item.prov = [mock_prov]
+
+            yield (mock_item, None)
+
+    # Return NEW generator each time method is called
+    mock_document.iterate_items.side_effect = lambda: create_mock_items()
+    return mock_document
+
+
+def _calculate_performance_targets(chunk_count: int) -> tuple[float, float]:
+    """Calculate performance targets based on chunk count.
+
+    Args:
+        chunk_count: Number of chunks processed
+
+    Returns:
+        Tuple of (target_seconds, max_duration_seconds) for performance validation
+    """
+    model_load_overhead_s = 5.0  # First-time model load (sentence-transformers)
+    embedding_time_per_chunk = 120.0 / 300.0  # 2 min / 300 chunks = 0.4s per chunk
+    target_seconds = (chunk_count * embedding_time_per_chunk) + model_load_overhead_s
+
+    # For 300+ chunks: 2 minutes + 5s model load = 125s
+    # For smaller documents: scale proportionally with 50% buffer
+    if chunk_count >= 300:
+        max_duration_seconds: float = 125.0
+    else:
+        max_duration_seconds = target_seconds * 1.5
+
+    return target_seconds, max_duration_seconds
+
+
+def _validate_performance(
+    elapsed_seconds: float, chunk_count: int, target_seconds: float, max_duration_seconds: float
+) -> None:
+    """Validate embedding generation performance meets AC9 requirements.
+
+    Args:
+        elapsed_seconds: Actual time taken for embedding generation
+        chunk_count: Number of chunks processed
+        target_seconds: Target time for this chunk count
+        max_duration_seconds: Maximum allowed time (hard limit)
+
+    Raises:
+        AssertionError: If performance does not meet requirements
+    """
+    print("\n  Performance Validation (Story 1.5 AC9):")
+    print(f"  Time: {elapsed_seconds:.1f}s (embedding generation only)")
+    print(f"  Target: <{target_seconds:.1f}s for {chunk_count} chunks + model load")
+    print(f"  Rate: {elapsed_seconds / chunk_count:.2f}s/chunk")
+
+    assert elapsed_seconds < max_duration_seconds, (
+        f"Performance test FAILED (AC9): "
+        f"Embedding generation took {elapsed_seconds:.1f}s for {chunk_count} chunks "
+        f"(target: <{max_duration_seconds:.1f}s including model load)"
+    )
+
+    print("  ✅ Performance meets <2 min/300 chunks requirement (AC9)")
+
+    # Calculate projected performance for 300 chunks
+    projected_300_chunks = (elapsed_seconds / chunk_count) * 300
+    print(f"  Projected time for 300 chunks: {projected_300_chunks:.1f}s")
+
+
+def _print_test_summary(
+    chunk_count: int, elapsed_seconds: float, max_duration_seconds: float
+) -> None:
+    """Print test completion summary.
+
+    Args:
+        chunk_count: Number of chunks processed
+        elapsed_seconds: Actual time taken
+        max_duration_seconds: Maximum allowed time
+    """
+    print("\n  === Story 1.5 Integration Test PASSED ===")
+    print("  ✅ AC7: End-to-end embedding generation complete")
+    print(f"  ✅ AC8: All {chunk_count} chunks processed")
+    print(f"  ✅ AC9: Performance validated ({elapsed_seconds:.1f}s < {max_duration_seconds:.1f}s)")
+    print("  Model: intfloat/e5-large-v2 (1024 dimensions)")
+    print("  Note: Docling PDF processing mocked to isolate embedding performance")
 
 
 @pytest.mark.slow  # Real embedding generation takes 10-30s
@@ -65,47 +182,9 @@ class TestEmbeddingIntegration:
         # Mock Docling to focus on embedding generation performance (AC9)
         # We test PDF processing separately - this test validates ONLY embedding speed
         # CRITICAL: Patch at import source (docling), not at usage location (pipeline)
-        # DocumentConverter is imported inside ingest_pdf(), so it must be patched at source
         with patch("docling.document_converter.DocumentConverter") as mock_converter:
-            # Create realistic mock for Docling result structure
-            # Simulate realistic text content that will generate ~13 chunks
-            page_content = " ".join(["Financial data content word"] * 200)  # ~200 words per page
-            full_markdown = "\n\n".join([f"# Page {i}\n\n{page_content}" for i in range(1, 11)])
-
-            # Mock document with proper API
-            mock_document = Mock()
-            mock_document.num_pages.return_value = 10
-            mock_document.export_to_markdown.return_value = full_markdown
-
-            # Mock iterate_items to return realistic elements with proper provenance
-            # prov must be a list with objects that have page_no attribute (Docling API)
-            # CRITICAL: With element-aware chunking (Story 2.2), need to mock actual Docling types
-            # Import Docling types for proper isinstance checks in extract_document_elements
-            from docling_core.types.doc import TableItem, TextItem
-
-            def create_mock_items():
-                """Generator that yields fresh mock items each time iterate_items() is called."""
-                for i in range(20):
-                    # Distribute items across 10 pages
-                    page_no = (i % 10) + 1
-                    mock_prov = Mock(page_no=page_no)
-
-                    # Create proper TextItem mock that passes isinstance check
-                    # Every 5th item is a table, rest are text paragraphs
-                    if i % 5 == 0:
-                        mock_item = Mock(spec=TableItem)
-                        mock_item.text = f"Table {i} | Column 1 | Column 2 |\n| --- | --- |\n| Data {i} | Value {i} |"
-                        mock_item.export_to_markdown.return_value = mock_item.text
-                        mock_item.prov = [mock_prov]
-                    else:
-                        mock_item = Mock(spec=TextItem)
-                        mock_item.text = f"Financial content for element {i} with realistic text about revenue growth and market analysis showing positive trends in Q{(i % 4) + 1} performance indicators."
-                        mock_item.prov = [mock_prov]
-
-                    yield (mock_item, None)
-
-            # Use side_effect to return NEW generator each time method is called
-            mock_document.iterate_items.side_effect = lambda: create_mock_items()
+            # Create mock document with realistic structure
+            mock_document = _create_mock_docling_document()
 
             # Mock conversion result
             mock_result = Mock()
@@ -136,63 +215,19 @@ class TestEmbeddingIntegration:
 
             # CRITICAL: Validate embedding generation (AC7, AC8)
             print("\n  Embedding Validation (Story 1.5 AC7/AC8):")
-
-            # Use the ingested result directly - no need to re-ingest
-            result_with_chunks = result
-
-            # The chunks are generated during ingestion but not stored in metadata
-            # We need to validate they were generated with embeddings
-            # Let's verify by checking that chunk_count > 0 which means chunking happened
-            assert result_with_chunks.chunk_count > 0
-
             print("  ✅ Document chunked and embedded successfully")
-            print(f"  ✅ Chunk count: {result_with_chunks.chunk_count}")
+            print(f"  ✅ Chunk count: {result.chunk_count}")
 
             # AC9: Performance validation (<2 minutes for 300 chunks)
-            # Scale target based on actual chunk count
-            # NOTE: Model loading overhead (~5s first time) should be amortized across chunks
-            model_load_overhead_s = 5.0  # First-time model load (sentence-transformers)
-            embedding_time_per_chunk = 120.0 / 300.0  # 2 min / 300 chunks = 0.4s per chunk
-            target_total_seconds = (
-                result_with_chunks.chunk_count * embedding_time_per_chunk
-            ) + model_load_overhead_s
-
-            print("\n  Performance Validation (Story 1.5 AC9):")
-            print(f"  Time: {elapsed_seconds:.1f}s (embedding generation only)")
-            print(
-                f"  Target: <{target_total_seconds:.1f}s for {result_with_chunks.chunk_count} chunks + model load"
+            target_seconds, max_duration_seconds = _calculate_performance_targets(
+                result.chunk_count
             )
-            print(f"  Rate: {elapsed_seconds / result_with_chunks.chunk_count:.2f}s/chunk")
-
-            # For 300 chunks, should be <120s (2 minutes) + 5s model load = 125s
-            # For smaller documents, scale proportionally with model load overhead
-            if result_with_chunks.chunk_count >= 300:
-                max_duration_seconds: float = 125.0  # 2 minutes + 5s model load for 300+ chunks
-            else:
-                # Allow 50% buffer for variance + model load overhead
-                max_duration_seconds = target_total_seconds * 1.5
-
-            assert elapsed_seconds < max_duration_seconds, (
-                f"Performance test FAILED (AC9): "
-                f"Embedding generation took {elapsed_seconds:.1f}s for {result_with_chunks.chunk_count} chunks "
-                f"(target: <{max_duration_seconds:.1f}s including model load)"
+            _validate_performance(
+                elapsed_seconds, result.chunk_count, target_seconds, max_duration_seconds
             )
-
-            print("  ✅ Performance meets <2 min/300 chunks requirement (AC9)")
-
-            # Calculate projected performance for 300 chunks
-            projected_300_chunks = (elapsed_seconds / result_with_chunks.chunk_count) * 300
-            print(f"  Projected time for 300 chunks: {projected_300_chunks:.1f}s")
 
             # Summary
-            print("\n  === Story 1.5 Integration Test PASSED ===")
-            print("  ✅ AC7: End-to-end embedding generation complete")
-            print(f"  ✅ AC8: All {result_with_chunks.chunk_count} chunks processed")
-            print(
-                f"  ✅ AC9: Performance validated ({elapsed_seconds:.1f}s < {max_duration_seconds:.1f}s)"
-            )
-            print("  Model: intfloat/e5-large-v2 (1024 dimensions)")
-            print("  Note: Docling PDF processing mocked to isolate embedding performance")
+            _print_test_summary(result.chunk_count, elapsed_seconds, max_duration_seconds)
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio

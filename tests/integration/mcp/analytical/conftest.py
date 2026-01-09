@@ -5,7 +5,7 @@ import pytest
 from raglite.main import analytical_query_financial_documents
 
 # Access underlying function from FastMCP FunctionTool wrapper
-analytical_query_fn = analytical_query_financial_documents.fn
+analytical_query_fn = analytical_query_financial_documents
 
 
 @pytest.fixture

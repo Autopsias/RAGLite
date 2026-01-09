@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-08T23:35:03.514002",
+  "baseline_date": "2026-01-09T00:59:40.667968",
   "description": "Grandfathered function length violations - refactor gradually",
   "thresholds": {
     "warning": 50,
@@ -57,51 +57,6 @@
       "function": "test_parallel_ingestion_three_documents",
       "file": "tests/integration/parallel_ingestion/test_parallel_ingestion_core.py",
       "line": 28,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "tests/"
-    },
-    "tests/integration/ingestion/test_embedding_storage.py:34:test_embedding_generation_end_to_end": {
-      "length": 162,
-      "function": "test_embedding_generation_end_to_end",
-      "file": "tests/integration/ingestion/test_embedding_storage.py",
-      "line": 34,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "tests/"
-    },
-    "tests/integration/test_chunking_core.py:130:test_ac5_fast_chunk_count_validation": {
-      "length": 139,
-      "function": "test_ac5_fast_chunk_count_validation",
-      "file": "tests/integration/test_chunking_core.py",
-      "line": 130,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "tests/"
-    },
-    "tests/integration/ingestion/test_excel_pipeline.py:115:test_page_number_flow_through_chunking_pipeline": {
-      "length": 137,
-      "function": "test_page_number_flow_through_chunking_pipeline",
-      "file": "tests/integration/ingestion/test_excel_pipeline.py",
-      "line": 115,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "tests/"
-    },
-    "tests/integration/ingestion/chunking/test_validation_rules_fast.py:17:test_ac5_fast_chunk_count_validation": {
-      "length": 137,
-      "function": "test_ac5_fast_chunk_count_validation",
-      "file": "tests/integration/ingestion/chunking/test_validation_rules_fast.py",
-      "line": 17,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "tests/"
-    },
-    "tests/integration/chunking/test_ac5_validation.py:26:test_ac5_fast_chunk_count_validation": {
-      "length": 136,
-      "function": "test_ac5_fast_chunk_count_validation",
-      "file": "tests/integration/chunking/test_ac5_validation.py",
-      "line": 26,
       "reason": "Baseline: existing at time of enforcement",
       "target_lines": 100,
       "directory": "tests/"

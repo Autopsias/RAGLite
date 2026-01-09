@@ -8,7 +8,7 @@ from raglite.shared.models import AnalyticalQueryRequest, AnalyticalQueryRespons
 pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 # Access underlying function from FastMCP FunctionTool wrapper
-analytical_query_fn = analytical_query_financial_documents.fn
+analytical_query_fn = analytical_query_financial_documents
 
 
 @pytest.mark.integration

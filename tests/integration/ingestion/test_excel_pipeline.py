@@ -5,6 +5,7 @@ Tests extract_excel and chunk_document with real files.
 
 import time
 from pathlib import Path
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -101,6 +102,126 @@ class TestExcelIngestionIntegration:
         print("  ✅ End-to-end Excel ingestion (AC 9)")
 
 
+def _create_mock_docling_converter() -> tuple[Mock, Mock]:
+    """Create mocked Docling DocumentConverter for testing.
+
+    Returns:
+        Tuple of (mock_converter_class, mock_converter_instance)
+    """
+    # Create realistic mock for Docling result structure
+    page_content = " ".join(["Financial data content word"] * 200)  # ~200 words/page
+    full_markdown = "\n\n".join([f"# Page {i}\n\n{page_content}" for i in range(1, 11)])
+
+    # Mock document with proper Docling API
+    mock_document = Mock()
+    mock_document.num_pages.return_value = 10
+    mock_document.export_to_markdown.return_value = full_markdown
+
+    # Mock iterate_items with provenance data
+    mock_items = []
+    for i in range(50):  # More items for realistic chunking
+        mock_item = Mock()
+        page_no = (i // 5) + 1  # 5 items per page, 10 pages total
+        # Varied content for each item to enable chunking
+        mock_item.text = f"Financial analysis item {i} with detailed content about revenue metrics and performance indicators for quarter Q{(i % 4) + 1} showing growth trends and market analysis data."
+        # CRITICAL: prov must be a LIST (Docling API returns list)
+        mock_prov = Mock()
+        mock_prov.page_no = page_no
+        mock_item.prov = [mock_prov]  # Must be list!
+        mock_items.append((mock_item, None))
+    mock_document.iterate_items.side_effect = lambda: iter(mock_items)
+
+    # Mock conversion result
+    mock_result = Mock()
+    mock_result.document = mock_document
+
+    # Mock converter instance
+    mock_converter_instance = Mock()
+    mock_converter_instance.convert.return_value = mock_result
+    mock_converter_class = Mock(return_value=mock_converter_instance)
+
+    return mock_converter_class, mock_converter_instance
+
+
+def _create_mock_embedding_model() -> Mock:
+    """Create mocked embedding model for testing.
+
+    Returns:
+        Mock embedding model that returns 1024-dimensional embeddings
+    """
+    import numpy as np
+
+    mock_model = Mock()
+    # Mock encode to return 1024-dimensional embeddings for any chunk count
+    mock_model.encode.side_effect = lambda texts, **kwargs: np.random.rand(len(texts), 1024).astype(
+        np.float32
+    )
+    return mock_model
+
+
+def _validate_chunk_page_numbers(chunks: list[Any], result: Any, page_count: int) -> list[int]:
+    """Validate that all chunks have valid page numbers (AC8).
+
+    Args:
+        chunks: List of chunk objects to validate
+        result: DocumentMetadata result from ingestion
+        page_count: Expected page count from document
+
+    Returns:
+        List of page numbers found in chunks
+
+    Raises:
+        AssertionError: If any chunk has invalid page_number
+    """
+    page_numbers_found = []
+    for i, chunk in enumerate(chunks):
+        # AC8: Every chunk MUST have page_number != None
+        assert chunk.page_number is not None, (
+            f"CRITICAL FAILURE (AC8): Chunk {i} has page_number=None. "
+            f"All chunks must have valid page numbers for source attribution (NFR7)."
+        )
+
+        # Validate page number is in valid range
+        assert chunk.page_number > 0, (
+            f"Chunk {i}: page_number must be positive, got {chunk.page_number}"
+        )
+        assert chunk.page_number <= page_count, (
+            f"Chunk {i}: page_number {chunk.page_number} exceeds document page_count {page_count}"
+        )
+
+        page_numbers_found.append(chunk.page_number)
+
+        # Validate chunk has required metadata
+        assert chunk.chunk_id, f"Chunk {i} missing chunk_id"
+        assert chunk.content, f"Chunk {i} has empty content"
+        assert chunk.metadata.filename == result.filename, f"Chunk {i} metadata mismatch"
+
+    return page_numbers_found
+
+
+def _print_page_number_validation_summary(
+    result: Any, chunks: list[Any], chunk_count: int, page_numbers: list[int]
+) -> None:
+    """Print summary of page number validation results.
+
+    Args:
+        result: DocumentMetadata result from ingestion
+        chunks: List of chunks generated
+        chunk_count: Expected chunk count
+        page_numbers: List of page numbers found in chunks
+    """
+    unique_pages = sorted(set(page_numbers))
+    print("\n\nPage Number Validation (Story 1.4 AC8/AC9):")
+    print(f"  Document: {result.filename}")
+    print(f"  Pages: {result.page_count}")
+    print(f"  Chunks generated: {len(chunks)}")
+    print(f"  Chunks in metadata: {chunk_count}")
+    print(f"  Page numbers found in chunks: {min(page_numbers)}-{max(page_numbers)}")
+    print(f"  Unique pages covered: {len(unique_pages)}/{result.page_count}")
+    print(f"\n  ✅ AC8 PASS: All {chunk_count} chunks have page_number != None")
+    print("  ✅ AC9 PASS: Page numbers preserved through ingestion → chunking pipeline")
+
+
 class TestChunkingIntegration:
     """Integration tests for Story 1.4: Document chunking with page number preservation.
 
@@ -136,56 +257,19 @@ class TestChunkingIntegration:
 
         # Locate sample PDF
         sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
-
         if not sample_pdf.exists():
             pytest.skip(f"Sample PDF not found at {sample_pdf}")
 
-        # Mock Docling DocumentConverter to prevent actual PDF processing (timeout fix)
+        # Mock Docling DocumentConverter to prevent actual PDF processing
         # CRITICAL: Patch at import source (docling), not at usage location (pipeline)
-        # DocumentConverter is imported inside ingest_pdf(), so it must be patched at source
-        with patch("docling.document_converter.DocumentConverter") as mock_converter_class:
-            # Create realistic mock for Docling result structure
-            page_content = " ".join(["Financial data content word"] * 200)  # ~200 words/page
-            full_markdown = "\n\n".join([f"# Page {i}\n\n{page_content}" for i in range(1, 11)])
-            # Mock document with proper Docling API
-            mock_document = Mock()
-            mock_document.num_pages.return_value = 10
-            mock_document.export_to_markdown.return_value = full_markdown
+        mock_converter_class, _ = _create_mock_docling_converter()
 
-            # Mock iterate_items with provenance data
-            mock_items = []
-            for i in range(50):  # More items for realistic chunking
-                mock_item = Mock()
-                page_no = (i // 5) + 1  # 5 items per page, 10 pages total
-                # Varied content for each item to enable chunking
-                mock_item.text = f"Financial analysis item {i} with detailed content about revenue metrics and performance indicators for quarter Q{(i % 4) + 1} showing growth trends and market analysis data."
-                # CRITICAL: prov must be a LIST (Docling API returns list)
-                mock_prov = Mock()
-                mock_prov.page_no = page_no
-                mock_item.prov = [mock_prov]  # Must be list!
-                mock_items.append((mock_item, None))
-            mock_document.iterate_items.side_effect = lambda: iter(mock_items)
-
-            # Mock conversion result
-            mock_result = Mock()
-            mock_result.document = mock_document
-
-            # Mock converter instance
-            mock_converter_instance = Mock()
-            mock_converter_instance.convert.return_value = mock_result
-            mock_converter_class.return_value = mock_converter_instance
-
+        with patch("docling.document_converter.DocumentConverter", mock_converter_class):
             # Mock embedding generation to focus on chunking logic
-            with patch("raglite.ingestion.pipeline.get_embedding_model") as mock_get_model:
-                import numpy as np
-
-                mock_model = Mock()
-                # Mock encode to return 1024-dimensional embeddings for any chunk count
-                mock_model.encode.side_effect = lambda texts, **kwargs: np.random.rand(
-                    len(texts), 1024
-                ).astype(np.float32)
-                mock_get_model.return_value = mock_model
-
+            with patch(
+                "raglite.ingestion.embedding_generation.get_embedding_model",
+                return_value=_create_mock_embedding_model(),
+            ):
                 # Act: Run full ingestion pipeline (mocked PDF + embeddings, fast!)
                 result = await ingest_pdf(str(sample_pdf))
 
@@ -195,11 +279,8 @@ class TestChunkingIntegration:
         assert result.chunk_count > 0, "Document must be chunked"
 
         # To validate AC8/AC9 (page numbers in chunks), we need to re-chunk
-        # This is acceptable because we're testing chunking logic, not storage
         # Use a simple sample text to validate chunking directly
-        sample_text = " ".join(
-            [f"Page {i} content " * 100 for i in range(1, 11)]
-        )  # Simulate 10 pages
+        sample_text = " ".join([f"Page {i} content " * 100 for i in range(1, 11)])
         metadata_for_chunking = DocumentMetadata(
             filename=result.filename,
             doc_type="PDF",
@@ -212,43 +293,12 @@ class TestChunkingIntegration:
         chunks = await chunk_document(sample_text, metadata_for_chunking)
 
         # CRITICAL: Validate page number preservation (AC8, AC9)
-        print("\n\nPage Number Validation (Story 1.4 AC8/AC9):")
-        print(f"  Document: {result.filename}")
-        print(f"  Pages: {result.page_count}")
-        print(f"  Chunks generated: {len(chunks)}")
-        print(f"  Chunks in metadata: {result.chunk_count}")
-
-        page_numbers_found = []
-        for i, chunk in enumerate(chunks):
-            # AC8: Every chunk MUST have page_number != None
-            assert chunk.page_number is not None, (
-                f"CRITICAL FAILURE (AC8): Chunk {i} has page_number=None. "
-                f"All chunks must have valid page numbers for source attribution (NFR7)."
-            )
-
-            # Validate page number is in valid range
-            assert chunk.page_number > 0, (
-                f"Chunk {i}: page_number must be positive, got {chunk.page_number}"
-            )
-            assert chunk.page_number <= result.page_count, (
-                f"Chunk {i}: page_number {chunk.page_number} exceeds document page_count {result.page_count}"
-            )
-
-            page_numbers_found.append(chunk.page_number)
-
-            # Validate chunk has required metadata
-            assert chunk.chunk_id, f"Chunk {i} missing chunk_id"
-            assert chunk.content, f"Chunk {i} has empty content"
-            assert chunk.metadata.filename == result.filename, f"Chunk {i} metadata mismatch"
+        page_numbers_found = _validate_chunk_page_numbers(chunks, result, result.page_count)
 
         # Summary: Show page number distribution
-        unique_pages = sorted(set(page_numbers_found))
-        print(
-            f"  Page numbers found in chunks: {min(page_numbers_found)}-{max(page_numbers_found)}"
+        _print_page_number_validation_summary(
+            result, chunks, result.chunk_count, page_numbers_found
         )
-        print(f"  Unique pages covered: {len(unique_pages)}/{result.page_count}")
-        print(f"\n  ✅ AC8 PASS: All {result.chunk_count} chunks have page_number != None")
-        print("  ✅ AC9 PASS: Page numbers preserved through ingestion → chunking pipeline")
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio

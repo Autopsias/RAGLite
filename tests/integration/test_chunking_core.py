@@ -8,9 +8,12 @@ This file contains the core ingestion and chunk count validation tests.
 """
 
 from pathlib import Path
+from typing import Any
 
 import pytest
+import tiktoken
 from qdrant_client import QdrantClient
+from qdrant_client.models import PointStruct
 
 from raglite.ingestion.pipeline import ingest_pdf
 from raglite.shared.clients import get_qdrant_client
@@ -26,12 +29,155 @@ pytestmark = [
 ]
 
 
+# Helper functions for chunk validation tests
+
+
+def scroll_all_qdrant_points(client: QdrantClient, collection_name: str) -> list[PointStruct]:
+    """Scroll through all points in a Qdrant collection.
+
+    Args:
+        client: Qdrant client instance
+        collection_name: Name of the collection to scroll
+
+    Returns:
+        List of all points in the collection with their payloads
+    """
+    all_points = []
+    offset = None
+    while True:
+        response = client.scroll(
+            collection_name=collection_name, limit=100, offset=offset, with_payload=True
+        )
+        points, offset = response
+        all_points.extend(points)
+        if offset is None:
+            break
+    return all_points
+
+
+def separate_table_and_text_chunks(
+    points: list[PointStruct], encoding: tiktoken.Encoding
+) -> tuple[list[int], list[int]]:
+    """Separate chunks into table and text categories based on content.
+
+    Args:
+        points: List of Qdrant points with text payloads
+        encoding: Tiktoken encoding for token counting
+
+    Returns:
+        Tuple of (text_token_counts, table_token_counts)
+    """
+    text_token_counts = []
+    table_token_counts = []
+
+    for point in points:
+        chunk_text = point.payload.get("text", "")
+        token_count = len(encoding.encode(chunk_text))
+
+        # Detect table chunks (contain markdown table syntax)
+        if "|" in chunk_text and chunk_text.count("|") > 10:
+            table_token_counts.append(token_count)
+        else:
+            text_token_counts.append(token_count)
+
+    return text_token_counts, table_token_counts
+
+
+def calculate_text_chunk_statistics(text_token_counts: list[int]) -> tuple[float, float]:
+    """Calculate mean and standard deviation for text chunk token counts.
+
+    Args:
+        text_token_counts: List of token counts for text chunks
+
+    Returns:
+        Tuple of (mean, standard_deviation)
+    """
+    if not text_token_counts:
+        return 0.0, 0.0
+
+    text_mean = sum(text_token_counts) / len(text_token_counts)
+    text_variance = sum((x - text_mean) ** 2 for x in text_token_counts) / len(text_token_counts)
+    text_std = text_variance**0.5
+
+    return text_mean, text_std
+
+
+def validate_text_chunk_consistency(
+    text_token_counts: list[int], text_mean: float, text_std: float
+) -> None:
+    """Validate text chunk size consistency against acceptance criteria.
+
+    Args:
+        text_token_counts: List of token counts for text chunks
+        text_mean: Mean token count for text chunks
+        text_std: Standard deviation of token counts
+
+    Raises:
+        AssertionError: If chunk sizes don't meet consistency criteria
+    """
+    # Skip validation if insufficient text chunks (< 3 text chunks = table-heavy document)
+    if len(text_token_counts) < 3:
+        return
+
+    # Story 2.3 AC6 FIX: After merging tiny chunks, mean should be close to 512 target
+    # Acceptable range: 250-600 tokens (expanded to accommodate table-heavy documents)
+    assert 250 <= text_mean <= 600, (
+        f"Mean TEXT chunk size {text_mean:.1f} not in range 250-600 "
+        f"(target: 512, adjusted for table-heavy documents)"
+    )
+
+    # Verify std deviation within acceptable bounds (<220 for table-heavy documents)
+    assert text_std < 220, (
+        f"TEXT chunk std deviation {text_std:.1f} exceeds 220-token limit (table-heavy document)"
+    )
+
+
+def print_chunk_validation_results(
+    chunk_count: int,
+    text_token_counts: list[int],
+    table_token_counts: list[int],
+    text_mean: float,
+    text_std: float,
+) -> None:
+    """Print detailed chunk validation results.
+
+    Args:
+        chunk_count: Total number of chunks
+        text_token_counts: List of token counts for text chunks
+        table_token_counts: List of token counts for table chunks
+        text_mean: Mean token count for text chunks
+        text_std: Standard deviation of token counts
+    """
+    if len(text_token_counts) >= 3:
+        print("\n✅ AC5 FAST PASS: Chunk Count Validation (10-page sample PDF)")
+        print(f"   - Total chunks: {chunk_count} (expected 5-30)")
+        print(
+            f"   - Text chunks: {len(text_token_counts)} "
+            f"(mean: {text_mean:.1f} tokens, std: {text_std:.1f})"
+        )
+        print(f"   - Table chunks: {len(table_token_counts)}")
+        if text_token_counts:
+            print(
+                f"   - Text chunk range: {min(text_token_counts)}-{max(text_token_counts)} tokens"
+            )
+    else:
+        # Table-heavy document - skip text chunk size validation
+        print("\n⚠️  AC5 FAST: Table-heavy document, skipping text chunk validation")
+        print(f"   - Total chunks: {chunk_count} (expected 50-120)")
+        print(
+            f"   - Text chunks: {len(text_token_counts)} (mean: {text_mean:.1f} tokens) "
+            f"- INSUFFICIENT FOR VALIDATION"
+        )
+        print(f"   - Table chunks: {len(table_token_counts)} (preserved per AC3)")
+        print("   - Validation skipped: < 3 text chunks (table-heavy document)")
+
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
 @pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_existing=True) - skip re-ingest cleanup
 @pytest.mark.timeout(2700)  # 45 minutes for large PDFs (increased from 30min)
-async def test_ac4_collection_recreation_and_reingest(test_pdf_path):
+async def test_ac4_collection_recreation_and_reingest(test_pdf_path: Any) -> None:
     """AC4: Delete contaminated collection, recreate with clean schema, re-ingest test PDF.
 
     Validates:
@@ -79,7 +225,7 @@ async def test_ac4_collection_recreation_and_reingest(test_pdf_path):
 @pytest.mark.slow
 @pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_existing=True) - skip re-ingest cleanup
 @pytest.mark.timeout(900)  # 15 minutes - medium test (actual: ~6-8 minutes)
-async def test_ac4_fast_40page(session_ingested_collection):
+async def test_ac4_fast_40page(session_ingested_collection: Any) -> None:
     """AC4 Fast Validation: 40-page PDF for quick CI/CD validation.
 
     This test validates the same functionality as test_ac4_collection_recreation_and_reingest
@@ -127,7 +273,9 @@ async def test_ac4_fast_40page(session_ingested_collection):
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_ac5_fast_chunk_count_validation(session_ingested_collection, encoding, request):
+async def test_ac5_fast_chunk_count_validation(
+    session_ingested_collection: Any, encoding: Any, request: Any
+) -> None:
     """AC5 FAST: Chunk count validation using 10-page test PDF (sample_financial_report.pdf).
 
     This is the fast variant for local development (VS Code Test Explorer).
@@ -173,17 +321,7 @@ async def test_ac5_fast_chunk_count_validation(session_ingested_collection, enco
         pytest.skip(f"Qdrant collection not available: {e}")
 
     # Scroll through all points to get chunk data
-    all_points = []
-    offset = None
-    while True:
-        response = client.scroll(
-            collection_name=collection_name, limit=100, offset=offset, with_payload=True
-        )
-        points, offset = response
-        all_points.extend(points)
-        if offset is None:
-            break
-
+    all_points = scroll_all_qdrant_points(client, collection_name)
     chunk_count = len(all_points)
 
     # Guard: Skip test if collection is empty (fixture didn't populate data)
@@ -205,73 +343,24 @@ async def test_ac5_fast_chunk_count_validation(session_ingested_collection, enco
     )
 
     # AC5.2: Separate table chunks from text chunks
-    text_token_counts = []
-    table_token_counts = []
-
-    for point in all_points:
-        chunk_text = point.payload.get("text", "")
-        token_count = len(encoding.encode(chunk_text))
-
-        # Detect table chunks (contain markdown table syntax)
-        if "|" in chunk_text and chunk_text.count("|") > 10:
-            table_token_counts.append(token_count)
-        else:
-            text_token_counts.append(token_count)
+    text_token_counts, table_token_counts = separate_table_and_text_chunks(all_points, encoding)
 
     # Calculate statistics for TEXT chunks only (tables are exempt per AC3)
-    if text_token_counts:
-        text_mean = sum(text_token_counts) / len(text_token_counts)
-        text_variance = sum((x - text_mean) ** 2 for x in text_token_counts) / len(
-            text_token_counts
-        )
-        text_std = text_variance**0.5
+    text_mean, text_std = calculate_text_chunk_statistics(text_token_counts)
 
-        # AC5.3: Verify TEXT chunk size consistency
-        # CRITICAL FIX (2025-11-20): 4-page test PDF is table-heavy with minimal text content
-        # Skip validation if insufficient text chunks (< 3 text chunks = table-heavy document)
-        if len(text_token_counts) >= 3:
-            # Story 2.3 AC6 FIX: After merging tiny chunks, mean should be close to 512 target
-            # Observed mean: ~300-500 tokens depending on document structure
-            # 10-page sample_financial_report.pdf is table-heavy with smaller text sections
-            # Acceptable range: 250-600 tokens (expanded to accommodate table-heavy documents)
-            # Rationale: Table-heavy documents have shorter text sections between tables
-            assert 250 <= text_mean <= 600, (
-                f"Mean TEXT chunk size {text_mean:.1f} not in range 250-600 (target: 512, adjusted for table-heavy documents)"
-            )
-            # Verify std deviation within acceptable bounds (<220 for table-heavy documents)
-            # Table-heavy documents have more variation due to shorter text sections between tables
-            # Threshold increased from 200 to 220 based on observed variance in sample PDFs
-            assert text_std < 220, (
-                f"TEXT chunk std deviation {text_std:.1f} exceeds 220-token limit (table-heavy document)"
-            )
+    # AC5.3: Verify TEXT chunk size consistency
+    validate_text_chunk_consistency(text_token_counts, text_mean, text_std)
 
-            # AC5.4: Document chunk count and size distribution
-            print("\n✅ AC5 FAST PASS: Chunk Count Validation (10-page sample PDF)")
-            print(f"   - Total chunks: {chunk_count} (expected 5-30)")
-            print(
-                f"   - Text chunks: {len(text_token_counts)} (mean: {text_mean:.1f} tokens, std: {text_std:.1f})"
-            )
-            print(f"   - Table chunks: {len(table_token_counts)}")
-            if text_token_counts:
-                print(
-                    f"   - Text chunk range: {min(text_token_counts)}-{max(text_token_counts)} tokens"
-                )
-        else:
-            # Table-heavy document - skip text chunk size validation
-            # AC5.4: Document chunk count and size distribution (minimal validation)
-            print("\n⚠️  AC5 FAST: Table-heavy document, skipping text chunk validation")
-            print(f"   - Total chunks: {chunk_count} (expected 50-120)")
-            print(
-                f"   - Text chunks: {len(text_token_counts)} (mean: {text_mean:.1f} tokens) - INSUFFICIENT FOR VALIDATION"
-            )
-            print(f"   - Table chunks: {len(table_token_counts)} (preserved per AC3)")
-            print("   - Validation skipped: < 3 text chunks (table-heavy document)")
+    # AC5.4: Document chunk count and size distribution
+    print_chunk_validation_results(
+        chunk_count, text_token_counts, table_token_counts, text_mean, text_std
+    )
 
 
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
-async def test_ac5_chunk_count_validation(ingested_160_page_pdf, encoding):
+async def test_ac5_chunk_count_validation(ingested_160_page_pdf: Any, encoding: Any) -> None:
     """AC5 SLOW: Chunk count validation using full 160-page PDF.
 
     This is the slow variant for CI/CD validation with the full 160-page PDF.
