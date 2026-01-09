@@ -29,6 +29,56 @@ _tft_model: TemporalFusionTransformer | None = None
 _tft_checkpoint_path: str | None = None
 
 
+def _validate_checkpoint_path(checkpoint_path: str) -> None:
+    """Validate checkpoint path security.
+
+    Args:
+        checkpoint_path: Path to checkpoint file
+
+    Raises:
+        ValueError: If path is invalid
+    """
+    if not checkpoint_path or not isinstance(checkpoint_path, str):
+        raise ValueError("Invalid checkpoint path")
+    if not checkpoint_path.endswith(".ckpt"):
+        raise ValueError("Checkpoint must be .ckpt file")
+
+
+def _load_tft_from_checkpoint(checkpoint_path: str) -> TemporalFusionTransformer:
+    """Load TFT model from checkpoint file.
+
+    Args:
+        checkpoint_path: Path to checkpoint file
+
+    Returns:
+        Loaded TFT model
+
+    Raises:
+        ValueError: If checkpoint is invalid
+    """
+    import torch
+    from pytorch_forecasting import TemporalFusionTransformer
+
+    _validate_checkpoint_path(checkpoint_path)
+
+    # Load checkpoint with weights_only=False for custom PyTorch Forecasting format
+    checkpoint = torch.load(  # nosec B614 - Required for PyTorch Forecasting custom checkpoint format
+        checkpoint_path,
+        map_location="cpu",
+        weights_only=False,
+    )
+    # Try Lightning-style loading first, fall back to manual if needed
+    hparams = checkpoint.get("hyper_parameters", checkpoint.get("hparams", {}))
+    if not hparams:
+        raise ValueError("Checkpoint missing hyper_parameters/hparams")
+
+    # Create model from hparams and load state dict
+    model = TemporalFusionTransformer(**hparams)
+    model.load_state_dict(checkpoint["state_dict"])
+    model.train(False)  # Set to evaluation mode (equivalent to .eval())
+    return model
+
+
 def _get_tft_model() -> TemporalFusionTransformer | None:
     """Lazy-load TFT model from checkpoint on first use.
 
@@ -57,34 +107,9 @@ def _get_tft_model() -> TemporalFusionTransformer | None:
                 return None
 
             # Try to load active checkpoint
-            import torch
-            from pytorch_forecasting import TemporalFusionTransformer
-
             try:
                 logger.info(f"Loading TFT model from {checkpoint_entry.checkpoint_path}...")
-                # Security: Validate checkpoint path before loading
-                if not checkpoint_entry.checkpoint_path or not isinstance(
-                    checkpoint_entry.checkpoint_path, str
-                ):
-                    raise ValueError("Invalid checkpoint path")
-                if not checkpoint_entry.checkpoint_path.endswith(".ckpt"):
-                    raise ValueError("Checkpoint must be .ckpt file")
-
-                # Load checkpoint with weights_only=False for custom PyTorch Forecasting format
-                checkpoint = torch.load(  # nosec B614 - Required for PyTorch Forecasting custom checkpoint format
-                    checkpoint_entry.checkpoint_path,
-                    map_location="cpu",
-                    weights_only=False,
-                )
-                # Try Lightning-style loading first, fall back to manual if needed
-                hparams = checkpoint.get("hyper_parameters", checkpoint.get("hparams", {}))
-                if not hparams:
-                    raise ValueError("Checkpoint missing hyper_parameters/hparams")
-
-                # Create model from hparams and load state dict
-                _tft_model = TemporalFusionTransformer(**hparams)
-                _tft_model.load_state_dict(checkpoint["state_dict"])
-                _tft_model.train(False)  # Set to evaluation mode (equivalent to .eval())
+                _tft_model = _load_tft_from_checkpoint(checkpoint_entry.checkpoint_path)
                 _tft_checkpoint_path = checkpoint_entry.checkpoint_path
                 logger.info("TFT model loaded successfully")
             except Exception as load_error:
@@ -103,22 +128,7 @@ def _get_tft_model() -> TemporalFusionTransformer | None:
                         logger.info(
                             f"Attempting fallback checkpoint: {prev_checkpoint.checkpoint_path}"
                         )
-                        # Security: Validate checkpoint path before loading
-                        if not prev_checkpoint.checkpoint_path or not isinstance(
-                            prev_checkpoint.checkpoint_path, str
-                        ):
-                            raise ValueError("Invalid checkpoint path")
-                        if not prev_checkpoint.checkpoint_path.endswith(".ckpt"):
-                            raise ValueError("Checkpoint must be .ckpt file")
-
-                        # Load checkpoint with weights_only=False for custom PyTorch Forecasting format
-                        checkpoint = torch.load(  # nosec B614 - Required for PyTorch Forecasting custom checkpoint format
-                            prev_checkpoint.checkpoint_path,
-                            map_location="cpu",
-                            weights_only=False,
-                        )
-                        _tft_model = TemporalFusionTransformer(**checkpoint["hparams"])
-                        _tft_model.load_state_dict(checkpoint["state_dict"])
+                        _tft_model = _load_tft_from_checkpoint(prev_checkpoint.checkpoint_path)
                         _tft_checkpoint_path = prev_checkpoint.checkpoint_path
                         logger.info(
                             f"Successfully loaded fallback checkpoint (version: {prev_checkpoint.model_version})"

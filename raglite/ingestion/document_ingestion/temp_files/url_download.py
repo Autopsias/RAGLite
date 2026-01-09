@@ -121,6 +121,60 @@ def handle_download_error(e: Exception, parsed: urllib.parse.ParseResult) -> Non
         raise
 
 
+def execute_download(
+    url: str, parsed: urllib.parse.ParseResult, filename_from_url: str
+) -> tuple[str, str, int]:
+    """Execute the actual file download from URL.
+
+    Args:
+        url: URL to download from
+        parsed: Parsed URL object for logging
+        filename_from_url: Initial filename from URL path
+
+    Returns:
+        tuple[str, str, int]: (temp_file_path, final_filename, downloaded_size)
+
+    Raises:
+        ValueError: If file too large or extension not supported
+        RuntimeError: If download fails
+    """
+    # Create request with timeout and headers
+    request = create_download_request(url)
+
+    # Download with streaming to handle large files
+    with urllib.request.urlopen(request, timeout=URL_DOWNLOAD_TIMEOUT_TOTAL) as response:  # nosec B310 - URL scheme validated above
+        # Check Content-Length if available
+        content_length = response.headers.get("Content-Length")
+        if content_length and int(content_length) > MAX_URL_DOWNLOAD_SIZE_BYTES:
+            size_mb = int(content_length) / (1024 * 1024)
+            raise ValueError(
+                f"File too large ({size_mb:.1f}MB). Maximum allowed: "
+                f"{MAX_URL_DOWNLOAD_SIZE_BYTES / (1024 * 1024):.0f}MB"
+            )
+
+        # Determine filename and extension from headers
+        final_filename, suffix = determine_filename_and_extension(response, filename_from_url)
+
+        # Create temp file
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            tmp_path = tmp.name
+
+        # Download file content with streaming
+        downloaded_size = download_file_streaming(response, tmp_path, parsed)
+
+        logger.info(
+            "URL download complete",
+            extra={
+                "url_domain": parsed.netloc,
+                "doc_filename": final_filename,
+                "size_bytes": downloaded_size,
+                "temp_path": tmp_path,
+            },
+        )
+
+        return tmp_path, final_filename, downloaded_size
+
+
 @contextmanager
 def temp_file_from_url(url: str) -> Generator[tuple[str, str], None, None]:
     """Download file from URL to temporary file with automatic cleanup.
@@ -169,43 +223,10 @@ def temp_file_from_url(url: str) -> Generator[tuple[str, str], None, None]:
 
     tmp_path = None
     try:
-        # Create request with timeout and headers
-        request = create_download_request(url)
-
-        # Download with streaming to handle large files
-        with urllib.request.urlopen(request, timeout=URL_DOWNLOAD_TIMEOUT_TOTAL) as response:  # nosec B310 - URL scheme validated above
-            # Check Content-Length if available
-            content_length = response.headers.get("Content-Length")
-            if content_length and int(content_length) > MAX_URL_DOWNLOAD_SIZE_BYTES:
-                size_mb = int(content_length) / (1024 * 1024)
-                raise ValueError(
-                    f"File too large ({size_mb:.1f}MB). Maximum allowed: "
-                    f"{MAX_URL_DOWNLOAD_SIZE_BYTES / (1024 * 1024):.0f}MB"
-                )
-
-            # Determine filename and extension from headers
-            filename_from_url, suffix = determine_filename_and_extension(
-                response, filename_from_url
-            )
-
-            # Create temp file
-            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-                tmp_path = tmp.name
-
-            # Download file content with streaming
-            downloaded_size = download_file_streaming(response, tmp_path, parsed)
-
-            logger.info(
-                "URL download complete",
-                extra={
-                    "url_domain": parsed.netloc,
-                    "doc_filename": filename_from_url,
-                    "size_bytes": downloaded_size,
-                    "temp_path": tmp_path,
-                },
-            )
-
-            yield tmp_path, filename_from_url
+        tmp_path, filename_from_url, downloaded_size = execute_download(
+            url, parsed, filename_from_url
+        )
+        yield tmp_path, filename_from_url
 
     except Exception as e:
         handle_download_error(e, parsed)

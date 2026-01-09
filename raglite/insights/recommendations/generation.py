@@ -20,6 +20,59 @@ def _get_insight_key(insight: Insight) -> str:
     return f"{insight.category.value}:{':'.join(sorted(insight.sources))}"
 
 
+async def _process_insight_to_recommendation(
+    insight: Insight,
+    auto_synthesize: bool,
+) -> Recommendation:
+    """Convert a single insight into a recommendation.
+
+    Args:
+        insight: Source insight to convert
+        auto_synthesize: If True, generate LLM recommendations
+
+    Returns:
+        Recommendation object with calculated scores and content
+    """
+    category = categorize_recommendation(insight)
+    impact_score = calculate_impact_score(insight)
+    urgency = determine_urgency(insight, impact_score)
+
+    if auto_synthesize:
+        title, description, rationale, action_steps = await synthesize_recommendation(
+            insight, category
+        )
+    else:
+        title = f"{category.value.replace('_', ' ').title()} Recommendation"
+        description = insight.summary
+        rationale = ""
+        action_steps = []
+
+    recommendation = Recommendation(
+        category=category,
+        impact_score=impact_score,
+        title=title,
+        description=description,
+        rationale=rationale,
+        supporting_evidence=insight.supporting_data,
+        action_steps=action_steps,
+        urgency=urgency,
+        sources=insight.sources,
+        created_at=datetime.now(UTC),
+    )
+
+    logger.info(
+        "Recommendation generated",
+        extra={
+            "category": category.value,
+            "impact_score": impact_score,
+            "urgency": urgency,
+            "sources_count": len(insight.sources),
+        },
+    )
+
+    return recommendation
+
+
 async def generate_recommendations(
     insights: list[Insight],
     context: str | None = None,
@@ -76,47 +129,8 @@ async def generate_recommendations(
             continue
         seen_keys.add(insight_key)
 
-        # Calculate scores and category
-        category = categorize_recommendation(insight)
-        impact_score = calculate_impact_score(insight)
-        urgency = determine_urgency(insight, impact_score)
-
-        if auto_synthesize:
-            (
-                title,
-                description,
-                rationale,
-                action_steps,
-            ) = await synthesize_recommendation(insight, category)
-        else:
-            title = f"{category.value.replace('_', ' ').title()} Recommendation"
-            description = insight.summary
-            rationale = ""
-            action_steps = []
-
-        recommendation = Recommendation(
-            category=category,
-            impact_score=impact_score,
-            title=title,
-            description=description,
-            rationale=rationale,
-            supporting_evidence=insight.supporting_data,
-            action_steps=action_steps,
-            urgency=urgency,
-            sources=insight.sources,
-            created_at=datetime.now(UTC),
-        )
+        recommendation = await _process_insight_to_recommendation(insight, auto_synthesize)
         recommendations.append(recommendation)
-
-        logger.info(
-            "Recommendation generated",
-            extra={
-                "category": category.value,
-                "impact_score": impact_score,
-                "urgency": urgency,
-                "sources_count": len(insight.sources),
-            },
-        )
 
     # Sort by impact score descending (10=highest first)
     recommendations.sort(key=lambda x: x.impact_score, reverse=True)

@@ -116,80 +116,77 @@ def warmup_embedding_model(request):
     yield
 
 
-@pytest.fixture(scope="session", autouse=True)
-def session_ingested_collection(request, warmup_embedding_model):
-    """Ingest test PDF once per session (Django/FastAPI pattern). Use --skip-ingestion to reuse existing data."""
+def _should_skip_ingestion(request):
+    """Check if ingestion should be skipped for this test run."""
     if request.config.option.collectonly:
-        yield
-        return
+        return True
 
     # PERFORMANCE FIX (2025-12-18): Skip for unit-only test runs
     if not _has_integration_tests(request):
         print("⚡ UNIT TESTS ONLY: Skipping PDF ingestion fixture", file=sys.stderr)
-        yield
-        return
+        return True
 
     # PERFORMANCE FIX (2025-12-21): Skip for PostgreSQL-only tests (Story 7b-4)
     # These tests don't need Qdrant at all
     if _is_postgresql_only_tests(request):
         print("⚡ POSTGRESQL ONLY TESTS: Skipping PDF ingestion fixture", file=sys.stderr)
-        yield
-        return
+        return True
 
-    _session_pid = os.getpid()
-    print(f"\n📊 SESSION FIXTURE START: PID={_session_pid}", file=sys.stderr)
+    return False
 
+
+def _try_reuse_existing_collection(request, settings, qdrant):
+    """Try to reuse existing collection when --skip-ingestion is set.
+
+    Returns:
+        bool: True if collection was reused (fixture should yield), False otherwise
+    """
     skip_ingestion = request.config.getoption("--skip-ingestion")
-    if skip_ingestion:
-        from raglite.shared.clients import get_qdrant_client
-        from raglite.shared.config import settings
+    if not skip_ingestion:
+        return False
 
-        qdrant = get_qdrant_client()
+    try:
+        count = qdrant.count(collection_name=settings.qdrant_collection_name).count
+        if count == 0:
+            print(
+                "⚠️  --skip-ingestion IGNORED: Collection empty. Proceeding with ingestion.",
+                file=sys.stderr,
+            )
+            return False
 
-        try:
-            count = qdrant.count(collection_name=settings.qdrant_collection_name).count
-            if count == 0:
-                print(
-                    "⚠️  --skip-ingestion IGNORED: Collection empty. Proceeding with ingestion.",
-                    file=sys.stderr,
+        session_state.session_sample_pdf_chunk_count = count
+        print(
+            f"\n✅ Using existing collection: {settings.qdrant_collection_name} ({count} chunks)",
+            file=sys.stderr,
+        )
+
+        if count < 10:
+            print(f"⚠️  WARNING: Only {count} chunks (expected 10-30)", file=sys.stderr)
+        elif count > 50000:
+            print(f"⚠️  WARNING: {count} chunks looks like PRODUCTION data", file=sys.stderr)
+
+        class MockResult:
+            def __init__(self, chunk_count):
+                self.filename = (
+                    "sample_financial_report.pdf"
+                    if chunk_count < 100
+                    else "2024-05 Performance Review CONSO_v1.pdf"
                 )
-            else:
-                session_state.session_sample_pdf_chunk_count = count
-                print(
-                    f"\n✅ Using existing collection: {settings.qdrant_collection_name} ({count} chunks)",
-                    file=sys.stderr,
-                )
+                self.page_count = 10 if chunk_count < 100 else 160
 
-                if count < 10:
-                    print(f"⚠️  WARNING: Only {count} chunks (expected 10-30)", file=sys.stderr)
-                elif count > 50000:
-                    print(f"⚠️  WARNING: {count} chunks looks like PRODUCTION data", file=sys.stderr)
+        session_state.session_sample_pdf_chunk_count = count
+        session_state.session_sample_pdf_result = MockResult(count)
+        session_state.session_ingestion_duration = 0.0
+        return True
+    except Exception as e:
+        print(f"⚠️  --skip-ingestion failed: {e}. Falling back to ingestion.", file=sys.stderr)
+        return False
 
-                class MockResult:
-                    def __init__(self, chunk_count):
-                        self.filename = (
-                            "sample_financial_report.pdf"
-                            if chunk_count < 100
-                            else "2024-05 Performance Review CONSO_v1.pdf"
-                        )
-                        self.page_count = 10 if chunk_count < 100 else 160
 
-                session_state.session_sample_pdf_chunk_count = count
-                session_state.session_sample_pdf_result = MockResult(count)
-                session_state.session_ingestion_duration = 0.0
-                yield
-                return
-        except Exception as e:
-            print(f"⚠️  --skip-ingestion failed: {e}. Falling back to ingestion.", file=sys.stderr)
+def _validate_test_environment(settings, guard):
+    """Validate that we're running in test environment."""
+    from raglite.shared.safety import ProductionProtectionError
 
-    print("DEBUG: Proceeding with full ingestion", file=sys.stderr)
-
-    from raglite.ingestion.pipeline import create_collection, ingest_pdf
-    from raglite.shared.clients import get_postgresql_connection, get_qdrant_client
-    from raglite.shared.config import settings
-    from raglite.shared.safety import ProductionProtectionError, SafetyGuard
-
-    guard = SafetyGuard()
     try:
         guard.validate_test_environment("session_ingested_collection fixture")
         print(
@@ -201,7 +198,11 @@ def session_ingested_collection(request, warmup_embedding_model):
             f"CRITICAL: TEST ISOLATION FAILURE\n{e}\nSet APP_ENV=test or use --skip-ingestion"
         )
 
-    qdrant_check = get_qdrant_client()
+
+def _warn_about_existing_collection(qdrant_check, settings):
+    """Warn user if collection already has data."""
+    import os
+
     try:
         existing_count = qdrant_check.count(collection_name=settings.qdrant_collection_name).count
         if existing_count > 0:
@@ -220,6 +221,14 @@ def session_ingested_collection(request, warmup_embedding_model):
                 )
     except Exception as e:
         print(f"DEBUG: No existing collection ({e}) - safe to create", file=sys.stderr)
+
+
+def _select_test_pdf():
+    """Select test PDF based on environment.
+
+    Returns:
+        tuple: (Path to PDF, description string, estimated time string)
+    """
     use_full_pdf = os.getenv("TEST_USE_FULL_PDF", "false").lower() == "true"
     if use_full_pdf:
         sample_pdf = Path("docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf")
@@ -230,14 +239,12 @@ def session_ingested_collection(request, warmup_embedding_model):
         pdf_description = "10-page PDF"
         estimated_time = "8-12s"
 
-    if not sample_pdf.exists():
-        pytest.skip(f"Test PDF not found at {sample_pdf}")
-        return
+    return sample_pdf, pdf_description, estimated_time, use_full_pdf
 
-    print(
-        f"SESSION FIXTURE: Ingesting {pdf_description} ONCE (production pattern)", file=sys.stderr
-    )
-    qdrant = get_qdrant_client()
+
+def _cleanup_collections(qdrant, settings, guard):
+    """Delete existing Qdrant collection and PostgreSQL data."""
+    from raglite.shared.clients import get_postgresql_connection
 
     try:
         try:
@@ -278,18 +285,28 @@ def session_ingested_collection(request, warmup_embedding_model):
 
         if not deletion_confirmed:
             print("   ⚠️  Collection deletion timeout, proceeding", file=sys.stderr)
-
-        create_collection(
-            collection_name=settings.qdrant_collection_name,
-            vector_size=settings.embedding_dimension,
-        )
-
-        initial_count = qdrant.count(collection_name=settings.qdrant_collection_name)
-        if initial_count.count > 0:
-            pytest.skip(f"Collection has {initial_count.count} chunks after creation (expected 0)")
-        print("   ✓ Collection verified empty", file=sys.stderr)
     except Exception as e:
         pytest.skip(f"Failed to initialize Qdrant collection: {e}")
+
+
+def _create_and_verify_collection(qdrant, settings):
+    """Create new Qdrant collection and verify it's empty."""
+    from raglite.ingestion.pipeline import create_collection
+
+    create_collection(
+        collection_name=settings.qdrant_collection_name,
+        vector_size=settings.embedding_dimension,
+    )
+
+    initial_count = qdrant.count(collection_name=settings.qdrant_collection_name)
+    if initial_count.count > 0:
+        pytest.skip(f"Collection has {initial_count.count} chunks after creation (expected 0)")
+    print("   ✓ Collection verified empty", file=sys.stderr)
+
+
+def _execute_ingestion(sample_pdf, use_full_pdf):
+    """Execute PDF ingestion pipeline."""
+    from raglite.ingestion.pipeline import ingest_pdf
 
     skip_metadata_extraction = not use_full_pdf
     if skip_metadata_extraction:
@@ -302,63 +319,139 @@ def session_ingested_collection(request, warmup_embedding_model):
                 str(sample_pdf), clear_existing=False, skip_metadata=skip_metadata_extraction
             )
         )
-        time.time() - start_ingest
+        return time.time() - start_ingest
     except Exception:
         raise
 
+
+def _verify_qdrant_ingestion(qdrant, settings):
+    """Wait for and verify Qdrant ingestion completed."""
     for _attempt in range(10):
         count_after = qdrant.count(collection_name=settings.qdrant_collection_name)
         if count_after.count > 0:
             break
         time.sleep(0.2)
 
+    return count_after.count
+
+
+def _verify_postgresql_data(use_full_pdf):
+    """Verify PostgreSQL has the expected data."""
+    import logging
+
+    from psycopg2.extras import RealDictCursor
+
+    from raglite.shared.clients import get_postgresql_connection
+
+    logger = logging.getLogger(__name__)
+
+    conn = get_postgresql_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    pg_count = 0
+    expected_min_rows = 10 if not use_full_pdf else 100
+
+    max_attempts = 20
+    for attempt in range(max_attempts):
+        if not conn.autocommit:
+            conn.rollback()
+        cursor.execute("SELECT COUNT(*) FROM financial_tables")
+        pg_count = cursor.fetchone()["count"]
+
+        if pg_count >= expected_min_rows:
+            logger.info("PostgreSQL data visible", extra={"rows": pg_count, "attempt": attempt + 1})
+            break
+
+        sleep_time = min(0.2 * (2**attempt), 2.0)
+        if attempt in [0, 2, 5, 8, 11, 14, 17]:
+            print(
+                f"   ⏳ PostgreSQL: {pg_count}/{expected_min_rows} rows (attempt {attempt + 1}/{max_attempts})",
+                file=sys.stderr,
+            )
+        time.sleep(sleep_time)
+    else:
+        pytest.fail(
+            f"PostgreSQL data not visible after {max_attempts} attempts: {pg_count}/{expected_min_rows} rows"
+        )
+
+    cursor.close()
+
+    session_state.session_postgresql_row_count = pg_count
+
+    if pg_count < expected_min_rows:
+        pytest.fail(f"PostgreSQL has only {pg_count} rows, expected at least {expected_min_rows}")
+
+
+def _create_snapshot(qdrant, settings, estimated_time):
+    """Create Qdrant snapshot for fast restoration."""
+    try:
+        snapshot_info = qdrant.create_snapshot(
+            collection_name=settings.qdrant_collection_name, wait=True
+        )
+        session_state.session_snapshot_name = snapshot_info.name
+        print(
+            f"   ✓ Snapshot created for fast restoration (<1s vs {estimated_time})", file=sys.stderr
+        )
+    except Exception:
+        session_state.session_snapshot_name = None
+
+
+@pytest.fixture(scope="session", autouse=True)
+def session_ingested_collection(request, warmup_embedding_model):
+    """Ingest test PDF once per session (Django/FastAPI pattern). Use --skip-ingestion to reuse existing data."""
+    if _should_skip_ingestion(request):
+        yield
+        return
+
+    _session_pid = os.getpid()
+    print(f"\n📊 SESSION FIXTURE START: PID={_session_pid}", file=sys.stderr)
+
+    from raglite.shared.clients import get_qdrant_client
+    from raglite.shared.config import settings
+    from raglite.shared.safety import SafetyGuard
+
+    qdrant = get_qdrant_client()
+    guard = SafetyGuard()
+
+    # Try to reuse existing collection
+    if _try_reuse_existing_collection(request, settings, qdrant):
+        yield
+        return
+
+    print("DEBUG: Proceeding with full ingestion", file=sys.stderr)
+
+    # Validate test environment
+    _validate_test_environment(settings, guard)
+
+    # Check for existing collection
+    _warn_about_existing_collection(qdrant, settings)
+
+    # Select test PDF
+    sample_pdf, pdf_description, estimated_time, use_full_pdf = _select_test_pdf()
+
+    if not sample_pdf.exists():
+        pytest.skip(f"Test PDF not found at {sample_pdf}")
+        return
+
+    print(
+        f"SESSION FIXTURE: Ingesting {pdf_description} ONCE (production pattern)", file=sys.stderr
+    )
+
+    # Cleanup existing data
+    _cleanup_collections(qdrant, settings, guard)
+
+    # Create fresh collection
+    _create_and_verify_collection(qdrant, settings)
+
+    # Execute ingestion
+    _execute_ingestion(sample_pdf, use_full_pdf)
+
+    # Verify Qdrant ingestion
+    count_after = _verify_qdrant_ingestion(qdrant, settings)
     session_state.session_sample_pdf_chunk_count = count_after.count
 
+    # Verify PostgreSQL data
     try:
-        import logging
-
-        from psycopg2.extras import RealDictCursor
-
-        logger = logging.getLogger(__name__)
-
-        conn = get_postgresql_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        pg_count = 0
-        expected_min_rows = 10 if not use_full_pdf else 100
-
-        max_attempts = 20
-        for attempt in range(max_attempts):
-            if not conn.autocommit:
-                conn.rollback()
-            cursor.execute("SELECT COUNT(*) FROM financial_tables")
-            pg_count = cursor.fetchone()["count"]
-
-            if pg_count >= expected_min_rows:
-                logger.info(
-                    "PostgreSQL data visible", extra={"rows": pg_count, "attempt": attempt + 1}
-                )
-                break
-
-            sleep_time = min(0.2 * (2**attempt), 2.0)
-            if attempt in [0, 2, 5, 8, 11, 14, 17]:
-                print(
-                    f"   ⏳ PostgreSQL: {pg_count}/{expected_min_rows} rows (attempt {attempt + 1}/{max_attempts})",
-                    file=sys.stderr,
-                )
-            time.sleep(sleep_time)
-        else:
-            pytest.fail(
-                f"PostgreSQL data not visible after {max_attempts} attempts: {pg_count}/{expected_min_rows} rows"
-            )
-
-        cursor.close()
-
-        session_state.session_postgresql_row_count = pg_count
-
-        if pg_count < expected_min_rows:
-            pytest.fail(
-                f"PostgreSQL has only {pg_count} rows, expected at least {expected_min_rows}"
-            )
+        _verify_postgresql_data(use_full_pdf)
     except Exception as e:
         pytest.fail(f"PostgreSQL verification failed: {e}")
 
@@ -368,26 +461,19 @@ def session_ingested_collection(request, warmup_embedding_model):
         file=sys.stderr,
     )
 
+    # Validate chunk count
     expected_range = (150, 220) if use_full_pdf else (10, 30)
     if not (expected_range[0] <= count_after.count <= expected_range[1]):
         pytest.fail(
             f"CRITICAL: Chunk count {count_after.count} not in expected range {expected_range}"
         )
 
-    snapshot_start = time.time()
-    try:
-        snapshot_info = qdrant.create_snapshot(
-            collection_name=settings.qdrant_collection_name, wait=True
-        )
-        session_state.session_snapshot_name = snapshot_info.name
-        time.time() - snapshot_start
-        print(
-            f"   ✓ Snapshot created for fast restoration (<1s vs {estimated_time})", file=sys.stderr
-        )
-    except Exception:
-        session_state.session_snapshot_name = None
+    # Create snapshot for fast restoration
+    _create_snapshot(qdrant, settings, estimated_time)
 
     yield
+
+    # Cleanup
     try:
         qdrant.delete_collection(collection_name=settings.qdrant_collection_name)
     except Exception:

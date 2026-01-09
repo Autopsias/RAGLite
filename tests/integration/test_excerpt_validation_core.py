@@ -141,63 +141,13 @@ class TestStory214ExcerptValidationCore:
     The fixture is session-scoped, shared across all tests for fast execution.
     """
 
-    @pytest.mark.asyncio
-    @pytest.mark.reruns(2)
-    @pytest.mark.reruns_delay(1)
-    @pytest.mark.parametrize(
-        "test_query",
-        [
-            {
-                "id": "EXC-001",
-                "query": "What is the revenue for Portugal in August 2025?",
-            },
-            {"id": "EXC-002", "query": "Show EBITDA for Tunisia"},
-            {"id": "EXC-003", "query": "Angola EBITDA and revenue"},
-            {"id": "EXC-004", "query": "Brazil turnover"},
-            {"id": "EXC-005", "query": "Portugal currency values"},
-            {"id": "EXC-006", "query": "Compare EBITDA for Portugal and Tunisia"},
-            {"id": "EXC-007", "query": "Brazil and Angola revenue metrics"},
-            {
-                "id": "EXC-008",
-                "query": "Show differences between Portugal and Tunisia turnover",
-            },
-            {"id": "EXC-009", "query": "EBITDA values for Portugal operations"},
-            {"id": "EXC-010", "query": "Total revenue for Brazil"},
-            {"id": "EXC-011", "query": "Portugal revenue August 2025"},
-            {"id": "EXC-012", "query": "Tunisia EBITDA metric values"},
-        ],
-        ids=lambda x: x["id"],
-    )
-    @pytest.mark.priority("P1")
-    @pytest.mark.preserve_collection  # Read-only SQL test - prevents 80-90s teardown restoration per test
-    async def test_excerpt_query(
-        self,
-        test_query,
-        excerpt_ground_truth,
-        mock_mistral_client,
-        session_ingested_collection,
-    ):
-        """Test individual ground truth query against 10-page sample PDF.
+    def _configure_mock_response_for_query(self, test_query: dict, mock_response) -> None:
+        """Configure mock SQL response for a specific test query.
 
         Args:
-            test_query: Parametrized test query definition
-            excerpt_ground_truth: Ground truth fixture with expected results
-            mock_mistral_client: Mock Mistral API client for SQL generation
-            session_ingested_collection: Session fixture with 10-page sample PDF data
+            test_query: Test query definition dict
+            mock_response: Mock response object to configure
         """
-        # Configure mock for all queries
-        mock_client, _ = mock_mistral_client
-        mock_response = mock_client.chat.complete.return_value
-
-        # Query-specific mock configurations for realistic result counts
-        # Updated (Story 2.10): Generic ILIKE-based SQL returns broader result sets
-        # Configure mock to return result counts aligned with ground truth expectations
-
-        # Use query-aware SQL generation from conftest.py mock
-        # The mock_mistral_client fixture already has query-aware logic that extracts
-        # entities, metrics, and periods from queries to generate appropriate WHERE clauses
-        # We just need to let it work naturally instead of overriding it
-
         # Special handling for specific queries if needed
         if test_query["id"] == "EXC-003":
             # Angola query expects 10-30 results
@@ -259,6 +209,64 @@ FROM financial_tables{where_clause}
 ORDER BY page_number DESC
 LIMIT 50;
             """.strip()
+
+    @pytest.mark.asyncio
+    @pytest.mark.reruns(2)
+    @pytest.mark.reruns_delay(1)
+    @pytest.mark.parametrize(
+        "test_query",
+        [
+            {
+                "id": "EXC-001",
+                "query": "What is the revenue for Portugal in August 2025?",
+            },
+            {"id": "EXC-002", "query": "Show EBITDA for Tunisia"},
+            {"id": "EXC-003", "query": "Angola EBITDA and revenue"},
+            {"id": "EXC-004", "query": "Brazil turnover"},
+            {"id": "EXC-005", "query": "Portugal currency values"},
+            {"id": "EXC-006", "query": "Compare EBITDA for Portugal and Tunisia"},
+            {"id": "EXC-007", "query": "Brazil and Angola revenue metrics"},
+            {
+                "id": "EXC-008",
+                "query": "Show differences between Portugal and Tunisia turnover",
+            },
+            {"id": "EXC-009", "query": "EBITDA values for Portugal operations"},
+            {"id": "EXC-010", "query": "Total revenue for Brazil"},
+            {"id": "EXC-011", "query": "Portugal revenue August 2025"},
+            {"id": "EXC-012", "query": "Tunisia EBITDA metric values"},
+        ],
+        ids=lambda x: x["id"],
+    )
+    @pytest.mark.priority("P1")
+    @pytest.mark.preserve_collection  # Read-only SQL test - prevents 80-90s teardown restoration per test
+    async def test_excerpt_query(
+        self,
+        test_query,
+        excerpt_ground_truth,
+        mock_mistral_client,
+        session_ingested_collection,
+    ):
+        """Test individual ground truth query against 10-page sample PDF.
+
+        Args:
+            test_query: Parametrized test query definition
+            excerpt_ground_truth: Ground truth fixture with expected results
+            mock_mistral_client: Mock Mistral API client for SQL generation
+            session_ingested_collection: Session fixture with 10-page sample PDF data
+        """
+        # Configure mock for all queries
+        mock_client, _ = mock_mistral_client
+        mock_response = mock_client.chat.complete.return_value
+
+        # Query-specific mock configurations for realistic result counts
+        # Updated (Story 2.10): Generic ILIKE-based SQL returns broader result sets
+        # Configure mock to return result counts aligned with ground truth expectations
+
+        # Use query-aware SQL generation from conftest.py mock
+        # The mock_mistral_client fixture already has query-aware logic that extracts
+        # entities, metrics, and periods from queries to generate appropriate WHERE clauses
+        # We just need to let it work naturally instead of overriding it
+        self._configure_mock_response_for_query(test_query, mock_response)
 
         # Skip validation for EXC-008 (query adjusted for ILIKE matching)
         # Updated (Story 2.10): Changed to "Portugal and Tunisia sales volumes"

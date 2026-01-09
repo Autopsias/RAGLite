@@ -177,6 +177,28 @@ async def _process_forecast(
     return insight
 
 
+def _calculate_metrics(
+    anomalies: list[Anomaly],
+    trends: list[Trend],
+    forecasts: list[ForecastResult],
+) -> int:
+    """Calculate total number of unique metrics analyzed.
+
+    Args:
+        anomalies: List of anomalies
+        trends: List of trends
+        forecasts: List of forecasts
+
+    Returns:
+        Count of unique metrics across all inputs
+    """
+    return len(
+        {a.metric for a in anomalies}
+        | {t.metric for t in trends}
+        | {f.metric_name for f in forecasts}
+    )
+
+
 async def generate_insights(
     anomalies: list[Anomaly],
     trends: list[Trend],
@@ -228,9 +250,7 @@ async def generate_insights(
         if metric_key in seen_metrics:
             continue
         seen_metrics.add(metric_key)
-
-        insight = await _process_anomaly(anomaly, auto_synthesize)
-        insights.append(insight)
+        insights.append(await _process_anomaly(anomaly, auto_synthesize))
 
     # Process trends
     for trend in trends:
@@ -238,9 +258,7 @@ async def generate_insights(
         if metric_key in seen_metrics:
             continue
         seen_metrics.add(metric_key)
-
-        insight = await _process_trend(trend, auto_synthesize)
-        insights.append(insight)
+        insights.append(await _process_trend(trend, auto_synthesize))
 
     # Process forecasts
     for forecast in forecasts:
@@ -248,21 +266,14 @@ async def generate_insights(
         if metric_key in seen_metrics:
             continue
         seen_metrics.add(metric_key)
-
-        insight = await _process_forecast(forecast, auto_synthesize)
-        insights.append(insight)
+        insights.append(await _process_forecast(forecast, auto_synthesize))
 
     # Sort by priority (1=critical first)
     insights.sort(key=lambda x: x.priority)
 
     # Calculate metrics
     total_generated = len(insights)
-    metrics_analyzed = len(
-        {a.metric for a in anomalies}
-        | {t.metric for t in trends}
-        | {f.metric_name for f in forecasts}
-    )
-
+    metrics_analyzed = _calculate_metrics(anomalies, trends, forecasts)
     generation_time_ms = int((time.time() - start_time) * 1000)
 
     logger.info(

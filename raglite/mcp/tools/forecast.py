@@ -62,6 +62,148 @@ from raglite.shared.models import ForecastQueryRequest, ForecastQueryResponse
 logger = get_logger(__name__)
 
 
+async def _fetch_regressors_if_requested(
+    request: ForecastQueryRequest,
+    metric: str,
+    historical_data,
+    periods_ahead: int,
+) -> tuple:
+    """Fetch external regressors if requested in the query.
+
+    Args:
+        request: Forecast query request
+        metric: Validated metric name
+        historical_data: Historical time-series data
+        periods_ahead: Number of periods to forecast
+
+    Returns:
+        Tuple of (external_regressors, regressors_used)
+    """
+    if not request.use_external_regressors:
+        return None, []
+
+    return await fetch_external_regressors(
+        metric, historical_data, periods_ahead, request.regressor_names, logger
+    )
+
+
+async def _generate_forecast_with_model_selection(
+    requested_model_type: str,
+    metric: str,
+    historical_data,
+    periods_ahead: int,
+    request: ForecastQueryRequest,
+    external_regressors,
+    regressors_used: list[str],
+) -> tuple:
+    """Generate forecast using appropriate model selection strategy.
+
+    Args:
+        requested_model_type: Model type requested (auto, prophet, ensemble)
+        metric: Validated metric name
+        historical_data: Historical time-series data
+        periods_ahead: Number of periods to forecast
+        request: Original forecast query request
+        external_regressors: External regressor data
+        regressors_used: List of regressor names used
+
+    Returns:
+        Tuple of (forecast_result, actual_model_type, model_selection_reason, model_desc, regressors_used)
+    """
+    if requested_model_type == "auto":
+        cached_selection = check_model_selection_cache_for_forecast(metric, logger)
+        if cached_selection is not None:
+            (
+                forecast_result,
+                actual_model_type,
+                model_selection_reason,
+                regressors_used,
+            ) = await generate_forecast_with_cache(
+                metric,
+                historical_data,
+                periods_ahead,
+                cached_selection,
+                external_regressors,
+                logger,
+            )
+            model_desc = f"{cached_selection.best_model.upper()} (cached)"
+        else:
+            (
+                forecast_result,
+                actual_model_type,
+                model_selection_reason,
+            ) = await generate_forecast_auto_select(
+                metric,
+                historical_data,
+                periods_ahead,
+                request.prefer_accuracy,
+                external_regressors,
+                request.future_regressor_strategy,
+                regressors_used,
+                logger,
+            )
+            model_desc = "Ensemble" if actual_model_type == "ensemble" else "Prophet"
+    else:
+        (
+            forecast_result,
+            actual_model_type,
+            model_selection_reason,
+        ) = await generate_forecast_explicit_model(
+            metric,
+            historical_data,
+            periods_ahead,
+            requested_model_type,
+            external_regressors,
+            request.future_regressor_strategy,
+            logger,
+        )
+        model_desc = "Ensemble" if actual_model_type == "ensemble" else "Prophet"
+
+    return forecast_result, actual_model_type, model_selection_reason, model_desc, regressors_used
+
+
+def _build_forecast_response(
+    forecast_result,
+    historical_data,
+    actual_model_type: str,
+    model_desc: str,
+    model_selection_reason: str,
+    metric: str,
+    regressors_used: list[str],
+) -> ForecastQueryResponse:
+    """Build final forecast response with enhanced basis.
+
+    Args:
+        forecast_result: Raw forecast result
+        historical_data: Historical time-series data
+        actual_model_type: Model type used for forecasting
+        model_desc: Human-readable model description
+        model_selection_reason: Reason for model selection
+        metric: Validated metric name
+        regressors_used: List of regressor names used
+
+    Returns:
+        Complete forecast query response
+    """
+    enhanced_basis = build_enhanced_basis(
+        actual_model_type,
+        model_desc,
+        historical_data,
+        metric,
+        regressors_used,
+        forecast_result.ensemble_models,
+    )
+    forecast_result.basis = enhanced_basis
+
+    return build_response(
+        forecast_result=forecast_result,
+        historical_data=historical_data,
+        actual_model_type=actual_model_type,
+        model_selection_reason=model_selection_reason,
+        regressors_used=regressors_used,
+    )
+
+
 @mcp.tool()
 async def get_financial_forecast(
     request: ForecastQueryRequest,
@@ -89,103 +231,49 @@ async def get_financial_forecast(
         },
     )
 
-    # Step 1: Parse and validate metric
     metric, periods_ahead = parse_and_validate_metric(request, logger)
 
     try:
-        # Step 2: Extract historical data
         historical_data = await extract_historical_data(metric, logger)
         logger.info(
             "Time-series extraction complete",
             extra={"metric": metric, "data_points": len(historical_data.points)},
         )
 
-        # Step 3: Fetch external regressors if requested
-        external_regressors = None
-        regressors_used: list[str] = []
-        if request.use_external_regressors:
-            external_regressors, regressors_used = await fetch_external_regressors(
-                metric, historical_data, periods_ahead, request.regressor_names, logger
-            )
+        external_regressors, regressors_used = await _fetch_regressors_if_requested(
+            request, metric, historical_data, periods_ahead
+        )
 
-        # Step 4: Route to appropriate model based on cache/selection
         requested_model_type = request.model_type or "auto"
-        model_desc = "Prophet"
-
-        if requested_model_type == "auto":
-            # Check cache first
-            cached_selection = check_model_selection_cache_for_forecast(metric, logger)
-            if cached_selection is not None:
-                (
-                    forecast_result,
-                    actual_model_type,
-                    model_selection_reason,
-                    regressors_used,
-                ) = await generate_forecast_with_cache(
-                    metric,
-                    historical_data,
-                    periods_ahead,
-                    cached_selection,
-                    external_regressors,
-                    logger,
-                )
-                model_desc = f"{cached_selection.best_model.upper()} (cached)"
-            else:
-                # Cache miss - auto select
-                (
-                    forecast_result,
-                    actual_model_type,
-                    model_selection_reason,
-                ) = await generate_forecast_auto_select(
-                    metric,
-                    historical_data,
-                    periods_ahead,
-                    request.prefer_accuracy,
-                    external_regressors,
-                    request.future_regressor_strategy,
-                    regressors_used,
-                    logger,
-                )
-                model_desc = "Ensemble" if actual_model_type == "ensemble" else "Prophet"
-        else:
-            # Explicit model type requested
-            (
-                forecast_result,
-                actual_model_type,
-                model_selection_reason,
-            ) = await generate_forecast_explicit_model(
-                metric,
-                historical_data,
-                periods_ahead,
-                requested_model_type,
-                external_regressors,
-                request.future_regressor_strategy,
-                logger,
-            )
-            model_desc = "Ensemble" if actual_model_type == "ensemble" else "Prophet"
+        (
+            forecast_result,
+            actual_model_type,
+            model_selection_reason,
+            model_desc,
+            regressors_used,
+        ) = await _generate_forecast_with_model_selection(
+            requested_model_type,
+            metric,
+            historical_data,
+            periods_ahead,
+            request,
+            external_regressors,
+            regressors_used,
+        )
 
         logger.info(
             "Forecast generated successfully",
             extra={"metric": metric, "periods": periods_ahead, "model_type": actual_model_type},
         )
 
-        # Step 5: Build enhanced basis and response
-        enhanced_basis = build_enhanced_basis(
+        response = _build_forecast_response(
+            forecast_result,
+            historical_data,
             actual_model_type,
             model_desc,
-            historical_data,
+            model_selection_reason,
             metric,
             regressors_used,
-            forecast_result.ensemble_models,
-        )
-        forecast_result.basis = enhanced_basis
-
-        response = build_response(
-            forecast_result=forecast_result,
-            historical_data=historical_data,
-            actual_model_type=actual_model_type,
-            model_selection_reason=model_selection_reason,
-            regressors_used=regressors_used,
         )
 
         logger.info(
@@ -195,7 +283,7 @@ async def get_financial_forecast(
 
     except Exception as e:
         handle_forecast_error(e, metric, logger)
-        raise  # Re-raise after handling (mypy requires explicit error path)
+        raise
 
 
 # Re-exports for backward compatibility with tests

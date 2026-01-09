@@ -25,6 +25,101 @@ EXTERNAL_SOURCE_MAPPINGS: dict[str, tuple[str, str]] = {
 }
 
 
+def _query_external_data_points(
+    cursor,
+    source_name: str,
+    metric_name: str,
+) -> list[tuple]:
+    """Query external data points from PostgreSQL.
+
+    Args:
+        cursor: PostgreSQL cursor
+        source_name: External data source name
+        metric_name: Metric name within the source
+
+    Returns:
+        List of tuples (date, value, unit)
+    """
+    query = """
+        SELECT edp.date, edp.value, edp.unit
+        FROM external_data_points edp
+        JOIN external_data_sources eds ON edp.source_id = eds.id
+        WHERE eds.source_name = %s
+          AND edp.metric_name = %s
+          AND edp.deleted_at IS NULL
+        ORDER BY edp.date ASC
+    """
+
+    cursor.execute(query, (source_name, metric_name))
+    return cursor.fetchall()
+
+
+def _rows_to_timeseries_points(
+    rows: list[tuple],
+) -> list[TimeSeriesPoint]:
+    """Convert database rows to TimeSeriesPoint objects.
+
+    Args:
+        rows: List of tuples (date, value, unit)
+
+    Returns:
+        List of TimeSeriesPoint objects
+    """
+    points = []
+    for date_val, value, unit in rows:
+        dt = datetime.combine(date_val, datetime.min.time())
+        points.append(TimeSeriesPoint(date=dt, value=float(value), label=unit))
+    return points
+
+
+def _resample_daily_to_monthly(
+    points: list[TimeSeriesPoint],
+    metric: str,
+    original_count: int,
+) -> list[TimeSeriesPoint]:
+    """Resample daily time series data to monthly frequency.
+
+    Story 6.24: Resample daily data to monthly to match SECIL internal data
+    frequency. This is critical for consistent forecasting and MAPE comparison.
+
+    Args:
+        points: Daily TimeSeriesPoint objects
+        metric: Metric name for logging
+        original_count: Original number of daily points
+
+    Returns:
+        Monthly TimeSeriesPoint objects
+    """
+    import pandas as pd
+
+    df = pd.DataFrame([(p.date, p.value) for p in points], columns=["date", "value"])
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.set_index("date")
+
+    # Resample to month-end, taking the mean
+    monthly = df.resample("ME").mean().dropna()
+
+    monthly_points = [
+        TimeSeriesPoint(
+            date=datetime.combine(idx.date(), datetime.min.time()),
+            value=float(row["value"]),
+            label="monthly_avg",
+        )
+        for idx, row in monthly.iterrows()
+    ]
+
+    logger.info(
+        "Resampled external data from daily to monthly",
+        extra={
+            "metric": metric,
+            "daily_points": original_count,
+            "monthly_points": len(monthly_points),
+        },
+    )
+
+    return monthly_points
+
+
 async def extract_external_timeseries(
     metric: str,
     min_points: int = 8,
@@ -65,18 +160,8 @@ async def extract_external_timeseries(
     cursor = conn.cursor()
 
     try:
-        query = """
-            SELECT edp.date, edp.value, edp.unit
-            FROM external_data_points edp
-            JOIN external_data_sources eds ON edp.source_id = eds.id
-            WHERE eds.source_name = %s
-              AND edp.metric_name = %s
-              AND edp.deleted_at IS NULL
-            ORDER BY edp.date ASC
-        """
-
-        cursor.execute(query, (source_name, metric_name))
-        rows = cursor.fetchall()
+        # Query external data points
+        rows = _query_external_data_points(cursor, source_name, metric_name)
 
         if len(rows) < min_points:
             logger.warning(
@@ -86,42 +171,13 @@ async def extract_external_timeseries(
             return None
 
         # Convert to TimeSeriesPoint objects
-        points = []
-        for date_val, value, unit in rows:
-            # Convert date to datetime for consistency
-            dt = datetime.combine(date_val, datetime.min.time())
-            points.append(TimeSeriesPoint(date=dt, value=float(value), label=unit))
+        points = _rows_to_timeseries_points(rows)
 
-        # Story 6.24: Resample daily data to monthly to match SECIL internal data frequency
-        # This is critical for consistent forecasting and MAPE comparison
-        if len(points) > 50:  # Only resample if we have enough daily data
-            import pandas as pd
-
-            df = pd.DataFrame([(p.date, p.value) for p in points], columns=["date", "value"])
-            df["date"] = pd.to_datetime(df["date"])
-            df = df.set_index("date")
-
-            # Resample to month-end, taking the mean
-            monthly = df.resample("ME").mean().dropna()
-
-            if len(monthly) >= min_points:
-                points = [
-                    TimeSeriesPoint(
-                        date=datetime.combine(idx.date(), datetime.min.time()),
-                        value=float(row["value"]),
-                        label="monthly_avg",
-                    )
-                    for idx, row in monthly.iterrows()
-                ]
-
-                logger.info(
-                    "Resampled external data from daily to monthly",
-                    extra={
-                        "metric": metric,
-                        "daily_points": len(rows),
-                        "monthly_points": len(points),
-                    },
-                )
+        # Resample daily data to monthly if we have enough points
+        if len(points) > 50:
+            monthly_points = _resample_daily_to_monthly(points, metric, len(rows))
+            if len(monthly_points) >= min_points:
+                points = monthly_points
 
         logger.info(
             "External time series extracted",
@@ -136,7 +192,7 @@ async def extract_external_timeseries(
         return TimeSeriesData(
             metric_name=metric,
             points=points,
-            interval="monthly",  # Resampled to monthly for consistency
+            interval="monthly",
             source_documents=[f"external:{source_name}"],
         )
 

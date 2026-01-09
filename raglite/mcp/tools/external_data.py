@@ -16,6 +16,39 @@ from raglite.shared.logging import get_logger
 logger = get_logger(__name__)
 
 
+def _format_bulk_refresh_result(bulk_result) -> dict:
+    """Format bulk refresh result for JSON response."""
+    return {
+        "total_sources": bulk_result.total_sources,
+        "successful": bulk_result.successful,
+        "failed": bulk_result.failed,
+        "total_duration_seconds": round(bulk_result.total_duration_seconds, 2),
+        "results": [
+            {
+                "source_name": r.source_name,
+                "success": r.success,
+                "records_updated": r.records_updated,
+                "duration_seconds": round(r.duration_seconds, 2),
+                "error_message": r.error_message,
+                "attempts": r.attempts,
+            }
+            for r in bulk_result.results
+        ],
+    }
+
+
+def _format_single_refresh_result(single_result) -> dict:
+    """Format single source refresh result for JSON response."""
+    return {
+        "source_name": single_result.source_name,
+        "success": single_result.success,
+        "records_updated": single_result.records_updated,
+        "duration_seconds": round(single_result.duration_seconds, 2),
+        "error_message": single_result.error_message,
+        "attempts": single_result.attempts,
+    }
+
+
 @mcp.tool()
 async def refresh_external_data(source_name: str | None = None) -> str:
     """Manually trigger external data refresh.
@@ -54,8 +87,6 @@ async def refresh_external_data(source_name: str | None = None) -> str:
         >>> print(result)
         {"source_name": "IPMA", "success": true, "records_updated": 7, ...}
     """
-    import json
-
     from raglite.external_data.refresh import (
         refresh_all_sources,
         refresh_source,
@@ -68,37 +99,13 @@ async def refresh_external_data(source_name: str | None = None) -> str:
     try:
         if source_name is None:
             bulk_result = await refresh_all_sources()
-            response = {
-                "total_sources": bulk_result.total_sources,
-                "successful": bulk_result.successful,
-                "failed": bulk_result.failed,
-                "total_duration_seconds": round(bulk_result.total_duration_seconds, 2),
-                "results": [
-                    {
-                        "source_name": r.source_name,
-                        "success": r.success,
-                        "records_updated": r.records_updated,
-                        "duration_seconds": round(r.duration_seconds, 2),
-                        "error_message": r.error_message,
-                        "attempts": r.attempts,
-                    }
-                    for r in bulk_result.results
-                ],
-            }
-        else:
-            single_result = await refresh_source(source_name)
-            response = {
-                "source_name": single_result.source_name,
-                "success": single_result.success,
-                "records_updated": single_result.records_updated,
-                "duration_seconds": round(single_result.duration_seconds, 2),
-                "error_message": single_result.error_message,
-                "attempts": single_result.attempts,
-            }
-        if source_name is None:
+            response = _format_bulk_refresh_result(bulk_result)
             success_status = bulk_result.successful == bulk_result.total_sources
         else:
+            single_result = await refresh_source(source_name)
+            response = _format_single_refresh_result(single_result)
             success_status = single_result.success
+
         logger.info(
             "Manual refresh completed",
             extra={

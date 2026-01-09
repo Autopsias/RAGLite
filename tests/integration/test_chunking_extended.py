@@ -24,6 +24,140 @@ pytestmark = [
 ]
 
 
+def _separate_text_and_table_chunks(all_points: list, encoding) -> tuple[list[int], list[tuple]]:
+    """Separate chunks into text and table categories.
+
+    Args:
+        all_points: List of Qdrant points with chunk data
+        encoding: Token encoding for counting
+
+    Returns:
+        Tuple of (text_token_counts, table_chunks) where:
+        - text_token_counts: List of token counts for non-table chunks
+        - table_chunks: List of (point_id, token_count, preview) tuples
+    """
+    text_token_counts = []
+    table_chunks = []
+
+    for point in all_points:
+        chunk_text = point.payload.get("text", "")
+        token_count = len(encoding.encode(chunk_text))
+
+        # Detect table chunks (contain markdown table syntax)
+        if "|" in chunk_text and chunk_text.count("|") > 10:
+            table_chunks.append((point.id, token_count, chunk_text[:100]))
+        else:
+            text_token_counts.append(token_count)
+
+    return text_token_counts, table_chunks
+
+
+def _calculate_chunk_statistics(text_token_counts: list[int]):
+    """Calculate statistics for text chunks.
+
+    Args:
+        text_token_counts: List of token counts for text chunks
+
+    Returns:
+        Tuple of (text_mean, text_std, percentile_95)
+    """
+    text_mean = sum(text_token_counts) / len(text_token_counts)
+    text_variance = sum((x - text_mean) ** 2 for x in text_token_counts) / len(text_token_counts)
+    text_std = text_variance**0.5
+
+    # Calculate 95th percentile
+    text_sorted = sorted(text_token_counts)
+    percentile_95_idx = int(len(text_sorted) * 0.95)
+    percentile_95 = text_sorted[percentile_95_idx] if text_sorted else 0
+
+    return text_mean, text_std, percentile_95
+
+
+def _validate_normal_chunk_distribution(text_token_counts: list[int], table_chunks: list[tuple]):
+    """Validate chunk size statistics for normal documents (≥3 text chunks).
+
+    Args:
+        text_token_counts: List of token counts for text chunks
+        table_chunks: List of table chunk metadata
+    """
+    text_mean, text_std, percentile_95 = _calculate_chunk_statistics(text_token_counts)
+
+    # Story 2.3 AC6 FIX: After merging tiny chunks, mean should be close to 512 target
+    # Acceptable range: 250-600 tokens (table-heavy documents)
+    assert 250 <= text_mean <= 600, (
+        f"Mean TEXT chunk size {text_mean:.1f} not within 250-600 (target: 512, adjusted for table-heavy documents)"
+    )
+
+    # AC6.3: Verify standard deviation for TEXT chunks (<220 for table-heavy documents)
+    assert text_std < 220, (
+        f"TEXT chunk std deviation {text_std:.1f} exceeds 220-token limit (table-heavy document)"
+    )
+
+    # AC6.4: Verify 95% of TEXT chunks within range
+    assert percentile_95 <= 562, (
+        f"95th percentile of TEXT chunks {percentile_95} exceeds 562-token limit"
+    )
+
+    # Count TEXT chunks within target range
+    in_range_count = sum(1 for tc in text_token_counts if 462 <= tc <= 562)
+    in_range_percentage = (in_range_count / len(text_token_counts)) * 100
+
+    # AC6.5: Document chunk size distribution (text vs tables)
+    print("\n✅ AC6 FAST PASS: Chunk Size Consistency (10-page sample PDF)")
+    print(f"   - TEXT chunks: {len(text_token_counts)} total")
+    print(f"     • Mean: {text_mean:.1f} tokens (target: 512±10)")
+    print(f"     • Std: {text_std:.1f} tokens (limit: <50)")
+    print(f"     • 95th percentile: {percentile_95} tokens (limit: ≤562)")
+    print(
+        f"     • In range (462-562): {in_range_percentage:.1f}% ({in_range_count}/{len(text_token_counts)})"
+    )
+    print(f"   - TABLE chunks: {len(table_chunks)} total (preserved per AC3)")
+
+
+def _validate_table_heavy_distribution(text_token_counts: list[int], table_chunks: list[tuple]):
+    """Validate chunk size statistics for table-heavy documents (<3 text chunks).
+
+    Args:
+        text_token_counts: List of token counts for text chunks
+        table_chunks: List of table chunk metadata
+    """
+    text_mean = sum(text_token_counts) / len(text_token_counts) if text_token_counts else 0
+
+    # Even for table-heavy documents, we should verify basic requirements
+    if len(text_token_counts) > 0:
+        # More lenient std deviation check for table-heavy documents
+        text_variance = sum((x - text_mean) ** 2 for x in text_token_counts) / len(
+            text_token_counts
+        )
+        text_std = text_variance**0.5
+
+        # Allow higher std deviation for table-heavy documents (up to 300)
+        assert text_std < 300, (
+            f"TEXT chunk std deviation {text_std:.1f} exceeds 300-token limit (table-heavy document)"
+        )
+
+    print("\n⚠️  AC6 FAST: Table-heavy document, using lenient validation")
+    print(f"   - TEXT chunks: {len(text_token_counts)} total (mean: {text_mean:.1f} tokens)")
+    print(f"   - TABLE chunks: {len(table_chunks)} total (preserved per AC3)")
+    print("   - Validation: basic checks only (table-heavy document)")
+
+
+def _validate_text_chunk_statistics(
+    text_token_counts: list[int],
+    table_chunks: list[tuple],
+) -> None:
+    """Validate chunk size statistics for text chunks.
+
+    Args:
+        text_token_counts: List of token counts for text chunks
+        table_chunks: List of table chunk metadata
+    """
+    if text_token_counts and len(text_token_counts) >= 3:
+        _validate_normal_chunk_distribution(text_token_counts, table_chunks)
+    elif text_token_counts:
+        _validate_table_heavy_distribution(text_token_counts, table_chunks)
+
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_ac6_fast_chunk_size_consistency(session_ingested_collection, encoding):
@@ -71,90 +205,10 @@ async def test_ac6_fast_chunk_size_consistency(session_ingested_collection, enco
         )
 
     # AC6.1: Separate table chunks from text chunks
-    text_token_counts = []
-    table_chunks = []
+    text_token_counts, table_chunks = _separate_text_and_table_chunks(all_points, encoding)
 
-    for point in all_points:
-        chunk_text = point.payload.get("text", "")
-        token_count = len(encoding.encode(chunk_text))
-
-        # Detect table chunks (contain markdown table syntax)
-        if "|" in chunk_text and chunk_text.count("|") > 10:
-            table_chunks.append((point.id, token_count, chunk_text[:100]))
-        else:
-            text_token_counts.append(token_count)
-
-    # AC6.2: Verify mean TEXT chunk size
-    # CRITICAL FIX (2025-11-20): 10-page test PDF is table-heavy with minimal text content
-    # Skip validation if insufficient text chunks (< 3 text chunks = table-heavy document)
-    if text_token_counts and len(text_token_counts) >= 3:
-        # Story 2.3 AC6 FIX: After merging tiny chunks, mean should be close to 512 target
-        # Observed mean: ~300-500 tokens depending on document structure
-        # 10-page sample_financial_report.pdf is table-heavy with smaller text sections
-        # Acceptable range: 250-600 tokens (expanded to accommodate table-heavy documents)
-        # Rationale: Table-heavy documents have shorter text sections between tables
-        text_mean = sum(text_token_counts) / len(text_token_counts)
-        assert 250 <= text_mean <= 600, (
-            f"Mean TEXT chunk size {text_mean:.1f} not within 250-600 (target: 512, adjusted for table-heavy documents)"
-        )
-
-        # AC6.3: Verify standard deviation for TEXT chunks (<220 for table-heavy documents)
-        # Table-heavy documents have more variation due to shorter text sections between tables
-        # Threshold increased from 200 to 220 based on observed variance in sample PDFs
-        text_variance = sum((x - text_mean) ** 2 for x in text_token_counts) / len(
-            text_token_counts
-        )
-        text_std = text_variance**0.5
-        assert text_std < 220, (
-            f"TEXT chunk std deviation {text_std:.1f} exceeds 220-token limit (table-heavy document)"
-        )
-
-        # AC6.4: Verify 95% of TEXT chunks within range (same limit as slow test)
-        # Note: 95th percentile can reach 512 for properly chunked text despite lower mean
-        # (mean is lowered by outliers like short headers/bullets, but standard chunks hit 512)
-        text_sorted = sorted(text_token_counts)
-        percentile_95_idx = int(len(text_sorted) * 0.95)
-        percentile_95 = text_sorted[percentile_95_idx] if text_sorted else 0
-        assert percentile_95 <= 562, (
-            f"95th percentile of TEXT chunks {percentile_95} exceeds 562-token limit"
-        )
-
-        # Count TEXT chunks within target range
-        in_range_count = sum(1 for tc in text_token_counts if 462 <= tc <= 562)
-        in_range_percentage = (in_range_count / len(text_token_counts)) * 100
-
-        # AC6.5: Document chunk size distribution (text vs tables)
-        print("\n✅ AC6 FAST PASS: Chunk Size Consistency (10-page sample PDF)")
-        print(f"   - TEXT chunks: {len(text_token_counts)} total")
-        print(f"     • Mean: {text_mean:.1f} tokens (target: 512±10)")
-        print(f"     • Std: {text_std:.1f} tokens (limit: <50)")
-        print(f"     • 95th percentile: {percentile_95} tokens (limit: ≤562)")
-        print(
-            f"     • In range (462-562): {in_range_percentage:.1f}% ({in_range_count}/{len(text_token_counts)})"
-        )
-        print(f"   - TABLE chunks: {len(table_chunks)} total (preserved per AC3)")
-    elif text_token_counts:
-        # Table-heavy document - skip detailed validation
-        text_mean = sum(text_token_counts) / len(text_token_counts) if text_token_counts else 0
-
-        # Even for table-heavy documents, we should verify basic requirements if we have text chunks
-        # but we should be more lenient with the standard deviation
-        if len(text_token_counts) > 0:
-            # More lenient std deviation check for table-heavy documents
-            text_variance = sum((x - text_mean) ** 2 for x in text_token_counts) / len(
-                text_token_counts
-            )
-            text_std = text_variance**0.5
-
-            # Allow higher std deviation for table-heavy documents (up to 300)
-            assert text_std < 300, (
-                f"TEXT chunk std deviation {text_std:.1f} exceeds 300-token limit (table-heavy document)"
-            )
-
-        print("\n⚠️  AC6 FAST: Table-heavy document, using lenient validation")
-        print(f"   - TEXT chunks: {len(text_token_counts)} total (mean: {text_mean:.1f} tokens)")
-        print(f"   - TABLE chunks: {len(table_chunks)} total (preserved per AC3)")
-        print("   - Validation: basic checks only (table-heavy document)")
+    # AC6.2-6.5: Validate statistics and report
+    _validate_text_chunk_statistics(text_token_counts, table_chunks)
 
 
 @pytest.mark.integration

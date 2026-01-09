@@ -216,6 +216,55 @@ async def _generate_recommendations_if_requested(
     return recommendations, total_recommendations
 
 
+def _create_success_response(
+    filtered_insights: list,
+    recommendations: list[Recommendation],
+    insight_result,
+    total_recommendations: int,
+    source_documents: list[str],
+    time_period: str | None,
+    generation_time_ms: float,
+) -> InsightsQueryResponse:
+    """Create successful insights query response.
+
+    Args:
+        filtered_insights: Filtered insights list
+        recommendations: Generated recommendations
+        insight_result: Insight generation result
+        total_recommendations: Total recommendations generated
+        source_documents: List of source documents
+        time_period: Time period analyzed
+        generation_time_ms: Time taken to generate response
+
+    Returns:
+        InsightsQueryResponse with all results
+    """
+    formatted_summary = format_insights_for_display(filtered_insights, recommendations)
+    logger.info(
+        "Insights query complete",
+        extra={
+            "insights_count": len(filtered_insights),
+            "recommendations_count": len(recommendations),
+            "total_insights": insight_result.total_generated,
+            "total_recommendations": total_recommendations,
+            "generation_time_ms": f"{generation_time_ms:.2f}",
+            "source_documents_count": len(source_documents),
+        },
+    )
+    return InsightsQueryResponse(
+        insights=filtered_insights,
+        recommendations=recommendations,
+        total_insights=insight_result.total_generated,
+        total_recommendations=total_recommendations,
+        formatted_summary=formatted_summary,
+        time_period_analyzed=TIME_PERIOD_MAPPINGS.get(
+            time_period or "all_time", "All available data"
+        ),
+        generation_time_ms=generation_time_ms,
+        source_documents=source_documents,
+    )
+
+
 @mcp.tool()
 async def get_financial_insights(
     request: InsightsQueryRequest,
@@ -282,32 +331,15 @@ async def get_financial_insights(
         )
 
         # Format and return response
-        formatted_summary = format_insights_for_display(filtered_insights, recommendations)
         generation_time_ms = (time.perf_counter() - start_time) * 1000
-        logger.info(
-            "Insights query complete",
-            extra={
-                "category_filter": category_filter,
-                "time_period": time_period,
-                "insights_count": len(filtered_insights),
-                "recommendations_count": len(recommendations),
-                "total_insights": insight_result.total_generated,
-                "total_recommendations": total_recommendations,
-                "generation_time_ms": f"{generation_time_ms:.2f}",
-                "source_documents_count": len(source_documents),
-            },
-        )
-        return InsightsQueryResponse(
-            insights=filtered_insights,
+        return _create_success_response(
+            filtered_insights=filtered_insights,
             recommendations=recommendations,
-            total_insights=insight_result.total_generated,
+            insight_result=insight_result,
             total_recommendations=total_recommendations,
-            formatted_summary=formatted_summary,
-            time_period_analyzed=TIME_PERIOD_MAPPINGS.get(
-                time_period or "all_time", "All available data"
-            ),
-            generation_time_ms=generation_time_ms,
             source_documents=source_documents,
+            time_period=time_period,
+            generation_time_ms=generation_time_ms,
         )
     except Exception as e:
         generation_time_ms = (time.perf_counter() - start_time) * 1000

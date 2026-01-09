@@ -21,34 +21,19 @@ from raglite.shared.logging import get_logger
 logger = get_logger(__name__)
 
 
-def train_tft_model(
+def _create_dataloaders(
     training_dataset: Any,  # TimeSeriesDataSet (lazy-loaded)
     validation_dataset: Any,  # TimeSeriesDataSet (lazy-loaded)
-    checkpoint_dir: str | None = None,
-) -> tuple[Any, dict[str, float | int | str]]:  # TemporalFusionTransformer (lazy-loaded)
-    """Train TFT model with PyTorch Lightning.
-
-    Story 6.14 AC4: Training loop with early stopping.
+) -> tuple[Any, Any]:  # DataLoader, DataLoader
+    """Create PyTorch DataLoaders for training and validation.
 
     Args:
         training_dataset: Training TimeSeriesDataSet
         validation_dataset: Validation TimeSeriesDataSet
-        checkpoint_dir: Directory to save checkpoints (defaults to settings)
 
     Returns:
-        Tuple of (trained_model, metrics_dict)
+        Tuple of (train_dataloader, val_dataloader)
     """
-    # Lazy-load ML libraries
-    pl = _get_lightning_module()
-    TFT, _, QuantileLoss = _get_pytorch_forecasting()
-
-    if checkpoint_dir is None:
-        checkpoint_dir = settings.tft_checkpoint_dir
-
-    # Create checkpoint directory if it doesn't exist
-    Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
-
-    # DataLoaders
     train_dataloader = training_dataset.to_dataloader(
         train=True,
         batch_size=TFT_TRAINING_CONFIG["batch_size"],
@@ -59,6 +44,21 @@ def train_tft_model(
         batch_size=int(TFT_TRAINING_CONFIG["batch_size"]) * 2,
         num_workers=0,
     )
+    return train_dataloader, val_dataloader
+
+
+def _create_trainer(
+    checkpoint_dir: str,
+) -> Any:  # pl.Trainer (lazy-loaded)
+    """Create PyTorch Lightning trainer with callbacks.
+
+    Args:
+        checkpoint_dir: Directory to save checkpoints
+
+    Returns:
+        Configured PyTorch Lightning trainer
+    """
+    pl = _get_lightning_module()
 
     # Early stopping callback
     early_stop_callback = _EarlyStopping(  # type: ignore[misc]
@@ -83,7 +83,22 @@ def train_tft_model(
         enable_model_summary=False,
     )
 
-    # Initialize TFT model
+    return trainer
+
+
+def _initialize_tft_model(
+    training_dataset: Any,  # TimeSeriesDataSet (lazy-loaded)
+) -> Any:  # TemporalFusionTransformer (lazy-loaded)
+    """Initialize TFT model from dataset.
+
+    Args:
+        training_dataset: Training TimeSeriesDataSet
+
+    Returns:
+        Initialized TFT model
+    """
+    TFT, _, QuantileLoss = _get_pytorch_forecasting()
+
     tft = TFT.from_dataset(  # type: ignore[attr-defined]
         training_dataset,
         learning_rate=TFT_TRAINING_CONFIG["learning_rate"],
@@ -96,6 +111,40 @@ def train_tft_model(
         log_interval=10,
         reduce_on_plateau_patience=4,
     )
+    return tft
+
+
+def train_tft_model(
+    training_dataset: Any,  # TimeSeriesDataSet (lazy-loaded)
+    validation_dataset: Any,  # TimeSeriesDataSet (lazy-loaded)
+    checkpoint_dir: str | None = None,
+) -> tuple[Any, dict[str, float | int | str]]:  # TemporalFusionTransformer (lazy-loaded)
+    """Train TFT model with PyTorch Lightning.
+
+    Story 6.14 AC4: Training loop with early stopping.
+
+    Args:
+        training_dataset: Training TimeSeriesDataSet
+        validation_dataset: Validation TimeSeriesDataSet
+        checkpoint_dir: Directory to save checkpoints (defaults to settings)
+
+    Returns:
+        Tuple of (trained_model, metrics_dict)
+    """
+    if checkpoint_dir is None:
+        checkpoint_dir = settings.tft_checkpoint_dir
+
+    # Create checkpoint directory if it doesn't exist
+    Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
+
+    # Create DataLoaders
+    train_dataloader, val_dataloader = _create_dataloaders(training_dataset, validation_dataset)
+
+    # Create trainer
+    trainer = _create_trainer(checkpoint_dir)
+
+    # Initialize TFT model
+    tft = _initialize_tft_model(training_dataset)
 
     logger.info(
         "Starting TFT training",

@@ -195,6 +195,156 @@ class TestAccuracyPerformance:
         assert p50_latency < 5.0, f"P50 latency {p50_latency:.3f}s exceeds 5s target (NFR13)"
         assert p95_latency < 15.0, f"P95 latency {p95_latency:.3f}s exceeds 15s target (NFR13)"
 
+    def _load_ground_truth_queries(self):
+        """Load ground truth queries for citation validation.
+
+        Returns:
+            List of question dictionaries
+
+        Raises:
+            pytest.skip: If ground truth file not found
+        """
+        ground_truth_path = Path("tests/ground_truth.json")
+        if not ground_truth_path.exists():
+            pytest.skip("Ground truth file not found")
+
+        with open(ground_truth_path) as f:
+            ground_truth = json.load(f)
+
+        # Use at least 10 queries for validation
+        return ground_truth["questions"][:10]
+
+    def _validate_qdrant_collection_for_citations(self):
+        """Validate Qdrant collection exists for citation testing.
+
+        Raises:
+            pytest.skip: If collection does not exist
+        """
+        from raglite.shared.clients import get_qdrant_client
+        from raglite.shared.config import settings
+
+        qdrant = get_qdrant_client()
+        collections = qdrant.get_collections().collections
+        collection_names = [c.name for c in collections]
+
+        if settings.qdrant_collection_name not in collection_names:
+            pytest.skip(
+                f"Collection {settings.qdrant_collection_name} does not exist. Run ingestion first."
+            )
+
+    async def _validate_single_result_citation(self, result):
+        """Validate citation format for a single result.
+
+        Args:
+            result: Search result with potential citation
+
+        Returns:
+            Tuple of (has_citation, has_correct_format)
+        """
+        # Check citation was appended to text
+        has_citation = "(Source:" in result.text
+
+        if not has_citation:
+            return False, False
+
+        # Validate citation format
+        citation_text = result.text.split("(Source:")[-1]
+        has_source_doc = result.source_document in citation_text
+        has_page = f"page {result.page_number}" in citation_text or "page N/A" in citation_text
+        has_chunk = f"chunk {result.chunk_index}" in citation_text
+
+        has_correct_format = has_source_doc and has_page and has_chunk
+
+        return has_citation, has_correct_format
+
+    async def _test_query_citations(self, q, query_idx):
+        """Test citation generation for a single query.
+
+        Args:
+            q: Question dictionary
+            query_idx: Query index (for manual validation output)
+
+        Returns:
+            Tuple of (total_results, results_with_valid_citations, results_with_correct_format)
+        """
+        from raglite.retrieval.attribution import generate_citations
+        from raglite.retrieval.search import search_documents
+
+        query_text = q["question"]
+
+        # Perform search
+        results = await search_documents(query_text, top_k=3)
+
+        if not results:
+            return 0, 0, 0
+
+        # Generate citations
+        cited_results = await generate_citations(results)
+
+        # Validate citations
+        total_results = 0
+        results_with_valid_citations = 0
+        results_with_correct_format = 0
+
+        for j, result in enumerate(cited_results):
+            total_results += 1
+
+            has_citation, has_correct_format = await self._validate_single_result_citation(result)
+
+            if has_citation:
+                results_with_valid_citations += 1
+
+                if has_correct_format:
+                    results_with_correct_format += 1
+
+                # Manual validation output (first query only)
+                if query_idx == 0:
+                    print(f"\n📝 Citation Sample {j + 1}:")
+                    print(f"  Query: {query_text}")
+                    print(f"  Score: {result.score:.4f}")
+                    print(f"  Source: {result.source_document}")
+                    print(f"  Page: {result.page_number}")
+                    print(f"  Chunk: {result.chunk_index}")
+                    print(f"  Text: {result.text[:150]}...")
+                    print(f"  Citation: ...{result.text[-80:]}")
+
+        return total_results, results_with_valid_citations, results_with_correct_format
+
+    def _calculate_and_print_citation_metrics(
+        self, questions, total_results, results_with_valid_citations, results_with_correct_format
+    ):
+        """Calculate and print citation accuracy metrics.
+
+        Args:
+            questions: List of questions tested
+            total_results: Total number of results
+            results_with_valid_citations: Results with valid citations
+            results_with_correct_format: Results with correct citation format
+
+        Returns:
+            Tuple of (citation_coverage, format_accuracy)
+        """
+        # Calculate metrics
+        citation_coverage = (
+            (results_with_valid_citations / total_results) * 100 if total_results > 0 else 0
+        )
+        format_accuracy = (
+            (results_with_correct_format / total_results) * 100 if total_results > 0 else 0
+        )
+
+        # Log results
+        print("\n\n📊 Citation Accuracy Test (Story 1.8):")
+        print(f"  Queries tested: {len(questions)}")
+        print(f"  Total results: {total_results}")
+        print(f"  Results with citations: {results_with_valid_citations}")
+        print(f"  Citation coverage: {citation_coverage:.1f}%")
+        print(f"  Results with correct format: {results_with_correct_format}")
+        print(f"  Format accuracy: {format_accuracy:.1f}%")
+        print("  Target (NFR7): 95%+ source attribution accuracy")
+        print("  Target (NFR11): 100% citation coverage")
+
+        return citation_coverage, format_accuracy
+
     @pytest.mark.priority("P0")
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -217,32 +367,11 @@ class TestAccuracyPerformance:
         - Review output to verify citations point to correct pages
         - Check that citations enable users to find original text
         """
-        # Lazy imports to avoid test discovery overhead
-        from raglite.retrieval.attribution import generate_citations
-        from raglite.retrieval.search import search_documents
-        from raglite.shared.clients import get_qdrant_client
-        from raglite.shared.config import settings
+        # Validate Qdrant collection exists
+        self._validate_qdrant_collection_for_citations()
 
         # Load ground truth queries
-        ground_truth_path = Path("tests/ground_truth.json")
-        if not ground_truth_path.exists():
-            pytest.skip("Ground truth file not found")
-
-        with open(ground_truth_path) as f:
-            ground_truth = json.load(f)
-
-        # Use at least 10 queries for validation
-        questions = ground_truth["questions"][:10]
-
-        # Check if Qdrant collection exists
-        qdrant = get_qdrant_client()
-        collections = qdrant.get_collections().collections
-        collection_names = [c.name for c in collections]
-
-        if settings.qdrant_collection_name not in collection_names:
-            pytest.skip(
-                f"Collection {settings.qdrant_collection_name} does not exist. Run ingestion first."
-            )
+        questions = self._load_ground_truth_queries()
 
         # Track citation validation metrics
         total_results = 0
@@ -251,67 +380,15 @@ class TestAccuracyPerformance:
 
         # Test each query
         for i, q in enumerate(questions):
-            query_text = q["question"]
+            query_total, query_valid, query_correct = await self._test_query_citations(q, i)
+            total_results += query_total
+            results_with_valid_citations += query_valid
+            results_with_correct_format += query_correct
 
-            # Perform search
-            results = await search_documents(query_text, top_k=3)
-
-            if not results:
-                continue
-
-            # Generate citations
-            cited_results = await generate_citations(results)
-
-            # Validate citations
-            for j, result in enumerate(cited_results):
-                total_results += 1
-
-                # Check citation was appended to text
-                has_citation = "(Source:" in result.text
-
-                if has_citation:
-                    results_with_valid_citations += 1
-
-                    # Validate citation format
-                    citation_text = result.text.split("(Source:")[-1]
-                    has_source_doc = result.source_document in citation_text
-                    has_page = (
-                        f"page {result.page_number}" in citation_text or "page N/A" in citation_text
-                    )
-                    has_chunk = f"chunk {result.chunk_index}" in citation_text
-
-                    if has_source_doc and has_page and has_chunk:
-                        results_with_correct_format += 1
-
-                    # Manual validation output (first query only)
-                    if i == 0:
-                        print(f"\n📝 Citation Sample {j + 1}:")
-                        print(f"  Query: {query_text}")
-                        print(f"  Score: {result.score:.4f}")
-                        print(f"  Source: {result.source_document}")
-                        print(f"  Page: {result.page_number}")
-                        print(f"  Chunk: {result.chunk_index}")
-                        print(f"  Text: {result.text[:150]}...")
-                        print(f"  Citation: ...{result.text[-80:]}")
-
-        # Calculate metrics
-        citation_coverage = (
-            (results_with_valid_citations / total_results) * 100 if total_results > 0 else 0
+        # Calculate and print metrics
+        citation_coverage, format_accuracy = self._calculate_and_print_citation_metrics(
+            questions, total_results, results_with_valid_citations, results_with_correct_format
         )
-        format_accuracy = (
-            (results_with_correct_format / total_results) * 100 if total_results > 0 else 0
-        )
-
-        # Log results
-        print("\n\n📊 Citation Accuracy Test (Story 1.8):")
-        print(f"  Queries tested: {len(questions)}")
-        print(f"  Total results: {total_results}")
-        print(f"  Results with citations: {results_with_valid_citations}")
-        print(f"  Citation coverage: {citation_coverage:.1f}%")
-        print(f"  Results with correct format: {results_with_correct_format}")
-        print(f"  Format accuracy: {format_accuracy:.1f}%")
-        print("  Target (NFR7): 95%+ source attribution accuracy")
-        print("  Target (NFR11): 100% citation coverage")
 
         # Assertions (NFR7: 95%+ attribution accuracy, NFR11: 100% coverage)
         assert citation_coverage == 100.0, (

@@ -64,17 +64,15 @@ def clean_session(db_session):
     db_session.rollback()
 
 
-@pytest.fixture(scope="module")
-def populated_storage(db_session):
-    """ExternalDataStorage with sample time-series data for forecasting.
+def _create_test_sources(storage):
+    """Create test data sources for forecasting tests.
 
-    Module-scoped to avoid recreating data for each test.
+    Args:
+        storage: ExternalDataStorage instance
+
+    Returns:
+        ExternalDataStorage with sources created
     """
-    from raglite.external_data.storage import ExternalDataStorage
-
-    storage = ExternalDataStorage(db_session)
-
-    # Use get_or_create to avoid duplicate issues
     storage.get_or_create_source(
         source_name="INE_BuildingPermits_Test",
         api_endpoint="https://ine.pt/api/test",
@@ -96,7 +94,18 @@ def populated_storage(db_session):
         refresh_frequency="monthly",
     )
 
-    # Check if data already exists (from previous test run)
+    return storage
+
+
+def _check_existing_data(storage):
+    """Check if test data already exists from previous run.
+
+    Args:
+        storage: ExternalDataStorage instance
+
+    Returns:
+        bool: True if data exists (>=24 points), False otherwise
+    """
     existing_permits = storage.query_data_range(
         source_name="INE_BuildingPermits_Test",
         start_date=date(2023, 1, 1),
@@ -104,11 +113,91 @@ def populated_storage(db_session):
         metric_name="building_permits_count",
     )
 
-    if len(existing_permits) >= 24:
-        # Data already exists, skip insertion
-        return storage
+    return len(existing_permits) >= 24
 
-    # Insert 24 months of data (enough for Prophet cross-validation)
+
+def _insert_building_permits_data(storage, i, point_date, base_permits):
+    """Insert building permits data point.
+
+    Args:
+        storage: ExternalDataStorage instance
+        i: Index for trend calculation
+        point_date: Date for data point
+        base_permits: Base value for permits
+    """
+    try:
+        storage.insert_data_points(
+            source_name="INE_BuildingPermits_Test",
+            data_points=[
+                {
+                    "date": point_date,
+                    "metric_name": "building_permits_count",
+                    "value": Decimal(str(base_permits + i * 20)),
+                    "unit": "count",
+                }
+            ],
+        )
+    except Exception:
+        pass  # Ignore duplicates
+
+
+def _insert_electricity_price_data(storage, i, point_date, base_electricity):
+    """Insert electricity price data point.
+
+    Args:
+        storage: ExternalDataStorage instance
+        i: Index for trend calculation
+        point_date: Date for data point
+        base_electricity: Base value for electricity
+    """
+    try:
+        seasonal_factor = 1.1 if (i % 12) in [11, 0, 1] else 1.0  # Winter higher
+        storage.insert_data_points(
+            source_name="OMIE_ElectricityPrice_Test",
+            data_points=[
+                {
+                    "date": point_date,
+                    "metric_name": "electricity_price_mwh",
+                    "value": Decimal(str(round((base_electricity + i) * seasonal_factor, 2))),
+                    "unit": "EUR/MWh",
+                }
+            ],
+        )
+    except Exception:
+        pass  # Ignore duplicates
+
+
+def _insert_cement_consumption_data(storage, i, point_date, base_cement):
+    """Insert cement consumption data point.
+
+    Args:
+        storage: ExternalDataStorage instance
+        i: Index for trend calculation
+        point_date: Date for data point
+        base_cement: Base value for cement
+    """
+    try:
+        storage.insert_data_points(
+            source_name="Cement_Consumption_Test",
+            data_points=[
+                {
+                    "date": point_date,
+                    "metric_name": "cement_consumption",
+                    "value": Decimal(str(base_cement + i * 3 + (i % 4) * 2)),
+                    "unit": "1000_tons",
+                }
+            ],
+        )
+    except Exception:
+        pass  # Ignore duplicates
+
+
+def _insert_time_series_data(storage):
+    """Insert 24 months of time-series data for Prophet cross-validation.
+
+    Args:
+        storage: ExternalDataStorage instance
+    """
     base_permits = 1000
     base_electricity = 50.0
     base_cement = 100
@@ -116,54 +205,30 @@ def populated_storage(db_session):
     for i in range(24):
         point_date = date(2023, 1 + (i % 12), 1) if i < 12 else date(2024, 1 + (i % 12), 1)
 
-        try:
-            # Building permits: growing trend
-            storage.insert_data_points(
-                source_name="INE_BuildingPermits_Test",
-                data_points=[
-                    {
-                        "date": point_date,
-                        "metric_name": "building_permits_count",
-                        "value": Decimal(str(base_permits + i * 20)),
-                        "unit": "count",
-                    }
-                ],
-            )
-        except Exception:
-            pass  # Ignore duplicates
+        _insert_building_permits_data(storage, i, point_date, base_permits)
+        _insert_electricity_price_data(storage, i, point_date, base_electricity)
+        _insert_cement_consumption_data(storage, i, point_date, base_cement)
 
-        try:
-            # Electricity price: seasonal pattern
-            seasonal_factor = 1.1 if (i % 12) in [11, 0, 1] else 1.0  # Winter higher
-            storage.insert_data_points(
-                source_name="OMIE_ElectricityPrice_Test",
-                data_points=[
-                    {
-                        "date": point_date,
-                        "metric_name": "electricity_price_mwh",
-                        "value": Decimal(str(round((base_electricity + i) * seasonal_factor, 2))),
-                        "unit": "EUR/MWh",
-                    }
-                ],
-            )
-        except Exception:
-            pass  # Ignore duplicates
 
-        try:
-            # Cement consumption: target metric with correlation to permits
-            storage.insert_data_points(
-                source_name="Cement_Consumption_Test",
-                data_points=[
-                    {
-                        "date": point_date,
-                        "metric_name": "cement_consumption",
-                        "value": Decimal(str(base_cement + i * 3 + (i % 4) * 2)),
-                        "unit": "1000_tons",
-                    }
-                ],
-            )
-        except Exception:
-            pass  # Ignore duplicates
+@pytest.fixture(scope="module")
+def populated_storage(db_session):
+    """ExternalDataStorage with sample time-series data for forecasting.
+
+    Module-scoped to avoid recreating data for each test.
+    """
+    from raglite.external_data.storage import ExternalDataStorage
+
+    storage = ExternalDataStorage(db_session)
+
+    # Create test sources
+    _create_test_sources(storage)
+
+    # Check if data already exists (from previous test run)
+    if _check_existing_data(storage):
+        return storage
+
+    # Insert 24 months of data (enough for Prophet cross-validation)
+    _insert_time_series_data(storage)
 
     return storage
 

@@ -194,8 +194,6 @@ class TestRetrievalExtended:
         - Check that citations enable users to find original text
         """
         # Lazy imports to avoid test discovery overhead
-        from raglite.retrieval.attribution import generate_citations
-        from raglite.retrieval.search import search_documents
         from raglite.shared.clients import get_qdrant_client
         from raglite.shared.config import settings
 
@@ -220,7 +218,59 @@ class TestRetrievalExtended:
                 f"Collection {settings.qdrant_collection_name} does not exist. Run ingestion first."
             )
 
-        # Track citation validation metrics
+        # Run citation validation
+        (
+            total_results,
+            results_with_valid_citations,
+            results_with_correct_format,
+        ) = await self._validate_citations_for_queries(questions)
+
+        # Calculate metrics
+        citation_coverage = (
+            (results_with_valid_citations / total_results) * 100 if total_results > 0 else 0
+        )
+        format_accuracy = (
+            (results_with_correct_format / total_results) * 100 if total_results > 0 else 0
+        )
+
+        # Log results
+        self._print_citation_accuracy_results(
+            len(questions),
+            total_results,
+            results_with_valid_citations,
+            citation_coverage,
+            results_with_correct_format,
+            format_accuracy,
+        )
+
+        # Assertions (NFR7: 95%+ attribution accuracy, NFR11: 100% coverage)
+        assert citation_coverage == 100.0, (
+            f"Citation coverage {citation_coverage:.1f}% < 100%. "
+            f"All results MUST have citations (NFR11)."
+        )
+
+        assert format_accuracy >= 95.0, (
+            f"Citation format accuracy {format_accuracy:.1f}% < 95%. "
+            f"Citations must correctly reference source document, page, and chunk (NFR7)."
+        )
+
+        print("\n✅ Citation accuracy test PASSED!")
+        print(
+            "   Manual validation recommended: Review citations point to correct pages in source PDFs."
+        )
+
+    async def _validate_citations_for_queries(self, questions: list[dict]) -> tuple[int, int, int]:
+        """Validate citations for a list of queries.
+
+        Args:
+            questions: List of ground truth questions
+
+        Returns:
+            Tuple of (total_results, valid_citations, correct_format)
+        """
+        from raglite.retrieval.attribution import generate_citations
+        from raglite.retrieval.search import search_documents
+
         total_results = 0
         results_with_valid_citations = 0
         results_with_correct_format = 0
@@ -270,37 +320,33 @@ class TestRetrievalExtended:
                         print(f"  Text: {result.text[:150]}...")
                         print(f"  Citation: ...{result.text[-80:]}")
 
-        # Calculate metrics
-        citation_coverage = (
-            (results_with_valid_citations / total_results) * 100 if total_results > 0 else 0
-        )
-        format_accuracy = (
-            (results_with_correct_format / total_results) * 100 if total_results > 0 else 0
-        )
+        return total_results, results_with_valid_citations, results_with_correct_format
 
-        # Log results
+    def _print_citation_accuracy_results(
+        self,
+        num_queries: int,
+        total_results: int,
+        valid_citations: int,
+        coverage: float,
+        correct_format: int,
+        format_accuracy: float,
+    ) -> None:
+        """Print citation accuracy test results.
+
+        Args:
+            num_queries: Number of queries tested
+            total_results: Total results processed
+            valid_citations: Results with valid citations
+            coverage: Citation coverage percentage
+            correct_format: Results with correct format
+            format_accuracy: Format accuracy percentage
+        """
         print("\n\n📊 Citation Accuracy Test (Story 1.8):")
-        print(f"  Queries tested: {len(questions)}")
+        print(f"  Queries tested: {num_queries}")
         print(f"  Total results: {total_results}")
-        print(f"  Results with citations: {results_with_valid_citations}")
-        print(f"  Citation coverage: {citation_coverage:.1f}%")
-        print(f"  Results with correct format: {results_with_correct_format}")
+        print(f"  Results with citations: {valid_citations}")
+        print(f"  Citation coverage: {coverage:.1f}%")
+        print(f"  Results with correct format: {correct_format}")
         print(f"  Format accuracy: {format_accuracy:.1f}%")
         print("  Target (NFR7): 95%+ source attribution accuracy")
         print("  Target (NFR11): 100% citation coverage")
-
-        # Assertions (NFR7: 95%+ attribution accuracy, NFR11: 100% coverage)
-        assert citation_coverage == 100.0, (
-            f"Citation coverage {citation_coverage:.1f}% < 100%. "
-            f"All results MUST have citations (NFR11)."
-        )
-
-        assert format_accuracy >= 95.0, (
-            f"Citation format accuracy {format_accuracy:.1f}% < 95%. "
-            f"Citations must correctly reference source document, page, and chunk (NFR7)."
-        )
-
-        print("\n✅ Citation accuracy test PASSED!")
-        print(
-            "   Manual validation recommended: Review citations point to correct pages in source PDFs."
-        )

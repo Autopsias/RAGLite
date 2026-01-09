@@ -111,6 +111,51 @@ CATBOOST_PARAM_GRID_FAST = {
 }
 
 
+def _calculate_cross_validation_mape(
+    model: CatBoostRegressor,
+    X: pd.DataFrame,
+    y: pd.Series,
+    tscv: Any,
+) -> float:
+    """Calculate MAPE using time-series cross-validation.
+
+    Story 6.12 AC1: MAPE calculation for CatBoost model evaluation.
+
+    Args:
+        model: Fitted CatBoost model
+        X: Feature DataFrame
+        y: Target series
+        tscv: TimeSeriesSplit cross-validator
+
+    Returns:
+        Mean Absolute Percentage Error (MAPE) as percentage
+    """
+    mape_scores: list[float] = []
+    for train_idx, val_idx in tscv.split(X):
+        X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
+        y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
+
+        # Refit best model on training fold
+        model.fit(X_train, y_train)
+        fold_predictions = model.predict(X_val)
+
+        y_vals = y_val.values
+        non_zero_mask = y_vals != 0
+        if non_zero_mask.any():
+            fold_mape = float(
+                np.mean(
+                    np.abs(
+                        (y_vals[non_zero_mask] - fold_predictions[non_zero_mask])
+                        / y_vals[non_zero_mask]
+                    )
+                )
+                * 100
+            )
+            mape_scores.append(fold_mape)
+
+    return float(np.mean(mape_scores)) if mape_scores else 0.0
+
+
 def fit_catboost(
     X: pd.DataFrame,
     y: pd.Series,
@@ -171,33 +216,11 @@ def fit_catboost(
     best_rmse = -grid_search.cv_results_["mean_test_rmse"][grid_search.best_index_]
     best_mae = -grid_search.cv_results_["mean_test_mae"][grid_search.best_index_]
 
-    # Calculate MAPE manually using time-series cross-validation
-    mape_scores: list[float] = []
-    for train_idx, val_idx in tscv.split(X):
-        X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
-        y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
-
-        # Refit best model on training fold
-        best_model.fit(X_train, y_train)
-        fold_predictions = best_model.predict(X_val)
-
-        y_vals = y_val.values
-        non_zero_mask = y_vals != 0
-        if non_zero_mask.any():
-            fold_mape = float(
-                np.mean(
-                    np.abs(
-                        (y_vals[non_zero_mask] - fold_predictions[non_zero_mask])
-                        / y_vals[non_zero_mask]
-                    )
-                )
-                * 100
-            )
-            mape_scores.append(fold_mape)
+    # Calculate MAPE using cross-validation
+    mape = _calculate_cross_validation_mape(best_model, X, y, tscv)
 
     # Final refit on all data
     best_model.fit(X, y)
-    mape = float(np.mean(mape_scores)) if mape_scores else 0.0
 
     metrics: dict[str, object] = {
         "rmse": float(best_rmse),
