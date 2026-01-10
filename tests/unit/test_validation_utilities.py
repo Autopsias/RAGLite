@@ -9,6 +9,7 @@ from datetime import datetime
 import numpy as np
 import pytest
 
+from tests.validation.forecast_accuracy.models import ForecastValidationResult
 from tests.validation.forecast_accuracy.test_data import (
     create_growth_data,
     create_seasonal_data,
@@ -27,9 +28,6 @@ from tests.validation.test_recommendation_alignment.models import (
 from tests.validation.test_recommendation_alignment.validator import (
     RecommendationAlignmentValidator,
 )
-
-# For backward compatibility
-ForecastValidationResult = InsightValidationResult  # Alias
 
 
 class TestMAPEEdgeCases:

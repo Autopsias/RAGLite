@@ -23,8 +23,9 @@ from raglite.external_data.scheduler import (
     _parse_cron_expression,
 )
 
-# RETRY_DELAYS was removed in Epic 8 refactoring
-RETRY_DELAYS = [1, 2, 4, 8, 16]  # Fallback values for tests
+# RETRY_DELAYS configuration from raglite.external_data.refresh_helpers
+# AC3: Exponential backoff with 3 retry attempts (1s, 2s, 4s)
+RETRY_DELAYS = [1, 2, 4]
 
 
 class TestCronExpressionParsing:

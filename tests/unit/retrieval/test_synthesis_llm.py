@@ -31,7 +31,7 @@ class TestOpenAISynthesis:
         retrieval_results = [{"content": "Revenue: $50M", "source": "report.pdf"}]
         query = "What is the revenue?"
 
-        # Mock OpenAI client
+        # Mock OpenAI client and response
         mock_client = AsyncMock()
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
@@ -40,12 +40,10 @@ class TestOpenAISynthesis:
         )
         mock_client.chat.completions.create.return_value = mock_response
 
-        # Patch AsyncOpenAI class to return our mock client
-        mock_openai_class = MagicMock(return_value=mock_client)
-
+        # Patch AsyncOpenAI class - use return_value to prevent constructor call
         with patch(
             "raglite.agentic.agents.synthesis_methods.AsyncOpenAI",
-            mock_openai_class,
+            return_value=mock_client,
         ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
                 answer, reasoning, sources = await _synthesize_with_openai(
@@ -69,18 +67,17 @@ class TestOpenAISynthesis:
         retrieval_results = [{"content": "Test", "source": "test.pdf"}]
         query = "Test query"
 
+        # Mock OpenAI client and response
         mock_client = AsyncMock()
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = json.dumps({"answer": "Test answer"})
         mock_client.chat.completions.create.return_value = mock_response
 
-        # Patch AsyncOpenAI class to return our mock client
-        mock_openai_class = MagicMock(return_value=mock_client)
-
+        # Patch AsyncOpenAI class - use return_value to prevent constructor call
         with patch(
             "raglite.agentic.agents.synthesis_methods.AsyncOpenAI",
-            mock_openai_class,
+            return_value=mock_client,
         ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
                 await _synthesize_with_openai(retrieval_results, [], query, model="gpt-4-turbo")
@@ -102,12 +99,10 @@ class TestOpenAISynthesis:
         mock_response.choices[0].message.content = None  # None response
         mock_client.chat.completions.create.return_value = mock_response
 
-        # Patch AsyncOpenAI class to return our mock client
-        mock_openai_class = MagicMock(return_value=mock_client)
-
+        # Patch AsyncOpenAI class - use return_value to prevent constructor call
         with patch(
             "raglite.agentic.agents.synthesis_methods.AsyncOpenAI",
-            mock_openai_class,
+            return_value=mock_client,
         ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
                 answer, reasoning, sources = await _synthesize_with_openai(
@@ -224,12 +219,10 @@ class TestSynthesisAgent:
         mock_response.choices[0].message.content = json.dumps({"answer": "Test answer"})
         mock_client.chat.completions.create.return_value = mock_response
 
-        # Patch AsyncOpenAI class to return our mock client
-        mock_openai_class = MagicMock(return_value=mock_client)
-
+        # Patch AsyncOpenAI class - use return_value to prevent constructor call
         with patch(
             "raglite.agentic.agents.synthesis_methods.AsyncOpenAI",
-            mock_openai_class,
+            return_value=mock_client,
         ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
                 result_json = await synthesis_agent("Test query", context)
@@ -258,12 +251,10 @@ class TestSynthesisAgent:
         mock_response.choices[0].message.content = json.dumps({"answer": "Test answer"})
         mock_client.chat.completions.create.return_value = mock_response
 
-        # Patch AsyncOpenAI class to return our mock client
-        mock_openai_class = MagicMock(return_value=mock_client)
-
+        # Patch AsyncOpenAI class - use return_value to prevent constructor call
         with patch(
             "raglite.agentic.agents.synthesis_methods.AsyncOpenAI",
-            mock_openai_class,
+            return_value=mock_client,
         ):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
                 result_json = await synthesis_agent("Test query", context)
@@ -284,12 +275,10 @@ class TestSynthesisAgent:
         mock_response.choices[0].message.content = json.dumps({"answer": "Test answer"})
         mock_client.chat.completions.create.return_value = mock_response
 
-        # Patch AsyncOpenAI class to return our mock client
-        mock_openai_class = MagicMock(return_value=mock_client)
-
+        # Patch AsyncOpenAI class - use return_value to prevent constructor call
         with patch(
             "raglite.agentic.agents.synthesis_methods.AsyncOpenAI",
-            mock_openai_class,
+            return_value=mock_client,
         ):
             # Bypass test mode to test OpenAI synthesis
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True):

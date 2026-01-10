@@ -72,7 +72,7 @@ class TestIngestFinancialDocumentTool:
             patch.object(
                 ingestion_module, "ingest_document", new_callable=AsyncMock
             ) as mock_ingest,
-            patch.object(ingestion_module, "settings") as mock_settings,
+            patch("raglite.shared.config.settings") as mock_settings,
         ):
             mock_ingest.return_value = mock_metadata
             mock_settings.enable_forecast_auto_update = False  # Disable for simpler test

@@ -183,7 +183,7 @@ class TestIngestFinancialDocumentSync:
         )
 
         with patch(
-            "raglite.ingestion.document_ingestion.ingest_document",
+            "raglite.mcp.tools.ingestion_tool.ingest_document",
             new_callable=AsyncMock,
             return_value=mock_metadata,
         ):
@@ -236,7 +236,7 @@ class TestIngestFinancialDocumentSync:
         )
 
         with patch(
-            "raglite.ingestion.document_ingestion.ingest_document",
+            "raglite.mcp.tools.ingestion_tool.ingest_document",
             new_callable=AsyncMock,
             return_value=mock_metadata,
         ):
@@ -279,7 +279,7 @@ class TestIngestFinancialDocumentSync:
         )
 
         with patch(
-            "raglite.ingestion.document_ingestion.ingest_document",
+            "raglite.mcp.tools.ingestion_tool.ingest_document",
             new_callable=AsyncMock,
             return_value=mock_metadata,
         ):

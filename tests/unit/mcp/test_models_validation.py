@@ -227,15 +227,19 @@ class TestToolRegistration:
         Given tools are registered via @mcp.tool()
         When importing tool functions
         Then they should have the .fn attribute from FastMCP
+
+        Note: analytical_query_financial_documents is NOT decorated with @mcp.tool()
+        as it's an internal helper called by the agentic workflow, not a direct MCP tool.
         """
         from raglite.main import (
-            analytical_query_financial_documents,
             check_database_health,
             get_financial_forecast,
             get_financial_insights,
             get_ingestion_status,
+            get_regressor_data,
             ingest_financial_document,
             ingest_financial_document_async,
+            list_available_regressors,
             manage_model_weights,
             query_external_data,
             query_financial_documents,
@@ -249,7 +253,6 @@ class TestToolRegistration:
             ingest_financial_document_async,
             get_ingestion_status,
             query_financial_documents,
-            analytical_query_financial_documents,
             get_financial_forecast,
             get_financial_insights,
             query_external_data,
@@ -258,6 +261,8 @@ class TestToolRegistration:
             manage_model_weights,
             retrain_forecasting_models,
             validate_forecasting_accuracy,
+            list_available_regressors,
+            get_regressor_data,
         ]
 
         for tool in tools:
@@ -271,7 +276,10 @@ class TestToolRegistration:
 
         Given tools are registered via decorators
         When listing tools from mcp._tool_manager
-        Then at least 15 tools should be registered
+        Then at least 14 tools should be registered (current count as of Epic 8)
+
+        Note: Using >= instead of exact count to allow for future expansion
+        without breaking tests every time a new tool is added.
         """
         # Import all tool modules to ensure decorators run
         from raglite.main import mcp
@@ -280,8 +288,8 @@ class TestToolRegistration:
         tools = await mcp._tool_manager.list_tools()
         tool_names = [t.name for t in tools]
 
-        # Verify minimum tool count
-        assert len(tool_names) >= 15, f"Expected >=15 tools, got {len(tool_names)}"
+        # Verify minimum tool count (14 as of Epic 8)
+        assert len(tool_names) >= 14, f"Expected >=14 tools, got {len(tool_names)}"
 
         # Verify key tools are registered
         expected_tools = [
@@ -328,11 +336,15 @@ class TestModuleBoundaries:
         Given the query module
         When inspecting public functions
         Then only query tools should be exported
+
+        Note: analytical_query_financial_documents is an internal helper, not an MCP tool.
         """
         import raglite.mcp.tools.query as query_module
 
-        # Should have query tools
+        # Should have query tool (MCP-decorated)
         assert hasattr(query_module, "query_financial_documents")
+
+        # Should have internal helper (not MCP-decorated, used by agentic workflow)
         assert hasattr(query_module, "analytical_query_financial_documents")
 
         # Should not have ingestion or other tools
