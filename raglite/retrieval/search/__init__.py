@@ -25,7 +25,7 @@ from raglite.retrieval.search.fusion import (
 )
 
 # Hybrid search orchestration
-from raglite.retrieval.search.hybrid import hybrid_search
+from raglite.retrieval.search.hybrid_search import hybrid_search
 
 # Query reformulation
 from raglite.retrieval.search.reformulation import (

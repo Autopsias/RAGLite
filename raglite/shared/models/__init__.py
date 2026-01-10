@@ -6,7 +6,7 @@ from domain-specific submodules. Import from here as usual:
     from raglite.shared.models import DocumentMetadata, QueryResult
 
 Internal architecture: Models are organized by domain in submodules
-(document.py, query.py, timeseries.py, etc.) but all are available
+(document.py, query_schemas.py, timeseries_models.py, etc.) but all are available
 via this __init__.py for compatibility.
 """
 
@@ -55,7 +55,7 @@ from raglite.shared.models.insights import (
 )
 
 # Query Models
-from raglite.shared.models.query import (
+from raglite.shared.models.query_schemas import (
     AnalyticalQueryRequest,
     AnalyticalQueryResponse,
     QueryRequest,
@@ -64,7 +64,7 @@ from raglite.shared.models.query import (
 )
 
 # Time Series & Forecasting
-from raglite.shared.models.timeseries import (
+from raglite.shared.models.timeseries_models import (
     ForecastPoint,
     ForecastQueryRequest,
     ForecastQueryResponse,
