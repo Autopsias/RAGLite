@@ -13,9 +13,10 @@ import pytest
 from raglite.shared.models import (
     Insight,
     InsightCategory,
-    Recommendation,
-    RecommendationResult,
 )
+
+# Note: Recommendation and RecommendationResult imported inside tests
+# to avoid pytest-xdist class identity issues with isinstance checks
 
 # =============================================================================
 # generate_recommendations() Tests
@@ -117,6 +118,7 @@ ACTIONS:
     ):
         """AC1: generate_recommendations returns RecommendationResult."""
         from raglite.insights.recommendations import generate_recommendations
+        from raglite.shared.models import RecommendationResult
 
         with patch("raglite.shared.clients.get_mistral_client") as mock_client:
             mock_client.return_value.chat.complete.return_value = mock_mistral_for_generation
@@ -129,6 +131,7 @@ ACTIONS:
     ):
         """AC1: generate_recommendations returns list of Recommendation."""
         from raglite.insights.recommendations import generate_recommendations
+        from raglite.shared.models import Recommendation
 
         with patch("raglite.shared.clients.get_mistral_client") as mock_client:
             mock_client.return_value.chat.complete.return_value = mock_mistral_for_generation
