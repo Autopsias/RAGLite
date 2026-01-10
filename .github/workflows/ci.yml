@@ -167,12 +167,13 @@ jobs:
           echo "========================================="
           pytest --collect-only -q tests/ 2>&1 | tee collection.log
 
-          # Check for collection errors
-          if grep -iE "ERROR|ModuleNotFoundError|ImportError" collection.log; then
+          # Check for actual collection errors (not test names containing 'error')
+          # Look for pytest error markers at start of line, or Python exception types
+          if grep -E "^(ERROR|E   |ERRORS|ModuleNotFoundError|ImportError:)" collection.log; then
             echo "FAIL: Test collection errors detected!"
             exit 1
           fi
-          echo "Collection validation passed ($(grep -c 'test session starts' collection.log || echo '0') test sessions)"
+          echo "Collection validation passed"
 
       - name: Validate Pytest Fixtures
         run: |
