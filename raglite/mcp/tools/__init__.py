@@ -5,11 +5,11 @@ from raglite.mcp.tools import (
     external_data,
     forecast,
     health,
+    ingestion_tool,
     insights,
     query,
     validation,
 )
-from raglite.mcp.tools import ingestion_tool
 
 __all__ = [
     "ingestion_tool",

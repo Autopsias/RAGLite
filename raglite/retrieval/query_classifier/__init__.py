@@ -17,6 +17,7 @@ Research Validation:
     - Expected accuracy gain: +20-25% over baseline semantic search
 """
 
+from raglite.retrieval.query_classifier.metadata_filter import classify_query_metadata
 from raglite.retrieval.query_classifier.query_classification import (
     METRIC_SYNONYMS,
     QueryType,
@@ -24,7 +25,6 @@ from raglite.retrieval.query_classifier.query_classification import (
     expand_metric_synonyms,
     get_metric_ilike_pattern,
 )
-from raglite.retrieval.query_classifier.metadata_filter import classify_query_metadata
 from raglite.retrieval.query_classifier.sql_generation import generate_sql_query
 
 __all__ = [

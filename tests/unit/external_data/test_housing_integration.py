@@ -18,7 +18,10 @@ from unittest.mock import AsyncMock, patch
 import pandas as pd
 import pytest
 
-from raglite.external_data.models import EurostatDwellingCompletions, EurostatHousingTransactions
+from raglite.external_data.models import (  # noqa: E402
+    EurostatDwellingCompletions,
+    EurostatHousingTransactions,
+)
 from raglite.forecasting.regressor_fetch import interpolate_quarterly_series_to_monthly
 
 
@@ -191,7 +194,7 @@ class TestRegressorConfigIntegration:
 
     def test_regressor_metadata_includes_housing_transactions(self) -> None:
         """Metadata includes housing_transactions with correct info."""
-        from raglite.forecasting.regressor_config import REGRESSOR_METADATA
+        from raglite.forecasting.regressor_config_data.regressor_metadata import REGRESSOR_METADATA
 
         assert "housing_transactions" in REGRESSOR_METADATA
         metadata = REGRESSOR_METADATA["housing_transactions"]
@@ -295,7 +298,7 @@ class TestDwellingCompletionsConfig:
 
     def test_regressor_metadata_includes_dwelling_completions(self) -> None:
         """Metadata includes dwelling_completions with correct info."""
-        from raglite.forecasting.regressor_config import REGRESSOR_METADATA
+        from raglite.forecasting.regressor_config_data.regressor_metadata import REGRESSOR_METADATA
 
         assert "dwelling_completions" in REGRESSOR_METADATA
         metadata = REGRESSOR_METADATA["dwelling_completions"]

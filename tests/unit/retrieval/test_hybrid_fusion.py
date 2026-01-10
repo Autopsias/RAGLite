@@ -163,10 +163,10 @@ class TestScoreFusion:
 class TestHybridSearchEndToEnd:
     """Test hybrid search end-to-end with mocks (AC2.4)."""
 
-    @patch("raglite.retrieval.search.hybrid.classify_query")
-    @patch("raglite.retrieval.search.hybrid.search_documents")
-    @patch("raglite.retrieval.search.hybrid.load_bm25_index")
-    @patch("raglite.retrieval.search.hybrid.compute_bm25_scores")
+    @patch("raglite.retrieval.search.hybrid_search.classify_query")
+    @patch("raglite.retrieval.search.hybrid_search.search_documents")
+    @patch("raglite.retrieval.search.hybrid_search.load_bm25_index")
+    @patch("raglite.retrieval.search.hybrid_search.compute_bm25_scores")
     @pytest.mark.priority("P1")
     async def test_hybrid_search_combines_results(
         self, mock_compute_bm25, mock_load_bm25, mock_search_docs, mock_classify
@@ -224,7 +224,7 @@ class TestHybridSearchEndToEnd:
         assert len(results) == 2
         assert all(isinstance(r, QueryResult) for r in results)
 
-    @patch("raglite.retrieval.search.hybrid.search_documents")
+    @patch("raglite.retrieval.search.hybrid_search.search_documents")
     @pytest.mark.priority("P1")
     async def test_hybrid_search_disabled_fallback(self, mock_search_docs):
         """Test hybrid search falls back to semantic-only when disabled."""
@@ -250,9 +250,9 @@ class TestHybridSearchEndToEnd:
 
         assert len(results) == 1
 
-    @patch("raglite.retrieval.search.hybrid.classify_query")
-    @patch("raglite.retrieval.search.hybrid.search_documents")
-    @patch("raglite.retrieval.search.hybrid.load_bm25_index")
+    @patch("raglite.retrieval.search.hybrid_search.classify_query")
+    @patch("raglite.retrieval.search.hybrid_search.search_documents")
+    @patch("raglite.retrieval.search.hybrid_search.load_bm25_index")
     @pytest.mark.priority("P1")
     async def test_hybrid_search_bm25_unavailable_fallback(
         self, mock_load_bm25, mock_search_docs, mock_classify
@@ -283,10 +283,10 @@ class TestHybridSearchEndToEnd:
         assert len(results) == 1
         assert results[0].score == 0.9
 
-    @patch("raglite.retrieval.search.hybrid.classify_query")
-    @patch("raglite.retrieval.search.hybrid.search_documents")
-    @patch("raglite.retrieval.search.hybrid.load_bm25_index")
-    @patch("raglite.retrieval.search.hybrid.compute_bm25_scores")
+    @patch("raglite.retrieval.search.hybrid_search.classify_query")
+    @patch("raglite.retrieval.search.hybrid_search.search_documents")
+    @patch("raglite.retrieval.search.hybrid_search.load_bm25_index")
+    @patch("raglite.retrieval.search.hybrid_search.compute_bm25_scores")
     @pytest.mark.priority("P1")
     async def test_hybrid_search_improves_ranking(
         self, mock_compute_bm25, mock_load_bm25, mock_search_docs, mock_classify

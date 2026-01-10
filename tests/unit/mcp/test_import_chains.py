@@ -77,11 +77,11 @@ class TestImportChains:
             external_data,
             forecast,
             health,
+            ingestion_tool,
             insights,
             query,
             validation,
         )
-        from raglite.mcp.tools import ingestion_tool
 
         # All modules should import successfully
         assert admin is not None
@@ -308,11 +308,11 @@ class TestFutureProofing:
             external_data,
             forecast,
             health,
+            ingestion_tool,
             insights,
             query,
             validation,
         )
-        from raglite.mcp.tools import ingestion_tool
 
         modules = [
             admin,

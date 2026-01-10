@@ -31,11 +31,11 @@ from raglite.mcp.tools import (  # noqa: E402, F401
     external_data,
     forecast,
     health,
+    ingestion_tool,  # noqa: E402, F401
     insights,
     query,
     validation,
 )
-from raglite.mcp.tools import ingestion_tool  # noqa: E402, F401
 
 # Admin tools accessed via module namespace to avoid circular imports
 # from raglite.mcp.tools.admin import manage_model_weights, retrain_forecasting_models
