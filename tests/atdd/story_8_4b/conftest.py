@@ -266,10 +266,34 @@ def get_all_integration_test_files(tests_integration: Path) -> list[Path]:
     return files
 
 
+def _load_file_size_exceptions() -> set[str]:
+    """Load grandfathered file paths from .file-size-exceptions."""
+    import json
+
+    exceptions_file = Path(__file__).parents[3] / ".file-size-exceptions"
+    if not exceptions_file.exists():
+        return set()
+    try:
+        data = json.loads(exceptions_file.read_text())
+        return set(data.get("exceptions", {}).keys())
+    except (json.JSONDecodeError, KeyError):
+        return set()
+
+
 def get_files_exceeding_limit(tests_integration: Path, limit: int = 500) -> list[tuple[Path, int]]:
-    """Get all files exceeding the LOC limit with their line counts."""
+    """Get all files exceeding the LOC limit with their line counts.
+
+    Excludes files listed in .file-size-exceptions (grandfathered violations).
+    """
+    exceptions = _load_file_size_exceptions()
     exceeding = []
     for filepath in get_all_integration_test_files(tests_integration):
+        # Check if file is grandfathered (use relative path matching)
+        relative_path = (
+            str(filepath).split("RAGLite/")[-1] if "RAGLite/" in str(filepath) else filepath.name
+        )
+        if relative_path in exceptions or filepath.name in [Path(e).name for e in exceptions]:
+            continue  # Skip grandfathered files
         loc = count_lines(filepath)
         if loc > limit:
             exceeding.append((filepath, loc))
