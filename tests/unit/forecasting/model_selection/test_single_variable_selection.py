@@ -26,8 +26,6 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from raglite.external_data.clients.atic import ATICClient
-
 if TYPE_CHECKING:
     pass
 
@@ -47,19 +45,18 @@ class TestSingleVariableSelection:
             raise ValueError("Model selection failed")
 
         with (
-            patch.object(
-                ATICClient,
-                "fetch_historical_data",
+            patch(
+                "raglite.forecasting.model_selection_job.fetch_historical_data",
                 new_callable=AsyncMock,
                 return_value=mock_historical_data,
             ),
-            patch.object(
-                "raglite.forecasting.regressor_fetch.fetch_regressors_with_date_range",
+            patch(
+                "raglite.forecasting.model_selection_job.fetch_regressors_with_date_range",
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch.object(
-                "raglite.forecasting.model_selection.select_best_model",
+            patch(
+                "raglite.forecasting.model_selection_job.select_best_model",
                 side_effect=failing_select,
             ),
         ):
@@ -77,24 +74,23 @@ class TestSingleVariableSelection:
         from raglite.forecasting.model_selection_job import run_single_variable_selection
 
         with (
-            patch.object(
-                ATICClient,
-                "fetch_historical_data",
+            patch(
+                "raglite.forecasting.model_selection_job.fetch_historical_data",
                 new_callable=AsyncMock,
                 return_value=mock_historical_data,
             ),
-            patch.object(
-                "raglite.forecasting.regressor_fetch.fetch_regressors_with_date_range",
+            patch(
+                "raglite.forecasting.model_selection_job.fetch_regressors_with_date_range",
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch.object(
-                "raglite.forecasting.model_selection.select_best_model",
+            patch(
+                "raglite.forecasting.model_selection_job.select_best_model",
                 new_callable=AsyncMock,
                 return_value=mock_model_result,
             ),
-            patch.object(
-                "raglite.external_data.storage.model_selection.cache_model_selection",
+            patch(
+                "raglite.forecasting.model_selection_job.cache_model_selection",
                 new_callable=Mock,
             ),
         ):
@@ -128,24 +124,23 @@ class TestSingleVariableSelection:
         }
 
         with (
-            patch.object(
-                ATICClient,
-                "fetch_historical_data",
+            patch(
+                "raglite.forecasting.model_selection_job.fetch_historical_data",
                 new_callable=AsyncMock,
                 return_value=mock_historical_data,
             ),
-            patch.object(
-                "raglite.forecasting.regressor_fetch.fetch_regressors_with_date_range",
+            patch(
+                "raglite.forecasting.model_selection_job.fetch_regressors_with_date_range",
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch.object(
-                "raglite.forecasting.model_selection.select_best_model",
+            patch(
+                "raglite.forecasting.model_selection_job.select_best_model",
                 new_callable=AsyncMock,
                 return_value=mock_result,
             ),
-            patch.object(
-                "raglite.external_data.storage.model_selection.cache_model_selection",
+            patch(
+                "raglite.forecasting.model_selection_job.cache_model_selection",
                 new_callable=Mock,
             ),
         ):

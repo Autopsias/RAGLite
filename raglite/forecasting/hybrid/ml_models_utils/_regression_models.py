@@ -66,7 +66,11 @@ def fit_linear_regression(
     # Final fit on all data
     model.fit(X, y)
 
-    metrics = calculate_cv_metrics(y, predictions, cv_rmse_scores, cv_mae_scores, cv_mape_scores)
+    # Calculate final metrics on full dataset
+    final_predictions = model.predict(X)
+    metrics = calculate_cv_metrics(
+        y, final_predictions, cv_rmse_scores, cv_mae_scores, cv_mape_scores
+    )
 
     logger.info(
         "Linear Regression fitted",
@@ -124,7 +128,11 @@ def fit_ridge_regression(
     # Final fit on all data
     model.fit(X, y)
 
-    metrics = calculate_cv_metrics(y, predictions, cv_rmse_scores, cv_mae_scores, cv_mape_scores)
+    # Calculate final metrics on full dataset
+    final_predictions = model.predict(X)
+    metrics = calculate_cv_metrics(
+        y, final_predictions, cv_rmse_scores, cv_mae_scores, cv_mape_scores
+    )
 
     logger.info(
         "Ridge Regression fitted",
@@ -187,7 +195,11 @@ def fit_lasso_regression(
     # Final fit on all data
     model.fit(X, y)
 
-    metrics = calculate_cv_metrics(y, predictions, cv_rmse_scores, cv_mae_scores, cv_mape_scores)
+    # Calculate final metrics on full dataset
+    final_predictions = model.predict(X)
+    metrics = calculate_cv_metrics(
+        y, final_predictions, cv_rmse_scores, cv_mae_scores, cv_mape_scores
+    )
 
     # Log non-zero coefficients for Lasso (feature selection insight)
     non_zero_coefs = sum(1 for c in model.coef_ if abs(c) > 1e-10)

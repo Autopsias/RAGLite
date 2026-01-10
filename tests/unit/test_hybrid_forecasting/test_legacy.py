@@ -391,10 +391,12 @@ class TestExplainForecast:
             0
         ].message.content = '{"summary": "Revenue is projected to grow by 50%.", "confidence_rationale": "Based on historical trends."}'
 
-        with patch("tests.unit.test_hybrid_forecasting.explain_forecast") as mock_explain:
-            mock_explain.return_value = (
-                "Revenue is projected to grow by 50%. Based on historical trends."
-            )
+        # Patch where get_mistral_client is used (in ensemble module)
+        with patch("raglite.forecasting.hybrid.ensemble.get_mistral_client") as mock_client:
+            # get_mistral_client returns a synchronous client
+            mock_mistral = MagicMock()
+            mock_mistral.chat.complete.return_value = mock_response
+            mock_client.return_value = mock_mistral
 
             explanation = await explain_forecast(forecast, "Financial context")
 
@@ -413,18 +415,20 @@ class TestExplainForecast:
             periods_ahead=4,
         )
 
-        with patch("tests.unit.test_hybrid_forecasting.explain_forecast") as mock_explain:
-            mock_explain.side_effect = Exception("API error")
+        # Patch Mistral client to raise an error during chat.complete()
+        with patch("raglite.forecasting.hybrid.ensemble.get_mistral_client") as mock_client:
+            mock_mistral = MagicMock()
+            mock_mistral.chat.complete.side_effect = Exception("API error")
+            mock_client.return_value = mock_mistral
 
             # Function should handle exception and return fallback
-            try:
-                explanation = await explain_forecast(forecast, "Context")
-                # Fallback should mention data points and periods
-                assert "1 historical data points" in explanation
-                assert "4 periods" in explanation
-            except Exception:
-                # Expected - explain_forecast raises on error in tests
-                pass
+            explanation = await explain_forecast(forecast, "Context")
+            # Fallback should mention data points and periods
+            assert (
+                "1 historical data points" in explanation
+                or "1 historical data point" in explanation
+            )
+            assert "4 periods" in explanation
 
     @pytest.mark.asyncio
     async def test_explain_forecast_handles_invalid_json(self) -> None:
@@ -440,8 +444,12 @@ class TestExplainForecast:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "Not valid JSON - just plain text explanation"
 
-        with patch("tests.unit.test_hybrid_forecasting.explain_forecast") as mock_explain:
-            mock_explain.return_value = "Not valid JSON - just plain text explanation"
+        # Patch Mistral client to return invalid JSON
+        with patch("raglite.forecasting.hybrid.ensemble.get_mistral_client") as mock_client:
+            # get_mistral_client returns a synchronous client
+            mock_mistral = MagicMock()
+            mock_mistral.chat.complete.return_value = mock_response
+            mock_client.return_value = mock_mistral
 
             explanation = await explain_forecast(forecast, "Context")
 

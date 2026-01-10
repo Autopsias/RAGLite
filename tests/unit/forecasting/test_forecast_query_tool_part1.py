@@ -8,7 +8,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from raglite.mcp.tools import forecast_helpers as forecast_helpers_module
 from raglite.shared.models import (
     ForecastPoint,
     ForecastQueryRequest,
@@ -85,17 +84,19 @@ class TestGetFinancialForecast:
         )
 
         with (
-            patch.object(
-                forecast_helpers_module,
-                "extract_historical_data_by_type",
+            patch(
+                "raglite.mcp.tools.forecast.extract_historical_data",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
-            patch.object(
-                forecast_helpers_module,
-                "generate_forecast",
+            patch(
+                "raglite.mcp.tools.forecast.check_model_selection_cache_for_forecast",
+                return_value=None,
+            ),
+            patch(
+                "raglite.mcp.tools.forecast.generate_forecast_auto_select",
                 new_callable=AsyncMock,
-                return_value=mock_forecast,
+                return_value=(mock_forecast, "ensemble", "Test selection reason"),
             ),
         ):
             request = ForecastQueryRequest(metric="revenue", periods_ahead=4)
@@ -147,17 +148,15 @@ class TestGetFinancialForecast:
         )
 
         with (
-            patch.object(
-                forecast_helpers_module,
-                "extract_historical_data_by_type",
+            patch(
+                "raglite.mcp.tools.forecast.extract_historical_data",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
-            patch.object(
-                forecast_helpers_module,
-                "generate_forecast",
+            patch(
+                "raglite.mcp.tools.forecast.generate_forecast_auto_select",
                 new_callable=AsyncMock,
-                return_value=mock_forecast,
+                return_value=(mock_forecast, "ensemble", "Test selection reason"),
             ),
         ):
             request = ForecastQueryRequest(query="What's the revenue forecast for next quarter?")
@@ -175,20 +174,11 @@ class TestGetFinancialForecast:
         from raglite.retrieval.search import QueryError
 
         # Mock SQL extraction to fail (no data for this metric)
-        with (
-            patch.object(
-                forecast_helpers_module,
-                "extract_historical_data_by_type",
-                new_callable=AsyncMock,
-                side_effect=ExtractionError(
-                    "No data found in financial_tables for metric 'invalid_metric'"
-                ),
-            ),
-            patch.object(
-                forecast_helpers_module,
-                "extract_timeseries",  # Fallback also fails
-                new_callable=AsyncMock,
-                side_effect=ExtractionError("No documents found"),
+        with patch(
+            "raglite.mcp.tools.forecast.extract_historical_data",
+            new_callable=AsyncMock,
+            side_effect=ExtractionError(
+                "No data found in financial_tables for metric 'invalid_metric'"
             ),
         ):
             request = ForecastQueryRequest(metric="invalid_metric")
@@ -226,15 +216,17 @@ class TestGetFinancialForecast:
         )
 
         with (
-            patch.object(
-                forecast_helpers_module,
-                "extract_historical_data_by_type",
+            patch(
+                "raglite.mcp.tools.forecast.extract_historical_data",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
-            patch.object(
-                forecast_helpers_module,
-                "generate_forecast",
+            patch(
+                "raglite.mcp.tools.forecast.check_model_selection_cache_for_forecast",
+                return_value=None,
+            ),
+            patch(
+                "raglite.mcp.tools.forecast.generate_forecast_auto_select",
                 new_callable=AsyncMock,
                 side_effect=InsufficientDataError("Need at least 8 data points"),
             ),
@@ -254,19 +246,10 @@ class TestGetFinancialForecast:
         from raglite.main import get_financial_forecast
         from raglite.retrieval.search import QueryError
 
-        with (
-            patch.object(
-                forecast_helpers_module,
-                "extract_historical_data_by_type",
-                new_callable=AsyncMock,
-                side_effect=ExtractionError("No data found in financial_tables"),
-            ),
-            patch.object(
-                forecast_helpers_module,
-                "extract_timeseries",
-                new_callable=AsyncMock,
-                side_effect=ExtractionError("No documents found"),
-            ),
+        with patch(
+            "raglite.mcp.tools.forecast.extract_historical_data",
+            new_callable=AsyncMock,
+            side_effect=ExtractionError("No data found in financial_tables"),
         ):
             request = ForecastQueryRequest(metric="revenue")
 
@@ -282,19 +265,10 @@ class TestGetFinancialForecast:
         from raglite.main import get_financial_forecast
         from raglite.retrieval.search import QueryError
 
-        with (
-            patch.object(
-                forecast_helpers_module,
-                "extract_historical_data_by_type",
-                new_callable=AsyncMock,
-                side_effect=RuntimeError("Unexpected crash"),
-            ),
-            patch.object(
-                forecast_helpers_module,
-                "extract_timeseries",
-                new_callable=AsyncMock,
-                side_effect=RuntimeError("Fallback also crashed"),
-            ),
+        with patch(
+            "raglite.mcp.tools.forecast.extract_historical_data",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("Unexpected crash"),
         ):
             request = ForecastQueryRequest(metric="revenue")
 

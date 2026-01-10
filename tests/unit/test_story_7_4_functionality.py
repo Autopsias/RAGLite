@@ -17,20 +17,21 @@ import pytest
 
 
 class TestAC3FunctionalityPreserved:
-    """AC3: Functionality Preserved - all 16 MCP tools remain functional.
+    """AC3: Functionality Preserved - all MCP tools remain functional.
 
     Given the existing MCP tools serve production traffic
     When tool extraction is complete
-    Then all 16 MCP tools should remain functional
+    Then all MCP tools (decorated with @mcp.tool()) should remain functional
     """
 
-    # List of all 16 MCP tools that must be preserved
+    # List of all MCP tools decorated with @mcp.tool() that must be preserved
     MCP_TOOLS = [
         "ingest_financial_document",
         "ingest_financial_document_async",
         "get_ingestion_status",
         "query_financial_documents",
-        "analytical_query_financial_documents",
+        # Note: analytical_query_financial_documents is NOT an MCP tool
+        # It's a helper function without @mcp.tool() decorator
         "get_financial_forecast",
         "get_financial_insights",
         "query_external_data",
@@ -62,7 +63,7 @@ class TestAC3FunctionalityPreserved:
 
         Given tools may be imported from main.py for backward compatibility
         When importing tools from raglite.main
-        Then all 16 tools should be importable
+        Then all MCP tools should be importable
         """
         from raglite import main
 
@@ -90,18 +91,18 @@ class TestAC3FunctionalityPreserved:
 
     @pytest.mark.priority("P0")
     def test_ac3_4_tool_count_preserved(self):
-        """TEST-AC-7.4.3.4: Total tool count is preserved (15+ tools).
+        """TEST-AC-7.4.3.4: Total tool count is preserved (14 tools).
 
-        Given the story documents 16 tools (15 unique names listed)
+        Given all MCP tools must be decorated with @mcp.tool()
         When counting registered tools
-        Then at least 15 tools should be available
+        Then all 14 decorated tools should be available
         """
         from raglite import main
 
         available_tools = [tool_name for tool_name in self.MCP_TOOLS if hasattr(main, tool_name)]
 
-        assert len(available_tools) >= 15, (
-            f"At least 15 MCP tools should be available, "
+        assert len(available_tools) == 14, (
+            f"All 14 MCP tools should be available, "
             f"but only found {len(available_tools)}: {available_tools}"
         )
 

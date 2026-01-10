@@ -56,6 +56,10 @@ class TestIngestPDF:
         mock_result = Mock()
         mock_result.document = mock_document
 
+        # Mock converter instance
+        mock_converter = Mock()
+        mock_converter.convert.return_value = mock_result
+
         # Mock Qdrant client to prevent real database calls in unit tests
         mock_qdrant_client = Mock()
         mock_qdrant_client.delete_collection = Mock()
@@ -70,15 +74,14 @@ class TestIngestPDF:
         mock_collection_info.points_count = 2  # Match number of mock chunks
         mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
 
-        # Patch Docling at the source for lazy imports inside ingest_pdf()
-        # Critical: patch both DocumentConverter and the required imports
+        # Mock at higher level: create_docling_converter instead of Docling internals
+        # This avoids Pydantic validation errors on backend parameter
+        # CRITICAL: Patch where the function is USED, not where it's defined
         with (
-            patch("docling.document_converter.DocumentConverter") as MockConverter,
-            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
-            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
-            patch("docling.datamodel.base_models.InputFormat"),
-            patch("docling.document_converter.PdfFormatOption"),
-            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+            patch(
+                "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
+                return_value=mock_converter,
+            ),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
                 return_value=mock_qdrant_client,
@@ -101,9 +104,6 @@ class TestIngestPDF:
                 return_value=None,
             ),
         ):
-            mock_converter_instance = MockConverter.return_value
-            mock_converter_instance.convert.return_value = mock_result
-
             # Mock embedding model
             mock_embedding_instance = MockEmbedding.return_value
             mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024, [0.2] * 1024])
@@ -145,18 +145,15 @@ class TestIngestPDF:
         corrupt_pdf = tmp_path / "corrupted.pdf"
         corrupt_pdf.write_bytes(b"not a real pdf")
 
-        # Patch Docling at the source for lazy imports inside ingest_pdf()
-        with (
-            patch("docling.document_converter.DocumentConverter") as MockConverter,
-            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
-            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
-            patch("docling.datamodel.base_models.InputFormat"),
-            patch("docling.document_converter.PdfFormatOption"),
-            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
-        ):
-            mock_converter_instance = MockConverter.return_value
-            mock_converter_instance.convert.side_effect = Exception("PDF parsing error")
+        # Mock converter that raises exception
+        mock_converter = Mock()
+        mock_converter.convert.side_effect = Exception("PDF parsing error")
 
+        # Mock at higher level to avoid Pydantic validation errors
+        with patch(
+            "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
+            return_value=mock_converter,
+        ):
             with pytest.raises(RuntimeError, match="Docling parsing failed"):
                 await ingest_pdf(str(corrupt_pdf))
 
@@ -191,6 +188,10 @@ class TestIngestPDF:
         mock_result = Mock()
         mock_result.document = mock_document
 
+        # Mock converter instance
+        mock_converter = Mock()
+        mock_converter.convert.return_value = mock_result
+
         # Mock Qdrant client
         mock_qdrant_client = Mock()
         mock_collections_response = Mock()
@@ -200,14 +201,12 @@ class TestIngestPDF:
         mock_collection_info.points_count = 5  # 5 mock elements
         mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
 
-        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        # Mock at higher level to avoid Pydantic validation errors
         with (
-            patch("docling.document_converter.DocumentConverter") as MockConverter,
-            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
-            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
-            patch("docling.datamodel.base_models.InputFormat"),
-            patch("docling.document_converter.PdfFormatOption"),
-            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+            patch(
+                "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
+                return_value=mock_converter,
+            ),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
                 return_value=mock_qdrant_client,
@@ -230,9 +229,6 @@ class TestIngestPDF:
                 return_value=None,
             ),
         ):
-            mock_converter_instance = MockConverter.return_value
-            mock_converter_instance.convert.return_value = mock_result
-
             # Mock embedding model
             mock_embedding_instance = MockEmbedding.return_value
             mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024] * 5)
@@ -266,6 +262,10 @@ class TestIngestPDF:
         mock_result = Mock()
         mock_result.document = mock_document
 
+        # Mock converter instance
+        mock_converter = Mock()
+        mock_converter.convert.return_value = mock_result
+
         # Mock Qdrant client
         mock_qdrant_client = Mock()
         mock_collections_response = Mock()
@@ -275,14 +275,12 @@ class TestIngestPDF:
         mock_collection_info.points_count = 1
         mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
 
-        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        # Mock at higher level to avoid Pydantic validation errors
         with (
-            patch("docling.document_converter.DocumentConverter") as MockConverter,
-            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
-            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
-            patch("docling.datamodel.base_models.InputFormat"),
-            patch("docling.document_converter.PdfFormatOption"),
-            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+            patch(
+                "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
+                return_value=mock_converter,
+            ),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
                 return_value=mock_qdrant_client,
@@ -305,9 +303,6 @@ class TestIngestPDF:
                 return_value=None,
             ),
         ):
-            mock_converter_instance = MockConverter.return_value
-            mock_converter_instance.convert.return_value = mock_result
-
             # Mock embedding model
             mock_embedding_instance = MockEmbedding.return_value
             mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024])
@@ -327,17 +322,11 @@ class TestIngestPDF:
         pdf_file = tmp_path / "test.pdf"
         pdf_file.write_bytes(b"%PDF-1.4")
 
-        # Patch Docling at the source for lazy imports inside ingest_pdf()
-        with (
-            patch("docling.document_converter.DocumentConverter") as MockConverter,
-            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
-            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
-            patch("docling.datamodel.base_models.InputFormat"),
-            patch("docling.document_converter.PdfFormatOption"),
-            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+        # Mock create_docling_converter to raise exception
+        with patch(
+            "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
+            side_effect=RuntimeError("Failed to initialize Docling converter: Test error"),
         ):
-            MockConverter.side_effect = Exception("Docling initialization failed")
-
             with pytest.raises(RuntimeError, match="Failed to initialize Docling converter"):
                 await ingest_pdf(str(pdf_file))
 
@@ -370,6 +359,10 @@ class TestIngestPDF:
         mock_result = Mock()
         mock_result.document = mock_document
 
+        # Mock converter instance
+        mock_converter = Mock()
+        mock_converter.convert.return_value = mock_result
+
         # Mock Qdrant client
         mock_qdrant_client = Mock()
         mock_collections_response = Mock()
@@ -379,15 +372,12 @@ class TestIngestPDF:
         mock_collection_info.points_count = 1
         mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
 
-        # Patch Docling at the source for lazy imports inside ingest_pdf()
-        # Story 3.0.1: Patch new module locations after refactoring
+        # Mock at higher level to avoid Pydantic validation errors
         with (
-            patch("docling.document_converter.DocumentConverter") as MockConverter,
-            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
-            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
-            patch("docling.datamodel.base_models.InputFormat"),
-            patch("docling.document_converter.PdfFormatOption"),
-            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+            patch(
+                "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
+                return_value=mock_converter,
+            ),
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
                 return_value=mock_qdrant_client,
@@ -410,9 +400,6 @@ class TestIngestPDF:
                 return_value=None,
             ),
         ):
-            mock_converter_instance = MockConverter.return_value
-            mock_converter_instance.convert.return_value = mock_result
-
             # Mock embedding model
             mock_embedding_instance = MockEmbedding.return_value
             mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024])

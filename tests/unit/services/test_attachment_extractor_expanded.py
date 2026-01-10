@@ -32,14 +32,15 @@ class TestAttachmentExtractorExpanded:
         pdf_file = tmp_path / "protected.pdf"
         pdf_file.write_bytes(b"%PDF-1.4 encrypted content")
 
-        # Mock Docling to simulate password-protected PDF
+        # Mock Docling converter to simulate password-protected PDF
+        mock_converter = Mock()
+        mock_converter.convert.side_effect = RuntimeError("No text content found (image-only PDF)")
+
         with (
-            patch("docling.document_converter.DocumentConverter") as MockConverter,
-            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
-            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
-            patch("docling.datamodel.base_models.InputFormat"),
-            patch("docling.document_converter.PdfFormatOption"),
-            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+            patch(
+                "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
+                return_value=mock_converter,
+            ),
             patch("raglite.shared.clients.get_qdrant_client"),
             patch("raglite.ingestion.storage.vector_store.get_qdrant_client"),
             patch("raglite.ingestion.embedding_generation.get_embedding_model"),
@@ -47,12 +48,6 @@ class TestAttachmentExtractorExpanded:
             patch("raglite.ingestion.storage.store_tables_in_postgresql"),
             patch("raglite.ingestion.storage.store_vectors_in_qdrant"),
         ):
-            mock_converter_instance = MockConverter.return_value
-            # FIXED: Simulate the actual error message that would be returned
-            mock_converter_instance.convert.side_effect = RuntimeError(
-                "No text content found (image-only PDF)"
-            )
-
             # Should raise error with the correct message
             with pytest.raises(RuntimeError, match="No text content found \\(image-only PDF\\)"):
                 await ingest_pdf(str(pdf_file))
@@ -71,14 +66,15 @@ class TestAttachmentExtractorExpanded:
         # Write a file that's missing PDF structure
         pdf_file.write_bytes(b"Some corrupted content without PDF structure")
 
-        # Mock Docling to simulate corrupted PDF
+        # Mock Docling converter to simulate corrupted PDF
+        mock_converter = Mock()
+        mock_converter.convert.side_effect = Exception("startxref not found")
+
         with (
-            patch("docling.document_converter.DocumentConverter") as MockConverter,
-            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
-            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
-            patch("docling.datamodel.base_models.InputFormat"),
-            patch("docling.document_converter.PdfFormatOption"),
-            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
+            patch(
+                "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
+                return_value=mock_converter,
+            ),
             patch("raglite.shared.clients.get_qdrant_client"),
             patch("raglite.ingestion.storage.vector_store.get_qdrant_client"),
             patch("raglite.ingestion.embedding_generation.get_embedding_model"),
@@ -86,10 +82,6 @@ class TestAttachmentExtractorExpanded:
             patch("raglite.ingestion.storage.store_tables_in_postgresql"),
             patch("raglite.ingestion.storage.store_vectors_in_qdrant"),
         ):
-            mock_converter_instance = MockConverter.return_value
-            # FIXED: Simulate the actual error message or use a more flexible assertion
-            mock_converter_instance.convert.side_effect = Exception("startxref not found")
-
             # Should raise error with appropriate message
             with pytest.raises(Exception) as exc_info:
                 await ingest_pdf(str(pdf_file))
@@ -115,17 +107,46 @@ class TestAttachmentExtractorExpanded:
         pdf_file = tmp_path / "image_only.pdf"
         pdf_file.write_bytes(b"%PDF-1.4 image-only content")
 
-        # Mock Docling to simulate image-only PDF with minimal text
+        # Mock Docling document with minimal text
+        mock_document = Mock()
+        mock_document.num_pages.return_value = 1
+
+        # Add at least one text item to avoid empty chunks
+        mock_element = Mock()
+        mock_element.text = "No text content found (image-only PDF)"
+        mock_prov = Mock()
+        mock_prov.page_no = 1
+        mock_element.prov = [mock_prov]
+
+        mock_document.iterate_items.return_value = [(mock_element, 1)]
+        mock_document.export_to_markdown.return_value = "No text content found (image-only PDF)"
+
+        mock_result = Mock()
+        mock_result.document = mock_document
+
+        mock_converter = Mock()
+        mock_converter.convert.return_value = mock_result
+
+        # Mock Qdrant client
+        mock_qdrant_client = Mock()
+        mock_qdrant_client.get_collections.return_value = Mock(collections=[])
+        mock_qdrant_client.get_collection.return_value = Mock(points_count=1)
+
         with (
-            patch("docling.document_converter.DocumentConverter") as MockConverter,
-            patch("docling.datamodel.pipeline_options.PdfPipelineOptions"),
-            patch("docling.datamodel.accelerator_options.AcceleratorOptions"),
-            patch("docling.datamodel.base_models.InputFormat"),
-            patch("docling.document_converter.PdfFormatOption"),
-            patch("docling.backend.pypdfium2_backend.PyPdfiumDocumentBackend"),
-            patch("raglite.shared.clients.get_qdrant_client"),
-            patch("raglite.ingestion.storage.vector_store.get_qdrant_client"),
-            patch("raglite.ingestion.embedding_generation.get_embedding_model"),
+            patch(
+                "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
+                return_value=mock_converter,
+            ),
+            patch("raglite.shared.clients.get_qdrant_client", return_value=mock_qdrant_client),
+            patch(
+                "raglite.ingestion.storage.vector_store.get_qdrant_client",
+                return_value=mock_qdrant_client,
+            ),
+            patch(
+                "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
+                return_value=mock_qdrant_client,
+            ),
+            patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
                 return_value=(0, 0),
@@ -139,50 +160,14 @@ class TestAttachmentExtractorExpanded:
                 return_value=None,
             ),
         ):
-            mock_converter_instance = MockConverter.return_value
-            mock_document = Mock()
-            mock_document.num_pages.return_value = 1
+            mock_embedding_instance = MockEmbedding.return_value
+            # Return numpy array as expected by the embedding generation module
+            mock_embedding_instance.encode.return_value = np.array([[0.1] * 1024], dtype=np.float32)
 
-            # FIXED: Add at least one text item to avoid empty chunks and division by zero
-            mock_element = Mock()
-            mock_element.text = "No text content found (image-only PDF)"
-            mock_prov = Mock()
-            mock_prov.page_no = 1
-            mock_element.prov = [mock_prov]
+            # Should process without error and handle image-only content
+            result = await ingest_pdf(str(pdf_file))
 
-            mock_document.iterate_items.return_value = [(mock_element, 1)]
-            mock_document.export_to_markdown.return_value = "No text content found (image-only PDF)"
-
-            mock_result = Mock()
-            mock_result.document = mock_document
-            mock_converter_instance.convert.return_value = mock_result
-
-            # Mock embedding model and Qdrant client
-            mock_qdrant_client = Mock()
-            mock_qdrant_client.get_collections.return_value = Mock(collections=[])
-            mock_qdrant_client.get_collection.return_value = Mock(points_count=1)
-
-            with patch(
-                "raglite.ingestion.embedding_generation.get_embedding_model"
-            ) as MockEmbedding:
-                mock_embedding_instance = MockEmbedding.return_value
-                # FIXED: Return numpy array as expected by the embedding generation module
-                mock_embedding_instance.encode.return_value = np.array(
-                    [[0.1] * 1024], dtype=np.float32
-                )
-
-                with patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
-                    return_value=mock_qdrant_client,
-                ):
-                    with patch(
-                        "raglite.ingestion.storage.vector_store.get_qdrant_client",
-                        return_value=mock_qdrant_client,
-                    ):
-                        # FIXED: Should process without error and handle image-only content
-                        result = await ingest_pdf(str(pdf_file))
-
-                        # Verify result is returned with appropriate handling
-                        assert result is not None
-                        assert result.filename == "image_only.pdf"
-                        assert result.doc_type == "PDF"
+            # Verify result is returned with appropriate handling
+            assert result is not None
+            assert result.filename == "image_only.pdf"
+            assert result.doc_type == "PDF"

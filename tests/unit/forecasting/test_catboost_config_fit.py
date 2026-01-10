@@ -142,7 +142,7 @@ class TestFitAndForecastCatBoost:
 
     def test_fit_and_forecast_returns_dict(self, forecast_data):
         """Test _fit_and_forecast_catboost returns dict with values and metrics."""
-        from raglite.forecasting.hybrid import _fit_and_forecast_catboost
+        from raglite.forecasting.models.catboost_model import _fit_and_forecast_catboost
 
         X, y, X_future = forecast_data
         result = _fit_and_forecast_catboost(X, y, X_future, periods_ahead=4, fast_mode=True)

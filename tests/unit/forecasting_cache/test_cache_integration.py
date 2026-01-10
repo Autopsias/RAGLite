@@ -91,8 +91,9 @@ class TestModelSelectionCacheIntegration:
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
-            patch(
-                "raglite.mcp.tools.forecast_helpers.select_model_type",
+            patch.object(
+                forecast_helpers_module,
+                "select_model_type",
             ) as mock_select,
             patch.object(
                 forecast_helpers_module,
@@ -132,10 +133,11 @@ class TestModelSelectionCacheIntegration:
     ) -> None:
         """Expired cache entries should trigger fallback."""
         from raglite.main import get_financial_forecast
+        from raglite.mcp.tools import forecast as forecast_module
 
         with (
             patch.object(
-                forecast_helpers_module,
+                forecast_module,
                 "check_model_selection_cache_for_forecast",
                 new_callable=Mock,  # Sync function
             ) as mock_cache_check,
@@ -144,8 +146,9 @@ class TestModelSelectionCacheIntegration:
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
-            patch(
-                "raglite.mcp.tools.forecast_helpers.select_model_type",
+            patch.object(
+                forecast_helpers_module,
+                "select_model_type",
             ) as mock_select,
             patch.object(
                 forecast_helpers_module,
@@ -247,16 +250,17 @@ class TestModelSelectionCacheIntegration:
         with (
             patch.object(
                 forecast_helpers_module,
-                "check_model_selection_cache_for_forecast",
+                "get_cached_model_selection",
                 new_callable=Mock,  # Sync function
-            ) as mock_cache_check,
+            ) as mock_get_cached,
             patch.object(
                 forecast_helpers_module,
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
-            patch(
-                "raglite.mcp.tools.forecast_helpers.select_model_type",
+            patch.object(
+                forecast_helpers_module,
+                "select_model_type",
             ) as mock_select,
             patch.object(
                 forecast_helpers_module,
@@ -270,8 +274,9 @@ class TestModelSelectionCacheIntegration:
                 return_value={},
             ),
         ):
-            # Setup mocks - cache throws exception
-            mock_cache_check.side_effect = Exception("Database connection failed")
+            # Setup mocks - underlying cache function throws exception
+            # This will be caught by check_model_selection_cache_for_forecast
+            mock_get_cached.side_effect = Exception("Database connection failed")
             mock_extract.return_value = sample_historical_data
             mock_select.return_value = ("prophet", "Fallback after error")
             mock_forecast.return_value = sample_forecast_result
@@ -291,10 +296,11 @@ class TestModelSelectionCacheIntegration:
     ) -> None:
         """Explicit model_type should bypass cache lookup."""
         from raglite.main import get_financial_forecast
+        from raglite.mcp.tools import forecast as forecast_module
 
         with (
             patch.object(
-                forecast_helpers_module,
+                forecast_module,
                 "check_model_selection_cache_for_forecast",
                 new_callable=Mock,  # Sync function
             ) as mock_cache_check,

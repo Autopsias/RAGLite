@@ -40,12 +40,14 @@ class TestPDFProcessingErrorHandling:
             tmp_path = tmp.name
 
         try:
-            with patch("docling.document_converter.DocumentConverter") as mock_converter_class:
-                # Mock converter to raise exception on empty file
-                mock_converter = MagicMock()
-                mock_converter.convert.side_effect = RuntimeError("Empty or corrupt PDF")
-                mock_converter_class.return_value = mock_converter
+            # Mock converter to raise exception on empty file
+            mock_converter = MagicMock()
+            mock_converter.convert.side_effect = RuntimeError("Empty or corrupt PDF")
 
+            with patch(
+                "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
+                return_value=mock_converter,
+            ):
                 # When ingesting
                 # Then raise RuntimeError
                 with pytest.raises(RuntimeError, match="Docling parsing failed"):
@@ -63,12 +65,14 @@ class TestPDFProcessingErrorHandling:
             tmp_path = tmp.name
 
         try:
-            with patch("docling.document_converter.DocumentConverter") as mock_converter_class:
-                # Mock Docling parsing failure
-                mock_converter = MagicMock()
-                mock_converter.convert.side_effect = RuntimeError("Invalid PDF structure")
-                mock_converter_class.return_value = mock_converter
+            # Mock Docling parsing failure
+            mock_converter = MagicMock()
+            mock_converter.convert.side_effect = RuntimeError("Invalid PDF structure")
 
+            with patch(
+                "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
+                return_value=mock_converter,
+            ):
                 # When ingesting
                 # Then raise RuntimeError with context
                 with pytest.raises(RuntimeError, match="Docling parsing failed"):
@@ -86,10 +90,14 @@ class TestPDFProcessingErrorHandling:
             tmp_path = tmp.name
 
         try:
-            with patch("docling.document_converter.DocumentConverter") as mock_converter_class:
-                # Mock initialization failure (e.g., missing dependencies)
-                mock_converter_class.side_effect = ImportError("PyTorch not available")
-
+            # Mock initialization failure (e.g., missing dependencies)
+            # Note: create_docling_converter catches exceptions and re-raises as RuntimeError
+            with patch(
+                "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
+                side_effect=RuntimeError(
+                    "Failed to initialize Docling converter: PyTorch not available"
+                ),
+            ):
                 # When ingesting
                 # Then raise RuntimeError with initialization context
                 with pytest.raises(RuntimeError, match="Failed to initialize Docling"):
@@ -106,8 +114,20 @@ class TestPDFProcessingErrorHandling:
             tmp_path = tmp.name
 
         try:
+            # Mock successful conversion but zero pages
+            mock_result = MagicMock()
+            mock_result.document.num_pages.return_value = 0
+            mock_result.document.iterate_items.return_value = []
+            mock_result.document.export_to_markdown.return_value = ""
+
+            mock_converter = MagicMock()
+            mock_converter.convert.return_value = mock_result
+
             with (
-                patch("docling.document_converter.DocumentConverter") as mock_converter_class,
+                patch(
+                    "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
+                    return_value=mock_converter,
+                ),
                 patch("raglite.ingestion.chunking_strategy.chunk_by_docling_items") as mock_chunk,
                 patch(
                     "raglite.ingestion.document_ingestion.pdf_utils.extract_metadata_for_chunks"
@@ -117,16 +137,6 @@ class TestPDFProcessingErrorHandling:
                     "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant"
                 ) as mock_store,
             ):
-                # Mock successful conversion but zero pages
-                mock_result = MagicMock()
-                mock_result.document.num_pages.return_value = 0
-                mock_result.document.iterate_items.return_value = []
-                mock_result.document.export_to_markdown.return_value = ""
-
-                mock_converter = MagicMock()
-                mock_converter.convert.return_value = mock_result
-                mock_converter_class.return_value = mock_converter
-
                 mock_chunk.return_value = []
                 mock_extract_meta.return_value = AsyncMock()
                 mock_embed.return_value = []
@@ -318,8 +328,20 @@ class TestPDFProcessingBoundaryConditions:
             tmp_path = tmp.name
 
         try:
+            # Mock conversion with no text items
+            mock_result = MagicMock()
+            mock_result.document.num_pages.return_value = 3
+            mock_result.document.iterate_items.return_value = []  # No text
+            mock_result.document.export_to_markdown.return_value = ""
+
+            mock_converter = MagicMock()
+            mock_converter.convert.return_value = mock_result
+
             with (
-                patch("docling.document_converter.DocumentConverter") as mock_converter_class,
+                patch(
+                    "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
+                    return_value=mock_converter,
+                ),
                 patch("raglite.ingestion.chunking_strategy.chunk_by_docling_items") as mock_chunk,
                 patch(
                     "raglite.ingestion.document_ingestion.pdf_utils.extract_metadata_for_chunks"
@@ -329,16 +351,6 @@ class TestPDFProcessingBoundaryConditions:
                     "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant"
                 ) as mock_store,
             ):
-                # Mock conversion with no text items
-                mock_result = MagicMock()
-                mock_result.document.num_pages.return_value = 3
-                mock_result.document.iterate_items.return_value = []  # No text
-                mock_result.document.export_to_markdown.return_value = ""
-
-                mock_converter = MagicMock()
-                mock_converter.convert.return_value = mock_result
-                mock_converter_class.return_value = mock_converter
-
                 mock_chunk.return_value = []  # No chunks
                 mock_extract_meta.return_value = AsyncMock()
                 mock_embed.return_value = []
@@ -364,43 +376,36 @@ class TestPDFProcessingBoundaryConditions:
             tmp_path = tmp.name
 
         try:
+            from raglite.shared.safety import ProductionProtectionError
+
+            # Create mock element with proper provenance
+            mock_prov = MagicMock()
+            mock_prov.page_no = 1
+            mock_element = MagicMock()
+            mock_element.prov = [mock_prov]
+            mock_element.text = "Test content"
+
+            mock_result = MagicMock()
+            mock_result.document.num_pages.return_value = 1
+            # iterate_items returns list of 2-tuples (item, _)
+            mock_result.document.iterate_items.return_value = [(mock_element, 1)]
+            mock_result.document.export_to_markdown.return_value = "Test content"
+
+            mock_converter = MagicMock()
+            mock_converter.convert.return_value = mock_result
+
             with (
-                patch("docling.document_converter.DocumentConverter") as mock_converter_class,
-                patch("raglite.ingestion.chunking_strategy.chunk_by_docling_items") as mock_chunk,
-                patch("raglite.ingestion.document_ingestion.pdf_utils.extract_metadata_for_chunks"),
-                patch("raglite.ingestion.embedding_generation.generate_embeddings"),
-                patch("raglite.ingestion.storage.vector_store.store_vectors_in_qdrant"),
-                patch("raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql"),
                 patch(
-                    "raglite.ingestion.document_ingestion.pdf_processing.clear_existing_data"
-                ) as mock_clear,
+                    "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
+                    return_value=mock_converter,
+                ),
+                patch(
+                    "raglite.ingestion.document_ingestion.pdf_utils.clear_existing_data",
+                    side_effect=ProductionProtectionError(
+                        "Refusing to delete production collection"
+                    ),
+                ),
             ):
-                # Mock clear_existing_data to raise ProductionProtectionError
-                from raglite.shared.safety import ProductionProtectionError
-
-                mock_clear.side_effect = ProductionProtectionError(
-                    "Refusing to delete production collection"
-                )
-
-                # Mock successful PDF conversion (so we reach the clear_existing check)
-                from unittest.mock import MagicMock
-
-                # Create mock element with proper provenance
-                mock_prov = MagicMock()
-                mock_prov.page_no = 1
-                mock_element = MagicMock()
-                mock_element.prov = [mock_prov]
-                mock_element.text = "Test content"
-
-                mock_result = MagicMock()
-                mock_result.document.num_pages.return_value = 1
-                # iterate_items returns list of 2-tuples (item, _)
-                mock_result.document.iterate_items.return_value = [(mock_element, 1)]
-                mock_result.export_to_markdown.return_value = "Test content"
-
-                mock_converter_class.return_value.convert.return_value = mock_result
-                mock_chunk.return_value = []
-
                 # When ingesting with clear_existing=True on production
                 # Then raise ProductionProtectionError
                 with pytest.raises(

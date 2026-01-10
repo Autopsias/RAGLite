@@ -3,11 +3,10 @@
 Tests the _perform_forecast_refresh helper function from mcp.tools.ingestion.
 """
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from raglite.mcp.tools import ingestion_tool as ingestion_module
 from raglite.shared.models import DocumentMetadata, ForecastRefreshResult, IngestionResult
 
 
@@ -48,8 +47,10 @@ class TestPerformForecastRefresh:
             chunk_count=30,
         )
 
-        with patch.object(ingestion_module, "settings") as mock_settings:
-            mock_settings.enable_forecast_auto_update = False
+        mock_settings = MagicMock()
+        mock_settings.enable_forecast_auto_update = False
+
+        with patch("raglite.shared.config.settings", mock_settings):
             result = await _perform_forecast_refresh(metadata, auto_forecast=True)
 
         assert result.forecasts_updated is None
@@ -77,17 +78,18 @@ class TestPerformForecastRefresh:
             success=True,
         )
 
+        mock_settings = MagicMock()
+        mock_settings.enable_forecast_auto_update = True
+        mock_settings.forecast_refresh_timeout = 300
+
         with (
-            patch.object(ingestion_module, "settings") as mock_settings,
-            patch.object(
-                ingestion_module,
-                "trigger_forecast_refresh",
+            patch("raglite.shared.config.settings", mock_settings),
+            patch(
+                "raglite.forecasting.auto_update.trigger_forecast_refresh",
                 new_callable=AsyncMock,
                 return_value=mock_refresh_result,
             ),
         ):
-            mock_settings.enable_forecast_auto_update = True
-            mock_settings.forecast_refresh_timeout = 300
             result = await _perform_forecast_refresh(metadata, auto_forecast=True)
 
         assert result.forecasts_updated == ["revenue"]
@@ -116,17 +118,18 @@ class TestPerformForecastRefresh:
             error_message="Forecast refresh timed out",
         )
 
+        mock_settings = MagicMock()
+        mock_settings.enable_forecast_auto_update = True
+        mock_settings.forecast_refresh_timeout = 300
+
         with (
-            patch.object(ingestion_module, "settings") as mock_settings,
-            patch.object(
-                ingestion_module,
-                "trigger_forecast_refresh",
+            patch("raglite.shared.config.settings", mock_settings),
+            patch(
+                "raglite.forecasting.auto_update.trigger_forecast_refresh",
                 new_callable=AsyncMock,
                 return_value=mock_refresh_result,
             ),
         ):
-            mock_settings.enable_forecast_auto_update = True
-            mock_settings.forecast_refresh_timeout = 300
             result = await _perform_forecast_refresh(metadata, auto_forecast=True)
 
         assert result.forecasts_updated is None
@@ -146,17 +149,18 @@ class TestPerformForecastRefresh:
             chunk_count=30,
         )
 
+        mock_settings = MagicMock()
+        mock_settings.enable_forecast_auto_update = True
+        mock_settings.forecast_refresh_timeout = 300
+
         with (
-            patch.object(ingestion_module, "settings") as mock_settings,
-            patch.object(
-                ingestion_module,
-                "trigger_forecast_refresh",
+            patch("raglite.shared.config.settings", mock_settings),
+            patch(
+                "raglite.forecasting.auto_update.trigger_forecast_refresh",
                 new_callable=AsyncMock,
                 side_effect=RuntimeError("Unexpected crash"),
             ),
         ):
-            mock_settings.enable_forecast_auto_update = True
-            mock_settings.forecast_refresh_timeout = 300
             result = await _perform_forecast_refresh(metadata, auto_forecast=True)
 
         # Should not raise, should gracefully handle
