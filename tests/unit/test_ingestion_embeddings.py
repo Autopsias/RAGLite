@@ -312,23 +312,25 @@ class TestGenerateEmbeddings:
         clients_module._SentenceTransformer = None
 
         try:
+            # Create a SINGLE mock instance that will be returned both times
+            mock_model = Mock()
+            mock_model.get_sentence_embedding_dimension.return_value = 1024
+
             with patch(
                 "raglite.shared.clients._get_sentence_transformer_class"
             ) as mock_get_st_class:
-                # Mock SentenceTransformer class
+                # Mock SentenceTransformer class - MUST return same instance each time
                 MockST = Mock()
-                mock_model = Mock()
-                mock_model.get_sentence_embedding_dimension.return_value = 1024
-                MockST.return_value = mock_model
+                MockST.return_value = mock_model  # Same instance both times
                 mock_get_st_class.return_value = MockST
 
-                # First call should load model
+                # First call should load model and cache it
                 model1 = get_embedding_model()
                 assert model1 is mock_model
 
-                # Second call should return cached model (no new instantiation)
+                # Second call should return the SAME cached instance
                 model2 = get_embedding_model()
-                assert model2 is model1
+                assert model2 is model1  # Validate singleton pattern
 
                 # Verify that _get_sentence_transformer_class was called twice (once per get_embedding_model call)
                 assert mock_get_st_class.call_count == 2

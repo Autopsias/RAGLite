@@ -9,11 +9,9 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from raglite.shared.models import (
-    ForecastPoint,
     ForecastQueryRequest,
     ForecastResult,
     TimeSeriesData,
-    TimeSeriesPoint,
 )
 
 # =============================================================================
@@ -56,27 +54,30 @@ class TestGetFinancialForecast:
             (2024, 7),
             (2024, 10),
         ]
+
+        # Create points as dictionaries for Pydantic serialization
+        ts_points = [
+            {"date": datetime(y, m, 1), "value": 100.0 + i * 5} for i, (y, m) in enumerate(quarters)
+        ]
+
         mock_ts_data = TimeSeriesData(
             metric_name="revenue",
-            points=[
-                TimeSeriesPoint(date=datetime(y, m, 1), value=100.0 + i * 5)
-                for i, (y, m) in enumerate(quarters)
-            ],
+            points=ts_points,
             source_documents=["Q1_2023.pdf", "Q2_2023.pdf"],
         )
 
-        # Mock forecast result
+        # Mock forecast result with dict-based forecast points
         mock_forecast = ForecastResult(
             metric_name="revenue",
-            historical_data=mock_ts_data.points,
+            historical_data=ts_points,
             forecast=[
-                ForecastPoint(
-                    date=datetime(2025, 1, 1),
-                    value=150.0,
-                    lower=140.0,
-                    upper=160.0,
-                    label="Q1 2025",
-                ),
+                {
+                    "date": datetime(2025, 1, 1),
+                    "value": 150.0,
+                    "lower": 140.0,
+                    "upper": 160.0,
+                    "label": "Q1 2025",
+                },
             ],
             confidence_reasoning="Test reasoning",
             basis="Prophet model trained on 8 quarters",
@@ -126,22 +127,27 @@ class TestGetFinancialForecast:
             (2024, 7),
             (2024, 10),
         ]
+
+        # Create points as dictionaries for Pydantic serialization
+        ts_points = [{"date": datetime(y, m, 1), "value": 100.0} for y, m in quarters]
+
         mock_ts_data = TimeSeriesData(
             metric_name="revenue",
-            points=[TimeSeriesPoint(date=datetime(y, m, 1), value=100.0) for y, m in quarters],
+            points=ts_points,
             source_documents=["Report.pdf"],
         )
 
+        # Mock forecast result with dict-based forecast point
         mock_forecast = ForecastResult(
             metric_name="revenue",
             forecast=[
-                ForecastPoint(
-                    date=datetime(2025, 1, 1),
-                    value=110.0,
-                    lower=105.0,
-                    upper=115.0,
-                    label="Q1 2025",
-                ),
+                {
+                    "date": datetime(2025, 1, 1),
+                    "value": 110.0,
+                    "lower": 105.0,
+                    "upper": 115.0,
+                    "label": "Q1 2025",
+                },
             ],
             basis="Test",
             periods_ahead=1,
@@ -209,9 +215,10 @@ class TestGetFinancialForecast:
         from raglite.main import get_financial_forecast
         from raglite.retrieval.search import QueryError
 
+        # Use dict for Pydantic serialization
         mock_ts_data = TimeSeriesData(
             metric_name="revenue",
-            points=[TimeSeriesPoint(date=datetime(2024, 1, 1), value=100.0)],
+            points=[{"date": datetime(2024, 1, 1), "value": 100.0}],
             source_documents=["Report.pdf"],
         )
 

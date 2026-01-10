@@ -336,12 +336,14 @@ class TestWorkflowExecutorTimeoutIntegration:
         # Mock the agent registry
         executor._agent_registry["retrieval"] = slow_agent
 
-        task = AgentTask(
-            task_id="task_1",
-            agent_type="retrieval",
-            instruction="Test instruction",
-            depends_on=[],
-        )
+        # Create task as dict for Pydantic v2 compatibility
+        task_dict = {
+            "task_id": "task_1",
+            "agent_type": "retrieval",
+            "instruction": "Test instruction",
+            "depends_on": [],
+        }
+        task = AgentTask(**task_dict)
 
         # Act
         result = await executor._execute_task(task, {}, timeout_seconds=0.1)
@@ -371,26 +373,26 @@ class TestWorkflowExecutorTimeoutIntegration:
         executor._agent_registry["retrieval"] = slow_agent
         executor._agent_registry["analysis"] = fast_agent
 
-        # Create two independent tasks
-        task1 = AgentTask(
-            task_id="task_1",
-            agent_type="retrieval",
-            instruction="Slow task",
-            depends_on=[],
-        )
-        task2 = AgentTask(
-            task_id="task_2",
-            agent_type="analysis",
-            instruction="Fast task",
-            depends_on=[],
-        )
+        # Create two independent tasks as dicts for Pydantic v2 compatibility
+        task1_dict = {
+            "task_id": "task_1",
+            "agent_type": "retrieval",
+            "instruction": "Slow task",
+            "depends_on": [],
+        }
+        task2_dict = {
+            "task_id": "task_2",
+            "agent_type": "analysis",
+            "instruction": "Fast task",
+            "depends_on": [],
+        }
 
         from raglite.agentic.planner import WorkflowPlan
 
         plan = WorkflowPlan(
             query="Test query",
             complexity=QueryComplexity.ANALYTICAL,
-            tasks=[task1, task2],
+            tasks=[task1_dict, task2_dict],
         )
 
         # Act

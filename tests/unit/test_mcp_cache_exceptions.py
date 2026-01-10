@@ -80,16 +80,20 @@ class TestCacheExceptionHandling:
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    # Should not raise - should gracefully fall back
-                    result = await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
 
-                    # Verify fallback to default Prophet
-                    assert result.model_source == "default"
+                        # Should not raise - should gracefully fall back
+                        result = await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
+
+                        # Verify fallback to default Prophet
+                        assert result.model_source == "default"
 
     @pytest.mark.asyncio
     async def test_cache_lookup_timeout_falls_back(self, sample_time_series_data) -> None:
@@ -112,14 +116,18 @@ class TestCacheExceptionHandling:
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    result = await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
 
-                    assert result.model_source == "default"
+                        result = await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
+
+                        assert result.model_source == "default"
 
     @pytest.mark.asyncio
     async def test_cache_none_data_characteristics_handled(self, sample_time_series_data) -> None:
@@ -159,17 +167,21 @@ class TestCacheExceptionHandling:
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    result = await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
 
-                    # Should use the cached model (prophet)
-                    assert result.model_source == "cached"
-                    # When data_characteristics is empty dict, model_selection_reason will be None
-                    # which is acceptable - the test verifies no crash occurs
+                        result = await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
+
+                        # Should use the cached model (prophet)
+                        assert result.model_source == "cached"
+                        # When data_characteristics is empty dict, model_selection_reason will be None
+                        # which is acceptable - the test verifies no crash occurs
 
 
 # =============================================================================
@@ -222,18 +234,22 @@ class TestRegressorFilteringEdgeCases:
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        external_regressors=actual_regressors,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
 
-                    # Should pass None when no intersection
-                    assert mock_route.called, "_route_to_model should be called"
-                    call_kwargs = mock_route.call_args[1]
-                    assert call_kwargs["external_regressors"] is None
+                        await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            external_regressors=actual_regressors,
+                            use_model_selection=True,
+                        )
+
+                        # Should pass None when no intersection
+                        assert mock_route.called, "_route_to_model should be called"
+                        call_kwargs = mock_route.call_args[1]
+                        assert call_kwargs["external_regressors"] is None
 
     @pytest.mark.asyncio
     async def test_partial_regressor_overlap(self, sample_time_series_data) -> None:
@@ -278,22 +294,26 @@ class TestRegressorFilteringEdgeCases:
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        external_regressors=actual_regressors,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
 
-                    # Should only pass gas_price
-                    assert mock_route.called, "_route_to_model should be called"
-                    call_kwargs = mock_route.call_args[1]
-                    filtered = call_kwargs["external_regressors"]
-                    assert filtered is not None, "Filtered regressors should not be None"
-                    assert "gas_price" in filtered
-                    assert "euribor" not in filtered
-                    assert len(filtered) == 1
+                        await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            external_regressors=actual_regressors,
+                            use_model_selection=True,
+                        )
+
+                        # Should only pass gas_price
+                        assert mock_route.called, "_route_to_model should be called"
+                        call_kwargs = mock_route.call_args[1]
+                        filtered = call_kwargs["external_regressors"]
+                        assert filtered is not None, "Filtered regressors should not be None"
+                        assert "gas_price" in filtered
+                        assert "euribor" not in filtered
+                        assert len(filtered) == 1
 
     @pytest.mark.asyncio
     async def test_empty_regressor_list_in_cache(self, sample_time_series_data) -> None:
@@ -334,13 +354,17 @@ class TestRegressorFilteringEdgeCases:
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        external_regressors=actual_regressors,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
 
-                    # Should pass None (empty list means no regressors)
-                    # This test verifies correct handling
+                        await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            external_regressors=actual_regressors,
+                            use_model_selection=True,
+                        )
+
+                        # Should pass None (empty list means no regressors)
+                        # This test verifies correct handling

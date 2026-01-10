@@ -68,7 +68,15 @@ if os.environ.get("LIGHTWEIGHT_TESTS") == "true":
     sys.modules["prophet.diagnostics"] = prophet.diagnostics
 
     # PyTorch/Chronos (~2-3GB combined)
+    # CRITICAL: torch.Tensor must be a real class, not a MagicMock
+    # scipy uses issubclass(cls, torch.Tensor) which fails if torch.Tensor is a MagicMock
+    class MockTensor:
+        """Mock torch.Tensor class for scipy compatibility."""
+
+        pass
+
     torch = create_mock_module("torch")
+    torch.Tensor = MockTensor  # Real class for issubclass() checks
     torch.nn = create_mock_module("torch.nn")
     torch.cuda = create_mock_module("torch.cuda")
     torch.cuda.is_available = MagicMock(return_value=False)

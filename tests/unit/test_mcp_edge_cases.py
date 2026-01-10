@@ -141,16 +141,20 @@ class TestModelRoutingEdgeCases:
                     with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                         mock_explain.return_value = "Test explanation"
 
-                        result = await generate_forecast(
-                            metric="ebitda",
-                            historical_data=sample_time_series_data,
-                            periods_ahead=4,
-                            use_model_selection=True,
-                        )
+                        with patch(
+                            "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                        ) as mock_fetch:
+                            mock_fetch.return_value = sample_time_series_data
 
-                        # Should fall back to Prophet
-                        assert result.model_source == "fallback"
-                        assert "not yet implemented" in result.model_selection_reason
+                            result = await generate_forecast(
+                                metric="ebitda",
+                                periods_ahead=4,
+                                use_model_selection=True,
+                            )
+
+                            # Should fall back to Prophet
+                            assert result.model_source == "fallback"
+                            assert "not yet implemented" in result.model_selection_reason
 
 
 # =============================================================================
@@ -202,21 +206,25 @@ class TestMetadataPopulation:
                     with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                         mock_explain.return_value = "Test explanation"
 
-                        result = await generate_forecast(
-                            metric="ebitda",
-                            historical_data=sample_time_series_data,
-                            periods_ahead=4,
-                            use_model_selection=True,
-                        )
+                        with patch(
+                            "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                        ) as mock_fetch:
+                            mock_fetch.return_value = sample_time_series_data
 
-                        # Reason should include the error details
-                        assert "arima" in result.model_selection_reason.lower()
-                        assert (
-                            "convergence" in result.model_selection_reason.lower()
-                            or "failure" in result.model_selection_reason.lower()
-                            or "fallback" in result.model_selection_reason.lower()
-                            or "failed" in result.model_selection_reason.lower()
-                        )
+                            result = await generate_forecast(
+                                metric="ebitda",
+                                periods_ahead=4,
+                                use_model_selection=True,
+                            )
+
+                            # Reason should include the error details
+                            assert "arima" in result.model_selection_reason.lower()
+                            assert (
+                                "convergence" in result.model_selection_reason.lower()
+                                or "failure" in result.model_selection_reason.lower()
+                                or "fallback" in result.model_selection_reason.lower()
+                                or "failed" in result.model_selection_reason.lower()
+                            )
 
     @pytest.mark.asyncio
     async def test_cached_model_preserves_reason_from_data_characteristics(
@@ -263,15 +271,19 @@ class TestMetadataPopulation:
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    result = await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
 
-                    # Should preserve exact rationale
-                    assert result.model_selection_reason == expected_rationale
+                        result = await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
+
+                        # Should preserve exact rationale
+                        assert result.model_selection_reason == expected_rationale
 
 
 # =============================================================================
@@ -319,23 +331,27 @@ class TestConcurrentRequests:
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    # Launch 5 concurrent forecasts
-                    tasks = [
-                        generate_forecast(
-                            metric="ebitda",
-                            historical_data=sample_time_series_data,
-                            periods_ahead=4,
-                            use_model_selection=True,
-                        )
-                        for _ in range(5)
-                    ]
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
 
-                    results = await asyncio.gather(*tasks)
+                        # Launch 5 concurrent forecasts
+                        tasks = [
+                            generate_forecast(
+                                metric="ebitda",
+                                periods_ahead=4,
+                                use_model_selection=True,
+                            )
+                            for _ in range(5)
+                        ]
 
-                    # All should succeed
-                    assert len(results) == 5
-                    for result in results:
-                        assert result.model_source == "cached"
+                        results = await asyncio.gather(*tasks)
+
+                        # All should succeed
+                        assert len(results) == 5
+                        for result in results:
+                            assert result.model_source == "cached"
 
 
 # =============================================================================
@@ -384,16 +400,20 @@ class TestLoggingAndObservability:
 
                     import logging
 
-                    with caplog.at_level(logging.INFO):
-                        await generate_forecast(
-                            metric="ebitda",
-                            historical_data=sample_time_series_data,
-                            periods_ahead=4,
-                            use_model_selection=True,
-                        )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
 
-                    # Verify logging occurred (implementation should log cache hit)
-                    assert len(caplog.records) > 0
+                        with caplog.at_level(logging.INFO):
+                            await generate_forecast(
+                                metric="ebitda",
+                                periods_ahead=4,
+                                use_model_selection=True,
+                            )
+
+                        # Verify logging occurred (implementation should log cache hit)
+                        assert len(caplog.records) > 0
 
     @pytest.mark.asyncio
     async def test_fallback_logs_warning_with_error(self, sample_time_series_data, caplog) -> None:
@@ -435,17 +455,21 @@ class TestLoggingAndObservability:
 
                         import logging
 
-                        with caplog.at_level(logging.WARNING):
-                            await generate_forecast(
-                                metric="ebitda",
-                                historical_data=sample_time_series_data,
-                                periods_ahead=4,
-                                use_model_selection=True,
-                            )
+                        with patch(
+                            "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                        ) as mock_fetch:
+                            mock_fetch.return_value = sample_time_series_data
 
-                        # Should have warning log
-                        assert any(
-                            "falling back" in record.message.lower()
-                            or "fallback" in record.message.lower()
-                            for record in caplog.records
-                        )
+                            with caplog.at_level(logging.WARNING):
+                                await generate_forecast(
+                                    metric="ebitda",
+                                    periods_ahead=4,
+                                    use_model_selection=True,
+                                )
+
+                            # Should have warning log
+                            assert any(
+                                "falling back" in record.message.lower()
+                                or "fallback" in record.message.lower()
+                                for record in caplog.records
+                            )

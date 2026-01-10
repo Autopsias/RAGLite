@@ -86,6 +86,12 @@ def mock_mistral_api_globally() -> Generator[None, None, None]:
     This resolves mock interference where test-specific function patches conflicted
     with session-level class patches, causing 145 test failures.
 
+    CRITICAL FIX (2026-01-10):
+    Added patch for raglite.agentic.agents.synthesis_methods.get_mistral_client
+    to prevent real Mistral API calls from synthesis tests (4 tests were failing
+    with "Status 401 Unauthorized" because synthesis_methods imports get_mistral_client
+    directly and wasn't patched).
+
     Patching at function level allows tests to:
     1. Completely override with their own get_mistral_client patches
     2. Use test-specific mock responses
@@ -104,9 +110,11 @@ def mock_mistral_api_globally() -> Generator[None, None, None]:
     with (
         patch("raglite.shared.clients.get_mistral_client") as mock_get_client,
         patch("raglite.ingestion.embedding_generation.get_mistral_client") as mock_emb,
+        patch("raglite.agentic.agents.synthesis_methods.get_mistral_client") as mock_synth,
     ):
         mock_get_client.return_value = mock_client_instance
         mock_emb.return_value = mock_client_instance
+        mock_synth.return_value = mock_client_instance
         yield
 
 
