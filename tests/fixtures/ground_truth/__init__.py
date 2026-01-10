@@ -9,6 +9,33 @@ Usage:
     >>> from tests.fixtures.ground_truth import GROUND_TRUTH_QA
     >>> questions = GROUND_TRUTH_QA[:15]  # Select subset for testing
 
+Structure:
+    Questions are organized by category and difficulty level in separate modules.
+    Each question is a GroundTruthQuestion TypedDict with the following fields:
+    - id: Unique question identifier
+    - question: The query text
+    - expected_answer: The expected response from the RAG system
+    - expected_keywords: Keywords that must appear in the answer
+    - source_document: Original PDF filename
+    - expected_page_number: Page where answer is located
+    - expected_section: Section name within document
+    - category: Category type (Cost Analysis, Margins, etc.)
+    - difficulty: Difficulty level (easy, medium, hard)
+
+How to Add New Questions:
+    To add new questions to the ground truth test set:
+    1. Choose the appropriate category file based on the question topic:
+       - cost_analysis.py: Cost Analysis questions
+       - financial_performance.py: Financial Performance questions
+       - margins.py: Margins questions
+       - operating_expenses.py: Operating Expenses questions
+       - safety_metrics.py: Safety Metrics questions
+       - workforce.py: Workforce questions
+    2. Add a new dict to the corresponding QUESTIONS list with all required fields
+    3. Use the next available ID number (check existing questions for highest ID)
+    4. Ensure the question is validated against the actual PDF content
+    5. Run tests to verify: pytest tests/e2e/test_ground_truth.py -v
+
 Source Document: 2025-08 Performance Review CONSO_v2.pdf (160 pages)
 Validation Method: Systematic PDF reading and keyword verification
 Categories: 6 (Cost Analysis, Margins, Financial Performance, Safety, Workforce, Operating Expenses)

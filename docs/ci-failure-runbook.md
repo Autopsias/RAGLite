@@ -18,6 +18,9 @@ Quick reference for diagnosing and resolving CI failures.
 | `APIConnectionError` | Missing mock | Check wrapper function mock | Patch at usage location |
 | `ATDD subprocess TimeoutError` | 180s timeout insufficient for subprocess | Increase to 300s timeout | Register marker, exclude from defaults |
 | `pytest.mark.atdd unregistered` | Marker not in pytest.ini | Add to `markers` section | Always register markers with --strict-markers |
+| `AttributeError` on mock target | Class name typo (ATIClient vs ATICClient) | Use `validate-mock-targets.py` script | Run validation before commit |
+| `ModuleNotFoundError` in test collection | Module renamed but imports not updated | `grep -r "old_name" .` + update all refs | Use module rename checklist |
+| `ATDD test file size violation` | Test file exceeds 500 LOC limit | Add exception to `.file-size-exceptions` or split file | Plan refactoring early |
 
 ---
 
@@ -238,6 +241,130 @@ pytest tests/ -m "not atdd" --collect-only | grep atdd | wc -l  # Should be 0
 - Run subprocess-heavy tests sequentially (`-n 0`) to avoid resource contention
 - Exclude subprocess tests from default runs to maintain fast feedback loop
 - Document timeout rationale in pytest.ini comments
+
+### 9. Mock Patch Target Name Mismatch
+
+#### Symptoms
+- `AttributeError: module 'X' has no attribute 'Y'` when running tests
+- Mock patch fails to locate target (e.g., `ATIClient` vs `ATICClient`)
+- Test passes locally but fails in CI (module import order issue)
+- Typo in class name not caught by static analysis
+
+#### Root Cause (Five Whys)
+1. Why? → Mock patch target spelled incorrectly (ATIClient vs ATICClient)
+2. Why? → Actual class definition has different spelling
+3. Why? → Manual typographical error during test authoring
+4. Why? → No validation of patch targets before test execution
+5. Why? → Static linters don't catch typos in string literals
+
+#### Solution
+- Use `validate-mock-targets.py` script to verify all mock patches before commit
+- Cross-reference patch string with actual class definition
+- Run validation in pre-commit hook or CI lint job
+- See `.claude/rules/module-rename-checklist.md` for verification process
+
+#### Verification
+```bash
+# Validate all mock patches in codebase
+python scripts/validate-mock-targets.py
+
+# For specific test file
+python scripts/validate-mock-targets.py tests/path/to/test_file.py
+
+# Check patch targets match class definitions
+grep -r "@patch" tests/ | grep "ATIClient"  # Find patches
+grep -r "class ATIClient\|class ATICClient" raglite/  # Find definitions
+```
+
+#### Prevention
+- Run `validate-mock-targets.py` before committing test changes
+- Use IDE "Find References" to verify patch targets exist
+- Add validation to CI lint job: `python scripts/validate-mock-targets.py --strict`
+- Review mock patches in code review (spelling matters)
+- Document actual class names in test docstrings
+
+### 10. Module Rename Not Propagated to All Imports
+
+#### Symptoms
+- `ModuleNotFoundError: No module named 'old_module_name'` during test collection
+- Test collection fails with import errors
+- Some files updated but old imports remain in others
+- CI fails on refactoring branches before merge
+
+#### Root Cause (Five Whys)
+1. Why? → Module renamed (e.g., `ingestion.py` → `ingestion_tool.py`)
+2. Why? → Some files updated with new name, but not all
+3. Why? → Manual refactoring didn't catch all import locations
+4. Why? → No validation that old module name is completely removed
+5. Why? → Test collection tries to import orphaned old references
+
+#### Solution
+- Use module rename checklist: `.claude/rules/module-rename-checklist.md`
+- Search for ALL references before finalizing rename
+- Validate with `pytest --collect-only` after each batch of updates
+- See step-by-step process in dedicated runbook
+
+#### Verification
+```bash
+# Find all references to old module name
+grep -r "from old_module_name import" .
+grep -r "import old_module_name" .
+grep -r "old_module_name\." . --include="*.py"
+
+# Verify test collection succeeds
+pytest --collect-only -q 2>&1 | grep -i "error\|ModuleNotFoundError"
+
+# Check no stale .pyc files reference old name
+find . -name "*.pyc" -delete
+find . -type d -name "__pycache__" -exec rm -rf {} +
+```
+
+#### Prevention
+- Follow `.claude/rules/module-rename-checklist.md` for all module renames
+- Use IDE refactoring tools (automatically updates imports)
+- Verify with `grep -r` before considering rename complete
+- Run `pytest --collect-only` to validate test discovery
+- Add validation step to PR checklist for refactoring PRs
+
+### 11. Test File Size Exceeds Limit
+
+#### Symptoms
+- `ATDD` test file exceeds 500 LOC hard limit
+- CI job fails on file size check
+- Pre-commit hook blocks commit with file size violation
+- `.file-size-exceptions` growing without refactoring
+
+#### Root Cause (Five Whys)
+1. Why? → Test file accumulated fixtures, helpers, and test cases
+2. Why? → Kept growing without intermediate splits
+3. Why? → Refactoring not prioritized during development
+4. Why? → No proactive enforcement until limit reached
+5. Why? → Exception process used instead of preventive refactoring
+
+#### Solution
+- Add file size exception to `.file-size-exceptions` with refactoring timeline
+- Plan module split (e.g., `test_foo.py` + `test_foo_helpers.py`)
+- Move reusable fixtures to `conftest.py` if appropriate
+- Use `split-test-file.py` script to guide refactoring
+
+#### Verification
+```bash
+# Check file sizes
+python scripts/check_file_sizes.py --verbose
+
+# Generate new baseline after refactoring
+python scripts/check_file_sizes.py --generate-baseline
+
+# Verify specific file
+wc -l tests/path/to/test_file.py
+```
+
+#### Prevention
+- Monitor file size proactively: `wc -l` before each commit
+- Split when approaching 400 LOC (not waiting for 500)
+- Include refactoring story when adding large test files
+- Use `.file-size-exceptions` for TEMPORARY exceptions with target dates
+- Review file size metrics in sprint retrospectives
 
 ---
 

@@ -252,7 +252,7 @@ def build_timeseries_query(
     final_select = _build_final_select(agg_func, month_translation)
 
     # nosec B608 - SQL query uses validated internal variables only, not user input
-    return f"""  # nosec
+    return f"""
         WITH {periods_cte},
         {entity_ctes},
         {latest_doc_cte}

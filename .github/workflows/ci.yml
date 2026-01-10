@@ -143,6 +143,37 @@ jobs:
           echo "Running security scan..."
           bandit -r raglite/ -ll -q -f txt --skip B608,B310
 
+      - name: Validate Mock Patch Targets
+        run: |
+          source ci-venv/bin/activate
+          echo "========================================="
+          echo "Validating mock patch targets exist"
+          echo "Prevents stale mocks after refactoring"
+          echo "========================================="
+          python scripts/validate-mock-targets.py --verbose
+          if [ $? -ne 0 ]; then
+            echo "FAIL: Invalid mock patch targets detected!"
+            echo "Run: python scripts/validate-mock-targets.py --fix-suggestions"
+            exit 1
+          fi
+          echo "Mock target validation passed"
+
+      - name: Validate Pytest Collection (Import Errors)
+        run: |
+          source ci-venv/bin/activate
+          echo "========================================="
+          echo "Validating pytest can collect all tests"
+          echo "Catches import errors before test execution"
+          echo "========================================="
+          pytest --collect-only -q tests/ 2>&1 | tee collection.log
+
+          # Check for collection errors
+          if grep -iE "ERROR|ModuleNotFoundError|ImportError" collection.log; then
+            echo "FAIL: Test collection errors detected!"
+            exit 1
+          fi
+          echo "Collection validation passed ($(grep -c 'test session starts' collection.log || echo '0') test sessions)"
+
       - name: Validate Pytest Fixtures
         run: |
           source ci-venv/bin/activate

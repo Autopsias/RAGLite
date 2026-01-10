@@ -130,6 +130,18 @@ MAIN BRANCH (Post-Merge Validation):
 - NEVER define dataclasses in large utility modules; use dedicated `models.py` files
 - ALWAYS use `TYPE_CHECKING` guards for cross-module type hints
 
+### Module Refactoring (Epic 8)
+- Follow `.claude/rules/module-rename-checklist.md` for ALL module renames
+- Verify patch targets exist: `python scripts/validate-mock-targets.py`
+- Run `pytest --collect-only` after import changes to catch ModuleNotFoundError
+- Search comprehensively for all references before finalizing renames
+
+### Test File Size Management
+- Monitor test file size before each commit: `wc -l tests/path/to/test_file.py`
+- Split files when approaching 400 LOC (before hitting 500 limit)
+- Use `.file-size-exceptions` for TEMPORARY exceptions only (with refactoring targets)
+- Move reusable fixtures to `conftest.py` to reduce duplication
+
 ## Global Environment Variables
 
 ### Strategic Configuration (Self-Hosted Runners)
@@ -269,3 +281,124 @@ def qdrant_client():
 - **Parallelism**: 80% tests running in parallel
 - **Coverage**: 90%+ code coverage
 - **Accuracy**: 95%+ retrieval accuracy
+
+---
+
+## Knowledge Extraction: CI Lessons Learned (Epic 8)
+
+### Failure Pattern: Mock Patch Target Name Mismatch
+
+**First Observed:** 2026-01-08 (Epic 8 technical debt reduction)
+**Frequency:** 1 incident during module cleanup refactoring
+**Impact:** Test failures, CI blockage, delayed merge
+
+#### Root Cause (Five Whys)
+1. Why? → Mock patch target string referenced wrong class name
+2. Why? → Used `@patch("module.ATIClient")` but class was `ATICClient`
+3. Why? → Manual typo during test authoring, not caught by linters
+4. Why? → String literals in patch decorators not validated
+5. Why? → No tool to validate patch targets before test execution
+
+#### Solution Implemented
+- Created `validate-mock-targets.py` script to verify patch targets
+- Script searches codebase for actual class definitions
+- Validates that patch string matches real class/function names
+- Can be integrated into pre-commit hooks or CI lint jobs
+
+#### Prevention Applied
+- Add mock validation to pre-commit hooks before merge
+- Include patch target validation in code review checklist
+- Document actual class names in test docstrings
+- Use IDE "Find References" during test authoring
+
+#### Related Documentation
+- Runbook: `docs/ci-failure-runbook.md` → Section 9
+- Prevention Tool: `scripts/validate-mock-targets.py`
+
+---
+
+### Failure Pattern: Module Rename Not Propagated to All Imports
+
+**First Observed:** 2026-01-08 (Epic 8 cleanup: `ingestion.py` → `ingestion_tool.py`)
+**Frequency:** 1 incident affecting 7+ files
+**Impact:** Test collection failures, CI blockage
+
+#### Root Cause (Five Whys)
+1. Why? → Module renamed manually without systematic search
+2. Why? → Some files updated with new import, others missed
+3. Why? → No validation that ALL references updated simultaneously
+4. Why? → Test collection encountered orphaned old imports
+5. Why? → Name collision wasn't fully resolved across codebase
+
+#### Solution Implemented
+- Created `.claude/rules/module-rename-checklist.md` with step-by-step process
+- Systematic grep-based search for ALL references before rename finalization
+- Validation after each batch of updates using `pytest --collect-only`
+- Clear rollback procedure if issues discovered mid-rename
+
+#### Prevention Applied
+- Use IDE refactoring tools for automatic import updates
+- Follow module rename checklist for future refactorings
+- Verify with `grep -r "old_name"` that all references removed
+- Run test collection validation before committing rename changes
+- Add "refactored module" checklist to PR template for Epic 8
+
+#### Related Documentation
+- Checklist: `.claude/rules/module-rename-checklist.md`
+- Runbook: `docs/ci-failure-runbook.md` → Section 10
+
+---
+
+### Failure Pattern: Test File Size Violations During Refactoring
+
+**First Observed:** 2026-01-08 (Epic 8: ATDD test files exceeded 500 LOC)
+**Frequency:** 4 test files affected
+**Impact:** CI file size check failures, blocking merges
+
+#### Root Cause (Five Whys)
+1. Why? → Test files accumulated fixtures and test cases over time
+2. Why? → Kept growing beyond 500 LOC without intermediate splits
+3. Why? → Refactoring not prioritized during feature development
+4. Why? → Hard limit enforcement triggered only when limit exceeded
+5. Why? → No proactive monitoring before reaching limit
+
+#### Solution Implemented
+- Added entries to `.file-size-exceptions` with refactoring target dates
+- File size limits are now TEMPORARY exceptions, not permanent waivers
+- Tracking mechanism to plan refactoring during future sprints
+- Baseline established for monitoring file growth trends
+
+#### Prevention Applied
+- Monitor file size before each commit: `wc -l tests/path/to/file.py`
+- Split files when approaching 400 LOC (not waiting for 500)
+- Include file size reduction in sprint planning
+- Use `.file-size-exceptions` as TEMPORARY measure only
+- Schedule refactoring stories when files cross 350 LOC threshold
+
+#### Related Documentation
+- Enforcement: `.claude/rules/file-size-limits.md`
+- Runbook: `docs/ci-failure-runbook.md` → Section 11
+- Script: `scripts/check_file_sizes.py`
+
+---
+
+## Refactoring Lessons (Epic 8 Summary)
+
+### What Worked Well
+1. **Incremental fixes** - Small commits made debugging easier
+2. **CI visibility** - GitHub Actions logs provided clear error messages
+3. **Validation scripts** - Grep-based searches caught orphaned references
+4. **Test collection validation** - `pytest --collect-only` caught import issues early
+
+### What Could Improve
+1. **Automation** - Mock patch validation should be in pre-commit hooks
+2. **IDE integration** - Module renames using IDE refactoring (not manual sed)
+3. **Proactive monitoring** - Check file sizes continuously, not at limit
+4. **Documentation** - Rename checklist should have been in place earlier
+
+### Recommendations for Future Epics
+1. Create "Refactoring Readiness" checklist before starting Epic 8
+2. Set up pre-commit hooks for mock validation and file size checking
+3. Use IDE refactoring tools for any module renames (automatic import updates)
+4. Establish "refactoring debt" tracking separate from feature work
+5. Include file size metrics in sprint retrospectives

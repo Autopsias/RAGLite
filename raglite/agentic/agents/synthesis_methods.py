@@ -228,10 +228,6 @@ async def _synthesize_with_openai(
 
     # Parse response using helper function
     response_text = response.choices[0].message.content if response.choices else None
-    if response_text is None:
-        answer = ""
-        reasoning_steps: list[str] = []
-    else:
-        answer, reasoning_steps = _parse_synthesis_response(response_text, "OpenAI")
+    answer, reasoning_steps = _parse_synthesis_response(response_text or "", "OpenAI")
 
     return answer, reasoning_steps, sources
