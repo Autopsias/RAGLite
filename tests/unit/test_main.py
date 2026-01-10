@@ -17,7 +17,7 @@ from raglite.main import (
 
 # Import modules (not functions) for reliable patch.object usage in CI
 # This avoids import-time binding issues with string-based patching
-from raglite.mcp.tools import ingestion as ingestion_module
+from raglite.mcp.tools import ingestion_tool as ingestion_module
 from raglite.mcp.tools import query as query_module
 from raglite.retrieval.multi_index_search import MultiIndexSearchError, SearchResult
 from raglite.retrieval.search import QueryError

@@ -165,6 +165,8 @@ pytest_plugins = [
     "tests.fixtures.mistral_mock_helpers",  # Mistral mock helper functions (must be before mock_clients)
     "tests.fixtures.mock_clients",  # Mock clients (includes autouse Mistral mock)
     "tests.fixtures.sample_data",  # Sample metadata and chunks
+    # Unit test fixtures
+    "tests.unit.fixtures.model_selection_fixtures",  # Model selection test fixtures
     # Integration fixtures (moved from tests/integration/conftest.py per pytest deprecation)
     "tests.integration.fixtures.session_state",
     "tests.integration.fixtures.service_checking",

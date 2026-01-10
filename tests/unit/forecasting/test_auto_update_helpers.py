@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from raglite.mcp.tools import ingestion as ingestion_module
+from raglite.mcp.tools import ingestion_tool as ingestion_module
 from raglite.shared.models import DocumentMetadata, ForecastRefreshResult, IngestionResult
 
 

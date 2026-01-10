@@ -24,7 +24,7 @@ from raglite.main import (
     DocumentProcessingError,
     ingest_financial_document_async,
 )
-from raglite.mcp.tools import ingestion as ingestion_module
+from raglite.mcp.tools import ingestion_tool as ingestion_module
 
 # =============================================================================
 # Test Fixtures
