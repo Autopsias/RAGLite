@@ -54,7 +54,7 @@ class TestHistoricalDataMigrationEdgeCases:
         from raglite.forecasting.hybrid.ensemble import generate_forecast
 
         with patch(
-            "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric"
+            "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
         ) as mock_fetch:
             # Mock returns None to simulate no data found
             mock_fetch.return_value = None
@@ -78,7 +78,7 @@ class TestHistoricalDataMigrationEdgeCases:
         mock_data.points = []  # Empty data
 
         with patch(
-            "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric",
+            "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric",
             return_value=mock_data,
         ):
             with pytest.raises((ValueError, AttributeError)) as exc_info:
@@ -104,7 +104,7 @@ class TestHistoricalDataMigrationEdgeCases:
         mock_data.points = [1.0, 2.0, float("nan"), 4.0, 5.0]
 
         with patch(
-            "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric",
+            "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric",
             return_value=mock_data,
         ):
             try:
@@ -127,7 +127,7 @@ class TestHistoricalDataMigrationEdgeCases:
         mock_data = {"not": "a series"}  # Wrong type
 
         with patch(
-            "raglite.forecasting.hybrid.preprocessing.fetch_historical_metric",
+            "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric",
             return_value=mock_data,
         ):
             with pytest.raises((AttributeError, TypeError, KeyError)) as exc_info:
