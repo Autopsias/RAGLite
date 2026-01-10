@@ -199,6 +199,7 @@ jobs:
           echo "========================================="
           echo "Running Fast Unit Tests (excludes integration)"
           echo "Excludes: slow, health_check, integration markers"
+          echo "Mode: Parallel (4 workers, default load distribution)"
           echo "========================================="
           pytest tests/ \
             -m "not slow and not health_check and not integration" \
@@ -206,7 +207,6 @@ jobs:
             -q \
             --timeout=120 \
             -n 4 \
-            --dist loadfile \
             --junitxml=test-results/junit.xml \
             2>&1 || exit_code=$?
 
