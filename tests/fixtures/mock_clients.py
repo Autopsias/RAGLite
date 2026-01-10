@@ -110,6 +110,47 @@ def mock_mistral_api_globally() -> Generator[None, None, None]:
         yield
 
 
+@pytest.fixture(scope="session", autouse=True)
+def mock_openai_api_globally() -> Generator[None, None, None]:
+    """Session-scoped autouse mock - BLOCKS ALL OpenAI API calls in entire test suite.
+
+    CRITICAL FIX (2026-01-10):
+    Prevents real OpenAI API calls during unit tests. Without this fixture, tests
+    that use synthesis_methods.py make real API calls, causing:
+    - ValueError: OPENAI_API_KEY environment variable not set
+    - openai.AuthenticationError: Incorrect API key provided
+
+    This fixture patches AsyncOpenAI at ALL import locations to ensure no real
+    API calls occur, even when tests run in parallel with pytest-xdist.
+
+    Technical Details:
+    - Patches AsyncOpenAI class at both definition and import locations
+    - Returns a MagicMock that simulates successful API responses
+    - Session-scoped ensures patch persists across entire test session
+    - autouse=True ensures protection even if tests don't explicitly request mock
+    """
+    # Create mock response structure matching OpenAI API
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock()]
+    mock_response.choices[0].message.content = "Mocked OpenAI response for testing"
+
+    # Create mock client that returns async responses
+    mock_client_instance = MagicMock()
+    mock_client_instance.chat.completions.create = AsyncMock(return_value=mock_response)
+
+    # Create mock class that returns the mock instance
+    mock_openai_class = MagicMock(return_value=mock_client_instance)
+
+    # Patch ALL import locations where AsyncOpenAI is used
+    with (
+        patch("openai.AsyncOpenAI", mock_openai_class),
+        patch("raglite.agentic.agents.synthesis_methods.AsyncOpenAI", mock_openai_class),
+        patch("raglite.agentic.agents.synthesis_agent.AsyncOpenAI", mock_openai_class),
+    ):
+        logger.info("[AUTOUSE] OpenAI API globally mocked for test session")
+        yield
+
+
 @pytest.fixture
 def mock_mistral_client() -> Generator[tuple[MagicMock, MagicMock], None, None]:
     """Mock Mistral API client for SQL generation tests.

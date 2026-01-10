@@ -138,6 +138,11 @@ os.environ["POSTGRES_PASSWORD"] = "raglite_ci"
 # This dummy key prevents ValueError in unit tests while the autouse mock handles actual API calls.
 os.environ.setdefault("MISTRAL_API_KEY", "test-mistral-api-key-for-ci")
 
+# CRITICAL FIX (2026-01-10): Set dummy OPENAI_API_KEY for unit tests
+# Similar to MISTRAL_API_KEY fix - prevents ValueError during module import
+# before the mock_openai_api_globally fixture can patch the AsyncOpenAI class.
+os.environ.setdefault("OPENAI_API_KEY", "test-openai-api-key-for-ci")
+
 import logging
 import time
 
