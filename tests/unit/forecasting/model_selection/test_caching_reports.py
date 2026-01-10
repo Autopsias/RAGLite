@@ -49,6 +49,7 @@ class TestCacheResults:
     async def test_cache_called_for_each_result(self) -> None:
         """[P0][TEST-AC-7b.5.5.1] cache_model_selection called for each successful result."""
         import pandas as pd
+
         from raglite.forecasting.model_selection_job import run_batch_model_selection
 
         mock_result = MagicMock()
