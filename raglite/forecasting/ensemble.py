@@ -115,9 +115,12 @@ def _fit_and_forecast_catboost(
     fast_mode: bool = False,
 ) -> dict[str, Any]:
     """Wrapper for CatBoost forecasting - imports from hybrid module."""
-    from raglite.forecasting.hybrid import _fit_and_forecast_catboost as catboost_impl
+    from raglite.forecasting.hybrid.ml_models_utils import (
+        fit_and_forecast_catboost as catboost_impl,
+    )
 
-    return catboost_impl(X, y, X_future, periods_ahead, fast_mode)
+    result: dict[str, Any] = catboost_impl(X, y, X_future, periods_ahead, fast_mode)
+    return result
 
 
 async def explain_forecast(result: ForecastResult, context: str) -> str:

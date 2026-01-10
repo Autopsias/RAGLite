@@ -43,6 +43,8 @@ Set `prefer_accuracy=True` when the user indicates they want:
 - Returns clear error message if insufficient data
 """
 
+from typing import Any
+
 from raglite.main import mcp
 from raglite.mcp.tools.forecast_helpers import (
     build_enhanced_basis,
@@ -65,9 +67,9 @@ logger = get_logger(__name__)
 async def _fetch_regressors_if_requested(
     request: ForecastQueryRequest,
     metric: str,
-    historical_data,
+    historical_data: Any,
     periods_ahead: int,
-) -> tuple:
+) -> tuple[Any, list[str]]:
     """Fetch external regressors if requested in the query.
 
     Args:
@@ -90,12 +92,12 @@ async def _fetch_regressors_if_requested(
 async def _generate_forecast_with_model_selection(
     requested_model_type: str,
     metric: str,
-    historical_data,
+    historical_data: Any,
     periods_ahead: int,
     request: ForecastQueryRequest,
-    external_regressors,
+    external_regressors: Any,
     regressors_used: list[str],
-) -> tuple:
+) -> tuple[Any, str, str, str, list[str]]:
     """Generate forecast using appropriate model selection strategy.
 
     Args:
@@ -163,8 +165,8 @@ async def _generate_forecast_with_model_selection(
 
 
 def _build_forecast_response(
-    forecast_result,
-    historical_data,
+    forecast_result: Any,
+    historical_data: Any,
     actual_model_type: str,
     model_desc: str,
     model_selection_reason: str,

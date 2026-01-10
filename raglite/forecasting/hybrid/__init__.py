@@ -27,9 +27,9 @@ from raglite.forecasting.hybrid.lazy_imports import (
     _sklearn_executor,
 )
 from raglite.forecasting.hybrid.ml_models import (
-    _fit_and_forecast_catboost,
     _fit_and_forecast_linear,
     _run_linear_forecast,
+    fit_and_forecast_catboost,
     fit_catboost,
     fit_lasso_regression,
     fit_linear_regression,
@@ -135,7 +135,7 @@ __all__ = [
     "_generate_tft_forecast",
     "_generate_linear_forecast",
     "_generate_future_regressors",
-    "_fit_and_forecast_catboost",
+    "fit_and_forecast_catboost",
     "_fit_and_forecast_linear",
     "_run_linear_forecast",
     "_run_xgboost_forecast",

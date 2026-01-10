@@ -115,7 +115,8 @@ def _extract_ocds_items(ocds_data: dict | list) -> list:
         List of OCDS items (releases or records)
     """
     if isinstance(ocds_data, dict):
-        return ocds_data.get("releases", ocds_data.get("records", []))
+        releases_or_records: list = ocds_data.get("releases", ocds_data.get("records", []))
+        return releases_or_records
     return ocds_data if isinstance(ocds_data, list) else []
 
 
@@ -151,7 +152,8 @@ def _extract_ocds_cpv(tender: dict) -> str | None:
     tender_items = tender.get("items", [])
     if tender_items:
         classification = tender_items[0].get("classification", {})
-        return classification.get("id", "")
+        cpv_id: str | None = classification.get("id")
+        return cpv_id if cpv_id else None
     return None
 
 
@@ -167,10 +169,13 @@ def _extract_ocds_value(contracts_list: list, awards: list, tender: dict) -> flo
         Contract value in EUR
     """
     if contracts_list:
-        return contracts_list[0].get("value", {}).get("amount", 0)
+        amount: int | float = contracts_list[0].get("value", {}).get("amount", 0)
+        return float(amount)
     if awards:
-        return awards[0].get("value", {}).get("amount", 0)
-    return tender.get("value", {}).get("amount", 0)
+        amount2: int | float = awards[0].get("value", {}).get("amount", 0)
+        return float(amount2)
+    amount3: int | float = tender.get("value", {}).get("amount", 0)
+    return float(amount3)
 
 
 def _extract_ocds_parties(parties: list) -> tuple[str, str]:

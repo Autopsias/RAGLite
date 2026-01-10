@@ -20,11 +20,11 @@ if TYPE_CHECKING:
     from catboost import CatBoostRegressor
 
 from raglite.forecasting.hybrid.ml_models_utils import (
-    _fit_and_forecast_catboost,
     _fit_and_forecast_linear,
     _run_linear_forecast,
     calculate_catboost_mape,
     create_catboost_grid_search,
+    fit_and_forecast_catboost,
     fit_lasso_regression,
     fit_linear_regression,
     fit_ridge_regression,
@@ -111,7 +111,7 @@ __all__ = [
     "fit_ridge_regression",
     "fit_lasso_regression",
     "fit_catboost",
-    "_fit_and_forecast_catboost",
+    "fit_and_forecast_catboost",
     "_fit_and_forecast_linear",
     "_run_linear_forecast",
     "CATBOOST_PARAM_GRID",

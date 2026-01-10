@@ -1,6 +1,7 @@
 """Insights MCP tools."""
 
 import time
+from typing import Any
 
 from raglite.main import mcp
 from raglite.mcp.tools.insights_helpers import (
@@ -217,9 +218,9 @@ async def _generate_recommendations_if_requested(
 
 
 def _create_success_response(
-    filtered_insights: list,
+    filtered_insights: list[Any],
     recommendations: list[Recommendation],
-    insight_result,
+    insight_result: Any,
     total_recommendations: int,
     source_documents: list[str],
     time_period: str | None,

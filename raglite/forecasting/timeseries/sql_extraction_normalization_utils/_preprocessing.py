@@ -2,15 +2,22 @@
 
 from __future__ import annotations
 
+import sys
 from collections import defaultdict
 from datetime import datetime
+from pathlib import Path
 
-from raglite.shared.models import TimeSeriesPoint
+# Add parent directory to path to import sibling module
+_parent_dir = Path(__file__).resolve().parent.parent
+if str(_parent_dir) not in sys.path:
+    sys.path.insert(0, str(_parent_dir))
 
-from ..sql_extraction_normalization_utils import (
+from sql_extraction_normalization_utils import (  # noqa: E402
     filter_year_end_only_points,
     interpolate_missing_months,
 )
+
+from raglite.shared.models import TimeSeriesPoint  # noqa: E402
 
 
 def deduplicate_points(points: list[TimeSeriesPoint], metric: str) -> list[TimeSeriesPoint]:

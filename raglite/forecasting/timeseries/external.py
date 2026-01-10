@@ -4,7 +4,7 @@ Part of Story 8.1 refactoring to split timeseries_extract.py.
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from raglite.forecasting.regressor_fetch import fetch_single_regressor
 from raglite.shared.logging import get_logger
@@ -26,10 +26,10 @@ EXTERNAL_SOURCE_MAPPINGS: dict[str, tuple[str, str]] = {
 
 
 def _query_external_data_points(
-    cursor,
+    cursor: Any,
     source_name: str,
     metric_name: str,
-) -> list[tuple]:
+) -> list[tuple[Any, ...]]:
     """Query external data points from PostgreSQL.
 
     Args:
@@ -51,7 +51,8 @@ def _query_external_data_points(
     """
 
     cursor.execute(query, (source_name, metric_name))
-    return cursor.fetchall()
+    rows: list[tuple[Any, ...]] = cursor.fetchall()
+    return rows
 
 
 def _rows_to_timeseries_points(

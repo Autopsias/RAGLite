@@ -200,7 +200,7 @@ def _calculate_page_metrics(result: Any, pdf_path: Path) -> tuple[int, int, int]
     Returns:
         Tuple of (page_count, total_elements, elements_with_pages)
     """
-    page_count = result.document.num_pages()  # type: ignore[attr-defined]
+    page_count = result.document.num_pages()
 
     # Count elements with provenance data for metrics
     total_elements = 0
