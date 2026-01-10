@@ -191,7 +191,7 @@ result = await generate_ensemble_forecast(...)
 patch("raglite.ingestion.document_ingestion.core.ingest_pdf")
 
 # CORRECT - patch where function is imported/used
-patch("raglite.mcp.tools.ingestion.ingest_pdf")
+patch("raglite.mcp.tools.ingestion_tool.ingest_pdf")
 ```
 
 ### 3. Check Function Signatures After Refactoring

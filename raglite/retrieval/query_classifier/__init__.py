@@ -17,7 +17,7 @@ Research Validation:
     - Expected accuracy gain: +20-25% over baseline semantic search
 """
 
-from raglite.retrieval.query_classifier.classification import (
+from raglite.retrieval.query_classifier.query_classification import (
     METRIC_SYNONYMS,
     QueryType,
     classify_query,

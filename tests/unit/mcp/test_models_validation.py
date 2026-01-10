@@ -310,7 +310,7 @@ class TestModuleBoundaries:
         When inspecting public functions
         Then only ingestion tools should be exported
         """
-        import raglite.mcp.tools.ingestion as ingestion_module
+        import raglite.mcp.tools.ingestion_tool as ingestion_module
 
         # Should have ingestion tools
         assert hasattr(ingestion_module, "ingest_financial_document")

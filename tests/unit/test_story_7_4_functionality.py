@@ -180,7 +180,7 @@ class TestAC4BackwardCompatibility:
         Then at least some tools should be importable
         """
         from raglite.mcp.tools.health import check_database_health
-        from raglite.mcp.tools.ingestion import ingest_financial_document
+        from raglite.mcp.tools.ingestion_tool import ingest_financial_document
         from raglite.mcp.tools.query import query_financial_documents
 
         assert ingest_financial_document is not None

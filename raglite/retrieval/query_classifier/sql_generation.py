@@ -9,7 +9,7 @@ import time
 from typing import Any
 
 from raglite.retrieval.period_normalizer import detect_period_in_query, normalize_period
-from raglite.retrieval.query_classifier.classification import (
+from raglite.retrieval.query_classifier.query_classification import (
     expand_metric_synonyms,
     get_metric_ilike_pattern,
 )

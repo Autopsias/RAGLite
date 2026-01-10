@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from docling_core.types.doc import TableItem
 
 from raglite.ingestion.adaptive_table.core import extract_page_context, get_table_caption
-from raglite.ingestion.adaptive_table.unit_inference.async_batch.helpers import (
+from raglite.ingestion.adaptive_table.unit_inference.async_batch.async_helpers import (
     _execute_batch_inference,
     _log_inference_statistics,
     _prepare_rows_for_inference,

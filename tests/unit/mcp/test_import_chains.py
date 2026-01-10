@@ -77,18 +77,18 @@ class TestImportChains:
             external_data,
             forecast,
             health,
-            ingestion,
             insights,
             query,
             validation,
         )
+        from raglite.mcp.tools import ingestion_tool
 
         # All modules should import successfully
         assert admin is not None
         assert external_data is not None
         assert forecast is not None
         assert health is not None
-        assert ingestion is not None
+        assert ingestion_tool is not None
         assert insights is not None
         assert query is not None
         assert validation is not None
@@ -132,11 +132,11 @@ class TestImportChains:
     def test_document_processing_error_importable_from_ingestion(self):
         """Test DocumentProcessingError can also be imported from ingestion module.
 
-        Given DocumentProcessingError is defined in ingestion.py
-        When importing from raglite.mcp.tools.ingestion
+        Given DocumentProcessingError is defined in ingestion_tool.py
+        When importing from raglite.mcp.tools.ingestion_tool
         Then it should be available directly
         """
-        from raglite.mcp.tools.ingestion import DocumentProcessingError
+        from raglite.mcp.tools.ingestion_tool import DocumentProcessingError
 
         assert DocumentProcessingError is not None
         assert issubclass(DocumentProcessingError, Exception)
@@ -182,7 +182,7 @@ class TestErrorHandling:
         When calling ingest_financial_document
         Then DocumentProcessingError should be raised
         """
-        from raglite.mcp.tools.ingestion import ingest_financial_document
+        from raglite.mcp.tools.ingestion_tool import ingest_financial_document
 
         # Test multiple inputs (doc_path + file_content)
         with pytest.raises(Exception) as exc_info:
@@ -203,7 +203,7 @@ class TestErrorHandling:
         When calling ingest_financial_document
         Then DocumentProcessingError should be raised
         """
-        from raglite.mcp.tools.ingestion import ingest_financial_document
+        from raglite.mcp.tools.ingestion_tool import ingest_financial_document
 
         with pytest.raises(Exception) as exc_info:
             await ingest_financial_document.fn(file_content="base64data")
@@ -219,7 +219,7 @@ class TestErrorHandling:
         When calling ingest_financial_document
         Then DocumentProcessingError should be raised
         """
-        from raglite.mcp.tools.ingestion import ingest_financial_document
+        from raglite.mcp.tools.ingestion_tool import ingest_financial_document
 
         with pytest.raises(Exception) as exc_info:
             await ingest_financial_document.fn()
@@ -308,18 +308,18 @@ class TestFutureProofing:
             external_data,
             forecast,
             health,
-            ingestion,
             insights,
             query,
             validation,
         )
+        from raglite.mcp.tools import ingestion_tool
 
         modules = [
             admin,
             external_data,
             forecast,
             health,
-            ingestion,
+            ingestion_tool,
             insights,
             query,
             validation,
