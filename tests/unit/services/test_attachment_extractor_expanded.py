@@ -15,6 +15,9 @@ import pytest
 
 from raglite.ingestion.document_ingestion import ingest_pdf
 
+# Group attachment extractor tests that share mocked PDF state to run on same worker
+pytestmark = pytest.mark.xdist_group(name="pdf_ingestion")
+
 
 class TestAttachmentExtractorExpanded:
     """Test suite for attachment extractor expanded functionality."""

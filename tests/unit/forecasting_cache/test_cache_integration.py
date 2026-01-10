@@ -13,6 +13,9 @@ from raglite.forecasting import regressor_fetch as regressor_fetch_module
 from raglite.mcp.tools import forecast_helpers as forecast_helpers_module
 from raglite.shared.models import ForecastQueryRequest, ForecastResult, TimeSeriesData
 
+# Group cache integration tests that share mocked state to run on same worker
+pytestmark = pytest.mark.xdist_group(name="model_cache")
+
 
 class TestModelSelectionCacheIntegration:
     """Tests for model selection cache integration in MCP tool."""

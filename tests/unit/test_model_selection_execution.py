@@ -19,8 +19,8 @@ import pytest
 if TYPE_CHECKING:
     pass
 
-# Mark all tests in this module as unit tests
-pytestmark = [pytest.mark.unit]
+# Group model selection execution tests that share mocked state to run on same worker
+pytestmark = [pytest.mark.unit, pytest.mark.xdist_group(name="model_selection_execution")]
 
 
 class TestRunSingleVariableSelection:

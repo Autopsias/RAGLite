@@ -11,7 +11,8 @@ import pytest
 from raglite.retrieval.search import fuse_search_results, hybrid_search
 from raglite.shared.models import QueryResult
 
-pytestmark = [pytest.mark.unit]
+# Group hybrid search tests that share mocked state to run on same worker
+pytestmark = [pytest.mark.unit, pytest.mark.xdist_group(name="search_retrieval")]
 
 
 class TestScoreFusion:

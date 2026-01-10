@@ -18,7 +18,12 @@ from raglite.ingestion.document_ingestion.temp_files import (
     temp_file_from_url,
 )
 
-pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
+# Group module integration tests that share mocked state to run on same worker
+pytestmark = [
+    pytest.mark.unit,
+    pytest.mark.asyncio,
+    pytest.mark.xdist_group(name="ingestion_integration"),
+]
 
 
 class TestTempFilesAndPDFProcessingIntegration:

@@ -16,6 +16,9 @@ from raglite.ingestion.pipeline import (
 from raglite.shared.clients import get_qdrant_client
 from raglite.shared.models import Chunk, DocumentMetadata
 
+# Group tests that modify Qdrant singleton state to run on same worker
+pytestmark = pytest.mark.xdist_group(name="qdrant_singleton")
+
 
 class TestQdrantStorage:
     """Test suite for Qdrant vector storage (Story 1.6)."""

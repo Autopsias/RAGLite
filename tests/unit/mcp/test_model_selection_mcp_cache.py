@@ -12,6 +12,9 @@ import pytest
 from raglite.mcp.tools import forecast_helpers as forecast_helpers_module
 from raglite.shared.models import ForecastQueryRequest
 
+# Group cache tests that share mocked state to run on same worker
+pytestmark = pytest.mark.xdist_group(name="model_cache")
+
 # =============================================================================
 # Test CachedModelSelection
 # =============================================================================

@@ -17,7 +17,8 @@ from raglite.shared.models import (
     RecommendationResult,
 )
 
-pytestmark = [pytest.mark.unit]
+# Group recommendation tests that share mocked state to run on same worker
+pytestmark = [pytest.mark.unit, pytest.mark.xdist_group(name="recommendations")]
 
 # =============================================================================
 # Test Data Fixtures

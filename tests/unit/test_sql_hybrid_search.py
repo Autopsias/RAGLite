@@ -17,6 +17,9 @@ import pytest
 
 from raglite.retrieval.query_classifier import generate_sql_query
 
+# Group SQL hybrid search tests that share mocked Mistral state to run on same worker
+pytestmark = pytest.mark.xdist_group(name="sql_hybrid_search")
+
 # =============================================================================
 # LITERAL SQL RETRIEVAL TESTS (AC0-AC2 scope)
 # =============================================================================

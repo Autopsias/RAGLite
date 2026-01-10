@@ -14,6 +14,9 @@ from raglite.shared.models import (
     TimeSeriesData,
 )
 
+# Group forecast query tool tests that share mocked state to run on same worker
+pytestmark = pytest.mark.xdist_group(name="forecast_query")
+
 # =============================================================================
 # Fixtures
 # =============================================================================

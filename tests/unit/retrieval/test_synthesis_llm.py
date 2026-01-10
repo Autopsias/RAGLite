@@ -13,6 +13,9 @@ from raglite.agentic.agents.synthesis_agent import synthesis_agent
 from raglite.agentic.agents.synthesis_methods import _synthesize_with_openai
 from raglite.agentic.state import SynthesisResult
 
+# Group synthesis LLM tests that share mocked OpenAI state to run on same worker
+pytestmark = pytest.mark.xdist_group(name="synthesis_llm")
+
 
 class TestOpenAISynthesis:
     """Test OpenAI GPT-4o-powered synthesis."""

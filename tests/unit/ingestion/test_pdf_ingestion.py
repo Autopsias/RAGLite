@@ -14,7 +14,8 @@ from raglite.ingestion.pipeline import (
 )
 from raglite.shared.models import DocumentMetadata
 
-pytestmark = [pytest.mark.unit]
+# Group PDF ingestion tests that share mocked Docling/embedding state to run on same worker
+pytestmark = [pytest.mark.unit, pytest.mark.xdist_group(name="pdf_ingestion")]
 
 
 class TestIngestPDF:

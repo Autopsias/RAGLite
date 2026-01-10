@@ -17,6 +17,9 @@ from tests.unit.pdf_ingestion_helpers import (
     create_standard_docling_patches,
 )
 
+# Group PDF ingestion tests that share mocked Docling/Qdrant state to run on same worker
+pytestmark = pytest.mark.xdist_group(name="pdf_ingestion")
+
 
 class TestIngestPDF:
     """Test suite for PDF ingestion pipeline."""

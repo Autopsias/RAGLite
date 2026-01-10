@@ -14,7 +14,8 @@ from raglite.ingestion.pipeline import (
 )
 from raglite.shared.models import DocumentMetadata
 
-pytestmark = [pytest.mark.unit]
+# Group Excel processing tests that share mocked openpyxl state to run on same worker
+pytestmark = [pytest.mark.unit, pytest.mark.xdist_group(name="excel_ingestion")]
 
 
 class TestExtractExcel:

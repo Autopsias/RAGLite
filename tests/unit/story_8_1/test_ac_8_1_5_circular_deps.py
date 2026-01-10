@@ -15,6 +15,11 @@ IMPORTANT (Epic 8 Safety):
 import subprocess
 import sys
 
+import pytest
+
+# Group circular dependency tests that run subprocesses to run on same worker
+pytestmark = pytest.mark.xdist_group(name="circular_deps")
+
 
 class TestAC8_1_5_NoCircularDependencies:
     """AC-8.1.5: No circular dependencies between modules."""

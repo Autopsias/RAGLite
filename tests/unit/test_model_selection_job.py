@@ -30,6 +30,8 @@ Priority levels:
 
 from __future__ import annotations
 
+import pytest
+
 # Import all test classes from API tests
 from tests.unit.test_model_selection_api import (
     TestCandidateModelsImport,
@@ -89,3 +91,6 @@ __all__ = [
     "TestEdgeCases",
     "TestRuntimePerformance",
 ]
+
+# Group model selection job tests that share mocked state to run on same worker
+pytestmark = pytest.mark.xdist_group(name="model_selection_execution")

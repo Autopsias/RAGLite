@@ -16,7 +16,8 @@ from raglite.ingestion.pipeline import (
 from raglite.shared.clients import get_embedding_model
 from raglite.shared.models import Chunk, DocumentMetadata
 
-pytestmark = [pytest.mark.unit]
+# Group tests that modify embedding singleton state to run on same worker
+pytestmark = [pytest.mark.unit, pytest.mark.xdist_group(name="embedding_singleton")]
 
 
 class TestGenerateEmbeddings:

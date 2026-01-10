@@ -10,7 +10,8 @@ import pytest
 from raglite.retrieval.search import QueryError, search_documents
 from raglite.shared.models import QueryResult
 
-pytestmark = [pytest.mark.unit]
+# Group search tests that share mocked Qdrant/embedding state to run on same worker
+pytestmark = [pytest.mark.unit, pytest.mark.xdist_group(name="search_retrieval")]
 
 
 class TestSearchDocuments:

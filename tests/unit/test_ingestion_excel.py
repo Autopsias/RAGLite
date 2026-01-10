@@ -12,6 +12,9 @@ import pytest
 from raglite.ingestion.pipeline import extract_excel
 from raglite.shared.models import DocumentMetadata
 
+# Group Excel ingestion tests that share mocked openpyxl state to run on same worker
+pytestmark = pytest.mark.xdist_group(name="excel_ingestion")
+
 
 class TestExtractExcel:
     """Test suite for Excel extraction pipeline."""

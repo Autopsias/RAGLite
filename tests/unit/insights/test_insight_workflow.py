@@ -17,7 +17,8 @@ from raglite.shared.models import (
     TrendDirection,
 )
 
-pytestmark = [pytest.mark.unit]
+# Group insight tests that share mocked state to run on same worker
+pytestmark = [pytest.mark.unit, pytest.mark.xdist_group(name="insights_workflow")]
 
 
 # =============================================================================

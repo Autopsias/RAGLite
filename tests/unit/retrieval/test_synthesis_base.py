@@ -16,6 +16,9 @@ from raglite.agentic.agents.synthesis_utils import (
     _synthesize_simple,
 )
 
+# Group synthesis tests that share mocked Mistral client to run on same worker
+pytestmark = pytest.mark.xdist_group(name="synthesis_tests")
+
 
 class TestSimpleSynthesis:
     """Test simple synthesis without LLM (no API key required)."""
