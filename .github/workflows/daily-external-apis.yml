@@ -1,0 +1,71 @@
+# Daily External API Tests
+# Runs external data API tests separately from main CI to avoid flakiness
+# External APIs (ECB, Eurostat, INE) can be slow/rate-limited/unavailable
+
+name: Daily External API Tests
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # 6 AM UTC daily
+  workflow_dispatch:
+    inputs:
+      skip_rate_limited:
+        description: 'Skip rate-limited tests (ECB, Eurostat)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  APP_ENV: test
+  CI: "true"
+  PYTHONDONTWRITEBYTECODE: "1"
+
+jobs:
+  external-api-tests:
+    name: "🌐 External API Validation"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup UV
+        uses: ./.github/actions/setup-uv
+
+      - name: Setup Python + UV
+        run: |
+          uv venv ci-venv --python 3.11 --quiet 2>/dev/null || uv venv ci-venv --quiet
+          source ci-venv/bin/activate
+          uv pip install -e ".[dev]" --quiet
+
+      - name: Run External API Tests
+        run: |
+          source ci-venv/bin/activate
+          echo "========================================="
+          echo "Running External API Tests"
+          echo "APIs: ECB, Eurostat, INE, BPstat"
+          echo "Note: These tests hit live APIs (may be slow)"
+          echo "========================================="
+
+          # Run external data tests with longer timeout
+          pytest tests/integration/external_data/ \
+            tests/integration/external_data_mcp/ \
+            -m "external_api or integration" \
+            --timeout=300 \
+            -v \
+            --tb=short \
+            --junitxml=test-results/external-api-junit.xml \
+            2>&1 || exit_code=$?
+
+          exit ${exit_code:-0}
+
+      - name: Upload Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: external-api-test-results
+          path: test-results/
+          retention-days: 7

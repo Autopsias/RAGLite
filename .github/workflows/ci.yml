@@ -358,6 +358,18 @@ jobs:
 
           echo "=== Container health verification complete ==="
 
+      - name: Check Available Memory
+        run: |
+          echo "=== Memory Check Before Integration Tests ==="
+          vm_stat | head -5
+          # Warn if <4GB available (macOS)
+          FREE_PAGES=$(vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.')
+          FREE_MB=$((FREE_PAGES * 4096 / 1024 / 1024))
+          echo "Approx free memory: ${FREE_MB}MB"
+          if [ "$FREE_MB" -lt 4000 ]; then
+            echo "WARNING: Low memory detected (<4GB free). OOM risk with parallel tests."
+          fi
+
       - name: Run Integration Tests
         env:
           PYTHONPATH: ${{ github.workspace }}
@@ -367,7 +379,8 @@ jobs:
           echo "========================================="
           echo "Running Integration Tests (~1000 tests)"
           echo "Mode: Parallel with xdist_group isolation"
-          echo "Workers: 4 (embedding tests grouped on single worker)"
+          echo "Workers: 2 (reduced from 4 to prevent OOM)"
+          echo "Memory: ~6GB (2 workers × 3GB each)"
           echo "Qdrant: localhost:${QDRANT_PORT}"
           echo "PostgreSQL: localhost:${POSTGRES_PORT}"
           echo "========================================="
@@ -375,7 +388,7 @@ jobs:
             -m "not health_check" \
             --tb=short \
             -v \
-            -n 4 \
+            -n 2 \
             --dist loadgroup \
             --timeout=300 \
             --junitxml=test-results/integration-junit.xml \

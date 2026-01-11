@@ -157,6 +157,8 @@ class TestAccuracyGate:
         print("Real accuracy validation requires actual ATIC consumption data.")
 
     @pytest.mark.slow
+    @pytest.mark.memory_heavy
+    @pytest.mark.timeout(180)  # 3 min max to prevent runaway execution
     @pytest.mark.asyncio
     async def test_ensemble_executes_successfully(
         self,
@@ -201,6 +203,8 @@ class TestAccuracyGate:
         print(f"\nSynthetic regressor MAPE: {mape:.1%} (informational only)")
 
     @pytest.mark.slow
+    @pytest.mark.memory_heavy
+    @pytest.mark.timeout(300)  # 5 min max - runs both baseline and ensemble
     @pytest.mark.asyncio
     async def test_ensemble_models_all_execute(
         self,
