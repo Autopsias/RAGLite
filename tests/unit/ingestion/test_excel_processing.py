@@ -75,16 +75,17 @@ class TestExtractExcel:
         mock_collection_info.points_count = 3
         mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
 
+        # CRITICAL: Patch at USAGE location (module-level imports in excel_processing.py)
         with (
             patch("openpyxl.load_workbook") as mock_load,
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
-                "raglite.ingestion.storage.store_metadata_in_postgresql",
+                "raglite.ingestion.document_ingestion.excel_processing.store_metadata_in_postgresql",
                 return_value=(3, 0),
             ),
             patch(
-                "raglite.ingestion.storage.store_vectors_in_qdrant",
-                return_value=None,
+                "raglite.ingestion.document_ingestion.excel_processing.store_vectors_in_qdrant",
+                return_value=3,
             ),
         ):
             mock_load.return_value = mock_workbook
@@ -146,20 +147,17 @@ class TestExtractExcel:
         mock_collection_info.points_count = 3
         mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
 
+        # CRITICAL: Patch at USAGE location (module-level imports in excel_processing.py)
         with (
             patch("openpyxl.load_workbook") as mock_load,
-            patch(
-                "raglite.ingestion.storage.vector_store.get_qdrant_client",
-                return_value=mock_qdrant_client,
-            ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
-                "raglite.ingestion.storage.store_metadata_in_postgresql",
+                "raglite.ingestion.document_ingestion.excel_processing.store_metadata_in_postgresql",
                 return_value=(3, 0),
             ),
             patch(
-                "raglite.ingestion.storage.store_vectors_in_qdrant",
-                return_value=None,
+                "raglite.ingestion.document_ingestion.excel_processing.store_vectors_in_qdrant",
+                return_value=3,
             ),
         ):
             mock_load.return_value = mock_workbook
@@ -205,20 +203,17 @@ class TestExtractExcel:
         mock_collection_info.points_count = 1
         mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
 
+        # CRITICAL: Patch at USAGE location (module-level imports in excel_processing.py)
         with (
             patch("openpyxl.load_workbook") as mock_load,
-            patch(
-                "raglite.ingestion.storage.vector_store.get_qdrant_client",
-                return_value=mock_qdrant_client,
-            ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
-                "raglite.ingestion.storage.store_metadata_in_postgresql",
+                "raglite.ingestion.document_ingestion.excel_processing.store_metadata_in_postgresql",
                 return_value=(1, 0),
             ),
             patch(
-                "raglite.ingestion.storage.store_vectors_in_qdrant",
-                return_value=None,
+                "raglite.ingestion.document_ingestion.excel_processing.store_vectors_in_qdrant",
+                return_value=1,
             ),
         ):
             mock_load.return_value = mock_workbook
@@ -322,20 +317,17 @@ class TestExtractExcel:
         mock_collection_info.points_count = 1  # At least 1 chunk will be created
         mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
 
+        # CRITICAL: Patch at USAGE location (module-level imports in excel_processing.py)
         with (
             patch("openpyxl.load_workbook") as mock_load,
-            patch(
-                "raglite.ingestion.storage.vector_store.get_qdrant_client",
-                return_value=mock_qdrant_client,
-            ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
-                "raglite.ingestion.storage.store_metadata_in_postgresql",
+                "raglite.ingestion.document_ingestion.excel_processing.store_metadata_in_postgresql",
                 return_value=(2, 0),
             ),
             patch(
-                "raglite.ingestion.storage.store_vectors_in_qdrant",
-                return_value=None,
+                "raglite.ingestion.document_ingestion.excel_processing.store_vectors_in_qdrant",
+                return_value=2,
             ),
         ):
             mock_load.return_value = mock_workbook

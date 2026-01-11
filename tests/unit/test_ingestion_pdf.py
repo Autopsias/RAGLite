@@ -76,24 +76,28 @@ class TestIngestPDF:
             ),
         ]
 
-        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        # CRITICAL: Patch at SOURCE modules for lazy imports inside _legacy.py
         docling_patches = create_standard_docling_patches()
         with (
             patch(docling_patches[0]) as MockConverter,
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
+                "raglite.shared.clients.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
+                "raglite.shared.clients.get_postgresql_connection",
+                return_value=Mock(),
+            ),
+            patch(
+                "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql",
                 return_value=(1, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant",
-                return_value=None,
+                "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant",
+                return_value=2,
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings",
+                "raglite.ingestion.embedding_generation.embeddings.generate_embeddings",
                 return_value=mock_chunks,
             ),
         ):
@@ -192,28 +196,32 @@ class TestIngestPDF:
             for i in range(5)
         ]
 
-        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        # CRITICAL: Patch at SOURCE modules for lazy imports inside _legacy.py
         docling_patches = create_standard_docling_patches()
         with (
             patch(docling_patches[0]) as MockConverter,
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
+                "raglite.shared.clients.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
+                "raglite.shared.clients.get_postgresql_connection",
+                return_value=Mock(),
+            ),
+            patch(
+                "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql",
                 return_value=(5, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_tables_in_postgresql",
+                "raglite.ingestion.storage.table_store.store_tables_in_postgresql",
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant",
-                return_value=None,
+                "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant",
+                return_value=5,
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings",
+                "raglite.ingestion.embedding_generation.embeddings.generate_embeddings",
                 return_value=mock_chunks,
             ),
         ):
@@ -265,28 +273,32 @@ class TestIngestPDF:
             ),
         ]
 
-        # Patch Docling at the source for lazy imports inside ingest_pdf()
+        # CRITICAL: Patch at SOURCE modules for lazy imports inside _legacy.py
         docling_patches = create_standard_docling_patches()
         with (
             patch(docling_patches[0]) as MockConverter,
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
+                "raglite.shared.clients.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
+                "raglite.shared.clients.get_postgresql_connection",
+                return_value=Mock(),
+            ),
+            patch(
+                "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql",
                 return_value=(1, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_tables_in_postgresql",
+                "raglite.ingestion.storage.table_store.store_tables_in_postgresql",
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant",
-                return_value=None,
+                "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant",
+                return_value=1,
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings",
+                "raglite.ingestion.embedding_generation.embeddings.generate_embeddings",
                 return_value=mock_chunks,
             ),
         ):
@@ -363,29 +375,33 @@ class TestIngestPDF:
             ),
         ]
 
-        # Patch Docling at the source for lazy imports inside ingest_pdf()
-        # Story 3.0.1: Patch new module locations after refactoring
+        # CRITICAL: Patch at SOURCE modules for lazy imports inside _legacy.py
+        # Story 8.3: Patch new module locations after refactoring
         docling_patches = create_standard_docling_patches()
         with (
             patch(docling_patches[0]) as MockConverter,
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
+                "raglite.shared.clients.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
+                "raglite.shared.clients.get_postgresql_connection",
+                return_value=Mock(),
+            ),
+            patch(
+                "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql",
                 return_value=(1, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_tables_in_postgresql",
+                "raglite.ingestion.storage.table_store.store_tables_in_postgresql",
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant",
-                return_value=None,
+                "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant",
+                return_value=1,
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.generate_embeddings",
+                "raglite.ingestion.embedding_generation.embeddings.generate_embeddings",
                 return_value=mock_chunks,
             ),
         ):

@@ -77,32 +77,33 @@ class TestIngestPDF:
 
         # Mock at higher level: create_docling_converter instead of Docling internals
         # This avoids Pydantic validation errors on backend parameter
-        # CRITICAL: Patch where the function is USED, not where it's defined
+        # CRITICAL: Patch at SOURCE modules for lazy imports in _legacy.py
+        # _legacy.py imports storage functions inside the function, so we must patch at source
         with (
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
                 return_value=mock_converter,
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
+                "raglite.shared.clients.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
             patch(
-                "raglite.ingestion.storage.vector_store.get_qdrant_client",
-                return_value=mock_qdrant_client,
+                "raglite.shared.clients.get_postgresql_connection",
+                return_value=Mock(),
             ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
+                "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql",
                 return_value=(1, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_tables_in_postgresql",
+                "raglite.ingestion.storage.table_store.store_tables_in_postgresql",
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant",
-                return_value=None,
+                "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant",
+                return_value=2,
             ),
         ):
             # Mock embedding model
@@ -202,32 +203,32 @@ class TestIngestPDF:
         mock_collection_info.points_count = 5  # 5 mock elements
         mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
 
-        # Mock at higher level to avoid Pydantic validation errors
+        # CRITICAL: Patch at SOURCE modules for lazy imports in _legacy.py
         with (
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
                 return_value=mock_converter,
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
+                "raglite.shared.clients.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
             patch(
-                "raglite.ingestion.storage.vector_store.get_qdrant_client",
-                return_value=mock_qdrant_client,
+                "raglite.shared.clients.get_postgresql_connection",
+                return_value=Mock(),
             ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
+                "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql",
                 return_value=(5, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_tables_in_postgresql",
+                "raglite.ingestion.storage.table_store.store_tables_in_postgresql",
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant",
-                return_value=None,
+                "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant",
+                return_value=5,
             ),
         ):
             # Mock embedding model
@@ -276,32 +277,32 @@ class TestIngestPDF:
         mock_collection_info.points_count = 1
         mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
 
-        # Mock at higher level to avoid Pydantic validation errors
+        # CRITICAL: Patch at SOURCE modules for lazy imports in _legacy.py
         with (
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
                 return_value=mock_converter,
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
+                "raglite.shared.clients.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
             patch(
-                "raglite.ingestion.storage.vector_store.get_qdrant_client",
-                return_value=mock_qdrant_client,
+                "raglite.shared.clients.get_postgresql_connection",
+                return_value=Mock(),
             ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
+                "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql",
                 return_value=(1, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_tables_in_postgresql",
+                "raglite.ingestion.storage.table_store.store_tables_in_postgresql",
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant",
-                return_value=None,
+                "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant",
+                return_value=1,
             ),
         ):
             # Mock embedding model
@@ -373,32 +374,32 @@ class TestIngestPDF:
         mock_collection_info.points_count = 1
         mock_qdrant_client.get_collection = Mock(return_value=mock_collection_info)
 
-        # Mock at higher level to avoid Pydantic validation errors
+        # CRITICAL: Patch at SOURCE modules for lazy imports in _legacy.py
         with (
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
                 return_value=mock_converter,
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.get_qdrant_client",
+                "raglite.shared.clients.get_qdrant_client",
                 return_value=mock_qdrant_client,
             ),
             patch(
-                "raglite.ingestion.storage.vector_store.get_qdrant_client",
-                return_value=mock_qdrant_client,
+                "raglite.shared.clients.get_postgresql_connection",
+                return_value=Mock(),
             ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
+                "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql",
                 return_value=(1, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_tables_in_postgresql",
+                "raglite.ingestion.storage.table_store.store_tables_in_postgresql",
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant",
-                return_value=None,
+                "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant",
+                return_value=1,
             ),
         ):
             # Mock embedding model
