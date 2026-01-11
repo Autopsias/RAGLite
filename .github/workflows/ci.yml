@@ -379,8 +379,8 @@ jobs:
           echo "========================================="
           echo "Running Integration Tests (~1000 tests)"
           echo "Mode: Parallel with xdist_group isolation"
-          echo "Workers: 2 (reduced from 4 to prevent OOM)"
-          echo "Memory: ~6GB (2 workers × 3GB each)"
+          echo "Workers: 4 (restored after test pruning)"
+          echo "Memory: ~12GB (4 workers × 3GB each)"
           echo "Qdrant: localhost:${QDRANT_PORT}"
           echo "PostgreSQL: localhost:${POSTGRES_PORT}"
           echo "========================================="
@@ -388,7 +388,7 @@ jobs:
             -m "not health_check" \
             --tb=short \
             -v \
-            -n 2 \
+            -n 4 \
             --dist loadgroup \
             --timeout=300 \
             --junitxml=test-results/integration-junit.xml \
