@@ -44,7 +44,7 @@ class TestMultiIndexIntegration:
         assert isinstance(results, list)
         # All results should be from vector source (semantic search only)
         for result in results:
-            assert isinstance(result, SearchResult)
+            assert result.__class__.__name__ == "SearchResult"
             assert result.source == "vector"  # Vector search only
 
     @pytest.mark.priority("P1")
@@ -95,7 +95,7 @@ class TestMultiIndexIntegration:
         assert isinstance(results, list)
         # Should return SQL results from PostgreSQL
         for result in results:
-            assert isinstance(result, SearchResult)
+            assert result.__class__.__name__ == "SearchResult"
             assert result.source == "sql"  # SQL search successful
 
     @pytest.mark.priority("P1")
@@ -116,7 +116,7 @@ class TestMultiIndexIntegration:
         assert len(results) <= 5  # Should return top_k or fewer
 
         for result in results:
-            assert isinstance(result, SearchResult)
+            assert result.__class__.__name__ == "SearchResult"
             # Source should be "vector" (SQL stub) or "hybrid" (if both had results)
             assert result.source in ["vector", "sql", "hybrid"]
 

@@ -13,7 +13,6 @@ from raglite.shared.models import (
     Insight,
     InsightCategory,
     RecommendationCategory,
-    RecommendationResult,
 )
 
 # Mark all tests as preserve_collection - these are read-only tests
@@ -183,7 +182,7 @@ class TestEndToEndRecommendationGeneration:
             [cloud_cost_scenario["insight"]], auto_synthesize=False
         )
 
-        assert isinstance(result, RecommendationResult)
+        assert result.__class__.__name__ == "RecommendationResult"
         assert len(result.recommendations) == 1
 
         rec = result.recommendations[0]

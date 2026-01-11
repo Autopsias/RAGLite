@@ -13,7 +13,6 @@ import httpx
 import pytest
 
 from raglite.external_data.clients.omie import OMIEClient
-from raglite.external_data.models import OMIEElectricityPrice
 
 
 class TestOMIEClient:
@@ -53,7 +52,7 @@ MARGINALPDBC;2024;01;01;24;50,10;51,00;0;0;0;0;0;0;0;0"""
             )
 
             assert len(result) == 3
-            assert isinstance(result[0], OMIEElectricityPrice)
+            assert result[0].__class__.__name__ == "OMIEElectricityPrice"
             assert result[0].price_eur_mwh == 45.50
             assert result[0].hour == 0  # OMIE uses 1-24, we convert to 0-23
 

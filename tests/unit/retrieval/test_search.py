@@ -8,7 +8,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 from raglite.retrieval.search import QueryError, search_documents
-from raglite.shared.models import QueryResult
 
 # Group search tests that share mocked Qdrant/embedding state to run on same worker
 pytestmark = [pytest.mark.unit, pytest.mark.xdist_group(name="search_retrieval")]
@@ -76,7 +75,7 @@ class TestSearchDocuments:
 
             # Assertions
             assert len(results) == 5
-            assert all(isinstance(r, QueryResult) for r in results)
+            assert all(r.__class__.__name__ == "QueryResult" for r in results)
             assert results[0].score == 0.87
             assert results[0].text == "Q3 revenue was $50M, up 20% YoY."
             assert results[0].source_document == "Q3_Report.pdf"

@@ -10,7 +10,6 @@ import numpy as np
 import pytest
 
 from raglite.ingestion.pipeline import extract_excel
-from raglite.shared.models import DocumentMetadata
 
 # Group Excel ingestion tests that share mocked openpyxl state to run on same worker
 pytestmark = pytest.mark.xdist_group(name="excel_ingestion")
@@ -93,7 +92,7 @@ class TestExtractExcel:
             result = await extract_excel(str(excel_file))
 
             # Assertions
-            assert isinstance(result, DocumentMetadata)
+            assert result.__class__.__name__ == "DocumentMetadata"
             assert result.filename == "test_financials.xlsx"
             assert result.doc_type == "Excel"
             assert result.page_count == 3  # 3 sheets

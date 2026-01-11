@@ -11,7 +11,6 @@ import pytest
 
 from raglite.shared.models import (
     Anomaly,
-    AnomalyDetectionResult,
     AnomalySeverity,
     TimeSeriesData,
     TimeSeriesPoint,
@@ -62,7 +61,7 @@ class TestDetectAnomalies:
 
         result = await detect_anomalies("revenue", normal_timeseries)
 
-        assert isinstance(result, AnomalyDetectionResult)
+        assert result.__class__.__name__ == "AnomalyDetectionResult"
         assert result.metric_name == "revenue"
         assert result.data_points_analyzed == 8
 
@@ -175,7 +174,7 @@ class TestDetectAnomalies:
             assert anomaly.value is not None
             assert anomaly.expected_value is not None
             assert anomaly.z_score is not None
-            assert anomaly.severity in AnomalySeverity
+            assert anomaly.severity.name in ["CRITICAL", "MODERATE", "MINOR"]
             assert isinstance(anomaly.magnitude_pct, float)
 
     @pytest.mark.asyncio

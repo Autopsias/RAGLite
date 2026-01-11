@@ -12,7 +12,6 @@ import pytest
 from raglite.shared.models import (
     TimeSeriesData,
     TimeSeriesPoint,
-    TrendAnalysisResult,
     TrendDirection,
 )
 
@@ -88,7 +87,7 @@ class TestAnalyzeTrends:
             {"revenue": increasing_timeseries},
         )
 
-        assert isinstance(result, TrendAnalysisResult)
+        assert result.__class__.__name__ == "TrendAnalysisResult"
         assert result.metrics_analyzed == 1
 
     @pytest.mark.asyncio
@@ -238,7 +237,7 @@ class TestAnalyzeTrends:
 
         for trend in result.trends:
             assert trend.metric is not None
-            assert trend.direction in TrendDirection
+            assert trend.direction.name in ["INCREASING", "DECREASING", "STABLE"]
             assert trend.magnitude is not None
             assert trend.start_date is not None
             assert trend.end_date is not None

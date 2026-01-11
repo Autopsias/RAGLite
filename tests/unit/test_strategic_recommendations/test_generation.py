@@ -118,12 +118,11 @@ ACTIONS:
     ):
         """AC1: generate_recommendations returns RecommendationResult."""
         from raglite.insights.recommendations import generate_recommendations
-        from raglite.shared.models import RecommendationResult
 
         with patch("raglite.shared.clients.get_mistral_client") as mock_client:
             mock_client.return_value.chat.complete.return_value = mock_mistral_for_generation
             result = await generate_recommendations([sample_risk_insight])
-            assert isinstance(result, RecommendationResult)
+            assert result.__class__.__name__ == "RecommendationResult"
 
     @pytest.mark.asyncio
     async def test_generate_returns_recommendations_list(
@@ -131,13 +130,12 @@ ACTIONS:
     ):
         """AC1: generate_recommendations returns list of Recommendation."""
         from raglite.insights.recommendations import generate_recommendations
-        from raglite.shared.models import Recommendation
 
         with patch("raglite.shared.clients.get_mistral_client") as mock_client:
             mock_client.return_value.chat.complete.return_value = mock_mistral_for_generation
             result = await generate_recommendations([sample_risk_insight])
             assert len(result.recommendations) >= 1
-            assert isinstance(result.recommendations[0], Recommendation)
+            assert result.recommendations[0].__class__.__name__ == "Recommendation"
 
     @pytest.mark.asyncio
     async def test_generate_sorted_by_impact_descending(

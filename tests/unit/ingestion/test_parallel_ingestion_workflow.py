@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from raglite.ingestion.document_ingestion import ingest_documents_parallel
-from raglite.shared.models import BatchIngestionResult, DocumentMetadata
+from raglite.shared.models import DocumentMetadata
 
 
 class TestParallelDocumentIngestion:
@@ -82,7 +82,7 @@ class TestParallelDocumentIngestion:
             result = await ingest_documents_parallel(file_paths, max_concurrent=2)
 
         # Verify BatchIngestionResult structure
-        assert isinstance(result, BatchIngestionResult)
+        assert result.__class__.__name__ == "BatchIngestionResult"
         assert result.total_documents == 3
         assert result.successful == 3
         assert result.failed == 0

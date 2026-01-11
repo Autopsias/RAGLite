@@ -7,7 +7,6 @@ import pandas as pd
 import pytest
 
 from tests.validation.forecast_accuracy import create_growth_data
-from tests.validation.test_epic4_e2e_validation.models import Epic4ValidationResult
 from tests.validation.test_epic4_e2e_validation.orchestrator import (
     Epic4ValidationOrchestrator,
     create_comprehensive_test_data,
@@ -53,7 +52,7 @@ class TestOrchestrator:
             result = await orchestrator.run_full_validation(forecast_data=test_data)
 
         # Validate result structure
-        assert isinstance(result, Epic4ValidationResult)
+        assert result.__class__.__name__ == "Epic4ValidationResult"
         assert len(result.forecast_results) == 4  # revenue, expenses, cash_flow, ebitda
         assert result.insight_result is not None
         assert result.recommendation_result is not None

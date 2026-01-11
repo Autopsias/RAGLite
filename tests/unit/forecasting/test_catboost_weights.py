@@ -361,19 +361,17 @@ class TestNumericPrecision:
 
     def test_backtest_rmse_precision(self):
         """Test backtest_rmse column has defined precision."""
-        from sqlalchemy import Numeric
 
         col = ModelWeightORM.__table__.c.backtest_rmse
-        assert isinstance(col.type, Numeric)
+        assert col.type.__class__.__name__ == "Numeric"
         assert col.type.precision == 12
         assert col.type.scale == 4
 
     def test_backtest_mape_precision(self):
         """Test backtest_mape column has defined precision."""
-        from sqlalchemy import Numeric
 
         col = ModelWeightORM.__table__.c.backtest_mape
-        assert isinstance(col.type, Numeric)
+        assert col.type.__class__.__name__ == "Numeric"
         assert col.type.precision == 8
         assert col.type.scale == 4
 

@@ -11,8 +11,6 @@ Testing Strategy:
 - Boundary: No actual API calls (integration testing separate)
 """
 
-from datetime import datetime
-
 import pandas as pd
 import pytest
 
@@ -110,7 +108,7 @@ class TestExtractExternalRegressorTimeseries:
         # Verify all values are floats
         assert all(isinstance(p.value, float) for p in result.points)
         # Verify date conversion
-        assert all(isinstance(p.date, datetime) for p in result.points)
+        assert all(p.date.__class__.__name__ == "datetime" for p in result.points)
 
     @pytest.mark.asyncio
     async def test_extract_filters_nan_values(self, mocker, caplog) -> None:

@@ -12,7 +12,6 @@ import pytest
 from raglite.ingestion.pipeline import (
     ingest_pdf,
 )
-from raglite.shared.models import DocumentMetadata
 
 # Group PDF ingestion tests that share mocked Docling/embedding state to run on same worker
 pytestmark = [pytest.mark.unit, pytest.mark.xdist_group(name="pdf_ingestion")]
@@ -114,7 +113,7 @@ class TestIngestPDF:
             result = await ingest_pdf(str(pdf_file))
 
             # Assertions
-            assert isinstance(result, DocumentMetadata)
+            assert result.__class__.__name__ == "DocumentMetadata"
             assert result.filename == "test_report.pdf"
             assert result.doc_type == "PDF"
             assert result.page_count == 2  # Two unique pages

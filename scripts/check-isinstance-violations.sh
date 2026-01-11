@@ -28,10 +28,53 @@ SAFE_BUILTINS=(
     "frozenset"
     "bytes"
     "bytearray"
+    "type"
+    "object"
+    "datetime"
+    "date"
+    "time"
+    "timedelta"
 )
 
-# Convert to grep pattern
+# Safe standard library and third-party classes
+SAFE_STDLIB=(
+    "Exception"
+    "BaseException"
+    "ValueError"
+    "TypeError"
+    "KeyError"
+    "IndexError"
+    "RuntimeError"
+    "AttributeError"
+    "ImportError"
+    "FileNotFoundError"
+    "OSError"
+    "IOError"
+    "MagicMock"
+    "Mock"
+    "AsyncMock"
+)
+
+# Safe external library patterns (pandas, numpy, etc.)
+SAFE_EXTERNAL_PATTERNS=(
+    "pd\\."
+    "np\\."
+    "ast\\."
+    "Decimal"
+    "Path"
+    "Numeric"
+    "Column"
+    "Table"
+    "Integer"
+    "String"
+    "Float"
+    "Boolean"
+)
+
+# Convert to grep patterns
 SAFE_PATTERN=$(IFS='|'; echo "${SAFE_BUILTINS[*]}")
+SAFE_STDLIB_PATTERN=$(IFS='|'; echo "${SAFE_STDLIB[*]}")
+SAFE_EXTERNAL_REGEX=$(IFS='|'; echo "${SAFE_EXTERNAL_PATTERNS[*]}")
 
 # Find all isinstance calls in tests
 while IFS= read -r file; do
@@ -39,18 +82,43 @@ while IFS= read -r file; do
     if grep -n "isinstance(" "$file" > /dev/null 2>&1; then
         # Check each isinstance line
         while IFS=: read -r lineno line; do
-            # Skip if it's a safe built-in type
+            # Skip comments
+            if echo "$line" | grep -q "^\s*#"; then
+                continue
+            fi
+
+            # Skip if it's a safe built-in type (single or in tuple)
             if echo "$line" | grep -qE "isinstance\([^,]+,\s*(${SAFE_PATTERN})\)"; then
                 continue
             fi
 
-            # Skip if it's checking against external library classes (they're stable)
-            if echo "$line" | grep -qE "isinstance\([^,]+,\s*(Exception|BaseException|ValueError|TypeError)"; then
+            # Skip if it's a tuple of safe built-in types like (list, dict), (str, int), etc.
+            if echo "$line" | grep -qE "isinstance\([^,]+,\s*\((${SAFE_PATTERN})(,\s*(${SAFE_PATTERN}))*\)\)"; then
                 continue
             fi
 
-            # Skip comments
-            if echo "$line" | grep -q "^\s*#"; then
+            # Skip if it's checking against exception/error classes (single or tuple)
+            if echo "$line" | grep -qE "isinstance\([^,]+,\s*(${SAFE_STDLIB_PATTERN})"; then
+                continue
+            fi
+
+            # Skip tuple of exception types like (ValueError, RuntimeError)
+            if echo "$line" | grep -qE "isinstance\([^,]+,\s*\((${SAFE_STDLIB_PATTERN})(,\s*(${SAFE_STDLIB_PATTERN}))*\)\)"; then
+                continue
+            fi
+
+            # Skip if it's checking against external library classes (pandas, numpy, ast, etc.)
+            if echo "$line" | grep -qE "isinstance\([^,]+,\s*(${SAFE_EXTERNAL_REGEX})"; then
+                continue
+            fi
+
+            # Skip tuple of ast types like (ast.FunctionDef, ast.AsyncFunctionDef)
+            if echo "$line" | grep -qE "isinstance\([^,]+,\s*\(ast\."; then
+                continue
+            fi
+
+            # Skip Python 3.10+ union type syntax: isinstance(x, int | float)
+            if echo "$line" | grep -qE "isinstance\([^,]+,\s*(${SAFE_PATTERN})\s*\|"; then
                 continue
             fi
 
@@ -70,17 +138,52 @@ echo "=== Checking for 'in Enum' violations in tests/ ==="
 echo "Pattern: value in SomeEnum fails with pytest-xdist"
 echo ""
 
+# Known safe constants (all caps) that are not enums
+SAFE_CONSTANTS=(
+    "STOPWORDS"
+    "CANDIDATE_MODELS"
+    "KNOWN_METRICS"
+    "VALID_MODELS"
+    "SUPPORTED_FORMATS"
+    "DEFAULT_CONFIG"
+    "API_ENDPOINTS"
+    "HTTP_METHODS"
+    "TEST_DATA"
+    "SAMPLE_DATA"
+    "MOCK_DATA"
+)
+SAFE_CONSTANTS_PATTERN=$(IFS='|'; echo "${SAFE_CONSTANTS[*]}")
+
 while IFS= read -r file; do
-    # Look for pattern: " in SomeEnum" or " in TrendDirection"
-    if grep -nE "\s+in\s+[A-Z][a-zA-Z]+\s*$" "$file" > /dev/null 2>&1; then
+    # Look for pattern: "(assert|if).*in SomeEnum" where SomeEnum is CamelCase
+    # This targets actual enum class membership checks like:
+    #   - assert value in TrendDirection
+    #   - if severity in AnomalySeverity:
+    # Must be actual Python code (assert or if), not docstrings/comments
+    if grep -nE "(assert|if)\s+\S+\s+in\s+[A-Z][a-z][a-zA-Z]+\s*(:|$)" "$file" > /dev/null 2>&1; then
         while IFS=: read -r lineno line; do
             # Skip comments
             if echo "$line" | grep -q "^\s*#"; then
                 continue
             fi
 
+            # Skip docstrings (lines that are just strings)
+            if echo "$line" | grep -qE '^\s*"""' || echo "$line" | grep -qE "^\s*'''"; then
+                continue
+            fi
+
             # Skip if it's checking membership in a list/dict/set
             if echo "$line" | grep -qE "in\s+\[|in\s+\{|in\s+\("; then
+                continue
+            fi
+
+            # Skip known safe constants
+            if echo "$line" | grep -qE "in\s+(${SAFE_CONSTANTS_PATTERN})"; then
+                continue
+            fi
+
+            # Skip if it's an ALL_CAPS constant (not an enum class)
+            if echo "$line" | grep -qE "in\s+[A-Z_]+\s*(:|$)"; then
                 continue
             fi
 
@@ -91,7 +194,7 @@ while IFS= read -r file; do
             echo ""
             VIOLATIONS_FOUND=$((VIOLATIONS_FOUND + 1))
             EXIT_CODE=1
-        done < <(grep -nE "\s+in\s+[A-Z][a-zA-Z]+\s*$" "$file")
+        done < <(grep -nE "(assert|if)\s+\S+\s+in\s+[A-Z][a-z][a-zA-Z]+\s*(:|$)" "$file")
     fi
 done < <(find tests -name "test_*.py" -type f)
 

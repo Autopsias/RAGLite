@@ -14,7 +14,6 @@ import pytest
 
 from raglite.external_data.clients.eurostat import EurostatClient
 from raglite.external_data.exceptions import ExternalDataFetchError
-from raglite.external_data.models import EurostatElectricityPrice
 
 
 class TestEurostatClientElectricity:
@@ -58,7 +57,7 @@ class TestEurostatClientElectricity:
             )
 
             assert len(result) == 3
-            assert all(isinstance(p, EurostatElectricityPrice) for p in result)
+            assert all(p.__class__.__name__ == "EurostatElectricityPrice" for p in result)
             assert result[0].price_eur_kwh == 0.1234
             assert result[0].country == "PT"
 

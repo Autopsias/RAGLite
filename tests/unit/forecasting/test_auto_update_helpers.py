@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from raglite.shared.models import DocumentMetadata, ForecastRefreshResult, IngestionResult
+from raglite.shared.models import DocumentMetadata, ForecastRefreshResult
 
 
 class TestPerformForecastRefresh:
@@ -29,7 +29,7 @@ class TestPerformForecastRefresh:
 
         result = await _perform_forecast_refresh(metadata, auto_forecast=False)
 
-        assert isinstance(result, IngestionResult)
+        assert result.__class__.__name__ == "IngestionResult"
         assert result.forecasts_updated is None
         assert result.forecast_refresh_skipped_reason == "auto_forecast=False"
 

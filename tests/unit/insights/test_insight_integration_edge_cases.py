@@ -11,7 +11,6 @@ from raglite.shared.models import (
     AnomalySeverity,
     ForecastPoint,
     ForecastResult,
-    Insight,
     InsightCategory,
     Trend,
     TrendDirection,
@@ -33,27 +32,27 @@ class TestCrossModuleFixtures:
         """[P1] Verify sample_anomalies fixture returns correct type."""
         assert isinstance(sample_anomalies, list)
         assert len(sample_anomalies) > 0
-        assert isinstance(sample_anomalies[0], Anomaly)
+        assert sample_anomalies[0].__class__.__name__ == "Anomaly"
 
     @pytest.mark.asyncio
     async def test_sample_trends_fixture_type(self, sample_trends):
         """[P1] Verify sample_trends fixture returns correct type."""
         assert isinstance(sample_trends, list)
         assert len(sample_trends) > 0
-        assert isinstance(sample_trends[0], Trend)
+        assert sample_trends[0].__class__.__name__ == "Trend"
 
     @pytest.mark.asyncio
     async def test_sample_forecasts_fixture_type(self, sample_forecasts):
         """[P1] Verify sample_forecasts fixture returns correct type."""
         assert isinstance(sample_forecasts, list)
         assert len(sample_forecasts) > 0
-        assert isinstance(sample_forecasts[0], ForecastResult)
+        assert sample_forecasts[0].__class__.__name__ == "ForecastResult"
 
     @pytest.mark.asyncio
     async def test_sample_insights_fixture_count(self, sample_insights):
         """[P1] Verify sample_insights fixture has expected count."""
         assert len(sample_insights) == 5
-        assert all(isinstance(i, Insight) for i in sample_insights)
+        assert all(i.__class__.__name__ == "Insight" for i in sample_insights)
 
 
 # =============================================================================
@@ -344,4 +343,4 @@ class TestDataValidationEdgeCases:
 
         # Should handle gracefully without crashing
         category = categorize_insight(forecast=forecast)
-        assert isinstance(category, InsightCategory)
+        assert category.__class__.__name__ == "InsightCategory"

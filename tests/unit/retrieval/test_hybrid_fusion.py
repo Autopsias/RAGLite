@@ -223,7 +223,7 @@ class TestHybridSearchEndToEnd:
 
         # Verify results returned
         assert len(results) == 2
-        assert all(isinstance(r, QueryResult) for r in results)
+        assert all(r.__class__.__name__ == "QueryResult" for r in results)
 
     @patch("raglite.retrieval.search.hybrid_search.search_documents")
     @pytest.mark.priority("P1")

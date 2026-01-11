@@ -12,7 +12,6 @@ Priority: P1 (High - BM25 critical for hybrid search accuracy)
 """
 
 import pytest
-from rank_bm25 import BM25Okapi
 
 from raglite.shared.bm25 import (
     BM25IndexError,
@@ -39,7 +38,7 @@ class TestBM25IndexCreation:
         bm25, tokenized = create_bm25_index([chunk])
 
         # THEN: Index created successfully
-        assert isinstance(bm25, BM25Okapi)
+        assert bm25.__class__.__name__ == "BM25Okapi"
         assert len(tokenized) == 1
         assert "EBITDA" in tokenized[0]
         assert "margin" in tokenized[0]
@@ -55,7 +54,7 @@ class TestBM25IndexCreation:
         bm25, tokenized = create_bm25_index(chunks)
 
         # THEN: Index created for all chunks
-        assert isinstance(bm25, BM25Okapi)
+        assert bm25.__class__.__name__ == "BM25Okapi"
         assert len(tokenized) == 10
         assert all(isinstance(doc, list) for doc in tokenized)
 
@@ -70,7 +69,7 @@ class TestBM25IndexCreation:
         bm25, tokenized = create_bm25_index(chunks, k1=2.0, b=0.75)
 
         # THEN: Index created (parameters stored in BM25Okapi object)
-        assert isinstance(bm25, BM25Okapi)
+        assert bm25.__class__.__name__ == "BM25Okapi"
         # Note: BM25Okapi stores k1 and b internally but doesn't expose them directly
 
     @pytest.mark.unit
@@ -134,7 +133,7 @@ class TestBM25IndexPersistence:
 
         # THEN: Index preserved correctly
         assert saved_path == index_path
-        assert isinstance(bm25_loaded, BM25Okapi)
+        assert bm25_loaded.__class__.__name__ == "BM25Okapi"
         assert len(tokenized_loaded) == len(tokenized_original)
         assert tokenized_loaded == tokenized_original
 
@@ -214,7 +213,7 @@ class TestBM25Caching:
 
         # THEN: Second load uses cache (file deleted but still loads)
         assert result1 == result2
-        assert isinstance(result2[0], BM25Okapi)
+        assert result2[0].__class__.__name__ == "BM25Okapi"
 
     @pytest.mark.unit
     @pytest.mark.priority("P2")
@@ -350,7 +349,7 @@ class TestBM25EndToEnd:
 
         # THEN: Workflow completes successfully
         assert saved_path.exists()
-        assert isinstance(bm25_loaded, BM25Okapi)
+        assert bm25_loaded.__class__.__name__ == "BM25Okapi"
         assert len(scores) == 3
         # First doc mentions revenue and YoY - should score highest
         assert scores[0] == max(scores)

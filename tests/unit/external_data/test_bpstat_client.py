@@ -17,7 +17,6 @@ from raglite.external_data.clients.bpstat import BPstatClient
 from raglite.external_data.exceptions import (
     ExternalDataFetchError,
 )
-from raglite.external_data.models import BPstatMortgageLoans
 
 
 class TestBPstatClient:
@@ -50,7 +49,7 @@ class TestBPstatClient:
             )
 
             assert len(result) == 2
-            assert isinstance(result[0], BPstatMortgageLoans)
+            assert result[0].__class__.__name__ == "BPstatMortgageLoans"
             assert result[0].avg_interest_rate_pct == 3.45
             assert result[1].avg_interest_rate_pct == 3.50
 

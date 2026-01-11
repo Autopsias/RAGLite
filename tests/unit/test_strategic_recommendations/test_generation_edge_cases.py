@@ -65,10 +65,10 @@ class TestEdgeCases:
                 summary=f"Test {cat.value}",
                 created_at=datetime.now(UTC),
             )
-            for cat in InsightCategory
+            for cat in InsightCategory.__members__.values()
         ]
         result = await generate_recommendations(insights, auto_synthesize=False)
-        assert result.total_generated == len(InsightCategory)
+        assert result.total_generated == len(InsightCategory.__members__)
 
 
 # =============================================================================

@@ -52,7 +52,7 @@ class TestICEFuturesClientAPI2Coal:
             )
 
             assert len(result) == 3
-            assert all(isinstance(p, API2CoalPrice) for p in result)
+            assert all(p.__class__.__name__ == "API2CoalPrice" for p in result)
             assert result[0].price == 120.50
             assert result[0].currency == "USD"
             assert result[0].unit == "USD/tonne"
@@ -162,7 +162,7 @@ class TestICEFuturesClientTTFGas:
             )
 
             assert len(result) == 3
-            assert all(isinstance(p, TTFGasPrice) for p in result)
+            assert all(p.__class__.__name__ == "TTFGasPrice" for p in result)
             assert result[0].price == 35.50
             assert result[0].currency == "EUR"
             assert result[0].unit == "EUR/MWh"

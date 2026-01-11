@@ -32,13 +32,12 @@ class TestModelRecommendations:
         Then: Should return a DataCharacteristics instance
         """
         from raglite.forecasting.data_analyzer import (
-            DataCharacteristics,
             analyze_data_characteristics,
         )
 
         result = analyze_data_characteristics(stationary_series, frequency="M")
 
-        assert isinstance(result, DataCharacteristics)
+        assert result.__class__.__name__ == "DataCharacteristics"
 
     def test_ac6_2_include_recommended_models(self, stationary_series: pd.Series) -> None:
         """TEST-AC-6.2: Include recommended_models: list[str].

@@ -9,9 +9,7 @@ import pytest
 
 from raglite.external_data.clients import BaseGovClient, OMIEClient
 from raglite.external_data.models import (
-    BaseGovContract,
     DataSource,
-    OMIEElectricityPrice,
 )
 
 pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
@@ -41,7 +39,7 @@ class TestOMIEClientIntegration:
         # 24 hours of data
         assert len(result) == 24
         for record in result:
-            assert isinstance(record, OMIEElectricityPrice)
+            assert record.__class__.__name__ == "OMIEElectricityPrice"
             assert record.market == "MIBEL"
             assert record.hour is not None and 0 <= record.hour <= 23
             assert record.price_eur_mwh > 0
@@ -122,7 +120,7 @@ class TestBaseGovClientIntegration:
 
         assert len(result) == 2
         for contract in result:
-            assert isinstance(contract, BaseGovContract)
+            assert contract.__class__.__name__ == "BaseGovContract"
             assert contract.source == DataSource.BASEGOV
             assert contract.contract_value_eur > 0
             assert contract.cpv_code is not None

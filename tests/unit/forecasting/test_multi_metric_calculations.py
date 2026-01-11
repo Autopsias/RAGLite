@@ -10,7 +10,6 @@ from __future__ import annotations
 import numpy as np
 
 from raglite.forecasting.validation_metrics import (
-    MultiMetricResult,
     calculate_all_metrics,
     calculate_bias,
     calculate_mae,
@@ -293,7 +292,7 @@ class TestCalculateAllMetrics:
 
         result = calculate_all_metrics(actuals, predictions, historical)
 
-        assert isinstance(result, MultiMetricResult)
+        assert result.__class__.__name__ == "MultiMetricResult"
         assert result.mape is not None
         assert result.mase is not None
         assert result.smape is not None

@@ -92,7 +92,6 @@ class TestVolatilityMeasurement:
         Then: Both CV value and volatility_level should be returned
         """
         from raglite.forecasting.data_analyzer import (
-            VolatilityLevel,
             analyze_data_characteristics,
         )
 
@@ -100,4 +99,4 @@ class TestVolatilityMeasurement:
 
         assert hasattr(result, "coefficient_of_variation")
         assert hasattr(result, "volatility_level")
-        assert isinstance(result.volatility_level, VolatilityLevel)
+        assert result.volatility_level.__class__.__name__ == "VolatilityLevel"

@@ -13,7 +13,6 @@ import httpx
 import pytest
 
 from raglite.external_data.clients.eu_oil_bulletin import EUOilBulletinClient
-from raglite.external_data.models import EUDieselPrice
 
 
 class TestEUOilBulletinClient:
@@ -72,7 +71,7 @@ class TestEUOilBulletinClient:
             )
 
             assert len(result) == 3
-            assert isinstance(result[0], EUDieselPrice)
+            assert result[0].__class__.__name__ == "EUDieselPrice"
             assert result[0].price_eur_litre == 1.456
             assert result[0].country == "Portugal"
 

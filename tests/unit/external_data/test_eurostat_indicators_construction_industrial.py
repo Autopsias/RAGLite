@@ -91,7 +91,7 @@ class TestEurostatConstructionOutput:
             mock_construction_response, "PT", "F", "SCA", None, None
         )
 
-        assert all(isinstance(r, EurostatConstructionOutput) for r in result)
+        assert all(r.__class__.__name__ == "EurostatConstructionOutput" for r in result)
 
     def test_ac1_parse_construction_data_date_parsing(
         self, client: EurostatClient, mock_construction_response: dict
@@ -228,7 +228,7 @@ class TestEurostatConstructionOutput:
             )
 
             assert len(result) == 3
-            assert all(isinstance(r, EurostatConstructionOutput) for r in result)
+            assert all(r.__class__.__name__ == "EurostatConstructionOutput" for r in result)
             assert result[0].index_value > 0
 
     @pytest.mark.asyncio
@@ -305,7 +305,7 @@ class TestEurostatIndustrialProduction:
             mock_industrial_response, "PT", "B-D", "SCA", None, None
         )
 
-        assert all(isinstance(r, EurostatIndustrialProduction) for r in result)
+        assert all(r.__class__.__name__ == "EurostatIndustrialProduction" for r in result)
 
     def test_ac2_parse_industrial_data_date_parsing(
         self, client: EurostatClient, mock_industrial_response: dict
@@ -421,7 +421,7 @@ class TestEurostatIndustrialProduction:
             )
 
             assert len(result) == 3
-            assert all(isinstance(r, EurostatIndustrialProduction) for r in result)
+            assert all(r.__class__.__name__ == "EurostatIndustrialProduction" for r in result)
 
     @pytest.mark.asyncio
     async def test_ac2_fetch_industrial_production_handles_api_error(

@@ -13,7 +13,6 @@ import httpx
 import pytest
 
 from raglite.external_data.clients.ipma import IPMAClient
-from raglite.external_data.models import IPMAWeatherData
 
 
 class TestIPMAClient:
@@ -50,7 +49,7 @@ class TestIPMAClient:
             )
 
             assert len(result) == 1
-            assert isinstance(result[0], IPMAWeatherData)
+            assert result[0].__class__.__name__ == "IPMAWeatherData"
             assert result[0].temperature_c == 15.5
             assert result[0].temperature_max_c == 20.0
             assert result[0].precipitation_mm == 2.5

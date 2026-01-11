@@ -13,7 +13,6 @@ import httpx
 import pytest
 
 from raglite.external_data.clients.basegov import BaseGovClient
-from raglite.external_data.models import BaseGovContract
 
 
 class TestBaseGovClient:
@@ -65,7 +64,7 @@ class TestBaseGovClient:
             )
 
             assert len(result) == 1
-            assert isinstance(result[0], BaseGovContract)
+            assert result[0].__class__.__name__ == "BaseGovContract"
             assert result[0].contract_value_eur == 1500000
             assert result[0].contractor == "Empresa ABC, Lda"
             assert result[0].cpv_code == "45233000"

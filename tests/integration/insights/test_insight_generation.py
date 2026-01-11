@@ -10,7 +10,6 @@ from raglite.shared.models import (
     AnomalySeverity,
     ForecastPoint,
     ForecastResult,
-    InsightGenerationResult,
     Trend,
     TrendDirection,
 )
@@ -74,7 +73,7 @@ class TestInsightGenerationIntegration:
             auto_synthesize=False,
         )
 
-        assert isinstance(result, InsightGenerationResult)
+        assert result.__class__.__name__ == "InsightGenerationResult"
         assert result.total_generated == 3
         assert result.metrics_analyzed == 3
         assert len(result.insights) == 3

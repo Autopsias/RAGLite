@@ -18,7 +18,6 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from raglite.external_data.clients.eurostat_housing import EurostatHousingClient
-from raglite.external_data.models import EurostatDwellingCompletions, EurostatHousingTransactions
 
 
 class TestEurostatHousingClient:
@@ -83,7 +82,7 @@ class TestEurostatHousingClient:
             mock_housing_transactions_response, "PT", None, None
         )
 
-        assert all(isinstance(r, EurostatHousingTransactions) for r in result)
+        assert all(r.__class__.__name__ == "EurostatHousingTransactions" for r in result)
 
     def test_ac1_parse_housing_transactions_sorted_by_date(
         self, client: EurostatHousingClient, mock_housing_transactions_response: dict
@@ -312,7 +311,7 @@ class TestDwellingCompletions:
             mock_dwelling_completions_response, "PT", "TOTAL", None, None
         )
 
-        assert all(isinstance(r, EurostatDwellingCompletions) for r in result)
+        assert all(r.__class__.__name__ == "EurostatDwellingCompletions" for r in result)
 
     def test_ac2_parse_dwelling_completions_sorted_by_date(
         self, client: EurostatHousingClient, mock_dwelling_completions_response: dict

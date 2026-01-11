@@ -156,7 +156,7 @@ class TestEurostatConstructionOutputIntegration:
             end_date=date(2024, 6, 30),
         )
 
-        assert all(isinstance(d, EurostatConstructionOutput) for d in data)
+        assert all(d.__class__.__name__ == "EurostatConstructionOutput" for d in data)
 
     @pytest.mark.asyncio
     async def test_ac1_construction_output_nace_sector_construction(
@@ -291,7 +291,7 @@ class TestEurostatIndustrialProductionIntegration:
             end_date=date(2024, 6, 30),
         )
 
-        assert all(isinstance(d, EurostatIndustrialProduction) for d in data)
+        assert all(d.__class__.__name__ == "EurostatIndustrialProduction" for d in data)
 
     @pytest.mark.asyncio
     async def test_ac2_industrial_production_nace_sector_industry(

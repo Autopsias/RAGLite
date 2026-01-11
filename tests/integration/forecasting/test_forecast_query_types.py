@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from raglite.shared.models import ForecastQueryRequest, ForecastQueryResponse
+from raglite.shared.models import ForecastQueryRequest
 
 pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
@@ -61,7 +61,7 @@ class TestForecastQueryIntegration:
         assert generate_call_kwargs["periods_ahead"] == 2
 
         # Verify response structure (AC2, AC3)
-        assert isinstance(response, ForecastQueryResponse)
+        assert response.__class__.__name__ == "ForecastQueryResponse"
         assert response.metric_name == "revenue"
         assert len(response.forecast) == 2
         assert response.forecast[0].label == "Q3 2024"

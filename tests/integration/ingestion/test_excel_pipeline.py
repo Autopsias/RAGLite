@@ -53,7 +53,6 @@ class TestExcelIngestionIntegration:
         """
         # Lazy imports to avoid test discovery overhead
         from raglite.ingestion.pipeline import extract_excel
-        from raglite.shared.models import DocumentMetadata
 
         # Locate sample Excel file
         sample_excel = Path("tests/fixtures/sample_financial_data.xlsx")
@@ -71,7 +70,7 @@ class TestExcelIngestionIntegration:
         duration_seconds = time.time() - start_time
 
         # Assertions
-        assert isinstance(result, DocumentMetadata)
+        assert result.__class__.__name__ == "DocumentMetadata"
         assert result.filename == "sample_financial_data.xlsx"
         assert result.doc_type == "Excel"
 
@@ -279,7 +278,7 @@ class TestChunkingIntegration:
                 result = await ingest_pdf(str(sample_pdf))
 
         # Assert: Validate document metadata
-        assert isinstance(result, DocumentMetadata)
+        assert result.__class__.__name__ == "DocumentMetadata"
         assert result.page_count > 0, "Document must have pages"
         assert result.chunk_count > 0, "Document must be chunked"
 

@@ -8,7 +8,7 @@ from datetime import datetime
 import pytest
 
 from raglite.ingestion.pipeline import chunk_document
-from raglite.shared.models import Chunk, DocumentMetadata
+from raglite.shared.models import DocumentMetadata
 
 
 class TestChunkDocument:
@@ -42,7 +42,7 @@ class TestChunkDocument:
         # Chunk 2: words 450-949 (500 words, 50-word overlap with chunk 1)
         # Chunk 3: words 900-999 (100 words, 50-word overlap with chunk 2)
         assert len(chunks) == 3
-        assert isinstance(chunks[0], Chunk)
+        assert chunks[0].__class__.__name__ == "Chunk"
         assert chunks[0].chunk_id == "test.pdf_0"
         assert chunks[1].chunk_id == "test.pdf_1"
         assert chunks[2].chunk_id == "test.pdf_2"

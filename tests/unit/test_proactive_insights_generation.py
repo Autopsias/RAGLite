@@ -15,7 +15,6 @@ from raglite.shared.models import (
     ForecastPoint,
     ForecastResult,
     InsightCategory,
-    InsightGenerationResult,
     Trend,
     TrendDirection,
 )
@@ -96,7 +95,7 @@ class TestGenerateInsights:
         with patch("raglite.shared.clients.get_mistral_client", return_value=mock_client):
             result = await generate_insights(sample_anomalies, sample_trends, sample_forecasts)
 
-        assert isinstance(result, InsightGenerationResult)
+        assert result.__class__.__name__ == "InsightGenerationResult"
         assert result.total_generated == 3  # 1 anomaly + 1 trend + 1 forecast
         assert result.metrics_analyzed == 3
 

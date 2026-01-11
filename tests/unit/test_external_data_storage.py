@@ -80,7 +80,7 @@ class TestExternalDataStorageCreateSource:
         """Test that create_source returns the ORM object."""
         result = storage.create_source(source_name="TestSource")
 
-        assert isinstance(result, ExternalDataSourceORM)
+        assert result.__class__.__name__ == "ExternalDataSourceORM"
         assert result.source_name == "TestSource"
 
 
@@ -219,7 +219,7 @@ class TestExternalDataStorageInsertDataPoints:
         storage.insert_data_points("TestSource", data_points)
 
         call_args = mock_session.add.call_args[0][0]
-        assert isinstance(call_args, ExternalDataPointORM)
+        assert call_args.__class__.__name__ == "ExternalDataPointORM"
         assert call_args.source_id == 42
         assert call_args.date == date(2024, 1, 15)
         assert call_args.metric_name == "temperature"

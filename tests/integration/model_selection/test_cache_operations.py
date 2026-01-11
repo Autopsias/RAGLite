@@ -158,7 +158,6 @@ class TestGetCachedModelSelectionIntegration:
     ) -> None:
         """TEST-AC-7b.4.3.7: get_cached_model_selection returns CachedModelSelection."""
         from raglite.external_data.storage import (
-            CachedModelSelection,
             cache_model_selection,
             get_cached_model_selection,
         )
@@ -167,7 +166,7 @@ class TestGetCachedModelSelectionIntegration:
         result = get_cached_model_selection("ebitda")
 
         assert result is not None
-        assert isinstance(result, CachedModelSelection)
+        assert result.__class__.__name__ == "CachedModelSelection"
         assert result.variable_name == "ebitda"
         assert result.best_model == "prophet"
         assert result.best_mape == pytest.approx(5.5, rel=0.01)

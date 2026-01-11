@@ -9,7 +9,6 @@ import pytest
 
 from raglite.external_data.clients import BPstatClient, INEClient
 from raglite.external_data.models import (
-    BPstatMortgageLoans,
     DataSource,
     INEBuildingPermits,
 )
@@ -39,7 +38,7 @@ class TestINEClientIntegration:
         assert len(result) >= 3
         # Verify model validation passed
         for record in result:
-            assert isinstance(record, INEBuildingPermits)
+            assert record.__class__.__name__ == "INEBuildingPermits"
             assert record.source == DataSource.INE
             assert record.permits_count > 0
         # Verify date range
@@ -88,7 +87,7 @@ class TestBPstatClientIntegration:
 
         assert len(result) == 3
         for record in result:
-            assert isinstance(record, BPstatMortgageLoans)
+            assert record.__class__.__name__ == "BPstatMortgageLoans"
             assert record.source == DataSource.BPSTAT
             # Story 6.9.3: Now returns interest rates, not loan amounts
             assert record.total_loans_eur == 0.0

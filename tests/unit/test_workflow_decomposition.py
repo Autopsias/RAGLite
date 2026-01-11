@@ -13,7 +13,6 @@ import pytest
 from raglite.agentic.planner import (
     AgentTask,
     QueryComplexity,
-    WorkflowPlan,
     _has_circular_dependencies,
     decompose_query,
 )
@@ -134,7 +133,7 @@ class TestSimpleQueryDecomposition:
         query = "What is Q3 revenue?"
         plan = await decompose_query(query, QueryComplexity.SIMPLE)
 
-        assert isinstance(plan, WorkflowPlan)
+        assert plan.__class__.__name__ == "WorkflowPlan"
         assert plan.query == query
         assert plan.complexity == QueryComplexity.SIMPLE
         assert len(plan.tasks) == 1

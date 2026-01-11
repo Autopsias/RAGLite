@@ -12,9 +12,7 @@ import pytest
 
 from raglite.shared.models import (
     Insight,
-    Recommendation,
     RecommendationCategory,
-    RecommendationResult,
 )
 
 # Group recommendation tests that share mocked state to run on same worker
@@ -118,7 +116,7 @@ class TestGenerateRecommendations:
         with patch("raglite.shared.clients.get_mistral_client") as mock_client:
             mock_client.return_value.chat.complete.return_value = mock_mistral_response
             result = await generate_recommendations([sample_risk_insight])
-            assert isinstance(result, RecommendationResult)
+            assert result.__class__.__name__ == "RecommendationResult"
 
     @pytest.mark.asyncio
     async def test_generate_returns_recommendations_list(
@@ -131,7 +129,7 @@ class TestGenerateRecommendations:
             mock_client.return_value.chat.complete.return_value = mock_mistral_response
             result = await generate_recommendations([sample_risk_insight])
             assert len(result.recommendations) >= 1
-            assert isinstance(result.recommendations[0], Recommendation)
+            assert result.recommendations[0].__class__.__name__ == "Recommendation"
 
     @pytest.mark.asyncio
     async def test_generate_sorted_by_impact_descending(

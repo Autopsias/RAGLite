@@ -40,7 +40,7 @@ class TestSQLRouting:
         assert isinstance(results, list)
         # All results should be QueryResult objects
         for result in results:
-            assert isinstance(result, QueryResult)
+            assert result.__class__.__name__ == "QueryResult"
             assert hasattr(result, "score")
             assert hasattr(result, "text")
             assert hasattr(result, "page_number")
@@ -61,7 +61,7 @@ class TestSQLRouting:
 
         # Results should have vector scores (not SQL score=1.0)
         for result in results:
-            assert isinstance(result, QueryResult)
+            assert result.__class__.__name__ == "QueryResult"
             assert 0.0 <= result.score <= 1.0
 
     @pytest.mark.priority("P1")
@@ -80,7 +80,7 @@ class TestSQLRouting:
         assert len(results) > 0
 
         for result in results:
-            assert isinstance(result, QueryResult)
+            assert result.__class__.__name__ == "QueryResult"
             assert hasattr(result, "score")
 
     @pytest.mark.priority("P1")
@@ -98,7 +98,7 @@ class TestSQLRouting:
         assert len(results) > 0  # Should have vector results
 
         for result in results:
-            assert isinstance(result, QueryResult)
+            assert result.__class__.__name__ == "QueryResult"
 
     @pytest.mark.priority("P1")
     @pytest.mark.asyncio
@@ -177,7 +177,7 @@ class TestSQLVectorFusion:
 
         # Should return fused results
         assert len(fused) == 4
-        assert all(isinstance(r, QueryResult) for r in fused)
+        assert all(r.__class__.__name__ == "QueryResult" for r in fused)
 
         # All results should have valid RRF scores
         for result in fused:

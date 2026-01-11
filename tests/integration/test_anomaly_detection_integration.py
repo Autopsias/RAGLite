@@ -11,7 +11,6 @@ import pytest
 
 from raglite.insights.anomalies import detect_anomalies
 from raglite.shared.models import (
-    AnomalyDetectionResult,
     AnomalySeverity,
     TimeSeriesData,
     TimeSeriesPoint,
@@ -291,7 +290,7 @@ class TestEndToEndWorkflow:
         result = await detect_anomalies("revenue", timeseries)
 
         # Verify result structure
-        assert isinstance(result, AnomalyDetectionResult)
+        assert result.__class__.__name__ == "AnomalyDetectionResult"
         assert result.metric_name == "revenue"
         assert result.data_points_analyzed == 7
         assert result.mean_value > 0

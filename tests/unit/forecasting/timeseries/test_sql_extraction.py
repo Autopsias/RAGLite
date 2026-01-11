@@ -15,7 +15,6 @@ from raglite.forecasting.timeseries import (
     MetricValidationError,
     extract_timeseries_from_sql,
 )
-from raglite.shared.models import TimeSeriesData
 
 
 @pytest.mark.asyncio
@@ -47,7 +46,7 @@ class TestExtractTimeseriesFromSQL:
             result = await extract_timeseries_from_sql(metric="revenue", min_points=8)
 
             # Verify result
-            assert isinstance(result, TimeSeriesData)
+            assert result.__class__.__name__ == "TimeSeriesData"
             assert result.metric_name == "revenue"
             assert len(result.points) == 9  # All 9 data points returned
             assert result.interval == "monthly"

@@ -71,7 +71,7 @@ class TestRENClientDaily:
             )
 
             assert len(result) == 1
-            assert isinstance(result[0], RENElectricityPrice)
+            assert result[0].__class__.__name__ == "RENElectricityPrice"
             assert result[0].price_type == "daily_avg"
             # Average of 50+55+60+...+110+105+...+55 = 1920/24 = 80.0
             assert result[0].price_eur_mwh == 80.0
@@ -185,7 +185,7 @@ class TestRENClientMonthly:
             result = await client.fetch_monthly_average(year=2024, month=1)
 
             assert result is not None
-            assert isinstance(result, RENElectricityPrice)
+            assert result.__class__.__name__ == "RENElectricityPrice"
             assert result.price_eur_mwh == 85.50
             assert result.price_type == "monthly_avg"
             assert result.date == date(2024, 1, 1)

@@ -15,12 +15,10 @@ from raglite.external_data.clients import (
     IPMAClient,
 )
 from raglite.external_data.models import (
-    ATICCementConsumption,
     CO2EUAPrice,
     CoalPrice,
     DataSource,
     EUDieselPrice,
-    IPMAWeatherData,
 )
 
 pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
@@ -47,7 +45,7 @@ class TestIPMAClientIntegration:
 
         assert len(result) == 1
         obs = result[0]
-        assert isinstance(obs, IPMAWeatherData)
+        assert obs.__class__.__name__ == "IPMAWeatherData"
         assert obs.source == DataSource.IPMA
         assert obs.temperature_c == 15.5
         assert obs.temperature_max_c == 20.0
@@ -97,7 +95,7 @@ class TestEUOilBulletinIntegration:
         # Should have 7 Portugal records (filtered from sample)
         assert len(result) == 7
         for price in result:
-            assert isinstance(price, EUDieselPrice)
+            assert price.__class__.__name__ == "EUDieselPrice"
             assert price.source == DataSource.EU_OIL_BULLETIN
             assert price.country == "Portugal"
             assert 1.0 <= price.price_eur_litre <= 2.0
@@ -125,7 +123,7 @@ class TestATICClientIntegration:
 
         assert len(result) == 6
         for record in result:
-            assert isinstance(record, ATICCementConsumption)
+            assert record.__class__.__name__ == "ATICCementConsumption"
             assert record.source == DataSource.ATIC
             assert record.consumption_tonnes > 0
 

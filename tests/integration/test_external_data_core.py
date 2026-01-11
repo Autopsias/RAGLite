@@ -25,10 +25,8 @@ from raglite.external_data.clients import (
     OMIEClient,
 )
 from raglite.external_data.models import (
-    BPstatMortgageLoans,
     DataSource,
     INEBuildingPermits,
-    OMIEElectricityPrice,
 )
 
 # Mark all tests in this module as integration tests that preserve collection state
@@ -129,7 +127,7 @@ class TestINEClientIntegration:
         assert len(result) >= 3
         # Verify model validation passed
         for record in result:
-            assert isinstance(record, INEBuildingPermits)
+            assert record.__class__.__name__ == "INEBuildingPermits"
             assert record.source == DataSource.INE
             assert record.permits_count > 0
         # Verify date range
@@ -182,7 +180,7 @@ class TestBPstatClientIntegration:
 
         assert len(result) == 3
         for record in result:
-            assert isinstance(record, BPstatMortgageLoans)
+            assert record.__class__.__name__ == "BPstatMortgageLoans"
             assert record.source == DataSource.BPSTAT
             # Story 6.9.3: Now returns interest rates, not loan amounts
             # total_loans_eur is 0 since we fetch interest rates instead
@@ -218,7 +216,7 @@ class TestOMIEClientIntegration:
         # 24 hours of data
         assert len(result) == 24
         for record in result:
-            assert isinstance(record, OMIEElectricityPrice)
+            assert record.__class__.__name__ == "OMIEElectricityPrice"
             assert record.market == "MIBEL"
             assert record.hour is not None and 0 <= record.hour <= 23
             assert record.price_eur_mwh > 0

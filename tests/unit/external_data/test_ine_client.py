@@ -20,11 +20,6 @@ import pytest
 
 from raglite.external_data.clients.ine import INEClient
 from raglite.external_data.exceptions import ExternalDataFetchError
-from raglite.external_data.models import (
-    INEBuildingPermits,
-    INEConstructionCostIndex,
-    INEConstructionOutput,
-)
 
 
 class TestINEClient:
@@ -59,7 +54,7 @@ class TestINEClient:
             )
 
             assert len(result) == 2
-            assert isinstance(result[0], INEBuildingPermits)
+            assert result[0].__class__.__name__ == "INEBuildingPermits"
             assert result[0].permits_count == 1234
             assert result[0].region == "Lisboa"
 
@@ -136,7 +131,7 @@ class TestINEClient:
             )
 
             assert len(result) == 1
-            assert isinstance(result[0], INEConstructionOutput)
+            assert result[0].__class__.__name__ == "INEConstructionOutput"
             assert result[0].index_value == 105.5
             # Note: INE doesn't provide YoY change in API response; it's calculated separately
             assert result[0].yoy_change_pct is None
@@ -168,7 +163,7 @@ class TestINEClient:
             )
 
             assert len(result) == 1
-            assert isinstance(result[0], INEConstructionCostIndex)
+            assert result[0].__class__.__name__ == "INEConstructionCostIndex"
             assert result[0].total_index == 110.2
             assert result[0].materials_index == 112.5
             assert result[0].labor_index == 108.1

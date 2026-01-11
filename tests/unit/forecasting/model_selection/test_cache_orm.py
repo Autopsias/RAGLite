@@ -191,7 +191,10 @@ class TestJSONSerialization:
 
 
 class TestInputValidation:
-    """[P0] M4 input validation tests for get_cached_model_selection and invalidate_model_selection."""
+    """[P0] M4 input validation tests for get_cached_model_selection.
+
+    Also covers invalidate_model_selection tests.
+    """
 
     def test_m4_get_cached_empty_variable_name(self) -> None:
         """[P0] M4: get_cached_model_selection rejects empty variable_name."""

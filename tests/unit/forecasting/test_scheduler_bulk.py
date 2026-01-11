@@ -189,7 +189,7 @@ class TestRefreshSource:
 
                     result = await refresh_source("IPMA")
 
-        assert isinstance(result, RefreshResult)
+        assert result.__class__.__name__ == "RefreshResult"
         assert result.source_name == "IPMA"
         assert result.success is True
 

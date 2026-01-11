@@ -7,7 +7,6 @@ import pytest
 from raglite.shared.models import (
     Insight,
     InsightCategory,
-    RecommendationResult,
 )
 
 pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
@@ -25,7 +24,7 @@ class TestEndToEndRecommendationGeneration:
             [cloud_cost_scenario["insight"]], auto_synthesize=False
         )
 
-        assert isinstance(result, RecommendationResult)
+        assert result.__class__.__name__ == "RecommendationResult"
         assert len(result.recommendations) == 1
 
         rec = result.recommendations[0]

@@ -9,7 +9,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 from raglite.ingestion.pipeline import ingest_pdf
-from raglite.shared.models import DocumentMetadata
 from tests.unit.pdf_ingestion_helpers import (
     create_mock_chunk,
     create_mock_element,
@@ -108,7 +107,7 @@ class TestIngestPDF:
             result = await ingest_pdf(str(pdf_file))
 
             # Assertions
-            assert isinstance(result, DocumentMetadata)
+            assert result.__class__.__name__ == "DocumentMetadata"
             assert result.filename == "test_report.pdf"
             assert result.doc_type == "PDF"
             assert result.page_count == 2  # Two unique pages

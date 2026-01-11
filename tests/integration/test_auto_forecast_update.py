@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from raglite.shared.models import DocumentMetadata, IngestionResult
+from raglite.shared.models import DocumentMetadata
 
 # All tests in this file use mocks and don't modify Qdrant collection state
 pytestmark = [
@@ -56,7 +56,7 @@ class TestMCPIngestionWithForecast:
             result = await ingest_financial_document.fn(doc_path="/tmp/test_report.pdf")
 
         # Should return IngestionResult, not DocumentMetadata
-        assert isinstance(result, IngestionResult)
+        assert result.__class__.__name__ == "IngestionResult"
         assert result.filename == "test_report.pdf"
         assert result.chunk_count == 30
 
@@ -391,7 +391,7 @@ class TestTimeoutBehavior:
             result = await _perform_forecast_refresh(metadata, auto_forecast=True)
 
         # Ingestion should still succeed, but forecast refresh should be skipped
-        assert isinstance(result, IngestionResult)
+        assert result.__class__.__name__ == "IngestionResult"
         # Note: The timeout is handled in trigger_forecast_refresh, not _perform_forecast_refresh
         # So we just verify graceful handling
 

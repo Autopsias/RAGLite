@@ -169,7 +169,6 @@ class TestEmbeddingIntegration:
         """
         # Lazy imports to avoid test discovery overhead
         from raglite.ingestion.pipeline import ingest_pdf
-        from raglite.shared.models import DocumentMetadata
 
         # Locate sample PDF
         sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
@@ -202,7 +201,7 @@ class TestEmbeddingIntegration:
             elapsed_seconds = time.time() - start_time  # STOP TIMER - captures embedding time
 
             # Assert: Validate document metadata
-            assert isinstance(result, DocumentMetadata)
+            assert result.__class__.__name__ == "DocumentMetadata"
             assert result.page_count > 0, "Document must have pages"
             assert result.chunk_count > 0, "Document must be chunked"
 

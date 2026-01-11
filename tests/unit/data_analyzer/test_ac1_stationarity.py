@@ -99,14 +99,13 @@ class TestStationarityTests:
         Then: Result should include stationarity as an enum type
         """
         from raglite.forecasting.data_analyzer import (
-            Stationarity,
             analyze_data_characteristics,
         )
 
         result = analyze_data_characteristics(stationary_series, frequency="M")
 
         assert hasattr(result, "stationarity")
-        assert isinstance(result.stationarity, Stationarity)
+        assert result.stationarity.__class__.__name__ == "Stationarity"
 
     def test_ac1_6_return_both_pvalues(self, stationary_series: pd.Series) -> None:
         """TEST-AC-1.6: Return both p-values.

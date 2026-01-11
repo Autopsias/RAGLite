@@ -183,7 +183,6 @@ class TestAC_7b_3_6_ModelSelectionResult:
         self, sample_time_series: pd.Series
     ) -> None:
         """TEST-AC-7b.3.6.4: Result contains data_characteristics from Story 7b-2."""
-        from raglite.forecasting.data_analyzer import DataCharacteristics
         from raglite.forecasting.model_selection import select_best_model
 
         result = await select_best_model(
@@ -192,7 +191,7 @@ class TestAC_7b_3_6_ModelSelectionResult:
         )
 
         assert hasattr(result, "data_characteristics")
-        assert isinstance(result.data_characteristics, DataCharacteristics)
+        assert result.data_characteristics.__class__.__name__ == "DataCharacteristics"
 
     @pytest.mark.asyncio
     async def test_ac_7b_3_6_5_result_contains_candidate_results(

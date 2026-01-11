@@ -15,7 +15,6 @@ from raglite.external_data.exceptions import (
     ExternalDataFetchError,
     ExternalDataValidationError,
 )
-from raglite.external_data.models import ATICCementConsumption
 
 
 class TestATICClient:
@@ -36,7 +35,7 @@ class TestATICClient:
         result = client.parse_csv_content(csv_content)
 
         assert len(result) == 3
-        assert isinstance(result[0], ATICCementConsumption)
+        assert result[0].__class__.__name__ == "ATICCementConsumption"
         assert result[0].consumption_tonnes == 150000
         assert result[0].region == "Portugal"
         assert result[2].region == "Lisboa"

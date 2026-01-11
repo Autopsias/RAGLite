@@ -12,7 +12,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from raglite.ingestion.document_ingestion.excel_processing import extract_excel
-from raglite.shared.models import DocumentMetadata
 
 pytestmark = [pytest.mark.unit]
 
@@ -96,7 +95,7 @@ class TestExcelProcessingErrorHandling:
                 result = await extract_excel(tmp_path)
 
                 # Then returns metadata with 0 pages
-                assert isinstance(result, DocumentMetadata), (
+                assert result.__class__.__name__ == "DocumentMetadata", (
                     f"Expected DocumentMetadata, got {type(result)}"
                 )
                 assert result.page_count == 0, f"Expected page_count=0, got {result.page_count}"
@@ -128,7 +127,7 @@ class TestExcelProcessingErrorHandling:
                 result = await extract_excel(tmp_path)
 
                 # Then returns metadata (empty sheets still create metadata)
-                assert isinstance(result, DocumentMetadata), (
+                assert result.__class__.__name__ == "DocumentMetadata", (
                     f"Expected DocumentMetadata, got {type(result)}"
                 )
         finally:
@@ -165,7 +164,7 @@ class TestExcelProcessingErrorHandling:
                 result = await extract_excel(tmp_path)
 
                 # Then succeeds without errors - returns DocumentMetadata when no sheets extracted
-                assert isinstance(result, DocumentMetadata), (
+                assert result.__class__.__name__ == "DocumentMetadata", (
                     f"Expected DocumentMetadata, got {type(result)}"
                 )
         finally:
@@ -202,7 +201,7 @@ class TestExcelProcessingErrorHandling:
                 result = await extract_excel(tmp_path)
 
                 # Then processes without errors - returns DocumentMetadata
-                assert isinstance(result, DocumentMetadata), (
+                assert result.__class__.__name__ == "DocumentMetadata", (
                     f"Expected DocumentMetadata, got {type(result)}"
                 )
         finally:
@@ -243,7 +242,7 @@ class TestExcelProcessingErrorHandling:
                 result = await extract_excel(tmp_path)
 
                 # Then extracts evaluated values - returns DocumentMetadata
-                assert isinstance(result, DocumentMetadata), (
+                assert result.__class__.__name__ == "DocumentMetadata", (
                     f"Expected DocumentMetadata, got {type(result)}"
                 )
         finally:
@@ -287,7 +286,7 @@ class TestExcelProcessingBoundaryConditions:
                 result = await extract_excel(tmp_path)
 
                 # Then processes single cell - returns DocumentMetadata
-                assert isinstance(result, DocumentMetadata), (
+                assert result.__class__.__name__ == "DocumentMetadata", (
                     f"Expected DocumentMetadata, got {type(result)}"
                 )
         finally:
@@ -324,7 +323,7 @@ class TestExcelProcessingBoundaryConditions:
                 result = await extract_excel(tmp_path)
 
                 # Then processes without memory issues - returns DocumentMetadata
-                assert isinstance(result, DocumentMetadata), (
+                assert result.__class__.__name__ == "DocumentMetadata", (
                     f"Expected DocumentMetadata, got {type(result)}"
                 )
         finally:
