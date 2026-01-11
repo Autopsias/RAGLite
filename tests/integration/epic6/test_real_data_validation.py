@@ -111,8 +111,8 @@ class TestNFRs:
 
         # Run all 3 models (baseline, multivariate, ensemble)
         baseline_result = await generate_forecast(
-            metric="cement_demand",
-            historical_data=train_time_series,
+            "cement_demand",
+            train_time_series,
             periods_ahead=periods,
             external_regressors=None,
             frequency="M",
@@ -123,8 +123,8 @@ class TestNFRs:
         )
 
         multivariate_result = await generate_forecast(
-            metric="cement_demand",
-            historical_data=train_time_series,
+            "cement_demand",
+            train_time_series,
             periods_ahead=periods,
             external_regressors=synthetic_regressors,
             frequency="M",
