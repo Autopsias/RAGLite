@@ -236,6 +236,13 @@ These rules prevent recurring test failures. Follow them for ALL test-related ch
 - **ALWAYS** split before adding new functionality to large files
 - **NEVER** commit new files exceeding 500 LOC without approved exception
 
+### pytest-xdist Type Checks
+- **NEVER** use `isinstance()` for custom class identity checks in tests (fails with `-n auto`)
+- **ALWAYS** use `__class__.__name__` or `hasattr()` for duck-typing validation
+- **NEVER** use `in Enum` checks; use `.name` or `.value` instead
+
+**CI Failure Runbook:** `docs/ci-failure-runbook.md` - Detailed diagnosis and resolution for all CI failure patterns.
+
 ---
 
 ## Current Next Steps

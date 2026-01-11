@@ -272,6 +272,105 @@ async def test_cache_hit_uses_cached_model():
 
 ---
 
+## isinstance Checks with pytest-xdist (CRITICAL)
+
+**Problem:** When using pytest-xdist (`-n auto`), each worker runs in a separate process.
+This causes `isinstance(obj, SomeClass)` to fail because `SomeClass` in each worker
+is a different object, even if it has the same name.
+
+### Prevention Rules
+
+1. **NEVER use isinstance() for class identity checks in tests**
+   ```python
+   # WRONG - fails with xdist
+   assert isinstance(result, TrendAnalysisResult)
+
+   # CORRECT - use duck-typing
+   assert result.__class__.__name__ == 'TrendAnalysisResult'
+   assert hasattr(result, 'trends')
+   assert hasattr(result, 'metrics_analyzed')
+   ```
+
+2. **NEVER use `in Enum` checks for enum membership**
+   ```python
+   # WRONG - fails with xdist
+   assert trend.direction in TrendDirection
+
+   # CORRECT - check enum value
+   assert trend.direction.name in ['INCREASING', 'DECREASING', 'STABLE']
+   # OR
+   assert trend.direction.value in ['increasing', 'decreasing', 'stable']
+   ```
+
+3. **For dataclasses, use attribute checks**
+   ```python
+   # WRONG
+   assert isinstance(result, ModelSelectionResult)
+
+   # CORRECT
+   assert result.__class__.__name__ == 'ModelSelectionResult'
+   assert hasattr(result, 'best_model')
+   assert hasattr(result, 'best_mape')
+   ```
+
+### When isinstance() IS Safe
+
+- Checking against built-in types: `isinstance(x, str)`, `isinstance(x, dict)`
+- Checking against typing module types: `isinstance(x, list)`
+- Checking against classes imported from external libraries (they're stable)
+
+---
+
+## Fixture Scope Conflicts (P1)
+
+### Problem
+
+Fixtures with different scopes can cause unexpected behavior when they depend on each other.
+
+### Rules
+
+1. **Function-scope fixtures cannot depend on session-scope fixtures with side effects**
+   ```python
+   # WRONG - state leaks between tests
+   @pytest.fixture(scope="session")
+   def db_connection():
+       conn = create_connection()
+       yield conn
+       conn.close()
+
+   @pytest.fixture(scope="function")
+   def user(db_connection):  # Dangerous!
+       # db_connection is shared across ALL tests
+       return create_user(db_connection)
+   ```
+
+2. **Use explicit scope markers for shared state**
+   ```python
+   @pytest.fixture(scope="session")
+   @pytest.mark.xdist_group(name="database")  # Force same worker
+   def db_connection():
+       ...
+   ```
+
+3. **Fixture location determines inheritance**
+   - `tests/conftest.py` - Available to ALL tests
+   - `tests/unit/conftest.py` - Available to unit tests only
+   - `tests/unit/module/conftest.py` - Available to that module only
+
+   If a test at `tests/unit/` uses a fixture from `tests/unit/module/conftest.py`,
+   pytest will NOT find it!
+
+### Common Fixture Scope Patterns
+
+| Fixture Scope | Use Case | xdist Behavior |
+|---------------|----------|----------------|
+| function | Isolated test data | Safe with `-n auto` |
+| class | Shared within test class | Safe with `-n auto` |
+| module | Shared within file | Safe with `-n auto` |
+| session | Global (e.g., DB connection) | MUST use xdist_group |
+
+---
+
 ## Test Organization
 
 - **Unit Tests** (`tests/unit/`): ~200 tests, no external dependencies

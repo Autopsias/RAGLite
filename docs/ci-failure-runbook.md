@@ -21,6 +21,7 @@ Quick reference for diagnosing and resolving CI failures.
 | `AttributeError` on mock target | Class name typo (ATIClient vs ATICClient) | Use `validate-mock-targets.py` script | Run validation before commit |
 | `ModuleNotFoundError` in test collection | Module renamed but imports not updated | `grep -r "old_name" .` + update all refs | Use module rename checklist |
 | `ATDD test file size violation` | Test file exceeds 500 LOC limit | Add exception to `.file-size-exceptions` or split file | Plan refactoring early |
+| `isinstance()` returns False with xdist | Class identity differs across workers | Use `__class__.__name__` or `hasattr()` | Never use isinstance for custom classes |
 
 ---
 
@@ -365,6 +366,65 @@ wc -l tests/path/to/test_file.py
 - Include refactoring story when adding large test files
 - Use `.file-size-exceptions` for TEMPORARY exceptions with target dates
 - Review file size metrics in sprint retrospectives
+
+### 12. isinstance Failures with pytest-xdist
+
+#### Symptoms
+- `AssertionError: assert False` on `isinstance(result, SomeClass)` assertions
+- Class shows correct name in error output but isinstance returns False
+- Test passes with `-n 0` but fails with `-n auto`
+- Dataclass or enum type checks fail intermittently in CI
+
+#### Root Cause (Five Whys)
+1. Why? → `isinstance(result, SomeClass)` returns False even when types match
+2. Why? → pytest-xdist runs each test in a separate process
+3. Why? → Each process imports modules independently
+4. Why? → Python creates distinct class objects with the same name per process
+5. Why? → `is` identity check fails even though types are semantically identical
+
+#### Solution
+Replace `isinstance()` with duck-typing checks:
+
+```python
+# WRONG - fails with xdist
+assert isinstance(result, TrendAnalysisResult)
+
+# CORRECT - use class name check
+assert result.__class__.__name__ == 'TrendAnalysisResult'
+
+# CORRECT - use duck-typing (verify attributes)
+assert hasattr(result, 'trends')
+assert hasattr(result, 'metrics_analyzed')
+```
+
+For enum membership checks:
+
+```python
+# WRONG - fails with xdist
+assert trend.direction in TrendDirection
+
+# CORRECT - check enum name/value
+assert trend.direction.name in ['INCREASING', 'DECREASING', 'STABLE']
+```
+
+#### Verification
+```bash
+# Run test sequentially (should pass)
+pytest tests/unit/test_example.py -n 0 -v
+
+# Run test in parallel (may fail with isinstance)
+pytest tests/unit/test_example.py -n auto -v
+
+# If sequential passes but parallel fails, isinstance is the culprit
+```
+
+#### Prevention
+- **NEVER** use `isinstance()` for custom class identity checks in tests
+- Use `__class__.__name__` for type name validation
+- Use `hasattr()` for duck-typing validation
+- Use `.name` or `.value` for enum membership checks
+- `isinstance()` is SAFE for built-in types (`str`, `dict`, `list`, etc.)
+- See `.claude/rules/testing.md` section "isinstance Checks with pytest-xdist"
 
 ---
 

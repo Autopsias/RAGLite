@@ -42,6 +42,44 @@ fi
 
 echo -e "${YELLOW}⚠️  Docker daemon is not running${NC}"
 
+# Check for Colima first (if Docker socket points to Colima)
+if [[ "$DOCKER_HOST" == *"colima"* ]] || [[ -S "$HOME/.colima/default/docker.sock" ]]; then
+    echo -e "${BLUE}Detected Colima configuration${NC}"
+
+    # Check if colima command exists
+    if command -v colima &> /dev/null; then
+        echo -e "${BLUE}Attempting to start Colima...${NC}"
+        colima start
+
+        # Wait for Docker daemon to be ready (max 60 seconds)
+        MAX_WAIT=60
+        WAIT_COUNT=0
+
+        while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
+            if docker info &> /dev/null; then
+                echo -e "${GREEN}✅ Docker daemon is now running via Colima (took ${WAIT_COUNT}s)${NC}"
+                docker version | head -10
+                exit 0
+            fi
+
+            if [ $((WAIT_COUNT % 10)) -eq 0 ] && [ $WAIT_COUNT -gt 0 ]; then
+                echo -e "${BLUE}Still waiting for Docker daemon... (${WAIT_COUNT}s/${MAX_WAIT}s)${NC}"
+            fi
+
+            sleep 1
+            WAIT_COUNT=$((WAIT_COUNT + 1))
+        done
+
+        echo -e "${RED}❌ Colima did not start Docker daemon within ${MAX_WAIT} seconds${NC}"
+        echo -e "${YELLOW}Try: brew services restart colima${NC}"
+        exit 1
+    else
+        echo -e "${YELLOW}⚠️  Colima socket detected but colima command not found${NC}"
+        echo -e "${YELLOW}Install with: brew install colima${NC}"
+        exit 1
+    fi
+fi
+
 # Attempt to start Docker Desktop (macOS)
 if [[ "$OSTYPE" == "darwin"* ]]; then
     echo -e "${BLUE}Attempting to start Docker Desktop...${NC}"

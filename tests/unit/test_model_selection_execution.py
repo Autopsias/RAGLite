@@ -134,17 +134,17 @@ class TestSingleVariableSelection:
                 return_value=mock_historical_data,
             ),
             patch(
-                "raglite.forecasting.regressor_fetch.fetch_regressors_with_date_range",
+                "raglite.forecasting.model_selection_job.fetch_regressors_with_date_range",
                 new_callable=AsyncMock,
                 return_value={},
             ),
             patch(
-                "raglite.forecasting.model_selection.select_best_model",
+                "raglite.forecasting.model_selection_job.select_best_model",
                 new_callable=AsyncMock,
                 return_value=mock_model_result,
             ),
             patch(
-                "raglite.external_data.storage.model_selection.cache_model_selection",
+                "raglite.forecasting.model_selection_job.cache_model_selection",
                 new_callable=Mock,
             ),
         ):
@@ -184,17 +184,17 @@ class TestSingleVariableSelection:
                 return_value=mock_historical_data,
             ),
             patch(
-                "raglite.forecasting.regressor_fetch.fetch_regressors_with_date_range",
+                "raglite.forecasting.model_selection_job.fetch_regressors_with_date_range",
                 new_callable=AsyncMock,
                 return_value={},
             ),
             patch(
-                "raglite.forecasting.model_selection.select_best_model",
+                "raglite.forecasting.model_selection_job.select_best_model",
                 new_callable=AsyncMock,
                 return_value=mock_result,
             ),
             patch(
-                "raglite.external_data.storage.model_selection.cache_model_selection",
+                "raglite.forecasting.model_selection_job.cache_model_selection",
                 new_callable=Mock,
             ),
         ):

@@ -135,6 +135,13 @@ class TestAttachmentExtractorExpanded:
         mock_qdrant_client.get_collections.return_value = Mock(collections=[])
         mock_qdrant_client.get_collection.return_value = Mock(points_count=1)
 
+        # Mock PostgreSQL connection with proper structure
+        mock_pg_conn = Mock()
+        mock_cursor = Mock()
+        mock_cursor.connection = mock_pg_conn
+        mock_cursor.connection.encoding = "UTF8"
+        mock_pg_conn.cursor.return_value = mock_cursor
+
         with (
             patch(
                 "raglite.ingestion.document_ingestion.pdf_processing._legacy.create_docling_converter",
@@ -151,15 +158,23 @@ class TestAttachmentExtractorExpanded:
             ),
             patch("raglite.ingestion.embedding_generation.get_embedding_model") as MockEmbedding,
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_metadata_in_postgresql",
+                "raglite.ingestion.storage.metadata_store.get_postgresql_connection",
+                return_value=mock_pg_conn,
+            ),
+            patch(
+                "raglite.ingestion.storage.table_store.get_postgresql_connection",
+                return_value=mock_pg_conn,
+            ),
+            patch(
+                "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql",
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_tables_in_postgresql",
+                "raglite.ingestion.storage.table_store.store_tables_in_postgresql",
                 return_value=(0, 0),
             ),
             patch(
-                "raglite.ingestion.document_ingestion.pdf_processing.store_vectors_in_qdrant",
+                "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant",
                 return_value=None,
             ),
         ):
