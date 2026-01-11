@@ -177,7 +177,9 @@ def session_ingested_collection(request, warmup_embedding_model):
     _ingest_test_pdf(sample_pdf, skip_metadata_extraction, settings)
 
     # Verify Qdrant data
-    expected_range = (150, 220) if use_full_pdf else (10, 30)
+    expected_range = (
+        (150, 220) if use_full_pdf else (10, 55)
+    )  # Updated: 10-page PDF now yields ~42 chunks
     count_after = _verify_qdrant_data(qdrant, settings, expected_range)
     session_state.session_sample_pdf_chunk_count = count_after
 

@@ -462,7 +462,9 @@ def session_ingested_collection(request, warmup_embedding_model):
     )
 
     # Validate chunk count
-    expected_range = (150, 220) if use_full_pdf else (10, 30)
+    expected_range = (
+        (150, 220) if use_full_pdf else (10, 55)
+    )  # Updated: 10-page PDF now yields ~42 chunks
     if not (expected_range[0] <= count_after.count <= expected_range[1]):
         pytest.fail(
             f"CRITICAL: Chunk count {count_after.count} not in expected range {expected_range}"

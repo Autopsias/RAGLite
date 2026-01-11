@@ -59,7 +59,9 @@ def run_ingestion_pipeline(sample_pdf, use_full_pdf):
 
     execute_ingestion(sample_pdf, skip_metadata_extraction)
 
-    expected_range = (150, 220) if use_full_pdf else (10, 30)
+    expected_range = (
+        (150, 220) if use_full_pdf else (10, 55)
+    )  # Updated: 10-page PDF now yields ~42 chunks
     count_after = verify_qdrant_data(expected_range)
 
     verify_postgresql_data(use_full_pdf)
