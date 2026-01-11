@@ -4,11 +4,15 @@ This module contains pytest hooks for:
 - Custom command line options (--run-slow, --skip-ingestion, --enforce-isolation-markers)
 - Test collection modification (grouping, marker enforcement, priority sorting)
 - xdist worker configuration
+- Docker/Colima auto-startup (ensures infrastructure is available before tests)
 
 These hooks are loaded by pytest via pytest_plugins in the root conftest.py.
 """
 
 import logging
+import os
+import shutil
+import subprocess
 
 import pytest
 from _pytest.config import Config
@@ -16,6 +20,87 @@ from _pytest.config.argparsing import Parser
 from _pytest.nodes import Item
 
 logger = logging.getLogger(__name__)
+
+
+def _ensure_docker_running() -> bool:
+    """Ensure Docker daemon is running, starting Colima if needed.
+
+    This function is called early in pytest_configure to ensure Docker is available
+    before any tests or fixtures that need containers are executed.
+
+    Strategic recommendation (2026-01-11): Prevents recurring test failures due to
+    Colima/Docker not running after system reboot, sleep, or crash.
+
+    Returns:
+        True if Docker is now available, False if startup failed
+    """
+    # Check if Docker is already available (fast path)
+    docker_path = shutil.which("docker")
+    if not docker_path:
+        logger.warning("Docker CLI not found - skipping Docker check")
+        return False
+
+    try:
+        result = subprocess.run(
+            ["docker", "info"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            logger.debug("Docker daemon is already running")
+            return True
+    except (subprocess.TimeoutExpired, Exception):
+        pass
+
+    # Docker not available - try to start via ensure-docker-running.sh
+    logger.info("Docker daemon not running - attempting auto-start...")
+
+    # Find the script relative to project root
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    script_path = os.path.join(project_root, "scripts", "ensure-docker-running.sh")
+
+    if os.path.exists(script_path):
+        try:
+            logger.info(f"Running {script_path}...")
+            result = subprocess.run(
+                ["bash", script_path],
+                capture_output=True,
+                text=True,
+                timeout=120,  # Colima startup can take up to 60s
+            )
+            if result.returncode == 0:
+                logger.info("Docker daemon started successfully via ensure-docker-running.sh")
+                return True
+            else:
+                logger.warning(f"ensure-docker-running.sh failed: {result.stderr}")
+        except subprocess.TimeoutExpired:
+            logger.warning("ensure-docker-running.sh timed out after 120s")
+        except Exception as e:
+            logger.warning(f"Error running ensure-docker-running.sh: {e}")
+    else:
+        # Fallback: Try direct Colima start if script not found
+        colima_path = shutil.which("colima")
+        if colima_path:
+            try:
+                logger.info("Attempting to start Colima directly...")
+                result = subprocess.run(
+                    ["colima", "start"],
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                )
+                if result.returncode == 0:
+                    logger.info("Colima started successfully")
+                    return True
+            except Exception as e:
+                logger.warning(f"Failed to start Colima: {e}")
+
+    logger.warning(
+        "Could not start Docker/Colima. Integration tests may fail. "
+        "Run 'colima start' or './scripts/ensure-docker-running.sh' manually."
+    )
+    return False
 
 
 def pytest_addoption(parser: Parser) -> None:
@@ -54,12 +139,29 @@ def pytest_configure(config: Config) -> None:
     This hook is called once per worker process in pytest-xdist.
     Makes the run_slow and skip_ingestion options available to all tests.
 
+    Strategic update (2026-01-11): Now also ensures Docker/Colima is running
+    before test collection begins. This prevents the recurring issue where
+    Colima stops between sessions and integration tests fail.
+
     Args:
         config: pytest configuration object
     """
     # Store flags globally so tests can access them
     pytest.run_slow = config.getoption("--run-slow")  # type: ignore[attr-defined]
     pytest.skip_ingestion = config.getoption("--skip-ingestion")  # type: ignore[attr-defined]
+
+    # Ensure Docker is running (only on main worker, not xdist workers)
+    # Check for xdist worker - if workerinput exists, we're a worker
+    if not hasattr(config, "workerinput"):
+        # We're the main process (or running without xdist)
+        # Check if unit tests only - skip Docker check for pure unit tests
+        # This is determined by looking at the test paths
+        args = config.args or []
+        is_unit_only = all("tests/unit" in str(arg) for arg in args) if args else False
+
+        if not is_unit_only:
+            # Not unit-only, so we may need Docker for integration tests
+            _ensure_docker_running()
 
     # Only set workerinput if we're actually in xdist mode
     # DO NOT create empty workerinput - it confuses pytest-cov!

@@ -22,6 +22,7 @@ Quick reference for diagnosing and resolving CI failures.
 | `ModuleNotFoundError` in test collection | Module renamed but imports not updated | `grep -r "old_name" .` + update all refs | Use module rename checklist |
 | `ATDD test file size violation` | Test file exceeds 500 LOC limit | Add exception to `.file-size-exceptions` or split file | Plan refactoring early |
 | `isinstance()` returns False with xdist | Class identity differs across workers | Use `__class__.__name__` or `hasattr()` | Never use isinstance for custom classes |
+| `Connection refused` on Qdrant/PostgreSQL | Docker/Colima not running | `colima stop && colima start` | pytest_configure auto-starts Docker |
 
 ---
 
@@ -426,9 +427,103 @@ pytest tests/unit/test_example.py -n auto -v
 - `isinstance()` is SAFE for built-in types (`str`, `dict`, `list`, etc.)
 - See `.claude/rules/testing.md` section "isinstance Checks with pytest-xdist"
 
+### 13. Docker/Colima Not Running
+
+#### Symptoms
+- `qdrant_client.http.exceptions.ResponseHandlingException: [Errno 61] Connection refused`
+- `psycopg2.OperationalError: could not connect to server: Connection refused`
+- All integration tests fail with connection errors
+- Docker commands return errors about daemon not running
+
+#### Root Cause (Five Whys)
+1. Why? → Qdrant/PostgreSQL containers unreachable
+2. Why? → Docker daemon is not running
+3. Why? → Colima service stopped (macOS)
+4. Why? → System reboot, sleep/wake cycle, or Colima crash
+5. Why? → No automatic Docker startup mechanism
+
+#### Solution
+
+**Option A: Use the helper script**
+```bash
+./scripts/ensure-docker-running.sh
+```
+This script detects Colima, starts it if stopped, and waits for Docker to be ready.
+
+**Option B: Manual Colima restart**
+```bash
+# Check Colima status
+colima status
+
+# If stopped or in error state, restart
+colima stop
+colima start
+
+# Verify Docker is running
+docker info
+
+# Start containers
+docker-compose up -d qdrant postgresql
+```
+
+**Option C: Check for inconsistent state**
+If `colima status` fails but Colima thinks it's running:
+```bash
+# Force stop and restart
+colima stop
+sleep 2
+colima start
+```
+
+#### Automatic Recovery (2026-01-11)
+The `pytest_configure` hook in `tests/fixtures/pytest_hooks.py` now automatically:
+1. Detects if Docker daemon is running
+2. Calls `ensure-docker-running.sh` if Docker is unavailable
+3. Falls back to direct `colima start` if script not found
+
+This happens before test collection, so integration tests should auto-recover.
+
+#### Verification
+```bash
+# Verify Colima is running
+colima status
+# Should show: colima is running
+
+# Verify Docker is working
+docker info | head -5
+
+# Verify containers are up
+docker ps --filter "name=raglite" --format "table {{.Names}}\t{{.Status}}"
+
+# Run integration test
+uv run pytest tests/integration/chunking/test_ac5_validation.py -v --timeout=120
+```
+
+#### Prevention
+1. **Automatic:** pytest_configure hook handles Docker startup (implemented 2026-01-11)
+2. **Brew service (optional):** `brew services start colima` for login auto-start
+3. **Always run:** `./scripts/ensure-docker-running.sh` before long test sessions
+4. **Monitor:** Check `colima status` if tests suddenly fail
+
+#### Common Issues
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| "error retrieving current runtime: empty value" | Colima in inconsistent state | `colima stop && colima start` |
+| "already running, ignoring" but status fails | Zombie Colima process | Same as above |
+| Docker commands hang | Colima VM frozen | `colima stop -f && colima start` |
+| Containers exist but ports not responding | Container health check failing | `docker-compose restart` |
+
 ---
 
 ## Troubleshooting Decision Tree
+
+### Docker/Colima Issues
+1. Check Colima status: `colima status`
+2. If error state: `colima stop && colima start`
+3. Verify Docker: `docker info`
+4. Check containers: `docker ps --filter "name=raglite"`
+5. Start containers if missing: `docker-compose up -d`
 
 ### Database Connection Issues
 1. Check container mounts: `docker inspect --format='{{json .Mounts}}'`
