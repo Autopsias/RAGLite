@@ -8,7 +8,12 @@ import pytest
 from raglite.shared.clients import get_qdrant_client
 from raglite.shared.config import settings
 
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 
 
 class TestMetadataInjectionMocked:

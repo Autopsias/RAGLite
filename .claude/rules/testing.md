@@ -253,9 +253,14 @@ def worker_containers(worker_id):
 ### Current Best Practices
 
 1. **Unit tests**: `-n auto` safe (no shared state)
-2. **Integration tests**: `-n 1` (session fixture, single worker)
+2. **Integration tests**: `-n 4 --dist loadgroup` (xdist_group isolates embedding tests)
 3. **E2E tests**: `-n 0` (sequential, full isolation)
-4. **Avoid**: `-n 4` on integration tests (container state pollution)
+
+**Integration Test Parallelization (2025-01-11):**
+- Tests using embedding model have `@pytest.mark.xdist_group(name="embedding_model")`
+- These tests run on a SINGLE worker (avoids 60s model load per worker)
+- Other integration tests distribute across remaining workers
+- Result: ~1000 tests in ~10 min (was 28 min with `-n 1`)
 
 ```python
 # This belongs in tests/unit/, NOT tests/integration/

@@ -30,7 +30,12 @@ from raglite.shared.models import QueryRequest
 from tests.fixtures.ground_truth import GROUND_TRUTH_QA
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 
 
 @pytest.mark.skip(

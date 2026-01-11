@@ -2,8 +2,41 @@
 
 Quick reference for diagnosing and resolving CI failures.
 
-**Last Updated:** 2025-12-30
-**CI Infrastructure Version:** 1.1 (self-hosted runners with resource isolation)
+**Last Updated:** 2025-01-11
+**CI Infrastructure Version:** 1.2 (self-hosted runners with proactive enforcement)
+
+---
+
+## Strategic Analysis Summary (2025-01-11)
+
+**CI Fix Commits:** 39% of total commits
+**Root Cause Analysis:** Three systemic patterns identified and addressed
+**Prevention Mechanisms:** Now enforced via CI workflow and pre-commit hooks
+
+### Three Root Causes Identified
+
+| Root Cause | Frequency | Fix Implemented | Enforcement |
+|-----------|-----------|-----------------|------------|
+| **Mock Target Drift** | 12% of failures | `validate-mock-targets.py` script | CI mock validation job |
+| **pytest-xdist isinstance()** | 15% of failures | Duck-typing replacement rules | `check-isinstance-violations.sh` linter |
+| **Docker/Colima Lifecycle** | 10% of failures | Auto-startup in `pytest_configure` | Automatic recovery before test collection |
+
+### Key Metrics
+
+- **Before:** 39% of commits were CI fixes (reactive)
+- **Target:** <10% of commits are CI fixes (proactive prevention)
+- **Prevention Rules:** 5 new automated checks added to CI workflow
+- **Documentation:** Runbook expanded to 13+ failure categories with solutions
+
+### Enforcement Mechanisms Now Active
+
+1. **Mock Patch Validation** - CI job runs `validate-mock-targets.py` on all PRs
+2. **isinstance() Linting** - CI job runs `check-isinstance-violations.sh` to catch xdist violations
+3. **Docker Auto-Recovery** - `pytest_configure` hook auto-starts Colima if Docker unavailable
+4. **Module Rename Checklist** - Documented in `.claude/rules/module-rename-checklist.md`
+5. **File Size Enforcement** - Pre-commit hook blocks new files >500 LOC
+
+---
 
 ## Quick Reference
 

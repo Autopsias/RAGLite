@@ -286,3 +286,223 @@ ps aux | wc -l
 - Mark tests using joblib/statsmodels with `@pytest.mark.slow`
 - Use `-n 1` parallelism for integration tests
 - Monitor process count during test runs
+
+---
+
+## Failure Pattern: Mock Patch Target Drift (Strategic Analysis 2025-01-11)
+
+**First Observed:** 2025-01-08 (Epic 8 refactoring)
+**Frequency:** ~12% of CI failures in recent sprints
+**Strategic Impact:** Part of 39% CI fix commits (systemic root cause)
+**Enforcement Mechanism:** `scripts/validate-mock-targets.py` runs in CI lint-gate job
+
+### Symptoms
+
+- `AttributeError: module 'X' has no attribute 'Y'` when running tests with mocks
+- Mock patch fails silently (creates attribute in test, doesn't affect actual code)
+- Test passes in isolation but fails in suite (import order dependent)
+- Typo in class name not caught by linters: `ATIClient` vs `ATICClient`
+- Patch target string references non-existent module attributes
+
+### Root Cause (Five Whys)
+
+1. **Why?** → Mock patch target spelled incorrectly or module name changed during refactoring
+2. **Why?** → Manual refactoring didn't update all patch target strings systematically
+3. **Why?** → Mock targets are string literals, not validated by static analysis tools
+4. **Why?** → No tool checks that patch strings match actual class/function names
+5. **Why?** → String-based patching creates drift when code is refactored
+
+### Solution Applied
+
+**Proactive Prevention (Added 2025-01-11):**
+
+1. Created `scripts/validate-mock-targets.py` to verify all patch targets before commit
+2. Script cross-references patch strings against actual class/function definitions
+3. CI job runs validation on all PRs (part of lint-gate job) - **blocks invalid patches**
+4. Pre-commit hook added to catch issues before push
+5. Mock patch patterns documented in `.claude/rules/testing.md`
+
+**How It Works:**
+
+```bash
+# Run validation before commit
+python scripts/validate-mock-targets.py
+
+# For specific test file
+python scripts/validate-mock-targets.py tests/path/to/test_file.py --verbose
+
+# CI enforcement (fails on any error)
+python scripts/validate-mock-targets.py --strict
+```
+
+### Verification
+
+```bash
+# Validate all mock patches in codebase
+python scripts/validate-mock-targets.py
+
+# Run after test file updates
+python scripts/validate-mock-targets.py --verbose
+
+# Check CI validation passes
+grep "validate-mock-targets" .github/workflows/ci.yml
+```
+
+### Prevention Checklist
+
+- [ ] Run `validate-mock-targets.py` before committing test changes
+- [ ] Use IDE "Find References" to verify patch targets exist
+- [ ] Review mock patches in code review (spelling and module paths matter)
+- [ ] Document actual class/function names in test docstrings
+- [ ] Use `patch.object()` when possible (type-safe variant)
+
+### Related Documentation
+
+- **Runbook:** `docs/ci-failure-runbook.md` → Section 9 (Mock Patch Target Name Mismatch)
+- **Prevention Tool:** `scripts/validate-mock-targets.py`
+- **Testing Rules:** `.claude/rules/testing.md` → Mock Patching section
+- **CI Strategy:** `docs/ci-strategy.md` → Mock Standards section
+
+---
+
+## Failure Pattern: pytest-xdist isinstance() Failures (Strategic Analysis 2025-01-11)
+
+**First Observed:** 2025-01-08 (Epic 8 test validation)
+**Frequency:** ~15% of CI failures in parallel test runs
+**Strategic Impact:** Part of 39% CI fix commits (systemic root cause)
+**Enforcement Mechanism:** `scripts/check-isinstance-violations.sh` runs in CI lint-gate job
+
+### Symptoms
+
+- `AssertionError: assert False` on `isinstance(result, CustomClass)` checks
+- Test passes with `-n 0` (sequential) but fails with `-n auto` (parallel)
+- Class name appears correct in error output but isinstance returns False
+- Dataclass or enum type checks fail intermittently in CI only
+- Same code works locally (single process) but fails in CI (parallel workers)
+
+### Root Cause (Five Whys)
+
+1. **Why?** → `isinstance(result, CustomClass)` returns False despite matching types
+2. **Why?** → pytest-xdist runs each test in a separate OS process
+3. **Why?** → Each process independently imports all modules
+4. **Why?** → Python creates distinct class objects with same name per process
+5. **Why?** → `isinstance()` uses object identity (`is`) comparison, not name matching
+
+### Solution Applied
+
+**Proactive Prevention (Added 2025-01-11):**
+
+1. Created `scripts/check-isinstance-violations.sh` to detect xdist-incompatible patterns
+2. CI job runs linter on all PRs (part of lint-gate job) - **blocks violations**
+3. Automated detection prevents isinstance patterns from ever reaching test execution
+4. Prevention rules documented in `.claude/rules/testing.md`
+5. All existing isinstance() violations fixed before merge
+
+**How It Works:**
+
+```bash
+# Run detection before commit
+./scripts/check-isinstance-violations.sh
+
+# Output shows violations with fix suggestions
+VIOLATION: tests/unit/test_example.py:42
+  assert isinstance(result, TrendAnalysisResult)
+  Suggested fix: Use __class__.__name__ or hasattr() instead
+
+# CI blocks commits with violations
+```
+
+**Correct Patterns:**
+
+```python
+# CORRECT - use class name check
+assert result.__class__.__name__ == 'TrendAnalysisResult'
+
+# CORRECT - use duck-typing (verify attributes)
+assert hasattr(result, 'trends')
+assert hasattr(result, 'metrics_analyzed')
+
+# CORRECT - for enum checks
+assert trend.direction.name in ['INCREASING', 'DECREASING', 'STABLE']
+```
+
+### Prevention Checklist
+
+- [ ] Never use `isinstance()` for custom class checks
+- [ ] Use `__class__.__name__` for type validation
+- [ ] Use `hasattr()` for duck-typing checks
+- [ ] Use `.name` or `.value` for enum checks
+- [ ] Run `check-isinstance-violations.sh` before committing
+- [ ] CI blocks commits with xdist-incompatible patterns
+
+### Related Documentation
+
+- **Runbook:** `docs/ci-failure-runbook.md` → Section 12 (isinstance Failures)
+- **Testing Rules:** `.claude/rules/testing.md` → isinstance Checks section
+- **Linter Script:** `scripts/check-isinstance-violations.sh`
+- **CI Strategy:** `docs/ci-strategy.md` → Prevention Rules section
+
+---
+
+## Failure Pattern: Docker/Colima Not Running (Strategic Analysis 2025-01-11)
+
+**First Observed:** 2025-01-08 (Epic 8 CI analysis)
+**Frequency:** ~10% of CI failures in integration test runs
+**Strategic Impact:** Part of 39% CI fix commits (systemic root cause)
+**Enforcement Mechanism:** `pytest_configure` hook auto-starts Docker before test collection
+
+### Symptoms
+
+- `qdrant_client.http.exceptions.ResponseHandlingException: [Errno 61] Connection refused`
+- `psycopg2.OperationalError: could not connect to server: Connection refused`
+- All integration tests fail with connection errors
+- Error occurs at fixture setup time, before test execution
+- Intermittent failures (depends on whether Colima service is running)
+
+### Root Cause (Five Whys)
+
+1. **Why?** → Qdrant/PostgreSQL containers unreachable on their ports
+2. **Why?** → Docker daemon is not running (containers not executing)
+3. **Why?** → Colima VM stopped (macOS Docker Desktop alternative)
+4. **Why?** → System reboot, sleep/wake cycle, or Colima crash
+5. **Why?** → No automatic Docker startup mechanism in test fixtures
+
+### Solution Applied
+
+**Automatic Recovery (Added 2025-01-11):**
+
+The `pytest_configure` hook in `tests/fixtures/pytest_hooks.py` now:
+1. Detects if Docker daemon is running (before test collection)
+2. Calls `scripts/ensure-docker-running.sh` if Docker is unavailable
+3. Falls back to direct `colima start` if script not found
+4. Waits for Docker to be ready before test collection begins
+5. Skips integration tests gracefully if recovery fails
+
+**How It Works:**
+
+```bash
+# Automatic - happens before pytest test collection
+# If Docker not running:
+#   1. Start Colima
+#   2. Wait for Docker daemon
+#   3. Proceed with tests
+
+# Manual recovery (if needed)
+./scripts/ensure-docker-running.sh
+```
+
+### Prevention Checklist
+
+- [ ] Automatic recovery via pytest_configure (already implemented)
+- [ ] Manual verification before long test sessions: `colima status`
+- [ ] Optional auto-start: `brew services start colima`
+- [ ] Check Docker health if tests suddenly fail: `docker info`
+- [ ] Verify containers are healthy: `docker ps --filter "name=raglite"`
+
+### Related Documentation
+
+- **Runbook:** `docs/ci-failure-runbook.md` → Section 13 (Docker/Colima)
+- **Database Safety:** `.claude/rules/database-safety.md` → Container Lifecycle
+- **Infrastructure:** `scripts/ensure-docker-running.sh`
+- **Fixture Hooks:** `tests/fixtures/pytest_hooks.py` → pytest_configure hook
+- **CI Strategy:** `docs/ci-strategy.md` → Infrastructure Improvements

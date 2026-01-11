@@ -11,7 +11,12 @@ from pathlib import Path
 import pytest
 
 # Mark all tests in this module as integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 # Project root for running scripts
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 

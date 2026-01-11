@@ -11,7 +11,12 @@ from unittest.mock import Mock, patch
 import pytest
 
 # Mark all tests in this module as slow integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 
 # Lazy imports for expensive modules - DO NOT import raglite modules at module level!
 

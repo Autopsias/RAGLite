@@ -15,7 +15,12 @@ import pytest
 os.environ["APP_ENV"] = "test"
 
 # Skip all tests in this module if not running integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.manages_collection_state, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.manages_collection_state,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 
 
 class TestChunkingConsistency:

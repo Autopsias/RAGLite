@@ -14,7 +14,12 @@ from raglite.shared.clients import get_qdrant_client
 from raglite.shared.config import settings
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 
 
 def _has_valid_mistral_api_key() -> bool:

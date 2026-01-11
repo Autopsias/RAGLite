@@ -143,12 +143,13 @@ jobs:
           echo "Running security scan..."
           bandit -r raglite/ -ll -q -f txt --skip B608,B310
 
-      - name: Validate Mock Patch Targets
+      - name: Validate Mock Patch Targets (P0-1)
         run: |
           source ci-venv/bin/activate
           echo "========================================="
           echo "Validating mock patch targets exist"
           echo "Prevents stale mocks after refactoring"
+          echo "Root cause: Mock targets drift during refactoring"
           echo "========================================="
           python scripts/validate-mock-targets.py --verbose
           if [ $? -ne 0 ]; then
@@ -157,6 +158,21 @@ jobs:
             exit 1
           fi
           echo "Mock target validation passed"
+
+      - name: Check isinstance Violations (P0-2)
+        run: |
+          echo "========================================="
+          echo "Checking for isinstance usage on custom classes"
+          echo "Prevents xdist parallel execution failures"
+          echo "Root cause: isinstance fails with pytest-xdist"
+          echo "========================================="
+          bash scripts/check-isinstance-violations.sh
+          if [ $? -ne 0 ]; then
+            echo "FAIL: isinstance violations detected!"
+            echo "See .claude/rules/testing.md for isinstance Checks with pytest-xdist"
+            exit 1
+          fi
+          echo "isinstance validation passed"
 
       - name: Validate Pytest Collection (Import Errors)
         run: |
@@ -350,15 +366,17 @@ jobs:
           source .ci-env
           echo "========================================="
           echo "Running Integration Tests (~1000 tests)"
-          echo "Excludes health_check only"
+          echo "Mode: Parallel with xdist_group isolation"
+          echo "Workers: 4 (embedding tests grouped on single worker)"
           echo "Qdrant: localhost:${QDRANT_PORT}"
           echo "PostgreSQL: localhost:${POSTGRES_PORT}"
           echo "========================================="
           pytest tests/integration/ \
             -m "not health_check" \
             --tb=short \
-            -q \
-            -n 1 \
+            -v \
+            -n 4 \
+            --dist loadgroup \
             --timeout=300 \
             --junitxml=test-results/integration-junit.xml \
             2>&1 || exit_code=$?
