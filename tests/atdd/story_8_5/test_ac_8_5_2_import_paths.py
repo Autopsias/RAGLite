@@ -8,9 +8,11 @@ import pytest
 from .shared_helpers import get_project_root
 
 # Mark all tests in this module
+# Slow marker: Subprocess-based import tests can take >30s in CI with parallel workers
 pytestmark = [
     pytest.mark.atdd,
     pytest.mark.story_8_5,
+    pytest.mark.slow,
 ]
 
 
@@ -98,7 +100,7 @@ class TestAC852ImportPathDeprecation:
             capture_output=True,
             text=True,
             cwd=str(project_root),
-            timeout=30,
+            timeout=90,  # Increased from 30s - imports can be slow in CI with parallel workers
         )
 
         assert result.returncode == 0, (

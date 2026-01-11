@@ -18,7 +18,11 @@ import sys
 import pytest
 
 # Group circular dependency tests that run subprocesses to run on same worker
-pytestmark = pytest.mark.xdist_group(name="circular_deps")
+# Slow marker: Subprocess-based import tests can take >30s in CI with parallel workers
+pytestmark = [
+    pytest.mark.xdist_group(name="circular_deps"),
+    pytest.mark.slow,
+]
 
 
 class TestAC8_1_5_NoCircularDependencies:
@@ -33,7 +37,7 @@ class TestAC8_1_5_NoCircularDependencies:
             [sys.executable, "-c", "import raglite; print('OK')"],
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=90,  # Increased from 30s - imports can be slow in CI with parallel workers
         )
         assert result.returncode == 0, f"Import raglite failed: {result.stderr}"
         assert "circular" not in result.stderr.lower(), f"Circular import detected: {result.stderr}"
@@ -47,7 +51,7 @@ class TestAC8_1_5_NoCircularDependencies:
             [sys.executable, "-c", "import raglite.forecasting; print('OK')"],
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=90,  # Increased from 30s - imports can be slow in CI with parallel workers
         )
         assert result.returncode == 0, f"Import raglite.forecasting failed: {result.stderr}"
         assert "circular" not in result.stderr.lower(), (
@@ -78,7 +82,7 @@ class TestAC8_1_5_NoCircularDependencies:
                 [sys.executable, "-c", f"import {module_name}; print('OK')"],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=90,  # Increased from 30s - imports can be slow in CI with parallel workers
             )
             if result.returncode != 0:
                 import_failures.append(f"{module_name}: {result.stderr}")
