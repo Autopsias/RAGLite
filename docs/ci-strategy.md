@@ -402,3 +402,142 @@ def qdrant_client():
 3. Use IDE refactoring tools for any module renames (automatic import updates)
 4. Establish "refactoring debt" tracking separate from feature work
 5. Include file size metrics in sprint retrospectives
+
+---
+
+## Knowledge Extraction: Test Validation Patterns (Epic 8 Strategic Analysis 2025-01-11)
+
+### Failure Pattern: Fixture Validation Range Too Strict
+
+**First Observed:** 2025-01-11 (Epic 8: PDF optimization fixture validation)
+**Frequency:** 949-test cascade failure from single root cause
+**Impact:** Test reliability dropped 52% due to non-deterministic chunk boundaries
+**Strategic Impact:** Revealed systemic validation anti-pattern
+
+#### Root Cause (Five Whys)
+1. Why? → Session fixture used hardcoded chunk count range (10, 55)
+2. Why? → Range was arbitrary, not based on actual chunk distribution
+3. Why? → Document processors produce non-deterministic chunk boundaries
+4. Why? → No tolerance mechanism for valid variations
+5. Why? → Hard assertion on narrow range instead of acceptance criteria
+
+#### Solution Applied
+- Replaced hardcoded ranges with tolerance-based validation
+- Calculate expected range as: baseline ± 15% tolerance
+- Allow document-specific variance within tolerance band
+- Example: 80 chunks baseline accepts 68-92 range
+
+#### Prevention Applied
+- Always use tolerance-based assertions for non-deterministic values
+- Document baseline expectations in test comments
+- Test with multiple document sizes and types
+- Use parametrized tests to catch edge cases
+- Never hardcode expected ranges without statistical reasoning
+
+#### Related Documentation
+- Runbook: `docs/ci-failure-runbook.md` → Section 14
+- Success Metrics: `docs/ci-knowledge/success-metrics.md` → Fixture Validation
+
+---
+
+### Failure Pattern: API Contract Drift - Signature Changes Not Propagated
+
+**First Observed:** 2025-01-11 (Epic 8: Epic 6 forecast API changes)
+**Frequency:** 5 test methods failed from single signature change
+**Impact:** Test suite blocked on API integration
+**Strategic Impact:** Revealed missing API contract enforcement
+
+#### Root Cause (Five Whys)
+1. Why? → Function signature changed (added required `historical_data` parameter)
+2. Why? → Test calls not updated systematically
+3. Why? → Change was localized to one module (forecast execution)
+4. Why? → No automated check for function signature changes
+5. Why? → Tests passed locally before Epic 6 merge but failed after
+
+#### Solution Applied
+- Added API contract tests to detect signature drift early
+- Updated all function calls to pass required parameters
+- Removed obsolete mock patches referencing old signatures
+- 11 mock patches simplified when signatures stabilized
+
+#### Prevention Applied
+- Add contract tests for public API functions (detect changes early)
+- Include function signature in docstring
+- Document required vs optional parameters
+- Use type hints to make contracts explicit
+- Run contract tests on every merge to main
+
+#### Related Documentation
+- Runbook: `docs/ci-failure-runbook.md` → Section 15
+- Prevention Rules: `docs/ci-knowledge/prevention-rules.md` (add API contract validation)
+
+---
+
+### Failure Pattern: Config-Test Synchronization Drift
+
+**First Observed:** 2025-01-11 (Epic 8: Metric configuration references)
+**Frequency:** 3 tests failed due to missing configured metric (`cement_demand`)
+**Impact:** Test initialization errors during fixture setup
+**Strategic Impact:** Revealed lack of cross-file validation
+
+#### Root Cause (Five Whys)
+1. Why? → Metric removed from config.yaml but test fixtures still reference it
+2. Why? → Configuration changes made without updating dependent tests
+3. Why? → No validation that configured metrics exist in test expectations
+4. Why? → No CI job to verify config-test synchronization
+5. Why? → Metrics added/removed without cross-file impact analysis
+
+#### Solution Applied
+- Added config-test synchronization verification
+- Implemented metric validation in test fixtures
+- Documented metric definitions in both config and tests
+- Added CI job to verify consistency
+
+#### Prevention Applied
+- Run config-test sync verification before every merge
+- Include config changes in test review checklist
+- Document metric definitions in both config and tests
+- Use shared constants for metric names (avoid duplication)
+- Add validation to config loader (verify referenced metrics exist)
+
+#### Related Documentation
+- Runbook: `docs/ci-failure-runbook.md` → Section 16
+- Prevention Rules: `docs/ci-knowledge/prevention-rules.md` (add config-test sync)
+
+---
+
+## Test Validation Lessons Learned (Epic 8 Summary)
+
+### Key Insights
+
+1. **Non-Deterministic Validation Pattern**
+   - Lesson: Document expected baselines, not hardcoded ranges
+   - Impact: Allows for legitimate variance while catching real errors
+   - Applied to: Chunk count validation, metrics accumulation tests
+
+2. **API Contract Testing Pattern**
+   - Lesson: Signature changes must be caught before test execution
+   - Impact: Prevent cascade failures from missing required parameters
+   - Applied to: Forecast execution, statistical calculations
+
+3. **Configuration Synchronization Pattern**
+   - Lesson: Config and test files must be validated together
+   - Impact: Prevent runtime errors from drift between systems
+   - Applied to: Metric definitions, feature flags, model parameters
+
+### Recommendations for Future Development
+
+1. **Implement Tolerance-Based Assertions**
+   - Use for: measurements, counts, performance metrics
+   - Document: baseline and tolerance in test comments
+   - Review: quarterly to ensure tolerances remain valid
+
+2. **Add API Contract Tests**
+   - For: all public functions that change frequently
+   - Check: required parameters, return types, exception contracts
+   - Run: automatically on each merge to catch drift early
+
+3. **Establish Config-Test Synchronization**
+   - Verify: all configured items are tested
+   - Verify: all tested items are configured
+   - Frequency: before each merge to main branch

@@ -56,6 +56,9 @@ Quick reference for diagnosing and resolving CI failures.
 | `ATDD test file size violation` | Test file exceeds 500 LOC limit | Add exception to `.file-size-exceptions` or split file | Plan refactoring early |
 | `isinstance()` returns False with xdist | Class identity differs across workers | Use `__class__.__name__` or `hasattr()` | Never use isinstance for custom classes |
 | `Connection refused` on Qdrant/PostgreSQL | Docker/Colima not running | `colima stop && colima start` | pytest_configure auto-starts Docker |
+| `AssertionError: N not in range(10, 55)` | Fixture validation range too strict | Use tolerance-based validation (±15%) | Document baseline, not hardcoded ranges |
+| `TypeError: missing required argument` | API signature changed, test calls not updated | Update all function calls with required params | Add contract tests to catch drift early |
+| `KeyError: 'cement_demand'` | Config and test files out of sync | Add validation that configured metrics exist | Sync verification CI job before merge |
 
 ---
 
@@ -546,6 +549,185 @@ uv run pytest tests/integration/chunking/test_ac5_validation.py -v --timeout=120
 | "already running, ignoring" but status fails | Zombie Colima process | Same as above |
 | Docker commands hang | Colima VM frozen | `colima stop -f && colima start` |
 | Containers exist but ports not responding | Container health check failing | `docker-compose restart` |
+
+### 14. Fixture Validation Range Too Strict (Story 2.2 - PDF Optimization)
+
+#### Symptoms
+- 949-test cascade failure in PDF integration test suite
+- `AssertionError: 120 not in range(10, 55)` in session fixture
+- Chunk count validation fails for variable-size documents
+- Non-deterministic chunk boundaries cause flaky assertions
+- Same document produces different chunk counts in different runs
+- Tests pass/fail based on document content variation
+
+#### Root Cause (Five Whys)
+1. Why? → Session fixture used hardcoded chunk count range (10, 55)
+2. Why? → Range was arbitrary, not based on actual chunk distribution
+3. Why? → Document processors produce non-deterministic chunk boundaries
+4. Why? → No tolerance mechanism for valid chunk count variations
+5. Why? → Tight range caught edge cases instead of errors
+
+#### Solution
+- Replace hardcoded ranges with tolerance-based validation
+- Calculate expected range from actual baseline: baseline ± 15%
+- Allow document-specific variance within tolerance band
+- Example: If baseline is 80 chunks, accept 68-92 (80 ± 15%)
+
+**Implementation:**
+```python
+# OLD: Strict range (fails on variations)
+def validate_chunk_count(count, expected_range=(10, 55)):
+    assert count in expected_range
+
+# NEW: Tolerance-based (accepts variations)
+def validate_chunk_count(count, baseline, tolerance=0.15):
+    min_count = int(baseline * (1 - tolerance))
+    max_count = int(baseline * (1 + tolerance))
+    assert min_count <= count <= max_count, \
+        f"Count {count} outside tolerance {min_count}-{max_count}"
+```
+
+#### Verification
+```bash
+# Test with 10-page fixture (produces ~80 chunks)
+uv run pytest tests/integration/fixtures/_ingestion_helpers.py -v
+
+# Check actual chunk distribution
+uv run pytest tests/integration/ -k "pdf" --collect-only -q
+```
+
+#### Prevention
+- Always use tolerance-based assertions for non-deterministic values
+- Document baseline expectations in test comments
+- Test with multiple document sizes and types
+- Use parametrized tests to catch edge cases
+- Never hardcode expected ranges without reasoning
+
+---
+
+### 15. API Contract Drift - Signature Changes Not Propagated (Epic 6)
+
+#### Symptoms
+- `TypeError: generate_ensemble_forecast() missing required argument: 'historical_data'`
+- Function signature changed but test calls unchanged
+- Works in main branch but fails after Epic 6 merge
+- Multiple test methods fail with same error
+- 5-10 test failures from same root cause (API change)
+- Error only visible at test execution time, not on import
+
+#### Root Cause (Five Whys)
+1. Why? → API function signature changed (added required parameter)
+2. Why? → Test calls to function not updated systematically
+3. Why? → Change was localized to one module (forecast execution)
+4. Why? → No automated check for function signature changes
+5. Why? → Tests passed locally before Epic 6 but failed after merge
+
+#### Solution
+- Add API contract tests to detect signature drift early
+- Update all function calls to pass required parameters
+- Remove obsolete mock patches that reference old signatures
+
+**Implementation:**
+```python
+# ADD: Signature validation test (detects drift early)
+def test_forecast_signature_contract():
+    """Verify generate_ensemble_forecast accepts required parameters."""
+    import inspect
+    sig = inspect.signature(generate_ensemble_forecast)
+    params = list(sig.parameters.keys())
+
+    # Assert required parameters exist
+    assert 'historical_data' in params, \
+        f"Missing required param 'historical_data'. Got: {params}"
+
+# UPDATE: Test calls with required parameters
+# OLD:
+result = generate_ensemble_forecast(config)
+
+# NEW:
+result = generate_ensemble_forecast(config, historical_data=data)
+```
+
+#### Verification
+```bash
+# Run API contract tests
+uv run pytest tests/integration/epic6/ -v -k "contract"
+
+# Check for remaining signature mismatches
+grep -r "generate_ensemble_forecast" tests/ --include="*.py" | grep -v "historical_data"
+```
+
+#### Prevention
+- Add contract tests for public API functions (detect changes early)
+- Include function signature in docstring
+- Document required vs optional parameters
+- Use type hints to make contracts explicit
+- Run contract tests on every merge to main
+
+---
+
+### 16. Config-Test Synchronization Drift
+
+#### Symptoms
+- `KeyError: 'cement_demand'` when accessing configured metric
+- Metric referenced in test but not defined in config
+- Test expects metric to exist but config.yaml doesn't include it
+- Inconsistency between pytest fixtures and system configuration
+- Configuration changes made without updating dependent tests
+- Error only occurs at test data setup time
+
+#### Root Cause (Five Whys)
+1. Why? → Config and test files drifted out of sync
+2. Why? → Config updated to remove metric, tests not updated
+3. Why? → No validation that configured metrics exist in tests
+4. Why? → No CI job to verify config-test synchronization
+5. Why? → Metrics added/removed without cross-file impact analysis
+
+#### Solution
+- Add config-test synchronization CI job
+- Verify all configured metrics are tested
+- Verify all test metrics are configured
+- Document metric definitions and usage
+
+**Implementation:**
+```python
+# ADD: Config sync validation
+def test_config_metrics_in_tests():
+    """Verify all configured metrics are tested."""
+    from raglite.config import Settings
+    from tests.fixtures.metrics import EXPECTED_METRICS
+
+    config = Settings()
+    configured = set(config.metrics.keys())
+    expected = set(EXPECTED_METRICS)
+
+    # Check for missing metrics
+    missing = configured - expected
+    assert not missing, f"Configured but not tested: {missing}"
+
+    # Check for orphaned tests
+    orphaned = expected - configured
+    assert not orphaned, f"Tested but not configured: {orphaned}"
+```
+
+#### Verification
+```bash
+# Verify config-test synchronization
+uv run pytest tests/ -v -k "sync" --tb=short
+
+# Check config metrics
+grep "metrics:" raglite/config.yaml -A 10
+
+# Check test expectations
+grep "EXPECTED_METRICS\|cement_demand" tests/ -r --include="*.py"
+```
+
+#### Prevention
+- Run config-test sync verification before every merge
+- Include config changes in test review checklist
+- Document metric definitions in both config and tests
+- Use shared constants for metric names (avoid duplication)
+- Add validation to config loader (verify referenced metrics exist)
 
 ---
 

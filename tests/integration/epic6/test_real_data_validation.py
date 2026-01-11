@@ -6,7 +6,6 @@ import os
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
-from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -49,14 +48,13 @@ class TestRealExternalData:
 
         _, test_df = train_test_split
 
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = train_time_series
-            result = await generate_ensemble_forecast(
-                metric="cement_demand",
-                external_regressors=real_external_regressors,
-                periods_ahead=len(test_df),
-                fast_mode=True,
-            )
+        result = await generate_ensemble_forecast(
+            metric="cement_demand",
+            historical_data=train_time_series,
+            external_regressors=real_external_regressors,
+            periods_ahead=len(test_df),
+            fast_mode=True,
+        )
 
         # Calculate MAPE
         predicted = np.array([p.value for p in result.forecast[: len(test_df)]])
@@ -92,6 +90,7 @@ class TestNFRs:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
+    @pytest.mark.timeout(300)  # 5 minutes for full validation
     async def test_validation_completes_within_5_minutes(
         self,
         train_time_series: TimeSeriesData,
@@ -111,32 +110,41 @@ class TestNFRs:
         periods = len(test_df)
 
         # Run all 3 models (baseline, multivariate, ensemble)
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = train_time_series
-            await generate_forecast(
-                metric="cement_demand",
-                periods_ahead=periods,
-                external_regressors=None,
-                frequency="M",
-            )
+        baseline_result = await generate_forecast(
+            metric="cement_demand",
+            historical_data=train_time_series,
+            periods_ahead=periods,
+            external_regressors=None,
+            frequency="M",
+        )
+        assert baseline_result is not None, "Baseline forecast failed"
+        assert hasattr(baseline_result, "forecast"), (
+            f"Invalid baseline result: {type(baseline_result)}"
+        )
 
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = train_time_series
-            await generate_forecast(
-                metric="cement_demand",
-                periods_ahead=periods,
-                external_regressors=synthetic_regressors,
-                frequency="M",
-            )
+        multivariate_result = await generate_forecast(
+            metric="cement_demand",
+            historical_data=train_time_series,
+            periods_ahead=periods,
+            external_regressors=synthetic_regressors,
+            frequency="M",
+        )
+        assert multivariate_result is not None, "Multivariate forecast failed"
+        assert hasattr(multivariate_result, "forecast"), (
+            f"Invalid multivariate result: {type(multivariate_result)}"
+        )
 
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = train_time_series
-            await generate_ensemble_forecast(
-                metric="cement_demand",
-                external_regressors=synthetic_regressors,
-                periods_ahead=periods,
-                fast_mode=True,
-            )
+        ensemble_result = await generate_ensemble_forecast(
+            metric="cement_demand",
+            historical_data=train_time_series,
+            external_regressors=synthetic_regressors,
+            periods_ahead=periods,
+            fast_mode=True,
+        )
+        assert ensemble_result is not None, "Ensemble forecast failed"
+        assert hasattr(ensemble_result, "forecast"), (
+            f"Invalid ensemble result: {type(ensemble_result)}"
+        )
 
         execution_time = time.time() - start_time
 

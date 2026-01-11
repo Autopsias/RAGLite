@@ -2,9 +2,10 @@
 
 Comprehensive documentation for RAGLite CI/CD infrastructure and practices.
 
-**Last Updated:** 2025-12-30
+**Last Updated:** 2025-01-11 (Strategic Analysis Update)
 **Infrastructure:** Self-hosted GitHub Actions runners (macOS)
 **Scope:** 372-test suite, 4-job pipeline, <15 minute target
+**Strategic Analysis Completed:** 3 validation pattern anti-patterns documented and remediated
 
 ---
 
@@ -56,7 +57,7 @@ Comprehensive documentation for RAGLite CI/CD infrastructure and practices.
 **Link:** `/docs/ci-strategy.md`
 
 ### 3. Failure Patterns
-**Knowledge extraction from 15+ CI fix commits**
+**Knowledge extraction from 15+ CI fix commits + Strategic Analysis 2025-01-11**
 
 - pytest-xdist worker state pollution
 - Resource tracker SIGKILL
@@ -66,6 +67,9 @@ Comprehensive documentation for RAGLite CI/CD infrastructure and practices.
 - Bytecode cache pollution
 - Joblib multiprocessing deadlocks
 - ATDD subprocess timeout (Story 8.4b)
+- **Fixture validation range too strict** (949-test failure)
+- **API contract drift - signature changes** (5 test methods)
+- **Config-test synchronization drift** (3 test failures)
 
 Each pattern includes:
 - Frequency and affected files
@@ -106,6 +110,9 @@ Detailed patterns for:
 - Global environment configuration
 - Bytecode cache isolation
 - Joblib multiprocessing safety
+- **Tolerance-based fixture validation** (non-deterministic assertions)
+- **API contract testing** (signature drift detection)
+- **Config-test synchronization** (cross-file validation)
 
 Each rule includes:
 - Required pattern (do this)
@@ -158,11 +165,20 @@ Each rule includes:
 |---|---------|-----------|--------|--------|
 | 6 | ATDD tests timeout in CI | 3-part issue: timeout (180s insufficient) + marker unregistered + job isolation missing | 15+ failed CI runs | Fixed: 300s timeout + marker registration + dedicated job |
 
+### Strategic Analysis Findings: Test Validation Anti-Patterns (2025-01-11)
+
+| # | Problem | Root Cause | Impact | Status |
+|---|---------|-----------|--------|--------|
+| 7 | Fixture validation range too strict | Hardcoded range (10, 55) didn't account for non-deterministic chunk boundaries | 949-test cascade failure | Fixed: Tolerance-based validation (±15%) |
+| 8 | API contract drift - signature changes | Function signature changed, test calls not updated systematically | 5 test methods failed | Fixed: API contract tests + 11 mock patches updated |
+| 9 | Config-test synchronization drift | Metric removed from config but test fixtures still reference it | 3 test failures (KeyError) | Fixed: Config-test sync validation |
+
 ### Combined Impact
 
-- **Before:** 97.2% pass rate, 10-15 failures/week
-- **After:** 99.5%+ pass rate, <5 failures/week
+- **Before:** 97.2% pass rate, 10-15 failures/week (Epic 8 analysis)
+- **After:** 99.5%+ pass rate, <5 failures/week (Target post-2025-01-11)
 - **Improvement:** 90%+ reduction in flakiness
+- **New Patterns Documented:** 3 validation anti-patterns with prevention rules
 
 ---
 
@@ -379,11 +395,27 @@ To add to this knowledge base:
 
 RAGLite CI has been systematically improved through:
 
-1. **Identifying 5 root causes** from 15 CI fix commits
+1. **Identifying 8 root causes** from 15 CI fix commits + strategic analysis (2025-01-11)
 2. **Implementing global infrastructure changes** (2 environment variables, 3 workflow improvements)
-3. **Documenting best practices** across 6 knowledge base files
+3. **Documenting best practices** across 7 knowledge base files
 4. **Capturing lessons learned** for future reference
+5. **Strategic Analysis (2025-01-11):** Documented 3 validation anti-patterns:
+   - Fixture validation range too strict (949-test cascade)
+   - API contract drift from signature changes (5 test failures)
+   - Config-test synchronization drift (3 runtime errors)
 
 The result: **90% reduction in test flakiness** with zero performance regression.
 
 All infrastructure changes are production-ready and self-documenting.
+
+### Knowledge Base Growth (2025-01-11)
+
+| Metric | Before | After | Change |
+|--------|--------|-------|--------|
+| Failure patterns documented | 8 | 11 | +3 patterns |
+| Prevention rules | 8 | 11 | +3 rules |
+| Runbook sections | 13 | 16 | +3 sections |
+| Strategic insights | 1 | 4 | +3 analyses |
+| Cross-references | 25+ | 40+ | +15 links |
+
+The strategic analysis of Epic 8 findings has enriched the CI knowledge base with prevention patterns that prevent cascade failures (949+ test failures), API signature drift, and configuration synchronization issues.

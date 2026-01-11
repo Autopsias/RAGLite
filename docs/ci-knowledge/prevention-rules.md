@@ -571,3 +571,225 @@ docker ps --filter "name=raglite"
 - **Runbook:** `docs/ci-failure-runbook.md` → Section 13
 - **Database Safety:** `.claude/rules/database-safety.md` → Container Lifecycle
 - **Fixture Hooks:** `tests/fixtures/pytest_hooks.py` → pytest_configure hook
+
+---
+
+## Prevention Rule: Tolerance-Based Fixture Validation (Strategic 2025-01-11)
+
+**Rule:** Non-deterministic values must use tolerance ranges, not hardcoded assertions
+
+**Impact:** Prevents 949-test cascade failures from single validation anti-pattern
+
+### Required Pattern
+
+```python
+# GOOD: Tolerance-based validation
+def validate_chunk_count(count, baseline, tolerance=0.15):
+    """Validate chunk count within tolerance band.
+
+    Baseline: ~80 chunks for 10-page document
+    Tolerance: ±15% (68-92 acceptable range)
+    """
+    min_count = int(baseline * (1 - tolerance))
+    max_count = int(baseline * (1 + tolerance))
+    assert min_count <= count <= max_count, \
+        f"Count {count} outside {min_count}-{max_count}"
+```
+
+### Forbidden Pattern
+
+```python
+# BAD: Hardcoded range (fails on legitimate variations)
+def validate_chunk_count(count):
+    """Fails for valid chunk counts outside (10, 55)."""
+    assert count in range(10, 55)  # Too restrictive
+```
+
+### How It Works
+
+1. **Document baseline expectations** - What's the typical value?
+2. **Set reasonable tolerance** - Allow for legitimate variance
+3. **Calculate acceptance band** - baseline ± tolerance
+4. **Document in comments** - Why this tolerance?
+
+### Example: Fixing Strict Validation
+
+```bash
+# Failing test (strict range)
+AssertionError: 120 not in range(10, 55)
+
+# Analysis: Actual documents produce 80-120 chunks (valid range)
+# Fix: Use tolerance-based validation
+
+# OLD (bad):
+assert chunk_count in range(10, 55)
+
+# NEW (good):
+assert 68 <= chunk_count <= 92  # 80 ± 15%
+```
+
+### Prevention Checklist
+
+- [ ] Never hardcode expected value ranges without reasoning
+- [ ] Always document baseline expectation in test
+- [ ] Use tolerance-based assertions for non-deterministic values
+- [ ] Test with multiple data sizes/types to find actual range
+- [ ] Use parametrized tests to catch edge cases
+- [ ] Review tolerance annually as systems evolve
+
+### Related Documentation
+
+- **Failure Pattern:** `docs/ci-knowledge/failure-patterns.md` → Fixture Validation Range
+- **Runbook:** `docs/ci-failure-runbook.md` → Section 14
+- **CI Strategy:** `docs/ci-strategy.md` → Test Validation Patterns
+
+---
+
+## Prevention Rule: API Contract Testing (Strategic 2025-01-11)
+
+**Rule:** Function signature changes must be caught with contract tests
+
+**Impact:** Prevents cascade failures from API signature drift (5+ tests fail from single change)
+
+### Required Pattern
+
+```python
+# ADD: Signature validation test (detects drift early)
+def test_api_contract_generate_ensemble_forecast():
+    """Verify API signatures don't change unexpectedly.
+
+    This contract test catches breaking changes before test execution.
+    Update this test when intentionally changing the API.
+    """
+    import inspect
+    from raglite.forecasting.ensemble import generate_ensemble_forecast
+
+    sig = inspect.signature(generate_ensemble_forecast)
+    params = list(sig.parameters.keys())
+
+    # Required parameters must exist
+    assert 'config' in params, "Missing required 'config' parameter"
+    assert 'historical_data' in params, "Missing required 'historical_data' parameter"
+
+    # Verify parameter types via annotations
+    config_param = sig.parameters['config']
+    assert config_param.annotation != inspect.Parameter.empty, \
+        "Parameter 'config' must have type annotation"
+```
+
+### How It Works
+
+1. **Document API contract** - What parameters must exist?
+2. **Test signature dynamically** - Catch breaking changes
+3. **Run before feature tests** - Fail fast on signature mismatches
+4. **Update when intentional** - Need to change signature? Update contract test
+
+### Example: Catching Signature Drift
+
+```bash
+# Old API (works):
+generate_ensemble_forecast(config)
+
+# New API (requires historical_data):
+generate_ensemble_forecast(config, historical_data)
+
+# Contract test catches this:
+FAILED test_api_contract - Missing required 'historical_data' parameter
+
+# Fix: Update all calls
+# result = generate_ensemble_forecast(config)
+# result = generate_ensemble_forecast(config, historical_data=data)
+```
+
+### Prevention Checklist
+
+- [ ] Add contract test for all public API functions
+- [ ] Test required parameters exist
+- [ ] Test parameter types (via annotations)
+- [ ] Test return type contract
+- [ ] Run contract tests before feature tests
+- [ ] Update contract when intentionally changing API
+
+### Related Documentation
+
+- **Failure Pattern:** `docs/ci-knowledge/failure-patterns.md` → API Contract Drift
+- **Runbook:** `docs/ci-failure-runbook.md` → Section 15
+- **CI Strategy:** `docs/ci-strategy.md` → Test Validation Patterns
+
+---
+
+## Prevention Rule: Config-Test Synchronization (Strategic 2025-01-11)
+
+**Rule:** Configuration and test files must be validated together before merge
+
+**Impact:** Prevents runtime errors from config-test drift (3+ tests fail per config change)
+
+### Required Pattern
+
+```python
+# ADD: Config-test synchronization test
+def test_config_metrics_synchronized():
+    """Verify configured metrics match test expectations.
+
+    This prevents divergence between config.yaml and test fixtures.
+    """
+    from raglite.config import Settings
+    import yaml
+
+    # Load both config and test expectations
+    with open('raglite/config.yaml') as f:
+        config_data = yaml.safe_load(f)
+
+    from tests.fixtures.metrics import EXPECTED_METRICS
+
+    configured_metrics = set(config_data['metrics'].keys())
+    expected_metrics = set(EXPECTED_METRICS)
+
+    # Check: All configured metrics are tested
+    missing_tests = configured_metrics - expected_metrics
+    assert not missing_tests, \
+        f"Metrics in config but not tested: {missing_tests}"
+
+    # Check: All tested metrics are configured
+    missing_config = expected_metrics - configured_metrics
+    assert not missing_config, \
+        f"Metrics tested but not in config: {missing_config}"
+```
+
+### How It Works
+
+1. **Load configuration** - What's configured?
+2. **Load test expectations** - What are we testing?
+3. **Compare sets** - Ensure they match exactly
+4. **Fail loudly** - Catch divergence at test time
+
+### Example: Catching Config Drift
+
+```bash
+# Config was updated but tests weren't:
+cement_demand removed from config.yaml
+
+# Test fixture still tries to use it:
+KeyError: 'cement_demand'
+
+# Sync test catches this:
+FAILED test_config_metrics_synchronized
+  Metrics tested but not in config: {'cement_demand'}
+
+# Fix: Update test fixtures to remove cement_demand references
+```
+
+### Prevention Checklist
+
+- [ ] Add config-test sync test before any config changes
+- [ ] Test passes only if config and tests match exactly
+- [ ] Run sync test as part of pre-commit validation
+- [ ] Update sync test when adding new configured items
+- [ ] Document metric definitions in both config and tests
+- [ ] Use shared constants for metric names (DRY principle)
+
+### Related Documentation
+
+- **Failure Pattern:** `docs/ci-knowledge/failure-patterns.md` → Config-Test Sync Drift
+- **Runbook:** `docs/ci-failure-runbook.md` → Section 16
+- **CI Strategy:** `docs/ci-strategy.md` → Test Validation Patterns

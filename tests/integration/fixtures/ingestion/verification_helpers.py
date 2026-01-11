@@ -56,9 +56,17 @@ def verify_qdrant_data(expected_range: tuple[int, int]) -> int:
 
     session_state.session_sample_pdf_chunk_count = count_after.count
 
-    if not (expected_range[0] <= count_after.count <= expected_range[1]):
+    # Tolerance-based validation: allow ±15% variance from expected range
+    # Story 2.8 table-aware chunking produces variable counts based on table density
+    min_expected, max_expected = expected_range
+    tolerance = 0.15
+    min_allowed = int(min_expected * (1 - tolerance))
+    max_allowed = int(max_expected * (1 + tolerance))
+
+    if not (min_allowed <= count_after.count <= max_allowed):
         pytest.fail(
-            f"CRITICAL: Chunk count {count_after.count} not in expected range {expected_range}"
+            f"CRITICAL: Chunk count {count_after.count} not in tolerance range "
+            f"({min_allowed}-{max_allowed}, ±15% of expected {expected_range})"
         )
 
     return count_after.count

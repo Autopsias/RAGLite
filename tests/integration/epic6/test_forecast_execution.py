@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING
-from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -36,14 +35,13 @@ class TestBaselineForecast:
 
         _, test_df = train_test_split
 
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = train_time_series
-            result = await generate_forecast(
-                metric="cement_demand",
-                periods_ahead=len(test_df),
-                external_regressors=None,
-                frequency="M",
-            )
+        result = await generate_forecast(
+            metric="cement_demand",
+            historical_data=train_time_series,
+            periods_ahead=len(test_df),
+            external_regressors=None,
+            frequency="M",
+        )
 
         assert result is not None
         assert len(result.forecast) >= len(test_df)
@@ -65,14 +63,13 @@ class TestMultivariateForecast:
 
         _, test_df = train_test_split
 
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = train_time_series
-            result = await generate_forecast(
-                metric="cement_demand",
-                periods_ahead=len(test_df),
-                external_regressors=synthetic_regressors,
-                frequency="M",
-            )
+        result = await generate_forecast(
+            metric="cement_demand",
+            historical_data=train_time_series,
+            periods_ahead=len(test_df),
+            external_regressors=synthetic_regressors,
+            frequency="M",
+        )
 
         assert result is not None
         assert len(result.forecast) >= len(test_df)
@@ -94,14 +91,13 @@ class TestEnsembleForecast:
 
         _, test_df = train_test_split
 
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = train_time_series
-            result = await generate_ensemble_forecast(
-                metric="cement_demand",
-                external_regressors=synthetic_regressors,
-                periods_ahead=len(test_df),
-                fast_mode=True,
-            )
+        result = await generate_ensemble_forecast(
+            metric="cement_demand",
+            historical_data=train_time_series,
+            external_regressors=synthetic_regressors,
+            periods_ahead=len(test_df),
+            fast_mode=True,
+        )
 
         assert result is not None
         assert len(result.forecast) >= len(test_df)
@@ -136,14 +132,13 @@ class TestAccuracyGate:
         # Use shorter horizon (3 months) for more realistic validation
         short_horizon = min(3, len(test_df))
 
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = train_time_series
-            result = await generate_forecast(
-                metric="cement_demand",
-                periods_ahead=short_horizon,
-                external_regressors=None,
-                frequency="M",
-            )
+        result = await generate_forecast(
+            metric="cement_demand",
+            historical_data=train_time_series,
+            periods_ahead=short_horizon,
+            external_regressors=None,
+            frequency="M",
+        )
 
         # Validate execution
         assert result is not None
@@ -183,14 +178,13 @@ class TestAccuracyGate:
 
         _, test_df = train_test_split
 
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = train_time_series
-            result = await generate_ensemble_forecast(
-                metric="cement_demand",
-                external_regressors=synthetic_regressors,
-                periods_ahead=len(test_df),
-                fast_mode=True,
-            )
+        result = await generate_ensemble_forecast(
+            metric="cement_demand",
+            historical_data=train_time_series,
+            external_regressors=synthetic_regressors,
+            periods_ahead=len(test_df),
+            fast_mode=True,
+        )
 
         # Verify model execution succeeded
         assert result is not None
@@ -225,25 +219,23 @@ class TestAccuracyGate:
         periods = len(test_df)
 
         # Baseline (Prophet univariate)
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = train_time_series
-            baseline_result = await generate_forecast(
-                metric="cement_demand",
-                periods_ahead=periods,
-                external_regressors=None,
-                frequency="M",
-            )
+        baseline_result = await generate_forecast(
+            metric="cement_demand",
+            historical_data=train_time_series,
+            periods_ahead=periods,
+            external_regressors=None,
+            frequency="M",
+        )
         baseline_predicted = np.array([p.value for p in baseline_result.forecast[:periods]])
 
         # Ensemble (Prophet + Linear + XGBoost)
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = train_time_series
-            ensemble_result = await generate_ensemble_forecast(
-                metric="cement_demand",
-                external_regressors=synthetic_regressors,
-                periods_ahead=periods,
-                fast_mode=True,
-            )
+        ensemble_result = await generate_ensemble_forecast(
+            metric="cement_demand",
+            historical_data=train_time_series,
+            external_regressors=synthetic_regressors,
+            periods_ahead=periods,
+            fast_mode=True,
+        )
         ensemble_predicted = np.array([p.value for p in ensemble_result.forecast[:periods]])
 
         # Calculate MAPEs for logging

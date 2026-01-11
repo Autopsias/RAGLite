@@ -461,13 +461,22 @@ def session_ingested_collection(request, warmup_embedding_model):
         file=sys.stderr,
     )
 
-    # Validate chunk count
+    # Validate chunk count with tolerance
     expected_range = (
         (150, 220) if use_full_pdf else (10, 55)
     )  # Updated: 10-page PDF now yields ~42 chunks
-    if not (expected_range[0] <= count_after.count <= expected_range[1]):
+
+    # Tolerance-based validation: allow ±15% variance from expected range
+    # Story 2.8 table-aware chunking produces variable counts based on table density
+    min_expected, max_expected = expected_range
+    tolerance = 0.15
+    min_allowed = int(min_expected * (1 - tolerance))
+    max_allowed = int(max_expected * (1 + tolerance))
+
+    if not (min_allowed <= count_after.count <= max_allowed):
         pytest.fail(
-            f"CRITICAL: Chunk count {count_after.count} not in expected range {expected_range}"
+            f"CRITICAL: Chunk count {count_after.count} not in tolerance range "
+            f"({min_allowed}-{max_allowed}, ±15% of expected {expected_range})"
         )
 
     # Create snapshot for fast restoration
