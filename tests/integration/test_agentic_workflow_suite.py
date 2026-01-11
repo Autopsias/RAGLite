@@ -28,10 +28,10 @@ from raglite.main import analytical_query_financial_documents
 from raglite.shared.models import AnalyticalQueryRequest, AnalyticalQueryResponse
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
-# Access underlying function from FastMCP FunctionTool wrapper
-analytical_query_fn = analytical_query_financial_documents.fn
+# analytical_query_financial_documents is a plain async function, not wrapped by FastMCP
+analytical_query_fn = analytical_query_financial_documents
 
 # Load test query set
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from unittest.mock import patch
 
 import pytest
 
@@ -29,6 +30,7 @@ pytestmark = pytest.mark.integration
 
 @pytest.mark.preserve_collection
 @pytest.mark.asyncio
+@pytest.mark.slow
 @pytest.mark.skipif(
     os.getenv("SKIP_CHRONOS_TESTS") == "true",
     reason="Chronos-2 model loading is slow in CI",
@@ -46,11 +48,12 @@ async def test_cold_start_scenario_minimal_data() -> None:
     # Generate forecast (should use cold-start path)
     from raglite.forecasting.hybrid import generate_forecast
 
-    result = await generate_forecast(
-        metric="test_cold_start",
-        historical_data=data,
-        periods_ahead=3,
-    )
+    with patch("raglite.forecasting.hybrid.preprocessing.fetch_historical_metric") as mock_fetch:
+        mock_fetch.return_value = data  # Use the minimal data we created
+        result = await generate_forecast(
+            metric="test_cold_start",
+            periods_ahead=3,
+        )
 
     # Verify Chronos-2 zero-shot was used
     assert "chronos" in result.model_type.lower()
@@ -69,6 +72,7 @@ async def test_cold_start_scenario_minimal_data() -> None:
 
 @pytest.mark.preserve_collection
 @pytest.mark.asyncio
+@pytest.mark.slow
 @pytest.mark.skipif(
     os.getenv("SKIP_CHRONOS_TESTS") == "true",
     reason="Chronos-2 model loading is slow in CI",
@@ -79,7 +83,7 @@ async def test_full_ensemble_with_chronos(cement_time_series: TimeSeriesData) ->
     # Use unique metric name to avoid existing adaptive weights from database
     result = await generate_ensemble_forecast(
         metric="test_chronos_full_ensemble",
-        historical_data=cement_time_series,
+        historical_data=cement_time_series,  # Story 8.5: Pass directly, not deprecated
         periods_ahead=4,
         models=["prophet", "chronos"],  # Just these for speed
     )
@@ -101,6 +105,7 @@ async def test_full_ensemble_with_chronos(cement_time_series: TimeSeriesData) ->
 
 @pytest.mark.preserve_collection
 @pytest.mark.asyncio
+@pytest.mark.slow
 @pytest.mark.skipif(
     os.getenv("SKIP_CHRONOS_TESTS") == "true",
     reason="Chronos-2 model loading is slow in CI",
@@ -111,7 +116,7 @@ async def test_no_regressors_fallback(cement_time_series: TimeSeriesData) -> Non
     # Use unique metric name to avoid existing adaptive weights from database
     result = await generate_ensemble_forecast(
         metric="test_chronos_no_regressors",
-        historical_data=cement_time_series,
+        historical_data=cement_time_series,  # Story 8.5: Pass directly, not deprecated
         external_regressors=None,  # No regressors
         periods_ahead=4,
         models=["prophet", "chronos", "linear"],
@@ -134,6 +139,7 @@ async def test_no_regressors_fallback(cement_time_series: TimeSeriesData) -> Non
 
 @pytest.mark.manages_collection_state
 @pytest.mark.asyncio
+@pytest.mark.slow
 @pytest.mark.skipif(
     os.getenv("SKIP_CHRONOS_TESTS") == "true",
     reason="Chronos-2 model loading is slow in CI",
@@ -211,7 +217,7 @@ async def test_chronos_inference_performance() -> None:
         TimeSeriesPoint(date=datetime(2024, i, 1), value=100.0 + i, label=f"M{i}")
         for i in range(1, 7)
     ]
-    data = TimeSeriesData(metric_name="perf_test", points=points, interval="monthly")
+    TimeSeriesData(metric_name="perf_test", points=points, interval="monthly")
 
     # Warm up model (first load is slow)
     _get_chronos_pipeline()
@@ -222,7 +228,6 @@ async def test_chronos_inference_performance() -> None:
 
     result = await _generate_chronos_cold_start_forecast(
         metric="perf_test",
-        historical_data=data,
         periods_ahead=4,
     )
     duration = time.time() - start

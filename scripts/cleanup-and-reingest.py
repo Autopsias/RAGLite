@@ -29,7 +29,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance
 
 from raglite.ingestion.document_ingestion import ingest_document
-from raglite.ingestion.storage_operations import create_collection
+from raglite.ingestion.storage import create_collection
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 from raglite.shared.safety import OperationType, SafetyGuard

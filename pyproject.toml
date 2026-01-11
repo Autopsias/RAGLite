@@ -159,12 +159,16 @@ exclude = [
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
-    "F",   # pyflakes
+    "F",   # pyflakes (includes F821 undefined-name - CRITICAL for catching missing imports)
     "I",   # isort
     "C",   # flake8-comprehensions
     "B",   # flake8-bugbear
     "UP",  # pyupgrade
 ]
+# NOTE: F821 (undefined-name) is enabled to catch errors like:
+#   - NameError: name 'patch' is not defined
+#   - Missing imports that only fail at runtime
+# Strategic recommendation from Story 8 test failure analysis
 
 # Ignore specific rules
 ignore = [
@@ -210,6 +214,17 @@ ensure_newline_before_comments = true
 [tool.pytest.ini_options]
 # Minimal config here - full config in pytest.ini
 asyncio_mode = "auto"
+
+# ============================================================================
+# UV PACKAGE MANAGER CONFIGURATION
+# ============================================================================
+# CI reliability: Prevent unbounded cache growth on shared runners
+# UV_CACHE_SIZE_LIMIT environment variable should be set to 2GB (2048 MB)
+# This prevents cache corruption issues when multiple projects share runners
+[tool.uv]
+# Cache limit in MB (default: unlimited, causes corruption on shared runners)
+# Set via environment variable UV_CACHE_SIZE_LIMIT=2048 in CI workflows
+cache-dir = ".uv-cache"  # Project-local cache instead of global ~/.cache/uv
 
 # ============================================================================
 # COVERAGE CONFIGURATION

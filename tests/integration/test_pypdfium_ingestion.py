@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 # Skip slow tests unless RUN_SLOW_TESTS=1 environment variable is set
 SKIP_SLOW_TESTS = os.getenv("RUN_SLOW_TESTS") != "1"

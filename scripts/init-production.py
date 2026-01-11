@@ -105,7 +105,7 @@ def initialize_qdrant_production(guard: SafetyGuard) -> bool:
         from qdrant_client import QdrantClient
         from qdrant_client.models import Distance
 
-        from raglite.ingestion.storage_operations import create_collection
+        from raglite.ingestion.storage import create_collection
 
         # Connect to production Qdrant
         qdrant = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)

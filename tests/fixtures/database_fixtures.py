@@ -4,7 +4,9 @@ Provides fixtures to populate the test database with proper time-series data
 for forecasting and extraction tests.
 """
 
+from collections.abc import Generator
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -13,7 +15,7 @@ from raglite.shared.safety import SafetyGuard
 
 
 @pytest.fixture(scope="session")
-def test_financial_data():
+def test_financial_data() -> Generator[None, None, None]:
     """Populate test database with proper financial time-series data.
 
     This fixture loads test data that matches the expected format for
@@ -92,7 +94,7 @@ def test_financial_data():
 
 
 @pytest.fixture(scope="function")
-def ensure_test_data_exists():
+def ensure_test_data_exists() -> Generator[Any, None, None]:
     """Ensure test financial data exists for individual tests.
 
     This is a safety check for tests that rely on the test data

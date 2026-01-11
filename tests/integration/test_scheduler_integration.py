@@ -100,20 +100,19 @@ class TestScheduledRefreshExecution:
                 mock_storage_class.return_value = mock_storage
 
                 # Mock individual refresh functions to avoid external API calls
+                # Patch SOURCE_REFRESH_FUNCTIONS dict to control which functions are called
                 with patch(
-                    "raglite.external_data.refresh._refresh_ipma",
-                    new=AsyncMock(
-                        return_value=MagicMock(
-                            success=True,
-                            source_name="IPMA",
-                            records_updated=7,
-                            duration_seconds=1.0,
-                        )
-                    ),
-                ):
-                    with patch(
-                        "raglite.external_data.refresh._refresh_omie",
-                        new=AsyncMock(
+                    "raglite.external_data.refresh.SOURCE_REFRESH_FUNCTIONS",
+                    new={
+                        "IPMA": AsyncMock(
+                            return_value=MagicMock(
+                                success=True,
+                                source_name="IPMA",
+                                records_updated=7,
+                                duration_seconds=1.0,
+                            )
+                        ),
+                        "OMIE": AsyncMock(
                             return_value=MagicMock(
                                 success=True,
                                 source_name="OMIE",
@@ -121,19 +120,17 @@ class TestScheduledRefreshExecution:
                                 duration_seconds=0.8,
                             )
                         ),
-                    ):
-                        with patch(
-                            "raglite.external_data.refresh._refresh_commodities_co2",
-                            new=AsyncMock(
-                                return_value=MagicMock(
-                                    success=True,
-                                    source_name="CO2_EUA",
-                                    records_updated=3,
-                                    duration_seconds=0.5,
-                                )
-                            ),
-                        ):
-                            result = await refresh_sources_by_frequency(RefreshFrequency.DAILY)
+                        "CO2_EUA": AsyncMock(
+                            return_value=MagicMock(
+                                success=True,
+                                source_name="CO2_EUA",
+                                records_updated=3,
+                                duration_seconds=0.5,
+                            )
+                        ),
+                    },
+                ):
+                    result = await refresh_sources_by_frequency(RefreshFrequency.DAILY)
 
         assert result.total_sources == 3
         assert result.successful == 3
@@ -207,25 +204,31 @@ class TestScheduledRefreshExecution:
                 mock_storage.get_source.return_value = None
                 mock_storage_class.return_value = mock_storage
 
+                # Mock SOURCE_REFRESH_FUNCTIONS dict to control which functions are called
                 with patch(
-                    "raglite.external_data.refresh._refresh_ine_construction",
-                    new=AsyncMock(
-                        return_value=MagicMock(
-                            success=True,
-                            source_name="INE_ConstructionOutput",
-                        )
-                    ),
-                ):
-                    with patch(
-                        "raglite.external_data.refresh._refresh_atic_cement",
-                        new=AsyncMock(
+                    "raglite.external_data.refresh.SOURCE_REFRESH_FUNCTIONS",
+                    new={
+                        "INE_ConstructionOutput": AsyncMock(
+                            return_value=MagicMock(
+                                success=True,
+                                source_name="INE_ConstructionOutput",
+                            )
+                        ),
+                        "INE_ConstructionCostIndex": AsyncMock(
+                            return_value=MagicMock(
+                                success=True,
+                                source_name="INE_ConstructionCostIndex",
+                            )
+                        ),
+                        "ATIC_CementConsumption": AsyncMock(
                             return_value=MagicMock(
                                 success=True,
                                 source_name="ATIC_CementConsumption",
                             )
                         ),
-                    ):
-                        result = await refresh_sources_by_frequency(RefreshFrequency.MONTHLY)
+                    },
+                ):
+                    result = await refresh_sources_by_frequency(RefreshFrequency.MONTHLY)
 
         # INE_ConstructionOutput and INE_ConstructionCostIndex both map to same function
         assert result.total_sources >= 2
@@ -267,7 +270,7 @@ class TestStalenessDetectionIntegration:
 
         with patch("raglite.external_data.refresh.settings") as mock_settings:
             mock_settings.external_data_stale_days = 30
-            with patch("raglite.external_data.refresh.logger") as mock_logger:
+            with patch("raglite.external_data.refresh_helpers.logger") as mock_logger:
                 is_stale = check_staleness("TEST_SOURCE", old_refresh)
 
                 # Verify WARNING was logged
@@ -357,7 +360,7 @@ class TestRetryWithExternalAPIs:
     async def test_retry_on_api_timeout(self) -> None:
         """Test that API timeout triggers retry with backoff."""
         from raglite.external_data.exceptions import ExternalDataFetchError
-        from raglite.external_data.refresh import _retry_with_backoff
+        from raglite.external_data.refresh_helpers import retry_with_backoff
 
         call_count = 0
 
@@ -370,11 +373,9 @@ class TestRetryWithExternalAPIs:
 
         with patch("raglite.external_data.refresh.settings") as mock_settings:
             mock_settings.external_data_retry_attempts = 3
-            with patch(
-                "raglite.external_data.refresh.asyncio.sleep", new=AsyncMock()
-            ) as mock_sleep:
-                # _retry_with_backoff returns 4 values: (success, attempts, error, result)
-                success, attempts, error, result = await _retry_with_backoff(
+            with patch("asyncio.sleep", new=AsyncMock()) as mock_sleep:
+                # retry_with_backoff returns 4 values: (success, attempts, error, result)
+                success, attempts, error, result = await retry_with_backoff(
                     timeout_then_success, "test_source"
                 )
 
@@ -391,17 +392,17 @@ class TestRetryWithExternalAPIs:
     async def test_error_logged_after_all_retries_fail(self) -> None:
         """Test that ERROR level log is emitted after all retries fail (AC3)."""
         from raglite.external_data.exceptions import ExternalDataFetchError
-        from raglite.external_data.refresh import _retry_with_backoff
+        from raglite.external_data.refresh_helpers import retry_with_backoff
 
         async def always_fails() -> None:
             raise ExternalDataFetchError("test", "Persistent failure")
 
         with patch("raglite.external_data.refresh.settings") as mock_settings:
             mock_settings.external_data_retry_attempts = 3
-            with patch("raglite.external_data.refresh.asyncio.sleep", new=AsyncMock()):
-                with patch("raglite.external_data.refresh.logger") as mock_logger:
-                    # _retry_with_backoff returns 4 values: (success, attempts, error, result)
-                    success, attempts, error, result = await _retry_with_backoff(
+            with patch("asyncio.sleep", new=AsyncMock()):
+                with patch("raglite.external_data.refresh_helpers.logger") as mock_logger:
+                    # retry_with_backoff returns 4 values: (success, attempts, error, result)
+                    success, attempts, error, result = await retry_with_backoff(
                         always_fails, "test_source"
                     )
 

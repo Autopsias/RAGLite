@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 # Mark all tests in this module as integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 # Project root for running scripts
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 

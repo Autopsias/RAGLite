@@ -47,10 +47,7 @@ async def run_weekly_backtest() -> dict[str, int]:
     Returns:
         Dict with metrics_processed count and weights_updated count
     """
-    import asyncio
-
     from raglite.external_data.storage import ExternalDataStorage
-    from raglite.forecasting.adaptive_weights import calculate_backtest_weights
     from raglite.shared.database import get_session
 
     logger.info("Starting weekly backtest job")
@@ -66,57 +63,30 @@ async def run_weekly_backtest() -> dict[str, int]:
             try:
                 logger.info(f"Processing backtest for metric: {metric}")
 
-                # Retrieve historical data from external data sources
-                # Try to find time-series data from multiple sources
+                # Retrieve and validate historical data
                 historical_data = await _get_metric_historical_data(metric, storage)
-
-                if historical_data is None or len(historical_data.points) < 12:
-                    logger.info(
-                        f"Insufficient data for backtest: {metric}",
-                        extra={
-                            "data_points": len(historical_data.points) if historical_data else 0,
-                            "required": 12,
-                        },
-                    )
+                if not historical_data or not _validate_metric_data(metric, historical_data):
                     continue
 
-                # Get external regressors if available
+                # Get external regressors and run backtest
                 external_regressors = await _get_external_regressors(storage)
-
-                # Run backtest in thread pool to avoid blocking event loop
-                loop = asyncio.get_event_loop()
-                results = await loop.run_in_executor(
-                    None,
-                    calculate_backtest_weights,
-                    metric,
-                    historical_data,
-                    external_regressors,
-                    None,  # Use default models
+                results = await _execute_backtest_for_metric(
+                    metric, historical_data, external_regressors
                 )
 
                 if not results:
-                    logger.warning(
-                        f"No backtest results for metric: {metric}",
-                    )
+                    logger.warning(f"No backtest results for metric: {metric}")
                     continue
 
                 metrics_processed += 1
 
-                # Store results in model_weights table
-                for model_name, model_results in results.items():
-                    storage.save_model_weight(
-                        metric_name=metric,
-                        model_name=model_name,
-                        weight=model_results["weight"],
-                        backtest_rmse=model_results.get("rmse"),
-                        backtest_mape=model_results.get("mape"),
-                        has_regressors=external_regressors is not None
-                        and len(external_regressors) > 0,
-                        data_points=int(model_results["data_points"])
-                        if model_results.get("data_points")
-                        else None,
-                    )
-                    weights_updated += 1
+                # Store results in database
+                weights_updated += _store_backtest_results(
+                    storage,
+                    metric,
+                    results,  # type: ignore[arg-type]
+                    external_regressors,
+                )
 
                 logger.info(
                     f"Backtest completed for {metric}",
@@ -148,6 +118,104 @@ async def run_weekly_backtest() -> dict[str, int]:
         "metrics_processed": metrics_processed,
         "weights_updated": weights_updated,
     }
+
+
+def _validate_metric_data(metric: str, historical_data: object | None) -> bool:
+    """Validate that metric has sufficient historical data for backtest.
+
+    Args:
+        metric: Metric name
+        historical_data: TimeSeriesData object or None
+
+    Returns:
+        True if data is sufficient, False otherwise
+    """
+    min_points = 12
+
+    if historical_data is None or (
+        hasattr(historical_data, "points") and len(historical_data.points) < min_points
+    ):
+        logger.info(
+            f"Insufficient data for backtest: {metric}",
+            extra={
+                "data_points": len(historical_data.points)
+                if historical_data and hasattr(historical_data, "points")
+                else 0,
+                "required": min_points,
+            },
+        )
+        return False
+
+    return True
+
+
+async def _execute_backtest_for_metric(
+    metric: str,
+    historical_data: TimeSeriesData,
+    external_regressors: dict[str, object] | None,
+) -> dict[str, dict[str, float]]:
+    """Execute backtest calculation for a single metric.
+
+    Args:
+        metric: Metric name
+        historical_data: TimeSeriesData for the metric
+        external_regressors: Optional external regressor series
+
+    Returns:
+        Dict of model results with weights and metrics
+    """
+    import asyncio
+
+    from raglite.forecasting.adaptive_weights import calculate_backtest_weights
+
+    # Run backtest in thread pool to avoid blocking event loop
+    loop = asyncio.get_event_loop()
+    results = await loop.run_in_executor(
+        None,
+        calculate_backtest_weights,
+        metric,
+        historical_data,
+        external_regressors,
+        None,  # Use default models
+    )
+
+    return results
+
+
+def _store_backtest_results(
+    storage: ExternalDataStorage,
+    metric: str,
+    results: dict[str, dict[str, object]],
+    external_regressors: dict[str, object] | None,
+) -> int:
+    """Store backtest results in model_weights table.
+
+    Args:
+        storage: ExternalDataStorage instance
+        metric: Metric name
+        results: Backtest results from calculate_backtest_weights
+        external_regressors: External regressors used in backtest
+
+    Returns:
+        Number of weights updated
+    """
+    weights_updated = 0
+
+    for model_name, model_results in results.items():
+        storage.save_model_weight(
+            metric_name=metric,
+            model_name=model_name,
+            weight=float(model_results["weight"]),  # type: ignore[arg-type]
+            backtest_rmse=float(model_results["rmse"]) if model_results.get("rmse") else None,  # type: ignore[arg-type]
+            backtest_mape=float(model_results["mape"]) if model_results.get("mape") else None,  # type: ignore[arg-type]
+            has_regressors=external_regressors is not None and len(external_regressors) > 0,
+            data_points=int(float(model_results["data_points"]))  # type: ignore[arg-type]
+            if model_results.get("data_points")
+            else None,
+        )
+        weights_updated += 1
+
+    return weights_updated
 
 
 async def _get_metric_historical_data(

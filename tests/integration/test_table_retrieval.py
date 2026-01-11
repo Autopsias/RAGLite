@@ -6,14 +6,14 @@ Requires PostgreSQL to be running and populated with data from Story 2.6.
 
 import pytest
 
-# Mark all tests in this module as integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
-
 from raglite.structured.table_retrieval import (
     TableRetrievalError,
     search_tables,
     search_tables_with_metadata_filter,
 )
+
+# Mark all tests in this module as integration tests
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 
 @pytest.mark.preserve_collection  # Read-only query tests - no data modification

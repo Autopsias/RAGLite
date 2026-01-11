@@ -22,6 +22,7 @@ warnings.filterwarnings("ignore")
 async def investigate_alignment():
     """Investigate data alignment between targets and regressors."""
     from raglite.forecasting.model_selection_job import fetch_historical_data
+
     from raglite.forecasting.regressor_config import get_default_regressors
     from raglite.forecasting.regressor_fetch import fetch_regressors_with_date_range
 

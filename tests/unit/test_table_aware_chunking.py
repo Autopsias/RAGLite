@@ -212,17 +212,20 @@ def test_table_chunk_section_type():
     """
     from raglite.shared.models import Chunk
 
+    # Create metadata as dict for Pydantic v2 compatibility
+    metadata_dict = {
+        "filename": "test.pdf",
+        "doc_type": "PDF",
+        "ingestion_timestamp": "2025-10-25T12:00:00Z",
+        "page_count": 10,
+        "source_path": "/path/to/test.pdf",
+    }
+
     # Create a chunk with section_type='Table'
     chunk = Chunk(
         chunk_id="test_chunk_1",
         content="Test table content",
-        metadata=DocumentMetadata(
-            filename="test.pdf",
-            doc_type="PDF",
-            ingestion_timestamp="2025-10-25T12:00:00Z",
-            page_count=10,
-            source_path="/path/to/test.pdf",
-        ),
+        metadata=metadata_dict,
         page_number=1,
         chunk_index=0,
         embedding=[],

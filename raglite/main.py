@@ -31,7 +31,7 @@ from raglite.mcp.tools import (  # noqa: E402, F401
     external_data,
     forecast,
     health,
-    ingestion,
+    ingestion_tool,  # noqa: E402, F401
     insights,
     query,
     validation,
@@ -53,7 +53,7 @@ from raglite.mcp.tools.health import check_database_health  # noqa: E402, F401
 
 # Re-export DocumentProcessingError for backward compatibility (AC4)
 # Re-export all tools for backward compatibility (AC4)
-from raglite.mcp.tools.ingestion import (  # noqa: E402, F401
+from raglite.mcp.tools.ingestion_tool import (  # noqa: E402, F401
     DocumentProcessingError,
     _perform_forecast_refresh,
     get_ingestion_status,

@@ -19,10 +19,100 @@ except ImportError:
 
 
 from raglite.forecasting.hybrid import InsufficientDataError, generate_forecast
-from raglite.forecasting.timeseries_extract import ExtractionError, extract_timeseries
+from raglite.forecasting.timeseries import ExtractionError, extract_timeseries
 from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _extract_forecasting_params(
+    instruction: str, context: dict | None
+) -> tuple[str, list[str], int]:
+    """Extract forecasting parameters from instruction and context.
+
+    Args:
+        instruction: Task instruction
+        context: Optional context data
+
+    Returns:
+        Tuple of (metric, documents, periods_ahead)
+    """
+    metric = "revenue"
+    docs: list[str] = []
+    periods_ahead = 4
+
+    if context and isinstance(context, dict):
+        metric = context.get("metric", "revenue")
+        docs = context.get("documents", [])
+        periods_ahead = context.get("periods_ahead", 4)
+
+    instruction_lower = instruction.lower()
+    if "cash flow" in instruction_lower or "cash_flow" in instruction_lower:
+        metric = "cash_flow"
+    elif "expense" in instruction_lower:
+        metric = "expenses"
+    elif "ebitda" in instruction_lower:
+        metric = "ebitda"
+
+    return metric, docs, periods_ahead
+
+
+async def _generate_forecast_response(
+    metric: str, docs: list[str], periods_ahead: int, start_time: float
+) -> dict:
+    """Generate forecast and build response dictionary.
+
+    Args:
+        metric: Metric to forecast
+        docs: Document list for context
+        periods_ahead: Number of periods to forecast
+        start_time: Execution start time
+
+    Returns:
+        Response dictionary with forecast results
+    """
+    time_series_data = await extract_timeseries(docs=docs, metric=metric)
+    forecast_result = await generate_forecast(
+        metric=metric,
+        historical_data=time_series_data,
+        periods_ahead=periods_ahead,
+    )
+
+    latency_ms = round((time.time() - start_time) * 1000, 2)
+
+    response = {
+        "metric_name": forecast_result.metric_name,
+        "forecast": [
+            {
+                "date": p.date.isoformat(),
+                "value": round(p.value, 2),
+                "lower": round(p.lower, 2),
+                "upper": round(p.upper, 2),
+                "label": p.label,
+            }
+            for p in forecast_result.forecast
+        ],
+        "confidence_reasoning": forecast_result.confidence_reasoning,
+        "basis": forecast_result.basis,
+        "accuracy_estimate": forecast_result.accuracy_estimate,
+        "periods_ahead": forecast_result.periods_ahead,
+        "metadata": {
+            "success": True,
+            "latency_ms": latency_ms,
+            "data_points": len(forecast_result.historical_data),
+        },
+    }
+
+    logger.info(
+        "Forecasting agent complete",
+        extra={
+            "metric": metric,
+            "forecast_points": len(forecast_result.forecast),
+            "latency_ms": latency_ms,
+        },
+    )
+
+    return response
 
 
 @tool
@@ -73,26 +163,7 @@ async def forecasting_agent(instruction: str, context: dict | None = None) -> st
     start_time = time.time()
     error_msg = None
 
-    # Parse instruction to extract metric and document list
-    metric = "revenue"  # Default metric
-    docs: list[str] = []
-
-    # Check context for parameters
-    if context and isinstance(context, dict):
-        metric = context.get("metric", "revenue")
-        docs = context.get("documents", [])
-        periods_ahead = context.get("periods_ahead", 4)
-    else:
-        periods_ahead = 4
-
-    # Try to parse metric from instruction if not in context
-    instruction_lower = instruction.lower()
-    if "cash flow" in instruction_lower or "cash_flow" in instruction_lower:
-        metric = "cash_flow"
-    elif "expense" in instruction_lower:
-        metric = "expenses"
-    elif "ebitda" in instruction_lower:
-        metric = "ebitda"
+    metric, docs, periods_ahead = _extract_forecasting_params(instruction, context)
 
     try:
         logger.info(
@@ -100,52 +171,7 @@ async def forecasting_agent(instruction: str, context: dict | None = None) -> st
             extra={"metric": metric, "docs": docs, "periods_ahead": periods_ahead},
         )
 
-        # Step 1: Extract time-series data (Story 4.1)
-        time_series_data = await extract_timeseries(docs=docs, metric=metric)
-
-        # Step 2: Generate forecast (Story 4.2)
-        forecast_result = await generate_forecast(
-            metric=metric,
-            historical_data=time_series_data,
-            periods_ahead=periods_ahead,
-        )
-
-        # Compute latency before building response
-        latency_ms = round((time.time() - start_time) * 1000, 2)
-
-        # Build successful response
-        response = {
-            "metric_name": forecast_result.metric_name,
-            "forecast": [
-                {
-                    "date": p.date.isoformat(),
-                    "value": round(p.value, 2),
-                    "lower": round(p.lower, 2),
-                    "upper": round(p.upper, 2),
-                    "label": p.label,
-                }
-                for p in forecast_result.forecast
-            ],
-            "confidence_reasoning": forecast_result.confidence_reasoning,
-            "basis": forecast_result.basis,
-            "accuracy_estimate": forecast_result.accuracy_estimate,
-            "periods_ahead": forecast_result.periods_ahead,
-            "metadata": {
-                "success": True,
-                "latency_ms": latency_ms,
-                "data_points": len(forecast_result.historical_data),
-            },
-        }
-
-        logger.info(
-            "Forecasting agent complete",
-            extra={
-                "metric": metric,
-                "forecast_points": len(forecast_result.forecast),
-                "latency_ms": latency_ms,
-            },
-        )
-
+        response = await _generate_forecast_response(metric, docs, periods_ahead, start_time)
         return json.dumps(response)
 
     except InsufficientDataError as e:
@@ -171,7 +197,6 @@ async def forecasting_agent(instruction: str, context: dict | None = None) -> st
             exc_info=True,
         )
 
-    # Return error response
     latency_ms = round((time.time() - start_time) * 1000, 2)
     error_response = {
         "metric_name": metric,

@@ -69,7 +69,7 @@ class TestAC1FileSizeReduction:
     @pytest.mark.parametrize(
         "module_name,expected_max_loc",
         [
-            ("ingestion", 500),
+            ("ingestion_tool", 500),
             ("query", 500),
             ("forecast", 500),
             ("insights", 500),
@@ -112,7 +112,7 @@ class TestAC1FileSizeReduction:
         ]
 
         for tool in [
-            "ingestion",
+            "ingestion_tool",
             "query",
             "forecast",
             "insights",

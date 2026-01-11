@@ -9,22 +9,24 @@ from datetime import datetime
 import numpy as np
 import pytest
 
-from tests.validation.test_forecast_accuracy import (
-    ForecastAccuracyValidator,
-    ForecastValidationResult,
+from tests.validation.forecast_accuracy.models import ForecastValidationResult
+from tests.validation.forecast_accuracy.test_data import (
     create_growth_data,
     create_seasonal_data,
     create_volatile_data,
 )
-from tests.validation.test_insight_quality import (
-    InsightQualityValidator,
+from tests.validation.forecast_accuracy.validator import ForecastAccuracyValidator
+from tests.validation.test_insight_quality.models import (
     InsightTestScenario,
     InsightValidationResult,
 )
-from tests.validation.test_recommendation_alignment import (
-    RecommendationAlignmentValidator,
+from tests.validation.test_insight_quality.validator import InsightQualityValidator
+from tests.validation.test_recommendation_alignment.models import (
     RecommendationTestScenario,
     RecommendationValidationResult,
+)
+from tests.validation.test_recommendation_alignment.validator import (
+    RecommendationAlignmentValidator,
 )
 
 

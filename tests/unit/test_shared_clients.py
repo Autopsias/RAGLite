@@ -8,6 +8,9 @@ from pytest import MonkeyPatch
 from raglite.shared.clients import get_claude_client, get_qdrant_client
 from raglite.shared.config import Settings
 
+# Group tests that modify shared client singletons to run on same worker
+pytestmark = pytest.mark.xdist_group(name="shared_clients")
+
 # CRITICAL FIX (2025-12-16): DO NOT use sys.modules mocking at module level!
 # Module-level sys.modules mocking persists for the entire Python process and
 # pollutes the global namespace. This caused 114 test failures when integration

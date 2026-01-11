@@ -22,12 +22,11 @@ from __future__ import annotations
 import asyncio
 import os
 from datetime import date, datetime, timedelta
-from io import BytesIO
 from pathlib import Path
-from typing import Any
 
 import httpx
 
+from raglite.external_data.clients import eu_oil_bulletin_parsers as parsers
 from raglite.external_data.exceptions import ExternalDataFetchError
 from raglite.external_data.models import EUDieselPrice
 from raglite.shared.config import settings
@@ -105,10 +104,6 @@ class EUOilBulletinClient:
         # Story 6.9.4 AC7: Extended timeout for ~4MB file download (NFR2: 60s)
         is_test = os.getenv("PYTEST_CURRENT_TEST") is not None
         self.timeout = 1.0 if is_test else 60.0  # 60s for large file
-
-        # Lazy-loaded workbook to avoid re-parsing
-        self._cached_workbook: Any = None
-        self._cached_workbook_time: datetime | None = None
 
     async def _fetch_xlsx_data(self) -> bytes:
         """Fetch historical oil bulletin XLSX file.
@@ -224,6 +219,9 @@ class EUOilBulletinClient:
         """Save XLSX content to cache.
 
         Story 6.9.4 AC5: Caching for large historical file
+
+        Args:
+            content: XLSX file bytes
         """
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         cache_file = self.cache_dir / "eu_oil_bulletin_history.xlsx"
@@ -267,7 +265,13 @@ class EUOilBulletinClient:
             self._save_to_cache(xlsx_content)
 
         # Parse XLSX content
-        results = self._parse_xlsx(xlsx_content, country, start_date, end_date, tax_included)
+        results = self._parse_xlsx(
+            xlsx_content,
+            country,
+            start_date,
+            end_date,
+            tax_included,
+        )
 
         logger.info(
             "Fetched EU Oil Bulletin diesel prices",
@@ -285,13 +289,8 @@ class EUOilBulletinClient:
     ) -> list[EUDieselPrice]:
         """Parse EU Oil Bulletin XLSX data.
 
-        Story 6.9.4 AC2: XLSX parsing with openpyxl
-
-        The XLSX file has multiple sheets:
-        - "Prices with taxes" - consumer prices including taxes
-        - "Prices wo taxes, per CTR" - prices without taxes by country
-
-        Each sheet has dates in column A and country prices in subsequent columns.
+        Backward-compatible delegation method for tests.
+        Delegates to parsers module.
 
         Args:
             content: XLSX file bytes
@@ -303,164 +302,14 @@ class EUOilBulletinClient:
         Returns:
             List of diesel price records
         """
-        try:
-            import openpyxl
-        except ImportError as e:
-            raise ExternalDataFetchError(
-                source="EU_Oil_Bulletin",
-                message="openpyxl not installed - required for XLSX parsing",
-                original_error=e,
-            ) from e
-
-        results: list[EUDieselPrice] = []
-
-        try:
-            wb = openpyxl.load_workbook(BytesIO(content), data_only=True, read_only=True)
-        except Exception as e:
-            logger.warning(
-                "Failed to open EU Oil Bulletin XLSX",
-                extra={"error": str(e)},
-            )
-            return results
-
-        # Try to find the sheet (name may vary slightly)
-        ws = None
-        for name in wb.sheetnames:
-            if "taxes" in name.lower():
-                if tax_included and "with" in name.lower():
-                    ws = wb[name]
-                    break
-                elif not tax_included and ("wo" in name.lower() or "without" in name.lower()):
-                    ws = wb[name]
-                    break
-
-        if ws is None:
-            # Fallback to first sheet
-            ws = wb.active
-            if ws is None:
-                logger.warning("No active sheet in EU Oil Bulletin XLSX")
-                return results
-
-        # Find country diesel column
-        # Story 6.9.5: Header format is {CC}_price_with_tax_diesel where CC is 2-letter country code
-        # Example: PT_price_with_tax_diesel for Portugal
-        country_col_idx: int | None = None
-        header_row = list(ws.iter_rows(min_row=1, max_row=1, values_only=True))[0]
-
-        # Get country code
-        country_code = self.COUNTRY_CODES.get(country, "")
-        target_pattern = f"{country_code}_price_with_tax_diesel".lower() if country_code else None
-
-        for idx, cell_value in enumerate(header_row):
-            if cell_value is None:
-                continue
-            cell_str = str(cell_value).strip().lower()
-
-            # Priority 1: Exact match on country code diesel column (e.g., "pt_price_with_tax_diesel")
-            if target_pattern and target_pattern in cell_str:
-                country_col_idx = idx
-                break
-
-            # Priority 2: Partial match on country name with diesel
-            if country.lower() in cell_str and "diesel" in cell_str:
-                country_col_idx = idx
-                break
-
-            # Priority 3: Exact country name match (for simple headers like "Portugal")
-            if cell_str == country.lower():
-                country_col_idx = idx
-                break
-
-        if country_col_idx is None:
-            logger.warning(
-                "Country not found in EU Oil Bulletin XLSX headers",
-                extra={"country": country, "headers": header_row[:15]},
-            )
-            return results
-
-        # Detect data start row:
-        # - Production files have 3 header rows (start at row 4)
-        # - Test mocks may have 1 header row (start at row 2)
-        # Check if row 2 has a date value in the first column
-        data_start_row = 4  # Default for production files
-        try:
-            row_2 = list(ws.iter_rows(min_row=2, max_row=2, values_only=True))[0]
-            first_cell = row_2[0] if row_2 else None
-            if isinstance(first_cell, (datetime, date)):
-                data_start_row = 2  # Test mock format with single header
-        except (IndexError, StopIteration):
-            pass
-
-        # Parse data rows
-        for row in ws.iter_rows(min_row=data_start_row, values_only=True):
-            try:
-                # First column is date
-                date_cell = row[0]
-                if date_cell is None:
-                    continue
-
-                # Parse date (may be datetime or string)
-                if isinstance(date_cell, datetime):
-                    record_date = date_cell.date()
-                elif isinstance(date_cell, date):
-                    record_date = date_cell
-                elif isinstance(date_cell, str):
-                    # Try common date formats
-                    for fmt in ["%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"]:
-                        try:
-                            record_date = datetime.strptime(date_cell, fmt).date()
-                            break
-                        except ValueError:
-                            continue
-                    else:
-                        continue
-                else:
-                    continue
-
-                # Filter by date range
-                if not (start_date <= record_date <= end_date):
-                    continue
-
-                # Get price value
-                if country_col_idx >= len(row):
-                    continue
-                price_cell = row[country_col_idx]
-                if price_cell is None:
-                    continue
-
-                price = float(price_cell)
-
-                # Story 6.9.5: Prices in XLSX are in cents (e.g., 1604 = €1.604/L)
-                # Convert to EUR per litre
-                if price > 100:  # Clearly in cents
-                    price = price / 1000.0
-
-                # Skip invalid prices (reasonable range for EUR/litre is 0.5 - 3.0)
-                if price <= 0.3 or price > 5.0:
-                    continue
-
-                results.append(
-                    EUDieselPrice(
-                        date=record_date,
-                        price_eur_litre=price,
-                        country=country,
-                        tax_included=tax_included,
-                    )
-                )
-
-            except (ValueError, TypeError, IndexError) as e:
-                logger.warning(
-                    "Failed to parse EU Oil Bulletin row",
-                    extra={"error": str(e)},
-                )
-                continue
-
-        wb.close()
-
-        # Sort by date (oldest first)
-        results.sort(key=lambda x: x.date)
-
-        return results
+        return parsers.parse_xlsx(
+            content,
+            country,
+            start_date,
+            end_date,
+            self.COUNTRY_CODES,
+            tax_included,
+        )
 
     def _code_to_country(self, code: str) -> str:
         """Convert country code to name."""

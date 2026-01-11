@@ -66,6 +66,103 @@ class MetricInfo(BaseModel):
     can_forecast: bool = Field(..., description="True if >= 8 data points")
 
 
+def _check_metrics_cache(use_cache: bool) -> list[MetricInfo] | None:
+    """Check if valid cached metrics exist.
+
+    Args:
+        use_cache: Whether to use cache
+
+    Returns:
+        Cached metrics if valid, None otherwise
+    """
+    global _metrics_cache
+
+    if not use_cache or _metrics_cache is None:
+        return None
+
+    cache_age = datetime.now() - _metrics_cache["last_fetch"]
+    if cache_age.total_seconds() < _get_cache_ttl():
+        logger.info(
+            "Returning cached metrics list",
+            extra={
+                "cache_age_seconds": cache_age.total_seconds(),
+                "metric_count": len(_metrics_cache["metrics"]),
+            },
+        )
+        return _metrics_cache["metrics"]
+
+    return None
+
+
+def _execute_metrics_query(min_points: int) -> list[MetricInfo]:
+    """Execute SQL query to fetch metrics from database.
+
+    Args:
+        min_points: Minimum points to set can_forecast=True
+
+    Returns:
+        List of MetricInfo objects
+
+    Raises:
+        RuntimeError: If SQL query fails
+    """
+    conn = get_postgresql_connection()
+    cursor = conn.cursor()
+
+    try:
+        query = """
+            SELECT
+                metric,
+                COUNT(*) as data_point_count,
+                MIN(period) as min_date,
+                MAX(period) as max_date
+            FROM financial_tables
+            WHERE metric IS NOT NULL
+            GROUP BY metric
+            ORDER BY data_point_count DESC
+        """
+
+        cursor.execute(query)
+        rows = cursor.fetchall()
+
+        metrics = []
+        for row in rows:
+            metric_name, count, min_period, max_period = row
+            can_forecast = count >= min_points
+
+            metrics.append(
+                MetricInfo(
+                    name=metric_name,
+                    data_point_count=count,
+                    min_period=min_period,
+                    max_period=max_period,
+                    can_forecast=can_forecast,
+                )
+            )
+
+        logger.info(
+            "Metrics discovery complete",
+            extra={
+                "total_metrics": len(metrics),
+                "forecastable_metrics": sum(1 for m in metrics if m.can_forecast),
+                "min_points_threshold": min_points,
+            },
+        )
+
+        return metrics
+
+    except Exception as e:
+        logger.error(
+            "Failed to fetch metrics from database",
+            extra={"error": str(e), "query": query},
+            exc_info=True,
+        )
+        raise RuntimeError(f"Metric discovery query failed: {e}") from e
+
+    finally:
+        cursor.close()
+
+
 async def list_available_metrics(
     min_points: int = MIN_DATA_POINTS,
     use_cache: bool = True,
@@ -94,81 +191,19 @@ async def list_available_metrics(
     global _metrics_cache
 
     # Check cache first (AC1.2: configurable TTL via settings)
-    if use_cache and _metrics_cache is not None:
-        cache_age = datetime.now() - _metrics_cache["last_fetch"]
-        if cache_age.total_seconds() < _get_cache_ttl():
-            logger.info(
-                "Returning cached metrics list",
-                extra={
-                    "cache_age_seconds": cache_age.total_seconds(),
-                    "metric_count": len(_metrics_cache["metrics"]),
-                },
-            )
-            return _metrics_cache["metrics"]
+    cached_metrics = _check_metrics_cache(use_cache)
+    if cached_metrics is not None:
+        return cached_metrics
 
     logger.info("Fetching available metrics from database", extra={"min_points": min_points})
 
     # Query PostgreSQL for unique metrics with counts
-    conn = get_postgresql_connection()
-    cursor = conn.cursor()
+    metrics = _execute_metrics_query(min_points)
 
-    try:
-        # AC1: SQL query for unique metrics with data point counts and date ranges
-        query = """
-            SELECT
-                metric,
-                COUNT(*) as data_point_count,
-                MIN(period) as min_date,
-                MAX(period) as max_date
-            FROM financial_tables
-            WHERE metric IS NOT NULL
-            GROUP BY metric
-            ORDER BY data_point_count DESC
-        """
+    # Update cache (AC1.2: configurable TTL via settings.metrics_cache_ttl_seconds)
+    _metrics_cache = {"last_fetch": datetime.now(), "metrics": metrics}
 
-        cursor.execute(query)
-        rows = cursor.fetchall()
-
-        # Build MetricInfo objects
-        metrics = []
-        for row in rows:
-            metric_name, count, min_period, max_period = row
-            can_forecast = count >= min_points
-
-            metrics.append(
-                MetricInfo(
-                    name=metric_name,
-                    data_point_count=count,
-                    min_period=min_period,
-                    max_period=max_period,
-                    can_forecast=can_forecast,
-                )
-            )
-
-        logger.info(
-            "Metrics discovery complete",
-            extra={
-                "total_metrics": len(metrics),
-                "forecastable_metrics": sum(1 for m in metrics if m.can_forecast),
-                "min_points_threshold": min_points,
-            },
-        )
-
-        # Update cache (AC1.2: configurable TTL via settings.metrics_cache_ttl_seconds)
-        _metrics_cache = {"last_fetch": datetime.now(), "metrics": metrics}
-
-        return metrics
-
-    except Exception as e:
-        logger.error(
-            "Failed to fetch metrics from database",
-            extra={"error": str(e), "query": query},
-            exc_info=True,
-        )
-        raise RuntimeError(f"Metric discovery query failed: {e}") from e
-
-    finally:
-        cursor.close()
+    return metrics
 
 
 def clear_metrics_cache() -> None:
@@ -181,6 +216,114 @@ def clear_metrics_cache() -> None:
     global _metrics_cache
     _metrics_cache = None
     logger.info("Metrics cache cleared")
+
+
+def _build_external_metric_info(
+    source_name: str,
+    metric_name: str,
+    count: int,
+    min_date: str,
+    max_date: str,
+    min_points: int,
+) -> MetricInfo | None:
+    """Build MetricInfo from external data row if mapping exists.
+
+    Args:
+        source_name: External data source name
+        metric_name: Metric name from source
+        count: Data point count
+        min_date: Minimum date
+        max_date: Maximum date
+        min_points: Minimum points for can_forecast=True
+
+    Returns:
+        MetricInfo object if mapping exists, None otherwise
+    """
+    key = (source_name, metric_name)
+    if key not in EXTERNAL_METRIC_MAPPINGS:
+        return None
+
+    forecast_name = EXTERNAL_METRIC_MAPPINGS[key]
+    can_forecast = count >= min_points
+
+    logger.debug(
+        "External metric mapped",
+        extra={
+            "source": source_name,
+            "metric": metric_name,
+            "forecast_name": forecast_name,
+            "count": count,
+        },
+    )
+
+    return MetricInfo(
+        name=forecast_name,
+        data_point_count=count,
+        min_period=min_date,
+        max_period=max_date,
+        can_forecast=can_forecast,
+    )
+
+
+def _execute_external_metrics_query(min_points: int) -> list[MetricInfo]:
+    """Execute SQL query to fetch external metrics from database.
+
+    Args:
+        min_points: Minimum points to set can_forecast=True
+
+    Returns:
+        List of MetricInfo objects for external metrics
+    """
+    conn = get_postgresql_connection()
+    cursor = conn.cursor()
+
+    try:
+        query = """
+            SELECT
+                eds.source_name,
+                edp.metric_name,
+                COUNT(*) as data_point_count,
+                MIN(edp.date)::text as min_date,
+                MAX(edp.date)::text as max_date
+            FROM external_data_points edp
+            JOIN external_data_sources eds ON edp.source_id = eds.id
+            WHERE edp.deleted_at IS NULL
+            GROUP BY eds.source_name, edp.metric_name
+            ORDER BY data_point_count DESC
+        """
+
+        cursor.execute(query)
+        rows = cursor.fetchall()
+
+        metrics = []
+        for row in rows:
+            source_name, metric_name, count, min_date, max_date = row
+            metric_info = _build_external_metric_info(
+                source_name, metric_name, count, min_date, max_date, min_points
+            )
+            if metric_info is not None:
+                metrics.append(metric_info)
+
+        logger.info(
+            "External metrics discovery complete",
+            extra={
+                "total_external": len(metrics),
+                "forecastable": sum(1 for m in metrics if m.can_forecast),
+            },
+        )
+
+        return metrics
+
+    except Exception as e:
+        logger.error(
+            "Failed to fetch external metrics",
+            extra={"error": str(e)},
+            exc_info=True,
+        )
+        return []
+
+    finally:
+        cursor.close()
 
 
 async def list_external_metrics(
@@ -209,78 +352,4 @@ async def list_external_metrics(
         co2_eua_price: 487 points
     """
     logger.info("Fetching external metrics from database", extra={"min_points": min_points})
-
-    conn = get_postgresql_connection()
-    cursor = conn.cursor()
-
-    try:
-        # Query external_data_points with source join
-        query = """
-            SELECT
-                eds.source_name,
-                edp.metric_name,
-                COUNT(*) as data_point_count,
-                MIN(edp.date)::text as min_date,
-                MAX(edp.date)::text as max_date
-            FROM external_data_points edp
-            JOIN external_data_sources eds ON edp.source_id = eds.id
-            WHERE edp.deleted_at IS NULL
-            GROUP BY eds.source_name, edp.metric_name
-            ORDER BY data_point_count DESC
-        """
-
-        cursor.execute(query)
-        rows = cursor.fetchall()
-
-        # Build MetricInfo objects with mapped names
-        metrics = []
-        for row in rows:
-            source_name, metric_name, count, min_date, max_date = row
-
-            # Map to forecast variable name
-            key = (source_name, metric_name)
-            if key in EXTERNAL_METRIC_MAPPINGS:
-                forecast_name = EXTERNAL_METRIC_MAPPINGS[key]
-                can_forecast = count >= min_points
-
-                metrics.append(
-                    MetricInfo(
-                        name=forecast_name,
-                        data_point_count=count,
-                        min_period=min_date,
-                        max_period=max_date,
-                        can_forecast=can_forecast,
-                    )
-                )
-
-                logger.debug(
-                    "External metric mapped",
-                    extra={
-                        "source": source_name,
-                        "metric": metric_name,
-                        "forecast_name": forecast_name,
-                        "count": count,
-                    },
-                )
-
-        logger.info(
-            "External metrics discovery complete",
-            extra={
-                "total_external": len(metrics),
-                "forecastable": sum(1 for m in metrics if m.can_forecast),
-            },
-        )
-
-        return metrics
-
-    except Exception as e:
-        logger.error(
-            "Failed to fetch external metrics",
-            extra={"error": str(e)},
-            exc_info=True,
-        )
-        # Return empty list on error (don't break existing flow)
-        return []
-
-    finally:
-        cursor.close()
+    return _execute_external_metrics_query(min_points)

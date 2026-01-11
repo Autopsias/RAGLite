@@ -9,6 +9,7 @@ pytestmark requires integration test setup.
 import os
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 os.environ.setdefault("DYLD_LIBRARY_PATH", "/opt/homebrew/opt/libomp/lib")
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 
 @pytest.fixture
@@ -84,13 +85,14 @@ class TestEnsembleWithExternalRegressors:
         """
         from raglite.forecasting.hybrid import generate_ensemble_forecast
 
-        result = await generate_ensemble_forecast(
-            metric="revenue",
-            historical_data=sample_historical_data,
-            external_regressors=sample_external_regressors,
-            periods_ahead=4,
-            fast_mode=True,
-        )
+        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
+            mock_fetch.return_value = sample_historical_data
+            result = await generate_ensemble_forecast(
+                metric="revenue",
+                external_regressors=sample_external_regressors,
+                periods_ahead=4,
+                fast_mode=True,
+            )
 
         # Verify ensemble result structure
         assert result.model_type == "ensemble"
@@ -116,13 +118,14 @@ class TestEnsembleWithExternalRegressors:
         """
         from raglite.forecasting.hybrid import generate_ensemble_forecast
 
-        result = await generate_ensemble_forecast(
-            metric="revenue",
-            historical_data=sample_historical_data,
-            external_regressors=None,  # No regressors
-            periods_ahead=4,
-            fast_mode=True,
-        )
+        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
+            mock_fetch.return_value = sample_historical_data
+            result = await generate_ensemble_forecast(
+                metric="revenue",
+                external_regressors=None,  # No regressors
+                periods_ahead=4,
+                fast_mode=True,
+            )
 
         # Should still generate forecast using Prophet only
         assert len(result.forecast) == 4
@@ -144,13 +147,14 @@ class TestEnsembleWithExternalRegressors:
         """
         from raglite.forecasting.hybrid import generate_ensemble_forecast
 
-        result = await generate_ensemble_forecast(
-            metric="revenue",
-            historical_data=sample_historical_data,
-            external_regressors=sample_external_regressors,
-            periods_ahead=4,
-            fast_mode=True,
-        )
+        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
+            mock_fetch.return_value = sample_historical_data
+            result = await generate_ensemble_forecast(
+                metric="revenue",
+                external_regressors=sample_external_regressors,
+                periods_ahead=4,
+                fast_mode=True,
+            )
 
         # Accuracy metrics should be populated
         assert "rmse" in result.accuracy_metrics or len(result.accuracy_metrics) == 0
@@ -171,14 +175,15 @@ class TestEnsembleModelSelection:
         """Test ensemble with only Prophet model specified."""
         from raglite.forecasting.hybrid import generate_ensemble_forecast
 
-        result = await generate_ensemble_forecast(
-            metric="revenue",
-            historical_data=sample_historical_data,
-            external_regressors=None,
-            periods_ahead=4,
-            models=["prophet"],  # Only Prophet
-            fast_mode=True,
-        )
+        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
+            mock_fetch.return_value = sample_historical_data
+            result = await generate_ensemble_forecast(
+                metric="revenue",
+                external_regressors=None,
+                periods_ahead=4,
+                models=["prophet"],  # Only Prophet
+                fast_mode=True,
+            )
 
         assert "prophet" in result.ensemble_models
         assert len(result.ensemble_models) == 1
@@ -198,14 +203,15 @@ class TestEnsembleModelSelection:
             "xgboost": 0.2,
         }
 
-        result = await generate_ensemble_forecast(
-            metric="revenue",
-            historical_data=sample_historical_data,
-            external_regressors=sample_external_regressors,
-            periods_ahead=4,
-            weights=custom_weights,
-            fast_mode=True,
-        )
+        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
+            mock_fetch.return_value = sample_historical_data
+            result = await generate_ensemble_forecast(
+                metric="revenue",
+                external_regressors=sample_external_regressors,
+                periods_ahead=4,
+                weights=custom_weights,
+                fast_mode=True,
+            )
 
         # Weights should be recorded (for models that ran)
         if "prophet" in result.ensemble_models:
@@ -228,14 +234,15 @@ class TestEnsembleFallback:
         from raglite.forecasting.hybrid import generate_ensemble_forecast
 
         # Even with empty regressors, Prophet should succeed
-        result = await generate_ensemble_forecast(
-            metric="revenue",
-            historical_data=sample_historical_data,
-            external_regressors={},  # Empty dict (no features)
-            periods_ahead=4,
-            models=["prophet", "linear", "xgboost"],
-            fast_mode=True,
-        )
+        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
+            mock_fetch.return_value = sample_historical_data
+            result = await generate_ensemble_forecast(
+                metric="revenue",
+                external_regressors={},  # Empty dict (no features)
+                periods_ahead=4,
+                models=["prophet", "linear", "xgboost"],
+                fast_mode=True,
+            )
 
         # Should still generate forecast
         assert len(result.forecast) > 0
@@ -263,13 +270,14 @@ class TestEnsemblePerformance:
 
         start_time = time.perf_counter()
 
-        result = await generate_ensemble_forecast(
-            metric="revenue",
-            historical_data=sample_historical_data,
-            external_regressors=sample_external_regressors,
-            periods_ahead=4,
-            fast_mode=True,  # Fast mode for CI
-        )
+        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
+            mock_fetch.return_value = sample_historical_data
+            result = await generate_ensemble_forecast(
+                metric="revenue",
+                external_regressors=sample_external_regressors,
+                periods_ahead=4,
+                fast_mode=True,  # Fast mode for CI
+            )
 
         elapsed = time.perf_counter() - start_time
 

@@ -44,7 +44,6 @@ def e2e_time_series_data():
     from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
 
     points = []
-    datetime(2022, 1, 1)
     value = 15000000.0  # 15M EUR
 
     for i in range(36):  # 3 years of monthly data
@@ -179,13 +178,17 @@ class TestMCPModelSelectionE2E:
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    result = await generate_forecast(
-                        metric="ebitda",
-                        historical_data=e2e_time_series_data,
-                        periods_ahead=4,
-                        external_regressors=sample_regressors,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = e2e_time_series_data
+
+                        result = await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            external_regressors=sample_regressors,
+                            use_model_selection=True,
+                        )
 
                     # Verify cache was used
                     assert result.model_source == "cached"
@@ -232,12 +235,16 @@ class TestMCPModelSelectionE2E:
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    result = await generate_forecast(
-                        metric="variable_cost",
-                        historical_data=e2e_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = e2e_time_series_data
+
+                        result = await generate_forecast(
+                            metric="variable_cost",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
 
                     assert result.model_source == "cached"
                     assert "prophet" in result.model_type.lower()
@@ -279,13 +286,17 @@ class TestMCPModelSelectionE2E:
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    result = await generate_forecast(
-                        metric="revenue",
-                        historical_data=e2e_time_series_data,
-                        periods_ahead=4,
-                        external_regressors=sample_regressors,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = e2e_time_series_data
+
+                        result = await generate_forecast(
+                            metric="revenue",
+                            periods_ahead=4,
+                            external_regressors=sample_regressors,
+                            use_model_selection=True,
+                        )
 
                     assert result.model_source == "cached"
                     assert result.regressors_used is not None
@@ -332,12 +343,16 @@ class TestMCPModelSelectionE2E:
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Forecast based on Prophet model"
 
-                    result = await generate_forecast(
-                        metric="unknown_metric",
-                        historical_data=e2e_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = e2e_time_series_data
+
+                        result = await generate_forecast(
+                            metric="unknown_metric",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
 
                     # Should use default Prophet and mark as "default"
                     assert result.model_source == "default"
@@ -381,12 +396,16 @@ class TestMCPModelSelectionE2E:
                     with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                         mock_explain.return_value = "Fallback forecast"
 
-                        result = await generate_forecast(
-                            metric="ebitda",
-                            historical_data=e2e_time_series_data,
-                            periods_ahead=4,
-                            use_model_selection=True,
-                        )
+                        with patch(
+                            "raglite.forecasting.hybrid.fetch_historical_metric"
+                        ) as mock_fetch:
+                            mock_fetch.return_value = e2e_time_series_data
+
+                            result = await generate_forecast(
+                                metric="ebitda",
+                                periods_ahead=4,
+                                use_model_selection=True,
+                            )
 
                         # Should fall back to Prophet
                         assert result.model_source == "fallback"
@@ -424,12 +443,16 @@ class TestMCPModelSelectionE2E:
                 with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    result = await generate_forecast(
-                        metric="ebitda",
-                        historical_data=e2e_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = e2e_time_series_data
+
+                        result = await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
 
                     # Verify all expected fields are present
                     assert hasattr(result, "model_source")

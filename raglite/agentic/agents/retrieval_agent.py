@@ -26,6 +26,126 @@ from raglite.shared.logging import get_logger
 logger = get_logger(__name__)
 
 
+def _reformulate_query(query: str) -> str:
+    """Remove instruction prefixes and simplify query.
+
+    Args:
+        query: Original query string
+
+    Returns:
+        Reformulated query string
+    """
+    if query.startswith("Retrieve relevant financial data for:"):
+        return query[39:].strip()
+    elif query.startswith("Search for:"):
+        return query[11:].strip()
+    return query
+
+
+async def _execute_search(query: str, top_k: int) -> tuple[list[dict], str | None]:
+    """Execute multi-index search and convert results to JSON format.
+
+    Args:
+        query: Search query string
+        top_k: Number of results to return
+
+    Returns:
+        Tuple of (chunks_data, backend)
+    """
+    search_results = await multi_index_search(query, top_k=top_k)
+
+    chunks_data = [
+        {
+            "id": result.document_id,
+            "content": result.text,
+            "source": result.source,
+            "page_number": result.page_number,
+            "chunk_index": i,
+            "metadata": {
+                **result.metadata,
+                "score": result.score,
+                "search_source": result.source,
+            },
+        }
+        for i, result in enumerate(search_results)
+    ]
+
+    backend = search_results[0].source if search_results else None
+    return chunks_data, backend
+
+
+def _build_retrieval_response(
+    chunks_data: list[dict],
+    query: str,
+    backend: str | None,
+    latency_ms: float,
+    success: bool,
+    error_msg: str | None = None,
+) -> str:
+    """Build JSON response for retrieval agent.
+
+    Args:
+        chunks_data: Retrieved document chunks
+        query: Search query string
+        backend: Search backend used
+        latency_ms: Execution time in milliseconds
+        success: Whether search succeeded
+        error_msg: Optional error message
+
+    Returns:
+        JSON-serialized response
+    """
+    search_metadata: dict[str, object] = {
+        "success": success,
+        "latency_ms": latency_ms,
+        "backend": backend,
+    }
+
+    if error_msg:
+        search_metadata["error"] = error_msg
+
+    response: dict[str, object] = {
+        "chunks": chunks_data,
+        "query": query,
+        "total_retrieved": len(chunks_data),
+        "search_metadata": search_metadata,
+    }
+
+    return json.dumps(response)
+
+
+def _extract_top_k(context: dict | None) -> int:
+    """Extract top_k parameter from context.
+
+    Args:
+        context: Optional context data
+
+    Returns:
+        Number of results to retrieve (default 5)
+    """
+    top_k = 5
+    if context and isinstance(context, dict):
+        top_k = context.get("top_k", 5)
+    return top_k
+
+
+def _log_query_reformulation(original_query: str, reformulated_query: str) -> None:
+    """Log query reformulation if query changed.
+
+    Args:
+        original_query: Original query string
+        reformulated_query: Reformulated query string
+    """
+    if reformulated_query != original_query:
+        logger.debug(
+            "Query reformulated",
+            extra={
+                "original": original_query[:80],
+                "reformulated": reformulated_query[:80],
+            },
+        )
+
+
 @tool
 async def retrieval_agent(instruction: str, context: dict | None = None) -> str:
     """Retrieval Agent: Search financial document knowledge base.
@@ -73,86 +193,35 @@ async def retrieval_agent(instruction: str, context: dict | None = None) -> str:
     start_time = time.time()
     success = False
     error_msg = None
-    chunks_data = []
+    chunks_data: list[dict] = []
     backend = None
+    query = instruction
 
     try:
-        # Extract query from instruction (orchestrator passes task instruction as string)
-        query = instruction
-        top_k = 5  # Default top_k
+        top_k = _extract_top_k(context)
 
-        # Check if context contains top_k parameter
-        if context and isinstance(context, dict):
-            top_k = context.get("top_k", 5)
-
-        # Query reformulation: Remove instruction prefixes and simplify comparative questions
-        # FIX: Prevents semantic mismatch between questions and document embeddings
-        # PERFORMANCE OPTIMIZATION: Simplified to reduce regex overhead (<50ms)
         original_query = query
+        query = _reformulate_query(query)
 
-        # Remove common instruction prefixes from planner (fast string operations)
-        if query.startswith("Retrieve relevant financial data for:"):
-            query = query[39:].strip()  # Fast slice instead of replace
-        elif query.startswith("Search for:"):
-            query = query[11:].strip()  # Fast slice instead of replace
+        _log_query_reformulation(original_query, query)
 
-        # PERFORMANCE: Reduced logging overhead - only log if query changed
-        if query != original_query:
-            logger.debug(
-                "Query reformulated",
-                extra={
-                    "original": original_query[:80],
-                    "reformulated": query[:80],
-                },
-            )
-
-        # Call Epic 2 multi-index search (AC3: direct function call, no duplication)
-        search_results = await multi_index_search(query, top_k=top_k)
-
-        # Convert SearchResult to DocumentChunk JSON-serializable dicts
-        # Preserve all citation metadata (AC2): page numbers, doc IDs, scores, section types
-        chunks_data = [
-            {
-                "id": result.document_id,
-                "content": result.text,
-                "source": result.source,
-                "page_number": result.page_number,
-                "chunk_index": i,  # Preserve result ranking
-                "metadata": {
-                    **result.metadata,  # Preserve all Epic 2 metadata
-                    "score": result.score,  # Add relevance score for ranking
-                    "search_source": result.source,  # Include backend used
-                },
-            }
-            for i, result in enumerate(search_results)
-        ]
-
+        chunks_data, backend = await _execute_search(query, top_k)
         success = True
-        backend = search_results[0].source if search_results else None
-        # PERFORMANCE: Reduced logging - only log count and latency
 
     except MultiIndexSearchError as e:
-        # Epic 2 search failed - return empty results with error metadata (AC2)
         error_msg = f"Multi-index search failed: {str(e)}"
         logger.error(
             "Retrieval agent search failed",
-            extra={
-                "query": query[:100],
-                "error": error_msg,
-            },
+            extra={"query": query[:100], "error": error_msg},
             exc_info=True,
         )
         success = False
 
     except Exception as e:
-        # Unexpected error - graceful degradation (NFR24)
         error_msg = f"Retrieval agent error: {str(e)}"
         logger.error(
             "Retrieval agent error",
-            extra={
-                "query": query[:100],
-                "error": error_msg,
-            },
+            extra={"query": query[:100], "error": error_msg},
             exc_info=True,
         )
         success = False
@@ -160,25 +229,6 @@ async def retrieval_agent(instruction: str, context: dict | None = None) -> str:
     finally:
         latency_ms = round((time.time() - start_time) * 1000, 2)
 
-    # Build return JSON (AC2: JSON-serialized output for Strands)
-    search_metadata: dict[str, object] = {
-        "success": success,
-        "latency_ms": latency_ms,
-        "backend": backend,
-    }
-
-    # Add error metadata if search failed
-    if error_msg:
-        search_metadata["error"] = error_msg
-
-    response: dict[str, object] = {
-        "chunks": chunks_data,
-        "query": query,
-        "total_retrieved": len(chunks_data),
-        "search_metadata": search_metadata,
-    }
-
-    # PERFORMANCE: Only log errors or slow queries (>4s)
     if not success or latency_ms > 4000:
         logger.warning(
             "Retrieval agent slow or failed",
@@ -189,5 +239,4 @@ async def retrieval_agent(instruction: str, context: dict | None = None) -> str:
             },
         )
 
-    # Return JSON string (Strands requirement: @tool functions return strings)
-    return json.dumps(response)
+    return _build_retrieval_response(chunks_data, query, backend, latency_ms, success, error_msg)

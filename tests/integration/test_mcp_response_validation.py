@@ -48,7 +48,6 @@ def check_collection_exists():
         raise
 
 
-@pytest.mark.priority("P1")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 async def test_e2e_metadata_completeness(session_ingested_collection):
@@ -125,7 +124,6 @@ async def test_e2e_metadata_completeness(session_ingested_collection):
     )
 
 
-@pytest.mark.priority("P1")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 async def test_e2e_citation_integration(session_ingested_collection):
@@ -166,7 +164,6 @@ async def test_e2e_citation_integration(session_ingested_collection):
         assert result.text.rstrip().endswith(")"), "Citation should be at end of text"
 
 
-@pytest.mark.priority("P1")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 async def test_e2e_llm_synthesis_compatibility(session_ingested_collection):
@@ -213,7 +210,6 @@ async def test_e2e_llm_synthesis_compatibility(session_ingested_collection):
     print("\n✅ QueryResponse structure is LLM-compatible")
 
 
-@pytest.mark.priority("P0")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 async def test_e2e_performance_validation(session_ingested_collection):
@@ -290,7 +286,6 @@ async def test_e2e_performance_validation(session_ingested_collection):
     print(f"   p95: {p95_latency:.2f}ms < 15000ms (NFR13 p95 target)")
 
 
-@pytest.mark.priority("P0")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 async def test_e2e_ground_truth_metadata(session_ingested_collection):
@@ -369,7 +364,6 @@ async def test_e2e_ground_truth_metadata(session_ingested_collection):
     print(f"   100% metadata completeness on {len(test_subset)} ground truth queries")
 
 
-@pytest.mark.priority("P2")
 @pytest.mark.integration
 @pytest.mark.preserve_collection  # Test is read-only - skip cleanup
 async def test_e2e_standard_mcp_pattern(session_ingested_collection):

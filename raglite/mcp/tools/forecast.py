@@ -1,118 +1,228 @@
-"""Forecast MCP tools."""
+"""Forecast MCP tools.
 
-from raglite.external_data.storage import CachedModelSelection, get_cached_model_selection
-from raglite.forecasting.extraction_routing import (
-    extract_historical_data_by_type,
-    resolve_variable_alias,
-)
-from raglite.forecasting.hybrid import (
-    InsufficientDataError,
-    _route_to_model,
-    generate_ensemble_forecast,
-    generate_forecast,
-)
-from raglite.forecasting.timeseries_extract import (
-    ExtractionError,
-    MetricValidationError,
-    extract_timeseries,
-)
+Story 8: Refactored get_financial_forecast from 456 to ~150 lines using forecast_helpers.py.
+
+Full documentation for get_financial_forecast:
+
+**Supported Metrics:** Any metric in the financial_tables database (e.g., revenue, turnover,
+cash_flow, ebitda, expenses, capex). The system automatically searches the database via SQL
+and falls back to hybrid search if needed.
+
+**Model Selection (Story 6.11.6):**
+The tool intelligently selects between Prophet (~21s, fast) and Ensemble (~78s, 4 models) based on:
+- **Default (model_type="auto", prefer_accuracy=False):** Uses Prophet for fast response
+- **High-accuracy mode (prefer_accuracy=True):** Uses Ensemble (Prophet+Linear+XGBoost+LightGBM)
+
+**WHEN TO SET prefer_accuracy=True:**
+Set `prefer_accuracy=True` when the user indicates they want:
+- "highly accurate", "most accurate", "best possible" forecast
+- "take your time", "don't rush", "thorough analysis"
+- "for board presentation", "critical decision", "important forecast"
+- "ensemble model", "multiple models", "robust forecast"
+
+**WHEN TO USE DEFAULT (prefer_accuracy=False):**
+- Quick questions: "What's the revenue forecast?"
+- No urgency indicators mentioned
+- User wants fast response
+
+**Input Modes:**
+1. **Structured Query (Programmatic):**
+   Provide explicit `metric` and `periods_ahead` parameters.
+2. **Natural Language Query (Conversational):**
+   Provide a `query` parameter and let the system extract parameters.
+
+**How It Works:**
+1. Parse query to extract metric and time period (regex + LLM fallback)
+2. Extract historical time-series data (Story 5.0.1: SQL-first with fallback)
+3. Auto-select model based on metric type and prefer_accuracy flag
+4. Generate forecast using selected model + LLM hybrid approach
+5. Return predictions with confidence intervals and model selection explanation
+
+**Minimum Data Requirement:**
+- Requires 8+ historical data points (2 years quarterly) for reliable forecasts
+- Returns clear error message if insufficient data
+"""
+
+from typing import Any
+
 from raglite.main import mcp
-from raglite.mcp.tools.query import parse_forecast_query
-from raglite.retrieval.search import QueryError
+from raglite.mcp.tools.forecast_helpers import (
+    build_enhanced_basis,
+    build_response,
+    check_model_selection_cache_for_forecast,
+    extract_historical_data,
+    fetch_external_regressors,
+    generate_forecast_auto_select,
+    generate_forecast_explicit_model,
+    generate_forecast_with_cache,
+    handle_forecast_error,
+    parse_and_validate_metric,
+)
 from raglite.shared.logging import get_logger
 from raglite.shared.models import ForecastQueryRequest, ForecastQueryResponse
 
 logger = get_logger(__name__)
 
 
+async def _fetch_regressors_if_requested(
+    request: ForecastQueryRequest,
+    metric: str,
+    historical_data: Any,
+    periods_ahead: int,
+) -> tuple[Any, list[str]]:
+    """Fetch external regressors if requested in the query.
+
+    Args:
+        request: Forecast query request
+        metric: Validated metric name
+        historical_data: Historical time-series data
+        periods_ahead: Number of periods to forecast
+
+    Returns:
+        Tuple of (external_regressors, regressors_used)
+    """
+    if not request.use_external_regressors:
+        return None, []
+
+    return await fetch_external_regressors(
+        metric, historical_data, periods_ahead, request.regressor_names, logger
+    )
+
+
+async def _generate_forecast_with_model_selection(
+    requested_model_type: str,
+    metric: str,
+    historical_data: Any,
+    periods_ahead: int,
+    request: ForecastQueryRequest,
+    external_regressors: Any,
+    regressors_used: list[str],
+) -> tuple[Any, str, str, str, list[str]]:
+    """Generate forecast using appropriate model selection strategy.
+
+    Args:
+        requested_model_type: Model type requested (auto, prophet, ensemble)
+        metric: Validated metric name
+        historical_data: Historical time-series data
+        periods_ahead: Number of periods to forecast
+        request: Original forecast query request
+        external_regressors: External regressor data
+        regressors_used: List of regressor names used
+
+    Returns:
+        Tuple of (forecast_result, actual_model_type, model_selection_reason, model_desc, regressors_used)
+    """
+    if requested_model_type == "auto":
+        cached_selection = check_model_selection_cache_for_forecast(metric, logger)
+        if cached_selection is not None:
+            (
+                forecast_result,
+                actual_model_type,
+                model_selection_reason,
+                regressors_used,
+            ) = await generate_forecast_with_cache(
+                metric,
+                historical_data,
+                periods_ahead,
+                cached_selection,
+                external_regressors,
+                logger,
+            )
+            model_desc = f"{cached_selection.best_model.upper()} (cached)"
+        else:
+            (
+                forecast_result,
+                actual_model_type,
+                model_selection_reason,
+            ) = await generate_forecast_auto_select(
+                metric,
+                historical_data,
+                periods_ahead,
+                request.prefer_accuracy,
+                external_regressors,
+                request.future_regressor_strategy,
+                regressors_used,
+                logger,
+            )
+            model_desc = "Ensemble" if actual_model_type == "ensemble" else "Prophet"
+    else:
+        (
+            forecast_result,
+            actual_model_type,
+            model_selection_reason,
+        ) = await generate_forecast_explicit_model(
+            metric,
+            historical_data,
+            periods_ahead,
+            requested_model_type,
+            external_regressors,
+            request.future_regressor_strategy,
+            logger,
+        )
+        model_desc = "Ensemble" if actual_model_type == "ensemble" else "Prophet"
+
+    return forecast_result, actual_model_type, model_selection_reason, model_desc, regressors_used
+
+
+def _build_forecast_response(
+    forecast_result: Any,
+    historical_data: Any,
+    actual_model_type: str,
+    model_desc: str,
+    model_selection_reason: str,
+    metric: str,
+    regressors_used: list[str],
+) -> ForecastQueryResponse:
+    """Build final forecast response with enhanced basis.
+
+    Args:
+        forecast_result: Raw forecast result
+        historical_data: Historical time-series data
+        actual_model_type: Model type used for forecasting
+        model_desc: Human-readable model description
+        model_selection_reason: Reason for model selection
+        metric: Validated metric name
+        regressors_used: List of regressor names used
+
+    Returns:
+        Complete forecast query response
+    """
+    enhanced_basis = build_enhanced_basis(
+        actual_model_type,
+        model_desc,
+        historical_data,
+        metric,
+        regressors_used,
+        forecast_result.ensemble_models,
+    )
+    forecast_result.basis = enhanced_basis
+
+    return build_response(
+        forecast_result=forecast_result,
+        historical_data=historical_data,
+        actual_model_type=actual_model_type,
+        model_selection_reason=model_selection_reason,
+        regressors_used=regressors_used,
+    )
+
+
 @mcp.tool()
 async def get_financial_forecast(
     request: ForecastQueryRequest,
 ) -> ForecastQueryResponse:
-    """Query financial forecasts for key metrics.
-    Story 4.4 AC1-AC5: MCP tool for conversational forecast queries using
-    Prophet statistical forecasting combined with LLM reasoning.
-    **Supported Metrics:** Any metric in the financial_tables database (e.g., revenue, turnover,
-    cash_flow, ebitda, expenses, capex). The system automatically searches the database via SQL
-    and falls back to hybrid search if needed.
-    **Model Selection (Story 6.11.6):**
-    The tool intelligently selects between Prophet (~21s, fast) and Ensemble (~78s, 4 models) based on:
-    - **Default (model_type="auto", prefer_accuracy=False):** Uses Prophet for fast response
-    - **High-accuracy mode (prefer_accuracy=True):** Uses Ensemble (Prophet+Linear+XGBoost+LightGBM)
-    **WHEN TO SET prefer_accuracy=True:**
-    Set `prefer_accuracy=True` when the user indicates they want:
-    - "highly accurate", "most accurate", "best possible" forecast
-    - "take your time", "don't rush", "thorough analysis"
-    - "for board presentation", "critical decision", "important forecast"
-    - "ensemble model", "multiple models", "robust forecast"
-    **WHEN TO USE DEFAULT (prefer_accuracy=False):**
-    - Quick questions: "What's the revenue forecast?"
-    - No urgency indicators mentioned
-    - User wants fast response
-    **Input Modes:**
-    1. **Structured Query (Programmatic):**
-       Provide explicit `metric` and `periods_ahead` parameters.
-       Example:
-           >>> request = ForecastQueryRequest(metric="revenue", periods_ahead=4)
-           >>> response = await get_financial_forecast(request)
-    2. **Natural Language Query (Conversational):**
-       Provide a `query` parameter and let the system extract parameters.
-       Example:
-           >>> request = ForecastQueryRequest(query="What's the revenue forecast for next quarter?")
-           >>> response = await get_financial_forecast(request)
-    **How It Works:**
-    1. Parse query to extract metric and time period (regex + LLM fallback)
-    2. Extract historical time-series data (Story 5.0.1: SQL-first with fallback):
-       a. Try SQL extraction from PostgreSQL financial_tables (primary)
-       b. Fall back to hybrid search + LLM extraction if SQL fails
-    3. Auto-select model based on metric type and prefer_accuracy flag
-    4. Generate forecast using selected model + LLM hybrid approach
-    5. Return predictions with confidence intervals and model selection explanation
-    **Minimum Data Requirement:**
-    - Requires 8+ historical data points (2 years quarterly) for reliable forecasts
-    - Returns clear error message if insufficient data
+    """Query financial forecasts for key metrics using Prophet/Ensemble models.
+
+    See module docstring for full documentation on supported metrics, model selection,
+    input modes, and examples.
+
     Args:
-        request: Forecast query parameters containing:
-          - metric: Financial metric to forecast (any metric in database: revenue, turnover, ebitda, cash_flow, expenses, capex, etc.)
-          - periods_ahead: Number of quarters to forecast (1-8, default: 4)
-          - query: Optional natural language query (parsed for metric/period)
-          - model_type: "auto" (intelligent selection), "prophet" (fast), or "ensemble" (slower, 4 models)
-          - prefer_accuracy: Set True when user wants highest accuracy (accepts ~3.7x slower execution)
+        request: Forecast query parameters (metric, periods_ahead, query, model_type, prefer_accuracy)
+
     Returns:
-        ForecastQueryResponse containing:
-          - metric_name: Name of forecasted metric
-          - forecast: List of ForecastPoint with value/lower/upper confidence intervals
-          - basis: Description of historical data used (e.g., "Prophet model trained on 12 quarters")
-          - confidence_reasoning: LLM explanation of forecast confidence
-          - methodology: "Prophet + Mistral Large hybrid forecasting"
-          - accuracy_estimate: "±15% (NFR10 target)"
-          - source_documents: Documents used for time-series extraction
-          - periods_ahead: Number of periods forecasted
-          - model_type: Which model was used (prophet_univariate, prophet_multivariate, ensemble)
-          - model_selection_reason: Why this model was chosen (helpful for transparency)
+        ForecastQueryResponse with forecast, confidence intervals, and model selection details
+
     Raises:
         QueryError: If metric not supported, no metric specified, or insufficient data
-    Example - Quick Forecast (Default - Prophet):
-        >>>
-        >>> request = ForecastQueryRequest(metric="revenue", periods_ahead=4)
-        >>> response = await get_financial_forecast(request)
-        >>> print(response.model_type)
-        "prophet_multivariate"
-        >>> print(response.model_selection_reason)
-        "Prophet selected (faster execution ~21s vs ~78s with comparable accuracy)"
-    Example - High-Accuracy Forecast (Ensemble):
-        >>>
-        >>> request = ForecastQueryRequest(metric="ebitda", periods_ahead=4, prefer_accuracy=True)
-        >>> response = await get_financial_forecast(request)
-        >>> print(response.model_type)
-        "ensemble"
-        >>> print(response.model_selection_reason)
-        "High-value financial metric with accuracy preference and 3 regressors available"
-    Example - Natural Language with Accuracy Intent:
-        >>>
-        >>> request = ForecastQueryRequest(query="thorough detailed revenue forecast", prefer_accuracy=True)
-        >>> response = await get_financial_forecast(request)
-        >>>
     """
     logger.info(
         "Forecast query received",
@@ -122,363 +232,64 @@ async def get_financial_forecast(
             "query": request.query,
         },
     )
-    metric = request.metric
-    periods_ahead = request.periods_ahead
-    if request.query and not metric:
-        parsed_metric, parsed_periods = parse_forecast_query(request.query)
-        if parsed_metric:
-            metric = parsed_metric
-        if parsed_periods:
-            periods_ahead = parsed_periods
-        logger.info(
-            "Parsed natural language query",
-            extra={
-                "original_query": request.query,
-                "parsed_metric": metric,
-                "parsed_periods": periods_ahead,
-            },
-        )
-    if not metric:
-        error_msg = (
-            "Could not determine metric to forecast. Please specify a financial metric "
-            "(e.g., revenue, turnover, ebitda, cash_flow, expenses, capex) or rephrase your query."
-        )
-        logger.warning("Forecast query failed - no metric", extra={"query": request.query})
-        raise QueryError(error_msg)
-    # Epic 7 Fix: Normalize aliases (e.g., "Turnover+VAT" -> "revenue") for cache lookup
-    metric = resolve_variable_alias(metric)
+
+    metric, periods_ahead = parse_and_validate_metric(request, logger)
+
     try:
-        logger.info(
-            "Extracting time-series data",
-            extra={"metric": metric},
-        )
-        try:
-            logger.info(
-                "Attempting type-routed extraction",
-                extra={"metric": metric, "method": "type_routed"},
-            )
-            historical_data = await extract_historical_data_by_type(metric=metric, min_points=6)
-            if historical_data is None:
-                raise ExtractionError(f"Type-routed extraction returned None for {metric}")
-            logger.info(
-                "Type-routed extraction successful",
-                extra={
-                    "metric": metric,
-                    "data_points": len(historical_data.points),
-                    "method": "type_routed",
-                },
-            )
-        except MetricValidationError:
-            raise
-        except ExtractionError as e:
-            logger.warning(
-                "SQL extraction failed, falling back to hybrid search",
-                extra={
-                    "metric": metric,
-                    "reason": str(e),
-                    "fallback_method": "hybrid_search",
-                },
-            )
-            historical_data = await extract_timeseries(docs=[], metric=metric)
-            logger.info(
-                "Hybrid search extraction successful",
-                extra={
-                    "metric": metric,
-                    "data_points": len(historical_data.points),
-                    "source_docs": len(historical_data.source_documents),
-                    "method": "hybrid_search_fallback",
-                },
-            )
+        historical_data = await extract_historical_data(metric, logger)
         logger.info(
             "Time-series extraction complete",
-            extra={
-                "metric": metric,
-                "data_points": len(historical_data.points),
-                "source_docs": len(historical_data.source_documents),
-            },
+            extra={"metric": metric, "data_points": len(historical_data.points)},
         )
+
+        external_regressors, regressors_used = await _fetch_regressors_if_requested(
+            request, metric, historical_data, periods_ahead
+        )
+
         requested_model_type = request.model_type or "auto"
-        external_regressors = None
-        regressors_used: list[str] = []
-        model_selection_reason: str | None = None
-        if request.use_external_regressors:
-            try:
-                from datetime import timedelta
+        (
+            forecast_result,
+            actual_model_type,
+            model_selection_reason,
+            model_desc,
+            regressors_used,
+        ) = await _generate_forecast_with_model_selection(
+            requested_model_type,
+            metric,
+            historical_data,
+            periods_ahead,
+            request,
+            external_regressors,
+            regressors_used,
+        )
 
-                from raglite.forecasting.regressor_fetch import fetch_regressors_for_metric
-
-                if historical_data.points:
-                    historical_dates = [
-                        p.date.date() if hasattr(p.date, "date") else p.date
-                        for p in historical_data.points
-                    ]
-                    start_date = min(historical_dates) - timedelta(days=365)
-                    end_date = max(historical_dates) + timedelta(days=30 * periods_ahead)
-                    external_regressors = await fetch_regressors_for_metric(
-                        metric=metric,
-                        start_date=start_date,
-                        end_date=end_date,
-                        regressor_names=request.regressor_names,
-                    )
-                    regressors_used = list(external_regressors.keys())
-                    logger.info(
-                        "External regressors fetched",
-                        extra={
-                            "metric": metric,
-                            "regressors": regressors_used,
-                            "count": len(regressors_used),
-                        },
-                    )
-            except Exception as e:
-                logger.warning(
-                    "External regressor fetch failed, falling back to univariate",
-                    extra={"metric": metric, "error": str(e)},
-                )
-                external_regressors = None
-                regressors_used = []
-        # Story 7b-6: Check model selection cache first for optimal per-variable model
-        cached_selection: CachedModelSelection | None = None
-        if requested_model_type == "auto":
-            try:
-                cached_selection = await get_cached_model_selection(metric)
-                if cached_selection and not cached_selection.is_expired:
-                    logger.info(
-                        "Using cached model selection",
-                        extra={
-                            "metric": metric,
-                            "best_model": cached_selection.best_model,
-                            "best_mase": cached_selection.best_mase,
-                            "use_regressors": cached_selection.use_regressors,
-                            "regressor_count": len(cached_selection.regressor_list),
-                        },
-                    )
-                else:
-                    cached_selection = None  # Treat expired as cache miss
-                    logger.debug(
-                        "Model selection cache miss or expired",
-                        extra={"metric": metric},
-                    )
-            except Exception as e:
-                logger.warning(
-                    "Error checking model selection cache, using fallback",
-                    extra={"metric": metric, "error": str(e)},
-                )
-                cached_selection = None
-
-        # Route based on cache hit or fall back to existing logic
-        if cached_selection is not None:
-            # Filter regressors to only those in cached selection
-            if cached_selection.use_regressors and external_regressors:
-                filtered_regressors = {
-                    name: series
-                    for name, series in external_regressors.items()
-                    if name in cached_selection.regressor_list
-                }
-                regressors_used = list(filtered_regressors.keys())
-            else:
-                filtered_regressors = None
-                regressors_used = []
-
-            model_type = cached_selection.best_model
-            mase_str = f"{cached_selection.best_mase:.2f}" if cached_selection.best_mase else "N/A"
-            model_selection_reason = f"Cached selection: {model_type} (MASE={mase_str})"
-
-            # Route to selected model
-            if model_type == "ensemble":
-                forecast_result = await generate_ensemble_forecast(
-                    metric=metric,
-                    historical_data=historical_data,
-                    periods_ahead=periods_ahead,
-                    fast_mode=True,
-                    external_regressors=filtered_regressors,
-                )
-                model_desc = "Ensemble (cached)"
-                actual_model_type = "ensemble"
-            else:
-                try:
-                    forecast_result = await _route_to_model(
-                        model_name=model_type,
-                        metric=metric,
-                        historical_data=historical_data,
-                        periods_ahead=periods_ahead,
-                        external_regressors=filtered_regressors,
-                    )
-                    model_desc = f"{model_type.upper()} (cached)"
-                    actual_model_type = model_type
-                except Exception as e:
-                    # Fallback to Prophet on any error
-                    logger.warning(
-                        f"Cached model {model_type} failed, falling back to Prophet",
-                        extra={"error": str(e), "metric": metric},
-                    )
-                    forecast_result = await generate_forecast(
-                        metric=metric,
-                        historical_data=historical_data,
-                        periods_ahead=periods_ahead,
-                        external_regressors=filtered_regressors,
-                        use_model_selection=False,
-                    )
-                    model_desc = "Prophet (fallback)"
-                    actual_model_type = "prophet_fallback"
-                    model_selection_reason = f"Fallback from {model_type}: {str(e)}"
-        elif requested_model_type == "auto":
-            # Cache miss - use existing select_model_type() logic
-            from raglite.forecasting.regressor_config import select_model_type
-
-            model_type, model_selection_reason = select_model_type(
-                metric=metric,
-                prefer_accuracy=request.prefer_accuracy,
-                num_regressors=len(regressors_used),
-            )
-            logger.info(
-                "Auto-selected model type (cache miss)",
-                extra={
-                    "metric": metric,
-                    "selected_model": model_type,
-                    "reason": model_selection_reason,
-                    "prefer_accuracy": request.prefer_accuracy,
-                    "num_regressors": len(regressors_used),
-                },
-            )
-            if model_type == "ensemble":
-                forecast_result = await generate_ensemble_forecast(
-                    metric=metric,
-                    historical_data=historical_data,
-                    periods_ahead=periods_ahead,
-                    fast_mode=True,
-                    external_regressors=external_regressors,
-                )
-                model_desc = "Ensemble"
-                actual_model_type = "ensemble"
-            else:
-                forecast_result = await generate_forecast(
-                    metric=metric,
-                    historical_data=historical_data,
-                    periods_ahead=periods_ahead,
-                    external_regressors=external_regressors if external_regressors else None,
-                    future_regressor_strategy=request.future_regressor_strategy,
-                )
-                model_desc = "Prophet Multi-variate" if external_regressors else "Prophet"
-                actual_model_type = (
-                    "prophet_multivariate" if external_regressors else "prophet_univariate"
-                )
-        else:
-            # User explicitly requested a specific model_type
-            model_type = requested_model_type
-            model_selection_reason = f"User explicitly requested {model_type}"
-            if model_type == "ensemble":
-                forecast_result = await generate_ensemble_forecast(
-                    metric=metric,
-                    historical_data=historical_data,
-                    periods_ahead=periods_ahead,
-                    fast_mode=True,
-                    external_regressors=external_regressors,
-                )
-                model_desc = "Ensemble"
-                actual_model_type = "ensemble"
-            else:
-                forecast_result = await generate_forecast(
-                    metric=metric,
-                    historical_data=historical_data,
-                    periods_ahead=periods_ahead,
-                    external_regressors=external_regressors if external_regressors else None,
-                    future_regressor_strategy=request.future_regressor_strategy,
-                )
-                model_desc = "Prophet Multi-variate" if external_regressors else "Prophet"
-                actual_model_type = (
-                    "prophet_multivariate" if external_regressors else "prophet_univariate"
-                )
         logger.info(
             "Forecast generated successfully",
-            extra={
-                "metric": metric,
-                "periods": periods_ahead,
-                "forecast_points": len(forecast_result.forecast),
-                "model_type": model_type,
-            },
+            extra={"metric": metric, "periods": periods_ahead, "model_type": actual_model_type},
         )
-        if model_type == "ensemble" and forecast_result.ensemble_models:
-            models_used = ", ".join(forecast_result.ensemble_models)
-            enhanced_basis = (
-                f"{model_desc} model ({models_used}) trained on {len(historical_data.points)} "
-                f"quarters of historical {metric} data from {len(historical_data.source_documents)} documents"
-            )
-        elif regressors_used:
-            regressors_str = ", ".join(regressors_used)
-            enhanced_basis = (
-                f"{model_desc} model trained on {len(historical_data.points)} quarters of historical "
-                f"{metric} data with external regressors ({regressors_str}) from "
-                f"{len(historical_data.source_documents)} documents"
-            )
-        else:
-            enhanced_basis = (
-                f"{model_desc} model trained on {len(historical_data.points)} quarters of historical "
-                f"{metric} data from {len(historical_data.source_documents)} documents"
-            )
-        forecast_result.basis = enhanced_basis
-        response = ForecastQueryResponse.from_forecast_result(
-            result=forecast_result,
-            source_documents=historical_data.source_documents,
-            regressors_used=regressors_used if regressors_used else None,
-            model_type=actual_model_type,
-            model_selection_reason=model_selection_reason,
+
+        response = _build_forecast_response(
+            forecast_result,
+            historical_data,
+            actual_model_type,
+            model_desc,
+            model_selection_reason,
+            metric,
+            regressors_used,
         )
+
         logger.info(
-            "Forecast query complete",
-            extra={
-                "metric": metric,
-                "periods": periods_ahead,
-                "model_type": actual_model_type,
-                "model_selection_reason": model_selection_reason,
-                "regressors_used": regressors_used,
-                "confidence_reasoning_length": len(response.confidence_reasoning),
-            },
+            "Forecast query complete", extra={"metric": metric, "model_type": actual_model_type}
         )
         return response
-    except InsufficientDataError as e:
-        error_msg = (
-            f"Insufficient historical data for {metric} forecast. "
-            f"At least 8 data points (2 years quarterly) are required for reliable predictions. "
-            f"Please ingest more financial documents containing {metric} data."
-        )
-        logger.warning(
-            "Forecast query failed - insufficient data",
-            extra={"metric": metric, "error": str(e)},
-        )
-        raise QueryError(error_msg) from e
-    except MetricValidationError as e:
-        error_msg = (
-            f"{str(e)}\n\n"
-            f"Available metrics with ≥8 data points for forecasting:\n"
-            + "\n".join(f"  - {m}" for m in e.available_metrics[:10])
-        )
-        if len(e.available_metrics) > 10:
-            error_msg += f"\n  ... and {len(e.available_metrics) - 10} more"
-        logger.warning(
-            "Forecast query failed - metric validation",
-            extra={
-                "metric": e.metric_name,
-                "data_points_found": e.data_points_found,
-                "available_metrics": e.available_metrics[:5],
-            },
-        )
-        raise QueryError(error_msg) from e
-    except ExtractionError as e:
-        error_msg = f"Could not extract {metric} time-series data. Details: {str(e)}"
-        logger.warning(
-            "Forecast query failed - extraction error",
-            extra={"metric": metric, "error": str(e)},
-        )
-        raise QueryError(error_msg) from e
+
     except Exception as e:
-        logger.error(
-            "Forecast query failed - unexpected error",
-            extra={
-                "metric": metric,
-                "periods": periods_ahead,
-                "error": str(e),
-                "error_type": type(e).__name__,
-            },
-            exc_info=True,
-        )
-        raise QueryError(f"Forecast generation failed: {e}") from e
+        handle_forecast_error(e, metric, logger)
+        raise
+
+
+# Re-exports for backward compatibility with tests
+# These functions were moved to forecast_helpers.py but tests still import them from here
+extract_historical_data_by_type = extract_historical_data
+generate_forecast = generate_forecast_auto_select
+extract_timeseries = extract_historical_data

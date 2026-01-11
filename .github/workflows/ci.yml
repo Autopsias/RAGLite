@@ -1,22 +1,41 @@
 # RAGLite CI - Consolidated Pipeline (Best Practices Aligned)
 # Self-hosted runners with 24GB RAM shared across projects
 #
-# Architecture: 3 focused jobs in single workflow
-# - validate: Every push/PR, <10 min, mocked ML deps
-# - integration: Main branch only, <20 min, with containers
-# - accuracy-gate: Main branch only, AC3 >=70% validation
+# Architecture: 4 focused jobs in single workflow
+# - lint-gate: Every push/PR, <2 min, fast feedback
+# - validate: Every push/PR, <10 min, unit tests with mocked deps
+# - integration: Main pushes only (or manual trigger), <30 min, full integration suite
+# - accuracy-gate: Main pushes only (post-merge), <45 min, AC3 >=70% validation
 #
-# Aligned with industry best practices for <1000 LOC Python projects
-# See: docs/ci/STRATEGY.md for full documentation
+# Execution Matrix:
+# | Event              | lint | validate | int-full | accuracy |
+# |--------------------|------|----------|----------|----------|
+# | PR to any branch   |  ✓   |    ✓     |    ✗     |    ✗     |
+# | Push to feature    |  ✓   |    ✓     |    ✗     |    ✗     |
+# | Push to main       |  ✓   |    ✓     |    ✓     |    ✓     |
+# | workflow_dispatch  |  ✓   |    ✓     | (if flag)| (if flag)|
+#
+# Note: Integration tests require real infrastructure (Qdrant/PostgreSQL) and are
+# all marked @pytest.mark.slow. Unit tests in 'validate' provide fast PR feedback.
+# Full integration suite runs on main for comprehensive validation.
 
 name: CI
 
-on:
+'on':
   push:
     branches: [main, develop, "story/**", "epic/**"]
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
+    inputs:
+      run_integration:
+        description: 'Run full integration tests (requires containers)'
+        type: boolean
+        default: false
+      run_accuracy_gate:
+        description: 'Run accuracy validation (NFR6/NFR7)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -30,36 +49,79 @@ concurrency:
 env:
   APP_ENV: test
   CI: "true"
+  PYTHONDONTWRITEBYTECODE: "1"  # Prevent .pyc generation (avoids bytecode cache pollution)
+  LOKY_MAX_CPU_COUNT: "1"  # Prevent joblib multiprocessing conflicts with pytest
 
 jobs:
   # ============================================================
-  # TIER 1: Fast PR Validation
+  # GATE 0: Linting (fastest feedback, must pass before tests)
   # Runs on every push/PR
+  # Target: <2 minutes, <1GB RAM
+  # ============================================================
+  lint-gate:
+    name: "🔒 Lint Gate: Ruff + Black"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Proactive UV Cache Cleanup (Pre-Install)
+        uses: ./.github/actions/validate-cache
+
+      - name: Setup UV
+        uses: ./.github/actions/setup-uv
+
+      - name: Install linting dependencies
+        run: |
+          echo "Installing dependencies (linting only)..."
+          uv pip install ruff black --system --quiet
+
+      - name: Check E402 pytestmark Violations
+        run: |
+          echo "=== Checking for pytestmark E402 violations ==="
+          python scripts/fix-pytestmark-e402.py --check
+          echo "No pytestmark E402 violations found"
+
+      - name: Lint Check (ruff)
+        run: |
+          echo "=== Running ruff linter ==="
+          ruff check raglite/ tests/ --output-format=github
+          echo "Ruff linting passed"
+
+      - name: Format Check (black)
+        run: |
+          echo "=== Checking code formatting ==="
+          ruff format raglite/ tests/ --check
+          echo "Black formatting passed"
+
+      - name: File Size Check
+        run: |
+          echo "=== Checking file sizes (500 LOC limit) ==="
+          python scripts/check_file_sizes.py
+          echo "File size check passed - no violations"
+
+  # ============================================================
+  # TIER 1: Fast PR Validation
+  # Runs on every push/PR, AFTER lint-gate passes
   # Target: <10 minutes, <4GB RAM, NO containers
   # ============================================================
   validate:
     name: "📝 Code Quality: Lint & Format"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 15
+    needs: lint-gate
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Validate UV Cache
-        run: |
-          if [ -d ~/.cache/uv ]; then
-            CACHE_SIZE=$(du -sm ~/.cache/uv 2>/dev/null | cut -f1 || echo "0")
-            if [ "$CACHE_SIZE" -gt 4096 ]; then
-              echo "Clearing oversized UV cache (${CACHE_SIZE}MB)..."
-              rm -rf ~/.cache/uv
-            fi
-            PARTIAL=$(find ~/.cache/uv -name "*.partial" -o -name "*.tmp" 2>/dev/null | wc -l || echo "0")
-            if [ "$PARTIAL" -gt 0 ]; then
-              echo "Found corrupted cache entries, clearing..."
-              rm -rf ~/.cache/uv
-            fi
-          fi
+      - name: Proactive Cache Cleanup (Pre-Install)
+        uses: ./.github/actions/validate-cache
+
+      - name: Setup UV
+        uses: ./.github/actions/setup-uv
 
       - name: Setup Python + UV
         run: |
@@ -69,41 +131,82 @@ jobs:
           echo "Installing dependencies (lightweight mode)..."
           uv pip install -e ".[dev]" --quiet
 
-      - name: Lint + Format Check
-        run: |
-          source ci-venv/bin/activate
-          echo "Running ruff linter..."
-          ruff check raglite/ tests/ --output-format=github
-          echo "Checking code formatting..."
-          ruff format raglite/ tests/ --check
-
       - name: Type Check (mypy)
         run: |
           source ci-venv/bin/activate
           echo "Running mypy type checker..."
-          mypy raglite/ --ignore-missing-imports --no-error-summary || true
+          mypy raglite/ --ignore-missing-imports --no-error-summary
 
       - name: Security Scan (bandit)
         run: |
           source ci-venv/bin/activate
           echo "Running security scan..."
-          bandit -r raglite/ -ll -q -f txt || true
+          bandit -r raglite/ -ll -q -f txt --skip B608,B310
 
-      - name: Unit Tests (Lightweight Mode)
+      - name: Validate Mock Patch Targets
+        run: |
+          source ci-venv/bin/activate
+          echo "========================================="
+          echo "Validating mock patch targets exist"
+          echo "Prevents stale mocks after refactoring"
+          echo "========================================="
+          python scripts/validate-mock-targets.py --verbose
+          if [ $? -ne 0 ]; then
+            echo "FAIL: Invalid mock patch targets detected!"
+            echo "Run: python scripts/validate-mock-targets.py --fix-suggestions"
+            exit 1
+          fi
+          echo "Mock target validation passed"
+
+      - name: Validate Pytest Collection (Import Errors)
+        run: |
+          source ci-venv/bin/activate
+          echo "========================================="
+          echo "Validating pytest can collect all tests"
+          echo "Catches import errors before test execution"
+          echo "========================================="
+          pytest --collect-only -q tests/ 2>&1 | tee collection.log
+
+          # Check for actual collection errors (not test names containing 'error')
+          # Look for pytest error markers at start of line, or Python exception types
+          if grep -E "^(ERROR|E   |ERRORS|ModuleNotFoundError|ImportError:)" collection.log; then
+            echo "FAIL: Test collection errors detected!"
+            exit 1
+          fi
+          echo "Collection validation passed"
+
+      - name: Validate Pytest Fixtures
+        run: |
+          source ci-venv/bin/activate
+          echo "========================================="
+          echo "Validating pytest fixture resolution"
+          echo "Prevents 'fixture not found' errors in CI"
+          echo "========================================="
+          pytest --collect-only -q tests/ 2>&1 | head -50
+          # Check for fixture errors in collection
+          if pytest --collect-only -q tests/ 2>&1 | grep -i "fixture.*not found"; then
+            echo "FAIL: Fixture references without definitions detected!"
+            exit 1
+          fi
+          echo "Fixture validation passed"
+
+      - name: Tests (Fast - excludes slow/health_check)
         env:
           LIGHTWEIGHT_TESTS: "true"
           PYTHONPATH: ${{ github.workspace }}
         run: |
           source ci-venv/bin/activate
           echo "========================================="
-          echo "Running Unit Tests (LIGHTWEIGHT_TESTS=true)"
-          echo "ML dependencies are mocked to save memory"
+          echo "Running Fast Unit Tests (excludes integration)"
+          echo "Excludes: slow, health_check, integration markers"
+          echo "Mode: Parallel (4 workers, default load distribution)"
           echo "========================================="
-          pytest tests/unit/ \
-            -x \
+          pytest tests/ \
+            -m "not slow and not health_check and not integration" \
             --tb=short \
             -q \
             --timeout=120 \
+            -n 4 \
             --junitxml=test-results/junit.xml \
             2>&1 || exit_code=$?
 
@@ -119,20 +222,33 @@ jobs:
           retention-days: 7
 
   # ============================================================
-  # TIER 2: Main Branch Integration Gate
-  # Runs ONLY on main branch pushes
-  # Target: <20 minutes, <6GB RAM, with containers
+  # TIER 2: Full Integration Tests
+  # Runs on: Main branch pushes (post-merge) OR manual trigger with flag
+  # Target: <30 minutes, <6GB RAM, with containers
+  # Note: All integration tests require real infrastructure and are slow
   # ============================================================
   integration:
-    name: "🔗 Tests: Integration (~115 tests)"
+    name: "🔗 Tests: Integration (~1000 tests)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 30
     needs: validate
-    if: github.ref == 'refs/heads/main'
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_integration == true)
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Cleanup Orphaned Processes (P0 Fix)
+        run: |
+          echo "=== Cleanup orphaned resource_tracker processes ==="
+          pkill -9 -f "resource_tracker" 2>/dev/null || echo "No orphaned resource_tracker processes"
+          pkill -9 -f "multiprocessing" 2>/dev/null || echo "No orphaned multiprocessing processes"
+          echo "Process cleanup complete"
+
+      - name: Clear Python bytecode & pytest cache
+        uses: ./.github/actions/validate-cache
 
       - name: Check Docker availability
         run: |
@@ -150,11 +266,81 @@ jobs:
           echo "Containers started, loading environment..."
           cat .ci-env
 
+      - name: Validate CI Credential Consistency
+        run: |
+          echo "=== Validating CI credentials against centralized config ==="
+          source scripts/ci/container-config.sh
+          validate_ci_credentials .github/workflows/ci.yml
+          echo "Credential validation passed"
+
+      - name: Verify Container Volume Mounts (P0 Fix)
+        run: |
+          echo "=== Verifying container volume mounts ==="
+          source .ci-env
+
+          # Check Qdrant mount
+          QDRANT_MOUNT=$(docker inspect raglite-qdrant-test --format='{{range .Mounts}}{{println .Source}}{{end}}' 2>/dev/null || echo "")
+          if [[ "$QDRANT_MOUNT" != *"/raglite/qdrant_storage_test"* ]]; then
+            echo "WARNING: Qdrant volume mount incorrect: $QDRANT_MOUNT"
+            echo "Recreating Qdrant container..."
+            docker stop raglite-qdrant-test 2>/dev/null || true
+            docker rm raglite-qdrant-test 2>/dev/null || true
+            ./scripts/ci/start-test-containers.sh test --qdrant-only --skip-cleanup
+          else
+            echo "Qdrant mount OK: $QDRANT_MOUNT"
+          fi
+
+          # Check PostgreSQL mount
+          PG_MOUNT=$(docker inspect raglite-postgresql-test --format='{{range .Mounts}}{{println .Source}}{{end}}' 2>/dev/null || echo "")
+          if [[ "$PG_MOUNT" != *"/raglite/postgresql_data_test"* ]]; then
+            echo "WARNING: PostgreSQL volume mount incorrect: $PG_MOUNT"
+            echo "Recreating PostgreSQL container..."
+            docker stop raglite-postgresql-test 2>/dev/null || true
+            docker rm raglite-postgresql-test 2>/dev/null || true
+            ./scripts/ci/start-test-containers.sh test --postgresql-only --skip-cleanup
+          else
+            echo "PostgreSQL mount OK: $PG_MOUNT"
+          fi
+
+          echo "Volume mount verification complete"
+
+      - name: Setup UV
+        uses: ./.github/actions/setup-uv
+
       - name: Setup Python + UV
         run: |
           uv venv ci-venv --python 3.11 --quiet 2>/dev/null || uv venv ci-venv --quiet
           source ci-venv/bin/activate
           uv pip install -e ".[dev]" --quiet
+
+      - name: Verify Container Health
+        run: |
+          source ci-venv/bin/activate
+          source .ci-env
+
+          echo "=== Waiting for containers to be fully ready ==="
+          sleep 5
+
+          echo "=== Checking Qdrant connectivity (with retry) ==="
+          for i in 1 2 3 4 5; do
+            if python -c "from qdrant_client import QdrantClient; c = QdrantClient(host='localhost', port=${QDRANT_PORT}); c.get_collections(); print('Qdrant is healthy')" 2>/dev/null; then
+              break
+            fi
+            echo "Qdrant not ready, attempt $i/5, waiting 5s..."
+            sleep 5
+          done
+
+          echo "=== Checking PostgreSQL connectivity (with retry) ==="
+          # Credentials sourced from .ci-env (generated by container-config.sh)
+          for i in 1 2 3 4 5; do
+            if python -c "import psycopg2; conn = psycopg2.connect(host='localhost', port=${POSTGRES_PORT}, database='${POSTGRES_DB}', user='${POSTGRES_USER}', password='${POSTGRES_PASSWORD}'); cur = conn.cursor(); cur.execute('SELECT 1'); print('PostgreSQL is healthy'); conn.close()" 2>/dev/null; then
+              break
+            fi
+            echo "PostgreSQL not ready, attempt $i/5, waiting 5s..."
+            sleep 5
+          done
+
+          echo "=== Container health verification complete ==="
 
       - name: Run Integration Tests
         env:
@@ -163,15 +349,16 @@ jobs:
           source ci-venv/bin/activate
           source .ci-env
           echo "========================================="
-          echo "Running Integration Tests"
+          echo "Running Integration Tests (~1000 tests)"
+          echo "Excludes health_check only"
           echo "Qdrant: localhost:${QDRANT_PORT}"
           echo "PostgreSQL: localhost:${POSTGRES_PORT}"
           echo "========================================="
           pytest tests/integration/ \
-            -x \
+            -m "not health_check" \
             --tb=short \
             -q \
-            -n 0 \
+            -n 1 \
             --timeout=300 \
             --junitxml=test-results/integration-junit.xml \
             2>&1 || exit_code=$?
@@ -182,7 +369,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-tier2
+          name: test-results-integration
           path: test-results/
           retention-days: 7
 
@@ -194,25 +381,27 @@ jobs:
 
   # ============================================================
   # TIER 3: Accuracy Gate (AC3 Validation)
-  # Runs ONLY on main branch after integration passes
+  # Runs on: Main branch pushes (post-merge) OR manual trigger with flag
   # Target: <45 minutes, validates >=70% accuracy
-  # Simplified from accuracy-validation.yml (482 lines -> ~45 lines)
+  # Note: Resource-intensive, so not run on PRs - integration tests provide pre-merge validation
   # ============================================================
   accuracy-gate:
     name: "✅ NFR: Accuracy Validation (NFR6/NFR7)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 45
     needs: integration
-    if: github.ref == 'refs/heads/main'
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_accuracy_gate == true)
 
     env:
       QDRANT_HOST: localhost
       QDRANT_PORT: "6335"
       POSTGRES_HOST: localhost
       POSTGRES_PORT: "5433"
-      POSTGRES_DB: raglite_test
-      POSTGRES_USER: raglite
-      POSTGRES_PASSWORD: raglite
+      POSTGRES_DB: raglite_ci
+      POSTGRES_USER: raglite_ci
+      POSTGRES_PASSWORD: raglite_ci
 
     steps:
       - name: Production Safety Check
@@ -231,11 +420,24 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Cleanup Orphaned Processes (P0 Fix)
+        run: |
+          echo "=== Cleanup orphaned resource_tracker processes ==="
+          pkill -9 -f "resource_tracker" 2>/dev/null || echo "No orphaned resource_tracker processes"
+          pkill -9 -f "multiprocessing" 2>/dev/null || echo "No orphaned multiprocessing processes"
+          echo "Process cleanup complete"
+
+      - name: Clear Python bytecode & pytest cache
+        uses: ./.github/actions/validate-cache
+
       - name: Start Test Containers
         run: |
           chmod +x scripts/ci/start-test-containers.sh
           ./scripts/ci/start-test-containers.sh test
           source .ci-env
+
+      - name: Setup UV
+        uses: ./.github/actions/setup-uv
 
       - name: Setup Python + UV
         run: |

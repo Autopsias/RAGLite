@@ -17,14 +17,6 @@ from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
-# These tests require real PyTorch/Chronos libraries
-pytestmark = pytest.mark.skipif(
-    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
-    reason="Chronos tests require real PyTorch/Chronos (not mocked)",
-)
-
 import torch  # noqa: E402
 
 from raglite.forecasting.adaptive_weights import (  # noqa: E402
@@ -39,6 +31,13 @@ from raglite.forecasting.models.chronos_model import (  # noqa: E402
 )
 from raglite.shared.config import settings  # noqa: E402
 from raglite.shared.models import TimeSeriesData, TimeSeriesPoint  # noqa: E402
+
+# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
+# These tests require real PyTorch/Chronos libraries
+pytestmark = pytest.mark.skipif(
+    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
+    reason="Chronos tests require real PyTorch/Chronos (not mocked)",
+)
 
 # =============================================================================
 # AC1, AC5: Lazy-Loading Pattern and Caching
@@ -107,9 +106,17 @@ async def test_cold_start_detection_with_insufficient_data() -> None:
     ]
     data = TimeSeriesData(metric_name="test_metric", points=points, interval="monthly")
 
-    with patch(
-        "raglite.forecasting.hybrid.generate_chronos_cold_start_forecast"
-    ) as mock_cold_start:
+    with (
+        patch(
+            "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+        ) as mock_fetch,
+        patch(
+            "raglite.forecasting.hybrid.ensemble.generate_chronos_cold_start_forecast"
+        ) as mock_cold_start,
+    ):
+        # Mock fetch_historical_metric to return test data
+        mock_fetch.return_value = data
+
         # Mock return value
         from raglite.shared.models import ForecastResult
 
@@ -120,14 +127,14 @@ async def test_cold_start_detection_with_insufficient_data() -> None:
             confidence_reasoning="Cold-start test",
         )
 
-        # Call generate_forecast with insufficient data
+        # Call without historical_data parameter - fetch_historical_metric will provide it
         result = await generate_forecast(
             metric="test_metric",
-            historical_data=data,
             periods_ahead=3,
         )
 
         # Verify cold-start path was triggered
+        mock_fetch.assert_called_once_with("test_metric")
         mock_cold_start.assert_called_once()
         assert result.model_type == "chronos-2-zero-shot"
 

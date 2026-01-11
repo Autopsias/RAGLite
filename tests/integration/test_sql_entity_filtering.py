@@ -11,7 +11,7 @@ Coverage gaps addressed:
 
 import pytest
 
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
 
 class TestExtractTimeseriesFromSqlEntityParameter:
@@ -29,7 +29,7 @@ class TestExtractTimeseriesFromSqlEntityParameter:
         When: Calling with entity='portugal' parameter
         Then: Function accepts parameter without TypeError
         """
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             MetricValidationError,
             extract_timeseries_from_sql,
@@ -59,7 +59,7 @@ class TestExtractTimeseriesFromSqlEntityParameter:
         When: Calling without entity parameter
         Then: Function works with default behavior (no entity filter)
         """
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             MetricValidationError,
             extract_timeseries_from_sql,
@@ -83,7 +83,7 @@ class TestExtractTimeseriesFromSqlEntityParameter:
 
         Note: Tests integration with entity_normalizer.normalize_entity.
         """
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             MetricValidationError,
             extract_timeseries_from_sql,
@@ -126,7 +126,7 @@ class TestEntityFilterFallbackToQdrant:
 
         Note: This test validates the fallback mechanism integration.
         """
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             MetricValidationError,
             extract_timeseries_from_sql,
@@ -167,7 +167,7 @@ class TestEntityFilterFallbackToQdrant:
 
         Note: Validates that entity parameter is passed through to fallback.
         """
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             extract_timeseries_from_sql,
         )
@@ -210,7 +210,7 @@ class TestNoRegressionExistingMetrics:
         When: Calling extract_timeseries_from_sql without entity parameter
         Then: Extraction works as before (no regression)
         """
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             MetricValidationError,
             extract_timeseries_from_sql,
@@ -232,7 +232,7 @@ class TestNoRegressionExistingMetrics:
         When: Calling extract_timeseries_from_sql without entity parameter
         Then: Extraction works with prefer_group_level logic (no regression)
         """
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             MetricValidationError,
             extract_timeseries_from_sql,
@@ -254,7 +254,7 @@ class TestNoRegressionExistingMetrics:
         When: Calling without entity parameter
         Then: No regression errors (may skip if data unavailable)
         """
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             MetricValidationError,
             extract_timeseries_from_sql,
@@ -290,7 +290,7 @@ class TestEntityFilterSqlQueryIntegration:
         Note: This is an integration test - validates end-to-end behavior
         rather than inspecting SQL query directly.
         """
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             MetricValidationError,
             extract_timeseries_from_sql,
@@ -320,7 +320,7 @@ class TestEntityFilterSqlQueryIntegration:
         When: Metric is aggregate metric (like EBITDA)
         Then: prefer_group_level logic applies (not entity filter)
         """
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             MetricValidationError,
             extract_timeseries_from_sql,
@@ -351,7 +351,7 @@ class TestEntityFilterSqlQueryIntegration:
 
         Note: Tests that explicit entity parameter wins over implicit defaults.
         """
-        from raglite.forecasting.timeseries_extract import (
+        from raglite.forecasting.timeseries import (
             ExtractionError,
             MetricValidationError,
             extract_timeseries_from_sql,

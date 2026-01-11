@@ -89,7 +89,7 @@ class TestAC2NewModuleStructure:
     @pytest.mark.parametrize(
         "tool_module",
         [
-            "ingestion",
+            "ingestion_tool",
             "query",
             "forecast",
             "insights",

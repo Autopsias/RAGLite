@@ -136,58 +136,25 @@ async def forecast_composite(
     if definition is None:
         raise ValueError(f"No composite definition found for {variable_name}")
 
-    # Validate component data
-    available_components = set(component_data.keys())
-    required_components = set(definition.components)
-    missing = required_components - available_components
-
+    # Validate component data and check for missing components
+    missing = _validate_component_data(definition, component_data, variable_name)
     if missing:
-        logger.warning(
-            f"Missing components for {variable_name}: {missing}. Falling back to direct forecast.",
-            extra={"variable": variable_name, "missing": list(missing)},
-        )
-        # Return fallback result indicating decomposition wasn't possible
-        return CompositeResult(
-            variable_name=variable_name,
-            composite_forecast=pd.Series(dtype=float),
-            component_forecasts={},
-            aggregation_method=definition.aggregation,
-            components_used=[],
-            fallback_used=True,
-            fallback_reason=f"Missing components: {missing}",
-        )
+        return _create_missing_components_fallback(variable_name, definition, missing)
 
     # Forecast each component
-    component_forecasts: dict[str, pd.Series] = {}
+    component_forecasts, failed_component = await _forecast_components(
+        definition,
+        component_data,
+        variable_name,
+        forecast_horizon,
+        forecast_function,
+        **forecast_kwargs,
+    )
 
-    for component_name in definition.components:
-        if component_name in component_data:
-            try:
-                logger.info(
-                    f"Forecasting component {component_name} for composite {variable_name}",
-                    extra={"component": component_name, "horizon": forecast_horizon},
-                )
-                forecast = await forecast_function(
-                    component_name,
-                    component_data[component_name],
-                    forecast_horizon,
-                    **forecast_kwargs,
-                )
-                component_forecasts[component_name] = forecast
-            except Exception as e:
-                logger.error(
-                    f"Failed to forecast component {component_name}: {e}",
-                    extra={"component": component_name, "error": str(e)},
-                )
-                return CompositeResult(
-                    variable_name=variable_name,
-                    composite_forecast=pd.Series(dtype=float),
-                    component_forecasts=component_forecasts,
-                    aggregation_method=definition.aggregation,
-                    components_used=list(component_forecasts.keys()),
-                    fallback_used=True,
-                    fallback_reason=f"Component forecast failed: {component_name}",
-                )
+    if failed_component:
+        return _create_component_failed_fallback(
+            variable_name, definition, component_forecasts, failed_component
+        )
 
     # Aggregate component forecasts
     composite_forecast = _aggregate_forecasts(
@@ -212,6 +179,137 @@ async def forecast_composite(
         aggregation_method=definition.aggregation,
         components_used=list(component_forecasts.keys()),
         fallback_used=False,
+    )
+
+
+def _validate_component_data(
+    definition: CompositeDefinition,
+    component_data: dict[str, pd.Series],
+    variable_name: str,
+) -> set[str] | None:
+    """Validate that all required components are present.
+
+    Args:
+        definition: Composite definition with required components
+        component_data: Available component data
+        variable_name: Name of composite variable (for logging)
+
+    Returns:
+        Set of missing component names, or None if all present
+    """
+    available_components = set(component_data.keys())
+    required_components = set(definition.components)
+    missing = required_components - available_components
+
+    if missing:
+        logger.warning(
+            f"Missing components for {variable_name}: {missing}. Falling back to direct forecast.",
+            extra={"variable": variable_name, "missing": list(missing)},
+        )
+        return missing
+
+    return None
+
+
+def _create_missing_components_fallback(
+    variable_name: str,
+    definition: CompositeDefinition,
+    missing: set[str],
+) -> CompositeResult:
+    """Create a fallback result when components are missing.
+
+    Args:
+        variable_name: Name of composite variable
+        definition: Composite definition
+        missing: Set of missing component names
+
+    Returns:
+        CompositeResult with fallback flag set
+    """
+    return CompositeResult(
+        variable_name=variable_name,
+        composite_forecast=pd.Series(dtype=float),
+        component_forecasts={},
+        aggregation_method=definition.aggregation,
+        components_used=[],
+        fallback_used=True,
+        fallback_reason=f"Missing components: {missing}",
+    )
+
+
+async def _forecast_components(
+    definition: CompositeDefinition,
+    component_data: dict[str, pd.Series],
+    variable_name: str,
+    forecast_horizon: int,
+    forecast_function: Any,
+    **forecast_kwargs: Any,
+) -> tuple[dict[str, pd.Series], str | None]:
+    """Forecast each component independently.
+
+    Args:
+        definition: Composite definition with component list
+        component_data: Available component data
+        variable_name: Name of composite variable (for logging)
+        forecast_horizon: Number of periods to forecast
+        forecast_function: Async forecast function to use
+        **forecast_kwargs: Additional kwargs for forecast function
+
+    Returns:
+        Tuple of (component_forecasts dict, failed_component_name or None)
+    """
+    component_forecasts: dict[str, pd.Series] = {}
+
+    for component_name in definition.components:
+        if component_name in component_data:
+            try:
+                logger.info(
+                    f"Forecasting component {component_name} for composite {variable_name}",
+                    extra={"component": component_name, "horizon": forecast_horizon},
+                )
+                forecast = await forecast_function(
+                    component_name,
+                    component_data[component_name],
+                    forecast_horizon,
+                    **forecast_kwargs,
+                )
+                component_forecasts[component_name] = forecast
+            except Exception as e:
+                logger.error(
+                    f"Failed to forecast component {component_name}: {e}",
+                    extra={"component": component_name, "error": str(e)},
+                )
+                # Return partial results and the failed component name
+                return component_forecasts, component_name
+
+    return component_forecasts, None
+
+
+def _create_component_failed_fallback(
+    variable_name: str,
+    definition: CompositeDefinition,
+    component_forecasts: dict[str, pd.Series],
+    failed_component: str,
+) -> CompositeResult:
+    """Create a fallback result when component forecasting fails.
+
+    Args:
+        variable_name: Name of composite variable
+        definition: Composite definition
+        component_forecasts: Partial component forecasts before failure
+        failed_component: Name of component that failed
+
+    Returns:
+        CompositeResult with fallback flag set
+    """
+    return CompositeResult(
+        variable_name=variable_name,
+        composite_forecast=pd.Series(dtype=float),
+        component_forecasts=component_forecasts,
+        aggregation_method=definition.aggregation,
+        components_used=list(component_forecasts.keys()),
+        fallback_used=True,
+        fallback_reason=f"Component forecast failed: {failed_component}",
     )
 
 

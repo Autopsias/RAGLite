@@ -68,7 +68,15 @@ if os.environ.get("LIGHTWEIGHT_TESTS") == "true":
     sys.modules["prophet.diagnostics"] = prophet.diagnostics
 
     # PyTorch/Chronos (~2-3GB combined)
+    # CRITICAL: torch.Tensor must be a real class, not a MagicMock
+    # scipy uses issubclass(cls, torch.Tensor) which fails if torch.Tensor is a MagicMock
+    class MockTensor:
+        """Mock torch.Tensor class for scipy compatibility."""
+
+        pass
+
     torch = create_mock_module("torch")
+    torch.Tensor = MockTensor  # Real class for issubclass() checks
     torch.nn = create_mock_module("torch.nn")
     torch.cuda = create_mock_module("torch.cuda")
     torch.cuda.is_available = MagicMock(return_value=False)
@@ -138,6 +146,11 @@ os.environ["POSTGRES_PASSWORD"] = "raglite_ci"
 # This dummy key prevents ValueError in unit tests while the autouse mock handles actual API calls.
 os.environ.setdefault("MISTRAL_API_KEY", "test-mistral-api-key-for-ci")
 
+# CRITICAL FIX (2026-01-10): Set dummy OPENAI_API_KEY for unit tests
+# Similar to MISTRAL_API_KEY fix - prevents ValueError during module import
+# before the mock_openai_api_globally fixture can patch the AsyncOpenAI class.
+os.environ.setdefault("OPENAI_API_KEY", "test-openai-api-key-for-ci")
+
 import logging
 import time
 
@@ -165,12 +178,13 @@ pytest_plugins = [
     "tests.fixtures.mistral_mock_helpers",  # Mistral mock helper functions (must be before mock_clients)
     "tests.fixtures.mock_clients",  # Mock clients (includes autouse Mistral mock)
     "tests.fixtures.sample_data",  # Sample metadata and chunks
+    # Unit test fixtures
+    "tests.unit.fixtures.model_selection_fixtures",  # Model selection test fixtures
     # Integration fixtures (moved from tests/integration/conftest.py per pytest deprecation)
     "tests.integration.fixtures.session_state",
     "tests.integration.fixtures.service_checking",
     "tests.integration.fixtures.container_lifecycle",  # Auto-restart for test containers (2025-12-24)
     "tests.integration.fixtures.session_fixtures",
-    "tests.integration.fixtures.test_isolation",
     "tests.integration.fixtures.module_fixtures",
     "tests.integration.fixtures.helper_fixtures",
 ]
@@ -276,17 +290,14 @@ def disable_joblib_parallel_processing():
     """
     # Configure environment variable to disable joblib parallel processing
     # This affects statsmodels, scikit-learn, and pmdarima which use joblib internally
-    os.environ["JOBLIB_START_METHOD"] = "threading"  # Use threading instead of multiprocessing
     os.environ["LOKY_MAX_CPU_COUNT"] = "1"  # Limit loky (joblib backend) to single CPU
 
-    logger.info("Joblib parallel processing disabled: using threading backend")
+    logger.info("Joblib parallel processing disabled: single CPU mode")
     logger.info("This prevents multiprocessing resource leaks during test cleanup")
 
     yield
 
     # Cleanup: restore to defaults
-    if "JOBLIB_START_METHOD" in os.environ:
-        del os.environ["JOBLIB_START_METHOD"]
     if "LOKY_MAX_CPU_COUNT" in os.environ:
         del os.environ["LOKY_MAX_CPU_COUNT"]
 

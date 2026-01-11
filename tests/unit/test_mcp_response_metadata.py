@@ -130,30 +130,38 @@ class TestResponseMetadata:
         """TEST-AC-7b.6.5.6: Cached selection populates model_selection_reason."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
-            mock_get_cache.return_value = mock_cached_model_selection
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.ensure_historical_data"
+        ) as mock_ensure_data:
+            mock_ensure_data.return_value = sample_time_series_data
 
-            with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
-                mock_result = MagicMock()
-                mock_result.model_source = "cached"
-                mock_route.return_value = mock_result
+            with patch(
+                "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+            ) as mock_get_cache:
+                mock_get_cache.return_value = mock_cached_model_selection
 
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
-                    mock_explain.return_value = "Test explanation"
+                with patch("raglite.forecasting.regressor_config.select_model_type") as mock_route:
+                    mock_result = MagicMock()
+                    mock_result.model_source = "cached"
+                    mock_route.return_value = mock_result
 
-                    result = await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.ensemble.explain_forecast"
+                    ) as mock_explain:
+                        mock_explain.return_value = "Test explanation"
 
-                    # Should have model_selection_reason from cache
-                    assert result.model_selection_reason is not None
-                    assert (
-                        "ARIMA" in result.model_selection_reason
-                        or "arima" in result.model_selection_reason.lower()
-                    )
+                        result = await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
+
+                        # Should have model_selection_reason from cache
+                        assert result.model_selection_reason is not None
+                        assert (
+                            "ARIMA" in result.model_selection_reason
+                            or "arima" in result.model_selection_reason.lower()
+                        )
 
 
 # -----------------------------------------------------------------------------
@@ -197,14 +205,13 @@ class TestMCPResponseSchema:
 class TestPerformance:
     """[P1] AC-7b.6.6: Maintain Less Than 5s Query Time with Cache Hit."""
 
-    @pytest.mark.asyncio
-    async def test_ac_7b_6_6_1_cache_lookup_under_100ms(self) -> None:
+    def test_ac_7b_6_6_1_cache_lookup_under_100ms(self) -> None:
         """TEST-AC-7b.6.6.1: Cache lookup adds <100ms overhead."""
         import time
 
         from raglite.external_data.storage import get_cached_model_selection
 
-        with patch("raglite.external_data.storage.get_session") as mock_get_session:
+        with patch("raglite.external_data.storage.model_selection.get_session") as mock_get_session:
             mock_session = MagicMock()
             mock_query = MagicMock()
             mock_query.filter.return_value.first.return_value = None
@@ -212,7 +219,7 @@ class TestPerformance:
             mock_get_session.return_value = mock_session
 
             start = time.time()
-            await get_cached_model_selection("test_variable")
+            get_cached_model_selection("test_variable")
             elapsed_ms = (time.time() - start) * 1000
 
             # Cache lookup should be very fast (mocked)

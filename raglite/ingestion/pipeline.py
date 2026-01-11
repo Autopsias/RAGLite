@@ -10,7 +10,7 @@ NEW MODULES (Story 3.0.1 Refactoring):
 - document_ingestion.py: PDF/Excel extraction (~750 lines)
 - chunking_strategy.py: Text + table-aware chunking (~600 lines)
 - embedding_generation.py: Embeddings + metadata (~350 lines)
-- storage_operations.py: Qdrant + PostgreSQL storage (~580 lines)
+- storage/: Qdrant + PostgreSQL storage (split into domain modules, <360 lines each)
 
 TODO: Update test imports to use new modules directly (can be deferred to separate PR)
 """
@@ -27,8 +27,10 @@ from .chunking_strategy import chunk_by_docling_items, chunk_document, split_lar
 
 # Re-export all functions from focused modules
 # This ensures backward compatibility with existing test imports
-# Document Ingestion Module
-from .document_ingestion import extract_excel, ingest_document, ingest_pdf
+# Document Ingestion Module (import from submodules to avoid deprecation warning)
+from .document_ingestion.core import ingest_document
+from .document_ingestion.excel_processing import extract_excel
+from .document_ingestion.pdf_processing import ingest_pdf
 
 # Embedding Generation Module
 from .embedding_generation import (
@@ -39,7 +41,7 @@ from .embedding_generation import (
 )
 
 # Storage Operations Module
-from .storage_operations import (
+from .storage import (
     VectorStorageError,
     create_collection,
     store_metadata_in_postgresql,

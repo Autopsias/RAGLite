@@ -17,7 +17,7 @@ from raglite.main import (
 
 # Import modules (not functions) for reliable patch.object usage in CI
 # This avoids import-time binding issues with string-based patching
-from raglite.mcp.tools import ingestion as ingestion_module
+from raglite.mcp.tools import ingestion_tool as ingestion_module
 from raglite.mcp.tools import query as query_module
 from raglite.retrieval.multi_index_search import MultiIndexSearchError, SearchResult
 from raglite.retrieval.search import QueryError
@@ -72,7 +72,7 @@ class TestIngestFinancialDocumentTool:
             patch.object(
                 ingestion_module, "ingest_document", new_callable=AsyncMock
             ) as mock_ingest,
-            patch.object(ingestion_module, "settings") as mock_settings,
+            patch("raglite.shared.config.settings") as mock_settings,
         ):
             mock_ingest.return_value = mock_metadata
             mock_settings.enable_forecast_auto_update = False  # Disable for simpler test

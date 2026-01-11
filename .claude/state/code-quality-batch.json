@@ -1,0 +1,148 @@
+{
+  "schema_version": "2.0",
+  "session_id": "1736422800",
+  "created_at": "2026-01-09T14:00:00Z",
+  "updated_at": "2026-01-09T14:00:00Z",
+  "project_path": "/Users/ricardocarvalho/DeveloperFolder/RAGLite",
+  "analysis": {
+    "total_violations": 34,
+    "file_size_violations": 0,
+    "function_length_violations": 34
+  },
+  "execution_plan": {
+    "total_batches": 24,
+    "current_batch": 1,
+    "batches": [
+      {
+        "batch_number": 1,
+        "cluster_id": "cluster_1",
+        "files": [
+          "raglite/forecasting/hybrid/ml_models.py",
+          "raglite/forecasting/metrics.py",
+          "raglite/forecasting/timeseries/external.py",
+          "raglite/forecasting/timeseries/sql_extraction_normalization.py",
+          "raglite/mcp/tools/external_data.py",
+          "raglite/mcp/tools/forecast.py",
+          "raglite/mcp/tools/insights.py"
+        ],
+        "mode": "serial",
+        "status": "pending",
+        "completed_at": null,
+        "reason": "shared 74 tests"
+      },
+      {
+        "batch_number": 2,
+        "cluster_id": "cluster_2",
+        "files": [
+          "raglite/insights/recommendations.py",
+          "raglite/insights/recommendations/generation.py",
+          "raglite/insights/recommendations/synthesis.py"
+        ],
+        "mode": "serial",
+        "status": "pending",
+        "completed_at": null,
+        "reason": "shared 15 tests"
+      },
+      {
+        "batch_number": 3,
+        "cluster_id": "cluster_3",
+        "files": [
+          "raglite/ingestion/adaptive_table/core/api.py",
+          "raglite/ingestion/document_ingestion/temp_files/url_download.py"
+        ],
+        "mode": "serial",
+        "status": "pending",
+        "completed_at": null,
+        "reason": "shared 6 tests"
+      }
+    ]
+  },
+  "clusters": [
+    {
+      "id": "cluster_1",
+      "files": [
+        "raglite/forecasting/hybrid/ml_models.py",
+        "raglite/forecasting/metrics.py",
+        "raglite/forecasting/timeseries/external.py",
+        "raglite/forecasting/timeseries/sql_extraction_normalization.py",
+        "raglite/mcp/tools/external_data.py",
+        "raglite/mcp/tools/forecast.py",
+        "raglite/mcp/tools/insights.py"
+      ],
+      "mode": "serial",
+      "shared_tests": [
+        "tests/e2e/test_mcp_e2e_integration.py",
+        "tests/e2e/test_mcp_e2e_performance.py",
+        "tests/integration/epic6/test_forecast_execution.py"
+      ],
+      "priority_score": 17
+    },
+    {
+      "id": "cluster_2",
+      "files": [
+        "raglite/insights/recommendations.py",
+        "raglite/insights/recommendations/generation.py",
+        "raglite/insights/recommendations/synthesis.py"
+      ],
+      "mode": "serial",
+      "shared_tests": [
+        "tests/integration/insights/recommendations/test_cloud_cost_example.py",
+        "tests/integration/insights/recommendations/test_expert_alignment.py"
+      ],
+      "priority_score": 13
+    },
+    {
+      "id": "cluster_3",
+      "files": [
+        "raglite/ingestion/adaptive_table/core/api.py",
+        "raglite/ingestion/document_ingestion/temp_files/url_download.py"
+      ],
+      "mode": "serial",
+      "shared_tests": [
+        "tests/unit/ingestion/adaptive_table/core/test_api_edge_cases.py",
+        "tests/unit/ingestion/test_module_integration.py"
+      ],
+      "priority_score": 12
+    }
+  ],
+  "file_status": {
+    "completed": [],
+    "pending": [
+      "raglite/forecasting/hybrid/ml_models.py",
+      "raglite/forecasting/metrics.py",
+      "raglite/forecasting/timeseries/external.py",
+      "raglite/forecasting/timeseries/sql_extraction_normalization.py",
+      "raglite/mcp/tools/external_data.py",
+      "raglite/mcp/tools/forecast.py",
+      "raglite/mcp/tools/insights.py",
+      "raglite/insights/recommendations.py",
+      "raglite/insights/recommendations/generation.py",
+      "raglite/insights/recommendations/synthesis.py",
+      "raglite/ingestion/adaptive_table/core/api.py",
+      "raglite/ingestion/document_ingestion/temp_files/url_download.py",
+      "raglite/external_data/clients/basegov/parsers.py",
+      "raglite/forecasting/models/catboost_model.py",
+      "raglite/forecasting/tft_training/training.py",
+      "raglite/forecasting/models/catboost/fitting.py",
+      "raglite/forecasting/models/tft/_legacy.py",
+      "raglite/insights/proactive_modules/generation.py",
+      "raglite/insights/proactive_modules/synthesis.py",
+      "tests/fixtures/mistral_mock_helpers.py",
+      "tests/integration/ac3_ground_truth/test_ac1_execution.py",
+      "tests/integration/fixtures/session/_legacy.py",
+      "tests/integration/fixtures/session/test_detection.py",
+      "tests/integration/ingestion/chunking/test_validation_rules_slow.py",
+      "tests/integration/parallel_ingestion/test_parallel_ingestion_core.py",
+      "tests/integration/retrieval/test_accuracy_performance.py",
+      "tests/integration/test_ac3_ground_truth.py",
+      "tests/integration/test_chunking_extended.py",
+      "tests/integration/test_excerpt_validation_core.py",
+      "tests/integration/test_forecast_external.py",
+      "tests/integration/test_hybrid_search_integration.py",
+      "tests/integration/test_parallel_ingestion.py",
+      "tests/integration/test_retrieval_extended.py"
+    ],
+    "failed": [],
+    "skipped": []
+  }
+}

@@ -57,7 +57,7 @@ class EmbeddingModelCache:
         """
         return hashlib.md5(model_name.encode()).hexdigest()
 
-    def load_model(self, model_name: str = "intfloat/e5-base-v2"):
+    def load_model(self, model_name: str = "intfloat/e5-base-v2") -> object | None:
         """Load embedding model from cache or compute and cache.
 
         Args:
@@ -81,7 +81,8 @@ class EmbeddingModelCache:
             )
             try:
                 with open(self.model_file, "rb") as f:
-                    return pickle.load(f)
+                    model: object = pickle.load(f)
+                    return model
             except Exception as e:
                 logger.warning(f"Failed to load cached model: {e}. Will reload from source.")
 
@@ -92,7 +93,7 @@ class EmbeddingModelCache:
         )
         return None
 
-    def save_model(self, model, model_name: str = "intfloat/e5-base-v2") -> None:
+    def save_model(self, model: object, model_name: str = "intfloat/e5-base-v2") -> None:
         """Save embedding model to cache.
 
         Args:

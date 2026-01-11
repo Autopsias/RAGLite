@@ -20,12 +20,13 @@ from unittest.mock import AsyncMock, patch
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from tests.validation.test_forecast_accuracy import ForecastValidationResult  # noqa: E402
+
 from tests.validation.test_epic4_e2e_validation import (  # noqa: E402
     Epic4ValidationOrchestrator,
     Epic4ValidationResult,
     create_comprehensive_test_data,
 )
-from tests.validation.test_forecast_accuracy import ForecastValidationResult  # noqa: E402
 from tests.validation.test_insight_quality import InsightValidationResult  # noqa: E402
 from tests.validation.test_recommendation_alignment import (  # noqa: E402
     RecommendationValidationResult,

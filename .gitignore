@@ -88,4 +88,5 @@ data/financial_docs_test_bm25.pkl
 backups/
 validation-*.txt
 lightning_logs/
+catboost_info/
 .ci-env

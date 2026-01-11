@@ -87,7 +87,7 @@ class TestAC5CICompatibility:
                 "raglite.mcp",
                 "raglite.mcp.models",
                 "raglite.mcp.tools",
-                "raglite.mcp.tools.ingestion",
+                "raglite.mcp.tools.ingestion_tool",
                 "raglite.mcp.tools.query",
                 "raglite.mcp.tools.forecast",
                 "raglite.mcp.tools.insights",
@@ -174,7 +174,7 @@ class TestAC6Documentation:
     @pytest.mark.parametrize(
         "tool_module",
         [
-            "ingestion",
+            "ingestion_tool",
             "query",
             "forecast",
             "insights",
@@ -218,21 +218,51 @@ class TestRefactoringIntegrity:
         When importing all tool modules
         Then all tools should be registered with the mcp instance
         """
+        # Force fresh import to ensure all tools are registered
+        # (previous tests may have cleared modules from sys.modules)
+        import sys
 
-        # Import all tool modules to trigger decorator registration
+        # Clear raglite modules to start fresh
+        for module_name in list(sys.modules.keys()):
+            if module_name.startswith("raglite"):
+                del sys.modules[module_name]
+
+        # Import main which triggers all tool registrations
         from raglite.main import mcp
 
         # Check that tools are registered
         # FastMCP stores tools in _tool_manager
         assert hasattr(mcp, "_tool_manager"), "mcp should have _tool_manager attribute"
 
-        # At least 15 tools should be registered
+        # All 14 tools should be registered
         # Use async list_tools() to get tool count
         tools = asyncio.run(mcp._tool_manager.list_tools())
         tool_count = len(tools)
-        assert tool_count >= 15, (
-            f"At least 15 tools should be registered with mcp, "
-            f"but only {tool_count} found: {[t.name for t in tools]}"
+        expected_tools = {
+            "check_database_health",
+            "get_financial_forecast",
+            "get_financial_insights",
+            "get_ingestion_status",
+            "get_regressor_data",
+            "ingest_financial_document",
+            "ingest_financial_document_async",
+            "list_available_regressors",
+            "manage_model_weights",
+            "query_external_data",
+            "query_financial_documents",
+            "refresh_external_data",
+            "retrain_forecasting_models",
+            "validate_forecasting_accuracy",
+        }
+        assert tool_count == 14, (
+            f"Expected 14 tools to be registered with mcp, "
+            f"but found {tool_count}: {sorted([t.name for t in tools])}"
+        )
+        actual_tool_names = {t.name for t in tools}
+        assert actual_tool_names == expected_tools, (
+            f"Tool names don't match. "
+            f"Missing: {expected_tools - actual_tool_names}, "
+            f"Extra: {actual_tool_names - expected_tools}"
         )
 
     @pytest.mark.priority("P1")

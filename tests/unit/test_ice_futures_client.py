@@ -12,6 +12,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+# Import the module (not just the class) to use patch.object correctly
+from raglite.external_data.clients import ice_futures as ice_futures_module
 from raglite.external_data.clients.ice_futures import ICEFuturesClient
 from raglite.external_data.exceptions import ExternalDataFetchError
 from raglite.external_data.models import API2CoalPrice, TTFGasPrice
@@ -38,7 +40,10 @@ class TestICEFuturesClientAPI2Coal:
             API2CoalPrice(date=date(2024, 1, 13), price=121.00, currency="USD", unit="USD/tonne"),
         ]
 
-        with patch.object(client, "_fetch_yahoo_coal", new_callable=AsyncMock) as mock_fetch:
+        # Use patch.object for reliable mocking even after module import by other tests
+        with patch.object(
+            ice_futures_module, "fetch_yahoo_coal", new_callable=AsyncMock
+        ) as mock_fetch:
             mock_fetch.return_value = mock_prices
 
             result = await client.fetch_api2_coal(
@@ -65,7 +70,9 @@ class TestICEFuturesClientAPI2Coal:
             API2CoalPrice(date=date(2024, 1, 5), price=119.75, currency="USD"),
         ]
 
-        with patch.object(client, "_fetch_yahoo_coal", new_callable=AsyncMock) as mock_fetch:
+        with patch.object(
+            ice_futures_module, "fetch_yahoo_coal", new_callable=AsyncMock
+        ) as mock_fetch:
             mock_fetch.return_value = mock_prices
 
             result = await client.fetch_api2_coal(
@@ -78,18 +85,20 @@ class TestICEFuturesClientAPI2Coal:
 
     @pytest.mark.asyncio
     async def test_fetch_api2_coal_fallback_to_yahoo(self, client: ICEFuturesClient) -> None:
-        """AC1.1: Should fallback to Yahoo Finance if Quandl fails."""
-        yahoo_prices = [
-            API2CoalPrice(date=date(2024, 1, 15), price=120.00, currency="USD"),
-        ]
-
-        with patch.object(client, "_fetch_quandl_data", new_callable=AsyncMock) as mock_quandl:
-            mock_quandl.side_effect = ExternalDataFetchError(
-                source="Quandl", message="API unavailable"
+        """AC1.1: Should fallback to cache if Yahoo Finance fails."""
+        # Primary source is Yahoo, fallback is cache
+        with patch.object(
+            ice_futures_module, "fetch_yahoo_coal", new_callable=AsyncMock
+        ) as mock_yahoo:
+            mock_yahoo.side_effect = ExternalDataFetchError(
+                source="Yahoo_Finance", message="API unavailable"
             )
 
-            with patch.object(client, "_fetch_yahoo_coal", new_callable=AsyncMock) as mock_yahoo:
-                mock_yahoo.return_value = yahoo_prices
+            with patch.object(ice_futures_module, "load_from_cache") as mock_cache:
+                cached_prices = [
+                    API2CoalPrice(date=date(2024, 1, 15), price=120.00, currency="USD"),
+                ]
+                mock_cache.return_value = cached_prices
 
                 result = await client.fetch_api2_coal(
                     start_date=date(2024, 1, 1),
@@ -97,19 +106,19 @@ class TestICEFuturesClientAPI2Coal:
                 )
 
                 assert len(result) == 1
-                mock_yahoo.assert_called_once()
+                mock_cache.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_fetch_api2_coal_correlation_metadata(self, client: ICEFuturesClient) -> None:
         """AC1.1: Should include pet coke correlation metadata."""
-        mock_response = {
-            "dataset": {
-                "data": [["2024-01-15", 120.50]],
-            }
-        }
+        mock_prices = [
+            API2CoalPrice(date=date(2024, 1, 15), price=120.50, currency="USD"),
+        ]
 
-        with patch.object(client, "_fetch_quandl_data", new_callable=AsyncMock) as mock_fetch:
-            mock_fetch.return_value = mock_response
+        with patch.object(
+            ice_futures_module, "fetch_yahoo_coal", new_callable=AsyncMock
+        ) as mock_fetch:
+            mock_fetch.return_value = mock_prices
 
             result = await client.fetch_api2_coal(
                 start_date=date(2024, 1, 1),
@@ -142,7 +151,9 @@ class TestICEFuturesClientTTFGas:
             }
         }
 
-        with patch.object(client, "_fetch_quandl_data", new_callable=AsyncMock) as mock_fetch:
+        with patch.object(
+            ice_futures_module, "fetch_quandl_data", new_callable=AsyncMock
+        ) as mock_fetch:
             mock_fetch.return_value = mock_response
 
             result = await client.fetch_ttf_gas(
@@ -169,7 +180,9 @@ class TestICEFuturesClientTTFGas:
             }
         }
 
-        with patch.object(client, "_fetch_quandl_data", new_callable=AsyncMock) as mock_fetch:
+        with patch.object(
+            ice_futures_module, "fetch_quandl_data", new_callable=AsyncMock
+        ) as mock_fetch:
             mock_fetch.return_value = mock_response
 
             result = await client.fetch_ttf_gas(
@@ -186,7 +199,9 @@ class TestICEFuturesClientTTFGas:
             TTFGasPrice(date=date(2024, 1, 15), price=35.00, currency="EUR"),
         ]
 
-        with patch.object(client, "_fetch_quandl_data", new_callable=AsyncMock) as mock_quandl:
+        with patch.object(
+            ice_futures_module, "fetch_quandl_data", new_callable=AsyncMock
+        ) as mock_quandl:
             mock_quandl.side_effect = ExternalDataFetchError(
                 source="Quandl", message="API unavailable"
             )
@@ -231,15 +246,11 @@ class TestICEFuturesClientRetry:
                 ),
             ]
 
-            # This should eventually succeed after retries
-            with patch.object(client, "_parse_quandl_coal_data") as mock_parse:
-                mock_parse.return_value = [
-                    API2CoalPrice(date=date(2024, 1, 15), price=100.0, currency="USD")
-                ]
+            # Test retry logic at the HTTP layer
 
-                # Should not raise - retries should handle transient failures
-                # Note: actual retry behavior depends on implementation
-                pass  # Test structure ready for implementation
+            # Should not raise - retries should handle transient failures
+            # Note: actual retry behavior depends on implementation
+            pass  # Test structure ready for implementation
 
 
 class TestICEFuturesClientCache:

@@ -24,90 +24,20 @@ from pathlib import Path
 
 import pytest
 
+from .test_refactoring_constants import (
+    BASELINE_CLIENT_TEST_COUNT,
+    CONFTEST_MAX_LOC,
+    EXPECTED_MODULES,
+    EXPECTED_TEST_CLASSES,
+    HARD_LIMIT_LOC,
+    IDEAL_MAX_LOC,
+)
+
 # Base paths
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 TESTS_ROOT = PROJECT_ROOT / "tests"
 EXTERNAL_DATA_TESTS_DIR = TESTS_ROOT / "unit" / "external_data"
 ORIGINAL_TEST_FILE = TESTS_ROOT / "unit" / "test_external_data_clients.py"
-
-# Expected modules after refactoring
-# NOTE (2025-12-18): test_basegov_story695.py split out separately for file size limits
-EXPECTED_MODULES = [
-    "test_ine_client.py",
-    "test_basegov_client.py",
-    "test_basegov_story695.py",  # Split from test_basegov_client.py for file size limits
-    "test_bpstat_client.py",
-    "test_omie_client.py",
-    "test_oil_bulletin_client.py",
-    "test_commodities_client.py",
-    "test_atic_client.py",
-    "test_ipma_client.py",
-    "test_exceptions.py",
-]
-
-# Expected test classes per module (from story analysis)
-# NOTE (2025-12-18): Updated to reflect actual refactoring structure
-EXPECTED_TEST_CLASSES = {
-    "test_ine_client.py": [
-        "TestINEClient",
-        "TestINEDateFiltering",
-        "TestINEClientAdditional",
-        "TestStory68INEExtensions",
-    ],
-    "test_basegov_client.py": [
-        "TestBaseGovClient",
-        "TestBaseGovClientAdditional",
-        "TestBaseGovClientCoverage",
-    ],
-    "test_basegov_story695.py": [
-        "TestBaseGovStory695",  # Extracted to separate file for file size limits
-    ],
-    "test_bpstat_client.py": [
-        "TestBPstatClient",
-        "TestBPstatClientAdditional",
-        "TestBPstatStory693",
-        "TestStory68BPstatExtensions",
-    ],
-    "test_omie_client.py": [
-        "TestOMIEClient",
-        "TestOMIEStory692",
-        "TestOMIEClientAdditional",
-    ],
-    "test_oil_bulletin_client.py": [
-        "TestEUOilBulletinClient",
-        "TestEUOilBulletinAdditional",
-        "TestEUOilBulletinStory694",
-    ],
-    "test_commodities_client.py": [
-        "TestCommoditiesURLFix",
-        "TestCommoditiesClient",
-        "TestCommoditiesClientAdditional",
-        "TestCommoditiesClientCoverage",
-    ],
-    "test_atic_client.py": [
-        "TestATICClient",
-        "TestATICClientAdditional",
-    ],
-    "test_ipma_client.py": [
-        "TestIPMAClient",
-        "TestIPMAClientAdditional",
-        "TestIPMAClientCoverage",
-    ],
-    "test_exceptions.py": [
-        "TestExceptions",
-        "TestRateLimitHandling",
-    ],
-}
-
-# File size limits (from .claude/rules/file-size-limits.md)
-HARD_LIMIT_LOC = 500
-IDEAL_MAX_LOC = 400
-CONFTEST_MAX_LOC = 200
-
-# Baseline test count from original file (176 tests, excluding acceptance tests)
-# Note: Original estimate was 131, updated to 197, now 176 client tests after Story 7.1 refactoring
-# (2025-12-18): Excludes test_refactoring_acceptance.py (~72 tests) for stable baseline
-BASELINE_TEST_COUNT = 176
 
 
 class TestAC1FileSizeReduction:
@@ -300,9 +230,10 @@ class TestAC3FunctionalityPreserved:
                         continue
                 break
 
-        assert test_count == BASELINE_TEST_COUNT, (
-            f"Test count mismatch: found {test_count}, expected {BASELINE_TEST_COUNT}. "
-            f"Tests may have been lost or duplicated during refactoring."
+        assert test_count >= BASELINE_CLIENT_TEST_COUNT, (
+            f"Test count dropped from baseline: found {test_count}, expected >={BASELINE_CLIENT_TEST_COUNT}. "
+            f"Tests may have been lost during refactoring. "
+            f"(New tests are OK, but count should not decrease)"
         )
 
     @pytest.mark.acceptance

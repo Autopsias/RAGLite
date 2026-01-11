@@ -136,23 +136,28 @@ class TestCacheLookup:
         """TEST-AC-7b.6.1.3: get_cached_model_selection is called when use_model_selection=True."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = mock_cached_model_selection
 
             # Mock the model routing to avoid actual model execution
-            with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
+            with patch("raglite.forecasting.regressor_config.select_model_type") as mock_route:
                 mock_route.return_value = MagicMock()
 
                 # Mock explain_forecast to avoid LLM calls
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
+                        await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
 
                     mock_get_cache.assert_called_once_with("ebitda")
 
@@ -164,9 +169,13 @@ class TestCacheLookup:
         """TEST-AC-7b.6.1.4: get_cached_model_selection NOT called when use_model_selection=False."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             # Mock Prophet to avoid actual model execution
-            with patch("raglite.forecasting.hybrid._get_prophet_class") as mock_prophet_class:
+            with patch(
+                "raglite.forecasting.hybrid.lazy_imports._get_prophet_class"
+            ) as mock_prophet_class:
                 mock_prophet = MagicMock()
                 mock_prophet.fit.return_value = None
                 mock_prophet.make_future_dataframe.return_value = MagicMock()
@@ -174,15 +183,18 @@ class TestCacheLookup:
                 mock_prophet_class.return_value = mock_prophet
 
                 # Mock explain_forecast
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=False,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
+                        await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=False,
+                        )
 
                     mock_get_cache.assert_not_called()
 
@@ -195,27 +207,38 @@ class TestCacheLookup:
         """TEST-AC-7b.6.1.5: Uses cached model configuration when cache is valid."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = mock_cached_model_selection
 
-            with patch("raglite.forecasting.hybrid._route_to_model") as mock_route:
-                mock_result = MagicMock()
-                mock_route.return_value = mock_result
+            # Mock ensure_historical_data to return our sample data (Story 8.1: historical_data required)
+            with patch(
+                "raglite.forecasting.hybrid.ensemble.ensure_historical_data"
+            ) as mock_ensure_data:
+                mock_ensure_data.return_value = sample_time_series_data
 
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
-                    mock_explain.return_value = "Test explanation"
+                with patch(
+                    "raglite.forecasting.hybrid.model_generators._route_to_model"
+                ) as mock_route:
+                    mock_result = MagicMock()
+                    mock_route.return_value = mock_result
 
-                    await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.ensemble.explain_forecast"
+                    ) as mock_explain:
+                        mock_explain.return_value = "Test explanation"
 
-                    # Should route to ARIMA (from cached selection)
-                    mock_route.assert_called_once()
-                    call_kwargs = mock_route.call_args[1]
-                    assert call_kwargs["model_name"] == "arima"
+                        await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
+
+                        # Should route to ARIMA (from cached selection)
+                        mock_route.assert_called_once()
+                        call_kwargs = mock_route.call_args[1]
+                        assert call_kwargs["model_name"] == "arima"
 
     @pytest.mark.asyncio
     async def test_ac_7b_6_1_6_ignores_expired_cache(
@@ -226,26 +249,33 @@ class TestCacheLookup:
         """TEST-AC-7b.6.1.6: Falls back to Prophet when cache is expired."""
         from raglite.forecasting.hybrid import generate_forecast
 
-        with patch("raglite.forecasting.hybrid.get_cached_model_selection") as mock_get_cache:
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.get_cached_model_selection"
+        ) as mock_get_cache:
             mock_get_cache.return_value = expired_cached_model_selection
 
             # Mock Prophet for fallback
-            with patch("raglite.forecasting.hybrid._get_prophet_class") as mock_prophet_class:
+            with patch(
+                "raglite.forecasting.hybrid.lazy_imports._get_prophet_class"
+            ) as mock_prophet_class:
                 mock_prophet = MagicMock()
                 mock_prophet.fit.return_value = None
                 mock_prophet.make_future_dataframe.return_value = MagicMock()
                 mock_prophet.predict.return_value = MagicMock()
                 mock_prophet_class.return_value = mock_prophet
 
-                with patch("raglite.forecasting.hybrid.explain_forecast") as mock_explain:
+                with patch("raglite.forecasting.hybrid.ensemble.explain_forecast") as mock_explain:
                     mock_explain.return_value = "Test explanation"
 
-                    result = await generate_forecast(
-                        metric="ebitda",
-                        historical_data=sample_time_series_data,
-                        periods_ahead=4,
-                        use_model_selection=True,
-                    )
+                    with patch(
+                        "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
+                    ) as mock_fetch:
+                        mock_fetch.return_value = sample_time_series_data
+                        result = await generate_forecast(
+                            metric="ebitda",
+                            periods_ahead=4,
+                            use_model_selection=True,
+                        )
 
                     # Should fall back to default (Prophet) when cache expired
                     assert result.model_source == "default"

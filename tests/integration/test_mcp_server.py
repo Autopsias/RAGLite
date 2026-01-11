@@ -13,19 +13,17 @@ from pathlib import Path
 import pytest
 
 # Add spike directory to path for importing spike modules
+spike_dir = Path(__file__).parent.parent.parent / "spike"
+sys.path.insert(0, str(spike_dir))
+
+from mcp_server import QueryRequest, check_health, execute_query  # noqa: E402
 
 # Mark all tests in this module as integration tests
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
-    pytest.mark.integration,
-    pytest.mark.preserve_collection,
 ]
-spike_dir = Path(__file__).parent.parent.parent / "spike"
-sys.path.insert(0, str(spike_dir))
-
-from mcp_server import QueryRequest, check_health, execute_query  # noqa: E402
 
 
 @pytest.mark.priority("P1")

@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from raglite.forecasting.timeseries_extract import prefer_group_level
+from raglite.forecasting.timeseries import prefer_group_level
 from raglite.ingestion.entity_normalizer import (
     get_entity_ilike_pattern,
     normalize_entity,

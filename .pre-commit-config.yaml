@@ -30,6 +30,15 @@ repos:
       - id: mixed-line-ending
 
   # ============ PYTHON-SPECIFIC CHECKS ============
+  # AST syntax validation - HIGHEST PRIORITY: Catches syntax errors before commit
+  # This prevents broken code from reaching CI (root cause fix)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-ast
+        name: Check Python syntax (AST)
+        language: python
+
   # Ruff - Fast linting and formatting
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.13.0
@@ -92,6 +101,26 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      # Pytest marker validation - prevent CI failures from marker syntax errors
+      - id: validate-pytest-markers
+        name: validate-pytest-markers
+        entry: python scripts/validate-pytest-markers.py
+        language: python
+        pass_filenames: false
+        stages: [pre-commit]
+        files: ^tests/.*\.py$
+
+      # Pytestmark E402 violation check - prevent pytestmark-before-imports anti-pattern
+      # Root cause: pytestmark placed before/between imports violates ruff E402
+      # This prevents the #1 recurring CI failure pattern
+      - id: check-pytestmark-e402
+        name: check-pytestmark-e402-violations
+        entry: python scripts/fix-pytestmark-e402.py --check
+        language: python
+        pass_filenames: false
+        stages: [pre-commit]
+        files: ^tests/.*\.py$
+
       # File size limits - prevent large file proliferation
       - id: check-file-sizes
         name: check-python-file-sizes
@@ -100,3 +129,27 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
         always_run: true
+
+      # Pytest fixture validation - catch missing fixtures before commit
+      # Root cause fix: Story 8 strategic analysis identified 78 tests failing
+      # due to fixture references without fixture definitions being copied
+      - id: validate-pytest-fixtures
+        name: validate-pytest-fixtures
+        entry: python scripts/validate-pytest-fixtures.py
+        language: python
+        pass_filenames: false
+        stages: [pre-commit]
+        files: ^tests/.*\.py$
+
+      # Mock target validation - catch stale patch() targets after refactoring
+      # Root cause fix: Story 8 strategic analysis identified 45+ test failures
+      # caused by mock targets pointing to moved/renamed modules after refactoring
+      # NOTE: Uses uv run to ensure project dependencies are available for validation
+      # This prevents false positives when system Python lacks pandas, openpyxl, etc.
+      - id: validate-mock-targets
+        name: validate-mock-targets
+        entry: uv run python3 scripts/validate-mock-targets.py
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+        files: ^tests/.*\.py$

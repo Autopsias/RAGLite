@@ -39,7 +39,7 @@ class TestEuropeanDecimalFormatParsing:
 
         Note: This test validates parsing logic but may skip if no data available.
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 
@@ -65,7 +65,7 @@ class TestEuropeanDecimalFormatParsing:
 
         Note: Tests that parentheses correctly indicate negative costs.
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 
@@ -88,7 +88,7 @@ class TestEuropeanDecimalFormatParsing:
 
         Note: Tests that parser handles both formats without confusion.
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 
@@ -128,7 +128,7 @@ class TestValueRangeFilteringBoundaries:
         When: Checking all extracted values
         Then: No values < -350 (lower bound enforced)
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 
@@ -149,7 +149,7 @@ class TestValueRangeFilteringBoundaries:
         When: Checking all extracted values
         Then: No values > -150 (upper bound enforced)
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 
@@ -172,7 +172,7 @@ class TestValueRangeFilteringBoundaries:
 
         Note: May skip if test data doesn't have exact boundary values.
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 
@@ -213,7 +213,7 @@ class TestEntityFilteringIntegration:
 
         Note: Validates that entity filtering is actually reducing search space.
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         # Extract with Portugal filter
         portugal_data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
@@ -241,7 +241,7 @@ class TestEntityFilteringIntegration:
 
         Note: Tests backwards compatibility if entity parameter is optional.
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         # Current implementation defaults to 'portugal', so entity=None may behave same as 'portugal'
         # This test validates backwards compatibility
@@ -275,7 +275,7 @@ class TestErrorHandlingEdgeCases:
 
         Note: This is expected behavior when using sample PDF without Variable Cost data.
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         # With sample PDF, this should return None (no Variable Cost data)
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
@@ -293,7 +293,7 @@ class TestErrorHandlingEdgeCases:
         When: Only <6 points are available
         Then: Returns None (insufficient data for forecasting)
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         # High min_points threshold (100) should cause None return if <100 points available
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal", min_points=100)
@@ -312,7 +312,7 @@ class TestErrorHandlingEdgeCases:
         When: No chunks match the entity filter
         Then: Returns None (graceful handling, no error)
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         # Try Tunisia filter (unlikely to have data in sample PDF)
         data = await extract_variable_cost_from_qdrant_chunks(entity="tunisia")
@@ -340,7 +340,7 @@ class TestCurrencyNormalizationIntegration:
 
         Note: Tunisia typically has ~350 TND/ton → ~108 EUR/ton after conversion.
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="tunisia")
 
@@ -365,7 +365,7 @@ class TestCurrencyNormalizationIntegration:
 
         Note: Brazil typically has ~580 BRL/ton → ~104 EUR/ton after conversion.
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="brazil")
 
@@ -390,7 +390,7 @@ class TestCurrencyNormalizationIntegration:
 
         Note: Portugal uses EUR natively, so no conversion should occur.
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 
@@ -422,7 +422,7 @@ class TestMetadataAndSourceTracking:
         When: Data is extracted from multiple documents
         Then: source_documents list contains unique document names
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 
@@ -446,7 +446,7 @@ class TestMetadataAndSourceTracking:
         When: Checking data points
         Then: All points have non-empty label field (e.g., "Oct-25")
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 
@@ -464,7 +464,7 @@ class TestMetadataAndSourceTracking:
         When: Checking date order
         Then: Points are sorted from earliest to latest
         """
-        from raglite.forecasting.timeseries_extract import extract_variable_cost_from_qdrant_chunks
+        from raglite.forecasting.timeseries import extract_variable_cost_from_qdrant_chunks
 
         data = await extract_variable_cost_from_qdrant_chunks(entity="portugal")
 

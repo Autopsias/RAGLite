@@ -62,6 +62,31 @@ async def test_bad_example(session_ingested_collection):
 2. Choose appropriate marker (`preserve_collection` or `manages_collection_state`)
 3. Add `@pytest.mark.slow` if test takes >30 seconds
 
+### CRITICAL: Fixture Definition Rule (Story 8 Strategic Fix)
+
+**When copying tests from other files, ALWAYS copy fixture definitions too.**
+
+Root cause from Story 8 analysis: 78 tests failed because fixture references were copied
+without copying the fixture definitions from conftest.py files.
+
+```python
+# WRONG: Copying test that uses db_session without copying the fixture
+def test_something(db_session):  # NameError: fixture 'db_session' not found
+    ...
+
+# CORRECT: When copying tests, also add the required fixture to conftest.py
+# In tests/integration/your_module/conftest.py:
+@pytest.fixture
+def db_session():
+    """Database session for tests."""
+    engine = create_engine(TEST_DATABASE_URL)
+    with Session(engine) as session:
+        yield session
+```
+
+**Prevention:** Pre-commit hook `validate-pytest-fixtures` runs `pytest --collect-only`
+to catch missing fixtures before commit.
+
 ### AFTER modifying tests:
 1. Run: `pytest tests/integration/ --skip-ingestion -v --durations=20`
 2. Verify total time is within budget (<10 minutes)
@@ -96,6 +121,253 @@ Per-Test Fixture (ensure_qdrant_test_isolation)
 - Individual test >60s without `@pytest.mark.slow` -> Add marker or optimize
 - `manages_collection_state` tests running back-to-back -> Ensure lazy restoration active
 - Chunk count validation failing -> Check for state pollution between tests
+
+---
+
+## Import Organization Rules (CRITICAL)
+
+### pytestmark Placement (E402 Violations)
+
+**pytestmark MUST be placed AFTER all imports, never before or between imports.**
+
+```python
+# WRONG: pytestmark before imports (violates ruff E402)
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+
+import pytest
+from raglite.ingestion import ingest_pdf
+
+# WRONG: pytestmark between imports (violates ruff E402)
+import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+
+from raglite.ingestion import ingest_pdf
+
+# CORRECT: All imports first, then pytestmark
+import pytest
+from raglite.ingestion import ingest_pdf
+
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+```
+
+**Why this matters:**
+- ruff E402 rule bans module-level code before imports
+- pytestmark is module-level code (assigns to module variable)
+- Placing it before/between imports causes CI linting failures
+- This is the #1 cause of E402 violations in test files
+
+**Quick fix:**
+1. Move ALL `import` and `from` statements to top of file
+2. Place `pytestmark` after ALL imports
+3. Run `ruff check --fix` to auto-fix remaining issues
+
+---
+
+## Mock Patching Rules (CRITICAL)
+
+### Patch Where Used, Not Where Defined
+
+**ALWAYS patch at the module where the function is IMPORTED and USED, not where it's defined.**
+
+```python
+# WRONG: Patches a non-existent attribute (causes silent pollution)
+patch("raglite.main.extract_timeseries", ...)  # Function doesn't exist in raglite.main!
+
+# CORRECT: Patch where the function is imported and used
+patch("raglite.mcp.tools.forecast.extract_timeseries", ...)
+
+# BEST: Use patch.object for type safety
+from raglite.mcp.tools import forecast
+patch.object(forecast, "extract_timeseries", new_callable=AsyncMock)
+```
+
+### Common Patch Target Mappings
+
+| Function | Wrong Target | Correct Target |
+|----------|--------------|----------------|
+| `extract_historical_data_by_type` | `raglite.main.*` | `raglite.mcp.tools.forecast.extract_historical_data_by_type` |
+| `extract_timeseries` | `raglite.main.*` | `raglite.mcp.tools.forecast.extract_timeseries` |
+| `generate_forecast` | `raglite.main.*` | `raglite.mcp.tools.forecast.generate_forecast` |
+| `get_mistral_client` | `raglite.shared.clients.*` | Where function is imported (e.g., `raglite.retrieval.query_classifier.get_mistral_client`) |
+
+### Why This Matters
+
+When you patch a non-existent module attribute:
+1. Python's `patch` creates the attribute temporarily
+2. After the test, it removes the attribute
+3. **BUT** other tests may have cached module references
+4. This causes **test pollution** where tests pass in isolation but fail in suite
+
+### Test Classification Rule
+
+**If a test mocks ALL external dependencies (database, API, etc.), it should be a UNIT test, not an integration test.**
+
+---
+
+## pytest-xdist Parallel Execution Rules (CRITICAL)
+
+### Worker Isolation Requirements
+
+**Tests using pytest-xdist (-n > 0) must ensure state isolation between workers.**
+
+```python
+# WRONG: Shared state causes race conditions
+@pytest.fixture(scope="session")
+def shared_counter():
+    return 0  # All workers share this - DATA RACE!
+
+# CORRECT: Worker-scoped or use xdist_group
+@pytest.fixture(scope="function")
+def worker_isolated_counter():
+    return 0  # Each worker gets its own
+
+# CORRECT: Use xdist_group to force single-worker execution
+@pytest.mark.xdist_group(name="qdrant_session")
+@pytest.fixture(scope="session")
+def session_collection():
+    # Only ONE worker runs this, others wait
+    return create_collection()
+```
+
+### Container State Pollution Prevention
+
+When using xdist with Docker containers:
+
+1. **Each worker needs unique container names** (not yet implemented - use `-n 0` or `-n 1` for now)
+2. **Test fixtures must detect worker ID** and adjust ports/names accordingly
+3. **Session fixtures must use xdist_group** to prevent concurrent initialization
+
+```python
+# Current workaround: Use single worker or sequential
+pytest tests/integration/ -n 0  # Sequential (safe but slow)
+pytest tests/integration/ -n 1  # Single worker (fast but no parallelism)
+
+# Future implementation (requires container naming changes):
+@pytest.fixture
+def worker_containers(worker_id):
+    port = 6335 + hash(worker_id) % 100  # Unique port per worker
+    return start_test_container(port)
+```
+
+### Current Best Practices
+
+1. **Unit tests**: `-n auto` safe (no shared state)
+2. **Integration tests**: `-n 1` (session fixture, single worker)
+3. **E2E tests**: `-n 0` (sequential, full isolation)
+4. **Avoid**: `-n 4` on integration tests (container state pollution)
+
+```python
+# This belongs in tests/unit/, NOT tests/integration/
+# All dependencies are mocked, no real infrastructure needed
+@pytest.mark.asyncio
+async def test_cache_hit_uses_cached_model():
+    with (
+        patch("raglite.mcp.tools.forecast.get_cached_model_selection", ...),
+        patch("raglite.mcp.tools.forecast.extract_historical_data_by_type", ...),
+        patch("raglite.mcp.tools.forecast.generate_forecast", ...),
+    ):
+        # Test logic here
+```
+
+---
+
+## isinstance Checks with pytest-xdist (CRITICAL)
+
+**Problem:** When using pytest-xdist (`-n auto`), each worker runs in a separate process.
+This causes `isinstance(obj, SomeClass)` to fail because `SomeClass` in each worker
+is a different object, even if it has the same name.
+
+### Prevention Rules
+
+1. **NEVER use isinstance() for class identity checks in tests**
+   ```python
+   # WRONG - fails with xdist
+   assert isinstance(result, TrendAnalysisResult)
+
+   # CORRECT - use duck-typing
+   assert result.__class__.__name__ == 'TrendAnalysisResult'
+   assert hasattr(result, 'trends')
+   assert hasattr(result, 'metrics_analyzed')
+   ```
+
+2. **NEVER use `in Enum` checks for enum membership**
+   ```python
+   # WRONG - fails with xdist
+   assert trend.direction in TrendDirection
+
+   # CORRECT - check enum value
+   assert trend.direction.name in ['INCREASING', 'DECREASING', 'STABLE']
+   # OR
+   assert trend.direction.value in ['increasing', 'decreasing', 'stable']
+   ```
+
+3. **For dataclasses, use attribute checks**
+   ```python
+   # WRONG
+   assert isinstance(result, ModelSelectionResult)
+
+   # CORRECT
+   assert result.__class__.__name__ == 'ModelSelectionResult'
+   assert hasattr(result, 'best_model')
+   assert hasattr(result, 'best_mape')
+   ```
+
+### When isinstance() IS Safe
+
+- Checking against built-in types: `isinstance(x, str)`, `isinstance(x, dict)`
+- Checking against typing module types: `isinstance(x, list)`
+- Checking against classes imported from external libraries (they're stable)
+
+---
+
+## Fixture Scope Conflicts (P1)
+
+### Problem
+
+Fixtures with different scopes can cause unexpected behavior when they depend on each other.
+
+### Rules
+
+1. **Function-scope fixtures cannot depend on session-scope fixtures with side effects**
+   ```python
+   # WRONG - state leaks between tests
+   @pytest.fixture(scope="session")
+   def db_connection():
+       conn = create_connection()
+       yield conn
+       conn.close()
+
+   @pytest.fixture(scope="function")
+   def user(db_connection):  # Dangerous!
+       # db_connection is shared across ALL tests
+       return create_user(db_connection)
+   ```
+
+2. **Use explicit scope markers for shared state**
+   ```python
+   @pytest.fixture(scope="session")
+   @pytest.mark.xdist_group(name="database")  # Force same worker
+   def db_connection():
+       ...
+   ```
+
+3. **Fixture location determines inheritance**
+   - `tests/conftest.py` - Available to ALL tests
+   - `tests/unit/conftest.py` - Available to unit tests only
+   - `tests/unit/module/conftest.py` - Available to that module only
+
+   If a test at `tests/unit/` uses a fixture from `tests/unit/module/conftest.py`,
+   pytest will NOT find it!
+
+### Common Fixture Scope Patterns
+
+| Fixture Scope | Use Case | xdist Behavior |
+|---------------|----------|----------------|
+| function | Isolated test data | Safe with `-n auto` |
+| class | Shared within test class | Safe with `-n auto` |
+| module | Shared within file | Safe with `-n auto` |
+| session | Global (e.g., DB connection) | MUST use xdist_group |
 
 ---
 
@@ -243,3 +515,29 @@ The auto-restart fixture calls `initialize_test_database_schema()` which ensures
 docker start raglite-postgresql-test
 APP_ENV=test uv run python scripts/init-test-postgresql.py
 ```
+
+---
+
+## Epic 8 Migration Guide
+
+**See:** `docs/sprint-artifacts/epic-8-migration-notes.md` for comprehensive migration documentation.
+
+### Key Breaking Changes (Epic 8)
+
+| Story | Change | Impact |
+|-------|--------|--------|
+| 8.1 | `historical_data` now required in `generate_ensemble_forecast` | Update all callers to pass data explicitly |
+| 8.2 | `get_cached_model_selection` now sync (was async) | Remove `await` and use `Mock` not `AsyncMock` |
+| 8.3 | `document_ingestion.py` split into package | Update mock targets to new module paths |
+| 8.4 | `db_session` fixture consolidated | Remove duplicate fixtures from subdirectories |
+
+### Mock Target Validation
+
+Run before committing test changes:
+
+```bash
+# Validate all mock targets exist
+python scripts/validate-mock-targets.py --verbose --fix-suggestions
+```
+
+This hook is also included in pre-commit and will block commits with stale mock targets.

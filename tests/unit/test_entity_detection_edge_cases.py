@@ -25,7 +25,7 @@ class TestEntityDetectionWordBoundaries:
         When: detect_entity() is called
         Then: Returns None (PT is not a standalone word)
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "PATTERN matching for costs"
         result = detect_entity(text)
@@ -38,7 +38,7 @@ class TestEntityDetectionWordBoundaries:
         When: detect_entity() is called
         Then: Returns None (TN is not a standalone word)
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "TNT shipping costs"
         result = detect_entity(text)
@@ -51,7 +51,7 @@ class TestEntityDetectionWordBoundaries:
         When: detect_entity() is called
         Then: Returns None (BR is not a standalone word)
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "BRAND costs analysis"
         result = detect_entity(text)
@@ -64,7 +64,7 @@ class TestEntityDetectionWordBoundaries:
         When: detect_entity() is called
         Then: Returns 'portugal'
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "PT costs EUR/ton"
         result = detect_entity(text)
@@ -77,7 +77,7 @@ class TestEntityDetectionWordBoundaries:
         When: detect_entity() is called
         Then: Returns 'tunisia'
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "TN costs TND/ton"
         result = detect_entity(text)
@@ -99,7 +99,7 @@ class TestEntityPriorityOrder:
         When: detect_entity() is called
         Then: Returns 'tunisia' (currency is more specific than language)
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "Tunisia Custos Variáveis TND/ton"
         result = detect_entity(text)
@@ -114,7 +114,7 @@ class TestEntityPriorityOrder:
         When: detect_entity() is called
         Then: Returns 'brazil' (currency is more specific than language)
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "Brazil Custos Variáveis BRL/ton"
         result = detect_entity(text)
@@ -129,7 +129,7 @@ class TestEntityPriorityOrder:
         When: detect_entity() is called
         Then: Returns 'tunisia'
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "Tunisia Variable Cost (no currency specified)"
         result = detect_entity(text)
@@ -150,7 +150,7 @@ class TestMalformedInputHandling:
         When: detect_entity() is called
         Then: Returns None (no entity detected)
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         result = detect_entity("")
         assert result is None, f"Expected None for empty string, got '{result}'"
@@ -162,7 +162,7 @@ class TestMalformedInputHandling:
         When: detect_entity() is called
         Then: Returns None
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         result = detect_entity("   \t\n   ")
         assert result is None, f"Expected None for whitespace-only, got '{result}'"
@@ -174,7 +174,7 @@ class TestMalformedInputHandling:
         When: detect_entity() is called
         Then: Still detects entity correctly without timeout/error
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         # Create long string with Portugal pattern embedded
         long_text = "x " * 5000 + "Portugal EUR/ton Variable Cost" + " x" * 5000
@@ -188,7 +188,7 @@ class TestMalformedInputHandling:
         When: detect_entity() is called
         Then: Correctly identifies entity
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "*** Portugal *** EUR/ton $$$ (281.1) %%% Variable Cost"
         result = detect_entity(text)
@@ -201,7 +201,7 @@ class TestMalformedInputHandling:
         When: detect_entity() is called
         Then: Correctly identifies entity
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         text = "Custos Variáveis Cémento Portugal EUR/m³"
         result = detect_entity(text)
@@ -222,7 +222,7 @@ class TestCurrencyConversionConstants:
         When: Importing CURRENCY_TO_EUR
         Then: Constant is accessible and is a dictionary
         """
-        from raglite.forecasting.timeseries_extract import CURRENCY_TO_EUR
+        from raglite.forecasting.timeseries import CURRENCY_TO_EUR
 
         assert isinstance(CURRENCY_TO_EUR, dict), "CURRENCY_TO_EUR should be a dictionary"
 
@@ -233,7 +233,7 @@ class TestCurrencyConversionConstants:
         When: Checking for 'TND' key
         Then: Key exists with reasonable conversion rate (>0, <1)
         """
-        from raglite.forecasting.timeseries_extract import CURRENCY_TO_EUR
+        from raglite.forecasting.timeseries import CURRENCY_TO_EUR
 
         assert "TND" in CURRENCY_TO_EUR, "CURRENCY_TO_EUR missing 'TND' key"
         rate = CURRENCY_TO_EUR["TND"]
@@ -246,7 +246,7 @@ class TestCurrencyConversionConstants:
         When: Checking for 'BRL' key
         Then: Key exists with reasonable conversion rate (>0, <1)
         """
-        from raglite.forecasting.timeseries_extract import CURRENCY_TO_EUR
+        from raglite.forecasting.timeseries import CURRENCY_TO_EUR
 
         assert "BRL" in CURRENCY_TO_EUR, "CURRENCY_TO_EUR missing 'BRL' key"
         rate = CURRENCY_TO_EUR["BRL"]
@@ -259,7 +259,7 @@ class TestCurrencyConversionConstants:
         When: Checking for 'EUR' key
         Then: Key exists with value exactly 1.0
         """
-        from raglite.forecasting.timeseries_extract import CURRENCY_TO_EUR
+        from raglite.forecasting.timeseries import CURRENCY_TO_EUR
 
         assert "EUR" in CURRENCY_TO_EUR, "CURRENCY_TO_EUR missing 'EUR' key"
         rate = CURRENCY_TO_EUR["EUR"]
@@ -272,7 +272,7 @@ class TestCurrencyConversionConstants:
         When: Checking conversion rate value
         Then: Rate is approximately 0.31 (+/- 0.1 tolerance for updates)
         """
-        from raglite.forecasting.timeseries_extract import CURRENCY_TO_EUR
+        from raglite.forecasting.timeseries import CURRENCY_TO_EUR
 
         rate = CURRENCY_TO_EUR["TND"]
         assert 0.21 <= rate <= 0.41, (
@@ -287,7 +287,7 @@ class TestCurrencyConversionConstants:
         When: Checking conversion rate value
         Then: Rate is approximately 0.18 (+/- 0.1 tolerance for updates)
         """
-        from raglite.forecasting.timeseries_extract import CURRENCY_TO_EUR
+        from raglite.forecasting.timeseries import CURRENCY_TO_EUR
 
         rate = CURRENCY_TO_EUR["BRL"]
         assert 0.08 <= rate <= 0.28, (
@@ -310,7 +310,7 @@ class TestEntityPatternEdgeCases:
         When: Checking each entity's pattern list
         Then: All lists have at least one pattern
         """
-        from raglite.forecasting.timeseries_extract import ENTITY_PATTERNS
+        from raglite.forecasting.timeseries import ENTITY_PATTERNS
 
         for entity, patterns in ENTITY_PATTERNS.items():
             assert len(patterns) > 0, f"{entity} has empty pattern list"
@@ -322,7 +322,7 @@ class TestEntityPatternEdgeCases:
         When: Checking pattern types
         Then: All patterns are strings
         """
-        from raglite.forecasting.timeseries_extract import ENTITY_PATTERNS
+        from raglite.forecasting.timeseries import ENTITY_PATTERNS
 
         for entity, patterns in ENTITY_PATTERNS.items():
             for pattern in patterns:
@@ -337,7 +337,7 @@ class TestEntityPatternEdgeCases:
         When: Checking for duplicates in each entity's patterns
         Then: All patterns are unique within each entity
         """
-        from raglite.forecasting.timeseries_extract import ENTITY_PATTERNS
+        from raglite.forecasting.timeseries import ENTITY_PATTERNS
 
         for entity, patterns in ENTITY_PATTERNS.items():
             unique_patterns = set(patterns)
@@ -361,7 +361,7 @@ class TestDetectEntityIntegrationPoints:
         When: detect_entity() is called
         Then: Returns 'portugal', 'tunisia', 'brazil' (lowercase only)
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         test_cases = [
             ("PORTUGAL costs", "portugal"),
@@ -386,7 +386,7 @@ class TestDetectEntityIntegrationPoints:
         When: detect_entity() is called
         Then: Detection works correctly (case-insensitive)
         """
-        from raglite.forecasting.timeseries_extract import detect_entity
+        from raglite.forecasting.timeseries import detect_entity
 
         # Test mixed case variations
         test_cases = [
@@ -418,7 +418,7 @@ class TestCurrencyNormalizationEdgeCases:
         When: Converting to EUR
         Then: Result remains negative
         """
-        from raglite.forecasting.timeseries_extract import CURRENCY_TO_EUR
+        from raglite.forecasting.timeseries import CURRENCY_TO_EUR
 
         # Simulate Tunisia cost conversion
         tnd_cost = -350.0  # TND/ton
@@ -437,7 +437,7 @@ class TestCurrencyNormalizationEdgeCases:
         When: Converting to EUR
         Then: Results are in expected Portugal EUR/ton range (-150 to -350)
         """
-        from raglite.forecasting.timeseries_extract import CURRENCY_TO_EUR
+        from raglite.forecasting.timeseries import CURRENCY_TO_EUR
 
         # Tunisia typical cost: ~350 TND/ton → ~108 EUR/ton (after conversion)
         # But we expect values in -150 to -350 range, so this validates conversion logic

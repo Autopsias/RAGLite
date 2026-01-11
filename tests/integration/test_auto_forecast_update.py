@@ -10,7 +10,11 @@ import pytest
 from raglite.shared.models import DocumentMetadata, IngestionResult
 
 # All tests in this file use mocks and don't modify Qdrant collection state
-pytestmark = pytest.mark.preserve_collection
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,  # Tests involve async pipeline operations
+]
 
 # =============================================================================
 # Test MCP Ingestion with Forecast Refresh
@@ -23,7 +27,7 @@ class TestMCPIngestionWithForecast:
     @pytest.mark.asyncio
     async def test_ingestion_returns_ingestion_result(self):
         """Test that ingest_financial_document returns IngestionResult (AC4)."""
-        from raglite.mcp.tools.ingestion import ingest_financial_document
+        from raglite.mcp.tools.ingestion_tool import ingest_financial_document
 
         # Mock the entire ingestion pipeline
         mock_metadata = DocumentMetadata(
@@ -37,12 +41,14 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.ingestion.ingest_document",
+                "raglite.mcp.tools.ingestion_tool.ingest_document",
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
-            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
-            patch("raglite.mcp.tools.ingestion.trigger_forecast_refresh", new_callable=AsyncMock),
+            patch("raglite.shared.config.settings") as mock_settings,
+            patch(
+                "raglite.forecasting.auto_update.trigger_forecast_refresh", new_callable=AsyncMock
+            ),
             patch("pathlib.Path.exists", return_value=True),
         ):
             mock_settings.enable_forecast_auto_update = False  # Disable to simplify test
@@ -57,7 +63,7 @@ class TestMCPIngestionWithForecast:
     @pytest.mark.asyncio
     async def test_ingestion_with_forecast_refresh_enabled(self):
         """Test that forecast refresh is triggered when enabled (AC1)."""
-        from raglite.mcp.tools.ingestion import ingest_financial_document
+        from raglite.mcp.tools.ingestion_tool import ingest_financial_document
         from raglite.shared.models import ForecastRefreshResult
 
         mock_metadata = DocumentMetadata(
@@ -79,13 +85,13 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.ingestion.ingest_document",
+                "raglite.mcp.tools.ingestion_tool.ingest_document",
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
-            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
+            patch("raglite.shared.config.settings") as mock_settings,
             patch(
-                "raglite.mcp.tools.ingestion.trigger_forecast_refresh",
+                "raglite.forecasting.auto_update.trigger_forecast_refresh",
                 new_callable=AsyncMock,
                 return_value=mock_refresh_result,
             ) as mock_refresh,
@@ -106,7 +112,7 @@ class TestMCPIngestionWithForecast:
     @pytest.mark.asyncio
     async def test_ingestion_with_auto_forecast_false(self):
         """Test that forecast refresh is skipped when auto_forecast=False."""
-        from raglite.mcp.tools.ingestion import ingest_financial_document
+        from raglite.mcp.tools.ingestion_tool import ingest_financial_document
 
         mock_metadata = DocumentMetadata(
             filename="Report.pdf",
@@ -119,13 +125,13 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.ingestion.ingest_document",
+                "raglite.mcp.tools.ingestion_tool.ingest_document",
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
-            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
+            patch("raglite.shared.config.settings") as mock_settings,
             patch(
-                "raglite.mcp.tools.ingestion.trigger_forecast_refresh", new_callable=AsyncMock
+                "raglite.forecasting.auto_update.trigger_forecast_refresh", new_callable=AsyncMock
             ) as mock_refresh,
             patch("pathlib.Path.exists", return_value=True),
         ):
@@ -146,7 +152,7 @@ class TestMCPIngestionWithForecast:
     @pytest.mark.asyncio
     async def test_ingestion_with_settings_disabled(self):
         """Test that forecast refresh is skipped when disabled in settings."""
-        from raglite.mcp.tools.ingestion import ingest_financial_document
+        from raglite.mcp.tools.ingestion_tool import ingest_financial_document
 
         mock_metadata = DocumentMetadata(
             filename="Report.pdf",
@@ -159,13 +165,13 @@ class TestMCPIngestionWithForecast:
 
         with (
             patch(
-                "raglite.mcp.tools.ingestion.ingest_document",
+                "raglite.mcp.tools.ingestion_tool.ingest_document",
                 new_callable=AsyncMock,
                 return_value=mock_metadata,
             ),
-            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
+            patch("raglite.shared.config.settings") as mock_settings,
             patch(
-                "raglite.mcp.tools.ingestion.trigger_forecast_refresh", new_callable=AsyncMock
+                "raglite.forecasting.auto_update.trigger_forecast_refresh", new_callable=AsyncMock
             ) as mock_refresh,
             patch("pathlib.Path.exists", return_value=True),
         ):
@@ -270,7 +276,7 @@ class TestForecastRefreshPipeline:
     async def test_pipeline_partial_success(self):
         """Test pipeline handles partial success (some metrics fail)."""
         from raglite.forecasting.auto_update import trigger_forecast_refresh
-        from raglite.forecasting.hybrid import InsufficientDataError
+        from raglite.forecasting.models.base import InsufficientDataError
 
         metadata = DocumentMetadata(
             filename="Quarterly_Report.pdf",
@@ -348,7 +354,7 @@ class TestTimeoutBehavior:
         """Test that MCP ingestion handles forecast timeout gracefully (AC3)."""
         import asyncio
 
-        from raglite.mcp.tools.ingestion import _perform_forecast_refresh
+        from raglite.mcp.tools.ingestion_tool import _perform_forecast_refresh
         from raglite.shared.models import ForecastRefreshResult
 
         metadata = DocumentMetadata(
@@ -371,9 +377,9 @@ class TestTimeoutBehavior:
             )
 
         with (
-            patch("raglite.mcp.tools.ingestion.settings") as mock_settings,
+            patch("raglite.shared.config.settings") as mock_settings,
             patch(
-                "raglite.mcp.tools.ingestion.trigger_forecast_refresh",
+                "raglite.forecasting.auto_update.trigger_forecast_refresh",
                 new_callable=AsyncMock,
                 side_effect=slow_refresh,
             ),

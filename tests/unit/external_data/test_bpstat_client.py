@@ -1,7 +1,8 @@
 """Unit tests for BPstat (Banco de Portugal) client.
 
 Story 7.1: Split test_external_data_clients.py
-This module contains tests for: TestBPstatClient, TestBPstatClientAdditional, TestBPstatStory693, TestStory68BPstatExtensions
+This module contains tests for: TestBPstatClient, TestBPstatClientAdditional,
+TestBPstatStory693, TestStory68BPstatExtensions
 """
 
 from __future__ import annotations
@@ -107,12 +108,18 @@ class TestBPstatClientAdditional:
 
     def test_parse_interest_rate_data_empty(self, client: BPstatClient) -> None:
         """Test empty observations parsing (Story 6.9.3)."""
+        from raglite.external_data.clients.bpstat.parsers import BPstatParser
+
+        parser = BPstatParser(client.MORTGAGE_RATE_MEDIAN, client.MORTGAGE_LOANS_SERIES)
         response = {"observations": []}
-        result = client._parse_interest_rate_data(response, [client.MORTGAGE_RATE_MEDIAN])
+        result = parser.parse_interest_rate_data(response, [client.MORTGAGE_RATE_MEDIAN])
         assert len(result) == 0
 
     def test_parse_interest_rate_data_multiple_periods(self, client: BPstatClient) -> None:
         """Test multiple periods parsing (Story 6.9.3 AC3)."""
+        from raglite.external_data.clients.bpstat.parsers import BPstatParser
+
+        parser = BPstatParser(client.MORTGAGE_RATE_MEDIAN, client.MORTGAGE_LOANS_SERIES)
         response = {
             "observations": [
                 {"period": "2024-01", "value": 3.45, "series_id": "12710733"},
@@ -121,7 +128,7 @@ class TestBPstatClientAdditional:
             ]
         }
 
-        result = client._parse_interest_rate_data(response, [client.MORTGAGE_RATE_MEDIAN])
+        result = parser.parse_interest_rate_data(response, [client.MORTGAGE_RATE_MEDIAN])
 
         assert len(result) == 3
         assert result[0].avg_interest_rate_pct == 3.45
@@ -172,8 +179,10 @@ class TestBPstatStory693:
     def test_new_response_parsing(self) -> None:
         """AC3: Verify new API response parsing."""
         from raglite.external_data.clients.bpstat import BPstatClient
+        from raglite.external_data.clients.bpstat.parsers import BPstatParser
 
         client = BPstatClient()
+        parser = BPstatParser(client.MORTGAGE_RATE_MEDIAN, client.MORTGAGE_LOANS_SERIES)
 
         # New API response format
         response = {
@@ -183,7 +192,7 @@ class TestBPstatStory693:
             ]
         }
 
-        result = client._parse_interest_rate_data(response, ["12710733"])
+        result = parser.parse_interest_rate_data(response, ["12710733"])
 
         assert len(result) == 2
         assert result[0].avg_interest_rate_pct == 3.45
@@ -195,12 +204,14 @@ class TestBPstatStory693:
     def test_response_parsing_with_refperiod_key(self) -> None:
         """AC3: Verify both 'period' and 'refPeriod' keys handled."""
         from raglite.external_data.clients.bpstat import BPstatClient
+        from raglite.external_data.clients.bpstat.parsers import BPstatParser
 
         client = BPstatClient()
+        parser = BPstatParser(client.MORTGAGE_RATE_MEDIAN, client.MORTGAGE_LOANS_SERIES)
         response = {
             "observations": [{"refPeriod": "2024-01", "value": 3.45, "series_id": "12710733"}]
         }
-        result = client._parse_interest_rate_data(response, ["12710733"])
+        result = parser.parse_interest_rate_data(response, ["12710733"])
 
         assert len(result) == 1
         assert result[0].avg_interest_rate_pct == 3.45
@@ -208,8 +219,10 @@ class TestBPstatStory693:
     def test_response_parsing_skips_invalid_entries(self) -> None:
         """AC3: Verify invalid observations skipped."""
         from raglite.external_data.clients.bpstat import BPstatClient
+        from raglite.external_data.clients.bpstat.parsers import BPstatParser
 
         client = BPstatClient()
+        parser = BPstatParser(client.MORTGAGE_RATE_MEDIAN, client.MORTGAGE_LOANS_SERIES)
         response = {
             "observations": [
                 {"period": "2024-01", "value": 3.45, "series_id": "12710733"},
@@ -218,7 +231,7 @@ class TestBPstatStory693:
                 {"period": "2024-04", "value": 3.65, "series_id": "12710733"},
             ]
         }
-        result = client._parse_interest_rate_data(response, ["12710733"])
+        result = parser.parse_interest_rate_data(response, ["12710733"])
 
         assert len(result) == 2
         assert result[0].avg_interest_rate_pct == 3.45
@@ -322,21 +335,24 @@ class TestStory68BPstatExtensions:
 
     def test_parse_bank_appraisal_data_empty(self, client: BPstatClient) -> None:
         """AC2.2: Test parsing empty response."""
+        from raglite.external_data.clients.bpstat.parsers import parse_bank_appraisal_data
 
         response = {"data": []}
-        result = client._parse_bank_appraisal_data(response)
+        result = parse_bank_appraisal_data(response)
 
         assert len(result) == 0
 
     def test_parse_bank_appraisal_data_with_reference_date(self, client: BPstatClient) -> None:
         """AC2.2: Test parsing with reference_date format."""
+        from raglite.external_data.clients.bpstat.parsers import parse_bank_appraisal_data
+
         response = {
             "data": [
                 {"reference_date": "2024-01-31", "value": 1300.00},
             ]
         }
 
-        result = client._parse_bank_appraisal_data(response)
+        result = parse_bank_appraisal_data(response)
 
         assert len(result) == 1
         assert result[0].date == date(2024, 1, 1)

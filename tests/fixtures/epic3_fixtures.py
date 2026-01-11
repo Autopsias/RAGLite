@@ -7,6 +7,7 @@ and sample catalog data following fixture-architecture.md patterns:
 - Type-safe and isolated
 """
 
+from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock
@@ -157,7 +158,7 @@ def mock_catalog_json_content() -> str:
 
 # Integration test fixture with auto-cleanup
 @pytest.fixture
-async def real_db_with_cleanup():
+async def real_db_with_cleanup() -> AsyncGenerator[Any, None]:
     """Provide real database client with auto-cleanup after test.
 
     Setup:

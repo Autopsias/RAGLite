@@ -21,6 +21,7 @@ warnings.filterwarnings("ignore")
 async def investigate_poor_performers():
     """Deep investigation of poor performing variables."""
     from raglite.forecasting.model_selection_job import fetch_historical_data
+
     from raglite.forecasting.regime_detection import detect_regime_changes
 
     poor_performers = [

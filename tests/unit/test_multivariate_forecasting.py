@@ -14,19 +14,19 @@ import numpy as np
 import pandas as pd
 import pytest
 
-# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
-# These tests require real Prophet for multi-variate forecasting
-pytestmark = pytest.mark.skipif(
-    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
-    reason="Multi-variate forecasting tests require real Prophet (not mocked)",
-)
-
 from raglite.forecasting.hybrid import (  # noqa: E402
     _generate_future_regressors,
     calculate_accuracy,
     get_baseline_rmse,
     prepare_regressors,
     select_regressors,
+)
+
+# Skip all tests in this module when running in LIGHTWEIGHT_TESTS mode
+# These tests require real Prophet for multi-variate forecasting
+pytestmark = pytest.mark.skipif(
+    os.environ.get("LIGHTWEIGHT_TESTS") == "true",
+    reason="Multi-variate forecasting tests require real Prophet (not mocked)",
 )
 
 

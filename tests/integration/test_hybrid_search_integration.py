@@ -20,8 +20,6 @@ Performance Optimization:
   to avoid 6+ second import overhead during test discovery (critical for test explorers)
 """
 
-import time
-
 import pytest
 
 # Import constants from scripts (lightweight, no heavy dependencies)
@@ -33,6 +31,13 @@ from scripts.accuracy_utils import NFR13_P95_TARGET_MS
 #   from raglite.retrieval.search import hybrid_search
 #   from raglite.retrieval.attribution import generate_citations
 from tests.fixtures.ground_truth import GROUND_TRUTH_QA
+from tests.integration.helpers.hybrid_search_helpers import (
+    collect_all_query_results,
+    print_accuracy_results,
+    validate_attribution_accuracy,
+    validate_latency,
+    validate_retrieval_accuracy,
+)
 
 # Mark all tests in this module as integration tests that preserve collection state
 pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
@@ -250,157 +255,16 @@ class TestHybridSearchIntegration:
 
         With the 10-page sample PDF, this test will fail/skip due to insufficient data.
         """
-        # Lazy imports to avoid test discovery overhead
-        from raglite.retrieval.attribution import generate_citations
-        from raglite.retrieval.search import hybrid_search
-        from raglite.shared.clients import get_qdrant_client
-        from raglite.shared.config import settings
-        from scripts.accuracy_utils import (
-            calculate_performance_metrics,
-            check_attribution_accuracy,
-            check_retrieval_accuracy,
-        )
-
-        # VALIDATION: Check if Qdrant has data before running test
-        qdrant = get_qdrant_client()
-        collection_info = qdrant.get_collection(settings.qdrant_collection_name)
-
-        if collection_info.points_count == 0:
-            pytest.skip(
-                "Qdrant collection is empty. Run 'python scripts/ingest-whole-pdf.py' "
-                "to populate test data before running this test."
-            )
-
-        # Note: Element-aware chunking produces ~900-1200 chunks for 160-page PDF
-        # (fewer than fixed 512-token chunking due to semantic element boundaries)
-        MIN_REQUIRED_POINTS = 800  # Minimum for meaningful accuracy testing
-
-        if collection_info.points_count < MIN_REQUIRED_POINTS:
-            pytest.skip(
-                f"Qdrant collection has only {collection_info.points_count} points. "
-                f"Expected ~900-1200 points for full 160-page PDF with element-aware chunking. "
-                f"Run 'python scripts/ingest-whole-pdf.py' and wait for completion."
-            )
-
-        print("\n" + "=" * 80)
-        print("ELEMENT-AWARE CHUNKING VALIDATION (Story 2.2 AC3 - DECISION GATE)")
-        print("=" * 80)
-        print(f"Qdrant data validated: {collection_info.points_count} points available")
-        print(f"Running {len(GROUND_TRUTH_QA)} queries with hybrid search + element chunking...")
-        print("MANDATORY: ≥64% retrieval accuracy (32/50 queries)")
-        print("STRETCH: ≥68% retrieval accuracy (34/50 queries)")
-        print("BASELINE: 56% (28/50 queries with fixed chunking)")
-        print("=" * 80 + "\n")
-
-        results = []
-        latencies = []
-
-        for i, qa in enumerate(GROUND_TRUTH_QA, start=1):
-            print(f"  [{i}/{len(GROUND_TRUTH_QA)}] {qa['question'][:60]}...", end=" ")
-
-            start_time = time.time()
-
-            # Run hybrid search (alpha=0.5 for balanced semantic/BM25 fusion)
-            query_results = await hybrid_search(
-                query=qa["question"], top_k=5, alpha=0.5, enable_hybrid=True
-            )
-            query_results = await generate_citations(query_results)
-
-            latency_ms = (time.time() - start_time) * 1000
-            latencies.append(latency_ms)
-
-            # Check accuracy
-            retrieval_result = check_retrieval_accuracy(qa, query_results)
-            attribution_result = check_attribution_accuracy(qa, query_results)
-
-            results.append(
-                {
-                    "query_id": qa["id"],
-                    "latency_ms": latency_ms,
-                    "retrieval": retrieval_result,
-                    "attribution": attribution_result,
-                }
-            )
-
-            status = "✓" if retrieval_result["pass_"] else "✗"
-            print(f"{status} ({latency_ms:.0f}ms)")
-
-        # Calculate metrics
-        metrics = calculate_performance_metrics(results)
+        # Collect all query results and metrics
+        results, latencies, metrics, collection_info = await collect_all_query_results()
 
         # Print results
-        print("\n" + "=" * 80)
-        print("HYBRID SEARCH ACCURACY RESULTS")
-        print("=" * 80)
-        print(f"  Retrieval Accuracy:   {metrics['retrieval_accuracy']:.1f}% (target: ≥70%)")
-        print(f"  Attribution Accuracy: {metrics['attribution_accuracy']:.1f}% (target: ≥45%)")
-        print(f"  p50 Latency:          {metrics['p50_latency_ms']:.0f}ms")
-        print(
-            f"  p95 Latency:          {metrics['p95_latency_ms']:.0f}ms (limit: {LATENCY_CEILING_P95}ms)"
-        )
-        print("=" * 80)
+        print_accuracy_results(metrics, LATENCY_CEILING_P95)
 
-        # Compare to baseline (for informational purposes)
-        baseline_retrieval = 56.0
-        baseline_attribution = 32.0
-        retrieval_improvement = metrics["retrieval_accuracy"] - baseline_retrieval
-        attribution_improvement = metrics["attribution_accuracy"] - baseline_attribution
-
-        print("\nIMPROVEMENT OVER EPIC 1 BASELINE:")
-        print(f"  Retrieval:   {retrieval_improvement:+.1f}pp (baseline: {baseline_retrieval}%)")
-        print(
-            f"  Attribution: {attribution_improvement:+.1f}pp (baseline: {baseline_attribution}%)"
-        )
-        print("=" * 80 + "\n")
-
-        # CRITICAL ASSERTION: Story 2.2 AC3 - Retrieval accuracy must be ≥64% (MANDATORY)
-        # Original target was 70% for Story 2.1, but Story 2.2 AC3 adjusted to 64% mandatory, 68% stretch
-        STORY_2_2_MANDATORY_TARGET = 64.0  # 32/50 queries
-        STORY_2_2_STRETCH_TARGET = 68.0  # 34/50 queries
-
-        assert metrics["retrieval_accuracy"] >= STORY_2_2_MANDATORY_TARGET, (
-            f"STORY 2.2 AC3 FAILED: Retrieval accuracy {metrics['retrieval_accuracy']:.1f}% "
-            f"is below {STORY_2_2_MANDATORY_TARGET}% mandatory target. "
-            f"Expected ≥{STORY_2_2_MANDATORY_TARGET}% for element-aware chunking + hybrid search. "
-            f"Baseline was 56%. Element-aware chunking must achieve ≥{STORY_2_2_MANDATORY_TARGET}% to pass AC3.\n"
-            f"DECISION GATE: <64% = ESCALATE TO PM (Story 2.2 BLOCKED)"
-        )
-
-        # Check if stretch target achieved for high confidence
-        if metrics["retrieval_accuracy"] >= STORY_2_2_STRETCH_TARGET:
-            print(
-                f"\n✓ STRETCH GOAL ACHIEVED: {metrics['retrieval_accuracy']:.1f}% ≥ {STORY_2_2_STRETCH_TARGET}% "
-                f"(high confidence in element-aware chunking approach)"
-            )
-        elif metrics["retrieval_accuracy"] >= STORY_2_2_MANDATORY_TARGET:
-            print(
-                f"\n⚠ MANDATORY TARGET MET: {metrics['retrieval_accuracy']:.1f}% in range "
-                f"[{STORY_2_2_MANDATORY_TARGET}%, {STORY_2_2_STRETCH_TARGET}%) "
-                f"(proceed with caution flag)"
-            )
-        else:
-            print(
-                f"\n❌ MANDATORY TARGET MISSED: {metrics['retrieval_accuracy']:.1f}% < "
-                f"{STORY_2_2_MANDATORY_TARGET}% (ESCALATE TO PM)"
-            )
-
-        # Target assertion: Attribution accuracy should improve
-        # Note: This is a target, not a hard requirement for story completion
-        if metrics["attribution_accuracy"] >= HYBRID_ATTRIBUTION_TARGET:
-            print(
-                f"✓ Attribution accuracy {metrics['attribution_accuracy']:.1f}% meets target (≥45%)"
-            )
-        else:
-            print(
-                f"⚠ Attribution accuracy {metrics['attribution_accuracy']:.1f}% below target "
-                f"(≥45%), but story can still pass if retrieval ≥70%"
-            )
-
-        # NFR13 compliance: p95 latency <15s (includes cold-start)
-        assert metrics["p95_latency_ms"] < LATENCY_CEILING_P95, (
-            f"NFR13 VIOLATION: p95 latency {metrics['p95_latency_ms']:.0f}ms "
-            f"exceeds {LATENCY_CEILING_P95}ms limit"
-        )
+        # Validate accuracy and latency
+        validate_retrieval_accuracy(metrics)
+        validate_attribution_accuracy(metrics, HYBRID_ATTRIBUTION_TARGET)
+        validate_latency(metrics, LATENCY_CEILING_P95)
 
     @pytest.mark.skip(
         reason="Story 2.1 - BM25 fusion degrading results due to fragmented chunk data. Hybrid (53.3%) worse than semantic (60.0%) on 15-query subset. Root cause: BM25 trained on fragmented table chunks produces poor keyword matches that lower semantic scores when fused. Requires Story 2.2 element-based chunking to create coherent chunks that BM25 can properly index."

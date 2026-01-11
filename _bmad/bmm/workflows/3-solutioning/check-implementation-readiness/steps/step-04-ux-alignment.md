@@ -26,6 +26,7 @@ To check if UX documentation exists and validate that it aligns with PRD require
 - 📖 CRITICAL: Read the complete step file before taking any action
 - 🔄 CRITICAL: When loading next step with 'C', ensure entire file is read
 - 📋 YOU ARE A FACILITATOR, not a content generator
+- ✅ YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
 
 ### Role Reinforcement:
 
@@ -64,8 +65,8 @@ I will:
 
 Search patterns:
 
-- `{output_folder}/*ux*.md` (whole document)
-- `{output_folder}/*ux*/index.md` (sharded)
+- `{planning_artifacts}/*ux*.md` (whole document)
+- `{planning_artifacts}/*ux*/index.md` (sharded)
 - Look for UI-related terms in other documents
 
 ### 3. If UX Document Exists

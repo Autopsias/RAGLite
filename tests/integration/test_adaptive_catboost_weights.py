@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -68,14 +69,15 @@ class TestAdaptiveCatBoostWeights:
         """
         from raglite.forecasting.hybrid import generate_ensemble_forecast
 
-        result = await generate_ensemble_forecast(
-            metric="cement_demand",
-            historical_data=sample_historical_data,
-            external_regressors=None,  # No regressors - CatBoost can't run
-            periods_ahead=4,
-            models=["prophet", "catboost"],  # Explicitly include CatBoost in request
-            fast_mode=True,
-        )
+        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
+            mock_fetch.return_value = sample_historical_data
+            result = await generate_ensemble_forecast(
+                metric="cement_demand",
+                external_regressors=None,  # No regressors - CatBoost can't run
+                periods_ahead=4,
+                models=["prophet", "catboost"],  # Explicitly include CatBoost in request
+                fast_mode=True,
+            )
 
         # Should have forecasts
         assert len(result.forecast) == 4

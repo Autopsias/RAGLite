@@ -214,6 +214,139 @@ Provide possible business implications of this trend. Be specific but concise.""
         )
 
 
+def _extract_metric_data(ts: TimeSeriesData) -> tuple[list[float], list[str]]:
+    """Extract values and dates from timeseries data.
+
+    Args:
+        ts: TimeSeriesData to extract from
+
+    Returns:
+        Tuple of (values list, dates list)
+    """
+    values = [p.value for p in ts.points]
+    dates = [p.label or p.date.strftime("%Y-%m-%d") for p in ts.points]
+    return values, dates
+
+
+def _calculate_confidence(values: list[float]) -> float:
+    """Calculate trend confidence based on data consistency.
+
+    Higher confidence if QoQ growth is consistent (low std deviation).
+
+    Args:
+        values: Time series values
+
+    Returns:
+        Confidence score between 0.0 and 1.0
+    """
+    if len(values) <= 1:
+        return 0.0
+
+    growth_std = float(
+        np.std(
+            [
+                (values[i] - values[i - 1]) / values[i - 1]
+                for i in range(1, len(values))
+                if values[i - 1] != 0
+            ]
+        )
+    )
+    return round(max(0.0, min(1.0, 1.0 - growth_std)), 2)
+
+
+def _create_trend(
+    metric: str,
+    values: list[float],
+    dates: list[str],
+    auto_explain: bool,
+) -> Trend:
+    """Create a Trend object from timeseries data.
+
+    Args:
+        metric: Metric name
+        values: Time series values
+        dates: Corresponding dates
+        auto_explain: Whether to generate LLM explanation
+
+    Returns:
+        Trend object with calculated metrics
+    """
+    years = len(values) * 0.25  # Assume quarterly data
+    cagr = calculate_cagr(values[0], values[-1], years)
+    qoq = calculate_qoq_growth(values)
+    direction = classify_direction(cagr)
+    magnitude = abs(cagr) * 100
+
+    trend = Trend(
+        metric=metric,
+        direction=direction,
+        magnitude=round(magnitude, 1),
+        confidence=_calculate_confidence(values),
+        start_date=dates[0],
+        end_date=dates[-1],
+        cagr=round(cagr, 4),
+        qoq_growth=round(qoq, 2),
+    )
+
+    logger.info(
+        "Trend detected",
+        extra={
+            "metric": metric,
+            "direction": direction.value,
+            "magnitude": round(magnitude, 1),
+            "cagr": round(cagr, 4),
+            "qoq_growth": round(qoq, 2),
+            "confidence": trend.confidence,
+            "start_date": dates[0],
+            "end_date": dates[-1],
+            "data_points": len(values),
+        },
+    )
+
+    return trend
+
+
+def _find_significant_correlations(
+    metrics_values: dict[str, list[float]],
+) -> list[CorrelationResult]:
+    """Find all significant correlations between metric pairs.
+
+    Args:
+        metrics_values: Dict mapping metric names to value lists
+
+    Returns:
+        List of significant CorrelationResult objects (|r| > 0.4, p < 0.1)
+    """
+    correlations: list[CorrelationResult] = []
+
+    for metric_a, metric_b in combinations(metrics_values.keys(), 2):
+        values_a = metrics_values[metric_a]
+        values_b = metrics_values[metric_b]
+
+        min_len = min(len(values_a), len(values_b))
+        if min_len < 3:
+            continue
+
+        try:
+            corr = detect_correlation(metric_a, metric_b, values_a[:min_len], values_b[:min_len])
+            if abs(corr.correlation_coefficient) > 0.4 and corr.p_value < 0.1:
+                correlations.append(corr)
+                logger.info(
+                    "Correlation detected",
+                    extra={
+                        "metric_a": metric_a,
+                        "metric_b": metric_b,
+                        "correlation": corr.correlation_coefficient,
+                        "p_value": corr.p_value,
+                        "interpretation": corr.interpretation,
+                    },
+                )
+        except ValueError as e:
+            logger.warning(f"Correlation detection failed for {metric_a}/{metric_b}: {e}")
+
+    return correlations
+
+
 async def analyze_trends(
     metrics: list[str],
     timeseries_data: dict[str, TimeSeriesData],
@@ -253,7 +386,6 @@ async def analyze_trends(
         Trend(metric="revenue", direction=INCREASING, magnitude=15.2, ...)
     """
     trends: list[Trend] = []
-    correlations: list[CorrelationResult] = []
     metrics_values: dict[str, list[float]] = {}
 
     logger.info(
@@ -278,97 +410,20 @@ async def analyze_trends(
                 "Minimum 3 required for trend analysis."
             )
 
-        values = [p.value for p in ts.points]
-        dates = [p.label or p.date.strftime("%Y-%m-%d") for p in ts.points]
+        values, dates = _extract_metric_data(ts)
         metrics_values[metric] = values
 
-        # Calculate years for CAGR (assume quarterly data = 0.25 years per point)
-        years = len(values) * 0.25
+        trend = _create_trend(metric, values, dates, auto_explain)
 
-        # Calculate growth metrics
-        cagr = calculate_cagr(values[0], values[-1], years)
-        qoq = calculate_qoq_growth(values)
-        direction = classify_direction(cagr)
-        magnitude = abs(cagr) * 100  # Convert to percentage
-
-        # Calculate confidence based on data consistency
-        # Higher confidence if QoQ growth is consistent with CAGR direction
-        std_growth = (
-            float(
-                np.std(
-                    [
-                        (values[i] - values[i - 1]) / values[i - 1]
-                        for i in range(1, len(values))
-                        if values[i - 1] != 0
-                    ]
-                )
-            )
-            if len(values) > 1
-            else 0.0
-        )
-        confidence = max(0.0, min(1.0, 1.0 - std_growth))
-
-        trend = Trend(
-            metric=metric,
-            direction=direction,
-            magnitude=round(magnitude, 1),
-            confidence=round(confidence, 2),
-            start_date=dates[0],
-            end_date=dates[-1],
-            cagr=round(cagr, 4),
-            qoq_growth=round(qoq, 2),
-        )
-
-        # Auto-explain if requested
         if auto_explain:
             trend.description = await explain_trend(trend)
 
         trends.append(trend)
 
-        # AC4: Structured logging for each detected trend
-        logger.info(
-            "Trend detected",
-            extra={
-                "metric": metric,
-                "direction": direction.value,
-                "magnitude": round(magnitude, 1),
-                "cagr": round(cagr, 4),
-                "qoq_growth": round(qoq, 2),
-                "confidence": round(confidence, 2),
-                "start_date": dates[0],
-                "end_date": dates[-1],
-                "data_points": len(values),
-            },
-        )
-
     # Detect correlations between all metric pairs
-    if len(metrics_values) >= 2:
-        for metric_a, metric_b in combinations(metrics_values.keys(), 2):
-            values_a = metrics_values[metric_a]
-            values_b = metrics_values[metric_b]
-
-            # Ensure same length for correlation
-            min_len = min(len(values_a), len(values_b))
-            if min_len >= 3:
-                try:
-                    corr = detect_correlation(
-                        metric_a, metric_b, values_a[:min_len], values_b[:min_len]
-                    )
-                    # Only include significant correlations (|r| > 0.4 and p < 0.1)
-                    if abs(corr.correlation_coefficient) > 0.4 and corr.p_value < 0.1:
-                        correlations.append(corr)
-                        logger.info(
-                            "Correlation detected",
-                            extra={
-                                "metric_a": metric_a,
-                                "metric_b": metric_b,
-                                "correlation": corr.correlation_coefficient,
-                                "p_value": corr.p_value,
-                                "interpretation": corr.interpretation,
-                            },
-                        )
-                except ValueError as e:
-                    logger.warning(f"Correlation detection failed for {metric_a}/{metric_b}: {e}")
+    correlations = (
+        _find_significant_correlations(metrics_values) if len(metrics_values) >= 2 else []
+    )
 
     logger.info(
         "Trend analysis complete",

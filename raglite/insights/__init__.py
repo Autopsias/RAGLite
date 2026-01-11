@@ -22,8 +22,8 @@ from raglite.insights.recommendations import (
     generate_recommendations,
     synthesize_recommendation,
 )
+from raglite.insights.trend_analysis import analyze_trends
 from raglite.insights.trends import (
-    analyze_trends,
     calculate_cagr,
     calculate_qoq_growth,
     classify_direction,

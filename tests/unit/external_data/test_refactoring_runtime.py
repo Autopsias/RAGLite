@@ -24,6 +24,9 @@ from pathlib import Path
 
 import pytest
 
+# Group runtime validation tests that run subprocesses to run on same worker
+pytestmark = pytest.mark.xdist_group(name="refactoring_runtime")
+
 # Base paths
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 TESTS_ROOT = PROJECT_ROOT / "tests"

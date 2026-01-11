@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from raglite.forecasting.timeseries_extract import (
+from raglite.forecasting.timeseries import (
     ExtractionError,
     extract_timeseries,
     normalize_to_interval,

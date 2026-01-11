@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
 from raglite.main import mcp
 from raglite.shared.logging import get_logger
@@ -16,6 +17,140 @@ from raglite.shared.models import (
 )
 
 logger = get_logger(__name__)
+
+
+def _create_error_response(
+    mape_method: str,
+    runtime_seconds: float = 0.0,
+) -> ValidationResponse:
+    """Create standardized error response for validation failures.
+
+    Args:
+        mape_method: The MAPE calculation method being used
+        runtime_seconds: Execution time before failure (default: 0.0)
+
+    Returns:
+        ValidationResponse with zeroed/default values indicating failure
+    """
+    return ValidationResponse(
+        timestamp=datetime.now(UTC).isoformat(),
+        runtime_seconds=runtime_seconds,
+        mape_method=mape_method,
+        variables_tested=0,
+        variables_passed=0,
+        pass_rate=0.0,
+        average_mape=0.0,
+        quality_gate_passed=False,
+        variable_cost_mape=None,
+        average_mase=None,
+        average_fqs=None,
+        controllable_mase=None,
+        controllable_fqs=None,
+        variable_results=[],
+        model_performance=None,
+    )
+
+
+def _build_variable_details(variable_results: list) -> list[VariableValidationDetail]:
+    """Build variable detail list from validation results.
+
+    Args:
+        variable_results: List of VariableValidationResult from validation script
+
+    Returns:
+        List of VariableValidationDetail for MCP response
+    """
+    return [
+        VariableValidationDetail(
+            variable_name=var_result.variable_name,
+            display_name=var_result.display_name,
+            target_mape=var_result.target_mape,
+            actual_mape=var_result.actual_mape,
+            passed=var_result.passed,
+            ensemble_weights=var_result.ensemble_weights,
+            best_model=var_result.best_model,
+            actual_mase=var_result.metrics.mase if var_result.metrics else None,
+            actual_smape=var_result.metrics.smape if var_result.metrics else None,
+            actual_bias=var_result.metrics.bias if var_result.metrics else None,
+            fqs=var_result.metrics.fqs if var_result.metrics else None,
+            primary_metric_used=getattr(var_result, "primary_metric_used", "mape"),
+            mase_only_pass=getattr(var_result, "mase_only_pass", False),
+        )
+        for var_result in variable_results
+    ]
+
+
+def _build_model_performance(
+    model_performance: dict | None,
+    include_model_breakdown: bool,
+) -> dict[str, ModelPerformanceDetail] | None:
+    """Build model performance detail dictionary if requested.
+
+    Args:
+        model_performance: Raw model performance from validation results
+        include_model_breakdown: Whether to include per-model breakdown
+
+    Returns:
+        Dictionary of model name to ModelPerformanceDetail, or None
+    """
+    if not include_model_breakdown or not model_performance:
+        return None
+
+    return {
+        name: ModelPerformanceDetail(
+            model_name=stats.model_name,
+            avg_mape=stats.avg_mape,
+            variables_used=stats.variables_used,
+        )
+        for name, stats in model_performance.items()
+    }
+
+
+def _create_success_response(
+    result: Any,
+    include_model_breakdown: bool,
+) -> ValidationResponse:
+    """Create successful validation response from result object.
+
+    Args:
+        result: UnifiedValidationResult from validation script
+        include_model_breakdown: Whether to include per-model MAPE breakdown
+
+    Returns:
+        ValidationResponse with all validation results
+    """
+    variable_details = _build_variable_details(result.variable_results)
+    model_perf = _build_model_performance(result.model_performance, include_model_breakdown)
+
+    logger.info(
+        "Validation completed",
+        extra={
+            "variables_tested": result.variables_tested,
+            "variables_passed": result.variables_passed,
+            "runtime_seconds": result.runtime_seconds,
+            "quality_gate": "PASS"
+            if result.quality_gate and result.quality_gate.passed
+            else "FAIL",
+        },
+    )
+
+    return ValidationResponse(
+        timestamp=result.timestamp,
+        runtime_seconds=result.runtime_seconds,
+        mape_method=result.mape_method,
+        variables_tested=result.variables_tested,
+        variables_passed=result.variables_passed,
+        pass_rate=result.pass_rate,
+        average_mape=result.average_mape,
+        quality_gate_passed=result.quality_gate.passed if result.quality_gate else False,
+        variable_cost_mape=result.quality_gate.variable_cost_mape if result.quality_gate else None,
+        average_mase=result.average_mase,
+        average_fqs=result.average_fqs,
+        controllable_mase=result.quality_gate.controllable_mase if result.quality_gate else None,
+        controllable_fqs=result.quality_gate.controllable_fqs if result.quality_gate else None,
+        variable_results=variable_details,
+        model_performance=model_perf,
+    )
 
 
 @mcp.tool()
@@ -43,23 +178,7 @@ async def validate_forecasting_accuracy(
         from scripts.validate_forecasting_unified import run_unified_validation
     except ImportError as e:
         logger.error("Failed to import validation script", extra={"error": str(e)})
-        return ValidationResponse(
-            timestamp=datetime.now(UTC).isoformat(),
-            runtime_seconds=0.0,
-            mape_method=mape_method,
-            variables_tested=0,
-            variables_passed=0,
-            pass_rate=0.0,
-            average_mape=0.0,
-            quality_gate_passed=False,
-            variable_cost_mape=None,
-            average_mase=None,
-            average_fqs=None,
-            controllable_mase=None,
-            controllable_fqs=None,
-            variable_results=[],
-            model_performance=None,
-        )
+        return _create_error_response(mape_method)
     logger.info(
         "Validation started",
         extra={
@@ -79,88 +198,13 @@ async def validate_forecasting_accuracy(
             ),
             timeout=timeout_seconds,
         )
-        variable_details = [
-            VariableValidationDetail(
-                variable_name=var_result.variable_name,
-                display_name=var_result.display_name,
-                target_mape=var_result.target_mape,
-                actual_mape=var_result.actual_mape,
-                passed=var_result.passed,
-                ensemble_weights=var_result.ensemble_weights,
-                best_model=var_result.best_model,
-                actual_mase=var_result.metrics.mase if var_result.metrics else None,
-                actual_smape=var_result.metrics.smape if var_result.metrics else None,
-                actual_bias=var_result.metrics.bias if var_result.metrics else None,
-                fqs=var_result.metrics.fqs if var_result.metrics else None,
-                primary_metric_used=getattr(var_result, "primary_metric_used", "mape"),
-                mase_only_pass=getattr(var_result, "mase_only_pass", False),
-            )
-            for var_result in result.variable_results
-        ]
-        model_perf = None
-        if include_model_breakdown and result.model_performance:
-            model_perf = {
-                name: ModelPerformanceDetail(
-                    model_name=stats.model_name,
-                    avg_mape=stats.avg_mape,
-                    variables_used=stats.variables_used,
-                )
-                for name, stats in result.model_performance.items()
-            }
-        logger.info(
-            "Validation completed",
-            extra={
-                "variables_tested": result.variables_tested,
-                "variables_passed": result.variables_passed,
-                "runtime_seconds": result.runtime_seconds,
-                "quality_gate": "PASS"
-                if result.quality_gate and result.quality_gate.passed
-                else "FAIL",
-            },
-        )
-        return ValidationResponse(
-            timestamp=result.timestamp,
-            runtime_seconds=result.runtime_seconds,
-            mape_method=result.mape_method,
-            variables_tested=result.variables_tested,
-            variables_passed=result.variables_passed,
-            pass_rate=result.pass_rate,
-            average_mape=result.average_mape,
-            quality_gate_passed=result.quality_gate.passed if result.quality_gate else False,
-            variable_cost_mape=result.quality_gate.variable_cost_mape
-            if result.quality_gate
-            else None,
-            average_mase=result.average_mase,
-            average_fqs=result.average_fqs,
-            controllable_mase=result.quality_gate.controllable_mase
-            if result.quality_gate
-            else None,
-            controllable_fqs=result.quality_gate.controllable_fqs if result.quality_gate else None,
-            variable_results=variable_details,
-            model_performance=model_perf,
-        )
+        return _create_success_response(result, include_model_breakdown)
     except TimeoutError:
         logger.warning(
             "Validation timed out",
             extra={"timeout_seconds": timeout_seconds},
         )
-        return ValidationResponse(
-            timestamp=datetime.now(UTC).isoformat(),
-            runtime_seconds=timeout_seconds,
-            mape_method=mape_method,
-            variables_tested=0,
-            variables_passed=0,
-            pass_rate=0.0,
-            average_mape=0.0,
-            quality_gate_passed=False,
-            variable_cost_mape=None,
-            average_mase=None,
-            average_fqs=None,
-            controllable_mase=None,
-            controllable_fqs=None,
-            variable_results=[],
-            model_performance=None,
-        )
+        return _create_error_response(mape_method, runtime_seconds=timeout_seconds)
     except Exception as e:
         logger.error("Validation failed", extra={"error": str(e)})
         raise
@@ -171,9 +215,9 @@ async def list_available_regressors(
     metric: str | None = None,
 ) -> RegressorListResponse:
     try:
-        from raglite.forecasting.regressor_config import (
+        from raglite.forecasting.regressor_config import METRIC_REGRESSORS
+        from raglite.forecasting.regressor_config_data.regressor_metadata import (
             AVAILABLE_REGRESSORS,
-            METRIC_REGRESSORS,
             REGRESSOR_METADATA,
         )
     except ImportError as e:
@@ -185,6 +229,7 @@ async def list_available_regressors(
     )
     if metric:
         metric_lower = metric.lower()
+        # METRIC_REGRESSORS is dict[str, list[str]], returns list of regressor names
         relevant_regressors = METRIC_REGRESSORS.get(metric_lower, AVAILABLE_REGRESSORS)
     else:
         relevant_regressors = AVAILABLE_REGRESSORS
@@ -216,7 +261,9 @@ async def get_regressor_data(
     start_date: str | None = None,
     end_date: str | None = None,
 ) -> RegressorDataResponse:
-    from raglite.forecasting.regressor_config import REGRESSOR_METADATA
+    from raglite.forecasting.regressor_config_data.regressor_metadata import (
+        REGRESSOR_METADATA,
+    )
     from raglite.forecasting.regressor_fetch import fetch_single_regressor
 
     logger.info(

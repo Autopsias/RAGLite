@@ -1,9 +1,5 @@
-# Story context XML files - story-key tags are not secrets
-docs/sprint-artifacts/*.context.xml:generic-api-key:12
-docs/sprint-artifacts/4-0-1-test-coverage-backfill-ci-cd-gates.context.xml:generic-api-key:12
-docs/sprint-artifacts/4-0-3-fix-mcp-ingestion-timeout.context.xml:generic-api-key:12
-# False positives - data source keys (not API keys)
-raglite/external_data/storage.py:generic-api-key:819
-raglite/external_data/storage.py:generic-api-key:903
-raglite/external_data/storage.py:generic-api-key:936
-scripts/ci/start-test-containers.sh:generic-api-key:240
+# Ignore REDACTED placeholders (not real secrets)
+raglite/external_data/clients/ecb/client.py:generic-api-key:297
+raglite/external_data/storage/tier2.py:generic-api-key:203
+raglite/external_data/storage/tier2.py:generic-api-key:293
+raglite/external_data/storage/tier2.py:generic-api-key:328

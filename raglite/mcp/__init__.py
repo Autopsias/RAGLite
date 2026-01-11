@@ -7,7 +7,7 @@ from raglite.mcp.tools.admin import manage_model_weights, retrain_forecasting_mo
 from raglite.mcp.tools.external_data import query_external_data, refresh_external_data
 from raglite.mcp.tools.forecast import get_financial_forecast
 from raglite.mcp.tools.health import check_database_health
-from raglite.mcp.tools.ingestion import (
+from raglite.mcp.tools.ingestion_tool import (
     get_ingestion_status,
     ingest_financial_document,
     ingest_financial_document_async,
