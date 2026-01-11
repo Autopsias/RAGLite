@@ -98,33 +98,18 @@ def _create_test_sources(storage):
 
 
 def _check_existing_data(storage):
-    """Check if test data already exists from previous run.
-
-    Args:
-        storage: ExternalDataStorage instance
-
-    Returns:
-        bool: True if data exists (>=24 points), False otherwise
-    """
+    """Check if test data already exists from previous run."""
     existing_permits = storage.query_data_range(
         source_name="INE_BuildingPermits_Test",
         start_date=date(2023, 1, 1),
         end_date=date(2024, 12, 31),
         metric_name="building_permits_count",
     )
-
     return len(existing_permits) >= 24
 
 
 def _insert_building_permits_data(storage, i, point_date, base_permits):
-    """Insert building permits data point.
-
-    Args:
-        storage: ExternalDataStorage instance
-        i: Index for trend calculation
-        point_date: Date for data point
-        base_permits: Base value for permits
-    """
+    """Insert building permits data point."""
     try:
         storage.insert_data_points(
             source_name="INE_BuildingPermits_Test",
@@ -138,20 +123,13 @@ def _insert_building_permits_data(storage, i, point_date, base_permits):
             ],
         )
     except Exception:
-        pass  # Ignore duplicates
+        pass
 
 
 def _insert_electricity_price_data(storage, i, point_date, base_electricity):
-    """Insert electricity price data point.
-
-    Args:
-        storage: ExternalDataStorage instance
-        i: Index for trend calculation
-        point_date: Date for data point
-        base_electricity: Base value for electricity
-    """
+    """Insert electricity price data point."""
     try:
-        seasonal_factor = 1.1 if (i % 12) in [11, 0, 1] else 1.0  # Winter higher
+        seasonal_factor = 1.1 if (i % 12) in [11, 0, 1] else 1.0
         storage.insert_data_points(
             source_name="OMIE_ElectricityPrice_Test",
             data_points=[
@@ -164,18 +142,11 @@ def _insert_electricity_price_data(storage, i, point_date, base_electricity):
             ],
         )
     except Exception:
-        pass  # Ignore duplicates
+        pass
 
 
 def _insert_cement_consumption_data(storage, i, point_date, base_cement):
-    """Insert cement consumption data point.
-
-    Args:
-        storage: ExternalDataStorage instance
-        i: Index for trend calculation
-        point_date: Date for data point
-        base_cement: Base value for cement
-    """
+    """Insert cement consumption data point."""
     try:
         storage.insert_data_points(
             source_name="Cement_Consumption_Test",
@@ -189,47 +160,48 @@ def _insert_cement_consumption_data(storage, i, point_date, base_cement):
             ],
         )
     except Exception:
-        pass  # Ignore duplicates
+        pass
 
 
 def _insert_time_series_data(storage):
-    """Insert 24 months of time-series data for Prophet cross-validation.
-
-    Args:
-        storage: ExternalDataStorage instance
-    """
+    """Insert 24 months of time-series data for Prophet cross-validation."""
     base_permits = 1000
     base_electricity = 50.0
     base_cement = 100
 
     for i in range(24):
         point_date = date(2023, 1 + (i % 12), 1) if i < 12 else date(2024, 1 + (i % 12), 1)
-
         _insert_building_permits_data(storage, i, point_date, base_permits)
         _insert_electricity_price_data(storage, i, point_date, base_electricity)
         _insert_cement_consumption_data(storage, i, point_date, base_cement)
 
 
+def _convert_to_timeseries_data(orm_points, metric_name: str, source_name: str) -> TimeSeriesData:
+    """Convert ORM data points to TimeSeriesData model."""
+    return TimeSeriesData(
+        metric_name=metric_name,
+        points=[
+            TimeSeriesPoint(
+                date=datetime.combine(p.date, datetime.min.time()),
+                value=float(p.value),
+                label=str(p.date),
+            )
+            for p in orm_points
+        ],
+        source_documents=[source_name],
+    )
+
+
 @pytest.fixture(scope="module")
 def populated_storage(db_session):
-    """ExternalDataStorage with sample time-series data for forecasting.
-
-    Module-scoped to avoid recreating data for each test.
-    """
+    """ExternalDataStorage with sample time-series data for forecasting."""
     from raglite.external_data.storage import ExternalDataStorage
 
     storage = ExternalDataStorage(db_session)
-
-    # Create test sources
     _create_test_sources(storage)
-
-    # Check if data already exists (from previous test run)
     if _check_existing_data(storage):
         return storage
-
-    # Insert 24 months of data (enough for Prophet cross-validation)
     _insert_time_series_data(storage)
-
     return storage
 
 
@@ -372,44 +344,27 @@ class TestEndToEndForecastingFlow:
     @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_generate_multivariate_forecast(self, populated_storage) -> None:
-        """Test complete multi-variate forecast generation.
-
-        This test is slow because it runs Prophet fitting and cross-validation.
-        """
+        """Test complete multi-variate forecast generation (slow: Prophet fitting/CV)."""
         import warnings
 
         from raglite.forecasting.hybrid import generate_forecast
 
-        # Get historical data from storage
         cement_points = populated_storage.query_data_range(
             source_name="Cement_Consumption_Test",
             start_date=date(2023, 1, 1),
             end_date=date(2024, 12, 31),
             metric_name="cement_consumption",
         )
-
-        # Convert ORM points to TimeSeriesPoint objects
-        historical_data = TimeSeriesData(
-            metric_name="cement_consumption",
-            points=[
-                TimeSeriesPoint(
-                    date=datetime.combine(p.date, datetime.min.time()),
-                    value=float(p.value),
-                    label=str(p.date),
-                )
-                for p in cement_points
-            ],
-            source_documents=["Cement_Consumption_Test"],
+        historical_data = _convert_to_timeseries_data(
+            cement_points, "cement_consumption", "Cement_Consumption_Test"
         )
 
-        # Get regressor data
         permits_points = populated_storage.query_data_range(
             source_name="INE_BuildingPermits_Test",
             start_date=date(2023, 1, 1),
             end_date=date(2024, 12, 31),
             metric_name="building_permits_count",
         )
-
         external_regressors = {
             "building_permits": pd.Series(
                 [float(p.value) for p in permits_points],
@@ -417,7 +372,6 @@ class TestEndToEndForecastingFlow:
             ),
         }
 
-        # Generate forecast (should trigger deprecation warning)
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
@@ -429,14 +383,11 @@ class TestEndToEndForecastingFlow:
                     frequency="M",
                     future_regressor_strategy="constant",
                 )
-
-            # Should have deprecation warning
             assert any("deprecated" in str(warning.message).lower() for warning in w)
 
-        # Validate result
         assert result.metric_name == "cement_consumption"
         assert result.model_type == "prophet_multivariate"
-        assert len(result.forecast) == 3  # Fixed: was 'forecasts', should be 'forecast'
+        assert len(result.forecast) == 3
         assert "building_permits" in result.regressors_used
 
 
@@ -446,58 +397,38 @@ class TestForecastAccuracyComparison:
     @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_multivariate_improves_accuracy(self, populated_storage) -> None:
-        """Test that adding regressors can improve forecast accuracy.
-
-        This test compares univariate vs multivariate forecasts.
-        """
+        """Test that adding regressors can improve forecast accuracy (compares uni/multivariate)."""
         import warnings
 
         from raglite.forecasting.hybrid import generate_forecast
 
-        # Get historical data
         cement_points = populated_storage.query_data_range(
             source_name="Cement_Consumption_Test",
             start_date=date(2023, 1, 1),
             end_date=date(2024, 12, 31),
             metric_name="cement_consumption",
         )
-
-        # Convert ORM points to TimeSeriesPoint objects
-        historical_data = TimeSeriesData(
-            metric_name="cement_consumption",
-            points=[
-                TimeSeriesPoint(
-                    date=datetime.combine(p.date, datetime.min.time()),
-                    value=float(p.value),
-                    label=str(p.date),
-                )
-                for p in cement_points
-            ],
-            source_documents=["Cement_Consumption_Test"],
+        historical_data = _convert_to_timeseries_data(
+            cement_points, "cement_consumption", "Cement_Consumption_Test"
         )
 
-        # Univariate forecast
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
                 mock_fetch.return_value = historical_data
                 univariate_result = await generate_forecast(
-                    metric="cement_consumption",
-                    periods_ahead=3,
-                    external_regressors=None,  # No regressors
+                    metric="cement_consumption", periods_ahead=3, external_regressors=None
                 )
 
         assert univariate_result.model_type == "prophet_univariate"
-        assert len(univariate_result.forecast) == 3  # Fixed: was 'forecasts'
+        assert len(univariate_result.forecast) == 3
 
-        # Get regressor data
         permits_points = populated_storage.query_data_range(
             source_name="INE_BuildingPermits_Test",
             start_date=date(2023, 1, 1),
             end_date=date(2024, 12, 31),
             metric_name="building_permits_count",
         )
-
         external_regressors = {
             "building_permits": pd.Series(
                 [float(p.value) for p in permits_points],
@@ -505,7 +436,6 @@ class TestForecastAccuracyComparison:
             ),
         }
 
-        # Multivariate forecast
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
@@ -518,12 +448,8 @@ class TestForecastAccuracyComparison:
 
         assert multivariate_result.model_type == "prophet_multivariate"
         assert "building_permits" in multivariate_result.regressors_used
+        assert len(multivariate_result.forecast) == 3
 
-        # Both should produce valid forecasts
-        assert len(multivariate_result.forecast) == 3  # Fixed: was 'forecasts'
-
-        # Accuracy metrics should be populated (if CV ran)
-        # Note: with 24 data points, CV should have enough data
         if multivariate_result.accuracy_metrics:
             assert "rmse" in multivariate_result.accuracy_metrics
             assert "mae" in multivariate_result.accuracy_metrics

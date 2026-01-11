@@ -1,35 +1,10 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-08T21:48:56.410563",
+  "baseline_date": "2026-01-11T14:07:30.731617",
   "description": "Grandfathered file size violations - reduce gradually",
   "thresholds": {
     "warning": 400,
     "hard_limit": 500
   },
-  "exceptions": {
-    "tests/integration/test_parallel_ingestion.py": {
-      "lines": 584,
-      "reason": "Grandfathered - Story 8.4b refactoring in progress",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/integration/test_ac3_ground_truth.py": {
-      "lines": 563,
-      "reason": "Grandfathered - Story 8.4b refactoring in progress",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/integration/test_hybrid_search_integration.py": {
-      "lines": 558,
-      "reason": "Grandfathered - Story 8.4b refactoring in progress",
-      "target_lines": 500,
-      "directory": "tests/"
-    },
-    "tests/integration/test_forecast_external.py": {
-      "lines": 530,
-      "reason": "Grandfathered - Story 8.4b refactoring in progress",
-      "target_lines": 500,
-      "directory": "tests/"
-    }
-  }
+  "exceptions": {}
 }

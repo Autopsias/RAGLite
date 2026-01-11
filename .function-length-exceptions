@@ -1,29 +1,10 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-09T11:39:38.679043",
+  "baseline_date": "2026-01-11T14:07:32.694658",
   "description": "Grandfathered function length violations - refactor gradually",
   "thresholds": {
     "warning": 50,
     "hard_limit": 100
   },
-  "exceptions": {
-    "raglite/insights/recommendations/synthesis.py:12:synthesize_recommendation": {
-      "length": 120,
-      "function": "synthesize_recommendation",
-      "file": "raglite/insights/recommendations/synthesis.py",
-      "line": 12,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    },
-    "raglite/forecasting/models/catboost/fitting.py:31:fit_catboost": {
-      "length": 106,
-      "function": "fit_catboost",
-      "file": "raglite/forecasting/models/catboost/fitting.py",
-      "line": 31,
-      "reason": "Baseline: existing at time of enforcement",
-      "target_lines": 100,
-      "directory": "raglite/"
-    }
-  }
+  "exceptions": {}
 }
