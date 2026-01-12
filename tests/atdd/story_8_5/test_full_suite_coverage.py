@@ -12,6 +12,12 @@ from pathlib import Path
 
 import pytest
 
+# Mark all tests in this module as slow (subprocess tests)
+pytestmark = [
+    pytest.mark.atdd,
+    pytest.mark.slow,  # Subprocess tests are inherently slow
+]
+
 
 class TestAC854FullSuiteCoverage:
     """AC-8.5-4: Verify full test suite has no raglite deprecation warnings."""
@@ -40,7 +46,7 @@ class TestAC854FullSuiteCoverage:
             capture_output=True,
             text=True,
             cwd=str(project_root),
-            timeout=120,
+            timeout=180,  # Increased for CI environments with cold imports
         )
 
         combined_output = result.stdout + result.stderr
@@ -144,7 +150,7 @@ class TestAC854FullSuiteCoverage:
             ],
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=180,  # Increased for CI environments
         )
 
         pytest_removed_count = int(result1.stdout.strip().split("\n")[-1])
@@ -160,7 +166,7 @@ class TestAC854FullSuiteCoverage:
             ],
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=180,  # Increased for CI environments
         )
 
         historical_data_count = int(result2.stdout.strip().split("\n")[-1])

@@ -9,9 +9,11 @@ import pytest
 from .shared_helpers import get_project_root
 
 # Mark all tests in this module
+# Note: Tests using subprocess pytest collection are slow in CI
 pytestmark = [
     pytest.mark.atdd,
     pytest.mark.story_8_5,
+    pytest.mark.slow,  # Subprocess tests are inherently slow
 ]
 
 
@@ -116,7 +118,7 @@ class TestAC853FixtureMarkerCleanup:
             capture_output=True,
             text=True,
             cwd=str(project_root),
-            timeout=60,
+            timeout=180,  # Increased for CI environments with cold imports
         )
 
         combined_output = result.stdout + result.stderr

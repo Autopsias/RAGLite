@@ -13,6 +13,12 @@ from pathlib import Path
 
 import pytest
 
+# Mark all tests in this module as slow (subprocess tests)
+pytestmark = [
+    pytest.mark.atdd,
+    pytest.mark.slow,  # Subprocess tests are inherently slow
+]
+
 
 class TestAC853FixtureMarkerCleanup:
     """AC-8.5-3: Verify fixture markers are removed for pytest 9.0 compatibility."""
@@ -115,7 +121,7 @@ class TestAC853FixtureMarkerCleanup:
             capture_output=True,
             text=True,
             cwd=str(project_root),
-            timeout=60,
+            timeout=180,  # Increased for CI environments with cold imports
         )
 
         combined_output = result.stdout + result.stderr

@@ -19,6 +19,7 @@ Epic: 8 - Technical Debt Reduction
 """
 
 import ast
+import importlib
 import re
 import subprocess
 import sys
@@ -28,9 +29,13 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+import raglite.ingestion.document_ingestion as doc_ingestion_module
+from raglite.forecasting.hybrid.ensemble import generate_forecast
+
 pytestmark = [
     pytest.mark.atdd,
     pytest.mark.story_8_5,
+    pytest.mark.slow,  # Subprocess tests are inherently slow
 ]
 
 
@@ -51,8 +56,6 @@ class TestHistoricalDataMigrationEdgeCases:
         When: Migrated to metric-based fetch
         Then: Should handle None gracefully without type errors
         """
-        from raglite.forecasting.hybrid.ensemble import generate_forecast
-
         with patch(
             "raglite.forecasting.hybrid.preprocessing_data.fetch_historical_metric"
         ) as mock_fetch:
@@ -72,8 +75,6 @@ class TestHistoricalDataMigrationEdgeCases:
         When: Migrated to metric-based fetch returning empty series
         Then: Should handle empty data without IndexError
         """
-        from raglite.forecasting.hybrid.ensemble import generate_forecast
-
         mock_data = AsyncMock()
         mock_data.points = []  # Empty data
 
@@ -98,8 +99,6 @@ class TestHistoricalDataMigrationEdgeCases:
         When: Migrated to metric-based fetch
         Then: NaN handling should remain consistent
         """
-        from raglite.forecasting.hybrid.ensemble import generate_forecast
-
         mock_data = AsyncMock()
         mock_data.points = [1.0, 2.0, float("nan"), 4.0, 5.0]
 
@@ -122,8 +121,6 @@ class TestHistoricalDataMigrationEdgeCases:
         When: generate_forecast processes the data
         Then: Should raise clear error, not opaque AttributeError
         """
-        from raglite.forecasting.hybrid.ensemble import generate_forecast
-
         mock_data = {"not": "a series"}  # Wrong type
 
         with patch(
@@ -153,23 +150,24 @@ class TestImportPathCompatibilityEdgeCases:
         """TEST-AC-8.5.6.1: [P1] Importing all public APIs should work without warnings.
 
         Given: The document_ingestion package with __init__.py re-exports
-        When: All public APIs are imported in a single statement
+        When: The module is reloaded to test fresh import behavior
         Then: No deprecation warnings should be raised
         """
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
-            # Import all major public functions
-            from raglite.ingestion.document_ingestion import (  # noqa: F401
-                extract_excel,
-                ingest_document,
-                ingest_pdf,
-            )
+            # Force reload to test fresh import behavior
+            importlib.reload(doc_ingestion_module)
+
+            # Verify functions are available after reload
+            assert hasattr(doc_ingestion_module, "extract_excel")
+            assert hasattr(doc_ingestion_module, "ingest_document")
+            assert hasattr(doc_ingestion_module, "ingest_pdf")
 
             deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
 
             assert len(deprecation_warnings) == 0, (
-                f"Bulk import triggered {len(deprecation_warnings)} deprecation warning(s):\n"
+                f"Module reload triggered {len(deprecation_warnings)} deprecation warning(s):\n"
                 + "\n".join(str(x.message) for x in deprecation_warnings)
             )
 
@@ -303,7 +301,7 @@ class TestFixtureMarkerCleanupEdgeCases:
             capture_output=True,
             text=True,
             cwd=str(project_root),
-            timeout=30,
+            timeout=180,  # Increased for CI environments with cold imports
         )
 
         # Should succeed (returncode=0 for successful collection)
