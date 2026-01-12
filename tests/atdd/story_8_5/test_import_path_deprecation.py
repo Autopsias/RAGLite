@@ -77,6 +77,7 @@ class TestAC852ImportPathDeprecation:
         )
 
     @pytest.mark.priority("P1")
+    @pytest.mark.slow  # Subprocess import loads heavy ML dependencies (>30s)
     def test_ac_8_5_2_3_verify_import_command_succeeds(self):
         """TEST-AC-8.5.2.3: Python import with warning escalation should succeed.
 

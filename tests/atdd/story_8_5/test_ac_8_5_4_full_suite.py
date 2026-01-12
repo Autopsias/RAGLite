@@ -125,6 +125,7 @@ class TestAC854FullSuiteCoverage:
         )
 
     @pytest.mark.priority("P0")
+    @pytest.mark.slow  # Command 3 subprocess import loads heavy ML dependencies (>30s)
     def test_ac_8_5_4_3_verification_commands_pass(self):
         """TEST-AC-8.5.4.3: All AC verification commands from story should pass.
 
