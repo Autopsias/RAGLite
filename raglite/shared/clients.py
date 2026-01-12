@@ -6,7 +6,10 @@ Provides singleton client instances for Qdrant, Claude API, PostgreSQL, and Mist
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from typing import Any
+
+import filelock
 
 from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
@@ -81,6 +84,9 @@ _qdrant_client: QdrantClient | None = None
 _embedding_model: Any | None = None  # SentenceTransformer (lazy-loaded)
 _postgresql_connection: Any | None = None  # psycopg2.extensions.connection when available
 _mistral_client: Mistral | None = None
+
+# Cross-process lock file for embedding model loading (prevents race conditions in xdist)
+_EMBEDDING_LOCK_FILE = Path("/tmp/raglite_embedding_model.lock")  # nosec B108 - lock file only for coordination, no sensitive data
 
 
 def get_qdrant_client() -> QdrantClient:
@@ -209,7 +215,7 @@ def get_claude_client() -> Anthropic:
 
 
 def get_embedding_model() -> Any:
-    """Get Fin-E5 embedding model (singleton pattern).
+    """Get Fin-E5 embedding model (singleton pattern with cross-process lock).
 
     Returns:
         SentenceTransformer: Cached intfloat/e5-large-v2 model (1024 dimensions)
@@ -221,6 +227,7 @@ def get_embedding_model() -> Any:
     Note:
         Model: Fin-E5 (intfloat/e5-large-v2), 1024 dimensions, financial domain optimization
         Week 0 validation: 0.84 avg similarity, 71.05% NDCG@10
+        Cross-process lock: Prevents simultaneous model loading across xdist workers
     """
     # Lazy-load the SentenceTransformer class (avoids slow PyTorch import at startup)
     SentenceTransformerClass = _get_sentence_transformer_class()
@@ -232,24 +239,36 @@ def get_embedding_model() -> Any:
     global _embedding_model
 
     if _embedding_model is None:
-        logger.info("Loading Fin-E5 embedding model", extra={"model": "intfloat/e5-large-v2"})
+        # Cross-process lock prevents simultaneous loading across xdist workers
+        lock = filelock.FileLock(_EMBEDDING_LOCK_FILE, timeout=180)
 
-        try:
-            _embedding_model = SentenceTransformerClass("intfloat/e5-large-v2")
-            dimensions = _embedding_model.get_sentence_embedding_dimension()
+        with lock:
+            # Double-check after acquiring lock (another process may have loaded it)
+            if _embedding_model is not None:
+                logger.info("Embedding model already loaded by another process")
+                return _embedding_model
 
             logger.info(
-                "Fin-E5 model loaded successfully",
-                extra={"model": "intfloat/e5-large-v2", "dimensions": dimensions},
+                "Loading Fin-E5 embedding model (with lock)",
+                extra={"model": "intfloat/e5-large-v2"},
             )
-        except Exception as e:
-            error_msg = f"Failed to load Fin-E5 model: {e}"
-            logger.error(
-                "Embedding model loading failed",
-                extra={"model": "intfloat/e5-large-v2", "error": str(e)},
-                exc_info=True,
-            )
-            raise RuntimeError(error_msg) from e
+
+            try:
+                _embedding_model = SentenceTransformerClass("intfloat/e5-large-v2")
+                dimensions = _embedding_model.get_sentence_embedding_dimension()
+
+                logger.info(
+                    "Fin-E5 model loaded successfully",
+                    extra={"model": "intfloat/e5-large-v2", "dimensions": dimensions},
+                )
+            except Exception as e:
+                error_msg = f"Failed to load Fin-E5 model: {e}"
+                logger.error(
+                    "Embedding model loading failed",
+                    extra={"model": "intfloat/e5-large-v2", "error": str(e)},
+                    exc_info=True,
+                )
+                raise RuntimeError(error_msg) from e
 
     return _embedding_model
 

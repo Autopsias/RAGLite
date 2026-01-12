@@ -277,6 +277,95 @@ async def test_cache_hit_uses_cached_model():
 
 ---
 
+## xdist_group Marker Requirements for Heavy Resources (CRITICAL)
+
+### Problem: Session Fixtures are Per-Worker, Not Global
+
+pytest-xdist creates separate Python processes per worker. Session-scoped fixtures execute ONCE PER WORKER, not once globally.
+
+**Impact with 4 workers and 60s embedding model load:**
+- Expected: 60s total (one load)
+- Actual: 240s total (4 loads, one per worker)
+
+This causes test suite slowdown of 4-5x when session-scoped fixtures with heavy initialization are used without proper grouping.
+
+### Solution: xdist_group Markers
+
+ALL tests that use heavy shared resources (embedding model, PDF ingestion) MUST have:
+
+```python
+import pytest
+
+pytestmark = [
+    pytest.mark.xdist_group(name="embedding_model"),
+    # ... other markers
+]
+```
+
+This ensures all such tests run on the SAME worker, preventing redundant resource loads.
+
+### Which Tests Need This Marker?
+
+Add `xdist_group(name="embedding_model")` if your test:
+1. Uses `get_embedding_model()` directly
+2. Uses `session_ingested_collection` fixture (depends on embedding model)
+3. Uses `warmup_embedding_model` fixture
+4. Imports from `raglite.shared.embedding_utils` or embedding-related modules
+5. Depends on any session-scoped fixture that loads the 2GB embedding model
+
+### How It Works
+
+When `xdist_group(name="embedding_model")` is applied:
+1. All tests with that group marker run on the same worker
+2. Session fixtures execute once for that group, not per worker
+3. Other tests distribute across remaining workers
+4. Result: 60s embedding load × 1 worker instead of × N workers
+
+### Validation
+
+Run before committing integration tests:
+```bash
+# Check which tests need xdist_group markers
+python scripts/validate-xdist-markers.py
+
+# Run tests with parallelization
+pytest tests/integration/ -n 4 --dist loadgroup
+```
+
+CI will fail if embedding-dependent tests lack the xdist_group marker when running with `-n auto`.
+
+### Common Pattern
+
+```python
+# tests/integration/retrieval/test_semantic_search.py
+import pytest
+from raglite.shared.embedding_utils import get_embedding_model
+
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.xdist_group(name="embedding_model"),  # Required!
+]
+
+async def test_search_with_semantic_model(session_ingested_collection):
+    """Test semantic search uses embedding model."""
+    model = get_embedding_model()  # Heavy load (60s)
+    # Test implementation...
+```
+
+### Current Metrics (as of 2025-01-11)
+
+| Metric | Value |
+|--------|-------|
+| Integration test files | 144 |
+| Files with xdist_group marker | 33 (23%) |
+| Embedding model load time | 60s |
+| Model size | 2GB |
+| Default worker count | 4 (auto mode) |
+| Expected slowdown without marker | 4-5x |
+| Actual test suite time | ~10 min (optimized) |
+
+---
+
 ## isinstance Checks with pytest-xdist (CRITICAL)
 
 **Problem:** When using pytest-xdist (`-n auto`), each worker runs in a separate process.

@@ -206,6 +206,22 @@ jobs:
           fi
           echo "Fixture validation passed"
 
+      - name: Validate xdist_group Markers (P0-3)
+        run: |
+          source ci-venv/bin/activate
+          echo "========================================="
+          echo "Validating xdist_group markers on embedding tests"
+          echo "Prevents 4x model load overhead in parallel tests"
+          echo "Root cause: Session fixtures are per-worker with xdist"
+          echo "========================================="
+          python scripts/validate-xdist-markers.py --fix-suggestions
+          if [ $? -ne 0 ]; then
+            echo "FAIL: Missing xdist_group markers detected!"
+            echo "All tests using embedding model need: pytest.mark.xdist_group(name='embedding_model')"
+            exit 1
+          fi
+          echo "xdist_group marker validation passed"
+
       - name: Tests (Fast - excludes slow/health_check)
         env:
           LIGHTWEIGHT_TESTS: "true"
@@ -379,8 +395,8 @@ jobs:
           echo "========================================="
           echo "Running Integration Tests (~1000 tests)"
           echo "Mode: Parallel with xdist_group isolation"
-          echo "Workers: 4 (restored after test pruning)"
-          echo "Memory: ~12GB (4 workers × 3GB each)"
+          echo "Workers: 2 (optimized for session fixture overhead)"
+          echo "Memory: ~6GB (2 workers × 3GB each)"
           echo "Qdrant: localhost:${QDRANT_PORT}"
           echo "PostgreSQL: localhost:${POSTGRES_PORT}"
           echo "========================================="
@@ -388,7 +404,7 @@ jobs:
             -m "not health_check" \
             --tb=short \
             -v \
-            -n 4 \
+            -n 2 \
             --dist loadgroup \
             --timeout=300 \
             --junitxml=test-results/integration-junit.xml \
