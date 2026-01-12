@@ -52,27 +52,21 @@ runs:
             exit 1
           fi
 
-          # Check for zombie state: Colima VM running but Docker daemon dead
+          # AGGRESSIVE CLEANUP: Docker not accessible + Colima socket exists = force full restart
+          # Don't rely on colima status - it can be unreliable when Colima is broken
+          echo "🧹 Docker daemon not accessible - forcing Colima cleanup regardless of reported state"
+          echo "   (Colima status can be unreliable when VM is corrupted)"
+
           COLIMA_STATUS=$(colima status 2>&1 || true)
-          if echo "$COLIMA_STATUS" | grep -q "Running"; then
-            echo "🔍 Colima VM reports 'Running', checking Docker daemon health..."
+          echo "   Current colima status: $COLIMA_STATUS"
 
-            if ! docker info &> /dev/null; then
-              echo "🧟 ZOMBIE STATE DETECTED - Colima VM running but Docker daemon dead"
-              echo "   This requires full VM recreation to recover"
-              echo "   Forcing Colima shutdown and cleanup..."
-
-              colima stop -f 2>/dev/null || true
-              sleep 2
-              colima delete -f 2>/dev/null || true
-              sleep 3
-
-              echo "✅ Zombie state cleared, proceeding with fresh VM start"
-            else
-              echo "✅ Colima VM and Docker daemon both healthy"
-              exit 0
-            fi
-          fi
+          # Always force cleanup when Docker is inaccessible
+          echo "🔄 Forcing Colima stop and delete to ensure clean state..."
+          colima stop -f 2>/dev/null || true
+          sleep 2
+          colima delete -f 2>/dev/null || true
+          sleep 3
+          echo "✅ Colima cleanup complete, proceeding with fresh VM start"
 
           echo "Starting Colima with retry logic..."
 

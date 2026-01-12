@@ -313,7 +313,7 @@ jobs:
       - name: Docker Pre-flight Validation
         uses: ./.github/actions/docker-preflight
         with:
-          max-wait-seconds: '60'
+          max-wait-seconds: '120'
           check-ports: '6333,6335,6337,6339,6340,5432,5433,5434,5435,5438'
 
       - name: Start Test Containers
@@ -566,7 +566,7 @@ jobs:
       - name: Docker Pre-flight Validation
         uses: ./.github/actions/docker-preflight
         with:
-          max-wait-seconds: '60'
+          max-wait-seconds: '120'
           check-ports: '6333,6335,5432,5433'
 
       - name: Start Test Containers
