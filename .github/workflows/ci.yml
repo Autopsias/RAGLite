@@ -260,19 +260,41 @@ jobs:
           retention-days: 7
 
   # ============================================================
-  # TIER 2: Full Integration Tests
+  # TIER 2: Full Integration Tests (Sharded for Performance)
   # Runs on: Main branch pushes (post-merge) OR manual trigger with flag
-  # Target: <30 minutes, <6GB RAM, with containers
-  # Note: All integration tests require real infrastructure and are slow
+  # Target: <15 minutes (3 parallel shards), <4GB RAM per shard
+  # Note: Tests split into 3 shards running in parallel
   # ============================================================
   integration:
-    name: "🔗 Tests: Integration (~1000 tests)"
+    name: "🔗 Tests: Integration (${{ matrix.shard }})"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 30
     needs: validate
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && inputs.run_integration == true)
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [postgresql, other]
+        include:
+          # Shard 1: PostgreSQL-only tests (forecasting, model_selection, external_data, insights)
+          # These directories don't require the embedding model for most operations
+          - shard: postgresql
+            variant: shard-postgresql
+            pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/external_data/ tests/integration/insights/"
+            pytest_ignore: ""
+            workers: 2
+            description: "~230 PostgreSQL-focused tests"
+          # Shard 2: Remaining integration tests (ingestion, retrieval, MCP, etc.)
+          # These tests typically use the embedding model via session fixtures
+          - shard: other
+            variant: shard-other
+            pytest_paths: "tests/integration/"
+            pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/external_data/ --ignore=tests/integration/insights/"
+            workers: 2
+            description: "~680 remaining tests"
 
     steps:
       - name: Checkout code
@@ -300,8 +322,8 @@ jobs:
       - name: Start Test Containers
         run: |
           chmod +x scripts/ci/start-test-containers.sh
-          ./scripts/ci/start-test-containers.sh test
-          echo "Containers started, loading environment..."
+          ./scripts/ci/start-test-containers.sh ${{ matrix.variant }}
+          echo "Containers started for shard '${{ matrix.shard }}', loading environment..."
           cat .ci-env
 
       - name: Validate CI Credential Consistency
@@ -313,29 +335,33 @@ jobs:
 
       - name: Verify Container Volume Mounts (P0 Fix)
         run: |
-          echo "=== Verifying container volume mounts ==="
+          echo "=== Verifying container volume mounts for shard '${{ matrix.shard }}' ==="
           source .ci-env
 
+          # Get container names from .ci-env (set by container-config.sh)
+          QDRANT_CONTAINER_NAME="${QDRANT_CONTAINER:-raglite-qdrant-${{ matrix.variant }}}"
+          POSTGRES_CONTAINER_NAME="${POSTGRES_CONTAINER:-raglite-postgresql-${{ matrix.variant }}}"
+
           # Check Qdrant mount
-          QDRANT_MOUNT=$(docker inspect raglite-qdrant-test --format='{{range .Mounts}}{{println .Source}}{{end}}' 2>/dev/null || echo "")
-          if [[ "$QDRANT_MOUNT" != *"/raglite/qdrant_storage_test"* ]]; then
+          QDRANT_MOUNT=$(docker inspect "$QDRANT_CONTAINER_NAME" --format='{{range .Mounts}}{{println .Source}}{{end}}' 2>/dev/null || echo "")
+          if [[ -n "$QDRANT_MOUNT" ]] && [[ "$QDRANT_MOUNT" != *"/raglite/"* ]]; then
             echo "WARNING: Qdrant volume mount incorrect: $QDRANT_MOUNT"
             echo "Recreating Qdrant container..."
-            docker stop raglite-qdrant-test 2>/dev/null || true
-            docker rm raglite-qdrant-test 2>/dev/null || true
-            ./scripts/ci/start-test-containers.sh test --qdrant-only --skip-cleanup
+            docker stop "$QDRANT_CONTAINER_NAME" 2>/dev/null || true
+            docker rm "$QDRANT_CONTAINER_NAME" 2>/dev/null || true
+            ./scripts/ci/start-test-containers.sh ${{ matrix.variant }} --qdrant-only --skip-cleanup
           else
             echo "Qdrant mount OK: $QDRANT_MOUNT"
           fi
 
           # Check PostgreSQL mount
-          PG_MOUNT=$(docker inspect raglite-postgresql-test --format='{{range .Mounts}}{{println .Source}}{{end}}' 2>/dev/null || echo "")
-          if [[ "$PG_MOUNT" != *"/raglite/postgresql_data_test"* ]]; then
+          PG_MOUNT=$(docker inspect "$POSTGRES_CONTAINER_NAME" --format='{{range .Mounts}}{{println .Source}}{{end}}' 2>/dev/null || echo "")
+          if [[ -n "$PG_MOUNT" ]] && [[ "$PG_MOUNT" != *"/raglite/"* ]]; then
             echo "WARNING: PostgreSQL volume mount incorrect: $PG_MOUNT"
             echo "Recreating PostgreSQL container..."
-            docker stop raglite-postgresql-test 2>/dev/null || true
-            docker rm raglite-postgresql-test 2>/dev/null || true
-            ./scripts/ci/start-test-containers.sh test --postgresql-only --skip-cleanup
+            docker stop "$POSTGRES_CONTAINER_NAME" 2>/dev/null || true
+            docker rm "$POSTGRES_CONTAINER_NAME" 2>/dev/null || true
+            ./scripts/ci/start-test-containers.sh ${{ matrix.variant }} --postgresql-only --skip-cleanup
           else
             echo "PostgreSQL mount OK: $PG_MOUNT"
           fi
@@ -399,21 +425,23 @@ jobs:
           source ci-venv/bin/activate
           source .ci-env
           echo "========================================="
-          echo "Running Integration Tests (~1000 tests)"
-          echo "Mode: Parallel with xdist_group isolation"
-          echo "Workers: 2 (optimized for session fixture overhead)"
-          echo "Memory: ~6GB (2 workers × 3GB each)"
+          echo "Running Integration Tests - Shard: ${{ matrix.shard }}"
+          echo "Description: ${{ matrix.description }}"
+          echo "Workers: ${{ matrix.workers }}"
           echo "Qdrant: localhost:${QDRANT_PORT}"
           echo "PostgreSQL: localhost:${POSTGRES_PORT}"
           echo "========================================="
-          pytest tests/integration/ \
+
+          # Build pytest command with shard-specific arguments (directory-based sharding)
+          pytest ${{ matrix.pytest_paths }} \
+            ${{ matrix.pytest_ignore }} \
             -m "not health_check" \
             --tb=short \
             -v \
-            -n 2 \
+            -n ${{ matrix.workers }} \
             --dist loadgroup \
-            --timeout=300 \
-            --junitxml=test-results/integration-junit.xml \
+            --timeout=120 \
+            --junitxml=test-results/integration-${{ matrix.shard }}-junit.xml \
             2>&1 || exit_code=$?
 
           exit ${exit_code:-0}
@@ -422,7 +450,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-integration
+          name: test-results-integration-${{ matrix.shard }}
           path: test-results/
           retention-days: 7
 
@@ -430,7 +458,62 @@ jobs:
         if: always()
         run: |
           chmod +x scripts/ci/cleanup-test-containers.sh
-          ./scripts/ci/cleanup-test-containers.sh test --force || true
+          ./scripts/ci/cleanup-test-containers.sh ${{ matrix.variant }} --force || true
+
+  # ============================================================
+  # Integration Results Aggregation
+  # Merges JUnit reports from all shards for unified reporting
+  # ============================================================
+  integration-aggregate:
+    name: "📊 Integration Results"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 5
+    needs: integration
+    if: always() && needs.integration.result != 'skipped'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all shard results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-integration-*
+          path: test-results/
+          merge-multiple: true
+
+      - name: Setup Python
+        run: |
+          python3 --version
+
+      - name: Merge JUnit Reports
+        run: |
+          python3 scripts/ci/merge-junit-reports.py \
+            test-results/integration-*-junit.xml \
+            -o test-results/integration-merged-junit.xml
+
+      - name: Upload Merged Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-integration-merged
+          path: test-results/integration-merged-junit.xml
+          retention-days: 7
+
+      - name: Report Summary
+        run: |
+          echo "## Integration Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f test-results/integration-merged-junit.xml ]; then
+            # Extract stats from merged report
+            TESTS=$(grep -oP 'tests="\K[0-9]+' test-results/integration-merged-junit.xml | head -1 || echo "0")
+            FAILURES=$(grep -oP 'failures="\K[0-9]+' test-results/integration-merged-junit.xml | head -1 || echo "0")
+            ERRORS=$(grep -oP 'errors="\K[0-9]+' test-results/integration-merged-junit.xml | head -1 || echo "0")
+            echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Tests | $TESTS |" >> $GITHUB_STEP_SUMMARY
+            echo "| Failures | $FAILURES |" >> $GITHUB_STEP_SUMMARY
+            echo "| Errors | $ERRORS |" >> $GITHUB_STEP_SUMMARY
+          fi
 
   # ============================================================
   # TIER 3: Accuracy Gate (AC3 Validation)
@@ -442,7 +525,7 @@ jobs:
     name: "✅ NFR: Accuracy Validation (NFR6/NFR7)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 45
-    needs: integration
+    needs: integration-aggregate
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && inputs.run_accuracy_gate == true)
