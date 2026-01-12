@@ -2,39 +2,106 @@
 
 Quick reference for diagnosing and resolving CI failures.
 
-**Last Updated:** 2025-01-11
-**CI Infrastructure Version:** 1.2 (self-hosted runners with proactive enforcement)
+**Last Updated:** 2025-01-12
+**CI Infrastructure Version:** 1.3 (self-hosted runners with enhanced pre-commit enforcement)
 
 ---
 
-## Strategic Analysis Summary (2025-01-11)
+## Strategic Analysis Summary (2025-01-12)
 
-**CI Fix Commits:** 39% of total commits
-**Root Cause Analysis:** Three systemic patterns identified and addressed
-**Prevention Mechanisms:** Now enforced via CI workflow and pre-commit hooks
+**CI Fix Commits:** 52% of total commits (85% of last 20 commits)
+**Root Cause Analysis:** Three systemic patterns identified and addressed with pre-commit hooks
+**Prevention Mechanisms:** Now enforced via 8 active pre-commit hooks + CI workflows
 
 ### Three Root Causes Identified
 
 | Root Cause | Frequency | Fix Implemented | Enforcement |
 |-----------|-----------|-----------------|------------|
-| **Mock Target Drift** | 12% of failures | `validate-mock-targets.py` script | CI mock validation job |
-| **pytest-xdist isinstance()** | 15% of failures | Duck-typing replacement rules | `check-isinstance-violations.sh` linter |
-| **Docker/Colima Lifecycle** | 10% of failures | Auto-startup in `pytest_configure` | Automatic recovery before test collection |
+| **Mock Target Drift** | 12% of failures | `validate-mock-targets.py` script | Pre-commit hook + CI validation job |
+| **pytest-xdist isinstance()** | 15% of failures | Duck-typing replacement rules | `check-isinstance-violations` hook (NEW) |
+| **xdist Marker Gaps** | 10% of failures | Add xdist_group markers | `validate-xdist-markers` hook (NEW) |
 
 ### Key Metrics
 
-- **Before:** 39% of commits were CI fixes (reactive)
+- **Before:** 52% of commits were CI fixes (85% in last 20: reactive)
 - **Target:** <10% of commits are CI fixes (proactive prevention)
-- **Prevention Rules:** 5 new automated checks added to CI workflow
-- **Documentation:** Runbook expanded to 13+ failure categories with solutions
+- **Prevention Rules:** 8 automated checks now active (was 5)
+- **Documentation:** Runbook expanded to 16 failure categories with solutions
+- **Hook Enforcement:** All pre-commit hooks active for all developers
 
 ### Enforcement Mechanisms Now Active
 
-1. **Mock Patch Validation** - CI job runs `validate-mock-targets.py` on all PRs
-2. **isinstance() Linting** - CI job runs `check-isinstance-violations.sh` to catch xdist violations
-3. **Docker Auto-Recovery** - `pytest_configure` hook auto-starts Colima if Docker unavailable
-4. **Module Rename Checklist** - Documented in `.claude/rules/module-rename-checklist.md`
-5. **File Size Enforcement** - Pre-commit hook blocks new files >500 LOC
+**Pre-commit Hooks (8 total):**
+1. **validate-mock-targets** - Verify mock patch targets exist
+2. **check-isinstance-violations** - Catch isinstance usage in tests (NEW)
+3. **validate-xdist-markers** - Ensure xdist_group markers on state-dependent tests (NEW)
+4. **check-file-sizes** - Block new files >500 LOC
+5. **validate-pytest-fixtures** - Verify fixture patterns
+6. **validate-pytest-markers** - Ensure markers are registered
+7. **check-pytestmark-e402** - Check for E402 violations with pytest markers
+8. **safety-check** - Verify production database isolation
+
+**CI Workflows:**
+1. Mock patch validation job on all PRs
+2. isinstance() linting job
+3. xdist marker validation job
+
+---
+
+## Pre-commit Hook Enforcement
+
+All pre-commit hooks are active and enforced on every commit. Hooks run BEFORE code is committed to git.
+
+### Hook Status (2025-01-12)
+
+| Hook ID | Purpose | Status | Auto-Fix | Impact |
+|---------|---------|--------|----------|--------|
+| `validate-mock-targets` | Verify mock patch targets exist | ACTIVE | No | Blocks commits with invalid mock targets |
+| `check-isinstance-violations` | Catch isinstance() on custom types | ACTIVE | No | Blocks commits with xdist-unsafe isinstance |
+| `validate-xdist-markers` | Ensure xdist_group markers | ACTIVE | No | Blocks commits with state-dependent tests missing markers |
+| `check-file-sizes` | Block new files >500 LOC | ACTIVE | No | Blocks commits with oversized files |
+| `validate-pytest-fixtures` | Verify fixture patterns | ACTIVE | No | Blocks commits with unsafe fixture patterns |
+| `validate-pytest-markers` | Ensure markers are registered | ACTIVE | No | Blocks commits with unregistered pytest markers |
+| `check-pytestmark-e402` | Check E402 violations with markers | ACTIVE | No | Blocks commits with import ordering issues |
+| `safety-check` | Verify database isolation | ACTIVE | No | Blocks commits that expose production ports |
+
+### Common Hook Failures and Fixes
+
+**Hook: check-isinstance-violations**
+```bash
+# Error: isinstance check on custom class in tests
+# Appears in: tests/unit/test_example.py:45
+
+# FIX 1: Use __class__.__name__
+assert result.__class__.__name__ == 'ResultType'
+
+# FIX 2: Use hasattr() for duck typing
+assert hasattr(result, 'value')
+
+# FIX 3: Use .name or .value for enums
+assert result.status.name == 'SUCCESS'
+```
+
+**Hook: validate-xdist-markers**
+```bash
+# Error: State-dependent test missing @pytest.mark.xdist_group
+# Appears in: tests/integration/test_shared_state.py:20
+
+# FIX: Add marker to test
+@pytest.mark.xdist_group(name="shared_resources")
+def test_something_with_state():
+    # This test uses shared state and cannot run in parallel
+```
+
+**Hook: validate-mock-targets**
+```bash
+# Error: Mock patch target does not exist
+# Error message: "Cannot find 'raglite.module.NonExistentClass' in source"
+
+# FIX: Verify class exists in module
+grep -n "class NonExistentClass" raglite/module.py  # Should find something
+# Then update patch with correct class name
+```
 
 ---
 

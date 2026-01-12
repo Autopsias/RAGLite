@@ -153,3 +153,25 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
         files: ^tests/.*\.py$
+
+      # isinstance violation check - prevent xdist failures before commit
+      # Root cause: isinstance() fails with pytest-xdist parallel workers
+      # This prevents 15% of recurring CI failure pattern
+      - id: check-isinstance-violations
+        name: check-isinstance-violations
+        entry: bash scripts/check-isinstance-violations.sh
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+        files: ^tests/.*\.py$
+
+      # xdist_group marker validation - prevent session fixture slowdown
+      # Root cause: Missing markers cause 60s embedding model load per worker
+      # This prevents 10% of recurring CI failure pattern
+      - id: validate-xdist-markers
+        name: validate-xdist-markers
+        entry: uv run python3 scripts/validate-xdist-markers.py
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+        files: ^tests/integration/.*\.py$
