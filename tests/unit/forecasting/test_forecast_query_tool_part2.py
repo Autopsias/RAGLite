@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from raglite.main import get_financial_forecast
 from raglite.mcp.tools import forecast_helpers as forecast_helpers_module
 from raglite.shared.models import (
     ForecastPoint,
@@ -18,14 +19,13 @@ from raglite.shared.models import (
 )
 
 
+@pytest.mark.timeout(300)
 class TestForecastToolPart2:
     """Additional tests for forecast tool edge cases."""
 
     @pytest.mark.asyncio
     async def test_cash_flow_metric(self):
         """Test forecast for cash_flow metric."""
-        from raglite.main import get_financial_forecast
-
         quarters = [
             (2023, 1),
             (2023, 4),
@@ -66,6 +66,12 @@ class TestForecastToolPart2:
             ),
             patch.object(
                 forecast_helpers_module,
+                "extract_timeseries",
+                new_callable=AsyncMock,
+                return_value=mock_ts_data,
+            ),
+            patch.object(
+                forecast_helpers_module,
                 "generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
@@ -79,8 +85,6 @@ class TestForecastToolPart2:
     @pytest.mark.asyncio
     async def test_expenses_metric(self):
         """Test forecast for expenses metric."""
-        from raglite.main import get_financial_forecast
-
         quarters = [
             (2023, 1),
             (2023, 4),
@@ -121,6 +125,12 @@ class TestForecastToolPart2:
             ),
             patch.object(
                 forecast_helpers_module,
+                "extract_timeseries",
+                new_callable=AsyncMock,
+                return_value=mock_ts_data,
+            ),
+            patch.object(
+                forecast_helpers_module,
                 "generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
@@ -134,8 +144,6 @@ class TestForecastToolPart2:
     @pytest.mark.asyncio
     async def test_response_includes_methodology(self):
         """Test that response includes methodology field (AC3)."""
-        from raglite.main import get_financial_forecast
-
         quarters = [
             (2023, 1),
             (2023, 4),
@@ -168,6 +176,12 @@ class TestForecastToolPart2:
             ),
             patch.object(
                 forecast_helpers_module,
+                "extract_timeseries",
+                new_callable=AsyncMock,
+                return_value=mock_ts_data,
+            ),
+            patch.object(
+                forecast_helpers_module,
                 "generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
@@ -182,8 +196,6 @@ class TestForecastToolPart2:
     @pytest.mark.asyncio
     async def test_enhanced_basis_with_document_count(self):
         """Test that basis includes document count (AC3)."""
-        from raglite.main import get_financial_forecast
-
         quarters = [
             (2022, 1),
             (2022, 4),
@@ -218,6 +230,12 @@ class TestForecastToolPart2:
             ),
             patch.object(
                 forecast_helpers_module,
+                "extract_timeseries",
+                new_callable=AsyncMock,
+                return_value=mock_ts_data,
+            ),
+            patch.object(
+                forecast_helpers_module,
                 "generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
@@ -232,8 +250,6 @@ class TestForecastToolPart2:
     @pytest.mark.asyncio
     async def test_metric_case_insensitive(self):
         """Test that metric parameter is case insensitive."""
-        from raglite.main import get_financial_forecast
-
         quarters = [
             (2023, 1),
             (2023, 4),
@@ -261,6 +277,12 @@ class TestForecastToolPart2:
             patch.object(
                 forecast_helpers_module,
                 "extract_historical_data_by_type",
+                new_callable=AsyncMock,
+                return_value=mock_ts_data,
+            ),
+            patch.object(
+                forecast_helpers_module,
+                "extract_timeseries",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),

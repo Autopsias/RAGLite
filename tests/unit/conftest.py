@@ -11,6 +11,65 @@ import pytest
 from raglite.forecasting.model_selection import ModelSelectionResult
 
 
+@pytest.fixture(scope="session", autouse=True)
+def block_external_apis_in_unit_tests():
+    """Prevent unit tests from making real external API calls.
+
+    This fixture blocks external API calls to:
+    - Mistral AI (embedding, classification)
+    - Claude API (synthesis, LLM calls)
+    - PostgreSQL (database connections)
+    - Qdrant (vector database)
+
+    Any unit test attempting real API calls will fail fast with a clear error
+    message instead of timing out mysteriously.
+
+    Why this matters:
+    - Unit tests should NEVER hit real external services
+    - Real API calls cause 5-15s timeout overhead per test
+    - Fail-fast approach prevents mysterious CI hangs
+    - Forces proper mocking discipline
+
+    Related Issues:
+    - Strategic Analysis: 39% of commits are CI fixes
+    - Root Cause: Incomplete mocks allow real API calls in unit tests
+    - Prevention: Block at session level, fail immediately with helpful error
+    """
+    # Block Mistral AI client
+    with patch("raglite.shared.clients.get_mistral_client") as mock_mistral:
+        mock_mistral.side_effect = RuntimeError(
+            "❌ Unit test attempted to call Mistral API!\n"
+            "Unit tests must mock get_mistral_client().\n"
+            "Add: patch('raglite.shared.clients.get_mistral_client', return_value=MockClient())"
+        )
+
+        # Block Claude API client
+        with patch("raglite.shared.clients.get_claude_client") as mock_claude:
+            mock_claude.side_effect = RuntimeError(
+                "❌ Unit test attempted to call Claude API!\n"
+                "Unit tests must mock get_claude_client().\n"
+                "Add: patch('raglite.shared.clients.get_claude_client', return_value=MockClient())"
+            )
+
+            # Block PostgreSQL client
+            with patch("raglite.shared.clients.get_postgresql_connection") as mock_pg:
+                mock_pg.side_effect = RuntimeError(
+                    "❌ Unit test attempted to connect to PostgreSQL!\n"
+                    "Unit tests must mock get_postgresql_connection().\n"
+                    "Add: patch('raglite.shared.clients.get_postgresql_connection', return_value=MockConnection())"
+                )
+
+                # Block Qdrant client
+                with patch("raglite.shared.clients.get_qdrant_client") as mock_qdrant:
+                    mock_qdrant.side_effect = RuntimeError(
+                        "❌ Unit test attempted to connect to Qdrant!\n"
+                        "Unit tests must mock get_qdrant_client().\n"
+                        "Add: patch('raglite.shared.clients.get_qdrant_client', return_value=MockClient())"
+                    )
+
+                    yield
+
+
 @pytest.fixture
 def mock_historical_data():
     """Provide mock historical data with 15 points."""

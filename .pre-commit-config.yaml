@@ -175,3 +175,14 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
         files: ^tests/integration/.*\.py$
+
+      # Deferred import detection - prevent test performance regressions
+      # Root cause: Tests importing raglite.main inside functions cause 5-15s overhead
+      # This prevents 12% of recurring CI timeout pattern
+      - id: check-deferred-imports
+        name: check-deferred-imports
+        entry: bash scripts/check-deferred-imports.sh
+        language: system
+        pass_filenames: true
+        stages: [pre-commit]
+        files: ^tests/.*test_.*\.py$

@@ -1,12 +1,38 @@
-"""Shared fixtures for forecasting module tests."""
+"""Shared fixtures for forecasting module tests.
+
+Performance Optimization:
+- Heavy dependencies imported at module level (not inside test functions)
+- Prevents 5-15s import overhead per test
+- Related: Strategic Analysis finding - deferred imports cause timeout issues
+"""
 
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, Mock
 
 import numpy as np
 import pandas as pd
 import pytest
+
+# MODULE-LEVEL IMPORTS: Prevent per-test import overhead
+# These imports are expensive (statsmodels, pmdarima) and should load once
+# DO NOT move these inside test functions - causes 5-15s overhead per test
+try:
+    from raglite.forecasting.forecast_helpers import (
+        generate_forecast,
+        prepare_forecast_data,
+    )
+
+    from raglite.forecasting.model_selection import ModelSelectionResult
+
+    FORECASTING_AVAILABLE = True
+except ImportError:
+    # Allow tests to run even if forecasting dependencies not installed
+    FORECASTING_AVAILABLE = False
+    ModelSelectionResult = None
+    generate_forecast = None
+    prepare_forecast_data = None
 
 
 @pytest.fixture
@@ -133,3 +159,68 @@ def short_series() -> pd.Series:
     dates = pd.date_range(start="2024-01-01", periods=4, freq="MS")
     values = [100, 110, 105, 115]
     return pd.Series(values, index=dates, name="metric")
+
+
+@pytest.fixture
+def mock_mistral_client():
+    """Mock Mistral client for classification tests.
+
+    Prevents real API calls in unit tests.
+    Returns a mock with AsyncMock for embeddings.generate().
+    """
+    mock_client = Mock()
+    mock_client.embeddings = Mock()
+    mock_client.embeddings.create = AsyncMock(
+        return_value=Mock(data=[Mock(embedding=[0.1] * 1024)])
+    )
+    return mock_client
+
+
+@pytest.fixture
+def mock_claude_client():
+    """Mock Claude client for synthesis tests.
+
+    Prevents real API calls in unit tests.
+    Returns a mock with messages.create() method.
+    """
+    mock_client = Mock()
+    mock_client.messages = Mock()
+    mock_client.messages.create = Mock(return_value=Mock(content=[Mock(text="Mocked response")]))
+    return mock_client
+
+
+@pytest.fixture
+def mock_postgresql_client():
+    """Mock PostgreSQL connection for storage tests.
+
+    Prevents real database connections in unit tests.
+    Returns a mock connection with cursor().
+    """
+    mock_cursor = Mock()
+    mock_cursor.fetchone = Mock(return_value=None)
+    mock_cursor.fetchall = Mock(return_value=[])
+    mock_cursor.execute = Mock()
+
+    mock_conn = Mock()
+    mock_conn.cursor = Mock(return_value=mock_cursor)
+    mock_conn.commit = Mock()
+    mock_conn.rollback = Mock()
+
+    return mock_conn
+
+
+@pytest.fixture
+def mock_qdrant_client():
+    """Mock Qdrant client for vector search tests.
+
+    Prevents real vector database connections in unit tests.
+    Returns a mock client with search() method.
+    """
+    from unittest.mock import MagicMock
+
+    mock_client = MagicMock()
+    mock_client.search = Mock(return_value=[])
+    mock_client.retrieve = Mock(return_value=[])
+    mock_client.upsert = Mock(return_value=Mock(status="success"))
+
+    return mock_client

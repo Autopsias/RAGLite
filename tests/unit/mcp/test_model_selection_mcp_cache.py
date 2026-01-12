@@ -9,11 +9,16 @@ from unittest.mock import AsyncMock, patch
 import pandas as pd
 import pytest
 
+from raglite.forecasting import regressor_fetch as regressor_fetch_module
+from raglite.main import get_financial_forecast
 from raglite.mcp.tools import forecast_helpers as forecast_helpers_module
 from raglite.shared.models import ForecastQueryRequest
 
 # Group cache tests that share mocked state to run on same worker
-pytestmark = pytest.mark.xdist_group(name="model_cache")
+pytestmark = [
+    pytest.mark.xdist_group(name="model_cache"),
+    pytest.mark.timeout(300),
+]
 
 # =============================================================================
 # Test CachedModelSelection
@@ -54,8 +59,6 @@ class TestModelSelectionCacheIntegration:
         cached_selection_without_regressors,
     ) -> None:
         """When cache hit, should use cached model instead of default."""
-        from raglite.main import get_financial_forecast
-
         with (
             patch(
                 "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
@@ -103,8 +106,6 @@ class TestModelSelectionCacheIntegration:
         sample_forecast_result,
     ) -> None:
         """When cache miss, should fall back to select_model_type()."""
-        from raglite.main import get_financial_forecast
-
         with (
             patch(
                 "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
@@ -155,8 +156,6 @@ class TestModelSelectionCacheIntegration:
         expired_cached_selection,
     ) -> None:
         """Expired cache entries should trigger fallback."""
-        from raglite.main import get_financial_forecast
-
         with (
             patch(
                 "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
@@ -201,9 +200,6 @@ class TestModelSelectionCacheIntegration:
         cached_selection_with_regressors,
     ) -> None:
         """Only regressors in cached.regressor_list should be passed."""
-        from raglite.forecasting import regressor_fetch as regressor_fetch_module
-        from raglite.main import get_financial_forecast
-
         # Create mock regressor data
         mock_regressors = {
             "gdp_growth": pd.Series([1.0, 1.1, 1.2]),
@@ -268,8 +264,6 @@ class TestModelSelectionCacheIntegration:
         sample_forecast_result,
     ) -> None:
         """Cache lookup errors should not break forecasting."""
-        from raglite.main import get_financial_forecast
-
         with (
             patch(
                 "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
@@ -314,8 +308,6 @@ class TestModelSelectionCacheIntegration:
         sample_forecast_result,
     ) -> None:
         """Explicit model_type should bypass cache lookup."""
-        from raglite.main import get_financial_forecast
-
         with (
             patch(
                 "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",

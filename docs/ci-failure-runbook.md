@@ -9,14 +9,15 @@ Quick reference for diagnosing and resolving CI failures.
 
 ## Strategic Analysis Summary (2025-01-12)
 
-**CI Fix Commits:** 52% of total commits (85% of last 20 commits)
-**Root Cause Analysis:** Three systemic patterns identified and addressed with pre-commit hooks
-**Prevention Mechanisms:** Now enforced via 8 active pre-commit hooks + CI workflows
+**CI Fix Commits:** 52% of total commits (85% of last 20 commits before this update)
+**Root Cause Analysis:** Four systemic patterns identified and addressed with pre-commit hooks
+**Prevention Mechanisms:** Now enforced via 8 active pre-commit hooks + CI workflows + runtime guards
 
-### Three Root Causes Identified
+### Four Root Causes Identified
 
 | Root Cause | Frequency | Fix Implemented | Enforcement |
 |-----------|-----------|-----------------|------------|
+| **Incomplete Mock Coverage** | 10-15% of failures (P0-3) | External API blocking fixture + pre-commit hook | `block_external_apis_in_unit_tests` autouse fixture + `check-deferred-imports.sh` |
 | **Mock Target Drift** | 12% of failures | `validate-mock-targets.py` script | Pre-commit hook + CI validation job |
 | **pytest-xdist isinstance()** | 15% of failures | Duck-typing replacement rules | `check-isinstance-violations` hook (NEW) |
 | **xdist Marker Gaps** | 10% of failures | Add xdist_group markers | `validate-xdist-markers` hook (NEW) |
@@ -109,6 +110,7 @@ grep -n "class NonExistentClass" raglite/module.py  # Should find something
 
 | Failure Pattern | Likely Cause | Quick Fix | Prevention |
 |-----------------|--------------|-----------|-----------|
+| `Timeout (>120s)` in unit tests | Incomplete mock coverage, fallback API calls | Mock ALL extraction functions (primary + fallback) | Use `block_external_apis_in_unit_tests` fixture |
 | `pytest-xdist worker pollution` | Singleton init at import time | Mark test `@pytest.mark.slow` | Use lazy loading |
 | `SIGKILL` during parallel jobs | Resource tracker leaks | `pkill -9 -f resource_tracker` | Add cleanup in CI workflow |
 | `Database Empty` errors | Stale container mounts | `./scripts/start-dev.sh` | Validate mounts in CI |
@@ -795,6 +797,204 @@ grep "EXPECTED_METRICS\|cement_demand" tests/ -r --include="*.py"
 - Document metric definitions in both config and tests
 - Use shared constants for metric names (avoid duplication)
 - Add validation to config loader (verify referenced metrics exist)
+
+---
+
+### 17. Timeout Due to Incomplete Mock Coverage (P0-3)
+
+#### Symptoms
+- `Timeout (>120.0s) from pytest-timeout` in unit tests
+- Tests involve MCP tools (forecast, model selection, timeseries extraction)
+- Tests pass locally with full stack but timeout in CI
+- Specific tests timeout while others pass (not a general performance issue)
+- Test hangs at ~82% progress (suggesting fallback code path executed)
+- Most common with `get_financial_forecast` and `select_best_model` tools
+
+#### Root Cause (Five Whys)
+1. Why? → Unit tests mock primary extraction functions but miss fallback paths
+2. Why? → When primary extraction fails, code calls real external API (Mistral, Claude)
+3. Why? → External API calls have no network connectivity or timeout in CI
+4. Why? → Mock coverage only 50-70%, leaving critical paths unmocked
+5. Why? → Tests designed for local full-stack execution, not API isolation
+
+#### Example Flow (Extract Timeseries)
+```
+Unit test expects mocked data
+  ↓
+forecast_helpers.extract_historical_data_by_type() mocked ✓
+  ↓
+[But if that mock returns None or fails...]
+  ↓
+extract_timeseries() called as fallback [NOT MOCKED] ✗
+  ↓
+Mistral API call attempted
+  ↓
+No network/timeout
+  ↓
+120s timeout expires → test fails
+```
+
+#### Detection
+
+**Quick check for test that's timing out:**
+```bash
+# Run test with verbose timeout output
+uv run pytest path/to/test.py::test_name -v --timeout=30 --timeout-method=thread
+
+# Check what mocks are applied
+grep -A 10 "test_name" path/to/test.py | grep "patch\|mock"
+
+# Search for incomplete mock patterns
+grep -B 5 "extract_timeseries" tests/unit/
+```
+
+**Comprehensive check for all incomplete mocks:**
+```bash
+# Find all MCP tool tests
+grep -r "get_financial_forecast\|select_best_model" tests/unit/ --include="*.py" -l
+
+# For each test, verify BOTH primary and fallback extraction mocks
+grep -A 20 "@patch" tests/unit/mcp/test_tools.py | grep "extract_"
+```
+
+#### Solution Pattern
+
+**WRONG: Primary function mocked only**
+```python
+@patch("raglite.mcp.tools.forecast_helpers.extract_historical_data_by_type")
+async def test_forecast(mock_extract):
+    mock_extract.return_value = {"data": [...]}
+    result = await get_financial_forecast.fn(request)
+    # If extract_historical_data_by_type fails, calls UNMOCKED
+    # extract_timeseries() → real API call → timeout
+```
+
+**CORRECT: Both primary AND fallback mocked**
+```python
+@patch("raglite.mcp.tools.forecast_helpers.extract_timeseries")
+@patch("raglite.mcp.tools.forecast_helpers.extract_historical_data_by_type")
+async def test_forecast(mock_extract, mock_timeseries):
+    # Primary function
+    mock_extract.return_value = {"data": [...]}
+    # Fallback function
+    mock_timeseries.return_value = ([], [])
+
+    result = await get_financial_forecast.fn(request)
+    # Now both paths are covered
+```
+
+**BEST: Use context manager for clarity**
+```python
+async def test_forecast_request():
+    """Test financial forecast generation."""
+    with (
+        patch("raglite.mcp.tools.forecast_helpers.extract_historical_data_by_type") as m1,
+        patch("raglite.mcp.tools.forecast_helpers.extract_timeseries") as m2,
+    ):
+        m1.return_value = {"data": [...]}
+        m2.return_value = ([], [])
+
+        result = await get_financial_forecast.fn(request)
+        assert result.forecast is not None
+```
+
+#### Identifying Missing Mocks
+
+**Trace the code path:**
+1. Read the MCP tool implementation
+2. Identify all external API/database calls
+3. Check if each is mocked in the test
+4. Look for fallback code paths (try/except, if/else)
+5. Verify fallback paths are also mocked
+
+**Common fallback patterns to check:**
+```python
+# Pattern 1: Try-except fallback
+try:
+    data = extract_historical_data_by_type(...)  # Mock this
+except:
+    data = extract_timeseries(...)  # AND mock this!
+
+# Pattern 2: Conditional extraction
+if use_cached:
+    data = get_cached_data()  # Mock this
+else:
+    data = extract_from_api()  # Mock this too!
+
+# Pattern 3: Nested extraction calls
+result1 = primary_extract()  # Mock this
+if not result1:
+    result2 = fallback_extract()  # Don't forget this!
+```
+
+#### Verification
+
+**Run test with strace to detect API calls:**
+```bash
+# Minimal timeout to fail fast if APIs are called
+uv run pytest tests/unit/mcp/test_tools.py::test_forecast -v --timeout=10
+
+# If it still times out, an API call is happening
+# Search for where that API call originates
+grep -r "Mistral\|request.post\|openai.ChatCompletion" raglite/
+```
+
+**Verify all mocks are present:**
+```bash
+# Extract function names from tool implementation
+grep -o "extract_[a-z_]*" raglite/mcp/tools/forecast_helpers.py | sort -u
+
+# Check which are mocked in tests
+for func in $(grep -o "extract_[a-z_]*" raglite/mcp/tools/forecast_helpers.py | sort -u); do
+    echo "=== $func ==="
+    grep -c "patch.*$func" tests/unit/mcp/test_tools.py || echo "NOT MOCKED"
+done
+```
+
+#### Prevention (2025-01-12)
+
+**1. External API Blocking Fixture** (Created in `/tests/unit/conftest.py`)
+```python
+@pytest.fixture(autouse=True)
+def block_external_apis_in_unit_tests():
+    """Fail fast if unit tests attempt external API calls."""
+    # Blocks: Mistral, Claude, Qdrant, PostgreSQL
+    # Ensures mocks are comprehensive before test starts
+```
+
+This fixture is session-scoped with `autouse=True`, so:
+- All unit tests automatically get protection
+- If any external API is called, test fails immediately with clear error
+- No need to wait 120s for timeout - you know instantly
+
+**2. Pre-commit Hook** (`scripts/check-deferred-imports.sh`)
+```bash
+# Runs before every commit
+# Detects deferred imports that could cause slowdown
+# Prevents: late imports, lazy loading abuse, mock miss patterns
+```
+
+**3. Test Pattern Checklist**
+
+When writing new tests that call MCP tools:
+- [ ] Identify all extraction functions called (trace code path)
+- [ ] Identify all fallback paths (try/except, if/else)
+- [ ] Mock ALL extraction functions (primary + fallbacks)
+- [ ] Run with `--timeout=30` to catch incomplete mocks early
+- [ ] Verify test completes in <3 seconds (not <120s)
+
+**4. Code Review Checklist**
+
+When reviewing test PRs:
+- [ ] Are all external API calls mocked?
+- [ ] Are fallback code paths covered?
+- [ ] Does test complete in <5 seconds?
+- [ ] Does test fail immediately (not timeout) if mock missing?
+
+#### Related Documentation
+- **Mock Patch Interference:** Section 4 (mock target drift)
+- **Test Reliability Rules:** `.claude/rules/testing.md` → Mock Patterns
+- **External API Blocking:** `tests/unit/conftest.py` → `block_external_apis_in_unit_tests`
 
 ---
 
