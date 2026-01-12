@@ -5,7 +5,7 @@ inputs:
   max-wait-seconds:
     description: 'Maximum seconds to wait for Docker daemon to be ready'
     required: false
-    default: '60'
+    default: '90'
   check-ports:
     description: 'Comma-separated list of ports to validate (e.g., "6333,5432")'
     required: false
@@ -50,6 +50,28 @@ runs:
             echo "❌ Colima socket exists but colima command not found"
             echo "Install with: brew install colima"
             exit 1
+          fi
+
+          # Check for zombie state: Colima VM running but Docker daemon dead
+          COLIMA_STATUS=$(colima status 2>&1 || true)
+          if echo "$COLIMA_STATUS" | grep -q "Running"; then
+            echo "🔍 Colima VM reports 'Running', checking Docker daemon health..."
+
+            if ! docker info &> /dev/null; then
+              echo "🧟 ZOMBIE STATE DETECTED - Colima VM running but Docker daemon dead"
+              echo "   This requires full VM recreation to recover"
+              echo "   Forcing Colima shutdown and cleanup..."
+
+              colima stop -f 2>/dev/null || true
+              sleep 2
+              colima delete -f 2>/dev/null || true
+              sleep 3
+
+              echo "✅ Zombie state cleared, proceeding with fresh VM start"
+            else
+              echo "✅ Colima VM and Docker daemon both healthy"
+              exit 0
+            fi
           fi
 
           echo "Starting Colima with retry logic..."

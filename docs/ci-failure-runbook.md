@@ -129,6 +129,7 @@ grep -n "class NonExistentClass" raglite/module.py  # Should find something
 | `TypeError: missing required argument` | API signature changed, test calls not updated | Update all function calls with required params | Add contract tests to catch drift early |
 | `KeyError: 'cement_demand'` | Config and test files out of sync | Add validation that configured metrics exist | Sync verification CI job before merge |
 | `Unit test attempted to call Mistral API!` | Lazy import in function body not patched | Add module to mock_clients.py patches | Run validate-mock-coverage.py before commit |
+| `Docker daemon did not become ready within 60s` | Colima zombie state (process running, daemon dead) | `colima stop -f && colima delete -f && colima start` | Add zombie state detection to pre-flight check |
 
 ---
 
@@ -1112,7 +1113,256 @@ sudo ln -s ~/.colima/default/docker.sock /var/run/docker.sock
 
 ---
 
-### 19. Lazy Import Mock Coverage Gap (Strategic Analysis 2025-01-12)
+### 19. Colima Zombie State - Daemon Process Unresponsive (Strategic Analysis 2025-01-12)
+
+#### Symptoms
+- Docker Pre-flight Validation step fails after exactly 60s timeout
+- Logs show: `colima start` succeeded with message "already running, ignoring"
+- Then: `Still waiting for Docker daemon... 10s/60s` → `20s/60s` → ... → `60s/60s`
+- Finally: `Docker daemon did not become ready within 60s`
+- `colima status` shows "running" but `docker info` fails or times out
+- Colima VM process visible in `ps aux` but internal Docker daemon is dead
+- Container operations fail with "Cannot connect to Docker daemon"
+
+#### Root Cause (Five Whys)
+1. Why? → Docker Pre-flight validation times out after 60s
+2. Why? → Colima responds to status check but daemon socket is unresponsive
+3. Why? → Colima VM process is running but internal Docker daemon crashed
+4. Why? → No health check exists to detect zombie VM state
+5. Why? → VM process can be "running" while daemon inside is dead
+
+#### Strategic Impact
+**Transient failure pattern** - Occurs intermittently on self-hosted runner when Colima VM enters zombie state. The VM appears running to the OS but Docker daemon inside is unresponsive. Different from general Docker unavailability (Section 13) - this is VM-level zombie state.
+
+#### Detection (Quick Check)
+
+**Test if Colima is in zombie state:**
+```bash
+# Step 1: Check if colima process exists
+colima status 2>/dev/null | grep -q "Running" && echo "Process: OK" || echo "Process: DEAD"
+
+# Step 2: Check if Docker daemon responds
+docker info &>/dev/null && echo "Daemon: OK" || echo "Daemon: DEAD"
+
+# Result: If "Process: OK" and "Daemon: DEAD" → Zombie state
+```
+
+**Full diagnostic:**
+```bash
+# Check Colima status
+colima status
+
+# Check Docker daemon responsiveness (with timeout)
+timeout 5 docker info > /dev/null 2>&1
+EXIT_CODE=$?
+if [ $EXIT_CODE -eq 0 ]; then
+    echo "Daemon: RESPONSIVE"
+elif [ $EXIT_CODE -eq 124 ]; then
+    echo "Daemon: TIMEOUT (zombie state likely)"
+else
+    echo "Daemon: ERROR"
+fi
+
+# Check for stale processes
+ps aux | grep colima | grep -v grep
+
+# Check socket status
+ls -la ~/.colima/default/docker.sock 2>/dev/null || echo "Socket not accessible"
+```
+
+#### Solution Pattern
+
+**Quick Recovery (30 seconds):**
+```bash
+# Force stop and delete VM (kills zombie process)
+colima stop -f
+colima delete -f
+
+# Restart with explicit resource allocation
+colima start --cpu 4 --memory 6 --disk 50 --runtime docker
+
+# Verify daemon is responsive
+docker info
+
+# Verify containers can be accessed
+docker ps
+```
+
+**Immediate Workaround (if scripts unavailable):**
+```bash
+# Single command to kill and restart
+colima stop -f && sleep 1 && colima delete -f && sleep 1 && colima start
+```
+
+**In CI Workflow:**
+```yaml
+- name: Recover from Colima Zombie State
+  if: failure()
+  run: |
+    colima stop -f
+    colima delete -f
+    colima start --cpu 4 --memory 6 --disk 50 --runtime docker
+    docker info
+    docker-compose up -d
+```
+
+#### Verification
+```bash
+# Verify recovery successful
+colima status
+# Should show: colima is running
+
+docker info | head -5
+# Should show Docker version and system information
+
+docker ps --filter "name=raglite" --format "table {{.Names}}\t{{.Status}}"
+# Should show running containers with healthy status
+
+# Run integration test to confirm
+uv run pytest tests/integration/chunking/test_ac5_validation.py -v --timeout=120
+```
+
+#### Prevention (2025-01-12)
+
+**1. Pre-Flight Zombie Detection Hook**
+
+Add to pytest_configure in `tests/fixtures/pytest_hooks.py`:
+```python
+import subprocess
+import time
+import logging
+
+logger = logging.getLogger(__name__)
+
+def _is_colima_zombie():
+    """Detect if Colima VM is in zombie state (process running but daemon dead)."""
+    try:
+        # Check if colima process exists
+        colima_status = subprocess.run(
+            ["colima", "status"],
+            capture_output=True,
+            timeout=5,
+            text=True
+        )
+        if "running" not in colima_status.stdout.lower():
+            return False  # Not zombie - just not running
+
+        # Check if Docker daemon responds (with short timeout)
+        docker_info = subprocess.run(
+            ["docker", "info"],
+            capture_output=True,
+            timeout=5,
+            text=True
+        )
+        if docker_info.returncode == 0:
+            return False  # Daemon responds - healthy
+        else:
+            return True  # Process running but daemon dead = zombie!
+    except subprocess.TimeoutExpired:
+        return True  # Timeout on docker info = zombie behavior
+    except Exception:
+        return False  # Can't determine
+
+def _recover_from_zombie():
+    """Force recreate Colima VM to recover from zombie state."""
+    commands = [
+        ["colima", "stop", "-f"],
+        ["sleep", "2"],
+        ["colima", "delete", "-f"],
+        ["sleep", "2"],
+        ["colima", "start"]
+    ]
+    for cmd in commands:
+        subprocess.run(cmd)
+    time.sleep(10)
+
+def pytest_configure(config):
+    if _is_colima_zombie():
+        logger.warning("Colima zombie state detected - forcing restart")
+        _recover_from_zombie()
+```
+
+**2. Enhanced Health Check Script**
+
+Update `scripts/ensure-colima-health.sh` to detect zombie state:
+```bash
+#!/bin/bash
+# Enhanced Colima health check with zombie state detection
+
+# Check for zombie state (process running but daemon unresponsive)
+if colima status 2>/dev/null | grep -q "running"; then
+    # Process is running - check if daemon responds
+    if ! timeout 5 docker info > /dev/null 2>&1; then
+        echo "ZOMBIE STATE DETECTED: Colima process running but daemon unresponsive"
+        echo "Forcing VM recreation..."
+
+        colima stop -f
+        sleep 2
+        colima delete -f
+        sleep 2
+        colima start --cpu 4 --memory 6 --disk 50 --runtime docker
+
+        # Wait for startup
+        for i in {1..60}; do
+            if docker info > /dev/null 2>&1; then
+                echo "VM recovered after ${i}s"
+                break
+            fi
+            sleep 1
+        done
+    fi
+fi
+
+# Continue with standard health checks...
+```
+
+**3. CI Job Configuration**
+
+Add zombie state handling to all jobs using Docker:
+```yaml
+jobs:
+  test:
+    runs-on: self-hosted-macos
+    steps:
+      - name: Detect and Fix Colima Zombie State
+        run: |
+          # Check for zombie state
+          if colima status 2>/dev/null | grep -q "running"; then
+            if ! timeout 5 docker info > /dev/null 2>&1; then
+              echo "Zombie state detected - recovering..."
+              colima stop -f
+              sleep 2
+              colima delete -f
+              sleep 2
+              colima start
+            fi
+          fi
+
+      - name: Run Tests
+        run: uv run pytest tests/integration/
+```
+
+**4. Monitoring Zombie State Occurrences**
+
+Track in CI logs:
+```bash
+# Enhanced health check with logging
+if colima status 2>/dev/null | grep -q "running" && \
+   ! timeout 5 docker info > /dev/null 2>&1; then
+    echo "ALERT: Colima zombie state detected at $(date)" >&2
+    # Trigger recovery
+fi
+```
+
+#### Related Documentation
+- **CI Strategy:** `docs/ci-strategy.md` → Docker/Colima Reliability section
+- **Colima Reliability:** `docs/ci-knowledge/colima-reliability.md` → Zombie State Prevention
+- **Prevention Rules:** `docs/ci-knowledge/prevention-rules.md` → Docker Infrastructure
+- **Self-Hosted Guide:** `docs/ci-knowledge/self-hosted-runner-guide.md` → Zombie Recovery
+
+---
+
+### 20. Lazy Import Mock Coverage Gap (Strategic Analysis 2025-01-12)
 
 #### Symptoms
 - `Unit test attempted to call Mistral API!` in test logs

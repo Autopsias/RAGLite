@@ -302,14 +302,142 @@ docker info    # Should succeed
 
 ---
 
+## Failure Pattern: Colima Zombie State (NEW - 2025-01-12)
+
+### Overview
+
+A distinct failure pattern from general Docker unavailability: Colima VM process is running, but the Docker daemon inside the VM is unresponsive. Appears as:
+- `colima status` reports "running"
+- `docker info` times out (>5 seconds)
+- Docker Pre-flight validation fails after 60s timeout
+- Container operations return "Cannot connect to Docker daemon"
+
+### Zombie State vs. Unavailability
+
+| State | colima status | docker info | Socket | Recovery |
+|-------|---------------|------------|--------|----------|
+| **Healthy** | "running" | Responds | Accessible | N/A |
+| **Stopped** | "stopped" | Fails immediately | Missing | `colima start` |
+| **Zombie** | "running" | Times out (>5s) | Present but unresponsive | Force recreate: `colima stop -f && colima delete -f && colima start` |
+| **Crashed** | Hangs | Fails with error | May be missing | Same as zombie |
+
+### Detection Pattern
+
+```bash
+# Zombie state test (all three must be true)
+colima status 2>/dev/null | grep -q "running"     # TRUE: process exists
+timeout 5 docker info > /dev/null 2>&1            # FALSE: daemon unresponsive
+[ $? -ne 0 ] && echo "Zombie state detected"      # Confirms zombie
+```
+
+### Recovery (Fastest Method)
+
+```bash
+# Single command: stop, delete, restart
+colima stop -f && sleep 2 && colima delete -f && sleep 2 && colima start
+
+# Then verify
+docker info && echo "Recovery successful"
+```
+
+### Root Cause Analysis
+
+**Why zombie state occurs:**
+1. Colima VM is a lightweight hypervisor - process can be "running" at OS level
+2. Docker daemon inside VM can crash independently
+3. Socket forwarding layer connects to dead daemon
+4. `colima status` only checks VM process, not daemon health
+5. First real interaction (docker info) detects the problem
+
+**Why it's different from Section 18 (Docker Daemon Socket Inaccessibility):**
+- Section 18: Socket is unreachable (usually due to VM stop)
+- Zombie State: Socket is present but daemon behind it is dead
+- Section 18 fix: Restart Colima
+- Zombie State fix: Force delete and recreate VM
+
+### Prevention Implementation
+
+**Option 1: Automatic Detection in pytest (tests/fixtures/pytest_hooks.py)**
+```python
+def _is_colima_zombie():
+    """Detect zombie state: process running but daemon unresponsive."""
+    try:
+        colima_status = subprocess.run(
+            ["colima", "status"],
+            capture_output=True,
+            timeout=5,
+            text=True
+        )
+        if "running" not in colima_status.stdout.lower():
+            return False
+
+        docker_info = subprocess.run(
+            ["docker", "info"],
+            capture_output=True,
+            timeout=5,
+            text=True
+        )
+        return docker_info.returncode != 0  # daemon unresponsive
+    except subprocess.TimeoutExpired:
+        return True  # Timeout = daemon unresponsive
+    except Exception:
+        return False
+```
+
+**Option 2: Enhanced Health Check Script (scripts/ensure-colima-health.sh)**
+```bash
+# Add zombie detection
+if colima status 2>/dev/null | grep -q "running"; then
+    if ! timeout 5 docker info > /dev/null 2>&1; then
+        echo "Zombie state detected - force recreating VM"
+        colima stop -f && sleep 2 && colima delete -f && sleep 2 && colima start
+    fi
+fi
+```
+
+**Option 3: CI Job Pre-Flight Check**
+```yaml
+- name: Detect and Fix Colima Zombie State
+  run: |
+    if colima status 2>/dev/null | grep -q "running"; then
+      if ! timeout 5 docker info > /dev/null 2>&1; then
+        colima stop -f
+        sleep 2
+        colima delete -f
+        sleep 2
+        colima start
+      fi
+    fi
+```
+
+### Metrics to Track
+
+Add to monitoring:
+- Zombie state occurrences per day
+- Time to detect (should be <5s with timeout)
+- Recovery success rate (should be 100%)
+- Alert if zombie states exceed 2 per hour
+
+---
+
 ## Summary
 
-The 80% CI fix rate is driven by a single root cause: Colima VM instability on self-hosted macOS runner. The socket becomes inaccessible between jobs, causing transient Docker connectivity failures.
+The 80% CI fix rate is driven by Colima VM instability on self-hosted macOS runner. There are two primary failure patterns:
 
-**Solution:** Implement pre-flight Colima health checks before any container operations. This simple addition should reduce the CI fix rate from 80% to <10% by automatically detecting and recovering from Colima unavailability.
+1. **Docker Socket Inaccessibility (Section 18):** Socket becomes unreachable between jobs
+   - Root cause: Colima VM stops or becomes unresponsive
+   - Fix: Restart Colima with health check
+
+2. **Colima Zombie State (NEW):** VM appears running but daemon is dead
+   - Root cause: Docker daemon inside VM crashes
+   - Fix: Force recreate VM with `colima delete -f && colima start`
+
+**Solution:** Implement dual-level detection:
+1. Pre-flight socket health check (catches Section 18)
+2. Daemon responsiveness check (catches zombie state)
 
 **Implementation Timeline:**
 - Phase 1 (P0): 1-2 days to prevent 80% of current failures
 - Phase 2-4: Follow-up improvements for long-term stability
 
-**Key Takeaway:** The issue is self-hosted runner infrastructure, not application code or test design. With proper pre-flight validation, Colima reliability can match GitHub-hosted runners.
+**Key Takeaway:** The issue is self-hosted runner infrastructure, not application code or test design. With proper pre-flight validation and zombie state detection, Colima reliability can match GitHub-hosted runners.
