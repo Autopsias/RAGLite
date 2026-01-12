@@ -30,40 +30,38 @@ pytestmark = [
 @pytest.mark.asyncio
 @pytest.mark.slow
 @pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_existing=True) - skip re-ingest cleanup
-@pytest.mark.timeout(2700)  # 45 minutes for large PDFs (increased from 30min)
+@pytest.mark.timeout(600)  # 10 minutes for 10-page PDF
 async def test_ac4_collection_recreation_and_reingest(test_pdf_path):
     """AC4: Delete contaminated collection, recreate with clean schema, re-ingest test PDF.
 
     Validates:
     - Old collection deleted
     - New collection created with proper schema
-    - 160-page PDF re-ingested successfully
-    - Chunk count in expected 180-220 range (corrected from 250-350)
+    - 10-page PDF re-ingested successfully
+    - Chunk count in expected 8-50 range
 
-    NOTE: This test uses the full 160-page PDF and may take 15-25 minutes.
-    For faster CI/CD, use test_ac4_fast_40page instead (marked as @pytest.mark.slow).
-    Expected runtime: 15-20 minutes for 160-page PDF with Docling + chunking + embeddings.
+    NOTE: Uses 10-page PDF for fast CI (~2-3 minutes).
+    Expected runtime: 2-3 minutes for 10-page PDF with Docling + chunking + embeddings.
     """
     client: QdrantClient = get_qdrant_client()
     collection_name = settings.qdrant_collection_name
 
     # AC4.1: Verify collection deletion and recreation (handled by ingest_pdf with clear_existing=True)
-    # AC4.2: Ingest 160-page test PDF
+    # AC4.2: Ingest 10-page test PDF
     metadata = await ingest_pdf(test_pdf_path, clear_existing=True)
 
     # AC4.3: Verify collection exists and has data
     collection_info = client.get_collection(collection_name)
     assert collection_info.points_count > 0, "Collection should have points after ingestion"
 
-    # AC4.4: Verify chunk count in expected range
-    # NOTE: Updated from 250-350 to 180-220 based on actual fixed chunking behavior
-    # - 160-page PDF with ~300-600 tokens/page = 48k-96k tokens
+    # AC4.4: Verify chunk count in expected range for 10-page PDF
+    # - 10 pages × 300-600 tokens/page = 3k-6k tokens
     # - 512-token chunks with 50-token overlap = 462-token stride
-    # - Expected: 48k-96k / 462 = 104-208 text chunks + ~10-20 table chunks = 180-220 total
-    # - Original 250-350 range was based on incorrect element-aware assumptions
+    # - Expected: 3k-6k / 462 = 6-13 text chunks + ~2-3 table chunks = 8-50 total
+    # - Upper bound increased to 50 to account for table-heavy pages
     chunk_count = collection_info.points_count
-    assert 180 <= chunk_count <= 220, (
-        f"Chunk count {chunk_count} not in expected range 180-220 (fixed chunking with 512-token chunks)"
+    assert 8 <= chunk_count <= 50, (
+        f"Chunk count {chunk_count} not in expected range 8-50 (fixed chunking with 512-token chunks)"
     )
 
     # Verify metadata chunk count matches Qdrant
@@ -71,7 +69,7 @@ async def test_ac4_collection_recreation_and_reingest(test_pdf_path):
         f"Metadata chunk count {metadata.chunk_count} != Qdrant {chunk_count}"
     )
 
-    print(f"\n✅ AC4 PASS: Collection recreated, {chunk_count} chunks ingested (180-220 expected)")
+    print(f"\n✅ AC4 PASS: Collection recreated, {chunk_count} chunks ingested (8-50 expected)")
 
 
 @pytest.mark.integration

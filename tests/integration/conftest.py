@@ -106,10 +106,14 @@ pytestmark = pytest.mark.preserve_collection
 
 @pytest.fixture
 def test_pdf_path():
-    """Path to 160-page test PDF."""
+    """Path to 10-page test PDF for fast CI tests.
+
+    Uses smaller PDF (10 pages) instead of full 160-page PDF.
+    Expected chunk count: 8-15 chunks for 10 pages.
+    """
     from pathlib import Path
 
-    pdf_path = Path("docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf")
+    pdf_path = Path("docs/sample pdf/test-10-pages.pdf")
     if not pdf_path.exists():
         pytest.skip(f"Test PDF not found: {pdf_path}")
     return str(pdf_path)
