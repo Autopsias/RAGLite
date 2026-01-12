@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from raglite.retrieval.query_classifier import QueryType
 from raglite.retrieval.search import fuse_search_results, hybrid_search
 from raglite.shared.models import QueryResult
 
@@ -164,18 +165,22 @@ class TestScoreFusion:
 class TestHybridSearchEndToEnd:
     """Test hybrid search end-to-end with mocks (AC2.4)."""
 
+    @patch("raglite.shared.clients.get_mistral_client")
     @patch("raglite.retrieval.search.hybrid_search.classify_query")
     @patch("raglite.retrieval.search.hybrid_search.search_documents")
     @patch("raglite.retrieval.search.hybrid_search.load_bm25_index")
     @patch("raglite.retrieval.search.hybrid_search.compute_bm25_scores")
     @pytest.mark.priority("P1")
     async def test_hybrid_search_combines_results(
-        self, mock_compute_bm25, mock_load_bm25, mock_search_docs, mock_classify
+        self,
+        mock_compute_bm25,
+        mock_load_bm25,
+        mock_search_docs,
+        mock_classify,
+        mock_mistral,
     ):
         """Test hybrid search combines semantic and BM25 results."""
         # Arrange: Mock query classifier to return VECTOR_ONLY (skip SQL routing)
-        from raglite.retrieval.query_classifier import QueryType
-
         mock_classify.return_value = QueryType.VECTOR_ONLY
 
         # Mock semantic search results
@@ -251,17 +256,16 @@ class TestHybridSearchEndToEnd:
 
         assert len(results) == 1
 
+    @patch("raglite.shared.clients.get_mistral_client")
     @patch("raglite.retrieval.search.hybrid_search.classify_query")
     @patch("raglite.retrieval.search.hybrid_search.search_documents")
     @patch("raglite.retrieval.search.hybrid_search.load_bm25_index")
     @pytest.mark.priority("P1")
     async def test_hybrid_search_bm25_unavailable_fallback(
-        self, mock_load_bm25, mock_search_docs, mock_classify
+        self, mock_load_bm25, mock_search_docs, mock_classify, mock_mistral
     ):
         """Test hybrid search falls back if BM25 index unavailable."""
         # Arrange: Mock query classifier to return VECTOR_ONLY (skip SQL routing)
-        from raglite.retrieval.query_classifier import QueryType
-
         mock_classify.return_value = QueryType.VECTOR_ONLY
 
         # Mock semantic search to return 1 result
@@ -284,18 +288,22 @@ class TestHybridSearchEndToEnd:
         assert len(results) == 1
         assert results[0].score == 0.9
 
+    @patch("raglite.shared.clients.get_mistral_client")
     @patch("raglite.retrieval.search.hybrid_search.classify_query")
     @patch("raglite.retrieval.search.hybrid_search.search_documents")
     @patch("raglite.retrieval.search.hybrid_search.load_bm25_index")
     @patch("raglite.retrieval.search.hybrid_search.compute_bm25_scores")
     @pytest.mark.priority("P1")
     async def test_hybrid_search_improves_ranking(
-        self, mock_compute_bm25, mock_load_bm25, mock_search_docs, mock_classify
+        self,
+        mock_compute_bm25,
+        mock_load_bm25,
+        mock_search_docs,
+        mock_classify,
+        mock_mistral,
     ):
         """Test hybrid search improves ranking by boosting keyword matches."""
         # Mock query classifier to skip SQL routing (Story 2.13)
-        from raglite.retrieval.query_classifier import QueryType
-
         mock_classify.return_value = QueryType.VECTOR_ONLY
         # Arrange: Semantic ranks chunk_2 higher, but BM25 ranks chunk_1 higher
         mock_search_docs.return_value = [

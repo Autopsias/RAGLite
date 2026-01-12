@@ -186,3 +186,15 @@ repos:
         pass_filenames: true
         stages: [pre-commit]
         files: ^tests/.*test_.*\.py$
+
+      # Mock coverage validation - prevent get_mistral_client mock gaps
+      # Root cause: 17+ modules import get_mistral_client but only 5 patched
+      # New modules bypass mock coverage causing 401 Unauthorized errors
+      # This prevents mock coverage gaps before commit
+      - id: validate-mock-coverage
+        name: validate-mock-coverage
+        entry: python scripts/validate-mock-coverage.py
+        language: python
+        pass_filenames: false
+        stages: [pre-commit]
+        files: ^(raglite/.*\.py|tests/fixtures/mock_clients\.py)$

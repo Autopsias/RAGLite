@@ -8,17 +8,16 @@ import asyncio
 
 import pytest
 
+from raglite.retrieval.search import enrich_results_with_metadata
+from raglite.shared import config
+from raglite.shared.models import ExtractedMetadata, QueryResult
+
 
 @pytest.mark.asyncio
 async def test_enrich_results_with_metadata_success(
     test_settings, mock_mistral_client, monkeypatch
 ):
     """Test successful metadata enrichment of query results."""
-    from raglite.retrieval.search import enrich_results_with_metadata
-
-    # Enable query-time metadata
-    from raglite.shared import config
-    from raglite.shared.models import QueryResult
 
     monkeypatch.setattr(config.settings, "query_time_metadata_enabled", True)
     monkeypatch.setattr(config.settings, "mistral_api_key", "test-key")
@@ -55,12 +54,6 @@ async def test_enrich_results_with_metadata_success(
 @pytest.mark.asyncio
 async def test_enrich_results_disabled(test_settings, monkeypatch):
     """Test enrichment is skipped when disabled."""
-    from raglite.retrieval.search import enrich_results_with_metadata
-
-    # Disable query-time metadata
-    from raglite.shared import config
-    from raglite.shared.models import QueryResult
-
     monkeypatch.setattr(config.settings, "query_time_metadata_enabled", False)
 
     results = [
@@ -82,12 +75,6 @@ async def test_enrich_results_disabled(test_settings, monkeypatch):
 @pytest.mark.asyncio
 async def test_enrich_results_no_api_key(test_settings, monkeypatch):
     """Test graceful degradation when API key missing."""
-    from raglite.retrieval.search import enrich_results_with_metadata
-
-    # Enable enrichment but no API key
-    from raglite.shared import config
-    from raglite.shared.models import QueryResult
-
     monkeypatch.setattr(config.settings, "query_time_metadata_enabled", True)
     monkeypatch.setattr(config.settings, "mistral_api_key", None)
 
@@ -108,12 +95,8 @@ async def test_enrich_results_no_api_key(test_settings, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_enrich_results_timeout(test_settings, monkeypatch):
+async def test_enrich_results_timeout(test_settings, mock_mistral_client, monkeypatch):
     """Test timeout handling returns results unchanged."""
-    from raglite.retrieval.search import enrich_results_with_metadata
-    from raglite.shared import config
-    from raglite.shared.models import QueryResult
-
     monkeypatch.setattr(config.settings, "query_time_metadata_enabled", True)
     monkeypatch.setattr(config.settings, "mistral_api_key", "test-key")
 
@@ -145,9 +128,6 @@ async def test_enrich_results_timeout(test_settings, monkeypatch):
 @pytest.mark.asyncio
 async def test_enrich_results_empty_list(test_settings, monkeypatch):
     """Test enrichment with empty results list."""
-    from raglite.retrieval.search import enrich_results_with_metadata
-    from raglite.shared import config
-
     monkeypatch.setattr(config.settings, "query_time_metadata_enabled", True)
     monkeypatch.setattr(config.settings, "mistral_api_key", "test-key")
 
@@ -157,12 +137,8 @@ async def test_enrich_results_empty_list(test_settings, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_enrich_results_partial_failure(test_settings, monkeypatch):
+async def test_enrich_results_partial_failure(test_settings, mock_mistral_client, monkeypatch):
     """Test enrichment continues when some results fail."""
-    from raglite.retrieval.search import enrich_results_with_metadata
-    from raglite.shared import config
-    from raglite.shared.models import QueryResult
-
     monkeypatch.setattr(config.settings, "query_time_metadata_enabled", True)
     monkeypatch.setattr(config.settings, "mistral_api_key", "test-key")
 
@@ -175,8 +151,6 @@ async def test_enrich_results_partial_failure(test_settings, monkeypatch):
         if call_count == 1:
             raise RuntimeError("Extraction failed")
         # Return mock metadata for other calls
-        from raglite.shared.models import ExtractedMetadata
-
         return ExtractedMetadata(
             company_name="Test Corp",
             metric_category="Revenue",
@@ -215,15 +189,11 @@ async def test_enrich_results_partial_failure(test_settings, monkeypatch):
 
 @pytest.mark.asyncio
 @pytest.mark.priority("P0")
-async def test_enrich_results_attaches_metadata(test_settings, monkeypatch):
+async def test_enrich_results_attaches_metadata(test_settings, mock_mistral_client, monkeypatch):
     """Test that enrich_results_with_metadata attaches metadata to QueryResult objects.
 
     Story 5.0.6 AC5 Fix: Verify metadata field is populated after enrichment.
     """
-    from raglite.retrieval.search import enrich_results_with_metadata
-    from raglite.shared import config
-    from raglite.shared.models import ExtractedMetadata, QueryResult
-
     monkeypatch.setattr(config.settings, "query_time_metadata_enabled", True)
     monkeypatch.setattr(config.settings, "mistral_api_key", "test-key")
 

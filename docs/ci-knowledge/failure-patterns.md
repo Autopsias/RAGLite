@@ -684,3 +684,89 @@ grep "EXPECTED_METRICS\|cement_demand" tests/ -r --include="*.py"
 - **Runbook:** `docs/ci-failure-runbook.md` → Section 16 (Config Sync Drift)
 - **Prevention Rules:** `docs/ci-knowledge/prevention-rules.md` → Config-Test Synchronization
 - **CI Strategy:** `docs/ci-strategy.md` → Test Validation Patterns
+
+---
+
+## Failure Pattern: Lazy Import Mock Coverage Gap (Strategic Analysis 2025-01-12)
+
+**First Observed:** 2025-01-12 (CI strategy analysis)
+**Frequency:** 80% of CI failures driven by reactive mock patching
+**Strategic Impact:** 17+ modules import get_mistral_client, only 5 patched initially
+**Enforcement Mechanism:** `scripts/validate-mock-coverage.py` validates all imports before commit
+
+### Symptoms
+
+- `Unit test attempted to call Mistral API!` in test output (fixture protection triggered)
+- Test timeout (>120s) after external API blocking fixture runs
+- Specific modules like `enrichment.py`, `anomaly_detection.py` escape mock coverage
+- 80% CI fix rate despite core mock fixtures in place (reactive patching pattern)
+- New code adding `get_mistral_client` imports causes immediate test timeout failures
+- Different behavior between old tests (patched) and newly written tests (unpatched)
+
+### Root Cause (Five Whys)
+
+1. **Why do tests timeout?** → External API calls execute (Mistral API requests)
+2. **Why aren't they mocked?** → Lazy imports inside function bodies execute at test runtime
+3. **Why use lazy imports?** → Avoid circular imports, defer module loading until needed
+4. **Why do patches miss locations?** → 17+ modules import get_mistral_client, only 5 manually patched
+5. **Why no structural prevention?** → No validation that all import locations are patched before tests run
+
+### Solution Applied
+
+- Created `scripts/validate-mock-coverage.py` to automatically detect unpatched import locations
+- Script scans all `raglite/` modules for `get_mistral_client` imports
+- Compares against patches in `tests/fixtures/mock_clients.py`
+- Reports gaps with actionable fix suggestions
+- Exit code allows use as pre-commit hook (blocks commits with gaps)
+- Added 12+ new patches to `tests/fixtures/mock_clients.py` (session fixture now covers all locations)
+
+### Verification
+
+```bash
+# Validate mock coverage
+python scripts/validate-mock-coverage.py
+
+# Should output: ✅ Mock coverage validation PASSED
+# (or show gaps that need fixing before commit)
+
+# Detailed report
+python scripts/validate-mock-coverage.py --verbose
+
+# Run unit tests with short timeout (fails fast if API calls happen)
+uv run pytest tests/unit/ -v --timeout=10
+# Should all pass in <3 seconds (no timeouts)
+```
+
+### Prevention
+
+**1. Automated Validation (Pre-commit)**
+- Script blocks commits if gaps found
+- Runs before every `git commit`
+- Provides exact patch lines needed
+
+**2. Code Review Checklist**
+- When adding code with `get_mistral_client`:
+  - [ ] Run `python scripts/validate-mock-coverage.py`
+  - [ ] Add patch to `tests/fixtures/mock_clients.py` if needed
+  - [ ] Unit tests complete in <3 seconds
+  - [ ] Validation passes in CI
+
+**3. Pattern for New Code**
+```python
+# Import at function level (lazy)
+def my_function():
+    from raglite.shared.clients import get_mistral_client
+    client = get_mistral_client()
+    # ...
+
+# Then add patch to tests/fixtures/mock_clients.py
+# Then verify: python scripts/validate-mock-coverage.py
+```
+
+### Related Documentation
+
+- **Comprehensive Guide:** `docs/ci-knowledge/mock-coverage-pattern.md` (detailed walkthrough)
+- **Runbook:** `docs/ci-failure-runbook.md` → Section 18 (Lazy Import Mock Coverage Gap)
+- **Validation Script:** `scripts/validate-mock-coverage.py` (automation)
+- **Fixture Locations:** `tests/fixtures/mock_clients.py` (patch definitions)
+- **CI Strategy:** `docs/ci-strategy.md` → Mock Coverage section

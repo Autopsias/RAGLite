@@ -102,6 +102,12 @@ jobs:
           python scripts/check_file_sizes.py
           echo "File size check passed - no violations"
 
+      - name: Mock Coverage Validation
+        run: |
+          echo "=== Validating get_mistral_client mock coverage ==="
+          python scripts/validate-mock-coverage.py
+          echo "Mock coverage validation passed"
+
   # ============================================================
   # TIER 1: Fast PR Validation
   # Runs on every push/PR, AFTER lint-gate passes

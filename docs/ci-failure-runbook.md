@@ -128,6 +128,7 @@ grep -n "class NonExistentClass" raglite/module.py  # Should find something
 | `AssertionError: N not in range(10, 55)` | Fixture validation range too strict | Use tolerance-based validation (±15%) | Document baseline, not hardcoded ranges |
 | `TypeError: missing required argument` | API signature changed, test calls not updated | Update all function calls with required params | Add contract tests to catch drift early |
 | `KeyError: 'cement_demand'` | Config and test files out of sync | Add validation that configured metrics exist | Sync verification CI job before merge |
+| `Unit test attempted to call Mistral API!` | Lazy import in function body not patched | Add module to mock_clients.py patches | Run validate-mock-coverage.py before commit |
 
 ---
 
@@ -995,6 +996,229 @@ When reviewing test PRs:
 - **Mock Patch Interference:** Section 4 (mock target drift)
 - **Test Reliability Rules:** `.claude/rules/testing.md` → Mock Patterns
 - **External API Blocking:** `tests/unit/conftest.py` → `block_external_apis_in_unit_tests`
+
+---
+
+### 18. Lazy Import Mock Coverage Gap (Strategic Analysis 2025-01-12)
+
+#### Symptoms
+- `Unit test attempted to call Mistral API!` in test logs
+- Test timeout after passing fixture blocking checks (>120s)
+- Specific modules like `enrichment.py` escape mock coverage
+- 80% CI fix rate despite 5 patched locations (reactive vs structural)
+- New code adding `get_mistral_client` imports causes immediate test failures
+- Different behavior between older tests and newly written tests
+
+#### Root Cause (Five Whys)
+1. Why? → 17+ modules import get_mistral_client inside function bodies (lazy imports)
+2. Why? → Mock session fixture only patches 5 locations (incomplete coverage)
+3. Why? → Lazy imports inside functions execute at test runtime, not import time
+4. Why? → Session fixture patches only module-level imports
+5. Why? → No structural validation of mock coverage before tests run
+
+#### Example Problem
+```python
+# raglite/retrieval/search/enrichment.py (NOT patched)
+def enrich_result(query: str):
+    # Lazy import inside function
+    from raglite.shared.clients import get_mistral_client  # <-- This line bypasses session fixture!
+    client = get_mistral_client()  # Attempts real API call → test timeout
+    return client.enrich(query)
+
+# Test fixture patches location:
+@pytest.fixture(scope="session", autouse=True)
+def mock_mistral_api_globally():
+    with (
+        patch("raglite.retrieval.search.get_mistral_client"),  # Only patches 5 known locations
+        # Missing: patch("raglite.retrieval.search.enrichment.get_mistral_client")
+    ):
+        yield
+```
+
+#### Detection
+
+**Quick check for lazy imports:**
+```bash
+# Find all get_mistral_client imports
+grep -r "from raglite.shared.clients import get_mistral_client" raglite/ --include="*.py"
+
+# Find which are patched in test fixture
+grep -r "patch.*get_mistral_client" tests/fixtures/mock_clients.py
+
+# Run validation script (shows gaps)
+python scripts/validate-mock-coverage.py --verbose
+```
+
+**Output if gaps exist:**
+```
+ERROR: Mock coverage gaps detected!
+Found 3 module(s) importing get_mistral_client without mock coverage:
+
+  ❌ raglite.retrieval.search.enrichment.get_mistral_client
+  ❌ raglite.mcp.tools.model_selector.get_mistral_client
+  ❌ raglite.insights.anomaly_detection.get_mistral_client
+```
+
+#### Solution Pattern
+
+**WRONG: Session fixture patches only known locations**
+```python
+@pytest.fixture(scope="session", autouse=True)
+def mock_mistral_api_globally():
+    with patch("raglite.mcp.tools.get_mistral_client"):  # Only 5 locations
+        yield
+    # New modules bypass this coverage
+```
+
+**CORRECT: Patch ALL locations where get_mistral_client is imported**
+```python
+@pytest.fixture(scope="session", autouse=True)
+def mock_mistral_api_globally():
+    """Mock Mistral API globally for all unit tests (17+ import locations)."""
+    with (
+        patch("raglite.mcp.tools.get_mistral_client") as mock1,
+        patch("raglite.retrieval.search.enrichment.get_mistral_client") as mock2,
+        patch("raglite.mcp.tools.model_selector.get_mistral_client") as mock3,
+        # ... all 17+ locations
+    ):
+        mock_client = AsyncMock()
+        mock_client.enrich = AsyncMock(return_value="mocked")
+
+        for mock in [mock1, mock2, mock3]:  # Apply to all patches
+            mock.return_value = mock_client
+
+        yield
+```
+
+**BEST: Use validation script to find all locations**
+```bash
+# Step 1: Find all import locations
+python scripts/validate-mock-coverage.py --verbose
+
+# Step 2: Update mock_clients.py with ALL locations
+# (Script shows exact patch lines needed)
+
+# Step 3: Verify coverage
+python scripts/validate-mock-coverage.py
+# Should output: ✅ Mock coverage validation PASSED
+```
+
+#### Identifying Missing Mocks
+
+**Scan all modules:**
+```bash
+# Find every module importing get_mistral_client
+grep -r "from raglite.shared.clients import get_mistral_client" raglite/ --include="*.py" -l
+
+# Example output:
+# raglite/mcp/tools.py
+# raglite/retrieval/search/enrichment.py
+# raglite/mcp/tools/model_selector.py
+# raglite/insights/anomaly_detection.py
+# (and 13+ more)
+```
+
+**Check if patched in fixture:**
+```bash
+# For each module found above, verify patch exists
+grep "patch.*raglite.retrieval.search.enrichment.get_mistral_client" tests/fixtures/mock_clients.py
+
+# If no match, that location is unpatched (coverage gap)
+```
+
+#### Verification
+
+**Run validation before every commit:**
+```bash
+# Quick check (binary pass/fail)
+python scripts/validate-mock-coverage.py
+
+# Detailed report (shows all gaps)
+python scripts/validate-mock-coverage.py --verbose
+```
+
+**Expected output (pass):**
+```
+================================================================================
+✅ Mock coverage validation PASSED
+================================================================================
+  - 17 module(s) import get_mistral_client
+  - 17 location(s) patched in mock fixtures
+  - 0 gaps (100% coverage)
+```
+
+**Expected output (fail):**
+```
+ERROR: Mock coverage gaps detected!
+Found 2 module(s) importing get_mistral_client without mock coverage:
+  ❌ raglite.retrieval.search.enrichment.get_mistral_client
+  ❌ raglite.insights.anomaly_detection.get_mistral_client
+```
+
+#### Prevention (2025-01-12)
+
+**1. Pre-commit Enforcement**
+
+Add to `.pre-commit-config.yaml`:
+```yaml
+- repo: local
+  hooks:
+    - id: validate-mock-coverage
+      name: Validate mock coverage
+      entry: python scripts/validate-mock-coverage.py
+      language: system
+      stages: [commit]
+      pass_filenames: false
+```
+
+This prevents commits that introduce unpatched import locations.
+
+**2. CI Job Enforcement**
+
+Runs on all PRs:
+```bash
+python scripts/validate-mock-coverage.py --strict
+# Exits with error if gaps found, blocks merge
+```
+
+**3. Code Review Checklist**
+
+When adding new code that imports get_mistral_client:
+- [ ] Module appears in `python scripts/validate-mock-coverage.py --verbose` output
+- [ ] Corresponding patch exists in `tests/fixtures/mock_clients.py`
+- [ ] Patch is applied in `mock_mistral_api_globally` fixture
+- [ ] `python scripts/validate-mock-coverage.py` passes
+- [ ] All unit tests complete in <5 seconds (not timeout)
+
+**4. Pattern for New Code**
+
+When writing new code that needs Mistral client:
+```python
+# DO: Import at function level (lazy import)
+def my_function():
+    from raglite.shared.clients import get_mistral_client
+    client = get_mistral_client()
+    # ...
+
+# THEN: Immediately add patch to tests/fixtures/mock_clients.py
+@pytest.fixture(scope="session", autouse=True)
+def mock_mistral_api_globally():
+    with patch("raglite.NEW_MODULE_PATH.get_mistral_client") as mock_new:
+        # ...
+        mock_new.return_value = mock_client
+        yield
+
+# THEN: Verify with validation
+python scripts/validate-mock-coverage.py
+# Should pass with updated count
+```
+
+#### Related Documentation
+- **Knowledge Base:** `docs/ci-knowledge/mock-coverage-pattern.md` (comprehensive guide)
+- **Validation Script:** `scripts/validate-mock-coverage.py` (automated detection)
+- **Mock Fixture Locations:** `tests/fixtures/mock_clients.py` (patch definitions)
+- **Test Reliability Rules:** `.claude/rules/testing.md` → Mock Patterns
+- **CI Strategy:** `docs/ci-strategy.md` → Mock Coverage section
 
 ---
 
