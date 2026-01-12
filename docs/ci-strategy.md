@@ -1,12 +1,42 @@
 # CI/CD Strategy
 
-## Executive Summary
-- **Tech stack**: Docker, GitHub Actions, pytest-xdist, Qdrant, PostgreSQL
-- **Key challenges**: Test isolation, container mount management, resource cleanup
-- **Target performance**: <5s p50, <15s p95 for test execution
+## Executive Summary (Updated 2025-01-12)
 
-## Root Cause Analysis
-### Primary Issues Identified
+**Strategic Analysis Finding:** 80% of recent commits are CI fixes - extremely high churn driven by Colima VM instability on self-hosted macOS runner.
+
+- **Tech stack**: Docker (via Colima on macOS), GitHub Actions, pytest-xdist, Qdrant, PostgreSQL
+- **Primary challenge**: Colima daemon socket becomes inaccessible between jobs (self-hosted runner issue)
+- **Secondary challenges**: Test isolation, container mount management, resource cleanup
+- **Target performance**: <5s p50, <15s p95 for test execution
+- **Stability target**: <10% of commits are CI fixes (down from 80%)
+
+## Root Cause Analysis (Updated 2025-01-12)
+
+### Primary Issue: Colima VM Instability (80% of CI failures)
+
+**Problem:** Docker daemon socket at `~/.colima/default/docker.sock` becomes inaccessible between GitHub Actions jobs on self-hosted macOS runner.
+
+**Symptoms:**
+- Integration tests fail with "Connection refused" on random jobs
+- Same test passes on next retry (suggests transient state)
+- `colima status` shows inconsistent state between jobs
+- No automatic recovery mechanism
+
+**Root Cause (Five Whys):**
+1. Why do tests fail? → Docker socket becomes inaccessible
+2. Why does socket become inaccessible? → Colima VM stops or becomes unresponsive
+3. Why does VM stop? → No health check or auto-recovery between jobs
+4. Why no recovery? → Missing pre-flight validation before container operations
+5. Why missing validation? → Self-hosted runner requires manual setup (unlike GitHub-hosted)
+
+**Impact Timeline:**
+- 16 of 20 recent commits (80%) are CI fixes
+- All failures are Docker/Colima connectivity related
+- Same root cause repeated across different test categories
+- Pattern emerged since switching to self-hosted runner
+
+### Secondary Issues (Still Active, Lower Priority)
+
 1. **Test State Pollution**: Settings singleton initialization in pytest-xdist workers
 2. **Resource Leaks**: Joblib multiprocessing processes not properly terminated
 3. **Environment Inconsistency**: Docker container mount staleness
@@ -250,6 +280,109 @@ def qdrant_client():
 - **GitHub Actions**: Pipeline execution metrics
 - **Container Status**: Database and service health
 - **Test Results**: Pass/fail trends and coverage
+
+## Implementation Roadmap: Colima Reliability (Updated 2025-01-12)
+
+### Phase 1: Pre-Flight Validation (P0 - Immediate)
+**Target:** Prevent 80% of CI failures via health checks before container operations
+
+**Actions:**
+1. Create `scripts/ensure-colima-health.sh` script:
+   - Check if Docker daemon responds: `docker info`
+   - If unavailable: restart Colima with `colima stop && colima start`
+   - Verify socket accessibility: `ls ~/.colima/default/docker.sock`
+   - Create symlink: `sudo ln -s ~/.colima/default/docker.sock /var/run/docker.sock`
+   - Wait for Docker readiness with exponential backoff (max 60s)
+
+2. Add to CI workflow (`lint-gate` job):
+   ```yaml
+   - name: Validate Colima Health
+     run: ./scripts/ensure-colima-health.sh
+   ```
+
+3. Add to local development (`scripts/start-dev.sh`):
+   - Run health check before docker-compose commands
+   - Provide clear error messages if recovery fails
+
+**Success Criteria:**
+- Health check completes in <15s
+- Colima auto-starts if stopped
+- Socket symlink created for standard Docker path
+- No timeout failures due to Docker unavailability
+
+### Phase 2: Container Startup Resilience (P1 - Next Week)
+**Target:** Improve container health check and readiness detection
+
+**Actions:**
+1. Increase health check timeout in docker-compose.yml:
+   - From: 30s timeout
+   - To: 60s timeout
+   - Add: 5 retries before considering container unhealthy
+
+2. Add port-in-use validation:
+   - Before starting containers, check: `netstat -tuln | grep PORT`
+   - If port in use, run: `docker-compose down -v` (cleanup)
+   - Then retry startup
+
+3. Verify container readiness:
+   - Qdrant: `curl http://localhost:6333/health`
+   - PostgreSQL: `pg_isready -h localhost -p 5432`
+   - Wait for both before proceeding with tests
+
+**Success Criteria:**
+- Containers start reliably within 60s
+- No "port already in use" errors
+- Readiness verified before test execution
+
+### Phase 3: Self-Hosted Runner Setup Documentation (P1 - This Week)
+**Target:** Provide clear setup instructions to prevent future issues
+
+**Actions:**
+1. Document in `docs/ci-knowledge/self-hosted-runner-guide.md`:
+   - One-time setup steps for macOS runner
+   - Socket symlink creation
+   - Colima configuration
+   - Periodic health check cron job
+
+2. Create setup script: `scripts/setup-runner.sh`
+   - Installs/configures Colima
+   - Creates required symlinks
+   - Sets up cron job for periodic health checks
+
+3. Add to runner onboarding checklist:
+   - [ ] Run `./scripts/setup-runner.sh`
+   - [ ] Verify: `colima status` shows running
+   - [ ] Verify: `ls -la /var/run/docker.sock` exists
+   - [ ] Run test job: `./scripts/ensure-colima-health.sh`
+
+**Success Criteria:**
+- New runners can be set up in <5 minutes
+- Setup script is idempotent (safe to run multiple times)
+- Documentation covers troubleshooting
+
+### Phase 4: Monitoring and Alerting (P2 - Sprint Planning)
+**Target:** Early detection of Colima issues before they affect CI
+
+**Actions:**
+1. Add periodic health check (cron job on runner):
+   ```bash
+   */30 * * * * /home/runner/scripts/ensure-colima-health.sh >> /tmp/colima-health.log 2>&1
+   ```
+
+2. Log Colima state to file for debugging:
+   - Record timestamp, colima status, docker info output
+   - Archive logs weekly
+
+3. Add alert when health check fails:
+   - Send notification to team Slack/email
+   - Include Colima status and suggested fixes
+
+**Success Criteria:**
+- Health checks run every 30 minutes
+- Logs available for debugging
+- Team notified of persistent issues
+
+---
 
 ## Continuous Improvement
 

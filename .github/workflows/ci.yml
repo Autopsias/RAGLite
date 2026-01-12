@@ -310,14 +310,11 @@ jobs:
       - name: Clear Python bytecode & pytest cache
         uses: ./.github/actions/validate-cache
 
-      - name: Check Docker availability
-        run: |
-          if ! docker info &> /dev/null; then
-            echo "Starting Colima..."
-            colima start --cpu 4 --memory 6 --disk 50 --runtime docker 2>&1 || true
-            sleep 5
-          fi
-          docker info > /dev/null || (echo "Docker not available" && exit 1)
+      - name: Docker Pre-flight Validation
+        uses: ./.github/actions/docker-preflight
+        with:
+          max-wait-seconds: '60'
+          check-ports: '6333,6335,6337,6339,6340,5432,5433,5434,5435,5438'
 
       - name: Start Test Containers
         run: |
@@ -565,6 +562,12 @@ jobs:
 
       - name: Clear Python bytecode & pytest cache
         uses: ./.github/actions/validate-cache
+
+      - name: Docker Pre-flight Validation
+        uses: ./.github/actions/docker-preflight
+        with:
+          max-wait-seconds: '60'
+          check-ports: '6333,6335,5432,5433'
 
       - name: Start Test Containers
         run: |

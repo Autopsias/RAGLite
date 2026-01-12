@@ -1,0 +1,169 @@
+name: 'Docker Pre-flight Validation'
+description: 'Validates Docker daemon availability and starts Colima if needed with exponential backoff'
+
+inputs:
+  max-wait-seconds:
+    description: 'Maximum seconds to wait for Docker daemon to be ready'
+    required: false
+    default: '60'
+  check-ports:
+    description: 'Comma-separated list of ports to validate (e.g., "6333,5432")'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check Docker Command Availability
+      shell: bash
+      run: |
+        echo "=== Docker Pre-flight Validation ==="
+        if ! command -v docker &> /dev/null; then
+          echo "❌ Docker command not found in PATH"
+          echo "Please install Docker or Colima"
+          exit 1
+        fi
+        echo "✅ Docker command found: $(which docker)"
+
+    - name: Validate Docker Daemon Accessibility
+      shell: bash
+      env:
+        MAX_WAIT: ${{ inputs.max-wait-seconds }}
+      run: |
+        echo "=== Checking Docker daemon accessibility ==="
+
+        # Check if Docker daemon is already running
+        if docker info &> /dev/null; then
+          echo "✅ Docker daemon is already running"
+          docker version | head -10
+          exit 0
+        fi
+
+        echo "⚠️  Docker daemon not accessible"
+
+        # Detect Colima configuration
+        COLIMA_SOCKET="$HOME/.colima/default/docker.sock"
+        if [[ "$DOCKER_HOST" == *"colima"* ]] || [[ -S "$COLIMA_SOCKET" ]]; then
+          echo "🔧 Detected Colima configuration"
+
+          if ! command -v colima &> /dev/null; then
+            echo "❌ Colima socket exists but colima command not found"
+            echo "Install with: brew install colima"
+            exit 1
+          fi
+
+          echo "Starting Colima with retry logic..."
+
+          # Exponential backoff parameters
+          ATTEMPT=1
+          MAX_ATTEMPTS=3
+          WAIT_TIME=2
+
+          while [[ $ATTEMPT -le $MAX_ATTEMPTS ]]; do
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Starting Colima..."
+
+            if colima start --cpu 4 --memory 6 --disk 50 --runtime docker 2>&1; then
+              echo "✅ Colima start command succeeded"
+              break
+            else
+              if [[ $ATTEMPT -eq $MAX_ATTEMPTS ]]; then
+                echo "❌ Failed to start Colima after $MAX_ATTEMPTS attempts"
+                exit 1
+              fi
+
+              echo "⚠️  Colima start failed, waiting ${WAIT_TIME}s before retry..."
+              sleep $WAIT_TIME
+              WAIT_TIME=$((WAIT_TIME * 2))  # Exponential backoff
+              ATTEMPT=$((ATTEMPT + 1))
+            fi
+          done
+
+          # Wait for Docker daemon to be ready
+          echo "⏳ Waiting for Docker daemon to be ready (max ${MAX_WAIT}s)..."
+          ELAPSED=0
+          INTERVAL=2
+
+          while [[ $ELAPSED -lt $MAX_WAIT ]]; do
+            if docker info &> /dev/null; then
+              echo "✅ Docker daemon is now ready (took ${ELAPSED}s)"
+              docker version | head -10
+              exit 0
+            fi
+
+            if [[ $((ELAPSED % 10)) -eq 0 ]] && [[ $ELAPSED -gt 0 ]]; then
+              echo "Still waiting for Docker daemon... (${ELAPSED}s/${MAX_WAIT}s)"
+            fi
+
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+
+          echo "❌ Docker daemon did not become ready within ${MAX_WAIT}s"
+          echo "Check Colima status: colima status"
+          exit 1
+        fi
+
+        # Non-Colima case: Docker Desktop or other runtime
+        echo "❌ Docker daemon not running and Colima not detected"
+        echo "Please start Docker Desktop or Colima manually"
+        exit 1
+
+    - name: Set Docker Host Environment Variable
+      shell: bash
+      run: |
+        echo "=== Setting DOCKER_HOST ==="
+
+        # Check if Colima is being used
+        COLIMA_SOCKET="$HOME/.colima/default/docker.sock"
+        if [[ -S "$COLIMA_SOCKET" ]]; then
+          echo "DOCKER_HOST=unix://$HOME/.colima/default/docker.sock" >> $GITHUB_ENV
+          echo "✅ DOCKER_HOST set to Colima socket"
+        else
+          echo "✅ Using default Docker socket"
+        fi
+
+    - name: Validate Port Availability
+      if: inputs.check-ports != ''
+      shell: bash
+      env:
+        PORTS: ${{ inputs.check-ports }}
+      run: |
+        echo "=== Validating port availability ==="
+
+        IFS=',' read -ra PORT_ARRAY <<< "$PORTS"
+        CONFLICTS=0
+
+        for PORT in "${PORT_ARRAY[@]}"; do
+          PORT=$(echo "$PORT" | xargs)  # Trim whitespace
+
+          if lsof -ti :"$PORT" &> /dev/null; then
+            echo "❌ Port $PORT is already in use"
+            lsof -i :"$PORT" || true
+            CONFLICTS=$((CONFLICTS + 1))
+          else
+            echo "✅ Port $PORT is available"
+          fi
+        done
+
+        if [[ $CONFLICTS -gt 0 ]]; then
+          echo "❌ $CONFLICTS port conflict(s) detected"
+          echo "Please free the ports before starting containers"
+          exit 1
+        fi
+
+        echo "✅ All requested ports are available"
+
+    - name: Verify Docker Daemon Final State
+      shell: bash
+      run: |
+        echo "=== Final Docker daemon verification ==="
+
+        if ! docker info &> /dev/null; then
+          echo "❌ Docker daemon still not accessible after pre-flight"
+          exit 1
+        fi
+
+        echo "✅ Docker daemon is accessible and ready"
+        echo ""
+        echo "Docker Info:"
+        docker info | grep -E "Server Version|Operating System|Total Memory|CPUs" || true

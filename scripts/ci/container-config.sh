@@ -84,8 +84,8 @@ readonly POSTGRES_CPU_LIMIT="1.0"
 readonly HEALTH_CHECK_TIMEOUT=90           # Max seconds to wait for startup
 readonly HEALTH_CHECK_INTERVAL=2           # Seconds between checks
 readonly BACKOFF_MULTIPLIER=1.5            # Exponential backoff multiplier
-readonly QDRANT_READY_TIMEOUT=30           # Qdrant-specific ready timeout
-readonly POSTGRES_READY_TIMEOUT=30         # PostgreSQL-specific ready timeout
+readonly QDRANT_READY_TIMEOUT=60           # Qdrant-specific ready timeout (increased for cold starts)
+readonly POSTGRES_READY_TIMEOUT=60         # PostgreSQL-specific ready timeout (increased for cold starts)
 
 # ============================================================
 # Container Names

@@ -48,8 +48,32 @@ if [[ "$DOCKER_HOST" == *"colima"* ]] || [[ -S "$HOME/.colima/default/docker.soc
 
     # Check if colima command exists
     if command -v colima &> /dev/null; then
-        echo -e "${BLUE}Attempting to start Colima...${NC}"
-        colima start
+        echo -e "${BLUE}Attempting to start Colima with retry logic...${NC}"
+
+        # Exponential backoff retry for colima start
+        ATTEMPT=1
+        MAX_ATTEMPTS=3
+        RETRY_WAIT=2
+
+        while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo -e "${BLUE}Attempt $ATTEMPT/$MAX_ATTEMPTS: Starting Colima...${NC}"
+
+            if colima start --cpu 4 --memory 6 --disk 50 --runtime docker 2>&1; then
+                echo -e "${GREEN}✅ Colima start command succeeded${NC}"
+                break
+            else
+                if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+                    echo -e "${RED}❌ Failed to start Colima after $MAX_ATTEMPTS attempts${NC}"
+                    echo -e "${YELLOW}Try: brew services restart colima${NC}"
+                    exit 1
+                fi
+
+                echo -e "${YELLOW}⚠️  Colima start failed, waiting ${RETRY_WAIT}s before retry...${NC}"
+                sleep $RETRY_WAIT
+                RETRY_WAIT=$((RETRY_WAIT * 2))  # Exponential backoff
+                ATTEMPT=$((ATTEMPT + 1))
+            fi
+        done
 
         # Wait for Docker daemon to be ready (max 60 seconds)
         MAX_WAIT=60

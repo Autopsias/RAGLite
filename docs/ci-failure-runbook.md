@@ -999,7 +999,120 @@ When reviewing test PRs:
 
 ---
 
-### 18. Lazy Import Mock Coverage Gap (Strategic Analysis 2025-01-12)
+### 18. Docker Daemon Socket Inaccessibility - Colima VM Failures (Strategic Analysis 2025-01-12)
+
+#### Symptoms
+- `Error: Cannot connect to Docker daemon at unix:///var/run/docker.sock: connect: no such file or directory`
+- `Error: Colima VM stopped unexpectedly - socket at ~/.colima/default/docker.sock inaccessible`
+- Integration tests fail with connection refused on random jobs (intermittent)
+- Docker commands work locally but fail in GitHub Actions self-hosted runner
+- Health check timeouts after container startup (30s timeout too aggressive)
+
+#### Root Cause (Five Whys)
+1. Why? → Docker socket at ~/.colima/default/docker.sock becomes inaccessible between jobs
+2. Why? → Colima VM stops or becomes unresponsive on self-hosted macOS runner
+3. Why? → No health check before attempting container operations
+4. Why? → 30-second health check timeout insufficient for container lifecycle
+5. Why? → Missing symlink: /var/run/docker.sock not created (standard Docker path)
+
+#### Strategic Impact
+**Root cause of 80% of recent CI failures** - Affects job-to-job consistency on self-hosted runner. When Colima daemon becomes inaccessible, all container operations fail until VM is restarted.
+
+#### Solution Pattern
+
+**P0: Add Pre-Flight Colima Health Check**
+```bash
+# Before any container operations, verify Colima is healthy
+./scripts/ensure-colima-health.sh
+
+# This script:
+# 1. Checks if Docker daemon is responding: docker info
+# 2. If unavailable: attempts colima stop && colima start
+# 3. Verifies socket is accessible: ls -la ~/.colima/default/docker.sock
+# 4. Creates symlink for standard path: ln -s ~/.colima/default/docker.sock /var/run/docker.sock
+# 5. Waits for Docker readiness: retry docker info with backoff
+```
+
+**P0: Create Docker Socket Symlink**
+```bash
+# Ensure standard Docker socket path works
+if [ ! -L /var/run/docker.sock ]; then
+    sudo mkdir -p /var/run
+    sudo ln -s ~/.colima/default/docker.sock /var/run/docker.sock
+fi
+```
+
+**P1: Increase Container Health Check Timeout**
+```yaml
+# In docker-compose.yml or container startup
+healthcheck:
+  test: ["CMD", "docker", "ps"]
+  interval: 10s
+  timeout: 60s      # Increased from 30s
+  retries: 5
+  start_period: 15s
+```
+
+**P1: Add Port-in-Use Validation Before Container Startup**
+```bash
+# Verify ports are not already in use
+netstat -tuln | grep -E ':6335|:5433|:6333|:5432'
+# If in use, kill previous containers: docker-compose down -v
+```
+
+#### Verification
+```bash
+# Check Colima health
+colima status
+colima version
+
+# Verify Docker socket accessibility
+ls -la ~/.colima/default/docker.sock
+ls -la /var/run/docker.sock
+
+# Test container startup
+docker ps
+docker-compose up -d qdrant postgresql
+docker ps --filter "name=raglite"
+
+# Verify health check passes
+docker exec raglite-qdrant wget --spider localhost:6333 2>/dev/null && echo "healthy" || echo "unhealthy"
+```
+
+#### Prevention (2025-01-12)
+
+**1. Pre-Flight Validation Action (CI)**
+```yaml
+- name: Validate Colima Health
+  uses: ./.github/actions/validate-colima
+  # Runs: ensure-colima-health.sh before any container operations
+```
+
+**2. Container Startup Standards**
+- Always run pre-flight check before docker-compose up
+- Increase health check timeout to 60s
+- Validate ports are available before starting containers
+- Create symlink for /var/run/docker.sock
+
+**3. Self-Hosted Runner Setup**
+```bash
+# On runner setup (one-time):
+sudo mkdir -p /var/run
+sudo ln -s ~/.colima/default/docker.sock /var/run/docker.sock
+
+# Verify in cron (periodic health check):
+*/30 * * * * ~/scripts/ensure-colima-health.sh > /dev/null 2>&1
+```
+
+#### Related Documentation
+- **CI Strategy:** `docs/ci-strategy.md` → Docker/Colima Reliability section
+- **Prevention Rules:** `docs/ci-knowledge/prevention-rules.md` → Docker Infrastructure
+- **Infrastructure Script:** `scripts/ensure-colima-health.sh`
+- **Self-Hosted Guide:** `docs/ci-knowledge/self-hosted-runner-guide.md`
+
+---
+
+### 19. Lazy Import Mock Coverage Gap (Strategic Analysis 2025-01-12)
 
 #### Symptoms
 - `Unit test attempted to call Mistral API!` in test logs
