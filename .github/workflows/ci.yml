@@ -300,13 +300,14 @@ jobs:
       - name: Pre-pull Docker Images (With Stabilization + Retry)
         run: |
           echo "=== Pre-pulling Docker images with VM stabilization and retry logic ==="
-          echo "FIX: Use --config flag to bypass macOS keychain credential helper"
+          echo "FIX: Use credHelpers to bypass macOS keychain (credsStore ignored due to omitempty)"
 
-          # FIX: Create isolated Docker config directory with EXPLICIT credential store disable
-          # The macOS keychain cannot be accessed in non-interactive CI sessions
-          # Using --config flag on EACH docker command ensures it's used (env var was unreliable)
+          # FIX: Use credHelpers per-registry with EXPLICIT empty strings
+          # Docker's resolution order: credHelpers[registry] > credsStore > PATH auto-detection
+          # Setting credsStore="" is IGNORED by Go's omitempty tag
+          # credHelpers with "" explicitly disables helpers BEFORE PATH auto-detection
           DOCKER_CFG=$(mktemp -d)
-          echo '{"auths":{},"credsStore":""}' > "$DOCKER_CFG/config.json"
+          echo '{"auths":{},"credHelpers":{"docker.io":"","index.docker.io":"","registry-1.docker.io":"","ghcr.io":"","quay.io":""}}' > "$DOCKER_CFG/config.json"
           echo "Created Docker config at: $DOCKER_CFG"
           cat "$DOCKER_CFG/config.json"
 
@@ -385,9 +386,9 @@ jobs:
         run: |
           echo "=== Verifying required images exist in both Colima profiles ==="
 
-          # Use --config flag to avoid keychain issues
+          # Use credHelpers to avoid keychain issues (credsStore is ignored)
           DOCKER_CFG=$(mktemp -d)
-          echo '{"auths":{},"credsStore":""}' > "$DOCKER_CFG/config.json"
+          echo '{"auths":{},"credHelpers":{"docker.io":"","index.docker.io":"","registry-1.docker.io":"","ghcr.io":"","quay.io":""}}' > "$DOCKER_CFG/config.json"
 
           ALL_GOOD=true
           for PROFILE in ci-postgresql ci-other; do
