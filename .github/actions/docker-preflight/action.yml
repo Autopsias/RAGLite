@@ -10,6 +10,10 @@ inputs:
     description: 'Comma-separated list of ports to validate (e.g., "6333,5432")'
     required: false
     default: ''
+  skip-colima-restart:
+    description: 'Skip Colima restart, only verify Docker is accessible'
+    required: false
+    default: 'false'
 
 runs:
   using: 'composite'
@@ -29,6 +33,7 @@ runs:
       shell: bash
       env:
         MAX_WAIT: ${{ inputs.max-wait-seconds }}
+        SKIP_COLIMA_RESTART: ${{ inputs.skip-colima-restart }}
       run: |
         echo "=== Checking Docker daemon accessibility ==="
 
@@ -40,6 +45,33 @@ runs:
         fi
 
         echo "⚠️  Docker daemon not accessible"
+
+        # If skip-colima-restart is true, just verify Docker, don't restart
+        if [[ "$SKIP_COLIMA_RESTART" == "true" ]]; then
+          echo "⚠️  Docker daemon not accessible (skip-colima-restart=true)"
+          echo "Waiting for Docker to become accessible (docker-setup should have started it)..."
+
+          ELAPSED=0
+          INTERVAL=2
+          while [[ $ELAPSED -lt $MAX_WAIT ]]; do
+            if docker info &> /dev/null; then
+              echo "✅ Docker daemon is now ready (took ${ELAPSED}s)"
+              docker version | head -10
+              exit 0
+            fi
+
+            if [[ $((ELAPSED % 10)) -eq 0 ]] && [[ $ELAPSED -gt 0 ]]; then
+              echo "Still waiting for Docker daemon... (${ELAPSED}s/${MAX_WAIT}s)"
+            fi
+
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+
+          echo "❌ Docker daemon did not become ready within ${MAX_WAIT}s"
+          echo "This job requires docker-setup to have started Colima first"
+          exit 1
+        fi
 
         # Detect Colima - check if colima command exists (primary detection)
         # Don't rely on socket file - it may not exist if VM was deleted/corrupted
