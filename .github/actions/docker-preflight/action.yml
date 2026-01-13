@@ -14,6 +14,10 @@ inputs:
     description: 'Skip Colima restart, only verify Docker is accessible'
     required: false
     default: 'false'
+  colima-profile:
+    description: 'Colima profile name for isolated Docker daemon (enables true parallel execution)'
+    required: false
+    default: 'default'
 
 runs:
   using: 'composite'
@@ -34,12 +38,18 @@ runs:
       env:
         MAX_WAIT: ${{ inputs.max-wait-seconds }}
         SKIP_COLIMA_RESTART: ${{ inputs.skip-colima-restart }}
+        COLIMA_PROFILE: ${{ inputs.colima-profile }}
       run: |
         echo "=== Checking Docker daemon accessibility ==="
+        echo "    Colima profile: $COLIMA_PROFILE"
 
         # ENHANCED: Dual-level health check (socket + daemon responsiveness)
-        # Level 1: Check if Docker socket exists
-        COLIMA_SOCKET="$HOME/.colima/default/docker.sock"
+        # Level 1: Check if Docker socket exists for the specified profile
+        COLIMA_SOCKET="$HOME/.colima/${COLIMA_PROFILE}/docker.sock"
+
+        # Set DOCKER_HOST for this profile (critical for parallel execution)
+        export DOCKER_HOST="unix://$COLIMA_SOCKET"
+        echo "    DOCKER_HOST: $DOCKER_HOST"
         if [[ -S "$COLIMA_SOCKET" ]]; then
           echo "✅ Docker socket exists: $COLIMA_SOCKET"
 
@@ -146,10 +156,10 @@ runs:
           fi
 
           # Always force cleanup when Docker is inaccessible - VM recreation instead of restart
-          echo "🔄 Forcing Colima full VM deletion and recreation (not just restart)..."
-          colima stop -f 2>/dev/null || true
+          echo "🔄 Forcing Colima profile '$COLIMA_PROFILE' full VM deletion and recreation..."
+          colima stop -p "$COLIMA_PROFILE" -f 2>/dev/null || true
           sleep 2
-          colima delete -f 2>/dev/null || true
+          colima delete -p "$COLIMA_PROFILE" -f 2>/dev/null || true
 
           # Remove stale Lima network sockets (root cause of "user-v2_ep.sock not found")
           # Lima recreates this directory automatically on next start
@@ -172,11 +182,14 @@ runs:
           WAIT_TIME=2
 
           while [[ $ATTEMPT -le $MAX_ATTEMPTS ]]; do
-            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Starting Colima..."
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Starting Colima profile '$COLIMA_PROFILE'..."
 
-            # Start Colima - RUNNER_TRACKING_ID is unset so runner won't kill it
-            if colima start --cpu 4 --memory 6 --disk 50 --runtime docker 2>&1; then
-              echo "✅ Colima start command succeeded"
+            # Start Colima with specified profile - RUNNER_TRACKING_ID is unset so runner won't kill it
+            # Each profile gets its own VM and Docker daemon for true parallel isolation
+            if colima start -p "$COLIMA_PROFILE" --cpu 2 --memory 3 --disk 25 --runtime docker 2>&1; then
+              echo "✅ Colima profile '$COLIMA_PROFILE' started successfully"
+              # Update DOCKER_HOST to point to this profile's socket
+              export DOCKER_HOST="unix://$HOME/.colima/${COLIMA_PROFILE}/docker.sock"
               break
             else
               if [[ $ATTEMPT -eq $MAX_ATTEMPTS ]]; then
@@ -224,16 +237,18 @@ runs:
 
     - name: Set Docker Host Environment Variable
       shell: bash
+      env:
+        COLIMA_PROFILE: ${{ inputs.colima-profile }}
       run: |
-        echo "=== Setting DOCKER_HOST ==="
+        echo "=== Setting DOCKER_HOST for profile '$COLIMA_PROFILE' ==="
 
-        # Check if Colima is being used
-        COLIMA_SOCKET="$HOME/.colima/default/docker.sock"
+        # Set DOCKER_HOST for the specified profile
+        COLIMA_SOCKET="$HOME/.colima/${COLIMA_PROFILE}/docker.sock"
         if [[ -S "$COLIMA_SOCKET" ]]; then
-          echo "DOCKER_HOST=unix://$HOME/.colima/default/docker.sock" >> $GITHUB_ENV
-          echo "✅ DOCKER_HOST set to Colima socket"
+          echo "DOCKER_HOST=unix://$COLIMA_SOCKET" >> $GITHUB_ENV
+          echo "✅ DOCKER_HOST set to: unix://$COLIMA_SOCKET"
         else
-          echo "✅ Using default Docker socket"
+          echo "⚠️ Socket not found at $COLIMA_SOCKET, using default"
         fi
 
     - name: Validate Port Availability
@@ -269,8 +284,14 @@ runs:
 
     - name: Verify Docker Daemon Final State
       shell: bash
+      env:
+        COLIMA_PROFILE: ${{ inputs.colima-profile }}
       run: |
-        echo "=== Final Docker daemon verification ==="
+        echo "=== Final Docker daemon verification for profile '$COLIMA_PROFILE' ==="
+
+        # Ensure DOCKER_HOST is set for this profile
+        export DOCKER_HOST="unix://$HOME/.colima/${COLIMA_PROFILE}/docker.sock"
+        echo "    DOCKER_HOST: $DOCKER_HOST"
 
         if ! docker info &> /dev/null; then
           echo "❌ Docker daemon still not accessible after pre-flight"
@@ -281,3 +302,6 @@ runs:
         echo ""
         echo "Docker Info:"
         docker info | grep -E "Server Version|Operating System|Total Memory|CPUs" || true
+        echo ""
+        echo "Colima profiles running:"
+        colima list 2>/dev/null || true

@@ -260,14 +260,14 @@ jobs:
           retention-days: 7
 
   # ============================================================
-  # Docker Setup (Colima) - Serialized resource initialization
-  # Ensures Colima is running BEFORE parallel integration shards start
-  # Prevents race condition where multiple shards try to start Colima
+  # Docker Setup (Colima) - Parallel profile initialization
+  # Starts MULTIPLE Colima profiles for true parallel execution
+  # Each integration shard gets its own isolated Docker daemon
   # ============================================================
   docker-setup:
-    name: "🐳 Docker Setup"
+    name: "🐳 Docker Setup (Profiles)"
     runs-on: [self-hosted, raglite]
-    timeout-minutes: 5
+    timeout-minutes: 10
     needs: [lint-gate, validate]  # Wait for both lint and code quality to finish orphan cleanup
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
@@ -277,11 +277,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Docker Pre-flight Validation
+      - name: Start Colima Profile for postgresql shard
         uses: ./.github/actions/docker-preflight
         with:
           max-wait-seconds: '120'
-          check-ports: ''
+          colima-profile: 'ci-postgresql'
+
+      - name: Start Colima Profile for other shard
+        uses: ./.github/actions/docker-preflight
+        with:
+          max-wait-seconds: '120'
+          colima-profile: 'ci-other'
+
+      - name: List Running Colima Profiles
+        run: |
+          echo "=== Colima Profiles Running ==="
+          colima list
+          echo ""
+          echo "=== Docker Sockets Available ==="
+          ls -la ~/.colima/*/docker.sock 2>/dev/null || echo "No sockets found"
 
   # ============================================================
   # TIER 2: Full Integration Tests (Sharded for Performance)
@@ -307,6 +321,7 @@ jobs:
           # These directories don't require the embedding model for most operations
           - shard: postgresql
             variant: shard-postgresql
+            colima_profile: 'ci-postgresql'  # Dedicated Colima profile for true parallel execution
             pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/external_data/ tests/integration/insights/"
             pytest_ignore: ""
             workers: 2
@@ -315,6 +330,7 @@ jobs:
           # These tests typically use the embedding model via session fixtures
           - shard: other
             variant: shard-other
+            colima_profile: 'ci-other'  # Dedicated Colima profile for true parallel execution
             pytest_paths: "tests/integration/"
             pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/external_data/ --ignore=tests/integration/insights/"
             workers: 2
@@ -359,10 +375,20 @@ jobs:
       - name: Clear Python bytecode & pytest cache
         uses: ./.github/actions/validate-cache
 
+      - name: Set DOCKER_HOST for Colima Profile
+        run: |
+          # Each shard uses its own dedicated Colima profile for true parallel isolation
+          COLIMA_PROFILE="${{ matrix.colima_profile }}"
+          DOCKER_SOCKET="$HOME/.colima/${COLIMA_PROFILE}/docker.sock"
+          echo "=== Setting up Colima profile: $COLIMA_PROFILE ==="
+          echo "DOCKER_HOST=unix://$DOCKER_SOCKET" >> $GITHUB_ENV
+          echo "✅ DOCKER_HOST will be: unix://$DOCKER_SOCKET"
+
       - name: Docker Pre-flight Validation
         uses: ./.github/actions/docker-preflight
         with:
           max-wait-seconds: '120'
+          colima-profile: ${{ matrix.colima_profile }}
           # Port validation: ALL CI variants (source: scripts/ci/container-config.sh)
           # test:6335/5433, agentic:6337/5438, discovery:6339/5434, burnin:6340/5435
           # shard-postgresql:6342/5437, shard-other:6343/5439
@@ -509,8 +535,19 @@ jobs:
       - name: Cleanup Containers
         if: always()
         run: |
+          # Ensure DOCKER_HOST is set for cleanup
+          export DOCKER_HOST="unix://$HOME/.colima/${{ matrix.colima_profile }}/docker.sock"
+          echo "Cleanup using DOCKER_HOST: $DOCKER_HOST"
+
           chmod +x scripts/ci/cleanup-test-containers.sh
           ./scripts/ci/cleanup-test-containers.sh ${{ matrix.variant }} --force || true
+
+      - name: Cleanup Colima Profile (optional)
+        if: always() && github.event_name == 'workflow_dispatch'
+        run: |
+          # Only cleanup Colima profiles on manual runs (preserve for faster re-runs)
+          echo "Stopping Colima profile: ${{ matrix.colima_profile }}"
+          colima stop -p ${{ matrix.colima_profile }} 2>/dev/null || echo "Profile already stopped"
 
   # ============================================================
   # Integration Results Aggregation
