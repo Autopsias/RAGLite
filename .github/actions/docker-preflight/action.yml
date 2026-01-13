@@ -22,6 +22,28 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Setup Docker Config (Bypass Keychain)
+      shell: bash
+      run: |
+        # Create isolated Docker config to bypass macOS keychain credential helper
+        # credHelpers with empty strings explicitly disable helpers BEFORE PATH auto-detection
+        DOCKER_CFG="$HOME/.docker-ci-config"
+        mkdir -p "$DOCKER_CFG"
+        cat > "$DOCKER_CFG/config.json" << 'DOCKERCFG'
+        {
+          "auths": {},
+          "credHelpers": {
+            "docker.io": "",
+            "index.docker.io": "",
+            "registry-1.docker.io": "",
+            "ghcr.io": "",
+            "quay.io": ""
+          }
+        }
+        DOCKERCFG
+        echo "DOCKER_CONFIG=$DOCKER_CFG" >> $GITHUB_ENV
+        echo "Created Docker config at $DOCKER_CFG to bypass keychain"
+
     - name: Check Docker Command Availability
       shell: bash
       run: |
