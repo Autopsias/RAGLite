@@ -268,7 +268,7 @@ jobs:
     name: "🐳 Docker Setup"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 5
-    needs: validate
+    needs: [lint-gate, validate]  # Wait for both lint and code quality to finish orphan cleanup
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && inputs.run_integration == true)
@@ -338,7 +338,7 @@ jobs:
         uses: ./.github/actions/docker-preflight
         with:
           max-wait-seconds: '120'
-          check-ports: '6333,6335,6337,6339,6340,5432,5433,5434,5435,5438'
+          check-ports: '6335,6337,6339,6340,5433,5434,5435,5438'
           skip-colima-restart: 'true'
 
       - name: Start Test Containers
@@ -592,7 +592,7 @@ jobs:
         uses: ./.github/actions/docker-preflight
         with:
           max-wait-seconds: '120'
-          check-ports: '6333,6335,5432,5433'
+          check-ports: '6335,5433'
           skip-colima-restart: 'true'
 
       - name: Start Test Containers
