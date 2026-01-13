@@ -300,52 +300,38 @@ jobs:
       - name: Pre-pull Docker Images (With Stabilization + Retry)
         run: |
           echo "=== Pre-pulling Docker images with VM stabilization and retry logic ==="
-          echo "Root cause fix: Docker contexts + daemon readiness + network stabilization"
+          echo "Root cause fix: Isolated Docker config + DOCKER_HOST + retry logic"
 
-          # Backup and modify the system Docker config to disable credential helpers
-          # This prevents the "keychain cannot be accessed" error in non-interactive sessions
-          DOCKER_CONFIG_DIR="$HOME/.docker"
-          DOCKER_CONFIG_BACKUP="$DOCKER_CONFIG_DIR/config.json.bak"
+          # FIX: Create isolated Docker config directory to bypass keychain credential helper
+          # The macOS keychain cannot be accessed in non-interactive CI sessions
+          # Using DOCKER_CONFIG env var overrides ~/.docker/config.json completely
+          TEMP_DOCKER_CONFIG=$(mktemp -d)
+          export DOCKER_CONFIG="$TEMP_DOCKER_CONFIG"
+          echo '{"auths":{}}' > "$TEMP_DOCKER_CONFIG/config.json"
+          echo "Created isolated Docker config at: $DOCKER_CONFIG"
+          echo "Config contents:"
+          cat "$TEMP_DOCKER_CONFIG/config.json"
 
-          if [ -f "$DOCKER_CONFIG_DIR/config.json" ]; then
-            cp "$DOCKER_CONFIG_DIR/config.json" "$DOCKER_CONFIG_BACKUP"
-            echo "Backed up existing Docker config"
-          fi
-
-          # Create a minimal config without credential helpers
-          mkdir -p "$DOCKER_CONFIG_DIR"
-          cat > "$DOCKER_CONFIG_DIR/config.json" << 'EOF'
-          {
-            "auths": {},
-            "credsStore": ""
-          }
-          EOF
-          echo "Created minimal Docker config without credential helpers"
-
-          # Pre-pull images into BOTH Colima profiles using Docker contexts
-          # FIX: Use 'docker context' instead of DOCKER_HOST to avoid path truncation bug
-          # FIX: Add daemon readiness check + network stabilization + retry logic
+          # Pre-pull images into BOTH Colima profiles
+          # FIX: Use DOCKER_HOST directly (simpler than contexts, no credential caching)
           for PROFILE in ci-postgresql ci-other; do
             echo ""
             echo "=========================================="
             echo "Pre-pulling images for profile: $PROFILE"
             echo "=========================================="
 
-            # FIX #1: Use Docker context (avoids DOCKER_HOST path truncation bug)
-            CONTEXT_NAME="colima-${PROFILE}"
-            echo "Switching to Docker context: $CONTEXT_NAME"
-            if ! docker context use "$CONTEXT_NAME" 2>/dev/null; then
-              echo "Context $CONTEXT_NAME not found, creating it..."
-              docker context create "$CONTEXT_NAME" \
-                --docker "host=unix://$HOME/.colima/${PROFILE}/docker.sock" \
-                --description "Colima profile $PROFILE" || {
-                echo "FATAL: Could not create Docker context for $PROFILE"
-                exit 1
-              }
-              docker context use "$CONTEXT_NAME"
+            # Set DOCKER_HOST for this profile's socket
+            export DOCKER_HOST="unix://$HOME/.colima/${PROFILE}/docker.sock"
+            echo "DOCKER_HOST=$DOCKER_HOST"
+
+            # Verify socket exists
+            if [ ! -S "$HOME/.colima/${PROFILE}/docker.sock" ]; then
+              echo "FATAL: Socket not found at $HOME/.colima/${PROFILE}/docker.sock"
+              ls -la "$HOME/.colima/${PROFILE}/" 2>/dev/null || echo "Directory does not exist"
+              exit 1
             fi
 
-            # FIX #2: Wait for Docker daemon to be ready (max 30s)
+            # Wait for Docker daemon to be ready (max 30s)
             echo "Waiting for Docker daemon to be ready..."
             DAEMON_READY=false
             for i in 1 2 3 4 5 6; do
@@ -360,28 +346,29 @@ jobs:
 
             if [ "$DAEMON_READY" = "false" ]; then
               echo "FATAL: Docker daemon not ready after 30s for $PROFILE"
+              docker info 2>&1 || true
               exit 1
             fi
 
-            # FIX #3: Wait for Lima VM networking to stabilize
+            # Wait for Lima VM networking to stabilize
             echo "Waiting 5s for Lima VM networking to stabilize..."
             sleep 5
 
-            # FIX #4: Pull images with retry logic (3 attempts, 5s backoff)
+            # Pull images with retry logic (3 attempts, 5s backoff)
             for IMG in "qdrant/qdrant:v1.15.0" "postgres:16"; do
               echo "Pulling $IMG into $PROFILE..."
               PULL_SUCCESS=false
               for attempt in 1 2 3; do
-                if docker pull "$IMG"; then
-                  echo "Pulled $IMG successfully"
+                if docker pull "$IMG" 2>&1; then
+                  echo "✅ Pulled $IMG successfully"
                   PULL_SUCCESS=true
                   break
                 fi
                 if [ $attempt -eq 3 ]; then
-                  echo "FATAL: Failed to pull $IMG after 3 attempts"
+                  echo "❌ FATAL: Failed to pull $IMG after 3 attempts"
                   exit 1
                 fi
-                echo "Pull failed, retry $attempt/3..."
+                echo "⚠️ Pull failed, retry $attempt/3..."
                 sleep 5
               done
             done
@@ -390,51 +377,54 @@ jobs:
             docker images | grep -E "(qdrant|postgres)" || echo "WARNING: Images may not be listed"
           done
 
-          # Restore original config if it existed
-          if [ -f "$DOCKER_CONFIG_BACKUP" ]; then
-            mv "$DOCKER_CONFIG_BACKUP" "$DOCKER_CONFIG_DIR/config.json"
-            echo "Restored original Docker config"
-          fi
-
+          # Cleanup temp config
+          rm -rf "$TEMP_DOCKER_CONFIG"
           echo ""
-          echo "Pre-pull complete for all profiles"
+          echo "✅ Pre-pull complete for all profiles"
 
       - name: Verify Images Exist in Both Profiles
         run: |
           echo "=== Verifying required images exist in both Colima profiles ==="
 
+          # Use isolated Docker config to avoid keychain issues
+          TEMP_DOCKER_CONFIG=$(mktemp -d)
+          export DOCKER_CONFIG="$TEMP_DOCKER_CONFIG"
+          echo '{"auths":{}}' > "$TEMP_DOCKER_CONFIG/config.json"
+
           ALL_GOOD=true
           for PROFILE in ci-postgresql ci-other; do
             echo ""
             echo "Checking profile: $PROFILE"
-            docker context use "colima-${PROFILE}"
+            export DOCKER_HOST="unix://$HOME/.colima/${PROFILE}/docker.sock"
 
             # Check Qdrant image
-            if docker images qdrant/qdrant:v1.15.0 --format "{{.Repository}}:{{.Tag}}" | grep -q "qdrant"; then
-              echo "Qdrant image present"
+            if docker images qdrant/qdrant:v1.15.0 --format "{{.Repository}}:{{.Tag}}" 2>/dev/null | grep -q "qdrant"; then
+              echo "✅ Qdrant image present"
             else
-              echo "FATAL: Qdrant image MISSING in $PROFILE"
+              echo "❌ FATAL: Qdrant image MISSING in $PROFILE"
               ALL_GOOD=false
             fi
 
             # Check PostgreSQL image
-            if docker images postgres:16 --format "{{.Repository}}:{{.Tag}}" | grep -q "postgres"; then
-              echo "PostgreSQL image present"
+            if docker images postgres:16 --format "{{.Repository}}:{{.Tag}}" 2>/dev/null | grep -q "postgres"; then
+              echo "✅ PostgreSQL image present"
             else
-              echo "FATAL: PostgreSQL image MISSING in $PROFILE"
+              echo "❌ FATAL: PostgreSQL image MISSING in $PROFILE"
               ALL_GOOD=false
             fi
           done
 
+          rm -rf "$TEMP_DOCKER_CONFIG"
+
           if [ "$ALL_GOOD" = "false" ]; then
             echo ""
-            echo "Image verification FAILED - some images are missing"
+            echo "❌ Image verification FAILED - some images are missing"
             echo "Integration tests will fail without these images"
             exit 1
           fi
 
           echo ""
-          echo "All required images verified in both profiles"
+          echo "✅ All required images verified in both profiles"
 
   # ============================================================
   # TIER 2: Full Integration Tests (Sharded for Performance)
