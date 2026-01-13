@@ -321,29 +321,26 @@ jobs:
           EOF
           echo "Created minimal Docker config without credential helpers"
 
-          # Pre-pull images for both profiles
-          echo ""
-          echo "Pulling Qdrant image..."
-          DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock" docker pull qdrant/qdrant:v1.15.0 || {
-            echo "WARNING: Qdrant pull failed, checking if image exists locally..."
-            DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock" docker images qdrant/qdrant:v1.15.0 --format "{{.Repository}}:{{.Tag}}"
-          }
+          # Pre-pull images into BOTH Colima profiles (each profile has isolated Docker daemon)
+          # This is critical: ci-postgresql and ci-other do NOT share image cache
+          for PROFILE in ci-postgresql ci-other; do
+            echo ""
+            echo "=== Pre-pulling images for profile: $PROFILE ==="
+            SOCKET="unix://$HOME/.colima/${PROFILE}/docker.sock"
 
-          echo ""
-          echo "Pulling PostgreSQL image..."
-          DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock" docker pull postgres:16 || {
-            echo "WARNING: PostgreSQL pull failed, checking if image exists locally..."
-            DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock" docker images postgres:16 --format "{{.Repository}}:{{.Tag}}"
-          }
+            echo "Pulling Qdrant image into $PROFILE..."
+            DOCKER_HOST="$SOCKET" docker pull qdrant/qdrant:v1.15.0 || {
+              echo "WARNING: Qdrant pull failed for $PROFILE"
+            }
 
-          # Verify images are available
-          echo ""
-          echo "=== Verifying images on ci-postgresql profile ==="
-          DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock" docker images | grep -E "(qdrant|postgres)" || echo "WARNING: Images may not be available"
+            echo "Pulling PostgreSQL image into $PROFILE..."
+            DOCKER_HOST="$SOCKET" docker pull postgres:16 || {
+              echo "WARNING: PostgreSQL pull failed for $PROFILE"
+            }
 
-          echo ""
-          echo "=== Verifying images on ci-other profile ==="
-          DOCKER_HOST="unix://$HOME/.colima/ci-other/docker.sock" docker images | grep -E "(qdrant|postgres)" || echo "WARNING: Images may not be available"
+            echo "Images in $PROFILE:"
+            DOCKER_HOST="$SOCKET" docker images | grep -E "(qdrant|postgres)" || echo "WARNING: Images may not be available in $PROFILE"
+          done
 
           # Restore original config if it existed
           if [ -f "$DOCKER_CONFIG_BACKUP" ]; then
