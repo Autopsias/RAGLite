@@ -43,16 +43,29 @@ runs:
         if [[ -S "$COLIMA_SOCKET" ]]; then
           echo "✅ Docker socket exists: $COLIMA_SOCKET"
 
-          # Level 2: Check if daemon is responsive (not zombie)
-          if timeout 5 docker info &> /dev/null; then
-            echo "✅ Docker daemon is responsive"
-            docker version | head -10
-            exit 0
-          else
-            echo "⚠️  Docker socket exists but daemon not responsive (zombie state detected)"
-            echo "   This indicates Colima VM is corrupted - forcing cleanup"
+          # Level 2: Check if daemon is responsive (not zombie) - with retry
+          RESPONSIVE=false
+          for ATTEMPT in 1 2 3; do
+            echo "Checking daemon responsiveness (attempt $ATTEMPT/3)..."
+            if timeout 10 docker info &> /dev/null; then
+              echo "✅ Docker daemon is responsive"
+              docker version | head -10
+              RESPONSIVE=true
+              break
+            fi
+            if [ $ATTEMPT -lt 3 ]; then
+              echo "Daemon not responsive, waiting 2s before retry..."
+              sleep 2
+            fi
+          done
+
+          if [ "$RESPONSIVE" = "false" ]; then
+            echo "⚠️  Docker socket exists but daemon not responsive after 3 retries (zombie state detected)"
+            echo "   This indicates Colima VM is corrupted - forcing cleanup with VM recreation"
             # Force cleanup even though socket exists
             FORCE_CLEANUP=true
+          else
+            exit 0
           fi
         else
           echo "⚠️  Docker socket not found"
@@ -100,15 +113,40 @@ runs:
           COLIMA_STATUS=$(colima status 2>&1 || true)
           echo "   Current colima status: $COLIMA_STATUS"
 
-          # ENHANCED: Detect zombie state - socket exists but daemon unresponsive
-          if [[ -S "$COLIMA_SOCKET" ]] && ! timeout 5 docker info &> /dev/null; then
-            echo "   🧟 ZOMBIE STATE DETECTED: Socket exists but daemon dead"
-            echo "   Root cause: VM corruption, network issues, or process deadlock"
-            FORCE_CLEANUP=true
+          # ENHANCED: Detect zombie state - socket exists but daemon unresponsive (with retry)
+          if [[ -S "$COLIMA_SOCKET" ]]; then
+            DAEMON_RESPONSIVE=false
+            for RETRY in 1 2 3; do
+              if timeout 10 docker info &> /dev/null; then
+                DAEMON_RESPONSIVE=true
+                break
+              fi
+              sleep 2
+            done
+
+            if [ "$DAEMON_RESPONSIVE" = "false" ]; then
+              echo "   🧟 ZOMBIE STATE DETECTED: Socket exists but daemon unresponsive after retries"
+              echo "   Root cause: VM corruption, network issues, or process deadlock"
+              FORCE_CLEANUP=true
+            fi
           fi
 
-          # Always force cleanup when Docker is inaccessible
-          echo "🔄 Forcing Colima stop and delete to ensure clean state..."
+          # Check VM memory usage before cleanup decision
+          if command -v colima &> /dev/null; then
+            VM_STATUS=$(colima status 2>&1 || echo "unknown")
+            if [[ "$VM_STATUS" == *"colima is running"* ]]; then
+              # Get VM memory stats (if available)
+              echo "Checking VM memory usage..."
+              VM_MEM_INFO=$(docker info 2>/dev/null | grep "Total Memory" || echo "unknown")
+              echo "VM Memory: $VM_MEM_INFO"
+
+              # If VM memory > 80% or unknown, trigger preemptive restart
+              # Note: docker info doesn't show memory % easily, so we trigger cleanup on zombie/unresponsive
+            fi
+          fi
+
+          # Always force cleanup when Docker is inaccessible - VM recreation instead of restart
+          echo "🔄 Forcing Colima full VM deletion and recreation (not just restart)..."
           colima stop -f 2>/dev/null || true
           sleep 2
           colima delete -f 2>/dev/null || true

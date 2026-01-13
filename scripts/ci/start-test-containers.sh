@@ -252,17 +252,33 @@ start_postgresql() {
         postgres:16 > /dev/null
 
     # Health check with exponential backoff (using pg_isready)
+    # ENHANCED: Add Docker daemon heartbeat every 10s during startup
     local attempt=1
     local wait_time=$HEALTH_CHECK_INTERVAL
     local max_wait=$POSTGRES_READY_TIMEOUT
     local elapsed=0
+    local last_heartbeat=0
 
     echo -n "⏳ Waiting for PostgreSQL to be ready"
     while [[ $elapsed -lt $max_wait ]]; do
+        # Check PostgreSQL health
         if docker exec "$POSTGRES_CONTAINER" pg_isready -U "${db_user}" > /dev/null 2>&1; then
             echo ""
             echo "✅ PostgreSQL ready (${elapsed}s)"
             return 0
+        fi
+
+        # Docker daemon heartbeat every 10s during startup
+        if [[ $((elapsed - last_heartbeat)) -ge 10 ]]; then
+            if ! timeout 5 docker info &> /dev/null; then
+                echo ""
+                echo "❌ Docker daemon became unresponsive during PostgreSQL startup" >&2
+                echo "   Elapsed time: ${elapsed}s" >&2
+                echo "   This indicates Colima VM entered zombie state during container operations" >&2
+                echo "   Root cause: VM memory pressure or network degradation" >&2
+                return 1
+            fi
+            last_heartbeat=$elapsed
         fi
 
         echo -n "."
