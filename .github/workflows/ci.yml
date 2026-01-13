@@ -300,20 +300,17 @@ jobs:
       - name: Pre-pull Docker Images (With Stabilization + Retry)
         run: |
           echo "=== Pre-pulling Docker images with VM stabilization and retry logic ==="
-          echo "Root cause fix: Isolated Docker config + DOCKER_HOST + retry logic"
+          echo "FIX: Use --config flag to bypass macOS keychain credential helper"
 
-          # FIX: Create isolated Docker config directory to bypass keychain credential helper
+          # FIX: Create isolated Docker config directory with EXPLICIT credential store disable
           # The macOS keychain cannot be accessed in non-interactive CI sessions
-          # Using DOCKER_CONFIG env var overrides ~/.docker/config.json completely
-          TEMP_DOCKER_CONFIG=$(mktemp -d)
-          export DOCKER_CONFIG="$TEMP_DOCKER_CONFIG"
-          echo '{"auths":{}}' > "$TEMP_DOCKER_CONFIG/config.json"
-          echo "Created isolated Docker config at: $DOCKER_CONFIG"
-          echo "Config contents:"
-          cat "$TEMP_DOCKER_CONFIG/config.json"
+          # Using --config flag on EACH docker command ensures it's used (env var was unreliable)
+          DOCKER_CFG=$(mktemp -d)
+          echo '{"auths":{},"credsStore":""}' > "$DOCKER_CFG/config.json"
+          echo "Created Docker config at: $DOCKER_CFG"
+          cat "$DOCKER_CFG/config.json"
 
           # Pre-pull images into BOTH Colima profiles
-          # FIX: Use DOCKER_HOST directly (simpler than contexts, no credential caching)
           for PROFILE in ci-postgresql ci-other; do
             echo ""
             echo "=========================================="
@@ -326,7 +323,7 @@ jobs:
 
             # Verify socket exists
             if [ ! -S "$HOME/.colima/${PROFILE}/docker.sock" ]; then
-              echo "FATAL: Socket not found at $HOME/.colima/${PROFILE}/docker.sock"
+              echo "❌ FATAL: Socket not found at $HOME/.colima/${PROFILE}/docker.sock"
               ls -la "$HOME/.colima/${PROFILE}/" 2>/dev/null || echo "Directory does not exist"
               exit 1
             fi
@@ -335,8 +332,8 @@ jobs:
             echo "Waiting for Docker daemon to be ready..."
             DAEMON_READY=false
             for i in 1 2 3 4 5 6; do
-              if timeout 10 docker info >/dev/null 2>&1; then
-                echo "Docker daemon is ready"
+              if timeout 10 docker --config "$DOCKER_CFG" info >/dev/null 2>&1; then
+                echo "✅ Docker daemon is ready"
                 DAEMON_READY=true
                 break
               fi
@@ -345,8 +342,8 @@ jobs:
             done
 
             if [ "$DAEMON_READY" = "false" ]; then
-              echo "FATAL: Docker daemon not ready after 30s for $PROFILE"
-              docker info 2>&1 || true
+              echo "❌ FATAL: Docker daemon not ready after 30s for $PROFILE"
+              docker --config "$DOCKER_CFG" info 2>&1 || true
               exit 1
             fi
 
@@ -355,17 +352,19 @@ jobs:
             sleep 5
 
             # Pull images with retry logic (3 attempts, 5s backoff)
+            # Use --config flag on EVERY docker command to bypass keychain
             for IMG in "qdrant/qdrant:v1.15.0" "postgres:16"; do
               echo "Pulling $IMG into $PROFILE..."
               PULL_SUCCESS=false
               for attempt in 1 2 3; do
-                if docker pull "$IMG" 2>&1; then
+                if docker --config "$DOCKER_CFG" pull "$IMG" 2>&1; then
                   echo "✅ Pulled $IMG successfully"
                   PULL_SUCCESS=true
                   break
                 fi
                 if [ $attempt -eq 3 ]; then
                   echo "❌ FATAL: Failed to pull $IMG after 3 attempts"
+                  rm -rf "$DOCKER_CFG"
                   exit 1
                 fi
                 echo "⚠️ Pull failed, retry $attempt/3..."
@@ -374,11 +373,11 @@ jobs:
             done
 
             echo "Images in $PROFILE:"
-            docker images | grep -E "(qdrant|postgres)" || echo "WARNING: Images may not be listed"
+            docker --config "$DOCKER_CFG" images | grep -E "(qdrant|postgres)" || echo "WARNING: Images may not be listed"
           done
 
           # Cleanup temp config
-          rm -rf "$TEMP_DOCKER_CONFIG"
+          rm -rf "$DOCKER_CFG"
           echo ""
           echo "✅ Pre-pull complete for all profiles"
 
@@ -386,10 +385,9 @@ jobs:
         run: |
           echo "=== Verifying required images exist in both Colima profiles ==="
 
-          # Use isolated Docker config to avoid keychain issues
-          TEMP_DOCKER_CONFIG=$(mktemp -d)
-          export DOCKER_CONFIG="$TEMP_DOCKER_CONFIG"
-          echo '{"auths":{}}' > "$TEMP_DOCKER_CONFIG/config.json"
+          # Use --config flag to avoid keychain issues
+          DOCKER_CFG=$(mktemp -d)
+          echo '{"auths":{},"credsStore":""}' > "$DOCKER_CFG/config.json"
 
           ALL_GOOD=true
           for PROFILE in ci-postgresql ci-other; do
@@ -398,7 +396,7 @@ jobs:
             export DOCKER_HOST="unix://$HOME/.colima/${PROFILE}/docker.sock"
 
             # Check Qdrant image
-            if docker images qdrant/qdrant:v1.15.0 --format "{{.Repository}}:{{.Tag}}" 2>/dev/null | grep -q "qdrant"; then
+            if docker --config "$DOCKER_CFG" images qdrant/qdrant:v1.15.0 --format "{{.Repository}}:{{.Tag}}" 2>/dev/null | grep -q "qdrant"; then
               echo "✅ Qdrant image present"
             else
               echo "❌ FATAL: Qdrant image MISSING in $PROFILE"
@@ -406,7 +404,7 @@ jobs:
             fi
 
             # Check PostgreSQL image
-            if docker images postgres:16 --format "{{.Repository}}:{{.Tag}}" 2>/dev/null | grep -q "postgres"; then
+            if docker --config "$DOCKER_CFG" images postgres:16 --format "{{.Repository}}:{{.Tag}}" 2>/dev/null | grep -q "postgres"; then
               echo "✅ PostgreSQL image present"
             else
               echo "❌ FATAL: PostgreSQL image MISSING in $PROFILE"
@@ -414,7 +412,7 @@ jobs:
             fi
           done
 
-          rm -rf "$TEMP_DOCKER_CONFIG"
+          rm -rf "$DOCKER_CFG"
 
           if [ "$ALL_GOOD" = "false" ]; then
             echo ""
