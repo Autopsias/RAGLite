@@ -41,16 +41,10 @@ runs:
 
         echo "⚠️  Docker daemon not accessible"
 
-        # Detect Colima configuration
-        COLIMA_SOCKET="$HOME/.colima/default/docker.sock"
-        if [[ "$DOCKER_HOST" == *"colima"* ]] || [[ -S "$COLIMA_SOCKET" ]]; then
-          echo "🔧 Detected Colima configuration"
-
-          if ! command -v colima &> /dev/null; then
-            echo "❌ Colima socket exists but colima command not found"
-            echo "Install with: brew install colima"
-            exit 1
-          fi
+        # Detect Colima - check if colima command exists (primary detection)
+        # Don't rely on socket file - it may not exist if VM was deleted/corrupted
+        if command -v colima &> /dev/null; then
+          echo "🔧 Detected Colima (colima command found at: $(which colima))"
 
           # AGGRESSIVE CLEANUP: Docker not accessible + Colima socket exists = force full restart
           # Don't rely on colima status - it can be unreliable when Colima is broken
@@ -119,9 +113,10 @@ runs:
           exit 1
         fi
 
-        # Non-Colima case: Docker Desktop or other runtime
-        echo "❌ Docker daemon not running and Colima not detected"
-        echo "Please start Docker Desktop or Colima manually"
+        # Non-Colima case: colima command not found
+        echo "❌ Docker daemon not running and colima command not found"
+        echo "Please install Colima: brew install colima"
+        echo "Or start Docker Desktop manually"
         exit 1
 
     - name: Set Docker Host Environment Variable
