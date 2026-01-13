@@ -366,7 +366,8 @@ jobs:
 
           # Check Qdrant mount
           QDRANT_MOUNT=$(docker inspect "$QDRANT_CONTAINER_NAME" --format='{{range .Mounts}}{{println .Source}}{{end}}' 2>/dev/null || echo "")
-          if [[ -n "$QDRANT_MOUNT" ]] && [[ "$QDRANT_MOUNT" != *"/raglite/"* ]]; then
+          # Case-insensitive check for /raglite/ or /RAGLite/ in path
+          if [[ -n "$QDRANT_MOUNT" ]] && [[ "${QDRANT_MOUNT,,}" != *"/raglite/"* ]]; then
             echo "WARNING: Qdrant volume mount incorrect: $QDRANT_MOUNT"
             echo "Recreating Qdrant container..."
             docker stop "$QDRANT_CONTAINER_NAME" 2>/dev/null || true
@@ -378,7 +379,8 @@ jobs:
 
           # Check PostgreSQL mount
           PG_MOUNT=$(docker inspect "$POSTGRES_CONTAINER_NAME" --format='{{range .Mounts}}{{println .Source}}{{end}}' 2>/dev/null || echo "")
-          if [[ -n "$PG_MOUNT" ]] && [[ "$PG_MOUNT" != *"/raglite/"* ]]; then
+          # Case-insensitive check for /raglite/ or /RAGLite/ in path
+          if [[ -n "$PG_MOUNT" ]] && [[ "${PG_MOUNT,,}" != *"/raglite/"* ]]; then
             echo "WARNING: PostgreSQL volume mount incorrect: $PG_MOUNT"
             echo "Recreating PostgreSQL container..."
             docker stop "$POSTGRES_CONTAINER_NAME" 2>/dev/null || true
