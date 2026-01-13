@@ -260,6 +260,30 @@ jobs:
           retention-days: 7
 
   # ============================================================
+  # Docker Setup (Colima) - Serialized resource initialization
+  # Ensures Colima is running BEFORE parallel integration shards start
+  # Prevents race condition where multiple shards try to start Colima
+  # ============================================================
+  docker-setup:
+    name: "🐳 Docker Setup"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 5
+    needs: validate
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_integration == true)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Docker Pre-flight Validation
+        uses: ./.github/actions/docker-preflight
+        with:
+          max-wait-seconds: '120'
+          check-ports: ''
+
+  # ============================================================
   # TIER 2: Full Integration Tests (Sharded for Performance)
   # Runs on: Main branch pushes (post-merge) OR manual trigger with flag
   # Target: <15 minutes (3 parallel shards), <4GB RAM per shard
@@ -269,7 +293,7 @@ jobs:
     name: "🔗 Tests: Integration (${{ matrix.shard }})"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 30
-    needs: validate
+    needs: [validate, docker-setup]
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && inputs.run_integration == true)
