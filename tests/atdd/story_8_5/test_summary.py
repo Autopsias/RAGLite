@@ -65,7 +65,7 @@ class TestAC85DeprecationCleanupSummary:
             capture_output=True,
             text=True,
             cwd=str(project_root),
-            timeout=30,
+            timeout=90,  # Increased for CI (2-3x slower than local ~14s)
         )
 
         if result.returncode != 0:
