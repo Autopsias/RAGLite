@@ -116,7 +116,7 @@ jobs:
   validate:
     name: "📝 Code Quality: Lint & Format"
     runs-on: [self-hosted, raglite]
-    timeout-minutes: 15
+    timeout-minutes: 25
     needs: lint-gate
 
     steps:
