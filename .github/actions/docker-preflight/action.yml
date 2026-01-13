@@ -100,19 +100,34 @@ runs:
           echo "✅ Colima cleanup complete, proceeding with fresh VM start"
 
           echo "Starting Colima with retry logic..."
+          echo "NOTE: Using nohup to prevent runner cleanup from killing Colima"
 
           # Exponential backoff parameters
           ATTEMPT=1
           MAX_ATTEMPTS=3
-          WAIT_TIME=2
+          WAIT_TIME=5  # Increased from 2 to give Colima more time
 
           while [[ $ATTEMPT -le $MAX_ATTEMPTS ]]; do
             echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Starting Colima..."
 
-            if colima start --cpu 4 --memory 6 --disk 50 --runtime docker 2>&1; then
+            # Start Colima with nohup to prevent runner from killing it
+            # Redirect to log file for debugging
+            nohup colima start --cpu 4 --memory 6 --disk 50 --runtime docker > /tmp/colima-start-$ATTEMPT.log 2>&1 &
+
+            # Give Colima time to start (it runs in background now)
+            echo "Waiting for Colima to initialize..."
+            sleep 10
+
+            # Check if Colima started successfully
+            if colima status 2>&1 | grep -qi "running"; then
               echo "✅ Colima start command succeeded"
+              # Show Colima status
+              colima status
               break
             else
+              echo "Colima start log:"
+              cat /tmp/colima-start-$ATTEMPT.log || true
+
               if [[ $ATTEMPT -eq $MAX_ATTEMPTS ]]; then
                 echo "❌ Failed to start Colima after $MAX_ATTEMPTS attempts"
                 exit 1
