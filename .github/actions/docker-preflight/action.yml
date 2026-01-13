@@ -208,7 +208,9 @@ runs:
 
             # Start Colima with specified profile - RUNNER_TRACKING_ID is unset so runner won't kill it
             # Each profile gets its own VM and Docker daemon for true parallel isolation
-            if colima start -p "$COLIMA_PROFILE" --cpu 2 --memory 3 --disk 25 --runtime docker 2>&1; then
+            # INCREASED: 4GB memory (was 3GB) to prevent VM zombie state under container load
+            # Root cause: Qdrant (1GB) + PostgreSQL (512MB+256MB shm) + QEMU overhead can exhaust 3GB
+            if colima start -p "$COLIMA_PROFILE" --cpu 2 --memory 4 --disk 25 --runtime docker 2>&1; then
               echo "✅ Colima profile '$COLIMA_PROFILE' started successfully"
               # Update DOCKER_HOST to point to this profile's socket
               export DOCKER_HOST="unix://$HOME/.colima/${COLIMA_PROFILE}/docker.sock"

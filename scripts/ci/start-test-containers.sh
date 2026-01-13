@@ -117,10 +117,14 @@ if ! command -v docker &> /dev/null; then
     exit 2
 fi
 
-if ! docker info &> /dev/null; then
-    echo "❌ Docker daemon not running" >&2
+# ENHANCED: Use timeout to detect zombie daemon (socket exists but unresponsive)
+if ! timeout 15 docker info &> /dev/null; then
+    echo "❌ Docker daemon not running or unresponsive" >&2
+    echo "   DOCKER_HOST: ${DOCKER_HOST:-default}" >&2
+    echo "   Tip: Colima VM may have died. Check: colima list" >&2
     exit 2
 fi
+echo "✅ Docker daemon is responsive"
 
 # ============================================================
 # Nuclear Cleanup
@@ -173,6 +177,14 @@ start_qdrant() {
     echo "------------------------------------------------------------"
     echo "[2/4] Starting Qdrant Container"
     echo "------------------------------------------------------------"
+
+    # Verify Docker daemon is responsive before starting container
+    echo "Verifying Docker daemon health..."
+    if ! timeout 10 docker info &> /dev/null; then
+        echo "❌ Docker daemon unresponsive before Qdrant startup" >&2
+        return 1
+    fi
+    echo "✅ Docker daemon responsive"
 
     # Create storage directory
     local storage_dir="qdrant_storage_${VARIANT}"
@@ -228,6 +240,17 @@ start_postgresql() {
     echo "------------------------------------------------------------"
     echo "[3/4] Starting PostgreSQL Container"
     echo "------------------------------------------------------------"
+
+    # CRITICAL: Verify Docker daemon is still responsive BEFORE starting PostgreSQL
+    # Root cause: Colima VM can enter zombie state after Qdrant starts
+    echo "Verifying Docker daemon health before PostgreSQL startup..."
+    if ! timeout 10 docker info &> /dev/null; then
+        echo "❌ Docker daemon unresponsive BEFORE PostgreSQL startup" >&2
+        echo "   This indicates Colima VM died after Qdrant started" >&2
+        echo "   Root cause: VM memory exhaustion or QEMU instability" >&2
+        return 1
+    fi
+    echo "✅ Docker daemon responsive"
 
     # Create storage directory
     local storage_dir="postgresql_data_${VARIANT}"
