@@ -297,6 +297,40 @@ jobs:
           echo "=== Docker Sockets Available ==="
           ls -la ~/.colima/*/docker.sock 2>/dev/null || echo "No sockets found"
 
+      - name: Pre-pull Docker Images (Avoid Keychain Issues)
+        run: |
+          echo "=== Pre-pulling Docker images to avoid keychain credential helper issues ==="
+
+          # Create a temporary Docker config that disables credential helpers
+          # This prevents the "keychain cannot be accessed" error in non-interactive sessions
+          export DOCKER_CONFIG="$(mktemp -d)"
+          cat > "$DOCKER_CONFIG/config.json" << 'EOF'
+          {
+            "credHelpers": {}
+          }
+          EOF
+          echo "Using temporary Docker config: $DOCKER_CONFIG"
+
+          # Pre-pull images for both profiles (they share the same image cache)
+          echo "Pulling Qdrant image..."
+          DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock" docker pull qdrant/qdrant:v1.15.0 || true
+
+          echo "Pulling PostgreSQL image..."
+          DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock" docker pull postgres:16 || true
+
+          # Verify images are available
+          echo ""
+          echo "=== Verifying images on ci-postgresql profile ==="
+          DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock" docker images | grep -E "(qdrant|postgres)" || echo "WARNING: Images may not be available"
+
+          echo ""
+          echo "=== Verifying images on ci-other profile ==="
+          DOCKER_HOST="unix://$HOME/.colima/ci-other/docker.sock" docker images | grep -E "(qdrant|postgres)" || echo "WARNING: Images may not be available"
+
+          # Cleanup
+          rm -rf "$DOCKER_CONFIG"
+          echo "✅ Pre-pull complete"
+
   # ============================================================
   # TIER 2: Full Integration Tests (Sharded for Performance)
   # Runs on: Main branch pushes (post-merge) OR manual trigger with flag

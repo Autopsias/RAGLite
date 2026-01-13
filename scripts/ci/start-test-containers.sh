@@ -179,7 +179,9 @@ start_qdrant() {
     mkdir -p "$storage_dir"
 
     # Start container (raw docker run - bypass Compose corruption)
+    # --pull=never: Images should be pre-pulled by docker-setup job to avoid keychain issues
     docker run -d \
+        --pull=never \
         --name "$QDRANT_CONTAINER" \
         --label "com.raglite.variant=${VARIANT}" \
         --label "com.raglite.type=test" \
@@ -237,7 +239,9 @@ start_postgresql() {
     local db_name="$CI_POSTGRES_DB"
 
     # Start container
+    # --pull=never: Images should be pre-pulled by docker-setup job to avoid keychain issues
     docker run -d \
+        --pull=never \
         --name "$POSTGRES_CONTAINER" \
         --label "com.raglite.variant=${VARIANT}" \
         --label "com.raglite.type=test" \
