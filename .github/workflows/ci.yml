@@ -331,6 +331,31 @@ jobs:
           pkill -9 -f "multiprocessing" 2>/dev/null || echo "No orphaned multiprocessing processes"
           echo "Process cleanup complete"
 
+      - name: Cleanup Shard Container Resources
+        run: |
+          echo "=== Cleaning up shard variant resources ==="
+
+          # Kill any processes using shard ports
+          echo "Checking shard ports..."
+          for PORT in 6342 6343 5437 5439; do
+            if lsof -ti :${PORT} >/dev/null 2>&1; then
+              echo "⚠️  Port $PORT in use, killing process..."
+              lsof -ti :${PORT} | xargs kill -9 2>/dev/null || true
+              sleep 0.5
+            else
+              echo "✅ Port $PORT available"
+            fi
+          done
+
+          # Remove any orphaned shard containers
+          echo "Removing orphaned shard containers..."
+          docker rm -f raglite-qdrant-shard-postgresql 2>/dev/null || echo "  qdrant-shard-postgresql: not found"
+          docker rm -f raglite-postgresql-shard-postgresql 2>/dev/null || echo "  postgresql-shard-postgresql: not found"
+          docker rm -f raglite-qdrant-shard-other 2>/dev/null || echo "  qdrant-shard-other: not found"
+          docker rm -f raglite-postgresql-shard-other 2>/dev/null || echo "  postgresql-shard-other: not found"
+
+          echo "✅ Shard resource cleanup complete"
+
       - name: Clear Python bytecode & pytest cache
         uses: ./.github/actions/validate-cache
 
@@ -338,7 +363,10 @@ jobs:
         uses: ./.github/actions/docker-preflight
         with:
           max-wait-seconds: '120'
-          check-ports: '6335,6337,6339,6340,5433,5434,5435,5438'
+          # Port validation: ALL CI variants (source: scripts/ci/container-config.sh)
+          # test:6335/5433, agentic:6337/5438, discovery:6339/5434, burnin:6340/5435
+          # shard-postgresql:6342/5437, shard-other:6343/5439
+          check-ports: '6335,6337,6339,6340,6342,6343,5433,5434,5435,5437,5438,5439'
           skip-colima-restart: 'true'
 
       - name: Start Test Containers
