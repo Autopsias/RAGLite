@@ -59,7 +59,12 @@ runs:
           colima stop -f 2>/dev/null || true
           sleep 2
           colima delete -f 2>/dev/null || true
-          sleep 3
+
+          # Remove stale Lima network sockets (root cause of "user-v2_ep.sock not found")
+          # Lima recreates this directory automatically on next start
+          echo "🧹 Removing stale Lima network state..."
+          rm -rf "$HOME/.colima/_lima/_networks"
+          sleep 2
           echo "✅ Colima cleanup complete, proceeding with fresh VM start"
 
           echo "Starting Colima with retry logic..."
