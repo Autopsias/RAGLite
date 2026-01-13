@@ -297,9 +297,10 @@ jobs:
           echo "=== Docker Sockets Available ==="
           ls -la ~/.colima/*/docker.sock 2>/dev/null || echo "No sockets found"
 
-      - name: Pre-pull Docker Images (Avoid Keychain Issues)
+      - name: Pre-pull Docker Images (With Stabilization + Retry)
         run: |
-          echo "=== Pre-pulling Docker images to avoid keychain credential helper issues ==="
+          echo "=== Pre-pulling Docker images with VM stabilization and retry logic ==="
+          echo "Root cause fix: Docker contexts + daemon readiness + network stabilization"
 
           # Backup and modify the system Docker config to disable credential helpers
           # This prevents the "keychain cannot be accessed" error in non-interactive sessions
@@ -321,25 +322,72 @@ jobs:
           EOF
           echo "Created minimal Docker config without credential helpers"
 
-          # Pre-pull images into BOTH Colima profiles (each profile has isolated Docker daemon)
-          # This is critical: ci-postgresql and ci-other do NOT share image cache
+          # Pre-pull images into BOTH Colima profiles using Docker contexts
+          # FIX: Use 'docker context' instead of DOCKER_HOST to avoid path truncation bug
+          # FIX: Add daemon readiness check + network stabilization + retry logic
           for PROFILE in ci-postgresql ci-other; do
             echo ""
-            echo "=== Pre-pulling images for profile: $PROFILE ==="
-            SOCKET="unix://$HOME/.colima/${PROFILE}/docker.sock"
+            echo "=========================================="
+            echo "Pre-pulling images for profile: $PROFILE"
+            echo "=========================================="
 
-            echo "Pulling Qdrant image into $PROFILE..."
-            DOCKER_HOST="$SOCKET" docker pull qdrant/qdrant:v1.15.0 || {
-              echo "WARNING: Qdrant pull failed for $PROFILE"
-            }
+            # FIX #1: Use Docker context (avoids DOCKER_HOST path truncation bug)
+            CONTEXT_NAME="colima-${PROFILE}"
+            echo "Switching to Docker context: $CONTEXT_NAME"
+            if ! docker context use "$CONTEXT_NAME" 2>/dev/null; then
+              echo "Context $CONTEXT_NAME not found, creating it..."
+              docker context create "$CONTEXT_NAME" \
+                --docker "host=unix://$HOME/.colima/${PROFILE}/docker.sock" \
+                --description "Colima profile $PROFILE" || {
+                echo "FATAL: Could not create Docker context for $PROFILE"
+                exit 1
+              }
+              docker context use "$CONTEXT_NAME"
+            fi
 
-            echo "Pulling PostgreSQL image into $PROFILE..."
-            DOCKER_HOST="$SOCKET" docker pull postgres:16 || {
-              echo "WARNING: PostgreSQL pull failed for $PROFILE"
-            }
+            # FIX #2: Wait for Docker daemon to be ready (max 30s)
+            echo "Waiting for Docker daemon to be ready..."
+            DAEMON_READY=false
+            for i in 1 2 3 4 5 6; do
+              if timeout 10 docker info >/dev/null 2>&1; then
+                echo "Docker daemon is ready"
+                DAEMON_READY=true
+                break
+              fi
+              echo "Daemon not ready, waiting 5s... ($i/6)"
+              sleep 5
+            done
+
+            if [ "$DAEMON_READY" = "false" ]; then
+              echo "FATAL: Docker daemon not ready after 30s for $PROFILE"
+              exit 1
+            fi
+
+            # FIX #3: Wait for Lima VM networking to stabilize
+            echo "Waiting 5s for Lima VM networking to stabilize..."
+            sleep 5
+
+            # FIX #4: Pull images with retry logic (3 attempts, 5s backoff)
+            for IMG in "qdrant/qdrant:v1.15.0" "postgres:16"; do
+              echo "Pulling $IMG into $PROFILE..."
+              PULL_SUCCESS=false
+              for attempt in 1 2 3; do
+                if docker pull "$IMG"; then
+                  echo "Pulled $IMG successfully"
+                  PULL_SUCCESS=true
+                  break
+                fi
+                if [ $attempt -eq 3 ]; then
+                  echo "FATAL: Failed to pull $IMG after 3 attempts"
+                  exit 1
+                fi
+                echo "Pull failed, retry $attempt/3..."
+                sleep 5
+              done
+            done
 
             echo "Images in $PROFILE:"
-            DOCKER_HOST="$SOCKET" docker images | grep -E "(qdrant|postgres)" || echo "WARNING: Images may not be available in $PROFILE"
+            docker images | grep -E "(qdrant|postgres)" || echo "WARNING: Images may not be listed"
           done
 
           # Restore original config if it existed
@@ -348,7 +396,45 @@ jobs:
             echo "Restored original Docker config"
           fi
 
-          echo "✅ Pre-pull complete"
+          echo ""
+          echo "Pre-pull complete for all profiles"
+
+      - name: Verify Images Exist in Both Profiles
+        run: |
+          echo "=== Verifying required images exist in both Colima profiles ==="
+
+          ALL_GOOD=true
+          for PROFILE in ci-postgresql ci-other; do
+            echo ""
+            echo "Checking profile: $PROFILE"
+            docker context use "colima-${PROFILE}"
+
+            # Check Qdrant image
+            if docker images qdrant/qdrant:v1.15.0 --format "{{.Repository}}:{{.Tag}}" | grep -q "qdrant"; then
+              echo "Qdrant image present"
+            else
+              echo "FATAL: Qdrant image MISSING in $PROFILE"
+              ALL_GOOD=false
+            fi
+
+            # Check PostgreSQL image
+            if docker images postgres:16 --format "{{.Repository}}:{{.Tag}}" | grep -q "postgres"; then
+              echo "PostgreSQL image present"
+            else
+              echo "FATAL: PostgreSQL image MISSING in $PROFILE"
+              ALL_GOOD=false
+            fi
+          done
+
+          if [ "$ALL_GOOD" = "false" ]; then
+            echo ""
+            echo "Image verification FAILED - some images are missing"
+            echo "Integration tests will fail without these images"
+            exit 1
+          fi
+
+          echo ""
+          echo "All required images verified in both profiles"
 
   # ============================================================
   # TIER 2: Full Integration Tests (Sharded for Performance)
