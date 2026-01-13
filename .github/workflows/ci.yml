@@ -301,22 +301,40 @@ jobs:
         run: |
           echo "=== Pre-pulling Docker images to avoid keychain credential helper issues ==="
 
-          # Create a temporary Docker config that disables credential helpers
+          # Backup and modify the system Docker config to disable credential helpers
           # This prevents the "keychain cannot be accessed" error in non-interactive sessions
-          export DOCKER_CONFIG="$(mktemp -d)"
-          cat > "$DOCKER_CONFIG/config.json" << 'EOF'
+          DOCKER_CONFIG_DIR="$HOME/.docker"
+          DOCKER_CONFIG_BACKUP="$DOCKER_CONFIG_DIR/config.json.bak"
+
+          if [ -f "$DOCKER_CONFIG_DIR/config.json" ]; then
+            cp "$DOCKER_CONFIG_DIR/config.json" "$DOCKER_CONFIG_BACKUP"
+            echo "Backed up existing Docker config"
+          fi
+
+          # Create a minimal config without credential helpers
+          mkdir -p "$DOCKER_CONFIG_DIR"
+          cat > "$DOCKER_CONFIG_DIR/config.json" << 'EOF'
           {
-            "credHelpers": {}
+            "auths": {},
+            "credsStore": ""
           }
           EOF
-          echo "Using temporary Docker config: $DOCKER_CONFIG"
+          echo "Created minimal Docker config without credential helpers"
 
-          # Pre-pull images for both profiles (they share the same image cache)
+          # Pre-pull images for both profiles
+          echo ""
           echo "Pulling Qdrant image..."
-          DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock" docker pull qdrant/qdrant:v1.15.0 || true
+          DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock" docker pull qdrant/qdrant:v1.15.0 || {
+            echo "WARNING: Qdrant pull failed, checking if image exists locally..."
+            DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock" docker images qdrant/qdrant:v1.15.0 --format "{{.Repository}}:{{.Tag}}"
+          }
 
+          echo ""
           echo "Pulling PostgreSQL image..."
-          DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock" docker pull postgres:16 || true
+          DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock" docker pull postgres:16 || {
+            echo "WARNING: PostgreSQL pull failed, checking if image exists locally..."
+            DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock" docker images postgres:16 --format "{{.Repository}}:{{.Tag}}"
+          }
 
           # Verify images are available
           echo ""
@@ -327,8 +345,12 @@ jobs:
           echo "=== Verifying images on ci-other profile ==="
           DOCKER_HOST="unix://$HOME/.colima/ci-other/docker.sock" docker images | grep -E "(qdrant|postgres)" || echo "WARNING: Images may not be available"
 
-          # Cleanup
-          rm -rf "$DOCKER_CONFIG"
+          # Restore original config if it existed
+          if [ -f "$DOCKER_CONFIG_BACKUP" ]; then
+            mv "$DOCKER_CONFIG_BACKUP" "$DOCKER_CONFIG_DIR/config.json"
+            echo "Restored original Docker config"
+          fi
+
           echo "✅ Pre-pull complete"
 
   # ============================================================
