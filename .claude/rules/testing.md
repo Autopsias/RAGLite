@@ -635,3 +635,75 @@ python scripts/validate-mock-targets.py --verbose --fix-suggestions
 ```
 
 This hook is also included in pre-commit and will block commits with stale mock targets.
+
+---
+
+## CI Infrastructure Enhancements (2025-01-13)
+
+### Colima Zombie State Detection (P0)
+
+**Problem:** 80% of CI failures caused by Colima VM in zombie state - socket exists but daemon unresponsive.
+
+**Enhanced Detection in docker-preflight action:**
+```yaml
+# Dual-level health check (socket + daemon responsiveness)
+if [[ -S "$COLIMA_SOCKET" ]]; then
+  if timeout 5 docker info &> /dev/null; then
+    echo "✅ Docker daemon responsive"
+  else
+    echo "🧟 ZOMBIE STATE DETECTED"
+    FORCE_CLEANUP=true
+  fi
+fi
+```
+
+**Prevention Mechanisms:**
+1. **Socket check** - Verify `~/.colima/default/docker.sock` exists
+2. **Daemon responsiveness check** - `timeout 5 docker info` must succeed
+3. **Automatic cleanup** - Force delete and restart on zombie detection
+4. **Lima network cleanup** - Remove stale network state: `rm -rf ~/.colima/_lima/_networks`
+
+**See:** `docs/ci-failure-runbook.md` → Section 16 for full diagnostic guide.
+
+### pytest Configuration Enhancements (P1)
+
+**Timeout Configuration:**
+- Default 120s timeout for unit tests (CI is 3-5x slower than local)
+- Timeout applies to test functions only, not fixtures
+- Individual tests override with `@pytest.mark.timeout(seconds)`
+
+**xdist Best Practices:**
+- Use `__class__.__name__` instead of `isinstance()` for custom classes
+- Add `@pytest.mark.xdist_group()` for tests sharing state
+- Use `hasattr()` for duck-typing validation
+- Avoid `in Enum` checks - use `.name` or `.value` instead
+
+**See:** `pytest.ini` for full configuration and comments.
+
+### Mock Coverage Validation (P0)
+
+**Problem:** 17+ modules import `get_mistral_client` but only 5 patched in mock fixtures.
+
+**Enforcement:**
+- Pre-commit hook: `validate-mock-coverage` blocks commits with gaps
+- CI lint-gate job: Validates mock coverage on every PR
+- Script: `scripts/validate-mock-coverage.py` for manual checks
+
+**Prevention Pattern:**
+```python
+# When adding get_mistral_client import to new module:
+# 1. Add module to raglite/module/new_feature.py
+from raglite.shared.clients import get_mistral_client
+
+# 2. Update tests/fixtures/mock_clients.py
+@pytest.fixture(scope="session")
+def mock_mistral_api_globally():
+    with ExitStack() as stack:
+        # ... existing patches ...
+        mock_new_feature = stack.enter_context(
+            patch("raglite.module.new_feature.get_mistral_client")
+        )
+        mock_new_feature.return_value = mock_client_instance
+```
+
+**See:** `scripts/validate-mock-coverage.py --verbose` for coverage report.

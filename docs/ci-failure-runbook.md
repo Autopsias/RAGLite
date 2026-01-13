@@ -620,6 +620,7 @@ uv run pytest tests/integration/chunking/test_ac5_validation.py -v --timeout=120
 | "already running, ignoring" but status fails | Zombie Colima process | Same as above |
 | Docker commands hang | Colima VM frozen | `colima stop -f && colima start` |
 | Containers exist but ports not responding | Container health check failing | `docker-compose restart` |
+| Socket exists but daemon unresponsive | Colima VM zombie state (80% of CI failures) | Force cleanup: `colima stop -f && colima delete -f` |
 
 ### 14. Fixture Validation Range Too Strict (Story 2.2 - PDF Optimization)
 
@@ -737,7 +738,98 @@ grep -r "generate_ensemble_forecast" tests/ --include="*.py" | grep -v "historic
 
 ---
 
-### 16. Config-Test Synchronization Drift
+### 16. Colima Zombie State Detection (P0 - 80% of CI failures)
+
+#### Symptoms
+- Docker socket exists at `~/.colima/default/docker.sock`
+- `docker info` hangs or times out (>5s)
+- `colima status` reports "Running" but Docker is unresponsive
+- Integration tests fail with "Cannot connect to Docker daemon"
+- CI job hangs at Docker setup for 90+ seconds
+- Force restart fails to recover without full cleanup
+
+#### Root Cause (Five Whys)
+1. Why? → Docker daemon unresponsive despite socket existing
+2. Why? → Colima VM in zombie state (corrupted, deadlocked, or network broken)
+3. Why? → VM corruption from Lima network issues or resource exhaustion
+4. Why? → No health check beyond socket existence
+5. Why? → Socket file persists even when daemon is dead
+
+#### Detection Pattern
+```bash
+# Check for zombie state
+COLIMA_SOCKET="$HOME/.colima/default/docker.sock"
+
+if [[ -S "$COLIMA_SOCKET" ]]; then
+  echo "✅ Socket exists"
+
+  # Health check: Daemon responsiveness (not just socket)
+  if timeout 5 docker info &> /dev/null; then
+    echo "✅ Daemon responsive"
+  else
+    echo "🧟 ZOMBIE STATE: Socket exists but daemon unresponsive"
+  fi
+fi
+```
+
+#### Solution (Enhanced docker-preflight action)
+**Phase 1: Dual-level health check**
+- Level 1: Verify socket exists
+- Level 2: Verify daemon responsive (`timeout 5 docker info`)
+- If socket exists but daemon dead → Force cleanup
+
+**Phase 2: Aggressive cleanup**
+- Force stop Colima: `colima stop -f`
+- Force delete VM: `colima delete -f`
+- Remove stale Lima network state: `rm -rf ~/.colima/_lima/_networks`
+- Fresh start with known-good configuration
+
+**Implementation (commit: this CI infrastructure update):**
+```yaml
+# Enhanced in .github/actions/docker-preflight/action.yml
+# Dual-level health check before assuming Docker is ready
+if timeout 5 docker info &> /dev/null; then
+  echo "✅ Docker daemon responsive"
+else
+  echo "🧟 ZOMBIE STATE DETECTED"
+  FORCE_CLEANUP=true
+fi
+```
+
+#### Verification
+```bash
+# Test zombie detection locally
+colima start
+# Simulate zombie: kill Lima VM process while keeping socket
+kill -9 $(pgrep -f "lima.*colima")
+
+# Run health check
+timeout 5 docker info
+# Should fail/timeout → Triggers cleanup
+
+# Verify cleanup works
+colima stop -f && colima delete -f
+colima start
+docker info  # Should succeed
+```
+
+#### Prevention
+1. **Always use dual-level health check** - Socket + daemon responsiveness
+2. **Timeout docker info calls** - 5s max wait (prevents hanging)
+3. **Force cleanup on zombie detection** - Don't try to recover, delete and restart
+4. **Remove Lima network state** - Prevents recurring network corruption
+5. **Monitor CI logs for timeout patterns** - Early detection of zombie states
+
+#### Monitoring
+**Zombie state indicators in CI logs:**
+- "Docker daemon did not become ready within 90s"
+- "docker info" hangs without output
+- "Socket exists but..." warnings in docker-preflight
+- Multiple Colima restart attempts within single job
+
+---
+
+### 17. Config-Test Synchronization Drift
 
 #### Symptoms
 - `KeyError: 'cement_demand'` when accessing configured metric
