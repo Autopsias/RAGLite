@@ -521,7 +521,9 @@ jobs:
           # test:6335/5433, agentic:6337/5438, discovery:6339/5434, burnin:6340/5435
           # shard-postgresql:6342/5437, shard-other:6343/5439
           check-ports: '6335,6337,6339,6340,6342,6343,5433,5434,5435,5437,5438,5439'
-          skip-colima-restart: 'true'
+          # CRITICAL FIX: Allow Colima restart to recover from VM zombie states
+          # Self-hosted runners can have corrupted VMs after previous job failures
+          skip-colima-restart: 'false'
 
       - name: Start Test Containers
         run: |
