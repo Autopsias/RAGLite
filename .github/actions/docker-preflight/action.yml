@@ -18,6 +18,10 @@ inputs:
     description: 'Colima profile name for isolated Docker daemon (enables true parallel execution)'
     required: false
     default: 'default'
+  colima-memory:
+    description: 'Memory allocation in GB for Colima VM (default: 4 for parallel shards, use 6 for heavy workloads like NFR)'
+    required: false
+    default: '4'
 
 runs:
   using: 'composite'
@@ -208,11 +212,13 @@ runs:
 
             # Start Colima with specified profile - RUNNER_TRACKING_ID is unset so runner won't kill it
             # Each profile gets its own VM and Docker daemon for true parallel isolation
-            # INCREASED: 6GB memory (was 4GB) to prevent VM zombie state under container load
-            # Memory Budget: Qdrant (1GB) + PostgreSQL (768MB) + Fin-E5 embedding model (2GB peak)
-            #                + QEMU overhead (512MB) + buffer (768MB) = 5GB minimum
-            # Root cause: Previous 4GB exhausted under NFR load, causing daemon unresponsiveness
-            if colima start -p "$COLIMA_PROFILE" --cpu 2 --memory 6 --disk 25 --runtime docker 2>&1; then
+            # Memory allocation configurable via colima-memory input:
+            #   - 4GB (default): For parallel integration shards (Qdrant + PostgreSQL only)
+            #   - 6GB: For heavy workloads like NFR job (embedding model + databases)
+            # Memory Budget (6GB): Qdrant (1GB) + PostgreSQL (768MB) + Fin-E5 (2GB) + QEMU (512MB) + buffer
+            COLIMA_MEMORY="${{ inputs.colima-memory }}"
+            echo "Memory allocation: ${COLIMA_MEMORY}GB"
+            if colima start -p "$COLIMA_PROFILE" --cpu 2 --memory "$COLIMA_MEMORY" --disk 25 --runtime docker 2>&1; then
               echo "✅ Colima profile '$COLIMA_PROFILE' started successfully"
               # Update DOCKER_HOST to point to this profile's socket
               export DOCKER_HOST="unix://$HOME/.colima/${COLIMA_PROFILE}/docker.sock"

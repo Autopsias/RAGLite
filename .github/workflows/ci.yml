@@ -798,6 +798,8 @@ jobs:
           skip-colima-restart: 'false'
           # Use same profile name as Docker Setup for port consistency
           colima-profile: 'ci-postgresql'
+          # NFR job needs 6GB for embedding model + databases (runs alone, not in parallel)
+          colima-memory: '6'
 
       - name: Start Test Containers
         # DOCKER_HOST inherited from docker-preflight (set in GITHUB_ENV)
