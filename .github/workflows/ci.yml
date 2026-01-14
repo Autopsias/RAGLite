@@ -788,9 +788,11 @@ jobs:
         with:
           max-wait-seconds: '120'
           check-ports: '6335,5433'
-          skip-colima-restart: 'true'
-          # CRITICAL: Reuse profile created by Docker Setup (not default profile)
-          # Docker Setup creates ci-postgresql and ci-other, not default
+          # CRITICAL FIX: NFR may run on a different runner than Docker Setup
+          # Each self-hosted runner has its own Colima VM, so we must allow
+          # NFR to start its own Colima profile if needed (not skip-restart)
+          skip-colima-restart: 'false'
+          # Use same profile name as Docker Setup for port consistency
           colima-profile: 'ci-postgresql'
 
       - name: Start Test Containers
