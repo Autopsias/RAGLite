@@ -755,6 +755,8 @@ jobs:
       POSTGRES_DB: raglite_ci
       POSTGRES_USER: raglite_ci
       POSTGRES_PASSWORD: raglite_ci
+      # API keys for LLM contextual metadata (Story 2.4)
+      MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
 
     steps:
       - name: Production Safety Check
