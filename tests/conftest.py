@@ -135,10 +135,16 @@ os.environ["TESTING"] = "true"
 # Must set PostgreSQL environment variables explicitly for test environment
 # Qdrant settings STILL auto-adjust (port 6335, collection _test/_ci suffix)
 # NOTE: PostgreSQL test container (port 5433) uses raglite_ci credentials, not raglite_test
-os.environ["POSTGRES_PORT"] = "5433"
-os.environ["POSTGRES_DB"] = "raglite_ci"
-os.environ["POSTGRES_USER"] = "raglite_ci"
-os.environ["POSTGRES_PASSWORD"] = "raglite_ci"
+#
+# CRITICAL FIX (2026-01-14): Use setdefault() to avoid overwriting CI-sourced values
+# CI sharded parallelization uses different ports per shard (e.g., shard-postgresql uses 5437).
+# If we use direct assignment, it overwrites the CI-sourced POSTGRES_PORT, causing all
+# integration tests to be skipped because they check the wrong port (5433 instead of 5437).
+# Using setdefault() preserves CI values while providing defaults for local development.
+os.environ.setdefault("POSTGRES_PORT", "5433")
+os.environ.setdefault("POSTGRES_DB", "raglite_ci")
+os.environ.setdefault("POSTGRES_USER", "raglite_ci")
+os.environ.setdefault("POSTGRES_PASSWORD", "raglite_ci")
 
 # CRITICAL FIX (2025-12-06): Set dummy MISTRAL_API_KEY for unit tests
 # The get_mistral_client() function validates the API key BEFORE instantiation,
