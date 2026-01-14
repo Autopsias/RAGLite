@@ -815,9 +815,13 @@ jobs:
     runs-on: [self-hosted, raglite]
     timeout-minutes: 45
     needs: integration-aggregate
+    # Run even if dependencies were skipped (allows NFR-only runs)
     if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_dispatch' && inputs.run_accuracy_gate == true)
+      always() && !failure() &&
+      (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name == 'workflow_dispatch' && inputs.run_accuracy_gate == true)
+      )
 
     env:
       QDRANT_HOST: localhost
