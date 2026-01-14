@@ -36,6 +36,25 @@ name: CI
         description: 'Run accuracy validation (NFR6/NFR7)'
         type: boolean
         default: false
+      # === TARGETED EXECUTION OPTIONS ===
+      # Use these to run only specific failing parts and save CI time
+      skip_lint:
+        description: 'Skip lint gate (use when lint is green)'
+        type: boolean
+        default: false
+      skip_validate:
+        description: 'Skip unit tests (use when unit tests are green)'
+        type: boolean
+        default: false
+      integration_shard:
+        description: 'Which integration shard to run'
+        type: choice
+        options:
+          - all
+          - postgresql
+          - other
+          - none
+        default: 'all'
 
 permissions:
   contents: read
@@ -62,6 +81,8 @@ jobs:
     name: "🔒 Lint Gate: Ruff + Black"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 5
+    # Skip if manually triggered with skip_lint=true
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.skip_lint == true) }}
 
     steps:
       - name: Checkout code
@@ -118,6 +139,12 @@ jobs:
     runs-on: [self-hosted, raglite]
     timeout-minutes: 25
     needs: lint-gate
+    # Skip if manually triggered with skip_validate=true
+    # Also run if lint-gate was skipped (always() handles skipped dependencies)
+    if: |
+      always() &&
+      !failure() &&
+      !(github.event_name == 'workflow_dispatch' && inputs.skip_validate == true)
 
     steps:
       - name: Checkout code
@@ -269,21 +296,27 @@ jobs:
     runs-on: [self-hosted, raglite]
     timeout-minutes: 10
     needs: [lint-gate, validate]  # Wait for both lint and code quality to finish orphan cleanup
+    # Run on main push OR manual trigger with integration enabled (and not shard=none)
     if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_dispatch' && inputs.run_integration == true)
+      always() && !failure() &&
+      (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name == 'workflow_dispatch' && inputs.run_integration == true && inputs.integration_shard != 'none')
+      )
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Start Colima Profile for postgresql shard
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.integration_shard == 'all' || inputs.integration_shard == 'postgresql' }}
         uses: ./.github/actions/docker-preflight
         with:
           max-wait-seconds: '120'
           colima-profile: 'ci-postgresql'
 
       - name: Start Colima Profile for other shard
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.integration_shard == 'all' || inputs.integration_shard == 'other' }}
         uses: ./.github/actions/docker-preflight
         with:
           max-wait-seconds: '120'
@@ -436,9 +469,13 @@ jobs:
     runs-on: [self-hosted, raglite]
     timeout-minutes: 30
     needs: [validate, docker-setup]
+    # Run if integration is triggered AND this shard should run
     if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_dispatch' && inputs.run_integration == true)
+      always() && !failure() &&
+      (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name == 'workflow_dispatch' && inputs.run_integration == true && inputs.integration_shard != 'none')
+      )
 
     strategy:
       fail-fast: false
@@ -465,10 +502,31 @@ jobs:
             description: "~680 remaining tests"
 
     steps:
+      - name: Check if shard should run
+        id: shard-check
+        run: |
+          SHARD="${{ matrix.shard }}"
+          TARGET="${{ inputs.integration_shard }}"
+          EVENT="${{ github.event_name }}"
+
+          # On push events or 'all' target, always run
+          if [[ "$EVENT" != "workflow_dispatch" ]] || [[ "$TARGET" == "all" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "✅ Running shard '$SHARD' (target: ${TARGET:-all})"
+          elif [[ "$TARGET" == "$SHARD" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "✅ Running shard '$SHARD' (matches target)"
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "⏭️ Skipping shard '$SHARD' (target: $TARGET)"
+          fi
+
       - name: Checkout code
+        if: steps.shard-check.outputs.should_run == 'true'
         uses: actions/checkout@v4
 
       - name: Cleanup Orphaned Processes (P0 Fix)
+        if: steps.shard-check.outputs.should_run == 'true'
         run: |
           echo "=== Cleanup orphaned resource_tracker processes ==="
           pkill -9 -f "resource_tracker" 2>/dev/null || echo "No orphaned resource_tracker processes"
@@ -476,6 +534,7 @@ jobs:
           echo "Process cleanup complete"
 
       - name: Cleanup Shard Container Resources
+        if: steps.shard-check.outputs.should_run == 'true'
         run: |
           echo "=== Cleaning up shard variant resources ==="
 
@@ -501,9 +560,11 @@ jobs:
           echo "✅ Shard resource cleanup complete"
 
       - name: Clear Python bytecode & pytest cache
+        if: steps.shard-check.outputs.should_run == 'true'
         uses: ./.github/actions/validate-cache
 
       - name: Set DOCKER_HOST for Colima Profile
+        if: steps.shard-check.outputs.should_run == 'true'
         run: |
           # Each shard uses its own dedicated Colima profile for true parallel isolation
           COLIMA_PROFILE="${{ matrix.colima_profile }}"
@@ -513,6 +574,7 @@ jobs:
           echo "✅ DOCKER_HOST will be: unix://$DOCKER_SOCKET"
 
       - name: Docker Pre-flight Validation
+        if: steps.shard-check.outputs.should_run == 'true'
         uses: ./.github/actions/docker-preflight
         with:
           max-wait-seconds: '120'
@@ -526,6 +588,7 @@ jobs:
           skip-colima-restart: 'false'
 
       - name: Start Test Containers
+        if: steps.shard-check.outputs.should_run == 'true'
         run: |
           chmod +x scripts/ci/start-test-containers.sh
           ./scripts/ci/start-test-containers.sh ${{ matrix.variant }}
@@ -533,6 +596,7 @@ jobs:
           cat .ci-env
 
       - name: Validate CI Credential Consistency
+        if: steps.shard-check.outputs.should_run == 'true'
         run: |
           echo "=== Validating CI credentials against centralized config ==="
           source scripts/ci/container-config.sh
@@ -540,6 +604,7 @@ jobs:
           echo "Credential validation passed"
 
       - name: Verify Container Volume Mounts (P0 Fix)
+        if: steps.shard-check.outputs.should_run == 'true'
         run: |
           echo "=== Verifying container volume mounts for shard '${{ matrix.shard }}' ==="
           source .ci-env
@@ -577,15 +642,18 @@ jobs:
           echo "Volume mount verification complete"
 
       - name: Setup UV
+        if: steps.shard-check.outputs.should_run == 'true'
         uses: ./.github/actions/setup-uv
 
       - name: Setup Python + UV
+        if: steps.shard-check.outputs.should_run == 'true'
         run: |
           uv venv ci-venv --python 3.11 --quiet 2>/dev/null || uv venv ci-venv --quiet
           source ci-venv/bin/activate
           uv pip install -e ".[dev]" --quiet
 
       - name: Verify Container Health
+        if: steps.shard-check.outputs.should_run == 'true'
         run: |
           source ci-venv/bin/activate
           source .ci-env
@@ -615,6 +683,7 @@ jobs:
           echo "=== Container health verification complete ==="
 
       - name: Check Available Memory
+        if: steps.shard-check.outputs.should_run == 'true'
         run: |
           echo "=== Memory Check Before Integration Tests ==="
           vm_stat | head -5
@@ -627,6 +696,7 @@ jobs:
           fi
 
       - name: Run Integration Tests
+        if: steps.shard-check.outputs.should_run == 'true'
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
@@ -655,7 +725,7 @@ jobs:
           exit ${exit_code:-0}
 
       - name: Upload Integration Results
-        if: always()
+        if: always() && steps.shard-check.outputs.should_run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: test-results-integration-${{ matrix.shard }}
@@ -663,7 +733,7 @@ jobs:
           retention-days: 7
 
       - name: Cleanup Containers
-        if: always()
+        if: always() && steps.shard-check.outputs.should_run == 'true'
         run: |
           # Ensure DOCKER_HOST is set for cleanup
           export DOCKER_HOST="unix://$HOME/.colima/${{ matrix.colima_profile }}/docker.sock"
