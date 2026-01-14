@@ -796,9 +796,8 @@ jobs:
           colima-profile: 'ci-postgresql'
 
       - name: Start Test Containers
-        env:
-          # Ensure Docker commands use the correct profile socket
-          DOCKER_HOST: unix://${{ runner.home }}/.colima/ci-postgresql/docker.sock
+        # DOCKER_HOST inherited from docker-preflight (set in GITHUB_ENV)
+        # Note: ${{ runner.home }} returns empty on self-hosted runners, so we rely on GITHUB_ENV
         run: |
           echo "Using DOCKER_HOST: $DOCKER_HOST"
           chmod +x scripts/ci/start-test-containers.sh
@@ -857,8 +856,7 @@ jobs:
 
       - name: Cleanup Containers
         if: always()
-        env:
-          DOCKER_HOST: unix://${{ runner.home }}/.colima/ci-postgresql/docker.sock
+        # DOCKER_HOST inherited from docker-preflight (set in GITHUB_ENV)
         run: |
           echo "Cleanup using DOCKER_HOST: $DOCKER_HOST"
           chmod +x scripts/ci/cleanup-test-containers.sh
