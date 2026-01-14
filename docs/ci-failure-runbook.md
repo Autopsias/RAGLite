@@ -2,8 +2,8 @@
 
 Quick reference for diagnosing and resolving CI failures.
 
-**Last Updated:** 2025-01-12
-**CI Infrastructure Version:** 1.3 (self-hosted runners with enhanced pre-commit enforcement)
+**Last Updated:** 2025-01-14
+**CI Infrastructure Version:** 1.4 (NFR infrastructure hardening with pre-flight validation and memory allocation)
 
 ---
 
@@ -130,6 +130,8 @@ grep -n "class NonExistentClass" raglite/module.py  # Should find something
 | `KeyError: 'cement_demand'` | Config and test files out of sync | Add validation that configured metrics exist | Sync verification CI job before merge |
 | `Unit test attempted to call Mistral API!` | Lazy import in function body not patched | Add module to mock_clients.py patches | Run validate-mock-coverage.py before commit |
 | `Docker daemon did not become ready within 60s` | Colima zombie state (process running, daemon dead) | `colima stop -f && colima delete -f && colima start` | Add zombie state detection to pre-flight check |
+| `NFR job hangs after 10 min processing PDFs` | Colima VM memory exhausted (4GB insufficient for large docs) | Restart CI with Colima 6GB allocation | Pre-flight validation catches infra issues early (30s) |
+| `Qdrant/PostgreSQL unreachable in NFR job` | Infrastructure not ready before expensive ingestion starts | Run pre-flight validation before ingestion | Use scripts/ingest-for-validation.py with retry logic |
 
 ---
 
@@ -1674,6 +1676,145 @@ python scripts/validate-mock-coverage.py
 - **Mock Fixture Locations:** `tests/fixtures/mock_clients.py` (patch definitions)
 - **Test Reliability Rules:** `.claude/rules/testing.md` → Mock Patterns
 - **CI Strategy:** `docs/ci-strategy.md` → Mock Coverage section
+
+---
+
+---
+
+### 21. NFR Job Infrastructure Hardening (2025-01-14)
+
+#### Context
+The NFR (Non-Functional Requirements) job validates accuracy on large PDF documents (160+ pages) in CI. Recent investigation identified:
+- 18 CI fix commits in the last 20 (90% fix rate)
+- NFR job failing after ~10 minutes of PDF ingestion
+- Root cause: Colima VM memory exhaustion + missing pre-flight validation
+
+#### Solution Implemented
+
+**1. Pre-flight Validation Infrastructure** (scripts/ingest-for-validation.py)
+- Added `validate_infrastructure()` function that runs BEFORE expensive document ingestion
+- Checks MISTRAL_API_KEY (warns if missing, doesn't fail)
+- Validates Qdrant connectivity with 3 retries, 5s backoff
+- Validates PostgreSQL connectivity with 3 retries, 5s backoff
+- Fails fast within 30 seconds total if databases unreachable
+- Provides actionable error messages with resolution steps
+
+**Implementation:**
+```bash
+# This runs before NFR job starts processing PDFs
+python scripts/ingest-for-validation.py
+
+# Output shows:
+# ✅ MISTRAL_API_KEY: configured
+# ✅ Qdrant: connected at localhost:6333
+# ✅ PostgreSQL: connected at localhost:5432
+# If any fails: Shows specific resolution steps and exits immediately
+```
+
+**2. Colima Memory Increased** (.github/actions/docker-preflight/action.yml)
+- Increased from 4GB to 6GB (line 215)
+- Prevents VM zombie state under sustained container load
+- Memory budget breakdown:
+  - Qdrant (1GB peak)
+  - PostgreSQL (768MB peak)
+  - Fin-E5 embedding model (2GB peak during inference)
+  - QEMU overhead (512MB)
+  - Buffer (768MB for spikes)
+  - **Total:** 5GB needed + 1GB buffer = 6GB allocation
+
+**Implementation:**
+```bash
+colima start -p "$COLIMA_PROFILE" --cpu 2 --memory 6 --disk 25 --runtime docker
+```
+
+#### Detection Pattern
+
+**Symptom 1: NFR Job Hangs After 10 Minutes**
+```
+Step 1: Pre-flight check passes
+Step 2: Document ingestion starts
+Step 3: Processing proceeds normally for ~5-10 min
+Step 4: Job hangs / Docker unresponsive
+Step 5: Timeout after 120+ minutes
+```
+
+Root cause: Colima VM entered zombie state due to memory exhaustion, not initial infrastructure problem.
+
+**Symptom 2: "Docker daemon not accessible" After Job Starts**
+```
+Early job steps pass (they use small tests)
+Job hangs when processing large PDFs (512-page documents)
+Memory spike occurs as embedding model loads
+VM becomes unresponsive (zombie state)
+```
+
+**Quick Diagnosis:**
+```bash
+# Check VM memory allocation while job runs
+colima status
+# Should show: CPU=2 Memory=6GB
+
+# If only showing 4GB, the old config is active
+# Fix: Redeploy ci infrastructure or restart runner
+```
+
+#### Verification
+
+**Local Testing:**
+```bash
+# Test pre-flight validation locally
+python scripts/ingest-for-validation.py
+
+# Should complete in <30s and output:
+# ======================================
+# PRE-FLIGHT VALIDATION
+# ======================================
+# ✅ MISTRAL_API_KEY: configured
+# ✅ Qdrant: connected at localhost:6333
+# ✅ PostgreSQL: connected at localhost:5432
+# ======================================
+# PRE-FLIGHT COMPLETE - All systems ready
+```
+
+**CI Testing:**
+```bash
+# Run NFR job on main branch - should now handle large PDFs without timeout
+# Monitor for "Docker daemon not accessible" errors - should be resolved
+# Expected ingestion time: 13-15 minutes (not >120s timeout)
+```
+
+#### Prevention
+
+**1. Always Use Pre-flight Validation**
+- NFR jobs now run pre-flight check before expensive operations
+- Fails fast (30s) if infrastructure unavailable
+- Prevents 10+ minutes of wasted job time
+
+**2. Monitor Memory Allocation**
+- 6GB is minimum for sustained large document processing
+- If jobs still hang after 10 minutes: Check for process leaks
+- If Qdrant/PostgreSQL consume >90% memory: Reduce parallelism
+
+**3. Watch for Memory Regression**
+- If Colima is redeployed with 4GB: NFR jobs will fail again
+- Add to deployment checklist: Verify Colima memory=6
+- Monitor docker-preflight action version (v1.4+)
+
+**4. Performance Baseline**
+- Expected PDF ingestion time: 13-15 minutes for 160-page document
+- If taking >20 minutes: Check CPU allocation (should be 2)
+- If taking <10 minutes: Verify Docker resource limits are not active
+
+#### Related Changes
+
+**Files Modified:**
+- `.github/actions/docker-preflight/action.yml` - Memory increased from 4GB to 6GB
+- `scripts/ingest-for-validation.py` - New validation script with retry logic
+- `.github/workflows/nfr-validation.yml` - Now calls pre-flight validation
+
+**Commits:**
+- Lines 211-214 in docker-preflight/action.yml explain memory budget
+- ingest-for-validation.py lines 33-132 show validation implementation
 
 ---
 
