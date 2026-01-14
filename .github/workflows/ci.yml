@@ -789,9 +789,16 @@ jobs:
           max-wait-seconds: '120'
           check-ports: '6335,5433'
           skip-colima-restart: 'true'
+          # CRITICAL: Reuse profile created by Docker Setup (not default profile)
+          # Docker Setup creates ci-postgresql and ci-other, not default
+          colima-profile: 'ci-postgresql'
 
       - name: Start Test Containers
+        env:
+          # Ensure Docker commands use the correct profile socket
+          DOCKER_HOST: unix://${{ runner.home }}/.colima/ci-postgresql/docker.sock
         run: |
+          echo "Using DOCKER_HOST: $DOCKER_HOST"
           chmod +x scripts/ci/start-test-containers.sh
           ./scripts/ci/start-test-containers.sh test
           source .ci-env
@@ -848,6 +855,9 @@ jobs:
 
       - name: Cleanup Containers
         if: always()
+        env:
+          DOCKER_HOST: unix://${{ runner.home }}/.colima/ci-postgresql/docker.sock
         run: |
+          echo "Cleanup using DOCKER_HOST: $DOCKER_HOST"
           chmod +x scripts/ci/cleanup-test-containers.sh
           ./scripts/ci/cleanup-test-containers.sh test --force || true
