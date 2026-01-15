@@ -14,6 +14,8 @@ Created: 2025-12-08
 Refactored: 2025-01-06 - Split into external_data/ package for better maintainability
 """
 
+import pytest
+
 from tests.health.external_data import (
     TestATICHealth,
     TestBaseGovHealth,
@@ -25,6 +27,13 @@ from tests.health.external_data import (
     TestIPMAHealth,
     TestOMIEHealth,
 )
+
+# All health check tests hit real external APIs - exclude from regular CI runs
+# Run manually with: pytest tests/health/ -m "" -v
+pytestmark = [
+    pytest.mark.health_check,
+    pytest.mark.external_api,
+]
 
 __all__ = [
     "TestINEHealth",

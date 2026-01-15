@@ -1,5 +1,13 @@
 """Health check summary and validation tests."""
 
+import pytest
+
+# All health check tests - exclude from regular CI runs
+# Run manually with: pytest tests/health/ -m "" -v
+pytestmark = [
+    pytest.mark.health_check,
+]
+
 
 class TestHealthSummary:
     """Generate health check summary and verify all sources checked."""

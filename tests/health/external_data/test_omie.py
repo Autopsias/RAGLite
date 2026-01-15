@@ -5,6 +5,13 @@ from datetime import date, timedelta
 import httpx
 import pytest
 
+# All health check tests hit real external APIs - exclude from regular CI runs
+# Run manually with: pytest tests/health/ -m "" -v
+pytestmark = [
+    pytest.mark.health_check,
+    pytest.mark.external_api,
+]
+
 
 class TestOMIEHealth:
     """OMIE (Iberian Electricity Market) health checks."""

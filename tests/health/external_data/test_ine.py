@@ -3,6 +3,13 @@
 import httpx
 import pytest
 
+# All health check tests hit real external APIs - exclude from regular CI runs
+# Run manually with: pytest tests/health/ -m "" -v
+pytestmark = [
+    pytest.mark.health_check,
+    pytest.mark.external_api,
+]
+
 
 class TestINEHealth:
     """INE (Instituto Nacional de Estatistica) API health checks."""

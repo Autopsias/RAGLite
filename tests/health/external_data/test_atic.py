@@ -2,6 +2,12 @@
 
 import pytest
 
+# All health check tests are excluded from regular CI runs
+# Run manually with: pytest tests/health/ -m "" -v
+pytestmark = [
+    pytest.mark.health_check,
+]
+
 
 class TestATICHealth:
     """ATIC (cement industry) health checks - CSV-based, currently working."""
