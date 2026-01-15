@@ -284,7 +284,7 @@ def _is_forecast_explanation_request(content: str) -> bool:
         "risks",
         "opportunities",
         "financial analyst",  # Typical prompt starter
-        "stakeholders",       # Common in explanation prompts
+        "stakeholders",  # Common in explanation prompts
     ]
 
     has_explanation_keyword = any(keyword in content_lower for keyword in explanation_keywords)
@@ -336,9 +336,9 @@ def generate_mock_metadata(messages: list[dict[str, Any] | Any], **kwargs: Any) 
         mock_response.choices[0].message.content = json.dumps(forecast_explanation)
     else:
         # Default: metadata extraction for chunk enrichment
-        mock_response.choices[0].message.content = (
-            '{"metric_category": "Revenue", "time_period": "Q3 2025"}'
-        )
+        mock_response.choices[
+            0
+        ].message.content = '{"metric_category": "Revenue", "time_period": "Q3 2025"}'
 
     return mock_response
 

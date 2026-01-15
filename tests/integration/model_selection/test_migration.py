@@ -111,13 +111,23 @@ class TestMigrationScript:
 
         # Check if container exists before attempting migration
         check_result = subprocess.run(
-            ["docker", "ps", "-a", "--filter", f"name={postgres_container}", "--format", "{{.Names}}"],
+            [
+                "docker",
+                "ps",
+                "-a",
+                "--filter",
+                f"name={postgres_container}",
+                "--format",
+                "{{.Names}}",
+            ],
             capture_output=True,
             text=True,
         )
 
         if postgres_container not in check_result.stdout:
-            pytest.skip(f"PostgreSQL container '{postgres_container}' not found (CI environment mismatch)")
+            pytest.skip(
+                f"PostgreSQL container '{postgres_container}' not found (CI environment mismatch)"
+            )
 
         # Run migration again - should not fail
         result = subprocess.run(
