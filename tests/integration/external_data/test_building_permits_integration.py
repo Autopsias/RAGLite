@@ -16,13 +16,18 @@ from raglite.external_data.clients.eurostat import EurostatClient
 from raglite.external_data.clients.ine import INEClient
 from raglite.forecasting.regressor_fetch import fetch_single_regressor
 
+# Module-level markers for all tests
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.slow,  # Real API calls (with VCR: <1s)
+    pytest.mark.preserve_collection,  # Read-only API tests
+    pytest.mark.vcr,  # Record/replay HTTP calls via VCR cassettes
+]
+
 
 class TestINEBuildingPermitsRealAPI:
     """Integration tests with real INE API."""
 
-    @pytest.mark.integration
-    @pytest.mark.slow
-    @pytest.mark.preserve_collection
     @pytest.mark.asyncio
     async def test_ine_building_permits_real_api(self) -> None:
         """Test fetching building permits from real INE API."""
@@ -39,9 +44,6 @@ class TestINEBuildingPermitsRealAPI:
         for p in permits[:5]:
             assert 0 < p.permits_count < 100000, f"Suspicious permits count: {p.permits_count}"
 
-    @pytest.mark.integration
-    @pytest.mark.slow
-    @pytest.mark.preserve_collection
     @pytest.mark.asyncio
     async def test_ine_building_permits_data_quality(self) -> None:
         """Verify INE building permits data is construction-related."""
@@ -67,9 +69,6 @@ class TestINEBuildingPermitsRealAPI:
 class TestEurostatBuildingPermitsRealAPI:
     """Integration tests with real Eurostat API."""
 
-    @pytest.mark.integration
-    @pytest.mark.slow
-    @pytest.mark.preserve_collection
     @pytest.mark.asyncio
     async def test_eurostat_building_permits_real_api(self) -> None:
         """Test fetching building permits from real Eurostat API."""
@@ -91,9 +90,6 @@ class TestEurostatBuildingPermitsRealAPI:
 class TestBuildingPermitsRegressorIntegration:
     """Integration tests for building permits as regressor."""
 
-    @pytest.mark.integration
-    @pytest.mark.slow  # Hits real INE/Eurostat APIs
-    @pytest.mark.preserve_collection
     @pytest.mark.asyncio
     async def test_building_permits_regressor_returns_series(self) -> None:
         """Verify building_permits regressor returns valid pandas Series."""
@@ -109,9 +105,6 @@ class TestBuildingPermitsRegressorIntegration:
         assert isinstance(result.index, pd.DatetimeIndex)
         assert len(result) > 0
 
-    @pytest.mark.integration
-    @pytest.mark.slow  # Hits real INE/Eurostat APIs
-    @pytest.mark.preserve_collection
     @pytest.mark.asyncio
     async def test_building_permits_regressor_no_duplicates(self) -> None:
         """Verify aggregated data has no duplicate dates."""
@@ -129,9 +122,6 @@ class TestBuildingPermitsRegressorIntegration:
 class TestBuildingPermitsCorrelation:
     """AC4: Correlation validation with sales_volume."""
 
-    @pytest.mark.integration
-    @pytest.mark.slow
-    @pytest.mark.preserve_collection
     @pytest.mark.asyncio
     async def test_building_permits_correlation_with_construction_output(self) -> None:
         """Verify building permits correlates with construction output (proxy for sales_volume)."""

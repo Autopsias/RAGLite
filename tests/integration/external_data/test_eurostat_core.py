@@ -38,8 +38,9 @@ except ImportError:
 # Module-level marker for all tests
 pytestmark = [
     pytest.mark.integration,
-    pytest.mark.slow,  # Real API calls take 2-5 seconds
+    pytest.mark.slow,  # Real API calls take 2-5 seconds (with VCR: <1s)
     pytest.mark.preserve_collection,  # Read-only API tests, no Qdrant modification
+    pytest.mark.vcr,  # Record/replay HTTP calls via VCR cassettes
 ]
 
 

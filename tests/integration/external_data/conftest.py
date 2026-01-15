@@ -1,8 +1,51 @@
 """Shared fixtures and data for external data integration tests."""
 
+import os
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+
+# =============================================================================
+# VCR Configuration for HTTP Cassette Recording
+# =============================================================================
+# pytest-recording (VCR.py) records HTTP interactions on first run,
+# then replays them on subsequent runs (no network calls needed).
+# This reduces API test time from ~35s to <1s per test.
+
+
+@pytest.fixture(scope="module")
+def vcr_config():
+    """Configure VCR for external API tests.
+
+    - Records HTTP requests/responses to YAML cassettes
+    - Filters out sensitive headers (API keys, auth tokens)
+    - Uses 'once' mode: record if cassette missing, replay if exists
+    """
+    return {
+        # Filter sensitive headers from recordings
+        "filter_headers": [
+            ("authorization", "REDACTED"),
+            ("x-api-key", "REDACTED"),
+            ("cookie", "REDACTED"),
+        ],
+        # Record mode: 'once' = record if no cassette, replay if exists
+        # Use --record-mode=rewrite to update cassettes
+        "record_mode": os.environ.get("VCR_RECORD_MODE", "once"),
+        # Match requests by method and URI
+        "match_on": ["method", "uri"],
+        # Decode compressed responses for readability
+        "decode_compressed_response": True,
+    }
+
+
+@pytest.fixture(scope="module")
+def vcr_cassette_dir(request):
+    """Store cassettes in tests/integration/external_data/cassettes/{module_name}/."""
+    cassette_dir = Path(__file__).parent / "cassettes" / request.module.__name__
+    cassette_dir.mkdir(parents=True, exist_ok=True)
+    return str(cassette_dir)
+
 
 # =============================================================================
 # Sample Data for Integration Tests

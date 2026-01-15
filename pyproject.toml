@@ -94,6 +94,7 @@ dev = [
     "pypdf>=4.0,<5.0",
     "pytest-ordering>=0.6",
     "types-python-dateutil>=2.9.0.20251115",
+    "pytest-recording>=0.13.4",
 ]
 test = [
     "faker>=18.0,<19.0",
