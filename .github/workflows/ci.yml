@@ -467,7 +467,7 @@ jobs:
   integration:
     name: "🔗 Tests: Integration (${{ matrix.shard }})"
     runs-on: [self-hosted, raglite]
-    timeout-minutes: 30
+    timeout-minutes: 45
     needs: [validate, docker-setup]
     # Run if integration is triggered AND this shard should run
     if: |

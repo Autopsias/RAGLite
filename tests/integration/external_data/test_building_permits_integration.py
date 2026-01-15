@@ -12,6 +12,10 @@ from datetime import date
 import pandas as pd
 import pytest
 
+from raglite.external_data.clients.eurostat import EurostatClient
+from raglite.external_data.clients.ine import INEClient
+from raglite.forecasting.regressor_fetch import fetch_single_regressor
+
 
 class TestINEBuildingPermitsRealAPI:
     """Integration tests with real INE API."""
@@ -22,8 +26,6 @@ class TestINEBuildingPermitsRealAPI:
     @pytest.mark.asyncio
     async def test_ine_building_permits_real_api(self) -> None:
         """Test fetching building permits from real INE API."""
-        from raglite.external_data.clients.ine import INEClient
-
         client = INEClient()
         permits = await client.fetch_building_permits(
             start_date=date(2024, 1, 1),
@@ -43,8 +45,6 @@ class TestINEBuildingPermitsRealAPI:
     @pytest.mark.asyncio
     async def test_ine_building_permits_data_quality(self) -> None:
         """Verify INE building permits data is construction-related."""
-        from raglite.external_data.clients.ine import INEClient
-
         client = INEClient()
         permits = await client.fetch_building_permits(
             start_date=date(2023, 1, 1),
@@ -73,8 +73,6 @@ class TestEurostatBuildingPermitsRealAPI:
     @pytest.mark.asyncio
     async def test_eurostat_building_permits_real_api(self) -> None:
         """Test fetching building permits from real Eurostat API."""
-        from raglite.external_data.clients.eurostat import EurostatClient
-
         client = EurostatClient()
         permits = await client.fetch_building_permits(
             country="PT",
@@ -99,8 +97,6 @@ class TestBuildingPermitsRegressorIntegration:
     @pytest.mark.asyncio
     async def test_building_permits_regressor_returns_series(self) -> None:
         """Verify building_permits regressor returns valid pandas Series."""
-        from raglite.forecasting.regressor_fetch import fetch_single_regressor
-
         result = await fetch_single_regressor(
             "building_permits",
             start_date=date(2023, 1, 1),
@@ -119,8 +115,6 @@ class TestBuildingPermitsRegressorIntegration:
     @pytest.mark.asyncio
     async def test_building_permits_regressor_no_duplicates(self) -> None:
         """Verify aggregated data has no duplicate dates."""
-        from raglite.forecasting.regressor_fetch import fetch_single_regressor
-
         result = await fetch_single_regressor(
             "building_permits",
             start_date=date(2023, 1, 1),
@@ -141,8 +135,6 @@ class TestBuildingPermitsCorrelation:
     @pytest.mark.asyncio
     async def test_building_permits_correlation_with_construction_output(self) -> None:
         """Verify building permits correlates with construction output (proxy for sales_volume)."""
-        from raglite.forecasting.regressor_fetch import fetch_single_regressor
-
         # Fetch both regressors
         permits = await fetch_single_regressor(
             "building_permits",
