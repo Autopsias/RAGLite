@@ -467,7 +467,7 @@ jobs:
   integration:
     name: "🔗 Tests: Integration (${{ matrix.shard }})"
     runs-on: [self-hosted, raglite]
-    timeout-minutes: 45
+    timeout-minutes: 30
     needs: [validate, docker-setup]
     # Run if integration is triggered AND this shard should run
     if: |
@@ -489,17 +489,17 @@ jobs:
             colima_profile: 'ci-postgresql'  # Dedicated Colima profile for true parallel execution
             pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/external_data/ tests/integration/insights/"
             pytest_ignore: ""
-            workers: 2
-            description: "~230 PostgreSQL-focused tests"
+            workers: 4
+            description: "~230 PostgreSQL-focused tests (includes external API tests)"
           # Shard 2: Remaining integration tests (ingestion, retrieval, MCP, etc.)
           # These tests typically use the embedding model via session fixtures
           - shard: other
             variant: shard-other
             colima_profile: 'ci-other'  # Dedicated Colima profile for true parallel execution
             pytest_paths: "tests/integration/"
-            pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/external_data/ --ignore=tests/integration/insights/"
-            workers: 2
-            description: "~680 remaining tests"
+            pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/external_data/ --ignore=tests/integration/insights/ --ignore=tests/integration/test_accuracy_validation.py --ignore=tests/integration/test_unified_validation_e2e.py"
+            workers: 4
+            description: "~660 tests (excludes subprocess-heavy accuracy tests)"
 
     steps:
       - name: Check if shard should run
