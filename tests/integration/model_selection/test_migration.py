@@ -101,14 +101,30 @@ class TestMigrationScript:
     @pytest.mark.manages_collection_state
     def test_ac_7b_4_6_5_migration_is_idempotent(self, db_session: Session) -> None:
         """TEST-AC-7b.4.6.5: Migration can run multiple times without error."""
+        import os
         import subprocess
+
+        # Get PostgreSQL container name from environment (supports CI sharding)
+        # CI shards use variant-specific containers: raglite-postgresql-shard-postgresql
+        # Local tests use: raglite-postgresql-test
+        postgres_container = os.getenv("POSTGRES_CONTAINER", "raglite-postgresql-test")
+
+        # Check if container exists before attempting migration
+        check_result = subprocess.run(
+            ["docker", "ps", "-a", "--filter", f"name={postgres_container}", "--format", "{{.Names}}"],
+            capture_output=True,
+            text=True,
+        )
+
+        if postgres_container not in check_result.stdout:
+            pytest.skip(f"PostgreSQL container '{postgres_container}' not found (CI environment mismatch)")
 
         # Run migration again - should not fail
         result = subprocess.run(
             [
                 "docker",
                 "exec",
-                "raglite-postgresql-test",
+                postgres_container,
                 "psql",
                 "-U",
                 "raglite_ci",

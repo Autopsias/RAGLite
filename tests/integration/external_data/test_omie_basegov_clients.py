@@ -73,7 +73,10 @@ class TestBaseGovClientIntegration:
         """Test fetching construction contracts.
 
         Story 6.9.5: BaseGov now uses dados.gov.pt IMPIC XLSX as primary source.
-        We mock at the TED API level since IMPIC requires real XLSX downloads.
+        Story 8.2 Task 4: Refactored IMPIC logic to standalone module.
+
+        We mock IMPIC to return empty (triggers TED fallback) since IMPIC XLSX
+        parsing requires real file downloads.
         """
         client = BaseGovClient()
 
@@ -103,8 +106,13 @@ class TestBaseGovClientIntegration:
 
         http_mock = mock_response(json_data=ted_response)
 
-        # Mock _get_impic_resource_urls to return empty (trigger TED fallback)
-        with patch.object(client, "_get_impic_resource_urls", new_callable=AsyncMock) as mock_impic:
+        # Mock get_impic_resource_urls to return empty (trigger TED fallback)
+        # Story 8.2: Method moved from private _get_impic_resource_urls to public
+        # get_impic_resource_urls in impic module
+        with patch(
+            "raglite.external_data.clients.basegov.impic.get_impic_resource_urls",
+            new_callable=AsyncMock,
+        ) as mock_impic:
             mock_impic.return_value = {}  # Empty = no IMPIC data available
 
             with patch("httpx.AsyncClient") as mock_client:

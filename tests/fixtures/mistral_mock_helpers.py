@@ -5,10 +5,11 @@ fixture to prevent real Mistral API calls during testing.
 
 Functions:
     generate_mock_sql: Generate query-aware SQL for table search tests
-    generate_mock_metadata: Generate mock metadata for chunk enrichment tests
+    generate_mock_metadata: Generate mock metadata for chunk enrichment and forecast explanations
     generate_query_aware_sql: Alias for generate_mock_sql (same implementation)
 """
 
+import json
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -209,18 +210,26 @@ def generate_mock_sql(messages: list[dict[str, Any] | Any], **kwargs: Any) -> Ma
     to generate SQL with appropriate WHERE clauses, ensuring tests retrieve
     relevant table data instead of all rows.
 
+    Also handles forecast explanation requests by detecting keywords and returning
+    appropriate JSON format (uses same detection logic as generate_mock_metadata).
+
     Args:
         messages: List of message dicts/objects containing the query
         **kwargs: Additional keyword arguments (ignored)
 
     Returns:
-        MagicMock response object with SQL in choices[0].message.content
+        MagicMock response object with SQL or JSON in choices[0].message.content
     """
     # Extract query from messages (last user message)
     query_text = _extract_query_from_messages(messages)
     query_lower = query_text.lower()
 
-    # Build filter lists
+    # Check if this is a forecast explanation request (not SQL generation)
+    if _is_forecast_explanation_request(query_text):
+        # Delegate to generate_mock_metadata for forecast explanations
+        return generate_mock_metadata(messages, **kwargs)
+
+    # Build filter lists for SQL generation
     entities = _build_entity_filters(query_lower)
     metrics = _build_metric_filters(query_lower)
     periods = _build_period_filters(query_lower)
@@ -253,8 +262,48 @@ LIMIT 50;""".strip()
     return _create_mock_response(sql)
 
 
+def _is_forecast_explanation_request(content: str) -> bool:
+    """Check if this is a forecast explanation request.
+
+    Args:
+        content: Message content to check
+
+    Returns:
+        True if content contains forecast explanation keywords
+    """
+    content_lower = content.lower()
+
+    # Check for forecast explanation prompt patterns
+    has_forecast = "forecast" in content_lower
+
+    # Check for explanation-related keywords
+    explanation_keywords = [
+        "confidence",
+        "explanation",
+        "rationale",
+        "risks",
+        "opportunities",
+        "financial analyst",  # Typical prompt starter
+        "stakeholders",       # Common in explanation prompts
+    ]
+
+    has_explanation_keyword = any(keyword in content_lower for keyword in explanation_keywords)
+
+    # Also check for JSON schema indicators in the prompt
+    has_json_schema = (
+        '"summary"' in content_lower
+        and '"confidence_rationale"' in content_lower
+        and ('"risks"' in content_lower or '"opportunities"' in content_lower)
+    )
+
+    return has_forecast and (has_explanation_keyword or has_json_schema)
+
+
 def generate_mock_metadata(messages: list[dict[str, Any] | Any], **kwargs: Any) -> MagicMock:
     """Mock metadata extraction for chunk enrichment - returns realistic JSON.
+
+    Also handles forecast explanation requests by detecting keywords and returning
+    appropriate JSON format.
 
     Args:
         messages: List of message dicts/objects containing the query
@@ -266,9 +315,31 @@ def generate_mock_metadata(messages: list[dict[str, Any] | Any], **kwargs: Any) 
     mock_response = MagicMock()
     mock_response.choices = [MagicMock()]
     mock_response.choices[0].message = MagicMock()
-    mock_response.choices[
-        0
-    ].message.content = '{"metric_category": "Revenue", "time_period": "Q3 2025"}'
+
+    # Extract message content
+    content = _extract_query_from_messages(messages)
+
+    # Check if this is a forecast explanation request
+    if _is_forecast_explanation_request(content):
+        # Return forecast explanation JSON format
+        forecast_explanation = {
+            "summary": "The forecast shows steady growth with increasing confidence intervals due to limited historical data.",
+            "confidence_rationale": "Confidence intervals widen for later periods due to model uncertainty. Data quality is good but sample size is limited.",
+            "risks": [
+                "Limited historical data may reduce forecast accuracy",
+                "External market conditions not reflected in historical patterns",
+            ],
+            "opportunities": [
+                "Growth trend suggests potential for expansion",
+            ],
+        }
+        mock_response.choices[0].message.content = json.dumps(forecast_explanation)
+    else:
+        # Default: metadata extraction for chunk enrichment
+        mock_response.choices[0].message.content = (
+            '{"metric_category": "Revenue", "time_period": "Q3 2025"}'
+        )
+
     return mock_response
 
 

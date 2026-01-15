@@ -59,17 +59,17 @@ class TestSQLFirstExtractionFallback:
 
         with (
             patch(
-                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
+                "raglite.mcp.tools.forecast_helpers.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 side_effect=ExtractionError("SQL extraction failed - no data"),
             ) as mock_sql,
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries",
+                "raglite.mcp.tools.forecast_helpers.extract_timeseries",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ) as mock_hybrid,
             patch(
-                "raglite.mcp.tools.forecast.generate_forecast",
+                "raglite.mcp.tools.forecast_helpers.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -127,15 +127,15 @@ class TestSQLFirstExtractionFallback:
 
         with (
             patch(
-                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
+                "raglite.mcp.tools.forecast_helpers.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ) as mock_sql,
             patch(
-                "raglite.mcp.tools.forecast.extract_timeseries", new_callable=AsyncMock
+                "raglite.mcp.tools.forecast_helpers.extract_timeseries", new_callable=AsyncMock
             ) as mock_hybrid,
             patch(
-                "raglite.mcp.tools.forecast.generate_forecast",
+                "raglite.mcp.tools.forecast_helpers.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -198,17 +198,17 @@ class TestSQLFirstExtractionFallback:
         for error in error_scenarios:
             with (
                 patch(
-                    "raglite.mcp.tools.forecast.extract_historical_data_by_type",
+                    "raglite.mcp.tools.forecast_helpers.extract_historical_data_by_type",
                     new_callable=AsyncMock,
                     side_effect=error,
                 ),
                 patch(
-                    "raglite.mcp.tools.forecast.extract_timeseries",
+                    "raglite.mcp.tools.forecast_helpers.extract_timeseries",
                     new_callable=AsyncMock,
                     return_value=mock_ts_data,
                 ),
                 patch(
-                    "raglite.mcp.tools.forecast.generate_forecast",
+                    "raglite.mcp.tools.forecast_helpers.generate_forecast",
                     new_callable=AsyncMock,
                     return_value=mock_forecast,
                 ),

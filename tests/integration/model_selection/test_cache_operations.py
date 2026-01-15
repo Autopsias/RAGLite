@@ -18,10 +18,15 @@ if TYPE_CHECKING:
 # Mark all tests as integration and PostgreSQL-only
 # 'postgresql_only' marker: These tests use ONLY PostgreSQL, not Qdrant
 # Used for filtering test runs when troubleshooting database-specific issues
+#
+# CRITICAL FIX (2026-01-15): Added xdist_group marker to prevent parallel execution
+# These tests modify the model_selection table and can experience race conditions
+# when run in parallel, causing StaleDataError (UPDATE matched 0 rows).
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.postgresql_only,
     pytest.mark.slow,
+    pytest.mark.xdist_group(name="model_selection_cache"),
 ]
 
 

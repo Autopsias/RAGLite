@@ -163,11 +163,15 @@ def cache_model_selection(result: ModelSelectionResult) -> None:
         except IntegrityError:
             # Entry exists, update instead
             session.rollback()
+
+            # Re-fetch with lock to prevent concurrent modification
             existing = (
                 session.query(ModelSelectionORM)
                 .filter(ModelSelectionORM.variable_name == result.variable_name)
+                .with_for_update()
                 .first()
             )
+
             if existing:
                 existing.best_model = result.best_model
                 existing.best_mape = Decimal(str(result.best_mape))
@@ -178,15 +182,42 @@ def cache_model_selection(result: ModelSelectionResult) -> None:
                 existing.data_characteristics = data_chars_dict
                 existing.selected_at = selected_at
                 existing.expires_at = expires_at
-                session.commit()
-                logger.info(
-                    "Updated cached model selection",
-                    extra={
-                        "variable_name": result.variable_name,
-                        "best_model": result.best_model,
-                        "best_mape": result.best_mape,
-                    },
-                )
+
+                try:
+                    session.commit()
+                    logger.info(
+                        "Updated cached model selection",
+                        extra={
+                            "variable_name": result.variable_name,
+                            "best_model": result.best_model,
+                            "best_mape": result.best_mape,
+                        },
+                    )
+                except Exception as update_error:
+                    # Handle race condition where row was deleted between SELECT and UPDATE
+                    session.rollback()
+                    logger.warning(
+                        "Failed to update cached model selection (possible concurrent deletion)",
+                        extra={
+                            "variable_name": result.variable_name,
+                            "error": str(update_error),
+                        },
+                    )
+                    # Attempt insert again as a fallback
+                    new_entry_retry = ModelSelectionORM(
+                        variable_name=result.variable_name,
+                        best_model=result.best_model,
+                        best_mape=Decimal(str(result.best_mape)),
+                        best_mase=Decimal(str(result.best_mase)),
+                        use_regressors=result.best_with_regressors,
+                        regressor_list=result.best_regressor_set,
+                        candidate_results=sanitized_candidate_results,
+                        data_characteristics=data_chars_dict,
+                        selected_at=selected_at,
+                        expires_at=expires_at,
+                    )
+                    session.add(new_entry_retry)
+                    session.commit()
 
     except Exception as e:
         session.rollback()
