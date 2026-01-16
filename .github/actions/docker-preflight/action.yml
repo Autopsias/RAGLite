@@ -59,6 +59,36 @@ runs:
         fi
         echo "✅ Docker command found: $(which docker)"
 
+    - name: Pre-emptive Runner Cleanup
+      if: inputs.colima-profile != 'default'
+      shell: bash
+      run: |
+        echo "=== Pre-emptive Runner Cleanup ==="
+
+        # Get memory before cleanup
+        FREE_BEFORE=$(vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.')
+        FREE_MB_BEFORE=$((FREE_BEFORE * 4096 / 1024 / 1024))
+        echo "Memory before cleanup: ${FREE_MB_BEFORE}MB"
+
+        # Kill zombie processes BEFORE checking memory
+        echo "Killing zombie processes..."
+        pkill -9 -f "qemu-system" 2>/dev/null && echo "  Killed QEMU" || true
+        pkill -9 -f "limactl" 2>/dev/null && echo "  Killed limactl" || true
+        pkill -9 -f "lima-guestagent" 2>/dev/null && echo "  Killed lima-guestagent" || true
+        pkill -9 -f "resource_tracker" 2>/dev/null && echo "  Killed resource_tracker" || true
+        pkill -9 -f "multiprocessing" 2>/dev/null && echo "  Killed multiprocessing" || true
+
+        # Wait for memory reclamation
+        sleep 3
+
+        # Report memory after cleanup
+        FREE_AFTER=$(vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.')
+        FREE_MB_AFTER=$((FREE_AFTER * 4096 / 1024 / 1024))
+        RECLAIMED=$((FREE_MB_AFTER - FREE_MB_BEFORE))
+
+        echo "Memory after cleanup: ${FREE_MB_AFTER}MB (reclaimed: ${RECLAIMED}MB)"
+        echo "✅ Pre-emptive cleanup complete"
+
     - name: Validate Available Memory for Parallel VMs
       if: inputs.colima-profile != 'default'
       shell: bash

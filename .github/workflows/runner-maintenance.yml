@@ -1,0 +1,142 @@
+# Runner Maintenance Workflow
+# Scheduled cleanup to prevent memory exhaustion on self-hosted runners
+#
+# Purpose: Kill zombie processes (QEMU, Lima, Python) and reclaim memory
+# Schedule: Every 6 hours + manual trigger
+# Target: Self-hosted macOS runners with Colima
+
+name: Runner Maintenance
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      cleanup_level:
+        description: 'Cleanup level'
+        type: choice
+        options:
+          - light
+          - medium
+          - aggressive
+        default: 'aggressive'
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: "🧹 Runner Health Maintenance"
+    runs-on: [self-hosted, raglite]
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Aggressive Resource Cleanup
+        run: |
+          echo "=== Scheduled Runner Maintenance ==="
+          echo "Time: $(date)"
+
+          # Memory before
+          FREE_BEFORE=$(vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.')
+          FREE_MB_BEFORE=$((FREE_BEFORE * 4096 / 1024 / 1024))
+          TOTAL_MB=$(($(sysctl -n hw.memsize) / 1024 / 1024))
+
+          echo ""
+          echo "=== Initial State ==="
+          echo "Total memory: ${TOTAL_MB}MB"
+          echo "Free memory:  ${FREE_MB_BEFORE}MB"
+          echo "Used memory:  $((TOTAL_MB - FREE_MB_BEFORE))MB"
+
+          echo ""
+          echo "=== Process Cleanup ==="
+
+          # Kill all zombie processes
+          for PATTERN in "qemu-system" "limactl" "lima-guestagent" "resource_tracker" "multiprocessing" "pytest" "python.*raglite"; do
+            COUNT=$(pgrep -f "$PATTERN" 2>/dev/null | wc -l | tr -d ' ')
+            if [ "$COUNT" -gt 0 ]; then
+              echo "Killing $COUNT processes matching: $PATTERN"
+              pkill -9 -f "$PATTERN" 2>/dev/null || true
+            else
+              echo "No processes matching: $PATTERN"
+            fi
+          done
+
+          echo ""
+          echo "=== Colima Profile Cleanup ==="
+
+          # Stop all CI Colima profiles
+          echo "Current Colima profiles:"
+          colima list 2>/dev/null || echo "Colima not available"
+
+          for PROFILE in $(colima list -j 2>/dev/null | jq -r '.[].name' 2>/dev/null || echo ""); do
+            if [[ "$PROFILE" == ci-* ]]; then
+              echo "Stopping profile: $PROFILE"
+              colima stop -p "$PROFILE" -f 2>/dev/null || true
+              sleep 1
+              colima delete -p "$PROFILE" -f 2>/dev/null || true
+            fi
+          done
+
+          # Clean Lima state
+          echo "Cleaning Lima network state..."
+          rm -rf "$HOME/.colima/_lima/_networks" 2>/dev/null || true
+
+          echo ""
+          echo "=== Docker Cleanup ==="
+
+          # Docker cleanup (if accessible via default profile)
+          if docker info >/dev/null 2>&1; then
+            echo "Pruning Docker resources..."
+            docker container prune -f 2>/dev/null || true
+            docker volume prune -f 2>/dev/null || true
+            docker network prune -f 2>/dev/null || true
+            docker image prune -f 2>/dev/null || true
+          else
+            echo "Docker not accessible, skipping"
+          fi
+
+          # Wait for memory reclamation
+          sleep 5
+
+          # Memory after
+          FREE_AFTER=$(vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.')
+          FREE_MB_AFTER=$((FREE_AFTER * 4096 / 1024 / 1024))
+          RECLAIMED=$((FREE_MB_AFTER - FREE_MB_BEFORE))
+
+          echo ""
+          echo "=== Final State ==="
+          echo "Free memory before: ${FREE_MB_BEFORE}MB"
+          echo "Free memory after:  ${FREE_MB_AFTER}MB"
+          echo "Memory reclaimed:   ${RECLAIMED}MB"
+
+          if [ "$FREE_MB_AFTER" -lt 4096 ]; then
+            echo ""
+            echo "WARNING: Free memory still below 4GB threshold"
+            echo "   Manual intervention may be required"
+          else
+            echo ""
+            echo "Runner health OK: ${FREE_MB_AFTER}MB free"
+          fi
+
+      - name: Report Health Metrics
+        run: |
+          echo "## Runner Health Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+
+          TOTAL_GB=$(($(sysctl -n hw.memsize) / 1024 / 1024 / 1024))
+          FREE_PAGES=$(vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.')
+          FREE_MB=$((FREE_PAGES * 4096 / 1024 / 1024))
+          DISK_FREE=$(df -h . | tail -1 | awk '{print $4}')
+          COLIMA_RUNNING=$(colima list 2>/dev/null | grep -c Running || echo 0)
+
+          echo "| Total Memory | ${TOTAL_GB}GB |" >> $GITHUB_STEP_SUMMARY
+          echo "| Free Memory | ${FREE_MB}MB |" >> $GITHUB_STEP_SUMMARY
+          echo "| Disk Free | ${DISK_FREE} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Colima Profiles | ${COLIMA_RUNNING} running |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cleanup Time | $(date) |" >> $GITHUB_STEP_SUMMARY
