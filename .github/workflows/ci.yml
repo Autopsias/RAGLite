@@ -546,6 +546,11 @@ jobs:
 
     strategy:
       fail-fast: false
+      # CRITICAL: max-parallel=1 prevents memory exhaustion on self-hosted runner
+      # When both shards run simultaneously, each 4GB Colima VM competes for RAM,
+      # causing VM zombie states when containers start inside them.
+      # Serializing ensures only one shard uses resources at a time.
+      max-parallel: 1
       matrix:
         shard: [postgresql, other]
         include:
@@ -653,6 +658,31 @@ jobs:
           # CRITICAL FIX: Allow Colima restart to recover from VM zombie states
           # Self-hosted runners can have corrupted VMs after previous job failures
           skip-colima-restart: 'false'
+
+      - name: Stop Other Colima Profile (Memory Optimization)
+        if: steps.shard-check.outputs.should_run == 'true'
+        run: |
+          # CRITICAL: Stop the OTHER Colima profile to free 4GB RAM before starting containers
+          # With max-parallel: 1, only one shard runs at a time, so we don't need both VMs
+          CURRENT_PROFILE="${{ matrix.colima_profile }}"
+          if [[ "$CURRENT_PROFILE" == "ci-postgresql" ]]; then
+            OTHER_PROFILE="ci-other"
+          else
+            OTHER_PROFILE="ci-postgresql"
+          fi
+
+          echo "=== Memory Optimization: Stopping unused Colima profile '$OTHER_PROFILE' ==="
+          if colima status -p "$OTHER_PROFILE" 2>&1 | grep -q "Running"; then
+            colima stop -p "$OTHER_PROFILE" -f 2>/dev/null && echo "✅ Stopped $OTHER_PROFILE" || echo "⚠️ Could not stop $OTHER_PROFILE"
+            sleep 3  # Allow memory to be reclaimed
+          else
+            echo "ℹ️ Profile $OTHER_PROFILE is not running"
+          fi
+
+          # Report memory state
+          FREE_PAGES=$(vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.')
+          FREE_MB=$((FREE_PAGES * 4096 / 1024 / 1024))
+          echo "Free memory after optimization: ${FREE_MB}MB"
 
       - name: Start Test Containers
         if: steps.shard-check.outputs.should_run == 'true'
