@@ -59,6 +59,46 @@ runs:
         fi
         echo "✅ Docker command found: $(which docker)"
 
+    - name: Validate Available Memory for Parallel VMs
+      if: inputs.colima-profile != 'default'
+      shell: bash
+      env:
+        COLIMA_MEMORY: ${{ inputs.colima-memory }}
+      run: |
+        echo "=== Memory Budget Validation for Colima VM ==="
+
+        # Get total system memory (macOS)
+        TOTAL_MEM_BYTES=$(sysctl -n hw.memsize)
+        TOTAL_MEM_GB=$((TOTAL_MEM_BYTES / 1024 / 1024 / 1024))
+        echo "Total system memory: ${TOTAL_MEM_GB}GB"
+
+        # Get free memory (pages * 4KB)
+        FREE_PAGES=$(vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.')
+        FREE_MEM_MB=$((FREE_PAGES * 4096 / 1024 / 1024))
+        FREE_MEM_GB=$((FREE_MEM_MB / 1024))
+        echo "Approx free memory: ${FREE_MEM_MB}MB (~${FREE_MEM_GB}GB)"
+
+        # Required: VM memory + 2GB buffer for host processes
+        REQUIRED_MEM=$((COLIMA_MEMORY + 2))
+        echo "Required memory for ${COLIMA_MEMORY}GB VM: ${REQUIRED_MEM}GB"
+
+        # Check if we have enough memory
+        if [ "$FREE_MEM_MB" -lt $((REQUIRED_MEM * 1024)) ]; then
+          echo "⚠️  LOW MEMORY WARNING: Only ${FREE_MEM_MB}MB free, need ${REQUIRED_MEM}GB"
+          echo "   This may cause Colima VM zombie states"
+
+          # If critically low (<4GB), fail fast
+          if [ "$FREE_MEM_MB" -lt 4096 ]; then
+            echo "❌ CRITICAL: Less than 4GB free memory - refusing to start VM"
+            echo "   Recommendation: Close other applications or reduce parallel profiles"
+            exit 1
+          fi
+
+          echo "   Proceeding with warning - monitor for zombie states"
+        else
+          echo "✅ Memory budget OK: ${FREE_MEM_MB}MB available for ${REQUIRED_MEM}GB requirement"
+        fi
+
     - name: Validate Docker Daemon Accessibility
       shell: bash
       env:

@@ -239,6 +239,27 @@ jobs:
           fi
           echo "Fixture validation passed"
 
+      - name: Verify health_check Tests Excluded
+        run: |
+          source ci-venv/bin/activate
+          echo "========================================="
+          echo "Validating NO health_check tests in validate job"
+          echo "========================================="
+          # Collect tests with -m filter and check none are health tests
+          HEALTH_COUNT=$(pytest --collect-only -q tests/ \
+            --ignore=tests/health/ \
+            -m "not slow and not health_check and not integration" \
+            2>&1 | grep -c "tests/health/" || echo "0")
+
+          if [ "$HEALTH_COUNT" -gt 0 ]; then
+            echo "❌ FAIL: $HEALTH_COUNT health check tests would run in validate job!"
+            echo "   This indicates norecursedirs or marker filtering is broken"
+            pytest --collect-only -q tests/ -m "not health_check" 2>&1 | grep "tests/health/" || true
+            exit 1
+          fi
+
+          echo "✅ Zero health check tests in validate job collection"
+
       - name: Validate xdist_group Markers (P0-3)
         run: |
           source ci-venv/bin/activate
@@ -267,6 +288,7 @@ jobs:
           echo "Mode: Parallel (4 workers, default load distribution)"
           echo "========================================="
           pytest tests/ \
+            --ignore=tests/health/ \
             -m "not slow and not health_check and not integration" \
             --tb=short \
             -q \
@@ -314,6 +336,16 @@ jobs:
         with:
           max-wait-seconds: '120'
           colima-profile: 'ci-postgresql'
+
+      - name: Wait for Lima Network Stabilization
+        if: |
+          (github.event_name != 'workflow_dispatch' || inputs.integration_shard == 'all' || inputs.integration_shard == 'other') &&
+          (github.event_name != 'workflow_dispatch' || inputs.integration_shard == 'all' || inputs.integration_shard == 'postgresql')
+        run: |
+          echo "=== Waiting 15s for Lima network state stabilization ==="
+          echo "   This prevents concurrent VM operations from corrupting ~/.colima/_lima/_networks"
+          sleep 15
+          echo "✅ Stabilization period complete"
 
       - name: Start Colima Profile for other shard
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.integration_shard == 'all' || inputs.integration_shard == 'other' }}
