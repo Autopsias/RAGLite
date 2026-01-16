@@ -526,15 +526,19 @@ jobs:
           echo "✅ All required images verified in both profiles"
 
   # ============================================================
-  # TIER 2: Full Integration Tests (Sharded for Performance)
+  # TIER 2: Full Integration Tests (Sharded for Isolation)
   # Runs on: Main branch pushes (post-merge) OR manual trigger with flag
-  # Target: <15 minutes (3 parallel shards), <4GB RAM per shard
-  # Note: Tests split into 3 shards running in parallel
+  # Target: <60 minutes per shard (serialized with max-parallel: 1)
+  # Note: Tests split into 2 shards, running sequentially to prevent memory exhaustion
   # ============================================================
   integration:
     name: "🔗 Tests: Integration (${{ matrix.shard }})"
     runs-on: [self-hosted, raglite]
-    timeout-minutes: 30
+    # Timeout increased from 30 to 60 minutes (2026-01-16):
+    # - With max-parallel: 1, shards run serially (not in parallel)
+    # - PostgreSQL shard: reached 45% in 29 min → needs ~65 min total
+    # - Other shard: varies based on test count
+    timeout-minutes: 60
     needs: [validate, docker-setup]
     # Run if integration is triggered AND this shard should run
     if: |
