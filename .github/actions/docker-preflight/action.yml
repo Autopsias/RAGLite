@@ -145,7 +145,7 @@ runs:
           RESPONSIVE=false
           for ATTEMPT in 1 2 3; do
             echo "Checking daemon responsiveness (attempt $ATTEMPT/3)..."
-            if timeout 10 docker info &> /dev/null; then
+            if timeout 5 docker info &> /dev/null; then
               echo "✅ Docker daemon is responsive"
               docker version | head -10
               RESPONSIVE=true
@@ -158,11 +158,12 @@ runs:
           done
 
           if [ "$RESPONSIVE" = "false" ]; then
-            echo "⚠️  Docker socket exists but daemon not responsive after 3 retries (zombie state detected)"
+            echo "🧟 ZOMBIE STATE DETECTED: Socket exists but daemon not responsive after 3 retries"
             echo "   This indicates Colima VM is corrupted - forcing cleanup with VM recreation"
-            # Force cleanup even though socket exists
+            # Force cleanup even though socket exists - don't exit, continue to cleanup section
             FORCE_CLEANUP=true
           else
+            # Daemon is responsive and healthy - exit early
             exit 0
           fi
         else
@@ -215,7 +216,7 @@ runs:
           if [[ -S "$COLIMA_SOCKET" ]]; then
             DAEMON_RESPONSIVE=false
             for RETRY in 1 2 3; do
-              if timeout 10 docker info &> /dev/null; then
+              if timeout 5 docker info &> /dev/null; then
                 DAEMON_RESPONSIVE=true
                 break
               fi
@@ -249,10 +250,19 @@ runs:
           sleep 2
           colima delete -p "$COLIMA_PROFILE" -f 2>/dev/null || true
 
-          # Remove stale Lima network sockets (root cause of "user-v2_ep.sock not found")
+          # ENHANCED: Remove stale Lima network sockets (root cause of "user-v2_ep.sock not found")
           # Lima recreates this directory automatically on next start
           echo "🧹 Removing stale Lima network state..."
           rm -rf "$HOME/.colima/_lima/_networks"
+
+          # ZOMBIE STATE FIX: If FORCE_CLEANUP is set, also kill any stale Lima processes
+          if [ "${FORCE_CLEANUP:-false}" = "true" ]; then
+            echo "🧹 Zombie state detected - killing stale Lima processes..."
+            pkill -9 -f "qemu-system" 2>/dev/null && echo "  Killed QEMU" || true
+            pkill -9 -f "limactl" 2>/dev/null && echo "  Killed limactl" || true
+            pkill -9 -f "lima-guestagent" 2>/dev/null && echo "  Killed lima-guestagent" || true
+          fi
+
           sleep 2
           echo "✅ Colima cleanup complete, proceeding with fresh VM start"
 

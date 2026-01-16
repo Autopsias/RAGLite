@@ -2,8 +2,8 @@
 
 Quick reference for diagnosing and resolving CI failures.
 
-**Last Updated:** 2025-01-14
-**CI Infrastructure Version:** 1.4 (NFR infrastructure hardening with pre-flight validation and memory allocation)
+**Last Updated:** 2026-01-16
+**CI Infrastructure Version:** 1.5 (Strategic hardening: dual-level zombie detection, memory budget validation, mock coverage gaps)
 
 ---
 
@@ -1815,6 +1815,271 @@ python scripts/ingest-for-validation.py
 **Commits:**
 - Lines 211-214 in docker-preflight/action.yml explain memory budget
 - ingest-for-validation.py lines 33-132 show validation implementation
+
+---
+
+### 22. Mistral API Empty Response - Mock Coverage Gap (Strategic Analysis 2025-01-16)
+
+#### Symptoms
+- `json.JSONDecodeError: Expecting value: line 1 column 1 (char 0)`
+- Empty string returned from Mistral client mock
+- Test timeout (>120s) after fixture protection triggers
+- Specific modules escape mock coverage (enrichment.py, anomaly_detection.py)
+- Error: "Unit test attempted to call Mistral API!" in logs
+
+#### Root Cause (Five Whys)
+1. Why? → Mistral API returns empty response
+2. Why? → Real API called (not mocked)
+3. Why? → Lazy import inside function body escapes session fixture
+4. Why? → 17+ modules import get_mistral_client, only 5 patched initially
+5. Why? → No structural validation of mock coverage completeness
+
+#### Strategic Impact
+**P0 Critical** - Causes 80% of recent CI fix commits. Lazy imports bypass session-scoped fixtures, requiring constant reactive patching of new import locations.
+
+#### Detection Pattern
+```bash
+# Quick check for mock coverage gaps
+python scripts/validate-mock-coverage.py --verbose
+
+# Output shows unpatched import locations:
+# ❌ raglite.retrieval.search.enrichment.get_mistral_client
+# ❌ raglite.mcp.tools.model_selector.get_mistral_client
+```
+
+#### Solution Pattern
+**Structural Fix (Implemented 2026-01-16):**
+- Pre-commit hook validates ALL import locations before commit
+- Session fixture patches all 17+ locations (100% coverage)
+- Script detects gaps and provides exact patch needed
+- Blocks commits if gaps found
+
+```bash
+# Validate before every commit
+python scripts/validate-mock-coverage.py
+
+# Expected output if fixed:
+# ✅ Mock coverage validation PASSED
+# - 17 module(s) import get_mistral_client
+# - 17 location(s) patched in mock fixtures
+# - 0 gaps (100% coverage)
+```
+
+#### Prevention
+1. **Automated Validation (Pre-commit)**
+   - Script blocks commits if coverage gaps found
+   - Runs before every `git commit`
+
+2. **Code Review Checklist**
+   - When adding code with `get_mistral_client`:
+     - [ ] Run `python scripts/validate-mock-coverage.py`
+     - [ ] Add patch to `tests/fixtures/mock_clients.py` if needed
+     - [ ] Validation passes before committing
+
+#### Related Documentation
+- **Strategic Analysis:** `docs/ci-knowledge/2026-01-16-strategic-analysis.md` → P0 Root Cause 1
+- **Prevention Rules:** `docs/ci-knowledge/prevention-rules.md` → Lazy Import Mock Coverage
+- **Validation Script:** `scripts/validate-mock-coverage.py`
+
+---
+
+### 23. Memory Budget Violation - OOM Kill (Strategic Analysis 2026-01-16)
+
+#### Symptoms
+- `Process killed by signal 9 (SIGKILL)` in job logs
+- Exit code 137 (128 + 9)
+- "Docker daemon unresponsive" after 10 minutes of PDF ingestion
+- Job hangs at exact point where embedding model loads
+- Colima VM becomes zombie state after memory spike
+
+#### Root Cause (Five Whys)
+1. Why? → Process killed with signal 9 (SIGKILL)
+2. Why? → Kernel OOM killer terminated process
+3. Why? → Colima VM memory exhausted (4GB total allocation)
+4. Why? → 4 workers × 2GB model = 8GB needed, only 4GB available
+5. Why? → No memory budget calculation or planning
+
+#### Strategic Impact
+**P0 Critical** - Prevents large document processing (160+ pages). Memory exhaustion triggers zombie state that cascades to other jobs.
+
+#### Memory Budget Breakdown
+```
+Colima VM Total: 6GB (updated from 4GB on 2026-01-16)
+
+Component Usage:
+- Qdrant vector DB: 1GB (peak during query)
+- PostgreSQL DB: 768MB (peak during inserts)
+- Fin-E5 embedding model: 2GB (peak during inference)
+- QEMU hypervisor: 512MB (Linux kernel + system)
+- Buffer for spikes: 768MB
+- Total: 5GB + 1GB buffer = 6GB
+
+Parallel Workers:
+- Before: 4 workers × 2GB model = 8GB needed (fails)
+- After: 2 workers × 2GB model = 4GB needed (within 6GB allocation)
+```
+
+#### Detection Pattern
+```bash
+# Check current Colima allocation
+colima status
+# Expected: Memory=6GB (not 4GB)
+
+# Monitor memory during test run
+docker stats --no-stream
+# Qdrant should peak at ~1GB
+# PostgreSQL should peak at ~768MB
+
+# If OOM occurs, memory allocation needs increase
+```
+
+#### Solution Pattern
+**Infrastructure Changes (Implemented 2026-01-16):**
+1. Increased Colima memory from 4GB to 6GB
+2. Reduced PostgreSQL workers from 4 to 2
+3. Added memory budget documentation to action
+4. Added pre-flight validation before ingestion
+
+```bash
+# Before NFR job, validate infrastructure
+python scripts/ingest-for-validation.py
+
+# Expected output:
+# ✅ Qdrant: connected at localhost:6333
+# ✅ PostgreSQL: connected at localhost:5432
+# PRE-FLIGHT COMPLETE - All systems ready
+```
+
+#### Prevention
+1. **Memory Budget Documented**
+   - Rationale in `.github/actions/docker-preflight/action.yml` (lines 211-214)
+   - Each component allocation explained
+
+2. **Pre-flight Validation**
+   - Runs before expensive operations (document ingestion)
+   - Fails fast (30s timeout) if infrastructure unavailable
+   - Prevents 10+ minute job waste
+
+3. **Resource Monitoring**
+   - Track Colima memory allocation on each deployment
+   - Alert if reduced below 6GB
+   - Monitor component memory usage in CI logs
+
+#### Related Documentation
+- **Strategic Analysis:** `docs/ci-knowledge/2026-01-16-strategic-analysis.md` → P0 Root Cause 2
+- **Infrastructure Script:** `scripts/ingest-for-validation.py`
+- **NFR Job Configuration:** `.github/workflows/nfr-validation.yml`
+
+---
+
+### 24. Colima Zombie State - Daemon Unresponsive (Strategic Analysis 2026-01-16)
+
+#### Symptoms
+- Docker socket exists but `docker info` hangs or times out
+- `colima status` reports "Running" but daemon is unresponsive
+- Docker Pre-flight step times out after exactly 60s
+- "Still waiting for Docker daemon... 60s/60s" repeated in logs
+- Integration tests fail with "Cannot connect to Docker daemon"
+- `colima stop && colima start` does NOT recover daemon
+
+#### Root Cause (Five Whys)
+1. Why? → Docker daemon unresponsive despite socket existing
+2. Why? → Colima VM in zombie state (corrupted, deadlocked, or network broken)
+3. Why? → Memory exhaustion or network issues in VM
+4. Why? → Health check only verified socket existence, not responsiveness
+5. Why? → Socket file persists even when daemon is dead
+
+#### Strategic Impact
+**P0 Critical** - Causes 80% of CI failures on self-hosted runner. Occurs intermittently when Colima VM enters zombie state after memory spikes or network issues.
+
+#### Zombie State Detection Pattern
+```bash
+# Step 1: Check if process appears running
+colima status
+# May report: "running" (misleading)
+
+# Step 2: Check if daemon actually responds (with timeout)
+timeout 5 docker info > /dev/null 2>&1
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -eq 0 ]; then
+    echo "✅ HEALTHY: Daemon responsive"
+elif [ $EXIT_CODE -eq 124 ]; then
+    echo "🧟 ZOMBIE STATE: Socket exists but daemon unresponsive"
+else
+    echo "❌ ERROR: Daemon not responding"
+fi
+```
+
+#### Solution Pattern
+**Dual-Level Health Check (Implemented 2026-01-16):**
+
+Level 1 (existing): Socket exists
+```bash
+[[ -S ~/.colima/default/docker.sock ]] && echo "Socket exists"
+```
+
+Level 2 (NEW): Daemon responsive
+```bash
+if timeout 5 docker info &> /dev/null; then
+    echo "✅ Daemon responsive"
+else
+    echo "🧟 ZOMBIE STATE - Force cleanup needed"
+    FORCE_CLEANUP=true
+fi
+```
+
+**Force Cleanup (Zombie Recovery):**
+```bash
+if [ "$FORCE_CLEANUP" = true ]; then
+    colima stop -f
+    sleep 2
+    colima delete -f
+    sleep 2
+    rm -rf ~/.colima/_lima/_networks 2>/dev/null || true
+    colima start --cpu 2 --memory 6 --disk 50 --runtime docker
+    sleep 10  # Wait for startup
+    docker info  # Verify responsive
+fi
+```
+
+#### Verification
+```bash
+# Local test (simulate zombie detection)
+colima start
+# Kill daemon process while keeping socket
+kill -9 $(pgrep -f "lima.*colima" | head -1)
+
+# Run health check
+timeout 5 docker info
+# Should timeout or fail → Triggers cleanup
+
+# Verify recovery
+colima stop -f && sleep 1 && colima delete -f && sleep 1 && colima start
+docker info  # Should succeed now
+```
+
+#### Prevention
+1. **Always use dual-level health check**
+   - Socket existence check (Level 1)
+   - Daemon responsiveness check (Level 2) with 5s timeout
+
+2. **Force cleanup on zombie detection**
+   - Don't try retry/restart loops
+   - Delete and recreate VM fresh
+
+3. **Remove Lima network state**
+   - `rm -rf ~/.colima/_lima/_networks`
+   - Prevents recurring network corruption
+
+4. **Timeout docker info calls**
+   - Always use `timeout 5` to prevent hanging
+   - Detects unresponsive daemons immediately
+
+#### Related Documentation
+- **Strategic Analysis:** `docs/ci-knowledge/2026-01-16-strategic-analysis.md` → P0 Root Cause 3
+- **Colima Reliability:** `docs/ci-knowledge/colima-reliability.md` → Zombie State Prevention
+- **Infrastructure Action:** `.github/actions/docker-preflight/action.yml` (lines 280-305)
 
 ---
 

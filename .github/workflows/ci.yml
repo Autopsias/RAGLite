@@ -560,22 +560,26 @@ jobs:
         include:
           # Shard 1: PostgreSQL-only tests (forecasting, model_selection, external_data, insights)
           # These directories don't require the embedding model for most operations
+          # MEMORY FIX (2026-01-16): Reduced workers from 4 to 2 to prevent OOM kills
+          # Root cause: 4GB Colima VM + 4 pytest workers + 2GB embedding model = exit 137 at 11% completion
           - shard: postgresql
             variant: shard-postgresql
             colima_profile: 'ci-postgresql'  # Dedicated Colima profile for true parallel execution
             pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/external_data/ tests/integration/insights/"
             pytest_ignore: ""
-            workers: 4
-            description: "~230 PostgreSQL-focused tests (includes external API tests)"
+            workers: 2
+            description: "~230 PostgreSQL-focused tests (OOM-safe with 2 workers)"
           # Shard 2: Remaining integration tests (ingestion, retrieval, MCP, etc.)
           # These tests typically use the embedding model via session fixtures
+          # MEMORY FIX (2026-01-16): Reduced workers from 4 to 2 to prevent OOM kills
+          # Root cause: 4GB Colima VM + 4 pytest workers + 2GB embedding model = exit 137 at 11% completion
           - shard: other
             variant: shard-other
             colima_profile: 'ci-other'  # Dedicated Colima profile for true parallel execution
             pytest_paths: "tests/integration/"
             pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/external_data/ --ignore=tests/integration/insights/ --ignore=tests/integration/test_accuracy_validation.py --ignore=tests/integration/test_unified_validation_e2e.py"
-            workers: 4
-            description: "~660 tests (excludes subprocess-heavy accuracy tests)"
+            workers: 2
+            description: "~660 tests (excludes subprocess-heavy accuracy tests, OOM-safe with 2 workers)"
 
     steps:
       - name: Check if shard should run
@@ -752,6 +756,20 @@ jobs:
           uv venv ci-venv --python 3.11 --quiet 2>/dev/null || uv venv ci-venv --quiet
           source ci-venv/bin/activate
           uv pip install -e ".[dev]" --quiet
+
+      - name: Validate API Key Availability (P0 Fix)
+        if: steps.shard-check.outputs.should_run == 'true'
+        run: |
+          echo "=== Checking for required API keys ==="
+          if [ -z "$MISTRAL_API_KEY" ]; then
+            echo "⚠️  MISTRAL_API_KEY not set - integration tests will skip gracefully"
+            echo "   Root cause: Mistral mock gaps allow real API calls with empty responses"
+            echo "   Workaround: Tests check for key presence and skip when missing"
+          else
+            echo "✅ MISTRAL_API_KEY is set"
+          fi
+        env:
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
 
       - name: Verify Container Health
         if: steps.shard-check.outputs.should_run == 'true'

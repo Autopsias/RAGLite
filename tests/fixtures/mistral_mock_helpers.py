@@ -210,8 +210,8 @@ def generate_mock_sql(messages: list[dict[str, Any] | Any], **kwargs: Any) -> Ma
     to generate SQL with appropriate WHERE clauses, ensuring tests retrieve
     relevant table data instead of all rows.
 
-    Also handles forecast explanation requests by detecting keywords and returning
-    appropriate JSON format (uses same detection logic as generate_mock_metadata).
+    Also handles forecast explanation and timeseries extraction requests by
+    detecting keywords and returning appropriate JSON format.
 
     Args:
         messages: List of message dicts/objects containing the query
@@ -223,6 +223,22 @@ def generate_mock_sql(messages: list[dict[str, Any] | Any], **kwargs: Any) -> Ma
     # Extract query from messages (last user message)
     query_text = _extract_query_from_messages(messages)
     query_lower = query_text.lower()
+
+    # Check if this is a timeseries extraction request (not SQL generation)
+    if _is_timeseries_extraction_request(query_text):
+        # Return mock timeseries JSON data
+        mock_timeseries = [
+            {"date": "Jan 2024", "value": 100.0, "label": "January 2024"},
+            {"date": "Feb 2024", "value": 105.0, "label": "February 2024"},
+            {"date": "Mar 2024", "value": 110.0, "label": "March 2024"},
+            {"date": "Apr 2024", "value": 115.0, "label": "April 2024"},
+            {"date": "May 2024", "value": 120.0, "label": "May 2024"},
+            {"date": "Jun 2024", "value": 125.0, "label": "June 2024"},
+            {"date": "Jul 2024", "value": 130.0, "label": "July 2024"},
+            {"date": "Aug 2024", "value": 135.0, "label": "August 2024"},
+            {"date": "Sep 2024", "value": 140.0, "label": "September 2024"},
+        ]
+        return _create_mock_response(json.dumps(mock_timeseries))
 
     # Check if this is a forecast explanation request (not SQL generation)
     if _is_forecast_explanation_request(query_text):
@@ -260,6 +276,30 @@ ORDER BY page_number DESC
 LIMIT 50;""".strip()
 
     return _create_mock_response(sql)
+
+
+def _is_timeseries_extraction_request(content: str) -> bool:
+    """Check if this is a timeseries extraction request.
+
+    Args:
+        content: Message content to check
+
+    Returns:
+        True if content contains timeseries extraction prompt patterns
+    """
+    content_lower = content.lower()
+
+    # Check for timeseries extraction patterns
+    # Pattern: "Extract all {metric} values with their dates"
+    has_extract_pattern = "extract" in content_lower and "values" in content_lower
+    has_date_pattern = "date" in content_lower or "period" in content_lower
+    has_json_array = "json array" in content_lower or "return only a json array" in content_lower
+
+    # Check for metric keywords
+    metric_keywords = ["revenue", "cash_flow", "expenses", "ebitda", "capex", "margins"]
+    has_metric = any(metric in content_lower for metric in metric_keywords)
+
+    return has_extract_pattern and has_date_pattern and (has_json_array or has_metric)
 
 
 def _is_forecast_explanation_request(content: str) -> bool:
