@@ -34,11 +34,19 @@ def _ensure_docker_running() -> bool:
     Returns:
         True if Docker is now available, False if startup failed
     """
+    # Skip in CI - containers are managed by CI workflow
+    if os.environ.get("CI") == "true":
+        logger.debug("Skipping Docker startup check in CI (managed by workflow)")
+        return True
+
     # Check if Docker is already available (fast path)
     docker_path = shutil.which("docker")
     if not docker_path:
         logger.warning("Docker CLI not found - skipping Docker check")
         return False
+
+    # Pass DOCKER_HOST to docker info command (for CI Colima profiles)
+    env = os.environ.copy()
 
     try:
         result = subprocess.run(
@@ -46,6 +54,7 @@ def _ensure_docker_running() -> bool:
             capture_output=True,
             text=True,
             timeout=5,
+            env=env,
         )
         if result.returncode == 0:
             logger.debug("Docker daemon is already running")
@@ -68,6 +77,7 @@ def _ensure_docker_running() -> bool:
                 capture_output=True,
                 text=True,
                 timeout=120,  # Colima startup can take up to 60s
+                env=os.environ.copy(),  # Pass DOCKER_HOST for CI profiles
             )
             if result.returncode == 0:
                 logger.info("Docker daemon started successfully via ensure-docker-running.sh")
