@@ -399,13 +399,14 @@ jobs:
 
     strategy:
       fail-fast: false
-      # OPTIMIZATION (2026-01-17): max-parallel=2 enables parallel shard execution
-      # This is now safe because:
-      # 1. PostgreSQL shard skips embedding model (saves 2GB RAM via CI_SHARD env var)
-      # 2. Each shard has its own dedicated Colima profile
-      # 3. PostgreSQL shard uses only 4GB (no embedding model), leaving room for other shard
-      # Total memory: 4GB (postgresql) + 8GB (other) = 12GB, fits in 24GB runner
-      max-parallel: 2
+      # CRITICAL: max-parallel=1 prevents Colima VM startup conflicts
+      # Even with reduced memory (4GB + 8GB = 12GB), simultaneous VM startup causes:
+      # - Resource contention during QEMU/Lima initialization
+      # - "signal: killed" errors when second VM tries to start
+      # - Zombie state detection failures
+      # The embedding model skip optimization still helps: PostgreSQL shard runs
+      # with 4 workers (4x faster) without the 2GB model overhead.
+      max-parallel: 1
       matrix:
         shard: [postgresql, other]
         include:
