@@ -381,11 +381,11 @@ jobs:
   integration:
     name: "🔗 Tests: Integration (${{ matrix.shard }})"
     runs-on: [self-hosted, raglite]
-    # Timeout increased from 30 to 60 minutes (2026-01-16):
+    # Timeout increased from 60 to 90 minutes (2026-01-17):
     # - With max-parallel: 1, shards run serially (not in parallel)
-    # - PostgreSQL shard: reached 45% in 29 min → needs ~65 min total
+    # - PostgreSQL shard: reached 71% in 60 min → needs ~85 min total
     # - Other shard: varies based on test count
-    timeout-minutes: 60
+    timeout-minutes: 90
     needs: [validate, docker-setup]
     # Run if integration is triggered AND this shard should run
     if: |
@@ -418,15 +418,16 @@ jobs:
             description: "~230 PostgreSQL-focused tests (OOM-safe with 2 workers)"
           # Shard 2: Remaining integration tests (ingestion, retrieval, MCP, etc.)
           # These tests typically use the embedding model via session fixtures
-          # MEMORY FIX (2026-01-16): Reduced workers from 4 to 2 to prevent OOM kills
-          # Root cause: 4GB Colima VM + 4 pytest workers + 2GB embedding model = exit 137 at 11% completion
+          # MEMORY FIX (2026-01-17): Reduced workers from 2 to 1 to prevent OOM kills
+          # Root cause: 6GB Colima VM + 2 pytest workers + 2GB embedding model = exit 137 at 11% completion
+          # Single worker ensures embedding model is loaded once, reducing memory pressure
           - shard: other
             variant: shard-other
             colima_profile: 'ci-other'  # Dedicated Colima profile for true parallel execution
             pytest_paths: "tests/integration/"
             pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/external_data/ --ignore=tests/integration/insights/ --ignore=tests/integration/test_accuracy_validation.py --ignore=tests/integration/test_unified_validation_e2e.py"
-            workers: 2
-            description: "~660 tests (excludes subprocess-heavy accuracy tests, OOM-safe with 2 workers)"
+            workers: 1
+            description: "~660 tests (excludes subprocess-heavy accuracy tests, single worker for OOM safety)"
 
     steps:
       - name: Check if shard should run
