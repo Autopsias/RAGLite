@@ -374,18 +374,20 @@ jobs:
   # ============================================================
   # TIER 2: Full Integration Tests (Sharded for Isolation)
   # Runs on: Main branch pushes (post-merge) OR manual trigger with flag
-  # Target: <60 minutes per shard (serialized with max-parallel: 1)
+  # Target: <30 minutes total (parallel execution with max-parallel: 2)
   # ARCHITECTURE (2026-01-16): Each shard starts its OWN Colima profile on-demand
-  # This prevents dual-VM memory contention that caused 80% of CI failures
+  # OPTIMIZATION (2026-01-17): Parallel execution enabled with memory-optimized shards
+  # - PostgreSQL shard: 4GB VM (no embedding model), 4 workers, ~20-25 min
+  # - Other shard: 8GB VM (embedding model), 1 worker, ~25-30 min
+  # Total memory: 12GB fits in 24GB runner
   # ============================================================
   integration:
     name: "🔗 Tests: Integration (${{ matrix.shard }})"
     runs-on: [self-hosted, raglite]
-    # Timeout increased from 60 to 90 minutes (2026-01-17):
-    # - With max-parallel: 1, shards run serially (not in parallel)
-    # - PostgreSQL shard: reached 71% in 60 min → needs ~85 min total
-    # - Other shard: varies based on test count
-    timeout-minutes: 90
+    # Timeout per shard (both run in parallel):
+    # - PostgreSQL shard: ~20-25 min with 4 workers (no embedding model)
+    # - Other shard: ~25-30 min with 1 worker (embedding model loaded)
+    timeout-minutes: 45
     needs: [validate, docker-setup]
     # Run if integration is triggered AND this shard should run
     if: |
@@ -397,37 +399,44 @@ jobs:
 
     strategy:
       fail-fast: false
-      # CRITICAL: max-parallel=1 prevents memory exhaustion on self-hosted runner
-      # When both shards run simultaneously, each 4GB Colima VM competes for RAM,
-      # causing VM zombie states when containers start inside them.
-      # Serializing ensures only one shard uses resources at a time.
-      max-parallel: 1
+      # OPTIMIZATION (2026-01-17): max-parallel=2 enables parallel shard execution
+      # This is now safe because:
+      # 1. PostgreSQL shard skips embedding model (saves 2GB RAM via CI_SHARD env var)
+      # 2. Each shard has its own dedicated Colima profile
+      # 3. PostgreSQL shard uses only 4GB (no embedding model), leaving room for other shard
+      # Total memory: 4GB (postgresql) + 8GB (other) = 12GB, fits in 24GB runner
+      max-parallel: 2
       matrix:
         shard: [postgresql, other]
         include:
           # Shard 1: PostgreSQL-only tests (forecasting, model_selection, external_data, insights)
-          # These directories don't require the embedding model for most operations
-          # MEMORY FIX (2026-01-16): Reduced workers from 4 to 2 to prevent OOM kills
-          # Root cause: 4GB Colima VM + 4 pytest workers + 2GB embedding model = exit 137 at 11% completion
+          # OPTIMIZATION (2026-01-17): These tests don't need the 2GB embedding model
+          # Setting CI_SHARD=postgresql triggers fixture optimization in _test_detection.py
+          # With no embedding model, we can:
+          # - Reduce Colima memory from 8GB to 4GB
+          # - Increase workers from 2 to 4 (4x parallelization)
+          # Expected time reduction: ~85 min -> ~20-25 min
           - shard: postgresql
             variant: shard-postgresql
             colima_profile: 'ci-postgresql'  # Dedicated Colima profile for true parallel execution
             pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/external_data/ tests/integration/insights/"
             pytest_ignore: ""
-            workers: 2
-            description: "~230 PostgreSQL-focused tests (OOM-safe with 2 workers)"
+            workers: 4
+            colima_memory: 4
+            ci_shard: postgresql
+            description: "~230 PostgreSQL-focused tests (no embedding model, 4x parallelization)"
           # Shard 2: Remaining integration tests (ingestion, retrieval, MCP, etc.)
-          # These tests typically use the embedding model via session fixtures
-          # MEMORY FIX (2026-01-17): Reduced workers from 2 to 1 to prevent OOM kills
-          # Root cause: 6GB Colima VM + 2 pytest workers + 2GB embedding model = exit 137 at 11% completion
-          # Single worker ensures embedding model is loaded once, reducing memory pressure
+          # These tests use the embedding model via session fixtures
+          # Kept at single worker to avoid 4x model load with xdist
           - shard: other
             variant: shard-other
             colima_profile: 'ci-other'  # Dedicated Colima profile for true parallel execution
             pytest_paths: "tests/integration/"
             pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/external_data/ --ignore=tests/integration/insights/ --ignore=tests/integration/test_accuracy_validation.py --ignore=tests/integration/test_unified_validation_e2e.py"
             workers: 1
-            description: "~660 tests (excludes subprocess-heavy accuracy tests, single worker for OOM safety)"
+            colima_memory: 8
+            ci_shard: other
+            description: "~660 tests (embedding model required, single worker for OOM safety)"
 
     steps:
       - name: Check if shard should run
@@ -514,9 +523,10 @@ jobs:
           # CRITICAL FIX: Allow Colima restart to recover from VM zombie states
           # Self-hosted runners can have corrupted VMs after previous job failures
           skip-colima-restart: 'false'
-          # MEMORY FIX (2026-01-17): Use 8GB per shard - 6GB caused worker crashes at 78-95%
-          # Workers were being killed with "node down: Not properly terminated"
-          colima-memory: '8'
+          # OPTIMIZATION (2026-01-17): Use shard-specific memory allocation
+          # - postgresql shard: 4GB (no embedding model needed)
+          # - other shard: 8GB (embedding model + containers)
+          colima-memory: '${{ matrix.colima_memory }}'
 
       - name: Pre-pull Docker Images (On-Demand)
         if: steps.shard-check.outputs.should_run == 'true'
@@ -697,6 +707,8 @@ jobs:
         if: steps.shard-check.outputs.should_run == 'true'
         env:
           PYTHONPATH: ${{ github.workspace }}
+          # CI_SHARD env var enables fixture optimization (skip embedding model for postgresql shard)
+          CI_SHARD: ${{ matrix.ci_shard }}
         run: |
           source ci-venv/bin/activate
           source .ci-env
@@ -704,6 +716,7 @@ jobs:
           echo "Running Integration Tests - Shard: ${{ matrix.shard }}"
           echo "Description: ${{ matrix.description }}"
           echo "Workers: ${{ matrix.workers }}"
+          echo "CI_SHARD: ${CI_SHARD:-not set}"
           echo "Qdrant: localhost:${QDRANT_PORT}"
           echo "PostgreSQL: localhost:${POSTGRES_PORT}"
           echo "========================================="

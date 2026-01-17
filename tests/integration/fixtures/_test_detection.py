@@ -5,6 +5,7 @@ allowing expensive fixtures (embedding model, PDF ingestion) to skip for unit-on
 test runs. This saves 60-150s of startup time.
 """
 
+import os
 import sys
 
 
@@ -13,12 +14,62 @@ def _is_postgresql_only_tests(request) -> bool:
 
     PostgreSQL-only tests (Story 7b-4) don't need Qdrant or embedding model.
 
+    CI OPTIMIZATION (2026-01-17): The PostgreSQL shard in CI runs tests from
+    forecasting/, model_selection/, external_data/, and insights/ directories.
+    These tests don't need the 2GB embedding model, saving:
+    - 60s model load time
+    - 2GB RAM per worker
+    - Enables 4x parallelization (workers: 4 vs workers: 1)
+
+    Detection methods (in priority order):
+    1. CI_SHARD=postgresql environment variable (CI shards)
+    2. Directory path detection for PostgreSQL-focused directories
+    3. @pytest.mark.postgresql_only marker (explicit marking)
+
     Args:
         request: pytest request fixture
 
     Returns:
-        True if all tests have the postgresql_only marker
+        True if tests don't need the embedding model
     """
+    # PRIORITY 1: CI shard environment variable (set by CI workflow)
+    # This is the most reliable check for CI environments
+    ci_shard = os.environ.get("CI_SHARD")
+    if ci_shard == "postgresql":
+        print(
+            "\n⚡ CI SHARD DETECTED: CI_SHARD=postgresql - skipping embedding model",
+            file=sys.stderr,
+        )
+        return True
+
+    # PRIORITY 2: Directory-based detection for PostgreSQL-focused test directories
+    # These directories contain tests that use PostgreSQL but NOT the embedding model
+    postgresql_only_dirs = {"forecasting", "model_selection", "external_data", "insights"}
+
+    if hasattr(request, "session") and hasattr(request.session, "items"):
+        items = request.session.items
+        if not items:
+            return False
+
+        # Check if ALL test paths are in PostgreSQL-only directories
+        all_postgresql_only = True
+        for item in items:
+            path_str = str(item.fspath)
+            # Check if path contains any of the postgresql-only directories
+            if not any(
+                f"/{d}/" in path_str or path_str.endswith(f"/{d}") for d in postgresql_only_dirs
+            ):
+                all_postgresql_only = False
+                break
+
+        if all_postgresql_only:
+            print(
+                f"\n⚡ DIRECTORY DETECTION: All {len(items)} tests in PostgreSQL-only directories",
+                file=sys.stderr,
+            )
+            return True
+
+    # PRIORITY 3: Marker-based detection (explicit @pytest.mark.postgresql_only)
     if hasattr(request, "session") and hasattr(request.session, "items"):
         for item in request.session.items:
             markers = [m.name for m in item.iter_markers()]
