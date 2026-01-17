@@ -514,9 +514,9 @@ jobs:
           # CRITICAL FIX: Allow Colima restart to recover from VM zombie states
           # Self-hosted runners can have corrupted VMs after previous job failures
           skip-colima-restart: 'false'
-          # MEMORY FIX (2026-01-16): Use 6GB per shard for embedding model + containers
-          # Single-profile-per-shard architecture means we have full memory budget
-          colima-memory: '6'
+          # MEMORY FIX (2026-01-17): Use 8GB per shard - 6GB caused worker crashes at 78-95%
+          # Workers were being killed with "node down: Not properly terminated"
+          colima-memory: '8'
 
       - name: Pre-pull Docker Images (On-Demand)
         if: steps.shard-check.outputs.should_run == 'true'
@@ -870,8 +870,8 @@ jobs:
           skip-colima-restart: 'false'
           # Use same profile name as Docker Setup for port consistency
           colima-profile: 'ci-postgresql'
-          # NFR job needs 6GB for embedding model + databases (runs alone, not in parallel)
-          colima-memory: '6'
+          # NFR job needs 8GB for embedding model + databases (matches integration shards)
+          colima-memory: '8'
 
       - name: Start Test Containers
         # DOCKER_HOST inherited from docker-preflight (set in GITHUB_ENV)
