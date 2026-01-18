@@ -28,6 +28,18 @@ name: CI
     branches: [main, develop]
   workflow_dispatch:
     inputs:
+      # === RERUN MODE (Simplified Selective Execution) ===
+      # Use this for quick retries of specific job groups
+      rerun_mode:
+        description: 'What to run (full = everything, or select specific jobs)'
+        type: choice
+        options:
+          - full           # Run everything (default behavior)
+          - integration    # Only integration tests (skip lint/validate)
+          - lint           # Only linting (fastest feedback)
+          - validate       # Only unit tests + type checking
+          - accuracy       # Only accuracy gate (NFR validation)
+        default: 'full'
       run_integration:
         description: 'Run full integration tests (requires containers)'
         type: boolean
@@ -81,8 +93,16 @@ jobs:
     name: "🔒 Lint Gate: Ruff + Black"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 5
-    # Skip if manually triggered with skip_lint=true
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.skip_lint == true) }}
+    # Run when:
+    # - NOT workflow_dispatch (push/PR events always run lint)
+    # - OR rerun_mode is 'full' or 'lint' (and NOT skip_lint)
+    # - Skip when rerun_mode targets other jobs (integration, validate, accuracy)
+    if: |
+      github.event_name != 'workflow_dispatch' ||
+      (
+        (inputs.rerun_mode == 'full' || inputs.rerun_mode == 'lint') &&
+        inputs.skip_lint != true
+      )
 
     steps:
       - name: Checkout code
@@ -139,12 +159,21 @@ jobs:
     runs-on: [self-hosted, raglite]
     timeout-minutes: 25
     needs: lint-gate
-    # Skip if manually triggered with skip_validate=true
-    # Also run if lint-gate was skipped (always() handles skipped dependencies)
+    # Run when:
+    # - NOT workflow_dispatch (push/PR events always run validate)
+    # - OR rerun_mode is 'full' or 'validate' (and NOT skip_validate)
+    # - Skip when rerun_mode targets other jobs (integration, lint, accuracy)
+    # Note: always() handles skipped lint-gate dependency, !failure() fails if lint failed
     if: |
       always() &&
       !failure() &&
-      !(github.event_name == 'workflow_dispatch' && inputs.skip_validate == true)
+      (
+        github.event_name != 'workflow_dispatch' ||
+        (
+          (inputs.rerun_mode == 'full' || inputs.rerun_mode == 'validate') &&
+          inputs.skip_validate != true
+        )
+      )
 
     steps:
       - name: Checkout code
@@ -319,11 +348,16 @@ jobs:
     runs-on: [self-hosted, raglite]
     timeout-minutes: 5
     needs: [lint-gate, validate]
+    # Run when:
+    # - Push to main (always run integration on main)
+    # - OR workflow_dispatch with run_integration=true
+    # - OR workflow_dispatch with rerun_mode='integration' (quick retry mode)
     if: |
       always() && !failure() &&
       (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-        (github.event_name == 'workflow_dispatch' && inputs.run_integration == true && inputs.integration_shard != 'none')
+        (github.event_name == 'workflow_dispatch' && inputs.run_integration == true && inputs.integration_shard != 'none') ||
+        (github.event_name == 'workflow_dispatch' && inputs.rerun_mode == 'integration')
       )
 
     steps:
@@ -384,17 +418,27 @@ jobs:
   integration:
     name: "🔗 Tests: Integration (${{ matrix.shard }})"
     runs-on: [self-hosted, raglite]
+    # Per-job concurrency: Don't cancel integration tests when new commits arrive
+    # This prevents "cancelled" status when pushing fixes while tests are running
+    # Fast jobs (lint, validate) use global concurrency with cancel-in-progress: true
+    concurrency:
+      group: integration-${{ github.ref }}-${{ matrix.shard }}
+      cancel-in-progress: false
     # Timeout per shard (both run in parallel):
     # - PostgreSQL shard: ~20-25 min with 4 workers (no embedding model)
     # - Other shard: ~25-30 min with 1 worker (embedding model loaded)
     timeout-minutes: 45
     needs: [validate, docker-setup]
-    # Run if integration is triggered AND this shard should run
+    # Run when:
+    # - Push to main (always run integration on main)
+    # - OR workflow_dispatch with run_integration=true
+    # - OR workflow_dispatch with rerun_mode='integration' (quick retry mode)
     if: |
       always() && !failure() &&
       (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-        (github.event_name == 'workflow_dispatch' && inputs.run_integration == true && inputs.integration_shard != 'none')
+        (github.event_name == 'workflow_dispatch' && inputs.run_integration == true && inputs.integration_shard != 'none') ||
+        (github.event_name == 'workflow_dispatch' && inputs.rerun_mode == 'integration')
       )
 
     strategy:
@@ -825,14 +869,23 @@ jobs:
   accuracy-gate:
     name: "✅ NFR: Accuracy Validation (NFR6/NFR7)"
     runs-on: [self-hosted, raglite]
+    # Per-job concurrency: Don't cancel accuracy tests when new commits arrive
+    concurrency:
+      group: accuracy-${{ github.ref }}
+      cancel-in-progress: false
     timeout-minutes: 45
     needs: integration-aggregate
-    # Run even if dependencies were skipped (allows NFR-only runs)
+    # Run when:
+    # - Push to main (always run accuracy on main)
+    # - OR workflow_dispatch with run_accuracy_gate=true
+    # - OR workflow_dispatch with rerun_mode='accuracy' (quick retry mode)
+    # Note: always() allows NFR-only runs even if dependencies were skipped
     if: |
       always() && !failure() &&
       (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-        (github.event_name == 'workflow_dispatch' && inputs.run_accuracy_gate == true)
+        (github.event_name == 'workflow_dispatch' && inputs.run_accuracy_gate == true) ||
+        (github.event_name == 'workflow_dispatch' && inputs.rerun_mode == 'accuracy')
       )
 
     env:
