@@ -88,6 +88,7 @@ dev = [
     "ruff>=0.0.270,<1.0.0",
     "isort>=5.12,<6.0",
     "mypy>=1.4,<2.0",
+    "bandit>=1.7,<2.0",  # Security linting
     "types-requests>=2.0,<3.0",
     "types-setuptools>=65.0,<70.0",
     "pre-commit>=3.0,<4.0",
