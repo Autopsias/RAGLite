@@ -409,3 +409,28 @@ runs:
         echo ""
         echo "Colima profiles running:"
         colima list 2>/dev/null || true
+
+        # Run health verification script
+        echo ""
+        echo "Running comprehensive VM health check..."
+        chmod +x scripts/ci/verify-colima-health.sh
+        if ! scripts/ci/verify-colima-health.sh "$COLIMA_PROFILE"; then
+          EXIT_CODE=$?
+          echo "⚠️  Health check failed (exit code: $EXIT_CODE)"
+          case $EXIT_CODE in
+            1)
+              echo "Issue: Zombie state detected"
+              echo "Recommendation: Force VM restart in docker-preflight"
+              ;;
+            2)
+              echo "Issue: High memory usage"
+              echo "Recommendation: Monitor for OOM, consider reducing Colima memory"
+              ;;
+            3)
+              echo "Issue: Network corruption"
+              echo "Recommendation: rm -rf ~/.colima/_lima/_networks && colima restart"
+              ;;
+          esac
+          # Don't fail the workflow - health check is informational
+          echo "Continuing (health check is advisory)"
+        fi

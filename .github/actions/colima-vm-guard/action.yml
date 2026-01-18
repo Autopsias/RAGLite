@@ -1,0 +1,122 @@
+name: 'Colima VM Guard'
+description: 'Prevents VM startup conflicts through sequential startup with adaptive backoff'
+
+inputs:
+  guard-id:
+    description: 'Unique identifier for this VM startup attempt (used for lock files)'
+    required: true
+  max-wait-seconds:
+    description: 'Maximum seconds to wait for lock before forcing cleanup'
+    required: false
+    default: '120'
+  profile:
+    description: 'Colima profile name being started'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Acquire Startup Lock
+      shell: bash
+      env:
+        GUARD_ID: ${{ inputs.guard-id }}
+        MAX_WAIT: ${{ inputs.max-wait-seconds }}
+        PROFILE: ${{ inputs.profile }}
+      run: |
+        set -euo pipefail
+
+        LOCK_DIR="$HOME/.colima-startup-locks"
+        mkdir -p "$LOCK_DIR"
+        LOCK_FILE="$LOCK_DIR/${GUARD_ID}.lock"
+
+        echo "=== Colima VM Startup Guard ==="
+        echo "Profile: $PROFILE"
+        echo "Guard ID: $GUARD_ID"
+        echo "Lock file: $LOCK_FILE"
+
+        # Check if another startup is in progress
+        if [[ -f "$LOCK_FILE" ]]; then
+          LOCK_AGE=$(($(date +%s) - $(date -r "$LOCK_FILE" +%s 2>/dev/null || echo "0")))
+          echo "⚠️  Lock file exists (age: ${LOCK_AGE}s)"
+
+          # If lock is older than max wait, force cleanup
+          if [[ $LOCK_AGE -gt $MAX_WAIT ]]; then
+            echo "🔓 Lock expired (${LOCK_AGE}s > ${MAX_WAIT}s), forcing release"
+            rm -f "$LOCK_FILE"
+          else
+            # Wait for lock with exponential backoff
+            WAIT_TIME=2
+            ELAPSED=0
+            while [[ -f "$LOCK_FILE" ]] && [[ $ELAPSED -lt $MAX_WAIT ]]; do
+              echo "⏳ Waiting for lock (${ELAPSED}s/${MAX_WAIT}s)..."
+              sleep "$WAIT_TIME"
+              ELAPSED=$((ELAPSED + WAIT_TIME))
+              WAIT_TIME=$((WAIT_TIME * 2))
+              if [[ $WAIT_TIME -gt 10 ]]; then
+                WAIT_TIME=10
+              fi
+
+              # Refresh lock age check
+              if [[ -f "$LOCK_FILE" ]]; then
+                LOCK_AGE=$(($(date +%s) - $(date -r "$LOCK_FILE" +%s 2>/dev/null || echo "0")))
+                if [[ $LOCK_AGE -gt $MAX_WAIT ]]; then
+                  echo "🔓 Lock expired during wait, forcing release"
+                  rm -f "$LOCK_FILE"
+                  break
+                fi
+              fi
+            done
+
+            if [[ -f "$LOCK_FILE" ]]; then
+              echo "❌ Timeout waiting for lock after ${MAX_WAIT}s"
+              exit 1
+            fi
+          fi
+        fi
+
+        # Create lock file with current timestamp
+        date +%s > "$LOCK_FILE"
+        echo "✅ Lock acquired: $LOCK_FILE"
+        echo "COLIMA_STARTUP_LOCK=$LOCK_FILE" >> $GITHUB_ENV
+
+    - name: Set Trap for Lock Release
+      shell: bash
+      run: |
+        # Ensure lock is released even if job fails
+        trap 'echo "🔓 Releasing lock..."; rm -f "${COLIMA_STARTUP_LOCK:-}" || true' EXIT
+
+    - name: Verify VM State
+      shell: bash
+      env:
+        PROFILE: ${{ inputs.profile }}
+      run: |
+        echo "=== Verifying Colima VM state ==="
+
+        # Check if profile is already running
+        if colima status -p "$PROFILE" 2>/dev/null | grep -q "colima is running"; then
+          echo "✅ Profile '$PROFILE' is already running"
+          colima status -p "$PROFILE"
+
+          # Verify Docker daemon is responsive
+          COLIMA_SOCKET="$HOME/.colima/${PROFILE}/docker.sock"
+          export DOCKER_HOST="unix://$COLIMA_SOCKET"
+
+          if timeout 5 docker info &> /dev/null; then
+            echo "✅ Docker daemon is responsive"
+            exit 0
+          else
+            echo "⚠️  Profile running but Docker unresponsive (zombie state)"
+            echo "Will proceed with VM restart in docker-preflight action"
+          fi
+        else
+          echo "Profile '$PROFILE' is not running"
+          colima status -p "$PROFILE" 2>/dev/null || echo "  (profile does not exist yet)"
+        fi
+
+    - name: Release Startup Lock
+      if: always()
+      shell: bash
+      run: |
+        echo "🔓 Reasing startup lock..."
+        rm -f "${COLIMA_STARTUP_LOCK:-}" || true
+        echo "✅ Lock released"

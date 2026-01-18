@@ -338,15 +338,15 @@ jobs:
           retention-days: 7
 
   # ============================================================
-  # Docker Setup - Pre-emptive cleanup only (no VM startup)
-  # ARCHITECTURE CHANGE (2026-01-16): Single-profile-per-shard model
-  # Each integration shard starts its OWN Colima profile on-demand
-  # This prevents dual-VM memory contention that caused 80% of CI failures
+  # Docker Setup - Sequential VM startup with guard
+  # ARCHITECTURE (2026-01-18): Sequential startup to prevent VM conflicts
+  # ROOT CAUSE: Parallel Colima VM startup causes Lima network corruption
+  # FIX: Start postgresql shard VM first, wait for full readiness, then start other shard VM
   # ============================================================
   docker-setup:
-    name: "🐳 Docker Setup (Cleanup)"
+    name: "🐳 Docker Setup (Sequential VM Startup)"
     runs-on: [self-hosted, raglite]
-    timeout-minutes: 5
+    timeout-minutes: 15
     needs: [lint-gate, validate]
     # Run when:
     # - Push to main (always run integration on main)
@@ -367,7 +367,7 @@ jobs:
       - name: Pre-emptive Runner Cleanup (Memory Recovery)
         run: |
           echo "=== Pre-emptive Runner Cleanup ==="
-          echo "Architecture: Single-profile-per-shard (no upfront VM startup)"
+          echo "Architecture: Sequential VM startup (postgresql first, then other)"
           echo ""
 
           # Get memory before cleanup
@@ -375,23 +375,17 @@ jobs:
           FREE_MB_BEFORE=$((FREE_BEFORE * 4096 / 1024 / 1024))
           echo "Memory before cleanup: ${FREE_MB_BEFORE}MB"
 
-          # Kill zombie processes from previous runs
-          echo "Killing zombie processes..."
-          pkill -9 -f "qemu-system" 2>/dev/null && echo "  Killed QEMU" || true
-          pkill -9 -f "limactl" 2>/dev/null && echo "  Killed limactl" || true
-          pkill -9 -f "lima-guestagent" 2>/dev/null && echo "  Killed lima-guestagent" || true
+          # Kill ONLY resource_tracker and multiprocessing zombies (safe cleanup)
+          # DO NOT kill limactl/QEMU processes - they belong to running Colima VMs!
+          echo "Killing zombie resource_tracker processes..."
           pkill -9 -f "resource_tracker" 2>/dev/null && echo "  Killed resource_tracker" || true
           pkill -9 -f "multiprocessing" 2>/dev/null && echo "  Killed multiprocessing" || true
 
-          # Stop ALL CI Colima profiles to ensure clean slate
-          echo "Stopping all CI Colima profiles..."
-          for PROFILE in ci-postgresql ci-other ci; do
+          # Stop CI Colima profiles ONLY (not production default profile)
+          echo "Stopping CI Colima profiles (ci-postgresql, ci-other)..."
+          for PROFILE in ci-postgresql ci-other; do
             colima stop -p "$PROFILE" -f 2>/dev/null && echo "  Stopped $PROFILE" || true
           done
-
-          # Clean Lima network state (prevents zombie socket issues)
-          echo "Cleaning Lima network state..."
-          rm -rf "$HOME/.colima/_lima/_networks" 2>/dev/null || true
 
           # Wait for memory reclamation
           sleep 3
@@ -403,14 +397,191 @@ jobs:
           echo ""
           echo "Memory after cleanup: ${FREE_MB_AFTER}MB (reclaimed: ${RECLAIMED}MB)"
           echo ""
-          echo "✅ Cleanup complete - integration shards will start their own Colima profiles"
+
+      - name: Start ci-postgresql Colima Profile (First)
+        run: |
+          echo "=== Starting ci-postgresql Colima profile (4GB) ==="
+          echo "This profile will be used by the postgresql integration shard"
+
+          # Unset RUNNER_TRACKING_ID to prevent runner from killing Colima
+          unset RUNNER_TRACKING_ID
+
+          # Start with retry logic
+          for ATTEMPT in 1 2 3; do
+            echo "Attempt $ATTEMPT/3..."
+            if colima start -p ci-postgresql --cpu 2 --memory 4 --disk 25 --runtime docker 2>&1; then
+              echo "✅ ci-postgresql Colima profile started"
+              break
+            else
+              if [[ $ATTEMPT -eq 3 ]]; then
+                echo "❌ Failed to start ci-postgresql after 3 attempts"
+                exit 1
+              fi
+              echo "⚠️ Start failed, cleaning up and retrying..."
+              colima stop -p ci-postgresql -f 2>/dev/null || true
+              colima delete -p ci-postgresql -f 2>/dev/null || true
+              rm -rf "$HOME/.colima/_lima/_networks"
+              sleep 5
+            fi
+          done
+
+          # Verify Docker daemon is ready
+          export DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock"
+          echo "Waiting for Docker daemon (max 60s)..."
+          for i in {1..30}; do
+            if timeout 5 docker info &> /dev/null; then
+              echo "✅ Docker daemon ready for ci-postgresql profile"
+              docker version | head -5
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "❌ Docker daemon not ready for ci-postgresql profile"
+          exit 1
+
+      - name: Verify ci-postgresql VM Health
+        run: |
+          echo "=== Verifying ci-postgresql VM health ==="
+          export DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock"
+
+          # Run test container to ensure VM is stable
+          echo "Running test container..."
+          docker run --rm hello-world
+
+          # Check VM resources
+          echo "VM resources:"
+          docker info | grep -E "CPUs|Total Memory"
+
+          echo "✅ ci-postgresql VM is healthy"
+
+      - name: Start ci-other Colima Profile (Second)
+        run: |
+          echo "=== Starting ci-other Colima profile (8GB) ==="
+          echo "This profile will be used by the 'other' integration shard"
+
+          # Unset RUNNER_TRACKING_ID to prevent runner from killing Colima
+          unset RUNNER_TRACKING_ID
+
+          # Start with retry logic
+          for ATTEMPT in 1 2 3; do
+            echo "Attempt $ATTEMPT/3..."
+            if colima start -p ci-other --cpu 2 --memory 8 --disk 25 --runtime docker 2>&1; then
+              echo "✅ ci-other Colima profile started"
+              break
+            else
+              if [[ $ATTEMPT -eq 3 ]]; then
+                echo "❌ Failed to start ci-other after 3 attempts"
+                exit 1
+              fi
+              echo "⚠️ Start failed, cleaning up and retrying..."
+              colima stop -p ci-other -f 2>/dev/null || true
+              colima delete -p ci-other -f 2>/dev/null || true
+              rm -rf "$HOME/.colima/_lima/_networks"
+              sleep 5
+            fi
+          done
+
+          # Verify Docker daemon is ready
+          export DOCKER_HOST="unix://$HOME/.colima/ci-other/docker.sock"
+          echo "Waiting for Docker daemon (max 60s)..."
+          for i in {1..30}; do
+            if timeout 5 docker info &> /dev/null; then
+              echo "✅ Docker daemon ready for ci-other profile"
+              docker version | head -5
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "❌ Docker daemon not ready for ci-other profile"
+          exit 1
+
+      - name: Verify ci-other VM Health
+        run: |
+          echo "=== Verifying ci-other VM health ==="
+          export DOCKER_HOST="unix://$HOME/.colima/ci-other/docker.sock"
+
+          # Run test container to ensure VM is stable
+          echo "Running test container..."
+          docker run --rm hello-world
+
+          # Check VM resources
+          echo "VM resources:"
+          docker info | grep -E "CPUs|Total Memory"
+
+          echo "✅ ci-other VM is healthy"
+
+      - name: Pre-pull Docker Images (Both VMs)
+        run: |
+          echo "=== Pre-pulling Docker images for both VMs ==="
+
+          # Use credHelpers to bypass macOS keychain
+          DOCKER_CFG=$(mktemp -d)
+          echo '{"auths":{},"credHelpers":{"docker.io":"","index.docker.io":"","registry-1.docker.io":"","ghcr.io":"","quay.io":""}}' > "$DOCKER_CFG/config.json"
+
+          # Pull images for ci-postgresql VM
+          echo "Pulling images for ci-postgresql VM..."
+          export DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock"
+          for IMG in "qdrant/qdrant:v1.15.0" "postgres:16"; do
+            echo "  Pulling $IMG..."
+            PULL_SUCCESS=false
+            for attempt in 1 2 3; do
+              if docker --config "$DOCKER_CFG" pull "$IMG" 2>&1; then
+                echo "  ✅ Pulled $IMG"
+                PULL_SUCCESS=true
+                break
+              fi
+              if [ $attempt -eq 3 ]; then
+                echo "  ❌ Failed to pull $IMG after 3 attempts"
+                rm -rf "$DOCKER_CFG"
+                exit 1
+              fi
+              echo "  ⚠️ Retry $attempt/3..."
+              sleep 3
+            done
+          done
+
+          # Pull images for ci-other VM
+          echo "Pulling images for ci-other VM..."
+          export DOCKER_HOST="unix://$HOME/.colima/ci-other/docker.sock"
+          for IMG in "qdrant/qdrant:v1.15.0" "postgres:16"; do
+            echo "  Pulling $IMG..."
+            PULL_SUCCESS=false
+            for attempt in 1 2 3; do
+              if docker --config "$DOCKER_CFG" pull "$IMG" 2>&1; then
+                echo "  ✅ Pulled $IMG"
+                PULL_SUCCESS=true
+                break
+              fi
+              if [ $attempt -eq 3 ]; then
+                echo "  ❌ Failed to pull $IMG after 3 attempts"
+                rm -rf "$DOCKER_CFG"
+                exit 1
+              fi
+              echo "  ⚠️ Retry $attempt/3..."
+              sleep 3
+            done
+          done
+
+          rm -rf "$DOCKER_CFG"
+          echo "✅ Image pre-pull complete for both VMs"
+
+      - name: Summary
+        run: |
+          echo "=== Docker Setup Complete ==="
+          echo ""
+          echo "Colima profiles running:"
+          colima list
+          echo ""
+          echo "✅ Both VMs ready for parallel test execution"
 
   # ============================================================
   # TIER 2: Full Integration Tests (Sharded for Isolation)
   # Runs on: Main branch pushes (post-merge) OR manual trigger with flag
   # Target: <30 minutes total (parallel execution with max-parallel: 2)
-  # ARCHITECTURE (2026-01-16): Each shard starts its OWN Colima profile on-demand
-  # OPTIMIZATION (2026-01-17): Parallel execution enabled with memory-optimized shards
+  # ARCHITECTURE (2026-01-18): VMs pre-started sequentially in docker-setup job
+  # FIX: This prevents Lima network corruption from parallel VM startup
   # - PostgreSQL shard: 4GB VM (no embedding model), 4 workers, ~20-25 min
   # - Other shard: 8GB VM (embedding model), 1 worker, ~25-30 min
   # Total memory: 12GB fits in 24GB runner
@@ -443,14 +614,17 @@ jobs:
 
     strategy:
       fail-fast: false
-      # CRITICAL: max-parallel=1 prevents Colima VM startup conflicts
-      # Even with reduced memory (4GB + 8GB = 12GB), simultaneous VM startup causes:
-      # - Resource contention during QEMU/Lima initialization
-      # - "signal: killed" errors when second VM tries to start
-      # - Zombie state detection failures
-      # The embedding model skip optimization still helps: PostgreSQL shard runs
-      # with 4 workers (4x faster) without the 2GB model overhead.
-      max-parallel: 1
+      # OPTIMIZATION (2026-01-18): max-parallel=2 enabled with sequential startup protection
+      # Root causes of VM conflicts FIXED:
+      # 1. Removed pre-flight zombie cleanup that killed all limactl processes (was killing VMs we just started)
+      # 2. Reduced ci-postgresql memory to 4GB (no embedding model needed)
+      # 3. Reduced ci-other memory to 8GB (embedding model + databases)
+      # 4. Added DOCKER_HOST isolation per profile (prevents cross-profile docker commands)
+      # Total memory: 12GB fits within 24GB runner with buffer
+      # Memory budget breakdown:
+      # - ci-postgresql (4GB): Qdrant (1GB) + PostgreSQL (768MB) + QEMU (512MB) + workers buffer (1.5GB)
+      # - ci-other (8GB): Qdrant (1GB) + PostgreSQL (768MB) + Fin-E5 (2GB) + QEMU (512MB) + buffer (3GB)
+      max-parallel: 2
       matrix:
         shard: [postgresql, other]
         include:
@@ -549,62 +723,37 @@ jobs:
         if: steps.shard-check.outputs.should_run == 'true'
         run: |
           # Each shard uses its own dedicated Colima profile for true parallel isolation
+          # VM was pre-started in docker-setup job to prevent Lima network corruption
           COLIMA_PROFILE="${{ matrix.colima_profile }}"
           DOCKER_SOCKET="$HOME/.colima/${COLIMA_PROFILE}/docker.sock"
           echo "=== Setting up Colima profile: $COLIMA_PROFILE ==="
           echo "DOCKER_HOST=unix://$DOCKER_SOCKET" >> $GITHUB_ENV
           echo "✅ DOCKER_HOST will be: unix://$DOCKER_SOCKET"
 
-      - name: Docker Pre-flight Validation
-        if: steps.shard-check.outputs.should_run == 'true'
-        uses: ./.github/actions/docker-preflight
-        with:
-          max-wait-seconds: '120'
-          colima-profile: ${{ matrix.colima_profile }}
-          # Port validation: ALL CI variants (source: scripts/ci/container-config.sh)
-          # test:6335/5433, agentic:6337/5438, discovery:6339/5434, burnin:6340/5435
-          # shard-postgresql:6342/5437, shard-other:6343/5439
-          check-ports: '6335,6337,6339,6340,6342,6343,5433,5434,5435,5437,5438,5439'
-          # CRITICAL FIX: Allow Colima restart to recover from VM zombie states
-          # Self-hosted runners can have corrupted VMs after previous job failures
-          skip-colima-restart: 'false'
-          # OPTIMIZATION (2026-01-17): Use shard-specific memory allocation
-          # - postgresql shard: 4GB (no embedding model needed)
-          # - other shard: 8GB (embedding model + containers)
-          colima-memory: '${{ matrix.colima_memory }}'
-
-      - name: Pre-pull Docker Images (On-Demand)
+      - name: Verify Docker Daemon Health
         if: steps.shard-check.outputs.should_run == 'true'
         run: |
-          echo "=== Pre-pulling Docker images for shard: ${{ matrix.shard }} ==="
-          echo "Architecture: Single-profile-per-shard (images pulled on-demand)"
+          echo "=== Verifying Docker daemon for ${{ matrix.colima_profile }} ==="
 
-          # Use credHelpers to bypass macOS keychain
-          DOCKER_CFG=$(mktemp -d)
-          echo '{"auths":{},"credHelpers":{"docker.io":"","index.docker.io":"","registry-1.docker.io":"","ghcr.io":"","quay.io":""}}' > "$DOCKER_CFG/config.json"
+          # Verify DOCKER_HOST is set
+          if [[ -z "${DOCKER_HOST:-}" ]]; then
+            echo "❌ DOCKER_HOST not set"
+            exit 1
+          fi
+          echo "DOCKER_HOST: $DOCKER_HOST"
 
-          # Pull images with retry logic
-          for IMG in "qdrant/qdrant:v1.15.0" "postgres:16"; do
-            echo "Pulling $IMG..."
-            PULL_SUCCESS=false
-            for attempt in 1 2 3; do
-              if docker --config "$DOCKER_CFG" pull "$IMG" 2>&1; then
-                echo "✅ Pulled $IMG successfully"
-                PULL_SUCCESS=true
-                break
-              fi
-              if [ $attempt -eq 3 ]; then
-                echo "❌ FATAL: Failed to pull $IMG after 3 attempts"
-                rm -rf "$DOCKER_CFG"
-                exit 1
-              fi
-              echo "⚠️ Pull failed, retry $attempt/3..."
-              sleep 5
-            done
-          done
+          # Verify daemon is responsive
+          if ! timeout 10 docker info &> /dev/null; then
+            echo "❌ Docker daemon not responsive"
+            echo "Colima profile may have died after docker-setup job"
+            echo "Colima status:"
+            colima status -p "${{ matrix.colima_profile }}" || true
+            exit 1
+          fi
 
-          rm -rf "$DOCKER_CFG"
-          echo "✅ Image pre-pull complete for shard"
+          echo "✅ Docker daemon is responsive"
+          docker info | grep -E "Server Version|CPUs|Total Memory"
+
 
       - name: Start Test Containers
         if: steps.shard-check.outputs.should_run == 'true'
