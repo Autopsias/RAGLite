@@ -104,26 +104,21 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Setup Python + UV
+      - name: Install Dependencies
         run: |
-          uv venv ci-venv --python 3.11 --quiet
-          source ci-venv/bin/activate
-          uv pip install -e ".[dev]" --quiet
+          uv sync --all-groups
 
       - name: Type Check (mypy)
         run: |
-          source ci-venv/bin/activate
-          mypy raglite/ --ignore-missing-imports --no-error-summary
+          uv run mypy raglite/ --ignore-missing-imports --no-error-summary
 
       - name: Security Scan (bandit)
         run: |
-          source ci-venv/bin/activate
-          bandit -r raglite/ -ll -q -f txt --skip B608,B310
+          uv run bandit -r raglite/ -ll -q -f txt --skip B608,B310
 
       - name: Validate Pytest Collection
         run: |
-          source ci-venv/bin/activate
-          pytest --collect-only -q tests/ 2>&1 | tee collection.log
+          uv run pytest --collect-only -q tests/ 2>&1 | tee collection.log
           if grep -E "^(ERROR|E   |ERRORS|ModuleNotFoundError|ImportError:)" collection.log; then
             echo "FAIL: Test collection errors detected!"
             exit 1
@@ -134,8 +129,7 @@ jobs:
           LIGHTWEIGHT_TESTS: "true"
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          source ci-venv/bin/activate
-          pytest tests/ \
+          uv run pytest tests/ \
             --ignore=tests/health/ \
             -m "not slow and not health_check and not integration" \
             --tb=short \
@@ -249,22 +243,19 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Setup Python + UV
+      - name: Install Dependencies
         if: steps.shard-check.outputs.should_run == 'true'
         run: |
-          uv venv ci-venv --python 3.11 --quiet
-          source ci-venv/bin/activate
-          uv pip install -e ".[dev]" --quiet
+          uv sync --all-groups
 
       - name: Verify Service Health
         if: steps.shard-check.outputs.should_run == 'true'
         run: |
-          source ci-venv/bin/activate
           echo "=== Checking Qdrant connectivity ==="
-          python -c "from qdrant_client import QdrantClient; c = QdrantClient(host='localhost', port=6335); c.get_collections(); print('Qdrant is healthy')"
+          uv run python -c "from qdrant_client import QdrantClient; c = QdrantClient(host='localhost', port=6335); c.get_collections(); print('Qdrant is healthy')"
 
           echo "=== Checking PostgreSQL connectivity ==="
-          python -c "import psycopg2; conn = psycopg2.connect(host='localhost', port=5433, database='raglite_ci', user='raglite_ci', password='raglite_ci'); cur = conn.cursor(); cur.execute('SELECT 1'); print('PostgreSQL is healthy'); conn.close()"
+          uv run python -c "import psycopg2; conn = psycopg2.connect(host='localhost', port=5433, database='raglite_ci', user='raglite_ci', password='raglite_ci'); cur = conn.cursor(); cur.execute('SELECT 1'); print('PostgreSQL is healthy'); conn.close()"
 
       - name: Run Integration Tests
         if: steps.shard-check.outputs.should_run == 'true'
@@ -276,7 +267,6 @@ jobs:
           PYTEST_IGNORE: ${{ matrix.pytest_ignore }}
           MATRIX_SHARD: ${{ matrix.shard }}
         run: |
-          source ci-venv/bin/activate
           echo "========================================="
           echo "Running Integration Tests - Shard: $MATRIX_SHARD"
           echo "Description: $DESCRIPTION"
@@ -284,7 +274,7 @@ jobs:
           echo "CI_SHARD: ${CI_SHARD}"
           echo "========================================="
 
-          pytest $PYTEST_PATHS \
+          uv run pytest $PYTEST_PATHS \
             $PYTEST_IGNORE \
             -m "not health_check" \
             --tb=short \
