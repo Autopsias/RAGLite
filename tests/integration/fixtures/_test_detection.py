@@ -34,10 +34,11 @@ def _is_postgresql_only_tests(request) -> bool:
     """
     # PRIORITY 1: CI shard environment variable (set by CI workflow)
     # This is the most reliable check for CI environments
+    # Skip embedding for shards that don't need it: postgresql, mcp
     ci_shard = os.environ.get("CI_SHARD")
-    if ci_shard == "postgresql":
+    if ci_shard in ("postgresql", "mcp"):
         print(
-            "\n⚡ CI SHARD DETECTED: CI_SHARD=postgresql - skipping embedding model",
+            f"\n⚡ CI SHARD DETECTED: CI_SHARD={ci_shard} - skipping embedding model",
             file=sys.stderr,
         )
         return True

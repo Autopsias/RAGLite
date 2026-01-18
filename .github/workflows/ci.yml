@@ -64,7 +64,8 @@ name: CI
         options:
           - all
           - postgresql
-          - other
+          - retrieval
+          - mcp
           - none
         default: 'all'
 
@@ -341,10 +342,11 @@ jobs:
   # Docker Setup - Sequential VM startup with guard
   # ARCHITECTURE (2026-01-18): Sequential startup to prevent VM conflicts
   # ROOT CAUSE: Parallel Colima VM startup causes Lima network corruption
-  # FIX: Start postgresql shard VM first, wait for full readiness, then start other shard VM
+  # FIX: Start VMs sequentially, wait for full readiness before starting next
+  # Phase 2.2: 3 Colima profiles (ci-postgresql, ci-retrieval, ci-mcp)
   # ============================================================
   docker-setup:
-    name: "🐳 Docker Setup (Sequential VM Startup)"
+    name: "🐳 Docker Setup (Sequential 3-VM Startup)"
     runs-on: [self-hosted, raglite]
     timeout-minutes: 15
     needs: [lint-gate, validate]
@@ -382,8 +384,8 @@ jobs:
           pkill -9 -f "multiprocessing" 2>/dev/null && echo "  Killed multiprocessing" || true
 
           # Stop CI Colima profiles ONLY (not production default profile)
-          echo "Stopping CI Colima profiles (ci-postgresql, ci-other)..."
-          for PROFILE in ci-postgresql ci-other; do
+          echo "Stopping CI Colima profiles (ci-postgresql, ci-retrieval, ci-mcp)..."
+          for PROFILE in ci-postgresql ci-retrieval ci-mcp; do
             colima stop -p "$PROFILE" -f 2>/dev/null && echo "  Stopped $PROFILE" || true
           done
 
@@ -455,10 +457,10 @@ jobs:
 
           echo "✅ ci-postgresql VM is healthy"
 
-      - name: Start ci-other Colima Profile (Second)
+      - name: Start ci-retrieval Colima Profile (Second)
         run: |
-          echo "=== Starting ci-other Colima profile (8GB) ==="
-          echo "This profile will be used by the 'other' integration shard"
+          echo "=== Starting ci-retrieval Colima profile (8GB) ==="
+          echo "This profile will be used by the 'retrieval' integration shard (needs embedding model)"
 
           # Unset RUNNER_TRACKING_ID to prevent runner from killing Colima
           unset RUNNER_TRACKING_ID
@@ -466,41 +468,41 @@ jobs:
           # Start with retry logic
           for ATTEMPT in 1 2 3; do
             echo "Attempt $ATTEMPT/3..."
-            if colima start -p ci-other --cpu 2 --memory 8 --disk 25 --runtime docker 2>&1; then
-              echo "✅ ci-other Colima profile started"
+            if colima start -p ci-retrieval --cpu 2 --memory 8 --disk 25 --runtime docker 2>&1; then
+              echo "✅ ci-retrieval Colima profile started"
               break
             else
               if [[ $ATTEMPT -eq 3 ]]; then
-                echo "❌ Failed to start ci-other after 3 attempts"
+                echo "❌ Failed to start ci-retrieval after 3 attempts"
                 exit 1
               fi
               echo "⚠️ Start failed, cleaning up and retrying..."
-              colima stop -p ci-other -f 2>/dev/null || true
-              colima delete -p ci-other -f 2>/dev/null || true
+              colima stop -p ci-retrieval -f 2>/dev/null || true
+              colima delete -p ci-retrieval -f 2>/dev/null || true
               rm -rf "$HOME/.colima/_lima/_networks"
               sleep 5
             fi
           done
 
           # Verify Docker daemon is ready
-          export DOCKER_HOST="unix://$HOME/.colima/ci-other/docker.sock"
+          export DOCKER_HOST="unix://$HOME/.colima/ci-retrieval/docker.sock"
           echo "Waiting for Docker daemon (max 60s)..."
           for i in {1..30}; do
             if timeout 5 docker info &> /dev/null; then
-              echo "✅ Docker daemon ready for ci-other profile"
+              echo "✅ Docker daemon ready for ci-retrieval profile"
               docker version | head -5
               exit 0
             fi
             sleep 2
           done
 
-          echo "❌ Docker daemon not ready for ci-other profile"
+          echo "❌ Docker daemon not ready for ci-retrieval profile"
           exit 1
 
-      - name: Verify ci-other VM Health
+      - name: Verify ci-retrieval VM Health
         run: |
-          echo "=== Verifying ci-other VM health ==="
-          export DOCKER_HOST="unix://$HOME/.colima/ci-other/docker.sock"
+          echo "=== Verifying ci-retrieval VM health ==="
+          export DOCKER_HOST="unix://$HOME/.colima/ci-retrieval/docker.sock"
 
           # Run test container to ensure VM is stable
           echo "Running test container..."
@@ -510,62 +512,99 @@ jobs:
           echo "VM resources:"
           docker info | grep -E "CPUs|Total Memory"
 
-          echo "✅ ci-other VM is healthy"
+          echo "✅ ci-retrieval VM is healthy"
 
-      - name: Pre-pull Docker Images (Both VMs)
+      - name: Start ci-mcp Colima Profile (Third)
         run: |
-          echo "=== Pre-pulling Docker images for both VMs ==="
+          echo "=== Starting ci-mcp Colima profile (4GB) ==="
+          echo "This profile will be used by the 'mcp' integration shard (no embedding model)"
+
+          # Unset RUNNER_TRACKING_ID to prevent runner from killing Colima
+          unset RUNNER_TRACKING_ID
+
+          # Start with retry logic
+          for ATTEMPT in 1 2 3; do
+            echo "Attempt $ATTEMPT/3..."
+            if colima start -p ci-mcp --cpu 2 --memory 4 --disk 25 --runtime docker 2>&1; then
+              echo "✅ ci-mcp Colima profile started"
+              break
+            else
+              if [[ $ATTEMPT -eq 3 ]]; then
+                echo "❌ Failed to start ci-mcp after 3 attempts"
+                exit 1
+              fi
+              echo "⚠️ Start failed, cleaning up and retrying..."
+              colima stop -p ci-mcp -f 2>/dev/null || true
+              colima delete -p ci-mcp -f 2>/dev/null || true
+              rm -rf "$HOME/.colima/_lima/_networks"
+              sleep 5
+            fi
+          done
+
+          # Verify Docker daemon is ready
+          export DOCKER_HOST="unix://$HOME/.colima/ci-mcp/docker.sock"
+          echo "Waiting for Docker daemon (max 60s)..."
+          for i in {1..30}; do
+            if timeout 5 docker info &> /dev/null; then
+              echo "✅ Docker daemon ready for ci-mcp profile"
+              docker version | head -5
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "❌ Docker daemon not ready for ci-mcp profile"
+          exit 1
+
+      - name: Verify ci-mcp VM Health
+        run: |
+          echo "=== Verifying ci-mcp VM health ==="
+          export DOCKER_HOST="unix://$HOME/.colima/ci-mcp/docker.sock"
+
+          # Run test container to ensure VM is stable
+          echo "Running test container..."
+          docker run --rm hello-world
+
+          # Check VM resources
+          echo "VM resources:"
+          docker info | grep -E "CPUs|Total Memory"
+
+          echo "✅ ci-mcp VM is healthy"
+
+      - name: Pre-pull Docker Images (All 3 VMs)
+        run: |
+          echo "=== Pre-pulling Docker images for all 3 VMs ==="
 
           # Use credHelpers to bypass macOS keychain
           DOCKER_CFG=$(mktemp -d)
           echo '{"auths":{},"credHelpers":{"docker.io":"","index.docker.io":"","registry-1.docker.io":"","ghcr.io":"","quay.io":""}}' > "$DOCKER_CFG/config.json"
 
-          # Pull images for ci-postgresql VM
-          echo "Pulling images for ci-postgresql VM..."
-          export DOCKER_HOST="unix://$HOME/.colima/ci-postgresql/docker.sock"
-          for IMG in "qdrant/qdrant:v1.15.0" "postgres:16"; do
-            echo "  Pulling $IMG..."
-            PULL_SUCCESS=false
-            for attempt in 1 2 3; do
-              if docker --config "$DOCKER_CFG" pull "$IMG" 2>&1; then
-                echo "  ✅ Pulled $IMG"
-                PULL_SUCCESS=true
-                break
-              fi
-              if [ $attempt -eq 3 ]; then
-                echo "  ❌ Failed to pull $IMG after 3 attempts"
-                rm -rf "$DOCKER_CFG"
-                exit 1
-              fi
-              echo "  ⚠️ Retry $attempt/3..."
-              sleep 3
-            done
-          done
-
-          # Pull images for ci-other VM
-          echo "Pulling images for ci-other VM..."
-          export DOCKER_HOST="unix://$HOME/.colima/ci-other/docker.sock"
-          for IMG in "qdrant/qdrant:v1.15.0" "postgres:16"; do
-            echo "  Pulling $IMG..."
-            PULL_SUCCESS=false
-            for attempt in 1 2 3; do
-              if docker --config "$DOCKER_CFG" pull "$IMG" 2>&1; then
-                echo "  ✅ Pulled $IMG"
-                PULL_SUCCESS=true
-                break
-              fi
-              if [ $attempt -eq 3 ]; then
-                echo "  ❌ Failed to pull $IMG after 3 attempts"
-                rm -rf "$DOCKER_CFG"
-                exit 1
-              fi
-              echo "  ⚠️ Retry $attempt/3..."
-              sleep 3
+          # Pull images for all 3 VMs
+          for PROFILE in ci-postgresql ci-retrieval ci-mcp; do
+            echo "Pulling images for $PROFILE VM..."
+            export DOCKER_HOST="unix://$HOME/.colima/$PROFILE/docker.sock"
+            for IMG in "qdrant/qdrant:v1.15.0" "postgres:16"; do
+              echo "  Pulling $IMG..."
+              PULL_SUCCESS=false
+              for attempt in 1 2 3; do
+                if docker --config "$DOCKER_CFG" pull "$IMG" 2>&1; then
+                  echo "  ✅ Pulled $IMG"
+                  PULL_SUCCESS=true
+                  break
+                fi
+                if [ $attempt -eq 3 ]; then
+                  echo "  ❌ Failed to pull $IMG after 3 attempts"
+                  rm -rf "$DOCKER_CFG"
+                  exit 1
+                fi
+                echo "  ⚠️ Retry $attempt/3..."
+                sleep 3
+              done
             done
           done
 
           rm -rf "$DOCKER_CFG"
-          echo "✅ Image pre-pull complete for both VMs"
+          echo "✅ Image pre-pull complete for all 3 VMs"
 
       - name: Summary
         run: |
@@ -574,17 +613,22 @@ jobs:
           echo "Colima profiles running:"
           colima list
           echo ""
-          echo "✅ Both VMs ready for parallel test execution"
+          echo "✅ All 3 VMs ready for sequential test execution"
+          echo "   - ci-postgresql: 4GB (no embedding)"
+          echo "   - ci-retrieval: 8GB (embedding model)"
+          echo "   - ci-mcp: 4GB (no embedding)"
 
   # ============================================================
-  # TIER 2: Full Integration Tests (Sharded for Isolation)
+  # TIER 2: Full Integration Tests (Sharded by Embedding Dependency)
   # Runs on: Main branch pushes (post-merge) OR manual trigger with flag
-  # Target: <30 minutes total (parallel execution with max-parallel: 2)
-  # ARCHITECTURE (2026-01-18): VMs pre-started sequentially in docker-setup job
-  # FIX: This prevents Lima network corruption from parallel VM startup
-  # - PostgreSQL shard: 4GB VM (no embedding model), 4 workers, ~20-25 min
-  # - Other shard: 8GB VM (embedding model), 1 worker, ~25-30 min
-  # Total memory: 12GB fits in 24GB runner
+  # Target: <60 minutes total (sequential execution with max-parallel: 1)
+  # ARCHITECTURE (2026-01-18): Phase 2.2 - 3 shards split by embedding dependency
+  # VMs pre-started sequentially in docker-setup job to prevent Lima network corruption
+  # - PostgreSQL shard: 4GB VM (no embedding), 4 workers, ~20-25 min
+  # - Retrieval shard: 8GB VM (embedding model), 1 worker, ~15-20 min
+  # - MCP shard: 4GB VM (no embedding), 4 workers, ~10-15 min
+  # Total memory: 16GB fits in 24GB runner with 8GB buffer
+  # Phase 3 will migrate to GitHub-hosted Linux runners for true parallelization
   # ============================================================
   integration:
     name: "🔗 Tests: Integration (${{ matrix.shard }})"
@@ -614,48 +658,58 @@ jobs:
 
     strategy:
       fail-fast: false
-      # OPTIMIZATION (2026-01-18): max-parallel=2 enabled with sequential startup protection
-      # Root causes of VM conflicts FIXED:
-      # 1. Removed pre-flight zombie cleanup that killed all limactl processes (was killing VMs we just started)
-      # 2. Reduced ci-postgresql memory to 4GB (no embedding model needed)
-      # 3. Reduced ci-other memory to 8GB (embedding model + databases)
-      # 4. Added DOCKER_HOST isolation per profile (prevents cross-profile docker commands)
-      # Total memory: 12GB fits within 24GB runner with buffer
-      # Memory budget breakdown:
+      # OPTIMIZATION (2026-01-18): Phase 2.2 - 3 shards split by embedding dependency
+      # Memory budget (24GB runner):
       # - ci-postgresql (4GB): Qdrant (1GB) + PostgreSQL (768MB) + QEMU (512MB) + workers buffer (1.5GB)
-      # - ci-other (8GB): Qdrant (1GB) + PostgreSQL (768MB) + Fin-E5 (2GB) + QEMU (512MB) + buffer (3GB)
-      max-parallel: 2
+      # - ci-retrieval (8GB): Qdrant (1GB) + PostgreSQL (768MB) + Fin-E5 (2GB) + QEMU (512MB) + buffer (3GB)
+      # - ci-mcp (4GB): Qdrant (1GB) + PostgreSQL (768MB) + QEMU (512MB) + workers buffer (1.5GB)
+      # Total: 16GB fits within 24GB runner with 8GB buffer
+      # NOTE: max-parallel kept at 1 due to Colima VM startup conflicts on macOS
+      # Phase 3 (GitHub-hosted Linux runners) will enable true parallelization
+      max-parallel: 1
       matrix:
-        shard: [postgresql, other]
+        shard: [postgresql, retrieval, mcp]
         include:
           # Shard 1: PostgreSQL-only tests (forecasting, model_selection, external_data, insights)
-          # OPTIMIZATION (2026-01-17): These tests don't need the 2GB embedding model
+          # OPTIMIZATION: These tests don't need the 2GB embedding model
           # Setting CI_SHARD=postgresql triggers fixture optimization in _test_detection.py
           # With no embedding model, we can:
           # - Reduce Colima memory from 8GB to 4GB
           # - Increase workers from 2 to 4 (4x parallelization)
-          # Expected time reduction: ~85 min -> ~20-25 min
           - shard: postgresql
             variant: shard-postgresql
-            colima_profile: 'ci-postgresql'  # Dedicated Colima profile for true parallel execution
+            colima_profile: 'ci-postgresql'
             pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/external_data/ tests/integration/insights/"
             pytest_ignore: ""
             workers: 4
             colima_memory: 4
             ci_shard: postgresql
-            description: "~230 PostgreSQL-focused tests (no embedding model, 4x parallelization)"
-          # Shard 2: Remaining integration tests (ingestion, retrieval, MCP, etc.)
-          # These tests use the embedding model via session fixtures
+            description: "~246 PostgreSQL-focused tests (no embedding model, 4x parallelization)"
+          # Shard 2: Retrieval/RAG tests (chunking, ingestion, retrieval, story_2_14)
+          # These tests REQUIRE the embedding model via session fixtures
           # Kept at single worker to avoid 4x model load with xdist
-          - shard: other
-            variant: shard-other
-            colima_profile: 'ci-other'  # Dedicated Colima profile for true parallel execution
-            pytest_paths: "tests/integration/"
-            pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/external_data/ --ignore=tests/integration/insights/ --ignore=tests/integration/test_accuracy_validation.py --ignore=tests/integration/test_unified_validation_e2e.py"
+          - shard: retrieval
+            variant: shard-retrieval
+            colima_profile: 'ci-retrieval'
+            pytest_paths: "tests/integration/chunking/ tests/integration/ingestion/ tests/integration/retrieval/ tests/integration/story_2_14/"
+            pytest_ignore: ""
             workers: 1
             colima_memory: 8
-            ci_shard: other
-            description: "~660 tests (embedding model required, single worker for OOM safety)"
+            ci_shard: retrieval
+            description: "~74 RAG/retrieval tests (embedding model required, single worker)"
+          # Shard 3: MCP and other tests (no embedding model)
+          # Includes: subdirectories (ac3_ground_truth, story_6_23, etc.) + root-level tests
+          # Excludes: directories handled by other shards + accuracy validation files
+          # Setting CI_SHARD=mcp triggers fixture optimization in _test_detection.py
+          - shard: mcp
+            variant: shard-mcp
+            colima_profile: 'ci-mcp'
+            pytest_paths: "tests/integration/"
+            pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/external_data/ --ignore=tests/integration/insights/ --ignore=tests/integration/chunking/ --ignore=tests/integration/ingestion/ --ignore=tests/integration/retrieval/ --ignore=tests/integration/story_2_14/ --ignore=tests/integration/test_accuracy_validation.py --ignore=tests/integration/test_unified_validation_e2e.py --ignore=tests/integration/fixtures/"
+            workers: 4
+            colima_memory: 4
+            ci_shard: mcp
+            description: "~590 MCP/other tests (no embedding model, 4x parallelization)"
 
     steps:
       - name: Check if shard should run
@@ -694,9 +748,9 @@ jobs:
         run: |
           echo "=== Cleaning up shard variant resources ==="
 
-          # Kill any processes using shard ports
+          # Kill any processes using shard ports (all 3 shards)
           echo "Checking shard ports..."
-          for PORT in 6342 6343 5437 5439; do
+          for PORT in 6342 6343 6344 5437 5439 5440; do
             if lsof -ti :${PORT} >/dev/null 2>&1; then
               echo "⚠️  Port $PORT in use, killing process..."
               lsof -ti :${PORT} | xargs kill -9 2>/dev/null || true
@@ -706,12 +760,12 @@ jobs:
             fi
           done
 
-          # Remove any orphaned shard containers
+          # Remove any orphaned shard containers (all 3 shards)
           echo "Removing orphaned shard containers..."
-          docker rm -f raglite-qdrant-shard-postgresql 2>/dev/null || echo "  qdrant-shard-postgresql: not found"
-          docker rm -f raglite-postgresql-shard-postgresql 2>/dev/null || echo "  postgresql-shard-postgresql: not found"
-          docker rm -f raglite-qdrant-shard-other 2>/dev/null || echo "  qdrant-shard-other: not found"
-          docker rm -f raglite-postgresql-shard-other 2>/dev/null || echo "  postgresql-shard-other: not found"
+          for VARIANT in shard-postgresql shard-retrieval shard-mcp; do
+            docker rm -f raglite-qdrant-${VARIANT} 2>/dev/null || echo "  qdrant-${VARIANT}: not found"
+            docker rm -f raglite-postgresql-${VARIANT} 2>/dev/null || echo "  postgresql-${VARIANT}: not found"
+          done
 
           echo "✅ Shard resource cleanup complete"
 

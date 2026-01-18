@@ -17,9 +17,10 @@ declare -A QDRANT_PORTS=(
     ["agentic"]="6337"
     ["discovery"]="6339"
     ["burnin"]="6340"
-    # Sharded integration test variants (Phase 2 parallelization)
-    ["shard-postgresql"]="6342"
-    ["shard-other"]="6343"
+    # Sharded integration test variants (Phase 2.2 parallelization - 3 shards)
+    ["shard-postgresql"]="6342"  # PostgreSQL-focused tests (no embedding)
+    ["shard-retrieval"]="6343"   # RAG/retrieval tests (needs embedding)
+    ["shard-mcp"]="6344"         # MCP/other tests (no embedding)
 )
 
 # PostgreSQL ports (maps internal 5432 to external port)
@@ -28,9 +29,10 @@ declare -A POSTGRES_PORTS=(
     ["agentic"]="5438"
     ["discovery"]="5434"
     ["burnin"]="5435"
-    # Sharded integration test variants (Phase 2 parallelization)
-    ["shard-postgresql"]="5437"
-    ["shard-other"]="5439"
+    # Sharded integration test variants (Phase 2.2 parallelization - 3 shards)
+    ["shard-postgresql"]="5437"  # PostgreSQL-focused tests (no embedding)
+    ["shard-retrieval"]="5439"   # RAG/retrieval tests (needs embedding)
+    ["shard-mcp"]="5440"         # MCP/other tests (no embedding)
 )
 
 # ============================================================
@@ -299,8 +301,9 @@ Variants:
   agentic          - Agentic workflow tests (ports 6337/5438)
   discovery        - Discovery tests (ports 6339/5434)
   burnin           - Burn-in tests (ports 6340/5435)
-  shard-postgresql - Sharded: PostgreSQL-focused tests (ports 6342/5437)
-  shard-other      - Sharded: remaining tests (ports 6343/5439)
+  shard-postgresql - Sharded: PostgreSQL-focused tests, no embedding (ports 6342/5437)
+  shard-retrieval  - Sharded: RAG/retrieval tests, needs embedding (ports 6343/5439)
+  shard-mcp        - Sharded: MCP/other tests, no embedding (ports 6344/5440)
 
 Examples:
   # Export ports for test variant

@@ -1,0 +1,334 @@
+# RAGLite CI - GitHub-Hosted Linux Runners (Phase 3)
+# This workflow eliminates Colima complexity by using native Docker on Linux
+#
+# Benefits over macOS self-hosted runner:
+# - No Colima VM overhead (saves 2-3GB per shard)
+# - No Lima network corruption issues
+# - True parallel execution (all 3 shards simultaneously)
+# - Auto-scaling with GitHub's infrastructure
+# - Simpler debugging (no VM state issues)
+#
+# Target: <20 minutes total with parallel shards
+
+name: CI (Linux)
+
+'on':
+  # For testing: only run on workflow_dispatch initially
+  # After validation, can be enabled for push/PR events
+  workflow_dispatch:
+    inputs:
+      run_integration:
+        description: 'Run integration tests'
+        type: boolean
+        default: true
+      integration_shard:
+        description: 'Which shard to run'
+        type: choice
+        options:
+          - all
+          - postgresql
+          - retrieval
+          - mcp
+        default: 'all'
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+env:
+  APP_ENV: test
+  CI: "true"
+  PYTHONDONTWRITEBYTECODE: "1"
+  LOKY_MAX_CPU_COUNT: "1"
+
+jobs:
+  # ============================================================
+  # Lint Gate (same as macOS version)
+  # ============================================================
+  lint-gate:
+    name: "🔒 Lint Gate: Ruff + Black"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install UV
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install linting dependencies
+        run: |
+          uv pip install ruff black --system --quiet
+
+      - name: Lint Check (ruff)
+        run: |
+          ruff check raglite/ tests/ --output-format=github
+
+      - name: Format Check (black)
+        run: |
+          ruff format raglite/ tests/ --check
+
+      - name: File Size Check
+        run: |
+          python scripts/check_file_sizes.py
+
+  # ============================================================
+  # Validate (same as macOS version, no containers needed)
+  # ============================================================
+  validate:
+    name: "📝 Code Quality: Lint & Format"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: lint-gate
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install UV
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Setup Python + UV
+        run: |
+          uv venv ci-venv --python 3.11 --quiet
+          source ci-venv/bin/activate
+          uv pip install -e ".[dev]" --quiet
+
+      - name: Type Check (mypy)
+        run: |
+          source ci-venv/bin/activate
+          mypy raglite/ --ignore-missing-imports --no-error-summary
+
+      - name: Security Scan (bandit)
+        run: |
+          source ci-venv/bin/activate
+          bandit -r raglite/ -ll -q -f txt --skip B608,B310
+
+      - name: Validate Pytest Collection
+        run: |
+          source ci-venv/bin/activate
+          pytest --collect-only -q tests/ 2>&1 | tee collection.log
+          if grep -E "^(ERROR|E   |ERRORS|ModuleNotFoundError|ImportError:)" collection.log; then
+            echo "FAIL: Test collection errors detected!"
+            exit 1
+          fi
+
+      - name: Tests (Fast - excludes slow/health_check)
+        env:
+          LIGHTWEIGHT_TESTS: "true"
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          source ci-venv/bin/activate
+          pytest tests/ \
+            --ignore=tests/health/ \
+            -m "not slow and not health_check and not integration" \
+            --tb=short \
+            -q \
+            --timeout=120 \
+            -n 4 \
+            --junitxml=test-results/junit.xml \
+            2>&1 || exit_code=$?
+          exit ${exit_code:-0}
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-tier1
+          path: test-results/
+          retention-days: 7
+
+  # ============================================================
+  # Integration Tests - Native Docker Services (No Colima!)
+  # Each shard runs with its own service containers
+  # ============================================================
+  integration:
+    name: "🔗 Tests: Integration (${{ matrix.shard }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: validate
+    if: ${{ inputs.run_integration == true }}
+
+    # Native Docker services - no Colima needed!
+    services:
+      qdrant:
+        image: qdrant/qdrant:v1.15.0
+        ports:
+          - 6335:6333
+        options: --health-cmd "curl -f http://localhost:6333/healthz || exit 1" --health-interval 10s --health-timeout 5s --health-retries 5
+      postgres:
+        image: postgres:16
+        ports:
+          - 5433:5432
+        env:
+          POSTGRES_USER: raglite_ci
+          POSTGRES_PASSWORD: raglite_ci
+          POSTGRES_DB: raglite_ci
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+    strategy:
+      fail-fast: false
+      # TRUE PARALLEL EXECUTION - all 3 shards run simultaneously
+      max-parallel: 3
+      matrix:
+        shard: [postgresql, retrieval, mcp]
+        include:
+          - shard: postgresql
+            pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/external_data/ tests/integration/insights/"
+            pytest_ignore: ""
+            workers: 4
+            ci_shard: postgresql
+            description: "PostgreSQL-focused tests (no embedding, 4x parallelization)"
+          - shard: retrieval
+            pytest_paths: "tests/integration/chunking/ tests/integration/ingestion/ tests/integration/retrieval/ tests/integration/story_2_14/"
+            pytest_ignore: ""
+            workers: 1
+            ci_shard: retrieval
+            description: "RAG/retrieval tests (embedding model required)"
+          - shard: mcp
+            pytest_paths: "tests/integration/"
+            pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/external_data/ --ignore=tests/integration/insights/ --ignore=tests/integration/chunking/ --ignore=tests/integration/ingestion/ --ignore=tests/integration/retrieval/ --ignore=tests/integration/story_2_14/ --ignore=tests/integration/test_accuracy_validation.py --ignore=tests/integration/test_unified_validation_e2e.py --ignore=tests/integration/fixtures/"
+            workers: 4
+            ci_shard: mcp
+            description: "MCP/other tests (no embedding, 4x parallelization)"
+
+    env:
+      QDRANT_HOST: localhost
+      QDRANT_PORT: "6335"
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5433"
+      POSTGRES_USER: raglite_ci
+      POSTGRES_PASSWORD: raglite_ci
+      POSTGRES_DB: raglite_ci
+      CI_SHARD: ${{ matrix.ci_shard }}
+
+    steps:
+      - name: Check if shard should run
+        id: shard-check
+        env:
+          SHARD: ${{ matrix.shard }}
+          TARGET: ${{ inputs.integration_shard }}
+        run: |
+          if [[ "$TARGET" == "all" ]] || [[ "$TARGET" == "$SHARD" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "✅ Running shard '$SHARD'"
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "⏭️ Skipping shard '$SHARD' (target: $TARGET)"
+          fi
+
+      - name: Checkout code
+        if: steps.shard-check.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        if: steps.shard-check.outputs.should_run == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install UV
+        if: steps.shard-check.outputs.should_run == 'true'
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Setup Python + UV
+        if: steps.shard-check.outputs.should_run == 'true'
+        run: |
+          uv venv ci-venv --python 3.11 --quiet
+          source ci-venv/bin/activate
+          uv pip install -e ".[dev]" --quiet
+
+      - name: Verify Service Health
+        if: steps.shard-check.outputs.should_run == 'true'
+        run: |
+          source ci-venv/bin/activate
+          echo "=== Checking Qdrant connectivity ==="
+          python -c "from qdrant_client import QdrantClient; c = QdrantClient(host='localhost', port=6335); c.get_collections(); print('Qdrant is healthy')"
+
+          echo "=== Checking PostgreSQL connectivity ==="
+          python -c "import psycopg2; conn = psycopg2.connect(host='localhost', port=5433, database='raglite_ci', user='raglite_ci', password='raglite_ci'); cur = conn.cursor(); cur.execute('SELECT 1'); print('PostgreSQL is healthy'); conn.close()"
+
+      - name: Run Integration Tests
+        if: steps.shard-check.outputs.should_run == 'true'
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          DESCRIPTION: ${{ matrix.description }}
+          WORKERS: ${{ matrix.workers }}
+          PYTEST_PATHS: ${{ matrix.pytest_paths }}
+          PYTEST_IGNORE: ${{ matrix.pytest_ignore }}
+          MATRIX_SHARD: ${{ matrix.shard }}
+        run: |
+          source ci-venv/bin/activate
+          echo "========================================="
+          echo "Running Integration Tests - Shard: $MATRIX_SHARD"
+          echo "Description: $DESCRIPTION"
+          echo "Workers: $WORKERS"
+          echo "CI_SHARD: ${CI_SHARD}"
+          echo "========================================="
+
+          pytest $PYTEST_PATHS \
+            $PYTEST_IGNORE \
+            -m "not health_check" \
+            --tb=short \
+            -v \
+            -n "$WORKERS" \
+            --dist loadgroup \
+            --timeout=120 \
+            --junitxml=test-results/integration-${MATRIX_SHARD}-junit.xml \
+            2>&1 || exit_code=$?
+
+          exit ${exit_code:-0}
+
+      - name: Upload Integration Results
+        if: always() && steps.shard-check.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-integration-${{ matrix.shard }}-linux
+          path: test-results/
+          retention-days: 7
+
+  # ============================================================
+  # Aggregate Results
+  # ============================================================
+  integration-aggregate:
+    name: "📊 Integration Results (Linux)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: integration
+    if: always() && needs.integration.result != 'skipped'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all shard results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-integration-*-linux
+          path: test-results/
+          merge-multiple: true
+
+      - name: Report Summary
+        run: |
+          echo "## Integration Test Results (Linux)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All shards completed on GitHub-hosted Linux runners." >> $GITHUB_STEP_SUMMARY
+          ls -la test-results/ || echo "No test results found"
