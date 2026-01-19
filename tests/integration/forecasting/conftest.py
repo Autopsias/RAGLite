@@ -11,6 +11,7 @@ subdirectory have different performance characteristics.
 """
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -21,6 +22,9 @@ from raglite.shared.models import (
     TimeSeriesPoint,
 )
 
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
+
 # Mark all tests in this subdirectory with standard integration markers
 # 'slow' marker is NOT applied here - it's applied per-test based on actual duration
 # xdist_group ensures all forecasting tests run on same worker (prevents database race conditions)
@@ -30,6 +34,34 @@ pytestmark = [
     pytest.mark.slow,
     pytest.mark.xdist_group(name="database_writes"),
 ]
+
+
+@pytest.fixture(autouse=True)
+def cleanup_forecast_tables(db_session: "Session"):
+    """Clean up model_selection and model_weights tables BEFORE each test.
+
+    CRITICAL: autouse=True ensures this runs for EVERY test in forecasting/.
+    Cleanup runs BEFORE yield (setup) to prevent xdist race conditions.
+
+    Tables cleaned:
+    - model_selection: Caches best model for each variable
+    - model_weights: Stores ensemble weights per metric/model
+
+    Without this cleanup, parallel tests on same xdist worker can still
+    insert data faster than sequential cleanup can run.
+    """
+    try:
+        from raglite.external_data.orm_models import ModelSelectionORM, ModelWeightORM
+
+        # Cleanup BEFORE test (not after) - prevents race conditions
+        db_session.query(ModelSelectionORM).delete()
+        db_session.query(ModelWeightORM).delete()
+        db_session.commit()
+    except Exception:
+        db_session.rollback()
+
+    yield
+    # No cleanup after - next test will clean before it runs
 
 
 @pytest.fixture
