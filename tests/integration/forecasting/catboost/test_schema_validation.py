@@ -8,8 +8,16 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.exc import IntegrityError
 
+from raglite.external_data.orm_models import ModelWeightORM
+from raglite.external_data.storage import ExternalDataStorage
+
 # Mark all tests in this module as integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="database_writes"),
+]
 
 
 class TestModelWeightSchema:
@@ -17,16 +25,12 @@ class TestModelWeightSchema:
 
     def test_model_weight_table_exists(self, clean_session) -> None:
         """Test model_weights table was created."""
-        from raglite.external_data.orm_models import ModelWeightORM
-
         # Simple query to verify table exists
         count = clean_session.query(ModelWeightORM).count()
         assert count >= 0  # Table exists if query succeeds
 
     def test_create_model_weight(self, clean_session) -> None:
         """Test creating a new model weight record."""
-        from raglite.external_data.orm_models import ModelWeightORM
-
         weight = ModelWeightORM(
             metric_name="cement_demand_test",
             model_name="catboost",
@@ -44,8 +48,6 @@ class TestModelWeightSchema:
 
     def test_query_model_weights_by_metric(self, clean_session) -> None:
         """Test querying model weights by metric name."""
-        from raglite.external_data.orm_models import ModelWeightORM
-
         # Create weights for multiple models
         for model_name in ["prophet", "catboost", "xgboost"]:
             weight = ModelWeightORM(
@@ -67,8 +69,6 @@ class TestModelWeightSchema:
 
     def test_unique_constraint_metric_model(self, clean_session) -> None:
         """Test unique constraint on (metric_name, model_name)."""
-        from raglite.external_data.orm_models import ModelWeightORM
-
         # Create first weight
         weight1 = ModelWeightORM(
             metric_name="cement_demand_unique_test",
@@ -93,8 +93,6 @@ class TestModelWeightSchema:
 
     def test_update_existing_weight(self, clean_session) -> None:
         """Test updating an existing model weight."""
-        from raglite.external_data.orm_models import ModelWeightORM
-
         # Create weight
         weight = ModelWeightORM(
             metric_name="revenue_update_test",
@@ -129,8 +127,6 @@ class TestStorageModelWeightMethods:
 
     def test_save_model_weight_creates_record(self, clean_session) -> None:
         """Test save_model_weight creates a new weight record."""
-        from raglite.external_data.storage import ExternalDataStorage
-
         storage = ExternalDataStorage(session=clean_session)
 
         result = storage.save_model_weight(
@@ -150,8 +146,6 @@ class TestStorageModelWeightMethods:
 
     def test_save_model_weight_upserts(self, clean_session) -> None:
         """Test save_model_weight updates existing record (upsert)."""
-        from raglite.external_data.storage import ExternalDataStorage
-
         storage = ExternalDataStorage(session=clean_session)
 
         # Create initial
@@ -175,8 +169,6 @@ class TestStorageModelWeightMethods:
 
     def test_get_model_weights_all(self, clean_session) -> None:
         """Test get_model_weights returns all weights."""
-        from raglite.external_data.storage import ExternalDataStorage
-
         storage = ExternalDataStorage(session=clean_session)
 
         # Create weights for different metrics
@@ -192,8 +184,6 @@ class TestStorageModelWeightMethods:
 
     def test_get_model_weights_by_metric(self, clean_session) -> None:
         """Test get_model_weights filters by metric."""
-        from raglite.external_data.storage import ExternalDataStorage
-
         storage = ExternalDataStorage(session=clean_session)
 
         # Create weights for one metric
@@ -210,8 +200,6 @@ class TestStorageModelWeightMethods:
 
     def test_get_weights_for_metric_returns_dict(self, clean_session) -> None:
         """Test get_weights_for_metric returns model->weight dict."""
-        from raglite.external_data.storage import ExternalDataStorage
-
         storage = ExternalDataStorage(session=clean_session)
 
         # Create weights
@@ -229,8 +217,6 @@ class TestStorageModelWeightMethods:
 
     def test_delete_model_weights_by_metric(self, clean_session) -> None:
         """Test delete_model_weights removes weights for metric."""
-        from raglite.external_data.storage import ExternalDataStorage
-
         storage = ExternalDataStorage(session=clean_session)
 
         # Create weights

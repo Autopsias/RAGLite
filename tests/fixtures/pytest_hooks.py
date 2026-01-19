@@ -235,12 +235,16 @@ def pytest_collection_modifyitems(config: Config, items: list[Item]) -> None:
                     "@pytest.mark.manages_collection_state (modifies data)."
                 )
 
-    # Add xdist_group marker to all integration tests
+    # Add xdist_group marker ONLY to integration tests that don't already have one
     # Do this in a separate loop to avoid collection modification issues
     for item in integration_items:
-        # Force embedding_model group (single worker for all integration tests)
-        # This will override any existing xdist_group marker automatically
-        item.add_marker(pytest.mark.xdist_group(name="embedding_model"))
+        # Check if item already has an xdist_group marker (from pytestmark)
+        existing_xdist_marker = item.get_closest_marker("xdist_group")
+
+        if not existing_xdist_marker:
+            # Force embedding_model group (single worker for all integration tests)
+            # Only add if not already present to avoid pytest-xdist scheduler conflicts
+            item.add_marker(pytest.mark.xdist_group(name="embedding_model"))
 
     # Sort tests: unit tests first, then integration, then e2e/slow
     def test_priority(item: Item) -> int:

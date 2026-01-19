@@ -7,11 +7,23 @@ from typing import TYPE_CHECKING
 import pandas as pd
 import pytest
 
+from raglite.forecasting.adaptive_weights import (
+    _calculate_weights_from_rmse,
+    apply_weight_caps,
+    handle_model_failure,
+)
+from raglite.forecasting.ensemble import generate_ensemble_forecast
+
 if TYPE_CHECKING:
     from raglite.shared.models import TimeSeriesData
 
 # Mark all tests in this module as integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="database_writes"),
+]
 
 
 class TestEnsembleWithCatBoost:
@@ -28,8 +40,6 @@ class TestEnsembleWithCatBoost:
 
         Story 6.12 AC1: CatBoost Integration.
         """
-        from raglite.forecasting.ensemble import generate_ensemble_forecast
-
         result = await generate_ensemble_forecast(
             metric="cement_demand",
             historical_data=sample_historical_data,
@@ -55,8 +65,6 @@ class TestEnsembleWithCatBoost:
         sample_external_regressors: dict[str, pd.Series],
     ) -> None:
         """Test ensemble with all 5 models including CatBoost."""
-        from raglite.forecasting.ensemble import generate_ensemble_forecast
-
         result = await generate_ensemble_forecast(
             metric="cement_demand",
             historical_data=sample_historical_data,
@@ -82,8 +90,6 @@ class TestEnsembleWithCatBoost:
         sample_external_regressors: dict[str, pd.Series],
     ) -> None:
         """Test forecast with CatBoost only."""
-        from raglite.forecasting.ensemble import generate_ensemble_forecast
-
         result = await generate_ensemble_forecast(
             metric="cement_demand",
             historical_data=sample_historical_data,
@@ -112,8 +118,6 @@ class TestAdaptiveWeightBehavior:
         sample_external_regressors: dict[str, pd.Series],
     ) -> None:
         """Test ensemble uses provided custom weights."""
-        from raglite.forecasting.ensemble import generate_ensemble_forecast
-
         custom_weights = {
             "prophet": 0.4,
             "catboost": 0.3,
@@ -146,8 +150,6 @@ class TestAdaptiveWeightBehavior:
 
         Story 6.12 AC4: Model failure handling.
         """
-        from raglite.forecasting.ensemble import generate_ensemble_forecast
-
         # Without regressors, sklearn models should fail/skip
         # Using default models to include Chronos-2 which works without regressors
         result = await generate_ensemble_forecast(
@@ -180,8 +182,6 @@ class TestAdaptiveWeightBehavior:
         When no regressors are provided, only Prophet can run (it doesn't
         require external features), so it becomes the sole model in the ensemble.
         """
-        from raglite.forecasting.ensemble import generate_ensemble_forecast
-
         result = await generate_ensemble_forecast(
             metric="cement_demand",
             historical_data=sample_historical_data,
@@ -221,8 +221,6 @@ class TestCatBoostPerformance:
         """
         import time
 
-        from raglite.forecasting.ensemble import generate_ensemble_forecast
-
         start_time = time.perf_counter()
 
         result = await generate_ensemble_forecast(
@@ -247,8 +245,6 @@ class TestAdaptiveWeightsHelpers:
 
     def test_calculate_weights_from_rmse(self) -> None:
         """Test weight calculation from backtest RMSE values."""
-        from raglite.forecasting.adaptive_weights import _calculate_weights_from_rmse
-
         results = {
             "prophet": {"rmse": 100.0, "mape": 5.0},
             "catboost": {"rmse": 50.0, "mape": 2.5},
@@ -267,8 +263,6 @@ class TestAdaptiveWeightsHelpers:
 
     def test_apply_weight_caps_integration(self) -> None:
         """Test weight capping with extreme values."""
-        from raglite.forecasting.adaptive_weights import apply_weight_caps
-
         # One model dominates
         uncapped = {"best": 0.95, "worst1": 0.025, "worst2": 0.025}
         capped = apply_weight_caps(uncapped)
@@ -281,8 +275,6 @@ class TestAdaptiveWeightsHelpers:
 
     def test_handle_model_failure_integration(self) -> None:
         """Test weight re-normalization after model failure."""
-        from raglite.forecasting.adaptive_weights import handle_model_failure
-
         weights = {"prophet": 0.3, "catboost": 0.35, "xgboost": 0.35}
         after = handle_model_failure(weights, "catboost")
 

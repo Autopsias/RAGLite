@@ -11,9 +11,22 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from raglite.shared.models import ForecastQueryRequest
+from raglite.forecasting.timeseries import ExtractionError
+from raglite.main import get_financial_forecast
+from raglite.shared.models import (
+    ForecastPoint,
+    ForecastQueryRequest,
+    ForecastResult,
+    TimeSeriesData,
+    TimeSeriesPoint,
+)
 
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="database_writes"),
+]
 
 
 class TestSQLFirstExtractionFallback:
@@ -22,15 +35,6 @@ class TestSQLFirstExtractionFallback:
     @pytest.mark.asyncio
     async def test_mcp_tool_uses_sql_first_then_fallback(self):
         """Test that MCP tool tries SQL first, then falls back to hybrid search."""
-        from raglite.forecasting.timeseries import ExtractionError
-        from raglite.main import get_financial_forecast
-        from raglite.shared.models import (
-            ForecastPoint,
-            ForecastResult,
-            TimeSeriesData,
-            TimeSeriesPoint,
-        )
-
         # Mock SQL extraction to fail
         # Mock hybrid search extraction to succeed
         mock_ts_data = TimeSeriesData(
@@ -92,14 +96,6 @@ class TestSQLFirstExtractionFallback:
     @pytest.mark.asyncio
     async def test_mcp_tool_uses_sql_successfully(self):
         """Test that MCP tool uses SQL extraction when it succeeds."""
-        from raglite.main import get_financial_forecast
-        from raglite.shared.models import (
-            ForecastPoint,
-            ForecastResult,
-            TimeSeriesData,
-            TimeSeriesPoint,
-        )
-
         # Mock SQL extraction to succeed
         mock_ts_data = TimeSeriesData(
             metric_name="revenue",
@@ -156,15 +152,6 @@ class TestSQLFirstExtractionFallback:
     @pytest.mark.asyncio
     async def test_fallback_behavior_with_various_sql_errors(self):
         """Test fallback behavior with different SQL error types."""
-        from raglite.forecasting.timeseries import ExtractionError
-        from raglite.main import get_financial_forecast
-        from raglite.shared.models import (
-            ForecastPoint,
-            ForecastResult,
-            TimeSeriesData,
-            TimeSeriesPoint,
-        )
-
         error_scenarios = [
             ExtractionError("No data found in financial_tables for metric 'revenue'"),
             ExtractionError("Insufficient data: found 5 points, need 8 minimum"),

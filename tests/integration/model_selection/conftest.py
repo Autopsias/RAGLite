@@ -22,7 +22,13 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
 # Mark all tests in this subdirectory with standard integration markers
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# xdist_group ensures all model_selection tests run on same worker (prevents database race conditions)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="database_writes"),
+]
 
 
 # Note: db_session fixture is now defined in tests/integration/conftest.py (parent)
@@ -55,9 +61,16 @@ def sample_model_selection_result():
 
 @pytest.fixture
 def cleanup_model_selection(db_session: Session):
-    """Clean up model_selection table after tests."""
-    yield
-    # Cleanup after test
+    """Clean up model_selection table before tests.
+
+    CRITICAL: Cleanup runs BEFORE yield (setup) to prevent xdist race conditions.
+    When multiple workers run in parallel, cleanup-after-test causes constraint violations
+    because workers INSERT data concurrently before cleanup runs.
+
+    By cleaning BEFORE the test, we ensure a clean slate for each test regardless of
+    parallel execution order.
+    """
+    # Cleanup BEFORE test (not after)
     try:
         from raglite.external_data.orm_models import ModelSelectionORM
 
@@ -65,6 +78,9 @@ def cleanup_model_selection(db_session: Session):
         db_session.commit()
     except Exception:
         db_session.rollback()
+
+    yield
+    # No cleanup after test - next test will clean before it runs
 
 
 # Time series fixtures for model selection tests

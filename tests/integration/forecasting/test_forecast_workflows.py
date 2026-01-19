@@ -14,9 +14,28 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from raglite.shared.models import ForecastQueryRequest
+from raglite.forecasting.hybrid import InsufficientDataError
+from raglite.forecasting.timeseries import (
+    ExtractionError,
+    extract_timeseries_from_sql,
+)
+from raglite.main import get_financial_forecast
+from raglite.retrieval.search import QueryError
+from raglite.shared.models import (
+    ForecastPoint,
+    ForecastQueryRequest,
+    ForecastResult,
+    TimeSeriesData,
+    TimeSeriesPoint,
+)
+from raglite.shared.safety import SafetyGuard
 
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="database_writes"),
+]
 
 
 class TestForecastQueryScenarios:
@@ -25,14 +44,6 @@ class TestForecastQueryScenarios:
     @pytest.mark.asyncio
     async def test_scenario_user_asks_about_revenue(self):
         """User scenario: 'What's the revenue forecast for next quarter?'"""
-        from raglite.main import get_financial_forecast
-        from raglite.shared.models import (
-            ForecastPoint,
-            ForecastResult,
-            TimeSeriesData,
-            TimeSeriesPoint,
-        )
-
         quarters = [
             (2023, 1),
             (2023, 4),
@@ -93,14 +104,6 @@ class TestForecastQueryScenarios:
     @pytest.mark.asyncio
     async def test_scenario_user_asks_about_expenses_trend(self):
         """User scenario: 'Show me expense projections for the next 4 quarters'"""
-        from raglite.main import get_financial_forecast
-        from raglite.shared.models import (
-            ForecastPoint,
-            ForecastResult,
-            TimeSeriesData,
-            TimeSeriesPoint,
-        )
-
         quarters = [
             (2023, 1),
             (2023, 4),
@@ -164,11 +167,6 @@ class TestForecastQueryScenarios:
     @pytest.mark.asyncio
     async def test_scenario_insufficient_data_graceful_error(self):
         """User scenario: Request forecast but insufficient historical data"""
-        from raglite.forecasting.hybrid import InsufficientDataError
-        from raglite.main import get_financial_forecast
-        from raglite.retrieval.search import QueryError
-        from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
-
         # Only 4 data points (insufficient)
         mock_ts_data = TimeSeriesData(
             metric_name="revenue",
@@ -231,13 +229,6 @@ class TestSQLTimeseriesExtraction:
     @pytest.mark.asyncio
     async def test_sql_extraction_with_real_database(self):
         """Test SQL extraction with real PostgreSQL test database."""
-
-        from raglite.forecasting.timeseries import (
-            ExtractionError,
-            extract_timeseries_from_sql,
-        )
-        from raglite.shared.safety import SafetyGuard
-
         # Verify we're using TEST environment
         guard = SafetyGuard()
         guard.validate_test_environment("test_sql_extraction_with_real_database")
@@ -265,12 +256,6 @@ class TestSQLTimeseriesExtraction:
     @pytest.mark.asyncio
     async def test_sql_extraction_no_data_raises_error(self):
         """Test that SQL extraction raises ExtractionError when no data found."""
-        from raglite.forecasting.timeseries import (
-            ExtractionError,
-            extract_timeseries_from_sql,
-        )
-        from raglite.shared.safety import SafetyGuard
-
         # Verify we're using TEST environment
         guard = SafetyGuard()
         guard.validate_test_environment("test_sql_extraction_no_data_raises_error")
@@ -282,12 +267,6 @@ class TestSQLTimeseriesExtraction:
     @pytest.mark.asyncio
     async def test_sql_extraction_insufficient_data_raises_error(self):
         """Test that SQL extraction raises ExtractionError with <min_points data."""
-        from raglite.forecasting.timeseries import (
-            ExtractionError,
-            extract_timeseries_from_sql,
-        )
-        from raglite.shared.safety import SafetyGuard
-
         # Verify we're using TEST environment
         guard = SafetyGuard()
         guard.validate_test_environment("test_sql_extraction_insufficient_data_raises_error")

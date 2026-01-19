@@ -7,11 +7,21 @@ from typing import TYPE_CHECKING
 import pandas as pd
 import pytest
 
+from raglite.forecasting.backtest_job import (
+    run_backtest_for_metric,
+    trigger_backtest_now,
+)
+
 if TYPE_CHECKING:
     from raglite.shared.models import TimeSeriesData
 
 # Mark all tests in this module as integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="database_writes"),
+]
 
 
 class TestBacktestJob:
@@ -24,8 +34,6 @@ class TestBacktestJob:
         sample_external_regressors: dict[str, pd.Series],
     ) -> None:
         """Test run_backtest_for_metric calculates weights."""
-        from raglite.forecasting.backtest_job import run_backtest_for_metric
-
         # Convert TimeSeriesData to the format expected by backtest
         result = run_backtest_for_metric(
             metric="cement_demand",
@@ -52,8 +60,6 @@ class TestBacktestJob:
         The important thing is that the function runs without errors and returns
         the correct structure.
         """
-        from raglite.forecasting.backtest_job import trigger_backtest_now
-
         # Trigger backtest - runs for KNOWN_METRICS
         # Note: The metrics parameter filters which metrics to process
         result = await trigger_backtest_now()

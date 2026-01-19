@@ -9,9 +9,24 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from raglite.shared.models import ForecastQueryRequest
+from raglite.forecasting.hybrid import InsufficientDataError
+from raglite.forecasting.timeseries import ExtractionError
+from raglite.main import get_financial_forecast, parse_forecast_query
+from raglite.retrieval.search import QueryError
+from raglite.shared.models import (
+    ForecastPoint,
+    ForecastQueryRequest,
+    ForecastResult,
+    TimeSeriesData,
+    TimeSeriesPoint,
+)
 
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="database_writes"),
+]
 
 
 class TestForecastQueryIntegration:
@@ -31,8 +46,6 @@ class TestForecastQueryIntegration:
         self, mock_revenue_ts_data, mock_revenue_forecast
     ):
         """Test complete forecast pipeline with mocked external dependencies."""
-        from raglite.main import get_financial_forecast
-
         with (
             patch(
                 "raglite.mcp.tools.forecast.extract_historical_data_by_type",
@@ -76,8 +89,6 @@ class TestForecastQueryIntegration:
     @pytest.mark.asyncio
     async def test_nl_query_parsing_integration(self):
         """Test that NL queries are correctly parsed and routed (AC4)."""
-        from raglite.main import parse_forecast_query
-
         # Test various NL query patterns
         test_cases = [
             ("What's the revenue forecast for next quarter?", "revenue", 1),
@@ -95,10 +106,6 @@ class TestForecastQueryIntegration:
     @pytest.mark.asyncio
     async def test_error_propagation_from_timeseries(self):
         """Test that errors from time-series extraction propagate correctly (AC5)."""
-        from raglite.forecasting.timeseries import ExtractionError
-        from raglite.main import get_financial_forecast
-        from raglite.retrieval.search import QueryError
-
         with patch(
             "raglite.mcp.tools.forecast.extract_timeseries",
             new_callable=AsyncMock,
@@ -120,11 +127,6 @@ class TestForecastQueryIntegration:
     @pytest.mark.asyncio
     async def test_error_propagation_from_forecast(self):
         """Test that errors from forecast generation propagate correctly (AC5)."""
-        from raglite.forecasting.hybrid import InsufficientDataError
-        from raglite.main import get_financial_forecast
-        from raglite.retrieval.search import QueryError
-        from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
-
         # Create mock data with insufficient points
         mock_ts_data = TimeSeriesData(
             metric_name="revenue",
@@ -163,14 +165,6 @@ class TestForecastQueryIntegration:
     @pytest.mark.asyncio
     async def test_structured_query_bypasses_nl_parsing(self):
         """Test that structured queries bypass NL parsing (AC1)."""
-        from raglite.main import get_financial_forecast
-        from raglite.shared.models import (
-            ForecastPoint,
-            ForecastResult,
-            TimeSeriesData,
-            TimeSeriesPoint,
-        )
-
         quarters = [
             (2023, 1),
             (2023, 4),
@@ -230,14 +224,6 @@ class TestForecastResponseFormat:
     @pytest.mark.asyncio
     async def test_response_serializable_to_json(self):
         """Test that response can be serialized to JSON for MCP transport."""
-        from raglite.main import get_financial_forecast
-        from raglite.shared.models import (
-            ForecastPoint,
-            ForecastResult,
-            TimeSeriesData,
-            TimeSeriesPoint,
-        )
-
         quarters = [
             (2023, 1),
             (2023, 4),
@@ -297,14 +283,6 @@ class TestForecastResponseFormat:
     @pytest.mark.asyncio
     async def test_response_includes_all_required_fields(self):
         """Test that response includes all fields specified in AC2/AC3."""
-        from raglite.main import get_financial_forecast
-        from raglite.shared.models import (
-            ForecastPoint,
-            ForecastResult,
-            TimeSeriesData,
-            TimeSeriesPoint,
-        )
-
         quarters = [
             (2023, 1),
             (2023, 4),

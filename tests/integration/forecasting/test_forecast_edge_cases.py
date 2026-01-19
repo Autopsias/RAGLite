@@ -9,9 +9,29 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from raglite.shared.models import ForecastQueryRequest
+from raglite.forecasting.metrics import (
+    _get_cache_ttl,
+    clear_metrics_cache,
+    list_available_metrics,
+)
+from raglite.forecasting.timeseries import MetricValidationError
+from raglite.main import get_financial_forecast
+from raglite.retrieval.search import QueryError
+from raglite.shared.config import settings
+from raglite.shared.models import (
+    ForecastPoint,
+    ForecastQueryRequest,
+    ForecastResult,
+    TimeSeriesData,
+    TimeSeriesPoint,
+)
 
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="database_writes"),
+]
 
 
 class TestDynamicMetricForecasting:
@@ -27,14 +47,6 @@ class TestDynamicMetricForecasting:
     @pytest.mark.asyncio
     async def test_dynamic_metric_capex_forecast(self):
         """Test forecasting for arbitrary metric 'capex' (not hardcoded)."""
-        from raglite.main import get_financial_forecast
-        from raglite.shared.models import (
-            ForecastPoint,
-            ForecastResult,
-            TimeSeriesData,
-            TimeSeriesPoint,
-        )
-
         # Create mock time-series data for 'capex' metric
         mock_ts_data = TimeSeriesData(
             metric_name="capex",
@@ -90,14 +102,6 @@ class TestDynamicMetricForecasting:
     @pytest.mark.asyncio
     async def test_dynamic_metric_margins_forecast(self):
         """Test forecasting for arbitrary metric 'margins'."""
-        from raglite.main import get_financial_forecast
-        from raglite.shared.models import (
-            ForecastPoint,
-            ForecastResult,
-            TimeSeriesData,
-            TimeSeriesPoint,
-        )
-
         mock_ts_data = TimeSeriesData(
             metric_name="margins",
             points=[
@@ -144,10 +148,6 @@ class TestDynamicMetricForecasting:
     @pytest.mark.asyncio
     async def test_metric_validation_error_with_suggestions(self):
         """Test that MetricValidationError provides available metric suggestions."""
-        from raglite.forecasting.timeseries import MetricValidationError
-        from raglite.main import get_financial_forecast
-        from raglite.retrieval.search import QueryError
-
         # Create MetricValidationError with available metrics
         validation_error = MetricValidationError(
             metric_name="unknown_metric",
@@ -174,14 +174,6 @@ class TestDynamicMetricForecasting:
     @pytest.mark.asyncio
     async def test_ebitda_forecast_without_entity_parameter(self):
         """Test that EBITDA forecasting works without entity disambiguation (AC5)."""
-        from raglite.main import get_financial_forecast
-        from raglite.shared.models import (
-            ForecastPoint,
-            ForecastResult,
-            TimeSeriesData,
-            TimeSeriesPoint,
-        )
-
         # EBITDA uses consolidated GROUP values automatically
         mock_ts_data = TimeSeriesData(
             metric_name="ebitda",
@@ -242,29 +234,18 @@ class TestMetricsCacheConfiguration:
 
     def test_cache_ttl_configurable_via_settings(self):
         """Test that metrics cache TTL is configurable via settings."""
-        from raglite.shared.config import settings
-
         # Verify default TTL is 300 seconds (5 minutes)
         assert hasattr(settings, "metrics_cache_ttl_seconds")
         assert settings.metrics_cache_ttl_seconds == 300
 
     def test_metrics_module_uses_settings_ttl(self):
         """Test that metrics module uses configurable TTL from settings."""
-        from raglite.forecasting.metrics import _get_cache_ttl
-        from raglite.shared.config import settings
-
         # Verify _get_cache_ttl returns the settings value
         assert _get_cache_ttl() == settings.metrics_cache_ttl_seconds
 
     @pytest.mark.asyncio
     async def test_cache_respects_custom_ttl(self):
         """Test that cache respects custom TTL setting."""
-        from raglite.forecasting.metrics import (
-            _get_cache_ttl,
-            clear_metrics_cache,
-            list_available_metrics,
-        )
-
         # Clear any existing cache
         clear_metrics_cache()
 

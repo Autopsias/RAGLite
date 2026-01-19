@@ -23,7 +23,13 @@ from raglite.shared.models import (
 
 # Mark all tests in this subdirectory with standard integration markers
 # 'slow' marker is NOT applied here - it's applied per-test based on actual duration
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# xdist_group ensures all forecasting tests run on same worker (prevents database race conditions)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="database_writes"),
+]
 
 
 @pytest.fixture
