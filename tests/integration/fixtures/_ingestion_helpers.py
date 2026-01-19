@@ -284,7 +284,14 @@ def _ingest_test_pdf(
 
     from raglite.ingestion.pipeline import ingest_pdf
 
-    if skip_metadata:
+    # CI Optimization: Always skip metadata extraction in CI
+    # This avoids Mistral API calls during test fixture setup
+    # which cause 401 Unauthorized errors when mocks aren't applied yet
+    is_ci = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
+    if is_ci:
+        skip_metadata = True
+        print("   ℹ️  Skipping LLM metadata extraction (CI mode)", file=sys.stderr)
+    elif skip_metadata:
         print("   ℹ️  Skipping LLM metadata extraction (LOCAL mode)", file=sys.stderr)
 
     start_ingest = time.time()

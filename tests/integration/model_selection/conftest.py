@@ -22,12 +22,12 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
 # Mark all tests in this subdirectory with standard integration markers
-# xdist_group ensures all model_selection tests run on same worker (prevents database race conditions)
+# Note: xdist_group removed (2025-01-19) - it was serializing 100+ tests onto single worker
+# causing timeouts. Apply @pytest.mark.xdist_group to individual tests that need it.
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
-    pytest.mark.xdist_group(name="database_writes"),
 ]
 
 
