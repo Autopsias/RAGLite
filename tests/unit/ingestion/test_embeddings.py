@@ -14,6 +14,7 @@ from raglite.ingestion.pipeline import (
     generate_embeddings,
 )
 from raglite.shared.clients import get_embedding_model
+from raglite.shared.config import settings
 from raglite.shared.models import Chunk, DocumentMetadata
 
 # Group tests that modify embedding singleton state to run on same worker
@@ -337,7 +338,13 @@ class TestGenerateEmbeddings:
                 assert mock_get_st_class.call_count == 2
 
                 # But SentenceTransformer should only be instantiated once (singleton pattern)
-                MockST.assert_called_once_with("intfloat/e5-large-v2")
+                # Model name depends on CI_FAST_EMBEDDING mode
+                expected_model = (
+                    settings.ci_fast_embedding_model
+                    if settings.ci_fast_embedding_enabled
+                    else settings.embedding_model
+                )
+                MockST.assert_called_once_with(expected_model)
         finally:
             # Restore ALL original state to prevent mock pollution
             clients_module._embedding_model = original_model
