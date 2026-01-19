@@ -155,7 +155,7 @@ jobs:
   integration:
     name: "🔗 Tests: Integration (${{ matrix.shard }})"
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     needs: validate
     if: ${{ inputs.run_integration == true }}
 
@@ -264,6 +264,20 @@ jobs:
           echo "=== Checking PostgreSQL connectivity ==="
           uv run python -c "import psycopg2; conn = psycopg2.connect(host='localhost', port=5433, database='raglite_ci', user='raglite_ci', password='raglite_ci'); cur = conn.cursor(); cur.execute('SELECT 1'); print('PostgreSQL is healthy'); conn.close()"
 
+      - name: Initialize Test Database Schema
+        if: steps.shard-check.outputs.should_run == 'true'
+        env:
+          APP_ENV: test
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: "5433"
+          POSTGRES_USER: raglite_ci
+          POSTGRES_PASSWORD: raglite_ci
+          POSTGRES_DB: raglite_ci
+        run: |
+          echo "=== Initializing Test Database Schema ==="
+          uv run python scripts/init-test-postgresql.py
+          echo "✅ Schema initialized successfully"
+
       - name: Run Integration Tests
         if: steps.shard-check.outputs.should_run == 'true'
         env:
@@ -289,6 +303,7 @@ jobs:
             -n "$WORKERS" \
             --dist loadgroup \
             --timeout=120 \
+            --maxfail=10 \
             --junitxml=test-results/integration-${MATRIX_SHARD}-junit.xml \
             2>&1 || exit_code=$?
 
