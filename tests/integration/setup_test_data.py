@@ -18,7 +18,7 @@ from qdrant_client.models import Distance, VectorParams
 
 from raglite.ingestion.pipeline import ingest_pdf
 from raglite.shared.clients import get_qdrant_client
-from raglite.shared.config import settings
+from raglite.shared.config import get_active_embedding_dimension, settings
 
 
 async def main():
@@ -67,13 +67,13 @@ async def main():
                 print("  Clearing and re-ingesting...")
                 qdrant.delete_collection(collection_name=settings.qdrant_collection_name)
 
-    # Create collection if needed
+    # Create collection if needed (use dynamic dimension for CI fast mode support)
     if settings.qdrant_collection_name not in collections:
         print(f"\n⚙️  Creating collection '{settings.qdrant_collection_name}'...")
         qdrant.create_collection(
             collection_name=settings.qdrant_collection_name,
             vectors_config=VectorParams(
-                size=settings.embedding_dimension,
+                size=get_active_embedding_dimension(),
                 distance=Distance.COSINE,
             ),
         )

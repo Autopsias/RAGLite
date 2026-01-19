@@ -22,7 +22,7 @@ from qdrant_client.models import (
 
 from raglite.shared.bm25 import create_bm25_index, save_bm25_index
 from raglite.shared.clients import get_qdrant_client
-from raglite.shared.config import settings
+from raglite.shared.config import get_active_embedding_dimension, settings
 from raglite.shared.logging import get_logger
 from raglite.shared.models import Chunk
 from raglite.shared.safety import SafetyGuard
@@ -389,8 +389,8 @@ async def store_vectors_in_qdrant(
         logger.warning("No chunks provided for storage", extra={"collection": collection_name})
         return 0
 
-    # Ensure collection exists
-    create_collection(collection_name, vector_size=settings.embedding_dimension)
+    # Ensure collection exists (use dynamic dimension for CI fast mode support)
+    create_collection(collection_name, vector_size=get_active_embedding_dimension())
 
     # Create BM25 index for hybrid search (Story 2.1 AC1.2)
     _create_bm25_index_for_chunks(chunks, collection_name)

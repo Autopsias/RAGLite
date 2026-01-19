@@ -292,10 +292,11 @@ def _cleanup_collections(qdrant, settings, guard):
 def _create_and_verify_collection(qdrant, settings):
     """Create new Qdrant collection and verify it's empty."""
     from raglite.ingestion.pipeline import create_collection
+    from raglite.shared.config import get_active_embedding_dimension
 
     create_collection(
         collection_name=settings.qdrant_collection_name,
-        vector_size=settings.embedding_dimension,
+        vector_size=get_active_embedding_dimension(),
     )
 
     initial_count = qdrant.count(collection_name=settings.qdrant_collection_name)

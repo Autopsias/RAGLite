@@ -215,18 +215,22 @@ def get_claude_client() -> Anthropic:
 
 
 def get_embedding_model() -> Any:
-    """Get Fin-E5 embedding model (singleton pattern with cross-process lock).
+    """Get embedding model (singleton pattern with cross-process lock).
 
     Returns:
-        SentenceTransformer: Cached intfloat/e5-large-v2 model (1024 dimensions)
+        SentenceTransformer: Cached embedding model
 
     Raises:
         RuntimeError: If model loading fails
         ImportError: If sentence-transformers package is not installed
 
     Note:
-        Model: Fin-E5 (intfloat/e5-large-v2), 1024 dimensions, financial domain optimization
-        Week 0 validation: 0.84 avg similarity, 71.05% NDCG@10
+        Production: Fin-E5 (intfloat/e5-large-v2), 1024 dimensions, financial domain optimization
+            Week 0 validation: 0.84 avg similarity, 71.05% NDCG@10
+            Load time: ~60s, Size: ~2GB
+        CI Fast Mode: all-MiniLM-L6-v2, 384 dimensions, general purpose
+            Load time: ~5s, Size: ~80MB
+            Trade-off: Slightly lower accuracy but 12x faster model loading
         Cross-process lock: Prevents simultaneous model loading across xdist workers
     """
     # Lazy-load the SentenceTransformer class (avoids slow PyTorch import at startup)
@@ -248,24 +252,38 @@ def get_embedding_model() -> Any:
                 logger.info("Embedding model already loaded by another process")
                 return _embedding_model
 
-            logger.info(
-                "Loading Fin-E5 embedding model (with lock)",
-                extra={"model": "intfloat/e5-large-v2"},
-            )
+            # CI Optimization: Use smaller, faster model in CI (Story CI-OPT)
+            # all-MiniLM-L6-v2: 80MB, ~5s load (vs Fin-E5: 2GB, ~60s load)
+            if settings.ci_fast_embedding_enabled:
+                model_name = settings.ci_fast_embedding_model
+                logger.info(
+                    "Loading CI fast embedding model (with lock)",
+                    extra={"model": model_name, "ci_fast_mode": True},
+                )
+            else:
+                model_name = settings.embedding_model
+                logger.info(
+                    "Loading Fin-E5 embedding model (with lock)",
+                    extra={"model": model_name, "ci_fast_mode": False},
+                )
 
             try:
-                _embedding_model = SentenceTransformerClass("intfloat/e5-large-v2")
+                _embedding_model = SentenceTransformerClass(model_name)
                 dimensions = _embedding_model.get_sentence_embedding_dimension()
 
                 logger.info(
-                    "Fin-E5 model loaded successfully",
-                    extra={"model": "intfloat/e5-large-v2", "dimensions": dimensions},
+                    "Embedding model loaded successfully",
+                    extra={
+                        "model": model_name,
+                        "dimensions": dimensions,
+                        "ci_fast_mode": settings.ci_fast_embedding_enabled,
+                    },
                 )
             except Exception as e:
-                error_msg = f"Failed to load Fin-E5 model: {e}"
+                error_msg = f"Failed to load embedding model ({model_name}): {e}"
                 logger.error(
                     "Embedding model loading failed",
-                    extra={"model": "intfloat/e5-large-v2", "error": str(e)},
+                    extra={"model": model_name, "error": str(e)},
                     exc_info=True,
                 )
                 raise RuntimeError(error_msg) from e

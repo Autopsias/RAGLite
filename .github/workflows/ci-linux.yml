@@ -41,6 +41,8 @@ env:
   CI: "true"
   PYTHONDONTWRITEBYTECODE: "1"
   LOKY_MAX_CPU_COUNT: "1"
+  # CI Optimization: Use smaller embedding model (MiniLM: 80MB/5s vs Fin-E5: 2GB/60s)
+  CI_FAST_EMBEDDING: "true"
 
 jobs:
   # ============================================================

@@ -8,7 +8,7 @@ import pytest
 
 from raglite.ingestion.pipeline import create_collection
 from raglite.shared.clients import get_postgresql_connection, get_qdrant_client
-from raglite.shared.config import settings
+from raglite.shared.config import get_active_embedding_dimension, settings
 from raglite.shared.safety import ProductionProtectionError, SafetyGuard
 
 
@@ -145,10 +145,10 @@ def initialize_clean_collection(guard: SafetyGuard) -> None:
         if not deletion_confirmed:
             print("   ⚠️  Collection deletion timeout, proceeding", file=sys.stderr)
 
-        # Create new collection
+        # Create new collection (use dynamic dimension for CI fast mode support)
         create_collection(
             collection_name=settings.qdrant_collection_name,
-            vector_size=settings.embedding_dimension,
+            vector_size=get_active_embedding_dimension(),
         )
 
         initial_count = qdrant.count(collection_name=settings.qdrant_collection_name)

@@ -106,16 +106,31 @@ def warmup_embedding_model(request):
 
     check_and_skip_if_unavailable()
     from raglite.shared.clients import get_embedding_model
+    from raglite.shared.config import settings
+
+    # CI Optimization instrumentation: Log which model is being used
+    model_name = (
+        settings.ci_fast_embedding_model
+        if settings.ci_fast_embedding_enabled
+        else settings.embedding_model
+    )
+    print(
+        f"🔄 Loading embedding model: {model_name} (CI fast mode: {settings.ci_fast_embedding_enabled})",
+        file=sys.stderr,
+    )
 
     model_load_start = time.time()
     model = get_embedding_model()
     model_load_duration = time.time() - model_load_start
     dim = model.get_sentence_embedding_dimension()
+
+    # Report performance metrics
+    mode_label = "CI fast" if settings.ci_fast_embedding_enabled else "Production"
     print(
-        f"✅ Embedding model ready: {dim} dimensions (Fin-E5 loaded in {model_load_duration:.1f}s)",
+        f"✅ Embedding model ready: {dim} dimensions ({mode_label}: {model_name})",
         file=sys.stderr,
     )
-    print(f"📊 MODEL LOAD PERF: Model loading took {model_load_duration:.1f}s", file=sys.stderr)
+    print(f"📊 MODEL LOAD PERF: {model_name} loaded in {model_load_duration:.1f}s", file=sys.stderr)
     yield
 
 
@@ -177,9 +192,16 @@ def session_ingested_collection(request, warmup_embedding_model):
     _ingest_test_pdf(sample_pdf, skip_metadata_extraction, settings)
 
     # Verify Qdrant data
-    expected_range = (
-        (150, 220) if use_full_pdf else (10, 55)
-    )  # Updated: 10-page PDF now yields ~42 chunks
+    # Expected chunks vary by PDF size:
+    #   160-page: 150-220 chunks
+    #   10-page:  10-55 chunks (~42 typical)
+    #   3-page:   3-15 chunks (CI fast mode)
+    if use_full_pdf:
+        expected_range = (150, 220)
+    elif "3-page" in pdf_description:
+        expected_range = (3, 15)  # CI fast mode: minimal PDF
+    else:
+        expected_range = (10, 55)  # Standard 10-page test PDF
     count_after = _verify_qdrant_data(qdrant, settings, expected_range)
     session_state.session_sample_pdf_chunk_count = count_after
 

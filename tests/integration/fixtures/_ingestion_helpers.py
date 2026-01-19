@@ -101,11 +101,23 @@ def _get_test_pdf_path(use_full_pdf: bool = False) -> tuple[Path, str, str]:
 
     Returns:
         Tuple of (pdf_path, description, estimated_time)
+
+    CI Optimization (Story CI-OPT):
+        In CI mode, uses minimal 3-page PDF (228K) instead of 10-page (357K)
+        Combined with fast embedding model, reduces fixture time from ~70s to ~10s
     """
+    is_ci = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
+    use_ci_minimal = os.getenv("CI_FAST_EMBEDDING", "").lower() == "true"
+
     if use_full_pdf:
         sample_pdf = Path("docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf")
         pdf_description = "160-page PDF"
         estimated_time = "150-180s"
+    elif is_ci and use_ci_minimal:
+        # CI Optimization: Use minimal 3-page PDF for faster CI tests
+        sample_pdf = Path("tests/fixtures/sample-small-3-pages.pdf")
+        pdf_description = "3-page PDF (CI fast mode)"
+        estimated_time = "3-5s"
     else:
         sample_pdf = Path("tests/fixtures/sample_financial_report.pdf")
         pdf_description = "10-page PDF"
@@ -237,10 +249,11 @@ def _initialize_qdrant_collection(settings, guard, qdrant) -> None:
             print("   ⚠️  Collection deletion timeout, proceeding", file=sys.stderr)
 
         from raglite.ingestion.pipeline import create_collection
+        from raglite.shared.config import get_active_embedding_dimension
 
         create_collection(
             collection_name=settings.qdrant_collection_name,
-            vector_size=settings.embedding_dimension,
+            vector_size=get_active_embedding_dimension(),
         )
 
         initial_count = qdrant.count(collection_name=settings.qdrant_collection_name)

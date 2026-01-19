@@ -69,6 +69,13 @@ class Settings(BaseSettings):
     embedding_model: str = "intfloat/e5-large-v2"
     embedding_dimension: int = 1024
 
+    # CI Optimization: Smaller embedding model for faster tests (Story CI-OPT)
+    # all-MiniLM-L6-v2: 80MB, ~5s load (vs Fin-E5: 2GB, ~60s load)
+    # Trade-off: Slightly lower accuracy but 12x faster model loading
+    ci_fast_embedding_model: str = "all-MiniLM-L6-v2"
+    ci_fast_embedding_dimension: int = 384
+    ci_fast_embedding_enabled: bool = False  # Set via CI_FAST_EMBEDDING=true env var
+
     # MCP Server Configuration
     mcp_server_port: int = 8000
 
@@ -216,6 +223,11 @@ class Settings(BaseSettings):
             if self.regressor_buffer_years == 3:
                 self.regressor_buffer_years = 1  # 1-year buffer for ~3x faster tests
 
+            # CI Optimization: Enable fast embedding model in CI (Story CI-OPT)
+            # all-MiniLM-L6-v2: 80MB, ~5s load (vs Fin-E5: 2GB, ~60s load)
+            if is_ci or os.getenv("CI_FAST_EMBEDDING", "").lower() == "true":
+                self.ci_fast_embedding_enabled = True
+
         return self
 
     # Pydantic 2.x configuration using SettingsConfigDict
@@ -229,6 +241,18 @@ class Settings(BaseSettings):
 
 # Singleton instance - import this in other modules
 settings = Settings()
+
+
+def get_active_embedding_dimension() -> int:
+    """Get the embedding dimension based on current mode (CI fast or production).
+
+    Returns:
+        int: 384 for CI fast mode (MiniLM), 1024 for production (Fin-E5)
+    """
+    if settings.ci_fast_embedding_enabled:
+        return settings.ci_fast_embedding_dimension
+    return settings.embedding_dimension
+
 
 # Diagnostic logging for Settings initialization (helps debug CI configuration issues)
 logger = logging.getLogger(__name__)
