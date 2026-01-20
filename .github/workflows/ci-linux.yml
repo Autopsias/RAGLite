@@ -161,7 +161,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: validate
-    if: ${{ inputs.run_integration == true }}
+    # Run integration tests on:
+    # - Push to main (always run full integration on main)
+    # - workflow_dispatch with run_integration=true
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_integration == true)
 
     # Native Docker services - no Colima needed!
     services:
