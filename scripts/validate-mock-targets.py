@@ -41,6 +41,7 @@ KNOWN_VALID_TARGETS = {
     "init_qdrant.logger",
     "init_qdrant.sys.exit",
     "init_qdrant.initialize_qdrant_collection",
+    "init_qdrant.get_active_embedding_dimension",
     # Root-level modules (not in raglite/ package)
     "strands_poc.mock_multi_index_search",
     "strands_poc.Agent",
