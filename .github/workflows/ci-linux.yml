@@ -13,8 +13,10 @@
 name: CI (Linux)
 
 'on':
-  # For testing: only run on workflow_dispatch initially
-  # After validation, can be enabled for push/PR events
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       run_integration:
@@ -189,9 +191,9 @@ jobs:
           - shard: postgresql
             pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/external_data/ tests/integration/insights/"
             pytest_ignore: ""
-            workers: 4
+            workers: 1  # P0 FIX: Single worker prevents 4x session fixture overhead
             ci_shard: postgresql
-            description: "PostgreSQL-focused tests (no embedding, 4x parallelization)"
+            description: "PostgreSQL-focused tests (no embedding, single worker)"
           - shard: retrieval
             pytest_paths: "tests/integration/chunking/ tests/integration/ingestion/ tests/integration/retrieval/ tests/integration/story_2_14/"
             pytest_ignore: ""
@@ -201,9 +203,9 @@ jobs:
           - shard: mcp
             pytest_paths: "tests/integration/"
             pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/external_data/ --ignore=tests/integration/insights/ --ignore=tests/integration/chunking/ --ignore=tests/integration/ingestion/ --ignore=tests/integration/retrieval/ --ignore=tests/integration/story_2_14/ --ignore=tests/integration/test_accuracy_validation.py --ignore=tests/integration/test_unified_validation_e2e.py --ignore=tests/integration/fixtures/"
-            workers: 4
+            workers: 1  # P0 FIX: Single worker prevents 4x session fixture overhead
             ci_shard: mcp
-            description: "MCP/other tests (no embedding, 4x parallelization)"
+            description: "MCP/other tests (no embedding, single worker)"
 
     env:
       QDRANT_HOST: localhost
