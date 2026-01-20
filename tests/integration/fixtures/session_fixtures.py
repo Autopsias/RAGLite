@@ -86,6 +86,17 @@ def warmup_embedding_model(request):
         yield
         return
 
+    # P0 FIX (2026-01-20): Direct CI_SHARD check FIRST - bypass complex detection
+    # This prevents xdist workers from loading 2GB model when not needed (240s overhead)
+    ci_shard = os.environ.get("CI_SHARD", "")
+    print(f"\n🔍 CI_SHARD environment: {ci_shard if ci_shard else 'NOT SET'}", file=sys.stderr)
+    if ci_shard in ("postgresql", "mcp"):
+        print(
+            f"\n⚡ CI_SHARD={ci_shard} detected - skipping embedding model warmup", file=sys.stderr
+        )
+        yield
+        return
+
     # PERFORMANCE FIX (2025-12-18): Skip for unit-only test runs
     # This saves 60-70s and 2GB memory when running only unit tests
     if not _has_integration_tests(request):

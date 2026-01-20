@@ -731,10 +731,10 @@ jobs:
             colima_profile: 'ci-postgresql'
             pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/external_data/ tests/integration/insights/"
             pytest_ignore: ""
-            workers: 4
+            workers: 1
             colima_memory: 4
             ci_shard: postgresql
-            description: "~246 PostgreSQL-focused tests (no embedding model, 4x parallelization)"
+            description: "~246 PostgreSQL-focused tests (no embedding model, 1 worker)"
           # Shard 2: Retrieval/RAG tests (chunking, ingestion, retrieval, story_2_14, parallel_ingestion, mcp/analytical)
           # These tests REQUIRE the embedding model via session fixtures
           # Kept at single worker to avoid 4x model load with xdist
@@ -756,10 +756,10 @@ jobs:
             colima_profile: 'ci-mcp'
             pytest_paths: "tests/integration/"
             pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/external_data/ --ignore=tests/integration/insights/ --ignore=tests/integration/chunking/ --ignore=tests/integration/ingestion/ --ignore=tests/integration/retrieval/ --ignore=tests/integration/story_2_14/ --ignore=tests/integration/parallel_ingestion/ --ignore=tests/integration/mcp/analytical/ --ignore=tests/integration/test_accuracy_validation.py --ignore=tests/integration/test_unified_validation_e2e.py --ignore=tests/integration/fixtures/"
-            workers: 4
+            workers: 1
             colima_memory: 4
             ci_shard: mcp
-            description: "~579 MCP/other tests (no embedding model, 4x parallelization)"
+            description: "~579 MCP/other tests (no embedding model, 1 worker)"
 
     steps:
       - name: Check if shard should run
