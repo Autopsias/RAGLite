@@ -228,10 +228,13 @@ jobs:
         env:
           SHARD: ${{ matrix.shard }}
           TARGET: ${{ inputs.integration_shard }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [[ "$TARGET" == "all" ]] || [[ "$TARGET" == "$SHARD" ]]; then
+          # Run all shards on push events (no shard selection available)
+          # On workflow_dispatch, respect the integration_shard input
+          if [[ "$EVENT_NAME" == "push" ]] || [[ "$EVENT_NAME" == "pull_request" ]] || [[ "$TARGET" == "all" ]] || [[ "$TARGET" == "$SHARD" ]]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
-            echo "✅ Running shard '$SHARD'"
+            echo "✅ Running shard '$SHARD' (event: $EVENT_NAME, target: ${TARGET:-all})"
           else
             echo "should_run=false" >> $GITHUB_OUTPUT
             echo "⏭️ Skipping shard '$SHARD' (target: $TARGET)"
