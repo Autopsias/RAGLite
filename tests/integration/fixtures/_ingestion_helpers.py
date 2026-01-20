@@ -21,16 +21,17 @@ def _should_skip_session_fixture(request) -> bool:
     Returns:
         True if should skip, False otherwise
     """
-    from ._test_detection import _has_integration_tests, _is_postgresql_only_tests
+    from ._test_detection import _needs_collection_ingestion
 
-    # PERFORMANCE FIX (2025-12-18): Skip for unit-only test runs
-    if not _has_integration_tests(request):
-        print("⚡ UNIT TESTS ONLY: Skipping PDF ingestion fixture", file=sys.stderr)
-        return True
-
-    # PERFORMANCE FIX (2025-12-21): Skip for PostgreSQL-only tests (Story 7b-4)
-    if _is_postgresql_only_tests(request):
-        print("⚡ POSTGRESQL ONLY TESTS: Skipping PDF ingestion fixture", file=sys.stderr)
+    # PERFORMANCE FIX (2026-01-20): Use _needs_collection_ingestion() to determine
+    # if Qdrant collection is needed. This separates concerns:
+    # - _is_postgresql_only_tests() -> controls embedding model skip
+    # - _needs_collection_ingestion() -> controls collection creation skip
+    #
+    # This fixes MCP shard 404 errors where collection was not created because
+    # MCP shard was incorrectly treated as "postgresql only" for ingestion skip.
+    if not _needs_collection_ingestion(request):
+        print("⚡ NO COLLECTION NEEDED: Skipping PDF ingestion fixture", file=sys.stderr)
         return True
 
     return False

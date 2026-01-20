@@ -82,6 +82,50 @@ def _is_postgresql_only_tests(request) -> bool:
     return False
 
 
+def _needs_collection_ingestion(request) -> bool:
+    """Check if tests need Qdrant collection with ingested documents.
+
+    This function separates the concern of collection ingestion from embedding
+    model loading. Some CI shards (like MCP) need the Qdrant collection but
+    can skip embedding model loading (using pre-computed embeddings or mocks).
+
+    CI Shards behavior:
+    - postgresql: No Qdrant needed (forecasting, model_selection tests)
+    - mcp: Qdrant NEEDED but embedding model skipped
+    - retrieval: Qdrant NEEDED with fresh embeddings
+
+    FIX (2026-01-20): Previously, _is_postgresql_only_tests() was used for both
+    embedding skip AND collection skip. This caused MCP shard tests to fail with
+    404 errors because the collection was never created.
+
+    Args:
+        request: pytest request fixture
+
+    Returns:
+        True if tests need Qdrant collection with ingested documents
+    """
+    ci_shard = os.environ.get("CI_SHARD")
+
+    # PostgreSQL shard doesn't need Qdrant at all
+    if ci_shard == "postgresql":
+        print(
+            f"\n⚡ CI_SHARD={ci_shard} - no Qdrant collection needed",
+            file=sys.stderr,
+        )
+        return False
+
+    # MCP and retrieval shards NEED collection
+    if ci_shard in ("mcp", "retrieval"):
+        print(
+            f"\n⚡ CI_SHARD={ci_shard} - Qdrant collection REQUIRED",
+            file=sys.stderr,
+        )
+        return True
+
+    # Default: use existing integration test detection
+    return _has_integration_tests(request)
+
+
 def _check_pytest_args_for_integration(request) -> bool | None:
     """Check pytest's invocation directory and collected args.
 
