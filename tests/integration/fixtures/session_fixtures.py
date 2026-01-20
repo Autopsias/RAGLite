@@ -206,7 +206,7 @@ def session_ingested_collection(request, warmup_embedding_model):
     if use_full_pdf:
         expected_range = (150, 220)
     elif "3-page" in pdf_description:
-        expected_range = (15, 35)  # CI fast mode: table-aware chunking (Story 2.8)
+        expected_range = (5, 15)  # CI fast mode: table-aware chunking produces fewer, larger chunks
     else:
         expected_range = (10, 55)  # Standard 10-page test PDF
     count_after = _verify_qdrant_data(qdrant, settings, expected_range)
