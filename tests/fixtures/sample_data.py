@@ -12,6 +12,7 @@ import logging
 
 import pytest
 
+from raglite.shared.config import get_active_embedding_dimension
 from raglite.shared.models import Chunk, DocumentMetadata
 
 logger = logging.getLogger(__name__)
@@ -53,5 +54,6 @@ def sample_chunk(sample_document_metadata: DocumentMetadata) -> Chunk:
         content="Q3 revenue was $50M, up 20% YoY.",
         metadata=sample_document_metadata,
         page_number=5,
-        embedding=[0.1] * 1024,  # Mock embedding vector
+        embedding=[0.1]
+        * get_active_embedding_dimension(),  # Mock embedding vector (CI: 384, Local: 1024)
     )

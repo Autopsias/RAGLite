@@ -20,7 +20,7 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
-    pytest.mark.xdist_group(name="database_writes"),
+    # REMOVED: xdist_group(name="database_writes") - tests use mocks/fixtures, no real DB writes
 ]
 
 

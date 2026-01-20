@@ -8,6 +8,8 @@ from pathlib import Path
 import pytest
 
 from raglite.ingestion.pipeline import ingest_pdf
+from raglite.shared.config import get_active_embedding_dimension
+from raglite.shared.models import Chunk, DocumentMetadata
 
 pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
@@ -19,8 +21,6 @@ class TestBackwardCompatibility:
     @pytest.mark.asyncio
     async def test_chunks_without_metadata_fields(self):
         """Test that chunks without metadata fields still work (backward compatible)."""
-        from raglite.shared.models import Chunk, DocumentMetadata
-
         # Create chunk without new metadata fields (old format)
         metadata = DocumentMetadata(
             filename="old_doc.pdf",
@@ -35,7 +35,7 @@ class TestBackwardCompatibility:
             metadata=metadata,
             page_number=1,
             chunk_index=0,
-            embedding=[0.1] * 1024,
+            embedding=[0.1] * get_active_embedding_dimension(),  # CI: 384, Local: 1024
             # Story 2.4 REVISION: Rich schema fields (15 total) not set (defaults to None)
         )
 

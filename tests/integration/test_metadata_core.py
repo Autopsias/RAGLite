@@ -11,7 +11,8 @@ import pytest
 
 from raglite.ingestion.pipeline import ingest_pdf
 from raglite.shared.clients import get_qdrant_client
-from raglite.shared.config import settings
+from raglite.shared.config import get_active_embedding_dimension, settings
+from raglite.shared.models import Chunk, DocumentMetadata, ExtractedMetadata
 
 # Mark all tests in this module as integration tests that preserve collection state
 pytestmark = [
@@ -110,10 +111,7 @@ class TestMetadataInjection:
 
         TODO: Consider refactoring to use pre-ingested test data with known metadata.
         """
-
         # Mock metadata extraction for controlled testing (Story 2.4 REVISION: 15-field schema)
-        from raglite.shared.models import ExtractedMetadata
-
         mock_metadata = ExtractedMetadata(
             reporting_period="Q3 2024",  # Story 2.4 REVISION: renamed from fiscal_period
             company_name="Test Corp",
@@ -137,8 +135,8 @@ class TestMetadataInjection:
             import numpy as np
             from qdrant_client.models import FieldCondition, Filter, MatchValue
 
-            # Create dummy query vector (1024 dimensions for Fin-E5)
-            query_vector = np.random.rand(1024).tolist()
+            # Create dummy query vector (dimensions match active embedding model)
+            query_vector = np.random.rand(get_active_embedding_dimension()).tolist()
 
             # Search with Qdrant filter API (Story 2.4 REVISION: use reporting_period field)
             results = client.search(
@@ -165,8 +163,6 @@ class TestBackwardCompatibility:
     @pytest.mark.asyncio
     async def test_chunks_without_metadata_fields(self):
         """Test that chunks without metadata fields still work (backward compatible)."""
-        from raglite.shared.models import Chunk, DocumentMetadata
-
         # Create chunk without new metadata fields (old format)
         metadata = DocumentMetadata(
             filename="old_doc.pdf",
@@ -181,7 +177,7 @@ class TestBackwardCompatibility:
             metadata=metadata,
             page_number=1,
             chunk_index=0,
-            embedding=[0.1] * 1024,
+            embedding=[0.1] * get_active_embedding_dimension(),  # CI: 384, Local: 1024
             # Story 2.4 REVISION: Rich schema fields (15 total) not set (defaults to None)
         )
 
@@ -383,8 +379,8 @@ class TestMetadataInjectionMocked:
 
         print(f"\n✓ Testing Qdrant filter API with {test_field}={test_value}")
 
-        # Create a dummy query vector (1024 dimensions for Fin-E5)
-        query_vector = np.random.rand(1024).tolist()
+        # Create a dummy query vector (dimensions match active embedding model)
+        query_vector = np.random.rand(get_active_embedding_dimension()).tolist()
 
         # Search with filter using the found metadata value (using query_points with vector name)
 

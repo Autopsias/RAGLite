@@ -10,6 +10,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from raglite.external_data.storage import (
+    cache_model_selection,
+    get_cached_model_selection,
+    invalidate_model_selection,
+)
+from raglite.forecasting.model_selection import ModelSelectionResult
+
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
@@ -18,6 +25,9 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.postgresql_only,
     pytest.mark.slow,
+    pytest.mark.xdist_group(
+        name="model_selection_cache"
+    ),  # Prevent race conditions with test_cache_operations.py
 ]
 
 
@@ -32,12 +42,6 @@ class TestInvalidateModelSelectionIntegration:
         cleanup_model_selection,
     ) -> None:
         """TEST-AC-7b.4.4.5: invalidate_model_selection deletes single variable."""
-        from raglite.external_data.storage import (
-            cache_model_selection,
-            get_cached_model_selection,
-            invalidate_model_selection,
-        )
-
         # Cache the result
         cache_model_selection(sample_model_selection_result)
 
@@ -60,13 +64,6 @@ class TestInvalidateModelSelectionIntegration:
         cleanup_model_selection,
     ) -> None:
         """TEST-AC-7b.4.4.6: invalidate_model_selection(None) deletes all entries."""
-        from raglite.external_data.storage import (
-            cache_model_selection,
-            get_cached_model_selection,
-            invalidate_model_selection,
-        )
-        from raglite.forecasting.model_selection import ModelSelectionResult
-
         # Cache multiple results
         for i, var in enumerate(["var1", "var2", "var3"]):
             result = ModelSelectionResult(
@@ -98,8 +95,6 @@ class TestInvalidateModelSelectionIntegration:
         cleanup_model_selection,
     ) -> None:
         """TEST-AC-7b.4.4.7: invalidate_model_selection returns 0 for nonexistent variable."""
-        from raglite.external_data.storage import invalidate_model_selection
-
         count = invalidate_model_selection("nonexistent")
         assert count == 0
 
@@ -115,12 +110,6 @@ class TestErrorHandlingIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P1] get_cached_model_selection returns None after invalidation."""
-        from raglite.external_data.storage import (
-            cache_model_selection,
-            get_cached_model_selection,
-            invalidate_model_selection,
-        )
-
         cache_model_selection(sample_model_selection_result)
 
         # Verify it exists
@@ -140,7 +129,5 @@ class TestErrorHandlingIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P1] invalidate_model_selection returns 0 for nonexistent variable."""
-        from raglite.external_data.storage import invalidate_model_selection
-
         count = invalidate_model_selection("nonexistent_variable_xyz")
         assert count == 0

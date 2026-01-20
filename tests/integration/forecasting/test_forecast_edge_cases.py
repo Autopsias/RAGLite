@@ -30,7 +30,7 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
-    pytest.mark.xdist_group(name="database_writes"),
+    # REMOVED: xdist_group(name="database_writes") - tests use mocks, no real DB writes
 ]
 
 
@@ -76,12 +76,12 @@ class TestDynamicMetricForecasting:
 
         with (
             patch(
-                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
+                "raglite.mcp.tools.forecast_helpers.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ) as mock_sql,
             patch(
-                "raglite.mcp.tools.forecast.generate_forecast",
+                "raglite.mcp.tools.forecast_helpers.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -129,12 +129,12 @@ class TestDynamicMetricForecasting:
 
         with (
             patch(
-                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
+                "raglite.mcp.tools.forecast_helpers.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ),
             patch(
-                "raglite.mcp.tools.forecast.generate_forecast",
+                "raglite.mcp.tools.forecast_helpers.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -157,7 +157,7 @@ class TestDynamicMetricForecasting:
         )
 
         with patch(
-            "raglite.mcp.tools.forecast.extract_historical_data_by_type",
+            "raglite.mcp.tools.forecast_helpers.extract_historical_data_by_type",
             new_callable=AsyncMock,
             side_effect=validation_error,
         ):
@@ -203,12 +203,12 @@ class TestDynamicMetricForecasting:
 
         with (
             patch(
-                "raglite.mcp.tools.forecast.extract_historical_data_by_type",
+                "raglite.mcp.tools.forecast_helpers.extract_historical_data_by_type",
                 new_callable=AsyncMock,
                 return_value=mock_ts_data,
             ) as mock_sql,
             patch(
-                "raglite.mcp.tools.forecast.generate_forecast",
+                "raglite.mcp.tools.forecast_helpers.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
