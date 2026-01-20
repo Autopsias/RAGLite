@@ -239,8 +239,46 @@ class Settings(BaseSettings):
     )
 
 
-# Singleton instance - import this in other modules
-settings = Settings()
+# Singleton instance management
+# CRITICAL FIX (2026-01-20): Lazy initialization to prevent race condition
+# where Settings is created before conftest.py sets APP_ENV=test
+_settings_instance: Settings | None = None
+
+
+def get_settings() -> Settings:
+    """Get the Settings singleton instance (lazy initialization).
+
+    This function implements lazy initialization to prevent the race condition
+    where Settings is created at import time BEFORE environment variables
+    (like APP_ENV=test) are set by test fixtures.
+
+    Returns:
+        Settings: The application settings singleton
+    """
+    global _settings_instance
+    if _settings_instance is None:
+        _settings_instance = Settings()
+    return _settings_instance
+
+
+def reset_settings() -> Settings:
+    """Force recreation of Settings singleton.
+
+    Call this after setting environment variables to ensure Settings
+    picks up the new values. Used by conftest.py after setting APP_ENV=test.
+
+    Returns:
+        Settings: The newly created Settings instance
+    """
+    global _settings_instance
+    _settings_instance = Settings()
+    return _settings_instance
+
+
+# Backward-compatible singleton instance - import this in other modules
+# NOTE: For tests, call reset_settings() after setting APP_ENV to ensure
+# correct configuration is loaded
+settings = get_settings()
 
 
 def get_active_embedding_dimension() -> int:
@@ -256,17 +294,22 @@ def get_active_embedding_dimension() -> int:
 
 # Diagnostic logging for Settings initialization (helps debug CI configuration issues)
 logger = logging.getLogger(__name__)
-logger.info(
-    "Settings initialized",
-    extra={
-        "postgres_db": settings.postgres_db,
-        "postgres_port": settings.postgres_port,
-        "postgres_user": settings.postgres_user,
-        "qdrant_collection": settings.qdrant_collection_name,
-        "qdrant_port": settings.qdrant_port,
-        "app_env": settings.app_env,
-        "regressor_buffer_years": settings.regressor_buffer_years,
-        "ci_detected": os.getenv("CI") == "true",
-        "github_actions": os.getenv("GITHUB_ACTIONS") == "true",
-    },
-)
+
+
+def _log_settings_state(prefix: str = "Settings state") -> None:
+    """Log current settings state for debugging CI configuration issues."""
+    s = get_settings()
+    logger.info(
+        prefix,
+        extra={
+            "postgres_db": s.postgres_db,
+            "postgres_port": s.postgres_port,
+            "postgres_user": s.postgres_user,
+            "qdrant_collection": s.qdrant_collection_name,
+            "qdrant_port": s.qdrant_port,
+            "app_env": s.app_env,
+            "regressor_buffer_years": s.regressor_buffer_years,
+            "ci_detected": os.getenv("CI") == "true",
+            "github_actions": os.getenv("GITHUB_ACTIONS") == "true",
+        },
+    )

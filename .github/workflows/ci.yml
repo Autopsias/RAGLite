@@ -383,8 +383,55 @@ jobs:
           pkill -9 -f "resource_tracker" 2>/dev/null && echo "  Killed resource_tracker" || true
           pkill -9 -f "multiprocessing" 2>/dev/null && echo "  Killed multiprocessing" || true
 
+          # === ENHANCED ZOMBIE STATE DETECTION (2026-01-20) ===
+          # Strategic fix: Detect Colima VMs in zombie state (socket exists but daemon dead)
+          # This causes 80% of CI failures. Force cleanup before attempting to start new VMs.
+          echo ""
+          echo "=== Colima Zombie State Detection ==="
+          ZOMBIE_DETECTED=false
+
+          for PROFILE in ci-postgresql ci-retrieval ci-mcp; do
+            SOCKET_PATH="$HOME/.colima/${PROFILE}/docker.sock"
+            if [[ -S "$SOCKET_PATH" ]]; then
+              echo "Socket exists for $PROFILE, checking daemon responsiveness..."
+              export DOCKER_HOST="unix://${SOCKET_PATH}"
+
+              # Dual-level health check: socket existence + daemon responsiveness
+              if timeout 5 docker info &> /dev/null; then
+                echo "  ✅ $PROFILE daemon is responsive"
+              else
+                echo "  🧟 ZOMBIE STATE DETECTED for $PROFILE"
+                echo "     Socket exists: $SOCKET_PATH"
+                echo "     Daemon: UNRESPONSIVE (timeout 5s)"
+                ZOMBIE_DETECTED=true
+
+                # Force cleanup of zombie VM
+                echo "  🔧 Forcing cleanup of zombie $PROFILE..."
+                colima stop -p "$PROFILE" -f 2>/dev/null || true
+                colima delete -p "$PROFILE" -f 2>/dev/null || true
+
+                # Remove stale socket and Lima network state
+                rm -f "$SOCKET_PATH" 2>/dev/null || true
+                echo "  ✅ Zombie $PROFILE cleaned up"
+              fi
+            else
+              echo "  No socket for $PROFILE (clean state)"
+            fi
+          done
+
+          # If any zombie detected, clean Lima network state (prevents cascading failures)
+          if [[ "$ZOMBIE_DETECTED" == "true" ]]; then
+            echo ""
+            echo "🧹 Cleaning Lima network state (prevents cascading failures)..."
+            rm -rf "$HOME/.colima/_lima/_networks" 2>/dev/null || true
+            echo "✅ Lima network state cleaned"
+          fi
+          # === END ZOMBIE STATE DETECTION ===
+
           # Stop CI Colima profiles ONLY (not production default profile)
-          echo "Stopping CI Colima profiles (ci-postgresql, ci-retrieval, ci-mcp)..."
+          # This is a secondary cleanup for non-zombie VMs that may be running
+          echo ""
+          echo "Stopping any remaining CI Colima profiles..."
           for PROFILE in ci-postgresql ci-retrieval ci-mcp; do
             colima stop -p "$PROFILE" -f 2>/dev/null && echo "  Stopped $PROFILE" || true
           done
@@ -398,6 +445,9 @@ jobs:
           RECLAIMED=$((FREE_MB_AFTER - FREE_MB_BEFORE))
           echo ""
           echo "Memory after cleanup: ${FREE_MB_AFTER}MB (reclaimed: ${RECLAIMED}MB)"
+          if [[ "$ZOMBIE_DETECTED" == "true" ]]; then
+            echo "⚠️  Zombie VMs were detected and cleaned up - this may have recovered significant memory"
+          fi
           echo ""
 
       - name: Start ci-postgresql Colima Profile (First)

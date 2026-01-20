@@ -163,13 +163,14 @@ import time
 import pytest
 from pytest import MonkeyPatch
 
-# CRITICAL FIX (2025-11-23): Force reload of settings singleton after env vars are set
-# The Settings class creates a singleton at module import time (config.py line 135).
-# If config.py was imported before conftest.py set test env vars, we need to recreate it.
-import raglite.shared.config
-from raglite.shared.config import Settings
+# CRITICAL FIX (2026-01-20): Force reload of settings singleton after env vars are set
+# The Settings class uses lazy initialization (get_settings() function) but the
+# backward-compatible `settings` singleton is still created at import time.
+# We MUST call reset_settings() to recreate it with the correct test env vars.
+from raglite.shared.config import Settings, reset_settings
 
-raglite.shared.config.settings = Settings()  # Recreate singleton with test env vars
+# Recreate singleton with test env vars - this ensures APP_ENV=test is respected
+reset_settings()
 
 logger = logging.getLogger(__name__)
 
