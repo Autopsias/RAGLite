@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from qdrant_client.models import Distance  # noqa: E402
 
 from raglite.ingestion.storage import create_collection  # noqa: E402
-from raglite.shared.config import settings  # noqa: E402
+from raglite.shared.config import get_active_embedding_dimension, settings  # noqa: E402
 from raglite.shared.safety import SafetyGuard  # noqa: E402
 
 # Configure logging
@@ -64,15 +64,17 @@ def initialize_qdrant_collection() -> None:
                 logger.info(f"ℹ️  No existing collection to delete (first run): {e}")
 
         # Create collection (idempotent - safe to call multiple times)
+        # CI FIX: Use get_active_embedding_dimension() to respect CI_FAST_EMBEDDING mode
+        vector_dim = get_active_embedding_dimension()
         create_collection(
             collection_name=settings.qdrant_collection_name,
-            vector_size=settings.embedding_dimension,
+            vector_size=vector_dim,
             distance=Distance.COSINE,
         )
 
         logger.info("✅ Qdrant collection initialization complete!")
         logger.info(f"   - Collection: {settings.qdrant_collection_name}")
-        logger.info(f"   - Dense vectors: {settings.embedding_dimension}d (COSINE)")
+        logger.info(f"   - Dense vectors: {vector_dim}d (COSINE)")
         logger.info("   - Sparse vectors: BM25 (enabled)")
         logger.info("   - Indexing: HNSW (optimal defaults)")
 

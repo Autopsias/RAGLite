@@ -20,7 +20,7 @@ from qdrant_client.models import Distance, SparseIndexParams, SparseVectorParams
 
 from raglite.ingestion.embedding_generation import extract_chunk_metadata
 from raglite.shared.clients import get_qdrant_client
-from raglite.shared.config import settings
+from raglite.shared.config import get_active_embedding_dimension, settings
 from raglite.shared.logging import get_logger
 
 if TYPE_CHECKING:
@@ -109,10 +109,11 @@ def create_qdrant_collection(client: QdrantClient) -> None:
         client: Qdrant client instance
     """
     try:
+        vector_dim = get_active_embedding_dimension()
         client.create_collection(
             collection_name=settings.qdrant_collection_name,
             vectors_config={
-                "text-dense": VectorParams(size=1024, distance=Distance.COSINE),
+                "text-dense": VectorParams(size=vector_dim, distance=Distance.COSINE),
             },
             sparse_vectors_config={
                 "text-sparse": SparseVectorParams(
@@ -124,7 +125,7 @@ def create_qdrant_collection(client: QdrantClient) -> None:
             "Created fresh collection",
             extra={
                 "collection": settings.qdrant_collection_name,
-                "vector_size": 1024,
+                "vector_size": vector_dim,
             },
         )
     except Exception as e:

@@ -284,12 +284,16 @@ settings = get_settings()
 def get_active_embedding_dimension() -> int:
     """Get the embedding dimension based on current mode (CI fast or production).
 
+    Uses get_settings() to ensure we read from the current singleton instance,
+    not the module-level cached variable (which may be stale after reset_settings).
+
     Returns:
         int: 384 for CI fast mode (MiniLM), 1024 for production (Fin-E5)
     """
-    if settings.ci_fast_embedding_enabled:
-        return settings.ci_fast_embedding_dimension
-    return settings.embedding_dimension
+    current_settings = get_settings()
+    if current_settings.ci_fast_embedding_enabled:
+        return current_settings.ci_fast_embedding_dimension
+    return current_settings.embedding_dimension
 
 
 # Diagnostic logging for Settings initialization (helps debug CI configuration issues)
