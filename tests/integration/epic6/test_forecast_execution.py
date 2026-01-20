@@ -12,12 +12,18 @@ import pytest
 if TYPE_CHECKING:
     from raglite.shared.models import TimeSeriesData
 
+from raglite.forecasting.hybrid import generate_ensemble_forecast, generate_forecast
 from tests.integration.epic6.conftest import calculate_mape
 
 # Set DYLD_LIBRARY_PATH for XGBoost on macOS
 os.environ.setdefault("DYLD_LIBRARY_PATH", "/opt/homebrew/opt/libomp/lib")
 
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 
 
 class TestBaselineForecast:
@@ -31,8 +37,6 @@ class TestBaselineForecast:
         train_test_split: tuple[pd.DataFrame, pd.DataFrame],
     ) -> None:
         """AC2: Baseline forecast runs without errors."""
-        from raglite.forecasting.hybrid import generate_forecast
-
         _, test_df = train_test_split
 
         result = await generate_forecast(
@@ -59,8 +63,6 @@ class TestMultivariateForecast:
         synthetic_regressors: dict[str, pd.Series],
     ) -> None:
         """AC2: Multivariate forecast runs without errors."""
-        from raglite.forecasting.hybrid import generate_forecast
-
         _, test_df = train_test_split
 
         result = await generate_forecast(
@@ -87,8 +89,6 @@ class TestEnsembleForecast:
         synthetic_regressors: dict[str, pd.Series],
     ) -> None:
         """AC2: Ensemble forecast runs without errors."""
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
-
         _, test_df = train_test_split
 
         result = await generate_ensemble_forecast(
@@ -125,8 +125,6 @@ class TestAccuracyGate:
 
         This test validates model execution, not accuracy.
         """
-        from raglite.forecasting.hybrid import generate_forecast
-
         _, test_df = train_test_split
 
         # Use shorter horizon (3 months) for more realistic validation
@@ -176,8 +174,6 @@ class TestAccuracyGate:
         (INE, BPstat, OMIE, etc.). Once integrated, update this test to
         validate MAPE <= 12%.
         """
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
-
         _, test_df = train_test_split
 
         result = await generate_ensemble_forecast(
@@ -217,8 +213,6 @@ class TestAccuracyGate:
         NOTE: With synthetic regressors, we only validate execution, not accuracy improvement.
         Real external data from Story 6.1 is required to achieve the >=20% MAPE improvement.
         """
-        from raglite.forecasting.hybrid import generate_ensemble_forecast, generate_forecast
-
         _, test_df = train_test_split
         periods = len(test_df)
 
