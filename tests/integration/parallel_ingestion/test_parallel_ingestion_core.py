@@ -17,7 +17,13 @@ from raglite.shared.config import settings
 from raglite.shared.safety import SafetyGuard
 
 # Mark all tests in this module as integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# CRITICAL: xdist_group required because tests use embedding model via ingest_documents_parallel
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 
 
 def _prepare_test_documents(fixtures_dir: Path) -> list[str]:

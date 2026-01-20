@@ -141,13 +141,18 @@ def db_session():
 
     This fixture is shared across all integration test subdirectories
     to prevent duplication (forecasting/catboost, model_selection, etc.).
+
+    CRITICAL FIX (2026-01-20): Ensure ALL ORM tables are created, including:
+    - model_selection (Story 7b-4 cache)
+    - model_weights (Story 6.12 ensemble)
+    - external_data_sources/points (regressor data)
     """
     from raglite.shared.safety import SafetyGuard
 
     guard = SafetyGuard()
     guard.validate_test_environment("integration_db_session")
 
-    # IMPORTANT: Import ORM models BEFORE create_all() so they register with Base
+    # IMPORTANT: Import ALL ORM models BEFORE create_all() so they register with Base
     from raglite.external_data.orm_models import (  # noqa: F401
         ExternalDataPointORM,
         ExternalDataSourceORM,
@@ -162,6 +167,23 @@ def db_session():
     # Create tables in test database
     engine = get_engine()
     Base.metadata.create_all(engine)
+
+    # Verify critical tables were created (fail fast if ORM not registered)
+    import logging
+
+    logger = logging.getLogger(__name__)
+    with engine.connect() as conn:
+        from sqlalchemy import text
+
+        result = conn.execute(
+            text(
+                "SELECT table_name FROM information_schema.tables "
+                "WHERE table_schema = 'public' "
+                "AND table_name IN ('model_selection', 'model_weights', 'external_data_sources')"
+            )
+        )
+        created_tables = [row[0] for row in result]
+        logger.info(f"✅ Created ORM tables: {created_tables}")
 
     session = get_session()
     yield session

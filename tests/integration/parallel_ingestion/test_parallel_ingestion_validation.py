@@ -9,11 +9,17 @@ from pathlib import Path
 import pytest
 
 from raglite.ingestion.document_ingestion import ingest_documents_parallel
-from raglite.shared.clients import get_postgresql_connection
+from raglite.shared.clients import get_postgresql_connection, reset_postgresql_connection
 from raglite.shared.safety import SafetyGuard
 
 # Mark all tests in this module as integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# CRITICAL: xdist_group required because tests use embedding model via ingest_documents_parallel
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 
 
 @pytest.mark.priority("P2")
@@ -61,8 +67,6 @@ async def test_parallel_ingestion_stores_metadata():
     # Clear stale test data to ensure accurate differential counts
     # Tests with @pytest.mark.manages_collection_state don't use ingest_test_data fixture
     # which normally handles this cleanup (conftest.py lines 569-571)
-    from raglite.shared.clients import reset_postgresql_connection
-
     reset_postgresql_connection()
 
     # CRITICAL SAFETY CHECK (Story 6.26): Validate test environment BEFORE any DELETE
@@ -94,8 +98,6 @@ async def test_parallel_ingestion_stores_metadata():
     # Verify metadata is accessible in PostgreSQL
     # CRITICAL FIX (CI): Reset singleton connection to force fresh connection
     # This ensures we see all committed data from parallel ingestion workers
-    from raglite.shared.clients import reset_postgresql_connection
-
     reset_postgresql_connection()
 
     postgres_conn = get_postgresql_connection()

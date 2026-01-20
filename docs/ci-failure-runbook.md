@@ -2,8 +2,8 @@
 
 Quick reference for diagnosing and resolving CI failures.
 
-**Last Updated:** 2026-01-16
-**CI Infrastructure Version:** 1.5 (Strategic hardening: dual-level zombie detection, memory budget validation, mock coverage gaps)
+**Last Updated:** 2026-01-20
+**CI Infrastructure Version:** 1.6 (Schema validation refinement, xdist group markers, parallel ingestion shard optimization)
 
 ---
 
@@ -2080,6 +2080,154 @@ docker info  # Should succeed now
 - **Strategic Analysis:** `docs/ci-knowledge/2026-01-16-strategic-analysis.md` → P0 Root Cause 3
 - **Colima Reliability:** `docs/ci-knowledge/colima-reliability.md` → Zombie State Prevention
 - **Infrastructure Action:** `.github/actions/docker-preflight/action.yml` (lines 280-305)
+
+---
+
+### 25. Settings Singleton Race Condition - Cross-Shard Configuration Inconsistency (Strategic Analysis 2026-01-20)
+
+#### Symptoms
+- Embedding model tests fail when run in parallel with other shards
+- `model_selection` table validation fails during parallel test execution
+- Different tests behave differently depending on which shard runs first
+- Settings singleton initialized before test isolation boundaries
+- Schema validation checks wrong table (`financial_chunks` vs `model_selection`)
+
+#### Root Cause (Five Whys)
+1. Why? → Settings singleton initialized at import time across multiple shards
+2. Why? → Parallel test execution (pytest-xdist) creates separate processes
+3. Why? → Each process imports modules independently, initializing singleton multiple times
+4. Why? → Schema validation checked non-existent `financial_chunks` table instead of `model_selection`
+5. Why? → Test database schema references were not aligned with actual ORM table names
+
+#### Strategic Impact
+**P1 Critical** - Causes flaky parallel test execution across shards. Race condition manifests differently depending on test execution order, making debugging difficult.
+
+#### Detection Pattern
+```bash
+# Failure pattern: Tests pass in isolation, fail when run together
+pytest tests/integration/parallel_ingestion/ -n 0  # Passes
+pytest tests/ -n auto                               # Fails randomly
+
+# Schema validation mismatch
+grep -n "financial_chunks" tests/integration/fixtures/session_fixtures.py
+# Should reference "model_selection" table instead for Story 7b+ tests
+```
+
+#### Solution Implemented (2026-01-20)
+
+**Change 1: Schema Validation Uses Correct Table**
+```python
+# OLD: Checked non-existent financial_chunks table
+SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'financial_chunks')
+
+# NEW: Checks actual ORM table
+SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'model_selection')
+```
+
+**File:** `tests/integration/fixtures/session_fixtures.py` (line 58-60)
+**Rationale:** ORM tables (model_selection, model_weights) are needed for PostgreSQL-only tests
+
+**Change 2: Embedding Model Tests Use xdist_group Markers**
+```python
+# Marks tests that cannot run in parallel due to embedding model singleton
+@pytest.mark.xdist_group(name="embedding_model")
+def test_parallel_ingestion_validation():
+    """This test uses embedding model and must run in isolation."""
+    pass
+```
+
+**Files:**
+- `tests/integration/parallel_ingestion/test_parallel_ingestion_core.py` (line 25)
+- `tests/integration/parallel_ingestion/test_parallel_ingestion_validation.py` (line 21)
+- `tests/integration/parallel_ingestion/test_query_latency.py` (line 21)
+
+**Change 3: Parallel Ingestion Tests Moved to Retrieval Shard**
+```
+Before: Parallel ingestion tests run in MCP shard (~4GB limit)
+After: Parallel ingestion tests run in retrieval shard (~8GB limit)
+
+Rationale: Large embedding model loads (2GB+) require 8GB VM, not 4GB
+```
+
+**Impact:** Prevents OOM kills when embedding model loads in parallel execution
+
+#### ORM Table Verification
+
+**Current Schema (PostgreSQL):**
+```
+model_selection          - Story 7b-4 (model comparison cache)
+model_weights            - Model performance tracking
+financial_chunks         - NOT used (legacy reference removed)
+financial_tables         - Production data tables
+financial_docs (Qdrant)  - Vector embeddings
+
+Tests that need model_selection:
+- tests/integration/model_selection/
+- tests/integration/forecasting/
+- tests/unit/forecasting/model_selection/
+```
+
+**ORM Table Validation in Session Fixture:**
+```python
+# tests/integration/fixtures/session_fixtures.py
+# Verifies model_selection exists before running any PostgreSQL-dependent tests
+cursor.execute(
+    "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'model_selection');"
+)
+model_selection_exists = cursor.fetchone()[0]
+
+if not model_selection_exists:
+    # Trigger schema initialization
+    logger.warning("model_selection table not found - initializing schema")
+```
+
+#### Verification
+```bash
+# Check schema table names
+docker exec raglite-postgresql psql -U raglite -d raglite -c "\dt"
+
+# Expected output includes:
+# public | model_selection | table
+# public | model_weights   | table
+
+# Verify ORM logging in db_session fixture
+grep -n "ORM Table" tests/integration/fixtures/session_fixtures.py
+# Should show logging for verification
+
+# Run parallel ingestion tests in isolation
+pytest tests/integration/parallel_ingestion/ -v --tb=short
+
+# Run parallel ingestion tests with full suite
+pytest tests/ -n auto -v --tb=short
+# Should not fail with schema errors
+```
+
+#### Prevention
+1. **Schema Validation Correctness**
+   - Always reference actual ORM table names in schema checks
+   - Test database initialization creates: model_selection, model_weights, etc.
+   - Never reference obsolete table names like financial_chunks
+
+2. **Embedding Model Test Isolation**
+   - All embedding model tests marked with `@pytest.mark.xdist_group(name="embedding_model")`
+   - Tests that load embedding model cannot run in parallel
+   - Memory requirement: 2GB for model + overhead = 8GB VM minimum
+
+3. **Shard Memory Requirements**
+   - MCP shard: 4GB (no embedding model)
+   - Retrieval shard: 8GB (includes embedding model + hybrid search)
+   - Parallel ingestion moved to retrieval shard (requires embedding for ingestion)
+
+4. **Cross-Shard Resource Monitoring**
+   - Check `.github/workflows/ci.yml` for shard VM sizes
+   - Ensure retrieval shard allocated 8GB
+   - Monitor parallel ingestion memory usage (should peak at ~4GB with buffer)
+
+#### Related Documentation
+- **Parallel Ingestion Tests:** `tests/integration/parallel_ingestion/test_*.py` (xdist_group markers)
+- **Session Fixture:** `tests/integration/fixtures/session_fixtures.py` (schema validation)
+- **ORM Integration:** `tests/integration/model_selection/` and `tests/integration/forecasting/`
+- **Strategic Analysis:** `docs/ci-knowledge/2026-01-20-strategic-analysis.md`
 
 ---
 

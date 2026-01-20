@@ -14,7 +14,12 @@ from raglite.retrieval.search import hybrid_search
 from raglite.shared.config import settings
 
 # Mark all tests in this module as integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection]
+# CRITICAL: xdist_group required because tests use embedding model via hybrid_search
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 
 
 @pytest.mark.priority("P1")

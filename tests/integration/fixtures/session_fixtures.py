@@ -26,7 +26,12 @@ from .service_checking import check_and_skip_if_unavailable
 
 @pytest.fixture(scope="session", autouse=True)
 def ensure_test_database_schema(request):
-    """Ensure PostgreSQL schema exists before tests (Story 4.0.5)."""
+    """Ensure PostgreSQL schema exists before tests (Story 4.0.5).
+
+    CRITICAL FIX (2026-01-20): PostgreSQL schema must be initialized for ALL integration tests,
+    including PostgreSQL-only tests (model_selection, forecasting). These tests need ORM tables
+    like model_selection, model_weights, etc.
+    """
     if request.config.option.collectonly:
         yield
         return
@@ -47,12 +52,14 @@ def ensure_test_database_schema(request):
 
         conn = get_postgresql_connection()
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'financial_chunks');"
-        )
-        table_exists = cursor.fetchone()[0]
 
-        if not table_exists:
+        # Check if ORM tables exist (model_selection is critical for Story 7b-4)
+        cursor.execute(
+            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'model_selection');"
+        )
+        model_selection_exists = cursor.fetchone()[0]
+
+        if not model_selection_exists:
             logger.warning("⚠️  Test database schema not found - initializing")
             import subprocess
 
@@ -65,7 +72,7 @@ def ensure_test_database_schema(request):
                 pytest.fail(f"Failed to initialize test database schema:\n{result.stderr}")
             logger.info("✅ Test database schema initialized")
         else:
-            logger.info("✅ Test database schema already exists")
+            logger.info("✅ Test database schema already exists (model_selection table found)")
         cursor.close()
     except Exception as e:
         pytest.fail(f"Failed to verify/initialize test database schema: {e}")
