@@ -290,6 +290,19 @@ jobs:
           uv run python scripts/init-test-postgresql.py
           echo "✅ Schema initialized successfully"
 
+      - name: Initialize Qdrant Collection
+        if: steps.shard-check.outputs.should_run == 'true' && matrix.ci_shard != 'postgresql'
+        env:
+          QDRANT_HOST: localhost
+          QDRANT_PORT: "6335"
+          QDRANT_COLLECTION: financial_docs_ci
+          CI_FAST_EMBEDDING: "true"
+          MATRIX_SHARD: ${{ matrix.ci_shard }}
+        run: |
+          echo "=== Initializing Qdrant Collection for CI (Shard: ${MATRIX_SHARD}) ==="
+          uv run python scripts/init-ci-qdrant.py
+          echo "✅ Qdrant collection ready"
+
       - name: Run Integration Tests
         if: steps.shard-check.outputs.should_run == 'true'
         env:

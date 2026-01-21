@@ -200,10 +200,16 @@ def session_ingested_collection(request, warmup_embedding_model):
     qdrant = get_qdrant_client()
 
     # Initialize Qdrant collection
+    # CI FIX (2026-01-21): In CI mode, collection is pre-created by scripts/init-ci-qdrant.py
+    # This prevents xdist race conditions where workers access collection before it's created
     from raglite.shared.safety import SafetyGuard
 
     guard = SafetyGuard()
-    _initialize_qdrant_collection(settings, guard, qdrant)
+    is_ci = os.getenv("CI") == "true"
+    if not is_ci:
+        _initialize_qdrant_collection(settings, guard, qdrant)
+    else:
+        print("CI mode: Using pre-created collection (scripts/init-ci-qdrant.py)", file=sys.stderr)
 
     # Ingest test PDF
     skip_metadata_extraction = not use_full_pdf
@@ -239,7 +245,11 @@ def session_ingested_collection(request, warmup_embedding_model):
     yield
 
     # Cleanup
-    try:
-        qdrant.delete_collection(collection_name=settings.qdrant_collection_name)
-    except Exception:
-        pass
+    # CI FIX (2026-01-21): Skip cleanup in CI to avoid race conditions with xdist workers
+    # CI containers are ephemeral so no cleanup needed
+    is_ci_cleanup = os.getenv("CI") == "true"
+    if not is_ci_cleanup:
+        try:
+            qdrant.delete_collection(collection_name=settings.qdrant_collection_name)
+        except Exception:
+            pass
