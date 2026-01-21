@@ -320,15 +320,19 @@ jobs:
           echo "CI_SHARD: ${CI_SHARD}"
           echo "========================================="
 
+          # Build pytest command with shard-specific options
+          PYTEST_OPTS="-m 'not slow and not health_check' --tb=short -v -n $WORKERS --dist loadgroup --timeout=120 --maxfail=10"
+
+          # Add --skip-ingestion for shards with pre-ingested data (retrieval, mcp)
+          # PostgreSQL shard doesn't use Qdrant/embeddings, so skip-ingestion doesn't apply
+          if [[ "$MATRIX_SHARD" != "postgresql" ]]; then
+            PYTEST_OPTS="$PYTEST_OPTS --skip-ingestion"
+            echo "Using --skip-ingestion (collection pre-populated by init-ci-qdrant.py)"
+          fi
+
           uv run pytest $PYTEST_PATHS \
             $PYTEST_IGNORE \
-            -m "not health_check" \
-            --tb=short \
-            -v \
-            -n "$WORKERS" \
-            --dist loadgroup \
-            --timeout=120 \
-            --maxfail=10 \
+            $PYTEST_OPTS \
             --junitxml=test-results/integration-${MATRIX_SHARD}-junit.xml \
             2>&1 || exit_code=$?
 

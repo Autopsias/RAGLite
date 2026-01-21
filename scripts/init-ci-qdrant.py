@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 """Initialize Qdrant collection for CI tests (runs ONCE before pytest).
 
-This script runs BEFORE pytest to ensure the Qdrant collection exists.
-It solves the xdist race condition where multiple workers try to access
-a collection that doesn't exist yet because session fixtures run per-worker.
+This script runs BEFORE pytest to ensure the Qdrant collection exists
+AND is pre-populated with test data, enabling --skip-ingestion mode.
+
+This solves:
+1. xdist race condition where multiple workers try to access a non-existent collection
+2. Session fixture overhead: embedding model load (60s) + PDF ingestion happens per-worker
+   With pre-ingested data, workers skip embedding model loading entirely.
 
 Usage (CI workflow):
     uv run python scripts/init-ci-qdrant.py
@@ -14,15 +18,63 @@ Environment Variables:
     QDRANT_PORT - Qdrant server port (default: 6335)
     QDRANT_COLLECTION - Collection name (default: financial_docs_ci)
     CI_FAST_EMBEDDING - If "true", use MiniLM dimensions (384) vs Fin-E5 (1024)
+    APP_ENV - Must be "test" for safety (set automatically)
 
 Exit Codes:
     0 - Success
     1 - Error (not in CI or Qdrant unavailable)
 """
 
+import asyncio
 import os
 import sys
 import time
+from pathlib import Path
+
+# Add project root to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# CI test PDF paths (smallest for fastest CI)
+TEST_PDF_3_PAGE = Path(__file__).parent.parent / "tests/fixtures/sample-small-3-pages.pdf"
+
+
+async def ingest_test_data(collection: str, host: str, port: int) -> bool:
+    """Ingest test PDF to pre-populate the collection.
+
+    Args:
+        collection: Qdrant collection name
+        host: Qdrant host
+        port: Qdrant port
+
+    Returns:
+        True if successful, False otherwise
+    """
+    if not TEST_PDF_3_PAGE.exists():
+        print(f"⚠️  Test PDF not found: {TEST_PDF_3_PAGE}")
+        print("   Collection will be empty (tests will run slower without --skip-ingestion)")
+        return False
+
+    try:
+        # Import ingestion pipeline (deferred to avoid import errors if not in CI)
+        from raglite.ingestion.pipeline import ingest_pdf
+
+        print(f"📄 Ingesting test PDF: {TEST_PDF_3_PAGE.name}")
+        start_time = time.time()
+
+        result = await ingest_pdf(
+            str(TEST_PDF_3_PAGE),
+            clear_existing=False,  # Collection already created with correct config
+            skip_metadata=True,  # Skip LLM metadata extraction for speed
+        )
+
+        duration = time.time() - start_time
+        print(f"✅ Ingested {result.chunk_count} chunks in {duration:.1f}s")
+        return True
+
+    except Exception as e:
+        print(f"⚠️  Ingestion failed: {e}")
+        print("   Collection will be empty (tests will run slower without --skip-ingestion)")
+        return False
 
 
 def main() -> int:
@@ -35,6 +87,9 @@ def main() -> int:
     if os.getenv("CI") != "true":
         print("⏭️  Not in CI environment (CI != 'true'), skipping collection init")
         return 0
+
+    # Force test environment for safety
+    os.environ["APP_ENV"] = "test"
 
     # Import Qdrant client (deferred to avoid import errors if not in CI)
     try:
@@ -117,8 +172,27 @@ def main() -> int:
         print(f"❌ Failed to create collection: {e}", file=sys.stderr)
         return 1
 
+    # Step 2: Ingest test PDF to enable --skip-ingestion mode
+    print("-" * 60)
+    print("📥 Ingesting test data for --skip-ingestion mode")
+    print("-" * 60)
+
+    ingestion_success = asyncio.run(ingest_test_data(collection, host, port))
+
+    # Verify final collection state
+    try:
+        info = client.get_collection(collection)
+        print(f"📊 Final collection state: {info.points_count} points")
+    except Exception as e:
+        print(f"⚠️  Could not verify collection: {e}")
+
     print("=" * 60)
-    print("✅ CI Qdrant collection ready for pytest!")
+    if ingestion_success:
+        print("✅ CI Qdrant collection ready with test data!")
+        print("   Tests can use --skip-ingestion for faster execution")
+    else:
+        print("✅ CI Qdrant collection ready (empty)")
+        print("   Tests will run slower (ingestion per session)")
     print("=" * 60)
     return 0
 
