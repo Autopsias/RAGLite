@@ -98,13 +98,16 @@ def main() -> int:
     except Exception as e:
         print(f"⚠️  Could not delete existing collection (may not exist): {e}")
 
-    # Create fresh collection
+    # Create fresh collection with NAMED vector (text-dense)
+    # Must match raglite/ingestion/storage/vector_store.py line 109
     try:
         client.create_collection(
             collection_name=collection,
-            vectors_config=VectorParams(size=dimensions, distance=Distance.COSINE),
+            vectors_config={
+                "text-dense": VectorParams(size=dimensions, distance=Distance.COSINE),
+            },
         )
-        print(f"✅ Created collection: {collection}")
+        print(f"✅ Created collection: {collection} (vector: text-dense)")
 
         # Verify collection exists
         info = client.get_collection(collection)
