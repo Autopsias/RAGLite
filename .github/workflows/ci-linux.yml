@@ -230,11 +230,12 @@ jobs:
           - shard: postgresql
             # PostgreSQL + forecasting + model_selection + root-level forecasting tests
             # Root-level: adaptive_catboost, auto_forecast, catboost_core, chronos, demand_regressors, ensemble, epic6, forecast_external
-            pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/external_data/ tests/integration/insights/ tests/integration/test_adaptive_catboost_weights.py tests/integration/test_auto_forecast_update.py tests/integration/test_catboost_core.py tests/integration/test_chronos_ensemble.py tests/integration/test_demand_regressors.py tests/integration/test_ensemble_real_data.py tests/integration/test_epic6_core.py tests/integration/test_forecast_external.py tests/integration/test_external_data_core.py tests/integration/test_external_data_schema.py tests/integration/test_ecb_macro_core.py"
+            # REMOVED external_data tests - moved to "other" shard (P1 fix for slow CI)
+            pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/insights/ tests/integration/test_adaptive_catboost_weights.py tests/integration/test_auto_forecast_update.py tests/integration/test_catboost_core.py tests/integration/test_chronos_ensemble.py tests/integration/test_demand_regressors.py tests/integration/test_ensemble_real_data.py tests/integration/test_epic6_core.py tests/integration/test_forecast_external.py"
             pytest_ignore: ""
             workers: 4  # No embedding model needed - safe to parallelize
             ci_shard: postgresql
-            description: "PostgreSQL + forecasting tests (no embedding, 4x parallelization)"
+            description: "PostgreSQL + forecasting tests (fast, no embedding, 4x parallelization)"
           - shard: retrieval
             # RAG/retrieval + accuracy tests + parallel ingestion + root-level embedding tests
             # Root-level: analytical_core, chunking_*, metadata_core, hybrid_search, main_integration, sql_routing
@@ -252,14 +253,15 @@ jobs:
             ci_shard: mcp
             description: "MCP + agentic tests (2x parallelization)"
           - shard: other
-            # Remaining integration tests: anomaly detection, AC tests, validation, etc.
-            # Only tests that don't need embedding model or special fixtures
+            # Remaining integration tests: anomaly, validation, external_data, etc.
+            # External data tests moved from postgresql shard (P1 fix for slow CI)
             pytest_paths: "tests/integration/"
             # Exclude all subdirectories and root-level tests assigned to other shards
-            pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/external_data/ --ignore=tests/integration/insights/ --ignore=tests/integration/chunking/ --ignore=tests/integration/ingestion/ --ignore=tests/integration/retrieval/ --ignore=tests/integration/story_2_14/ --ignore=tests/integration/ac3_ground_truth/ --ignore=tests/integration/parallel_ingestion/ --ignore=tests/integration/mcp/ --ignore=tests/integration/story_6_23/ --ignore=tests/integration/external_data_mcp/ --ignore=tests/integration/epic6/ --ignore=tests/integration/helpers/ --ignore=tests/integration/fixtures/ --ignore=tests/integration/workflows/ --ignore=tests/integration/test_accuracy_validation.py --ignore=tests/integration/test_unified_validation_e2e.py --ignore=tests/integration/test_adaptive_catboost_weights.py --ignore=tests/integration/test_auto_forecast_update.py --ignore=tests/integration/test_catboost_core.py --ignore=tests/integration/test_chronos_ensemble.py --ignore=tests/integration/test_demand_regressors.py --ignore=tests/integration/test_ensemble_real_data.py --ignore=tests/integration/test_epic6_core.py --ignore=tests/integration/test_forecast_external.py --ignore=tests/integration/test_external_data_core.py --ignore=tests/integration/test_external_data_schema.py --ignore=tests/integration/test_ecb_macro_core.py --ignore=tests/integration/test_analytical_core.py --ignore=tests/integration/test_chunking_consistency.py --ignore=tests/integration/test_chunking_core.py --ignore=tests/integration/test_metadata_core.py --ignore=tests/integration/test_hybrid_search_integration.py --ignore=tests/integration/test_main_integration.py --ignore=tests/integration/test_retrieval_core.py --ignore=tests/integration/test_pypdfium_ingestion.py --ignore=tests/integration/test_e2e_query_validation.py --ignore=tests/integration/test_agentic_framework.py --ignore=tests/integration/test_agentic_workflow_suite.py --ignore=tests/integration/test_analysis_agent_workflow.py --ignore=tests/integration/test_mcp_server.py --ignore=tests/integration/test_mcp_validation_integration.py --ignore=tests/integration/test_story_6_23_mcp_tools.py --ignore=tests/integration/test_external_data_mcp_core.py --ignore=tests/integration/test_sql_routing.py --ignore=tests/integration/test_multi_index_integration.py --ignore=tests/integration/test_document_segregation.py --ignore=tests/integration/test_excerpt_validation_core.py --ignore=tests/integration/test_mcp_async_ingestion.py --ignore=tests/integration/test_mcp_response_validation.py --ignore=tests/integration/test_parallel_ingestion.py --ignore=tests/integration/test_page_parallelism.py"
-            workers: 4  # Remaining tests can parallelize
+            # NOTE: external_data tests NOW INCLUDED (removed from ignore list)
+            pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/insights/ --ignore=tests/integration/chunking/ --ignore=tests/integration/ingestion/ --ignore=tests/integration/retrieval/ --ignore=tests/integration/story_2_14/ --ignore=tests/integration/ac3_ground_truth/ --ignore=tests/integration/parallel_ingestion/ --ignore=tests/integration/mcp/ --ignore=tests/integration/story_6_23/ --ignore=tests/integration/external_data_mcp/ --ignore=tests/integration/epic6/ --ignore=tests/integration/helpers/ --ignore=tests/integration/fixtures/ --ignore=tests/integration/workflows/ --ignore=tests/integration/test_accuracy_validation.py --ignore=tests/integration/test_unified_validation_e2e.py --ignore=tests/integration/test_adaptive_catboost_weights.py --ignore=tests/integration/test_auto_forecast_update.py --ignore=tests/integration/test_catboost_core.py --ignore=tests/integration/test_chronos_ensemble.py --ignore=tests/integration/test_demand_regressors.py --ignore=tests/integration/test_ensemble_real_data.py --ignore=tests/integration/test_epic6_core.py --ignore=tests/integration/test_forecast_external.py --ignore=tests/integration/test_analytical_core.py --ignore=tests/integration/test_chunking_consistency.py --ignore=tests/integration/test_chunking_core.py --ignore=tests/integration/test_metadata_core.py --ignore=tests/integration/test_hybrid_search_integration.py --ignore=tests/integration/test_main_integration.py --ignore=tests/integration/test_retrieval_core.py --ignore=tests/integration/test_pypdfium_ingestion.py --ignore=tests/integration/test_e2e_query_validation.py --ignore=tests/integration/test_agentic_framework.py --ignore=tests/integration/test_agentic_workflow_suite.py --ignore=tests/integration/test_analysis_agent_workflow.py --ignore=tests/integration/test_mcp_server.py --ignore=tests/integration/test_mcp_validation_integration.py --ignore=tests/integration/test_story_6_23_mcp_tools.py --ignore=tests/integration/test_external_data_mcp_core.py --ignore=tests/integration/test_sql_routing.py --ignore=tests/integration/test_multi_index_integration.py --ignore=tests/integration/test_document_segregation.py --ignore=tests/integration/test_excerpt_validation_core.py --ignore=tests/integration/test_mcp_async_ingestion.py --ignore=tests/integration/test_mcp_response_validation.py --ignore=tests/integration/test_parallel_ingestion.py --ignore=tests/integration/test_page_parallelism.py"
+            workers: 4  # External data tests can parallelize with VCR cassettes
             ci_shard: other
-            description: "Other integration tests (anomaly, validation, misc)"
+            description: "Other integration tests (anomaly, validation, external_data, misc)"
 
     env:
       QDRANT_HOST: localhost
@@ -379,8 +381,9 @@ jobs:
           # Solution: Quote the marker expression at the point of use, not in the variable
           # NOTE: Integration tests ARE marked slow by design - don't exclude them!
           # Unit tests exclude slow, but integration tests NEED slow tests to run
-          MARKER_EXPR="not health_check and not atdd"
-          PYTEST_OPTS="--tb=short -v -n $WORKERS --dist loadfile --timeout=120 --maxfail=10"
+          # External API tests excluded as safety net (rely on VCR cassettes)
+          MARKER_EXPR="not health_check and not atdd and not external_api"
+          PYTEST_OPTS="--tb=short -v -n $WORKERS --dist loadgroup --timeout=120 --maxfail=10"
 
           # Add --skip-ingestion for shards with pre-ingested data (retrieval, mcp)
           # PostgreSQL shard doesn't use Qdrant/embeddings, so skip-ingestion doesn't apply
