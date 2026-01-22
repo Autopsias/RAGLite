@@ -298,6 +298,8 @@ jobs:
           QDRANT_COLLECTION: financial_docs_ci
           CI_FAST_EMBEDDING: "true"
           MATRIX_SHARD: ${{ matrix.ci_shard }}
+          # Required for PDF ingestion (even with skip_metadata, some code paths validate the key)
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
         run: |
           echo "=== Initializing Qdrant Collection for CI (Shard: ${MATRIX_SHARD}) ==="
           uv run python scripts/init-ci-qdrant.py
