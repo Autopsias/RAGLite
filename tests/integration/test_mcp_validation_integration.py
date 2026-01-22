@@ -23,7 +23,8 @@ pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.m
 @pytest.mark.asyncio
 async def test_validate_forecasting_accuracy_success():
     """Test successful validation with existing forecasts in database."""
-    response = await validate_forecasting_accuracy()
+    # Access the underlying function via .fn (FunctionTool wrapper)
+    response = await validate_forecasting_accuracy.fn()
 
     assert response.__class__.__name__ == "ValidationResponse"
     assert response.variables_tested >= 0
@@ -35,7 +36,8 @@ async def test_validate_forecasting_accuracy_success():
 @pytest.mark.asyncio
 async def test_list_available_regressors_static_data():
     """Test regressor list returns all configured regressors."""
-    response = await list_available_regressors()
+    # Access the underlying function via .fn (FunctionTool wrapper)
+    response = await list_available_regressors.fn()
 
     assert response.__class__.__name__ == "RegressorListResponse"
     assert len(response.regressors) > 0
@@ -50,8 +52,9 @@ async def test_list_available_regressors_static_data():
 @pytest.mark.asyncio
 async def test_get_regressor_data_with_valid_variable():
     """Test fetching regressor data for a valid variable."""
+    # Access the underlying function via .fn (FunctionTool wrapper)
     # Use a known regressor from config (use ISO string format)
-    response = await get_regressor_data(
+    response = await get_regressor_data.fn(
         regressor="ttf_gas",
         start_date="2020-01-01",
         end_date="2023-12-31",
@@ -71,8 +74,9 @@ async def test_get_regressor_data_with_valid_variable():
 @pytest.mark.asyncio
 async def test_get_regressor_data_with_invalid_variable():
     """Test error handling for unknown variable."""
+    # Access the underlying function via .fn (FunctionTool wrapper)
     with pytest.raises(ValueError, match="Unknown regressor"):
-        await get_regressor_data(
+        await get_regressor_data.fn(
             regressor="nonexistent_variable",
             start_date="2020-01-01",
             end_date="2023-12-31",
