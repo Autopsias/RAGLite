@@ -240,6 +240,8 @@ jobs:
       POSTGRES_PASSWORD: raglite_ci
       POSTGRES_DB: raglite_ci
       CI_SHARD: ${{ matrix.ci_shard }}
+      # Required for tests that use Mistral API (query classification, metadata extraction)
+      MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
 
     steps:
       - name: Check if shard should run
