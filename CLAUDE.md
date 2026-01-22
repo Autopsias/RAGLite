@@ -122,6 +122,53 @@ uv run python -m raglite.main
 
 ---
 
+## CI Workflow Management
+
+### Quick CI Commands
+
+```bash
+# Trigger workflow with targeted stage (skip lint/validate for faster iteration)
+gh workflow run ci-linux.yml --ref main -f run_integration=true -f skip_to_stage=integration-only
+
+# Check recent CI runs
+gh run list --limit 5
+
+# View specific run details
+gh run view <run_id>
+
+# View logs
+gh run view <run_id> --log
+```
+
+### Cancel CI Workflows
+
+**Normal cancellation** (may take 1-3 minutes for running jobs):
+```bash
+gh run cancel <run_id>
+```
+
+**Force-cancel (NUCLEAR OPTION)** - bypasses all conditions, kills immediately:
+```bash
+# This is the GitHub Actions force-cancel API endpoint
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer $(gh auth token)" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  "https://api.github.com/repos/Autopsias/RAGLite/actions/runs/<run_id>/force-cancel"
+```
+
+**When to use force-cancel:**
+- Regular cancel is not responding after 30+ seconds
+- Workflow is stuck and consuming resources
+- Need to immediately free up CI capacity for another run
+
+**Technical details:**
+- Normal cancel sends SIGINT → SIGTERM (7.5s wait) → SIGKILL (2.5s wait)
+- Force-cancel bypasses all timeouts and kills immediately
+- Useful for stuck integration tests with Docker containers
+
+---
+
 ## Database Backup & Restore
 
 **Backup location:** `backups/` directory
