@@ -184,7 +184,7 @@ jobs:
   integration:
     name: "🔗 Tests: Integration (${{ matrix.shard }})"
     runs-on: ubuntu-latest
-    timeout-minutes: 25  # Reduced from 60 to force investigation of slow tests (target: <20 min)
+    timeout-minutes: 30  # Optimized: 2x expected duration (15min) with memory fixes in place
     needs: validate
     # Run integration tests on:
     # - Push to main (always run full integration on main)
@@ -239,19 +239,21 @@ jobs:
           - shard: retrieval
             # RAG/retrieval + accuracy tests + parallel ingestion + root-level embedding tests
             # Root-level: analytical_core, chunking_*, metadata_core, hybrid_search, main_integration, sql_routing
+            # MEMORY FIX (2026-01-23): Reduced from 4 to 1 worker - embedding model tests use 2GB per worker
             pytest_paths: "tests/integration/chunking/ tests/integration/ingestion/ tests/integration/retrieval/ tests/integration/story_2_14/ tests/integration/ac3_ground_truth/ tests/integration/parallel_ingestion/ tests/integration/test_analytical_core.py tests/integration/test_chunking_consistency.py tests/integration/test_chunking_core.py tests/integration/test_metadata_core.py tests/integration/test_hybrid_search_integration.py tests/integration/test_main_integration.py tests/integration/test_retrieval_core.py tests/integration/test_pypdfium_ingestion.py tests/integration/test_e2e_query_validation.py tests/integration/test_sql_routing.py tests/integration/test_multi_index_integration.py tests/integration/test_document_segregation.py tests/integration/test_excerpt_validation_core.py tests/integration/test_parallel_ingestion.py tests/integration/test_page_parallelism.py"
             pytest_ignore: ""
-            workers: 4
+            workers: 1
             ci_shard: retrieval
-            description: "RAG/retrieval + embedding tests (xdist_group keeps embedding tests on 1 worker)"
+            description: "RAG/retrieval + embedding tests (1 worker prevents 4×2GB memory exhaustion)"
           - shard: mcp
             # MCP tools + story tests + epic6 + agentic tests
             # Root-level: agentic_*, mcp_*, story tests, async_ingestion, response_validation
+            # OPTIMIZED (2026-01-23): 2 workers with xdist_group - embedding tests stay on one worker
             pytest_paths: "tests/integration/mcp/ tests/integration/story_6_23/ tests/integration/external_data_mcp/ tests/integration/epic6/ tests/integration/helpers/ tests/integration/test_agentic_framework.py tests/integration/test_agentic_workflow_suite.py tests/integration/test_analysis_agent_workflow.py tests/integration/test_mcp_server.py tests/integration/test_mcp_validation_integration.py tests/integration/test_story_6_23_mcp_tools.py tests/integration/test_external_data_mcp_core.py tests/integration/test_mcp_async_ingestion.py tests/integration/test_mcp_response_validation.py"
             pytest_ignore: ""
-            workers: 2  # Embedding model tests - use xdist_group
+            workers: 2
             ci_shard: mcp
-            description: "MCP + agentic tests (2x parallelization)"
+            description: "MCP + agentic tests (2 workers, xdist_group keeps embedding tests together)"
           - shard: other
             # Remaining integration tests: anomaly, validation, external_data, etc.
             # External data tests moved from postgresql shard (P1 fix for slow CI)
@@ -357,6 +359,27 @@ jobs:
           echo "=== Initializing Qdrant Collection for CI (Shard: ${MATRIX_SHARD}) ==="
           uv run python scripts/init-ci-qdrant.py
           echo "✅ Qdrant collection ready"
+
+      - name: Validate xdist_group Markers
+        if: steps.shard-check.outputs.should_run == 'true'
+        run: |
+          echo "=== Validating xdist_group markers for embedding tests ==="
+          uv run python scripts/validate-xdist-markers.py --verbose
+          echo "✅ Marker validation passed"
+
+      - name: Validate Test Collection with xdist
+        if: steps.shard-check.outputs.should_run == 'true'
+        env:
+          MATRIX_SHARD: ${{ matrix.shard }}
+          WORKERS: ${{ matrix.workers }}
+        run: |
+          echo "=== Validating pytest collection with --dist loadgroup (Shard: $MATRIX_SHARD) ==="
+          uv run pytest --collect-only --dist loadgroup -n $WORKERS -q tests/integration/ 2>&1 | tee /tmp/collection.log
+          if grep -E "ERROR|ModuleNotFoundError|ImportError:" /tmp/collection.log; then
+            echo "❌ Test collection failed with xdist enabled"
+            exit 1
+          fi
+          echo "✅ Test collection validation passed"
 
       - name: Run Integration Tests
         if: steps.shard-check.outputs.should_run == 'true'

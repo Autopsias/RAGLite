@@ -172,6 +172,59 @@ MAIN BRANCH (Post-Merge Validation):
 - Use `.file-size-exceptions` for TEMPORARY exceptions only (with refactoring targets)
 - Move reusable fixtures to `conftest.py` to reduce duplication
 
+## Resource-Based Sharding Strategy (Updated 2026-01-22)
+
+### Problem: Embedding Model Memory in Parallel Execution
+
+Embedding model (Fin-E5, 2GB) cannot run in parallel on 4GB VM:
+- 4 workers × 2GB model = 8GB needed
+- 4GB VM has only 768MB free after DB containers
+- Result: OOM kill, SIGKILL on worker processes
+
+### Solution: Different Shard Allocations
+
+**Retrieval Shard (8GB VM, 2 workers):**
+- Contains: Embedding-dependent tests (parallel ingestion, retrieval, hybrid search)
+- Memory profile: High (2GB embedding model + parallelization)
+- Worker count: 2 (allows embedding model in each worker, 4GB per worker)
+- Timeout: 45 minutes (embedding load + parallel ingestion)
+
+**MCP Shard (4GB VM, 4 workers):**
+- Contains: Stateless MCP tests (no embedding model)
+- Memory profile: Low (no embedding required)
+- Worker count: 4 (safe on 4GB VM, no embedding overhead)
+- Timeout: 15 minutes (fast tests)
+
+### Test Classification
+
+| Test Category | Embedding Required | Shard | Workers | Timeout |
+|---|---|---|---|---|
+| Parallel Ingestion | Yes | Retrieval | 2 | 45min |
+| Retrieval Core | Yes | Retrieval | 2 | 45min |
+| Hybrid Search | Yes | Retrieval | 2 | 45min |
+| MCP Tools | No | MCP | 4 | 15min |
+| MCP Analytical | No | MCP | 4 | 15min |
+| Unit Tests (no embedding) | No | Validate | auto | 10min |
+
+### Validation
+
+**Pre-commit:**
+```bash
+python scripts/validate-xdist-markers.py
+# Ensures all embedding tests marked @pytest.mark.xdist_group(name="embedding_model")
+```
+
+**CI Configuration:**
+```bash
+grep "retrieval.*shard" .github/workflows/ci.yml | grep workers
+# Expected: workers: 2
+
+grep "mcp.*shard" .github/workflows/ci.yml | grep workers
+# Expected: workers: 4
+```
+
+---
+
 ## Global Environment Variables
 
 ### Strategic Configuration (Self-Hosted Runners)

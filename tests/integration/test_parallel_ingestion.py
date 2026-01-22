@@ -12,7 +12,12 @@ from pathlib import Path
 import pytest
 
 from raglite.ingestion.document_ingestion import ingest_documents_parallel
-from raglite.shared.clients import get_postgresql_connection, get_qdrant_client
+from raglite.retrieval.search import hybrid_search
+from raglite.shared.clients import (
+    get_postgresql_connection,
+    get_qdrant_client,
+    reset_postgresql_connection,
+)
 from raglite.shared.config import settings
 from raglite.shared.safety import SafetyGuard
 from tests.integration.helpers.parallel_ingestion_helpers import (
@@ -28,7 +33,13 @@ from tests.integration.helpers.parallel_ingestion_helpers import (
 )
 
 # Mark all tests in this module as integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# xdist_group marker ensures all tests run on same worker (prevents 4×60s embedding model load)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),  # Required: uses session_ingested_collection
+]
 
 
 @pytest.mark.slow  # Takes ~60s, actual PDF ingestion
@@ -191,8 +202,6 @@ async def test_parallel_ingestion_stores_metadata():
     # Clear stale test data to ensure accurate differential counts
     # Tests with @pytest.mark.manages_collection_state don't use ingest_test_data fixture
     # which normally handles this cleanup (conftest.py lines 569-571)
-    from raglite.shared.clients import reset_postgresql_connection
-
     reset_postgresql_connection()
 
     # CRITICAL SAFETY CHECK (Story 6.26): Validate test environment BEFORE any DELETE
@@ -224,8 +233,6 @@ async def test_parallel_ingestion_stores_metadata():
     # Verify metadata is accessible in PostgreSQL
     # CRITICAL FIX (CI): Reset singleton connection to force fresh connection
     # This ensures we see all committed data from parallel ingestion workers
-    from raglite.shared.clients import reset_postgresql_connection
-
     reset_postgresql_connection()
 
     postgres_conn = get_postgresql_connection()
@@ -263,8 +270,6 @@ async def test_query_latency_with_enrichment():
 
     from qdrant_client import QdrantClient
     from qdrant_client.http.exceptions import UnexpectedResponse
-
-    from raglite.retrieval.search import hybrid_search
 
     # Check if Qdrant collection exists before running test
     try:
@@ -325,8 +330,6 @@ async def test_query_latency_multiple_queries():
 
     from qdrant_client import QdrantClient
     from qdrant_client.http.exceptions import UnexpectedResponse
-
-    from raglite.retrieval.search import hybrid_search
 
     # Check if Qdrant collection exists before running test
     try:

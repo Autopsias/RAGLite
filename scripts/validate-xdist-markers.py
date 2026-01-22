@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Validate xdist_group markers on embedding-dependent tests.
+"""Validate xdist_group markers for embedding-dependent tests.
 
-This script ensures all integration tests that use the embedding model
-have the @pytest.mark.xdist_group(name="embedding_model") marker.
+Purpose: Ensure all tests that use the 2GB embedding model have xdist_group markers
+         to prevent redundant model loads across pytest-xdist workers.
 
-Without this marker, tests scatter across workers and each worker loads
-the 2GB Fin-E5 model independently (60s × workers = massive overhead).
+Background:
+- pytest-xdist session fixtures execute once PER WORKER, not once globally
+- Without xdist_group: 60s load × 4 workers = 240s wasted
+- With xdist_group: 60s load × 1 worker = 60s total
 
 Usage:
-    python scripts/validate-xdist-markers.py [--fix-suggestions]
-
-Exit codes:
-    0: All markers present
-    1: Missing markers found (CI should fail)
+    python scripts/validate-xdist-markers.py              # Check all integration tests
+    python scripts/validate-xdist-markers.py --verbose    # Show detailed analysis
+    python scripts/validate-xdist-markers.py --fix        # Auto-add markers (dry-run)
 """
 
 import argparse
@@ -20,83 +20,119 @@ import re
 import sys
 from pathlib import Path
 
-# Patterns indicating embedding model usage
-EMBEDDING_PATTERNS = [
-    r"get_embedding_model",
-    r"session_ingested_collection",
-    r"warmup_embedding_model",
-    r"SentenceTransformer",
-    r"from raglite\.shared\.clients import.*embedding",
-]
 
-# Patterns indicating xdist_group marker
-XDIST_GROUP_PATTERN = r'xdist_group\s*\(\s*name\s*=\s*["\']embedding_model["\']\s*\)'
+def parse_args():
+    parser = argparse.ArgumentParser(description="Validate xdist_group markers")
+    parser.add_argument("--verbose", action="store_true", help="Show detailed analysis per file")
+    parser.add_argument(
+        "--fix", action="store_true", help="Show suggested fixes (no file modifications)"
+    )
+    return parser.parse_args()
 
 
-def find_test_files(integration_dir: Path) -> list[Path]:
-    """Find all test_*.py files in integration tests."""
-    return list(integration_dir.glob("**/test_*.py"))
+def find_embedding_dependencies(file_path: Path) -> dict[str, list[int]]:
+    """Find indicators that a test file uses the embedding model.
 
+    Returns:
+        Dict mapping indicator type to list of line numbers
+    """
+    indicators = {
+        "import_embedding_utils": [],
+        "get_embedding_model": [],
+        "session_ingested_collection": [],
+        "warmup_embedding_model": [],
+        "parallel_ingestion": [],
+    }
 
-def uses_embedding(file_path: Path) -> bool:
-    """Check if file uses embedding model."""
     content = file_path.read_text()
-    for pattern in EMBEDDING_PATTERNS:
-        if re.search(pattern, content):
-            return True
-    return False
+    lines = content.split("\n")
+
+    for i, line in enumerate(lines, start=1):
+        if "from raglite.shared.embedding_utils import" in line:
+            indicators["import_embedding_utils"].append(i)
+        if "get_embedding_model()" in line:
+            indicators["get_embedding_model"].append(i)
+        if "session_ingested_collection" in line and "@pytest.fixture" not in line:
+            indicators["session_ingested_collection"].append(i)
+        if "warmup_embedding_model" in line:
+            indicators["warmup_embedding_model"].append(i)
+        if "test_parallel_ingestion" in str(file_path):
+            indicators["parallel_ingestion"].append(i)
+
+    return {k: v for k, v in indicators.items() if v}
 
 
-def has_xdist_marker(file_path: Path) -> bool:
-    """Check if file has xdist_group(name='embedding_model') marker."""
+def has_xdist_group_marker(file_path: Path) -> bool:
+    """Check if file has xdist_group marker."""
     content = file_path.read_text()
-    return bool(re.search(XDIST_GROUP_PATTERN, content))
+    return bool(re.search(r'xdist_group\(name="embedding_model"\)', content))
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-    parser.add_argument(
-        "--fix-suggestions", action="store_true", help="Show how to fix missing markers"
-    )
-    args = parser.parse_args()
+    args = parse_args()
 
-    integration_dir = Path("tests/integration")
-    if not integration_dir.exists():
-        print(f"ERROR: Directory not found: {integration_dir}")
-        sys.exit(1)
+    integration_tests = Path("tests/integration")
+    if not integration_tests.exists():
+        print(f"ERROR: {integration_tests} not found")
+        return 1
 
-    test_files = find_test_files(integration_dir)
-    if not test_files:
-        print(f"WARNING: No test files found in {integration_dir}")
-        sys.exit(0)
+    test_files = list(integration_tests.rglob("test_*.py"))
+    print(f"Analyzing {len(test_files)} integration test files...\n")
 
-    missing = []
-    for f in test_files:
-        if uses_embedding(f) and not has_xdist_marker(f):
-            missing.append(f)
+    missing_markers: list[Path] = []
+    properly_marked: list[Path] = []
 
-    if missing:
-        print(f"ERROR: {len(missing)} files use embedding but missing xdist_group marker:")
-        for f in missing:
-            print(f"  - {f}")
+    for test_file in sorted(test_files):
+        indicators = find_embedding_dependencies(test_file)
 
-        if args.fix_suggestions:
-            print("\nTo fix, add to each file's pytestmark:")
-            print("  pytest.mark.xdist_group(name='embedding_model'),")
-            print("\nExample:")
-            print("  pytestmark = [")
-            print("      pytest.mark.integration,")
-            print("      pytest.mark.xdist_group(name='embedding_model'),")
-            print("  ]")
+        if not indicators:
+            continue
 
-        sys.exit(1)
-    else:
-        total = len([f for f in test_files if uses_embedding(f)])
-        print(f"OK: All {total} embedding-dependent integration test files have correct markers")
-        sys.exit(0)
+        has_marker = has_xdist_group_marker(test_file)
+
+        if has_marker:
+            properly_marked.append(test_file)
+        else:
+            missing_markers.append(test_file)
+
+            if args.verbose or args.fix:
+                print(f"⚠️  {test_file.relative_to(integration_tests)}")
+                print("    Embedding indicators found:")
+                for indicator_type, line_numbers in indicators.items():
+                    print(f"      - {indicator_type}: lines {', '.join(map(str, line_numbers))}")
+
+                if args.fix:
+                    print("\n    Suggested fix:")
+                    print("    Add to pytestmark at top of file (after imports):")
+                    print('    pytest.mark.xdist_group(name="embedding_model")')
+                print()
+
+    # Summary
+    print("\n" + "=" * 70)
+    print("Summary:")
+    print(f"  Total test files analyzed: {len(test_files)}")
+    print(f"  Files with embedding dependencies: {len(missing_markers) + len(properly_marked)}")
+    print(f"  ✅ Properly marked: {len(properly_marked)}")
+    print(f"  ⚠️  Missing markers: {len(missing_markers)}")
+    print("=" * 70)
+
+    if missing_markers:
+        print(f"\n❌ VALIDATION FAILED: {len(missing_markers)} files need xdist_group markers")
+        print("\nFiles needing markers:")
+        for f in missing_markers:
+            print(f"  - {f.relative_to(integration_tests)}")
+
+        print("\nTo fix, add this to pytestmark in each file:")
+        print("  pytestmark = [")
+        print("      pytest.mark.integration,")
+        print('      pytest.mark.xdist_group(name="embedding_model"),  # Required!')
+        print("  ]")
+
+        return 1
+
+    print("\n✅ All embedding-dependent tests have xdist_group markers")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

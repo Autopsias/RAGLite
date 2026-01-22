@@ -2,8 +2,8 @@
 
 Quick reference for diagnosing and resolving CI failures.
 
-**Last Updated:** 2026-01-20
-**CI Infrastructure Version:** 1.6 (Schema validation refinement, xdist group markers, parallel ingestion shard optimization)
+**Last Updated:** 2026-01-22
+**CI Infrastructure Version:** 1.7 (Worker memory exhaustion fix, resource-based sharding, xdist_group enforcement)
 
 ---
 
@@ -131,6 +131,7 @@ grep -n "class NonExistentClass" raglite/module.py  # Should find something
 | `Unit test attempted to call Mistral API!` | Lazy import in function body not patched | Add module to mock_clients.py patches | Run validate-mock-coverage.py before commit |
 | `Docker daemon did not become ready within 60s` | Colima zombie state (process running, daemon dead) | `colima stop -f && colima delete -f && colima start` | Add zombie state detection to pre-flight check |
 | `NFR job hangs after 10 min processing PDFs` | Colima VM memory exhausted (4GB insufficient for large docs) | Restart CI with Colima 6GB allocation | Pre-flight validation catches infra issues early (30s) |
+| `[gw3] node down: Not properly terminated` (SIGKILL) | Worker memory exhaustion - embedding model × 4 workers | Reduce workers on embedding shard, add xdist_group markers | Use resource-based sharding, validate marker coverage |
 | `Qdrant/PostgreSQL unreachable in NFR job` | Infrastructure not ready before expensive ingestion starts | Run pre-flight validation before ingestion | Use scripts/ingest-for-validation.py with retry logic |
 
 ---
@@ -2228,6 +2229,131 @@ pytest tests/ -n auto -v --tb=short
 - **Session Fixture:** `tests/integration/fixtures/session_fixtures.py` (schema validation)
 - **ORM Integration:** `tests/integration/model_selection/` and `tests/integration/forecasting/`
 - **Strategic Analysis:** `docs/ci-knowledge/2026-01-20-strategic-analysis.md`
+
+---
+
+### 26. Worker Memory Exhaustion - Embedding Model in Parallel Execution (Strategic Analysis 2026-01-22)
+
+#### Symptoms
+- `[gw3] node down: Not properly terminated` in pytest-xdist logs
+- Exit code 137 (128 + 9 = SIGKILL)
+- Integration test jobs hang at 10-15 minutes then timeout after 120+ minutes
+- Docker daemon becomes unresponsive (zombie state)
+- Colima VM appears running but daemon not responding to commands
+- "Parallel execution failed" - workers killed by OOM killer
+
+#### Root Cause (Five Whys)
+1. Why? → Worker process killed with signal 9 (SIGKILL)
+2. Why? → Kernel OOM killer terminated process due to memory exhaustion
+3. Why? → Colima VM memory exhausted when embedding model loaded in parallel
+4. Why? → 4 workers × 2GB embedding model = 8GB needed, only 4GB VM allocated
+5. Why? → Resource-based sharding strategy not implemented - all shards sized identically
+
+#### Strategic Impact
+**P0 Critical** - Blocks all large document processing in CI. Embedding model (Fin-E5, 2GB) cannot run in parallel on 4GB VM. Occurs whenever embedding-dependent tests run with 4 workers.
+
+#### Detection Pattern
+```bash
+# Check if embedding model tests marked with xdist_group
+grep -r "@pytest.mark.xdist_group.*embedding" tests/ --include="*.py" | wc -l
+
+# Run validation script
+python scripts/validate-xdist-markers.py
+
+# If output shows gaps, embedding tests will run in parallel and cause OOM
+```
+
+#### Solution Pattern
+**Three-part fix (Implemented 2026-01-22):**
+
+1. **Add xdist_group markers to embedding-heavy tests**
+   ```python
+   @pytest.mark.xdist_group(name="embedding_model")
+   def test_parallel_ingestion_validation():
+       """This test uses embedding model and must run in isolation."""
+       pass
+   ```
+
+2. **Move parallel ingestion tests to Retrieval shard (8GB, not MCP 4GB)**
+   ```yaml
+   # Retrieval shard (8GB VM):
+   - tests/integration/parallel_ingestion/
+   - tests/integration/retrieval/
+
+   # MCP shard (4GB VM):
+   - tests/mcp/
+   - tests/integration/mcp/
+   ```
+
+3. **Reduce worker count for embedding-heavy shards**
+   ```
+   Before: retrieval_shard workers=4 (4×2GB model = 8GB needed)
+   After: retrieval_shard workers=2 (2×2GB model = 4GB needed, fits in 8GB VM)
+
+   MCP shard unaffected: workers=4 (no embedding model)
+   ```
+
+#### Memory Budget Breakdown
+```
+Retrieval Shard (8GB VM, 2 workers):
+- Qdrant: 1GB
+- PostgreSQL: 768MB
+- Fin-E5 model (2 copies for 2 workers): 2×2GB = 4GB
+- QEMU: 512MB
+- Buffer: 1.22GB
+- Total: 8GB ✓
+
+MCP Shard (4GB VM, 4 workers):
+- Qdrant: 1GB
+- PostgreSQL: 768MB
+- QEMU: 512MB
+- Buffer: 768MB
+- Total: 4GB ✓ (no embedding model)
+```
+
+#### Verification
+```bash
+# Check all embedding tests have xdist_group marker
+python scripts/validate-xdist-markers.py
+# Expected: ✅ Validation passed - 43 tests marked with xdist_group
+
+# Verify CI configuration
+grep -A 2 "retrieval.*shard" .github/workflows/ci.yml | grep workers
+# Expected: workers: 2
+
+grep -A 2 "mcp.*shard" .github/workflows/ci.yml | grep workers
+# Expected: workers: 4
+
+# Monitor memory during test execution
+docker stats --no-stream | grep -E "raglite-(qdrant|postgresql)"
+# Expected: Total <3GB (buffer for spikes)
+```
+
+#### Prevention
+1. **Always use xdist_group markers for embedding model tests**
+   - Check: All embedding tests marked `@pytest.mark.xdist_group(name="embedding_model")`
+   - Validation: `python scripts/validate-xdist-markers.py` before commit
+
+2. **Resource-based shard allocation**
+   - Embedding-heavy tests: 8GB VM, 2 workers
+   - Stateless tests: 4GB VM, 4 workers
+   - Monitor memory allocation in `.github/workflows/ci.yml`
+
+3. **Timeout configuration**
+   - Embedding model tests need 45+ minute timeout (not 25)
+   - Parallel ingestion: 30-40 minutes
+   - Model load: 30-60 seconds
+   - Buffer: 5 minutes
+
+4. **Pre-commit validation**
+   - Run `python scripts/validate-xdist-markers.py` before every commit
+   - Catches unmarked embedding tests early
+   - Prevents regression in subsequent CI runs
+
+#### Related Documentation
+- **Knowledge Base:** `docs/ci-knowledge/worker-memory-exhaustion-2026-01-22.md` (detailed analysis)
+- **CI Strategy:** `docs/ci-strategy.md` → Resource Management section
+- **Validation Script:** `scripts/validate-xdist-markers.py`
 
 ---
 
