@@ -37,8 +37,10 @@ name: CI (Linux)
         description: 'Skip to specific stage (saves time on re-runs)'
         type: choice
         options:
-          - all
-          - integration-only
+          - all                    # Run everything (default)
+          - integration-only       # Skip lint + validate (existing)
+          - skip-lint              # Skip only lint-gate
+          - skip-validate          # Skip only validate
         default: 'all'
 
 permissions:
@@ -68,8 +70,8 @@ jobs:
     name: "🔒 Lint Gate: Ruff + Black"
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # Skip lint gate when running integration-only
-    if: inputs.skip_to_stage != 'integration-only'
+    # Skip lint gate when running integration-only or skip-lint
+    if: inputs.skip_to_stage != 'integration-only' && inputs.skip_to_stage != 'skip-lint'
 
     steps:
       - name: Checkout code
@@ -109,8 +111,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: lint-gate
-    # Skip validate when running integration-only
-    if: inputs.skip_to_stage != 'integration-only'
+    # Skip validate when running integration-only or skip-validate
+    # Use always() to allow running when lint-gate is skipped (via skip-lint option)
+    if: >-
+      always() &&
+      inputs.skip_to_stage != 'integration-only' &&
+      inputs.skip_to_stage != 'skip-validate' &&
+      (needs.lint-gate.result == 'success' || needs.lint-gate.result == 'skipped')
 
     steps:
       - name: Checkout code
@@ -182,11 +189,11 @@ jobs:
     # Run integration tests on:
     # - Push to main (always run full integration on main)
     # - workflow_dispatch with run_integration=true
-    # - workflow_dispatch with skip_to_stage=integration-only (skips lint/validate)
+    # - workflow_dispatch with skip_to_stage options (skips lint and/or validate)
     if: >-
       always() && (
         (needs.validate.result == 'success') ||
-        (github.event_name == 'workflow_dispatch' && inputs.skip_to_stage == 'integration-only')
+        (needs.validate.result == 'skipped' && github.event_name == 'workflow_dispatch')
       ) && (
         github.ref == 'refs/heads/main' ||
         (github.event_name == 'workflow_dispatch' && inputs.run_integration == true)
@@ -370,8 +377,9 @@ jobs:
           # CRITICAL FIX (2026-01-22): Use separate MARKER_EXPR variable to avoid bash quoting issues
           # Problem: PYTEST_OPTS="-m 'not health_check'" passes literal quotes to pytest
           # Solution: Quote the marker expression at the point of use, not in the variable
-          # NOTE: Marker consistency fix - CI now uses same markers as pytest.ini default
-          MARKER_EXPR="not slow and not health_check and not atdd"
+          # NOTE: Integration tests ARE marked slow by design - don't exclude them!
+          # Unit tests exclude slow, but integration tests NEED slow tests to run
+          MARKER_EXPR="not health_check and not atdd"
           PYTEST_OPTS="--tb=short -v -n $WORKERS --dist loadfile --timeout=120 --maxfail=10"
 
           # Add --skip-ingestion for shards with pre-ingested data (retrieval, mcp)
