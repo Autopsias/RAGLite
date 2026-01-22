@@ -321,7 +321,8 @@ jobs:
           echo "========================================="
 
           # Build pytest command with shard-specific options
-          PYTEST_OPTS="-m 'not slow and not health_check' --tb=short -v -n $WORKERS --dist loadgroup --timeout=120 --maxfail=10"
+          # Note: Integration tests are marked @pytest.mark.slow, so we only exclude health_check
+          PYTEST_OPTS="-m 'not health_check' --tb=short -v -n $WORKERS --dist loadgroup --timeout=120 --maxfail=10"
 
           # Add --skip-ingestion for shards with pre-ingested data (retrieval, mcp)
           # PostgreSQL shard doesn't use Qdrant/embeddings, so skip-ingestion doesn't apply
