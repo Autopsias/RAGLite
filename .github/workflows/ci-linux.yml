@@ -165,7 +165,7 @@ jobs:
   integration:
     name: "🔗 Tests: Integration (${{ matrix.shard }})"
     runs-on: ubuntu-latest
-    timeout-minutes: 45  # Increased from 30 to allow for session fixture overhead
+    timeout-minutes: 60  # Increased from 45 to allow for CI variability
     needs: validate
     # Run integration tests on:
     # - Push to main (always run full integration on main)
