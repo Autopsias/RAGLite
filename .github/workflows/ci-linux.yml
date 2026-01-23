@@ -184,7 +184,7 @@ jobs:
   integration:
     name: "🔗 Tests: Integration (${{ matrix.shard }})"
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Optimized: 2x expected duration (15min) with memory fixes in place
+    timeout-minutes: 15  # Reduced: Fast-fail for hangs (was 30, now 15 with step-level timeout backup)
     needs: validate
     # Run integration tests on:
     # - Push to main (always run full integration on main)
@@ -392,6 +392,7 @@ jobs:
 
       - name: Run Integration Tests
         if: steps.shard-check.outputs.should_run == 'true'
+        timeout-minutes: 10  # Step-level timeout: kills test step after 10 min (sends SIGINT -> SIGTERM -> SIGKILL)
         env:
           PYTHONPATH: ${{ github.workspace }}
           DESCRIPTION: ${{ matrix.description }}
@@ -415,7 +416,10 @@ jobs:
           # Unit tests exclude slow, but integration tests NEED slow tests to run
           # External API tests excluded as safety net (rely on VCR cassettes)
           MARKER_EXPR="not health_check and not atdd and not external_api"
-          PYTEST_OPTS="--tb=short -v -n $WORKERS --dist loadgroup --timeout=120 --maxfail=10"
+          # HANG FIX (2026-01-23): Added --timeout-xdist for per-test timeouts in xdist workers
+          # Without this flag, --timeout only works on main process, not worker subprocesses
+          # Increased per-test timeout to 180s (was 120s) to allow for embedding model loading
+          PYTEST_OPTS="--tb=short -v -n $WORKERS --dist loadgroup --timeout=180 --timeout-xdist --maxfail=10"
 
           # Add --skip-ingestion for shards with pre-ingested data (retrieval, mcp)
           # PostgreSQL shard doesn't use Qdrant/embeddings, so skip-ingestion doesn't apply
@@ -424,12 +428,15 @@ jobs:
             echo "Using --skip-ingestion (collection pre-populated by init-ci-qdrant.py)"
           fi
 
-          uv run pytest $PYTEST_PATHS \
-            $PYTEST_IGNORE \
-            -m "$MARKER_EXPR" \
-            $PYTEST_OPTS \
-            --junitxml=test-results/integration-${MATRIX_SHARD}-junit.xml \
-            2>&1 || exit_code=$?
+          # Backup timeout: 540s (9 min) hard kill if pytest hangs completely
+          # This catches cases where pytest-timeout doesn't work (e.g., stuck in fixture teardown)
+          timeout --preserve-status 540 \
+            uv run pytest $PYTEST_PATHS \
+              $PYTEST_IGNORE \
+              -m "$MARKER_EXPR" \
+              $PYTEST_OPTS \
+              --junitxml=test-results/integration-${MATRIX_SHARD}-junit.xml \
+              2>&1 || exit_code=$?
 
           exit ${exit_code:-0}
 
@@ -439,12 +446,19 @@ jobs:
           MATRIX_SHARD: ${{ matrix.shard }}
         run: |
           echo "========================================="
-          echo "🔍 Diagnosing Test Hang (Shard: $MATRIX_SHARD)"
+          echo "🔍 Diagnosing Test Hang/Timeout (Shard: $MATRIX_SHARD)"
           echo "========================================="
 
           echo ""
+          echo "=== Timeout Configuration ==="
+          echo "Layer 1: Job timeout = 15 min"
+          echo "Layer 2: Step timeout = 10 min (SIGINT->SIGTERM->SIGKILL)"
+          echo "Layer 3: Backup timeout = 540s (9 min hard kill)"
+          echo "Layer 4: pytest-timeout = 180s per test (with --timeout-xdist for workers)"
+
+          echo ""
           echo "=== Active pytest processes ==="
-          ps aux | grep -E "pytest|python" | grep -v grep || echo "No pytest processes found"
+          ps aux | grep -E "pytest|python" | grep -v grep || echo "No pytest processes found (likely killed by timeout)"
 
           echo ""
           echo "=== Memory usage ==="
@@ -455,16 +469,21 @@ jobs:
           if [ -f "test-results/integration-${MATRIX_SHARD}-junit.xml" ]; then
             tail -100 "test-results/integration-${MATRIX_SHARD}-junit.xml" || true
           else
-            echo "No JUnit XML found"
+            echo "No JUnit XML found - tests may have been killed before completion"
           fi
 
           echo ""
-          echo "=== Event loop debugging hint ==="
-          echo "If tests hang at 90-100% completion, check:"
-          echo "1. Session fixtures with async resources (semaphores, models)"
-          echo "2. Missing asyncio.timeout() in polling loops"
-          echo "3. Event loop mismatch with pytest-xdist workers"
-          echo "See: tests/conftest.py -> event_loop fixture"
+          echo "=== Common timeout causes ==="
+          echo "1. Session fixtures not cleaned up (async resources, semaphores)"
+          echo "2. Embedding model loading timeout (2GB model + slow I/O)"
+          echo "3. xdist worker deadlock (event loop mismatch)"
+          echo "4. Network timeout waiting for Qdrant/PostgreSQL"
+          echo ""
+          echo "=== Resolution steps ==="
+          echo "1. Check which test was running when timeout hit"
+          echo "2. Add @pytest.mark.timeout(X) to specific slow tests"
+          echo "3. Review fixture teardown in conftest.py"
+          echo "4. Consider reducing parallelism if memory-bound"
 
       - name: Report Test Durations
         if: always() && steps.shard-check.outputs.should_run == 'true'
