@@ -25,6 +25,7 @@ from .service_checking import check_and_skip_if_unavailable
 
 
 @pytest.fixture(scope="session", autouse=True)
+@pytest.mark.timeout(180)  # P0 FIX (2026-01-23): 3 min max for DB schema init
 def ensure_test_database_schema(request):
     """Ensure PostgreSQL schema exists before tests (Story 4.0.5).
 
@@ -80,6 +81,9 @@ def ensure_test_database_schema(request):
 
 
 @pytest.fixture(scope="session", autouse=True)
+@pytest.mark.timeout(
+    300
+)  # P0 FIX (2026-01-23): 5 min max for embedding model load (typical: 60-70s)
 def warmup_embedding_model(request):
     """Pre-warm Fin-E5 model (60-70s) before PDF ingestion. Skipped if --skip-ingestion."""
     if request.config.option.collectonly:
@@ -153,6 +157,9 @@ def warmup_embedding_model(request):
 
 
 @pytest.fixture(scope="session", autouse=True)
+@pytest.mark.timeout(
+    600
+)  # P0 FIX (2026-01-23): 10 min max (CI uses --skip-ingestion, local: 5-10 min)
 def session_ingested_collection(request, warmup_embedding_model):
     """Ingest test PDF once per session (Django/FastAPI pattern). Use --skip-ingestion to reuse existing data."""
     if request.config.option.collectonly:

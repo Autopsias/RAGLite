@@ -21,6 +21,7 @@ Test Environment Configuration:
 
 # CRITICAL: CI lightweight mode - mock heavy ML dependencies BEFORE any imports
 # This prevents loading 10-15GB of ML libraries during test collection on CI runners with ~6GB RAM
+import asyncio
 import os
 import sys
 from unittest.mock import MagicMock
@@ -313,6 +314,43 @@ def disable_joblib_parallel_processing():
 
     gc.collect()
     logger.info("Joblib configuration cleaned up")
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Shared session-scoped event loop for pytest-asyncio + xdist compatibility.
+
+    P0 FIX (2026-01-23): Prevents integration tests from hanging at 90-100% completion.
+
+    Why needed: pytest-xdist spawns separate worker processes, each with its own
+    event loop. Session-scoped async fixtures can fail across loops, causing hangs
+    at 90-100% test completion during fixture teardown. This fixture ensures
+    consistent event loop handling across all workers.
+
+    Behavior:
+    - Creates a new event loop at session start
+    - All async tests and fixtures share this loop
+    - Cleanup: Waits for pending tasks before closing (prevents warnings)
+
+    Reference: https://github.com/pytest-dev/pytest-xdist/issues/1084
+    """
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    yield loop
+
+    # Cleanup pending tasks before closing to prevent "Task was destroyed but pending" warnings
+    pending = asyncio.all_tasks(loop)
+    if pending:
+        # Give tasks 5 seconds to complete, then cancel
+        loop.run_until_complete(asyncio.wait(pending, timeout=5.0))
+        for task in pending:
+            if not task.done():
+                task.cancel()
+        # Run one more iteration to process cancellations
+        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+
+    loop.close()
+    logger.info("Event loop closed cleanly")
 
 
 def _timed_fixture(fixture_name: str, func, start_time: float) -> None:

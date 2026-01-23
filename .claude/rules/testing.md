@@ -774,3 +774,123 @@ def mock_mistral_api_globally():
 ```
 
 **See:** `scripts/validate-mock-coverage.py --verbose` for coverage report.
+
+---
+
+## Event Loop Best Practices for pytest-xdist (P0)
+
+**Added 2026-01-23:** Fixes for integration tests hanging at 90-100% completion in CI.
+
+### Problem: Event Loop Mismatch
+
+pytest-xdist spawns separate worker processes, each with its own event loop. Session-scoped async fixtures (using semaphores, models, or other asyncio resources) can fail across loops, causing tests to hang indefinitely during fixture teardown.
+
+**Symptoms:**
+- Tests hang at 90-100% completion
+- No error messages, just timeout
+- `[gw*] node down` messages in CI logs
+- Session fixtures never complete cleanup
+
+### Solution 1: Explicit Event Loop Fixture
+
+**ALWAYS use an explicit session-scoped event_loop fixture in `tests/conftest.py`:**
+
+```python
+import asyncio
+import pytest
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Shared session-scoped event loop for pytest-asyncio + xdist compatibility."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    yield loop
+
+    # Cleanup pending tasks before closing
+    pending = asyncio.all_tasks(loop)
+    if pending:
+        loop.run_until_complete(asyncio.wait(pending, timeout=5.0))
+        for task in pending:
+            if not task.done():
+                task.cancel()
+        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+
+    loop.close()
+```
+
+**Why needed:**
+- pytest-asyncio's auto-created loop is function-scoped by default
+- Session fixtures need session-scoped loop
+- Without explicit fixture, async resources can be left dangling
+
+### Solution 2: Fixture Timeout Protection
+
+**Set `timeout_func_only = false` in pytest.ini:**
+
+```ini
+# Timeout applies to fixtures too, preventing infinite hangs
+timeout_func_only = false
+```
+
+**Then add explicit timeout markers to session fixtures:**
+
+```python
+@pytest.fixture(scope="session", autouse=True)
+@pytest.mark.timeout(300)  # 5 minute max
+def warmup_embedding_model(request):
+    """Pre-warm embedding model."""
+    ...
+```
+
+**Timeout guidelines:**
+| Fixture Type | Timeout |
+|-------------|---------|
+| DB schema init | 180s (3 min) |
+| Embedding model load | 300s (5 min) |
+| PDF ingestion | 600s (10 min) |
+
+### Solution 3: Hard Timeout for Async Polling
+
+**ALWAYS wrap async polling loops with `asyncio.timeout()`:**
+
+```python
+import asyncio
+
+ASYNC_POLL_TIMEOUT_SECONDS = 90  # Module constant
+
+async def test_async_workflow():
+    async with asyncio.timeout(ASYNC_POLL_TIMEOUT_SECONDS):
+        while not done:
+            result = await poll_status()
+            if result.status in ["completed", "failed"]:
+                break
+            await asyncio.sleep(1)
+```
+
+**Why needed:**
+- Polling loops can run indefinitely if the underlying operation hangs
+- `asyncio.timeout()` ensures the test fails fast with a clear error
+- Without hard timeout, test hangs until pytest's 120s timeout (which may not apply to fixtures)
+
+### Verification
+
+```bash
+# Check event_loop fixture is loaded
+uv run pytest tests/integration/ --fixtures | grep event_loop
+
+# Run integration tests with xdist to validate
+uv run pytest tests/integration/ -n 4 --dist loadgroup --timeout=120 -v
+
+# Look for warning signs
+# - "Task was destroyed but pending" warnings
+# - "[gw*] node down" messages
+# - Tests hanging at collection or teardown
+```
+
+### CI Debugging
+
+When tests hang in CI, check the "Check for Hanging Tests" step which logs:
+- Active pytest processes
+- Memory usage
+- Last 100 lines of test output
+- Debugging hints for event loop issues

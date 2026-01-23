@@ -12,12 +12,17 @@ from pathlib import Path
 import pytest
 
 from raglite.main import (
+    DocumentProcessingError,
     get_ingestion_status,
     ingest_financial_document,
     ingest_financial_document_async,
     query_financial_documents,
 )
 from raglite.shared.models import QueryRequest
+
+# P0 FIX (2026-01-23): Hard timeout constant for async polling loops
+# Prevents tests from hanging indefinitely if underlying operations never complete
+ASYNC_POLL_TIMEOUT_SECONDS = 90  # 90s max for any polling loop
 
 # Mark all tests in this module as integration tests that modify data
 # These tests call ingest_financial_document which modifies Qdrant collection
@@ -126,20 +131,22 @@ async def test_async_ingestion_workflow():
         )
 
         # Step 2: Poll status until complete
+        # P0 FIX (2026-01-23): Wrap polling with hard timeout to prevent infinite hangs
         print("Step 2: Polling job status...")
         max_polls = 60  # Max 1 minute polling (1s intervals)
         poll_count = 0
 
-        while poll_count < max_polls:
-            poll_count += 1
-            status = await get_ingestion_status.fn(response.job_id)
+        async with asyncio.timeout(ASYNC_POLL_TIMEOUT_SECONDS):
+            while poll_count < max_polls:
+                poll_count += 1
+                status = await get_ingestion_status.fn(response.job_id)
 
-            print(f"   Poll {poll_count}: status={status.status}, progress={status.progress}%")
+                print(f"   Poll {poll_count}: status={status.status}, progress={status.progress}%")
 
-            if status.status in ["completed", "failed"]:
-                break
+                if status.status in ["completed", "failed"]:
+                    break
 
-            await asyncio.sleep(1)  # 1-second polling interval for testing
+                await asyncio.sleep(1)  # 1-second polling interval for testing
 
         # Validate completion
         assert status.status == "completed", f"Job failed: {status.error}"
@@ -196,18 +203,20 @@ async def test_async_ingestion_end_to_end_with_query():
         print()
 
         # Step 2: Poll until complete
+        # P0 FIX (2026-01-23): Wrap polling with hard timeout to prevent infinite hangs
         print("Step 2: Polling until complete...")
         max_polls = 60
         poll_count = 0
 
-        while poll_count < max_polls:
-            poll_count += 1
-            status = await get_ingestion_status.fn(job_id)
+        async with asyncio.timeout(ASYNC_POLL_TIMEOUT_SECONDS):
+            while poll_count < max_polls:
+                poll_count += 1
+                status = await get_ingestion_status.fn(job_id)
 
-            if status.status in ["completed", "failed"]:
-                break
+                if status.status in ["completed", "failed"]:
+                    break
 
-            await asyncio.sleep(1)
+                await asyncio.sleep(1)
 
         assert status.status == "completed", f"Ingestion failed: {status.error}"
         print(f"✅ Ingestion completed ({status.result.chunk_count} chunks)")
@@ -272,8 +281,6 @@ async def test_async_ingestion_invalid_file():
 
     try:
         # Should raise DocumentProcessingError before creating job
-        from raglite.main import DocumentProcessingError
-
         with pytest.raises(DocumentProcessingError, match="Document not found"):
             await ingest_financial_document_async.fn(invalid_path)
 
