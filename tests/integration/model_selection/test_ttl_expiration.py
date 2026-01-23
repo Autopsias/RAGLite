@@ -11,6 +11,14 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from raglite.external_data.orm_models import ModelSelectionORM
+from raglite.external_data.storage import (
+    MODEL_SELECTION_TTL_DAYS,
+    cache_model_selection,
+    cleanup_expired_model_selections,
+    get_cached_model_selection,
+)
+
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
@@ -19,6 +27,7 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.postgresql_only,
     pytest.mark.slow,
+    pytest.mark.xdist_group(name="model_selection_cache"),  # Prevent race conditions
 ]
 
 
@@ -33,12 +42,6 @@ class TestTTLExpirationIntegration:
         cleanup_model_selection,
     ) -> None:
         """TEST-AC-7b.4.5.10: expires_at is set to selected_at + 7 days."""
-        from raglite.external_data.orm_models import ModelSelectionORM
-        from raglite.external_data.storage import (
-            MODEL_SELECTION_TTL_DAYS,
-            cache_model_selection,
-        )
-
         before = datetime.utcnow()
         cache_model_selection(sample_model_selection_result)
         after = datetime.utcnow()
@@ -63,12 +66,6 @@ class TestTTLExpirationIntegration:
         cleanup_model_selection,
     ) -> None:
         """TEST-AC-7b.4.5.11: cleanup_expired_model_selections removes expired entries."""
-        from raglite.external_data.orm_models import ModelSelectionORM
-        from raglite.external_data.storage import (
-            cleanup_expired_model_selections,
-            get_cached_model_selection,
-        )
-
         now = datetime.utcnow()
 
         # Insert one fresh and one expired entry
@@ -120,11 +117,6 @@ class TestTTLExpirationIntegration:
         cleanup_model_selection,
     ) -> None:
         """TEST-AC-7b.4.5.12: cleanup_expired_model_selections returns 0 when none expired."""
-        from raglite.external_data.storage import (
-            cache_model_selection,
-            cleanup_expired_model_selections,
-        )
-
         # Cache fresh entry
         cache_model_selection(sample_model_selection_result)
 
@@ -139,12 +131,6 @@ class TestTTLExpirationIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P1] cleanup_expired_model_selections only removes expired entries."""
-        from raglite.external_data.orm_models import ModelSelectionORM
-        from raglite.external_data.storage import (
-            cleanup_expired_model_selections,
-            get_cached_model_selection,
-        )
-
         now = datetime.utcnow()
 
         # Insert 3 fresh and 2 expired entries

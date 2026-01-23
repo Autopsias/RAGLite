@@ -12,6 +12,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from raglite.external_data.orm_models import ModelSelectionORM
+from raglite.external_data.storage import (
+    cache_model_selection,
+    cleanup_expired_model_selections,
+    invalidate_model_selection,
+)
+
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
@@ -20,6 +27,7 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.postgresql_only,
     pytest.mark.slow,
+    pytest.mark.xdist_group(name="model_selection_cache"),  # Prevent race conditions
 ]
 
 
@@ -33,8 +41,6 @@ class TestPerformance:
         cleanup_model_selection,
     ) -> None:
         """cache_model_selection completes in <500ms."""
-        from raglite.external_data.storage import cache_model_selection
-
         start = time.time()
         cache_model_selection(sample_model_selection_result)
         elapsed_ms = (time.time() - start) * 1000
@@ -48,11 +54,6 @@ class TestPerformance:
         cleanup_model_selection,
     ) -> None:
         """invalidate_model_selection completes in <200ms."""
-        from raglite.external_data.storage import (
-            cache_model_selection,
-            invalidate_model_selection,
-        )
-
         cache_model_selection(sample_model_selection_result)
 
         start = time.time()
@@ -68,9 +69,6 @@ class TestPerformance:
         cleanup_model_selection,
     ) -> None:
         """cleanup_expired_model_selections completes in <1s."""
-        from raglite.external_data.orm_models import ModelSelectionORM
-        from raglite.external_data.storage import cleanup_expired_model_selections
-
         now = datetime.utcnow()
 
         # Insert 50 expired entries

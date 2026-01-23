@@ -11,6 +11,14 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from raglite.external_data.orm_models import ModelSelectionORM
+from raglite.external_data.storage import (
+    cache_model_selection,
+    get_cached_model_selection,
+    invalidate_model_selection,
+)
+from raglite.forecasting.model_selection import ModelSelectionResult
+
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
@@ -19,6 +27,7 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.postgresql_only,
     pytest.mark.slow,
+    pytest.mark.xdist_group(name="model_selection_cache"),  # Prevent race conditions
 ]
 
 
@@ -31,8 +40,6 @@ class TestInputValidationIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P0] M4: get_cached_model_selection rejects empty variable_name (real DB)."""
-        from raglite.external_data.storage import get_cached_model_selection
-
         with pytest.raises(ValueError, match="variable_name cannot be empty"):
             get_cached_model_selection("")
 
@@ -42,8 +49,6 @@ class TestInputValidationIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P0] M4: get_cached_model_selection rejects whitespace-only variable_name (real DB)."""
-        from raglite.external_data.storage import get_cached_model_selection
-
         with pytest.raises(ValueError, match="variable_name cannot be empty"):
             get_cached_model_selection("   \t\n  ")
 
@@ -53,8 +58,6 @@ class TestInputValidationIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P0] M4: get_cached_model_selection rejects >100 char variable_name (real DB)."""
-        from raglite.external_data.storage import get_cached_model_selection
-
         long_name = "a" * 101
         with pytest.raises(ValueError, match="variable_name cannot exceed 100 characters"):
             get_cached_model_selection(long_name)
@@ -65,8 +68,6 @@ class TestInputValidationIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P0] M4: invalidate_model_selection rejects empty variable_name (real DB)."""
-        from raglite.external_data.storage import invalidate_model_selection
-
         with pytest.raises(ValueError, match="variable_name cannot be empty"):
             invalidate_model_selection("")
 
@@ -76,8 +77,6 @@ class TestInputValidationIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P0] M4: invalidate_model_selection rejects whitespace-only variable_name (real DB)."""
-        from raglite.external_data.storage import invalidate_model_selection
-
         with pytest.raises(ValueError, match="variable_name cannot be empty"):
             invalidate_model_selection("   \t\n  ")
 
@@ -87,8 +86,6 @@ class TestInputValidationIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P0] M4: invalidate_model_selection rejects >100 char variable_name (real DB)."""
-        from raglite.external_data.storage import invalidate_model_selection
-
         long_name = "a" * 101
         with pytest.raises(ValueError, match="variable_name cannot exceed 100 characters"):
             invalidate_model_selection(long_name)
@@ -104,12 +101,6 @@ class TestEdgeCasesIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P1] cache_model_selection stores None data_characteristics correctly."""
-        from raglite.external_data.storage import (
-            cache_model_selection,
-            get_cached_model_selection,
-        )
-        from raglite.forecasting.model_selection import ModelSelectionResult
-
         result = ModelSelectionResult(
             variable_name="test_none_chars",
             best_model="prophet",
@@ -136,12 +127,6 @@ class TestEdgeCasesIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P1] cache_model_selection stores empty regressor_list correctly."""
-        from raglite.external_data.storage import (
-            cache_model_selection,
-            get_cached_model_selection,
-        )
-        from raglite.forecasting.model_selection import ModelSelectionResult
-
         result = ModelSelectionResult(
             variable_name="test_empty_regressors",
             best_model="xgboost",
@@ -168,12 +153,6 @@ class TestEdgeCasesIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P2] cache_model_selection handles large candidate_results JSON."""
-        from raglite.external_data.storage import (
-            cache_model_selection,
-            get_cached_model_selection,
-        )
-        from raglite.forecasting.model_selection import ModelSelectionResult
-
         # Simulate large candidate_results (50+ entries)
         large_results = {
             f"model_{i}_regressors_{i % 2}": {"mape": 5.0 + i * 0.1, "mase": 0.8 + i * 0.01}
@@ -206,12 +185,6 @@ class TestEdgeCasesIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P2] cache_model_selection handles very long regressor list."""
-        from raglite.external_data.storage import (
-            cache_model_selection,
-            get_cached_model_selection,
-        )
-        from raglite.forecasting.model_selection import ModelSelectionResult
-
         # Edge case: 20+ regressors
         long_regressors = [f"regressor_{i}" for i in range(20)]
 
@@ -241,12 +214,6 @@ class TestEdgeCasesIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P2] cache_model_selection handles Unicode variable names."""
-        from raglite.external_data.storage import (
-            cache_model_selection,
-            get_cached_model_selection,
-        )
-        from raglite.forecasting.model_selection import ModelSelectionResult
-
         unicode_name = "变量名称"  # Chinese characters
 
         result = ModelSelectionResult(
@@ -275,12 +242,6 @@ class TestEdgeCasesIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P2] cache_model_selection handles special characters in variable name."""
-        from raglite.external_data.storage import (
-            cache_model_selection,
-            get_cached_model_selection,
-        )
-        from raglite.forecasting.model_selection import ModelSelectionResult
-
         special_name = "var_name-with.special@chars#123"
 
         result = ModelSelectionResult(
@@ -309,9 +270,6 @@ class TestEdgeCasesIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P1] M3: CachedModelSelection preserves None for best_mase."""
-        from raglite.external_data.orm_models import ModelSelectionORM
-        from raglite.external_data.storage import get_cached_model_selection
-
         now = datetime.utcnow()
 
         # Insert directly with None best_mase
@@ -341,12 +299,6 @@ class TestEdgeCasesIntegration:
         cleanup_model_selection,
     ) -> None:
         """[P1] M4: Cache and retrieve variable_name at 100 char boundary."""
-        from raglite.external_data.storage import (
-            cache_model_selection,
-            get_cached_model_selection,
-        )
-        from raglite.forecasting.model_selection import ModelSelectionResult
-
         exactly_100 = "a" * 100
 
         result = ModelSelectionResult(

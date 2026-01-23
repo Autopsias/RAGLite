@@ -17,7 +17,19 @@ import pytest
 # Set test environment before importing
 os.environ["APP_ENV"] = "test"
 
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+from raglite.forecasting.model_selection import (
+    CANDIDATE_MODELS,
+    ModelSelectionError,
+    ModelSelectionResult,
+    select_best_model,
+)
+
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="model_selection_cache"),  # Prevent race conditions
+]
 
 if TYPE_CHECKING:
     pass
@@ -36,8 +48,6 @@ class TestAC_7b_3_5_GracefulFailureHandling:
         self, sample_time_series: pd.Series
     ) -> None:
         """TEST-AC-7b.3.5.1: Failed model doesn't crash the selection process."""
-        from raglite.forecasting.model_selection import select_best_model
-
         # Even if some models fail, selection should complete successfully
         result = await select_best_model(
             variable_name="test_metric",
@@ -52,8 +62,6 @@ class TestAC_7b_3_5_GracefulFailureHandling:
         self, sample_time_series: pd.Series
     ) -> None:
         """TEST-AC-7b.3.5.2: Failed models excluded from candidate_results or marked with error."""
-        from raglite.forecasting.model_selection import select_best_model
-
         result = await select_best_model(
             variable_name="test_metric",
             historical_data=sample_time_series,
@@ -73,8 +81,6 @@ class TestAC_7b_3_5_GracefulFailureHandling:
         self, sample_time_series: pd.Series
     ) -> None:
         """TEST-AC-7b.3.5.3: Warning logged for failed models."""
-        from raglite.forecasting.model_selection import select_best_model
-
         with patch("raglite.forecasting.model_selection.logger") as mock_logger:
             await select_best_model(
                 variable_name="test_metric",
@@ -91,8 +97,6 @@ class TestAC_7b_3_5_GracefulFailureHandling:
         self, sample_time_series: pd.Series
     ) -> None:
         """TEST-AC-7b.3.5.4: At least one model must succeed or raise ModelSelectionError."""
-        from raglite.forecasting.model_selection import select_best_model
-
         # When selection succeeds, we have a valid best_model
         result = await select_best_model(
             variable_name="test_metric",
@@ -115,8 +119,6 @@ class TestAC_7b_3_5_GracefulFailureHandling:
     @pytest.mark.asyncio
     async def test_ac_7b_3_5_5_all_models_fail_raises_error(self) -> None:
         """TEST-AC-7b.3.5.5: ModelSelectionError raised when all models fail."""
-        from raglite.forecasting.model_selection import ModelSelectionError, select_best_model
-
         # Create pathological data that makes all models fail
         dates = pd.date_range(start="2024-01-01", periods=12, freq="MS")
         # Constant series that will cause issues for many models
@@ -144,8 +146,6 @@ class TestAC_7b_3_6_ModelSelectionResult:
 
     def test_ac_7b_3_6_1_model_selection_result_exists(self) -> None:
         """TEST-AC-7b.3.6.1: ModelSelectionResult dataclass exists."""
-        from raglite.forecasting.model_selection import ModelSelectionResult
-
         assert ModelSelectionResult is not None
 
     @pytest.mark.asyncio
@@ -153,8 +153,6 @@ class TestAC_7b_3_6_ModelSelectionResult:
         self, sample_time_series: pd.Series
     ) -> None:
         """TEST-AC-7b.3.6.2: Result contains variable_name field."""
-        from raglite.forecasting.model_selection import select_best_model
-
         result = await select_best_model(
             variable_name="test_metric",
             historical_data=sample_time_series,
@@ -168,8 +166,6 @@ class TestAC_7b_3_6_ModelSelectionResult:
         self, sample_time_series: pd.Series
     ) -> None:
         """TEST-AC-7b.3.6.3: Result contains best_model field."""
-        from raglite.forecasting.model_selection import select_best_model
-
         result = await select_best_model(
             variable_name="test_metric",
             historical_data=sample_time_series,
@@ -183,8 +179,6 @@ class TestAC_7b_3_6_ModelSelectionResult:
         self, sample_time_series: pd.Series
     ) -> None:
         """TEST-AC-7b.3.6.4: Result contains data_characteristics from Story 7b-2."""
-        from raglite.forecasting.model_selection import select_best_model
-
         result = await select_best_model(
             variable_name="test_metric",
             historical_data=sample_time_series,
@@ -198,8 +192,6 @@ class TestAC_7b_3_6_ModelSelectionResult:
         self, sample_time_series: pd.Series
     ) -> None:
         """TEST-AC-7b.3.6.5: Result contains candidate_results dict."""
-        from raglite.forecasting.model_selection import select_best_model
-
         result = await select_best_model(
             variable_name="test_metric",
             historical_data=sample_time_series,
@@ -214,8 +206,6 @@ class TestAC_7b_3_6_ModelSelectionResult:
         self, sample_time_series: pd.Series
     ) -> None:
         """TEST-AC-7b.3.6.6: Result contains runtime_seconds field."""
-        from raglite.forecasting.model_selection import select_best_model
-
         result = await select_best_model(
             variable_name="test_metric",
             historical_data=sample_time_series,
@@ -230,8 +220,6 @@ class TestAC_7b_3_6_ModelSelectionResult:
         self, sample_time_series: pd.Series
     ) -> None:
         """TEST-AC-7b.3.6.7: Result contains all required fields from spec."""
-        from raglite.forecasting.model_selection import select_best_model
-
         result = await select_best_model(
             variable_name="test_metric",
             historical_data=sample_time_series,
@@ -260,8 +248,6 @@ class TestAC_7b_3_6_ModelSelectionResult:
         """TEST-AC-7b.3.6.8: Result is serializable to JSON for caching."""
         import json
         from dataclasses import asdict
-
-        from raglite.forecasting.model_selection import select_best_model
 
         result = await select_best_model(
             variable_name="test_metric",
@@ -300,8 +286,6 @@ class TestAC_7b_3_7_RuntimePerformance:
         self, sample_time_series: pd.Series
     ) -> None:
         """TEST-AC-7b.3.7.1: Single variable selection completes in <10 minutes."""
-        from raglite.forecasting.model_selection import select_best_model
-
         start_time = time.time()
 
         result = await select_best_model(
@@ -322,8 +306,6 @@ class TestAC_7b_3_7_RuntimePerformance:
         self, sample_time_series: pd.Series
     ) -> None:
         """TEST-AC-7b.3.7.2: Runtime is tracked in ModelSelectionResult."""
-        from raglite.forecasting.model_selection import select_best_model
-
         start_time = time.time()
 
         result = await select_best_model(
@@ -349,28 +331,20 @@ class TestModuleExports:
 
     def test_module_exports_select_best_model(self) -> None:
         """select_best_model function is exported from module."""
-        from raglite.forecasting.model_selection import select_best_model
-
         assert callable(select_best_model)
 
     def test_module_exports_candidate_models(self) -> None:
         """CANDIDATE_MODELS list is exported from module."""
-        from raglite.forecasting.model_selection import CANDIDATE_MODELS
-
         assert isinstance(CANDIDATE_MODELS, list)
 
     def test_module_exports_model_selection_result(self) -> None:
         """ModelSelectionResult dataclass is exported from module."""
         from dataclasses import is_dataclass
 
-        from raglite.forecasting.model_selection import ModelSelectionResult
-
         assert is_dataclass(ModelSelectionResult)
 
     def test_module_exports_model_selection_error(self) -> None:
         """ModelSelectionError exception is exported from module."""
-        from raglite.forecasting.model_selection import ModelSelectionError
-
         assert issubclass(ModelSelectionError, Exception)
 
 
@@ -380,8 +354,6 @@ class TestEdgeCases:
     @pytest.mark.asyncio
     async def test_force_refresh_parameter(self, sample_time_series: pd.Series) -> None:
         """select_best_model accepts force_refresh parameter."""
-        from raglite.forecasting.model_selection import select_best_model
-
         result = await select_best_model(
             variable_name="test_metric",
             historical_data=sample_time_series,
@@ -393,8 +365,6 @@ class TestEdgeCases:
     @pytest.mark.asyncio
     async def test_empty_regressors_dict(self, sample_time_series: pd.Series) -> None:
         """Empty regressors dict treated same as None."""
-        from raglite.forecasting.model_selection import select_best_model
-
         result = await select_best_model(
             variable_name="test_metric",
             historical_data=sample_time_series,
