@@ -11,6 +11,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from raglite.forecasting.ensemble import generate_ensemble_forecast
+from raglite.forecasting.hybrid import generate_forecast
+
 if TYPE_CHECKING:
     from raglite.shared.models import TimeSeriesData
 
@@ -43,8 +46,6 @@ class TestRealExternalData:
         """
         if real_external_regressors is None:
             pytest.skip("Real external data unavailable (network/API issues)")
-
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
 
         _, test_df = train_test_split
 
@@ -102,8 +103,6 @@ class TestNFRs:
         This test runs all 3 models and validates total time.
         Marked as slow since it runs the full validation.
         """
-        from raglite.forecasting.hybrid import generate_ensemble_forecast, generate_forecast
-
         start_time = time.time()
 
         _, test_df = train_test_split

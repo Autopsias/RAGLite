@@ -13,12 +13,17 @@ import os
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING
-from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 import pytest
 from sqlalchemy.exc import IntegrityError
+
+from raglite.external_data.orm_models import ModelWeightORM
+from raglite.external_data.storage import ExternalDataStorage
+from raglite.forecasting.ensemble import generate_ensemble_forecast
+from raglite.shared.database import Base, get_engine, get_session, reset_engine
+from raglite.shared.safety import SafetyGuard
 
 # Set test environment before importing
 os.environ["APP_ENV"] = "test"
@@ -40,7 +45,6 @@ def db_session():
     Creates tables in test database and yields session.
     Rolls back after tests complete.
     """
-    from raglite.shared.safety import SafetyGuard
 
     guard = SafetyGuard()
     guard.validate_test_environment("catboost_adaptive_weights_integration")
@@ -51,7 +55,6 @@ def db_session():
         ExternalDataSourceORM,
         ModelWeightORM,
     )
-    from raglite.shared.database import Base, get_engine, get_session, reset_engine
 
     # Reset engine to pick up test environment settings
     reset_engine()
@@ -165,16 +168,12 @@ class TestModelWeightSchema:
 
     def test_model_weight_table_exists(self, clean_session) -> None:
         """Test model_weights table was created."""
-        from raglite.external_data.orm_models import ModelWeightORM
-
         # Simple query to verify table exists
         count = clean_session.query(ModelWeightORM).count()
         assert count >= 0  # Table exists if query succeeds
 
     def test_create_model_weight(self, clean_session) -> None:
         """Test creating a new model weight record."""
-        from raglite.external_data.orm_models import ModelWeightORM
-
         weight = ModelWeightORM(
             metric_name="cement_demand_test",
             model_name="catboost",
@@ -192,8 +191,6 @@ class TestModelWeightSchema:
 
     def test_query_model_weights_by_metric(self, clean_session) -> None:
         """Test querying model weights by metric name."""
-        from raglite.external_data.orm_models import ModelWeightORM
-
         # Create weights for multiple models
         for model_name in ["prophet", "catboost", "xgboost"]:
             weight = ModelWeightORM(
@@ -215,8 +212,6 @@ class TestModelWeightSchema:
 
     def test_unique_constraint_metric_model(self, clean_session) -> None:
         """Test unique constraint on (metric_name, model_name)."""
-        from raglite.external_data.orm_models import ModelWeightORM
-
         # Create first weight
         weight1 = ModelWeightORM(
             metric_name="cement_demand_unique_test",
@@ -241,8 +236,6 @@ class TestModelWeightSchema:
 
     def test_update_existing_weight(self, clean_session) -> None:
         """Test updating an existing model weight."""
-        from raglite.external_data.orm_models import ModelWeightORM
-
         # Create weight
         weight = ModelWeightORM(
             metric_name="revenue_update_test",
@@ -277,8 +270,6 @@ class TestStorageModelWeightMethods:
 
     def test_save_model_weight_creates_record(self, clean_session) -> None:
         """Test save_model_weight creates a new weight record."""
-        from raglite.external_data.storage import ExternalDataStorage
-
         storage = ExternalDataStorage(session=clean_session)
 
         result = storage.save_model_weight(
@@ -298,8 +289,6 @@ class TestStorageModelWeightMethods:
 
     def test_save_model_weight_upserts(self, clean_session) -> None:
         """Test save_model_weight updates existing record (upsert)."""
-        from raglite.external_data.storage import ExternalDataStorage
-
         storage = ExternalDataStorage(session=clean_session)
 
         # Create initial
@@ -323,8 +312,6 @@ class TestStorageModelWeightMethods:
 
     def test_get_model_weights_all(self, clean_session) -> None:
         """Test get_model_weights returns all weights."""
-        from raglite.external_data.storage import ExternalDataStorage
-
         storage = ExternalDataStorage(session=clean_session)
 
         # Create weights for different metrics
@@ -340,8 +327,6 @@ class TestStorageModelWeightMethods:
 
     def test_get_model_weights_by_metric(self, clean_session) -> None:
         """Test get_model_weights filters by metric."""
-        from raglite.external_data.storage import ExternalDataStorage
-
         storage = ExternalDataStorage(session=clean_session)
 
         # Create weights for one metric
@@ -358,8 +343,6 @@ class TestStorageModelWeightMethods:
 
     def test_get_weights_for_metric_returns_dict(self, clean_session) -> None:
         """Test get_weights_for_metric returns model->weight dict."""
-        from raglite.external_data.storage import ExternalDataStorage
-
         storage = ExternalDataStorage(session=clean_session)
 
         # Create weights
@@ -377,8 +360,6 @@ class TestStorageModelWeightMethods:
 
     def test_delete_model_weights_by_metric(self, clean_session) -> None:
         """Test delete_model_weights removes weights for metric."""
-        from raglite.external_data.storage import ExternalDataStorage
-
         storage = ExternalDataStorage(session=clean_session)
 
         # Create weights
@@ -408,17 +389,15 @@ class TestEnsembleWithCatBoost:
 
         Story 6.12 AC1: CatBoost Integration.
         """
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
-
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = sample_historical_data
-            result = await generate_ensemble_forecast(
-                metric="cement_demand",
-                external_regressors=sample_external_regressors,
-                periods_ahead=4,
-                models=["prophet", "catboost"],  # Explicitly include CatBoost
-                fast_mode=True,
-            )
+        # Epic 8 API change: historical_data is now a required positional parameter
+        result = await generate_ensemble_forecast(
+            metric="cement_demand",
+            historical_data=sample_historical_data,  # Required param (Epic 8)
+            external_regressors=sample_external_regressors,
+            periods_ahead=4,
+            models=["prophet", "catboost"],  # Explicitly include CatBoost
+            fast_mode=True,
+        )
 
         # Verify ensemble result structure
         assert result.model_type == "ensemble"
@@ -436,17 +415,15 @@ class TestEnsembleWithCatBoost:
         sample_external_regressors: dict[str, pd.Series],
     ) -> None:
         """Test ensemble with all 5 models including CatBoost."""
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
-
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = sample_historical_data
-            result = await generate_ensemble_forecast(
-                metric="cement_demand",
-                external_regressors=sample_external_regressors,
-                periods_ahead=4,
-                models=["prophet", "linear", "xgboost", "lightgbm", "catboost"],
-                fast_mode=True,
-            )
+        # Epic 8 API change: historical_data is now a required positional parameter
+        result = await generate_ensemble_forecast(
+            metric="cement_demand",
+            historical_data=sample_historical_data,  # Required param (Epic 8)
+            external_regressors=sample_external_regressors,
+            periods_ahead=4,
+            models=["prophet", "linear", "xgboost", "lightgbm", "catboost"],
+            fast_mode=True,
+        )
 
         # Should have forecasts
         assert len(result.forecast) == 4
@@ -464,17 +441,15 @@ class TestEnsembleWithCatBoost:
         sample_external_regressors: dict[str, pd.Series],
     ) -> None:
         """Test forecast with CatBoost only."""
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
-
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = sample_historical_data
-            result = await generate_ensemble_forecast(
-                metric="cement_demand",
-                external_regressors=sample_external_regressors,
-                periods_ahead=4,
-                models=["catboost"],
-                fast_mode=True,
-            )
+        # Epic 8 API change: historical_data is now a required positional parameter
+        result = await generate_ensemble_forecast(
+            metric="cement_demand",
+            historical_data=sample_historical_data,  # Required param (Epic 8)
+            external_regressors=sample_external_regressors,
+            periods_ahead=4,
+            models=["catboost"],
+            fast_mode=True,
+        )
 
         # Should generate forecasts
         assert len(result.forecast) == 4

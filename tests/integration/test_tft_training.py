@@ -3,9 +3,24 @@
 Story 6.14 AC9: Test training workflow, model registry, and ensemble integration.
 """
 
-from unittest.mock import patch
+import asyncio
+import uuid
+from datetime import datetime
 
 import pytest
+
+import raglite.external_data.scheduler as scheduler_module
+from raglite.external_data.scheduler import (
+    get_next_run_times,
+    get_scheduler,
+    shutdown_scheduler,
+    start_scheduler,
+)
+from raglite.external_data.storage import ExternalDataStorage
+from raglite.forecasting.ensemble import generate_ensemble_forecast
+from raglite.shared.config import settings
+from raglite.shared.database import get_session
+from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
 
 # Mark all tests as integration tests
 # Mark as slow due to model training and setup taking significant time
@@ -19,8 +34,6 @@ class TestModelRegistryOperations:
     @pytest.mark.asyncio
     async def test_save_and_retrieve_checkpoint(self, external_data_storage):
         """Test saving and retrieving TFT checkpoint from registry."""
-        import uuid
-
         # Use the fixture-provided storage instance
         storage = external_data_storage
 
@@ -49,8 +62,6 @@ class TestModelRegistryOperations:
     @pytest.mark.asyncio
     async def test_checkpoint_history(self, external_data_storage):
         """Test retrieving checkpoint history."""
-        import uuid
-
         # Use the fixture-provided storage instance
         storage = external_data_storage
 
@@ -80,13 +91,6 @@ class TestSchedulerIntegration:
     @pytest.mark.asyncio
     async def test_tft_training_job_registered(self):
         """Test that TFT training job is registered in scheduler."""
-        import raglite.external_data.scheduler as scheduler_module
-        from raglite.external_data.scheduler import (
-            get_scheduler,
-            shutdown_scheduler,
-            start_scheduler,
-        )
-
         # Reset scheduler singleton to ensure fresh state
         if scheduler_module._scheduler is not None:
             if scheduler_module._scheduler.running:
@@ -99,8 +103,6 @@ class TestSchedulerIntegration:
         await start_scheduler()
 
         # Give scheduler a moment to register jobs
-        import asyncio
-
         await asyncio.sleep(0.1)
 
         jobs = scheduler.get_jobs()
@@ -116,8 +118,6 @@ class TestSchedulerIntegration:
     @pytest.mark.asyncio
     async def test_tft_training_runs_before_backtest(self):
         """Test that TFT training is scheduled before backtest."""
-        from raglite.external_data.scheduler import get_next_run_times
-
         next_runs = get_next_run_times()
 
         if "tft_training_weekly" in next_runs and "backtest_weekly" in next_runs:
@@ -136,8 +136,6 @@ class TestEnsembleWithTFT:
     @pytest.mark.asyncio
     async def test_ensemble_includes_tft_in_models(self):
         """Test that TFT is included in ensemble models list."""
-        from raglite.shared.config import settings
-
         models = settings.forecasting_models.split(",")
         assert "tft" in models
 
@@ -145,8 +143,6 @@ class TestEnsembleWithTFT:
     @pytest.mark.asyncio
     async def test_ensemble_has_tft_weight(self):
         """Test that TFT has configured weight."""
-        from raglite.shared.config import settings
-
         assert settings.ensemble_weight_tft == 0.12
 
 
@@ -160,16 +156,14 @@ class TestGracefulDegradation:
         sample_time_series_data,
     ):
         """Test ensemble forecast works when TFT checkpoint doesn't exist."""
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
-
+        # Epic 8 API change: historical_data is now a required positional parameter
         # This should work even without TFT checkpoint (graceful degradation)
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = sample_time_series_data
-            result = await generate_ensemble_forecast(
-                metric="test_tft_fallback",
-                external_regressors=None,
-                periods_ahead=3,
-            )
+        result = await generate_ensemble_forecast(
+            metric="test_tft_fallback",
+            historical_data=sample_time_series_data,
+            external_regressors=None,
+            periods_ahead=3,
+        )
 
         assert result is not None
         assert len(result.forecast) == 3
@@ -182,9 +176,6 @@ class TestGracefulDegradation:
 @pytest.fixture
 def external_data_storage():
     """Provide ExternalDataStorage instance for tests."""
-    from raglite.external_data.storage import ExternalDataStorage
-    from raglite.shared.database import get_session
-
     session = get_session()
     return ExternalDataStorage(session)
 
@@ -192,10 +183,6 @@ def external_data_storage():
 @pytest.fixture
 def sample_time_series_data():
     """Create sample time series data for testing."""
-    from datetime import datetime
-
-    from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
-
     points = [
         TimeSeriesPoint(date=datetime(2024, i, 1), value=100 + i * 5, label=f"M{i}")
         for i in range(1, 13)

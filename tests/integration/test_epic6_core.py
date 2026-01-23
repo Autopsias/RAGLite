@@ -17,6 +17,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from raglite.forecasting.ensemble import generate_ensemble_forecast
+from raglite.forecasting.hybrid import generate_forecast
+
 if TYPE_CHECKING:
     from raglite.shared.models import TimeSeriesData
 
@@ -208,8 +211,6 @@ class TestBaselineForecast:
         train_test_split: tuple[pd.DataFrame, pd.DataFrame],
     ) -> None:
         """AC2: Baseline forecast runs without errors."""
-        from raglite.forecasting.hybrid import generate_forecast
-
         _, test_df = train_test_split
 
         with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
@@ -237,8 +238,6 @@ class TestMultivariateForecast:
         synthetic_regressors: dict[str, pd.Series],
     ) -> None:
         """AC2: Multivariate forecast runs without errors."""
-        from raglite.forecasting.hybrid import generate_forecast
-
         _, test_df = train_test_split
 
         with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
@@ -266,18 +265,16 @@ class TestEnsembleForecast:
         synthetic_regressors: dict[str, pd.Series],
     ) -> None:
         """AC2: Ensemble forecast runs without errors."""
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
-
         _, test_df = train_test_split
 
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = train_time_series
-            result = await generate_ensemble_forecast(
-                metric="cement_demand",
-                external_regressors=synthetic_regressors,
-                periods_ahead=len(test_df),
-                fast_mode=True,
-            )
+        # Epic 8 API change: historical_data is now a required positional parameter
+        result = await generate_ensemble_forecast(
+            metric="cement_demand",
+            historical_data=train_time_series,  # Required param (Epic 8)
+            external_regressors=synthetic_regressors,
+            periods_ahead=len(test_df),
+            fast_mode=True,
+        )
 
         assert result is not None
         assert len(result.forecast) >= len(test_df)

@@ -7,13 +7,16 @@ pytestmark requires integration test setup.
 """
 
 import os
+import time
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
-from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 import pytest
+
+from raglite.forecasting.ensemble import generate_ensemble_forecast
+from raglite.shared.models import ForecastQueryRequest
 
 if TYPE_CHECKING:
     from raglite.shared.models import TimeSeriesData
@@ -83,16 +86,14 @@ class TestEnsembleWithExternalRegressors:
 
         Story 6.4 AC5: Ensemble voting with configurable weights.
         """
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
-
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = sample_historical_data
-            result = await generate_ensemble_forecast(
-                metric="revenue",
-                external_regressors=sample_external_regressors,
-                periods_ahead=4,
-                fast_mode=True,
-            )
+        # Epic 8 API change: historical_data is now a required positional parameter
+        result = await generate_ensemble_forecast(
+            metric="revenue",
+            historical_data=sample_historical_data,  # Required param (Epic 8)
+            external_regressors=sample_external_regressors,
+            periods_ahead=4,
+            fast_mode=True,
+        )
 
         # Verify ensemble result structure
         assert result.model_type == "ensemble"
@@ -116,16 +117,14 @@ class TestEnsembleWithExternalRegressors:
 
         Story 6.4 AC6: Fallback when sklearn models can't run.
         """
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
-
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = sample_historical_data
-            result = await generate_ensemble_forecast(
-                metric="revenue",
-                external_regressors=None,  # No regressors
-                periods_ahead=4,
-                fast_mode=True,
-            )
+        # Epic 8 API change: historical_data is now a required positional parameter
+        result = await generate_ensemble_forecast(
+            metric="revenue",
+            historical_data=sample_historical_data,  # Required param (Epic 8)
+            external_regressors=None,  # No regressors
+            periods_ahead=4,
+            fast_mode=True,
+        )
 
         # Should still generate forecast using Prophet only
         assert len(result.forecast) == 4
@@ -145,16 +144,14 @@ class TestEnsembleWithExternalRegressors:
 
         Story 6.4 AC7: Validate accuracy improvement tracking.
         """
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
-
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = sample_historical_data
-            result = await generate_ensemble_forecast(
-                metric="revenue",
-                external_regressors=sample_external_regressors,
-                periods_ahead=4,
-                fast_mode=True,
-            )
+        # Epic 8 API change: historical_data is now a required positional parameter
+        result = await generate_ensemble_forecast(
+            metric="revenue",
+            historical_data=sample_historical_data,  # Required param (Epic 8)
+            external_regressors=sample_external_regressors,
+            periods_ahead=4,
+            fast_mode=True,
+        )
 
         # Accuracy metrics should be populated
         assert "rmse" in result.accuracy_metrics or len(result.accuracy_metrics) == 0
@@ -173,17 +170,15 @@ class TestEnsembleModelSelection:
         sample_historical_data: "TimeSeriesData",
     ) -> None:
         """Test ensemble with only Prophet model specified."""
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
-
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = sample_historical_data
-            result = await generate_ensemble_forecast(
-                metric="revenue",
-                external_regressors=None,
-                periods_ahead=4,
-                models=["prophet"],  # Only Prophet
-                fast_mode=True,
-            )
+        # Epic 8 API change: historical_data is now a required positional parameter
+        result = await generate_ensemble_forecast(
+            metric="revenue",
+            historical_data=sample_historical_data,  # Required param (Epic 8)
+            external_regressors=None,
+            periods_ahead=4,
+            models=["prophet"],  # Only Prophet
+            fast_mode=True,
+        )
 
         assert "prophet" in result.ensemble_models
         assert len(result.ensemble_models) == 1
@@ -195,23 +190,21 @@ class TestEnsembleModelSelection:
         sample_external_regressors: dict[str, pd.Series],
     ) -> None:
         """Test ensemble with custom model weights."""
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
-
         custom_weights = {
             "prophet": 0.6,
             "linear": 0.2,
             "xgboost": 0.2,
         }
 
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = sample_historical_data
-            result = await generate_ensemble_forecast(
-                metric="revenue",
-                external_regressors=sample_external_regressors,
-                periods_ahead=4,
-                weights=custom_weights,
-                fast_mode=True,
-            )
+        # Epic 8 API change: historical_data is now a required positional parameter
+        result = await generate_ensemble_forecast(
+            metric="revenue",
+            historical_data=sample_historical_data,  # Required param (Epic 8)
+            external_regressors=sample_external_regressors,
+            periods_ahead=4,
+            weights=custom_weights,
+            fast_mode=True,
+        )
 
         # Weights should be recorded (for models that ran)
         if "prophet" in result.ensemble_models:
@@ -231,18 +224,16 @@ class TestEnsembleFallback:
 
         Story 6.4 AC6: Graceful degradation.
         """
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
-
+        # Epic 8 API change: historical_data is now a required positional parameter
         # Even with empty regressors, Prophet should succeed
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = sample_historical_data
-            result = await generate_ensemble_forecast(
-                metric="revenue",
-                external_regressors={},  # Empty dict (no features)
-                periods_ahead=4,
-                models=["prophet", "linear", "xgboost"],
-                fast_mode=True,
-            )
+        result = await generate_ensemble_forecast(
+            metric="revenue",
+            historical_data=sample_historical_data,  # Required param (Epic 8)
+            external_regressors={},  # Empty dict (no features)
+            periods_ahead=4,
+            models=["prophet", "linear", "xgboost"],
+            fast_mode=True,
+        )
 
         # Should still generate forecast
         assert len(result.forecast) > 0
@@ -264,20 +255,16 @@ class TestEnsemblePerformance:
 
         NFR: Ensemble Forecast Time <15s p95
         """
-        import time
-
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
-
         start_time = time.perf_counter()
 
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = sample_historical_data
-            result = await generate_ensemble_forecast(
-                metric="revenue",
-                external_regressors=sample_external_regressors,
-                periods_ahead=4,
-                fast_mode=True,  # Fast mode for CI
-            )
+        # Epic 8 API change: historical_data is now a required positional parameter
+        result = await generate_ensemble_forecast(
+            metric="revenue",
+            historical_data=sample_historical_data,  # Required param (Epic 8)
+            external_regressors=sample_external_regressors,
+            periods_ahead=4,
+            fast_mode=True,  # Fast mode for CI
+        )
 
         elapsed = time.perf_counter() - start_time
 
@@ -292,8 +279,6 @@ class TestMCPToolIntegration:
     @pytest.mark.asyncio
     async def test_mcp_tool_ensemble_model_type(self) -> None:
         """Test MCP tool accepts ensemble model_type parameter."""
-        from raglite.shared.models import ForecastQueryRequest
-
         request = ForecastQueryRequest(
             metric="revenue",
             periods_ahead=4,
@@ -305,8 +290,6 @@ class TestMCPToolIntegration:
     @pytest.mark.asyncio
     async def test_mcp_tool_prophet_model_type(self) -> None:
         """Test MCP tool accepts prophet model_type parameter."""
-        from raglite.shared.models import ForecastQueryRequest
-
         request = ForecastQueryRequest(
             metric="revenue",
             periods_ahead=4,

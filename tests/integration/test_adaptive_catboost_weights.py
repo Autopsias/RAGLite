@@ -10,10 +10,11 @@ from __future__ import annotations
 import os
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
-from unittest.mock import patch
 
 import numpy as np
 import pytest
+
+from raglite.forecasting.ensemble import generate_ensemble_forecast
 
 # Set test environment before importing
 os.environ["APP_ENV"] = "test"
@@ -67,17 +68,15 @@ class TestAdaptiveCatBoostWeights:
         (it requires features). The ensemble should fall back to Prophet-only
         forecasting with weight 1.0.
         """
-        from raglite.forecasting.hybrid import generate_ensemble_forecast
-
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = sample_historical_data
-            result = await generate_ensemble_forecast(
-                metric="cement_demand",
-                external_regressors=None,  # No regressors - CatBoost can't run
-                periods_ahead=4,
-                models=["prophet", "catboost"],  # Explicitly include CatBoost in request
-                fast_mode=True,
-            )
+        # Epic 8 API change: historical_data is now a required positional parameter
+        result = await generate_ensemble_forecast(
+            metric="cement_demand",
+            historical_data=sample_historical_data,  # Required param (Epic 8)
+            external_regressors=None,  # No regressors - CatBoost can't run
+            periods_ahead=4,
+            models=["prophet", "catboost"],  # Explicitly include CatBoost in request
+            fast_mode=True,
+        )
 
         # Should have forecasts
         assert len(result.forecast) == 4

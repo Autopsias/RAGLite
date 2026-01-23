@@ -12,7 +12,8 @@ import pytest
 if TYPE_CHECKING:
     from raglite.shared.models import TimeSeriesData
 
-from raglite.forecasting.hybrid import generate_ensemble_forecast, generate_forecast
+from raglite.forecasting.ensemble import generate_ensemble_forecast
+from raglite.forecasting.hybrid import generate_forecast
 from tests.integration.epic6.conftest import calculate_mape
 
 # Set DYLD_LIBRARY_PATH for XGBoost on macOS

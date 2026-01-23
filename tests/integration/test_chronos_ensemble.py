@@ -12,12 +12,22 @@ Test Coverage:
 from __future__ import annotations
 
 import os
+import time
 from datetime import datetime
 from unittest.mock import patch
 
 import pytest
+from sqlalchemy import delete
 
-from raglite.forecasting.hybrid import generate_ensemble_forecast
+from raglite.external_data.orm_models import ModelWeightORM
+from raglite.external_data.storage import ExternalDataStorage
+from raglite.forecasting.ensemble import generate_ensemble_forecast
+from raglite.forecasting.hybrid import (
+    _generate_chronos_cold_start_forecast,
+    _get_chronos_pipeline,
+    generate_forecast,
+)
+from raglite.shared.database import get_session
 from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
 
 # Require database for integration tests
@@ -46,8 +56,6 @@ async def test_cold_start_scenario_minimal_data() -> None:
     data = TimeSeriesData(metric_name="test_cold_start", points=points, interval="monthly")
 
     # Generate forecast (should use cold-start path)
-    from raglite.forecasting.hybrid import generate_forecast
-
     with patch("raglite.forecasting.hybrid.preprocessing.fetch_historical_metric") as mock_fetch:
         mock_fetch.return_value = data  # Use the minimal data we created
         result = await generate_forecast(
@@ -146,9 +154,6 @@ async def test_no_regressors_fallback(cement_time_series: TimeSeriesData) -> Non
 )
 async def test_chronos_weights_from_database(cement_time_series: TimeSeriesData) -> None:
     """Test Chronos-2 weights can be stored/retrieved from PostgreSQL."""
-    from raglite.external_data.storage import ExternalDataStorage
-    from raglite.shared.database import get_session
-
     session = get_session()
     storage = ExternalDataStorage(session)
 
@@ -183,10 +188,6 @@ async def test_chronos_weights_from_database(cement_time_series: TimeSeriesData)
 
     finally:
         # Cleanup
-        from sqlalchemy import delete
-
-        from raglite.external_data.orm_models import ModelWeightORM
-
         session.execute(
             delete(ModelWeightORM).where(ModelWeightORM.metric_name == "test_metric_chronos")
         )
@@ -208,10 +209,6 @@ async def test_chronos_weights_from_database(cement_time_series: TimeSeriesData)
 )
 async def test_chronos_inference_performance() -> None:
     """Test Chronos-2 inference completes within 2 seconds (AC6)."""
-    import time
-
-    from raglite.forecasting.hybrid import _get_chronos_pipeline
-
     # Prepare minimal test data
     points = [
         TimeSeriesPoint(date=datetime(2024, i, 1), value=100.0 + i, label=f"M{i}")
@@ -224,8 +221,6 @@ async def test_chronos_inference_performance() -> None:
 
     # Time cold-start forecast (should use cached model)
     start = time.time()
-    from raglite.forecasting.hybrid import _generate_chronos_cold_start_forecast
-
     result = await _generate_chronos_cold_start_forecast(
         metric="perf_test",
         periods_ahead=4,
