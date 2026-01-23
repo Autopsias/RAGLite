@@ -117,6 +117,7 @@ async def query_financial_documents(request: QueryRequest) -> QueryResponse:
         raise QueryError(f"Query failed: {e}") from e
 
 
+@mcp.tool()
 async def analytical_query_financial_documents(
     request: AnalyticalQueryRequest,
 ) -> AnalyticalQueryResponse:
