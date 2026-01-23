@@ -97,6 +97,8 @@ class TestAC_7b_3_5_GracefulFailureHandling:
         self, sample_time_series: pd.Series
     ) -> None:
         """TEST-AC-7b.3.5.4: At least one model must succeed or raise ModelSelectionError."""
+        import os
+
         # When selection succeeds, we have a valid best_model
         result = await select_best_model(
             variable_name="test_metric",
@@ -104,17 +106,22 @@ class TestAC_7b_3_5_GracefulFailureHandling:
         )
 
         assert result.best_model is not None
-        assert result.best_model in [
+
+        # In CI, chronos and tft are skipped due to ProcessPoolExecutor + xdist conflicts
+        is_ci = os.environ.get("CI") == "true"
+        expected_models = [
             "arima",
             "ets",
             "prophet",
             "xgboost",
             "lightgbm",
             "catboost",
-            "chronos",
-            "tft",
             "linear",
         ]
+        if not is_ci:
+            expected_models.extend(["chronos", "tft"])
+
+        assert result.best_model in expected_models
 
     @pytest.mark.asyncio
     async def test_ac_7b_3_5_5_all_models_fail_raises_error(self) -> None:

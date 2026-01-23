@@ -233,7 +233,7 @@ jobs:
             # REMOVED external_data tests - moved to "other" shard (P1 fix for slow CI)
             pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/insights/ tests/integration/test_adaptive_catboost_weights.py tests/integration/test_auto_forecast_update.py tests/integration/test_catboost_core.py tests/integration/test_chronos_ensemble.py tests/integration/test_demand_regressors.py tests/integration/test_ensemble_real_data.py tests/integration/test_epic6_core.py tests/integration/test_forecast_external.py"
             pytest_ignore: ""
-            workers: 4  # Restored: asyncio fixes should prevent hangs
+            workers: 1  # P0 FIX (2026-01-23): ProcessPoolExecutor in model selection conflicts with xdist fork
             ci_shard: postgresql
             description: "PostgreSQL + forecasting tests"
           - shard: retrieval
