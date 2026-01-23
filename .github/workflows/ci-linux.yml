@@ -233,7 +233,7 @@ jobs:
             # REMOVED external_data tests - moved to "other" shard (P1 fix for slow CI)
             pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/insights/ tests/integration/test_adaptive_catboost_weights.py tests/integration/test_auto_forecast_update.py tests/integration/test_catboost_core.py tests/integration/test_chronos_ensemble.py tests/integration/test_demand_regressors.py tests/integration/test_ensemble_real_data.py tests/integration/test_epic6_core.py tests/integration/test_forecast_external.py"
             pytest_ignore: ""
-            workers: 1  # P0 FIX (2026-01-23): ProcessPoolExecutor in model selection conflicts with xdist fork
+            workers: 4  # Restored: Chronos/TFT skipped in CI, ProcessPoolExecutor conflict resolved
             ci_shard: postgresql
             description: "PostgreSQL + forecasting tests"
           - shard: retrieval
@@ -425,12 +425,11 @@ jobs:
             echo "Using --skip-ingestion (collection pre-populated by init-ci-qdrant.py)"
           fi
 
-          # Backup timeout: 3600s (60 min) hard kill if pytest hangs completely
+          # Backup timeout: 1200s (20 min) hard kill if pytest hangs completely
           # Catches cases where pytest-timeout doesn't work (e.g., stuck in fixture teardown)
           # --kill-after=60 guarantees SIGKILL after 60s if SIGTERM fails
-          # P0 FIX (2026-01-23): Increased from 600s for sequential execution (workers: 1)
-          # PostgreSQL shard has 234 tests at ~17.5s each = ~68 min with single worker
-          timeout --kill-after=60 --preserve-status 3600 \
+          # With 4 workers: 234 tests × 15s / 4 workers ≈ 15 min expected
+          timeout --kill-after=60 --preserve-status 1200 \
             uv run pytest $PYTEST_PATHS \
               $PYTEST_IGNORE \
               -m "$MARKER_EXPR" \
