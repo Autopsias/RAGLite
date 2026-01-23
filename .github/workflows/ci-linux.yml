@@ -411,11 +411,10 @@ jobs:
           # CRITICAL FIX (2026-01-22): Use separate MARKER_EXPR variable to avoid bash quoting issues
           # Problem: PYTEST_OPTS="-m 'not health_check'" passes literal quotes to pytest
           # Solution: Quote the marker expression at the point of use, not in the variable
-          # P0-0 FIX (2026-01-23): Added "not slow" to exclude 160-page PDF tests from CI
-          # These tests take 16-18 minutes for ingestion and should NEVER run in CI.
-          # Tests using ingested_160_page_pdf fixture are marked @pytest.mark.slow.
+          # NOTE: Do NOT add "not slow" here - many integration tests have module-level slow markers
+          # The 160-page PDF tests are protected by fixture-level CI skip guard instead.
           # External API tests excluded as safety net (rely on VCR cassettes)
-          MARKER_EXPR="not slow and not health_check and not atdd and not external_api"
+          MARKER_EXPR="not health_check and not atdd and not external_api"
           # HANG FIX (2026-01-23): Added --timeout-method=thread for per-test timeouts in xdist workers
           # The thread method starts a timer thread per test item, which works correctly with xdist
           # Increased per-test timeout to 180s (was 120s) to allow for embedding model loading
