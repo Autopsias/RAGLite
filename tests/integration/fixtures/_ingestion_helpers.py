@@ -279,6 +279,10 @@ def _ingest_test_pdf(
 
     Raises:
         Exception: If ingestion fails
+
+    P0-1 FIX (2026-01-23): Replaced asyncio.run() with proper event loop handling.
+    asyncio.run() creates a new event loop, but pytest-asyncio already has one.
+    This caused nested loop issues and indefinite hangs in CI.
     """
     import asyncio
     import sys
@@ -297,7 +301,36 @@ def _ingest_test_pdf(
 
     start_ingest = time.time()
     try:
-        asyncio.run(ingest_pdf(str(sample_pdf), clear_existing=False, skip_metadata=skip_metadata))
+        # P0-1 FIX: Use existing event loop instead of creating new one
+        # This prevents nested event loop issues with pytest-asyncio
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop - safe to create one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(
+                    asyncio.wait_for(
+                        ingest_pdf(
+                            str(sample_pdf), clear_existing=False, skip_metadata=skip_metadata
+                        ),
+                        timeout=300.0,  # 5 minute hard timeout
+                    )
+                )
+            finally:
+                loop.close()
+        else:
+            # Running loop exists - use run_until_complete if we're in the same thread
+            # or run_coroutine_threadsafe if called from different thread
+            future = asyncio.run_coroutine_threadsafe(
+                asyncio.wait_for(
+                    ingest_pdf(str(sample_pdf), clear_existing=False, skip_metadata=skip_metadata),
+                    timeout=300.0,
+                ),
+                loop,
+            )
+            future.result(timeout=330.0)  # Slightly longer to allow asyncio timeout to fire first
         time.time() - start_ingest
     except Exception:
         raise

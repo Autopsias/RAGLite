@@ -306,7 +306,12 @@ def _create_and_verify_collection(qdrant, settings):
 
 
 def _execute_ingestion(sample_pdf, use_full_pdf):
-    """Execute PDF ingestion pipeline."""
+    """Execute PDF ingestion pipeline.
+
+    P0-1 FIX (2026-01-23): Replaced asyncio.run() with proper event loop handling.
+    asyncio.run() creates a new event loop, but pytest-asyncio already has one.
+    This caused nested loop issues and indefinite hangs in CI.
+    """
     from raglite.ingestion.pipeline import ingest_pdf
 
     skip_metadata_extraction = not use_full_pdf
@@ -315,11 +320,40 @@ def _execute_ingestion(sample_pdf, use_full_pdf):
 
     start_ingest = time.time()
     try:
-        asyncio.run(
-            ingest_pdf(
-                str(sample_pdf), clear_existing=False, skip_metadata=skip_metadata_extraction
+        # P0-1 FIX: Use existing event loop instead of creating new one
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop - safe to create one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(
+                    asyncio.wait_for(
+                        ingest_pdf(
+                            str(sample_pdf),
+                            clear_existing=False,
+                            skip_metadata=skip_metadata_extraction,
+                        ),
+                        timeout=300.0,  # 5 minute hard timeout
+                    )
+                )
+            finally:
+                loop.close()
+        else:
+            # Running loop exists - use run_coroutine_threadsafe
+            future = asyncio.run_coroutine_threadsafe(
+                asyncio.wait_for(
+                    ingest_pdf(
+                        str(sample_pdf),
+                        clear_existing=False,
+                        skip_metadata=skip_metadata_extraction,
+                    ),
+                    timeout=300.0,
+                ),
+                loop,
             )
-        )
+            future.result(timeout=330.0)
         return time.time() - start_ingest
     except Exception:
         raise

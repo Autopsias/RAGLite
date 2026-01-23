@@ -7,8 +7,14 @@ This module provides expensive module-scoped fixtures that run once per test mod
 Fixtures:
     ingested_160_page_pdf: 160-page PDF ingestion (shared across slow tests)
     ingested_excerpt_pdf: 33-page excerpt PDF for Story 2.14 validation
+
+P0-2 FIX (2026-01-23): Converted async fixtures to sync to avoid event loop scope mismatch.
+Module-scoped async fixtures don't work well with pytest-asyncio's session-scoped event loop,
+causing deadlocks with pytest-xdist. Now using explicit event loop management.
 """
 
+import asyncio
+import os
 from pathlib import Path
 
 import pytest
@@ -17,24 +23,63 @@ import pytest
 from . import session_state
 
 
+def _run_async_with_timeout(coro, timeout: float = 300.0):
+    """Run async coroutine from sync context with timeout.
+
+    P0-2 FIX: Helper to properly run async code from sync fixtures without
+    creating nested event loops that conflict with pytest-asyncio.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # No running loop - safe to create one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(asyncio.wait_for(coro, timeout=timeout))
+        finally:
+            loop.close()
+    else:
+        # Running loop exists - use run_coroutine_threadsafe
+        future = asyncio.run_coroutine_threadsafe(
+            asyncio.wait_for(coro, timeout=timeout),
+            loop,
+        )
+        return future.result(timeout=timeout + 30.0)
+
+
 @pytest.fixture(scope="module")
-async def ingested_160_page_pdf():
+def ingested_160_page_pdf():
     """Module-scoped fixture for 160-page PDF ingestion - shared across slow tests.
 
     This fixture ingests the 160-page PDF ONCE per test module and reuses the result
     across multiple tests, avoiding the 16-18 minute re-ingestion cost per test.
 
+    P0-2 FIX (2026-01-23): Converted from async to sync to avoid event loop scope mismatch
+    with pytest-asyncio's session-scoped loop. Uses explicit loop management.
+
+    P0-0 FIX (2026-01-23): Added CI skip guard as defense-in-depth. These tests should
+    be excluded by MARKER_EXPR="not slow", but this prevents accidental CI runs.
+
     Usage:
         @pytest.mark.slow
-        @pytest.mark.asyncio
-        async def test_something(ingested_160_page_pdf):
+        def test_something(ingested_160_page_pdf):
             # PDF is already ingested, just use the Qdrant collection
-            client = get_qdrant_client()
+            metadata, client = ingested_160_page_pdf
             # ... test logic here ...
 
     Returns:
         tuple: (metadata, qdrant_client) - Ingestion metadata and Qdrant client
     """
+    # P0-0 FIX: Skip in CI - these tests should never run in CI (use @pytest.mark.slow)
+    # This is defense-in-depth; MARKER_EXPR should exclude them, but this ensures safety
+    is_ci = os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true"
+    if is_ci:
+        pytest.skip(
+            "160-page PDF tests are excluded from CI (takes 16-18 min). "
+            "Use @pytest.mark.slow and run locally for full validation."
+        )
+
     from raglite.ingestion.pipeline import ingest_pdf
     from raglite.shared.clients import get_qdrant_client
 
@@ -43,7 +88,12 @@ async def ingested_160_page_pdf():
         pytest.skip(f"160-page PDF not found: {pdf_path}")
 
     print("\n⚙️  Ingesting 160-page PDF (shared fixture - runs once per module)...")
-    metadata = await ingest_pdf(str(pdf_path), clear_existing=True)
+
+    # P0-2 FIX: Use helper to run async code from sync context
+    metadata = _run_async_with_timeout(
+        ingest_pdf(str(pdf_path), clear_existing=True),
+        timeout=600.0,  # 10 min for large PDF
+    )
     client = get_qdrant_client()
 
     print(f"✓ 160-page PDF ingested: {metadata.chunk_count} chunks")
@@ -54,7 +104,7 @@ async def ingested_160_page_pdf():
 
 
 @pytest.fixture(scope="module")
-async def ingested_excerpt_pdf():
+def ingested_excerpt_pdf():
     """Module-scoped fixture for Story 2.14 excerpt PDF (pages 18-50).
 
     This fixture ingests the 33-page excerpt PDF ONCE per test module for Story 2.14
@@ -64,11 +114,14 @@ async def ingested_excerpt_pdf():
     - Metrics: Variable Cost, EBITDA, Sales Volumes, Thermal Energy, etc.
     - Periods: Aug-25, Aug-25 YTD, 2025
 
+    P0-2 FIX (2026-01-23): Converted from async to sync to avoid event loop scope mismatch
+    with pytest-asyncio's session-scoped loop. Uses explicit loop management.
+
     Usage:
-        @pytest.mark.asyncio
         @pytest.mark.preserve_collection
-        async def test_excerpt_query(ingested_excerpt_pdf):
+        def test_excerpt_query(ingested_excerpt_pdf):
             # Excerpt PDF is already ingested with PostgreSQL tables populated
+            metadata, client = ingested_excerpt_pdf
             # ... test logic here ...
 
     Returns:
@@ -84,7 +137,12 @@ async def ingested_excerpt_pdf():
         pytest.skip(f"Story 2.14 excerpt PDF not found: {pdf_path}")
 
     print("\n⚙️  Ingesting Story 2.14 excerpt PDF (pages 18-50, 33 pages)...")
-    metadata = await ingest_pdf(str(pdf_path), clear_existing=True)
+
+    # P0-2 FIX: Use helper to run async code from sync context
+    metadata = _run_async_with_timeout(
+        ingest_pdf(str(pdf_path), clear_existing=True),
+        timeout=300.0,  # 5 min for excerpt PDF
+    )
     client = get_qdrant_client()
 
     print(f"✓ Excerpt PDF ingested: {metadata.chunk_count} chunks ({metadata.page_count} pages)")

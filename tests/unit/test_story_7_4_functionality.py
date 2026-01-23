@@ -1,6 +1,6 @@
 """ATDD tests for Story 7.4 - AC3 & AC4: Functionality & Compatibility.
 
-Tests AC3: Functionality Preserved - all 16 MCP tools remain functional.
+Tests AC3: Functionality Preserved - all 15 MCP tools remain functional.
 Tests AC4: Backward Compatibility - re-exports, no breaking changes.
 
 This module tests that tools are importable, functional, and maintain backward
@@ -15,6 +15,19 @@ TDD Phase: RED (tests expected to fail until implementation complete)
 
 import pytest
 
+# Module-level imports to avoid deferred import overhead in tests
+# These imports trigger the full module graph load once at collection time
+from raglite import main
+from raglite.main import DocumentProcessingError, mcp
+from raglite.mcp.models import (
+    ExternalDataPoint,
+    ExternalDataQueryRequest,
+    ExternalDataQueryResponse,
+)
+from raglite.mcp.tools.health import check_database_health
+from raglite.mcp.tools.ingestion_tool import ingest_financial_document
+from raglite.mcp.tools.query import query_financial_documents
+
 
 class TestAC3FunctionalityPreserved:
     """AC3: Functionality Preserved - all MCP tools remain functional.
@@ -26,12 +39,11 @@ class TestAC3FunctionalityPreserved:
 
     # List of all MCP tools decorated with @mcp.tool() that must be preserved
     MCP_TOOLS = [
+        "analytical_query_financial_documents",
         "ingest_financial_document",
         "ingest_financial_document_async",
         "get_ingestion_status",
         "query_financial_documents",
-        # Note: analytical_query_financial_documents is NOT an MCP tool
-        # It's a helper function without @mcp.tool() decorator
         "get_financial_forecast",
         "get_financial_insights",
         "query_external_data",
@@ -52,8 +64,6 @@ class TestAC3FunctionalityPreserved:
         When importing from raglite.main
         Then the mcp instance should be available
         """
-        from raglite.main import mcp
-
         assert mcp is not None, "mcp instance should be available"
         assert mcp.name == "RAGLite", "mcp server should be named 'RAGLite'"
 
@@ -65,8 +75,6 @@ class TestAC3FunctionalityPreserved:
         When importing tools from raglite.main
         Then all MCP tools should be importable
         """
-        from raglite import main
-
         for tool_name in self.MCP_TOOLS:
             assert hasattr(main, tool_name), (
                 f"Tool '{tool_name}' should be importable from raglite.main"
@@ -80,8 +88,6 @@ class TestAC3FunctionalityPreserved:
         When checking tool attributes
         Then all tools should have callable .fn attribute
         """
-        from raglite import main
-
         for tool_name in self.MCP_TOOLS:
             tool = getattr(main, tool_name)
             assert hasattr(tool, "fn"), (
@@ -91,18 +97,16 @@ class TestAC3FunctionalityPreserved:
 
     @pytest.mark.priority("P0")
     def test_ac3_4_tool_count_preserved(self):
-        """TEST-AC-7.4.3.4: Total tool count is preserved (14 tools).
+        """TEST-AC-7.4.3.4: Total tool count is preserved (15 tools).
 
         Given all MCP tools must be decorated with @mcp.tool()
         When counting registered tools
-        Then all 14 decorated tools should be available
+        Then all 15 decorated tools should be available
         """
-        from raglite import main
-
         available_tools = [tool_name for tool_name in self.MCP_TOOLS if hasattr(main, tool_name)]
 
-        assert len(available_tools) == 14, (
-            f"All 14 MCP tools should be available, "
+        assert len(available_tools) == 15, (
+            f"All 15 MCP tools should be available, "
             f"but only found {len(available_tools)}: {available_tools}"
         )
 
@@ -114,8 +118,6 @@ class TestAC3FunctionalityPreserved:
         When importing from raglite.main
         Then DocumentProcessingError should be available
         """
-        from raglite.main import DocumentProcessingError
-
         assert DocumentProcessingError is not None
         assert issubclass(DocumentProcessingError, Exception)
 
@@ -136,8 +138,6 @@ class TestAC4BackwardCompatibility:
         When importing from raglite.main
         Then it should still be available for backward compatibility
         """
-        from raglite.main import DocumentProcessingError
-
         assert DocumentProcessingError is not None
         assert issubclass(DocumentProcessingError, Exception)
 
@@ -149,8 +149,6 @@ class TestAC4BackwardCompatibility:
         When importing from raglite.main
         Then the mcp instance should be available
         """
-        from raglite.main import mcp
-
         assert mcp is not None
         assert mcp.name == "RAGLite"
 
@@ -162,12 +160,6 @@ class TestAC4BackwardCompatibility:
         When importing from raglite.mcp
         Then request/response models should be available
         """
-        from raglite.mcp.models import (
-            ExternalDataPoint,
-            ExternalDataQueryRequest,
-            ExternalDataQueryResponse,
-        )
-
         assert ExternalDataQueryRequest is not None
         assert ExternalDataPoint is not None
         assert ExternalDataQueryResponse is not None
@@ -180,10 +172,6 @@ class TestAC4BackwardCompatibility:
         When importing from raglite.mcp.tools
         Then at least some tools should be importable
         """
-        from raglite.mcp.tools.health import check_database_health
-        from raglite.mcp.tools.ingestion_tool import ingest_financial_document
-        from raglite.mcp.tools.query import query_financial_documents
-
         assert ingest_financial_document is not None
         assert query_financial_documents is not None
         assert check_database_health is not None
