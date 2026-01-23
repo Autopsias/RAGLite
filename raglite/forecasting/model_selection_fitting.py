@@ -144,21 +144,40 @@ async def fit_chronos(y_train: pd.Series, horizon: int) -> np.ndarray:
 
     Uses ProcessPoolExecutor to avoid GIL deadlocks with PyTorch.
     Note: Chronos-2 inference typically takes 3-10 seconds per call.
+
+    P0-1 FIX (2026-01-23): Added 60s timeout to prevent indefinite hangs.
+    ProcessPoolExecutor can deadlock with pytest-xdist workers due to fork
+    safety issues with PyTorch. The timeout ensures tests fail fast instead
+    of hanging forever.
     """
     import asyncio
     from concurrent.futures import ProcessPoolExecutor
 
+    # Timeout for subprocess inference (60s should be plenty for Chronos)
+    INFERENCE_TIMEOUT_SECONDS = 60.0
+
     try:
         # Use ProcessPoolExecutor to run in a separate process (avoids GIL)
         loop = asyncio.get_running_loop()
-        with ProcessPoolExecutor(max_workers=1) as executor:
-            result = await loop.run_in_executor(
-                executor,
-                _run_chronos_inference,
-                y_train.index.tolist(),
-                y_train.values.tolist(),
-                horizon,
+        executor = ProcessPoolExecutor(max_workers=1)
+        try:
+            # P0-1 FIX: Add timeout to prevent indefinite hang with xdist workers
+            result = await asyncio.wait_for(
+                loop.run_in_executor(
+                    executor,
+                    _run_chronos_inference,
+                    y_train.index.tolist(),
+                    y_train.values.tolist(),
+                    horizon,
+                ),
+                timeout=INFERENCE_TIMEOUT_SECONDS,
             )
+        finally:
+            # Ensure executor is shut down even if timeout fires
+            executor.shutdown(wait=False, cancel_futures=True)
+    except TimeoutError:
+        # Return NaN array on timeout (model will be scored as failed)
+        return np.full(horizon, np.nan)
     except Exception:
         return np.full(horizon, np.nan)
 
@@ -234,18 +253,32 @@ async def fit_tft(
                 "values": series.values.tolist(),
             }
 
+    # Timeout for subprocess inference (60s should be plenty for TFT)
+    INFERENCE_TIMEOUT_SECONDS = 60.0
+
     try:
         # Use ProcessPoolExecutor to run in a separate process (avoids GIL)
         loop = asyncio.get_running_loop()
-        with ProcessPoolExecutor(max_workers=1) as executor:
-            result = await loop.run_in_executor(
-                executor,
-                _run_tft_inference,
-                y_train.index.tolist(),
-                y_train.values.tolist(),
-                horizon,
-                regressors_data,
+        executor = ProcessPoolExecutor(max_workers=1)
+        try:
+            # P0-1 FIX: Add timeout to prevent indefinite hang with xdist workers
+            result = await asyncio.wait_for(
+                loop.run_in_executor(
+                    executor,
+                    _run_tft_inference,
+                    y_train.index.tolist(),
+                    y_train.values.tolist(),
+                    horizon,
+                    regressors_data,
+                ),
+                timeout=INFERENCE_TIMEOUT_SECONDS,
             )
+        finally:
+            # Ensure executor is shut down even if timeout fires
+            executor.shutdown(wait=False, cancel_futures=True)
+    except TimeoutError:
+        # Return NaN array on timeout (model will be scored as failed)
+        return np.full(horizon, np.nan)
     except Exception:
         return np.full(horizon, np.nan)
 
