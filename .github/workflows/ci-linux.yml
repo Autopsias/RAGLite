@@ -381,6 +381,13 @@ jobs:
           fi
           echo "✅ Test collection validation passed"
 
+      - name: Record shard start time
+        if: steps.shard-check.outputs.should_run == 'true'
+        id: start_time
+        run: |
+          echo "start=$(date +%s)" >> $GITHUB_OUTPUT
+          echo "⏱️ Shard start time: $(date)"
+
       - name: Run Integration Tests
         if: steps.shard-check.outputs.should_run == 'true'
         env:
@@ -441,6 +448,41 @@ jobs:
           else
             echo "No JUnit XML found for shard $MATRIX_SHARD"
           fi
+
+      - name: Check shard timing budget
+        if: always() && steps.shard-check.outputs.should_run == 'true'
+        env:
+          START_TIME: ${{ steps.start_time.outputs.start }}
+          MATRIX_SHARD: ${{ matrix.shard }}
+        run: |
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          MINUTES=$((DURATION / 60))
+          SECONDS=$((DURATION % 60))
+
+          echo "========================================="
+          echo "⏱️ Shard Timing Report: $MATRIX_SHARD"
+          echo "========================================="
+          echo "Duration: ${MINUTES}m ${SECONDS}s (${DURATION}s total)"
+
+          # Warning at 15 minutes
+          if [ $DURATION -gt 900 ]; then
+            echo "⚠️ WARNING: Shard exceeded 15-minute budget (${DURATION}s)"
+            echo "Consider investigating slow tests or rebalancing shards."
+          fi
+
+          # Critical at 25 minutes (approaching 30-minute timeout)
+          if [ $DURATION -gt 1500 ]; then
+            echo "❌ CRITICAL: Shard approaching timeout limit (${DURATION}s / 1800s max)"
+            echo "Shard may fail on next run if tests get slower."
+          fi
+
+          # Success message if within budget
+          if [ $DURATION -le 900 ]; then
+            echo "✅ Shard completed within 15-minute budget"
+          fi
+
+          echo "========================================="
 
       - name: Upload Integration Results
         if: always() && steps.shard-check.outputs.should_run == 'true'
