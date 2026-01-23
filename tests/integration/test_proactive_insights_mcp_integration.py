@@ -11,6 +11,13 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from raglite.main import (
+    SUPPORTED_INSIGHT_CATEGORIES,
+    TIME_PERIOD_MAPPINGS,
+    format_insights_for_display,
+    get_financial_insights,
+    parse_insights_query,
+)
 from raglite.shared.models import (
     Insight,
     InsightCategory,
@@ -31,10 +38,8 @@ class TestGetFinancialInsightsIntegration:
     @pytest.mark.asyncio
     async def test_empty_data_returns_helpful_message(self):
         """Test MCP tool handles empty data gracefully (AC3)."""
-        from raglite.main import get_financial_insights
-
         with patch(
-            "raglite.forecasting.timeseries_extract.extract_timeseries",
+            "raglite.forecasting.timeseries.extract_timeseries",
             new_callable=AsyncMock,
         ) as mock_extract:
             mock_extract.return_value = TimeSeriesData(
@@ -79,10 +84,8 @@ class TestGetFinancialInsightsIntegration:
     @pytest.mark.asyncio
     async def test_response_model_structure(self):
         """Test InsightsQueryResponse has correct structure (AC2/AC4)."""
-        from raglite.main import get_financial_insights
-
         with patch(
-            "raglite.forecasting.timeseries_extract.extract_timeseries",
+            "raglite.forecasting.timeseries.extract_timeseries",
             new_callable=AsyncMock,
         ) as mock_extract:
             mock_extract.return_value = TimeSeriesData(
@@ -111,9 +114,6 @@ class TestGetFinancialInsightsIntegration:
     @pytest.mark.asyncio
     async def test_natural_language_parsing_integration(self):
         """Test natural language query parsing works end-to-end (AC1)."""
-        from raglite.main import parse_insights_query
-        from raglite.shared.models import InsightCategory
-
         # Test various query patterns
         test_cases = [
             ("What risks should I know about?", InsightCategory.RISK, None),
@@ -140,8 +140,6 @@ class TestGetFinancialInsightsIntegration:
     @pytest.mark.asyncio
     async def test_formatted_summary_generation(self):
         """Test format_insights_for_display() generates correct output (AC4)."""
-        from raglite.main import format_insights_for_display
-
         # Test with insights
         insights = [
             Insight(
@@ -196,10 +194,8 @@ class TestGetFinancialInsightsIntegration:
     @pytest.mark.asyncio
     async def test_observability_fields_populated(self):
         """Test observability fields are correctly populated (AC1)."""
-        from raglite.main import get_financial_insights
-
         with patch(
-            "raglite.forecasting.timeseries_extract.extract_timeseries",
+            "raglite.forecasting.timeseries.extract_timeseries",
             new_callable=AsyncMock,
         ) as mock_extract:
             mock_extract.return_value = TimeSeriesData(
@@ -235,8 +231,6 @@ class TestGetFinancialInsightsIntegration:
     @pytest.mark.asyncio
     async def test_time_period_mapping(self):
         """Test time period mappings are correct (AC1)."""
-        from raglite.main import TIME_PERIOD_MAPPINGS
-
         assert TIME_PERIOD_MAPPINGS["last_quarter"] == "Previous Quarter"
         assert TIME_PERIOD_MAPPINGS["current_quarter"] == "Current Quarter"
         assert TIME_PERIOD_MAPPINGS["last_year"] == "Last 12 Months"
@@ -245,7 +239,5 @@ class TestGetFinancialInsightsIntegration:
     @pytest.mark.asyncio
     async def test_supported_categories(self):
         """Test supported categories are correct (AC1)."""
-        from raglite.main import SUPPORTED_INSIGHT_CATEGORIES
-
         expected = {"RISK", "OPPORTUNITY", "ANOMALY", "TREND", "STRATEGIC_PRIORITY"}
         assert SUPPORTED_INSIGHT_CATEGORIES == expected
