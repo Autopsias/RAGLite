@@ -425,10 +425,12 @@ jobs:
             echo "Using --skip-ingestion (collection pre-populated by init-ci-qdrant.py)"
           fi
 
-          # Backup timeout: 600s (10 min) hard kill if pytest hangs completely
+          # Backup timeout: 3600s (60 min) hard kill if pytest hangs completely
           # Catches cases where pytest-timeout doesn't work (e.g., stuck in fixture teardown)
           # --kill-after=60 guarantees SIGKILL after 60s if SIGTERM fails
-          timeout --kill-after=60 --preserve-status 600 \
+          # P0 FIX (2026-01-23): Increased from 600s for sequential execution (workers: 1)
+          # PostgreSQL shard has 234 tests at ~17.5s each = ~68 min with single worker
+          timeout --kill-after=60 --preserve-status 3600 \
             uv run pytest $PYTEST_PATHS \
               $PYTEST_IGNORE \
               -m "$MARKER_EXPR" \
