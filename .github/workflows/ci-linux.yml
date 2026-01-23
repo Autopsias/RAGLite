@@ -416,10 +416,10 @@ jobs:
           # Unit tests exclude slow, but integration tests NEED slow tests to run
           # External API tests excluded as safety net (rely on VCR cassettes)
           MARKER_EXPR="not health_check and not atdd and not external_api"
-          # HANG FIX (2026-01-23): Added --timeout-xdist for per-test timeouts in xdist workers
-          # Without this flag, --timeout only works on main process, not worker subprocesses
+          # HANG FIX (2026-01-23): Added --timeout-method=thread for per-test timeouts in xdist workers
+          # The thread method starts a timer thread per test item, which works correctly with xdist
           # Increased per-test timeout to 180s (was 120s) to allow for embedding model loading
-          PYTEST_OPTS="--tb=short -v -n $WORKERS --dist loadgroup --timeout=180 --timeout-xdist --maxfail=10"
+          PYTEST_OPTS="--tb=short -v -n $WORKERS --dist loadgroup --timeout=180 --timeout-method=thread --maxfail=10"
 
           # Add --skip-ingestion for shards with pre-ingested data (retrieval, mcp)
           # PostgreSQL shard doesn't use Qdrant/embeddings, so skip-ingestion doesn't apply
@@ -454,7 +454,7 @@ jobs:
           echo "Layer 1: Job timeout = 15 min"
           echo "Layer 2: Step timeout = 10 min (SIGINT->SIGTERM->SIGKILL)"
           echo "Layer 3: Backup timeout = 540s (9 min hard kill)"
-          echo "Layer 4: pytest-timeout = 180s per test (with --timeout-xdist for workers)"
+          echo "Layer 4: pytest-timeout = 180s per test (with --timeout-method=thread for workers)"
 
           echo ""
           echo "=== Active pytest processes ==="
