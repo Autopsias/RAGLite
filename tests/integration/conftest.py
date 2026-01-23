@@ -133,6 +133,7 @@ def encoding():
 
 
 @pytest.fixture(scope="module")
+@pytest.mark.timeout(60)  # P1 FIX: 60s max for db session setup/teardown
 def db_session():
     """PostgreSQL session for integration tests.
 
@@ -147,6 +148,10 @@ def db_session():
     - model_weights (Story 6.12 ensemble)
     - external_data_sources/points (regressor data)
     """
+    import logging
+
+    logger = logging.getLogger(__name__)
+
     from raglite.shared.safety import SafetyGuard
 
     guard = SafetyGuard()
@@ -169,9 +174,6 @@ def db_session():
     Base.metadata.create_all(engine)
 
     # Verify critical tables were created (fail fast if ORM not registered)
-    import logging
-
-    logger = logging.getLogger(__name__)
     with engine.connect() as conn:
         from sqlalchemy import text
 
@@ -188,8 +190,18 @@ def db_session():
     session = get_session()
     yield session
 
-    session.rollback()
-    session.close()
+    # P1 FIX: Proper cleanup sequence with error handling
+    try:
+        session.rollback()
+    except Exception as e:
+        logger.warning(f"Session rollback failed: {e}")
+
+    try:
+        if hasattr(session, "remove"):
+            session.remove()  # Clear from registry - prevents connection pool exhaustion
+        session.close()
+    except Exception as e:
+        logger.warning(f"Session cleanup failed: {e}")
 
 
 @pytest.fixture

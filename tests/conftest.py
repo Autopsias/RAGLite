@@ -317,6 +317,7 @@ def disable_joblib_parallel_processing():
 
 
 @pytest.fixture(scope="session")
+@pytest.mark.timeout(30)  # P0 FIX: 30s max for event loop setup/teardown
 def event_loop():
     """Shared session-scoped event loop for pytest-asyncio + xdist compatibility.
 
@@ -341,13 +342,31 @@ def event_loop():
     # Cleanup pending tasks before closing to prevent "Task was destroyed but pending" warnings
     pending = asyncio.all_tasks(loop)
     if pending:
-        # Give tasks 5 seconds to complete, then cancel
-        loop.run_until_complete(asyncio.wait(pending, timeout=5.0))
-        for task in pending:
+        logger.info(f"Event loop cleanup: {len(pending)} tasks pending")
+
+        # FIX 1: Properly unpack asyncio.wait() return value
+        done, still_pending = loop.run_until_complete(asyncio.wait(pending, timeout=5.0))
+
+        logger.info(f"After 5s wait: {len(done)} done, {len(still_pending)} still pending")
+
+        # FIX 2: Only cancel tasks that are ACTUALLY still pending
+        for task in still_pending:
             if not task.done():
                 task.cancel()
-        # Run one more iteration to process cancellations
-        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+
+        # FIX 3: Use wait_for() with timeout on final gather
+        if still_pending:
+            try:
+                loop.run_until_complete(
+                    asyncio.wait_for(
+                        asyncio.gather(*still_pending, return_exceptions=True),
+                        timeout=5.0,
+                    )
+                )
+            except TimeoutError:
+                logger.warning(
+                    f"Event loop cleanup timed out with {len(still_pending)} tasks - forcing close"
+                )
 
     loop.close()
     logger.info("Event loop closed cleanly")
