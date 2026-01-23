@@ -26,38 +26,8 @@ pytestmark = [
     pytest.mark.slow,
 ]
 
-
-@pytest.fixture(scope="module")
-def db_session():
-    """PostgreSQL session for integration tests.
-
-    Creates tables in test database and yields session.
-    Rolls back after tests complete.
-    """
-    from raglite.shared.safety import SafetyGuard
-
-    guard = SafetyGuard()
-    guard.validate_test_environment("external_data_mcp_integration")
-
-    # IMPORTANT: Import ORM models BEFORE create_all() so they register with Base
-    from raglite.external_data.orm_models import (  # noqa: F401
-        ExternalDataPointORM,
-        ExternalDataSourceORM,
-    )
-    from raglite.shared.database import Base, get_engine, get_session, reset_engine
-
-    # Reset engine to pick up test environment settings
-    reset_engine()
-
-    # Create tables in test database
-    engine = get_engine()
-    Base.metadata.create_all(engine)
-
-    session = get_session()
-    yield session
-
-    session.rollback()
-    session.close()
+# NOTE: db_session fixture is provided by tests/integration/conftest.py
+# Do NOT define duplicate fixtures here - causes xdist deadlock (P0 fix 2026-01-23)
 
 
 @pytest.fixture(scope="module")

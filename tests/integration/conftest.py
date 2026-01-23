@@ -164,10 +164,13 @@ def db_session():
         ModelSelectionORM,
         ModelWeightORM,
     )
-    from raglite.shared.database import Base, get_engine, get_session, reset_engine
+    from raglite.shared.database import Base, get_engine, get_session
 
-    # Reset engine to pick up test environment settings
-    reset_engine()
+    # NOTE: Do NOT call reset_engine() here! (P0 fix 2026-01-23)
+    # reset_engine() disposes ALL connections in the pool, which breaks other
+    # pytest-xdist workers that may be using those connections. The test env
+    # vars are already set at module load time (lines 44-56), so the engine
+    # will use test settings when first created.
 
     # Create tables in test database
     engine = get_engine()

@@ -23,45 +23,8 @@ os.environ["APP_ENV"] = "test"
 # Skip all tests in this module if not running integration tests
 pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
 
-
-@pytest.fixture(scope="module")
-def db_session():
-    """PostgreSQL session for integration tests.
-
-    Creates tables in test database and yields session.
-    Rolls back after tests complete.
-    """
-    from raglite.shared.safety import SafetyGuard
-
-    guard = SafetyGuard()
-    guard.validate_test_environment("forecast_external_integration")
-
-    # IMPORTANT: Import ORM models BEFORE create_all() so they register with Base
-    from raglite.external_data.orm_models import (  # noqa: F401
-        ExternalDataPointORM,
-        ExternalDataSourceORM,
-    )
-    from raglite.shared.database import Base, get_engine, get_session, reset_engine
-
-    # Reset engine to pick up test environment settings
-    reset_engine()
-
-    # Create tables in test database
-    engine = get_engine()
-    Base.metadata.create_all(engine)
-
-    session = get_session()
-    yield session
-
-    session.rollback()
-    session.close()
-
-
-@pytest.fixture
-def clean_session(db_session):
-    """Clean session that rolls back after each test."""
-    yield db_session
-    db_session.rollback()
+# NOTE: db_session and clean_session fixtures are provided by tests/integration/conftest.py
+# Do NOT define duplicate fixtures here - causes xdist deadlock (P0 fix 2026-01-23)
 
 
 def _create_test_sources(storage):
