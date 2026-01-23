@@ -29,7 +29,13 @@ from raglite.shared.models import (
 
 # Mark all tests as preserve_collection - these are read-only tests
 # that don't modify the Qdrant collection (performance optimization)
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# Task 0.4: Added explicit 30s timeout - tests use mocking, should be fast
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.timeout(30),
+]
 
 
 class TestGetFinancialInsightsIntegration:

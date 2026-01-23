@@ -680,6 +680,73 @@ fi
 
 **See:** `pytest.ini` for full configuration and comments.
 
+### External API Test Patterns (P1)
+
+**Problem:** External API tests (ECB, Eurostat, INE, OMIE, etc.) can be flaky due to network issues, rate limiting, and API availability.
+
+**Solution Architecture:**
+
+External API tests use embedded sample data with mock patches, NOT VCR cassette recording:
+
+```python
+# tests/integration/external_data/ecb/conftest.py
+SAMPLE_GDP_CSV = """KEY,FREQ,REF_AREA,...
+MNA.Q.Y.PT...,Q,PT,N,2020-Q1,0.6
+..."""
+
+# In test file - mock the HTTP client
+with patch("httpx.AsyncClient") as mock_client:
+    mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+        return_value=mock_response
+    )
+```
+
+**Required Markers (ALL external API tests):**
+
+```python
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.external_api,  # Required - enables CI exclusion
+    pytest.mark.timeout(60),   # Required - prevents hanging
+]
+```
+
+**CI Exclusion:**
+
+External API tests are excluded from fast CI via:
+```yaml
+MARKER_EXPR="not health_check and not atdd and not external_api"
+```
+
+**VCR Infrastructure (Optional):**
+
+VCR configuration exists in `tests/integration/external_data/conftest.py` for recording real HTTP interactions when needed:
+
+```bash
+# Record cassettes (requires network access)
+VCR_RECORD_MODE=once uv run pytest tests/integration/external_data/ -m external_api --timeout=300
+```
+
+**Sample Data Locations:**
+
+| API | Variable | File |
+|-----|----------|------|
+| ECB GDP | `SAMPLE_GDP_CSV` | `tests/integration/external_data/ecb/conftest.py` |
+| ECB HICP | `SAMPLE_HICP_CSV` | `tests/integration/external_data/ecb/conftest.py` |
+| INE | `SAMPLE_INE_RESPONSE` | `tests/integration/external_data/conftest.py` |
+| OMIE | `SAMPLE_OMIE_RESPONSE` | `tests/integration/external_data/conftest.py` |
+
+**Verification:**
+
+```bash
+# Run external API tests (uses mocks, no network required)
+APP_ENV=test uv run pytest tests/integration/external_data/ -m external_api -v --timeout=120
+```
+
+---
+
 ### Mock Coverage Validation (P0)
 
 **Problem:** 17+ modules import `get_mistral_client` but only 5 patched in mock fixtures.

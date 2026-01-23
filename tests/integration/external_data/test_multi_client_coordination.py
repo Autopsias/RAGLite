@@ -11,7 +11,14 @@ import pytest
 from raglite.external_data.clients import BPstatClient, INEClient, OMIEClient
 from raglite.external_data.models import DataSource, ExternalDataPoint, INEBuildingPermits
 
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# Task 0.4: Added external_api marker + 60s timeout for API tests
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.external_api,
+    pytest.mark.timeout(60),
+]
 
 
 @pytest.mark.asyncio

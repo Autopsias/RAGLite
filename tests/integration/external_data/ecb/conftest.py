@@ -5,7 +5,14 @@ from __future__ import annotations
 import pytest
 
 # Mark all tests as integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# Task 0.4: Added external_api marker + 60s timeout for API tests
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.external_api,
+    pytest.mark.timeout(60),
+]
 
 
 # Sample ECB API Response Data

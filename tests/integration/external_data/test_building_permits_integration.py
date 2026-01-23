@@ -17,12 +17,14 @@ from raglite.external_data.clients.ine import INEClient
 from raglite.forecasting.regressor_fetch import fetch_single_regressor
 
 # Module-level markers for all tests
+# Task 0.4: Added 60s timeout for API tests
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.slow,  # Real API calls (with VCR: <1s)
     pytest.mark.preserve_collection,  # Read-only API tests
     pytest.mark.vcr,  # Record/replay HTTP calls via VCR cassettes
     pytest.mark.external_api,  # Tests hit real external APIs
+    pytest.mark.timeout(60),
 ]
 
 

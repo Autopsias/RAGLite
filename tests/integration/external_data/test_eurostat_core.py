@@ -36,11 +36,14 @@ except ImportError:
 
 
 # Module-level marker for all tests
+# Task 0.4: Added external_api marker + 60s timeout for API tests
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.slow,  # Real API calls take 2-5 seconds (with VCR: <1s)
     pytest.mark.preserve_collection,  # Read-only API tests, no Qdrant modification
     pytest.mark.vcr,  # Record/replay HTTP calls via VCR cassettes
+    pytest.mark.external_api,
+    pytest.mark.timeout(60),
 ]
 
 

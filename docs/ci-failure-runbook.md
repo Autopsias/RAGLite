@@ -2357,6 +2357,112 @@ docker stats --no-stream | grep -E "raglite-(qdrant|postgresql)"
 
 ---
 
+### 27. External API Tests - Mock Pattern and VCR Configuration (2026-01-23)
+
+**Pattern:** External API tests (ECB, Eurostat, INE, etc.) use embedded sample data with mock patches rather than VCR cassette recording.
+
+**Root Cause:** Tests hitting external APIs can be flaky due to:
+- Network latency and timeouts
+- Rate limiting from external services
+- API schema changes
+- CI environment restrictions
+
+**Prevention Architecture:**
+
+The external_data tests use a dual-layer approach:
+
+1. **Mock-Based Tests (Primary):** Tests use `unittest.mock.patch` with sample data embedded in conftest.py files:
+   ```python
+   # tests/integration/external_data/ecb/conftest.py
+   SAMPLE_GDP_CSV = """KEY,FREQ,REF_AREA,...
+   MNA.Q.Y.PT...,Q,PT,N,2020-Q1,0.6
+   ..."""
+
+   # In test file:
+   with patch("httpx.AsyncClient") as mock_client:
+       mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+           return_value=mock_response
+       )
+   ```
+
+2. **VCR Infrastructure (Available but Optional):** VCR configuration exists in `tests/integration/external_data/conftest.py` for recording real HTTP interactions when needed:
+   ```python
+   @pytest.fixture(scope="module")
+   def vcr_config():
+       return {
+           "filter_headers": [("authorization", "REDACTED")],
+           "record_mode": os.environ.get("VCR_RECORD_MODE", "once"),
+       }
+   ```
+
+**Required Markers for External API Tests:**
+
+All external API tests MUST have these markers:
+
+```python
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.external_api,  # Required for CI exclusion
+    pytest.mark.timeout(60),   # Prevent hanging
+]
+```
+
+**CI Configuration:**
+
+External API tests are excluded from fast CI runs via marker expression:
+```yaml
+MARKER_EXPR="not health_check and not atdd and not external_api"
+```
+
+**Recording VCR Cassettes (When Needed):**
+
+To record cassettes for tests that need live API data:
+
+```bash
+# Record new cassettes (requires network access)
+VCR_RECORD_MODE=once uv run pytest tests/integration/external_data/ -m external_api --timeout=300
+
+# Overwrite existing cassettes
+VCR_RECORD_MODE=rewrite uv run pytest tests/integration/external_data/ -m external_api
+```
+
+Cassettes are stored in: `tests/integration/external_data/cassettes/{module_name}/`
+
+**Sample Data Location:**
+
+| API | Sample Data | conftest.py Location |
+|-----|-------------|---------------------|
+| ECB GDP | `SAMPLE_GDP_CSV` | `tests/integration/external_data/ecb/conftest.py` |
+| ECB HICP | `SAMPLE_HICP_CSV` | `tests/integration/external_data/ecb/conftest.py` |
+| INE | `SAMPLE_INE_RESPONSE` | `tests/integration/external_data/conftest.py` |
+| OMIE | `SAMPLE_OMIE_RESPONSE` | `tests/integration/external_data/conftest.py` |
+| Eurostat | Embedded in test mocks | Various test files |
+
+**Verification Commands:**
+
+```bash
+# Run external API tests with mocks (fast)
+APP_ENV=test uv run pytest tests/integration/external_data/ -m external_api -v --timeout=120
+
+# Check cassette directory
+ls -la tests/integration/external_data/cassettes/
+
+# Verify tests don't require network (use mocks)
+APP_ENV=test uv run pytest tests/integration/external_data/ecb/ -m external_api --timeout=60
+```
+
+**Prevention Checklist:**
+
+- [ ] New external API tests have `@pytest.mark.external_api` marker
+- [ ] Tests have `@pytest.mark.timeout(60)` to prevent hanging
+- [ ] Sample data is embedded in appropriate conftest.py
+- [ ] Mock patches target the correct module location
+- [ ] Tests pass without network access (mocks only)
+
+---
+
 ## Troubleshooting Decision Tree
 
 ### Docker/Colima Issues

@@ -11,7 +11,14 @@ from raglite.external_data.clients.ecb import ECBClient
 
 from .conftest import SAMPLE_GDP_CSV
 
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# Task 0.4: Added external_api marker + 60s timeout for API tests
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.external_api,
+    pytest.mark.timeout(60),
+]
 
 
 @pytest.mark.asyncio
