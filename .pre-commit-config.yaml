@@ -193,7 +193,8 @@ repos:
         # - test_accuracy_performance.py: VS Code test discovery optimization
         # - test_search_core.py: VS Code test discovery optimization
         # - test_regressor_fetch_core.py: External API tests excluded from CI via @external_api
-        exclude: (test_story_7_4_integration|test_scheduler_integration|test_tft_training(_integration)?|test_accuracy_performance|test_search_core|test_regressor_fetch_core)\.py$
+        # - test_chunking_core.py: Chunking tests in retrieval shard
+        exclude: (test_story_7_4_integration|test_scheduler_integration|test_tft_training(_integration)?|test_accuracy_performance|test_search_core|test_regressor_fetch_core|test_chunking_core)\.py$
 
       # Mock coverage validation - prevent get_mistral_client mock gaps
       # Root cause: 17+ modules import get_mistral_client but only 5 patched

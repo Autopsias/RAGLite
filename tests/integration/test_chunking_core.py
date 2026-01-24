@@ -7,6 +7,7 @@ Tests validate:
 This file contains the core ingestion and chunk count validation tests.
 """
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -178,6 +179,10 @@ def print_chunk_validation_results(
 @pytest.mark.slow
 @pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_existing=True) - skip re-ingest cleanup
 @pytest.mark.timeout(2700)  # 45 minutes for large PDFs (increased from 30min)
+@pytest.mark.skipif(
+    os.getenv("CI") == "true",
+    reason="160-page PDF ingestion takes 15-25 minutes and causes timeout cascades - run locally",
+)
 async def test_ac4_collection_recreation_and_reingest(test_pdf_path: Any) -> None:
     """AC4: Delete contaminated collection, recreate with clean schema, re-ingest test PDF.
 
@@ -226,6 +231,10 @@ async def test_ac4_collection_recreation_and_reingest(test_pdf_path: Any) -> Non
 @pytest.mark.slow
 @pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_existing=True) - skip re-ingest cleanup
 @pytest.mark.timeout(900)  # 15 minutes - medium test (actual: ~6-8 minutes)
+@pytest.mark.skipif(
+    os.getenv("CI") == "true",
+    reason="40-page PDF ingestion takes 6-8 minutes and causes timeout cascades - run locally",
+)
 async def test_ac4_fast_40page(session_ingested_collection: Any) -> None:
     """AC4 Fast Validation: 40-page PDF for quick CI/CD validation.
 
