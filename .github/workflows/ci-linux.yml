@@ -228,10 +228,10 @@ jobs:
         shard: [postgresql, retrieval, mcp, other]
         include:
           - shard: postgresql
-            # PostgreSQL + forecasting + model_selection + root-level forecasting tests
+            # PostgreSQL + forecasting + model_selection + epic6 + story_6_23 forecasting tests
             # Root-level: adaptive_catboost, auto_forecast, catboost_core, chronos, demand_regressors, ensemble, epic6, forecast_external
-            # REMOVED external_data tests - moved to "other" shard (P1 fix for slow CI)
-            pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/insights/ tests/integration/test_adaptive_catboost_weights.py tests/integration/test_auto_forecast_update.py tests/integration/test_catboost_core.py tests/integration/test_chronos_ensemble.py tests/integration/test_demand_regressors.py tests/integration/test_ensemble_real_data.py tests/integration/test_epic6_core.py tests/integration/test_forecast_external.py"
+            # REBALANCED 2026-01-24: Absorbed epic6/ and story_6_23 AC1-4 tests from MCP shard (slow forecasting tests)
+            pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/insights/ tests/integration/epic6/ tests/integration/story_6_23/test_ac1_variable_cost_mape.py tests/integration/story_6_23/test_ac2_data_quality.py tests/integration/story_6_23/test_ac3_pass_rate.py tests/integration/story_6_23/test_ac4_performance.py tests/integration/story_6_23/test_epic6_quality_gate.py tests/integration/story_6_23/test_mape_validation.py tests/integration/test_adaptive_catboost_weights.py tests/integration/test_auto_forecast_update.py tests/integration/test_catboost_core.py tests/integration/test_chronos_ensemble.py tests/integration/test_demand_regressors.py tests/integration/test_ensemble_real_data.py tests/integration/test_epic6_core.py tests/integration/test_forecast_external.py"
             pytest_ignore: ""
             workers: 4  # Restored: Chronos/TFT skipped in CI, ProcessPoolExecutor conflict resolved
             ci_shard: postgresql
@@ -246,9 +246,10 @@ jobs:
             ci_shard: retrieval
             description: "RAG/retrieval + embedding tests"
           - shard: mcp
-            # MCP tools + story tests + epic6 + agentic tests
-            # Root-level: agentic_*, mcp_*, story tests, async_ingestion, response_validation
-            pytest_paths: "tests/integration/mcp/ tests/integration/story_6_23/ tests/integration/external_data_mcp/ tests/integration/epic6/ tests/integration/helpers/ tests/integration/test_agentic_framework.py tests/integration/test_agentic_workflow_suite.py tests/integration/test_analysis_agent_workflow.py tests/integration/test_mcp_server.py tests/integration/test_mcp_validation_integration.py tests/integration/test_story_6_23_mcp_tools.py tests/integration/test_external_data_mcp_core.py tests/integration/test_mcp_async_ingestion.py tests/integration/test_mcp_response_validation.py"
+            # MCP tools + agentic tests (forecasting validation tests moved to postgresql shard)
+            # Root-level: agentic_*, mcp_*, async_ingestion, response_validation
+            # REBALANCED 2026-01-24: Removed epic6/ and story_6_23 AC1-4 (slow forecasting) to postgresql shard
+            pytest_paths: "tests/integration/mcp/ tests/integration/story_6_23/test_ac5_mcp_tools.py tests/integration/story_6_23/test_mcp_integration.py tests/integration/external_data_mcp/ tests/integration/helpers/ tests/integration/test_agentic_framework.py tests/integration/test_agentic_workflow_suite.py tests/integration/test_analysis_agent_workflow.py tests/integration/test_mcp_server.py tests/integration/test_mcp_validation_integration.py tests/integration/test_story_6_23_mcp_tools.py tests/integration/test_external_data_mcp_core.py tests/integration/test_mcp_async_ingestion.py tests/integration/test_mcp_response_validation.py"
             pytest_ignore: ""
             workers: 2  # Restored: asyncio fixes should prevent hangs
             ci_shard: mcp
