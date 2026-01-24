@@ -268,26 +268,18 @@ class TestChunkingIntegration:
         # CRITICAL: Patch at import source (docling), not at usage location (pipeline)
         mock_converter_class, _ = _create_mock_docling_converter()
 
-        # FIX: Clear embedding model singleton cache BEFORE patching get_embedding_model
-        # The singleton cache causes the real 2GB model to be returned even when
-        # get_embedding_model is patched, because the cache check happens first.
-        import raglite.shared.clients as clients_module
+        # FIX: Patch at the SOURCE (raglite.shared.clients) not the re-export location
+        # The ingest_pdf function calls get_embedding_model from shared.clients,
+        # so we must patch there for the mock to be used.
+        mock_embedding_model = _create_mock_embedding_model()
 
-        original_model = clients_module._embedding_model
-        clients_module._embedding_model = None  # Clear cache
-
-        try:
-            with patch("docling.document_converter.DocumentConverter", mock_converter_class):
-                # Mock embedding generation to focus on chunking logic
-                with patch(
-                    "raglite.ingestion.embedding_generation.get_embedding_model",
-                    return_value=_create_mock_embedding_model(),
-                ):
-                    # Act: Run full ingestion pipeline (mocked PDF + embeddings, fast!)
-                    result = await ingest_pdf(str(sample_pdf))
-        finally:
-            # Restore original model cache to avoid affecting other tests
-            clients_module._embedding_model = original_model
+        with (
+            patch("docling.document_converter.DocumentConverter", mock_converter_class),
+            patch("raglite.shared.clients.get_embedding_model", return_value=mock_embedding_model),
+            patch("raglite.shared.clients._embedding_model", mock_embedding_model),
+        ):
+            # Act: Run full ingestion pipeline (mocked PDF + embeddings, fast!)
+            result = await ingest_pdf(str(sample_pdf))
 
         # Assert: Validate document metadata
         assert result.__class__.__name__ == "DocumentMetadata"
