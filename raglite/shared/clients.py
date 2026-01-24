@@ -252,30 +252,49 @@ def get_embedding_model() -> Any:
                 logger.info("Embedding model already loaded by another process")
                 return _embedding_model
 
-            # CRITICAL FIX (2026-01-24): Use get_settings() to ensure fresh env var reading
-            # The module-level `settings` may be stale in xdist workers, causing CI to
-            # load the 2GB Fin-E5 model instead of the 80MB MiniLM model.
+            # CRITICAL FIX (2026-01-24): Check env var DIRECTLY as fallback
+            # The Settings singleton may be stale in xdist workers (created before
+            # CI_FAST_EMBEDDING was set), causing 2GB Fin-E5 to load instead of 80MB MiniLM.
+            # Belt-and-suspenders: Check BOTH settings AND env var directly.
             import os
 
             current_settings = get_settings()
 
+            # Direct env var check - most reliable in xdist workers
+            ci_fast_env_raw = os.environ.get("CI_FAST_EMBEDDING", "")
+            ci_env_raw = os.environ.get("CI", "")
+            ci_fast_from_env = ci_fast_env_raw.lower() == "true"
+            ci_from_env = ci_env_raw.lower() == "true"
+
+            # Use fast model if EITHER settings OR direct env var indicates CI mode
+            # This prevents OOM in xdist workers where Settings singleton may be stale
+            use_fast_model = (
+                current_settings.ci_fast_embedding_enabled or ci_fast_from_env or ci_from_env
+            )
+
             # Diagnostic logging for CI debugging
-            ci_fast_env = os.environ.get("CI_FAST_EMBEDDING", "NOT SET")
             logger.info(
                 "Embedding model selection",
                 extra={
-                    "CI_FAST_EMBEDDING_env": ci_fast_env,
-                    "ci_fast_embedding_enabled": current_settings.ci_fast_embedding_enabled,
+                    "CI_FAST_EMBEDDING_env": ci_fast_env_raw or "NOT SET",
+                    "CI_env": ci_env_raw or "NOT SET",
+                    "settings_ci_fast_enabled": current_settings.ci_fast_embedding_enabled,
+                    "use_fast_model": use_fast_model,
                 },
             )
 
             # CI Optimization: Use smaller, faster model in CI (Story CI-OPT)
             # all-MiniLM-L6-v2: 80MB, ~5s load (vs Fin-E5: 2GB, ~60s load)
-            if current_settings.ci_fast_embedding_enabled:
+            if use_fast_model:
+                # Use CI fast model (80MB MiniLM vs 2GB Fin-E5)
                 model_name = current_settings.ci_fast_embedding_model
                 logger.info(
                     "Loading CI fast embedding model (with lock)",
-                    extra={"model": model_name, "ci_fast_mode": True},
+                    extra={
+                        "model": model_name,
+                        "ci_fast_mode": True,
+                        "reason": "env_var" if (ci_fast_from_env or ci_from_env) else "settings",
+                    },
                 )
             else:
                 model_name = current_settings.embedding_model
@@ -293,7 +312,7 @@ def get_embedding_model() -> Any:
                     extra={
                         "model": model_name,
                         "dimensions": dimensions,
-                        "ci_fast_mode": current_settings.ci_fast_embedding_enabled,
+                        "ci_fast_mode": use_fast_model,
                     },
                 )
             except Exception as e:
