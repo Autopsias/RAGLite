@@ -162,6 +162,15 @@ def mock_mistral_api_globally() -> Generator[None, None, None]:
         patch(
             "raglite.forecasting.timeseries.core.get_mistral_client", create=True
         ) as mock_ts_core,
+        # Retrieval query classifier modules (SQL generation, metadata filtering)
+        # CRITICAL FIX (2026-01-24): These were missing, causing real Mistral API calls
+        # in MCP analytical tests (~19 min shard time due to 200-500ms per API call)
+        patch(
+            "raglite.retrieval.query_classifier.sql_generation.get_mistral_client"
+        ) as mock_sql_gen,
+        patch(
+            "raglite.retrieval.query_classifier.metadata_filter.get_mistral_client"
+        ) as mock_metadata_filter,
         # Insights modules
         patch("raglite.insights.anomalies.get_mistral_client", create=True) as mock_anomalies,
         patch("raglite.insights.trends.get_mistral_client", create=True) as mock_trends,
@@ -189,6 +198,10 @@ def mock_mistral_api_globally() -> Generator[None, None, None]:
         mock_forecast_hybrid.return_value = mock_client_instance
         mock_forecast_ensemble.return_value = mock_client_instance
         mock_ts_core.return_value = mock_client_instance
+        # Query classifier modules (added 2026-01-24)
+        mock_sql_gen.return_value = mock_client_instance
+        mock_metadata_filter.return_value = mock_client_instance
+        # Insights modules
         mock_anomalies.return_value = mock_client_instance
         mock_trends.return_value = mock_client_instance
         mock_recommendations.return_value = mock_client_instance
