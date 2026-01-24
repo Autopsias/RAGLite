@@ -70,7 +70,13 @@ def get_qdrant_documents() -> set[str]:
 
 def get_postgresql_documents() -> set[str]:
     """Get all unique document_id values from PostgreSQL financial_tables."""
-    db_url = os.getenv("DATABASE_URL", "postgresql://raglite:raglite@localhost:5432/raglite")
+    from raglite.shared.config import settings
+
+    # Use settings-based URL to respect APP_ENV (test vs production)
+    db_url = os.getenv(
+        "DATABASE_URL",
+        f"postgresql://{settings.postgres_user}:{settings.postgres_password}@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}",
+    )
     engine = create_engine(db_url)
 
     with engine.connect() as conn:

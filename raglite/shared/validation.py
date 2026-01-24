@@ -122,7 +122,13 @@ async def get_postgresql_documents() -> tuple[int, set[str]]:
     """
     from sqlalchemy import create_engine, text
 
-    db_url = os.getenv("DATABASE_URL", "postgresql://raglite:raglite@localhost:5432/raglite")
+    from raglite.shared.config import settings
+
+    # Use settings-based URL to respect APP_ENV (test vs production)
+    db_url = os.getenv(
+        "DATABASE_URL",
+        f"postgresql://{settings.postgres_user}:{settings.postgres_password}@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}",
+    )
     engine = create_engine(db_url)
 
     with engine.connect() as conn:

@@ -215,7 +215,7 @@ jobs:
           POSTGRES_USER: raglite_ci
           POSTGRES_PASSWORD: raglite_ci
           POSTGRES_DB: raglite_ci
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        options: --health-cmd "pg_isready -U raglite_ci -d raglite_ci" --health-interval 10s --health-timeout 5s --health-retries 5
 
     strategy:
       fail-fast: false
