@@ -18,12 +18,12 @@ import pytest
 
 # Mark all tests in this module as integration tests that preserve collection state
 # Note: These tests don't interact with Qdrant, but CI requires isolation markers for all integration tests
+# CRITICAL: xdist_group prevents APScheduler race conditions in parallel test execution
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
-    pytest.mark.integration,
-    pytest.mark.preserve_collection,  # Read-only - no Qdrant interaction
+    pytest.mark.xdist_group(name="apscheduler"),  # Force single-worker execution
     pytest.mark.skipif(
         os.getenv("APP_ENV") != "test",
         reason="Integration tests require APP_ENV=test",

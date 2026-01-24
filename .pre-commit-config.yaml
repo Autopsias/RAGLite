@@ -186,9 +186,11 @@ repos:
         pass_filenames: true
         stages: [pre-commit]
         files: ^tests/.*test_.*\.py$
-        # Exclude test_story_7_4_integration.py - intentional deferred imports
-        # This file tests MCP registration behavior which requires fresh imports
-        exclude: test_story_7_4_integration\.py$
+        # Exclude files with intentional deferred imports:
+        # - test_story_7_4_integration.py: Tests MCP registration behavior
+        # - test_scheduler_integration.py: Tests scheduler with mock isolation
+        # - test_tft_training*.py: Tests TFT training with scheduler
+        exclude: (test_story_7_4_integration|test_scheduler_integration|test_tft_training(_integration)?)\.py$
 
       # Mock coverage validation - prevent get_mistral_client mock gaps
       # Root cause: 17+ modules import get_mistral_client but only 5 patched

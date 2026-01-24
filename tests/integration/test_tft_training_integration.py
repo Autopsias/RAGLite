@@ -17,7 +17,13 @@ os.environ["APP_ENV"] = "test"
 
 # Skip all tests in this module if not running integration tests
 # Mark as slow due to model training taking significant time
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# CRITICAL: xdist_group prevents APScheduler race conditions in parallel test execution
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="apscheduler"),  # Force single-worker execution
+]
 
 
 @pytest.fixture
