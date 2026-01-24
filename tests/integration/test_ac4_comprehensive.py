@@ -15,8 +15,15 @@ from pathlib import Path
 
 import pytest
 
+from raglite.ingestion.pipeline import ingest_pdf
+
 # Mark all tests in this module as integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 
 
 @pytest.mark.asyncio
@@ -36,10 +43,6 @@ async def test_ac4_160page_doclingparse_baseline():
 
     Expected: ~6.2 GB peak memory (from AC4 specification estimate)
     """
-    # Lazy imports
-
-    from raglite.ingestion.pipeline import ingest_pdf
-
     # Locate 160-page PDF
     full_pdf = Path("docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf")
 
@@ -129,9 +132,6 @@ async def test_ac4_160page_pypdfium_optimized():
     Expected: ~2.4 GB peak memory (from AC4 specification estimate)
     Expected reduction: 50-60% vs DoclingParse baseline
     """
-    # Lazy imports
-    from raglite.ingestion.pipeline import ingest_pdf
-
     # Locate 160-page PDF
     full_pdf = Path("docs/sample pdf/2025-08 Performance Review CONSO_v2.pdf")
 

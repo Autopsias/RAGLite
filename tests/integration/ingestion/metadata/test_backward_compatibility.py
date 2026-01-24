@@ -11,7 +11,12 @@ from raglite.ingestion.pipeline import ingest_pdf
 from raglite.shared.config import get_active_embedding_dimension
 from raglite.shared.models import Chunk, DocumentMetadata
 
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 
 
 class TestBackwardCompatibility:

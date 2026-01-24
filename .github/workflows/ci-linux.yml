@@ -390,7 +390,7 @@ jobs:
 
       - name: Run Integration Tests
         if: steps.shard-check.outputs.should_run == 'true'
-        timeout-minutes: 15  # Restored: parallelism re-enabled
+        timeout-minutes: 25  # Increased for postgresql shard serialization
         env:
           PYTHONPATH: ${{ github.workspace }}
           DESCRIPTION: ${{ matrix.description }}

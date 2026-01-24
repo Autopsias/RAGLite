@@ -7,6 +7,7 @@ with real Qdrant connection. Requires Docker services running.
 import pytest
 
 from raglite.main import ingest_financial_document, mcp, query_financial_documents
+from raglite.retrieval.search import QueryError
 from raglite.shared.models import IngestionResult, QueryRequest, QueryResponse
 
 # Mark all tests in this module as integration tests that preserve collection state
@@ -14,8 +15,7 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
-    pytest.mark.integration,
-    pytest.mark.preserve_collection,
+    pytest.mark.xdist_group(name="embedding_model"),
 ]
 
 
@@ -179,8 +179,6 @@ class TestMCPErrorHandling:
 
         This test verifies graceful handling when no documents are ingested.
         """
-        from raglite.retrieval.search import QueryError
-
         request = QueryRequest(query="test query", top_k=5)
 
         # If collection is empty, search should either:
