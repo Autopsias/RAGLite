@@ -161,8 +161,11 @@ class TestMetadataInjectionMocked:
 
         print(f"\n✓ Testing Qdrant filter API with {test_field}={test_value}")
 
-        # Create a dummy query vector (1024 dimensions for Fin-E5)
-        query_vector = np.random.rand(1024).tolist()
+        # Create a dummy query vector (dimensions depend on CI_FAST_EMBEDDING)
+        from raglite.shared.config import get_active_embedding_dimension
+
+        embedding_dim = get_active_embedding_dimension()
+        query_vector = np.random.rand(embedding_dim).tolist()
 
         # Search with filter using the found metadata value (using query_points with vector name)
 

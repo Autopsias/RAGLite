@@ -136,10 +136,14 @@ class TestMetadataInjection:
             import numpy as np
             from qdrant_client.models import FieldCondition, Filter, MatchValue
 
-            # Create dummy query vector (1024 dimensions for Fin-E5)
-            query_vector = np.random.rand(1024).tolist()
+            from raglite.shared.config import get_active_embedding_dimension
+
+            # Create dummy query vector (dimensions depend on CI_FAST_EMBEDDING)
+            embedding_dim = get_active_embedding_dimension()
+            query_vector = np.random.rand(embedding_dim).tolist()
 
             # Search with Qdrant filter API (Story 2.4 REVISION: use reporting_period field)
+            # NOTE: Collection uses named vectors, must specify using="text-dense"
             results = client.search(
                 collection_name=settings.qdrant_collection_name,
                 query_vector=query_vector,
@@ -147,6 +151,7 @@ class TestMetadataInjection:
                     must=[FieldCondition(key="reporting_period", match=MatchValue(value="Q3 2024"))]
                 ),
                 limit=5,
+                using="text-dense",  # Required for named vectors (Story 2.1)
             )
 
             # Verify all results match the filter

@@ -65,8 +65,11 @@ class TestQdrantStorageIntegration:
         # Generate real embeddings
         chunks_with_embeddings = await generate_embeddings(test_chunks)
 
-        # Verify embeddings were generated
-        assert all(len(c.embedding) == 1024 for c in chunks_with_embeddings)
+        # Verify embeddings were generated (dimension depends on CI_FAST_EMBEDDING)
+        from raglite.shared.config import get_active_embedding_dimension
+
+        expected_dim = get_active_embedding_dimension()
+        assert all(len(c.embedding) == expected_dim for c in chunks_with_embeddings)
 
         # Create unique test collection
         test_collection = f"test_storage_{int(time.time())}"
@@ -235,9 +238,12 @@ class TestQdrantStorageIntegration:
         ]
 
         # Generate embeddings (this will take time, but not counted in storage perf)
+        from raglite.shared.config import get_active_embedding_dimension
+
+        expected_dim = get_active_embedding_dimension()
         print("\n  📊 Generating embeddings for 300 chunks...")
         chunks_with_embeddings = await generate_embeddings(test_chunks)
-        assert all(len(c.embedding) == 1024 for c in chunks_with_embeddings)
+        assert all(len(c.embedding) == expected_dim for c in chunks_with_embeddings)
 
         # Create unique test collection
         test_collection = f"test_perf_{int(time.time())}"
