@@ -10,7 +10,13 @@ from pathlib import Path
 import pytest
 
 # Mark all tests in this subdirectory with standard integration markers
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# xdist_group prevents worker crashes from parallel subprocess execution
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="story_6_23_validation"),
+]
 
 
 @pytest.fixture
