@@ -49,6 +49,10 @@ for test_file in "${FILES[@]}"; do
     [[ ! "$test_file" =~ test_.*\.py$ ]] && continue
     [[ ! -f "$test_file" ]] && continue
 
+    # Skip integration tests - they use intentional lazy imports for isolation
+    # and are not subject to the same timeout constraints as unit tests
+    [[ "$test_file" =~ tests/integration/ ]] && continue
+
     # Extract line numbers of test function definitions
     test_func_lines=$(grep -n "^\s*\(async \)\?def test_" "$test_file" | cut -d: -f1 || true)
 
