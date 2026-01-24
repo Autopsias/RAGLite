@@ -60,11 +60,19 @@ class TestExcelIngestionIntegration:
         if not sample_excel.exists():
             pytest.skip(f"Sample Excel not found at {sample_excel}")
 
+        # Mock embedding model (test Excel extraction, not embedding generation)
+        # This prevents loading the 2GB embedding model, which causes OOM on workers
+        mock_embedding_model = _create_mock_embedding_model()
+
         # Start timing
         start_time = time.time()
 
-        # Extract Excel
-        result = await extract_excel(str(sample_excel))
+        # Extract Excel with mocked embeddings
+        with (
+            patch("raglite.shared.clients.get_embedding_model", return_value=mock_embedding_model),
+            patch("raglite.shared.clients._embedding_model", mock_embedding_model),
+        ):
+            result = await extract_excel(str(sample_excel))
 
         # Calculate duration
         duration_seconds = time.time() - start_time
