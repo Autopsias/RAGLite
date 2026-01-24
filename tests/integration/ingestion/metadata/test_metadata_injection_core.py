@@ -144,15 +144,16 @@ class TestMetadataInjection:
 
             # Search with Qdrant filter API (Story 2.4 REVISION: use reporting_period field)
             # NOTE: Collection uses named vectors, must specify using="text-dense"
-            results = client.search(
+            # FIX: Use query_points() instead of search() - search() doesn't support 'using' param
+            results = client.query_points(
                 collection_name=settings.qdrant_collection_name,
-                query_vector=query_vector,
+                query=query_vector,  # query_points uses 'query', not 'query_vector'
+                using="text-dense",  # Required for named vectors (Story 2.1)
                 query_filter=Filter(
                     must=[FieldCondition(key="reporting_period", match=MatchValue(value="Q3 2024"))]
                 ),
                 limit=5,
-                using="text-dense",  # Required for named vectors (Story 2.1)
-            )
+            ).points  # query_points returns QueryResponse, access .points for results
 
             # Verify all results match the filter
             assert len(results) > 0, "Filter should return results"
