@@ -11,7 +11,13 @@ from pathlib import Path
 import pytest
 
 # Mark all tests in this module as integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# xdist_group ensures embedding model loads only once (prevents 4x model load with -n 4)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 
 # Skip slow tests unless RUN_SLOW_TESTS=1 environment variable is set
 SKIP_SLOW_TESTS = os.getenv("RUN_SLOW_TESTS") != "1"
@@ -25,12 +31,23 @@ def get_ingestion_module():
     return pipeline
 
 
+def get_bm25_clear_cache_fn():
+    """Lazy-load BM25 cache clear function to avoid heavy imports at module level."""
+    from raglite.shared.bm25 import clear_bm25_cache
+
+    return clear_bm25_cache
+
+
 @pytest.mark.priority("P0")
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.slow
 @pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_existing=True) - skip re-ingest cleanup
 @pytest.mark.timeout(900)  # 15 minutes for 160-page PDF
+@pytest.mark.skipif(
+    os.getenv("CI") == "true",
+    reason="160-page PDF ingestion (13+ min) excluded from CI - run locally with: RUN_SLOW_TESTS=1",
+)
 async def test_ac2_parallel_ingestion_4_threads():
     """
     AC2: Speedup Validation - 8 threads.
@@ -178,8 +195,7 @@ async def test_ac4_thread_safety_determinism():
 
             # CRITICAL FIX: Clear BM25 index cache to force regeneration each run
             # This ensures BM25 index creation is tested for determinism, not just cache hits
-            from raglite.shared.bm25 import clear_bm25_cache
-
+            clear_bm25_cache = get_bm25_clear_cache_fn()
             clear_bm25_cache()
 
             result = await pipeline.ingest_pdf(

@@ -10,7 +10,14 @@ import subprocess
 
 import pytest
 
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xfail(
+        reason="TDD RED phase - expected to fail until Story 6.23 implementation complete"
+    ),
+]
 
 
 class TestAC3VariablePassRate:

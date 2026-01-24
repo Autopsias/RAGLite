@@ -28,7 +28,13 @@ from raglite.main import analytical_query_financial_documents
 from raglite.shared.models import AnalyticalQueryRequest, AnalyticalQueryResponse
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# xdist_group ensures embedding model loads only once (prevents 4x model load with -n 4)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 
 # Access underlying function from FastMCP FunctionTool wrapper
 # FunctionTool objects are NOT directly callable - must use .fn attribute
@@ -328,9 +334,10 @@ def test_performance_budget():
 
 
 # Edge case specific tests (AC6)
+# NOTE: These tests require session_ingested_collection fixture for Qdrant data
 @pytest.mark.slow
 @pytest.mark.asyncio
-async def test_edge_case_missing_data():
+async def test_edge_case_missing_data(session_ingested_collection):
     """Test graceful handling of missing data queries (AC6).
 
     Edge case: Query for data not in documents should return graceful failure.
@@ -350,7 +357,7 @@ async def test_edge_case_missing_data():
 
 @pytest.mark.slow
 @pytest.mark.asyncio
-async def test_edge_case_ambiguous_query():
+async def test_edge_case_ambiguous_query(session_ingested_collection):
     """Test handling of ambiguous queries without time period (AC6).
 
     Edge case: Ambiguous query should return best-effort response or clarification.
@@ -367,7 +374,7 @@ async def test_edge_case_ambiguous_query():
 
 @pytest.mark.slow
 @pytest.mark.asyncio
-async def test_edge_case_out_of_domain():
+async def test_edge_case_out_of_domain(session_ingested_collection):
     """Test handling of out-of-domain queries (AC6).
 
     Edge case: Non-financial query should be gracefully declined.
@@ -386,7 +393,7 @@ async def test_edge_case_out_of_domain():
 
 @pytest.mark.slow
 @pytest.mark.asyncio
-async def test_edge_case_complex_multi_document():
+async def test_edge_case_complex_multi_document(session_ingested_collection):
     """Test complex multi-document reasoning workflow (AC6).
 
     Edge case: Query requiring 4+ retrievals should complete successfully.

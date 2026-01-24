@@ -30,6 +30,7 @@ class TestRealExternalData:
 
     @pytest.mark.asyncio
     @pytest.mark.slow  # Requires network access to INE API
+    @pytest.mark.external_api  # Excluded from CI - requires real network calls
     async def test_accuracy_with_real_external_data(
         self,
         train_time_series: TimeSeriesData,
