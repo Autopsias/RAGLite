@@ -364,6 +364,53 @@ async def test_search_with_semantic_model(session_ingested_collection):
 | Expected slowdown without marker | 4-5x |
 | Actual test suite time | ~10 min (optimized) |
 
+### forecasting_model xdist_group (CRITICAL - Added 2026-01-24)
+
+**Problem:** Forecasting validation tests dynamically import heavy ML libraries at test runtime, bypassing module-level mocking. This loads ~3-4GB of forecasting stack per worker:
+- statsmodels
+- pytorch_forecasting
+- catboost
+
+With GitHub runners having ~7GB RAM and 2 workers, this causes OOM kills (SIGKILL, exit code 137).
+
+**Solution:** Add `xdist_group(name="forecasting_model")` marker to ALL tests that:
+
+1. Call `validate_forecasting_accuracy()` MCP tool
+2. Import from `scripts.validate_forecasting_unified`
+3. Use `run_unified_validation()` or related functions
+4. Test any forecasting ensemble or model selection logic
+
+**Required Pattern:**
+
+```python
+# tests/integration/test_mcp_validation_integration.py
+import pytest
+
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="forecasting_model"),  # CRITICAL!
+]
+
+async def test_validate_forecasting_accuracy_success():
+    """Tests load heavy forecasting stack at runtime."""
+    response = await validate_forecasting_accuracy.fn()
+    # ...
+```
+
+**CI Shard Assignment:**
+- Forecasting tests belong in **postgresql shard** (not mcp shard)
+- postgresql shard has `workers: 2` and handles all ML-heavy tests
+- mcp shard is for lightweight MCP tool tests only
+
+**Memory Budget:**
+| Resource | Size | Impact |
+|----------|------|--------|
+| Embedding model (Fin-E5) | ~2GB | embedding_model group |
+| Forecasting stack | ~3-4GB | forecasting_model group |
+| GitHub runner RAM | ~7GB | Max capacity |
+| Safe workers for forecasting | 1-2 | Prevents OOM |
+
 ---
 
 ## isinstance Checks with pytest-xdist (CRITICAL)
