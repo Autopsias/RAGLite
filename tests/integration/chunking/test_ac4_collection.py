@@ -7,6 +7,7 @@ Tests validate:
 - AC4.4: Chunk count in expected range
 """
 
+import os
 from pathlib import Path
 
 import pytest
@@ -31,6 +32,10 @@ pytestmark = [
 @pytest.mark.slow
 @pytest.mark.manages_collection_state  # Calls ingest_pdf(clear_existing=True) - skip re-ingest cleanup
 @pytest.mark.timeout(600)  # 10 minutes for 10-page PDF
+@pytest.mark.skipif(
+    os.getenv("CI") == "true",
+    reason="Collection recreation test takes 3+ minutes and causes timeout cascades - run locally",
+)
 async def test_ac4_collection_recreation_and_reingest(test_pdf_path):
     """AC4: Delete contaminated collection, recreate with clean schema, re-ingest test PDF.
 

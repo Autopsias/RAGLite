@@ -233,6 +233,7 @@ class TestForecastResponseFormat:
     """Tests to verify response format meets MCP requirements."""
 
     @pytest.mark.asyncio
+    @pytest.mark.timeout(120)  # Prevent worker crash from long operations
     async def test_response_serializable_to_json(self):
         """Test that response can be serialized to JSON for MCP transport."""
         quarters = [

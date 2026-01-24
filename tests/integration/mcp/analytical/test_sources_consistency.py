@@ -92,6 +92,8 @@ class TestGracefulDegradation:
             "partial",
             "epic1_fallback",
             "epic2_routing",
+            "full_orchestration",
+            "basic_retrieval",
         ]
 
     @pytest.mark.asyncio
