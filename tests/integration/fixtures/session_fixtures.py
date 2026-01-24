@@ -84,9 +84,26 @@ def ensure_test_database_schema(request):
 @pytest.mark.timeout(
     300
 )  # P0 FIX (2026-01-23): 5 min max for embedding model load (typical: 60-70s)
-def warmup_embedding_model(request):
-    """Pre-warm Fin-E5 model (60-70s) before PDF ingestion. Skipped if --skip-ingestion."""
+def warmup_embedding_model(request, worker_id):
+    """Pre-warm Fin-E5 model (60-70s) before PDF ingestion. Skipped if --skip-ingestion.
+
+    CRITICAL FIX (2026-01-24): Worker-exclusive model loading to prevent OOM crashes.
+    Research finding: Session fixtures run PER-WORKER in xdist, not globally.
+    With 2 workers each loading 80MB model, OOM can occur (2x 2GB = 4GB for Fin-E5).
+    Solution: Only gw0 loads the model, other workers skip.
+    """
     if request.config.option.collectonly:
+        yield
+        return
+
+    # CRITICAL FIX (2026-01-24): Only gw0/master loads the embedding model.
+    # This prevents OOM crashes from multiple workers each loading 80MB+ model.
+    # Other workers skip - tests needing embeddings are grouped to gw0 via xdist_group marker.
+    # Django pattern: Use worker_id fixture for worker-specific resources.
+    if worker_id not in ("master", "gw0"):
+        print(
+            f"\n⚡ Worker {worker_id}: Skipping embedding warmup (gw0 handles it)", file=sys.stderr
+        )
         yield
         return
 

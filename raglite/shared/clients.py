@@ -88,6 +88,9 @@ _mistral_client: Mistral | None = None
 # Cross-process lock file for embedding model loading (prevents race conditions in xdist)
 _EMBEDDING_LOCK_FILE = Path("/tmp/raglite_embedding_model.lock")  # nosec B108 - lock file only for coordination, no sensitive data
 
+# Signal file created by gw0 when model is loaded (other workers wait for this)
+_MODEL_READY_SIGNAL = Path("/tmp/raglite_embedding_ready.lock")  # nosec B108 - signal file only
+
 
 def get_qdrant_client() -> QdrantClient:
     """Get Qdrant client with singleton caching, connection pooling, and retry logic.
@@ -232,6 +235,11 @@ def get_embedding_model() -> Any:
             Load time: ~5s, Size: ~80MB
             Trade-off: Slightly lower accuracy but 12x faster model loading
         Cross-process lock: Prevents simultaneous model loading across xdist workers
+
+        Worker Coordination (2026-01-24):
+            In xdist mode, only gw0 loads the model. Other workers wait for gw0 to signal
+            completion via _MODEL_READY_SIGNAL file. This prevents multiple workers from
+            each loading 80MB+ models and causing OOM.
     """
     # Lazy-load the SentenceTransformer class (avoids slow PyTorch import at startup)
     SentenceTransformerClass = _get_sentence_transformer_class()
@@ -243,6 +251,43 @@ def get_embedding_model() -> Any:
     global _embedding_model
 
     if _embedding_model is None:
+        import os
+
+        # CRITICAL FIX (2026-01-24): Worker coordination to prevent OOM
+        # In xdist mode, only gw0 should load the model.
+        # Other workers should have their embedding tests routed to gw0 via xdist_group.
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER", "")
+        is_xdist = bool(worker_id)
+
+        if is_xdist and worker_id not in ("", "gw0"):
+            # Non-gw0 worker trying to load model - likely a misconfiguration
+            # Tests needing embeddings should have @pytest.mark.xdist_group(name="embedding_model")
+            logger.warning(
+                f"Worker {worker_id} attempting to load embedding model. "
+                "This may indicate missing xdist_group marker on embedding tests.",
+                extra={"worker_id": worker_id, "xdist_mode": True},
+            )
+            # Wait for gw0 to signal model ready (with timeout)
+            # This provides fallback protection if xdist_group markers are missing
+            wait_start = time.time()
+            max_wait = 180  # 3 minutes max wait
+            while not _MODEL_READY_SIGNAL.exists():
+                if time.time() - wait_start > max_wait:
+                    logger.error(
+                        f"Worker {worker_id}: Timeout waiting for gw0 to load embedding model",
+                        extra={"worker_id": worker_id, "waited_seconds": max_wait},
+                    )
+                    raise RuntimeError(
+                        f"Worker {worker_id} timed out waiting for gw0 to load embedding model. "
+                        "Ensure tests using embeddings have @pytest.mark.xdist_group(name='embedding_model')"
+                    )
+                time.sleep(1)
+            # gw0 has loaded - we can now acquire the lock and use the cached model
+            logger.info(
+                f"Worker {worker_id}: gw0 has loaded embedding model, waiting for lock",
+                extra={"worker_id": worker_id},
+            )
+
         # Cross-process lock prevents simultaneous loading across xdist workers
         lock = filelock.FileLock(_EMBEDDING_LOCK_FILE, timeout=180)
 
@@ -256,8 +301,6 @@ def get_embedding_model() -> Any:
             # The Settings singleton may be stale in xdist workers (created before
             # CI_FAST_EMBEDDING was set), causing 2GB Fin-E5 to load instead of 80MB MiniLM.
             # Belt-and-suspenders: Check BOTH settings AND env var directly.
-            import os
-
             current_settings = get_settings()
 
             # Direct env var check - most reliable in xdist workers
@@ -315,6 +358,21 @@ def get_embedding_model() -> Any:
                         "ci_fast_mode": use_fast_model,
                     },
                 )
+
+                # CRITICAL FIX (2026-01-24): Signal to other workers that model is ready
+                # This allows non-gw0 workers to proceed (fallback for missing xdist_group markers)
+                if is_xdist:
+                    try:
+                        _MODEL_READY_SIGNAL.touch()
+                        logger.info(
+                            f"Worker {worker_id or 'master'}: Created model ready signal",
+                            extra={"signal_path": str(_MODEL_READY_SIGNAL)},
+                        )
+                    except OSError as signal_err:
+                        logger.warning(
+                            f"Failed to create model ready signal: {signal_err}",
+                            extra={"error": str(signal_err)},
+                        )
             except Exception as e:
                 error_msg = f"Failed to load embedding model ({model_name}): {e}"
                 logger.error(

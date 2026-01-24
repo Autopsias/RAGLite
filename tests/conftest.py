@@ -22,6 +22,7 @@ Test Environment Configuration:
 # CRITICAL: CI lightweight mode - mock heavy ML dependencies BEFORE any imports
 # This prevents loading 10-15GB of ML libraries during test collection on CI runners with ~6GB RAM
 import asyncio
+import gc
 import os
 import sys
 from unittest.mock import MagicMock
@@ -175,6 +176,30 @@ reset_settings()
 
 logger = logging.getLogger(__name__)
 
+
+# =============================================================================
+# pytest Hooks for Memory Management (CRITICAL FIX 2026-01-24)
+# =============================================================================
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_teardown(item, nextitem):
+    """Force garbage collection after each test to prevent memory accumulation.
+
+    CRITICAL FIX (2026-01-24): PyTorch pattern for preventing OOM in xdist workers.
+    Research finding: Memory accumulation across tests can cause "gw* node down"
+    errors when Linux OOM killer terminates the worker process.
+
+    This hook runs after EVERY test's teardown phase, ensuring:
+    1. Unused embedding models/tensors are released promptly
+    2. Large result objects don't accumulate across test boundaries
+    3. Memory is available for subsequent tests
+
+    Reference: PyTorch test suite pattern, HuggingFace transformers tests
+    """
+    gc.collect()
+
+
 # Load fixture modules via pytest_plugins
 # NOTE: Order matters for hooks - pytest_hooks must load BEFORE other plugins
 # NOTE: pytest_plugins MUST be defined at root conftest only (pytest deprecation)
@@ -314,6 +339,31 @@ def disable_joblib_parallel_processing():
 
     gc.collect()
     logger.info("Joblib configuration cleaned up")
+
+
+@pytest.fixture(scope="session")
+def worker_id(request):
+    """Get pytest-xdist worker ID, with fallback for non-xdist runs.
+
+    CRITICAL FIX (2026-01-24): Worker-exclusive resource loading pattern.
+    Returns:
+        - "master" when running without xdist (single process)
+        - "gw0", "gw1", etc. when running with xdist (-n N)
+
+    Used by session fixtures to ensure only gw0 loads heavy resources,
+    preventing OOM crashes from multiple workers loading embedding models.
+    """
+    # xdist sets PYTEST_XDIST_WORKER env var in worker processes
+    import os
+
+    xdist_worker = os.environ.get("PYTEST_XDIST_WORKER", "")
+    if xdist_worker:
+        return xdist_worker
+    # Also check if xdist plugin provides the worker_id
+    if hasattr(request.config, "workerinput"):
+        return request.config.workerinput["workerid"]
+    # No xdist - running in master process
+    return "master"
 
 
 @pytest.fixture(scope="session")
