@@ -5,7 +5,7 @@ Tests Story 2.4 metadata injection into Qdrant and cost validation.
 
 import os
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -119,9 +119,13 @@ class TestMetadataInjection:
             department_scope="Finance",  # Story 2.4 REVISION: renamed from department_name
         )
 
-        with patch("raglite.ingestion.pipeline.extract_chunk_metadata") as mock_extract:
-            mock_extract.return_value = mock_metadata
-
+        # FIX: Patch where the function is USED, not where it's re-exported
+        # pdf_utils.py imports extract_chunk_metadata directly from embedding_generation
+        # FIX: Use AsyncMock since extract_chunk_metadata is async
+        with patch(
+            "raglite.ingestion.document_ingestion.pdf_utils.extract_chunk_metadata",
+            new=AsyncMock(return_value=mock_metadata),
+        ):
             # PERFORMANCE FIX: Use specific small test PDF instead of glob pattern
             test_pdf = Path("tests/fixtures/sample-small-3-pages.pdf")
 
