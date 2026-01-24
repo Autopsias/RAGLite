@@ -233,7 +233,7 @@ jobs:
             # REBALANCED 2026-01-24: Absorbed epic6/ and story_6_23 AC1-4 tests from MCP shard (slow forecasting tests)
             pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/insights/ tests/integration/epic6/ tests/integration/story_6_23/test_ac1_variable_cost_mape.py tests/integration/story_6_23/test_ac2_data_quality.py tests/integration/story_6_23/test_ac3_pass_rate.py tests/integration/story_6_23/test_ac4_performance.py tests/integration/story_6_23/test_epic6_quality_gate.py tests/integration/story_6_23/test_mape_validation.py tests/integration/test_adaptive_catboost_weights.py tests/integration/test_auto_forecast_update.py tests/integration/test_catboost_core.py tests/integration/test_chronos_ensemble.py tests/integration/test_demand_regressors.py tests/integration/test_ensemble_real_data.py tests/integration/test_epic6_core.py tests/integration/test_forecast_external.py"
             pytest_ignore: ""
-            workers: 4  # Restored: Chronos/TFT skipped in CI, ProcessPoolExecutor conflict resolved
+            workers: 2  # P0 FIX (2026-01-24): Reduced from 4 to prevent DB transaction races in autouse cleanup
             ci_shard: postgresql
             description: "PostgreSQL + forecasting tests"
           - shard: retrieval

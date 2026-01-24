@@ -27,7 +27,14 @@ ASYNC_POLL_TIMEOUT_SECONDS = 90  # 90s max for any polling loop
 # Mark all tests in this module as integration tests that modify data
 # These tests call ingest_financial_document which modifies Qdrant collection
 # SLOW: All tests involve actual PDF ingestion (~20-25s each)
-pytestmark = [pytest.mark.integration, pytest.mark.manages_collection_state, pytest.mark.slow]
+# P0 FIX (2026-01-24): Added xdist_group(name="embedding_model") to prevent worker crashes
+# Real PDF ingestion loads 2GB embedding model - must run on single worker to avoid OOM
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.manages_collection_state,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 
 
 @pytest.mark.priority("P1")

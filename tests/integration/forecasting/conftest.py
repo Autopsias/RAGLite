@@ -27,12 +27,14 @@ if TYPE_CHECKING:
 
 # Mark all tests in this subdirectory with standard integration markers
 # 'slow' marker is NOT applied here - it's applied per-test based on actual duration
-# Note: xdist_group removed (2025-01-19) - it was serializing 100+ tests onto single worker
-# causing timeouts. Apply @pytest.mark.xdist_group to individual tests that need it.
+# P0 FIX (2026-01-24): Restored xdist_group(name="database_writes") to prevent worker crashes
+# The autouse cleanup_forecast_tables fixture performs DB writes (DELETE statements)
+# which cause transaction conflicts when multiple workers run in parallel.
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
+    pytest.mark.xdist_group(name="database_writes"),
 ]
 
 
