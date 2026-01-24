@@ -176,11 +176,12 @@ async def validate_forecasting_accuracy(
     """
     import os
 
-    # FIX 2026-01-24: Skip heavy forecasting imports in CI/LIGHTWEIGHT_TESTS mode
+    # FIX 2026-01-24: Skip heavy forecasting imports in CI mode
     # The dynamic import at runtime bypasses module-level mocking, causing workers
     # to load ~3-4GB forecasting stack (statsmodels + pytorch_forecasting + catboost)
     # which triggers OOM kills on GitHub runners with 7GB RAM and 2 workers
-    if os.environ.get("LIGHTWEIGHT_TESTS") == "true":
+    # Check both CI=true (set by GitHub Actions) and LIGHTWEIGHT_TESTS for flexibility
+    if os.environ.get("CI") == "true" or os.environ.get("LIGHTWEIGHT_TESTS") == "true":
         logger.info(
             "Skipping forecasting validation in LIGHTWEIGHT_TESTS mode",
             extra={"mape_method": mape_method},
