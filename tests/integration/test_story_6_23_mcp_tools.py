@@ -306,9 +306,9 @@ class TestEpic6QualityGate:
     """
 
     @pytest.mark.slow
-    @pytest.mark.xfail(
-        reason="P0: Subprocess may OOM in CI - validate manually until fixed",
-        strict=False,  # Don't fail if it passes
+    @pytest.mark.skipif(
+        os.environ.get("CI") == "true",
+        reason="Subprocess loads 3-4GB forecasting models (Chronos, TFT, Prophet), exceeds CI memory. Validate manually.",
     )
     def test_epic6_quality_gate_passes(self, validation_script_path, project_root):
         """TEST-EPIC6-QG: Epic 6 quality gate must pass.
