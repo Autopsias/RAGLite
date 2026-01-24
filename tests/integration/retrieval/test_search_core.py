@@ -12,7 +12,13 @@ import time
 import pytest
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# xdist_group ensures all embedding model tests run on the same worker (prevents 4x model load)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 
 # Lazy imports for expensive modules - DO NOT import raglite modules at module level!
 # Test explorers (VS Code) run discovery multiple times causing 30+ second delays.

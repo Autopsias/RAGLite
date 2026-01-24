@@ -203,12 +203,16 @@ class TestAC5MCPToolsFunctional:
             )
 
     @pytest.mark.asyncio
+    @pytest.mark.external_api  # Hits real external APIs (Quandl, EEX, etc.) - skip in fast CI
     async def test_ac5_get_regressor_data_tool(self):
         """TEST-AC-6.23.5c: get_regressor_data() fetches live data.
 
         GIVEN: MCP tool and external data sources (Stories 6.16, 6.17)
         WHEN: Calling get_regressor_data for ttf_gas
         THEN: Returns recent data points
+
+        NOTE: This test hits real external APIs (Quandl, EEX, ECB, Eurostat).
+        It is marked with external_api and excluded from fast CI runs.
         """
         try:
             get_data_func = self.get_tool_function("get_regressor_data")

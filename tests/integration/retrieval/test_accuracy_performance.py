@@ -11,9 +11,16 @@ from pathlib import Path
 import pytest
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# xdist_group ensures all embedding model tests run on the same worker (prevents 4x model load)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="embedding_model"),
+]
 
 
+# Note: xdist_group is in pytestmark above, class-level marker is redundant but kept for clarity
 @pytest.mark.xdist_group(name="embedding_model")
 @pytest.mark.preserve_collection
 class TestAccuracyPerformance:

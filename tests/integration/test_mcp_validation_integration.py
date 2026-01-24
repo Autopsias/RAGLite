@@ -50,8 +50,13 @@ async def test_list_available_regressors_static_data():
 
 
 @pytest.mark.asyncio
+@pytest.mark.external_api  # Hits real external APIs (Quandl, EEX, etc.) - skip in fast CI
 async def test_get_regressor_data_with_valid_variable():
-    """Test fetching regressor data for a valid variable."""
+    """Test fetching regressor data for a valid variable.
+
+    NOTE: This test hits real external APIs (ICE, EEX, ECB, Eurostat).
+    It is marked with external_api and excluded from fast CI runs.
+    """
     # Access the underlying function via .fn (FunctionTool wrapper)
     # Use a known regressor from config (use ISO string format)
     response = await get_regressor_data.fn(

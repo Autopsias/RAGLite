@@ -22,8 +22,9 @@ pytestmark = [
     pytest.mark.xdist_group(name="embedding_model"),
 ]
 
-# analytical_query_financial_documents is a plain async function, not wrapped by FastMCP
-analytical_query_fn = analytical_query_financial_documents
+# Access underlying function from FastMCP FunctionTool wrapper
+# FunctionTool objects are NOT directly callable - must use .fn attribute
+analytical_query_fn = analytical_query_financial_documents.fn
 
 
 @pytest.mark.integration
@@ -32,15 +33,17 @@ class TestMCPToolCompliance:
     """Test AC1: MCP tool definition and protocol compliance (no data required)."""
 
     def test_analytical_query_tool_registered(self):
-        """Verify analytical_query_financial_documents is a callable async function (AC1)."""
-        # AC1: Function must be callable for internal use by Epic 3 workflows
-        # Note: This is an internal function, not directly exposed as an MCP tool
-        assert callable(analytical_query_financial_documents)
+        """Verify analytical_query_financial_documents is registered as MCP tool (AC1)."""
+        # AC1: Function must be registered as MCP tool with FastMCP
+        # FunctionTool wrapper has .fn and .name attributes
+        assert hasattr(analytical_query_financial_documents, "fn")
+        assert hasattr(analytical_query_financial_documents, "name")
+        assert analytical_query_financial_documents.name == "analytical_query_financial_documents"
         assert callable(analytical_query_fn)
-        # Verify it's an async function
+        # Verify underlying function is async
         import inspect
 
-        assert inspect.iscoroutinefunction(analytical_query_financial_documents)
+        assert inspect.iscoroutinefunction(analytical_query_fn)
 
     def test_analytical_query_request_model_valid(self):
         """Verify AnalyticalQueryRequest model is properly defined (AC2)."""
