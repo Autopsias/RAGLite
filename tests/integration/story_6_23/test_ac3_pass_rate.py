@@ -1,11 +1,15 @@
 """Test AC3: At least 10/12 variables meet their MAPE targets.
 
 Story 6.23 - RED PHASE: Tests MUST FAIL initially.
+
+NOTE: These tests run long validation subprocesses (10+ min) that crash
+pytest-xdist workers in CI. Skipped in CI via pytest.mark.skipif.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 
 import pytest
@@ -14,8 +18,9 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
-    pytest.mark.xfail(
-        reason="TDD RED phase - expected to fail until Story 6.23 implementation complete"
+    pytest.mark.skipif(
+        os.getenv("CI") == "true",
+        reason="TDD red-phase subprocess tests crash xdist workers in CI - run locally",
     ),
 ]
 
