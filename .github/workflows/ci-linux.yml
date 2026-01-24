@@ -244,7 +244,7 @@ jobs:
             # FIX 2026-01-24: Moved test_mcp_async_ingestion.py here from MCP shard (needs embedding warmup)
             pytest_paths: "tests/integration/chunking/ tests/integration/ingestion/ tests/integration/retrieval/ tests/integration/story_2_14/ tests/integration/ac3_ground_truth/ tests/integration/parallel_ingestion/ tests/integration/test_analytical_core.py tests/integration/test_chunking_consistency.py tests/integration/test_chunking_core.py tests/integration/test_metadata_core.py tests/integration/test_hybrid_search_integration.py tests/integration/test_main_integration.py tests/integration/test_retrieval_core.py tests/integration/test_pypdfium_ingestion.py tests/integration/test_e2e_query_validation.py tests/integration/test_sql_routing.py tests/integration/test_multi_index_integration.py tests/integration/test_document_segregation.py tests/integration/test_excerpt_validation_core.py tests/integration/test_parallel_ingestion.py tests/integration/test_page_parallelism.py tests/integration/test_mcp_async_ingestion.py"
             pytest_ignore: ""
-            workers: 1  # P0 FIX (2026-01-24): Reduced from 2 to prevent OOM when embedding model stays in memory
+            workers: 2  # Restored: test_excel_pipeline.py tests mock embeddings (no xdist_group needed)
             ci_shard: retrieval
             description: "RAG/retrieval + embedding tests"
           - shard: mcp
