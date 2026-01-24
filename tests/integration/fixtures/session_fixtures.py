@@ -127,17 +127,37 @@ def warmup_embedding_model(request):
         return
 
     check_and_skip_if_unavailable()
+
+    # CRITICAL FIX (2026-01-24): Reset settings BEFORE accessing them to ensure
+    # CI_FAST_EMBEDDING env var is picked up in xdist workers.
+    # Without this, the Settings singleton may have been created before the env var was set.
+    from raglite.shared.config import reset_settings
+
+    # Diagnostic: Log env var state BEFORE reset
+    ci_fast_env = os.environ.get("CI_FAST_EMBEDDING", "NOT SET")
+    ci_env = os.environ.get("CI", "NOT SET")
+    print(
+        f"🔍 DEBUG: CI_FAST_EMBEDDING env = {ci_fast_env}, CI env = {ci_env}",
+        file=sys.stderr,
+    )
+
+    # Force Settings recreation to pick up current env vars
+    current_settings = reset_settings()
+    print(
+        f"🔍 DEBUG: After reset_settings(): ci_fast_embedding_enabled = {current_settings.ci_fast_embedding_enabled}",
+        file=sys.stderr,
+    )
+
     from raglite.shared.clients import get_embedding_model
-    from raglite.shared.config import settings
 
     # CI Optimization instrumentation: Log which model is being used
     model_name = (
-        settings.ci_fast_embedding_model
-        if settings.ci_fast_embedding_enabled
-        else settings.embedding_model
+        current_settings.ci_fast_embedding_model
+        if current_settings.ci_fast_embedding_enabled
+        else current_settings.embedding_model
     )
     print(
-        f"🔄 Loading embedding model: {model_name} (CI fast mode: {settings.ci_fast_embedding_enabled})",
+        f"🔄 Loading embedding model: {model_name} (CI fast mode: {current_settings.ci_fast_embedding_enabled})",
         file=sys.stderr,
     )
 
@@ -147,7 +167,7 @@ def warmup_embedding_model(request):
     dim = model.get_sentence_embedding_dimension()
 
     # Report performance metrics
-    mode_label = "CI fast" if settings.ci_fast_embedding_enabled else "Production"
+    mode_label = "CI fast" if current_settings.ci_fast_embedding_enabled else "Production"
     print(
         f"✅ Embedding model ready: {dim} dimensions ({mode_label}: {model_name})",
         file=sys.stderr,

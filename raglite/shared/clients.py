@@ -11,7 +11,7 @@ from typing import Any
 
 import filelock
 
-from raglite.shared.config import settings
+from raglite.shared.config import get_settings, settings
 from raglite.shared.logging import get_logger
 
 # OPTIMIZATION: Make imports optional to prevent test failures when dependencies not available
@@ -252,16 +252,33 @@ def get_embedding_model() -> Any:
                 logger.info("Embedding model already loaded by another process")
                 return _embedding_model
 
+            # CRITICAL FIX (2026-01-24): Use get_settings() to ensure fresh env var reading
+            # The module-level `settings` may be stale in xdist workers, causing CI to
+            # load the 2GB Fin-E5 model instead of the 80MB MiniLM model.
+            import os
+
+            current_settings = get_settings()
+
+            # Diagnostic logging for CI debugging
+            ci_fast_env = os.environ.get("CI_FAST_EMBEDDING", "NOT SET")
+            logger.info(
+                "Embedding model selection",
+                extra={
+                    "CI_FAST_EMBEDDING_env": ci_fast_env,
+                    "ci_fast_embedding_enabled": current_settings.ci_fast_embedding_enabled,
+                },
+            )
+
             # CI Optimization: Use smaller, faster model in CI (Story CI-OPT)
             # all-MiniLM-L6-v2: 80MB, ~5s load (vs Fin-E5: 2GB, ~60s load)
-            if settings.ci_fast_embedding_enabled:
-                model_name = settings.ci_fast_embedding_model
+            if current_settings.ci_fast_embedding_enabled:
+                model_name = current_settings.ci_fast_embedding_model
                 logger.info(
                     "Loading CI fast embedding model (with lock)",
                     extra={"model": model_name, "ci_fast_mode": True},
                 )
             else:
-                model_name = settings.embedding_model
+                model_name = current_settings.embedding_model
                 logger.info(
                     "Loading Fin-E5 embedding model (with lock)",
                     extra={"model": model_name, "ci_fast_mode": False},
@@ -276,7 +293,7 @@ def get_embedding_model() -> Any:
                     extra={
                         "model": model_name,
                         "dimensions": dimensions,
-                        "ci_fast_mode": settings.ci_fast_embedding_enabled,
+                        "ci_fast_mode": current_settings.ci_fast_embedding_enabled,
                     },
                 )
             except Exception as e:
