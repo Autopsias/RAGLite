@@ -25,6 +25,7 @@ import pytest
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.slow,  # Real API calls
+    pytest.mark.external_api,  # Excluded from CI - requires real Eurostat API calls
     pytest.mark.preserve_collection,  # Read-only tests (don't modify Qdrant)
 ]
 
