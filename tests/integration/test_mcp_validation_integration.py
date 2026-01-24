@@ -46,7 +46,16 @@ async def test_list_available_regressors_static_data():
     for reg in response.regressors:
         assert reg.name
         assert reg.display_name
-        assert reg.source in ["Eurostat", "ECB", "Unknown"]
+        assert reg.source in [
+            "Eurostat",
+            "ECB",
+            "ICE",
+            "EU Oil Bulletin",
+            "EC",
+            "REN",
+            "Eurostat/INE",
+            "Unknown",
+        ]
 
 
 @pytest.mark.asyncio
