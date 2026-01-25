@@ -254,7 +254,9 @@ jobs:
             # Uses --dist loadfile for file-level isolation (no xdist_group needed)
             # SPLIT 2026-01-25: Chunking + ingestion workflow tests separated from embedding tests
             # FIX 2026-01-25: Removed story_2_14/ (has xdist_group markers, needs loadgroup)
-            pytest_paths: "tests/integration/chunking/ tests/integration/test_chunking_consistency.py tests/integration/test_chunking_core.py tests/integration/test_pypdfium_ingestion.py tests/integration/test_page_parallelism.py"
+            # FIX 2026-01-25: Removed test_chunking_consistency.py and test_pypdfium_ingestion.py
+            #                 (both have xdist_group markers, incompatible with --dist loadfile)
+            pytest_paths: "tests/integration/chunking/ tests/integration/test_chunking_core.py tests/integration/test_page_parallelism.py"
             pytest_ignore: ""
             workers: 2
             ci_shard: retrieval-core
@@ -265,7 +267,9 @@ jobs:
             # SPLIT 2026-01-25: Embedding tests isolated for reliable serial execution
             # FIX 2026-01-25: Added story_2_14/ (has xdist_group markers, needs session_ingested_collection)
             # FIX 2026-01-25: Added test_ac1_fuzzy_entity_matching.py (uses session_ingested_collection)
-            pytest_paths: "tests/integration/ingestion/ tests/integration/retrieval/ tests/integration/story_2_14/ tests/integration/ac3_ground_truth/ tests/integration/parallel_ingestion/ tests/integration/test_analytical_core.py tests/integration/test_metadata_core.py tests/integration/test_hybrid_search_integration.py tests/integration/test_main_integration.py tests/integration/test_retrieval_core.py tests/integration/test_e2e_query_validation.py tests/integration/test_sql_routing.py tests/integration/test_multi_index_integration.py tests/integration/test_document_segregation.py tests/integration/test_excerpt_validation_core.py tests/integration/test_parallel_ingestion.py tests/integration/test_mcp_async_ingestion.py tests/integration/test_ac1_fuzzy_entity_matching.py"
+            # FIX 2026-01-25: Added test_chunking_consistency.py and test_pypdfium_ingestion.py
+            #                 (both have xdist_group markers, need --dist loadgroup)
+            pytest_paths: "tests/integration/ingestion/ tests/integration/retrieval/ tests/integration/story_2_14/ tests/integration/ac3_ground_truth/ tests/integration/parallel_ingestion/ tests/integration/test_analytical_core.py tests/integration/test_metadata_core.py tests/integration/test_hybrid_search_integration.py tests/integration/test_main_integration.py tests/integration/test_retrieval_core.py tests/integration/test_e2e_query_validation.py tests/integration/test_sql_routing.py tests/integration/test_multi_index_integration.py tests/integration/test_document_segregation.py tests/integration/test_excerpt_validation_core.py tests/integration/test_parallel_ingestion.py tests/integration/test_mcp_async_ingestion.py tests/integration/test_ac1_fuzzy_entity_matching.py tests/integration/test_chunking_consistency.py tests/integration/test_pypdfium_ingestion.py"
             pytest_ignore: ""
             workers: 1  # Single worker for embedding tests - prevents contention
             ci_shard: retrieval-embedding
