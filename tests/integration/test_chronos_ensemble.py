@@ -14,7 +14,7 @@ from __future__ import annotations
 import os
 import time
 from datetime import datetime
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy import delete
@@ -55,9 +55,13 @@ async def test_cold_start_scenario_minimal_data() -> None:
     ]
     data = TimeSeriesData(metric_name="test_cold_start", points=points, interval="monthly")
 
-    # Generate forecast - mock fetch_historical_data per Story 8.5 ATDD pattern
-    with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-        mock_fetch.return_value = data
+    # Generate forecast - mock ensure_historical_data per Story 8.5 ATDD pattern
+    # Patch where the function is imported (ensemble.py), not the alias in __init__.py
+    with patch(
+        "raglite.forecasting.hybrid.ensemble.ensure_historical_data",
+        new_callable=AsyncMock,
+        return_value=data,
+    ):
         result = await generate_forecast(
             metric="test_cold_start",
             periods_ahead=3,

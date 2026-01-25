@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import numpy as np
 import pandas as pd
@@ -213,8 +213,12 @@ class TestBaselineForecast:
         """AC2: Baseline forecast runs without errors."""
         _, test_df = train_test_split
 
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = train_time_series
+        # Patch where the function is imported (ensemble.py), not the alias in __init__.py
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.ensure_historical_data",
+            new_callable=AsyncMock,
+            return_value=train_time_series,
+        ):
             result = await generate_forecast(
                 metric="cement_demand",
                 periods_ahead=len(test_df),
@@ -240,8 +244,12 @@ class TestMultivariateForecast:
         """AC2: Multivariate forecast runs without errors."""
         _, test_df = train_test_split
 
-        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-            mock_fetch.return_value = train_time_series
+        # Patch where the function is imported (ensemble.py), not the alias in __init__.py
+        with patch(
+            "raglite.forecasting.hybrid.ensemble.ensure_historical_data",
+            new_callable=AsyncMock,
+            return_value=train_time_series,
+        ):
             result = await generate_forecast(
                 metric="cement_demand",
                 periods_ahead=len(test_df),
