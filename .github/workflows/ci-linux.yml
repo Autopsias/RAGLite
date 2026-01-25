@@ -184,7 +184,7 @@ jobs:
   integration:
     name: "🔗 Tests: Integration (${{ matrix.shard }})"
     runs-on: ubuntu-latest
-    timeout-minutes: 20  # Restored: parallelism re-enabled
+    timeout-minutes: 30  # Allow step timeout (25 min) + service startup overhead
     needs: validate
     # Run integration tests on:
     # - Push to main (always run full integration on main)
