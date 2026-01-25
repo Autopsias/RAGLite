@@ -4,6 +4,7 @@ import os
 import sys
 import time
 
+import filelock
 import pytest
 
 # Import session state globals
@@ -191,18 +192,36 @@ def warmup_embedding_model(request, worker_id):
         file=sys.stderr,
     )
 
-    model_load_start = time.time()
-    model = get_embedding_model()
-    model_load_duration = time.time() - model_load_start
-    dim = model.get_sentence_embedding_dimension()
+    # CRITICAL FIX (2026-01-25): Serialize model loading across workers with filelock.
+    # Problem: When both workers load the embedding model simultaneously, resource contention
+    # causes crashes ("worker crashed and worker restarting disabled").
+    # Solution: Use file lock to serialize model loading. Even though the model is cached,
+    # the initial HuggingFace/SentenceTransformer loading process is not thread-safe.
+    # With lock: gw0 loads -> releases -> gw1 loads (sequential, safe)
+    # Without lock: gw0 and gw1 load simultaneously (race condition, crashes)
+    lock_path = "/tmp/raglite_embedding_model_warmup.lock"
+    lock = filelock.FileLock(lock_path, timeout=300)  # 5 min timeout
 
-    # Report performance metrics
-    mode_label = "CI fast" if current_settings.ci_fast_embedding_enabled else "Production"
-    print(
-        f"✅ Embedding model ready: {dim} dimensions ({mode_label}: {model_name})",
-        file=sys.stderr,
-    )
-    print(f"📊 MODEL LOAD PERF: {model_name} loaded in {model_load_duration:.1f}s", file=sys.stderr)
+    print(f"🔒 Worker {worker_id}: Acquiring embedding model lock...", file=sys.stderr)
+    with lock:
+        print(f"🔒 Worker {worker_id}: Lock acquired, loading model...", file=sys.stderr)
+        model_load_start = time.time()
+        model = get_embedding_model()
+        model_load_duration = time.time() - model_load_start
+        dim = model.get_sentence_embedding_dimension()
+
+        # Report performance metrics
+        mode_label = "CI fast" if current_settings.ci_fast_embedding_enabled else "Production"
+        print(
+            f"✅ Embedding model ready: {dim} dimensions ({mode_label}: {model_name})",
+            file=sys.stderr,
+        )
+        print(
+            f"📊 MODEL LOAD PERF: {model_name} loaded in {model_load_duration:.1f}s",
+            file=sys.stderr,
+        )
+        print(f"🔓 Worker {worker_id}: Releasing embedding model lock", file=sys.stderr)
+
     yield
 
 
