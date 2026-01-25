@@ -292,12 +292,24 @@ class TestChunkingIntegration:
         # so we must patch there for the mock to be used.
         mock_embedding_model = _create_mock_embedding_model()
 
+        # CRITICAL: Must mock storage functions too - otherwise mock embeddings (1024-dim)
+        # get stored to Qdrant collection with different dimensions, causing 400 Bad Request
+        # The storage functions are imported at runtime inside _legacy.py, so patch at definition location
         with (
             patch("docling.document_converter.DocumentConverter", mock_converter_class),
             patch("raglite.shared.clients.get_embedding_model", return_value=mock_embedding_model),
             patch("raglite.shared.clients._embedding_model", mock_embedding_model),
+            # Mock storage to prevent Qdrant/PostgreSQL calls with mock embeddings
+            patch(
+                "raglite.ingestion.storage.vector_store.store_vectors_in_qdrant",
+                return_value=10,  # Return mock point count
+            ),
+            patch(
+                "raglite.ingestion.storage.metadata_store.store_metadata_in_postgresql",
+                return_value=(10, 0),  # Return (stored, skipped)
+            ),
         ):
-            # Act: Run full ingestion pipeline (mocked PDF + embeddings, fast!)
+            # Act: Run full ingestion pipeline (mocked PDF + embeddings + storage, fast!)
             result = await ingest_pdf(str(sample_pdf))
 
         # Assert: Validate document metadata
