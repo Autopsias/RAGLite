@@ -20,6 +20,7 @@ pytestmark = [
     pytest.mark.manages_collection_state,
     pytest.mark.slow,
     pytest.mark.xdist_group(name="embedding_model"),
+    pytest.mark.timeout(180),  # CI: prevent SIGTERM from step timeout
 ]
 
 

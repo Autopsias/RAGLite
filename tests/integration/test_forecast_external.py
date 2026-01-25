@@ -308,8 +308,6 @@ class TestEndToEndForecastingFlow:
     @pytest.mark.asyncio
     async def test_generate_multivariate_forecast(self, populated_storage) -> None:
         """Test complete multi-variate forecast generation (slow: Prophet fitting/CV)."""
-        import warnings
-
         from raglite.forecasting.hybrid import generate_forecast
 
         cement_points = populated_storage.query_data_range(
@@ -335,18 +333,17 @@ class TestEndToEndForecastingFlow:
             ),
         }
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
-                mock_fetch.return_value = historical_data
-                result = await generate_forecast(
-                    metric="cement_consumption",
-                    periods_ahead=3,
-                    external_regressors=external_regressors,
-                    frequency="M",
-                    future_regressor_strategy="constant",
-                )
-            assert any("deprecated" in str(warning.message).lower() for warning in w)
+        # Epic 8 API cleanup: deprecated parameter warnings removed
+        # Test now validates the multivariate forecast API directly
+        with patch("raglite.forecasting.hybrid.fetch_historical_data") as mock_fetch:
+            mock_fetch.return_value = historical_data
+            result = await generate_forecast(
+                metric="cement_consumption",
+                periods_ahead=3,
+                external_regressors=external_regressors,
+                frequency="M",
+                future_regressor_strategy="constant",
+            )
 
         assert result.metric_name == "cement_consumption"
         assert result.model_type == "prophet_multivariate"

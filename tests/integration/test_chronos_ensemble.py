@@ -212,7 +212,7 @@ async def test_chronos_inference_performance() -> None:
         TimeSeriesPoint(date=datetime(2024, i, 1), value=100.0 + i, label=f"M{i}")
         for i in range(1, 7)
     ]
-    TimeSeriesData(metric_name="perf_test", points=points, interval="monthly")
+    test_data = TimeSeriesData(metric_name="perf_test", points=points, interval="monthly")
 
     # Warm up model (first load is slow)
     _get_chronos_pipeline()
@@ -221,6 +221,7 @@ async def test_chronos_inference_performance() -> None:
     start = time.time()
     result = await _generate_chronos_cold_start_forecast(
         metric="perf_test",
+        historical_data=test_data,  # Epic 8.1: historical_data is now required
         periods_ahead=4,
     )
     duration = time.time() - start
