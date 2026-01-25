@@ -9,16 +9,25 @@ Tests for the three new MCP tools:
 """
 
 from datetime import date
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 # Lazy import pattern: import raglite.shared.models only (fast)
 # raglite.main is imported inside get_tool_function() to avoid slow module-level import
+from raglite.forecasting.validation_schema import (
+    ModelPerformanceStats,
+    QualityGateResult,
+    UnifiedValidationResult,
+    VariableValidationResult,
+)
 from raglite.shared.models import (
+    RegressorDataPoint,
     RegressorDataResponse,
+    RegressorInfo,
     RegressorListResponse,
     ValidationResponse,
+    VariableValidationDetail,
 )
 
 # Module-level cache for lazy-loaded main_module
@@ -68,15 +77,11 @@ async def test_validate_accuracy_basic():
     """Test that validate_forecasting_accuracy returns valid response."""
     validate_func = get_tool_function("validate_forecasting_accuracy")
 
-    with patch("scripts.validate_forecasting_unified.run_unified_validation") as mock_validation:
+    with patch(
+        "scripts.validate_forecasting_unified.run_unified_validation",
+        new_callable=AsyncMock,
+    ) as mock_validation:
         # Create mock validation result
-        from raglite.forecasting.validation_schema import (
-            ModelPerformanceStats,
-            QualityGateResult,
-            UnifiedValidationResult,
-            VariableValidationResult,
-        )
-
         mock_result = UnifiedValidationResult(
             timestamp="2025-12-13T10:00:00Z",
             runtime_seconds=120.5,
@@ -130,13 +135,10 @@ async def test_validate_accuracy_single_metric():
     """Test validation of a single metric."""
     validate_func = get_tool_function("validate_forecasting_accuracy")
 
-    with patch("scripts.validate_forecasting_unified.run_unified_validation") as mock_validation:
-        from raglite.forecasting.validation_schema import (
-            QualityGateResult,
-            UnifiedValidationResult,
-            VariableValidationResult,
-        )
-
+    with patch(
+        "scripts.validate_forecasting_unified.run_unified_validation",
+        new_callable=AsyncMock,
+    ) as mock_validation:
         mock_result = UnifiedValidationResult(
             timestamp="2025-12-13T10:00:00Z",
             runtime_seconds=15.0,
@@ -179,13 +181,13 @@ async def test_validate_accuracy_single_metric():
 @pytest.mark.asyncio
 async def test_validate_accuracy_timeout():
     """Test graceful timeout handling with custom timeout."""
-
     validate_func = get_tool_function("validate_forecasting_accuracy")
 
-    with patch("asyncio.wait_for") as mock_wait_for:
-        # Simulate timeout
-        mock_wait_for.side_effect = TimeoutError()
-
+    # Patch asyncio.wait_for where it's USED (not at module definition)
+    with patch(
+        "raglite.mcp.tools.validation.asyncio.wait_for",
+        side_effect=TimeoutError(),
+    ):
         # Call the tool with custom timeout
         custom_timeout = 120.0
         response = await validate_func(timeout_seconds=custom_timeout)
@@ -322,8 +324,6 @@ async def test_get_regressor_data_with_dates():
 
 def test_validation_response_schema():
     """Test ValidationResponse model schema."""
-    from raglite.shared.models import VariableValidationDetail
-
     response = ValidationResponse(
         timestamp="2025-12-13T10:00:00Z",
         runtime_seconds=120.5,
@@ -354,8 +354,6 @@ def test_validation_response_schema():
 
 def test_regressor_list_response_schema():
     """Test RegressorListResponse model schema."""
-    from raglite.shared.models import RegressorInfo
-
     response = RegressorListResponse(
         regressors=[
             RegressorInfo(
@@ -380,8 +378,6 @@ def test_regressor_list_response_schema():
 
 def test_regressor_data_response_schema():
     """Test RegressorDataResponse model schema."""
-    from raglite.shared.models import RegressorDataPoint
-
     response = RegressorDataResponse(
         regressor_name="construction_output",
         display_name="Construction Production Index",
