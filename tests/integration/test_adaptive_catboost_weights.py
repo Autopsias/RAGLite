@@ -26,7 +26,13 @@ if TYPE_CHECKING:
     from raglite.shared.models import TimeSeriesData
 
 # Skip all tests in this module if not running integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# requires_ml_stack: Loads CatBoost, ensemble forecasting (~3-4GB)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.requires_ml_stack,
+]
 
 
 @pytest.fixture

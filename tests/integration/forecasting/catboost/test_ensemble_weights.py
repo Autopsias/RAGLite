@@ -18,11 +18,13 @@ if TYPE_CHECKING:
     from raglite.shared.models import TimeSeriesData
 
 # Mark all tests in this module as integration tests
+# requires_ml_stack: CatBoost ensemble tests load ML stack (~3-4GB)
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
     pytest.mark.xdist_group(name="database_writes"),
+    pytest.mark.requires_ml_stack,
 ]
 
 

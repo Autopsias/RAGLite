@@ -27,7 +27,13 @@ if TYPE_CHECKING:
 os.environ.setdefault("DYLD_LIBRARY_PATH", "/opt/homebrew/opt/libomp/lib")
 
 # Mark all tests as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# requires_ml_stack: Loads full ML stack for multi-variate forecasting (~3-4GB)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.requires_ml_stack,
+]
 
 # Ground truth file path
 GROUND_TRUTH_PATH = Path("tests/ground_truth/cement_demand_2020_2024.csv")

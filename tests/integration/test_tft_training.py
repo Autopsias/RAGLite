@@ -25,10 +25,12 @@ from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
 # Mark all tests as integration tests
 # Mark as slow due to model training and setup taking significant time
 # CRITICAL: xdist_group prevents APScheduler race conditions in parallel test execution
+# requires_ml_stack: TFT (TemporalFusionTransformer) requires pytorch_forecasting (~3-4GB)
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.slow,
     pytest.mark.xdist_group(name="apscheduler"),  # Force single-worker execution
+    pytest.mark.requires_ml_stack,
 ]
 
 

@@ -26,7 +26,13 @@ if TYPE_CHECKING:
 os.environ.setdefault("DYLD_LIBRARY_PATH", "/opt/homebrew/opt/libomp/lib")
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# requires_ml_stack: Loads Prophet, CatBoost, ensemble models (~3-4GB)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.requires_ml_stack,
+]
 
 
 @pytest.fixture

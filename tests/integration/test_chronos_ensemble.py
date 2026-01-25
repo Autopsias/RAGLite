@@ -31,7 +31,11 @@ from raglite.shared.database import get_session
 from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
 
 # Require database for integration tests
-pytestmark = pytest.mark.integration
+# requires_ml_stack: Loads Chronos-2 model, statsmodels, catboost (~3-4GB)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.requires_ml_stack,
+]
 
 # =============================================================================
 # AC2: Cold-Start Scenario (3 data points -> Chronos-2 only)

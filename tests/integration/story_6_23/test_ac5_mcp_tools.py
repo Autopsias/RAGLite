@@ -11,7 +11,13 @@ import pytest
 
 from raglite.forecasting.regressor_config import METRIC_REGRESSORS
 
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# requires_ml_stack: MCP validation tools trigger ML library loading (~3-4GB)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.requires_ml_stack,
+]
 
 
 class TestAC5MCPToolsFunctional:

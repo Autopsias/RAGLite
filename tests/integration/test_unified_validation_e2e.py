@@ -14,10 +14,12 @@ from pathlib import Path
 import pytest
 
 # Mark all tests as integration
+# requires_ml_stack: subprocess loads full forecasting stack (~3-4GB)
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.slow,  # Forecasting is slow
     pytest.mark.preserve_collection,  # All tests are read-only (CLI/programmatic validation)
+    pytest.mark.requires_ml_stack,
 ]
 
 

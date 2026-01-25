@@ -19,11 +19,13 @@ from tests.integration.epic6.conftest import calculate_mape
 # Set DYLD_LIBRARY_PATH for XGBoost on macOS
 os.environ.setdefault("DYLD_LIBRARY_PATH", "/opt/homebrew/opt/libomp/lib")
 
+# requires_ml_stack: Prophet, CatBoost model loading (~3-4GB)
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
     pytest.mark.xdist_group(name="embedding_model"),
+    pytest.mark.requires_ml_stack,
 ]
 
 

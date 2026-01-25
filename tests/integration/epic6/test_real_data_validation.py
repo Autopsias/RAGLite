@@ -22,7 +22,13 @@ from tests.integration.epic6.conftest import MAPE_CI_GATE, calculate_mape
 # Set DYLD_LIBRARY_PATH for XGBoost on macOS
 os.environ.setdefault("DYLD_LIBRARY_PATH", "/opt/homebrew/opt/libomp/lib")
 
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# requires_ml_stack: Full forecasting ML stack (~3-4GB)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.requires_ml_stack,
+]
 
 
 class TestRealExternalData:

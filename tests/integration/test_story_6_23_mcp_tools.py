@@ -32,6 +32,7 @@ pytestmark = [
     # test_epic6_quality_gate_passes spawns subprocess that loads 2GB models
     # Without this marker, 4 workers × 2GB = 8GB → OOM crash
     pytest.mark.xdist_group(name="subprocess_heavy"),
+    pytest.mark.requires_ml_stack,  # Phase 3: subprocess loads full ML stack
 ]
 
 

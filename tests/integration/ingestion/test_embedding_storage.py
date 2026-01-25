@@ -10,6 +10,15 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+# Module-level markers (promoted from class level for proper xdist_group isolation)
+# requires_embedding_model: Tests use 2GB Fin-E5 embedding model
+pytestmark = [
+    pytest.mark.slow,  # Real embedding generation takes 10-30s
+    pytest.mark.manages_collection_state,  # Tests call ingest_pdf() - skip re-ingest cleanup
+    pytest.mark.xdist_group(name="embedding_model"),  # All embedding tests on same worker
+    pytest.mark.requires_embedding_model,  # Phase 3 resource scheduling marker
+]
+
 # Lazy imports for expensive modules - DO NOT import raglite modules at module level!
 
 
@@ -149,9 +158,6 @@ def _print_test_summary(
     print("  Note: Docling PDF processing mocked to isolate embedding performance")
 
 
-@pytest.mark.slow  # Real embedding generation takes 10-30s
-@pytest.mark.manages_collection_state  # Tests call ingest_pdf() - skip re-ingest cleanup
-@pytest.mark.xdist_group(name="embedding_model")
 class TestEmbeddingIntegration:
     """Integration tests for Story 1.5: Embedding generation with real Fin-E5 model.
 
@@ -159,8 +165,7 @@ class TestEmbeddingIntegration:
     Tests AC7 (end-to-end integration), AC8 (all embeddings != None), AC9 (performance).
 
     Note: Tests in this class load the embedding model (3s overhead).
-    The @pytest.mark.xdist_group ensures all tests run in the same worker
-    to avoid multiple model loads during parallel execution.
+    Markers are at module level (pytestmark) to ensure xdist_group works correctly.
     """
 
     @pytest.mark.priority("P1")

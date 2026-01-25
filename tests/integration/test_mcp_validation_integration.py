@@ -19,11 +19,13 @@ from raglite.mcp.tools.validation import (
 # Mark all tests as integration tests that require collection state
 # xdist_group ensures all forecasting tests run on SAME worker to prevent OOM
 # (forecasting stack loads ~3-4GB: statsmodels + pytorch_forecasting + catboost)
+# requires_ml_stack: Phase 3 resource scheduling marker
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
     pytest.mark.xdist_group(name="forecasting_model"),
+    pytest.mark.requires_ml_stack,
 ]
 
 
