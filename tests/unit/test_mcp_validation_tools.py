@@ -75,12 +75,19 @@ def get_tool_function(tool_name: str):
 @pytest.mark.asyncio
 async def test_validate_accuracy_basic():
     """Test that validate_forecasting_accuracy returns valid response."""
+    import os
+
     validate_func = get_tool_function("validate_forecasting_accuracy")
 
-    with patch(
-        "scripts.validate_forecasting_unified.run_unified_validation",
-        new_callable=AsyncMock,
-    ) as mock_validation:
+    # Bypass CI early-return by setting CI and LIGHTWEIGHT_TESTS to "false"
+    # (the check is `== "true"`, so any other value bypasses it)
+    with (
+        patch.dict(os.environ, {"CI": "false", "LIGHTWEIGHT_TESTS": "false"}),
+        patch(
+            "scripts.validate_forecasting_unified.run_unified_validation",
+            new_callable=AsyncMock,
+        ) as mock_validation,
+    ):
         # Create mock validation result
         mock_result = UnifiedValidationResult(
             timestamp="2025-12-13T10:00:00Z",
@@ -133,12 +140,18 @@ async def test_validate_accuracy_basic():
 @pytest.mark.asyncio
 async def test_validate_accuracy_single_metric():
     """Test validation of a single metric."""
+    import os
+
     validate_func = get_tool_function("validate_forecasting_accuracy")
 
-    with patch(
-        "scripts.validate_forecasting_unified.run_unified_validation",
-        new_callable=AsyncMock,
-    ) as mock_validation:
+    # Bypass CI early-return by setting CI and LIGHTWEIGHT_TESTS to "false"
+    with (
+        patch.dict(os.environ, {"CI": "false", "LIGHTWEIGHT_TESTS": "false"}),
+        patch(
+            "scripts.validate_forecasting_unified.run_unified_validation",
+            new_callable=AsyncMock,
+        ) as mock_validation,
+    ):
         mock_result = UnifiedValidationResult(
             timestamp="2025-12-13T10:00:00Z",
             runtime_seconds=15.0,
@@ -181,12 +194,17 @@ async def test_validate_accuracy_single_metric():
 @pytest.mark.asyncio
 async def test_validate_accuracy_timeout():
     """Test graceful timeout handling with custom timeout."""
+    import os
+
     validate_func = get_tool_function("validate_forecasting_accuracy")
 
-    # Patch asyncio.wait_for where it's USED (not at module definition)
-    with patch(
-        "raglite.mcp.tools.validation.asyncio.wait_for",
-        side_effect=TimeoutError(),
+    # Bypass CI early-return and patch asyncio.wait_for to raise TimeoutError
+    with (
+        patch.dict(os.environ, {"CI": "false", "LIGHTWEIGHT_TESTS": "false"}),
+        patch(
+            "raglite.mcp.tools.validation.asyncio.wait_for",
+            side_effect=TimeoutError(),
+        ),
     ):
         # Call the tool with custom timeout
         custom_timeout = 120.0
