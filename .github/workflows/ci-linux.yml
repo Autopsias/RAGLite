@@ -30,7 +30,8 @@ name: CI (Linux)
           - all
           - postgresql-db
           - postgresql-ml
-          - retrieval
+          - retrieval-core
+          - retrieval-embedding
           - mcp
           - other
         default: 'all'
@@ -220,14 +221,16 @@ jobs:
 
     strategy:
       fail-fast: false
-      # TRUE PARALLEL EXECUTION - all 5 shards run simultaneously
-      # REBALANCED 2026-01-25: Split postgresql into db + ml shards for timeout prevention
+      # TRUE PARALLEL EXECUTION - all 6 shards run simultaneously
+      # REBALANCED 2026-01-25: Split postgresql into db + ml, retrieval into core + embedding
       # - postgresql-db: Database-focused forecasting/model_selection/insights
       # - postgresql-ml: ML-heavy tests (chronos, catboost, ensemble, epic6)
+      # - retrieval-core: Chunking + ingestion workflow (no embedding model)
+      # - retrieval-embedding: Embedding + retrieval tests (serial, 1 worker)
       # Target: <18 min per shard, <20 min total CI
-      max-parallel: 5
+      max-parallel: 6
       matrix:
-        shard: [postgresql-db, postgresql-ml, retrieval, mcp, other]
+        shard: [postgresql-db, postgresql-ml, retrieval-core, retrieval-embedding, mcp, other]
         include:
           - shard: postgresql-db
             # Database-focused forecasting tests: forecasting/, model_selection/, insights/
@@ -246,16 +249,24 @@ jobs:
             workers: 1  # Single worker for ML-heavy tests - prevents OOM and xdist serialization
             ci_shard: postgresql-ml
             description: "PostgreSQL + ML-heavy tests"
-          - shard: retrieval
-            # RAG/retrieval + accuracy tests + parallel ingestion + root-level embedding tests
-            # Root-level: analytical_core, chunking_*, metadata_core, hybrid_search, main_integration, sql_routing
-            # MEMORY NOTE: Embedding model uses 2GB - keep workers limited
-            # FIX 2026-01-24: Moved test_mcp_async_ingestion.py here from MCP shard (needs embedding warmup)
-            pytest_paths: "tests/integration/chunking/ tests/integration/ingestion/ tests/integration/retrieval/ tests/integration/story_2_14/ tests/integration/ac3_ground_truth/ tests/integration/parallel_ingestion/ tests/integration/test_analytical_core.py tests/integration/test_chunking_consistency.py tests/integration/test_chunking_core.py tests/integration/test_metadata_core.py tests/integration/test_hybrid_search_integration.py tests/integration/test_main_integration.py tests/integration/test_retrieval_core.py tests/integration/test_pypdfium_ingestion.py tests/integration/test_e2e_query_validation.py tests/integration/test_sql_routing.py tests/integration/test_multi_index_integration.py tests/integration/test_document_segregation.py tests/integration/test_excerpt_validation_core.py tests/integration/test_parallel_ingestion.py tests/integration/test_page_parallelism.py tests/integration/test_mcp_async_ingestion.py"
+          - shard: retrieval-core
+            # Lightweight tests that DON'T need embedding model
+            # Uses --dist loadfile for file-level isolation (no xdist_group needed)
+            # SPLIT 2026-01-25: Chunking + ingestion workflow tests separated from embedding tests
+            pytest_paths: "tests/integration/chunking/ tests/integration/story_2_14/ tests/integration/test_chunking_consistency.py tests/integration/test_chunking_core.py tests/integration/test_pypdfium_ingestion.py tests/integration/test_page_parallelism.py"
             pytest_ignore: ""
-            workers: 2  # Restored: test_excel_pipeline.py tests mock embeddings (no xdist_group needed)
-            ci_shard: retrieval
-            description: "RAG/retrieval + embedding tests"
+            workers: 2
+            ci_shard: retrieval-core
+            description: "Chunking + ingestion workflow (no embedding)"
+          - shard: retrieval-embedding
+            # Heavy tests that NEED embedding model
+            # Single worker to avoid model loading contention
+            # SPLIT 2026-01-25: Embedding tests isolated for reliable serial execution
+            pytest_paths: "tests/integration/ingestion/ tests/integration/retrieval/ tests/integration/ac3_ground_truth/ tests/integration/parallel_ingestion/ tests/integration/test_analytical_core.py tests/integration/test_metadata_core.py tests/integration/test_hybrid_search_integration.py tests/integration/test_main_integration.py tests/integration/test_retrieval_core.py tests/integration/test_e2e_query_validation.py tests/integration/test_sql_routing.py tests/integration/test_multi_index_integration.py tests/integration/test_document_segregation.py tests/integration/test_excerpt_validation_core.py tests/integration/test_parallel_ingestion.py tests/integration/test_mcp_async_ingestion.py"
+            pytest_ignore: ""
+            workers: 1  # Single worker for embedding tests - prevents contention
+            ci_shard: retrieval-embedding
+            description: "Embedding + retrieval tests (serial)"
           - shard: mcp
             # MCP tools + agentic tests (forecasting validation tests moved to postgresql shard)
             # Root-level: agentic_*, mcp_*, response_validation
@@ -325,6 +336,15 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
+      - name: Cache HuggingFace Models
+        if: steps.shard-check.outputs.should_run == 'true' && !startsWith(matrix.ci_shard, 'postgresql')
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface/hub
+          key: ${{ runner.os }}-hf-models-minilm-v1
+          restore-keys: |
+            ${{ runner.os }}-hf-models-
+
       - name: Install Dependencies
         if: steps.shard-check.outputs.should_run == 'true'
         run: |
@@ -358,6 +378,14 @@ jobs:
           echo "=== Initializing Test Database Schema ==="
           uv run python scripts/init-test-postgresql.py
           echo "✅ Schema initialized successfully"
+
+      - name: Pre-download Embedding Model
+        if: steps.shard-check.outputs.should_run == 'true' && !startsWith(matrix.ci_shard, 'postgresql')
+        env:
+          CI_FAST_EMBEDDING: "true"
+        run: |
+          echo "📥 Pre-downloading MiniLM embedding model..."
+          uv run python -c "from sentence_transformers import SentenceTransformer; m = SentenceTransformer('all-MiniLM-L6-v2'); print(f'✅ Model ready: {m.get_sentence_embedding_dimension()} dims')"
 
       - name: Initialize Qdrant Collection
         # Skip Qdrant init for postgresql shards (db + ml) - they don't use embeddings
@@ -435,7 +463,14 @@ jobs:
           # OOM FIX (2026-01-24): --max-worker-restart=0 prevents infinite restart loops on OOM
           # Without this, xdist keeps restarting crashed workers (usually OOM kills)
           # which obscures the real issue and wastes CI time. Fails fast instead.
-          PYTEST_OPTS="--tb=short -v -n $WORKERS --dist loadgroup --timeout=180 --timeout-method=thread --maxfail=10 --max-worker-restart=0"
+          # PERF FIX (2026-01-25): Use loadfile for non-embedding shards (better parallelization)
+          # loadfile groups tests by file, eliminating xdist_group overhead for lightweight shards
+          if [[ "$MATRIX_SHARD" == *"-core"* ]]; then
+            DIST_MODE="loadfile"  # File-level isolation for lightweight shards
+          else
+            DIST_MODE="loadgroup"  # xdist_group compatibility for embedding shards
+          fi
+          PYTEST_OPTS="--tb=short -v -n $WORKERS --dist $DIST_MODE --timeout=180 --timeout-method=thread --maxfail=10 --max-worker-restart=0"
 
           # Add --skip-ingestion for shards with pre-ingested data (retrieval, mcp)
           # PostgreSQL shards (db + ml) don't use Qdrant/embeddings, so skip-ingestion doesn't apply
