@@ -284,19 +284,23 @@ class TestChunkingIntegration:
             pytest.skip(f"Sample PDF not found at {sample_pdf}")
 
         # Mock Docling DocumentConverter to prevent actual PDF processing
-        # CRITICAL: Patch at import source (docling), not at usage location (pipeline)
+        # CRITICAL: Patch where the name is USED (docling_helpers), not where it's DEFINED (docling)
+        # Python mocking rule: the import "from docling...import DocumentConverter" in docling_helpers.py
+        # creates a reference in that module's namespace - we must patch THAT reference
         mock_converter_class, _ = _create_mock_docling_converter()
 
-        # FIX: Patch at the SOURCE (raglite.shared.clients) not the re-export location
-        # The ingest_pdf function calls get_embedding_model from shared.clients,
-        # so we must patch there for the mock to be used.
+        # Mock embedding model at the source module
         mock_embedding_model = _create_mock_embedding_model()
 
         # CRITICAL: Must mock storage functions too - otherwise mock embeddings (1024-dim)
         # get stored to Qdrant collection with different dimensions, causing 400 Bad Request
         # The storage functions are imported at runtime inside _legacy.py, so patch at definition location
         with (
-            patch("docling.document_converter.DocumentConverter", mock_converter_class),
+            # Patch DocumentConverter where it's IMPORTED and USED in docling_helpers.py
+            patch(
+                "raglite.ingestion.document_ingestion.pdf_processing.docling_helpers.DocumentConverter",
+                mock_converter_class,
+            ),
             patch("raglite.shared.clients.get_embedding_model", return_value=mock_embedding_model),
             patch("raglite.shared.clients._embedding_model", mock_embedding_model),
             # Mock storage to prevent Qdrant/PostgreSQL calls with mock embeddings
