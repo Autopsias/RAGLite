@@ -111,7 +111,7 @@ def warmup_embedding_model(request, worker_id):
     # This prevents xdist workers from loading 2GB model when not needed (240s overhead)
     ci_shard = os.environ.get("CI_SHARD", "")
     print(f"\n🔍 CI_SHARD environment: {ci_shard if ci_shard else 'NOT SET'}", file=sys.stderr)
-    if ci_shard in ("postgresql", "mcp"):
+    if ci_shard.startswith("postgresql") or ci_shard == "mcp":
         print(
             f"\n⚡ CI_SHARD={ci_shard} detected - skipping embedding model warmup", file=sys.stderr
         )

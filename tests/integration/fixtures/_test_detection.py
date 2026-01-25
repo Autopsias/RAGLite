@@ -34,9 +34,10 @@ def _is_postgresql_only_tests(request) -> bool:
     """
     # PRIORITY 1: CI shard environment variable (set by CI workflow)
     # This is the most reliable check for CI environments
-    # Skip embedding for shards that don't need it: postgresql, mcp
+    # Skip embedding for shards that don't need it: postgresql-db, postgresql-ml, mcp
+    # FIX (2026-01-25): Use startswith for postgresql-* shards after shard split
     ci_shard = os.environ.get("CI_SHARD")
-    if ci_shard in ("postgresql", "mcp"):
+    if ci_shard and (ci_shard.startswith("postgresql") or ci_shard == "mcp"):
         print(
             f"\n⚡ CI SHARD DETECTED: CI_SHARD={ci_shard} - skipping embedding model",
             file=sys.stderr,
@@ -106,8 +107,9 @@ def _needs_collection_ingestion(request) -> bool:
     """
     ci_shard = os.environ.get("CI_SHARD")
 
-    # PostgreSQL shard doesn't need Qdrant at all
-    if ci_shard == "postgresql":
+    # PostgreSQL shards (db, ml) don't need Qdrant at all
+    # FIX (2026-01-25): Use startswith for postgresql-* shards after shard split
+    if ci_shard and ci_shard.startswith("postgresql"):
         print(
             f"\n⚡ CI_SHARD={ci_shard} - no Qdrant collection needed",
             file=sys.stderr,

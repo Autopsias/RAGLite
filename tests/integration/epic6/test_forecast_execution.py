@@ -20,11 +20,13 @@ from tests.integration.epic6.conftest import calculate_mape
 os.environ.setdefault("DYLD_LIBRARY_PATH", "/opt/homebrew/opt/libomp/lib")
 
 # requires_ml_stack: Prophet, CatBoost model loading (~3-4GB)
+# FIX (2026-01-25): Use forecasting_model group, not embedding_model
+# These tests don't need Qdrant/embeddings - they use ground truth CSV data
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
-    pytest.mark.xdist_group(name="embedding_model"),
+    pytest.mark.xdist_group(name="forecasting_model"),
     pytest.mark.requires_ml_stack,
 ]
 
