@@ -126,6 +126,63 @@ if os.environ.get("LIGHTWEIGHT_TESTS") == "true":
 
     print("[LIGHTWEIGHT_TESTS] Mocked 15 heavy ML dependency trees (hierarchical)")
 
+# CI_LIGHTWEIGHT_FORECASTING: Mock only forecasting libraries (not embeddings)
+# Use this for validation tests that need to test API contracts but not actual forecasting
+# This is a lighter-weight alternative to LIGHTWEIGHT_TESTS for shards that need embeddings
+# but don't need the forecasting stack (3-4GB: statsmodels, catboost, pytorch_forecasting)
+if (
+    os.environ.get("CI_LIGHTWEIGHT_FORECASTING") == "true"
+    and os.environ.get("LIGHTWEIGHT_TESTS") != "true"
+):
+    # Only mock if LIGHTWEIGHT_TESTS isn't already handling it
+
+    def create_mock_module_fc(name: str) -> MagicMock:
+        """Create a MagicMock that behaves like a module."""
+        mock = MagicMock()
+        mock.__name__ = name
+        mock.__file__ = f"<mocked {name}>"
+        mock.__loader__ = None
+        mock.__spec__ = None
+        return mock
+
+    # Mock forecasting-specific heavy libraries (~3-4GB)
+    # Statsmodels (~500MB)
+    statsmodels_fc = create_mock_module_fc("statsmodels")
+    statsmodels_fc.tsa = create_mock_module_fc("statsmodels.tsa")
+    statsmodels_fc.tsa.holtwinters = create_mock_module_fc("statsmodels.tsa.holtwinters")
+    statsmodels_fc.tsa.holtwinters.ExponentialSmoothing = MagicMock()
+    statsmodels_fc.tsa.stattools = create_mock_module_fc("statsmodels.tsa.stattools")
+    statsmodels_fc.tsa.stattools.adfuller = MagicMock(return_value=(0, 0.05, 0, 0, {}, 0))
+    statsmodels_fc.tsa.stattools.kpss = MagicMock(return_value=(0, 0.05, 0, {}))
+    statsmodels_fc.tsa.stattools.acf = MagicMock(return_value=[1.0, 0.5, 0.25])
+    sys.modules["statsmodels"] = statsmodels_fc
+    sys.modules["statsmodels.tsa"] = statsmodels_fc.tsa
+    sys.modules["statsmodels.tsa.holtwinters"] = statsmodels_fc.tsa.holtwinters
+    sys.modules["statsmodels.tsa.stattools"] = statsmodels_fc.tsa.stattools
+
+    # CatBoost (~500MB)
+    catboost_fc = create_mock_module_fc("catboost")
+    catboost_fc.CatBoostRegressor = MagicMock()
+    sys.modules["catboost"] = catboost_fc
+
+    # PyTorch Forecasting (~1GB)
+    pytorch_forecasting_fc = create_mock_module_fc("pytorch_forecasting")
+    sys.modules["pytorch_forecasting"] = pytorch_forecasting_fc
+
+    pytorch_lightning_fc = create_mock_module_fc("pytorch_lightning")
+    sys.modules["pytorch_lightning"] = pytorch_lightning_fc
+
+    # PMDARIMA (~200MB)
+    pmdarima_fc = create_mock_module_fc("pmdarima")
+    pmdarima_fc.arima = create_mock_module_fc("pmdarima.arima")
+    pmdarima_fc.arima.auto_arima = MagicMock()
+    sys.modules["pmdarima"] = pmdarima_fc
+    sys.modules["pmdarima.arima"] = pmdarima_fc.arima
+
+    print(
+        "[CI_LIGHTWEIGHT_FORECASTING] Mocked forecasting libraries (statsmodels, catboost, pytorch_forecasting, pmdarima)"
+    )
+
 # CRITICAL: Set APP_ENV=test BEFORE any raglite imports
 # This ensures the Settings singleton uses test database ports (6335, 5433)
 # Must be at module level before imports to take effect during module initialization
