@@ -28,7 +28,8 @@ name: CI (Linux)
         type: choice
         options:
           - all
-          - postgresql
+          - postgresql-db
+          - postgresql-ml
           - retrieval
           - mcp
           - other
@@ -219,24 +220,32 @@ jobs:
 
     strategy:
       fail-fast: false
-      # TRUE PARALLEL EXECUTION - all 4 shards run simultaneously
-      # Re-balanced 2026-01-22: Split old MCP shard for faster CI
-      # Old: 3 shards with MCP having 564 tests on 1 worker = 45+ min
-      # New: 4 shards balanced ~35-60 tests each, target <20 min total
-      max-parallel: 4
+      # TRUE PARALLEL EXECUTION - all 5 shards run simultaneously
+      # REBALANCED 2026-01-25: Split postgresql into db + ml shards for timeout prevention
+      # - postgresql-db: Database-focused forecasting/model_selection/insights
+      # - postgresql-ml: ML-heavy tests (chronos, catboost, ensemble, epic6)
+      # Target: <18 min per shard, <20 min total CI
+      max-parallel: 5
       matrix:
-        shard: [postgresql, retrieval, mcp, other]
+        shard: [postgresql-db, postgresql-ml, retrieval, mcp, other]
         include:
-          - shard: postgresql
-            # PostgreSQL + forecasting + model_selection + epic6 + story_6_23 forecasting tests
-            # Root-level: adaptive_catboost, auto_forecast, catboost_core, chronos, demand_regressors, ensemble, epic6, forecast_external
-            # REBALANCED 2026-01-24: Absorbed epic6/ and story_6_23 AC1-4 tests from MCP shard (slow forecasting tests)
-            # FIX 2026-01-24: Moved test_mcp_validation_integration.py here from MCP shard (loads heavy forecasting stack ~3-4GB)
-            pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/insights/ tests/integration/epic6/ tests/integration/story_6_23/test_ac1_variable_cost_mape.py tests/integration/story_6_23/test_ac2_data_quality.py tests/integration/story_6_23/test_ac3_pass_rate.py tests/integration/story_6_23/test_ac4_performance.py tests/integration/story_6_23/test_epic6_quality_gate.py tests/integration/story_6_23/test_mape_validation.py tests/integration/test_adaptive_catboost_weights.py tests/integration/test_auto_forecast_update.py tests/integration/test_catboost_core.py tests/integration/test_chronos_ensemble.py tests/integration/test_demand_regressors.py tests/integration/test_ensemble_real_data.py tests/integration/test_epic6_core.py tests/integration/test_forecast_external.py tests/integration/test_mcp_validation_integration.py"
+          - shard: postgresql-db
+            # Database-focused forecasting tests: forecasting/, model_selection/, insights/
+            # SPLIT 2026-01-25: Lighter tests that primarily do DB operations
+            pytest_paths: "tests/integration/forecasting/ tests/integration/model_selection/ tests/integration/insights/ tests/integration/test_demand_regressors.py tests/integration/test_forecast_external.py"
             pytest_ignore: ""
-            workers: 2  # P0 FIX (2026-01-24): Reduced from 4 to prevent DB transaction races in autouse cleanup
-            ci_shard: postgresql
-            description: "PostgreSQL + forecasting tests"
+            workers: 2
+            ci_shard: postgresql-db
+            description: "PostgreSQL + forecasting DB tests"
+          - shard: postgresql-ml
+            # ML-heavy tests: epic6/, story_6_23 AC tests, chronos, catboost, ensemble
+            # SPLIT 2026-01-25: Tests that load heavy ML stack (~3-4GB statsmodels, catboost, pytorch)
+            # Single worker to prevent OOM and xdist_group serialization overhead
+            pytest_paths: "tests/integration/epic6/ tests/integration/story_6_23/test_ac1_variable_cost_mape.py tests/integration/story_6_23/test_ac2_data_quality.py tests/integration/story_6_23/test_ac3_pass_rate.py tests/integration/story_6_23/test_ac4_performance.py tests/integration/story_6_23/test_epic6_quality_gate.py tests/integration/story_6_23/test_mape_validation.py tests/integration/test_adaptive_catboost_weights.py tests/integration/test_auto_forecast_update.py tests/integration/test_catboost_core.py tests/integration/test_chronos_ensemble.py tests/integration/test_ensemble_real_data.py tests/integration/test_epic6_core.py tests/integration/test_mcp_validation_integration.py"
+            pytest_ignore: ""
+            workers: 1  # Single worker for ML-heavy tests - prevents OOM and xdist serialization
+            ci_shard: postgresql-ml
+            description: "PostgreSQL + ML-heavy tests"
           - shard: retrieval
             # RAG/retrieval + accuracy tests + parallel ingestion + root-level embedding tests
             # Root-level: analytical_core, chunking_*, metadata_core, hybrid_search, main_integration, sql_routing
@@ -260,7 +269,8 @@ jobs:
             description: "MCP + agentic tests"
           - shard: other
             # Remaining integration tests: anomaly, validation, external_data, etc.
-            # External data tests moved from postgresql shard (P1 fix for slow CI)
+            # External data tests moved from postgresql shards (P1 fix for slow CI)
+            # UPDATED 2026-01-25: Excludes tests from postgresql-db and postgresql-ml shards
             pytest_paths: "tests/integration/"
             # Exclude all subdirectories and root-level tests assigned to other shards
             # NOTE: external_data tests NOW INCLUDED (removed from ignore list)
@@ -350,7 +360,8 @@ jobs:
           echo "✅ Schema initialized successfully"
 
       - name: Initialize Qdrant Collection
-        if: steps.shard-check.outputs.should_run == 'true' && matrix.ci_shard != 'postgresql'
+        # Skip Qdrant init for postgresql shards (db + ml) - they don't use embeddings
+        if: steps.shard-check.outputs.should_run == 'true' && !startsWith(matrix.ci_shard, 'postgresql')
         env:
           QDRANT_HOST: localhost
           QDRANT_PORT: "6335"
@@ -427,17 +438,18 @@ jobs:
           PYTEST_OPTS="--tb=short -v -n $WORKERS --dist loadgroup --timeout=180 --timeout-method=thread --maxfail=10 --max-worker-restart=0"
 
           # Add --skip-ingestion for shards with pre-ingested data (retrieval, mcp)
-          # PostgreSQL shard doesn't use Qdrant/embeddings, so skip-ingestion doesn't apply
-          if [[ "$MATRIX_SHARD" != "postgresql" ]]; then
+          # PostgreSQL shards (db + ml) don't use Qdrant/embeddings, so skip-ingestion doesn't apply
+          if [[ "$MATRIX_SHARD" != postgresql-* ]]; then
             PYTEST_OPTS="$PYTEST_OPTS --skip-ingestion"
             echo "Using --skip-ingestion (collection pre-populated by init-ci-qdrant.py)"
           fi
 
-          # Backup timeout: 1200s (20 min) hard kill if pytest hangs completely
+          # Backup timeout: 1500s (25 min) hard kill if pytest hangs completely
           # Catches cases where pytest-timeout doesn't work (e.g., stuck in fixture teardown)
           # --kill-after=60 guarantees SIGKILL after 60s if SIGTERM fails
-          # With 4 workers: 234 tests × 15s / 4 workers ≈ 15 min expected
-          timeout --kill-after=60 --preserve-status 1200 \
+          # INCREASED (2026-01-25): From 1200s to 1500s to prevent timeouts on postgresql/retrieval
+          # shards which have heavy ML stack loads and xdist_group serialization overhead
+          timeout --kill-after=60 --preserve-status 1500 \
             uv run pytest $PYTEST_PATHS \
               $PYTEST_IGNORE \
               -m "$MARKER_EXPR" \
@@ -460,7 +472,7 @@ jobs:
           echo "=== Timeout Configuration ==="
           echo "Layer 1: Job timeout = 30 min (P0-5 FIX: workers=1 sequential execution)"
           echo "Layer 2: Step timeout = 25 min (SIGINT->SIGTERM->SIGKILL)"
-          echo "Layer 3: Backup timeout = 1200s (20 min hard kill)"
+          echo "Layer 3: Backup timeout = 1500s (25 min hard kill)"
           echo "Layer 4: pytest-timeout = 180s per test (with --timeout-method=thread for workers)"
 
           echo ""
@@ -508,6 +520,20 @@ jobs:
               awk -F'\t' '{printf "%.2fs - %s\n", $2, $1}'
           else
             echo "No JUnit XML found for shard $MATRIX_SHARD"
+          fi
+
+      - name: Extract Duration Data (Phase 3)
+        if: always() && steps.shard-check.outputs.should_run == 'true'
+        env:
+          MATRIX_SHARD: ${{ matrix.shard }}
+        run: |
+          # Phase 3: Extract structured duration data for shard balancing analysis
+          if [ -f "test-results/integration-${MATRIX_SHARD}-junit.xml" ]; then
+            uv run python scripts/extract-test-durations.py \
+              "test-results/integration-${MATRIX_SHARD}-junit.xml" \
+              --output "test-results/durations-${MATRIX_SHARD}.json" \
+              --format json \
+              --top 20 || echo "Duration extraction failed (non-fatal)"
           fi
 
       - name: Check shard timing budget
