@@ -253,16 +253,19 @@ jobs:
             # Lightweight tests that DON'T need embedding model
             # Uses --dist loadfile for file-level isolation (no xdist_group needed)
             # SPLIT 2026-01-25: Chunking + ingestion workflow tests separated from embedding tests
-            pytest_paths: "tests/integration/chunking/ tests/integration/story_2_14/ tests/integration/test_chunking_consistency.py tests/integration/test_chunking_core.py tests/integration/test_pypdfium_ingestion.py tests/integration/test_page_parallelism.py"
+            # FIX 2026-01-25: Removed story_2_14/ (has xdist_group markers, needs loadgroup)
+            pytest_paths: "tests/integration/chunking/ tests/integration/test_chunking_consistency.py tests/integration/test_chunking_core.py tests/integration/test_pypdfium_ingestion.py tests/integration/test_page_parallelism.py"
             pytest_ignore: ""
             workers: 2
             ci_shard: retrieval-core
-            description: "Chunking + ingestion workflow (no embedding)"
+            description: "Chunking tests only (no embedding dependencies)"
           - shard: retrieval-embedding
             # Heavy tests that NEED embedding model
             # Single worker to avoid model loading contention
             # SPLIT 2026-01-25: Embedding tests isolated for reliable serial execution
-            pytest_paths: "tests/integration/ingestion/ tests/integration/retrieval/ tests/integration/ac3_ground_truth/ tests/integration/parallel_ingestion/ tests/integration/test_analytical_core.py tests/integration/test_metadata_core.py tests/integration/test_hybrid_search_integration.py tests/integration/test_main_integration.py tests/integration/test_retrieval_core.py tests/integration/test_e2e_query_validation.py tests/integration/test_sql_routing.py tests/integration/test_multi_index_integration.py tests/integration/test_document_segregation.py tests/integration/test_excerpt_validation_core.py tests/integration/test_parallel_ingestion.py tests/integration/test_mcp_async_ingestion.py"
+            # FIX 2026-01-25: Added story_2_14/ (has xdist_group markers, needs session_ingested_collection)
+            # FIX 2026-01-25: Added test_ac1_fuzzy_entity_matching.py (uses session_ingested_collection)
+            pytest_paths: "tests/integration/ingestion/ tests/integration/retrieval/ tests/integration/story_2_14/ tests/integration/ac3_ground_truth/ tests/integration/parallel_ingestion/ tests/integration/test_analytical_core.py tests/integration/test_metadata_core.py tests/integration/test_hybrid_search_integration.py tests/integration/test_main_integration.py tests/integration/test_retrieval_core.py tests/integration/test_e2e_query_validation.py tests/integration/test_sql_routing.py tests/integration/test_multi_index_integration.py tests/integration/test_document_segregation.py tests/integration/test_excerpt_validation_core.py tests/integration/test_parallel_ingestion.py tests/integration/test_mcp_async_ingestion.py tests/integration/test_ac1_fuzzy_entity_matching.py"
             pytest_ignore: ""
             workers: 1  # Single worker for embedding tests - prevents contention
             ci_shard: retrieval-embedding
@@ -285,7 +288,8 @@ jobs:
             pytest_paths: "tests/integration/"
             # Exclude all subdirectories and root-level tests assigned to other shards
             # NOTE: external_data tests NOW INCLUDED (removed from ignore list)
-            pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/insights/ --ignore=tests/integration/chunking/ --ignore=tests/integration/ingestion/ --ignore=tests/integration/retrieval/ --ignore=tests/integration/story_2_14/ --ignore=tests/integration/ac3_ground_truth/ --ignore=tests/integration/parallel_ingestion/ --ignore=tests/integration/mcp/ --ignore=tests/integration/story_6_23/ --ignore=tests/integration/external_data_mcp/ --ignore=tests/integration/epic6/ --ignore=tests/integration/helpers/ --ignore=tests/integration/fixtures/ --ignore=tests/integration/workflows/ --ignore=tests/integration/test_accuracy_validation.py --ignore=tests/integration/test_unified_validation_e2e.py --ignore=tests/integration/test_adaptive_catboost_weights.py --ignore=tests/integration/test_auto_forecast_update.py --ignore=tests/integration/test_catboost_core.py --ignore=tests/integration/test_chronos_ensemble.py --ignore=tests/integration/test_demand_regressors.py --ignore=tests/integration/test_ensemble_real_data.py --ignore=tests/integration/test_epic6_core.py --ignore=tests/integration/test_forecast_external.py --ignore=tests/integration/test_analytical_core.py --ignore=tests/integration/test_chunking_consistency.py --ignore=tests/integration/test_chunking_core.py --ignore=tests/integration/test_metadata_core.py --ignore=tests/integration/test_hybrid_search_integration.py --ignore=tests/integration/test_main_integration.py --ignore=tests/integration/test_retrieval_core.py --ignore=tests/integration/test_pypdfium_ingestion.py --ignore=tests/integration/test_e2e_query_validation.py --ignore=tests/integration/test_agentic_framework.py --ignore=tests/integration/test_agentic_workflow_suite.py --ignore=tests/integration/test_analysis_agent_workflow.py --ignore=tests/integration/test_mcp_server.py --ignore=tests/integration/test_mcp_validation_integration.py --ignore=tests/integration/test_story_6_23_mcp_tools.py --ignore=tests/integration/test_external_data_mcp_core.py --ignore=tests/integration/test_sql_routing.py --ignore=tests/integration/test_multi_index_integration.py --ignore=tests/integration/test_document_segregation.py --ignore=tests/integration/test_excerpt_validation_core.py --ignore=tests/integration/test_mcp_async_ingestion.py --ignore=tests/integration/test_mcp_response_validation.py --ignore=tests/integration/test_parallel_ingestion.py --ignore=tests/integration/test_page_parallelism.py"
+            # FIX 2026-01-25: Added test_ac1_fuzzy_entity_matching.py to ignore (moved to retrieval-embedding)
+            pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/insights/ --ignore=tests/integration/chunking/ --ignore=tests/integration/ingestion/ --ignore=tests/integration/retrieval/ --ignore=tests/integration/story_2_14/ --ignore=tests/integration/ac3_ground_truth/ --ignore=tests/integration/parallel_ingestion/ --ignore=tests/integration/mcp/ --ignore=tests/integration/story_6_23/ --ignore=tests/integration/external_data_mcp/ --ignore=tests/integration/epic6/ --ignore=tests/integration/helpers/ --ignore=tests/integration/fixtures/ --ignore=tests/integration/workflows/ --ignore=tests/integration/test_accuracy_validation.py --ignore=tests/integration/test_unified_validation_e2e.py --ignore=tests/integration/test_adaptive_catboost_weights.py --ignore=tests/integration/test_auto_forecast_update.py --ignore=tests/integration/test_catboost_core.py --ignore=tests/integration/test_chronos_ensemble.py --ignore=tests/integration/test_demand_regressors.py --ignore=tests/integration/test_ensemble_real_data.py --ignore=tests/integration/test_epic6_core.py --ignore=tests/integration/test_forecast_external.py --ignore=tests/integration/test_analytical_core.py --ignore=tests/integration/test_chunking_consistency.py --ignore=tests/integration/test_chunking_core.py --ignore=tests/integration/test_metadata_core.py --ignore=tests/integration/test_hybrid_search_integration.py --ignore=tests/integration/test_main_integration.py --ignore=tests/integration/test_retrieval_core.py --ignore=tests/integration/test_pypdfium_ingestion.py --ignore=tests/integration/test_e2e_query_validation.py --ignore=tests/integration/test_agentic_framework.py --ignore=tests/integration/test_agentic_workflow_suite.py --ignore=tests/integration/test_analysis_agent_workflow.py --ignore=tests/integration/test_mcp_server.py --ignore=tests/integration/test_mcp_validation_integration.py --ignore=tests/integration/test_story_6_23_mcp_tools.py --ignore=tests/integration/test_external_data_mcp_core.py --ignore=tests/integration/test_sql_routing.py --ignore=tests/integration/test_multi_index_integration.py --ignore=tests/integration/test_document_segregation.py --ignore=tests/integration/test_excerpt_validation_core.py --ignore=tests/integration/test_mcp_async_ingestion.py --ignore=tests/integration/test_mcp_response_validation.py --ignore=tests/integration/test_parallel_ingestion.py --ignore=tests/integration/test_page_parallelism.py --ignore=tests/integration/test_ac1_fuzzy_entity_matching.py"
             workers: 2  # Restored: asyncio fixes should prevent hangs
             ci_shard: other
             description: "Other integration tests"
@@ -479,12 +483,16 @@ jobs:
             echo "Using --skip-ingestion (collection pre-populated by init-ci-qdrant.py)"
           fi
 
-          # Backup timeout: 1500s (25 min) hard kill if pytest hangs completely
+          # Backup timeout: Default 1500s (25 min), increased to 1800s for retrieval-embedding
           # Catches cases where pytest-timeout doesn't work (e.g., stuck in fixture teardown)
           # --kill-after=60 guarantees SIGKILL after 60s if SIGTERM fails
-          # INCREASED (2026-01-25): From 1200s to 1500s to prevent timeouts on postgresql/retrieval
-          # shards which have heavy ML stack loads and xdist_group serialization overhead
-          timeout --kill-after=60 --preserve-status 1500 \
+          # FIX 2026-01-25: retrieval-embedding uses n=1 (serial), needs more time for 150+ tests
+          if [[ "$MATRIX_SHARD" == "retrieval-embedding" ]]; then
+            BACKUP_TIMEOUT=1800  # 30 min for serial embedding shard
+          else
+            BACKUP_TIMEOUT=1500  # 25 min for parallel shards
+          fi
+          timeout --kill-after=60 --preserve-status $BACKUP_TIMEOUT \
             uv run pytest $PYTEST_PATHS \
               $PYTEST_IGNORE \
               -m "$MARKER_EXPR" \
