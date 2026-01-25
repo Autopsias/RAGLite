@@ -63,9 +63,22 @@ def find_embedding_dependencies(file_path: Path) -> dict[str, list[int]]:
 
 
 def has_xdist_group_marker(file_path: Path) -> bool:
-    """Check if file has xdist_group marker."""
+    """Check if file has xdist_group marker for embedding tests.
+
+    Accepts any of the embedding-related group names:
+    - embedding_model (legacy)
+    - embedding_model_reads (read-only tests)
+    - embedding_model_writes (tests that modify collection state)
+
+    Handles both single-line and multi-line marker formats:
+    - xdist_group(name="embedding_model_reads")
+    - xdist_group(\n    name="embedding_model_writes"\n)
+    """
     content = file_path.read_text()
-    return bool(re.search(r'xdist_group\(name="embedding_model"\)', content))
+    # Match embedding_model variants with optional whitespace/newlines
+    # Handles both: xdist_group(name="...") and xdist_group(\n    name="..."\n)
+    pattern = r'xdist_group\s*\(\s*name\s*=\s*["\']embedding_model(?:_reads|_writes)?["\']\s*\)'
+    return bool(re.search(pattern, content))
 
 
 def main():
@@ -104,7 +117,9 @@ def main():
                 if args.fix:
                     print("\n    Suggested fix:")
                     print("    Add to pytestmark at top of file (after imports):")
-                    print('    pytest.mark.xdist_group(name="embedding_model")')
+                    print(
+                        '    pytest.mark.xdist_group(name="embedding_model_reads")  # for read-only tests'
+                    )
                 print()
 
     # Summary
@@ -125,7 +140,11 @@ def main():
         print("\nTo fix, add this to pytestmark in each file:")
         print("  pytestmark = [")
         print("      pytest.mark.integration,")
-        print('      pytest.mark.xdist_group(name="embedding_model"),  # Required!')
+        print('      pytest.mark.xdist_group(name="embedding_model_reads"),  # For read-only tests')
+        print("      # OR")
+        print(
+            '      pytest.mark.xdist_group(name="embedding_model_writes"),  # For tests that modify state'
+        )
         print("  ]")
 
         return 1

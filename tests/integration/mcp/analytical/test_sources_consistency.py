@@ -8,7 +8,7 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
-    pytest.mark.xdist_group(name="embedding_model"),
+    pytest.mark.xdist_group(name="embedding_model_reads"),
 ]
 
 

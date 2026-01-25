@@ -26,7 +26,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.m
 #   from raglite.shared.config import settings
 
 
-@pytest.mark.xdist_group(name="embedding_model")
+@pytest.mark.xdist_group(name="embedding_model_reads")
 @pytest.mark.preserve_collection  # Tests are read-only - skip expensive Qdrant cleanup
 class TestRetrievalCore:
     """Integration tests for end-to-end retrieval with real Qdrant - Core functionality.

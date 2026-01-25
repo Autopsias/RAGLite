@@ -50,7 +50,7 @@ LATENCY_CEILING_P95 = (
 )
 
 
-@pytest.mark.xdist_group(name="embedding_model")
+@pytest.mark.xdist_group(name="embedding_model_reads")
 @pytest.mark.preserve_collection  # Tests are read-only - skip expensive Qdrant cleanup
 class TestHybridSearchIntegration:
     """Integration tests for hybrid search accuracy and performance.

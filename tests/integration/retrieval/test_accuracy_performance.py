@@ -16,12 +16,12 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
-    pytest.mark.xdist_group(name="embedding_model"),
+    pytest.mark.xdist_group(name="embedding_model_reads"),
 ]
 
 
 # Note: xdist_group is in pytestmark above, class-level marker is redundant but kept for clarity
-@pytest.mark.xdist_group(name="embedding_model")
+@pytest.mark.xdist_group(name="embedding_model_reads")
 @pytest.mark.preserve_collection
 class TestAccuracyPerformance:
     """Accuracy and performance validation tests."""

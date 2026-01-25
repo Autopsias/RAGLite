@@ -244,7 +244,7 @@ def pytest_collection_modifyitems(config: Config, items: list[Item]) -> None:
         if not existing_xdist_marker:
             # Force embedding_model group (single worker for all integration tests)
             # Only add if not already present to avoid pytest-xdist scheduler conflicts
-            item.add_marker(pytest.mark.xdist_group(name="embedding_model"))
+            item.add_marker(pytest.mark.xdist_group(name="embedding_model_reads"))
 
     # Sort tests: unit tests first, then integration, then e2e/slow
     def test_priority(item: Item) -> int:

@@ -96,16 +96,29 @@ def warmup_embedding_model(request, worker_id):
         yield
         return
 
-    # CRITICAL FIX (2026-01-24): Only gw0/master loads the embedding model.
-    # This prevents OOM crashes from multiple workers each loading 80MB+ model.
-    # Other workers skip - tests needing embeddings are grouped to gw0 via xdist_group marker.
-    # Django pattern: Use worker_id fixture for worker-specific resources.
-    if worker_id not in ("master", "gw0"):
+    # CRITICAL FIX (2026-01-25): Conditional worker exclusion for embedding model loading.
+    #
+    # Worker Distribution Logic:
+    # - Fin-E5 mode (2GB model): Only gw0/master loads to prevent OOM (2x 2GB = 4GB > 3.5GB runner RAM)
+    # - CI fast mode (80MB MiniLM): ALL workers can load safely (2x 80MB = 160MB << 7GB runner RAM)
+    #
+    # With CI_FAST_EMBEDDING=true, tests distribute across both workers instead of serializing to gw0.
+    # This cuts retrieval shard time from 25min (timeout) to ~12-15min.
+    ci_fast = os.environ.get("CI_FAST_EMBEDDING", "").lower() == "true"
+    if not ci_fast and worker_id not in ("master", "gw0"):
+        # Heavy Fin-E5 mode: Skip non-gw0 workers to prevent OOM
         print(
-            f"\n⚡ Worker {worker_id}: Skipping embedding warmup (gw0 handles it)", file=sys.stderr
+            f"\n⚡ Worker {worker_id}: Skipping embedding warmup (Fin-E5 mode - gw0 handles it)",
+            file=sys.stderr,
         )
         yield
         return
+    elif ci_fast and worker_id not in ("master", "gw0"):
+        # CI fast mode: All workers load the lightweight MiniLM model
+        print(
+            f"\n⚡ Worker {worker_id}: Loading embedding model (CI fast mode - MiniLM is lightweight)",
+            file=sys.stderr,
+        )
 
     # P0 FIX (2026-01-20): Direct CI_SHARD check FIRST - bypass complex detection
     # This prevents xdist workers from loading 2GB model when not needed (240s overhead)

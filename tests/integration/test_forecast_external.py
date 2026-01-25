@@ -21,7 +21,13 @@ from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
 os.environ["APP_ENV"] = "test"
 
 # Skip all tests in this module if not running integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# P1 FIX (2026-01-25): xdist_group prevents race conditions on shared PostgreSQL fixtures
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.xdist_group(name="postgresql_forecasting"),
+]
 
 # NOTE: db_session and clean_session fixtures are provided by tests/integration/conftest.py
 # Do NOT define duplicate fixtures here - causes xdist deadlock (P0 fix 2026-01-23)
@@ -86,7 +92,8 @@ def _insert_building_permits_data(storage, i, point_date, base_permits):
             ],
         )
     except Exception:
-        pass
+        # P0 FIX (2026-01-25): Rollback prevents PendingRollbackError in subsequent operations
+        storage.session.rollback()
 
 
 def _insert_electricity_price_data(storage, i, point_date, base_electricity):
@@ -105,7 +112,8 @@ def _insert_electricity_price_data(storage, i, point_date, base_electricity):
             ],
         )
     except Exception:
-        pass
+        # P0 FIX (2026-01-25): Rollback prevents PendingRollbackError in subsequent operations
+        storage.session.rollback()
 
 
 def _insert_cement_consumption_data(storage, i, point_date, base_cement):
@@ -123,7 +131,8 @@ def _insert_cement_consumption_data(storage, i, point_date, base_cement):
             ],
         )
     except Exception:
-        pass
+        # P0 FIX (2026-01-25): Rollback prevents PendingRollbackError in subsequent operations
+        storage.session.rollback()
 
 
 def _insert_time_series_data(storage):
