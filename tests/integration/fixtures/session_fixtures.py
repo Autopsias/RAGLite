@@ -148,14 +148,16 @@ def warmup_embedding_model(request, worker_id):
         yield
         return
 
+    # FIX (2026-01-25): Don't skip embedding model warmup in --skip-ingestion mode.
+    # The warmup with filelock is CRITICAL to prevent worker crashes when both workers
+    # try to load the model simultaneously. The skip-ingestion flag only skips PDF ingestion.
     skip_ingestion = request.config.getoption("--skip-ingestion", default=False)
     if skip_ingestion:
         print(
-            "\n⚡ SKIP INGESTION MODE: Skipping embedding model warmup (saves 60-70s)",
+            "\n⚡ SKIP INGESTION MODE: Still loading embedding model (required for tests)",
             file=sys.stderr,
         )
-        yield
-        return
+        # Fall through to load the model with filelock - don't return early!
 
     check_and_skip_if_unavailable()
 
