@@ -258,11 +258,10 @@ def session_ingested_collection(request, warmup_embedding_model):
     # Validate test environment
     _validate_test_environment_for_session(request, settings)
 
-    # Check for existing collection
-    qdrant_check = get_qdrant_client()
-    _check_existing_collection(qdrant_check, settings)
+    # Get worker_id from request config (may be passed from warmup_embedding_model)
+    worker_id = getattr(request.config, "workerinput", {}).get("workerid", "master")
 
-    # Get test PDF path
+    # Get test PDF path (outside lock - needed for verification too)
     use_full_pdf = os.getenv("TEST_USE_FULL_PDF", "false").lower() == "true"
     sample_pdf, pdf_description, estimated_time = _get_test_pdf_path(use_full_pdf)
 
@@ -270,28 +269,73 @@ def session_ingested_collection(request, warmup_embedding_model):
         pytest.skip(f"Test PDF not found at {sample_pdf}")
         return
 
-    print(
-        f"SESSION FIXTURE: Ingesting {pdf_description} ONCE (production pattern)", file=sys.stderr
-    )
+    # Get Qdrant client (reused throughout fixture)
     qdrant = get_qdrant_client()
 
-    # Initialize Qdrant collection
-    # CI FIX (2026-01-21): In CI mode, collection is pre-created by scripts/init-ci-qdrant.py
-    # This prevents xdist race conditions where workers access collection before it's created
-    from raglite.shared.safety import SafetyGuard
+    # CRITICAL FIX (2026-01-25): Serialize PDF ingestion across workers with filelock.
+    # Problem: When multiple workers run session fixtures simultaneously, Docling converter
+    # initialization races cause crashes ("node down: Not properly terminated").
+    # The Docling/pypdfium backend is NOT thread-safe for concurrent initialization.
+    # Solution: Use file lock to ensure only one worker ingests at a time.
+    # After first worker completes, other workers check if data exists before re-ingesting.
+    ingestion_lock_path = "/tmp/raglite_pdf_ingestion.lock"
+    ingestion_lock = filelock.FileLock(ingestion_lock_path, timeout=600)  # 10 min timeout
 
-    guard = SafetyGuard()
-    is_ci = os.getenv("CI") == "true"
-    if not is_ci:
-        _initialize_qdrant_collection(settings, guard, qdrant)
-    else:
-        print("CI mode: Using pre-created collection (scripts/init-ci-qdrant.py)", file=sys.stderr)
+    print(f"🔒 Worker {worker_id}: Acquiring PDF ingestion lock...", file=sys.stderr)
+    with ingestion_lock:
+        print(
+            f"🔒 Worker {worker_id}: Lock acquired, checking for existing data...",
+            file=sys.stderr,
+        )
 
-    # Ingest test PDF
-    skip_metadata_extraction = not use_full_pdf
-    _ingest_test_pdf(sample_pdf, skip_metadata_extraction, settings)
+        # Check if another worker already ingested (AFTER acquiring lock)
+        already_ingested = False
+        try:
+            collection_info = qdrant.get_collection(settings.qdrant_collection_name)
+            existing_count = collection_info.points_count
+            if existing_count > 0:
+                print(
+                    f"✅ Worker {worker_id}: Collection already has {existing_count} points "
+                    f"(ingested by another worker)",
+                    file=sys.stderr,
+                )
+                session_state.session_sample_pdf_chunk_count = existing_count
+                already_ingested = True
+        except Exception:
+            # Collection doesn't exist - will be created below
+            pass
 
-    # Verify Qdrant data
+        # Only ingest if no existing data
+        if not already_ingested:
+            _check_existing_collection(qdrant, settings)
+
+            print(
+                f"SESSION FIXTURE: Ingesting {pdf_description} ONCE (production pattern)",
+                file=sys.stderr,
+            )
+
+            # Initialize Qdrant collection
+            # CI FIX (2026-01-21): In CI mode, collection is pre-created by scripts/init-ci-qdrant.py
+            # This prevents xdist race conditions where workers access collection before it's created
+            from raglite.shared.safety import SafetyGuard
+
+            guard = SafetyGuard()
+            is_ci = os.getenv("CI") == "true"
+            if not is_ci:
+                _initialize_qdrant_collection(settings, guard, qdrant)
+            else:
+                print(
+                    "CI mode: Using pre-created collection (scripts/init-ci-qdrant.py)",
+                    file=sys.stderr,
+                )
+
+            # Ingest test PDF
+            skip_metadata_extraction = not use_full_pdf
+            _ingest_test_pdf(sample_pdf, skip_metadata_extraction, settings)
+
+        print(f"🔓 Worker {worker_id}: Releasing PDF ingestion lock", file=sys.stderr)
+
+    # Verify Qdrant data (outside lock - all workers verify)
     # Expected chunks vary by PDF size:
     #   160-page: 150-220 chunks
     #   10-page:  10-55 chunks (~42 typical)
