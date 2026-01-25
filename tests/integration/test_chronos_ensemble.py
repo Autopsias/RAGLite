@@ -14,7 +14,6 @@ from __future__ import annotations
 import os
 import time
 from datetime import datetime
-from unittest.mock import patch
 
 import pytest
 from sqlalchemy import delete
@@ -55,13 +54,12 @@ async def test_cold_start_scenario_minimal_data() -> None:
     ]
     data = TimeSeriesData(metric_name="test_cold_start", points=points, interval="monthly")
 
-    # Generate forecast (should use cold-start path)
-    with patch("raglite.forecasting.hybrid.preprocessing.fetch_historical_metric") as mock_fetch:
-        mock_fetch.return_value = data  # Use the minimal data we created
-        result = await generate_forecast(
-            metric="test_cold_start",
-            periods_ahead=3,
-        )
+    # Generate forecast - pass data directly to bypass fetch (Story 8.5 pattern)
+    result = await generate_forecast(
+        metric="test_cold_start",
+        historical_data=data,  # Pass directly, bypasses fetch_historical_metric
+        periods_ahead=3,
+    )
 
     # Verify Chronos-2 zero-shot was used
     assert "chronos" in result.model_type.lower()
