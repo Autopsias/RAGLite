@@ -16,8 +16,8 @@ pytestmark = [
     pytest.mark.slow,  # Real embedding generation takes 10-30s
     pytest.mark.manages_collection_state,  # Tests call ingest_pdf() - skip re-ingest cleanup
     pytest.mark.xdist_group(
-        name="embedding_model_writes"
-    ),  # P2 FIX: Write tests on separate worker
+        name="embedding_model_reads"
+    ),  # Unified: ALL embedding tests on same worker (prevents gw1 crash)
     pytest.mark.requires_embedding_model,  # Phase 3 resource scheduling marker
 ]
 
