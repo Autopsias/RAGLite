@@ -67,10 +67,21 @@ class TestExcelIngestionIntegration:
         # Start timing
         start_time = time.time()
 
-        # Extract Excel with mocked embeddings
+        # Extract Excel with mocked embeddings AND storage
+        # CRITICAL: Must mock storage functions too - otherwise mock embeddings (1024-dim)
+        # get stored to Qdrant collection with different dimensions, causing 400 Bad Request
         with (
             patch("raglite.shared.clients.get_embedding_model", return_value=mock_embedding_model),
             patch("raglite.shared.clients._embedding_model", mock_embedding_model),
+            # Mock storage to prevent Qdrant/PostgreSQL calls with mock embeddings
+            patch(
+                "raglite.ingestion.document_ingestion.excel_processing.store_vectors_in_qdrant",
+                return_value=10,  # Return mock point count
+            ),
+            patch(
+                "raglite.ingestion.document_ingestion.excel_processing.store_metadata_in_postgresql",
+                return_value=(10, 0),  # Return (stored, skipped)
+            ),
         ):
             result = await extract_excel(str(sample_excel))
 

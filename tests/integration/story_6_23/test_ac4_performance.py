@@ -5,6 +5,7 @@ Story 6.23 - RED PHASE: Tests MUST FAIL initially.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import time
 
@@ -24,6 +25,11 @@ class TestAC4ValidationPerformance:
     """
 
     @pytest.mark.slow
+    @pytest.mark.skipif(
+        os.environ.get("CI") == "true",
+        reason="Full validation subprocess loads 3-4GB ML stack (statsmodels, catboost, "
+        "pytorch_forecasting), exceeds CI worker memory budget - run locally",
+    )
     def test_ac4_full_validation_runtime(self, validation_script_path, project_root):
         """TEST-AC-6.23.4: Full validation must complete in <10 minutes.
 
