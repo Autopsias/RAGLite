@@ -31,8 +31,7 @@ name: CI (Linux)
           - postgresql-db
           - postgresql-ml
           - retrieval-core
-          - retrieval-lightweight
-          - retrieval-heavy
+          - retrieval-embedding
           - mcp
           - other
         default: 'all'
@@ -222,17 +221,22 @@ jobs:
 
     strategy:
       fail-fast: false
-      # TRUE PARALLEL EXECUTION - all 7 shards run simultaneously
-      # REBALANCED 2026-01-26: Split retrieval-embedding into lightweight + heavy based on needs_embedding marker
+      # TRUE PARALLEL EXECUTION - all 6 shards run simultaneously
+      # CONSOLIDATED 2026-01-26: Reverted lightweight+heavy split - marker approach doesn't work
+      # Root cause: Module imports trigger embedding model loading regardless of test markers
+      # Python's import system executes module-level code, so any test importing raglite.retrieval.*
+      # may load embedding clients. With 4 workers x 2GB = 8GB > 7GB runner limit = OOM.
+      # Solution: Single worker for ALL retrieval tests - slower but reliable CI.
       # - postgresql-db: Database-focused forecasting/model_selection/insights
       # - postgresql-ml: ML-heavy tests (chronos, catboost, ensemble, epic6)
       # - retrieval-core: Chunking tests only (no embedding model)
-      # - retrieval-lightweight: Retrieval tests WITHOUT embedding calls (4 workers)
-      # - retrieval-heavy: Retrieval tests WITH embedding calls (1 worker, prevents OOM)
-      # Target: <18 min per shard, <20 min total CI
-      max-parallel: 7
+      # - retrieval-embedding: ALL embedding/retrieval tests (single worker, prevents OOM)
+      # - mcp: MCP tools + agentic tests
+      # - other: Remaining integration tests
+      # Trade-off: ~25-30 min retrieval shard, but green CI > fast red CI
+      max-parallel: 6
       matrix:
-        shard: [postgresql-db, postgresql-ml, retrieval-core, retrieval-lightweight, retrieval-heavy, mcp, other]
+        shard: [postgresql-db, postgresql-ml, retrieval-core, retrieval-embedding, mcp, other]
         include:
           - shard: postgresql-db
             # Database-focused forecasting tests: forecasting/, model_selection/, insights/
@@ -263,26 +267,19 @@ jobs:
             workers: 2
             ci_shard: retrieval-core
             description: "Chunking tests only (no embedding dependencies)"
-          - shard: retrieval-lightweight
-            # Tests WITHOUT embedding calls - safe for parallel execution
-            # MARKER-BASED SPLIT 2026-01-26: Uses -m 'not needs_embedding' to filter
-            # These tests use pre-ingested data but don't call search_documents/model.encode at runtime
+          - shard: retrieval-embedding
+            # ALL embedding/retrieval tests - SINGLE WORKER to prevent OOM
+            # CONSOLIDATED 2026-01-26: Reverted lightweight+heavy split
+            # Root cause analysis: Marker-based splitting doesn't work because:
+            # 1. Module imports are eager - importing raglite.retrieval.* loads embedding clients
+            # 2. Tests without 'needs_embedding' marker still cause OOM via transitive imports
+            # 3. 4 workers × 2GB model = 8GB > 7GB runner limit
+            # Solution: Single worker for ALL retrieval tests - CI reliability > CI speed
             pytest_paths: "tests/integration/ingestion/ tests/integration/retrieval/ tests/integration/story_2_14/ tests/integration/ac3_ground_truth/ tests/integration/parallel_ingestion/ tests/integration/test_analytical_core.py tests/integration/test_metadata_core.py tests/integration/test_main_integration.py tests/integration/test_e2e_query_validation.py tests/integration/test_sql_routing.py tests/integration/test_multi_index_integration.py tests/integration/test_excerpt_validation_core.py tests/integration/test_parallel_ingestion.py tests/integration/test_mcp_async_ingestion.py tests/integration/test_ac1_fuzzy_entity_matching.py"
-            pytest_marker: "not needs_embedding"
             pytest_ignore: ""
-            workers: 4  # Safe - embedding model not loaded at runtime
-            ci_shard: retrieval-lightweight
-            description: "Retrieval tests without embedding (parallel)"
-          - shard: retrieval-heavy
-            # Tests WITH embedding calls - require embedding model loaded in memory
-            # MARKER-BASED SPLIT 2026-01-26: Uses -m 'needs_embedding' to filter
-            # Single worker to prevent OOM (each worker loads PyTorch + model ~2-3GB)
-            pytest_paths: "tests/integration/"
-            pytest_marker: "needs_embedding"
-            pytest_ignore: "--ignore=tests/integration/forecasting/ --ignore=tests/integration/model_selection/ --ignore=tests/integration/insights/ --ignore=tests/integration/chunking/ --ignore=tests/integration/mcp/ --ignore=tests/integration/story_6_23/ --ignore=tests/integration/external_data_mcp/ --ignore=tests/integration/epic6/ --ignore=tests/integration/helpers/ --ignore=tests/integration/fixtures/ --ignore=tests/integration/workflows/"
-            workers: 1  # Required - embedding model uses ~2-3GB per worker
-            ci_shard: retrieval-heavy
-            description: "Embedding-dependent tests (serial)"
+            workers: 1  # CRITICAL: Single worker prevents OOM (embedding model ~2GB per process)
+            ci_shard: retrieval-embedding
+            description: "Embedding + retrieval tests (serial, OOM-safe)"
           - shard: mcp
             # MCP tools + agentic tests (forecasting validation tests moved to postgresql shard)
             # Root-level: agentic_*, mcp_*, response_validation
@@ -457,7 +454,6 @@ jobs:
           WORKERS: ${{ matrix.workers }}
           PYTEST_PATHS: ${{ matrix.pytest_paths }}
           PYTEST_IGNORE: ${{ matrix.pytest_ignore }}
-          PYTEST_MARKER: ${{ matrix.pytest_marker }}
           MATRIX_SHARD: ${{ matrix.shard }}
         run: |
           echo "========================================="
@@ -465,7 +461,6 @@ jobs:
           echo "Description: $DESCRIPTION"
           echo "Workers: $WORKERS"
           echo "CI_SHARD: ${CI_SHARD}"
-          echo "Shard marker: ${PYTEST_MARKER:-none}"
           echo "========================================="
 
           # Build pytest command with shard-specific options
@@ -475,14 +470,8 @@ jobs:
           # NOTE: Do NOT add "not slow" here - many integration tests have module-level slow markers
           # The 160-page PDF tests are protected by fixture-level CI skip guard instead.
           # External API tests excluded as safety net (rely on VCR cassettes)
-          # MARKER-BASED SPLIT (2026-01-26): Combine base markers with shard-specific marker if present
-          BASE_MARKER="not health_check and not atdd and not external_api"
-          if [[ -n "$PYTEST_MARKER" ]]; then
-            MARKER_EXPR="($BASE_MARKER) and ($PYTEST_MARKER)"
-            echo "Using combined marker: $MARKER_EXPR"
-          else
-            MARKER_EXPR="$BASE_MARKER"
-          fi
+          # CONSOLIDATED (2026-01-26): Removed marker-based split - didn't prevent OOM
+          MARKER_EXPR="not health_check and not atdd and not external_api"
           # HANG FIX (2026-01-23): Added --timeout-method=thread for per-test timeouts in xdist workers
           # The thread method starts a timer thread per test item, which works correctly with xdist
           # Increased per-test timeout to 180s (was 120s) to allow for embedding model loading
@@ -491,11 +480,11 @@ jobs:
           # which obscures the real issue and wastes CI time. Fails fast instead.
           # PERF FIX (2026-01-25): Use loadfile for non-embedding shards (better parallelization)
           # loadfile groups tests by file, eliminating xdist_group overhead for lightweight shards
-          # MARKER-BASED SPLIT (2026-01-26): Use loadfile for lightweight shards, loadgroup for heavy
-          if [[ "$MATRIX_SHARD" == *"-core"* ]] || [[ "$MATRIX_SHARD" == *"-lightweight"* ]]; then
-            DIST_MODE="loadfile"  # File-level isolation for lightweight shards
+          # CONSOLIDATED (2026-01-26): retrieval-embedding uses loadgroup for xdist_group markers
+          if [[ "$MATRIX_SHARD" == *"-core"* ]]; then
+            DIST_MODE="loadfile"  # File-level isolation for chunking tests
           else
-            DIST_MODE="loadgroup"  # xdist_group compatibility for embedding/heavy shards
+            DIST_MODE="loadgroup"  # xdist_group compatibility for embedding/serialized shards
           fi
           PYTEST_OPTS="--tb=short -v -n $WORKERS --dist $DIST_MODE --timeout=180 --timeout-method=thread --maxfail=10 --max-worker-restart=0"
 
@@ -509,8 +498,8 @@ jobs:
           # Backup timeout: Default 1500s (25 min) for all shards
           # Catches cases where pytest-timeout doesn't work (e.g., stuck in fixture teardown)
           # --kill-after=60 guarantees SIGKILL after 60s if SIGTERM fails
-          # OPTIMIZED 2026-01-26: retrieval-embedding now uses 4 workers (was 1), same timeout as others
-          BACKUP_TIMEOUT=1500  # 25 min for all parallel shards
+          # CONSOLIDATED 2026-01-26: retrieval-embedding uses 1 worker (serial) to prevent OOM
+          BACKUP_TIMEOUT=1500  # 25 min - allows ~150 tests at 10s average
           timeout --kill-after=60 --preserve-status $BACKUP_TIMEOUT \
             uv run pytest $PYTEST_PATHS \
               $PYTEST_IGNORE \
