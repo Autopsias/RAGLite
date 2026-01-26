@@ -25,7 +25,9 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
-    pytest.mark.xdist_group(name="database_writes"),
+    # FIX (2026-01-26): Use forecasting_model group - test imports heavy forecasting stack
+    # (statsmodels, catboost, prophet ~3-4GB) via get_financial_forecast from raglite.main
+    pytest.mark.xdist_group(name="forecasting_model"),
 ]
 
 

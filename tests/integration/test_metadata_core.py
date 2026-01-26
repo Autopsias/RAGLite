@@ -118,7 +118,10 @@ class TestMetadataInjection:
             department_scope="Finance",  # Story 2.4 REVISION: renamed from department_name
         )
 
-        with patch("raglite.ingestion.pipeline.extract_chunk_metadata") as mock_extract:
+        # FIX (2026-01-26): Patch at use-site (pdf_utils) not re-export site (pipeline)
+        with patch(
+            "raglite.ingestion.document_ingestion.pdf_utils.extract_chunk_metadata"
+        ) as mock_extract:
             mock_extract.return_value = mock_metadata
 
             # PERFORMANCE FIX: Use specific small test PDF instead of glob pattern
