@@ -40,7 +40,13 @@ from tests.integration.helpers.hybrid_search_helpers import (
 )
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# needs_embedding: Tests call search_documents at runtime (loads embedding model)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.needs_embedding,
+]
 
 # Story 2.1 targets
 HYBRID_RETRIEVAL_TARGET = 70.0  # ≥70% retrieval accuracy (vs 56% baseline)

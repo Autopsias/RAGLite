@@ -15,10 +15,12 @@ import pytest
 os.environ["APP_ENV"] = "test"
 
 # Skip all tests in this module if not running integration tests
+# needs_embedding: Tests call get_embedding_model() at runtime
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.manages_collection_state,
     pytest.mark.slow,
+    pytest.mark.needs_embedding,
     pytest.mark.xdist_group(
         name="embedding_model_writes"
     ),  # P2 FIX: Write tests on separate worker

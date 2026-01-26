@@ -15,7 +15,13 @@ from pathlib import Path
 import pytest
 
 # Mark all tests in this module as integration tests that preserve collection state
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# needs_embedding: Tests call search_documents/generate_query_embedding at runtime
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.needs_embedding,
+]
 
 # Lazy imports for expensive modules - DO NOT import raglite modules at module level!
 # Test explorers (VS Code) run discovery multiple times causing 30+ second delays.

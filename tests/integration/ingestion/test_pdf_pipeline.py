@@ -10,10 +10,12 @@ Performance Optimization:
 import pytest
 
 # Mark all tests in this module as slow integration tests
+# needs_embedding: Tests use embedding model for search operations at runtime
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
+    pytest.mark.needs_embedding,
 ]
 
 # Lazy imports for expensive modules - DO NOT import raglite modules at module level!

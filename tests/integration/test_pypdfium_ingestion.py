@@ -20,10 +20,12 @@ from pathlib import Path
 import pytest
 
 # Mark all tests in this module as integration tests that preserve collection state
+# needs_embedding: Tests call search_documents/generate_query_embedding at runtime
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
+    pytest.mark.needs_embedding,
 ]
 
 # Skip slow tests unless RUN_SLOW_TESTS=1 environment variable is set

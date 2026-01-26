@@ -42,7 +42,13 @@ from scripts.accuracy_utils import (
 from tests.fixtures.ground_truth import GROUND_TRUTH_QA
 
 # Mark all tests in this module as integration tests
-pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.mark.slow]
+# needs_embedding: Tests call search_documents at runtime (loads embedding model)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.preserve_collection,
+    pytest.mark.slow,
+    pytest.mark.needs_embedding,
+]
 
 # Epic 1 baseline thresholds (from baseline-accuracy-report-FINAL.txt)
 BASELINE_RETRIEVAL_FLOOR = 56.0  # Must not regress below 56%

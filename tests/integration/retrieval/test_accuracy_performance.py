@@ -11,11 +11,12 @@ from pathlib import Path
 import pytest
 
 # Mark all tests in this module as integration tests that preserve collection state
-# xdist_group ensures all embedding model tests run on the same worker (prevents 4x model load)
+# needs_embedding: Tests call search_documents at runtime (loads embedding model)
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
+    pytest.mark.needs_embedding,
 ]
 
 

@@ -12,9 +12,11 @@ import pytest
 
 # Module-level markers (promoted from class level for proper xdist_group isolation)
 # requires_embedding_model: Tests use 2GB Fin-E5 embedding model
+# needs_embedding: Tests generate embeddings at runtime (loads embedding model)
 pytestmark = [
     pytest.mark.slow,  # Real embedding generation takes 10-30s
     pytest.mark.manages_collection_state,  # Tests call ingest_pdf() - skip re-ingest cleanup
+    pytest.mark.needs_embedding,
     pytest.mark.xdist_group(
         name="embedding_model_writes"
     ),  # Separate group - OK with single worker shard (retrieval-embedding)
