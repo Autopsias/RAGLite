@@ -14,7 +14,6 @@ from raglite.ingestion.pipeline import (
     generate_embeddings,
 )
 from raglite.shared.clients import get_embedding_model
-from raglite.shared.config import settings
 from raglite.shared.models import Chunk, DocumentMetadata
 
 # Group tests that modify embedding singleton state to run on same worker
@@ -328,25 +327,22 @@ class TestGenerateEmbeddings:
                 MockST.return_value = mock_model  # Same instance both times
                 mock_get_st_class.return_value = MockST
 
-                # First call should load model and cache it
+                # First call should return LazyEmbeddingModel wrapper (lazy loading)
                 model1 = get_embedding_model()
-                assert model1 is mock_model
+                assert model1.__class__.__name__ == "LazyEmbeddingModel"
 
-                # Second call should return the SAME cached instance
+                # Second call should return the SAME cached wrapper instance (singleton)
                 model2 = get_embedding_model()
                 assert model2 is model1  # Validate singleton pattern
 
-                # Verify that _get_sentence_transformer_class was called twice (once per get_embedding_model call)
-                assert mock_get_st_class.call_count == 2
+                # Model should NOT be loaded yet (lazy loading defers until encode())
+                assert model1._model is None
 
-                # But SentenceTransformer should only be instantiated once (singleton pattern)
-                # Model name depends on CI_FAST_EMBEDDING mode
-                expected_model = (
-                    settings.ci_fast_embedding_model
-                    if settings.ci_fast_embedding_enabled
-                    else settings.embedding_model
-                )
-                MockST.assert_called_once_with(expected_model)
+                # Trigger model load by calling encode
+                model1.encode(["test text"])
+
+                # Now model should be loaded
+                assert model1._model is not None
         finally:
             # Restore ALL original state to prevent mock pollution
             clients_module._embedding_model = original_model
