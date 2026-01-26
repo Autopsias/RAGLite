@@ -441,7 +441,7 @@ jobs:
 
       - name: Run Integration Tests
         if: steps.shard-check.outputs.should_run == 'true'
-        timeout-minutes: 25  # Increased for postgresql shard serialization
+        timeout-minutes: 30  # FIX 2026-01-25: Match backup timeout for retrieval-embedding (150+ tests serial)
         env:
           PYTHONPATH: ${{ github.workspace }}
           DESCRIPTION: ${{ matrix.description }}
