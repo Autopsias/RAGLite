@@ -437,6 +437,29 @@ jobs:
           fi
           echo "✅ Test collection validation passed"
 
+      - name: Pre-flight Memory Check
+        if: steps.shard-check.outputs.should_run == 'true' && matrix.shard == 'retrieval-embedding'
+        env:
+          MATRIX_SHARD: ${{ matrix.shard }}
+        run: |
+          echo "========================================="
+          echo "Memory Pre-flight Check (${MATRIX_SHARD} shard)"
+          echo "========================================="
+          AVAILABLE_MB=$(free -m | awk '/^Mem:/{print $7}')
+          echo "Available memory: ${AVAILABLE_MB}MB"
+
+          REQUIRED_MB=4096
+          if [ "$AVAILABLE_MB" -lt "$REQUIRED_MB" ]; then
+            echo "❌ INSUFFICIENT MEMORY: ${AVAILABLE_MB}MB available, ${REQUIRED_MB}MB required"
+            echo "   This pre-flight check prevents 45-min timeout waste from OOM kills"
+            echo "   Root cause: Embedding model requires ~2GB RAM per worker"
+            echo "   Current config: 1 worker (serial execution) for OOM safety"
+            exit 1
+          fi
+
+          echo "✅ Memory check passed: ${AVAILABLE_MB}MB available (${REQUIRED_MB}MB required)"
+          echo "========================================="
+
       - name: Record shard start time
         if: steps.shard-check.outputs.should_run == 'true'
         id: start_time

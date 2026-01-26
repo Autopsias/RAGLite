@@ -326,16 +326,22 @@ class TestGenerateEmbeddings:
                 MockST.return_value = mock_model
                 mock_get_st_class.return_value = MockST
 
-                # First call should load model
+                # First call should return LazyEmbeddingModel wrapper
                 model1 = get_embedding_model()
-                assert model1 is mock_model
+                assert model1.__class__.__name__ == "LazyEmbeddingModel"
 
-                # Second call should return cached model (no new instantiation)
+                # Second call should return same wrapper instance (singleton)
                 model2 = get_embedding_model()
                 assert model2 is model1
 
-                # Verify that _get_sentence_transformer_class was called twice (once per get_embedding_model call)
-                assert mock_get_st_class.call_count == 2
+                # Model should not be loaded yet (lazy loading)
+                assert model1._model is None
+
+                # Trigger model load by encoding
+                model1.encode(["test text"])
+
+                # Now model should be loaded
+                assert model1._model is not None
 
                 # But SentenceTransformer should only be instantiated once (singleton pattern)
                 # Model name depends on CI_FAST_EMBEDDING mode

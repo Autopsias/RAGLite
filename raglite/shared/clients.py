@@ -79,9 +79,173 @@ def _get_sentence_transformer_class() -> type | None:
 logger = get_logger(__name__)
 
 
+class LazyEmbeddingModel:
+    """Lazy-loading wrapper for SentenceTransformer embedding model.
+
+    Defers actual model loading until first encode() call. This prevents:
+    - OOM from eager imports in parallel test execution
+    - Unnecessary model loading in tests that don't use embeddings
+    - Enables marker-based test splitting without memory overhead
+    """
+
+    def __init__(self) -> None:
+        """Initialize lazy wrapper without loading model."""
+        self._model: Any | None = None
+        self._model_name: str | None = None
+
+    def _load_model(self) -> None:
+        """Load the actual SentenceTransformer model (called on first encode)."""
+        if self._model is not None:
+            return  # Already loaded
+
+        # Lazy-load the SentenceTransformer class
+        SentenceTransformerClass = _get_sentence_transformer_class()
+        if SentenceTransformerClass is None:
+            raise ImportError(
+                "sentence-transformers package not installed. Install with: pip install sentence-transformers"
+            )
+
+        import os
+
+        # CRITICAL FIX (2026-01-24): Worker coordination to prevent OOM
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER", "")
+        is_xdist = bool(worker_id)
+
+        if is_xdist and worker_id not in ("", "gw0"):
+            # Non-gw0 worker trying to load model - likely a misconfiguration
+            logger.warning(
+                f"Worker {worker_id} attempting to load embedding model. "
+                "This may indicate missing xdist_group marker on embedding tests.",
+                extra={"worker_id": worker_id, "xdist_mode": True},
+            )
+            # Wait for gw0 to signal model ready (with timeout)
+            wait_start = time.time()
+            max_wait = 180  # 3 minutes max wait
+            while not _MODEL_READY_SIGNAL.exists():
+                if time.time() - wait_start > max_wait:
+                    logger.error(
+                        f"Worker {worker_id}: Timeout waiting for gw0 to load embedding model",
+                        extra={"worker_id": worker_id, "waited_seconds": max_wait},
+                    )
+                    raise RuntimeError(
+                        f"Worker {worker_id} timed out waiting for gw0 to load embedding model. "
+                        "Ensure tests using embeddings have @pytest.mark.xdist_group(name='embedding_model')"
+                    )
+                time.sleep(1)
+            logger.info(
+                f"Worker {worker_id}: gw0 has loaded embedding model, waiting for lock",
+                extra={"worker_id": worker_id},
+            )
+
+        # Cross-process lock prevents simultaneous loading across xdist workers
+        lock = filelock.FileLock(_EMBEDDING_LOCK_FILE, timeout=180)
+
+        with lock:
+            # Double-check after acquiring lock (another process may have loaded it)
+            if self._model is not None:
+                logger.info("Embedding model already loaded by another process")
+                return
+
+            # CRITICAL FIX (2026-01-24): Check env var DIRECTLY as fallback
+            current_settings = get_settings()
+
+            # Direct env var check - most reliable in xdist workers
+            ci_fast_env_raw = os.environ.get("CI_FAST_EMBEDDING", "")
+            ci_env_raw = os.environ.get("CI", "")
+            ci_fast_from_env = ci_fast_env_raw.lower() == "true"
+            ci_from_env = ci_env_raw.lower() == "true"
+
+            # Use fast model if EITHER settings OR direct env var indicates CI mode
+            use_fast_model = (
+                current_settings.ci_fast_embedding_enabled or ci_fast_from_env or ci_from_env
+            )
+
+            # Diagnostic logging for CI debugging
+            logger.info(
+                "Embedding model selection (lazy load)",
+                extra={
+                    "CI_FAST_EMBEDDING_env": ci_fast_env_raw or "NOT SET",
+                    "CI_env": ci_env_raw or "NOT SET",
+                    "settings_ci_fast_enabled": current_settings.ci_fast_embedding_enabled,
+                    "use_fast_model": use_fast_model,
+                },
+            )
+
+            # CI Optimization: Use smaller, faster model in CI
+            if use_fast_model:
+                self._model_name = current_settings.ci_fast_embedding_model
+                logger.info(
+                    "Loading CI fast embedding model (with lock)",
+                    extra={
+                        "model": self._model_name,
+                        "ci_fast_mode": True,
+                        "reason": "env_var" if (ci_fast_from_env or ci_from_env) else "settings",
+                    },
+                )
+            else:
+                self._model_name = current_settings.embedding_model
+                logger.info(
+                    "Loading Fin-E5 embedding model (with lock)",
+                    extra={"model": self._model_name, "ci_fast_mode": False},
+                )
+
+            try:
+                self._model = SentenceTransformerClass(self._model_name)
+                dimensions = self._model.get_sentence_embedding_dimension()
+
+                logger.info(
+                    "Embedding model loaded successfully (lazy)",
+                    extra={
+                        "model": self._model_name,
+                        "dimensions": dimensions,
+                        "ci_fast_mode": use_fast_model,
+                    },
+                )
+
+                # CRITICAL FIX (2026-01-24): Signal to other workers that model is ready
+                if is_xdist:
+                    try:
+                        _MODEL_READY_SIGNAL.touch()
+                        logger.info(
+                            f"Worker {worker_id or 'master'}: Created model ready signal",
+                            extra={"signal_path": str(_MODEL_READY_SIGNAL)},
+                        )
+                    except OSError as signal_err:
+                        logger.warning(
+                            f"Failed to create model ready signal: {signal_err}",
+                            extra={"error": str(signal_err)},
+                        )
+            except Exception as e:
+                error_msg = f"Failed to load embedding model ({self._model_name}): {e}"
+                logger.error(
+                    "Embedding model loading failed",
+                    extra={"model": self._model_name, "error": str(e)},
+                    exc_info=True,
+                )
+                raise RuntimeError(error_msg) from e
+
+    def encode(self, *args: Any, **kwargs: Any) -> Any:
+        """Encode text to embeddings (loads model on first call)."""
+        self._load_model()
+        assert self._model is not None  # Guaranteed after _load_model()
+        return self._model.encode(*args, **kwargs)
+
+    def get_sentence_embedding_dimension(self) -> int:
+        """Get embedding dimension (loads model if needed)."""
+        self._load_model()
+        assert self._model is not None  # Guaranteed after _load_model()
+        result: int = self._model.get_sentence_embedding_dimension()
+        return result
+
+    def __getattr__(self, name: str) -> Any:
+        """Proxy other attributes to underlying model (loads on access)."""
+        self._load_model()
+        return getattr(self._model, name)
+
+
 # Module-level singletons (connection pooling and model caching)
 _qdrant_client: QdrantClient | None = None
-_embedding_model: Any | None = None  # SentenceTransformer (lazy-loaded)
+_embedding_model: LazyEmbeddingModel | None = None  # Lazy-loaded wrapper
 _postgresql_connection: Any | None = None  # psycopg2.extensions.connection when available
 _mistral_client: Mistral | None = None
 
@@ -218,10 +382,10 @@ def get_claude_client() -> Anthropic:
 
 
 def get_embedding_model() -> Any:
-    """Get embedding model (singleton pattern with cross-process lock).
+    """Get embedding model (singleton pattern with lazy loading).
 
     Returns:
-        SentenceTransformer: Cached embedding model
+        LazyEmbeddingModel: Wrapper that defers model loading until first encode() call
 
     Raises:
         RuntimeError: If model loading fails
@@ -234,6 +398,13 @@ def get_embedding_model() -> Any:
         CI Fast Mode: all-MiniLM-L6-v2, 384 dimensions, general purpose
             Load time: ~5s, Size: ~80MB
             Trade-off: Slightly lower accuracy but 12x faster model loading
+
+        Lazy Loading (2026-01-26):
+            Model loading deferred until first encode() call. This prevents:
+            - OOM from eager imports (4 workers × 2GB = 8GB > 7GB runner limit)
+            - Unnecessary model loading in tests that don't use embeddings
+            - Enables marker-based test splitting without memory overhead
+
         Cross-process lock: Prevents simultaneous model loading across xdist workers
 
         Worker Coordination (2026-01-24):
@@ -241,146 +412,12 @@ def get_embedding_model() -> Any:
             completion via _MODEL_READY_SIGNAL file. This prevents multiple workers from
             each loading 80MB+ models and causing OOM.
     """
-    # Lazy-load the SentenceTransformer class (avoids slow PyTorch import at startup)
-    SentenceTransformerClass = _get_sentence_transformer_class()
-    if SentenceTransformerClass is None:
-        raise ImportError(
-            "sentence-transformers package not installed. Install with: pip install sentence-transformers"
-        )
-
     global _embedding_model
 
     if _embedding_model is None:
-        import os
-
-        # CRITICAL FIX (2026-01-24): Worker coordination to prevent OOM
-        # In xdist mode, only gw0 should load the model.
-        # Other workers should have their embedding tests routed to gw0 via xdist_group.
-        worker_id = os.environ.get("PYTEST_XDIST_WORKER", "")
-        is_xdist = bool(worker_id)
-
-        if is_xdist and worker_id not in ("", "gw0"):
-            # Non-gw0 worker trying to load model - likely a misconfiguration
-            # Tests needing embeddings should have @pytest.mark.xdist_group(name="embedding_model")
-            logger.warning(
-                f"Worker {worker_id} attempting to load embedding model. "
-                "This may indicate missing xdist_group marker on embedding tests.",
-                extra={"worker_id": worker_id, "xdist_mode": True},
-            )
-            # Wait for gw0 to signal model ready (with timeout)
-            # This provides fallback protection if xdist_group markers are missing
-            wait_start = time.time()
-            max_wait = 180  # 3 minutes max wait
-            while not _MODEL_READY_SIGNAL.exists():
-                if time.time() - wait_start > max_wait:
-                    logger.error(
-                        f"Worker {worker_id}: Timeout waiting for gw0 to load embedding model",
-                        extra={"worker_id": worker_id, "waited_seconds": max_wait},
-                    )
-                    raise RuntimeError(
-                        f"Worker {worker_id} timed out waiting for gw0 to load embedding model. "
-                        "Ensure tests using embeddings have @pytest.mark.xdist_group(name='embedding_model')"
-                    )
-                time.sleep(1)
-            # gw0 has loaded - we can now acquire the lock and use the cached model
-            logger.info(
-                f"Worker {worker_id}: gw0 has loaded embedding model, waiting for lock",
-                extra={"worker_id": worker_id},
-            )
-
-        # Cross-process lock prevents simultaneous loading across xdist workers
-        lock = filelock.FileLock(_EMBEDDING_LOCK_FILE, timeout=180)
-
-        with lock:
-            # Double-check after acquiring lock (another process may have loaded it)
-            if _embedding_model is not None:
-                logger.info("Embedding model already loaded by another process")
-                return _embedding_model
-
-            # CRITICAL FIX (2026-01-24): Check env var DIRECTLY as fallback
-            # The Settings singleton may be stale in xdist workers (created before
-            # CI_FAST_EMBEDDING was set), causing 2GB Fin-E5 to load instead of 80MB MiniLM.
-            # Belt-and-suspenders: Check BOTH settings AND env var directly.
-            current_settings = get_settings()
-
-            # Direct env var check - most reliable in xdist workers
-            ci_fast_env_raw = os.environ.get("CI_FAST_EMBEDDING", "")
-            ci_env_raw = os.environ.get("CI", "")
-            ci_fast_from_env = ci_fast_env_raw.lower() == "true"
-            ci_from_env = ci_env_raw.lower() == "true"
-
-            # Use fast model if EITHER settings OR direct env var indicates CI mode
-            # This prevents OOM in xdist workers where Settings singleton may be stale
-            use_fast_model = (
-                current_settings.ci_fast_embedding_enabled or ci_fast_from_env or ci_from_env
-            )
-
-            # Diagnostic logging for CI debugging
-            logger.info(
-                "Embedding model selection",
-                extra={
-                    "CI_FAST_EMBEDDING_env": ci_fast_env_raw or "NOT SET",
-                    "CI_env": ci_env_raw or "NOT SET",
-                    "settings_ci_fast_enabled": current_settings.ci_fast_embedding_enabled,
-                    "use_fast_model": use_fast_model,
-                },
-            )
-
-            # CI Optimization: Use smaller, faster model in CI (Story CI-OPT)
-            # all-MiniLM-L6-v2: 80MB, ~5s load (vs Fin-E5: 2GB, ~60s load)
-            if use_fast_model:
-                # Use CI fast model (80MB MiniLM vs 2GB Fin-E5)
-                model_name = current_settings.ci_fast_embedding_model
-                logger.info(
-                    "Loading CI fast embedding model (with lock)",
-                    extra={
-                        "model": model_name,
-                        "ci_fast_mode": True,
-                        "reason": "env_var" if (ci_fast_from_env or ci_from_env) else "settings",
-                    },
-                )
-            else:
-                model_name = current_settings.embedding_model
-                logger.info(
-                    "Loading Fin-E5 embedding model (with lock)",
-                    extra={"model": model_name, "ci_fast_mode": False},
-                )
-
-            try:
-                _embedding_model = SentenceTransformerClass(model_name)
-                dimensions = _embedding_model.get_sentence_embedding_dimension()
-
-                logger.info(
-                    "Embedding model loaded successfully",
-                    extra={
-                        "model": model_name,
-                        "dimensions": dimensions,
-                        "ci_fast_mode": use_fast_model,
-                    },
-                )
-
-                # CRITICAL FIX (2026-01-24): Signal to other workers that model is ready
-                # This allows non-gw0 workers to proceed (fallback for missing xdist_group markers)
-                if is_xdist:
-                    try:
-                        _MODEL_READY_SIGNAL.touch()
-                        logger.info(
-                            f"Worker {worker_id or 'master'}: Created model ready signal",
-                            extra={"signal_path": str(_MODEL_READY_SIGNAL)},
-                        )
-                    except OSError as signal_err:
-                        logger.warning(
-                            f"Failed to create model ready signal: {signal_err}",
-                            extra={"error": str(signal_err)},
-                        )
-            except Exception as e:
-                error_msg = f"Failed to load embedding model ({model_name}): {e}"
-                logger.error(
-                    "Embedding model loading failed",
-                    extra={"model": model_name, "error": str(e)},
-                    exc_info=True,
-                )
-                raise RuntimeError(error_msg) from e
+        # Create lazy wrapper (defers actual model loading until first encode() call)
+        _embedding_model = LazyEmbeddingModel()
+        logger.info("Created lazy embedding model wrapper (model will load on first encode() call)")
 
     return _embedding_model
 
