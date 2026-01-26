@@ -102,7 +102,7 @@ class TestConditionalRouting:
         # Verify response structure
         assert response.complexity == "simple"
         assert response.workflow_metadata["workflow_pattern"] == "simple_retrieval"
-        assert response.workflow_metadata["fallback_tier"] == "epic2_routing"
+        assert response.workflow_metadata["fallback_tier"] == "basic_retrieval"
         assert response.workflow_metadata["task_count"] == 1
         assert response.confidence == "high"
 

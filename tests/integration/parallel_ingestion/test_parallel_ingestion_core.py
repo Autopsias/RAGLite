@@ -9,12 +9,57 @@ Tests parallel ingestion pipeline with multiple documents and verifies:
 
 from pathlib import Path
 
+import psycopg2
 import pytest
 
 from raglite.ingestion.document_ingestion import ingest_documents_parallel
 from raglite.shared.clients import get_postgresql_connection, get_qdrant_client
 from raglite.shared.config import settings
 from raglite.shared.safety import SafetyGuard
+
+
+def _get_healthy_connection():
+    """Get a healthy PostgreSQL connection with automatic reconnection.
+
+    FIXED (2026-01-26): Handles InterfaceError from stale connections.
+    In CI serial execution, singleton connections can become stale across tests.
+    This function ensures we always get a working connection.
+
+    Returns:
+        Tuple of (connection, cursor) with verified connectivity
+    """
+    from raglite.shared.clients import reset_postgresql_connection
+
+    max_retries = 3
+    last_error = None
+
+    for attempt in range(max_retries):
+        try:
+            # Reset singleton to force fresh connection
+            reset_postgresql_connection()
+            conn = get_postgresql_connection()
+
+            # Health check: execute a simple query to verify connection
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+            cursor.close()
+
+            # Connection is healthy, return fresh cursor
+            cursor = conn.cursor()
+            return conn, cursor
+
+        except (psycopg2.InterfaceError, psycopg2.OperationalError) as e:
+            last_error = e
+            print(f"DEBUG: Connection attempt {attempt + 1} failed: {e}")
+            # Reset and retry
+            reset_postgresql_connection()
+            continue
+
+    raise psycopg2.InterfaceError(
+        f"Failed to establish healthy PostgreSQL connection after {max_retries} attempts: {last_error}"
+    )
+
 
 # Mark all tests in this module as integration tests
 # CRITICAL: xdist_group required because tests use embedding model via ingest_documents_parallel
@@ -52,36 +97,32 @@ def _setup_baseline_counts(qdrant, postgres_conn):
 
     Args:
         qdrant: Qdrant client instance
-        postgres_conn: PostgreSQL connection
+        postgres_conn: PostgreSQL connection (ignored, we get fresh connection)
 
     Returns:
         Tuple of (initial_qdrant_count, initial_chunk_count, initial_table_count, cursor)
+
+    FIXED (2026-01-26): Uses _get_healthy_connection() to handle stale connections.
     """
-    from raglite.shared.clients import reset_postgresql_connection
-
-    # CRITICAL FIX (CI): Reset singleton connection to force fresh connection
-    reset_postgresql_connection()
-
     # CRITICAL SAFETY CHECK (Story 6.26): Validate test environment BEFORE any DELETE
     guard = SafetyGuard()
     guard.validate_test_environment("test_parallel_ingestion_cleanup")
 
-    cursor = postgres_conn.cursor()
+    # Get healthy connection with retry logic
+    conn, cursor = _get_healthy_connection()
 
     # Clear stale test data to ensure accurate differential counts
     cursor.execute("DELETE FROM financial_chunks")
     cursor.execute("DELETE FROM financial_tables")
-    postgres_conn.commit()
+    conn.commit()
     cursor.close()
 
-    # CRITICAL FIX: Reset connection and start fresh transaction AFTER cleanup
-    reset_postgresql_connection()
-    postgres_conn = get_postgresql_connection()
-    cursor = postgres_conn.cursor()
+    # Get fresh healthy connection AFTER cleanup
+    conn, cursor = _get_healthy_connection()
 
     # Force new transaction BEFORE baseline counts
-    if not postgres_conn.autocommit:
-        postgres_conn.rollback()
+    if not conn.autocommit:
+        conn.rollback()
 
     # Count existing data (should be 0 after cleanup)
     initial_qdrant_count = qdrant.count(collection_name=settings.qdrant_collection_name).count
@@ -157,9 +198,9 @@ def _collect_final_counts(initial_qdrant_count, initial_chunk_count, initial_tab
 
     Returns:
         Tuple of (new_qdrant_chunks, new_postgres_chunks, new_table_rows, cursor)
-    """
-    from raglite.shared.clients import reset_postgresql_connection
 
+    FIXED (2026-01-26): Uses _get_healthy_connection() to handle stale connections.
+    """
     # Verify new chunks were added to Qdrant
     final_qdrant_count = qdrant.count(collection_name=settings.qdrant_collection_name).count
     new_qdrant_chunks = final_qdrant_count - initial_qdrant_count
@@ -171,10 +212,8 @@ def _collect_final_counts(initial_qdrant_count, initial_chunk_count, initial_tab
 
     assert new_qdrant_chunks > 0, "New chunks should be stored in Qdrant"
 
-    # CRITICAL FIX (CI): Reset singleton connection AGAIN after ingestion
-    reset_postgresql_connection()
-    postgres_conn = get_postgresql_connection()
-    cursor = postgres_conn.cursor()
+    # Get healthy connection with retry logic (handles stale connections)
+    postgres_conn, cursor = _get_healthy_connection()
 
     # Force new transaction to see committed data from parallel workers
     if not postgres_conn.autocommit:

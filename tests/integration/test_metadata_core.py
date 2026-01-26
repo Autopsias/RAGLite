@@ -139,14 +139,16 @@ class TestMetadataInjection:
             query_vector = np.random.rand(get_active_embedding_dimension()).tolist()
 
             # Search with Qdrant filter API (Story 2.4 REVISION: use reporting_period field)
-            results = client.search(
+            # FIXED (2026-01-26): Use query_points() with named vector for hybrid collection
+            results = client.query_points(
                 collection_name=settings.qdrant_collection_name,
-                query_vector=query_vector,
+                query=query_vector,
+                using="text-dense",  # Required: specify vector name for named vectors
                 query_filter=Filter(
                     must=[FieldCondition(key="reporting_period", match=MatchValue(value="Q3 2024"))]
                 ),
                 limit=5,
-            )
+            ).points
 
             # Verify all results match the filter
             assert len(results) > 0, "Filter should return results"
