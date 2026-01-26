@@ -221,20 +221,19 @@ jobs:
 
     strategy:
       fail-fast: false
-      # TRUE PARALLEL EXECUTION - all 6 shards run simultaneously
-      # CONSOLIDATED 2026-01-26: Reverted lightweight+heavy split - marker approach doesn't work
-      # Root cause: Module imports trigger embedding model loading regardless of test markers
-      # Python's import system executes module-level code, so any test importing raglite.retrieval.*
-      # may load embedding clients. With 4 workers x 2GB = 8GB > 7GB runner limit = OOM.
-      # Solution: Single worker for ALL retrieval tests - slower but reliable CI.
+      # PARALLEL EXECUTION - 4 shards run simultaneously (reduced from 6)
+      # STABILITY FIX 2026-01-26: Reduced from 6 to 4 to prevent resource exhaustion
+      # Root cause: Running all 6 shards simultaneously creates peak resource demand that
+      # occasionally exceeds GitHub Actions runner pool capacity, causing "other" shard
+      # worker crashes with "Not properly terminated" errors.
       # - postgresql-db: Database-focused forecasting/model_selection/insights
       # - postgresql-ml: ML-heavy tests (chronos, catboost, ensemble, epic6)
       # - retrieval-core: Chunking tests only (no embedding model)
       # - retrieval-embedding: ALL embedding/retrieval tests (single worker, prevents OOM)
       # - mcp: MCP tools + agentic tests
       # - other: Remaining integration tests
-      # Trade-off: ~25-30 min retrieval shard, but green CI > fast red CI
-      max-parallel: 6
+      # Trade-off: ~30-35 min total (vs ~20-25 min with 6 parallel), but reliable CI > fast flaky CI
+      max-parallel: 4
       matrix:
         shard: [postgresql-db, postgresql-ml, retrieval-core, retrieval-embedding, mcp, other]
         include:
