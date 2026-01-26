@@ -263,14 +263,14 @@ jobs:
             description: "Chunking tests only (no embedding dependencies)"
           - shard: retrieval-embedding
             # Heavy tests that NEED embedding model
-            # OPTIMIZED 2026-01-26: 4 workers for read-only tests, writes serialized via xdist_group
-            # Read-only tests parallelize safely; only embedding_model_writes tests need serialization
+            # OOM FIX 2026-01-26: 2 workers (4 workers crashed all gw0-gw3 simultaneously)
+            # Each worker loads PyTorch + MiniLM (~700MB), 4 workers exceeded 7GB runner limit
             # FIX 2026-01-25: Added story_2_14/ (has xdist_group markers, needs session_ingested_collection)
             # FIX 2026-01-25: Added test_ac1_fuzzy_entity_matching.py (uses session_ingested_collection)
             # FIX 2026-01-25: Added test_chunking_consistency.py and test_pypdfium_ingestion.py
             pytest_paths: "tests/integration/ingestion/ tests/integration/retrieval/ tests/integration/story_2_14/ tests/integration/ac3_ground_truth/ tests/integration/parallel_ingestion/ tests/integration/test_analytical_core.py tests/integration/test_metadata_core.py tests/integration/test_hybrid_search_integration.py tests/integration/test_main_integration.py tests/integration/test_retrieval_core.py tests/integration/test_e2e_query_validation.py tests/integration/test_sql_routing.py tests/integration/test_multi_index_integration.py tests/integration/test_document_segregation.py tests/integration/test_excerpt_validation_core.py tests/integration/test_parallel_ingestion.py tests/integration/test_mcp_async_ingestion.py tests/integration/test_ac1_fuzzy_entity_matching.py tests/integration/test_chunking_consistency.py tests/integration/test_pypdfium_ingestion.py"
             pytest_ignore: ""
-            workers: 4  # Read-only tests parallelize, writes serialized via xdist_group
+            workers: 2  # OOM FIX: 4 workers exceeded runner memory limit (PyTorch + MiniLM per worker)
             ci_shard: retrieval-embedding
             description: "Embedding + retrieval tests (parallel)"
           - shard: mcp
