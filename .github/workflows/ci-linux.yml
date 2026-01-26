@@ -186,7 +186,7 @@ jobs:
   integration:
     name: "🔗 Tests: Integration (${{ matrix.shard }})"
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Allow step timeout (25 min) + service startup overhead
+    timeout-minutes: 50  # Allow step timeout (45 min) + service startup overhead (retrieval-embedding runs serial)
     needs: validate
     # Run integration tests on:
     # - Push to main (always run full integration on main)
@@ -447,7 +447,7 @@ jobs:
 
       - name: Run Integration Tests
         if: steps.shard-check.outputs.should_run == 'true'
-        timeout-minutes: 30  # FIX 2026-01-25: Match backup timeout for retrieval-embedding (150+ tests serial)
+        timeout-minutes: 45  # FIX 2026-01-26: Increased for retrieval-embedding serial execution (~150 tests x 15s avg = 38 min)
         env:
           PYTHONPATH: ${{ github.workspace }}
           DESCRIPTION: ${{ matrix.description }}
@@ -495,11 +495,12 @@ jobs:
             echo "Using --skip-ingestion (collection pre-populated by init-ci-qdrant.py)"
           fi
 
-          # Backup timeout: Default 1500s (25 min) for all shards
+          # Backup timeout: Default 2700s (45 min) for all shards
           # Catches cases where pytest-timeout doesn't work (e.g., stuck in fixture teardown)
           # --kill-after=60 guarantees SIGKILL after 60s if SIGTERM fails
           # CONSOLIDATED 2026-01-26: retrieval-embedding uses 1 worker (serial) to prevent OOM
-          BACKUP_TIMEOUT=1500  # 25 min - allows ~150 tests at 10s average
+          # Calculation: ~150 tests x 15s avg = 38 min + model loading overhead = 45 min safe budget
+          BACKUP_TIMEOUT=2700  # 45 min - serial execution budget for retrieval-embedding shard
           timeout --kill-after=60 --preserve-status $BACKUP_TIMEOUT \
             uv run pytest $PYTEST_PATHS \
               $PYTEST_IGNORE \
@@ -521,9 +522,9 @@ jobs:
 
           echo ""
           echo "=== Timeout Configuration ==="
-          echo "Layer 1: Job timeout = 30 min (P0-5 FIX: workers=1 sequential execution)"
-          echo "Layer 2: Step timeout = 25 min (SIGINT->SIGTERM->SIGKILL)"
-          echo "Layer 3: Backup timeout = 1500s (25 min hard kill)"
+          echo "Layer 1: Job timeout = 50 min (retrieval-embedding runs serial, needs longer budget)"
+          echo "Layer 2: Step timeout = 45 min (SIGINT->SIGTERM->SIGKILL)"
+          echo "Layer 3: Backup timeout = 2700s (45 min hard kill)"
           echo "Layer 4: pytest-timeout = 180s per test (with --timeout-method=thread for workers)"
 
           echo ""
