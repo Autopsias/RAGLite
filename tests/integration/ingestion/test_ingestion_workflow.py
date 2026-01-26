@@ -13,7 +13,6 @@ pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.m
 # Lazy imports for expensive modules - DO NOT import raglite modules at module level!
 
 
-@pytest.mark.xdist_group(name="embedding_model_reads")
 class TestQdrantStorageIntegration:
     """Integration tests for Qdrant vector storage with real database (Story 1.6).
 

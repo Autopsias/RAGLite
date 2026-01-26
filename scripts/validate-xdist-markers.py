@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 """Validate xdist_group markers for embedding-dependent tests.
 
-Purpose: Ensure all tests that use the 2GB embedding model have xdist_group markers
-         to prevent redundant model loads across pytest-xdist workers.
+Purpose: Ensure WRITE tests that modify embedding state have xdist_group markers
+         to prevent race conditions, while allowing READ-ONLY tests to parallelize.
 
-Background:
+Background (Updated 2026-01-26):
 - pytest-xdist session fixtures execute once PER WORKER, not once globally
-- Without xdist_group: 60s load × 4 workers = 240s wasted
-- With xdist_group: 60s load × 1 worker = 60s total
+- OLD approach: All embedding tests had xdist_group(name="embedding_model_reads")
+  - Problem: 180 tests running serially on 1 worker = 30+ min CI timeout
+- NEW approach: Only WRITE tests need xdist_group(name="embedding_model_writes")
+  - Read-only tests can parallelize safely across workers
+  - CI uses 4 workers, reducing time to ~8 min
+  - Model loading overhead: 5s × 4 workers = 20s (acceptable with MiniLM in CI)
 
 Usage:
-    python scripts/validate-xdist-markers.py              # Check all integration tests
+    python scripts/validate-xdist-markers.py              # Check write test markers
     python scripts/validate-xdist-markers.py --verbose    # Show detailed analysis
-    python scripts/validate-xdist-markers.py --fix        # Auto-add markers (dry-run)
+    python scripts/validate-xdist-markers.py --check-legacy  # Warn about legacy read markers
 """
 
 import argparse
@@ -20,12 +24,22 @@ import re
 import sys
 from pathlib import Path
 
+# Write tests that MUST have xdist_group(name="embedding_model_writes")
+# These tests modify Qdrant collection state and can't run in parallel
+WRITE_TEST_FILES = {
+    "test_chunking_consistency.py",
+    "test_mcp_async_ingestion.py",
+    "test_embedding_storage.py",
+}
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Validate xdist_group markers")
     parser.add_argument("--verbose", action="store_true", help="Show detailed analysis per file")
     parser.add_argument(
-        "--fix", action="store_true", help="Show suggested fixes (no file modifications)"
+        "--check-legacy",
+        action="store_true",
+        help="Warn about files still using legacy embedding_model_reads markers",
     )
     return parser.parse_args()
 
@@ -62,22 +76,23 @@ def find_embedding_dependencies(file_path: Path) -> dict[str, list[int]]:
     return {k: v for k, v in indicators.items() if v}
 
 
-def has_xdist_group_marker(file_path: Path) -> bool:
-    """Check if file has xdist_group marker for embedding tests.
+def has_xdist_group_writes_marker(file_path: Path) -> bool:
+    """Check if file has xdist_group marker for write tests.
 
-    Accepts any of the embedding-related group names:
-    - embedding_model (legacy)
-    - embedding_model_reads (read-only tests)
-    - embedding_model_writes (tests that modify collection state)
-
-    Handles both single-line and multi-line marker formats:
-    - xdist_group(name="embedding_model_reads")
-    - xdist_group(\n    name="embedding_model_writes"\n)
+    Only embedding_model_writes is valid for write tests.
     """
     content = file_path.read_text()
-    # Match embedding_model variants with optional whitespace/newlines
-    # Handles both: xdist_group(name="...") and xdist_group(\n    name="..."\n)
-    pattern = r'xdist_group\s*\(\s*name\s*=\s*["\']embedding_model(?:_reads|_writes)?["\']\s*\)'
+    pattern = r'xdist_group\s*\(\s*name\s*=\s*["\']embedding_model_writes["\']\s*\)'
+    return bool(re.search(pattern, content))
+
+
+def has_legacy_reads_marker(file_path: Path) -> bool:
+    """Check if file still has legacy embedding_model_reads marker.
+
+    These should be removed as read-only tests can now parallelize.
+    """
+    content = file_path.read_text()
+    pattern = r'xdist_group\s*\(\s*name\s*=\s*["\']embedding_model_reads["\']\s*\)'
     return bool(re.search(pattern, content))
 
 
@@ -92,64 +107,64 @@ def main():
     test_files = list(integration_tests.rglob("test_*.py"))
     print(f"Analyzing {len(test_files)} integration test files...\n")
 
-    missing_markers: list[Path] = []
-    properly_marked: list[Path] = []
+    # Check write tests have proper markers
+    missing_write_markers: list[Path] = []
+    properly_marked_writes: list[Path] = []
 
     for test_file in sorted(test_files):
-        indicators = find_embedding_dependencies(test_file)
+        if test_file.name in WRITE_TEST_FILES:
+            if has_xdist_group_writes_marker(test_file):
+                properly_marked_writes.append(test_file)
+            else:
+                missing_write_markers.append(test_file)
 
-        if not indicators:
-            continue
-
-        has_marker = has_xdist_group_marker(test_file)
-
-        if has_marker:
-            properly_marked.append(test_file)
-        else:
-            missing_markers.append(test_file)
-
-            if args.verbose or args.fix:
-                print(f"⚠️  {test_file.relative_to(integration_tests)}")
-                print("    Embedding indicators found:")
-                for indicator_type, line_numbers in indicators.items():
-                    print(f"      - {indicator_type}: lines {', '.join(map(str, line_numbers))}")
-
-                if args.fix:
-                    print("\n    Suggested fix:")
-                    print("    Add to pytestmark at top of file (after imports):")
-                    print(
-                        '    pytest.mark.xdist_group(name="embedding_model_reads")  # for read-only tests'
-                    )
-                print()
+    # Check for legacy read markers (optional)
+    legacy_markers: list[Path] = []
+    if args.check_legacy:
+        for test_file in sorted(test_files):
+            if has_legacy_reads_marker(test_file):
+                legacy_markers.append(test_file)
 
     # Summary
-    print("\n" + "=" * 70)
-    print("Summary:")
-    print(f"  Total test files analyzed: {len(test_files)}")
-    print(f"  Files with embedding dependencies: {len(missing_markers) + len(properly_marked)}")
-    print(f"  ✅ Properly marked: {len(properly_marked)}")
-    print(f"  ⚠️  Missing markers: {len(missing_markers)}")
     print("=" * 70)
+    print("xdist_group Marker Validation (Updated 2026-01-26)")
+    print("=" * 70)
+    print("\nWrite Test Markers (REQUIRED for mutation tests):")
+    print(f"  Total write test files: {len(WRITE_TEST_FILES)}")
+    print(f"  ✅ Properly marked: {len(properly_marked_writes)}")
+    print(f"  ⚠️  Missing markers: {len(missing_write_markers)}")
 
-    if missing_markers:
-        print(f"\n❌ VALIDATION FAILED: {len(missing_markers)} files need xdist_group markers")
-        print("\nFiles needing markers:")
-        for f in missing_markers:
-            print(f"  - {f.relative_to(integration_tests)}")
+    if args.verbose and properly_marked_writes:
+        print("\n  Files with embedding_model_writes marker:")
+        for f in properly_marked_writes:
+            print(f"    ✅ {f.relative_to(integration_tests)}")
+
+    if missing_write_markers:
+        print(f"\n❌ VALIDATION FAILED: {len(missing_write_markers)} write tests need markers")
+        print("\nWrite test files missing xdist_group(name='embedding_model_writes'):")
+        for f in missing_write_markers:
+            print(f"  ❌ {f.relative_to(integration_tests)}")
 
         print("\nTo fix, add this to pytestmark in each file:")
         print("  pytestmark = [")
         print("      pytest.mark.integration,")
-        print('      pytest.mark.xdist_group(name="embedding_model_reads"),  # For read-only tests')
-        print("      # OR")
-        print(
-            '      pytest.mark.xdist_group(name="embedding_model_writes"),  # For tests that modify state'
-        )
+        print('      pytest.mark.xdist_group(name="embedding_model_writes"),')
         print("  ]")
-
         return 1
 
-    print("\n✅ All embedding-dependent tests have xdist_group markers")
+    if args.check_legacy and legacy_markers:
+        print(
+            f"\n⚠️  WARNING: {len(legacy_markers)} files still have legacy embedding_model_reads markers"
+        )
+        print("These markers are no longer needed (read-only tests can parallelize):")
+        for f in legacy_markers:
+            print(f"  - {f.relative_to(integration_tests)}")
+
+    print("\n" + "=" * 70)
+    print("✅ All write tests have proper xdist_group markers")
+    print("\nNote: Read-only tests do NOT need xdist_group markers.")
+    print("      They can parallelize safely across workers.")
+    print("=" * 70)
     return 0
 
 

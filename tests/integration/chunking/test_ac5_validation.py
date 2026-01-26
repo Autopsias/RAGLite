@@ -22,7 +22,6 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.order(22),
-    pytest.mark.xdist_group(name="embedding_model_reads"),
 ]
 
 

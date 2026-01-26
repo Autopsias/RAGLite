@@ -18,7 +18,6 @@ from raglite.shared.config import settings
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
-    pytest.mark.xdist_group(name="embedding_model_reads"),
 ]
 
 

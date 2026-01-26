@@ -19,7 +19,6 @@ pytestmark = [pytest.mark.integration, pytest.mark.preserve_collection, pytest.m
 # Lazy imports for expensive modules - DO NOT import raglite modules at module level!
 
 
-@pytest.mark.xdist_group(name="embedding_model_reads")
 @pytest.mark.preserve_collection  # Tests are read-only - skip expensive cleanup
 class TestDocumentSegregation:
     """Integration tests for document segregation and attribution (Story 4.0.4 AC4).
@@ -233,7 +232,6 @@ class TestDocumentSegregation:
         # In a multi-document scenario, results can span multiple docs
 
 
-@pytest.mark.xdist_group(name="embedding_model_reads")
 @pytest.mark.preserve_collection
 class TestPostgreSQLDocumentSegregation:
     """Integration tests for PostgreSQL document attribution (Story 4.0.4 AC3).

@@ -17,7 +17,6 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
-    pytest.mark.xdist_group(name="embedding_model_reads"),
 ]
 
 # Lazy imports for expensive modules - DO NOT import raglite modules at module level!
@@ -29,7 +28,6 @@ pytestmark = [
 #   from raglite.shared.config import settings
 
 
-@pytest.mark.xdist_group(name="embedding_model_reads")
 @pytest.mark.preserve_collection  # Tests are read-only - skip expensive Qdrant cleanup
 class TestSearchCore:
     """Core search integration tests with real Qdrant.

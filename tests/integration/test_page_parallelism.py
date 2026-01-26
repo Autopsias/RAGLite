@@ -16,7 +16,6 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.preserve_collection,
     pytest.mark.slow,
-    pytest.mark.xdist_group(name="embedding_model_reads"),
 ]
 
 # Skip slow tests unless RUN_SLOW_TESTS=1 environment variable is set
