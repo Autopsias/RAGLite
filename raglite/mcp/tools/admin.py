@@ -164,7 +164,12 @@ def _check_checkpoint_freshness(
     if not active_checkpoint:
         return None
 
-    age = datetime.now(UTC) - active_checkpoint.trained_at
+    # Ensure both datetimes are timezone-aware for comparison
+    # Database returns naive datetime, so we make it timezone-aware
+    trained_at = active_checkpoint.trained_at
+    if trained_at.tzinfo is None:
+        trained_at = trained_at.replace(tzinfo=UTC)
+    age = datetime.now(UTC) - trained_at
     if age >= timedelta(days=settings.tft_checkpoint_freshness_days):
         return None
 
