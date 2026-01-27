@@ -317,7 +317,7 @@ class TestGenerateEmbeddings:
 
         try:
             with patch(
-                "raglite.shared.clients._get_sentence_transformer_class"
+                "raglite.shared.embedding._get_sentence_transformer_class"
             ) as mock_get_st_class:
                 # Mock SentenceTransformer class
                 MockST = Mock()

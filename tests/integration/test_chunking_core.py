@@ -316,7 +316,7 @@ async def test_ac5_fast_chunk_count_validation(
             "The collection may contain accumulated data from previous tests."
         )
 
-    from qdrant_client.http.exceptions import UnexpectedResponse
+    from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 
     from raglite.shared.clients import get_qdrant_client
     from raglite.shared.config import settings
@@ -326,8 +326,8 @@ async def test_ac5_fast_chunk_count_validation(
         client: QdrantClient = get_qdrant_client()
         collection_name = settings.qdrant_collection_name
         client.get_collection(collection_name)
-    except UnexpectedResponse as e:
-        pytest.skip(f"Qdrant collection not available: {e}")
+    except (UnexpectedResponse, ResponseHandlingException) as e:
+        pytest.skip(f"Qdrant not available: {e}")
 
     # Scroll through all points to get chunk data
     all_points = scroll_all_qdrant_points(client, collection_name)

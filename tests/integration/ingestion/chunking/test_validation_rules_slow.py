@@ -31,7 +31,7 @@ async def test_ac6_fast_chunk_size_consistency(session_ingested_collection, enco
 
     Runtime: ~10 seconds (vs 16+ minutes for slow variant)
     """
-    from qdrant_client.http.exceptions import UnexpectedResponse
+    from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 
     from raglite.shared.clients import get_qdrant_client
     from raglite.shared.config import settings
@@ -41,8 +41,8 @@ async def test_ac6_fast_chunk_size_consistency(session_ingested_collection, enco
         client: QdrantClient = get_qdrant_client()
         collection_name = settings.qdrant_collection_name
         client.get_collection(collection_name)
-    except UnexpectedResponse as e:
-        pytest.skip(f"Qdrant collection not available: {e}")
+    except (UnexpectedResponse, ResponseHandlingException) as e:
+        pytest.skip(f"Qdrant not available: {e}")
 
     # Retrieve all points from Qdrant
     all_points = _retrieve_all_points(client, collection_name)

@@ -1,17 +1,10 @@
 {
   "version": 1,
-  "baseline_date": "2026-01-11T14:07:30.731617",
+  "baseline_date": "2026-01-26T19:09:34.960445",
   "description": "Grandfathered file size violations - reduce gradually",
   "thresholds": {
     "warning": 400,
     "hard_limit": 500
   },
-  "exceptions": {
-    "raglite/shared/clients.py": {
-      "lines": 503,
-      "reason": "Critical CI OOM fix (2026-01-24): Added direct env var check for CI_FAST_EMBEDDING. Refactoring to split embedding logic into separate module planned for Epic 8.",
-      "target_lines": 450,
-      "directory": "raglite/"
-    }
-  }
+  "exceptions": {}
 }

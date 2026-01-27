@@ -268,14 +268,14 @@ async def test_query_latency_with_enrichment():
     import time
 
     from qdrant_client import QdrantClient
-    from qdrant_client.http.exceptions import UnexpectedResponse
+    from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 
     # Check if Qdrant collection exists before running test
     try:
         client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
         client.get_collection(settings.qdrant_collection_name)
-    except UnexpectedResponse as e:
-        pytest.skip(f"Qdrant collection not available: {e}")
+    except (UnexpectedResponse, ResponseHandlingException) as e:
+        pytest.skip(f"Qdrant not available: {e}")
 
     # Verify query-time metadata enrichment is enabled
     assert settings.query_time_metadata_enabled, (
@@ -328,14 +328,14 @@ async def test_query_latency_multiple_queries():
     import time
 
     from qdrant_client import QdrantClient
-    from qdrant_client.http.exceptions import UnexpectedResponse
+    from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 
     # Check if Qdrant collection exists before running test
     try:
         client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
         client.get_collection(settings.qdrant_collection_name)
-    except UnexpectedResponse as e:
-        pytest.skip(f"Qdrant collection not available: {e}")
+    except (UnexpectedResponse, ResponseHandlingException) as e:
+        pytest.skip(f"Qdrant not available: {e}")
 
     # Test queries (financial domain)
     test_queries = [

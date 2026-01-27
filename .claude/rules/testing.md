@@ -95,6 +95,33 @@ to catch missing fixtures before commit.
    - Over-aggressive restoration in fixture?
    - New test triggering unnecessary re-ingestion?
 
+### Qdrant Exception Handling (CRITICAL - Added 2026-01-26)
+
+**Problem:** `UnexpectedResponse` (HTTP errors like 404) and `ResponseHandlingException` (connection errors like ECONNREFUSED) are **sibling classes**, both inheriting from `ApiException`. Catching only one misses the other.
+
+**When catching Qdrant exceptions for skip logic, ALWAYS catch BOTH:**
+
+```python
+from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
+
+try:
+    client.get_collection(collection_name)
+except (UnexpectedResponse, ResponseHandlingException) as e:
+    pytest.skip(f"Qdrant not available: {e}")
+```
+
+**Exception Hierarchy:**
+```
+ApiException (parent)
+├── UnexpectedResponse  - HTTP errors (404 collection not found, 500, etc.)
+└── ResponseHandlingException  - Connection errors (ECONNREFUSED, timeout)
+```
+
+**Why this matters:**
+- Tests that only catch `UnexpectedResponse` will FAIL (not skip) when Qdrant is offline
+- This caused 3 recurring test failures that persisted through 7 fix attempts
+- Connection refused errors are common in CI when Qdrant container isn't ready
+
 ---
 
 ## Test Fixture Architecture

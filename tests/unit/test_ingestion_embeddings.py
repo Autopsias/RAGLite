@@ -320,7 +320,7 @@ class TestGenerateEmbeddings:
             mock_model.get_sentence_embedding_dimension.return_value = 1024
 
             with patch(
-                "raglite.shared.clients._get_sentence_transformer_class"
+                "raglite.shared.embedding._get_sentence_transformer_class"
             ) as mock_get_st_class:
                 # Mock SentenceTransformer class - MUST return same instance each time
                 MockST = Mock()

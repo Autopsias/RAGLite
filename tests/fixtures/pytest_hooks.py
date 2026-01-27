@@ -170,8 +170,13 @@ def pytest_configure(config: Config) -> None:
         is_unit_only = all("tests/unit" in str(arg) for arg in args) if args else False
 
         if not is_unit_only:
-            # Not unit-only, so we may need Docker for integration tests
-            _ensure_docker_running()
+            # Skip Docker startup during --collect-only to avoid blocking
+            # subprocess collection tests (they have 30s timeout, Docker startup
+            # can take 120s)
+            collect_only = config.getoption("--collect-only", default=False)
+            if not collect_only:
+                # Not unit-only and not collect-only, so we need Docker
+                _ensure_docker_running()
 
     # Only set workerinput if we're actually in xdist mode
     # DO NOT create empty workerinput - it confuses pytest-cov!

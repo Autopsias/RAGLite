@@ -106,6 +106,139 @@ def _serialize_dataclass_with_enums(obj: Any) -> dict[str, Any]:
     return dict(sanitized) if isinstance(sanitized, dict) else {"data": sanitized}
 
 
+def _create_model_selection_orm(
+    result: ModelSelectionResult,
+    selected_at: datetime,
+    expires_at: datetime,
+    sanitized_candidate_results: dict,
+    data_chars_dict: dict | None,
+) -> ModelSelectionORM:
+    """Create a ModelSelectionORM instance from result data.
+
+    Args:
+        result: ModelSelectionResult from select_best_model()
+        selected_at: Timestamp when model was selected
+        expires_at: Expiration timestamp
+        sanitized_candidate_results: JSON-safe candidate results
+        data_chars_dict: Serialized data characteristics
+
+    Returns:
+        ModelSelectionORM instance ready for database insertion
+    """
+    return ModelSelectionORM(
+        variable_name=result.variable_name,
+        best_model=result.best_model,
+        best_mape=Decimal(str(result.best_mape)),
+        best_mase=Decimal(str(result.best_mase)),
+        use_regressors=result.best_with_regressors,
+        regressor_list=result.best_regressor_set,
+        candidate_results=sanitized_candidate_results,
+        data_characteristics=data_chars_dict,
+        selected_at=selected_at,
+        expires_at=expires_at,
+    )
+
+
+def _update_existing_entry(
+    existing: ModelSelectionORM,
+    result: ModelSelectionResult,
+    selected_at: datetime,
+    expires_at: datetime,
+    sanitized_candidate_results: dict,
+    data_chars_dict: dict | None,
+) -> None:
+    """Update an existing ModelSelectionORM entry with new data.
+
+    Args:
+        existing: Existing ModelSelectionORM instance to update
+        result: New ModelSelectionResult data
+        selected_at: Timestamp when model was selected
+        expires_at: Expiration timestamp
+        sanitized_candidate_results: JSON-safe candidate results
+        data_chars_dict: Serialized data characteristics
+    """
+    existing.best_model = result.best_model
+    existing.best_mape = Decimal(str(result.best_mape))
+    existing.best_mase = Decimal(str(result.best_mase))
+    existing.use_regressors = result.best_with_regressors
+    existing.regressor_list = result.best_regressor_set
+    existing.candidate_results = sanitized_candidate_results
+    existing.data_characteristics = data_chars_dict
+    existing.selected_at = selected_at
+    existing.expires_at = expires_at
+
+
+def _handle_integrity_error_update(
+    session: Any,
+    result: ModelSelectionResult,
+    selected_at: datetime,
+    expires_at: datetime,
+    sanitized_candidate_results: dict,
+    data_chars_dict: dict | None,
+) -> None:
+    """Handle IntegrityError by updating existing entry or retrying insert.
+
+    Args:
+        session: SQLAlchemy session
+        result: ModelSelectionResult from select_best_model()
+        selected_at: Timestamp when model was selected
+        expires_at: Expiration timestamp
+        sanitized_candidate_results: JSON-safe candidate results
+        data_chars_dict: Serialized data characteristics
+    """
+    session.rollback()
+
+    # Re-fetch with lock to prevent concurrent modification
+    existing = (
+        session.query(ModelSelectionORM)
+        .filter(ModelSelectionORM.variable_name == result.variable_name)
+        .with_for_update()
+        .first()
+    )
+
+    if existing:
+        # Update using helper
+        _update_existing_entry(
+            existing,
+            result,
+            selected_at,
+            expires_at,
+            sanitized_candidate_results,
+            data_chars_dict,
+        )
+
+        try:
+            session.commit()
+            logger.info(
+                "Updated cached model selection",
+                extra={
+                    "variable_name": result.variable_name,
+                    "best_model": result.best_model,
+                    "best_mape": result.best_mape,
+                },
+            )
+        except Exception as update_error:
+            # Handle race condition where row was deleted between SELECT and UPDATE
+            session.rollback()
+            logger.warning(
+                "Failed to update cached model selection (possible concurrent deletion)",
+                extra={
+                    "variable_name": result.variable_name,
+                    "error": str(update_error),
+                },
+            )
+            # Attempt insert again as a fallback using helper
+            new_entry_retry = _create_model_selection_orm(
+                result,
+                selected_at,
+                expires_at,
+                sanitized_candidate_results,
+                data_chars_dict,
+            )
+            session.add(new_entry_retry)
+            session.commit()
+
+
 def cache_model_selection(result: ModelSelectionResult) -> None:
     """Cache model selection result in PostgreSQL.
 
@@ -133,18 +266,9 @@ def cache_model_selection(result: ModelSelectionResult) -> None:
         # Sanitize candidate_results (may contain Infinity/NaN from failed models)
         sanitized_candidate_results = _sanitize_for_json(result.candidate_results)
 
-        # Create new entry
-        new_entry = ModelSelectionORM(
-            variable_name=result.variable_name,
-            best_model=result.best_model,
-            best_mape=Decimal(str(result.best_mape)),
-            best_mase=Decimal(str(result.best_mase)),
-            use_regressors=result.best_with_regressors,
-            regressor_list=result.best_regressor_set,
-            candidate_results=sanitized_candidate_results,
-            data_characteristics=data_chars_dict,
-            selected_at=selected_at,
-            expires_at=expires_at,
+        # Create new entry using helper
+        new_entry = _create_model_selection_orm(
+            result, selected_at, expires_at, sanitized_candidate_results, data_chars_dict
         )
 
         # Try insert first (optimistic approach for new entries)
@@ -162,63 +286,14 @@ def cache_model_selection(result: ModelSelectionResult) -> None:
             )
         except IntegrityError:
             # Entry exists, update instead
-            session.rollback()
-
-            # Re-fetch with lock to prevent concurrent modification
-            existing = (
-                session.query(ModelSelectionORM)
-                .filter(ModelSelectionORM.variable_name == result.variable_name)
-                .with_for_update()
-                .first()
+            _handle_integrity_error_update(
+                session,
+                result,
+                selected_at,
+                expires_at,
+                sanitized_candidate_results,
+                data_chars_dict,
             )
-
-            if existing:
-                existing.best_model = result.best_model
-                existing.best_mape = Decimal(str(result.best_mape))
-                existing.best_mase = Decimal(str(result.best_mase))
-                existing.use_regressors = result.best_with_regressors
-                existing.regressor_list = result.best_regressor_set
-                existing.candidate_results = sanitized_candidate_results
-                existing.data_characteristics = data_chars_dict
-                existing.selected_at = selected_at
-                existing.expires_at = expires_at
-
-                try:
-                    session.commit()
-                    logger.info(
-                        "Updated cached model selection",
-                        extra={
-                            "variable_name": result.variable_name,
-                            "best_model": result.best_model,
-                            "best_mape": result.best_mape,
-                        },
-                    )
-                except Exception as update_error:
-                    # Handle race condition where row was deleted between SELECT and UPDATE
-                    session.rollback()
-                    logger.warning(
-                        "Failed to update cached model selection (possible concurrent deletion)",
-                        extra={
-                            "variable_name": result.variable_name,
-                            "error": str(update_error),
-                        },
-                    )
-                    # Attempt insert again as a fallback
-                    new_entry_retry = ModelSelectionORM(
-                        variable_name=result.variable_name,
-                        best_model=result.best_model,
-                        best_mape=Decimal(str(result.best_mape)),
-                        best_mase=Decimal(str(result.best_mase)),
-                        use_regressors=result.best_with_regressors,
-                        regressor_list=result.best_regressor_set,
-                        candidate_results=sanitized_candidate_results,
-                        data_characteristics=data_chars_dict,
-                        selected_at=selected_at,
-                        expires_at=expires_at,
-                    )
-                    session.add(new_entry_retry)
-                    session.commit()
-
     except Exception as e:
         session.rollback()
         logger.error(

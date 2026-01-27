@@ -162,7 +162,7 @@ class TestPypdfiumTableAccuracy:
         """
         # Lazy imports
         from qdrant_client import QdrantClient
-        from qdrant_client.http.exceptions import UnexpectedResponse
+        from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 
         from raglite.retrieval.attribution import generate_citations
         from raglite.retrieval.search import search_documents
@@ -174,8 +174,8 @@ class TestPypdfiumTableAccuracy:
         try:
             client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
             client.get_collection(settings.qdrant_collection_name)
-        except UnexpectedResponse as e:
-            pytest.skip(f"Qdrant collection not available: {e}")
+        except (UnexpectedResponse, ResponseHandlingException) as e:
+            pytest.skip(f"Qdrant not available: {e}")
 
         # AC3 Validation: Run 10 ground truth table queries
         correct_retrievals = 0

@@ -48,6 +48,88 @@ def _run_async_with_timeout(coro, timeout: float = 300.0):
         return future.result(timeout=timeout + 30.0)
 
 
+def _verify_postgresql_tables():
+    """Verify PostgreSQL has data after ingestion.
+
+    Returns:
+        tuple: (table_count, page_range) or None if verification failed
+    """
+    try:
+        from raglite.shared.clients import get_postgresql_connection
+
+        # PERFORMANCE: Use cached connection to reduce overhead
+        conn = get_postgresql_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT COUNT(*) FROM financial_tables")
+        table_count = cursor.fetchone()[0]
+
+        cursor.execute("SELECT MIN(page_number), MAX(page_number) FROM financial_tables")
+        page_range = cursor.fetchone()
+
+        cursor.close()  # Only close cursor, keep connection cached
+        # Note: Connection kept open for session to reduce overhead
+
+        print(
+            f"✓ PostgreSQL financial_tables: {table_count} rows, pages {page_range[0]}-{page_range[1]}"
+        )
+
+        if table_count == 0:
+            pytest.skip("Excerpt PDF ingestion did not populate PostgreSQL tables")
+
+        return table_count, page_range
+
+    except Exception as e:
+        print(f"⚠️  PostgreSQL verification failed: {e}")
+        return None
+
+
+def _restore_session_state(client):
+    """Restore session fixture state after module ends.
+
+    This prevents excerpt data from polluting subsequent tests.
+
+    Args:
+        client: Qdrant client for collection operations
+    """
+    print("\n🔄 Restoring session fixture state (excerpt module cleanup)...")
+
+    if session_state.session_snapshot_name:
+        # FAST PATH: Restore from snapshot (<1s)
+        try:
+            from raglite.shared.config import settings
+
+            # Delete excerpt collection
+            try:
+                client.delete_collection(collection_name=settings.qdrant_collection_name)
+            except Exception:
+                pass
+
+            # Recover from snapshot
+            qdrant_host = settings.qdrant_url.rstrip("/")
+            snapshot_url = f"{qdrant_host}/collections/{settings.qdrant_collection_name}/snapshots/{session_state.session_snapshot_name}"
+
+            client.recover_snapshot(
+                collection_name=settings.qdrant_collection_name,
+                location=snapshot_url,
+                priority="snapshot",
+                wait=True,
+            )
+
+            # Verify restoration
+            count_after = client.count(collection_name=settings.qdrant_collection_name)
+            print(f"   ✓ Session state restored: {count_after.count} chunks (snapshot recovery)")
+        except Exception as e:
+            print(f"   ⚠️  Snapshot recovery failed: {e}, falling back to re-ingestion")
+            # Fallback: trigger session fixture re-ingestion by clearing and relying on autouse fixture
+            try:
+                client.delete_collection(collection_name=settings.qdrant_collection_name)
+            except Exception:
+                pass
+    else:
+        print("   ⚠️  No snapshot available, session state NOT restored (tests may fail!)")
+
+
 @pytest.fixture(scope="module")
 def ingested_160_page_pdf():
     """Module-scoped fixture for 160-page PDF ingestion - shared across slow tests.
@@ -128,7 +210,7 @@ def ingested_excerpt_pdf():
         tuple: (metadata, qdrant_client) - Ingestion metadata and Qdrant client
     """
     from raglite.ingestion.pipeline import ingest_pdf
-    from raglite.shared.clients import get_postgresql_connection, get_qdrant_client
+    from raglite.shared.clients import get_qdrant_client
 
     # Use absolute path from project root
     project_root = Path(__file__).parent.parent.parent.parent
@@ -148,67 +230,9 @@ def ingested_excerpt_pdf():
     print(f"✓ Excerpt PDF ingested: {metadata.chunk_count} chunks ({metadata.page_count} pages)")
 
     # Verify PostgreSQL has data
-    try:
-        # PERFORMANCE: Use cached connection to reduce overhead
-        conn = get_postgresql_connection()
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT COUNT(*) FROM financial_tables")
-        table_count = cursor.fetchone()[0]
-
-        cursor.execute("SELECT MIN(page_number), MAX(page_number) FROM financial_tables")
-        page_range = cursor.fetchone()
-
-        cursor.close()  # Only close cursor, keep connection cached
-        # Note: Connection kept open for session to reduce overhead
-
-        print(
-            f"✓ PostgreSQL financial_tables: {table_count} rows, pages {page_range[0]}-{page_range[1]}"
-        )
-
-        if table_count == 0:
-            pytest.skip("Excerpt PDF ingestion did not populate PostgreSQL tables")
-
-    except Exception as e:
-        print(f"⚠️  PostgreSQL verification failed: {e}")
+    _verify_postgresql_tables()
 
     yield metadata, client
 
     # CRITICAL: Restore session fixture state after module ends
-    # This prevents excerpt data from polluting subsequent tests
-    print("\n🔄 Restoring session fixture state (excerpt module cleanup)...")
-
-    if session_state.session_snapshot_name:
-        # FAST PATH: Restore from snapshot (<1s)
-        try:
-            from raglite.shared.config import settings
-
-            # Delete excerpt collection
-            try:
-                client.delete_collection(collection_name=settings.qdrant_collection_name)
-            except Exception:
-                pass
-
-            # Recover from snapshot
-            qdrant_host = settings.qdrant_url.rstrip("/")
-            snapshot_url = f"{qdrant_host}/collections/{settings.qdrant_collection_name}/snapshots/{session_state.session_snapshot_name}"
-
-            client.recover_snapshot(
-                collection_name=settings.qdrant_collection_name,
-                location=snapshot_url,
-                priority="snapshot",
-                wait=True,
-            )
-
-            # Verify restoration
-            count_after = client.count(collection_name=settings.qdrant_collection_name)
-            print(f"   ✓ Session state restored: {count_after.count} chunks (snapshot recovery)")
-        except Exception as e:
-            print(f"   ⚠️  Snapshot recovery failed: {e}, falling back to re-ingestion")
-            # Fallback: trigger session fixture re-ingestion by clearing and relying on autouse fixture
-            try:
-                client.delete_collection(collection_name=settings.qdrant_collection_name)
-            except Exception:
-                pass
-    else:
-        print("   ⚠️  No snapshot available, session state NOT restored (tests may fail!)")
+    _restore_session_state(client)

@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 from qdrant_client import QdrantClient
-from qdrant_client.http.exceptions import UnexpectedResponse
+from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 from qdrant_client.models import PointStruct
 
 pytestmark = [
@@ -201,8 +201,8 @@ async def test_ac5_fast_chunk_count_validation(
         client: QdrantClient = get_qdrant_client()
         collection_name = settings.qdrant_collection_name
         client.get_collection(collection_name)
-    except UnexpectedResponse as e:
-        pytest.skip(f"Qdrant collection not available: {e}")
+    except (UnexpectedResponse, ResponseHandlingException) as e:
+        pytest.skip(f"Qdrant not available: {e}")
 
     # Fetch all chunks from Qdrant
     all_points = fetch_all_chunks_from_qdrant(client, collection_name)

@@ -52,14 +52,14 @@ class TestMetadataInjection:
         Expected runtime: <10s (was 80-1600s before optimization)
         """
         # Check if Qdrant collection exists before running test
-        from qdrant_client.http.exceptions import UnexpectedResponse
+        from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 
         try:
             client = get_qdrant_client()
             collection_info = client.get_collection(settings.qdrant_collection_name)
             assert collection_info.points_count > 0, "Session fixture should have ingested data"
-        except UnexpectedResponse as e:
-            pytest.skip(f"Qdrant collection not available: {e}")
+        except (UnexpectedResponse, ResponseHandlingException) as e:
+            pytest.skip(f"Qdrant not available: {e}")
 
         # Scroll through points to check metadata
         scroll_result = client.scroll(

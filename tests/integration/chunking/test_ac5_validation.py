@@ -188,15 +188,15 @@ async def test_ac5_fast_chunk_count_validation(
             "The collection may contain accumulated data from previous tests."
         )
 
-    from qdrant_client.http.exceptions import UnexpectedResponse
+    from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 
     # Check if Qdrant collection exists before running test
     try:
         client: QdrantClient = get_qdrant_client()
         collection_name = settings.qdrant_collection_name
         client.get_collection(collection_name)
-    except UnexpectedResponse as e:
-        pytest.skip(f"Qdrant collection not available: {e}")
+    except (UnexpectedResponse, ResponseHandlingException) as e:
+        pytest.skip(f"Qdrant not available: {e}")
 
     # Fetch all chunks from collection
     all_points = _fetch_all_chunks(client, collection_name)

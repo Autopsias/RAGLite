@@ -25,6 +25,47 @@ from tests.fixtures.mistral_mock_helpers import (
 logger = logging.getLogger(__name__)
 
 
+def _get_mistral_client_patch_targets() -> list[str]:
+    """Get all module paths that need get_mistral_client patched.
+
+    This helper consolidates the comprehensive list of modules that import
+    get_mistral_client. All patches are required to prevent real Mistral API
+    calls during testing (session fixture ingestion, integration tests, etc.).
+
+    Returns:
+        List of module paths to patch with mock_mistral_client
+    """
+    return [
+        # Core clients module (source of truth)
+        "raglite.shared.clients.get_mistral_client",
+        # Ingestion modules
+        "raglite.ingestion.embedding_generation.get_mistral_client",
+        "raglite.ingestion.embedding_generation.__init__.get_mistral_client",
+        "raglite.ingestion.document_ingestion.pdf_processing.__init__.get_mistral_client",
+        "raglite.ingestion.document_ingestion.pdf_processing._legacy.get_mistral_client",
+        "raglite.ingestion.adaptive_table.unit_inference.llm_inference.get_mistral_client",
+        "raglite.ingestion.adaptive_table.unit_inference.async_batch._legacy.get_mistral_client",
+        # Agentic modules
+        "raglite.agentic.agents.synthesis_methods.get_mistral_client",
+        "raglite.agentic.agents.synthesis_agent.get_mistral_client",
+        # Retrieval modules
+        "raglite.retrieval.search.enrichment.get_mistral_client",
+        # Forecasting modules
+        "raglite.forecasting.hybrid.__init__.get_mistral_client",
+        "raglite.forecasting.hybrid.ensemble.get_mistral_client",
+        "raglite.forecasting.timeseries.core.get_mistral_client",
+        # Retrieval query classifier modules (SQL generation, metadata filtering)
+        "raglite.retrieval.query_classifier.sql_generation.get_mistral_client",
+        "raglite.retrieval.query_classifier.metadata_filter.get_mistral_client",
+        # Insights modules
+        "raglite.insights.anomalies.get_mistral_client",
+        "raglite.insights.trends.get_mistral_client",
+        "raglite.insights.recommendations.get_mistral_client",
+        "raglite.insights.recommendations.synthesis.get_mistral_client",
+        "raglite.insights.proactive_modules.synthesis.get_mistral_client",
+    ]
+
+
 @pytest.fixture(scope="module")
 def mock_qdrant_client() -> MagicMock:
     """Provide a mock Qdrant client for unit tests (module-scoped).
@@ -103,6 +144,8 @@ def mock_mistral_api_globally() -> Generator[None, None, None]:
     2. Use test-specific mock responses
     3. Still maintain protection against real API calls
     """
+    from contextlib import ExitStack
+
     # Create a single shared mock client with both sync and async methods configured
     mock_client_instance = MagicMock()
     # Sync method for SQL generation (query classifier)
@@ -110,103 +153,34 @@ def mock_mistral_api_globally() -> Generator[None, None, None]:
     # Async method for metadata extraction (embedding generation)
     mock_client_instance.chat.complete_async = AsyncMock(side_effect=generate_mock_metadata)
 
-    # Patch the get_mistral_client function to return our mock
-    # This allows test-specific patches to override by patching the same function
-    # CRITICAL: Patch ALL import locations where get_mistral_client is used
-    # For lazy imports (inside functions), use create=True to avoid AttributeError
-    #
-    # COMPREHENSIVE FIX (2026-01-12):
-    # The validate-mock-coverage.py script found 17+ modules importing get_mistral_client.
-    # All must be patched to prevent real API calls during tests.
-    with (
-        # Core clients module (source of truth)
-        patch("raglite.shared.clients.get_mistral_client") as mock_get_client,
-        # Ingestion modules
-        patch("raglite.ingestion.embedding_generation.get_mistral_client") as mock_emb,
-        patch(
-            "raglite.ingestion.embedding_generation.__init__.get_mistral_client",
-            create=True,
-        ) as mock_emb_init,
-        patch(
-            "raglite.ingestion.document_ingestion.pdf_processing.__init__.get_mistral_client",
-            create=True,
-        ) as mock_pdf_init,
-        patch(
-            "raglite.ingestion.document_ingestion.pdf_processing._legacy.get_mistral_client",
-            create=True,
-        ) as mock_pdf_legacy,
-        patch(
-            "raglite.ingestion.adaptive_table.unit_inference.llm_inference.get_mistral_client",
-            create=True,
-        ) as mock_llm_inference,
-        patch(
-            "raglite.ingestion.adaptive_table.unit_inference.async_batch._legacy.get_mistral_client",
-            create=True,
-        ) as mock_async_batch_legacy,
-        # Agentic modules
-        patch("raglite.agentic.agents.synthesis_methods.get_mistral_client") as mock_synth,
-        patch(
-            "raglite.agentic.agents.synthesis_agent.get_mistral_client", create=True
-        ) as mock_synth_agent,
-        # Retrieval modules
-        patch(
-            "raglite.retrieval.search.enrichment.get_mistral_client", create=True
-        ) as mock_enrichment,
-        # Forecasting modules
-        patch(
-            "raglite.forecasting.hybrid.__init__.get_mistral_client", create=True
-        ) as mock_forecast_hybrid,
-        patch(
-            "raglite.forecasting.hybrid.ensemble.get_mistral_client", create=True
-        ) as mock_forecast_ensemble,
-        patch(
-            "raglite.forecasting.timeseries.core.get_mistral_client", create=True
-        ) as mock_ts_core,
-        # Retrieval query classifier modules (SQL generation, metadata filtering)
-        # CRITICAL FIX (2026-01-24): These were missing, causing real Mistral API calls
-        # in MCP analytical tests (~19 min shard time due to 200-500ms per API call)
-        patch(
-            "raglite.retrieval.query_classifier.sql_generation.get_mistral_client"
-        ) as mock_sql_gen,
-        patch(
-            "raglite.retrieval.query_classifier.metadata_filter.get_mistral_client"
-        ) as mock_metadata_filter,
-        # Insights modules
-        patch("raglite.insights.anomalies.get_mistral_client", create=True) as mock_anomalies,
-        patch("raglite.insights.trends.get_mistral_client", create=True) as mock_trends,
-        patch(
-            "raglite.insights.recommendations.get_mistral_client", create=True
-        ) as mock_recommendations,
-        patch(
-            "raglite.insights.recommendations.synthesis.get_mistral_client", create=True
-        ) as mock_rec_synthesis,
-        patch(
-            "raglite.insights.proactive_modules.synthesis.get_mistral_client", create=True
-        ) as mock_proactive_synth,
-    ):
-        # Assign mock client instance to ALL patches
-        mock_get_client.return_value = mock_client_instance
-        mock_emb.return_value = mock_client_instance
-        mock_emb_init.return_value = mock_client_instance
-        mock_pdf_init.return_value = mock_client_instance
-        mock_pdf_legacy.return_value = mock_client_instance
-        mock_llm_inference.return_value = mock_client_instance
-        mock_async_batch_legacy.return_value = mock_client_instance
-        mock_synth.return_value = mock_client_instance
-        mock_synth_agent.return_value = mock_client_instance
-        mock_enrichment.return_value = mock_client_instance
-        mock_forecast_hybrid.return_value = mock_client_instance
-        mock_forecast_ensemble.return_value = mock_client_instance
-        mock_ts_core.return_value = mock_client_instance
-        # Query classifier modules (added 2026-01-24)
-        mock_sql_gen.return_value = mock_client_instance
-        mock_metadata_filter.return_value = mock_client_instance
-        # Insights modules
-        mock_anomalies.return_value = mock_client_instance
-        mock_trends.return_value = mock_client_instance
-        mock_recommendations.return_value = mock_client_instance
-        mock_rec_synthesis.return_value = mock_client_instance
-        mock_proactive_synth.return_value = mock_client_instance
+    # Get all module paths that need patching (consolidated helper function)
+    patch_targets = _get_mistral_client_patch_targets()
+
+    # Create patches for all targets using ExitStack
+    with ExitStack() as stack:
+        mock_patches = []
+        for target in patch_targets:
+            # Use create=True for lazy imports to avoid AttributeError
+            needs_create = "__init__" in target or any(
+                module in target
+                for module in [
+                    "synthesis_agent",
+                    "enrichment",
+                    "hybrid",
+                    "ensemble",
+                    "timeseries.core",
+                    "anomalies",
+                    "trends",
+                    "recommendations",
+                    "proactive_modules",
+                    "llm_inference",  # Lazy import inside _call_mistral_api function
+                    "_legacy",  # Lazy import in async_batch/_legacy.py
+                ]
+            )
+            mock_patch = stack.enter_context(patch(target, create=needs_create))
+            mock_patch.return_value = mock_client_instance
+            mock_patches.append(mock_patch)
+
         yield
 
 
