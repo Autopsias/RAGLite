@@ -23,31 +23,72 @@ def _get_period_match_clause(prefer_ytd: bool) -> tuple[str, str, str]:
         This fallback allows extracting recent data that may not have a YTD prefix
         (e.g., December 2025 data stored as "Dec-25" instead of "YTD  Dec-25").
         Fix for: December 2025 Performance Review stores EBITDA in monthly format.
+
+        EBITDA Data Quality Fix (2026-01-30): Comprehensive budget exclusion
+        Budget periods are filtered via _get_budget_exclusion_clause() which handles:
+        - "B Mon-YY" (prefix)
+        - "Mon-YY B" (suffix)
+        - "YTD B Mon-YY" (YTD budget)
+        - "YTD  B Mon-YY" (YTD budget with double space)
+        - Empty/null/N/A periods
     """
+    budget_exclusion = _get_budget_exclusion_clause()
+
     if prefer_ytd:
         # YTD mode with monthly fallback: Match EITHER "YTD Mon-YY" OR plain "Mon-YY"
-        # This allows extracting recent data that may not have YTD prefix
-        # Phase 3 Quality Fix (2026-01-29): Enhanced budget filtering
-        # Budget periods have patterns: "B Mon-YY", "YTD B Mon-YY", "YTD  B Mon-YY"
-        period_match = """
+        # Also supports 4-digit years: "YTD Mon-YYYY" or "Mon-YYYY"
+        # Also supports Portuguese months: "YTD Dez-25" or "Dez-25"
+        period_match = f"""
               AND (
-                  period ~ '^YTD\\s+[A-Z][a-z]{2}-[0-9]{2}$'
-                  OR period ~ '^[A-Z][a-z]{2}-[0-9]{2}$'
+                  period ~ '^YTD\\s+[A-Za-z]{{3}}-[0-9]{{2,4}}$'
+                  OR period ~ '^[A-Za-z]{{3}}-[0-9]{{2,4}}$'
               )
-              AND period !~ '^B\\s'
-              AND period !~ '\\sB\\s'
-              AND period !~ '\\sB$'"""
-        period_extract = "(REGEXP_MATCH(period, '([A-Z][a-z]{2}-[0-9]{2})'))[1]"
+              {budget_exclusion}"""
+        period_extract = "(REGEXP_MATCH(period, '([A-Za-z]{3}-[0-9]{2,4})'))[1]"
         # Dynamic: TRUE if starts with YTD, FALSE for monthly format
         is_ytd_flag = "CASE WHEN period ~ '^YTD' THEN TRUE ELSE FALSE END"
     else:
-        # Standard mode: Match "Mon-YY" format only (excludes YTD and Budget)
-        # Phase 3 Quality Fix (2026-01-29): Budget periods starting with "B " are excluded
-        period_match = """AND period ~ '^[A-Z][a-z]{2}-[0-9]{2}$'
-              AND period !~ '^B\\s'"""
+        # Standard mode: Match "Mon-YY" or "Mon-YYYY" format only (excludes YTD and Budget)
+        # Also supports Portuguese months: "Dez-25"
+        period_match = f"""AND period ~ '^[A-Za-z]{{3}}-[0-9]{{2,4}}$'
+              {budget_exclusion}"""
         period_extract = "period"
         is_ytd_flag = "FALSE"
     return period_match, period_extract, is_ytd_flag
+
+
+def _get_budget_exclusion_clause() -> str:
+    """Get comprehensive SQL clause to exclude budget and invalid periods.
+
+    EBITDA Data Quality Fix (2026-01-30):
+    Excludes all budget-related periods and invalid/unknown periods.
+
+    Budget patterns excluded:
+    - "B Mon-YY" - Budget prefix
+    - "B  Mon-YY" - Budget prefix with double space
+    - "Mon-YY B" - Budget suffix
+    - "YTD B Mon-YY" - YTD Budget prefix
+    - "YTD  B Mon-YY" - YTD Budget with double space
+
+    Invalid patterns excluded:
+    - NULL periods
+    - Empty strings
+    - "N/A", "None", "null" (case insensitive)
+
+    Returns:
+        SQL AND clauses for budget/invalid exclusion
+    """
+    return """
+              AND period !~ '^B\\s'
+              AND period !~ '\\sB\\s'
+              AND period !~ '\\sB$'
+              AND period !~ '^YTD\\s+B\\s'
+              AND period !~ '^YTD\\s{2,}B\\s'
+              AND period IS NOT NULL
+              AND TRIM(period) <> ''
+              AND period !~* '^N/A$'
+              AND period !~* '^None$'
+              AND period !~* '^null$'"""
 
 
 def _get_entity_priority_expr(entity_filter: str) -> str:

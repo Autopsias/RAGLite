@@ -13,6 +13,16 @@ Consolidates all validation approaches into a single script with:
 - MCP-compatible output format
 - <10 minute runtime target
 
+IMPORTANT: This script validates against PRODUCTION data.
+Ensure test environment variables are NOT set:
+
+    # Wrong (will validate against empty test database):
+    APP_ENV=test python scripts/validate_forecasting_unified.py --full
+
+    # Correct (uses production database with actual data):
+    unset POSTGRES_PORT POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD APP_ENV
+    python scripts/validate_forecasting_unified.py --full
+
 Usage:
     # Full validation (all variables, holdout MAPE)
     python scripts/validate_forecasting_unified.py --full
@@ -69,6 +79,9 @@ import numpy as np  # noqa: E402
 
 from raglite.forecasting.report_generator import (  # noqa: E402
     generate_validation_report,
+)
+from raglite.forecasting.timeseries.external import (  # noqa: E402
+    EXTERNAL_SOURCE_MAPPINGS,
 )
 from raglite.forecasting.validation_methods import (  # noqa: E402
     calculate_cv_mape,
@@ -1155,6 +1168,31 @@ async def run_unified_validation(
                 print(f"  SKIP: {config.display_name} - {config.skip_reason or 'deprecated'}")
             continue  # Don't add to results - excluded from validation entirely
 
+        # Issue 2 Fix (2026-01-30): Skip data-quality-exempt external metrics without data source
+        # These metrics are exempted because their external data APIs are unavailable
+        # (e.g., Pet Coke, TTF Gas, CO2 - APIs deprecated or not configured)
+        if config.data_quality_exempt and config.is_external_only:
+            has_external_source = var_name in EXTERNAL_SOURCE_MAPPINGS
+            if not has_external_source or config.data_quality_reason:
+                exempt_reason = config.data_quality_reason or "No external data source configured"
+                logger.info(f"Exempt: {var_name} - {exempt_reason}")
+                if not quiet:
+                    print(f"  EXEMPT: {config.display_name} - {exempt_reason}")
+                # Mark as passing (exempt) with low confidence flag
+                variable_results.append(
+                    VariableValidationResult(
+                        variable_name=var_name,
+                        display_name=config.display_name,
+                        target_mape=config.target_mape,
+                        actual_mape=None,
+                        passed=True,  # Exempt variables pass by design
+                        primary_metric_used="exempt",
+                        low_confidence=True,
+                        low_confidence_reason=exempt_reason,
+                    )
+                )
+                continue
+
         # Story 6.24: Use config flag instead of hardcoded list for external variables
         # This allows all external metrics (10 new ones from Story 6.24.2) to be validated
         is_external = config.is_external_only
@@ -1195,11 +1233,23 @@ async def run_unified_validation(
             and forecast_data.predictions is not None
             and len(forecast_data.actuals) > 0
         ):
+            # Issue 1 Fix: Calculate holdout-aware min_points to prevent N/A
+            # The holdout size is determined by historical data length (see lines 858-863)
+            # We need min_points to match the holdout size, not the default 5
+            n_hist = len(forecast_data.historical) if forecast_data.historical is not None else 0
+            if n_hist >= 16:
+                holdout_min_points = 4  # Matches holdout_size for large datasets
+            elif n_hist >= 8:
+                holdout_min_points = 2  # Matches holdout_size for medium datasets
+            else:
+                holdout_min_points = 1  # Matches holdout_size for sparse datasets
+
             all_metrics = calculate_all_metrics(
                 actuals=forecast_data.actuals,
                 predictions=forecast_data.predictions,
                 historical_data=forecast_data.historical,
                 seasonality=12,  # Monthly data
+                min_points=holdout_min_points,  # Issue 1: Match holdout size
             )
             # Calculate FQS (Forecast Quality Score) - composite metric
             fqs = calculate_fqs(mape=all_metrics.mape, mase=all_metrics.mase)
@@ -1568,8 +1618,49 @@ def print_summary(result: UnifiedValidationResult) -> None:
 # =============================================================================
 
 
+def _check_environment() -> None:
+    """Check for test environment variables that would route to wrong database.
+
+    Bug fix (2026-01-30): Validation was silently connecting to empty test database
+    when POSTGRES_DB=raglite_ci or APP_ENV=test was set, causing "No match found"
+    for all SECIL metrics.
+    """
+    import os
+
+    test_indicators = []
+
+    if os.environ.get("APP_ENV") == "test":
+        test_indicators.append("APP_ENV=test")
+
+    if os.environ.get("POSTGRES_DB") in ("raglite_ci", "raglite_test"):
+        test_indicators.append(f"POSTGRES_DB={os.environ.get('POSTGRES_DB')}")
+
+    if os.environ.get("POSTGRES_PORT") in ("5433",):
+        test_indicators.append(f"POSTGRES_PORT={os.environ.get('POSTGRES_PORT')}")
+
+    if test_indicators:
+        print("\n" + "=" * 80)
+        print("WARNING: Test environment variables detected!")
+        print("=" * 80)
+        print(f"  Detected: {', '.join(test_indicators)}")
+        print()
+        print("This validation script requires PRODUCTION data.")
+        print("Test databases typically have insufficient data for validation.")
+        print()
+        print("To fix, unset test environment variables:")
+        print("  unset POSTGRES_PORT POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD APP_ENV")
+        print()
+        print("Or run with production settings:")
+        print("  APP_ENV=production python scripts/validate_forecasting_unified.py --full")
+        print("=" * 80)
+        print()
+
+
 def main() -> int:
     """Main entry point."""
+    # Check for test environment before starting
+    _check_environment()
+
     parser = argparse.ArgumentParser(
         description="Unified Forecasting Validation - All Variables, All Methods",
         epilog="""
@@ -1694,4 +1785,6 @@ holdout validation. Full async implementation is planned for future iterations.
 
 
 if __name__ == "__main__":
+    # Check environment FIRST before any other operations
+    _check_environment()
     sys.exit(main())

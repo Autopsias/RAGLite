@@ -201,12 +201,13 @@ def get_entity_filters() -> dict[str, tuple[str | None, bool]]:
     The unit normalization (Phase 2) handles the kEUR scaling instead.
     """
     return {
-        # EBITDA IFRS: Use GROUP entity filter + YTD-to-monthly conversion
-        # Database stores YTD cumulative values (e.g., Dec-25 €203.16M = full year total)
+        # EBITDA IFRS: Use Portugal entity filter + YTD-to-monthly conversion
+        # Fix 2026-01-30: Changed GROUP to portugal to match validation script and database reality.
+        # Investigation found: Portugal has 479 EBITDA records vs GROUP's 181.
+        # Entity mismatch between config (GROUP) and validation script (Portugal) caused
+        # discovery phase to fail finding data, resulting in N/A validation results.
         # prefer_ytd=True converts YTD to monthly: Jan=€11M, Feb=€10.6M (delta), etc.
-        # Fix 2026-01-30: Changed False->True for prefer_ytd to fix 6-7x forecast overestimate
-        # Expected monthly EBITDA: ~€15-20M (not €88M which was YTD average)
-        "EBITDA IFRS": ("GROUP", True),
+        "EBITDA IFRS": ("portugal", True),
         # Turnover/Revenue: No entity filter - uses unit-based normalization instead
         # Entity values are "Currency (1000 EUR)" not "GROUP"
         "turnover": (None, False),

@@ -181,17 +181,21 @@ def normalize_to_interval(data: TimeSeriesData, interval: str) -> TimeSeriesData
 
 
 def parse_period_to_date(period: str, fiscal_year: int) -> datetime:
-    """Parse period string (Mon-YY format) to datetime.
+    """Parse period string (Mon-YY or Mon-YYYY format) to datetime.
 
-    Converts period strings like "Jan-25", "Dec-24" to datetime objects
+    Converts period strings like "Jan-25", "Dec-24", "Dec-2017" to datetime objects
     representing the first day of that month.
+
+    EBITDA Data Quality Fix (2026-01-30): Enhanced to support:
+    - Portuguese month abbreviations (Dez, Fev, Abr, Mai, Ago, Set, Out)
+    - 4-digit year format (Dec-2017 -> 2017-12-01)
 
     BUG FIX (P0): Extract year from period suffix to prevent duplicate dates.
     Previously ignored year suffix and used fiscal_year parameter, causing
     "Jan-24" and "Jan-25" to both map to same date when processing multi-year data.
 
     Args:
-        period: Period string in Mon-YY format (e.g., "Jan-25", "Dec-24")
+        period: Period string in Mon-YY or Mon-YYYY format (e.g., "Jan-25", "Dec-24", "Dec-2017")
         fiscal_year: Fiscal year as integer (DEPRECATED - now extracted from period suffix)
 
     Returns:
@@ -205,23 +209,34 @@ def parse_period_to_date(period: str, fiscal_year: int) -> datetime:
         datetime(2025, 1, 1)
         >>> parse_period_to_date("Dec-24", 2024)
         datetime(2024, 12, 1)
+        >>> parse_period_to_date("Dec-2017", 2017)
+        datetime(2017, 12, 1)
+        >>> parse_period_to_date("Dez-21", 2021)  # Portuguese
+        datetime(2021, 12, 1)
     """
     import re
 
     # BUG FIX: Parse period suffix to determine actual year
-    # "Jan-24" → year = 2024, "Jan-25" → year = 2025
-    match = re.match(r"^([A-Za-z]+)-(\d{2})$", period.strip())
+    # Support both 2-digit and 4-digit years: "Jan-24", "Jan-2024"
+    match = re.match(r"^([A-Za-z]+)-(\d{2,4})$", period.strip())
     if not match:
         raise ValueError(
-            f"Invalid period format: '{period}'. Expected Mon-YY format (e.g., Jan-25)"
+            f"Invalid period format: '{period}'. Expected Mon-YY or Mon-YYYY format (e.g., Jan-25, Dec-2017)"
         )
 
     month_abbrev = match.group(1).capitalize()
-    year_suffix = int(match.group(2))
-    year = 2000 + year_suffix  # 24 → 2024, 25 → 2025
+    year_str = match.group(2)
 
-    # Month name to integer mapping
+    # Handle both 2-digit and 4-digit years
+    if len(year_str) == 4:
+        year = int(year_str)
+    else:
+        year = 2000 + int(year_str)  # 24 → 2024, 25 → 2025
+
+    # Month name to integer mapping (English + Portuguese)
+    # EBITDA Data Quality Fix: Added Portuguese month abbreviations
     month_map = {
+        # English
         "Jan": 1,
         "Feb": 2,
         "Mar": 3,
@@ -234,12 +249,21 @@ def parse_period_to_date(period: str, fiscal_year: int) -> datetime:
         "Oct": 10,
         "Nov": 11,
         "Dec": 12,
+        # Portuguese abbreviations
+        "Fev": 2,  # Fevereiro
+        "Abr": 4,  # Abril
+        "Mai": 5,  # Maio
+        "Ago": 8,  # Agosto
+        "Set": 9,  # Setembro
+        "Out": 10,  # Outubro
+        "Dez": 12,  # Dezembro
+        # Note: Jan, Mar, Jun, Jul, Nov are same in Portuguese
     }
 
     if month_abbrev not in month_map:
         raise ValueError(
             f"Invalid month abbreviation: '{month_abbrev}'. "
-            f"Expected one of: {', '.join(month_map.keys())}"
+            f"Expected one of: {', '.join(sorted(set(month_map.keys())))}"
         )
 
     month = month_map[month_abbrev]
