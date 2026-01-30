@@ -9,22 +9,42 @@ def _get_period_match_clause(prefer_ytd: bool) -> tuple[str, str, str]:
     """Get period matching clause based on YTD preference.
 
     Args:
-        prefer_ytd: If True, extract YTD periods; if False, extract monthly periods
+        prefer_ytd: If True, extract YTD periods (with monthly fallback);
+                    if False, extract monthly periods only
 
     Returns:
         Tuple of (period_match_sql, period_extract_sql, is_ytd_flag)
+
+    Note:
+        When prefer_ytd=True, the query now accepts BOTH:
+        - "YTD Mon-YY" format (e.g., "YTD  Sep-25") - marked as is_ytd=TRUE
+        - "Mon-YY" format (e.g., "Dec-25") - marked as is_ytd=FALSE
+
+        This fallback allows extracting recent data that may not have a YTD prefix
+        (e.g., December 2025 data stored as "Dec-25" instead of "YTD  Dec-25").
+        Fix for: December 2025 Performance Review stores EBITDA in monthly format.
     """
     if prefer_ytd:
-        # YTD mode: Match "YTD  Mon-YY" format (e.g., "YTD  Jun-25")
+        # YTD mode with monthly fallback: Match EITHER "YTD Mon-YY" OR plain "Mon-YY"
+        # This allows extracting recent data that may not have YTD prefix
+        # Phase 3 Quality Fix (2026-01-29): Enhanced budget filtering
+        # Budget periods have patterns: "B Mon-YY", "YTD B Mon-YY", "YTD  B Mon-YY"
         period_match = """
-              AND period ~ '^YTD\\s+[A-Z][a-z]{2}-[0-9]{2}$'
+              AND (
+                  period ~ '^YTD\\s+[A-Z][a-z]{2}-[0-9]{2}$'
+                  OR period ~ '^[A-Z][a-z]{2}-[0-9]{2}$'
+              )
+              AND period !~ '^B\\s'
               AND period !~ '\\sB\\s'
               AND period !~ '\\sB$'"""
         period_extract = "(REGEXP_MATCH(period, '([A-Z][a-z]{2}-[0-9]{2})'))[1]"
-        is_ytd_flag = "TRUE"
+        # Dynamic: TRUE if starts with YTD, FALSE for monthly format
+        is_ytd_flag = "CASE WHEN period ~ '^YTD' THEN TRUE ELSE FALSE END"
     else:
-        # Standard mode: Match "Mon-YY" format
-        period_match = "AND period ~ '^[A-Z][a-z]{2}-[0-9]{2}$'"
+        # Standard mode: Match "Mon-YY" format only (excludes YTD and Budget)
+        # Phase 3 Quality Fix (2026-01-29): Budget periods starting with "B " are excluded
+        period_match = """AND period ~ '^[A-Z][a-z]{2}-[0-9]{2}$'
+              AND period !~ '^B\\s'"""
         period_extract = "period"
         is_ytd_flag = "FALSE"
     return period_match, period_extract, is_ytd_flag
@@ -75,6 +95,7 @@ def _build_periods_with_year_cte(
     metric_condition: str,
     period_match: str,
     entity_filter: str,
+    value_filter: str = "",
 ) -> str:
     """Build the periods_with_year CTE.
 
@@ -85,6 +106,7 @@ def _build_periods_with_year_cte(
         metric_condition: SQL WHERE clause for metric
         period_match: SQL WHERE clause for period matching
         entity_filter: SQL WHERE clause for entity filtering
+        value_filter: Optional SQL WHERE clause for value filtering (e.g., "AND value < 50")
 
     Returns:
         SQL CTE string
@@ -101,14 +123,11 @@ def _build_periods_with_year_cte(
                 -- Infer fiscal year from the Mon-YY suffix (e.g., "Jun-25" → 2025)
                 2000 + CAST(SUBSTRING(period FROM '[0-9]{{2}}$') AS INTEGER) as inferred_fiscal_year,
                 document_id,
-                -- FIX: Normalize values - if > 1000 assume kEUR, convert to EUR M
-                -- Reference: GROUP EBITDA ~120-170 EUR M annually, ~10-20 EUR M monthly
-                CASE
-                    WHEN value > 1000 THEN value / 1000.0
-                    ELSE value
-                END as value,
+                value,
                 entity,
                 metric,
+                -- Unit column for explicit unit-based normalization (Phase 2 data quality)
+                unit,
                 -- Entity priority for selection: prefer GROUP over SECIL Group
                 -- FIX (2025-12-22): Only when entity_filter configured, else constant 1
                 {entity_priority_expr} as entity_priority
@@ -118,6 +137,7 @@ def _build_periods_with_year_cte(
               {period_match}
               AND value IS NOT NULL
               {entity_filter}
+              {value_filter}
         )"""
 
 
@@ -126,6 +146,9 @@ def _build_entity_deduplication_ctes() -> str:
 
     Returns:
         SQL CTEs for best_entity_per_period and filtered_by_entity
+
+    Note:
+        filtered_by_entity preserves all columns from periods_with_year including unit.
     """
     return """best_entity_per_period AS (
             -- For each period, select the highest-priority entity (GROUP > SECIL Group)
@@ -138,6 +161,7 @@ def _build_entity_deduplication_ctes() -> str:
         ),
         filtered_by_entity AS (
             -- Keep only rows matching the best entity for each period
+            -- Preserves all columns including unit for downstream normalization
             SELECT p.*
             FROM periods_with_year p
             INNER JOIN best_entity_per_period be
@@ -173,6 +197,10 @@ def _build_final_select(agg_func: str, month_translation: str) -> str:
 
     Returns:
         SQL SELECT statement
+
+    Note:
+        Phase 2 data quality: Includes unit column for explicit unit-based normalization.
+        MODE() returns most common unit when multiple rows are aggregated.
     """
     return f"""SELECT
             ft.clean_period as period,
@@ -180,7 +208,8 @@ def _build_final_select(agg_func: str, month_translation: str) -> str:
             {agg_func}(ft.value) as total_value,
             COUNT(*) as row_count,
             MAX(ft.document_id) as source_doc,
-            BOOL_OR(ft.is_ytd) as is_ytd_data
+            BOOL_OR(ft.is_ytd) as is_ytd_data,
+            MODE() WITHIN GROUP (ORDER BY ft.unit) as unit
         FROM filtered_by_entity ft
         INNER JOIN latest_doc_per_period ld
             ON ft.clean_period = ld.clean_period
@@ -199,6 +228,7 @@ def build_timeseries_query(
     entity_filter: str,
     prefer_ytd: bool,
     aggregation: str,
+    value_filter: str = "",
 ) -> str:
     """Build SQL query for timeseries extraction.
 
@@ -207,6 +237,8 @@ def build_timeseries_query(
         entity_filter: SQL WHERE clause for entity filtering (e.g., "AND entity = 'GROUP'")
         prefer_ytd: If True, extract YTD periods; if False, extract monthly periods
         aggregation: Aggregation function ("sum", "max", "avg", "min", "count")
+        value_filter: Optional SQL WHERE clause for pre-aggregation value filtering
+                     (e.g., "AND value < 50" for EBITDA to exclude mislabeled annual data)
 
     Returns:
         SQL query string with placeholders for metric parameter
@@ -232,6 +264,8 @@ def build_timeseries_query(
         raise ValueError("Invalid metric condition")
     if not isinstance(entity_filter, str) or ";" in entity_filter:
         raise ValueError("Invalid entity filter")
+    if not isinstance(value_filter, str) or ";" in value_filter:
+        raise ValueError("Invalid value filter")
 
     # Get configuration for query components
     period_match, period_extract, is_ytd_flag = _get_period_match_clause(prefer_ytd)
@@ -246,6 +280,7 @@ def build_timeseries_query(
         metric_condition,
         period_match,
         entity_filter,
+        value_filter,
     )
     entity_ctes = _build_entity_deduplication_ctes()
     latest_doc_cte = _build_latest_doc_cte()

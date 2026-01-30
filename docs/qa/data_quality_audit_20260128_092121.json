@@ -1,0 +1,1130 @@
+{
+  "timestamp": "2026-01-28T09:21:21.526200",
+  "runtime_seconds": 10.57,
+  "summary": {
+    "variables_audited": 12,
+    "total_checks": 96,
+    "passed": 11,
+    "warned": 7,
+    "failed": 2,
+    "skipped": 76,
+    "pass_rate": 55.0,
+    "variables_passed": 3,
+    "variables_warned": 7,
+    "variables_failed": 2
+  },
+  "results": [
+    {
+      "variable": "ebitda",
+      "status": "FAIL",
+      "passed": 1,
+      "warned": 0,
+      "failed": 1,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "FAIL",
+          "message": "Leakage detected: fuzzy=626, exact=342 (1.8x)",
+          "variable": "ebitda",
+          "severity": 3,
+          "actual_value": 626,
+          "threshold": 342,
+          "sample_rows": [
+            {
+              "entity": "Angola Cement + Group Structure"
+            },
+            {
+              "entity": "Angola + Group Structure"
+            },
+            {
+              "entity": "EBITDA Angola + Group Structure"
+            },
+            {
+              "entity": "EBITDA Group Structure"
+            },
+            {
+              "entity": "EBITDA Lebanon + Group Structure"
+            }
+          ]
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "PASS",
+          "message": "Entity 'GROUP' has 117 periods (>= 6)",
+          "variable": "ebitda",
+          "severity": 1,
+          "actual_value": 117,
+          "threshold": 6,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "ebitda",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "ebitda",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "ebitda",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "ebitda",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "ebitda",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "ebitda",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "revenue",
+      "status": "PASS",
+      "passed": 0,
+      "warned": 0,
+      "failed": 0,
+      "skipped": 8,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "SKIP",
+          "message": "No entity filter configured",
+          "variable": "revenue",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "SKIP",
+          "message": "No entity filter required",
+          "variable": "revenue",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "revenue",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "revenue",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "revenue",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "revenue",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "revenue",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "revenue",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "variable_cost",
+      "status": "WARN",
+      "passed": 1,
+      "warned": 1,
+      "failed": 0,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "WARN",
+          "message": "Minor leakage: fuzzy=656, exact=555 (1.2x)",
+          "variable": "variable_cost",
+          "severity": 2,
+          "actual_value": 656,
+          "threshold": 555,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "PASS",
+          "message": "Entity 'portugal' has 93 periods (>= 6)",
+          "variable": "variable_cost",
+          "severity": 1,
+          "actual_value": 93,
+          "threshold": 6,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "variable_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "variable_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "variable_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "variable_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "variable_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "variable_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "sales_volume",
+      "status": "WARN",
+      "passed": 1,
+      "warned": 1,
+      "failed": 0,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "WARN",
+          "message": "Minor leakage: fuzzy=714, exact=588 (1.2x)",
+          "variable": "sales_volume",
+          "severity": 2,
+          "actual_value": 714,
+          "threshold": 588,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "PASS",
+          "message": "Entity 'portugal' has 73 periods (>= 6)",
+          "variable": "sales_volume",
+          "severity": 1,
+          "actual_value": 73,
+          "threshold": 6,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "sales_volume",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "sales_volume",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "sales_volume",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "sales_volume",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "sales_volume",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "sales_volume",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "electricity_cost",
+      "status": "WARN",
+      "passed": 1,
+      "warned": 1,
+      "failed": 0,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "WARN",
+          "message": "Minor leakage: fuzzy=212, exact=164 (1.3x)",
+          "variable": "electricity_cost",
+          "severity": 2,
+          "actual_value": 212,
+          "threshold": 164,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "PASS",
+          "message": "Entity 'portugal' has 47 periods (>= 6)",
+          "variable": "electricity_cost",
+          "severity": 1,
+          "actual_value": 47,
+          "threshold": 6,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "electricity_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "electricity_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "electricity_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "electricity_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "electricity_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "electricity_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "thermal_cost",
+      "status": "WARN",
+      "passed": 1,
+      "warned": 1,
+      "failed": 0,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "WARN",
+          "message": "Minor leakage: fuzzy=180, exact=132 (1.4x)",
+          "variable": "thermal_cost",
+          "severity": 2,
+          "actual_value": 180,
+          "threshold": 132,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "PASS",
+          "message": "Entity 'portugal' has 36 periods (>= 6)",
+          "variable": "thermal_cost",
+          "severity": 1,
+          "actual_value": 36,
+          "threshold": 6,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "thermal_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "thermal_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "thermal_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "thermal_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "thermal_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "thermal_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "avg_selling_price",
+      "status": "WARN",
+      "passed": 1,
+      "warned": 1,
+      "failed": 0,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "WARN",
+          "message": "Minor leakage: fuzzy=916, exact=772 (1.2x)",
+          "variable": "avg_selling_price",
+          "severity": 2,
+          "actual_value": 916,
+          "threshold": 772,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "PASS",
+          "message": "Entity 'portugal' has 67 periods (>= 6)",
+          "variable": "avg_selling_price",
+          "severity": 1,
+          "actual_value": 67,
+          "threshold": 6,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "avg_selling_price",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "avg_selling_price",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "avg_selling_price",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "avg_selling_price",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "avg_selling_price",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "avg_selling_price",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "capacity_utilization",
+      "status": "PASS",
+      "passed": 0,
+      "warned": 0,
+      "failed": 0,
+      "skipped": 8,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "SKIP",
+          "message": "No entity filter configured",
+          "variable": "capacity_utilization",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "SKIP",
+          "message": "No entity filter required",
+          "variable": "capacity_utilization",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capacity_utilization",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "Scale mismatch detection not configured",
+          "variable": "capacity_utilization",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capacity_utilization",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capacity_utilization",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capacity_utilization",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capacity_utilization",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "capex",
+      "status": "PASS",
+      "passed": 2,
+      "warned": 0,
+      "failed": 0,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "PASS",
+          "message": "Minimal contamination: fuzzy=206, exact=3133 (0.1x)",
+          "variable": "capex",
+          "severity": 1,
+          "actual_value": 3133,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "PASS",
+          "message": "Entity 'GROUP' has 58 periods (>= 6)",
+          "variable": "capex",
+          "severity": 1,
+          "actual_value": 58,
+          "threshold": 6,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capex",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capex",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capex",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capex",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capex",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capex",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "fixed_costs",
+      "status": "WARN",
+      "passed": 1,
+      "warned": 1,
+      "failed": 0,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "WARN",
+          "message": "Minor leakage: fuzzy=361, exact=265 (1.4x)",
+          "variable": "fixed_costs",
+          "severity": 2,
+          "actual_value": 361,
+          "threshold": 265,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "PASS",
+          "message": "Entity 'portugal' has 36 periods (>= 6)",
+          "variable": "fixed_costs",
+          "severity": 1,
+          "actual_value": 36,
+          "threshold": 6,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "fixed_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "fixed_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "fixed_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "fixed_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "fixed_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "fixed_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "headcount",
+      "status": "FAIL",
+      "passed": 1,
+      "warned": 0,
+      "failed": 1,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "FAIL",
+          "message": "Leakage detected: fuzzy=2714, exact=419 (6.5x)",
+          "variable": "headcount",
+          "severity": 5,
+          "actual_value": 2714,
+          "threshold": 419,
+          "sample_rows": [
+            {
+              "entity": "PORTUGAL*"
+            },
+            {
+              "entity": "Portugal Aggregates"
+            },
+            {
+              "entity": "Portugal Bags"
+            },
+            {
+              "entity": "Portugal Betotrans"
+            },
+            {
+              "entity": "Portugal Cape Verde"
+            }
+          ]
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "PASS",
+          "message": "Entity 'portugal' has 106 periods (>= 6)",
+          "variable": "headcount",
+          "severity": 1,
+          "actual_value": 106,
+          "threshold": 6,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "headcount",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "Scale mismatch detection not configured",
+          "variable": "headcount",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "headcount",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "headcount",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "headcount",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "headcount",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "other_costs",
+      "status": "WARN",
+      "passed": 1,
+      "warned": 1,
+      "failed": 0,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "WARN",
+          "message": "Minor leakage: fuzzy=183, exact=135 (1.4x)",
+          "variable": "other_costs",
+          "severity": 2,
+          "actual_value": 183,
+          "threshold": 135,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "PASS",
+          "message": "Entity 'portugal' has 38 periods (>= 6)",
+          "variable": "other_costs",
+          "severity": 1,
+          "actual_value": 38,
+          "threshold": 6,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "other_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "other_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "other_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "other_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "other_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "other_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    }
+  ]
+}

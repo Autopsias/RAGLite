@@ -112,11 +112,21 @@ class VariableValidationResult:
     best_model: str = ""
     best_model_mape: float = 0.0
 
+    # Phase 5 Model Transparency (2026-01-29): Track which model was selected for this variable
+    selected_model: str | None = None  # Which model was actually used for forecast
+    model_source: str = "unknown"  # "cached" | "default" | "cv" | "config_override"
+
     # Story 6.27: Multi-metric pass/fail fields
     primary_metric_used: str = "mape"  # Which metric determined pass/fail
     mase_only_pass: bool = False  # Did MASE-only pass apply?
     bias_alert: bool = False  # True if |bias| > 20% of mean
     bias_alert_message: str = ""  # Description of bias alert
+
+    # Phase 9: Sparse data and low confidence warnings
+    sparse_data_warning: bool = False  # True if historical data < 15 points
+    data_point_count: int | None = None  # Number of historical data points
+    low_confidence: bool = False  # True if MASE > 1.0 (worse than naive)
+    low_confidence_reason: str = ""  # Explanation for low confidence
 
 
 @dataclass
@@ -194,7 +204,28 @@ class VariableConfig:
     target_smape: float | None = None  # When primary_metric="smape"
     target_mase: float = 1.0  # Default: beat naive baseline
 
+    # Phase 5 Model Override (2026-01-29): Allow explicit model selection per variable
+    # If set, bypasses model selection cache and uses this model directly
+    preferred_model: str | None = None  # e.g., "prophet", "arima", "tft", "chronos"
+
+    # Phase 5 Regressor Scaling (2026-01-29): Apply RobustScaler to regressors
+    # Handles regime changes (2022 energy crisis) better than StandardScaler
+    # Use for variables with energy regressors that have extreme scale differences
+    scale_regressors: bool = False  # Apply RobustScaler before model training
+
     # Story 6.29 P2: Data quality exemption - exclude from aggregate MASE calculation
     # Use for metrics with known structural data issues (gaps, regime changes)
     data_quality_exempt: bool = False
     data_quality_reason: str | None = None  # Document why exempt
+
+    # Phase 4 Quality Fix (2026-01-29): Skip validation for deprecated variables
+    # Use for metrics with insufficient data (e.g., <10 points) or deprecated sources
+    skip_validation: bool = False
+    skip_reason: str | None = None  # Document why skipped
+
+    # Phase 7 Ensemble Grouping (2026-01-29): Ensemble strategy selection
+    # - "single_best": Use model selection to pick single best model (default)
+    # - "stratified": Two-stage stratified voting ensemble (group-based)
+    # - "flat_weighted": Traditional weighted ensemble (all models equal influence)
+    # Use "stratified" for variables with MASE > 1.0 that need methodological diversity
+    ensemble_strategy: str = "single_best"

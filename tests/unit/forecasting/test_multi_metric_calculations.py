@@ -28,7 +28,8 @@ class TestMAPEFromArrays:
         actuals = np.array([100, 200, 300, 400])
         predictions = np.array([110, 190, 320, 380])
 
-        mape = calculate_mape_from_arrays(actuals, predictions)
+        # Use min_points=2 for unit test (default is 6 for production reliability)
+        mape = calculate_mape_from_arrays(actuals, predictions, min_points=2)
 
         # Expected: (10/100 + 10/200 + 20/300 + 20/400) / 4 * 100
         # = (0.1 + 0.05 + 0.0667 + 0.05) / 4 * 100 = 6.67%
@@ -40,7 +41,8 @@ class TestMAPEFromArrays:
         actuals = np.array([100, 0, 200, 0])
         predictions = np.array([110, 10, 190, 20])
 
-        mape = calculate_mape_from_arrays(actuals, predictions)
+        # Use min_points=1 for edge case testing (only 2 non-zero points after filtering)
+        mape = calculate_mape_from_arrays(actuals, predictions, min_points=1)
 
         # Only non-zero actuals used: (10/100 + 10/200) / 2 * 100 = 7.5%
         assert mape is not None
@@ -290,7 +292,8 @@ class TestCalculateAllMetrics:
         predictions = np.array([110, 190, 320, 380])
         historical = np.array([50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160])
 
-        result = calculate_all_metrics(actuals, predictions, historical)
+        # Use min_points=1 for edge case testing (only 4 test points)
+        result = calculate_all_metrics(actuals, predictions, historical, min_points=1)
 
         assert result.__class__.__name__ == "MultiMetricResult"
         assert result.mape is not None
@@ -305,7 +308,8 @@ class TestCalculateAllMetrics:
         actuals = [100, 200, 300, 400]
         predictions = [110, 190, 320, 380]
 
-        result = calculate_all_metrics(actuals, predictions)
+        # Use min_points=1 for edge case testing (only 4 test points)
+        result = calculate_all_metrics(actuals, predictions, min_points=1)
 
         assert result.mape is not None
         assert result.mae is not None
@@ -329,7 +333,8 @@ class TestMetricInterpretation:
         actuals = np.array([100, 100, 100, 100])
         predictions = np.array([103, 98, 102, 97])  # ~3% error
 
-        result = calculate_all_metrics(actuals, predictions)
+        # Use min_points=1 for edge case testing (only 4 test points)
+        result = calculate_all_metrics(actuals, predictions, min_points=1)
 
         assert result.mape is not None
         assert result.mape < 5.0  # Excellent threshold
@@ -358,7 +363,8 @@ class TestEdgeCases:
         actuals = np.array([-100, -200, -150, -180])
         predictions = np.array([-95, -210, -140, -190])
 
-        result = calculate_all_metrics(actuals, predictions)
+        # Use min_points=1 for edge case testing (only 4 test points)
+        result = calculate_all_metrics(actuals, predictions, min_points=1)
 
         assert result.mae is not None
         assert result.rmse is not None
@@ -371,7 +377,8 @@ class TestEdgeCases:
         actuals = np.array([0.001, 0.002, 0.003, 0.004])
         predictions = np.array([0.0011, 0.0019, 0.0031, 0.0039])
 
-        result = calculate_all_metrics(actuals, predictions)
+        # Use min_points=1 for edge case testing (only 4 test points)
+        result = calculate_all_metrics(actuals, predictions, min_points=1)
 
         assert result.mape is not None
         assert result.mae is not None
@@ -381,7 +388,8 @@ class TestEdgeCases:
         actuals = np.array([1e9, 2e9, 3e9, 4e9])
         predictions = np.array([1.1e9, 1.9e9, 3.1e9, 3.9e9])
 
-        result = calculate_all_metrics(actuals, predictions)
+        # Use min_points=1 for edge case testing (only 4 test points)
+        result = calculate_all_metrics(actuals, predictions, min_points=1)
 
         assert result.mape is not None
         assert result.mae is not None
@@ -392,7 +400,8 @@ class TestEdgeCases:
         actuals = np.array([100])
         predictions = np.array([110])
 
-        result = calculate_all_metrics(actuals, predictions)
+        # Use min_points=1 for edge case testing (single point)
+        result = calculate_all_metrics(actuals, predictions, min_points=1)
 
         assert result.mape == 10.0
         assert result.mae == 10.0

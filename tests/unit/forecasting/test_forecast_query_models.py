@@ -67,13 +67,13 @@ class TestForecastQueryRequest:
             ForecastQueryRequest(metric="revenue", periods_ahead=0)
 
     def test_periods_validation_maximum(self):
-        """Test that periods_ahead must be <= 8."""
+        """Test that periods_ahead must be <= 18."""
         with pytest.raises(ValueError):
-            ForecastQueryRequest(metric="revenue", periods_ahead=9)
+            ForecastQueryRequest(metric="revenue", periods_ahead=19)
 
     def test_valid_periods_range(self):
-        """Test valid periods_ahead values within range."""
-        for periods in [1, 2, 4, 6, 8]:
+        """Test valid periods_ahead values within range (1-18)."""
+        for periods in [1, 2, 4, 6, 8, 10, 12, 13, 15, 18]:
             request = ForecastQueryRequest(metric="revenue", periods_ahead=periods)
             assert request.periods_ahead == periods
 
@@ -306,14 +306,14 @@ class TestParseForecastQuery:
         # This test is time-dependent, but we can verify it returns a value
         _, periods = parse_forecast_query("Predict revenue for Q1 2026")
         assert periods is not None
-        assert 1 <= periods <= 8
+        assert 1 <= periods <= 12
 
-    def test_periods_capped_at_8(self):
-        """Test that periods are capped at maximum 8."""
+    def test_periods_capped_at_18(self):
+        """Test that periods are capped at maximum 18."""
         from raglite.main import parse_forecast_query
 
         _, periods = parse_forecast_query("Forecast revenue for next 20 quarters")
-        assert periods == 8
+        assert periods == 18
 
     def test_no_metric_found(self):
         """Test when no metric can be extracted."""

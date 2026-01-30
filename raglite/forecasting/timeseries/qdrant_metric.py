@@ -293,12 +293,72 @@ def _apply_metric_specific_transformations(
     return points
 
 
+def _verify_qdrant_collection_exists(client, collection_name: str) -> bool:
+    """Verify collection exists before querying.
+
+    Phase 2 Fix (2026-01-29): Prevents "collection not found" errors when
+    APP_ENV=test automatically switches to financial_docs_test which may not exist.
+
+    Args:
+        client: Qdrant client instance
+        collection_name: Name of collection to verify
+
+    Returns:
+        True if collection exists, False otherwise
+    """
+    try:
+        client.get_collection(collection_name)
+        return True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "404" in error_str or "not found" in error_str or "doesn't exist" in error_str:
+            logger.warning(
+                f"Collection '{collection_name}' not found",
+                extra={"collection": collection_name},
+            )
+            return False
+        # Re-raise unexpected errors
+        raise
+
+
+def _get_valid_qdrant_collection(client, collection: str) -> str | None:
+    """Get a valid Qdrant collection, with fallback to production if test collection missing.
+
+    Phase 2 Fix (2026-01-29): Graceful fallback to production collection if test
+    collection doesn't exist.
+
+    Args:
+        client: Qdrant client instance
+        collection: Requested collection name
+
+    Returns:
+        Valid collection name or None if no collection available
+    """
+    if _verify_qdrant_collection_exists(client, collection):
+        return collection
+
+    # Fallback for test/CI collections
+    if collection.endswith("_test") or collection.endswith("_ci"):
+        fallback = "financial_docs"
+        if _verify_qdrant_collection_exists(client, fallback):
+            logger.info(
+                f"Using fallback collection '{fallback}' (test collection not found)",
+                extra={"original": collection, "fallback": fallback},
+            )
+            return fallback
+
+    logger.warning("No valid Qdrant collection available")
+    return None
+
+
 def _query_qdrant_for_metric(
     category: str | None,
     search_patterns: list[str],
     collection: str,
 ) -> list:
     """Query Qdrant using category filter or text search.
+
+    Phase 2 Fix (2026-01-29): Validates collection exists with fallback to production.
 
     Args:
         category: Metric category for filtering (optional)
@@ -313,6 +373,13 @@ def _query_qdrant_for_metric(
     from raglite.shared.clients import get_qdrant_client
 
     client = get_qdrant_client()
+
+    # Phase 2 Fix: Verify collection exists with fallback
+    valid_collection = _get_valid_qdrant_collection(client, collection)
+    if not valid_collection:
+        return []
+    collection = valid_collection
+
     results = []
 
     # Try category-based filter first (more precise)

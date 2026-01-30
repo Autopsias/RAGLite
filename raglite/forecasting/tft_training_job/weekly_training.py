@@ -136,6 +136,7 @@ async def run_weekly_tft_training() -> None:
             target_column="value",
             group_column="metric_name",
             time_column="time_idx",
+            time_varying_unknown_reals=[],  # No external regressors in DataFrame currently
         )
 
         # Train model

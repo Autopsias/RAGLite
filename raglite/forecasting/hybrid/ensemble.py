@@ -45,7 +45,21 @@ from raglite.shared.models import ForecastResult, TimeSeriesData
 # Module-level constants
 logger = get_logger(__name__)
 MIN_CV_DATA_POINTS = 12  # Minimum points for cross-validation
-POSITIVE_ONLY_METRICS = {"ebitda", "revenue", "capacity_utilization", "sales_volume"}
+# Phase 3 Quality Fix (2026-01-29): Added cost metrics to prevent negative forecasts
+# Variable Cost, Electricity Cost, Thermal Cost are always positive values
+POSITIVE_ONLY_METRICS = {
+    "ebitda",
+    "revenue",
+    "capacity_utilization",
+    "sales_volume",
+    # Cost metrics (Phase 3 fix)
+    "variable_cost",
+    "variable cost",
+    "electricity_cost",
+    "electrical energy",
+    "thermal_cost",
+    "thermal energy",
+}
 
 # Story 7b-6: Model selection cache integration
 try:
@@ -53,6 +67,20 @@ try:
 except ImportError:
     # Storage module may not be available in some test scenarios
     get_cached_model_selection = None  # type: ignore
+
+
+def _get_data_point_count(data: TimeSeriesData | pd.Series | None) -> int:
+    """Get data point count from TimeSeriesData or pandas Series.
+
+    Phase 5 fix (2026-01-29): Handle both TimeSeriesData (with .points) and pandas Series.
+    """
+    if data is None:
+        return 0
+    if hasattr(data, "points"):
+        return len(data.points)
+    if hasattr(data, "__len__"):
+        return len(data)
+    return 0
 
 
 async def generate_forecast(
@@ -111,6 +139,10 @@ async def generate_forecast(
     # Historical data should always be loaded at this point
     if historical_data is None:
         raise ValueError(f"Failed to load historical data for {metric}")
+
+    # Phase 5 fix (2026-01-29): Convert pandas Series to TimeSeriesData for type consistency
+    if isinstance(historical_data, pd.Series):
+        historical_data = TimeSeriesData.from_series(historical_data, metric_name=metric)
 
     # Cold-start check
     result = await handle_cold_start_scenario(
@@ -327,7 +359,7 @@ def get_baseline_rmse(metric: str) -> float | None:
 
 async def handle_cold_start_scenario(
     metric: str,
-    historical_data: TimeSeriesData,
+    historical_data: TimeSeriesData | pd.Series,
     periods_ahead: int,
     logger: Any,
     min_data_points: int,
@@ -336,7 +368,7 @@ async def handle_cold_start_scenario(
 
     Args:
         metric: Metric name
-        historical_data: Time-series data
+        historical_data: Time-series data (TimeSeriesData or pandas Series)
         periods_ahead: Number of periods to forecast
         logger: Logger instance
         min_data_points: Minimum required data points
@@ -344,7 +376,9 @@ async def handle_cold_start_scenario(
     Returns:
         ForecastResult if cold-start detected, None otherwise
     """
-    if len(historical_data.points) < min_data_points:
+    # Phase 5 fix (2026-01-29): Handle both TimeSeriesData and pandas Series
+    data_point_count = _get_data_point_count(historical_data)
+    if data_point_count < min_data_points:
         logger.info("Cold-start detected: routing to Chronos-2", extra={"metric": metric})
         return await generate_chronos_cold_start_forecast(
             metric=metric, historical_data=historical_data, periods_ahead=periods_ahead

@@ -74,7 +74,19 @@ async def _generate_tft_forecast(
     """
     import asyncio
 
-    from raglite.forecasting.models.tft_model import fit_and_forecast_tft
+    from raglite.forecasting.models.tft_model import (
+        _get_tft_model_with_timeout,
+        fit_and_forecast_tft_with_model,
+    )
+
+    # Load TFT model with async timeout to avoid blocking event loop
+    # This wraps sync DB access in an executor with timeout protection
+    model = await _get_tft_model_with_timeout(timeout=15.0)
+    if model is None:
+        raise ValueError(
+            f"TFT forecast failed for {metric}: no checkpoint available or loading timed out. "
+            "Run offline TFT training first."
+        )
 
     # Convert TimeSeriesData to pandas Series
     dates = pd.to_datetime([p.date for p in historical_data.points])
@@ -89,11 +101,13 @@ async def _generate_tft_forecast(
             aligned = series.reindex(dates).interpolate(method="linear").ffill().bfill()
             X_regressors[name] = aligned
 
-    # TFT is synchronous, run in executor to avoid blocking
+    # TFT inference is synchronous, run in executor to avoid blocking
+    # Model is already loaded, so this should be fast
     loop = asyncio.get_event_loop()
     result = await loop.run_in_executor(
         None,
-        lambda: fit_and_forecast_tft(
+        lambda: fit_and_forecast_tft_with_model(
+            model=model,
             y=values,
             periods_ahead=periods_ahead,
             external_regressors=X_regressors,

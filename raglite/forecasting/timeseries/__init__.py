@@ -12,6 +12,7 @@ from raglite.forecasting.timeseries.external import (
 from raglite.forecasting.timeseries.metadata import (
     CURRENCY_TO_EUR,
     EBITDA_ENTITY_PATTERNS,
+    EBITDA_ENTITY_PATTERNS_ALT,
     EBITDA_VALUE_THRESHOLDS,
     ENTITY_PATTERNS,
     METRIC_CATEGORY_MAP,
@@ -55,6 +56,7 @@ __all__ = [
     "parse_period_to_date",
     "detect_entity",
     "EBITDA_ENTITY_PATTERNS",
+    "EBITDA_ENTITY_PATTERNS_ALT",
     "EBITDA_VALUE_THRESHOLDS",
     "METRIC_CATEGORY_MAP",
     "METRIC_SEARCH_PATTERNS",

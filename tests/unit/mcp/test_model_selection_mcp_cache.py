@@ -307,7 +307,7 @@ class TestModelSelectionCacheIntegration:
         sample_historical_data,
         sample_forecast_result,
     ) -> None:
-        """Explicit model_type should bypass cache lookup."""
+        """Explicit model_type should bypass cache lookup and route to async."""
         with (
             patch(
                 "raglite.mcp.tools.forecast_helpers.get_cached_model_selection",
@@ -322,17 +322,15 @@ class TestModelSelectionCacheIntegration:
                 "extract_timeseries",
                 new_callable=AsyncMock,
             ) as mock_extract_timeseries,
-            patch.object(
-                forecast_helpers_module,
-                "generate_ensemble_forecast",
-                new_callable=AsyncMock,
-            ) as mock_ensemble,
+            patch(
+                "raglite.mcp.tools.forecast.get_financial_forecast_async",
+            ) as mock_async_tool,
         ):
             mock_extract.return_value = sample_historical_data
             mock_extract_timeseries.return_value = sample_historical_data
-            mock_ensemble.return_value = sample_forecast_result
+            mock_async_tool.fn = AsyncMock(return_value=sample_forecast_result)
 
-            # Explicitly request ensemble - should bypass cache
+            # Explicitly request ensemble - should bypass cache and route to async
             request = ForecastQueryRequest(
                 metric="revenue",
                 periods_ahead=4,
@@ -343,5 +341,5 @@ class TestModelSelectionCacheIntegration:
             # Cache should not be checked when model_type is explicit
             mock_cache.assert_not_called()
 
-            # Ensemble should be used as explicitly requested
-            mock_ensemble.assert_called_once()
+            # Should route to async path for ensemble
+            mock_async_tool.fn.assert_called_once_with(request)

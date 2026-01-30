@@ -2,6 +2,7 @@
 
 Story 6.21: Unified Validation Script
 Story 6.26: Multi-Metric Validation Enhancement
+EBITDA bug fix (2026-01-29): Added minimum data point validation for reliable metrics.
 
 Contains validation metrics:
 - MAPE: Mean Absolute Percentage Error (percentage deviation)
@@ -21,6 +22,9 @@ from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
 
+# EBITDA bug fix: Minimum data points required for meaningful MAPE calculation
+MIN_POINTS_FOR_RELIABLE_MAPE = 5
+
 
 # =============================================================================
 # Core Metric Calculation Functions
@@ -30,17 +34,22 @@ logger = get_logger(__name__)
 def calculate_mape_from_arrays(
     actuals: np.ndarray,
     predictions: np.ndarray,
+    min_points: int = MIN_POINTS_FOR_RELIABLE_MAPE,
 ) -> float | None:
     """Calculate MAPE from numpy arrays.
 
     MAPE = mean(|actual - predicted| / |actual|) * 100
 
+    EBITDA bug fix (2026-01-29): Added minimum data point validation and
+    warning for high MAPE values indicating unreliable forecasts.
+
     Args:
         actuals: Array of actual values
         predictions: Array of predicted values
+        min_points: Minimum points required for reliable MAPE (default: 5)
 
     Returns:
-        MAPE as percentage, or None if all actuals are zero
+        MAPE as percentage, or None if insufficient data points
     """
     if len(actuals) == 0 or len(predictions) == 0:
         return None
@@ -53,7 +62,32 @@ def calculate_mape_from_arrays(
     filtered_actuals = actuals[non_zero_mask]
     filtered_predictions = predictions[non_zero_mask]
 
+    # EBITDA bug fix: Validate minimum data points for reliable metric
+    if len(filtered_actuals) < min_points:
+        logger.warning(
+            "Insufficient data points for reliable MAPE calculation",
+            extra={
+                "n_points": len(filtered_actuals),
+                "min_required": min_points,
+                "original_points": len(actuals),
+                "zeros_filtered": len(actuals) - len(filtered_actuals),
+            },
+        )
+        return None
+
     mape = np.mean(np.abs((filtered_actuals - filtered_predictions) / filtered_actuals)) * 100
+
+    # EBITDA bug fix: Warn when MAPE > 100% (forecast is essentially random)
+    if mape > 100:
+        logger.warning(
+            "MAPE exceeds 100%% - forecast may be unreliable",
+            extra={
+                "mape": round(mape, 2),
+                "n_points": len(filtered_actuals),
+                "interpretation": "Average error exceeds actual values - consider data quality",
+            },
+        )
+
     return float(mape)
 
 
@@ -73,6 +107,10 @@ def calculate_mase(
     MASE < 1.0 means the model outperforms the naïve baseline.
     MASE > 1.0 means the naïve forecast would be better.
 
+    Phase 4 Quality Fix (2026-01-29): Added sparse data warning.
+    Research (Perplexity): MASE unreliable with <20-30 points; use with caution
+    for very sparse data like EBITDA (6-8 points).
+
     Reference: Hyndman & Koehler (2006) - "Another look at measures of forecast accuracy"
 
     Args:
@@ -86,6 +124,17 @@ def calculate_mase(
     """
     if len(actuals) == 0 or len(predictions) == 0:
         return None
+
+    # Phase 4: Warn for very sparse data where MASE may be unreliable
+    if len(historical_data) < 8:
+        logger.warning(
+            "Sparse historical data for MASE calculation - metric may be unreliable",
+            extra={
+                "n_historical_points": len(historical_data),
+                "min_recommended": 20,
+                "interpretation": "MASE < 1.0 is still meaningful but confidence is lower",
+            },
+        )
 
     if len(historical_data) <= seasonality:
         # Not enough historical data for seasonal naïve
@@ -371,6 +420,7 @@ def calculate_all_metrics(
     predictions: np.ndarray,
     historical_data: np.ndarray | None = None,
     seasonality: int = 12,
+    min_points: int = MIN_POINTS_FOR_RELIABLE_MAPE,
 ) -> MultiMetricResult:
     """Calculate all validation metrics at once.
 
@@ -383,6 +433,8 @@ def calculate_all_metrics(
         historical_data: Array of historical values for MASE calculation
                         (if None, uses actuals)
         seasonality: Seasonal period for MASE (default 12 for monthly)
+        min_points: Minimum points required for reliable MAPE (default: 5)
+                   Use min_points=1 for edge case testing
 
     Returns:
         MultiMetricResult with all metrics
@@ -397,7 +449,7 @@ def calculate_all_metrics(
         historical_data = np.asarray(historical_data, dtype=float)
 
     return MultiMetricResult(
-        mape=calculate_mape_from_arrays(actuals, predictions),
+        mape=calculate_mape_from_arrays(actuals, predictions, min_points=min_points),
         mase=calculate_mase(actuals, predictions, historical_data, seasonality),
         smape=calculate_smape(actuals, predictions),
         rmse=calculate_rmse(actuals, predictions),

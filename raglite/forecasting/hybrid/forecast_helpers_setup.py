@@ -139,12 +139,21 @@ async def handle_initial_setup(
     # Determine if multivariate
     is_multivariate = external_regressors is not None and len(external_regressors) > 0
 
-    # Log start
+    # Log start - handle both TimeSeriesData (with .points) and pandas Series
+    if historical_data is None:
+        data_points = 0
+    elif hasattr(historical_data, "points"):
+        data_points = len(historical_data.points)
+    elif hasattr(historical_data, "__len__"):
+        data_points = len(historical_data)
+    else:
+        data_points = 0
+
     logger.info(
         "Generating forecast",
         extra={
             "metric": metric,
-            "data_points": len(historical_data.points) if historical_data else 0,
+            "data_points": data_points,
             "periods": periods_ahead,
             "multivariate": is_multivariate,
             "selected_model": selected_model,

@@ -38,6 +38,8 @@ ENTITY_CANONICAL_MAP: dict[str, str] = {
     "Port.": "Portugal",
     "Portug.": "Portugal",
     "PORTUGAL": "Portugal",
+    # Note: Sub-regions like "Portugal Cape Verde", "Portugal Group Madeira" are kept separate
+    # User may request aggregation in the future, but for data quality, keeping them distinct
     # ===== BRAZIL VARIATIONS =====
     "BR": "Brazil",
     "Brasil": "Brazil",

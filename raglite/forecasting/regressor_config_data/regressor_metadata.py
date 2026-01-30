@@ -23,9 +23,16 @@ AVAILABLE_REGRESSORS: list[str] = [
     "diesel",  # EU Oil Bulletin diesel prices
     "eurostat_electricity",  # Eurostat industrial electricity prices
     "ren_electricity",  # REN Data Hub Portuguese spot electricity (Story 7.0)
-    # Economic indicators
+    # Economic indicators - Portugal (ECB)
     "gdp_growth",  # ECB GDP growth rate YoY (Story 6.17)
     "inflation",  # ECB HICP inflation index (Story 6.17)
+    # Economic indicators - Multi-geography (World Bank)
+    "gdp_portugal_wb",  # World Bank GDP growth - Portugal
+    "gdp_tunisia",  # World Bank GDP growth - Tunisia
+    "gdp_angola",  # World Bank GDP growth - Angola
+    "gdp_brazil",  # World Bank GDP growth - Brazil
+    "gdp_lebanon",  # World Bank GDP growth - Lebanon
+    "gdp_weighted_composite",  # Weighted GDP composite (all Secil geographies)
     # Demand-side regressors (construction activity) - Story 7b-7
     "construction_output",  # Eurostat construction production index (Story 6.16)
     "industrial_production",  # Eurostat industrial production index (Story 6.16)
@@ -116,5 +123,42 @@ REGRESSOR_METADATA: dict[str, dict[str, str]] = {
         "display_name": "Dwelling Completions (Portugal)",
         "source": "Eurostat",
         "unit": "Count (monthly)",
+    },
+    # Multi-geography GDP regressors (World Bank)
+    "gdp_portugal_wb": {
+        "display_name": "Portugal GDP Growth (World Bank)",
+        "source": "World Bank",
+        "unit": "%",
+        "description": "Annual GDP growth rate, interpolated to monthly",
+    },
+    "gdp_tunisia": {
+        "display_name": "Tunisia GDP Growth",
+        "source": "World Bank",
+        "unit": "%",
+        "description": "Annual GDP growth rate, interpolated to monthly",
+    },
+    "gdp_angola": {
+        "display_name": "Angola GDP Growth",
+        "source": "World Bank",
+        "unit": "%",
+        "description": "Annual GDP growth rate, interpolated to monthly",
+    },
+    "gdp_brazil": {
+        "display_name": "Brazil GDP Growth",
+        "source": "World Bank",
+        "unit": "%",
+        "description": "Annual GDP growth rate, interpolated to monthly",
+    },
+    "gdp_lebanon": {
+        "display_name": "Lebanon GDP Growth",
+        "source": "World Bank",
+        "unit": "%",
+        "description": "Annual GDP growth rate, interpolated to monthly",
+    },
+    "gdp_weighted_composite": {
+        "display_name": "Weighted GDP Composite (All Geographies)",
+        "source": "World Bank",
+        "unit": "%",
+        "description": "72% PT + 10% TN + 8% AO + 7% BR + 3% LB",
     },
 }

@@ -43,12 +43,19 @@ Set `prefer_accuracy=True` when the user indicates they want:
 - Returns clear error message if insufficient data
 """
 
+import asyncio
 from typing import Any
 
+from raglite.forecasting.forecast_job_tracker import (
+    create_forecast_job,
+    get_forecast_job_status,
+    start_background_forecast,
+)
 from raglite.main import mcp
 from raglite.mcp.tools.forecast_helpers import (
     build_enhanced_basis,
     build_response,
+    calculate_periods_for_target_year,
     check_model_selection_cache_for_forecast,
     extract_historical_data,
     fetch_external_regressors,
@@ -59,7 +66,12 @@ from raglite.mcp.tools.forecast_helpers import (
     parse_and_validate_metric,
 )
 from raglite.shared.logging import get_logger
-from raglite.shared.models import ForecastQueryRequest, ForecastQueryResponse
+from raglite.shared.models import (
+    AsyncForecastResponse,
+    ForecastJobStatus,
+    ForecastQueryRequest,
+    ForecastQueryResponse,
+)
 
 logger = get_logger(__name__)
 
@@ -206,10 +218,116 @@ def _build_forecast_response(
     )
 
 
+# Top-level timeout for forecast operations (prevents MCP client timeout)
+FORECAST_TIMEOUT_SECONDS = 90.0
+
+# Claude Desktop has ~30s MCP client timeout; use 25s safety margin
+MCP_CLIENT_TIMEOUT_SECONDS = 25.0
+
+
+def _should_use_async(request: ForecastQueryRequest) -> bool:
+    """Check if forecast should auto-route to async.
+
+    Ensemble/prefer_accuracy=True takes ~52s, exceeds 30s MCP timeout.
+    Prophet only takes ~21s, safe for sync.
+
+    Args:
+        request: Forecast query request
+
+    Returns:
+        True if forecast should use async path
+    """
+    if request.prefer_accuracy:
+        return True
+    if request.model_type and request.model_type.lower() == "ensemble":
+        return True
+    return False
+
+
+async def _execute_forecast_internal(
+    request: ForecastQueryRequest,
+    metric: str,
+    periods_ahead: int,
+) -> ForecastQueryResponse:
+    """Internal forecast execution logic (wrapped with timeout by caller).
+
+    Forecast debug fix (2026-01-28): Added support for target_year parameter.
+    When target_year is specified, periods_ahead is dynamically calculated
+    after historical data extraction.
+
+    Args:
+        request: Forecast query parameters
+        metric: Validated metric name
+        periods_ahead: Number of periods to forecast (may be recalculated if target_year set)
+
+    Returns:
+        ForecastQueryResponse with forecast results
+    """
+    historical_data = await extract_historical_data(metric, logger)
+    logger.info(
+        "Time-series extraction complete",
+        extra={"metric": metric, "data_points": len(historical_data.points)},
+    )
+
+    # Forecast debug fix: Recalculate periods_ahead if target_year was specified
+    if request.target_year is not None:
+        periods_ahead = calculate_periods_for_target_year(
+            request.target_year, historical_data, logger
+        )
+        logger.info(
+            "Periods ahead recalculated from target_year",
+            extra={
+                "target_year": request.target_year,
+                "final_periods_ahead": periods_ahead,
+            },
+        )
+
+    external_regressors, regressors_used = await _fetch_regressors_if_requested(
+        request, metric, historical_data, periods_ahead
+    )
+
+    requested_model_type = request.model_type or "auto"
+    (
+        forecast_result,
+        actual_model_type,
+        model_selection_reason,
+        model_desc,
+        regressors_used,
+    ) = await _generate_forecast_with_model_selection(
+        requested_model_type,
+        metric,
+        historical_data,
+        periods_ahead,
+        request,
+        external_regressors,
+        regressors_used,
+    )
+
+    logger.info(
+        "Forecast generated successfully",
+        extra={"metric": metric, "periods": periods_ahead, "model_type": actual_model_type},
+    )
+
+    response = _build_forecast_response(
+        forecast_result,
+        historical_data,
+        actual_model_type,
+        model_desc,
+        model_selection_reason,
+        metric,
+        regressors_used,
+    )
+
+    logger.info(
+        "Forecast query complete", extra={"metric": metric, "model_type": actual_model_type}
+    )
+    return response
+
+
 @mcp.tool()
 async def get_financial_forecast(
     request: ForecastQueryRequest,
-) -> ForecastQueryResponse:
+) -> ForecastQueryResponse | AsyncForecastResponse:
     """Query financial forecasts for key metrics using Prophet/Ensemble models.
 
     See module docstring for full documentation on supported metrics, model selection,
@@ -223,6 +341,7 @@ async def get_financial_forecast(
 
     Raises:
         QueryError: If metric not supported, no metric specified, or insufficient data
+        TimeoutError: If forecast generation exceeds timeout (90 seconds)
     """
     logger.info(
         "Forecast query received",
@@ -235,53 +354,34 @@ async def get_financial_forecast(
 
     metric, periods_ahead = parse_and_validate_metric(request, logger)
 
+    # Auto-route to async if forecast would exceed MCP timeout
+    if _should_use_async(request):
+        logger.info(
+            "Auto-routing to async (ensemble/prefer_accuracy detected)",
+            extra={"metric": metric, "prefer_accuracy": request.prefer_accuracy},
+        )
+        return await get_financial_forecast_async.fn(request)
+
     try:
-        historical_data = await extract_historical_data(metric, logger)
-        logger.info(
-            "Time-series extraction complete",
-            extra={"metric": metric, "data_points": len(historical_data.points)},
-        )
-
-        external_regressors, regressors_used = await _fetch_regressors_if_requested(
-            request, metric, historical_data, periods_ahead
-        )
-
-        requested_model_type = request.model_type or "auto"
-        (
-            forecast_result,
-            actual_model_type,
-            model_selection_reason,
-            model_desc,
-            regressors_used,
-        ) = await _generate_forecast_with_model_selection(
-            requested_model_type,
-            metric,
-            historical_data,
-            periods_ahead,
-            request,
-            external_regressors,
-            regressors_used,
-        )
-
-        logger.info(
-            "Forecast generated successfully",
-            extra={"metric": metric, "periods": periods_ahead, "model_type": actual_model_type},
-        )
-
-        response = _build_forecast_response(
-            forecast_result,
-            historical_data,
-            actual_model_type,
-            model_desc,
-            model_selection_reason,
-            metric,
-            regressors_used,
-        )
-
-        logger.info(
-            "Forecast query complete", extra={"metric": metric, "model_type": actual_model_type}
+        # Wrap forecast execution with timeout to prevent indefinite hangs
+        # This protects against slow DB connections, model loading issues, etc.
+        response = await asyncio.wait_for(
+            _execute_forecast_internal(request, metric, periods_ahead),
+            timeout=FORECAST_TIMEOUT_SECONDS,
         )
         return response
+
+    except TimeoutError:
+        logger.warning(
+            "Sync forecast timed out, retrying with async",
+            extra={
+                "metric": metric,
+                "periods_ahead": periods_ahead,
+                "timeout_seconds": FORECAST_TIMEOUT_SECONDS,
+            },
+        )
+        # Retry with async instead of returning error
+        return await get_financial_forecast_async.fn(request)
 
     except Exception as e:
         handle_forecast_error(e, metric, logger)
@@ -293,3 +393,134 @@ async def get_financial_forecast(
 extract_historical_data_by_type = extract_historical_data
 generate_forecast = generate_forecast_auto_select
 extract_timeseries = extract_historical_data
+
+
+# =============================================================================
+# ASYNC FORECAST TOOLS - MCP Timeout Resolution
+# =============================================================================
+# Claude Desktop has a 30-second hardcoded MCP client timeout, but forecasts
+# take ~50 seconds. These tools enable an async job pattern that returns
+# immediately with a job_id for status polling.
+# =============================================================================
+
+
+@mcp.tool()
+async def get_financial_forecast_async(
+    request: ForecastQueryRequest,
+) -> AsyncForecastResponse:
+    """Start async forecast generation (returns immediately, poll for results).
+
+    Use this tool when forecast timing is uncertain or when you want to avoid
+    MCP timeouts. The forecast runs in the background while you can continue
+    other work.
+
+    **When to use this vs get_financial_forecast:**
+    - Use `get_financial_forecast_async` when you want immediate response
+    - Use `get_financial_forecast_async` if forecasts have been timing out
+    - Use `get_financial_forecast` for faster total turnaround (if it works)
+
+    **Workflow:**
+    1. Call `get_financial_forecast_async(metric="ebitda", periods_ahead=4)`
+    2. Receive job_id immediately
+    3. Poll with `get_forecast_status(job_id)` until status="completed"
+    4. Retrieve full forecast from the status response
+
+    Args:
+        request: Forecast query parameters (same as get_financial_forecast)
+
+    Returns:
+        AsyncForecastResponse with job_id to poll for results
+    """
+    logger.info(
+        "Async forecast query received",
+        extra={
+            "metric": request.metric,
+            "periods_ahead": request.periods_ahead,
+            "query": request.query,
+        },
+    )
+
+    # Validate and parse the request
+    metric, periods_ahead = parse_and_validate_metric(request, logger)
+
+    # Create job and start background processing
+    job_id = create_forecast_job(request, metric, periods_ahead)
+    start_background_forecast(job_id, request, metric, periods_ahead)
+
+    message = (
+        f"Forecast started for {metric} ({periods_ahead} periods ahead). "
+        f"Use get_forecast_status('{job_id}') to check progress. "
+        f"Forecasts typically take 40-60 seconds to complete."
+    )
+
+    logger.info(
+        "Async forecast job initiated",
+        extra={
+            "job_id": job_id,
+            "metric": metric,
+            "periods_ahead": periods_ahead,
+        },
+    )
+
+    return AsyncForecastResponse(
+        job_id=job_id,
+        status="started",
+        message=message,
+        metric=metric,
+        periods_ahead=periods_ahead,
+    )
+
+
+@mcp.tool()
+async def get_forecast_status(job_id: str) -> ForecastJobStatus:
+    """Check status of an async forecast job.
+
+    Poll this endpoint to check if a forecast job has completed.
+    When status="completed", the result field contains the full forecast.
+
+    **Status values:**
+    - `pending`: Job created, not yet started
+    - `running`: Forecast generation in progress
+    - `completed`: Forecast ready in `result` field
+    - `failed`: Error occurred, see `error` field
+
+    **Example:**
+    ```
+    status = get_forecast_status("abc-123")
+    if status.status == "completed":
+        forecast = status.result  # Full ForecastQueryResponse
+    elif status.status == "failed":
+        print(f"Error: {status.error}")
+    else:
+        print(f"Progress: {status.progress}%")
+    ```
+
+    Args:
+        job_id: Job identifier from get_financial_forecast_async
+
+    Returns:
+        ForecastJobStatus with current status and results (if completed)
+
+    Raises:
+        ValueError: If job_id not found (may have expired or server restarted)
+    """
+    logger.info("Checking forecast job status", extra={"job_id": job_id})
+
+    job_status = get_forecast_job_status(job_id)
+
+    if job_status is None:
+        error_msg = f"Forecast job not found: {job_id}. Job may have expired or server restarted."
+        logger.warning("Forecast job status check failed - job not found", extra={"job_id": job_id})
+        raise ValueError(error_msg)
+
+    logger.info(
+        "Forecast job status retrieved",
+        extra={
+            "job_id": job_id,
+            "status": job_status.status,
+            "progress": job_status.progress,
+            "has_result": job_status.result is not None,
+        },
+    )
+
+    return job_status

@@ -234,15 +234,18 @@ class TestRefactoringIntegrity:
         # FastMCP stores tools in _tool_manager
         assert hasattr(mcp, "_tool_manager"), "mcp should have _tool_manager attribute"
 
-        # All 15 tools should be registered
+        # All 19 tools should be registered
         # Use async list_tools() to get tool count
         tools = asyncio.run(mcp._tool_manager.list_tools())
         tool_count = len(tools)
         expected_tools = {
             "analytical_query_financial_documents",
             "check_database_health",
+            "check_forecast_readiness",
             "get_financial_forecast",
+            "get_financial_forecast_async",
             "get_financial_insights",
+            "get_forecast_status",
             "get_ingestion_status",
             "get_regressor_data",
             "ingest_financial_document",
@@ -254,9 +257,10 @@ class TestRefactoringIntegrity:
             "refresh_external_data",
             "retrain_forecasting_models",
             "validate_forecasting_accuracy",
+            "warmup_forecasting_models",
         }
-        assert tool_count == 15, (
-            f"Expected 15 tools to be registered with mcp, "
+        assert tool_count == 19, (
+            f"Expected 19 tools to be registered with mcp, "
             f"but found {tool_count}: {sorted([t.name for t in tools])}"
         )
         actual_tool_names = {t.name for t in tools}

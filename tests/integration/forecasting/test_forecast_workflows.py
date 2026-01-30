@@ -7,6 +7,22 @@ File Organization (Story 8-4b):
 - test_sql_fallback.py: SQL-first with fallback tests (194 LOC)
 
 Split to maintain <500 LOC per file for AI comprehension.
+
+MCP Tool Invocation (EBITDA bug fix documentation):
+    When testing MCP tools programmatically (not via MCP protocol), you MUST use
+    the `.fn` property to invoke the underlying async function. The `@mcp.tool()`
+    decorator wraps functions in FunctionTool objects which are not directly callable.
+
+    Example:
+        # WRONG - raises "'FunctionTool' object is not callable"
+        result = await get_financial_forecast(request)
+
+        # CORRECT - access the underlying function via .fn
+        result = await get_financial_forecast.fn(request)
+
+    This pattern applies to ALL MCP tools decorated with @mcp.tool() when called
+    directly in Python code. When invoked via the MCP protocol (e.g., from Claude Desktop),
+    the protocol handles the invocation correctly.
 """
 
 from datetime import datetime

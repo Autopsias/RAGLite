@@ -4,9 +4,12 @@ Defines models for time series data, forecasts, and forecast validation.
 """
 
 from datetime import datetime
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 # Story 4.1: Time-series data extraction models for forecasting
@@ -24,6 +27,11 @@ class TimeSeriesPoint(BaseModel):
     date: datetime = Field(..., description="Datetime of the data point")
     value: float = Field(..., description="Numeric value for the metric")
     label: str | None = Field(default=None, description="Optional label like 'Q3 2024'")
+
+    @field_serializer("date")
+    def serialize_datetime(self, dt: datetime) -> str:
+        """Ensure datetime is serialized as ISO 8601 with time component."""
+        return dt.isoformat()
 
 
 class TimeSeriesData(BaseModel):
@@ -50,6 +58,54 @@ class TimeSeriesData(BaseModel):
         default_factory=list, description="Source document filenames"
     )
 
+    @classmethod
+    def from_series(cls, series: "pd.Series", metric_name: str = "unknown") -> "TimeSeriesData":
+        """Create TimeSeriesData from a pandas Series.
+
+        Phase 5 fix (2026-01-29): Allow conversion from pandas Series to TimeSeriesData
+        for type consistency in forecasting pipelines.
+
+        Args:
+            series: pandas Series with DatetimeIndex and numeric values
+            metric_name: Name of the metric
+
+        Returns:
+            TimeSeriesData object
+        """
+        import pandas as pd
+
+        points = []
+        for date, value in series.items():
+            # Handle both Timestamp and datetime
+            if isinstance(date, pd.Timestamp):
+                dt = date.to_pydatetime()
+            else:
+                dt = (
+                    datetime.combine(date, datetime.min.time())
+                    if not isinstance(date, datetime)
+                    else date
+                )
+            points.append(TimeSeriesPoint(date=dt, value=float(value)))
+
+        return cls(
+            metric_name=metric_name,
+            points=sorted(points, key=lambda p: p.date),
+            interval="monthly",  # Assume monthly for financial data
+            source_documents=[],
+        )
+
+    @property
+    def values(self) -> "pd.Series":
+        """Convert to pandas Series for compatibility with forecasting models.
+
+        Phase 5 fix (2026-01-29): Provide pandas Series interface for models expecting Series.
+        """
+        import pandas as pd
+
+        dates = [p.date for p in self.points]
+        values = [p.value for p in self.points]
+        return pd.Series(values, index=pd.DatetimeIndex(dates))
+
 
 # Story 4.2: Forecasting engine models for Prophet + LLM hybrid approach
 class ForecastPoint(BaseModel):
@@ -70,6 +126,15 @@ class ForecastPoint(BaseModel):
     lower: float = Field(..., description="Lower confidence interval (yhat_lower)")
     upper: float = Field(..., description="Upper confidence interval (yhat_upper)")
     label: str | None = Field(default=None, description="Optional label like 'Q1 2025'")
+
+    @field_serializer("date")
+    def serialize_datetime(self, dt: datetime) -> str:
+        """Ensure datetime is serialized as ISO 8601 with time component.
+
+        MCP schema validation requires 'date-time' format (e.g., '2026-02-01T00:00:00')
+        not just 'date' format (e.g., '2026-02-01').
+        """
+        return dt.isoformat()
 
 
 class ForecastResult(BaseModel):
@@ -194,12 +259,15 @@ class ForecastQueryRequest(BaseModel):
     Story 4.4 AC1: MCP tool parameters for forecast queries.
     Story 5.0.1 Enhancement: Supports SQL-based extraction for any metric in database.
     Story 6.4 Enhancement: Supports ensemble forecasting with multiple models.
+    Forecast debug fix (2026-01-28): Added target_year for year-based forecasting.
     Supports both structured parameters and natural language queries.
 
     Attributes:
         metric: Metric to forecast (e.g., revenue, turnover, ebitda, cash_flow, expenses, capex).
                 Accepts any financial metric name - will search database via SQL and documents via hybrid search.
-        periods_ahead: Number of quarters to forecast (1-8, default 4).
+        periods_ahead: Number of periods to forecast (1-18, default 4). Ignored if target_year is set.
+        target_year: Target year for forecast (e.g., 2026). Dynamically calculates periods_ahead
+                     based on last historical data point to cover full year.
         query: Optional natural language query (e.g., "turnover forecast next quarter").
         model_type: Forecasting model type: 'prophet' (default), 'ensemble', or 'prophet_multivariate'.
     """
@@ -211,8 +279,17 @@ class ForecastQueryRequest(BaseModel):
     periods_ahead: int = Field(
         default=4,
         ge=1,
-        le=8,
-        description="Number of quarters to forecast (1-8)",
+        le=18,
+        description="Number of periods to forecast (1-18). Ignored if target_year is set.",
+    )
+    # Forecast debug fix (2026-01-28): Add target_year for year-based forecasting
+    target_year: int | None = Field(
+        default=None,
+        description=(
+            "Target year for forecast (e.g., 2026). When set, periods_ahead is dynamically calculated "
+            "to cover from last historical data point through December of target year. "
+            "Takes precedence over periods_ahead when set."
+        ),
     )
     query: str | None = Field(
         default=None,
@@ -254,6 +331,7 @@ class ForecastQueryResponse(BaseModel):
     """Response for financial forecast query via MCP.
 
     Story 4.4 AC2/AC3: Forecast results with confidence intervals and explanations.
+    Forecast debug fix (2026-01-28): Added forecast date range fields for clarity.
 
     Attributes:
         metric_name: Name of forecasted metric.
@@ -264,6 +342,9 @@ class ForecastQueryResponse(BaseModel):
         accuracy_estimate: Expected forecast accuracy (±15% per NFR10).
         source_documents: Documents used for time-series data extraction.
         periods_ahead: Number of periods forecasted.
+        forecast_start_date: First forecasted period (ISO date string).
+        forecast_end_date: Last forecasted period (ISO date string).
+        last_historical_date: Last actual data point date (ISO date string).
     """
 
     metric_name: str = Field(..., description="Name of forecasted metric")
@@ -292,6 +373,19 @@ class ForecastQueryResponse(BaseModel):
         description="Documents used for time-series data extraction",
     )
     periods_ahead: int = Field(..., description="Number of periods forecasted")
+    # Forecast debug fix (2026-01-28): Add forecast date range fields for user clarity
+    forecast_start_date: str | None = Field(
+        default=None,
+        description="First forecasted period date (ISO 8601 format, e.g., '2025-12-01')",
+    )
+    forecast_end_date: str | None = Field(
+        default=None,
+        description="Last forecasted period date (ISO 8601 format, e.g., '2026-11-01')",
+    )
+    last_historical_date: str | None = Field(
+        default=None,
+        description="Last actual data point date before forecast (ISO 8601 format)",
+    )
     # Story 6.11.1: Multi-variate forecasting response fields
     regressors_used: list[str] | None = Field(
         default=None,
@@ -361,3 +455,55 @@ class ForecastQueryResponse(BaseModel):
             # Story 6.25: Include accuracy metrics from Prophet cross-validation
             accuracy_metrics=result.accuracy_metrics if result.accuracy_metrics else None,
         )
+
+
+# MCP Timeout Resolution: Async Forecast Pattern
+# Claude Desktop has a 30-second hardcoded MCP client timeout, but forecasts take ~50s.
+# These models enable an async job pattern that returns immediately with a job_id.
+
+
+class AsyncForecastResponse(BaseModel):
+    """Response from async forecast initiation.
+
+    MCP Timeout Resolution: Returns immediately with job_id so the MCP client
+    doesn't timeout while waiting for the ~50s forecast execution.
+    """
+
+    job_id: str = Field(..., description="Unique job identifier for status polling")
+    status: str = Field(default="started", description="Initial job status ('started')")
+    message: str = Field(
+        ...,
+        description="User-friendly message explaining how to check forecast status",
+    )
+    metric: str = Field(..., description="Metric being forecasted")
+    periods_ahead: int = Field(..., description="Number of periods requested")
+
+
+class ForecastJobStatus(BaseModel):
+    """Status response for async forecast job polling.
+
+    MCP Timeout Resolution: Allows polling for forecast job status and retrieving
+    results when complete.
+    """
+
+    job_id: str = Field(..., description="Unique job identifier")
+    status: str = Field(
+        ...,
+        description="Job status: 'pending', 'running', 'completed', or 'failed'",
+    )
+    progress: int | None = Field(
+        default=None, description="Progress percentage (0-100) if available"
+    )
+    result: ForecastQueryResponse | None = Field(
+        default=None, description="Forecast result (only when status='completed')"
+    )
+    error: str | None = Field(default=None, description="Error message (only when status='failed')")
+    started_at: str | None = Field(
+        default=None, description="Job start timestamp (ISO 8601 format)"
+    )
+    completed_at: str | None = Field(
+        default=None,
+        description="Job completion timestamp (ISO 8601 format, only when done)",
+    )
+    metric: str | None = Field(default=None, description="Metric being forecasted")
+    periods_ahead: int | None = Field(default=None, description="Number of periods requested")

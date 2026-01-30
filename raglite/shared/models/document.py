@@ -145,6 +145,7 @@ class IngestionResult(BaseModel):
         chunk_count: Number of chunks created from document
         forecasts_updated: List of metrics refreshed after ingestion (None if disabled)
         forecast_refresh_skipped_reason: Reason why forecast refresh was skipped (if applicable)
+        models_retrained: List of models retrained after ingestion (if retrain_models=True)
     """
 
     # DocumentMetadata fields
@@ -164,6 +165,11 @@ class IngestionResult(BaseModel):
         default=None,
         description="Reason why forecast refresh was skipped (e.g., 'disabled', 'timeout')",
     )
+    # Model retraining field (Issue 5 fix)
+    models_retrained: list[str] | None = Field(
+        default=None,
+        description="List of models retrained after ingestion (if retrain_models=True)",
+    )
 
     @classmethod
     def from_metadata(
@@ -171,6 +177,7 @@ class IngestionResult(BaseModel):
         metadata: "DocumentMetadata",
         forecasts_updated: list[str] | None = None,
         forecast_refresh_skipped_reason: str | None = None,
+        models_retrained: list[str] | None = None,
     ) -> "IngestionResult":
         """Create IngestionResult from DocumentMetadata with forecast fields.
 
@@ -178,6 +185,7 @@ class IngestionResult(BaseModel):
             metadata: Document metadata from ingestion
             forecasts_updated: List of refreshed metrics
             forecast_refresh_skipped_reason: Reason if refresh was skipped
+            models_retrained: List of models retrained after ingestion
 
         Returns:
             IngestionResult with all fields populated
@@ -191,6 +199,7 @@ class IngestionResult(BaseModel):
             chunk_count=metadata.chunk_count,
             forecasts_updated=forecasts_updated,
             forecast_refresh_skipped_reason=forecast_refresh_skipped_reason,
+            models_retrained=models_retrained,
         )
 
 

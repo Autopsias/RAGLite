@@ -43,6 +43,8 @@ class ValueRangeConfig:
         expected_sign: Expected sign constraint
         unit: Expected unit for display
         detect_scale_mismatch: Check for 1000x scale issues
+        scale_reference_median: Expected median for scale check
+        outlier_mad_threshold: MAD threshold for outlier detection (default 3.5)
     """
 
     min_value: float | None = None
@@ -51,6 +53,7 @@ class ValueRangeConfig:
     unit: str = ""
     detect_scale_mismatch: bool = False
     scale_reference_median: float | None = None  # Expected median for scale check
+    outlier_mad_threshold: float = 3.5  # MAD threshold for outlier detection
 
 
 @dataclass

@@ -7,6 +7,7 @@ Part of Story 8.1 refactoring to split sql_extraction.py.
 from raglite.forecasting.timeseries.metadata import (
     ExtractionError,
     MetricValidationError,
+    UnitMixingError,
 )
 from raglite.forecasting.timeseries.qdrant_ebitda import (
     extract_ebitda_from_qdrant_chunks,
@@ -19,6 +20,7 @@ from raglite.forecasting.timeseries.qdrant_variable_cost import (
 )
 from raglite.forecasting.timeseries.sql_extraction_normalization import (
     normalize_timeseries_data,
+    normalize_timeseries_with_units,
 )
 from raglite.forecasting.timeseries.sql_extraction_validation import (
     validate_ebitda_scale,
@@ -28,6 +30,108 @@ from raglite.shared.logging import get_logger
 from raglite.shared.models import TimeSeriesData, TimeSeriesPoint
 
 logger = get_logger(__name__)
+
+# Threshold for detecting unit mixing (kEUR vs EUR M)
+UNIT_MIXING_SWING_THRESHOLD = 10.0
+
+# Threshold for REJECTING data due to extreme unit mixing
+# Beyond this threshold, data quality is too poor for reliable forecasting
+# Phase 3 Quality Fix (2026-01-29): Increased from 30x to 50x
+# EBITDA monthly data has legitimate high variance (slow vs strong months)
+# The previous threshold was causing false rejections after relaxing the 50M cap
+UNIT_MIXING_REJECTION_THRESHOLD = 50.0
+
+# EBITDA-specific threshold - higher due to legitimate business volatility
+# EBITDA can swing significantly month-to-month for cyclical businesses
+EBITDA_SWING_THRESHOLD = 100.0
+
+
+def validate_unit_consistency(
+    points: list[TimeSeriesPoint], metric: str, reject_on_severe: bool = True
+) -> list[str]:
+    """Detect unit mixing that indicates data quality issues.
+
+    When data comes from different sources or documents, values may be in
+    different units (e.g., kEUR vs EUR millions). This function detects
+    when the max/min ratio exceeds a threshold, indicating potential unit mixing.
+
+    Phase 5 enhancement: Rejects data with swing >20x instead of just warning.
+    This prevents forecasting with data that has extreme unit mixing.
+
+    Phase 3 Quality Fix (2026-01-29): EBITDA uses a higher threshold (100x)
+    due to legitimate business volatility in cyclical industries.
+
+    Args:
+        points: List of TimeSeriesPoint objects
+        metric: Metric name for logging context
+        reject_on_severe: If True, raise UnitMixingError when swing exceeds threshold
+
+    Returns:
+        List of warning messages (empty if no issues detected)
+
+    Raises:
+        UnitMixingError: When swing exceeds rejection threshold
+            and reject_on_severe is True
+    """
+    issues: list[str] = []
+    if len(points) < 2:
+        return issues
+
+    values = [p.value for p in points if p.value is not None and p.value != 0]
+    if len(values) < 2:
+        return issues
+
+    # Check positive values only (negative values have different semantics)
+    positive_values = [v for v in values if v > 0]
+    if len(positive_values) < 2:
+        return issues
+
+    max_val = max(positive_values)
+    min_val = min(positive_values)
+
+    swing_ratio = max_val / min_val
+
+    # Phase 3 Quality Fix (2026-01-29): Use EBITDA-specific threshold
+    # EBITDA has legitimate high volatility in cyclical industries
+    from raglite.forecasting.timeseries.sql_extraction_config import get_ebitda_metrics
+
+    is_ebitda = metric.lower() in get_ebitda_metrics()
+    rejection_threshold = EBITDA_SWING_THRESHOLD if is_ebitda else UNIT_MIXING_REJECTION_THRESHOLD
+
+    # REJECT data with swing exceeding threshold
+    if reject_on_severe and swing_ratio > rejection_threshold:
+        logger.error(
+            "Unit mixing too severe - rejecting data for forecasting",
+            extra={
+                "metric": metric,
+                "max_value": max_val,
+                "min_value": min_val,
+                "swing_ratio": swing_ratio,
+                "rejection_threshold": rejection_threshold,
+                "is_ebitda": is_ebitda,
+            },
+        )
+        raise UnitMixingError(metric, swing_ratio, max_val, min_val)
+
+    # Warn for moderate unit mixing (10x-20x)
+    if swing_ratio > UNIT_MIXING_SWING_THRESHOLD:
+        issues.append(
+            f"Unit mixing suspected for '{metric}': max={max_val:.1f}, min={min_val:.1f}, "
+            f"swing={swing_ratio:.1f}x (threshold={UNIT_MIXING_SWING_THRESHOLD}x). "
+            "Check for kEUR vs EUR M mixing in source documents."
+        )
+        logger.warning(
+            "Potential unit mixing detected in time series data",
+            extra={
+                "metric": metric,
+                "max_value": max_val,
+                "min_value": min_val,
+                "swing_ratio": swing_ratio,
+                "threshold": UNIT_MIXING_SWING_THRESHOLD,
+            },
+        )
+
+    return issues
 
 
 async def suggest_available_metrics(metric: str, min_points: int) -> None:
@@ -157,6 +261,7 @@ def finalize_timeseries(
     metric: str,
     is_ytd_data: bool,
     source_documents: set[str],
+    units: list[str | None] | None = None,
 ) -> TimeSeriesData:
     """Sort, normalize, validate and create final TimeSeriesData.
 
@@ -165,13 +270,27 @@ def finalize_timeseries(
         metric: Metric name
         is_ytd_data: Whether data is YTD format
         source_documents: Set of source document names
+        units: Optional list of unit strings (parallel to points)
 
     Returns:
         TimeSeriesData with validated data
+
+    Note:
+        Phase 2 data quality: If units provided, applies explicit unit-based
+        normalization before value-based heuristics.
     """
     # Sort by date and normalize
     points.sort(key=lambda p: p.date)
-    points = normalize_timeseries_data(points, metric, is_ytd_data)
+
+    # Phase 2 data quality: Use unit-aware normalization if units provided
+    if units is not None and len(units) == len(points):
+        # Sort units to match sorted points (by date)
+        point_unit_pairs = sorted(zip(points, units, strict=False), key=lambda x: x[0].date)
+        points = [p for p, _ in point_unit_pairs]
+        units = [u for _, u in point_unit_pairs]
+        points = normalize_timeseries_with_units(points, units, metric, is_ytd_data)
+    else:
+        points = normalize_timeseries_data(points, metric, is_ytd_data)
 
     # Log success
     min_date = points[0].date.strftime("%Y-%m-%d")
@@ -189,6 +308,12 @@ def finalize_timeseries(
     # Validate data quality
     validate_scale_with_config(points, metric)
     validate_ebitda_scale(points, metric)
+
+    # Check for unit consistency issues (warns but doesn't fail)
+    unit_issues = validate_unit_consistency(points, metric)
+    if unit_issues:
+        for issue in unit_issues:
+            logger.warning(issue)
 
     return TimeSeriesData(
         metric_name=metric,

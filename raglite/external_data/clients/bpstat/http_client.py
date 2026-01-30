@@ -66,6 +66,11 @@ class BPstatHTTPClient:
             "series_ids": ",".join(series_ids),
             "lang": "EN",
         }
+        # Add date range parameters if provided
+        if start_date:
+            params["startDate"] = start_date.strftime("%Y-%m-%d")
+        if end_date:
+            params["endDate"] = end_date.strftime("%Y-%m-%d")
 
         headers = {"Accept": "application/json"}
         if self.api_key:

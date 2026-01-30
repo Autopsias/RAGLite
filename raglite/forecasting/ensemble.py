@@ -221,6 +221,7 @@ async def generate_ensemble_forecast(
     models: list[str] | None = None,
     weights: dict[str, float] | None = None,
     fast_mode: bool = False,
+    use_stratified: bool = False,
 ) -> ForecastResult:
     """Generate ensemble forecast using multiple models.
 
@@ -230,6 +231,7 @@ async def generate_ensemble_forecast(
     Story 6.13: Added Chronos-2 to ensemble.
     Story 6.14: Added TFT to ensemble.
     Story 8: Refactored from 452 to ~100 lines using ensemble_helpers.py.
+    Phase 8: Added stratified ensemble support for problem variables.
 
     Args:
         metric: Metric name (e.g., "cement_demand")
@@ -239,6 +241,10 @@ async def generate_ensemble_forecast(
         models: Models to use (default: ["prophet", "linear", "xgboost", "lightgbm", "catboost", "chronos", "tft"])
         weights: Model weights (default from settings)
         fast_mode: Use fast hyperparameter grid for XGBoost/LightGBM/CatBoost (default: False)
+        use_stratified: Use two-stage stratified voting ensemble (default: False)
+            When True, predictions are first averaged within model groups, then
+            group averages are combined using group weights. This prevents any
+            single model from dominating and ensures methodological diversity.
 
     Returns:
         ForecastResult with ensemble predictions and per-model details
@@ -291,8 +297,19 @@ async def generate_ensemble_forecast(
             metric, historical_data, external_regressors, periods_ahead, logger
         )
 
-    # Step 7: Calculate weighted ensemble
-    ensemble_values = calculate_ensemble_forecast(successful_models, predictions, weights)
+    # Step 7: Calculate weighted ensemble (stratified or flat)
+    if use_stratified:
+        from raglite.forecasting.ensemble_helpers_results import (
+            calculate_stratified_ensemble_forecast,
+        )
+
+        ensemble_values = calculate_stratified_ensemble_forecast(predictions)
+        logger.info(
+            "Using stratified ensemble for problem variable",
+            extra={"metric": metric, "models": successful_models},
+        )
+    else:
+        ensemble_values = calculate_ensemble_forecast(successful_models, predictions, weights)
 
     # Step 8: Build forecast points
     forecast_points = build_forecast_points(ensemble_values, prophet_result, df, periods_ahead)

@@ -297,7 +297,7 @@ class TestModelSelectionCacheIntegration:
         sample_historical_data: TimeSeriesData,
         sample_forecast_result: ForecastResult,
     ) -> None:
-        """Explicit model_type should bypass cache lookup."""
+        """Explicit model_type should bypass cache lookup and route to async."""
         from raglite.main import get_financial_forecast
         from raglite.mcp.tools import forecast as forecast_module
 
@@ -312,11 +312,9 @@ class TestModelSelectionCacheIntegration:
                 "extract_historical_data_by_type",
                 new_callable=AsyncMock,
             ) as mock_extract,
-            patch.object(
-                forecast_helpers_module,
-                "generate_ensemble_forecast",
-                new_callable=AsyncMock,
-            ) as mock_ensemble,
+            patch(
+                "raglite.mcp.tools.forecast.get_financial_forecast_async",
+            ) as mock_async_tool,
             patch.object(
                 regressor_fetch_module,
                 "fetch_regressors_for_metric",
@@ -325,9 +323,9 @@ class TestModelSelectionCacheIntegration:
             ),
         ):
             mock_extract.return_value = sample_historical_data
-            mock_ensemble.return_value = sample_forecast_result
+            mock_async_tool.fn = AsyncMock(return_value=sample_forecast_result)
 
-            # Explicitly request ensemble - should bypass cache
+            # Explicitly request ensemble - should bypass cache and route to async
             request = ForecastQueryRequest(
                 metric="revenue",
                 periods_ahead=4,
@@ -338,5 +336,5 @@ class TestModelSelectionCacheIntegration:
             # Cache should not be checked when model_type is explicit
             mock_cache_check.assert_not_called()
 
-            # Ensemble should be used as explicitly requested
-            mock_ensemble.assert_called_once()
+            # Should route to async path for ensemble
+            mock_async_tool.fn.assert_called_once_with(request)

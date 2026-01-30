@@ -2,13 +2,14 @@
 
 Story 8: Refactoring to reduce get_financial_forecast from 456 to ~150 lines.
 Epic 8: Split into modules to comply with <500 LOC limit.
+Forecast debug fix (2026-01-28): Added target_year support for year-based forecasting.
 
 These helpers extract cohesive logic blocks while preserving the original algorithm.
 """
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from logging import Logger
 from typing import TYPE_CHECKING
 
@@ -49,6 +50,10 @@ def parse_and_validate_metric(
 ) -> tuple[str, int]:
     """Parse natural language query and validate metric.
 
+    Forecast debug fix (2026-01-28): Added support for target_year parameter.
+    When target_year is set, periods_ahead is calculated dynamically based on
+    last historical data point to cover the full target year.
+
     Args:
         request: Forecast query request
         logger: Logger instance
@@ -88,7 +93,73 @@ def parse_and_validate_metric(
     # Normalize aliases (e.g., "Turnover+VAT" -> "revenue")
     metric = resolve_variable_alias(metric)
 
+    # Forecast debug fix: Handle target_year - periods_ahead will be recalculated
+    # after historical data extraction when we know the last data point
+    if request.target_year is not None:
+        logger.info(
+            "Target year specified - periods_ahead will be calculated dynamically",
+            extra={
+                "target_year": request.target_year,
+                "initial_periods_ahead": periods_ahead,
+            },
+        )
+        # Return a placeholder value; actual calculation happens after data extraction
+        # Use 12 as a reasonable default for year-based forecasts
+        periods_ahead = 12
+
     return metric, periods_ahead
+
+
+def calculate_periods_for_target_year(
+    target_year: int,
+    historical_data: TimeSeriesData,
+    logger: Logger,
+) -> int:
+    """Calculate periods_ahead to reach December of target year.
+
+    Forecast debug fix (2026-01-28): Dynamically calculates the number of periods
+    needed to forecast through the end of the specified target year.
+
+    Args:
+        target_year: Target year (e.g., 2026)
+        historical_data: Historical time-series data with last data point
+        logger: Logger instance
+
+    Returns:
+        Number of periods to forecast to reach December of target_year
+
+    Example:
+        If last data point is Nov-2025 and target_year=2026:
+        - Dec-2025, Jan-2026, Feb-2026, ... Dec-2026 = 13 periods
+    """
+    if not historical_data.points:
+        logger.warning("No historical data points, using default 12 periods")
+        return 12
+
+    # Find last historical data point
+    last_point = max(historical_data.points, key=lambda p: p.date)
+    last_date = last_point.date
+
+    # Target is December of the target year
+    target_date = datetime(target_year, 12, 1)
+
+    # Calculate months between last date and target
+    months_diff = (target_date.year - last_date.year) * 12 + (target_date.month - last_date.month)
+
+    # Clamp to valid range (1-18)
+    periods_ahead = max(1, min(18, months_diff))
+
+    logger.info(
+        "Calculated periods_ahead from target_year",
+        extra={
+            "target_year": target_year,
+            "last_historical_date": last_date.strftime("%Y-%m-%d"),
+            "target_date": target_date.strftime("%Y-%m-%d"),
+            "calculated_periods": periods_ahead,
+        },
+    )
+
+    return periods_ahead
 
 
 async def extract_historical_data(

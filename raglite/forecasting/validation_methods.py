@@ -34,21 +34,47 @@ logger = get_logger(__name__)
 def calculate_holdout_mape(
     historical_points: list[TimeSeriesPoint],
     forecast_points: list[ForecastPoint],
-    holdout_size: int = 4,
+    holdout_size: int | None = None,
 ) -> float | None:
     """Calculate MAPE using holdout validation.
 
     Uses the last N historical points as test set and compares
     with the first N forecast points.
 
+    Phase 4 Quality Fix (2026-01-29): Adaptive holdout sizing for sparse data.
+    Research (Perplexity): Recommends 12-25% holdout for sparse data, not 50%+.
+    EBITDA with 6-8 points using 4-point holdout leaves only 2-4 training points.
+
     Args:
         historical_points: List of TimeSeriesPoint objects
         forecast_points: List of ForecastPoint objects
-        holdout_size: Number of points to use for validation
+        holdout_size: Number of points for validation. If None, uses adaptive sizing:
+                      - 4 points if data >= 16 points (25% holdout)
+                      - 2 points if 8 <= data < 16 (25% holdout)
+                      - 1 point if 6 <= data < 8 (12-17% holdout)
 
     Returns:
         MAPE as percentage, or None if insufficient data
     """
+    # Adaptive holdout sizing for sparse data
+    if holdout_size is None:
+        n_points = len(historical_points)
+        if n_points >= 16:
+            holdout_size = 4  # Standard: 25% holdout
+        elif n_points >= 8:
+            holdout_size = 2  # Sparse: 25% holdout
+        else:
+            holdout_size = 1  # Very sparse: 12-17% holdout
+
+        logger.debug(
+            "Using adaptive holdout size",
+            extra={
+                "n_historical_points": n_points,
+                "holdout_size": holdout_size,
+                "holdout_ratio": f"{holdout_size / n_points:.1%}" if n_points > 0 else "N/A",
+            },
+        )
+
     if len(historical_points) < holdout_size or len(forecast_points) < holdout_size:
         return None
 

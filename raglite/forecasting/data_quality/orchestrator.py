@@ -202,7 +202,8 @@ class DataQualityOrchestrator:
                     entity_condition = "entity ILIKE %s"
                     entity_params = [f"%{config.entity.required_entity}%"]
 
-            query = f"""  # nosec
+            # nosec B608: SQL built with parameterized queries
+            query = f"""
                 SELECT period, value, entity, metric
                 FROM financial_tables
                 WHERE ({metric_condition})
@@ -223,8 +224,8 @@ class DataQualityOrchestrator:
 
             df = pd.DataFrame(rows, columns=["period", "value", "entity", "metric"])
 
-            # Parse period to date
-            df["date"] = pd.to_datetime(df["period"], format="%b-%y", errors="coerce")
+            # Parse period to date using multi-format parsing
+            df["date"] = self._parse_period_multi_format(df["period"])
 
             logger.info(
                 "Fetched SECIL data",
@@ -430,3 +431,56 @@ class DataQualityOrchestrator:
     def clear_cache(self) -> None:
         """Clear the data cache."""
         self._data_cache.clear()
+
+    def _parse_period_multi_format(self, periods: pd.Series) -> pd.Series:
+        """Parse periods using multiple format attempts.
+
+        Handles various date formats found in SECIL financial data:
+        - Aug-25 (%b-%y)
+        - August-25 (%B-%y)
+        - Aug-2025 (%b-%Y)
+        - 2025 (%Y, year only)
+        - Prefixed: "B Aug-25", "YTD Aug-25", "YTD  Aug-25"
+        - Suffixed: "Aug-25 YTD", "YTD Apr-24 B Apr-24"
+
+        Args:
+            periods: Series of period strings
+
+        Returns:
+            Series of parsed datetime values
+        """
+        import re
+
+        formats = [
+            "%b-%y",  # Aug-25
+            "%B-%y",  # August-25
+            "%b-%Y",  # Aug-2025
+            "%Y",  # 2025 (year only)
+        ]
+
+        result = pd.Series([pd.NaT] * len(periods), index=periods.index)
+
+        # First pass: try direct parsing
+        for fmt in formats:
+            mask = result.isna()
+            if not mask.any():
+                break
+            parsed = pd.to_datetime(periods[mask], format=fmt, errors="coerce")
+            result[mask] = parsed
+
+        # Second pass: extract Mon-YY pattern from complex strings
+        # Matches patterns like "Aug-25", "Apr-24" anywhere in the string
+        month_year_pattern = re.compile(r"([A-Z][a-z]{2}-\d{2})")
+
+        unparsed_mask = result.isna()
+        if unparsed_mask.any():
+            for idx in periods[unparsed_mask].index:
+                period_str = str(periods[idx])
+                match = month_year_pattern.search(period_str)
+                if match:
+                    try:
+                        result[idx] = pd.to_datetime(match.group(1), format="%b-%y")
+                    except (ValueError, TypeError):
+                        pass
+
+        return result

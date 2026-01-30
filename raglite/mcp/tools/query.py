@@ -235,10 +235,10 @@ def parse_forecast_query(query: str) -> tuple[str | None, int | None]:
         periods = 1
     next_n_match = re.search(r"next\s+(\d+)\s+quarters?", query_lower)
     if next_n_match:
-        periods = min(int(next_n_match.group(1)), 8)
+        periods = min(int(next_n_match.group(1)), 18)
     for_n_match = re.search(r"for\s+(?:the\s+)?(?:next\s+)?(\d+)\s+quarters?", query_lower)
     if for_n_match:
-        periods = min(int(for_n_match.group(1)), 8)
+        periods = min(int(for_n_match.group(1)), 18)
     q_match = re.search(r"q([1-4])\s*(\d{4})", query_lower)
     if q_match:
         from datetime import datetime
@@ -251,5 +251,5 @@ def parse_forecast_query(query: str) -> tuple[str | None, int | None]:
         target_q_ordinal = target_year * 4 + target_quarter
         current_q_ordinal = current_year * 4 + current_quarter
         periods = max(1, target_q_ordinal - current_q_ordinal)
-        periods = min(periods, 8)
+        periods = min(periods, 18)
     return metric, periods

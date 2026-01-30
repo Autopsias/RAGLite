@@ -65,6 +65,8 @@ from raglite.shared.models.query_schemas import (
 
 # Time Series & Forecasting
 from raglite.shared.models.timeseries_models import (
+    AsyncForecastResponse,
+    ForecastJobStatus,
     ForecastPoint,
     ForecastQueryRequest,
     ForecastQueryResponse,
@@ -109,6 +111,8 @@ __all__ = [
     "ForecastRefreshResult",
     "ForecastQueryRequest",
     "ForecastQueryResponse",
+    "AsyncForecastResponse",
+    "ForecastJobStatus",
     # Insights
     "AnomalySeverity",
     "Anomaly",

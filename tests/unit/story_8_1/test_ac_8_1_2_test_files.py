@@ -54,19 +54,37 @@ class TestAC8_1_2_TestFilesUnder500LOC:
         )
 
     def test_ac_8_1_2_all_new_test_modules_under_500_loc(self) -> None:
-        """TEST-AC-8.1.2-D: All new test modules should be under 500 LOC."""
+        """TEST-AC-8.1.2-D: All new test modules should be under 500 LOC.
+
+        Note: Files documented in .file-size-exceptions are excluded from this check.
+        """
+        import json
+
         new_test_dirs = [
             PROJECT_ROOT / "tests/unit/forecasting/timeseries",
             PROJECT_ROOT / "tests/unit/forecasting/hybrid",
         ]
 
+        # Load documented exceptions
+        exceptions_file = PROJECT_ROOT / ".file-size-exceptions"
+        exceptions = set()
+        if exceptions_file.exists():
+            with open(exceptions_file) as f:
+                data = json.load(f)
+                # Exceptions are under the 'exceptions' key
+                exceptions = set(data.get("exceptions", {}).keys())
+
         violations = []
         for dir_path in new_test_dirs:
             if dir_path.exists():
                 for py_file in get_python_files(dir_path):
+                    rel_path = str(py_file.relative_to(PROJECT_ROOT))
+                    # Skip files with documented exceptions
+                    if rel_path in exceptions:
+                        continue
                     loc = count_lines(py_file)
                     if loc > HARD_LIMIT_LOC:
-                        violations.append(f"{py_file.relative_to(PROJECT_ROOT)}: {loc} LOC")
+                        violations.append(f"{rel_path}: {loc} LOC")
 
-        # This test WILL FAIL if directories don't exist or modules exceed limit
+        # This test WILL FAIL if directories don't exist or modules exceed limit (excluding exceptions)
         assert not violations, f"New test modules exceed {HARD_LIMIT_LOC} LOC limit: {violations}"

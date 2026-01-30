@@ -88,7 +88,7 @@ class TestTFTTrainingModule:
         assert "encoder_length" in TFT_TRAINING_CONFIG
         assert "prediction_length" in TFT_TRAINING_CONFIG
         assert "max_epochs" in TFT_TRAINING_CONFIG
-        assert TFT_TRAINING_CONFIG["encoder_length"] == 12
+        assert TFT_TRAINING_CONFIG["encoder_length"] == 18
         assert TFT_TRAINING_CONFIG["prediction_length"] == 3
 
 
@@ -157,7 +157,7 @@ class TestConfigurationParameters:
         from raglite.shared.config import settings
 
         assert settings.ensemble_weight_tft == 0.12
-        assert settings.tft_encoder_length == 12
+        assert settings.tft_encoder_length == 18
         assert settings.tft_prediction_length == 3
         assert settings.tft_max_epochs == 50
         assert settings.refresh_cron_tft_training == "0 2 * * 0"  # Sunday 2am

@@ -198,14 +198,21 @@ def insert_data_points(
 
     session.commit()
 
-    # Update last_refresh timestamp
-    stmt = (
-        update(ExternalDataSourceORM)
-        .where(ExternalDataSourceORM.id == source.id)
-        .values(last_refresh_at=utc_now())
-    )
-    session.execute(stmt)
-    session.commit()
+    # Update last_refresh timestamp ONLY if records were actually inserted/updated
+    # This prevents masking failures where API returns 0 records
+    if count > 0:
+        stmt = (
+            update(ExternalDataSourceORM)
+            .where(ExternalDataSourceORM.id == source.id)
+            .values(last_refresh_at=utc_now())
+        )
+        session.execute(stmt)
+        session.commit()
+    else:
+        logger.warning(
+            "No records inserted/updated, last_refresh_at not updated",
+            extra={"source_name": source_name},
+        )
 
     return count
 

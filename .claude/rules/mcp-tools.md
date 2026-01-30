@@ -50,3 +50,45 @@ When a user uploads a file to Claude.ai and asks to ingest it:
 2. Encode to base64
 3. Call the ingestion tool with `file_content` and `filename`
 4. The MCP server creates a temp file, processes it, then cleans up
+
+---
+
+## Programmatic Tool Invocation (Testing)
+
+**EBITDA bug fix (2026-01-29):** When testing MCP tools programmatically (Python code, not MCP protocol),
+use the `.fn` property to access the underlying async function.
+
+### Problem
+
+```python
+# WRONG - raises "'FunctionTool' object is not callable"
+result = await get_financial_forecast(request)
+```
+
+### Solution
+
+```python
+# CORRECT - access the underlying function via .fn
+result = await get_financial_forecast.fn(request)
+```
+
+### Explanation
+
+The `@mcp.tool()` decorator wraps functions in `FunctionTool` objects for MCP protocol handling.
+These wrapper objects are not directly callable as functions. The `.fn` property provides
+access to the original async function for direct invocation.
+
+| Context | Invocation Method |
+|---------|-------------------|
+| MCP Protocol (Claude Desktop) | Protocol handles invocation automatically |
+| Python Tests | Use `tool_name.fn(args)` |
+| Integration Tests | Use `tool_name.fn(args)` with mocked dependencies |
+
+### Affected Tools
+
+All tools decorated with `@mcp.tool()` in `raglite/mcp/tools/`:
+- `get_financial_forecast` / `get_financial_forecast_async`
+- `ingest_financial_document` / `ingest_financial_document_async`
+- `query_financial_documents`
+- `get_health_status`
+- `validate_forecasting_accuracy`
