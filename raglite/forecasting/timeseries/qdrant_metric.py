@@ -293,7 +293,7 @@ def _apply_metric_specific_transformations(
     return points
 
 
-def _verify_qdrant_collection_exists(client, collection_name: str) -> bool:
+def _verify_qdrant_collection_exists(client: Any, collection_name: str) -> bool:
     """Verify collection exists before querying.
 
     Phase 2 Fix (2026-01-29): Prevents "collection not found" errors when
@@ -321,7 +321,7 @@ def _verify_qdrant_collection_exists(client, collection_name: str) -> bool:
         raise
 
 
-def _get_valid_qdrant_collection(client, collection: str) -> str | None:
+def _get_valid_qdrant_collection(client: Any, collection: str) -> str | None:
     """Get a valid Qdrant collection, with fallback to production if test collection missing.
 
     Phase 2 Fix (2026-01-29): Graceful fallback to production collection if test

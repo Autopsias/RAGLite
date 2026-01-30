@@ -96,7 +96,7 @@ class WorldBankClient:
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.get(url, params=params)
+                response = await client.get(url, params=params)  # type: ignore[arg-type]
                 response.raise_for_status()
                 data = response.json()
 

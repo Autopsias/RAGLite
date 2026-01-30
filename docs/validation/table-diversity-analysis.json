@@ -12,13 +12,5 @@
     "METRIC": 0,
     "UNKNOWN": 0
   },
-  "sample_analyses": [
-    {
-      "page": 4,
-      "table": 1,
-      "dimensions": "19x7",
-      "col_header_rows": 2,
-      "num_row_headers": 17,
-      "num_col_headers": 7,
-      "num_data_cells": 102,
-      "row_header_types": {
+  "sample_analyses": []
+}

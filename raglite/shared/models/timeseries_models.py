@@ -276,6 +276,16 @@ class ForecastQueryRequest(BaseModel):
         default=None,
         description="Metric to forecast: revenue, turnover, cash_flow, expenses, ebitda, capex, or any financial metric name",
     )
+    # Multi-geography support: Allows forecasting for specific regions
+    # When None, defaults to config-based entity (GROUP for EBITDA, etc.)
+    entity: str | None = Field(
+        default=None,
+        description=(
+            "Entity/geography to forecast: 'GROUP' (consolidated, default for EBITDA), "
+            "'Portugal', 'Brazil', 'Tunisia', 'Lebanon', 'Angola'. "
+            "If not specified, uses config-based default for the metric."
+        ),
+    )
     periods_ahead: int = Field(
         default=4,
         ge=1,
@@ -457,53 +467,5 @@ class ForecastQueryResponse(BaseModel):
         )
 
 
-# MCP Timeout Resolution: Async Forecast Pattern
-# Claude Desktop has a 30-second hardcoded MCP client timeout, but forecasts take ~50s.
-# These models enable an async job pattern that returns immediately with a job_id.
-
-
-class AsyncForecastResponse(BaseModel):
-    """Response from async forecast initiation.
-
-    MCP Timeout Resolution: Returns immediately with job_id so the MCP client
-    doesn't timeout while waiting for the ~50s forecast execution.
-    """
-
-    job_id: str = Field(..., description="Unique job identifier for status polling")
-    status: str = Field(default="started", description="Initial job status ('started')")
-    message: str = Field(
-        ...,
-        description="User-friendly message explaining how to check forecast status",
-    )
-    metric: str = Field(..., description="Metric being forecasted")
-    periods_ahead: int = Field(..., description="Number of periods requested")
-
-
-class ForecastJobStatus(BaseModel):
-    """Status response for async forecast job polling.
-
-    MCP Timeout Resolution: Allows polling for forecast job status and retrieving
-    results when complete.
-    """
-
-    job_id: str = Field(..., description="Unique job identifier")
-    status: str = Field(
-        ...,
-        description="Job status: 'pending', 'running', 'completed', or 'failed'",
-    )
-    progress: int | None = Field(
-        default=None, description="Progress percentage (0-100) if available"
-    )
-    result: ForecastQueryResponse | None = Field(
-        default=None, description="Forecast result (only when status='completed')"
-    )
-    error: str | None = Field(default=None, description="Error message (only when status='failed')")
-    started_at: str | None = Field(
-        default=None, description="Job start timestamp (ISO 8601 format)"
-    )
-    completed_at: str | None = Field(
-        default=None,
-        description="Job completion timestamp (ISO 8601 format, only when done)",
-    )
-    metric: str | None = Field(default=None, description="Metric being forecasted")
-    periods_ahead: int | None = Field(default=None, description="Number of periods requested")
+# Async forecast job models (moved to forecast_jobs.py for MCP timeout resolution)
+# These are re-exported via __init__.py for backward compatibility

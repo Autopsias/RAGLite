@@ -187,22 +187,26 @@ def get_entity_filters() -> dict[str, tuple[str | None, bool]]:
     Story 6.29: Portugal filter for regional metrics to prevent contamination.
     Phase 2 data quality: Added turnover/revenue with no entity filter.
 
-    Note on EBITDA IFRS (2026-01-29): Changed from ("GROUP", True) to (None, True)
-    because database has entity="Portugal" with 338 rows of valid EBITDA IFRS data,
-    but NO entity="GROUP" data exists. The GROUP filter returned 0 rows, falling
-    back to Phase 3 which was blocked by CONTAMINATED_ENTITIES.
+    Note on EBITDA IFRS (2026-01-30): Uses ("GROUP", True) for two reasons:
+    1. GROUP entity filter: Database has 43 GROUP-level rows with consolidated data
+       (Dec-25 €203.16M YTD, Oct-25 €172.28M YTD, Oct-24 €134.09M YTD).
+    2. prefer_ytd=True: Database stores YEAR-TO-DATE cumulative values, NOT monthly.
+       Setting prefer_ytd=True triggers YTD-to-monthly conversion which transforms
+       cumulative values (€11M Jan, €53M Apr, €203M Dec) into true monthly values
+       (€11M, €42M delta, €17M avg). Without this, YTD values are averaged as if
+       monthly, causing 6-7x overestimate (€1.3B vs €203M actual annual).
 
     Note on turnover: Data analysis shows turnover has entity="Currency (1000 EUR)"
     not "GROUP", so entity filtering is disabled (None) to allow all entities.
     The unit normalization (Phase 2) handles the kEUR scaling instead.
     """
     return {
-        # EBITDA IFRS: No entity filter - allow Portugal-level data (338 rows)
-        # MAX aggregation handles duplicate prevention
-        # Phase 5 Data Quality Fix (2026-01-29): Changed prefer_ytd from True to False
-        # Root cause: YTD filtering was overly restrictive, reducing 338 rows to ~40
-        # Most EBITDA data uses standard monthly period format, not YTD
-        "EBITDA IFRS": (None, False),
+        # EBITDA IFRS: Use GROUP entity filter + YTD-to-monthly conversion
+        # Database stores YTD cumulative values (e.g., Dec-25 €203.16M = full year total)
+        # prefer_ytd=True converts YTD to monthly: Jan=€11M, Feb=€10.6M (delta), etc.
+        # Fix 2026-01-30: Changed False->True for prefer_ytd to fix 6-7x forecast overestimate
+        # Expected monthly EBITDA: ~€15-20M (not €88M which was YTD average)
+        "EBITDA IFRS": ("GROUP", True),
         # Turnover/Revenue: No entity filter - uses unit-based normalization instead
         # Entity values are "Currency (1000 EUR)" not "GROUP"
         "turnover": (None, False),

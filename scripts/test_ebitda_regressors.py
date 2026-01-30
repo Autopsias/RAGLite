@@ -25,9 +25,8 @@ logging.getLogger("catboost").setLevel(logging.ERROR)
 
 async def test_ebitda_models():
     """Show all candidate results for ebitda."""
-    from raglite.forecasting.model_selection_job import fetch_historical_data
-
     from raglite.forecasting.model_selection import select_best_model
+    from raglite.forecasting.model_selection_job import fetch_historical_data
     from raglite.forecasting.regressor_config import get_default_regressors
     from raglite.forecasting.regressor_fetch import fetch_regressors_with_date_range
 

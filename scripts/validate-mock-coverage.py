@@ -82,7 +82,7 @@ def find_patched_locations(project_root: Path) -> set[str]:
         with open(mock_fixtures, encoding="utf-8") as f:
             content = f.read()
 
-        # Parse AST to find patch() calls
+        # Method 1: Parse AST to find direct patch() calls
         tree = ast.parse(content, filename=str(mock_fixtures))
 
         for node in ast.walk(tree):
@@ -92,9 +92,28 @@ def find_patched_locations(project_root: Path) -> set[str]:
                     if node.args and isinstance(node.args[0], ast.Constant):
                         patch_target = node.args[0].value
                         # Extract module path (remove .get_mistral_client suffix)
-                        if patch_target.endswith(".get_mistral_client"):
+                        if isinstance(patch_target, str) and patch_target.endswith(
+                            ".get_mistral_client"
+                        ):
                             module_path = patch_target.rsplit(".", 1)[0]
                             patched.add(module_path)
+
+        # Method 2: Also parse the _get_mistral_client_patch_targets() helper function
+        # This handles patches defined dynamically via ExitStack
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "_get_mistral_client_patch_targets"
+            ):
+                # This function returns a list of patch target strings
+                for body_node in ast.walk(node):
+                    if isinstance(body_node, ast.List):
+                        for elt in body_node.elts:
+                            if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                                patch_target = elt.value
+                                if patch_target.endswith(".get_mistral_client"):
+                                    module_path = patch_target.rsplit(".", 1)[0]
+                                    patched.add(module_path)
 
     except FileNotFoundError:
         print(f"ERROR: Mock fixtures not found at {mock_fixtures}", file=sys.stderr)

@@ -1,12 +1,23 @@
 """Forecast MCP tools.
 
 Story 8: Refactored get_financial_forecast from 456 to ~150 lines using forecast_helpers.py.
+Multi-geography fix (2026-01-30): Added entity parameter for geography-specific forecasts.
 
 Full documentation for get_financial_forecast:
 
 **Supported Metrics:** Any metric in the financial_tables database (e.g., revenue, turnover,
 cash_flow, ebitda, expenses, capex). The system automatically searches the database via SQL
 and falls back to hybrid search if needed.
+
+**Multi-Geography Support (2026-01-30):**
+Forecast any Secil geography by specifying the `entity` parameter:
+- `entity="GROUP"` - Consolidated data (~€200M/year for EBITDA)
+- `entity="Portugal"` - Portugal region (~€150M/year for EBITDA)
+- `entity="Brazil"` - Brazil region (~€40M/year for EBITDA)
+- `entity="Tunisia"` - Tunisia region (~€15M/year for EBITDA)
+- `entity="Lebanon"` - Lebanon region
+- `entity="Angola"` - Angola region
+- `entity=None` (default) - Uses config-based default (GROUP for EBITDA, etc.)
 
 **Model Selection (Story 6.11.6):**
 The tool intelligently selects between Prophet (~21s, fast) and Ensemble (~78s, 4 models) based on:
@@ -27,7 +38,7 @@ Set `prefer_accuracy=True` when the user indicates they want:
 
 **Input Modes:**
 1. **Structured Query (Programmatic):**
-   Provide explicit `metric` and `periods_ahead` parameters.
+   Provide explicit `metric`, `entity`, and `periods_ahead` parameters.
 2. **Natural Language Query (Conversational):**
    Provide a `query` parameter and let the system extract parameters.
 
@@ -255,6 +266,8 @@ async def _execute_forecast_internal(
     When target_year is specified, periods_ahead is dynamically calculated
     after historical data extraction.
 
+    Multi-geography fix (2026-01-30): Added entity parameter threading.
+
     Args:
         request: Forecast query parameters
         metric: Validated metric name
@@ -263,7 +276,7 @@ async def _execute_forecast_internal(
     Returns:
         ForecastQueryResponse with forecast results
     """
-    historical_data = await extract_historical_data(metric, logger)
+    historical_data = await extract_historical_data(metric, logger, entity=request.entity)
     logger.info(
         "Time-series extraction complete",
         extra={"metric": metric, "data_points": len(historical_data.points)},
@@ -360,7 +373,7 @@ async def get_financial_forecast(
             "Auto-routing to async (ensemble/prefer_accuracy detected)",
             extra={"metric": metric, "prefer_accuracy": request.prefer_accuracy},
         )
-        return await get_financial_forecast_async.fn(request)
+        return await get_financial_forecast_async.fn(request)  # type: ignore[no-any-return]
 
     try:
         # Wrap forecast execution with timeout to prevent indefinite hangs
@@ -381,7 +394,7 @@ async def get_financial_forecast(
             },
         )
         # Retry with async instead of returning error
-        return await get_financial_forecast_async.fn(request)
+        return await get_financial_forecast_async.fn(request)  # type: ignore[no-any-return]
 
     except Exception as e:
         handle_forecast_error(e, metric, logger)

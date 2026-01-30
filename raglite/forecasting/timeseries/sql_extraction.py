@@ -99,10 +99,12 @@ async def extract_timeseries_from_sql(
             )
 
         await validate_minimum_points(points, metric, min_points)
-        return finalize_timeseries(points, metric, is_ytd_data, source_documents, units)
+        return finalize_timeseries(
+            points, metric, is_ytd_data, source_documents, units, config_prefers_ytd=prefer_ytd
+        )
 
     except (MetricValidationError, ExtractionError) as e:
-        return await handle_extraction_failure(e, metric, min_points)
+        return await handle_extraction_failure(e, metric, min_points, entity=entity)
 
     except Exception as e:
         _handle_transaction_error(metric, e)

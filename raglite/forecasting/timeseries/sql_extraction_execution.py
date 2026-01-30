@@ -44,12 +44,21 @@ def configure_entity_filter(
 
     if entity is not None:
         # User-specified entity filter takes precedence
+        # Fix 2026-01-30: Preserve prefer_ytd from original config when overriding entity
         canonical_entity = normalize_entity(entity)
         if canonical_entity:
-            ENTITY_FILTERS[metric_search] = (canonical_entity, False)
+            # Get original prefer_ytd from config (if exists), otherwise False
+            existing_config = ENTITY_FILTERS.get(metric_search)
+            original_prefer_ytd = existing_config[1] if existing_config else False
+            ENTITY_FILTERS[metric_search] = (canonical_entity, original_prefer_ytd)
             logger.info(
                 "User-specified entity filter applied",
-                extra={"metric": metric, "entity": entity, "canonical": canonical_entity},
+                extra={
+                    "metric": metric,
+                    "entity": entity,
+                    "canonical": canonical_entity,
+                    "prefer_ytd": original_prefer_ytd,
+                },
             )
         return ENTITY_FILTERS, canonical_entity or entity
     else:

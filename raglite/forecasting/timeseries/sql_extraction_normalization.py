@@ -21,7 +21,10 @@ from raglite.forecasting.timeseries.sql_extraction_normalization_utils import (
     normalize_ebitda_pre_ytd,
     normalize_units_and_filter_outliers,
 )
+from raglite.shared.logging import get_logger
 from raglite.shared.models import TimeSeriesPoint
+
+logger = get_logger(__name__)
 
 
 def normalize_timeseries_data(
@@ -61,7 +64,13 @@ def normalize_timeseries_data(
         points = normalize_ebitda_pre_ytd(points, metric)
 
     # Step 4: YTD → Monthly conversion (was Step 3)
+    # Fix 2026-01-30: This step now triggers correctly for EBITDA when config_prefers_ytd=True
+    # because effective_is_ytd is computed in finalize_timeseries() and passed here
     if is_ytd_data and len(points) > 1:
+        logger.debug(
+            "Applying YTD-to-monthly conversion",
+            extra={"metric": metric, "points": len(points), "is_ytd_data": is_ytd_data},
+        )
         points = convert_ytd_to_monthly(points, metric)
 
     # Step 5: Unit normalization & outlier filtering (was Step 4, skip EBITDA - already done)
@@ -127,7 +136,12 @@ def normalize_timeseries_with_units(
         points = normalize_ebitda_pre_ytd(points, metric)
 
     # Step 4: YTD → Monthly conversion
+    # Fix 2026-01-30: This step now triggers correctly for EBITDA when config_prefers_ytd=True
     if is_ytd_data and len(points) > 1:
+        logger.debug(
+            "Applying YTD-to-monthly conversion (unit-aware path)",
+            extra={"metric": metric, "points": len(points), "is_ytd_data": is_ytd_data},
+        )
         points = convert_ytd_to_monthly(points, metric)
 
     # Step 5: Skip value-based unit normalization (already done with explicit units)

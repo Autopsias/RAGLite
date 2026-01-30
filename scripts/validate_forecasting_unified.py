@@ -737,6 +737,9 @@ async def run_forecast_with_method(
     """
     # Epic 7 Fix: Use cache_metric_name for model selection cache lookup
     model_cache_name = cache_metric_name or metric_name
+    # Phase 8: Helper to select forecast function based on ensemble_strategy
+    from typing import Any
+
     from raglite.forecasting.ensemble import generate_ensemble_forecast
     from raglite.forecasting.hybrid import generate_forecast
     from raglite.forecasting.timeseries import (
@@ -745,13 +748,12 @@ async def run_forecast_with_method(
     )
     from raglite.shared.models import TimeSeriesData
 
-    # Phase 8: Helper to select forecast function based on ensemble_strategy
     async def _run_forecast(
         train_data: TimeSeriesData,
         periods: int,
         regressors: dict[str, pd.Series] | None,
         use_stratified_ensemble: bool,
-    ):
+    ) -> Any:
         """Run forecast using single model or stratified ensemble."""
         if use_stratified_ensemble:
             logger.info(
