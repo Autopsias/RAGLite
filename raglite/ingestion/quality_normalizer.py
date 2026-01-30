@@ -378,7 +378,7 @@ class AutoQualityNormalizer:
                 WHERE metric ~ E'[\\r\\n]' {doc_filter}
             """
             )
-            count = cursor.fetchone()[0]
+            count = int(cursor.fetchone()[0])
         else:
             exec_with_doc_filter(
                 """
@@ -387,7 +387,7 @@ class AutoQualityNormalizer:
                 WHERE metric ~ E'[\\r\\n]' {doc_filter}
             """
             )
-            count = cursor.rowcount
+            count = int(cursor.rowcount or 0)
             if count > 0:
                 conn.commit()
         total_cleaned += count
@@ -400,7 +400,7 @@ class AutoQualityNormalizer:
                 WHERE metric != TRIM(metric) {doc_filter}
             """
             )
-            count = cursor.fetchone()[0]
+            count = int(cursor.fetchone()[0])
         else:
             exec_with_doc_filter(
                 """
@@ -409,7 +409,7 @@ class AutoQualityNormalizer:
                 WHERE metric != TRIM(metric) {doc_filter}
             """
             )
-            count = cursor.rowcount
+            count = int(cursor.rowcount or 0)
             if count > 0:
                 conn.commit()
         total_cleaned += count
@@ -422,7 +422,7 @@ class AutoQualityNormalizer:
                 WHERE unit IS NOT NULL AND unit != TRIM(unit) {doc_filter}
             """
             )
-            count = cursor.fetchone()[0]
+            count = int(cursor.fetchone()[0])
         else:
             exec_with_doc_filter(
                 """
@@ -431,7 +431,7 @@ class AutoQualityNormalizer:
                 WHERE unit IS NOT NULL AND unit != TRIM(unit) {doc_filter}
             """
             )
-            count = cursor.rowcount
+            count = int(cursor.rowcount or 0)
             if count > 0:
                 conn.commit()
         total_cleaned += count
