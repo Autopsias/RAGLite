@@ -1,1 +1,1 @@
-from tests.integration.ac3_ground_truth.models import AccuracyMetrics, QueryValidationResult
+# AC3 ground truth validation tests - placeholder

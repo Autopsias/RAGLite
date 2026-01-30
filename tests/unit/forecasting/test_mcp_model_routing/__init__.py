@@ -1,3 +1,1 @@
-from .test_fallback_handling import TestFallbackHandling
-from .test_model_routing import TestModelRouting
-from .test_regressor_filtering import TestRegressorFiltering
+# MCP model routing tests - placeholder
