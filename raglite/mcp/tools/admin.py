@@ -508,8 +508,9 @@ def _warmup_chronos() -> tuple[bool, float | None, str | None]:
 
         model_name = settings.chronos_model_name
         # This will download/cache the model if not already present
-        AutoTokenizer.from_pretrained(model_name)
-        AutoModelForSeq2SeqLM.from_pretrained(model_name)
+        # Model name is controlled by trusted settings, not user input
+        AutoTokenizer.from_pretrained(model_name)  # nosec B615 - trusted model from settings
+        AutoModelForSeq2SeqLM.from_pretrained(model_name)  # nosec B615 - trusted model from settings
         elapsed = time.time() - start
         return True, elapsed, None
     except ImportError:
