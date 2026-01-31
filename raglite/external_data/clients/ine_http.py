@@ -108,6 +108,11 @@ async def fetch_with_retry(
         "Dim1": "T",
         "lang": "PT",
     }
+    # Add date range parameters if provided (INE API format)
+    if start_date:
+        params["datIni"] = start_date.strftime("%Y-%m-%d")
+    if end_date:
+        params["datFim"] = end_date.strftime("%Y-%m-%d")
 
     headers = {
         "Accept": "application/json",

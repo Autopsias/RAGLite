@@ -343,7 +343,7 @@ async def check_robust_outliers(
     variable: str,
     config: VariableQualityConfig,
     data: pd.DataFrame,
-    mad_threshold: float = 3.5,
+    mad_threshold: float | None = None,
 ) -> CheckResult:
     """Detect outliers using MAD-based robust z-scores.
 
@@ -354,11 +354,14 @@ async def check_robust_outliers(
         variable: Variable name
         config: Variable quality configuration
         data: DataFrame with 'value' column
-        mad_threshold: Number of MAD units to consider outlier (default 3.5)
+        mad_threshold: Number of MAD units to consider outlier (uses config if None)
 
     Returns:
         CheckResult with outlier detection status
     """
+    # Use config threshold if not explicitly provided
+    if mad_threshold is None:
+        mad_threshold = config.value_range.outlier_mad_threshold
     if data is None or data.empty or "value" not in data.columns:
         return CheckResult(
             check_name="robust_outliers",

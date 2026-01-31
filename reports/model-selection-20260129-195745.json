@@ -1,0 +1,21 @@
+{
+  "timestamp": "20260129-195745",
+  "runtime_minutes": 1.9477700153986612,
+  "variables_processed": 2,
+  "results": {
+    "ebitda": {
+      "best_model": "catboost",
+      "best_mape": 114.54933769217476,
+      "best_mase": 0.4434567166541749,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "variable_cost": {
+      "best_model": "chronos",
+      "best_mape": 10.78516152955991,
+      "best_mase": 0.9715052706839316,
+      "use_regressors": false,
+      "regressor_set": []
+    }
+  }
+}

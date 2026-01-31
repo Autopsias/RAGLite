@@ -86,6 +86,14 @@ class Settings(BaseSettings):
     enable_forecast_auto_update: bool = True  # Auto-refresh forecasts on document ingestion
     forecast_refresh_timeout: int = 300  # 5-minute timeout for forecast refresh (AC3)
 
+    # TFT Model Preloading (Fixes timeout issues)
+    preload_tft_model: bool = (
+        True  # Preload TFT model at server startup to avoid first-request latency
+    )
+    tft_preload_timeout: float = (
+        60.0  # Timeout for TFT model preloading (seconds) - increased to ensure completion
+    )
+
     # Metrics Discovery Cache Configuration (Story 5.0.4 Advisory)
     metrics_cache_ttl_seconds: int = 300  # 5-minute TTL for development; tune for production
 
@@ -137,7 +145,7 @@ class Settings(BaseSettings):
     chronos_inference_timeout: float = 2.0  # Chronos-2 inference timeout (seconds)
 
     # Story 6.14: TFT Configuration
-    tft_encoder_length: int = 12  # TFT lookback periods
+    tft_encoder_length: int = 18  # TFT lookback periods (supports up to 18-period forecasts)
     tft_prediction_length: int = 3  # TFT forecast periods
     tft_max_epochs: int = 50  # TFT training max epochs
     tft_early_stopping_patience: int = 5  # TFT early stopping patience

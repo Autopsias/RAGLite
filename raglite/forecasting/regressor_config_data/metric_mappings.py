@@ -60,14 +60,16 @@ METRIC_REGRESSORS: dict[str, list[str]] = {
     # EBITDA = Revenue - Costs: demand (revenue driver) and cost inputs
     # NOTE: euribor_3m removed per Story 7b-7 AC5 - less relevant to cement EBITDA
     # Epic 7 Enhancement: Added sales_volume and capacity_utilization per McKinsey research
-    # EBITDA forecasting benefits from demand-linked regressors (inventory, utilization)
+    # Multi-Geography Enhancement: Added gdp_weighted_composite to capture all Secil markets
     "ebitda": [
-        # Demand-side (construction activity -> revenue)
+        # Demand-side (construction activity -> revenue) - Portugal
         "construction_output",
         "building_permits",
         "construction_confidence",
         "housing_transactions",  # Story 7b-7: Leading indicator (6-12 month lag)
         "sales_volume",  # Epic 7: Direct demand indicator for Portugal operations
+        # Multi-geography GDP (captures PT 72% + TN 10% + AO 8% + BR 7% + LB 3%)
+        "gdp_weighted_composite",  # World Bank: weighted GDP for all Secil markets
         # Cost-side (energy costs -> margins)
         "ttf_gas",
         "diesel",

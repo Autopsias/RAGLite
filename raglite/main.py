@@ -105,6 +105,7 @@ __all__ = [
     "list_available_regressors",
     "get_regressor_data",
     "check_database_health",
+    # check_forecast_readiness and warmup_forecasting_models are lazy-loaded via __getattr__
     "ExternalDataQueryRequest",
     "ExternalDataPoint",
     "ExternalDataQueryResponse",
@@ -112,7 +113,7 @@ __all__ = [
 
 
 def __getattr__(name: str) -> Any:
-    """Lazy import for admin tools to avoid circular import during module load."""
+    """Lazy import for admin/health tools to avoid circular import during module load."""
     if name == "manage_model_weights":
         from raglite.mcp.tools import admin
 
@@ -121,7 +122,125 @@ def __getattr__(name: str) -> Any:
         from raglite.mcp.tools import admin
 
         return admin.retrain_forecasting_models
+    elif name == "warmup_forecasting_models":
+        from raglite.mcp.tools import admin
+
+        return admin.warmup_forecasting_models
+    elif name == "check_forecast_readiness":
+        from raglite.mcp.tools import health
+
+        return health.check_forecast_readiness
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
+
+def _preload_prophet_model() -> None:
+    """Preload Prophet at server startup to avoid 3-5s import penalty on first forecast.
+
+    Prophet has heavy dependencies (cmdstanpy, numpy, pandas) that take 3-5 seconds
+    to import on first use. By importing at startup, we avoid this latency during
+    actual forecast requests.
+    """
+    try:
+        import time
+
+        start = time.time()
+        from prophet import Prophet  # noqa: F401
+
+        elapsed = time.time() - start
+        logger.info(
+            "Prophet preloaded successfully",
+            extra={"import_time_seconds": round(elapsed, 2)},
+        )
+    except ImportError:
+        logger.debug(
+            "Prophet not installed - Prophet preloading skipped",
+            extra={"reason": "ImportError"},
+        )
+    except Exception as e:
+        logger.warning(
+            "Prophet preload failed (will retry on first request)",
+            extra={"error": str(e), "error_type": type(e).__name__},
+        )
+
+
+def _prewarm_database_connections() -> None:
+    """Pre-warm database connection pool at server startup.
+
+    Creating database connections on first request adds 0.5-2s latency.
+    By establishing the connection pool at startup, we avoid this delay
+    during actual forecast requests.
+    """
+    try:
+        import time
+
+        from sqlalchemy import text
+
+        start = time.time()
+        from raglite.shared.database import get_session
+
+        # Create a session to establish connection pool
+        session = get_session()
+        # Execute a simple query to fully warm the connection
+        session.execute(text("SELECT 1"))
+        session.close()
+
+        elapsed = time.time() - start
+        logger.info(
+            "Database connection pool pre-warmed successfully",
+            extra={"warmup_time_seconds": round(elapsed, 2)},
+        )
+    except Exception as e:
+        logger.warning(
+            "Database connection pre-warming failed (will connect on first request)",
+            extra={"error": str(e), "error_type": type(e).__name__},
+        )
+
+
+def _preload_tft_model() -> None:
+    """Preload TFT model at server startup to avoid first-request latency.
+
+    This moves the slow DB + model loading from request time to startup time,
+    preventing timeouts on the first forecast request.
+    """
+    if not settings.preload_tft_model:
+        return
+
+    try:
+        import asyncio
+
+        from raglite.forecasting.models.tft_model import _get_tft_model_with_timeout
+
+        logger.info(
+            "Preloading TFT model...",
+            extra={"timeout_seconds": settings.tft_preload_timeout},
+        )
+
+        # Run the async model loading in a new event loop (since main() hasn't started yet)
+        loop = asyncio.new_event_loop()
+        try:
+            model = loop.run_until_complete(
+                _get_tft_model_with_timeout(timeout=settings.tft_preload_timeout)
+            )
+            if model is not None:
+                logger.info("TFT model preloaded successfully")
+            else:
+                logger.warning(
+                    "TFT model preload returned None (no checkpoint or timeout) - "
+                    "TFT forecasts may not be available"
+                )
+        finally:
+            loop.close()
+
+    except ImportError:
+        logger.debug(
+            "pytorch-forecasting not installed - TFT preloading skipped",
+            extra={"reason": "ImportError"},
+        )
+    except Exception as e:
+        logger.warning(
+            "TFT model preload failed (forecasts will retry on first request)",
+            extra={"error": str(e), "error_type": type(e).__name__},
+        )
 
 
 def _start_scheduler_sync() -> None:
@@ -173,8 +292,17 @@ def main() -> None:
             "qdrant_port": settings.qdrant_port,
             "collection": settings.qdrant_collection_name,
             "scheduler_enabled": settings.scheduler_enabled,
+            "preload_tft_model": settings.preload_tft_model,
         },
     )
+
+    # Preload forecasting models and warm database connections at startup
+    # This avoids first-request latency that causes MCP timeouts
+    logger.info("Starting model preloading and database warmup...")
+    _preload_prophet_model()
+    _prewarm_database_connections()
+    _preload_tft_model()
+    logger.info("Startup preloading complete")
 
     _start_scheduler_sync()
     atexit.register(_shutdown_scheduler_sync)

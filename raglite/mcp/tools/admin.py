@@ -1,7 +1,10 @@
 """Admin MCP tools."""
 
+import time
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
+
+from pydantic import BaseModel, Field
 
 from raglite.forecasting.backtest_job import trigger_backtest_now
 from raglite.main import mcp
@@ -10,6 +13,31 @@ from raglite.shared.config import settings
 from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+class WarmupResult(BaseModel):
+    """Result from forecasting model warmup operation."""
+
+    status: str = Field(description="Overall warmup status: 'success', 'partial', 'failed'")
+    prophet_loaded: bool = Field(default=False, description="Whether Prophet model was loaded")
+    prophet_load_time: float | None = Field(
+        default=None, description="Prophet load time in seconds"
+    )
+    tft_loaded: bool = Field(default=False, description="Whether TFT model was loaded")
+    tft_load_time: float | None = Field(default=None, description="TFT load time in seconds")
+    chronos_loaded: bool = Field(default=False, description="Whether Chronos model was loaded")
+    chronos_load_time: float | None = Field(
+        default=None, description="Chronos load time in seconds"
+    )
+    database_connected: bool = Field(
+        default=False, description="Whether database connection is active"
+    )
+    database_warmup_time: float | None = Field(
+        default=None, description="DB warmup time in seconds"
+    )
+    total_warmup_time: float = Field(description="Total warmup time in seconds")
+    errors: list[str] = Field(default_factory=list, description="Any errors encountered")
+    message: str = Field(description="Human-readable summary")
 
 
 @mcp.tool()
@@ -164,7 +192,12 @@ def _check_checkpoint_freshness(
     if not active_checkpoint:
         return None
 
-    age = datetime.now(UTC) - active_checkpoint.trained_at
+    # Ensure both datetimes are timezone-aware for comparison
+    # Database returns naive datetime, so we make it timezone-aware
+    trained_at = active_checkpoint.trained_at
+    if trained_at.tzinfo is None:
+        trained_at = trained_at.replace(tzinfo=UTC)
+    age = datetime.now(UTC) - trained_at
     if age >= timedelta(days=settings.tft_checkpoint_freshness_days):
         return None
 
@@ -412,3 +445,213 @@ async def retrain_forecasting_models(
             duration_seconds=duration,
             errors=[str(e)],
         ).model_dump_json(indent=2)
+
+
+def _warmup_prophet() -> tuple[bool, float | None, str | None]:
+    """Load Prophet model and return status.
+
+    Returns:
+        Tuple of (success, load_time_seconds, error_message)
+    """
+    try:
+        start = time.time()
+        from prophet import Prophet  # noqa: F401
+
+        elapsed = time.time() - start
+        return True, elapsed, None
+    except ImportError:
+        return False, None, "Prophet not installed"
+    except Exception as e:
+        return False, None, str(e)
+
+
+def _warmup_tft() -> tuple[bool, float | None, str | None]:
+    """Load TFT model checkpoint and return status.
+
+    Returns:
+        Tuple of (success, load_time_seconds, error_message)
+    """
+    try:
+        import asyncio
+
+        from raglite.forecasting.models.tft_model import _get_tft_model_with_timeout
+
+        start = time.time()
+        loop = asyncio.new_event_loop()
+        try:
+            model = loop.run_until_complete(
+                _get_tft_model_with_timeout(timeout=settings.tft_preload_timeout)
+            )
+            elapsed = time.time() - start
+            if model is not None:
+                return True, elapsed, None
+            else:
+                return False, elapsed, "No TFT checkpoint available"
+        finally:
+            loop.close()
+    except ImportError:
+        return False, None, "pytorch-forecasting not installed"
+    except Exception as e:
+        return False, None, str(e)
+
+
+def _warmup_chronos() -> tuple[bool, float | None, str | None]:
+    """Load Chronos model and return status.
+
+    Returns:
+        Tuple of (success, load_time_seconds, error_message)
+    """
+    try:
+        start = time.time()
+        # Import the Chronos model to trigger download/caching
+        from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
+        model_name = settings.chronos_model_name
+        # This will download/cache the model if not already present
+        # Model name is controlled by trusted settings, not user input
+        AutoTokenizer.from_pretrained(model_name)  # nosec B615 - trusted model from settings
+        AutoModelForSeq2SeqLM.from_pretrained(model_name)  # nosec B615 - trusted model from settings
+        elapsed = time.time() - start
+        return True, elapsed, None
+    except ImportError:
+        return False, None, "transformers not installed"
+    except Exception as e:
+        return False, None, str(e)
+
+
+def _warmup_database() -> tuple[bool, float | None, str | None]:
+    """Warm database connection pool and return status.
+
+    Returns:
+        Tuple of (success, warmup_time_seconds, error_message)
+    """
+    try:
+        from sqlalchemy import text
+
+        from raglite.shared.database import get_session
+
+        start = time.time()
+        session = get_session()
+        session.execute(text("SELECT 1"))
+        session.close()
+        elapsed = time.time() - start
+        return True, elapsed, None
+    except Exception as e:
+        return False, None, str(e)
+
+
+@mcp.tool()
+async def warmup_forecasting_models(
+    include_chronos: bool = False,
+) -> str:
+    """Manually warm up forecasting models and database connections.
+
+    Use this tool ONCE after server start (or after long idle periods) to ensure
+    forecasting tools respond quickly. This preloads:
+    - Prophet model (avoids 3-5s import delay)
+    - TFT model checkpoint (avoids 5-25s loading delay)
+    - Chronos model (optional, avoids 5-10s download delay)
+    - Database connection pool (avoids 0.5-2s connection delay)
+
+    **When to use:**
+    - After server restart
+    - Before critical forecast requests
+    - If forecasts have been timing out
+
+    **Note:** Prophet and TFT are automatically preloaded at server startup.
+    Use this tool to verify warmup status or to manually trigger warmup
+    if automatic preloading failed.
+
+    Args:
+        include_chronos: If True, also warm up Chronos model (adds 5-10s)
+
+    Returns:
+        JSON string with WarmupResult containing status of each component
+    """
+    logger.info(
+        "Manual forecasting warmup triggered",
+        extra={"include_chronos": include_chronos},
+    )
+
+    total_start = time.time()
+    errors: list[str] = []
+
+    # Warmup Prophet
+    prophet_loaded, prophet_time, prophet_err = _warmup_prophet()
+    if prophet_err:
+        errors.append(f"Prophet: {prophet_err}")
+
+    # Warmup TFT
+    tft_loaded, tft_time, tft_err = _warmup_tft()
+    if tft_err:
+        errors.append(f"TFT: {tft_err}")
+
+    # Warmup Chronos (optional)
+    chronos_loaded, chronos_time, chronos_err = False, None, None
+    if include_chronos:
+        chronos_loaded, chronos_time, chronos_err = _warmup_chronos()
+        if chronos_err:
+            errors.append(f"Chronos: {chronos_err}")
+
+    # Warmup database
+    db_connected, db_time, db_err = _warmup_database()
+    if db_err:
+        errors.append(f"Database: {db_err}")
+
+    total_time = time.time() - total_start
+
+    # Determine overall status
+    core_loaded = prophet_loaded and db_connected
+    if core_loaded and tft_loaded:
+        status = "success"
+    elif core_loaded:
+        status = "partial"
+    else:
+        status = "failed"
+
+    # Build human-readable message
+    loaded_models = []
+    if prophet_loaded:
+        loaded_models.append("Prophet")
+    if tft_loaded:
+        loaded_models.append("TFT")
+    if chronos_loaded:
+        loaded_models.append("Chronos")
+
+    if status == "success":
+        message = f"Forecasting models ready: {', '.join(loaded_models)}. DB connected."
+    elif status == "partial":
+        message = (
+            f"Partial warmup: {', '.join(loaded_models) or 'none'} loaded. Some models unavailable."
+        )
+    else:
+        message = "Warmup failed. Check errors for details."
+
+    result = WarmupResult(
+        status=status,
+        prophet_loaded=prophet_loaded,
+        prophet_load_time=round(prophet_time, 2) if prophet_time else None,
+        tft_loaded=tft_loaded,
+        tft_load_time=round(tft_time, 2) if tft_time else None,
+        chronos_loaded=chronos_loaded,
+        chronos_load_time=round(chronos_time, 2) if chronos_time else None,
+        database_connected=db_connected,
+        database_warmup_time=round(db_time, 2) if db_time else None,
+        total_warmup_time=round(total_time, 2),
+        errors=errors,
+        message=message,
+    )
+
+    logger.info(
+        "Forecasting warmup complete",
+        extra={
+            "status": status,
+            "prophet_loaded": prophet_loaded,
+            "tft_loaded": tft_loaded,
+            "chronos_loaded": chronos_loaded,
+            "db_connected": db_connected,
+            "total_time": round(total_time, 2),
+        },
+    )
+
+    return result.model_dump_json(indent=2)

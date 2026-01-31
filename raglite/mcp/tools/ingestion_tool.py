@@ -30,12 +30,14 @@ logger = get_logger(__name__)
 async def _ingest_from_url(
     doc_url: str,
     auto_forecast: bool,
+    retrain_models: bool = False,
 ) -> IngestionResult:
     """Ingest document from URL.
 
     Args:
         doc_url: URL to download document from
         auto_forecast: Whether to trigger forecast refresh
+        retrain_models: Whether to trigger model retraining after ingestion
 
     Returns:
         IngestionResult with metadata and forecast status
@@ -61,7 +63,7 @@ async def _ingest_from_url(
                     "input_mode": "url",
                 },
             )
-            return await _perform_forecast_refresh(metadata, auto_forecast)
+            return await _perform_forecast_refresh(metadata, auto_forecast, retrain_models)
     except ValueError as e:
         logger.error(
             "URL ingestion failed - validation error",
@@ -91,6 +93,7 @@ async def _ingest_from_base64(
     file_content: str,
     filename: str,
     auto_forecast: bool,
+    retrain_models: bool = False,
 ) -> IngestionResult:
     """Ingest document from base64 content.
 
@@ -98,6 +101,7 @@ async def _ingest_from_base64(
         file_content: Base64-encoded file content
         filename: Original filename with extension
         auto_forecast: Whether to trigger forecast refresh
+        retrain_models: Whether to trigger model retraining after ingestion
 
     Returns:
         IngestionResult with metadata and forecast status
@@ -123,7 +127,7 @@ async def _ingest_from_base64(
                     "input_mode": "base64",
                 },
             )
-            return await _perform_forecast_refresh(metadata, auto_forecast)
+            return await _perform_forecast_refresh(metadata, auto_forecast, retrain_models)
     except ValueError as e:
         logger.error(
             "Base64 ingestion failed - validation error",
@@ -146,12 +150,14 @@ async def _ingest_from_base64(
 async def _ingest_from_path(
     doc_path: str,
     auto_forecast: bool,
+    retrain_models: bool = False,
 ) -> IngestionResult:
     """Ingest document from filesystem path.
 
     Args:
         doc_path: Path to document file
         auto_forecast: Whether to trigger forecast refresh
+        retrain_models: Whether to trigger model retraining after ingestion
 
     Returns:
         IngestionResult with metadata and forecast status
@@ -173,7 +179,7 @@ async def _ingest_from_path(
                 "input_mode": "path",
             },
         )
-        return await _perform_forecast_refresh(metadata, auto_forecast)
+        return await _perform_forecast_refresh(metadata, auto_forecast, retrain_models)
     except FileNotFoundError as e:
         logger.error(
             "Document not found",
@@ -201,6 +207,7 @@ async def ingest_financial_document(
     filename: str | None = None,
     doc_url: str | None = None,
     auto_forecast: bool = True,
+    retrain_models: bool = False,
 ) -> IngestionResult:
     """Ingest financial document from path, base64 content, or URL.
 
@@ -210,6 +217,9 @@ async def ingest_financial_document(
         filename: Original filename (required with file_content)
         doc_url: URL to download document from
         auto_forecast: Whether to trigger forecast refresh after ingestion
+        retrain_models: Whether to trigger full model retraining after ingestion.
+            This is slow (~5 min) but ensures forecasting models are up-to-date
+            with the latest data. Use sparingly, typically after major data updates.
 
     Returns:
         IngestionResult with document metadata and forecast status
@@ -223,13 +233,13 @@ async def ingest_financial_document(
 
     if has_url:
         assert doc_url is not None
-        return await _ingest_from_url(doc_url, auto_forecast)
+        return await _ingest_from_url(doc_url, auto_forecast, retrain_models)
     elif has_content:
         assert file_content is not None and filename is not None
-        return await _ingest_from_base64(file_content, filename, auto_forecast)
+        return await _ingest_from_base64(file_content, filename, auto_forecast, retrain_models)
     else:
         assert doc_path is not None
-        return await _ingest_from_path(doc_path, auto_forecast)
+        return await _ingest_from_path(doc_path, auto_forecast, retrain_models)
 
 
 @mcp.tool()

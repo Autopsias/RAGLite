@@ -162,6 +162,12 @@ async def fetch_single_regressor(
         elif reg_name == "ren_electricity":
             return await fetch_ren_electricity(start_date, end_date)
 
+        # Phase 4 Quality Fix (2026-01-29): electricity_cost validation variable maps to ren_electricity
+        # model_selection_job_config.py defines: "electricity_cost": {"type": "external_api", "metric_name": "ren_electricity"}
+        # This alias allows validation script to use variable name directly
+        elif reg_name == "electricity_cost":
+            return await fetch_ren_electricity(start_date, end_date)
+
         elif reg_name == "construction_output":
             return await fetch_construction_output(start_date, end_date)
 
@@ -191,11 +197,65 @@ async def fetch_single_regressor(
         elif reg_name == "dwelling_completions":
             return await fetch_dwelling_completions(start_date, end_date)
 
+        # Multi-geography GDP regressors (World Bank)
+        elif reg_name == "gdp_portugal_wb":
+            from raglite.forecasting.regressors.worldbank_fetchers import (
+                fetch_gdp_portugal_wb,
+            )
+
+            return await fetch_gdp_portugal_wb(start_date, end_date)
+
+        elif reg_name == "gdp_tunisia":
+            from raglite.forecasting.regressors.worldbank_fetchers import (
+                fetch_gdp_tunisia,
+            )
+
+            return await fetch_gdp_tunisia(start_date, end_date)
+
+        elif reg_name == "gdp_angola":
+            from raglite.forecasting.regressors.worldbank_fetchers import (
+                fetch_gdp_angola,
+            )
+
+            return await fetch_gdp_angola(start_date, end_date)
+
+        elif reg_name == "gdp_brazil":
+            from raglite.forecasting.regressors.worldbank_fetchers import (
+                fetch_gdp_brazil,
+            )
+
+            return await fetch_gdp_brazil(start_date, end_date)
+
+        elif reg_name == "gdp_lebanon":
+            from raglite.forecasting.regressors.worldbank_fetchers import (
+                fetch_gdp_lebanon,
+            )
+
+            return await fetch_gdp_lebanon(start_date, end_date)
+
+        elif reg_name == "gdp_weighted_composite":
+            from raglite.forecasting.regressors.worldbank_fetchers import (
+                fetch_gdp_weighted_composite,
+            )
+
+            return await fetch_gdp_weighted_composite(start_date, end_date)
+
         elif reg_name == "omie_spot":
             # NOTE: Currently disabled - too slow (1000+ HTTP requests)
             # Use ren_electricity as faster alternative (same underlying MIBEL data)
             logger.warning(f"Regressor {reg_name} disabled - too slow, use ren_electricity")
             return None
+
+        # Validation Fix: Add commodity price regressors
+        elif reg_name == "petcoke":
+            from raglite.forecasting.regressors.commodity_fetchers import fetch_petcoke_prices
+
+            return await fetch_petcoke_prices(start_date, end_date)
+
+        elif reg_name == "co2_eua":
+            from raglite.forecasting.regressors.commodity_fetchers import fetch_co2_eua_prices
+
+            return await fetch_co2_eua_prices(start_date, end_date)
 
         else:
             logger.warning(f"Unknown regressor: {reg_name}")

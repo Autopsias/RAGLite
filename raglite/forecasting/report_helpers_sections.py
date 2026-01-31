@@ -350,6 +350,77 @@ def generate_cross_variable_analysis(result: UnifiedValidationResult) -> str:
     return "\n".join(lines)
 
 
+def generate_model_distribution(result: UnifiedValidationResult) -> str:
+    """Generate model distribution summary section.
+
+    Phase 5 Model Transparency (2026-01-29): Shows which models are used for each variable,
+    helping identify model selection patterns and potential improvements.
+
+    Args:
+        result: UnifiedValidationResult from validation run
+
+    Returns:
+        Model distribution summary as markdown string
+    """
+    # Collect model distribution data
+    model_vars: dict[str, list[str]] = {}  # model_name -> [variable_names]
+    source_counts: dict[str, int] = {}  # model_source -> count
+
+    for var in result.variable_results:
+        model = getattr(var, "selected_model", None)
+        source = getattr(var, "model_source", "unknown")
+
+        if model:
+            if model not in model_vars:
+                model_vars[model] = []
+            model_vars[model].append(var.display_name)
+
+        source_counts[source] = source_counts.get(source, 0) + 1
+
+    # If no model info available, return empty
+    if not model_vars:
+        return ""
+
+    lines = [
+        "## Model Distribution",
+        "",
+        "### Models Used Per Variable",
+        "| Model | Variables | Count |",
+        "|-------|-----------|-------|",
+    ]
+
+    # Sort by count (descending)
+    for model, vars_list in sorted(model_vars.items(), key=lambda x: -len(x[1])):
+        vars_str = ", ".join(vars_list[:3])
+        if len(vars_list) > 3:
+            vars_str += f" (+{len(vars_list) - 3} more)"
+        lines.append(f"| {model} | {vars_str} | {len(vars_list)} |")
+
+    lines.append("")
+
+    # Model source distribution (cached, default, cv, etc.)
+    if source_counts:
+        lines.append("### Model Selection Sources")
+        lines.append("| Source | Count | Description |")
+        lines.append("|--------|-------|-------------|")
+
+        source_descriptions = {
+            "cached": "Model selection cached from previous CV run",
+            "default": "Default model (Prophet) used",
+            "cv": "Fresh cross-validation model selection",
+            "config_override": "Explicitly configured per-variable",
+            "unknown": "Source not tracked",
+        }
+
+        for source, count in sorted(source_counts.items(), key=lambda x: -x[1]):
+            desc = source_descriptions.get(source, "Unknown source")
+            lines.append(f"| {source} | {count} | {desc} |")
+
+        lines.append("")
+
+    return "\n".join(lines)
+
+
 def generate_console_summary(result: UnifiedValidationResult) -> str:
     """Generate abbreviated console summary.
 

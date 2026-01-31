@@ -75,6 +75,7 @@ def prepare_tft_dataset(
         add_relative_time_idx=True,
         add_target_scales=True,
         add_encoder_length=True,
+        categorical_encoders={},  # Prevent auto-categorical detection of float columns
     )
 
     # Validation dataset (last 12 months)

@@ -20,7 +20,7 @@ from raglite.forecasting.timeseries.sql_extraction_execution import (
     execute_sql_with_fallback,
 )
 from raglite.forecasting.timeseries.sql_extraction_parsing import (
-    parse_sql_rows_to_points,
+    parse_sql_rows_with_units,
 )
 from raglite.forecasting.timeseries.sql_extraction_response import (
     finalize_timeseries,
@@ -86,7 +86,12 @@ async def extract_timeseries_from_sql(
             logger.warning("No SQL data found for metric", extra={"metric": metric})
             await suggest_available_metrics(metric, min_points)
 
-        points, source_documents, is_ytd_data = parse_sql_rows_to_points(rows, metric)
+        # Phase 2 data quality: Use unit-aware parsing
+        parsed = parse_sql_rows_with_units(rows, metric)
+        points = parsed.points
+        units = parsed.units
+        source_documents = parsed.source_documents
+        is_ytd_data = parsed.is_ytd_data
 
         if not points:
             raise ExtractionError(
@@ -94,10 +99,12 @@ async def extract_timeseries_from_sql(
             )
 
         await validate_minimum_points(points, metric, min_points)
-        return finalize_timeseries(points, metric, is_ytd_data, source_documents)
+        return finalize_timeseries(
+            points, metric, is_ytd_data, source_documents, units, config_prefers_ytd=prefer_ytd
+        )
 
     except (MetricValidationError, ExtractionError) as e:
-        return await handle_extraction_failure(e, metric, min_points)
+        return await handle_extraction_failure(e, metric, min_points, entity=entity)
 
     except Exception as e:
         _handle_transaction_error(metric, e)

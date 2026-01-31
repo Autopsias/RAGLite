@@ -8,8 +8,10 @@ from typing import Any
 
 from raglite.forecasting.timeseries.sql_extraction_config import (
     determine_aggregation_function,
+    get_contaminated_entities,
     get_entity_filters,
     get_metric_synonyms,
+    get_segment_entities_for_group_exclusion,
 )
 from raglite.forecasting.timeseries.sql_extraction_query import build_timeseries_query
 from raglite.ingestion.entity_normalizer import (
@@ -42,12 +44,21 @@ def configure_entity_filter(
 
     if entity is not None:
         # User-specified entity filter takes precedence
+        # Fix 2026-01-30: Preserve prefer_ytd from original config when overriding entity
         canonical_entity = normalize_entity(entity)
         if canonical_entity:
-            ENTITY_FILTERS[metric_search] = (canonical_entity, False)
+            # Get original prefer_ytd from config (if exists), otherwise False
+            existing_config = ENTITY_FILTERS.get(metric_search)
+            original_prefer_ytd = existing_config[1] if existing_config else False
+            ENTITY_FILTERS[metric_search] = (canonical_entity, original_prefer_ytd)
             logger.info(
                 "User-specified entity filter applied",
-                extra={"metric": metric, "entity": entity, "canonical": canonical_entity},
+                extra={
+                    "metric": metric,
+                    "entity": entity,
+                    "canonical": canonical_entity,
+                    "prefer_ytd": original_prefer_ytd,
+                },
             )
         return ENTITY_FILTERS, canonical_entity or entity
     else:
@@ -85,11 +96,37 @@ def build_entity_filter_clause(
             canonical = canonical_entity or required_entity
 
             if canonical.upper() == "GROUP":
+                # Include all GROUP variations from entity_normalizer.py
+                # Story 6.28: Expanded filter for complete GROUP entity matching
+                group_variations = [
+                    "GROUP",
+                    "Group",
+                    "SECIL Group",
+                    "Secil Group",
+                    "SECIL GROUP",
+                    "Total",
+                    "TOTAL",
+                    "Consolidado",
+                    "Consolidated",
+                    "Group Total",
+                    "Total Group",
+                    "Conso",
+                    "CONSO",
+                    "Groupe",
+                ]
+                variations_sql = ", ".join(f"'{v}'" for v in group_variations)
+
+                # Forecast debug fix (2026-01-28): Exclude segment entities
+                # to prevent mixing GROUP-level with regional segment data
+                segment_entities = get_segment_entities_for_group_exclusion()
+                segment_exclusion_sql = ", ".join(f"'{e}'" for e in segment_entities)
+
                 entity_filter = f"""AND (
-                          UPPER(entity) = '{required_entity.upper()}'
-                          OR entity = 'SECIL Group'
+                          entity IN ({variations_sql})
+                          OR UPPER(entity) = 'GROUP'
                       )
-                      AND entity NOT LIKE '%%+%%'"""
+                      AND entity NOT LIKE '%%+%%'
+                      AND entity NOT IN ({segment_exclusion_sql})"""
                 logger.info(
                     "Using GROUP priority-based entity selection (Story 6.28)",
                     extra={
@@ -97,6 +134,7 @@ def build_entity_filter_clause(
                         "required_entity": required_entity,
                         "entity_priority": "GROUP > SECIL Group",
                         "prefer_ytd": prefer_ytd,
+                        "segment_exclusion": len(segment_entities),
                     },
                 )
             else:
@@ -118,6 +156,17 @@ def build_entity_filter_clause(
                 "Using YTD period mode without entity filter",
                 extra={"metric": metric_search, "prefer_ytd": prefer_ytd},
             )
+
+    # Data quality fix: Always exclude contaminated entities (metrics stored as entities)
+    contaminated = get_contaminated_entities()
+    if contaminated:
+        contaminated_sql = ", ".join(f"'{e}'" for e in contaminated)
+        exclusion_clause = f"AND (entity IS NULL OR entity NOT IN ({contaminated_sql}))"
+        if entity_filter:
+            entity_filter = f"{entity_filter}\n                      {exclusion_clause}"
+        else:
+            entity_filter = exclusion_clause
+
     return entity_filter, prefer_ytd
 
 
@@ -128,7 +177,7 @@ async def execute_sql_with_fallback(
     prefer_ytd: bool,
     aggregation: str,
 ) -> list[tuple[Any, ...]]:
-    """Execute SQL query with exact match first, wildcard fallback.
+    """Execute SQL query with exact match first, wildcard fallback, entity column fallback.
 
     Args:
         metric: Original metric name
@@ -141,22 +190,45 @@ async def execute_sql_with_fallback(
         List of SQL result rows
 
     Raises:
-        ExtractionError: If no data found after both attempts
+        ExtractionError: If no data found after all attempts
+
+    Note:
+        Phase 3 (entity column fallback) handles inverted data where the metric name
+        is stored in the entity column instead of the metric column (e.g., when
+        entity="EBITDA IFRS" and metric=NULL).
     """
     from raglite.shared.clients import get_postgresql_connection
 
     conn = get_postgresql_connection()
     cursor = conn.cursor()
 
-    # Try exact match first
+    # Phase 5 Data Quality Fix (2026-01-29): REMOVED pre-aggregation filter for EBITDA
+    # Root cause analysis: 338 EBITDA rows exist in database, but cascading filters
+    # (SQL value filter + YTD preference + outlier bounds) reduced to only 6-8 rows
+    # causing MASE > 1.0 (worse than naive baseline).
+    #
+    # Solution: Remove pre-aggregation SQL filter - post-aggregation MAD-based
+    # outlier detection in _normalization.py is more statistically sound and
+    # handles extreme values appropriately after aggregation.
+    #
+    # Historical note: Previous filters were:
+    # - ABS(value) < 50 (too aggressive, 2026-01-28)
+    # - ABS(value) < 200 (still too aggressive, 2026-01-29)
+    # Both created artificial data sparsity.
+    value_filter = ""
+    # EBITDA no longer needs pre-aggregation filtering - let normalization handle outliers
+
+    # Phase 1: Try exact match first
     metric_condition = "metric = %s"
     metric_param = metric_search
     match_type = "exact"
 
-    query = build_timeseries_query(metric_condition, entity_filter, prefer_ytd, aggregation)
+    query = build_timeseries_query(
+        metric_condition, entity_filter, prefer_ytd, aggregation, value_filter
+    )
 
     logger.debug(
-        "Executing SQL query (exact match first)",
+        "Phase 1: Executing SQL query (exact match)",
         extra={
             "metric_condition": metric_condition,
             "metric_param": metric_param,
@@ -168,26 +240,59 @@ async def execute_sql_with_fallback(
     cursor.execute(query, (metric_param,))
     rows: list[tuple[Any, ...]] = cursor.fetchall()
 
-    # If no results with exact match, try wildcard as fallback
-    if not rows and match_type == "exact":
+    # Phase 2: If no results with exact match, try wildcard fallback
+    if not rows:
         logger.info(
-            "No results with exact match, trying wildcard fallback",
+            "Phase 1 failed, trying Phase 2: wildcard fallback",
             extra={"metric_search": metric_search},
         )
 
-        # Switch to wildcard matching
         metric_condition = "LOWER(metric) LIKE %s"
         metric_param = f"%{metric_search.lower()}%"
         match_type = "wildcard"
 
-        query = build_timeseries_query(metric_condition, entity_filter, prefer_ytd, aggregation)
+        query = build_timeseries_query(
+            metric_condition, entity_filter, prefer_ytd, aggregation, value_filter
+        )
         cursor.execute(query, (metric_param,))
         rows = cursor.fetchall()
 
         if rows:
             logger.info(
-                "Wildcard fallback succeeded",
+                "Phase 2 wildcard fallback succeeded",
                 extra={"rows_found": len(rows), "metric_param": metric_param},
+            )
+
+    # Phase 3: If still no results, try entity column fallback (for inverted data)
+    # This handles cases where metric name is in entity column and metric column is NULL
+    if not rows:
+        logger.info(
+            "Phase 2 failed, trying Phase 3: entity column fallback for inverted data",
+            extra={"metric_search": metric_search},
+        )
+
+        # Search entity column when metric is NULL or 'None' (inverted data pattern)
+        # Disable entity filter since entity column contains the metric name
+        metric_condition = """(
+            LOWER(entity) LIKE %s
+            AND (metric IS NULL OR metric = 'None' OR TRIM(metric) = '')
+        )"""
+        metric_param = f"%{metric_search.lower()}%"
+        match_type = "entity_fallback"
+
+        # Build query WITHOUT entity filter (empty string) since entity has metric data
+        query = build_timeseries_query(metric_condition, "", prefer_ytd, aggregation, value_filter)
+        cursor.execute(query, (metric_param,))
+        rows = cursor.fetchall()
+
+        if rows:
+            logger.info(
+                "Phase 3 entity column fallback succeeded (inverted data detected)",
+                extra={
+                    "rows_found": len(rows),
+                    "metric_param": metric_param,
+                    "match_type": match_type,
+                },
             )
 
     cursor.close()

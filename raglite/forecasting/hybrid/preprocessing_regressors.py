@@ -24,6 +24,77 @@ MAX_MISSING_RATIO = 0.30  # Maximum 30% missing data allowed
 MAX_INTERPOLATION_GAP = 3  # Maximum periods to interpolate
 
 
+def scale_regressors_robust(
+    regressors: dict[str, pd.Series],
+) -> tuple[dict[str, pd.Series], dict[str, tuple[float, float]]]:
+    """Scale regressors using RobustScaler (median/IQR).
+
+    Phase 5 Quality Fix (2026-01-29): Handles regime changes (2022 energy crisis)
+    better than StandardScaler. Variable Cost issue: Diesel ~1, TTF Gas ~3-339
+    (scale mismatch) causing poor model performance.
+
+    RobustScaler is preferred for financial/commodity data because:
+    1. Uses median instead of mean (robust to outliers)
+    2. Uses IQR instead of std (handles regime changes)
+    3. Energy crisis 2022 created 10-100x swings that StandardScaler amplifies
+
+    Args:
+        regressors: Dict of regressor name -> pandas Series with values
+
+    Returns:
+        Tuple of:
+        - scaled: Dict of regressor name -> scaled pandas Series (median=0, IQR-normalized)
+        - scalers: Dict of regressor name -> (median, iqr) for inverse transform
+    """
+    from sklearn.preprocessing import RobustScaler
+
+    scaled: dict[str, pd.Series] = {}
+    scalers: dict[str, tuple[float, float]] = {}
+
+    for name, series in regressors.items():
+        if series.empty:
+            continue
+
+        # RobustScaler requires 2D input
+        scaler = RobustScaler()
+        values = series.values.reshape(-1, 1)
+
+        try:
+            scaled_values = scaler.fit_transform(values).flatten()
+            scaled[name] = pd.Series(scaled_values, index=series.index, name=name)
+
+            # Store median and IQR for inverse transform (if needed)
+            scalers[name] = (float(scaler.center_[0]), float(scaler.scale_[0]))
+
+            logger.debug(
+                f"Scaled regressor {name} with RobustScaler",
+                extra={
+                    "regressor": name,
+                    "original_range": f"{series.min():.2f} to {series.max():.2f}",
+                    "scaled_range": f"{scaled[name].min():.2f} to {scaled[name].max():.2f}",
+                    "median": scaler.center_[0],
+                    "iqr": scaler.scale_[0],
+                },
+            )
+        except Exception as e:
+            logger.warning(
+                f"Failed to scale regressor {name}: {e}, using original",
+                extra={"regressor": name, "error": str(e)},
+            )
+            scaled[name] = series
+
+    if scaled:
+        logger.info(
+            "Applied RobustScaler to regressors",
+            extra={
+                "scaled_count": len(scaled),
+                "regressor_names": list(scaled.keys()),
+            },
+        )
+
+    return scaled, scalers
+
+
 def validate_regressor_scale(
     regressor: pd.Series,
     target: pd.Series,

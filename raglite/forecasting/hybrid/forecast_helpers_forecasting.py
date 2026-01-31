@@ -19,7 +19,21 @@ if TYPE_CHECKING:
 
 
 # Module-level constants
-POSITIVE_ONLY_METRICS = {"ebitda", "revenue", "capacity_utilization", "sales_volume"}
+# Phase 3 Quality Fix (2026-01-29): Added cost metrics to prevent negative forecasts
+# Variable Cost, Electricity Cost, Thermal Cost are always positive values
+POSITIVE_ONLY_METRICS = {
+    "ebitda",
+    "revenue",
+    "capacity_utilization",
+    "sales_volume",
+    # Cost metrics (Phase 3 fix)
+    "variable_cost",
+    "variable cost",
+    "electricity_cost",
+    "electrical energy",
+    "thermal_cost",
+    "thermal energy",
+}
 
 
 def detect_input_frequency(df: pd.DataFrame) -> bool:

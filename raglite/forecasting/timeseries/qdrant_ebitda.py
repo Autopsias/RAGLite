@@ -16,6 +16,7 @@ logger = get_logger(__name__)
 
 from raglite.forecasting.timeseries.metadata import (  # noqa: E402
     EBITDA_ENTITY_PATTERNS,
+    EBITDA_ENTITY_PATTERNS_ALT,
     EBITDA_VALUE_THRESHOLDS,
     ExtractionError,
 )
@@ -39,17 +40,38 @@ def _parse_ebitda_chunk_metadata(source_doc: str) -> tuple[int, int] | None:
     return int(doc_match.group(1)), int(doc_match.group(2))
 
 
-def _extract_ebitda_values_from_line(line: str, value_threshold: int) -> list[int]:
-    """Parse EBITDA values from markdown table row.
+def _extract_ebitda_values_from_line(
+    line: str, value_threshold: int, search_pattern: str | None = None
+) -> list[int]:
+    """Parse EBITDA YTD values from markdown table row.
+
+    The table structure is: | Monthly values... | Label | YTD values... |
+    We want the YTD values which come AFTER the label.
 
     Args:
         line: Markdown table row text
         value_threshold: Minimum value threshold for YTD values
+        search_pattern: Optional pattern to split on (extract values after pattern)
 
     Returns:
-        List of large values exceeding threshold
+        List of large values exceeding threshold (YTD values only if pattern provided)
     """
     import re
+
+    # If search pattern provided, only look at values AFTER the pattern
+    # This isolates YTD values from Monthly values
+    if search_pattern:
+        # Split by the pattern and take the part after it
+        parts = line.split(search_pattern)
+        if len(parts) > 1:
+            line = parts[1]  # Values after the label are YTD values
+        # Also try alternate pattern formats
+        for alt_label in ["EBITDA IFRS Portugal", "Portugal EBITDA IFRS"]:
+            if alt_label in line:
+                parts = line.split(alt_label)
+                if len(parts) > 1:
+                    line = parts[1]
+                    break
 
     # Parse the markdown table row - split by | and extract numeric values
     cells = [c.strip() for c in line.split("|") if c.strip()]
@@ -85,6 +107,13 @@ def _aggregate_ebitda_by_period(
     """
     ebitda_data: dict[str, float] = {}  # period -> value
 
+    # Get both primary and alternate patterns for line matching
+    entity_lower = entity.lower().strip()
+    alt_pattern = EBITDA_ENTITY_PATTERNS_ALT.get(entity_lower)
+    patterns_to_check = [search_pattern]
+    if alt_pattern and alt_pattern != search_pattern:
+        patterns_to_check.append(alt_pattern)
+
     for point in results:
         text = point.payload.get("text", "")
         source_doc = point.payload.get("source_document", "unknown")
@@ -96,14 +125,28 @@ def _aggregate_ebitda_by_period(
 
         doc_year, doc_month = metadata
 
-        # Find the line containing the entity's EBITDA pattern
+        # Find the line containing the entity's EBITDA pattern (check both patterns)
+        # Prioritize lines with "(1000 EUR)" which indicate the actual values table
         lines = text.split("\n")
         for line in lines:
-            if search_pattern in line:
-                large_values = _extract_ebitda_values_from_line(line, value_threshold)
+            # Find which pattern matched this line
+            matched_pattern = None
+            for pattern in patterns_to_check:
+                if pattern in line:
+                    matched_pattern = pattern
+                    break
 
-                # The YTD value for the document's month should be the first large value
-                # (tables show current month YTD first in the YTD section)
+            if matched_pattern:
+                # Check if this is the primary actuals table (has unit indicator)
+                is_actuals_table = "(1000 EUR)" in line or "(M EUR)" in line
+
+                # Pass the pattern so extraction can isolate YTD values (after label)
+                large_values = _extract_ebitda_values_from_line(
+                    line, value_threshold, matched_pattern
+                )
+
+                # The YTD value for the document's month should be the FIRST large value
+                # after the label (tables show: Label | YTD Actual | YTD Budget | YTD LY)
                 if large_values:
                     # Convert to period format (Oct-25)
                     month_abbr = [
@@ -122,11 +165,22 @@ def _aggregate_ebitda_by_period(
                     ][doc_month - 1]
                     period = f"{month_abbr}-{doc_year % 100:02d}"
 
-                    # Use the largest value (most likely current YTD)
-                    ytd_value = max(large_values)
+                    # Use the FIRST value (YTD Actual comes before Budget in table)
+                    # NOT max(), as Budget can sometimes exceed Actual
+                    ytd_value = large_values[0]
 
-                    # Only update if we don't have this period or new value is larger
-                    if period not in ebitda_data or ytd_value > ebitda_data[period]:
+                    # Update rules:
+                    # 1. Always prefer actuals table (has unit indicator)
+                    # 2. If both are actuals tables, keep existing (first found)
+                    # 3. If neither is actuals, keep existing
+                    should_update = False
+                    if period not in ebitda_data:
+                        should_update = True
+                    elif is_actuals_table:
+                        # Actuals table overrides non-actuals
+                        should_update = True
+
+                    if should_update:
                         ebitda_data[period] = ytd_value
                         logger.debug(
                             f"Found EBITDA: {period} = €{ytd_value}K",
@@ -134,6 +188,7 @@ def _aggregate_ebitda_by_period(
                                 "period": period,
                                 "value": ytd_value,
                                 "source": source_doc,
+                                "is_actuals_table": is_actuals_table,
                             },
                         )
 
@@ -286,15 +341,49 @@ def _remove_outliers(points: list["TimeSeriesPoint"]) -> list["TimeSeriesPoint"]
     return filtered_points
 
 
+def _verify_qdrant_collection_exists(client: Any, collection_name: str) -> bool:
+    """Verify collection exists before querying.
+
+    Phase 2 Fix (2026-01-29): Prevents "collection not found" errors when
+    APP_ENV=test automatically switches to financial_docs_test which may not exist.
+
+    Args:
+        client: Qdrant client instance
+        collection_name: Name of collection to verify
+
+    Returns:
+        True if collection exists, False otherwise
+    """
+    try:
+        client.get_collection(collection_name)
+        return True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "404" in error_str or "not found" in error_str or "doesn't exist" in error_str:
+            logger.warning(
+                f"Collection '{collection_name}' not found",
+                extra={"collection": collection_name},
+            )
+            return False
+        # Re-raise unexpected errors
+        raise
+
+
 def _query_qdrant_for_ebitda(search_pattern: str, entity: str) -> list[Any]:
     """Query Qdrant for chunks containing EBITDA data.
 
+    Searches using both primary pattern and alternate pattern to handle
+    different document formats (e.g., "EBITDA IFRS Portugal" vs "Portugal EBITDA IFRS").
+
+    Phase 2 Fix (2026-01-29): Graceful fallback to production collection if test
+    collection doesn't exist.
+
     Args:
-        search_pattern: Entity-specific search pattern
+        search_pattern: Entity-specific search pattern (primary)
         entity: Entity name for logging
 
     Returns:
-        List of Qdrant points matching the search pattern
+        List of Qdrant points matching either pattern (deduplicated by point ID)
     """
     from qdrant_client.models import FieldCondition, Filter, MatchText
 
@@ -304,6 +393,23 @@ def _query_qdrant_for_ebitda(search_pattern: str, entity: str) -> list[Any]:
     client = get_qdrant_client()
     collection = settings.qdrant_collection_name
 
+    # Phase 2 Fix: Verify collection exists with fallback to production
+    if not _verify_qdrant_collection_exists(client, collection):
+        if collection.endswith("_test") or collection.endswith("_ci"):
+            fallback = "financial_docs"
+            if _verify_qdrant_collection_exists(client, fallback):
+                logger.info(
+                    f"Using fallback collection '{fallback}' (test collection not found)",
+                    extra={"original": collection, "fallback": fallback},
+                )
+                collection = fallback
+            else:
+                logger.warning("No valid Qdrant collection available")
+                return []
+        else:
+            return []
+
+    # Search with primary pattern
     results: list[Any]
     results, _ = client.scroll(
         collection_name=collection,
@@ -323,6 +429,37 @@ def _query_qdrant_for_ebitda(search_pattern: str, entity: str) -> list[Any]:
         f"Found Qdrant chunks with {search_pattern}",
         extra={"chunk_count": len(results), "entity": entity},
     )
+
+    # Also search with alternate pattern if available
+    entity_lower = entity.lower().strip()
+    alt_pattern = EBITDA_ENTITY_PATTERNS_ALT.get(entity_lower)
+    if alt_pattern and alt_pattern != search_pattern:
+        alt_results, _ = client.scroll(
+            collection_name=collection,
+            scroll_filter=Filter(
+                must=[
+                    FieldCondition(
+                        key="text",
+                        match=MatchText(text=alt_pattern),
+                    )
+                ]
+            ),
+            limit=100,
+            with_payload=True,
+        )
+
+        if alt_results:
+            logger.info(
+                f"Found additional Qdrant chunks with alternate pattern {alt_pattern}",
+                extra={"chunk_count": len(alt_results), "entity": entity},
+            )
+
+            # Deduplicate by point ID
+            seen_ids = {p.id for p in results}
+            for point in alt_results:
+                if point.id not in seen_ids:
+                    results.append(point)
+                    seen_ids.add(point.id)
 
     return results
 

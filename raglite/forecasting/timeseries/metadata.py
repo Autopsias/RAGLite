@@ -19,6 +19,31 @@ class ExtractionError(Exception):
     pass
 
 
+class UnitMixingError(ExtractionError):
+    """Raised when unit mixing is too severe for forecasting.
+
+    Phase 5 enhancement: When value swing exceeds 20x, data quality is too
+    poor for reliable forecasting and must be fixed first.
+
+    Attributes:
+        metric: Name of the metric with unit mixing
+        swing_ratio: Ratio of max/min values
+        max_val: Maximum value found
+        min_val: Minimum value found
+    """
+
+    def __init__(self, metric: str, swing_ratio: float, max_val: float, min_val: float) -> None:
+        self.metric = metric
+        self.swing_ratio = swing_ratio
+        self.max_val = max_val
+        self.min_val = min_val
+        super().__init__(
+            f"Unit mixing too severe for '{metric}': swing={swing_ratio:.1f}x "
+            f"(max={max_val:.1f}, min={min_val:.1f}). "
+            "Run data quality fixes (scripts/fix_ebitda_scale_v2.py) before forecasting."
+        )
+
+
 class MetricValidationError(ExtractionError):
     """Exception for metric validation failures.
 
@@ -71,15 +96,27 @@ class MetricValidationError(ExtractionError):
 
 EBITDA_ENTITY_PATTERNS = {
     # Geographic entities (consolidated by country)
+    # Primary pattern for Qdrant text search - uses "EBITDA IFRS {Country}" format
+    # which contains YTD values in newer document formats (Dec 2025+)
+    "portugal": "EBITDA IFRS Portugal",
+    "tunisia": "EBITDA IFRS Tunisia",
+    "angola": "EBITDA IFRS Angola",
+    "brazil": "EBITDA IFRS Brazil",
+    "lebanon": "EBITDA IFRS Lebanon",
+    # Segment totals (not consolidated GROUP)
+    "cement_portugal": "Cement EBITDA IFRS",
+    "concrete": "Concrete EBITDA IFRS",
+    "aggregates": "Aggregates EBITDA IFRS",
+}
+
+# Alternate patterns for backward compatibility with older documents
+# Some documents use "{Country} EBITDA IFRS" instead of "EBITDA IFRS {Country}"
+EBITDA_ENTITY_PATTERNS_ALT = {
     "portugal": "Portugal EBITDA IFRS",
     "tunisia": "Tunisia EBITDA IFRS",
     "angola": "Angola EBITDA IFRS",
     "brazil": "Brazil EBITDA IFRS",
     "lebanon": "Lebanon EBITDA IFRS",
-    # Segment totals (not consolidated GROUP)
-    "cement_portugal": "Cement EBITDA IFRS",
-    "concrete": "Concrete EBITDA IFRS",
-    "aggregates": "Aggregates EBITDA IFRS",
 }
 
 

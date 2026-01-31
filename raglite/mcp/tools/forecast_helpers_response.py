@@ -62,6 +62,9 @@ def build_response(
 ) -> ForecastQueryResponse:
     """Build the final ForecastQueryResponse.
 
+    Forecast debug fix (2026-01-28): Added forecast date range fields to response
+    for improved user clarity about forecast horizon.
+
     Args:
         forecast_result: Generated forecast result
         historical_data: Historical time-series data
@@ -74,13 +77,37 @@ def build_response(
     """
     from raglite.shared.models import ForecastQueryResponse
 
-    return ForecastQueryResponse.from_forecast_result(
+    # Forecast debug fix: Extract date range information
+    last_historical_date = None
+    forecast_start_date = None
+    forecast_end_date = None
+
+    # Get last historical data point date
+    if historical_data.points:
+        last_point = max(historical_data.points, key=lambda p: p.date)
+        last_historical_date = last_point.date.strftime("%Y-%m-%d")
+
+    # Get forecast date range
+    if forecast_result.forecast:
+        forecast_dates = sorted([f.date for f in forecast_result.forecast])
+        if forecast_dates:
+            forecast_start_date = forecast_dates[0].strftime("%Y-%m-%d")
+            forecast_end_date = forecast_dates[-1].strftime("%Y-%m-%d")
+
+    response = ForecastQueryResponse.from_forecast_result(
         result=forecast_result,
         source_documents=historical_data.source_documents,
         regressors_used=regressors_used if regressors_used else None,
         model_type=actual_model_type,
         model_selection_reason=model_selection_reason,
     )
+
+    # Add date range fields
+    response.last_historical_date = last_historical_date
+    response.forecast_start_date = forecast_start_date
+    response.forecast_end_date = forecast_end_date
+
+    return response
 
 
 def handle_forecast_error(e: Exception, metric: str, logger: Logger) -> None:

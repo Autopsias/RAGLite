@@ -45,6 +45,7 @@ from raglite.forecasting.report_helpers_sections import (
     generate_cross_variable_analysis,
     generate_executive_summary,
     generate_improvement_priorities,
+    generate_model_distribution,
     generate_variable_assessment,
 )
 from raglite.shared.logging import get_logger
@@ -65,6 +66,7 @@ __all__ = [
     "diagnose_failure",
     "generate_actionable_guidance",
     "generate_cross_variable_analysis",
+    "generate_model_distribution",
     "generate_markdown_report",
     "generate_console_summary",
     "generate_validation_report",
@@ -94,6 +96,7 @@ def generate_markdown_report(result: UnifiedValidationResult) -> str:
         generate_variable_assessment(result),
         generate_improvement_priorities(result),
         generate_actionable_guidance(result),  # Story 6.27: Add actionable guidance
+        generate_model_distribution(result),  # Phase 5: Model transparency
         generate_cross_variable_analysis(result),
     ]
 

@@ -35,6 +35,12 @@ from raglite.shared.models.external_data import (
     RegressorListResponse,
 )
 
+# Time Series & Forecasting
+from raglite.shared.models.forecast_jobs import (
+    AsyncForecastResponse,
+    ForecastJobStatus,
+)
+
 # Insights, Anomalies, Trends, Recommendations
 from raglite.shared.models.insights import (
     Anomaly,
@@ -62,8 +68,6 @@ from raglite.shared.models.query_schemas import (
     QueryResponse,
     QueryResult,
 )
-
-# Time Series & Forecasting
 from raglite.shared.models.timeseries_models import (
     ForecastPoint,
     ForecastQueryRequest,
@@ -109,6 +113,8 @@ __all__ = [
     "ForecastRefreshResult",
     "ForecastQueryRequest",
     "ForecastQueryResponse",
+    "AsyncForecastResponse",
+    "ForecastJobStatus",
     # Insights
     "AnomalySeverity",
     "Anomaly",

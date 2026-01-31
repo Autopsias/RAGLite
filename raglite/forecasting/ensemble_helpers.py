@@ -32,6 +32,7 @@ from raglite.forecasting.ensemble_helpers_results import (
     build_ensemble_result,
     build_forecast_points,
     calculate_ensemble_forecast,
+    calculate_stratified_ensemble_forecast,
 )
 
 __all__ = [
@@ -52,4 +53,5 @@ __all__ = [
     "build_ensemble_result",
     "build_forecast_points",
     "calculate_ensemble_forecast",
+    "calculate_stratified_ensemble_forecast",
 ]

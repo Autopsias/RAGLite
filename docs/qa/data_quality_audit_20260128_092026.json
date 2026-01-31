@@ -1,0 +1,1098 @@
+{
+  "timestamp": "2026-01-28T09:20:26.369077",
+  "runtime_seconds": 6.66,
+  "summary": {
+    "variables_audited": 12,
+    "total_checks": 96,
+    "passed": 0,
+    "warned": 0,
+    "failed": 20,
+    "skipped": 76,
+    "pass_rate": 0.0,
+    "variables_passed": 2,
+    "variables_warned": 0,
+    "variables_failed": 10
+  },
+  "results": [
+    {
+      "variable": "ebitda",
+      "status": "FAIL",
+      "passed": 0,
+      "warned": 0,
+      "failed": 2,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "ebitda",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "ebitda",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "ebitda",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "ebitda",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "ebitda",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "ebitda",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "ebitda",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "ebitda",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "revenue",
+      "status": "PASS",
+      "passed": 0,
+      "warned": 0,
+      "failed": 0,
+      "skipped": 8,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "SKIP",
+          "message": "No entity filter configured",
+          "variable": "revenue",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "SKIP",
+          "message": "No entity filter required",
+          "variable": "revenue",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "revenue",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "revenue",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "revenue",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "revenue",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "revenue",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "revenue",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "variable_cost",
+      "status": "FAIL",
+      "passed": 0,
+      "warned": 0,
+      "failed": 2,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "variable_cost",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "variable_cost",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "variable_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "variable_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "variable_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "variable_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "variable_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "variable_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "sales_volume",
+      "status": "FAIL",
+      "passed": 0,
+      "warned": 0,
+      "failed": 2,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "sales_volume",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "sales_volume",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "sales_volume",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "sales_volume",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "sales_volume",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "sales_volume",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "sales_volume",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "sales_volume",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "electricity_cost",
+      "status": "FAIL",
+      "passed": 0,
+      "warned": 0,
+      "failed": 2,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "electricity_cost",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "electricity_cost",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "electricity_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "electricity_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "electricity_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "electricity_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "electricity_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "electricity_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "thermal_cost",
+      "status": "FAIL",
+      "passed": 0,
+      "warned": 0,
+      "failed": 2,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "thermal_cost",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "thermal_cost",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "thermal_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "thermal_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "thermal_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "thermal_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "thermal_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "thermal_cost",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "avg_selling_price",
+      "status": "FAIL",
+      "passed": 0,
+      "warned": 0,
+      "failed": 2,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "avg_selling_price",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "avg_selling_price",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "avg_selling_price",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "avg_selling_price",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "avg_selling_price",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "avg_selling_price",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "avg_selling_price",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "avg_selling_price",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "capacity_utilization",
+      "status": "PASS",
+      "passed": 0,
+      "warned": 0,
+      "failed": 0,
+      "skipped": 8,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "SKIP",
+          "message": "No entity filter configured",
+          "variable": "capacity_utilization",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "SKIP",
+          "message": "No entity filter required",
+          "variable": "capacity_utilization",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capacity_utilization",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "Scale mismatch detection not configured",
+          "variable": "capacity_utilization",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capacity_utilization",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capacity_utilization",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capacity_utilization",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capacity_utilization",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "capex",
+      "status": "FAIL",
+      "passed": 0,
+      "warned": 0,
+      "failed": 2,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "capex",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "capex",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capex",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capex",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capex",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capex",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capex",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "capex",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "fixed_costs",
+      "status": "FAIL",
+      "passed": 0,
+      "warned": 0,
+      "failed": 2,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "fixed_costs",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "fixed_costs",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "fixed_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "fixed_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "fixed_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "fixed_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "fixed_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "fixed_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "headcount",
+      "status": "FAIL",
+      "passed": 0,
+      "warned": 0,
+      "failed": 2,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "headcount",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "headcount",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "headcount",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "Scale mismatch detection not configured",
+          "variable": "headcount",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "headcount",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "headcount",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "headcount",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "headcount",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    },
+    {
+      "variable": "other_costs",
+      "status": "FAIL",
+      "passed": 0,
+      "warned": 0,
+      "failed": 2,
+      "skipped": 6,
+      "checks": [
+        {
+          "check_name": "entity_contamination",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "other_costs",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "entity_coverage",
+          "status": "FAIL",
+          "message": "Query error: syntax error at or near \"#\"\nLINE 1:   # nosec\n          ^\n",
+          "variable": "other_costs",
+          "severity": 3,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "value_range",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "other_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "unit_consistency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "other_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "robust_outliers",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "other_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "effective_frequency",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "other_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "time_index_integrity",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "other_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        },
+        {
+          "check_name": "missing_data_pattern",
+          "status": "SKIP",
+          "message": "No data to check",
+          "variable": "other_costs",
+          "severity": 1,
+          "actual_value": null,
+          "threshold": null,
+          "sample_rows": []
+        }
+      ]
+    }
+  ]
+}

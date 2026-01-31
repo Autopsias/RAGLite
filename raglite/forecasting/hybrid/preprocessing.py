@@ -36,6 +36,7 @@ from .preprocessing_data import (  # noqa: F401
 from .preprocessing_regressors import (  # noqa: F401
     generate_future_regressors,
     prepare_regressors,
+    scale_regressors_robust,
     select_regressors,
     validate_regressor_scale,
 )
@@ -48,7 +49,21 @@ from .preprocessing_yoy import (  # noqa: F401
 logger = get_logger(__name__)
 MAX_MISSING_RATIO = 0.30  # Maximum 30% missing data allowed
 MAX_INTERPOLATION_GAP = 3  # Maximum periods to interpolate
-POSITIVE_ONLY_METRICS = {"ebitda", "revenue", "capacity_utilization", "sales_volume"}
+# Phase 3 Quality Fix (2026-01-29): Added cost metrics to prevent negative forecasts
+# Variable Cost, Electricity Cost, Thermal Cost are always positive values
+POSITIVE_ONLY_METRICS = {
+    "ebitda",
+    "revenue",
+    "capacity_utilization",
+    "sales_volume",
+    # Cost metrics (Phase 3 fix)
+    "variable_cost",
+    "variable cost",
+    "electricity_cost",
+    "electrical energy",
+    "thermal_cost",
+    "thermal energy",
+}
 
 # Private function for internal use (kept in this file, not exported)
 _generate_future_regressors = generate_future_regressors

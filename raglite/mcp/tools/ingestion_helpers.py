@@ -299,12 +299,14 @@ def _prepare_path_for_async(
 async def _perform_forecast_refresh(
     metadata: Any,
     auto_forecast: bool,
+    retrain_models: bool = False,
 ) -> "IngestionResult":
     """Perform forecast refresh after document ingestion.
 
     Args:
         metadata: DocumentMetadata from ingestion
         auto_forecast: Whether to trigger forecast refresh
+        retrain_models: Whether to trigger model retraining after refresh
 
     Returns:
         IngestionResult with forecast status
@@ -315,6 +317,8 @@ async def _perform_forecast_refresh(
 
     forecasts_updated: list[str] | None = None
     forecast_skip_reason: str | None = None
+    models_retrained: list[str] | None = None
+
     if not auto_forecast:
         forecast_skip_reason = "auto_forecast=False"
     elif not settings.enable_forecast_auto_update:
@@ -349,8 +353,43 @@ async def _perform_forecast_refresh(
                 "Forecast refresh failed unexpectedly",
                 extra={"doc_filename": metadata.filename, "error": str(e)},
             )
+
+    # Optionally retrain models after forecast refresh
+    if retrain_models:
+        try:
+            from raglite.mcp.tools.admin import retrain_forecasting_models
+
+            logger.info(
+                "Starting model retraining after ingestion",
+                extra={"doc_filename": metadata.filename},
+            )
+            retrain_result = await retrain_forecasting_models(models="all", force=True)
+            if retrain_result.status == "success":
+                models_retrained = retrain_result.models_trained
+                logger.info(
+                    "Model retraining completed",
+                    extra={
+                        "doc_filename": metadata.filename,
+                        "models_retrained": models_retrained,
+                    },
+                )
+            else:
+                logger.warning(
+                    "Model retraining failed",
+                    extra={
+                        "doc_filename": metadata.filename,
+                        "error": retrain_result.message,
+                    },
+                )
+        except Exception as e:
+            logger.warning(
+                "Model retraining failed unexpectedly",
+                extra={"doc_filename": metadata.filename, "error": str(e)},
+            )
+
     return IngestionResult.from_metadata(
         metadata,
         forecasts_updated=forecasts_updated,
         forecast_refresh_skipped_reason=forecast_skip_reason,
+        models_retrained=models_retrained,
     )
