@@ -75,7 +75,7 @@ class TestSQLFirstExtractionFallback:
                 return_value=mock_ts_data,
             ) as mock_hybrid,
             patch(
-                "raglite.forecasting.hybrid.ensemble.generate_forecast",
+                "raglite.mcp.tools.forecast_helpers_generation.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -133,7 +133,7 @@ class TestSQLFirstExtractionFallback:
                 "raglite.mcp.tools.forecast_helpers.extract_timeseries", new_callable=AsyncMock
             ) as mock_hybrid,
             patch(
-                "raglite.forecasting.hybrid.ensemble.generate_forecast",
+                "raglite.mcp.tools.forecast_helpers_generation.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -197,7 +197,7 @@ class TestSQLFirstExtractionFallback:
                     return_value=mock_ts_data,
                 ),
                 patch(
-                    "raglite.forecasting.hybrid.ensemble.generate_forecast",
+                    "raglite.mcp.tools.forecast_helpers_generation.generate_forecast",
                     new_callable=AsyncMock,
                     return_value=mock_forecast,
                 ),

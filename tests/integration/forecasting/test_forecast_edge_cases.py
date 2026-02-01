@@ -81,7 +81,7 @@ class TestDynamicMetricForecasting:
                 return_value=mock_ts_data,
             ) as mock_sql,
             patch(
-                "raglite.forecasting.hybrid.ensemble.generate_forecast",
+                "raglite.mcp.tools.forecast_helpers_generation.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -134,7 +134,7 @@ class TestDynamicMetricForecasting:
                 return_value=mock_ts_data,
             ),
             patch(
-                "raglite.forecasting.hybrid.ensemble.generate_forecast",
+                "raglite.mcp.tools.forecast_helpers_generation.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -208,7 +208,7 @@ class TestDynamicMetricForecasting:
                 return_value=mock_ts_data,
             ) as mock_sql,
             patch(
-                "raglite.forecasting.hybrid.ensemble.generate_forecast",
+                "raglite.mcp.tools.forecast_helpers_generation.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
