@@ -53,7 +53,7 @@ class TestForecastQueryIntegration:
                 return_value=mock_revenue_ts_data,
             ) as mock_extract_sql,
             patch(
-                "raglite.mcp.tools.forecast_helpers.generate_forecast",
+                "raglite.forecasting.hybrid.ensemble.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_revenue_forecast,
             ) as mock_generate,
@@ -155,7 +155,7 @@ class TestForecastQueryIntegration:
                 return_value=mock_ts_data,
             ),
             patch(
-                "raglite.mcp.tools.forecast_helpers.generate_forecast",
+                "raglite.forecasting.hybrid.ensemble.generate_forecast",
                 new_callable=AsyncMock,
                 side_effect=InsufficientDataError("Need at least 8 data points, got 2"),
             ),
@@ -214,7 +214,7 @@ class TestForecastQueryIntegration:
                 return_value=mock_ts_data,
             ) as mock_extract,
             patch(
-                "raglite.mcp.tools.forecast_helpers.generate_forecast",
+                "raglite.forecasting.hybrid.ensemble.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ) as mock_generate,
@@ -274,7 +274,7 @@ class TestForecastResponseFormat:
                 return_value=mock_ts_data,
             ),
             patch(
-                "raglite.mcp.tools.forecast_helpers.generate_forecast",
+                "raglite.forecasting.hybrid.ensemble.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -335,7 +335,7 @@ class TestForecastResponseFormat:
                 return_value=mock_ts_data,
             ),
             patch(
-                "raglite.mcp.tools.forecast_helpers.generate_forecast",
+                "raglite.forecasting.hybrid.ensemble.generate_forecast",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),

@@ -45,6 +45,8 @@ def _get_mistral_client_patch_targets() -> list[str]:
         "raglite.ingestion.document_ingestion.pdf_processing._legacy.get_mistral_client",
         "raglite.ingestion.adaptive_table.unit_inference.llm_inference.get_mistral_client",
         "raglite.ingestion.adaptive_table.unit_inference.async_batch._legacy.get_mistral_client",
+        # Classification modules (Epic 9)
+        "raglite.ingestion.classification.period_classifier.get_mistral_client",
         # Agentic modules
         "raglite.agentic.agents.synthesis_methods.get_mistral_client",
         "raglite.agentic.agents.synthesis_agent.get_mistral_client",
@@ -175,6 +177,7 @@ def mock_mistral_api_globally() -> Generator[None, None, None]:
                     "proactive_modules",
                     "llm_inference",  # Lazy import inside _call_mistral_api function
                     "_legacy",  # Lazy import in async_batch/_legacy.py
+                    "period_classifier",  # Lazy import in classification module (Epic 9)
                 ]
             )
             mock_patch = stack.enter_context(patch(target, create=needs_create))

@@ -121,7 +121,7 @@ class TestModelSelectionCacheIntegration:
                 new_callable=AsyncMock,
             ) as mock_extract_timeseries,
             patch(
-                "raglite.mcp.tools.forecast_helpers.select_model_type",
+                "raglite.forecasting.regressor_config.select_model_type",
             ) as mock_select,
             patch.object(
                 forecast_helpers_module,
@@ -171,7 +171,7 @@ class TestModelSelectionCacheIntegration:
                 new_callable=AsyncMock,
             ) as mock_extract_timeseries,
             patch(
-                "raglite.mcp.tools.forecast_helpers.select_model_type",
+                "raglite.forecasting.regressor_config.select_model_type",
             ) as mock_select,
             patch.object(
                 forecast_helpers_module,
@@ -279,7 +279,7 @@ class TestModelSelectionCacheIntegration:
                 new_callable=AsyncMock,
             ) as mock_extract_timeseries,
             patch(
-                "raglite.mcp.tools.forecast_helpers.select_model_type",
+                "raglite.forecasting.regressor_config.select_model_type",
             ) as mock_select,
             patch.object(
                 forecast_helpers_module,
