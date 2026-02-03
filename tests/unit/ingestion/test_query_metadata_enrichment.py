@@ -52,7 +52,7 @@ async def test_enrich_results_with_metadata_success(
 
 
 @pytest.mark.asyncio
-async def test_enrich_results_disabled(test_settings, monkeypatch):
+async def test_enrich_results_disabled(test_settings, mock_mistral_client, monkeypatch):
     """Test enrichment is skipped when disabled."""
     monkeypatch.setattr(config.settings, "query_time_metadata_enabled", False)
 
@@ -73,7 +73,7 @@ async def test_enrich_results_disabled(test_settings, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_enrich_results_no_api_key(test_settings, monkeypatch):
+async def test_enrich_results_no_api_key(test_settings, mock_mistral_client, monkeypatch):
     """Test graceful degradation when API key missing."""
     monkeypatch.setattr(config.settings, "query_time_metadata_enabled", True)
     monkeypatch.setattr(config.settings, "mistral_api_key", None)

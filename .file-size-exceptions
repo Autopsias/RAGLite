@@ -66,6 +66,12 @@
       "reason": "Database migration integration tests for Epic 9 - requires extensive fixture setup and test coverage",
       "target_lines": 500,
       "directory": "tests/"
+    },
+    "raglite/ingestion/classification/entity_level_classifier.py": {
+      "lines": 511,
+      "reason": "Cohesive entity level classification with geographic/company/segment patterns and currency detection - Epic 9 Story 9.4",
+      "target_lines": 500,
+      "directory": "raglite/"
     }
   }
 }

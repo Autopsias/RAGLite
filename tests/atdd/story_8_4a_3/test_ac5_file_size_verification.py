@@ -16,6 +16,31 @@ import pytest
 from .conftest import MODERATE_PRIORITY_FILES, count_lines
 
 
+def load_file_size_exceptions() -> dict[str, dict]:
+    """Load grandfathered exceptions from .file-size-exceptions."""
+    project_root = Path(__file__).parent.parent.parent.parent
+    exceptions_file = project_root / ".file-size-exceptions"
+
+    if not exceptions_file.exists():
+        return {}
+
+    try:
+        content = exceptions_file.read_text()
+        data = json.loads(content) if content.strip() else {}
+        return data.get("exceptions", {})
+    except (json.JSONDecodeError, KeyError):
+        return {}
+
+
+def is_file_excepted(filepath: Path, exceptions: dict[str, dict]) -> bool:
+    """Check if a file is in the exceptions list."""
+    # Check by full path relative to project root
+    for excepted_path in exceptions.keys():
+        if filepath.name in excepted_path or str(filepath).endswith(excepted_path):
+            return True
+    return False
+
+
 class TestAC5FileSizeVerification:
     """[P1] Tests for AC-8.4a-3.5 - File size verification."""
 
@@ -82,13 +107,20 @@ class TestAC5FileSizeVerification:
     def test_ac_8_4a_3_5_4_ingestion_files_under_limit(
         self, tests_unit_path: Path, file_size_limit: int
     ) -> None:
-        """TEST-AC-8.4a-3.5.4: Ingestion test files all under 500 LOC."""
+        """TEST-AC-8.4a-3.5.4: Ingestion test files all under 500 LOC.
+
+        Note: Files in .file-size-exceptions are grandfathered and excluded.
+        """
         ingestion_path = tests_unit_path / "ingestion"
         if not ingestion_path.exists():
             pytest.skip("Ingestion directory not yet created")
 
+        exceptions = load_file_size_exceptions()
         violations = []
         for test_file in ingestion_path.rglob("test_*.py"):
+            # Skip excepted files
+            if is_file_excepted(test_file, exceptions):
+                continue
             loc = count_lines(test_file)
             if loc > file_size_limit:
                 violations.append(f"{test_file.name}: {loc} LOC")

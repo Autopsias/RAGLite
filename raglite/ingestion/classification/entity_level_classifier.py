@@ -124,6 +124,22 @@ SEGMENT_PATTERNS = [
     r"\baggregates\b",
 ]
 
+# Industry-specific keywords (used for "Geographic + Industry = Company" rule)
+# These are more specific than generic operational terms
+# "Portugal Cement" = company, but "Portugal Operations" = geographic
+INDUSTRY_SPECIFIC_PATTERNS = [
+    r"\bcement\b",
+    r"\bconcrete\b",
+    r"\baggregates\b",
+    r"\bready[- ]?mix\b",
+    r"\bprecast\b",
+    r"\bmortars?\b",
+    r"\bquarry\b",
+    r"\bquarries\b",
+    r"\bmining\b",
+    r"\bsteel\b",
+]
+
 
 def _detect_currency_entity(unit: str | None) -> str | None:
     """Detect geographic entity from currency in unit field.
@@ -267,37 +283,42 @@ def classify_entity_level(
             source="entity_pattern",
         )
 
-    # Special case: Geographic + Industry keyword = Company name
-    # e.g., "Portugal Cement", "Spain Steel", "Brazil Mining"
+    # Check for geographic names first
     has_geographic = any(
         re.search(rf"\b{re.escape(geo)}\b", entity_lower) for geo in GEOGRAPHIC_ENTITIES
     )
-    has_industry_keyword = any(re.search(pattern, entity_lower) for pattern in SEGMENT_PATTERNS)
 
-    if has_geographic and has_industry_keyword:
+    if has_geographic:
+        # Geographic + Industry-specific keyword = Company name
+        # e.g., "Portugal Cement", "Spain Steel", "Brazil Mining"
+        has_industry_keyword = any(
+            re.search(pattern, entity_lower) for pattern in INDUSTRY_SPECIFIC_PATTERNS
+        )
+
+        if has_industry_keyword:
+            return ClassifiedEntityLevel(
+                original=entity,
+                entity_level=EntityLevel.COMPANY_ONLY,
+                source="entity_pattern",
+            )
+
+        # Geographic WITHOUT industry-specific keyword = GEOGRAPHIC
+        # e.g., "Portugal Operations", "Tunisia Business", "Europe Region"
+        # Geographic takes precedence over generic segment keywords
+        logger.debug(f"Matched geographic entity in '{entity}'")
         return ClassifiedEntityLevel(
             original=entity,
-            entity_level=EntityLevel.COMPANY_ONLY,
+            entity_level=EntityLevel.GEOGRAPHIC,
             source="entity_pattern",
         )
 
     # Check segment patterns (e.g., "Cement Division", "Ready Mix Unit")
+    # Only applies to non-geographic entities
     for pattern in SEGMENT_PATTERNS:
         if re.search(pattern, entity_lower):
             return ClassifiedEntityLevel(
                 original=entity,
                 entity_level=EntityLevel.SEGMENT,
-                source="entity_pattern",
-            )
-
-    # Check geographic patterns (country/region names) - AFTER company/segment
-    # Use word boundaries to avoid false positives (e.g., "uk" matching "Duke")
-    for geo_entity in GEOGRAPHIC_ENTITIES:
-        if re.search(rf"\b{re.escape(geo_entity)}\b", entity_lower):
-            logger.debug(f"Matched geographic entity '{geo_entity}' in '{entity}'")
-            return ClassifiedEntityLevel(
-                original=entity,
-                entity_level=EntityLevel.GEOGRAPHIC,
                 source="entity_pattern",
             )
 
