@@ -25,26 +25,27 @@ class TestMAPEFromArrays:
 
     def test_basic_mape_calculation(self):
         """Test basic MAPE calculation with simple values."""
-        actuals = np.array([100, 200, 300, 400])
-        predictions = np.array([110, 190, 320, 380])
+        actuals = np.array([100, 200, 300, 400, 500])
+        predictions = np.array([110, 190, 320, 380, 510])
 
         mape = calculate_mape_from_arrays(actuals, predictions)
 
-        # Expected: (10/100 + 10/200 + 20/300 + 20/400) / 4 * 100
-        # = (0.1 + 0.05 + 0.0667 + 0.05) / 4 * 100 = 6.67%
+        # Expected: (10/100 + 10/200 + 20/300 + 20/400 + 10/500) / 5 * 100
+        # = (0.1 + 0.05 + 0.0667 + 0.05 + 0.02) / 5 * 100 = 5.73%
         assert mape is not None
-        assert 6.0 < mape < 7.0
+        assert 5.5 < mape < 6.0
 
     def test_mape_with_zeros_filtered(self):
         """Test that zero actuals are filtered out."""
-        actuals = np.array([100, 0, 200, 0])
-        predictions = np.array([110, 10, 190, 20])
+        actuals = np.array([100, 0, 200, 0, 300, 150, 250])
+        predictions = np.array([110, 10, 190, 20, 310, 145, 260])
 
         mape = calculate_mape_from_arrays(actuals, predictions)
 
-        # Only non-zero actuals used: (10/100 + 10/200) / 2 * 100 = 7.5%
+        # Only non-zero actuals used: (10/100 + 10/200 + 10/300 + 5/150 + 10/250) / 5 * 100
+        # = (0.1 + 0.05 + 0.0333 + 0.0333 + 0.04) / 5 * 100 = 5.13%
         assert mape is not None
-        assert 7.0 < mape < 8.0
+        assert 5.0 < mape < 5.5
 
     def test_mape_all_zeros_returns_none(self):
         """Test that all-zero actuals returns None."""
@@ -286,8 +287,8 @@ class TestCalculateAllMetrics:
 
     def test_returns_all_metrics(self):
         """Test that all metrics are calculated."""
-        actuals = np.array([100, 200, 300, 400])
-        predictions = np.array([110, 190, 320, 380])
+        actuals = np.array([100, 200, 300, 400, 500])
+        predictions = np.array([110, 190, 320, 380, 510])
         historical = np.array([50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160])
 
         result = calculate_all_metrics(actuals, predictions, historical)
@@ -302,8 +303,8 @@ class TestCalculateAllMetrics:
 
     def test_converts_lists_to_arrays(self):
         """Test that lists are converted to numpy arrays."""
-        actuals = [100, 200, 300, 400]
-        predictions = [110, 190, 320, 380]
+        actuals = [100, 200, 300, 400, 500]
+        predictions = [110, 190, 320, 380, 510]
 
         result = calculate_all_metrics(actuals, predictions)
 
@@ -326,8 +327,8 @@ class TestMetricInterpretation:
 
     def test_excellent_mape_threshold(self):
         """Test that <5% MAPE is excellent."""
-        actuals = np.array([100, 100, 100, 100])
-        predictions = np.array([103, 98, 102, 97])  # ~3% error
+        actuals = np.array([100, 100, 100, 100, 100])
+        predictions = np.array([103, 98, 102, 97, 101])  # ~2% error
 
         result = calculate_all_metrics(actuals, predictions)
 
@@ -355,8 +356,8 @@ class TestEdgeCases:
 
     def test_negative_values_handled(self):
         """Test that negative values (costs, losses) are handled."""
-        actuals = np.array([-100, -200, -150, -180])
-        predictions = np.array([-95, -210, -140, -190])
+        actuals = np.array([-100, -200, -150, -180, -220])
+        predictions = np.array([-95, -210, -140, -190, -230])
 
         result = calculate_all_metrics(actuals, predictions)
 
@@ -368,8 +369,8 @@ class TestEdgeCases:
 
     def test_very_small_values(self):
         """Test with very small values (avoiding floating point issues)."""
-        actuals = np.array([0.001, 0.002, 0.003, 0.004])
-        predictions = np.array([0.0011, 0.0019, 0.0031, 0.0039])
+        actuals = np.array([0.001, 0.002, 0.003, 0.004, 0.005])
+        predictions = np.array([0.0011, 0.0019, 0.0031, 0.0039, 0.0051])
 
         result = calculate_all_metrics(actuals, predictions)
 
@@ -378,8 +379,8 @@ class TestEdgeCases:
 
     def test_very_large_values(self):
         """Test with very large values (millions in EUR)."""
-        actuals = np.array([1e9, 2e9, 3e9, 4e9])
-        predictions = np.array([1.1e9, 1.9e9, 3.1e9, 3.9e9])
+        actuals = np.array([1e9, 2e9, 3e9, 4e9, 5e9])
+        predictions = np.array([1.1e9, 1.9e9, 3.1e9, 3.9e9, 5.1e9])
 
         result = calculate_all_metrics(actuals, predictions)
 
@@ -388,13 +389,14 @@ class TestEdgeCases:
         assert result.rmse is not None
 
     def test_single_point(self):
-        """Test with single data point."""
+        """Test with single data point (insufficient for MAPE)."""
         actuals = np.array([100])
         predictions = np.array([110])
 
         result = calculate_all_metrics(actuals, predictions)
 
-        assert result.mape == 10.0
+        # MAPE requires min 5 points
+        assert result.mape is None
         assert result.mae == 10.0
         assert result.rmse == 10.0
         assert result.bias == 10.0

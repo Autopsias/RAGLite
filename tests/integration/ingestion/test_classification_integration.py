@@ -36,14 +36,10 @@ class TestAC2ClassificationAccuracy:
     @pytest.fixture
     def ground_truth_data(self) -> list[dict]:
         """Load ground truth dataset for accuracy validation."""
-        ground_truth_path = Path(
-            "tests/fixtures/period_classification_ground_truth.json"
-        )
+        ground_truth_path = Path("tests/fixtures/period_classification_ground_truth.json")
 
         # Ground truth file should exist for AC2 validation
-        assert ground_truth_path.exists(), (
-            f"Ground truth file not found: {ground_truth_path}"
-        )
+        assert ground_truth_path.exists(), f"Ground truth file not found: {ground_truth_path}"
 
         with open(ground_truth_path) as f:
             data = json.load(f)
@@ -53,9 +49,7 @@ class TestAC2ClassificationAccuracy:
 
         return data
 
-    def test_ac2_1_achieves_95_percent_accuracy(
-        self, ground_truth_data: list[dict]
-    ) -> None:
+    def test_ac2_1_achieves_95_percent_accuracy(self, ground_truth_data: list[dict]) -> None:
         """TEST-AC-9.2.2.1 [P0]: Achieves 95%+ classification accuracy."""
         from raglite.ingestion.classification import classify_period
 
@@ -81,8 +75,7 @@ class TestAC2ClassificationAccuracy:
 
         # Then accuracy is 95%+
         assert accuracy >= 95.0, (
-            f"Accuracy {accuracy:.1f}% below 95% target. "
-            f"Correct: {correct}/{total}"
+            f"Accuracy {accuracy:.1f}% below 95% target. Correct: {correct}/{total}"
         )
 
     def test_ac2_2_monthly_actual_classified_correctly(self) -> None:
@@ -195,9 +188,7 @@ class TestAC5DatabaseSchemaIntegration:
 
             # Then all values are strings <= 50 characters
             assert isinstance(value, str), f"{period_type.name} value is not a string"
-            assert len(value) <= 50, (
-                f"{period_type.name} value '{value}' exceeds VARCHAR(50)"
-            )
+            assert len(value) <= 50, f"{period_type.name} value '{value}' exceeds VARCHAR(50)"
 
     def test_ac5_2_valid_values_match_schema(self) -> None:
         """TEST-AC-9.2.5.2 [P0]: Valid values match database schema."""
@@ -239,8 +230,7 @@ class TestAC5DatabaseSchemaIntegration:
 
             # Then period_type.value provides the database value
             assert result.period_type.value == expected_db_value, (
-                f"{period}: expected {expected_db_value}, "
-                f"got {result.period_type.value}"
+                f"{period}: expected {expected_db_value}, got {result.period_type.value}"
             )
 
     def test_ac5_4_normalized_period_available_for_storage(self) -> None:

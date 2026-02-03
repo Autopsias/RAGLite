@@ -15,7 +15,6 @@ And this prevents classification inconsistencies
 """
 
 
-
 class TestAC5PeriodTypeIntegration:
     """AC5: Integration with Period Classification.
 
@@ -130,9 +129,7 @@ class TestAC5PeriodTypeIntegration:
         ambiguous_period = "Jan B 25"
 
         # Act: Classify with explicit period_type
-        result = classify_value_type(
-            ambiguous_period, period_type=PeriodType.BUDGET
-        )
+        result = classify_value_type(ambiguous_period, period_type=PeriodType.BUDGET)
 
         # Assert: Period type determines value type
         assert result.value_type == ValueType.BUDGET
@@ -177,9 +174,7 @@ class TestAC5PeriodTypeIntegration:
         period_result = classify_period("B Dec-21")
 
         # Then use period_type in value_type classification
-        value_result = classify_value_type(
-            "B Dec-21", period_type=period_result.period_type
-        )
+        value_result = classify_value_type("B Dec-21", period_type=period_result.period_type)
 
         # Assert: Classifications are consistent
         # If period_type is BUDGET, value_type should be BUDGET

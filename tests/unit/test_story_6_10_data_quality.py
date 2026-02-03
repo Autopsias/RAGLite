@@ -72,9 +72,13 @@ class TestQueryTimeEntityNormalization:
         Story 6.10.4 Update: Only EBITDA has actual GROUP-level data in database.
         Revenue/turnover, sales volume, capacity utilization don't have GROUP entity
         (they use "Currency (1000 EUR)" instead), so GROUP filter was removed.
+
+        Fix 2026-01-29: EBITDA removed from GROUP_PREFERRED_METRICS because
+        database has NO entity="GROUP" data for EBITDA - only entity="Portugal".
+        All metrics now return None when entity is None (no entity filter).
         """
-        # Only EBITDA has GROUP data - should prefer GROUP
-        assert prefer_group_level(None, "ebitda") == "Group"
+        # Fix 2026-01-29: EBITDA no longer uses GROUP filter (GROUP_PREFERRED_METRICS is empty)
+        assert prefer_group_level(None, "ebitda") is None  # No GROUP data in DB
         # Story 6.10.4: These metrics DON'T have GROUP-level data - return None
         assert prefer_group_level(None, "revenue") is None  # No GROUP rows
         assert prefer_group_level(None, "sales volume") is None  # No GROUP rows

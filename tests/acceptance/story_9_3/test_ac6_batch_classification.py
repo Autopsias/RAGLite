@@ -143,9 +143,7 @@ class TestAC6BatchClassificationSupport:
         elapsed = time.time() - start
 
         # Assert: <100ms (0.1 seconds)
-        assert elapsed < 0.1, (
-            f"Batch took {elapsed * 1000:.1f}ms, expected <100ms"
-        )
+        assert elapsed < 0.1, f"Batch took {elapsed * 1000:.1f}ms, expected <100ms"
 
     def test_ac_6_4_1_batch_handles_empty_list(self) -> None:
         """TEST-AC-9.3.6.5 [P1]: Batch handles empty list gracefully.

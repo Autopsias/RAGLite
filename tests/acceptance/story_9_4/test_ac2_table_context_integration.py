@@ -86,8 +86,7 @@ class TestAC2TableContextIntegration:
         from raglite.ingestion.classification import EntityLevel, classify_entity_level
 
         result = classify_entity_level(
-            "SECIL Portugal SA",
-            table_title="GROUP Financial Statements"
+            "SECIL Portugal SA", table_title="GROUP Financial Statements"
         )
 
         assert result.entity_level == EntityLevel.COMPANY_ONLY
@@ -164,19 +163,13 @@ class TestAC2TableContextIntegration:
         from raglite.ingestion.classification import EntityLevel, classify_entity_level
 
         # Company entity with geographic table title
-        result1 = classify_entity_level(
-            "SECIL SA",
-            table_title="Portugal Operations"
-        )
+        result1 = classify_entity_level("SECIL SA", table_title="Portugal Operations")
         assert result1.entity_level == EntityLevel.COMPANY_ONLY, (
             "Company entity should override geographic table title"
         )
 
         # Geographic entity with consolidated table title
-        result2 = classify_entity_level(
-            "Tunisia",
-            table_title="GROUP Financial Statements"
-        )
+        result2 = classify_entity_level("Tunisia", table_title="GROUP Financial Statements")
         assert result2.entity_level == EntityLevel.GEOGRAPHIC, (
             "Geographic entity should override consolidated table title"
         )

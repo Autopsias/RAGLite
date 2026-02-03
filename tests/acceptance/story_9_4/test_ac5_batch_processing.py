@@ -127,9 +127,7 @@ class TestAC5BatchProcessingPerformance:
         elapsed = time.time() - start
 
         assert len(results) == 1000
-        assert elapsed < 0.1, (
-            f"Batch took {elapsed * 1000:.1f}ms, expected <100ms"
-        )
+        assert elapsed < 0.1, f"Batch took {elapsed * 1000:.1f}ms, expected <100ms"
 
     def test_ac_5_5_4_handles_none_table_titles(self) -> None:
         """TEST-AC-9.4.5.4 [P1]: Handles None table_titles gracefully.
@@ -213,8 +211,7 @@ class TestAC5BatchProcessingPerformance:
 
         for i, result in enumerate(results):
             assert result.original == entities[i], (
-                f"Original mismatch at index {i}: expected '{entities[i]}', "
-                f"got '{result.original}'"
+                f"Original mismatch at index {i}: expected '{entities[i]}', got '{result.original}'"
             )
 
     def test_ac_5_5_8_large_batch_performance(self) -> None:
@@ -247,6 +244,4 @@ class TestAC5BatchProcessingPerformance:
 
         assert len(results) == 1000
         assert report.total_records == 1000
-        assert elapsed < 0.5, (
-            f"Large batch took {elapsed * 1000:.1f}ms, expected <500ms"
-        )
+        assert elapsed < 0.5, f"Large batch took {elapsed * 1000:.1f}ms, expected <500ms"

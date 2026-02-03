@@ -15,7 +15,6 @@ And handles Portuguese equivalents (Orcamento, Previsao, Real)
 """
 
 
-
 class TestAC4ContextBasedClassification:
     """AC4: Context-Based Classification.
 

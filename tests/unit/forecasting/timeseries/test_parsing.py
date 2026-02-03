@@ -179,12 +179,14 @@ class TestParsePeriodToDate:
             "25",  # Year only
             "Jan 25",  # Space instead of hyphen
             "Jan_25",  # Underscore instead of hyphen
-            "Jan-2025",  # 4-digit year
             "",  # Empty string
         ],
     )
     def test_invalid_period_formats(self, invalid_period: str) -> None:
-        """Test that invalid period formats raise ValueError."""
+        """Test that invalid period formats raise ValueError.
+
+        Note: "Jan-2025" is now VALID (4-digit year support added for EBITDA data quality).
+        """
         with pytest.raises(ValueError, match="Invalid period format"):
             parse_period_to_date(invalid_period, 2025)
 

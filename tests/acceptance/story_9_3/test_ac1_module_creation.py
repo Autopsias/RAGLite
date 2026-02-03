@@ -14,7 +14,6 @@ And the module follows the same patterns as period_classifier.py
 """
 
 
-
 class TestAC1ValueTypeClassifierModuleCreation:
     """AC1: Value Type Classifier Module Creation.
 

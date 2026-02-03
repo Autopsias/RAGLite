@@ -42,6 +42,7 @@ def cleanup_migration_columns():
     # Teardown: Remove test columns
     if os.environ.get("APP_ENV") == "test":
         from raglite.shared.clients import get_postgresql_connection
+
         try:
             conn = get_postgresql_connection()
             cursor = conn.cursor()
@@ -101,7 +102,9 @@ class TestAC1PeriodTypeColumnIntegration:
         # Assert
         assert result is not None, "period_type column should exist"
         column_name, data_type, max_length, is_nullable = result
-        assert column_name == "period_type", f"Expected column name 'period_type', got {column_name}"
+        assert column_name == "period_type", (
+            f"Expected column name 'period_type', got {column_name}"
+        )
         assert data_type == "character varying", f"Expected 'character varying', got {data_type}"
         assert max_length == 50, f"Expected length 50, got {max_length}"
         assert is_nullable == "YES", f"Column should be nullable, is_nullable={is_nullable}"
@@ -142,8 +145,12 @@ class TestAC1PeriodTypeColumnIntegration:
         # Assert
         assert result is not None, "idx_period_type index should exist"
         indexname, indexdef = result
-        assert indexname == "idx_period_type", f"Expected index name 'idx_period_type', got {indexname}"
-        assert "period_type" in indexdef.lower(), f"Index definition should reference period_type: {indexdef}"
+        assert indexname == "idx_period_type", (
+            f"Expected index name 'idx_period_type', got {indexname}"
+        )
+        assert "period_type" in indexdef.lower(), (
+            f"Index definition should reference period_type: {indexdef}"
+        )
 
 
 class TestAC2ValueTypeColumnIntegration:
@@ -702,8 +709,12 @@ class TestIndexUsageAndQueryPerformance:
         # Assert: Verify exact counts from our inserted test data
         # Inserted 2 rows: test-007 with period_type='monthly_actual' (NOT NULL)
         #                  test-008 with period_type=NULL
-        assert null_count >= 1, f"Expected at least 1 NULL period_type row from test data, got {null_count}"
-        assert not_null_count >= 1, f"Expected at least 1 NOT NULL period_type row from test data, got {not_null_count}"
+        assert null_count >= 1, (
+            f"Expected at least 1 NULL period_type row from test data, got {null_count}"
+        )
+        assert not_null_count >= 1, (
+            f"Expected at least 1 NOT NULL period_type row from test data, got {not_null_count}"
+        )
 
     @pytest.mark.p2
     def test_ac_9_1_index_4_index_usage_verified_via_explain(self) -> None:

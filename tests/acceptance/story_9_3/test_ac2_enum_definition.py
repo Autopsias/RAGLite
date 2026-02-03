@@ -14,7 +14,6 @@ And the enum is exported from raglite/ingestion/classification/__init__.py
 """
 
 
-
 class TestAC2ValueTypeEnumDefinition:
     """AC2: ValueType Enum Definition.
 

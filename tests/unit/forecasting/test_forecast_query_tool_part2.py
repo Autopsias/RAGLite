@@ -72,7 +72,7 @@ class TestForecastToolPart2:
             ),
             patch.object(
                 forecast_helpers_module,
-                "generate_forecast",
+                "generate_forecast_with_cache",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -131,7 +131,7 @@ class TestForecastToolPart2:
             ),
             patch.object(
                 forecast_helpers_module,
-                "generate_forecast",
+                "generate_forecast_with_cache",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -182,7 +182,7 @@ class TestForecastToolPart2:
             ),
             patch.object(
                 forecast_helpers_module,
-                "generate_forecast",
+                "generate_forecast_with_cache",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -236,7 +236,7 @@ class TestForecastToolPart2:
             ),
             patch.object(
                 forecast_helpers_module,
-                "generate_forecast",
+                "generate_forecast_with_cache",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),
@@ -288,7 +288,7 @@ class TestForecastToolPart2:
             ),
             patch.object(
                 forecast_helpers_module,
-                "generate_forecast",
+                "generate_forecast_with_cache",
                 new_callable=AsyncMock,
                 return_value=mock_forecast,
             ),

@@ -225,9 +225,7 @@ class TestSafetyGuardIntegration:
                 "migrations.migration_007_add_classification_columns.get_postgresql_connection",
                 return_value=mock_conn,
             ),
-            patch(
-                "migrations.migration_007_add_classification_columns.SafetyGuard"
-            ) as mock_guard,
+            patch("migrations.migration_007_add_classification_columns.SafetyGuard") as mock_guard,
         ):
             result = verify_migration()
 

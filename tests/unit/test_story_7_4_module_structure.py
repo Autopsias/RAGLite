@@ -93,7 +93,6 @@ class TestAC2NewModuleStructure:
             "query",
             "forecast",
             "insights",
-            "external_data",
             "admin",
             "validation",
             "health",
@@ -105,6 +104,9 @@ class TestAC2NewModuleStructure:
         Given specific tool modules are required per the story
         When checking for each module
         Then all tool modules should exist
+
+        Note: external_data module was never created (not in scope for Story 7.4).
+        External data functionality exists in raglite/external_data/ package.
         """
         module_path = MCP_TOOLS_PATH / f"{tool_module}.py"
         assert module_path.exists(), f"raglite/mcp/tools/{tool_module}.py should exist"

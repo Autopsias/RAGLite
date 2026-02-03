@@ -33,14 +33,11 @@ class TestAC3ClassificationAccuracyTarget:
     @pytest.fixture
     def ground_truth_data(self) -> list[dict]:
         """Load ground truth dataset for accuracy validation."""
-        ground_truth_path = Path(
-            "tests/fixtures/value_type_ground_truth.json"
-        )
+        ground_truth_path = Path("tests/fixtures/value_type_ground_truth.json")
 
         # Ground truth file should exist for AC3 validation
         assert ground_truth_path.exists(), (
-            f"Ground truth file not found: {ground_truth_path}. "
-            "Task 4.1 must create this file."
+            f"Ground truth file not found: {ground_truth_path}. Task 4.1 must create this file."
         )
 
         with open(ground_truth_path) as f:
@@ -51,9 +48,7 @@ class TestAC3ClassificationAccuracyTarget:
 
         return data
 
-    def test_ac_3_1_1_achieves_90_percent_accuracy(
-        self, ground_truth_data: list[dict]
-    ) -> None:
+    def test_ac_3_1_1_achieves_90_percent_accuracy(self, ground_truth_data: list[dict]) -> None:
         """TEST-AC-9.3.3.1 [P0]: Achieves 90%+ classification accuracy.
 
         Given a ground truth dataset with 50+ examples
@@ -81,8 +76,7 @@ class TestAC3ClassificationAccuracyTarget:
 
         # Assert: Accuracy meets 90% target
         assert accuracy >= 90.0, (
-            f"Accuracy {accuracy:.1f}% below 90% target. "
-            f"Correct: {correct}/{total}"
+            f"Accuracy {accuracy:.1f}% below 90% target. Correct: {correct}/{total}"
         )
 
     def test_ac_3_2_1_actual_values_classified_correctly(self) -> None:

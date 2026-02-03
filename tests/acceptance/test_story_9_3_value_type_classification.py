@@ -53,9 +53,7 @@ class TestAC1ValueTypeClassificationAccuracy:
         assert len(data) >= 50, f"Need 50+ samples, found {len(data)}"
         return data
 
-    def test_ac_1_1_1_achieves_90_percent_accuracy(
-        self, ground_truth_data: list[dict]
-    ) -> None:
+    def test_ac_1_1_1_achieves_90_percent_accuracy(self, ground_truth_data: list[dict]) -> None:
         """TEST-AC-9.3.1.1 [P0]: 90%+ accuracy on ground truth dataset.
 
         Given the ground truth dataset with 51 samples
@@ -77,13 +75,15 @@ class TestAC1ValueTypeClassificationAccuracy:
             if result.value_type.value == expected_type:
                 correct += 1
             else:
-                failures.append({
-                    "period": period,
-                    "header": header,
-                    "expected": expected_type,
-                    "actual": result.value_type.value,
-                    "source": result.source,
-                })
+                failures.append(
+                    {
+                        "period": period,
+                        "header": header,
+                        "expected": expected_type,
+                        "actual": result.value_type.value,
+                        "source": result.source,
+                    }
+                )
 
         accuracy = correct / len(ground_truth_data)
 
@@ -445,9 +445,7 @@ class TestAC4UnknownValueHandling:
             assert result.value_type == ValueType.UNKNOWN, (
                 f"Empty input '{repr(period)}' expected UNKNOWN"
             )
-            assert result.source == "empty", (
-                f"Empty input '{repr(period)}' expected source 'empty'"
-            )
+            assert result.source == "empty", f"Empty input '{repr(period)}' expected source 'empty'"
 
     def test_ac_4_4_2_na_markers_return_unknown(self) -> None:
         """TEST-AC-9.3.4.2 [P0]: N/A markers return UNKNOWN with source "unknown_marker".
@@ -462,9 +460,7 @@ class TestAC4UnknownValueHandling:
 
         for period in na_markers:
             result = classify_value_type(period)
-            assert result.value_type == ValueType.UNKNOWN, (
-                f"N/A marker '{period}' expected UNKNOWN"
-            )
+            assert result.value_type == ValueType.UNKNOWN, f"N/A marker '{period}' expected UNKNOWN"
             assert result.source == "unknown_marker", (
                 f"N/A marker '{period}' expected source 'unknown_marker'"
             )
@@ -606,9 +602,7 @@ class TestAC5BatchProcessingPerformance:
         elapsed = time.time() - start
 
         assert len(results) == 1000
-        assert elapsed < 0.1, (
-            f"Batch took {elapsed * 1000:.1f}ms, expected <100ms"
-        )
+        assert elapsed < 0.1, f"Batch took {elapsed * 1000:.1f}ms, expected <100ms"
 
     def test_ac_5_5_4_handles_none_headers_and_period_types(self) -> None:
         """TEST-AC-9.3.5.4 [P1]: Handles None headers and period_types gracefully.
@@ -622,9 +616,7 @@ class TestAC5BatchProcessingPerformance:
         periods = ["Dec-21", "B Jan-22", "F Feb-23"]
 
         # Test with explicit None
-        results, report = classify_value_types_batch(
-            periods, headers=None, period_types=None
-        )
+        results, report = classify_value_types_batch(periods, headers=None, period_types=None)
 
         assert len(results) == 3
         assert report.total_records == 3

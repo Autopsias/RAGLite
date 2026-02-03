@@ -48,9 +48,7 @@ class TestAC1EntityLevelClassificationAccuracy:
         assert len(data) >= 50, f"Need 50+ samples, found {len(data)}"
         return data
 
-    def test_ac_1_1_1_achieves_90_percent_accuracy(
-        self, ground_truth_data: list[dict]
-    ) -> None:
+    def test_ac_1_1_1_achieves_90_percent_accuracy(self, ground_truth_data: list[dict]) -> None:
         """TEST-AC-9.4.1.1 [P0]: 90%+ accuracy on ground truth dataset.
 
         Scenario: Ground truth validation passes at 90%+
@@ -74,13 +72,15 @@ class TestAC1EntityLevelClassificationAccuracy:
             if result.entity_level.value == expected_level:
                 correct += 1
             else:
-                failures.append({
-                    "entity": entity,
-                    "table_title": table_title,
-                    "expected": expected_level,
-                    "actual": result.entity_level.value,
-                    "source": result.source,
-                })
+                failures.append(
+                    {
+                        "entity": entity,
+                        "table_title": table_title,
+                        "expected": expected_level,
+                        "actual": result.entity_level.value,
+                        "source": result.source,
+                    }
+                )
 
         accuracy = correct / len(ground_truth_data)
 

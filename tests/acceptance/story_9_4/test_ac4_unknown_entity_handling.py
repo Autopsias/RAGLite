@@ -60,9 +60,7 @@ class TestAC4UnknownEntityHandling:
             assert result.entity_level == EntityLevel.UNKNOWN, (
                 f"Whitespace '{repr(entity)}' expected UNKNOWN"
             )
-            assert result.source == "empty", (
-                f"Whitespace '{repr(entity)}' expected source 'empty'"
-            )
+            assert result.source == "empty", f"Whitespace '{repr(entity)}' expected source 'empty'"
 
     def test_ac_4_4_3_na_marker_returns_unknown(self) -> None:
         """TEST-AC-9.4.4.3 [P0]: N/A marker returns UNKNOWN with source "unknown_marker".

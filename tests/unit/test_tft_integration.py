@@ -88,8 +88,12 @@ class TestTFTTrainingModule:
         assert "encoder_length" in TFT_TRAINING_CONFIG
         assert "prediction_length" in TFT_TRAINING_CONFIG
         assert "max_epochs" in TFT_TRAINING_CONFIG
-        assert TFT_TRAINING_CONFIG["encoder_length"] == 12
+        # Updated from 12 to 18 (settings.tft_encoder_length changed)
+        assert TFT_TRAINING_CONFIG["encoder_length"] == 18
         assert TFT_TRAINING_CONFIG["prediction_length"] == 3
+        # Note: Config uses "attention_head_size" not "num_attention_heads"
+        assert "attention_head_size" in TFT_TRAINING_CONFIG
+        assert TFT_TRAINING_CONFIG["attention_head_size"] == 4
 
 
 class TestGracefulDegradation:
@@ -157,7 +161,12 @@ class TestConfigurationParameters:
         from raglite.shared.config import settings
 
         assert settings.ensemble_weight_tft == 0.12
-        assert settings.tft_encoder_length == 12
+        # Updated from 12 to 18 (settings.tft_encoder_length changed)
+        assert settings.tft_encoder_length == 18
         assert settings.tft_prediction_length == 3
         assert settings.tft_max_epochs == 50
         assert settings.refresh_cron_tft_training == "0 2 * * 0"  # Sunday 2am
+        # TFT config uses attention_head_size (from tft_training/config.py), not settings
+        from raglite.forecasting.tft_training import TFT_TRAINING_CONFIG
+
+        assert TFT_TRAINING_CONFIG["attention_head_size"] == 4

@@ -91,7 +91,6 @@ class TestAC5CICompatibility:
                 "raglite.mcp.tools.query",
                 "raglite.mcp.tools.forecast",
                 "raglite.mcp.tools.insights",
-                "raglite.mcp.tools.external_data",
                 "raglite.mcp.tools.admin",
                 "raglite.mcp.tools.validation",
                 "raglite.mcp.tools.health",
@@ -178,7 +177,6 @@ class TestAC6Documentation:
             "query",
             "forecast",
             "insights",
-            "external_data",
             "admin",
             "validation",
             "health",
@@ -190,6 +188,8 @@ class TestAC6Documentation:
         Given tool modules need documentation for maintainability
         When checking each tool module
         Then it should have a module docstring explaining its purpose
+
+        Note: external_data module was never created (not in scope for Story 7.4).
         """
         module_path = MCP_TOOLS_PATH / f"{tool_module}.py"
         assert module_path.exists(), f"mcp/tools/{tool_module}.py should exist"
@@ -234,15 +234,19 @@ class TestRefactoringIntegrity:
         # FastMCP stores tools in _tool_manager
         assert hasattr(mcp, "_tool_manager"), "mcp should have _tool_manager attribute"
 
-        # All 15 tools should be registered
+        # All 20 tools should be registered (updated from 19 after forecast reliability fix)
         # Use async list_tools() to get tool count
         tools = asyncio.run(mcp._tool_manager.list_tools())
         tool_count = len(tools)
         expected_tools = {
             "analytical_query_financial_documents",
             "check_database_health",
+            "check_forecast_environment",  # Forecast reliability fix (2026-02-02)
+            "check_forecast_readiness",  # Story 6.x addition
             "get_financial_forecast",
+            "get_financial_forecast_async",  # Story 6.x addition
             "get_financial_insights",
+            "get_forecast_status",  # Story 6.x addition
             "get_ingestion_status",
             "get_regressor_data",
             "ingest_financial_document",
@@ -254,9 +258,10 @@ class TestRefactoringIntegrity:
             "refresh_external_data",
             "retrain_forecasting_models",
             "validate_forecasting_accuracy",
+            "warmup_forecasting_models",  # Story 6.x addition
         }
-        assert tool_count == 15, (
-            f"Expected 15 tools to be registered with mcp, "
+        assert tool_count == 20, (
+            f"Expected 20 tools to be registered with mcp, "
             f"but found {tool_count}: {sorted([t.name for t in tools])}"
         )
         actual_tool_names = {t.name for t in tools}

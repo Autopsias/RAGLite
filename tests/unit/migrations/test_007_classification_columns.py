@@ -97,7 +97,8 @@ class TestAC1PeriodTypeColumnAddition:
         # Assert: SQL should NOT contain NOT NULL for period_type
         # Verify nullable column - should NOT have NOT NULL constraint
         period_type_calls = [
-            str(call).lower() for call in mock_cursor.execute.call_args_list
+            str(call).lower()
+            for call in mock_cursor.execute.call_args_list
             if "period_type" in str(call).lower()
         ]
         assert len(period_type_calls) > 0, "period_type should be added"
@@ -105,8 +106,9 @@ class TestAC1PeriodTypeColumnAddition:
             # Column should be nullable - either no NOT NULL or has IF NOT EXISTS guard
             has_not_null = "not null" in call_sql
             has_if_not_exists = "if not exists" in call_sql
-            assert not has_not_null or has_if_not_exists, \
+            assert not has_not_null or has_if_not_exists, (
                 f"period_type column must be nullable (no NOT NULL constraint): {call_sql}"
+            )
 
     @pytest.mark.p1
     def test_ac_9_1_1_3_idx_period_type_index_created(self) -> None:
@@ -133,9 +135,7 @@ class TestAC1PeriodTypeColumnAddition:
             apply_migration()
 
         # Assert: CREATE INDEX for idx_period_type was called
-        executed_sql = " ".join(
-            str(call) for call in mock_cursor.execute.call_args_list
-        )
+        executed_sql = " ".join(str(call) for call in mock_cursor.execute.call_args_list)
         assert "idx_period_type" in executed_sql.lower()
         assert "create index" in executed_sql.lower()
 
@@ -175,9 +175,7 @@ class TestAC2ValueTypeColumnAddition:
             apply_migration()
 
         # Assert
-        executed_sql = " ".join(
-            str(call) for call in mock_cursor.execute.call_args_list
-        )
+        executed_sql = " ".join(str(call) for call in mock_cursor.execute.call_args_list)
         assert "value_type" in executed_sql.lower()
         assert "varchar(50)" in executed_sql.lower()
 
@@ -207,7 +205,8 @@ class TestAC2ValueTypeColumnAddition:
 
         # Assert
         value_type_calls = [
-            str(call) for call in mock_cursor.execute.call_args_list
+            str(call)
+            for call in mock_cursor.execute.call_args_list
             if "value_type" in str(call).lower()
         ]
         for call_sql in value_type_calls:
@@ -238,9 +237,7 @@ class TestAC2ValueTypeColumnAddition:
             apply_migration()
 
         # Assert
-        executed_sql = " ".join(
-            str(call) for call in mock_cursor.execute.call_args_list
-        )
+        executed_sql = " ".join(str(call) for call in mock_cursor.execute.call_args_list)
         assert "idx_value_type" in executed_sql.lower()
         assert "create index" in executed_sql.lower()
 
@@ -280,9 +277,7 @@ class TestAC3EntityLevelColumnAddition:
             apply_migration()
 
         # Assert
-        executed_sql = " ".join(
-            str(call) for call in mock_cursor.execute.call_args_list
-        )
+        executed_sql = " ".join(str(call) for call in mock_cursor.execute.call_args_list)
         assert "entity_level" in executed_sql.lower()
         assert "varchar(100)" in executed_sql.lower()
 
@@ -312,7 +307,8 @@ class TestAC3EntityLevelColumnAddition:
 
         # Assert
         entity_level_calls = [
-            str(call) for call in mock_cursor.execute.call_args_list
+            str(call)
+            for call in mock_cursor.execute.call_args_list
             if "entity_level" in str(call).lower()
         ]
         for call_sql in entity_level_calls:
@@ -343,9 +339,7 @@ class TestAC3EntityLevelColumnAddition:
             apply_migration()
 
         # Assert
-        executed_sql = " ".join(
-            str(call) for call in mock_cursor.execute.call_args_list
-        )
+        executed_sql = " ".join(str(call) for call in mock_cursor.execute.call_args_list)
         assert "idx_entity_level" in executed_sql.lower()
         assert "create index" in executed_sql.lower()
 
@@ -385,7 +379,8 @@ class TestAC4MigrationIdempotency:
 
         # Assert: All ALTER TABLE statements use IF NOT EXISTS
         alter_calls = [
-            str(call) for call in mock_cursor.execute.call_args_list
+            str(call)
+            for call in mock_cursor.execute.call_args_list
             if "alter table" in str(call).lower()
         ]
         for call_sql in alter_calls:
@@ -417,7 +412,8 @@ class TestAC4MigrationIdempotency:
 
         # Assert: All CREATE INDEX statements use IF NOT EXISTS
         index_calls = [
-            str(call) for call in mock_cursor.execute.call_args_list
+            str(call)
+            for call in mock_cursor.execute.call_args_list
             if "create index" in str(call).lower()
         ]
         for call_sql in index_calls:
@@ -453,8 +449,9 @@ class TestAC4MigrationIdempotency:
         # Expected: 6 SQL calls per run (3 ALTER TABLE + 3 CREATE INDEX) x 2 = 12 minimum
         EXPECTED_CALLS_PER_RUN = 6  # 3 columns + 3 indexes
         MIN_CALLS_FOR_TWO_RUNS = EXPECTED_CALLS_PER_RUN * 2
-        assert mock_cursor.execute.call_count >= MIN_CALLS_FOR_TWO_RUNS, \
+        assert mock_cursor.execute.call_count >= MIN_CALLS_FOR_TWO_RUNS, (
             f"Expected at least {MIN_CALLS_FOR_TWO_RUNS} calls for 2 migrations, got {mock_cursor.execute.call_count}"
+        )
 
 
 class TestAC5VerificationScript:
@@ -502,7 +499,8 @@ class TestAC5VerificationScript:
 
         # Assert: Verification queries information_schema for all 3 columns
         info_schema_calls = [
-            str(call) for call in mock_cursor.execute.call_args_list
+            str(call)
+            for call in mock_cursor.execute.call_args_list
             if "information_schema" in str(call).lower()
         ]
         assert len(info_schema_calls) >= 3
@@ -541,7 +539,8 @@ class TestAC5VerificationScript:
 
         # Assert: Verification queries pg_indexes for all 3 indexes
         pg_indexes_calls = [
-            str(call) for call in mock_cursor.execute.call_args_list
+            str(call)
+            for call in mock_cursor.execute.call_args_list
             if "pg_indexes" in str(call).lower()
         ]
         assert len(pg_indexes_calls) >= 1
@@ -586,8 +585,9 @@ class TestAC5VerificationScript:
         # Assert: Returns success status (dict with SUCCESS status or True bool)
         assert result is not None, "Verification result should not be None"
         if isinstance(result, dict):
-            assert result.get("status") == "SUCCESS", \
+            assert result.get("status") == "SUCCESS", (
                 f"Expected SUCCESS status in result, got: {result}"
+            )
         elif isinstance(result, bool):
             assert result is True, "Expected True for successful migration verification"
         else:
