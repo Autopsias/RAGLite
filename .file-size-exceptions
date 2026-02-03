@@ -36,6 +36,18 @@
       "reason": "Comprehensive SQL extraction test suite split from original test_timeseries_extract.py - Epic 8 refactoring",
       "target_lines": 500,
       "directory": "tests/"
+    },
+    "raglite/forecasting/timeseries/sql_extraction_config.py": {
+      "lines": 534,
+      "reason": "Cohesive SQL extraction configuration including metric mappings, entity filters, and multi-entity Epic 9 support - EBITDA forecast fix 2026-02-03",
+      "target_lines": 500,
+      "directory": "raglite/"
+    },
+    "raglite/forecasting/hybrid/preprocessing_regressors.py": {
+      "lines": 513,
+      "reason": "Regressor preprocessing with lagged correlation support for profit metrics (EBITDA) - Forecast reliability fix 2026-02-02",
+      "target_lines": 500,
+      "directory": "raglite/"
     }
   }
 }

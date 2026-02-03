@@ -51,6 +51,11 @@ def convert_ytd_to_monthly(points: list[TimeSeriesPoint], metric: str) -> list[T
 
     Story 6.27: Filters out year-end-only data points (Dec only years).
 
+    Fix 2026-02-03: When first YTD of a year is not January, distribute the
+    cumulative value evenly across Jan-to-current months instead of assigning
+    the full cumulative to the single month. This prevents inflated values like
+    50.71M for Apr-25 (YTD) being treated as a single monthly value.
+
     Args:
         points: List of YTD cumulative points
         metric: Metric name for logging
@@ -74,12 +79,46 @@ def convert_ytd_to_monthly(points: list[TimeSeriesPoint], metric: str) -> list[T
         # Calculate monthly value (handle year boundaries)
         if prev_date is not None:
             if p.date.year != prev_date.year:
+                # Year boundary crossed - reset YTD accumulator
                 prev_ytd = 0.0
-                monthly_value = p.value
+                # Fix 2026-02-03: If this is not January, distribute YTD across months
+                if p.date.month > 1:
+                    # First YTD of year is not January - distribute evenly
+                    months_in_ytd = p.date.month
+                    monthly_value = p.value / months_in_ytd
+                    # Create synthetic points for Jan through (month-1)
+
+                    for m in range(1, p.date.month):
+                        synth_date = p.date.replace(month=m, day=1)
+                        monthly_points.append(
+                            TimeSeriesPoint(
+                                date=synth_date,
+                                value=monthly_value,
+                                label=f"{synth_date.strftime('%b-%y')} Monthly (distributed from YTD)",
+                            )
+                        )
+                else:
+                    monthly_value = p.value
             else:
                 monthly_value = p.value - prev_ytd
         else:
-            monthly_value = p.value
+            # First point ever - check if it's not January
+            if p.date.month > 1:
+                # First YTD is not January - distribute evenly
+                months_in_ytd = p.date.month
+                monthly_value = p.value / months_in_ytd
+                # Create synthetic points for Jan through (month-1)
+                for m in range(1, p.date.month):
+                    synth_date = p.date.replace(month=m, day=1)
+                    monthly_points.append(
+                        TimeSeriesPoint(
+                            date=synth_date,
+                            value=monthly_value,
+                            label=f"{synth_date.strftime('%b-%y')} Monthly (distributed from YTD)",
+                        )
+                    )
+            else:
+                monthly_value = p.value
 
         # Interpolate missing months if needed
         if prev_date is not None:
