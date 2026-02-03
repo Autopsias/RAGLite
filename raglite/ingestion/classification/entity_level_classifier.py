@@ -6,6 +6,13 @@ Classifies financial entities into levels:
 - SEGMENT: Business segment data
 - GEOGRAPHIC: Geographic region data
 - UNKNOWN: Cannot determine level
+
+Currency Detection (Story 9.4 Enhancement):
+Non-EUR currencies are strong signals for geographic entities:
+- BRL (Brazilian Real) → Brazil
+- AOA (Angolan Kwanza) → Angola
+- LBP (Lebanese Pound) → Lebanon
+- TND (Tunisian Dinar) → Tunisia
 """
 
 import re
@@ -19,6 +26,32 @@ from raglite.ingestion.classification.models import (
 from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
+
+# Currency to entity mapping (non-EUR currencies indicate geographic entities)
+# When a row has a non-EUR currency, it should be classified as that geographic entity
+# regardless of what the entity field says (e.g., "SECIL Group" with BRL → Brazil)
+CURRENCY_TO_ENTITY: dict[str, str] = {
+    # Brazilian Real
+    "BRL": "Brazil",
+    "1000 BRL": "Brazil",
+    "BRL/ton": "Brazil",
+    "BRL/m3": "Brazil",
+    # Angolan Kwanza
+    "AOA": "Angola",
+    "1000 AOA": "Angola",
+    "AOA/ton": "Angola",
+    # Lebanese Pound
+    "LBP": "Lebanon",
+    "1000 LBP": "Lebanon",
+    "LBP/ton": "Lebanon",
+    # Tunisian Dinar
+    "TND": "Tunisia",
+    "1000 TND": "Tunisia",
+    "TND/ton": "Tunisia",
+}
+
+# Currency codes that indicate non-EUR data (used for pattern matching)
+NON_EUR_CURRENCY_CODES: set[str] = {"BRL", "AOA", "LBP", "TND"}
 
 # Geographic entity dictionary
 GEOGRAPHIC_ENTITIES: set[str] = {
@@ -43,6 +76,10 @@ GEOGRAPHIC_ENTITIES: set[str] = {
     "americas",
     "asia",
     "africa",
+    "north",
+    "south",
+    "east",
+    "west",
     # Portuguese geographic keywords
     "pais",
     "regiao",
@@ -88,21 +125,67 @@ SEGMENT_PATTERNS = [
 ]
 
 
+def _detect_currency_entity(unit: str | None) -> str | None:
+    """Detect geographic entity from currency in unit field.
+
+    Non-EUR currencies are strong indicators of geographic entities.
+    For example, "1000 BRL" or "BRL/ton" indicates Brazil operations.
+
+    Args:
+        unit: Unit string (e.g., "M EUR", "1000 BRL", "BRL/ton")
+
+    Returns:
+        Entity name if non-EUR currency detected, None otherwise
+
+    Examples:
+        >>> _detect_currency_entity("1000 BRL")
+        'Brazil'
+        >>> _detect_currency_entity("M EUR")
+        None
+        >>> _detect_currency_entity("AOA/ton")
+        'Angola'
+    """
+    if not unit:
+        return None
+
+    unit_upper = unit.upper().strip()
+
+    # Check exact match first
+    if unit_upper in CURRENCY_TO_ENTITY:
+        return CURRENCY_TO_ENTITY[unit_upper]
+
+    # Check for currency code anywhere in unit string
+    for currency_code in NON_EUR_CURRENCY_CODES:
+        if currency_code in unit_upper:
+            # Map currency code to entity
+            for unit_pattern, entity_name in CURRENCY_TO_ENTITY.items():
+                if currency_code in unit_pattern.upper():
+                    return entity_name
+
+    return None
+
+
 def classify_entity_level(
     entity: str,
     table_title: str | None = None,
+    unit: str | None = None,
+    metric: str | None = None,
 ) -> ClassifiedEntityLevel:
     """Classify an entity string into its entity level.
 
     Classification hierarchy (checked first to last):
     0. Empty/whitespace/unknown patterns -> UNKNOWN
-    1. Entity pattern (consolidated, company, segment, geographic) - highest priority
+    0.5. Currency detection (non-EUR currency = geographic) - HIGHEST priority
+    1. Entity pattern (consolidated, company, segment, geographic)
     2. Table title context (secondary signal)
+    2.5. Metric name context inference (fallback for UNKNOWN only)
     3. Default: UNKNOWN (conservative approach)
 
     Args:
         entity: Entity string to classify
         table_title: Optional table title for context
+        unit: Optional unit string for currency detection (e.g., "1000 BRL")
+        metric: Optional metric name for context inference (e.g., "EBITDA IFRS Group")
 
     Returns:
         ClassifiedEntityLevel with entity level and source attribution
@@ -118,6 +201,8 @@ def classify_entity_level(
         ClassifiedEntityLevel(original="Cement Division", entity_level=SEGMENT, source="entity_pattern")
         >>> classify_entity_level("Revenue", table_title="GROUP Financial Statements")
         ClassifiedEntityLevel(original="Revenue", entity_level=CONSOLIDATED, source="table_title")
+        >>> classify_entity_level("SECIL Group", unit="1000 BRL")
+        ClassifiedEntityLevel(original="SECIL Group", entity_level=GEOGRAPHIC, source="currency_detection", corrected_entity="Brazil")
     """
     # Step 0: Handle empty/whitespace/unknown patterns
     if not entity or not entity.strip():
@@ -146,7 +231,22 @@ def classify_entity_level(
             source="ambiguous",
         )
 
+    # Step 0.5: Currency detection (HIGHEST priority)
+    # Non-EUR currencies override entity classification
+    # e.g., "SECIL Group" with unit="1000 BRL" → Brazil (geographic)
+    currency_entity = _detect_currency_entity(unit)
+    if currency_entity:
+        logger.debug(f"Currency detection: '{entity}' with unit='{unit}' → {currency_entity}")
+        return ClassifiedEntityLevel(
+            original=entity,
+            entity_level=EntityLevel.GEOGRAPHIC,
+            source="currency_detection",
+            corrected_entity=currency_entity,
+        )
+
     # Step 1: Check entity patterns (highest priority)
+    # Order matters: check company/segment patterns BEFORE geographic
+    # Special case: "Portugal Cement" = company name (geo + industry keyword)
 
     # Check consolidated patterns
     for pattern in CONSOLIDATED_PATTERNS:
@@ -157,16 +257,40 @@ def classify_entity_level(
                 source="entity_pattern",
             )
 
-    # Check company patterns
-    for pattern in COMPANY_PATTERNS:
+    # Check company patterns (explicit company indicators like SA, Ltd)
+    has_company_indicator = any(re.search(pattern, entity_lower) for pattern in COMPANY_PATTERNS)
+
+    if has_company_indicator:
+        return ClassifiedEntityLevel(
+            original=entity,
+            entity_level=EntityLevel.COMPANY_ONLY,
+            source="entity_pattern",
+        )
+
+    # Special case: Geographic + Industry keyword = Company name
+    # e.g., "Portugal Cement", "Spain Steel", "Brazil Mining"
+    has_geographic = any(
+        re.search(rf"\b{re.escape(geo)}\b", entity_lower) for geo in GEOGRAPHIC_ENTITIES
+    )
+    has_industry_keyword = any(re.search(pattern, entity_lower) for pattern in SEGMENT_PATTERNS)
+
+    if has_geographic and has_industry_keyword:
+        return ClassifiedEntityLevel(
+            original=entity,
+            entity_level=EntityLevel.COMPANY_ONLY,
+            source="entity_pattern",
+        )
+
+    # Check segment patterns (e.g., "Cement Division", "Ready Mix Unit")
+    for pattern in SEGMENT_PATTERNS:
         if re.search(pattern, entity_lower):
             return ClassifiedEntityLevel(
                 original=entity,
-                entity_level=EntityLevel.COMPANY_ONLY,
+                entity_level=EntityLevel.SEGMENT,
                 source="entity_pattern",
             )
 
-    # Check geographic patterns (country/region names)
+    # Check geographic patterns (country/region names) - AFTER company/segment
     # Use word boundaries to avoid false positives (e.g., "uk" matching "Duke")
     for geo_entity in GEOGRAPHIC_ENTITIES:
         if re.search(rf"\b{re.escape(geo_entity)}\b", entity_lower):
@@ -174,15 +298,6 @@ def classify_entity_level(
             return ClassifiedEntityLevel(
                 original=entity,
                 entity_level=EntityLevel.GEOGRAPHIC,
-                source="entity_pattern",
-            )
-
-    # Check segment patterns
-    for pattern in SEGMENT_PATTERNS:
-        if re.search(pattern, entity_lower):
-            return ClassifiedEntityLevel(
-                original=entity,
-                entity_level=EntityLevel.SEGMENT,
                 source="entity_pattern",
             )
 
@@ -217,6 +332,35 @@ def classify_entity_level(
                     source="table_title",
                 )
 
+    # Step 2.5: Metric name context inference (fallback for otherwise-UNKNOWN entities)
+    # Only applies when entity/table_title patterns didn't match, to avoid overriding
+    # correct classifications (e.g., "GROUP" with metric "Revenue Cement" stays CONSOLIDATED)
+    if metric:
+        metric_lower = metric.lower().strip()
+        # Metric containing "group" or "consolidated" → CONSOLIDATED
+        if any(p in metric_lower for p in ("group", "consolidated", "conso")):
+            return ClassifiedEntityLevel(
+                original=entity,
+                entity_level=EntityLevel.CONSOLIDATED,
+                source="metric_context",
+            )
+        # Metric containing geographic entity name → GEOGRAPHIC
+        for geo in GEOGRAPHIC_ENTITIES:
+            if geo in metric_lower:
+                return ClassifiedEntityLevel(
+                    original=entity,
+                    entity_level=EntityLevel.GEOGRAPHIC,
+                    source="metric_context",
+                )
+        # Metric containing segment keywords → SEGMENT
+        segment_keywords = ("cement", "ready-mix", "concrete", "aggregates", "precast")
+        if any(p in metric_lower for p in segment_keywords):
+            return ClassifiedEntityLevel(
+                original=entity,
+                entity_level=EntityLevel.SEGMENT,
+                source="metric_context",
+            )
+
     # Step 3: Default to UNKNOWN (conservative approach)
     logger.debug(f"No classification found for '{entity}', defaulting to UNKNOWN")
     return ClassifiedEntityLevel(
@@ -231,34 +375,44 @@ def classify_entity_level(
 def _classify_cached(
     normalized_entity: str,
     normalized_table_title: str | None,
+    normalized_unit: str | None,
+    normalized_metric: str | None = None,
 ) -> ClassifiedEntityLevel:
     """Cache wrapper for classify_entity_level.
 
     Args:
         normalized_entity: Whitespace-stripped entity string
         normalized_table_title: Whitespace-stripped table title (or None)
+        normalized_unit: Whitespace-stripped unit string (or None)
+        normalized_metric: Whitespace-stripped metric string (or None)
 
     Returns:
         ClassifiedEntityLevel result
     """
-    return classify_entity_level(normalized_entity, normalized_table_title)
+    return classify_entity_level(
+        normalized_entity, normalized_table_title, normalized_unit, normalized_metric
+    )
 
 
 def classify_entity_levels_batch(
     entities: list[str],
     table_titles: list[str | None] | None = None,
+    units: list[str | None] | None = None,
+    metrics: list[str | None] | None = None,
 ) -> tuple[list[ClassifiedEntityLevel], EntityLevelReport]:
     """Classify a batch of entity strings.
 
     Args:
         entities: List of entity strings to classify
         table_titles: Optional list of table titles (same length as entities, or None)
+        units: Optional list of unit strings for currency detection (same length as entities, or None)
+        metrics: Optional list of metric strings for context inference (same length as entities, or None)
 
     Returns:
         Tuple of (list of ClassifiedEntityLevel, EntityLevelReport)
 
     Raises:
-        ValueError: If table_titles length doesn't match entities length
+        ValueError: If table_titles, units, or metrics length doesn't match entities length
 
     Examples:
         >>> results, report = classify_entity_levels_batch(["GROUP", "Portugal", "SECIL"])
@@ -266,10 +420,24 @@ def classify_entity_levels_batch(
         3
         >>> report.total_records
         3
+        >>> # Currency detection example
+        >>> results, _ = classify_entity_levels_batch(["SECIL Group"], units=["1000 BRL"])
+        >>> results[0].entity_level.name
+        'GEOGRAPHIC'
+        >>> results[0].corrected_entity
+        'Brazil'
     """
     if table_titles is not None and len(table_titles) != len(entities):
         raise ValueError(
             f"table_titles and entities must have the same length (got {len(table_titles)} and {len(entities)})"
+        )
+    if units is not None and len(units) != len(entities):
+        raise ValueError(
+            f"units and entities must have the same length (got {len(units)} and {len(entities)})"
+        )
+    if metrics is not None and len(metrics) != len(entities):
+        raise ValueError(
+            f"metrics and entities must have the same length (got {len(metrics)} and {len(entities)})"
         )
 
     # Initialize counters for single-pass counting
@@ -283,13 +451,19 @@ def classify_entity_levels_batch(
     results: list[ClassifiedEntityLevel] = []
     for idx, entity in enumerate(entities):
         table_title = table_titles[idx] if table_titles else None
+        unit = units[idx] if units else None
+        metric = metrics[idx] if metrics else None
 
         # Normalize inputs for caching
         normalized_entity = entity.strip() if entity else ""
         normalized_table_title = table_title.strip() if table_title else None
+        normalized_unit = unit.strip() if unit else None
+        normalized_metric = metric.strip() if metric else None
 
         # Classify with caching
-        result = _classify_cached(normalized_entity, normalized_table_title)
+        result = _classify_cached(
+            normalized_entity, normalized_table_title, normalized_unit, normalized_metric
+        )
         results.append(result)
 
         # Update counters in single pass

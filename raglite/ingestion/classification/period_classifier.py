@@ -20,6 +20,64 @@ from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Known non-period patterns that should be classified as UNKNOWN immediately
+# These patterns trigger LLM fallback unnecessarily, causing slow classification
+# Derived from actual data distribution analysis showing ~31% of "unknown" rows
+KNOWN_NON_PERIOD_PATTERNS: list[re.Pattern] = [
+    re.compile(r"^Var\.?$", re.IGNORECASE),  # "Var." or "Var"
+    re.compile(r"^%\s*LY$", re.IGNORECASE),  # "% LY" (vs last year)
+    re.compile(r"^%\s*Bud\.?$", re.IGNORECASE),  # "% Bud" or "% Bud."
+    re.compile(r"^Month$", re.IGNORECASE),  # "Month" header
+    re.compile(r"^YTD$", re.IGNORECASE),  # Standalone "YTD" (not "YTD Dec-24")
+    re.compile(r"^Total$", re.IGNORECASE),  # "Total" rows
+    re.compile(r"^Currency.*$", re.IGNORECASE),  # "Currency (1000 EUR)"
+    re.compile(r"^\d+$"),  # Pure numbers like row indices
+    re.compile(r"^N/?A$", re.IGNORECASE),  # "N/A" or "NA"
+    re.compile(r"^-+$"),  # Dashes only
+    re.compile(r"^\.+$"),  # Dots only
+    re.compile(r"^\s*$"),  # Whitespace only
+]
+
+
+def _is_known_non_period(text: str) -> bool:
+    """Check if text matches known non-period patterns.
+
+    Args:
+        text: Period string to check
+
+    Returns:
+        True if text is definitely not a period
+    """
+    for pattern in KNOWN_NON_PERIOD_PATTERNS:
+        if pattern.match(text):
+            return True
+    return False
+
+
+def _has_month_indicator(text: str) -> bool:
+    """Check if text contains any month or date indicator.
+
+    Used to skip LLM fallback for strings that clearly don't contain periods.
+
+    Args:
+        text: Period string to check
+
+    Returns:
+        True if text contains month names, years, or quarter indicators
+    """
+    month_patterns = [
+        r"Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec",  # English months
+        r"Fev|Abr|Mai|Ago|Set|Out|Dez",  # Portuguese months
+        r"\d{4}",  # 4-digit year like 2024, 2025
+        r"\d{2}[-/]\d{2}",  # Date patterns like 24-25 or 24/25
+        r"Q[1-4]",  # Quarter indicators
+    ]
+    for pattern in month_patterns:
+        if re.search(pattern, text, re.IGNORECASE):
+            return True
+    return False
+
+
 # Portuguese to English month abbreviation mapping
 PORTUGUESE_MONTH_MAP: dict[str, str] = {
     "Fev": "Feb",
@@ -170,8 +228,9 @@ def classify_period(period: str | None) -> ClassifiedPeriod:
     # Strip regular spaces and NBSP (non-breaking space U+00A0)
     period = period.strip().replace("\u00a0", " ").strip()
 
-    # Step 2: Check for YTD Budget (e.g., "YTD B Dec-21", "YTD  B Sep-25")
-    if re.match(r"^YTD\s+B\s", period, re.IGNORECASE):
+    # Step 2: Check for YTD Budget patterns
+    # Patterns: "YTD B Dec-21", "YTD Budget 2025", "YTD Budget Dec-21"
+    if re.match(r"^YTD\s+(B\s|Budget\s+)", period, re.IGNORECASE):
         return ClassifiedPeriod(
             original=period,
             period_type=PeriodType.YTD_BUDGET,
@@ -179,8 +238,9 @@ def classify_period(period: str | None) -> ClassifiedPeriod:
             is_usable=False,
         )
 
-    # Step 3: Check for Budget (e.g., "B Dec-21", "Dec-21 B", "B  Apr-25", "Jan B 25")
-    if re.match(r"^B\s", period, re.IGNORECASE):
+    # Step 3: Check for Budget patterns
+    # Patterns: "B Dec-21", "Budget 2025", "Dec-21 B", "Jan B 25"
+    if re.match(r"^(B\s|Budget\s+)", period, re.IGNORECASE):
         return ClassifiedPeriod(
             original=period,
             period_type=PeriodType.BUDGET,
@@ -232,8 +292,28 @@ def classify_period(period: str | None) -> ClassifiedPeriod:
             is_usable=True,
         )
 
-    # Step 6: Everything else - attempt LLM classification before UNKNOWN
-    # This includes: "N/A", "None", "2017 P", year-only formats, complex cases, etc.
+    # Step 6: Fast-path for known non-period patterns
+    # Skip LLM entirely for patterns like "Var.", "% LY", pure numbers, etc.
+    if _is_known_non_period(period):
+        return ClassifiedPeriod(
+            original=period,
+            period_type=PeriodType.UNKNOWN,
+            normalized=None,
+            is_usable=False,
+        )
+
+    # Step 7: Skip LLM if no month/date indicators present
+    # Strings without months/years/quarters can't be valid periods
+    if not _has_month_indicator(period):
+        return ClassifiedPeriod(
+            original=period,
+            period_type=PeriodType.UNKNOWN,
+            normalized=None,
+            is_usable=False,
+        )
+
+    # Step 8: Everything else - attempt LLM classification
+    # This includes: "2017 P", year-only formats, complex date cases, etc.
     # Per AC3: Try LLM classification for ambiguous cases
     # Per AC4: Catch all exceptions and enforce 5s timeout (no pipeline blocking)
     executor = ThreadPoolExecutor(max_workers=1)

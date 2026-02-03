@@ -127,7 +127,10 @@ class ClassifiedEntityLevel:
 
     original: str  # Original entity string
     entity_level: EntityLevel  # Classification result
-    source: str  # Where classification came from: "table_title", "entity_pattern", "default", "empty", "unknown_marker", "ambiguous"
+    source: str  # Where classification came from: "table_title", "entity_pattern", "default", "empty", "unknown_marker", "ambiguous", "currency_detection"
+    corrected_entity: str | None = (
+        None  # Corrected entity name when currency detection overrides (e.g., "SECIL Group" -> "Brazil" when unit is BRL)
+    )
 
 
 @dataclass

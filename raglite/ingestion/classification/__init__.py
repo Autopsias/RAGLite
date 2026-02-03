@@ -24,10 +24,16 @@ And entity levels:
 Supports Portuguese month abbreviations and batch classification with caching.
 """
 
-from raglite.ingestion.classification import value_type_classifier
+from raglite.ingestion.classification import integration, value_type_classifier
 from raglite.ingestion.classification.entity_level_classifier import (
     classify_entity_level,
     classify_entity_levels_batch,
+)
+from raglite.ingestion.classification.integration import (
+    ClassificationSummary,
+    classify_row,
+    classify_rows_batch,
+    generate_classification_summary,
 )
 from raglite.ingestion.classification.models import (
     ClassificationReport,
@@ -68,6 +74,12 @@ __all__ = [
     "EntityLevelReport",
     "classify_entity_level",
     "classify_entity_levels_batch",
+    # Integration
+    "ClassificationSummary",
+    "classify_row",
+    "classify_rows_batch",
+    "generate_classification_summary",
     # Modules (for test inspection)
+    "integration",
     "value_type_classifier",
 ]
