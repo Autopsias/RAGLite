@@ -27,7 +27,8 @@ class TestP0CriticalGaps:
         """[P0] LLM successfully classifying BUDGET (lines 238-239)."""
         from raglite.ingestion.classification import PeriodType, classify_period
 
-        # Given an ambiguous period that LLM classifies as BUDGET
+        # Given an ambiguous period that has month indicators but needs LLM
+        # (must have month indicator to reach LLM, otherwise fast-path returns UNKNOWN)
         # When LLM returns BUDGET classification
         with patch(
             "raglite.ingestion.classification.period_classifier.get_mistral_client"
@@ -37,7 +38,8 @@ class TestP0CriticalGaps:
             mock_response.choices[0].message.content = "budget"
             mock_client.return_value.chat.complete.return_value = mock_response
 
-            result = classify_period("random string that needs LLM")
+            # Use a string with month indicator that's ambiguous enough for LLM
+            result = classify_period("2024 Jan Budget Plan")
 
             # Then result has BUDGET type and is not usable
             assert result.period_type == PeriodType.BUDGET
@@ -48,7 +50,8 @@ class TestP0CriticalGaps:
         """[P0] LLM successfully classifying YTD_BUDGET (lines 238-239)."""
         from raglite.ingestion.classification import PeriodType, classify_period
 
-        # Given an ambiguous period that LLM classifies as YTD_BUDGET
+        # Given an ambiguous period that has month indicators but needs LLM
+        # (must have month indicator to reach LLM, otherwise fast-path returns UNKNOWN)
         with patch(
             "raglite.ingestion.classification.period_classifier.get_mistral_client"
         ) as mock_client:
@@ -57,7 +60,8 @@ class TestP0CriticalGaps:
             mock_response.choices[0].message.content = "ytd_budget"
             mock_client.return_value.chat.complete.return_value = mock_response
 
-            result = classify_period("random ytd budget string")
+            # Use a string with month indicator that's ambiguous for LLM
+            result = classify_period("2024 Mar Acc YTD Budget")
 
             # Then result has YTD_BUDGET type and is not usable
             assert result.period_type == PeriodType.YTD_BUDGET
@@ -68,7 +72,8 @@ class TestP0CriticalGaps:
         """[P0] LLM successfully classifying MONTHLY_ACTUAL (lines 238-239)."""
         from raglite.ingestion.classification import PeriodType, classify_period
 
-        # Given an ambiguous period that LLM classifies as MONTHLY_ACTUAL
+        # Given an ambiguous period that has month indicators but needs LLM
+        # (must have month indicator to reach LLM, otherwise fast-path returns UNKNOWN)
         with patch(
             "raglite.ingestion.classification.period_classifier.get_mistral_client"
         ) as mock_client:
@@ -77,7 +82,8 @@ class TestP0CriticalGaps:
             mock_response.choices[0].message.content = "monthly_actual"
             mock_client.return_value.chat.complete.return_value = mock_response
 
-            result = classify_period("some weird month format")
+            # Use a string with month indicator that's ambiguous for LLM
+            result = classify_period("2024 Dec Actual M")
 
             # Then result has MONTHLY_ACTUAL type and is usable
             assert result.period_type == PeriodType.MONTHLY_ACTUAL
@@ -88,7 +94,8 @@ class TestP0CriticalGaps:
         """[P0] LLM successfully classifying YTD_ACTUAL (lines 238-239)."""
         from raglite.ingestion.classification import PeriodType, classify_period
 
-        # Given an ambiguous period that LLM classifies as YTD_ACTUAL
+        # Given an ambiguous period that has month indicators but needs LLM
+        # (must have month indicator to reach LLM, otherwise fast-path returns UNKNOWN)
         with patch(
             "raglite.ingestion.classification.period_classifier.get_mistral_client"
         ) as mock_client:
@@ -97,7 +104,8 @@ class TestP0CriticalGaps:
             mock_response.choices[0].message.content = "ytd_actual"
             mock_client.return_value.chat.complete.return_value = mock_response
 
-            result = classify_period("ytd something weird")
+            # Use a string with month indicator that's ambiguous for LLM
+            result = classify_period("2024 Dec Acc YTD")
 
             # Then result has YTD_ACTUAL type and is usable
             assert result.period_type == PeriodType.YTD_ACTUAL

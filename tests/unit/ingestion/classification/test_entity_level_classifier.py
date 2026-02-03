@@ -281,11 +281,11 @@ class TestCachingBehavior:
         entity = "GROUP EBITDA Test Entity"
 
         # First call - cache miss
-        result1 = _classify_cached(entity, None)
+        result1 = _classify_cached(entity, None, None)
         assert result1.entity_level == EntityLevel.CONSOLIDATED
 
         # Second call - cache hit (should be instant)
-        result2 = _classify_cached(entity, None)
+        result2 = _classify_cached(entity, None, None)
         assert result2.entity_level == EntityLevel.CONSOLIDATED
         assert result2 == result1
 
@@ -296,9 +296,9 @@ class TestCachingBehavior:
         """
         entity = "Revenue"
 
-        result1 = _classify_cached(entity, "GROUP Statements")
-        result2 = _classify_cached(entity, "Portugal Operations")
-        result3 = _classify_cached(entity, None)
+        result1 = _classify_cached(entity, "GROUP Statements", None)
+        result2 = _classify_cached(entity, "Portugal Operations", None)
+        result3 = _classify_cached(entity, None, None)
 
         # All three should be different due to table_title
         assert result1.entity_level == EntityLevel.CONSOLIDATED
@@ -314,7 +314,7 @@ class TestCachingBehavior:
         unique_entities = [f"Entity_{i}" for i in range(1100)]
 
         for entity in unique_entities:
-            _classify_cached(entity, None)
+            _classify_cached(entity, None, None)
 
         # Cache should have evicted ~100 oldest entries
         cache_info = _classify_cached.cache_info()
@@ -620,3 +620,115 @@ class TestPerformanceEdgeCases:
             assert results[i].original == "B"
         for i in range(200, 300):
             assert results[i].original == "A"
+
+
+class TestCurrencyDetection:
+    """Currency detection feature tests (Story 9.4 Enhancement).
+
+    Non-EUR currencies are strong signals for geographic entities:
+    - BRL (Brazilian Real) → Brazil
+    - AOA (Angolan Kwanza) → Angola
+    - LBP (Lebanese Pound) → Lebanon
+    - TND (Tunisian Dinar) → Tunisia
+
+    When a row has a non-EUR currency, it should be classified as that geographic entity
+    regardless of what the entity field says (e.g., "SECIL Group" with BRL → Brazil).
+    """
+
+    def test_brl_currency_overrides_consolidated_entity_p0(self) -> None:
+        """[P0] BRL currency should classify entity as Brazil regardless of entity name.
+
+        This is critical for preventing unit mixing in forecasts (e.g., EBITDA bug).
+        """
+        result = classify_entity_level("SECIL Group", unit="1000 BRL")
+
+        assert result.entity_level == EntityLevel.GEOGRAPHIC
+        assert result.corrected_entity == "Brazil"
+        assert result.source == "currency_detection"
+
+    def test_aoa_currency_overrides_entity_p1(self) -> None:
+        """[P1] AOA currency should classify entity as Angola."""
+        result = classify_entity_level("SECIL Group", unit="AOA/ton")
+
+        assert result.entity_level == EntityLevel.GEOGRAPHIC
+        assert result.corrected_entity == "Angola"
+        assert result.source == "currency_detection"
+
+    def test_lbp_currency_overrides_entity_p1(self) -> None:
+        """[P1] LBP currency should classify entity as Lebanon."""
+        result = classify_entity_level("Operations", unit="1000 LBP")
+
+        assert result.entity_level == EntityLevel.GEOGRAPHIC
+        assert result.corrected_entity == "Lebanon"
+        assert result.source == "currency_detection"
+
+    def test_tnd_currency_overrides_entity_p1(self) -> None:
+        """[P1] TND currency should classify entity as Tunisia."""
+        result = classify_entity_level("Division", unit="TND")
+
+        assert result.entity_level == EntityLevel.GEOGRAPHIC
+        assert result.corrected_entity == "Tunisia"
+        assert result.source == "currency_detection"
+
+    def test_eur_currency_does_not_override_p0(self) -> None:
+        """[P0] EUR currency should NOT trigger currency detection."""
+        result = classify_entity_level("SECIL Group", unit="M EUR")
+
+        assert result.entity_level == EntityLevel.CONSOLIDATED
+        assert result.corrected_entity is None
+        assert result.source == "entity_pattern"
+
+    def test_no_unit_does_not_trigger_currency_detection_p1(self) -> None:
+        """[P1] None/empty unit should NOT trigger currency detection."""
+        result1 = classify_entity_level("SECIL Group", unit=None)
+        result2 = classify_entity_level("SECIL Group", unit="")
+
+        assert result1.entity_level == EntityLevel.CONSOLIDATED
+        assert result1.corrected_entity is None
+        assert result2.entity_level == EntityLevel.CONSOLIDATED
+        assert result2.corrected_entity is None
+
+    def test_batch_with_mixed_currencies_p1(self) -> None:
+        """[P1] Batch classification should correctly apply currency detection."""
+        entities = ["SECIL Group", "SECIL Group", "Operations"]
+        units = ["1000 BRL", "M EUR", "AOA/ton"]
+
+        results, report = classify_entity_levels_batch(entities, units=units)
+
+        # First row: BRL → Brazil
+        assert results[0].entity_level == EntityLevel.GEOGRAPHIC
+        assert results[0].corrected_entity == "Brazil"
+
+        # Second row: EUR → keep SECIL Group as consolidated
+        assert results[1].entity_level == EntityLevel.CONSOLIDATED
+        assert results[1].corrected_entity is None
+
+        # Third row: AOA → Angola
+        assert results[2].entity_level == EntityLevel.GEOGRAPHIC
+        assert results[2].corrected_entity == "Angola"
+
+    def test_batch_units_length_mismatch_raises_p1(self) -> None:
+        """[P1] Mismatched units/entities length should raise ValueError."""
+        entities = ["A", "B", "C"]
+        units = ["BRL", "EUR"]  # Wrong length
+
+        with pytest.raises(ValueError, match="units and entities must have the same length"):
+            classify_entity_levels_batch(entities, units=units)
+
+    def test_cache_respects_unit_parameter_p1(self) -> None:
+        """[P1] Different units should produce different cache keys."""
+        entity = "Revenue"
+
+        result1 = _classify_cached(entity, None, "BRL")
+        result2 = _classify_cached(entity, None, "EUR")
+        result3 = _classify_cached(entity, None, None)
+
+        # BRL should be geographic with corrected_entity
+        assert result1.entity_level == EntityLevel.GEOGRAPHIC
+        assert result1.corrected_entity == "Brazil"
+
+        # EUR and None should not trigger currency detection
+        assert result2.entity_level == EntityLevel.UNKNOWN
+        assert result2.corrected_entity is None
+        assert result3.entity_level == EntityLevel.UNKNOWN
+        assert result3.corrected_entity is None

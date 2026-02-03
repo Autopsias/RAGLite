@@ -549,9 +549,7 @@ class TestP2EdgeCases:
     def test_p2_015_batch_performance_stress_test(self) -> None:
         """TEST-UNIT-VTC-P2-015: Batch handles 10,000 periods efficiently."""
         # Stress test with 10,000 mixed periods
-        periods = (
-            ["Dec-21", "B Jan-22", "F Feb-23", "Var Mar-24", "N/A"] * 2000
-        )  # 10,000 total
+        periods = ["Dec-21", "B Jan-22", "F Feb-23", "Var Mar-24", "N/A"] * 2000  # 10,000 total
 
         start = time.time()
         results, report = classify_value_types_batch(periods)

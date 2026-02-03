@@ -219,18 +219,14 @@ class TestAC3LLMResilience:
         ) as mock_client:
             mock_client.return_value.chat.complete.side_effect = Exception("API Error")
 
-            with patch(
-                "raglite.ingestion.classification.period_classifier.logger"
-            ) as mock_logger:
+            with patch("raglite.ingestion.classification.period_classifier.logger") as mock_logger:
                 _classify_with_llm("ambiguous period")
 
                 # Verify structured logging was called
                 assert mock_logger.warning.called or mock_logger.error.called
 
                 # Check for structured extra fields in any call
-                log_calls = (
-                    mock_logger.warning.call_args_list + mock_logger.error.call_args_list
-                )
+                log_calls = mock_logger.warning.call_args_list + mock_logger.error.call_args_list
                 has_structured_logging = any(
                     "extra" in call.kwargs for call in log_calls if call.kwargs
                 )

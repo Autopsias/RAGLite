@@ -57,9 +57,7 @@ class TestP2EdgeCases:
         with patch(
             "raglite.ingestion.classification.period_classifier.get_mistral_client"
         ) as mock_client:
-            mock_client.return_value.chat.complete.side_effect = Exception(
-                "Mocked failure"
-            )
+            mock_client.return_value.chat.complete.side_effect = Exception("Mocked failure")
 
             # Given a 10,000 character string
             long_string = "x" * 10000
@@ -71,9 +69,9 @@ class TestP2EdgeCases:
 
             # Then regex completes without ReDoS, but LLM retries add ~3s
             # (This is expected behavior - fallback has retry delays)
-            assert (
-                elapsed < 4.0
-            ), f"Long string took {elapsed:.3f}s (expected <4s with retry delays)"
+            assert elapsed < 4.0, (
+                f"Long string took {elapsed:.3f}s (expected <4s with retry delays)"
+            )
             assert result.period_type == PeriodType.UNKNOWN
 
     def test_unicode_characters_in_period(self) -> None:
@@ -105,9 +103,7 @@ class TestP2EdgeCases:
         with patch(
             "raglite.ingestion.classification.period_classifier.get_mistral_client"
         ) as mock_client:
-            mock_client.return_value.chat.complete.side_effect = Exception(
-                "Should not reach LLM"
-            )
+            mock_client.return_value.chat.complete.side_effect = Exception("Should not reach LLM")
 
             # Clear cache
             _classify_cached.cache_clear()
@@ -132,9 +128,7 @@ class TestP2EdgeCases:
         with patch(
             "raglite.ingestion.classification.period_classifier.get_mistral_client"
         ) as mock_client:
-            mock_client.return_value.chat.complete.side_effect = Exception(
-                "Should not reach LLM"
-            )
+            mock_client.return_value.chat.complete.side_effect = Exception("Should not reach LLM")
 
             # Clear cache
             _classify_cached.cache_clear()
@@ -187,9 +181,7 @@ class TestP2EdgeCases:
 
         for period, expected_normalized in test_cases:
             result = classify_period(period)
-            assert (
-                result.normalized == expected_normalized
-            ), f"Failed for: {period}"
+            assert result.normalized == expected_normalized, f"Failed for: {period}"
 
     def test_y2k_edge_case(self) -> None:
         """[P2] Y2K edge case (Dec-99 vs Dec-00)."""
