@@ -23,7 +23,6 @@ try:
         generate_forecast,
         prepare_forecast_data,
     )
-
     from raglite.forecasting.model_selection import ModelSelectionResult
 
     FORECASTING_AVAILABLE = True
