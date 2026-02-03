@@ -13,7 +13,9 @@ from pathlib import Path
 import pytest
 
 # Ground truth file location
-GROUND_TRUTH_PATH = Path(__file__).parents[2] / "fixtures" / "period_classification_ground_truth.json"
+GROUND_TRUTH_PATH = (
+    Path(__file__).parents[2] / "fixtures" / "period_classification_ground_truth.json"
+)
 
 
 class TestAC5GroundTruthValidation:
@@ -66,15 +68,16 @@ class TestAC5GroundTruthValidation:
 
         # Check Portuguese months present
         portuguese_months = ["Dez", "Fev", "Abr", "Mai", "Ago", "Set", "Out"]
-        has_portuguese = any(
-            any(pm in period for pm in portuguese_months)
-            for period in periods
-        )
+        has_portuguese = any(any(pm in period for pm in portuguese_months) for period in periods)
         assert has_portuguese, "Ground truth should include Portuguese month abbreviations"
 
         # Check case variations present
         has_lowercase = any(period.islower() or period[0].islower() for period in periods if period)
-        has_uppercase = any(period.isupper() or period[0:3].isupper() for period in periods if period and len(period) >= 3)
+        has_uppercase = any(
+            period.isupper() or period[0:3].isupper()
+            for period in periods
+            if period and len(period) >= 3
+        )
         assert has_lowercase or has_uppercase, "Ground truth should include case variations"
 
         # Check whitespace variations present
@@ -115,13 +118,15 @@ class TestAC5GroundTruthValidation:
             if type_match and norm_match:
                 correct += 1
             else:
-                failures.append({
-                    "period": period,
-                    "expected_type": expected_type,
-                    "actual_type": actual_type,
-                    "expected_normalized": expected_normalized,
-                    "actual_normalized": result.normalized,
-                })
+                failures.append(
+                    {
+                        "period": period,
+                        "expected_type": expected_type,
+                        "actual_type": actual_type,
+                        "expected_normalized": expected_normalized,
+                        "actual_normalized": result.normalized,
+                    }
+                )
 
         accuracy = correct / len(ground_truth)
 
@@ -130,7 +135,7 @@ class TestAC5GroundTruthValidation:
         assert isinstance(failures, list), "Failures should be a list"
 
         # Log output for verification (in real usage, this would be captured)
-        print(f"Validation Results:")
+        print("Validation Results:")
         print(f"  Total samples: {len(ground_truth)}")
         print(f"  Correct: {correct}")
         print(f"  Accuracy: {accuracy:.2%}")
@@ -171,7 +176,9 @@ class TestAC5GroundTruthValidation:
         assert isinstance(passes_threshold, bool), "Threshold comparison should return bool"
 
         # Log for visibility
-        print(f"Threshold {threshold:.0%}: {'PASS' if passes_threshold else 'FAIL'} (actual: {accuracy:.2%})")
+        print(
+            f"Threshold {threshold:.0%}: {'PASS' if passes_threshold else 'FAIL'} (actual: {accuracy:.2%})"
+        )
 
 
 class TestGroundTruthDatasetStructure:

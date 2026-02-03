@@ -40,7 +40,7 @@ class TestAC2RegexPatternMatching:
 
         with patch(
             "raglite.ingestion.classification.period_classifier._classify_with_llm",
-            side_effect=mock_llm_call
+            side_effect=mock_llm_call,
         ):
             start = time.time()
             result = classify_period("Dec-21")
@@ -133,7 +133,7 @@ class TestAC2RegexPatternMatching:
 
         with patch(
             "raglite.ingestion.classification.period_classifier._classify_with_llm",
-            side_effect=mock_unavailable_llm
+            side_effect=mock_unavailable_llm,
         ):
             # Test non-regex period that would normally need LLM
             start = time.time()
@@ -147,10 +147,10 @@ class TestAC2RegexPatternMatching:
     @pytest.mark.parametrize(
         "whitespace_period,expected_normalized",
         [
-            ("Dec-21\t", "Dec-21"),      # Trailing tab
-            ("\tJan-25", "Jan-25"),      # Leading tab
+            ("Dec-21\t", "Dec-21"),  # Trailing tab
+            ("\tJan-25", "Jan-25"),  # Leading tab
             ("Dec-21\u00a0", "Dec-21"),  # NBSP (non-breaking space)
-            ("  Feb-24  ", "Feb-24"),    # Surrounding spaces
+            ("  Feb-24  ", "Feb-24"),  # Surrounding spaces
         ],
     )
     def test_ac2_5_whitespace_handling(

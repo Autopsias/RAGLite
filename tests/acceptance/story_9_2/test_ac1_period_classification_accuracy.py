@@ -13,7 +13,9 @@ from pathlib import Path
 import pytest
 
 # Ground truth file location
-GROUND_TRUTH_PATH = Path(__file__).parents[2] / "fixtures" / "period_classification_ground_truth.json"
+GROUND_TRUTH_PATH = (
+    Path(__file__).parents[2] / "fixtures" / "period_classification_ground_truth.json"
+)
 ACCURACY_THRESHOLD = 0.95
 
 
@@ -32,7 +34,7 @@ class TestAC1PeriodClassificationAccuracy:
         When classifying all periods
         Then at least 64 samples are correctly classified (95.5%+)
         """
-        from raglite.ingestion.classification import PeriodType, classify_period
+        from raglite.ingestion.classification import classify_period
 
         # Load ground truth
         with open(GROUND_TRUTH_PATH) as f:
@@ -57,13 +59,15 @@ class TestAC1PeriodClassificationAccuracy:
             if type_match and norm_match:
                 correct += 1
             else:
-                failures.append({
-                    "period": period,
-                    "expected_type": expected_type,
-                    "actual_type": actual_type,
-                    "expected_normalized": expected_normalized,
-                    "actual_normalized": result.normalized,
-                })
+                failures.append(
+                    {
+                        "period": period,
+                        "expected_type": expected_type,
+                        "actual_type": actual_type,
+                        "expected_normalized": expected_normalized,
+                        "actual_normalized": result.normalized,
+                    }
+                )
 
         accuracy = correct / len(ground_truth)
 
@@ -138,9 +142,7 @@ class TestAC1PeriodClassificationAccuracy:
             ("YTD Dec-21", "YTD_ACTUAL"),
         ],
     )
-    def test_ac1_4_normalized_period_extraction(
-        self, period: str, expected_type: str
-    ) -> None:
+    def test_ac1_4_normalized_period_extraction(self, period: str, expected_type: str) -> None:
         """TEST-AC-9.2.1.4 [P0]: Normalized period extracted in Mon-YY format.
 
         Given a usable period type (MONTHLY_ACTUAL or YTD_ACTUAL)
@@ -160,12 +162,12 @@ class TestAC1PeriodClassificationAccuracy:
     @pytest.mark.parametrize(
         "period,expected_usable",
         [
-            ("Dec-21", True),       # MONTHLY_ACTUAL
-            ("YTD Dec-21", True),   # YTD_ACTUAL
-            ("B Dec-21", False),    # BUDGET
-            ("Dec-21 B", False),    # BUDGET
-            ("YTD B Dec-21", False), # YTD_BUDGET
-            ("N/A", False),         # UNKNOWN
+            ("Dec-21", True),  # MONTHLY_ACTUAL
+            ("YTD Dec-21", True),  # YTD_ACTUAL
+            ("B Dec-21", False),  # BUDGET
+            ("Dec-21 B", False),  # BUDGET
+            ("YTD B Dec-21", False),  # YTD_BUDGET
+            ("N/A", False),  # UNKNOWN
         ],
     )
     def test_ac1_5_is_usable_only_for_actual_types(

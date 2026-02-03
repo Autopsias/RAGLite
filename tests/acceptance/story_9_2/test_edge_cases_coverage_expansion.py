@@ -18,7 +18,6 @@ Gap Analysis Focus:
 6. Error recovery scenarios
 """
 
-import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
@@ -254,7 +253,7 @@ class TestMixedBatchWithFailures:
         Then regex-matchable periods succeed
         And ambiguous periods return UNKNOWN (not crash)
         """
-        from raglite.ingestion.classification import PeriodType, classify_periods_batch
+        from raglite.ingestion.classification import classify_periods_batch
 
         # 50 regex-matchable + 50 ambiguous
         regex_periods = [f"Dec-{i % 30:02d}" for i in range(50)]
@@ -363,8 +362,9 @@ class TestErrorRecovery:
         Then ThreadPoolExecutor timeout (4.9s) prevents thread leak
         And thread pool is properly shut down
         """
-        from raglite.ingestion.classification import classify_period
         import threading
+
+        from raglite.ingestion.classification import classify_period
 
         initial_thread_count = threading.active_count()
 

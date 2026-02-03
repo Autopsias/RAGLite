@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import atexit
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -35,7 +35,7 @@ logger = get_logger(__name__)
 _scheduler: AsyncIOScheduler | None = None
 
 
-class RefreshFrequency(str, Enum):
+class RefreshFrequency(StrEnum):
     """Refresh frequency for external data sources."""
 
     DAILY = "daily"

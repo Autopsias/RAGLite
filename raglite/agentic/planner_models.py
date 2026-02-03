@@ -1,12 +1,12 @@
 """Data models and types for workflow planning."""
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class QueryComplexity(str, Enum):
+class QueryComplexity(StrEnum):
     """Classification of query complexity (AC1)."""
 
     SIMPLE = "simple"  # Direct retrieval queries

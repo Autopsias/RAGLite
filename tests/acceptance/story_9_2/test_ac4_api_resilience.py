@@ -40,7 +40,7 @@ class TestAC4APIResilience:
 
         with patch(
             "raglite.ingestion.classification.period_classifier._classify_with_llm",
-            side_effect=mock_slow_llm
+            side_effect=mock_slow_llm,
         ):
             start = time.time()
             result = classify_period("Q1 2021")  # Ambiguous - needs LLM
@@ -66,7 +66,7 @@ class TestAC4APIResilience:
 
         with patch(
             "raglite.ingestion.classification.period_classifier._classify_with_llm",
-            side_effect=mock_api_unavailable
+            side_effect=mock_api_unavailable,
         ):
             # These should all work via regex without needing LLM
             result1 = classify_period("Dec-21")
@@ -90,7 +90,7 @@ class TestAC4APIResilience:
         # Mock the _classify_with_llm to return UNKNOWN (simulating failure handling)
         with patch(
             "raglite.ingestion.classification.period_classifier._classify_with_llm",
-            return_value=PeriodType.UNKNOWN
+            return_value=PeriodType.UNKNOWN,
         ):
             # Should not raise exception, should return UNKNOWN
             result = classify_period("FY2021")  # Ambiguous format
@@ -114,16 +114,14 @@ class TestAC4APIResilience:
         ) as mock_llm:
             mock_llm.side_effect = TimeoutError("API timeout after 5s")
 
-            with patch(
-                "raglite.ingestion.classification.period_classifier.logger"
-            ) as mock_logger:
+            with patch("raglite.ingestion.classification.period_classifier.logger") as mock_logger:
                 classify_period("random format abc")
 
                 # Check logging was called
                 log_called = (
-                    mock_logger.warning.called or
-                    mock_logger.error.called or
-                    mock_logger.info.called
+                    mock_logger.warning.called
+                    or mock_logger.error.called
+                    or mock_logger.info.called
                 )
                 assert log_called, "Expected log calls for API failure"
 
@@ -153,7 +151,7 @@ class TestAC4APIResilience:
 
         with patch(
             "raglite.ingestion.classification.period_classifier._classify_with_llm",
-            side_effect=mock_api_failure
+            side_effect=mock_api_failure,
         ):
             start = time.time()
             report = classify_periods_batch(all_periods)
@@ -187,7 +185,7 @@ class TestAC4APIResilience:
 
         with patch(
             "raglite.ingestion.classification.period_classifier._classify_with_llm",
-            side_effect=mock_slow_response
+            side_effect=mock_slow_response,
         ):
             start = time.time()
             result = classify_period("ambiguous-format-xyz")
@@ -218,11 +216,12 @@ class TestAC4APIResilience:
             llm_call_count += 1
             # Return UNKNOWN for ambiguous
             from raglite.ingestion.classification import PeriodType
+
             return PeriodType.UNKNOWN
 
         with patch(
             "raglite.ingestion.classification.period_classifier._classify_with_llm",
-            side_effect=track_llm_calls
+            side_effect=track_llm_calls,
         ):
             start = time.time()
             classify_periods_batch(periods)  # Report not needed, just testing performance

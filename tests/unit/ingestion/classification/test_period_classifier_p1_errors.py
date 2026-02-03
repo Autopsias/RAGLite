@@ -81,7 +81,7 @@ class TestP1ErrorPaths:
             mock_client.return_value.chat.complete = mock_timeout
 
             start = time.time()
-            result = _classify_with_llm("ambiguous")
+            _result = _classify_with_llm("ambiguous")  # noqa: F841
             elapsed = time.time() - start
 
             # Then 3 attempts with cumulative delay 1s + 2s = 3s
@@ -102,9 +102,7 @@ class TestP1ErrorPaths:
         ) as mock_client:
             # Note: KeyboardInterrupt is not caught by except Exception
             # This tests that the code doesn't have overly broad exception handling
-            mock_client.return_value.chat.complete.side_effect = Exception(
-                "Generic API Error"
-            )
+            mock_client.return_value.chat.complete.side_effect = Exception("Generic API Error")
 
             # When classification is attempted
             result = _classify_with_llm("test")
@@ -229,9 +227,7 @@ class TestP1ErrorPaths:
         with patch(
             "raglite.ingestion.classification.period_classifier.get_mistral_client"
         ) as mock_client:
-            mock_client.return_value.chat.complete.side_effect = Exception(
-                "Should not reach LLM"
-            )
+            mock_client.return_value.chat.complete.side_effect = Exception("Should not reach LLM")
 
             for xss in xss_attempts:
                 # When classified
@@ -248,9 +244,7 @@ class TestP1ErrorPaths:
         with patch(
             "raglite.ingestion.classification.period_classifier.get_mistral_client"
         ) as mock_client:
-            mock_client.return_value.chat.complete.side_effect = Exception(
-                "Should not reach LLM"
-            )
+            mock_client.return_value.chat.complete.side_effect = Exception("Should not reach LLM")
 
             # Given period with null byte
             result = classify_period("Dec\x00-21")
