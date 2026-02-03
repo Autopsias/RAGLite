@@ -48,6 +48,24 @@
       "reason": "Regressor preprocessing with lagged correlation support for profit metrics (EBITDA) - Forecast reliability fix 2026-02-02",
       "target_lines": 500,
       "directory": "raglite/"
+    },
+    "tests/unit/ingestion/classification/test_entity_level_classifier.py": {
+      "lines": 734,
+      "reason": "Comprehensive entity level classification tests for Epic 9 Story 9.4 - AC coverage requires extensive test cases",
+      "target_lines": 500,
+      "directory": "tests/"
+    },
+    "tests/unit/ingestion/classification/test_value_type_classifier.py": {
+      "lines": 560,
+      "reason": "Value type classification tests for Epic 9 Story 9.3 - AC coverage requires comprehensive test cases",
+      "target_lines": 500,
+      "directory": "tests/"
+    },
+    "tests/integration/test_007_migration_integration.py": {
+      "lines": 753,
+      "reason": "Database migration integration tests for Epic 9 - requires extensive fixture setup and test coverage",
+      "target_lines": 500,
+      "directory": "tests/"
     }
   }
 }
