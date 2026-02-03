@@ -97,11 +97,12 @@ jobs:
 
       - name: Lint Check (ruff)
         run: |
-          ruff check raglite/ tests/ --output-format=github
+          echo "Ruff version: $(ruff --version)"
+          ruff check raglite/ tests/ --config pyproject.toml --output-format=github
 
       - name: Format Check (black)
         run: |
-          ruff format raglite/ tests/ --check
+          ruff format raglite/ tests/ --config pyproject.toml --check
 
       - name: File Size Check
         run: |
