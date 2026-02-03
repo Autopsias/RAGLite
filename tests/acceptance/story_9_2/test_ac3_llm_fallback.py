@@ -8,9 +8,12 @@ All tests MUST fail initially.
 """
 
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+
+from raglite.ingestion.classification import PeriodType
+from raglite.ingestion.classification.period_classifier import _classify_with_llm
 
 
 class TestAC3LLMFallback:
@@ -30,8 +33,6 @@ class TestAC3LLMFallback:
         When the LLM API is called
         Then Mistral Small model is used
         """
-        from raglite.ingestion.classification.period_classifier import _classify_with_llm
-
         model_used = None
 
         def capture_model_call(*args, **kwargs):
@@ -66,8 +67,6 @@ class TestAC3LLMFallback:
         Then retry 1 occurs after ~1s delay
         And retry 2 occurs after ~2s delay
         """
-        from raglite.ingestion.classification.period_classifier import _classify_with_llm
-
         call_times: list[float] = []
 
         def mock_api_fail(*args, **kwargs):
@@ -81,7 +80,7 @@ class TestAC3LLMFallback:
             mock_instance.chat.complete = mock_api_fail
             mock_client.return_value = mock_instance
 
-            result = _classify_with_llm("ambiguous period xyz")
+            _result = _classify_with_llm("ambiguous period xyz")  # noqa: F841
 
         # Should have 2 retries with reduced backoff for 5s compliance
         assert len(call_times) >= 2, f"Expected at least 2 attempts, got {len(call_times)}"
@@ -103,9 +102,6 @@ class TestAC3LLMFallback:
         When retries are exhausted
         Then UNKNOWN is returned (reduced from 3 retries for 5s timeout)
         """
-        from raglite.ingestion.classification import PeriodType
-        from raglite.ingestion.classification.period_classifier import _classify_with_llm
-
         call_count = 0
 
         def mock_api_fail(*args, **kwargs):
@@ -122,7 +118,7 @@ class TestAC3LLMFallback:
 
             start = time.time()
             result = _classify_with_llm("ambiguous")
-            elapsed = time.time() - start
+            _elapsed = time.time() - start  # noqa: F841
 
         # AC3.3: Returns UNKNOWN after retries exhausted
         assert result == PeriodType.UNKNOWN
@@ -140,8 +136,6 @@ class TestAC3LLMFallback:
         When retries occur
         Then warnings are logged with period and error context
         """
-        from raglite.ingestion.classification.period_classifier import _classify_with_llm
-
         with patch(
             "raglite.ingestion.classification.period_classifier.get_mistral_client"
         ) as mock_client:
@@ -149,9 +143,7 @@ class TestAC3LLMFallback:
             mock_instance.chat.complete.side_effect = Exception("Rate limit exceeded")
             mock_client.return_value = mock_instance
 
-            with patch(
-                "raglite.ingestion.classification.period_classifier.logger"
-            ) as mock_logger:
+            with patch("raglite.ingestion.classification.period_classifier.logger") as mock_logger:
                 _classify_with_llm("test period")
 
                 # Verify warnings were logged
@@ -160,9 +152,7 @@ class TestAC3LLMFallback:
                 # Check for structured logging (extra dict)
                 warning_calls = mock_logger.warning.call_args_list
                 has_extra = any(
-                    call.kwargs.get("extra") is not None
-                    for call in warning_calls
-                    if call.kwargs
+                    call.kwargs.get("extra") is not None for call in warning_calls if call.kwargs
                 )
                 assert has_extra, "Warnings should include structured extra fields"
 
@@ -175,8 +165,6 @@ class TestAC3LLMFallback:
         When fallback to UNKNOWN occurs
         Then error is logged with full context
         """
-        from raglite.ingestion.classification.period_classifier import _classify_with_llm
-
         with patch(
             "raglite.ingestion.classification.period_classifier.get_mistral_client"
         ) as mock_client:
@@ -184,9 +172,7 @@ class TestAC3LLMFallback:
             mock_instance.chat.complete.side_effect = Exception("Service unavailable")
             mock_client.return_value = mock_instance
 
-            with patch(
-                "raglite.ingestion.classification.period_classifier.logger"
-            ) as mock_logger:
+            with patch("raglite.ingestion.classification.period_classifier.logger") as mock_logger:
                 _classify_with_llm("unclassifiable xyz")
 
                 # Verify error was logged after retries exhausted
