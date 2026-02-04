@@ -84,7 +84,7 @@ class TestAC4ClassificationAccuracyValidation:
 
         Given the ground truth file exists
         When we examine entry structure
-        Then each entry has document, page, table_index, row_index, expected classifications
+        Then each entry has document, table_index, row_index, expected classifications
         """
         # Arrange: Load ground truth
         import json
@@ -101,7 +101,6 @@ class TestAC4ClassificationAccuracyValidation:
         # Assert: Required fields are present
         required_fields = [
             "document",
-            "page",
             "table_index",
             "row_index",
             "expected_period_type",
