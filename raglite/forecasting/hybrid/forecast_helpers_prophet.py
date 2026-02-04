@@ -288,13 +288,23 @@ def add_regressors_to_prophet(
     is_profit_metric = metric_lower in PROFIT_METRICS
 
     # Get selection with lag info for profit metrics (where lagged correlations matter)
-    lag_info = select_regressors(
+    lag_info_result = select_regressors(
         target_series, external_regressors, metric_name=metric, return_lag_info=True
     )
 
-    if lag_info:
-        selected = list(lag_info.keys())
+    # Type narrowing: When return_lag_info=True, result is dict[str, tuple[float, int]]
+    if isinstance(lag_info_result, dict):
+        lag_info: dict[str, tuple[float, int]] = lag_info_result
+        if lag_info:
+            selected = list(lag_info.keys())
+        else:
+            selected = []
+    else:
+        # Fallback case (shouldn't happen with return_lag_info=True)
+        selected = lag_info_result if isinstance(lag_info_result, list) else []
+        lag_info = {}
 
+    if selected:
         # Prepare regressors (align, interpolate, auto-transform YoY%)
         target_index = pd.DatetimeIndex(df["ds"])
         prepared = prepare_regressors(

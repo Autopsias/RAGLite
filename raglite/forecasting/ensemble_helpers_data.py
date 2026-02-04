@@ -49,7 +49,11 @@ def prepare_ensemble_data(
 
     if external_regressors:
         # Forecast reliability fix: Pass metric name for appropriate threshold
-        selected = select_regressors(target_series, external_regressors, metric_name=metric)
+        # Note: return_lag_info defaults to False, so this returns list[str]
+        result = select_regressors(target_series, external_regressors, metric_name=metric)
+        # Type narrowing: result is list[str] when return_lag_info=False (default)
+        if isinstance(result, list):
+            selected = result
         if selected:
             prepared = prepare_regressors(
                 {k: v for k, v in external_regressors.items() if k in selected},
