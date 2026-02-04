@@ -25,6 +25,10 @@ class AsyncForecastResponse(BaseModel):
     )
     metric: str = Field(..., description="Metric being forecasted")
     periods_ahead: int = Field(..., description="Number of periods requested")
+    methodology: str = Field(
+        default="Prophet + Mistral Large hybrid forecasting",
+        description="Forecasting methodology description",
+    )
 
 
 class ForecastJobStatus(BaseModel):
