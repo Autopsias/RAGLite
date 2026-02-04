@@ -73,22 +73,88 @@ def configure_entity_filter(
         return ENTITY_FILTERS, ""
 
 
+def build_entity_level_filter_clause(entity_level: str | None) -> str:
+    """Build entity_level filter SQL clause for Epic 9 multi-entity support.
+
+    Uses the entity_level column populated by Epic 9 classification pipeline
+    to filter by semantic entity classification rather than entity name matching.
+
+    Args:
+        entity_level: Entity level to filter by: 'consolidated', 'geographic',
+                     'segment', 'company_only', or None (no filter)
+
+    Returns:
+        SQL WHERE clause fragment (e.g., "AND entity_level = 'geographic'")
+        or empty string if entity_level is None
+    """
+    if entity_level is None:
+        return ""
+
+    # Validate entity_level value to prevent SQL injection
+    valid_levels = {"consolidated", "geographic", "segment", "company_only"}
+    entity_level_lower = entity_level.lower().strip()
+
+    if entity_level_lower not in valid_levels:
+        logger.warning(
+            "Invalid entity_level provided, ignoring filter",
+            extra={"entity_level": entity_level, "valid_levels": list(valid_levels)},
+        )
+        return ""
+
+    logger.info(
+        "Building entity_level filter (Epic 9 multi-entity support)",
+        extra={"entity_level": entity_level_lower},
+    )
+    return f"AND entity_level = '{entity_level_lower}'"
+
+
 def build_entity_filter_clause(
     metric_search: str,
     ENTITY_FILTERS: dict[str, tuple[str | None, bool]],
-) -> tuple[str, bool]:
+    entity_level: str | None = None,
+) -> tuple[str, str, bool]:
     """Build entity filter SQL clause.
 
     Args:
         metric_search: Metric name after synonym resolution
         ENTITY_FILTERS: Entity filter configuration dict
+        entity_level: Optional entity level for Epic 9 filtering.
+                     When specified, entity_level takes precedence over entity name filtering.
+                     This enables multi-entity queries like "all geographic entities" instead
+                     of hardcoded single-entity filtering.
 
     Returns:
-        Tuple of (entity_filter SQL clause, prefer_ytd flag)
+        Tuple of (entity_filter SQL clause, entity_level_filter SQL clause, prefer_ytd flag)
+
+    Note:
+        Epic 9 multi-entity support: When entity_level is specified, we skip the entity name
+        filter and rely purely on entity_level classification. This allows queries like
+        entity_level='geographic' to return ALL geographic entities (Portugal, Angola, Brazil,
+        Tunisia, Lebanon) instead of just one hardcoded entity.
     """
     entity_filter = ""
     prefer_ytd = False
     filter_config = ENTITY_FILTERS.get(metric_search)
+
+    # Epic 9 multi-entity support: When entity_level is specified, skip entity name filtering
+    # and rely on semantic entity_level classification instead.
+    if entity_level is not None:
+        # Get prefer_ytd from config if available, but skip entity name filter
+        if filter_config:
+            _, prefer_ytd = filter_config
+        logger.info(
+            "Using entity_level filter instead of entity name filter (Epic 9 multi-entity)",
+            extra={
+                "metric": metric_search,
+                "entity_level": entity_level,
+                "prefer_ytd": prefer_ytd,
+                "skipped_entity_filter": True,
+            },
+        )
+        # Skip to entity_level filter building
+        entity_level_filter = build_entity_level_filter_clause(entity_level)
+        return entity_filter, entity_level_filter, prefer_ytd
+
     if filter_config:
         required_entity, prefer_ytd = filter_config
         if required_entity is not None:
@@ -96,39 +162,31 @@ def build_entity_filter_clause(
             canonical = canonical_entity or required_entity
 
             if canonical.upper() == "GROUP":
-                # Include all GROUP variations from entity_normalizer.py
-                # Story 6.28: Expanded filter for complete GROUP entity matching
-                group_variations = [
-                    "GROUP",
-                    "Group",
-                    "SECIL Group",
-                    "Secil Group",
-                    "SECIL GROUP",
-                    "Total",
-                    "TOTAL",
-                    "Consolidado",
-                    "Consolidated",
-                    "Group Total",
-                    "Total Group",
-                    "Conso",
-                    "CONSO",
-                    "Groupe",
-                ]
-                variations_sql = ", ".join(f"'{v}'" for v in group_variations)
-
-                # Forecast debug fix (2026-01-28): Exclude segment entities
-                # to prevent mixing GROUP-level with regional segment data
+                # Epic 9: Use entity_normalized column instead of hardcoded variations
+                # entity_normalized='Group' covers GROUP, SECIL Group, Total, Consolidated, etc.
                 segment_entities = get_segment_entities_for_group_exclusion()
                 segment_exclusion_sql = ", ".join(f"'{e}'" for e in segment_entities)
 
-                entity_filter = f"""AND (
-                          entity IN ({variations_sql})
-                          OR UPPER(entity) = 'GROUP'
-                      )
+                # Non-EUR currencies and incompatible unit types for GROUP-level queries.
+                # BRL/AOA/TND/LBP rows mixed with EUR cause "unit mixing too severe".
+                # FIX (2026-02-03): Also exclude '%' (EBITDA margin, not monetary) and
+                # 'EUR/ton' (per-unit pricing, not totals). These are different metrics
+                # that should never aggregate with M EUR monetary totals.
+                non_eur_and_incompatible_units = (
+                    "'1000 BRL','BRL','BRL/ton','BRL/m3',"
+                    "'AOA','1000 AOA','AOA/ton',"
+                    "'LBP','1000 LBP','LBP/ton',"
+                    "'TND','1000 TND','TND/ton',"
+                    "'%%','EUR/ton'"
+                )
+
+                entity_filter = f"""AND entity_normalized = 'Group'
+                      AND entity_level NOT IN ('geographic', 'segment')
+                      AND (unit IS NULL OR unit NOT IN ({non_eur_and_incompatible_units}))
                       AND entity NOT LIKE '%%+%%'
                       AND entity NOT IN ({segment_exclusion_sql})"""
                 logger.info(
-                    "Using GROUP priority-based entity selection (Story 6.28)",
+                    "Using entity_normalized GROUP filter (Epic 9)",
                     extra={
                         "metric": metric_search,
                         "required_entity": required_entity,
@@ -167,13 +225,17 @@ def build_entity_filter_clause(
         else:
             entity_filter = exclusion_clause
 
-    return entity_filter, prefer_ytd
+    # Epic 9 multi-entity support: Build entity_level filter
+    entity_level_filter = build_entity_level_filter_clause(entity_level)
+
+    return entity_filter, entity_level_filter, prefer_ytd
 
 
 async def execute_sql_with_fallback(
     metric: str,
     metric_search: str,
     entity_filter: str,
+    entity_level_filter: str,
     prefer_ytd: bool,
     aggregation: str,
 ) -> list[tuple[Any, ...]]:
@@ -183,6 +245,7 @@ async def execute_sql_with_fallback(
         metric: Original metric name
         metric_search: Metric name after synonym resolution
         entity_filter: SQL entity filter clause
+        entity_level_filter: SQL entity_level filter clause (Epic 9 multi-entity support)
         prefer_ytd: Whether to prefer YTD periods
         aggregation: Aggregation function
 
@@ -224,7 +287,7 @@ async def execute_sql_with_fallback(
     match_type = "exact"
 
     query = build_timeseries_query(
-        metric_condition, entity_filter, prefer_ytd, aggregation, value_filter
+        metric_condition, entity_filter, prefer_ytd, aggregation, value_filter, entity_level_filter
     )
 
     logger.debug(
@@ -252,7 +315,12 @@ async def execute_sql_with_fallback(
         match_type = "wildcard"
 
         query = build_timeseries_query(
-            metric_condition, entity_filter, prefer_ytd, aggregation, value_filter
+            metric_condition,
+            entity_filter,
+            prefer_ytd,
+            aggregation,
+            value_filter,
+            entity_level_filter,
         )
         cursor.execute(query, (metric_param,))
         rows = cursor.fetchall()
@@ -281,7 +349,10 @@ async def execute_sql_with_fallback(
         match_type = "entity_fallback"
 
         # Build query WITHOUT entity filter (empty string) since entity has metric data
-        query = build_timeseries_query(metric_condition, "", prefer_ytd, aggregation, value_filter)
+        # Also skip entity_level_filter for inverted data pattern
+        query = build_timeseries_query(
+            metric_condition, "", prefer_ytd, aggregation, value_filter, ""
+        )
         cursor.execute(query, (metric_param,))
         rows = cursor.fetchall()
 
@@ -303,16 +374,18 @@ def configure_extraction(
     metric: str,
     aggregation: str,
     entity: str | None,
-) -> tuple[str, str, dict[str, tuple[str | None, bool]]]:
+    entity_level: str | None = None,
+) -> tuple[str, str, dict[str, tuple[str | None, bool]], str | None]:
     """Configure extraction parameters (synonyms, aggregation, entity filters).
 
     Args:
         metric: Original metric name
         aggregation: Aggregation method
         entity: Optional entity filter
+        entity_level: Optional entity_level filter (Epic 9 multi-entity support)
 
     Returns:
-        Tuple of (metric_search, final_aggregation, ENTITY_FILTERS)
+        Tuple of (metric_search, final_aggregation, ENTITY_FILTERS, entity_level)
     """
     # Apply metric synonyms (revenue → turnover, ebitda → EBITDA IFRS, etc.)
     metric_search = get_metric_synonyms().get(metric.lower(), metric)
@@ -328,4 +401,11 @@ def configure_extraction(
     # Configure entity filters
     ENTITY_FILTERS, _ = configure_entity_filter(metric, metric_search, entity)
 
-    return metric_search, aggregation, ENTITY_FILTERS
+    # Log entity_level if specified
+    if entity_level:
+        logger.info(
+            "Entity level filter specified (Epic 9 multi-entity support)",
+            extra={"metric": metric, "entity_level": entity_level},
+        )
+
+    return metric_search, aggregation, ENTITY_FILTERS, entity_level

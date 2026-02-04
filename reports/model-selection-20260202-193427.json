@@ -1,0 +1,161 @@
+{
+  "timestamp": "20260202-193427",
+  "runtime_minutes": 13.465222350756328,
+  "variables_processed": 19,
+  "results": {
+    "revenue": {
+      "best_model": "xgboost",
+      "best_mape": 1.3704500557192005,
+      "best_mase": 1.0512253473983908,
+      "use_regressors": true,
+      "regressor_set": [
+        "construction_output",
+        "building_permits",
+        "housing_transactions",
+        "gdp_growth",
+        "euribor_3m"
+      ]
+    },
+    "ebitda": {
+      "best_model": "lightgbm",
+      "best_mape": 196.71377892787675,
+      "best_mase": 4.936027612230635,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "sales_volume": {
+      "best_model": "lightgbm",
+      "best_mape": 213.9220639346513,
+      "best_mase": 2.107205280673041,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "thermal_cost": {
+      "best_model": "linear",
+      "best_mape": 12.267328658649225,
+      "best_mase": 1.088582945311595,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "variable_cost": {
+      "best_model": "ets",
+      "best_mape": 9.692928534030322,
+      "best_mase": 0.7695290269927062,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "capacity_utilization": {
+      "best_model": "xgboost",
+      "best_mape": 7.380338155838286,
+      "best_mase": 5.057218332236641,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "avg_selling_price": {
+      "best_model": "ets",
+      "best_mape": 2.1324999402230937,
+      "best_mase": 1.9834195524038456,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "ttf_gas_price": {
+      "best_model": "xgboost",
+      "best_mape": 42.004712026549115,
+      "best_mase": 6.03797874557617,
+      "use_regressors": true,
+      "regressor_set": [
+        "construction_confidence",
+        "housing_transactions",
+        "building_permits",
+        "inflation"
+      ]
+    },
+    "petcoke_price": {
+      "best_model": "chronos",
+      "best_mape": 25.77820145729392,
+      "best_mase": 1.9874366109626143,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "co2_eua_price": {
+      "best_model": "ets",
+      "best_mape": 13.167272332753518,
+      "best_mase": 1.2276081319896655,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "electricity_cost": {
+      "best_model": "linear",
+      "best_mape": 7.31488986502114,
+      "best_mase": 0.4333067409032288,
+      "use_regressors": true,
+      "regressor_set": [
+        "ren_electricity",
+        "ttf_gas"
+      ]
+    },
+    "diesel": {
+      "best_model": "chronos",
+      "best_mape": 8.362897896857973,
+      "best_mase": 7.822483606435121,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "gdp_growth": {
+      "best_model": "xgboost",
+      "best_mape": 17.43834019052413,
+      "best_mase": 0.9431053406872679,
+      "use_regressors": true,
+      "regressor_set": [
+        "construction_output",
+        "euribor_3m"
+      ]
+    },
+    "inflation": {
+      "best_model": "linear",
+      "best_mape": 1.7903922478212793,
+      "best_mase": 3.088064900491839,
+      "use_regressors": true,
+      "regressor_set": [
+        "construction_output",
+        "euribor_3m",
+        "gdp_growth"
+      ]
+    },
+    "euribor_3m": {
+      "best_model": "chronos",
+      "best_mape": 47.86515076400313,
+      "best_mase": 17.545679265157467,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "construction_output": {
+      "best_model": "xgboost",
+      "best_mape": 2.1216583713898327,
+      "best_mase": 2.155186885173229,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "building_permits": {
+      "best_model": "lightgbm",
+      "best_mape": 10.740396338090367,
+      "best_mase": 0.8055397883701154,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "construction_confidence": {
+      "best_model": "chronos",
+      "best_mape": 197.20543621215762,
+      "best_mase": 1.3484924195825227,
+      "use_regressors": false,
+      "regressor_set": []
+    },
+    "industrial_production": {
+      "best_model": "xgboost",
+      "best_mape": 2.291463811883704,
+      "best_mase": 1.4175199118766508,
+      "use_regressors": false,
+      "regressor_set": []
+    }
+  }
+}

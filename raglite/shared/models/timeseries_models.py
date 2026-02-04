@@ -286,6 +286,20 @@ class ForecastQueryRequest(BaseModel):
             "If not specified, uses config-based default for the metric."
         ),
     )
+    # Epic 9 multi-entity support: Filter by entity classification level
+    # Uses entity_level column populated by Epic 9 classification pipeline
+    entity_level: str | None = Field(
+        default=None,
+        description=(
+            "Filter by entity classification level from Epic 9 classification: "
+            "'consolidated' (GROUP-level aggregated data), "
+            "'geographic' (Portugal, Angola, Brazil, Tunisia, Lebanon), "
+            "'segment' (business segment data like Ready-Mix, Cement), "
+            "'company_only' (individual company data). "
+            "When specified, queries use semantic entity_level filtering instead of entity name matching. "
+            "Example: entity_level='geographic' returns all geographic entities for a metric."
+        ),
+    )
     periods_ahead: int = Field(
         default=4,
         ge=1,
@@ -332,8 +346,8 @@ class ForecastQueryRequest(BaseModel):
         description="Specific regressors to use (auto-selected if None). Options: euribor_3m, ttf_gas, api2_coal, diesel, eurostat_electricity",
     )
     future_regressor_strategy: str = Field(
-        default="constant",
-        description="Strategy for future regressor values: 'constant' (last value), 'extrapolate' (trend)",
+        default="seasonal",
+        description="Strategy for future regressor values: 'seasonal' (historical pattern, default), 'momentum' (trend-based), 'constant' (last value), 'extrapolate' (linear trend)",
     )
 
 

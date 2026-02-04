@@ -155,8 +155,8 @@ class TestForecastQueryRequestExtensions:
 
         request = ForecastQueryRequest(metric="revenue")
         assert hasattr(request, "future_regressor_strategy")
-        # Default should be "constant"
-        assert request.future_regressor_strategy == "constant"
+        # Default should be "seasonal" (historical pattern-based strategy)
+        assert request.future_regressor_strategy == "seasonal"
 
     def test_request_with_custom_regressors(self) -> None:
         """AC4: User can override with explicit regressor_names."""

@@ -1,6 +1,6 @@
 # Story 9.3: Classification Module - Value Type Classification
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

@@ -55,6 +55,7 @@ TEST_MODULES = [
 class TestDiscovery:
     """P1: Validate pytest test discovery correctness."""
 
+    @pytest.mark.slow  # Subprocess execution takes ~10s
     def test_pytest_collects_all_modules(self) -> None:
         """[P1] pytest can discover and collect all test modules."""
         result = subprocess.run(
@@ -83,6 +84,7 @@ class TestDiscovery:
         for module_name in TEST_MODULES:
             assert module_name in result.stdout, f"Module {module_name} not collected by pytest"
 
+    @pytest.mark.slow  # Subprocess execution takes ~12s
     def test_no_collection_errors(self) -> None:
         """[P1] pytest collection has no errors or warnings."""
         result = subprocess.run(

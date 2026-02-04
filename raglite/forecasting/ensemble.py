@@ -262,8 +262,10 @@ async def generate_ensemble_forecast(
         extra={"metric": metric, "models": models, "weights": weights},
     )
 
-    # Step 2: Prepare data
-    X, y, selected, prepared = prepare_ensemble_data(historical_data, external_regressors, logger)
+    # Step 2: Prepare data (pass metric for appropriate threshold selection)
+    X, y, selected, prepared = prepare_ensemble_data(
+        historical_data, external_regressors, logger, metric=metric
+    )
 
     # Build DataFrame for forecast point generation
     df = _build_historical_dataframe(historical_data)

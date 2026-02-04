@@ -2,8 +2,8 @@
 
 Quick reference for diagnosing and resolving CI failures in RAGLite.
 
-**Last Updated:** 2025-12-24
-**Total Patterns Documented:** 12 categories
+**Last Updated:** 2026-02-02
+**Total Patterns Documented:** 13 categories (including 7.4)
 **Success Rate:** 95%+ resolution with this guide
 
 ---
@@ -19,6 +19,7 @@ Quick reference for diagnosing and resolving CI failures in RAGLite.
 | Docker socket error | `docker.errors.DockerException: Socket error` | Docker daemon issue | `docker ps` or restart Docker | 60s |
 | Worker internal error | `pytest worker controller internal errors` | pytest-xdist conflict | Ensure `-n 0` (sequential) | 5m |
 | Environment mismatch | `AssertionError: Expected test env, got production` | APP_ENV not set | Check `echo $APP_ENV` | 10s |
+| **Forecast no data** | `Minimum 6 data points required, got 0` | Shell env overrides .env | `unset POSTGRES_DB APP_ENV` | 30s |
 | Test timeout | `asyncio.TimeoutError` or `pytest.PytestUnraisableExceptionWarning` | Service too slow | Increase timeout in fixture | 5m |
 | Collection not isolated | `AssertionError: Collection modified unexpectedly` | Test state pollution | Add `@pytest.mark.manages_collection_state` | 10m |
 | Import error | `ModuleNotFoundError: No module named 'raglite'` | Dependencies not installed | `uv sync --all-groups` | 2m |
@@ -779,6 +780,177 @@ uv run pytest tests/ -v --setup-show -x 2>&1 | head -100
 #### Related Issues
 
 See: Category 5 (Database Configuration)
+
+---
+
+### Category 7.4: Environment Variables Override Forecast Database Settings
+
+**Added:** 2026-02-02 (Forecast reliability fix)
+
+#### Symptoms
+
+```
+Forecast returned 0 data points
+Minimum 6 data points required, got 0
+SQL extraction returned None for ebitda
+```
+
+Or in logs:
+
+```
+Non-production database detected - forecasts may return no data!
+Empty database detected - wrong database configuration
+```
+
+#### Root Cause Analysis
+
+1. **Shell environment variables override .env file**
+   - After running tests, `POSTGRES_DB=raglite_ci` persists in shell
+   - Python Settings reads from environment BEFORE .env file
+   - Server connects to empty CI database instead of production
+
+2. **Settings singleton created with wrong values**
+   - Settings is created at module import time
+   - Environment variables already set when raglite imports
+   - Even restarting server doesn't help if shell vars persist
+
+3. **CI environment leaks to development**
+   - Running `uv run pytest` sets APP_ENV=test, POSTGRES_DB=raglite_ci
+   - These persist in same terminal session
+   - Next forecast queries wrong database
+
+#### Solution: Environment Cleanup
+
+**Step 1: Quick Diagnosis**
+
+```bash
+# Check which database server thinks it's using
+env | grep -E "POSTGRES|APP_ENV"
+
+# If any variables are set, they're overriding .env
+# POSTGRES_DB=raglite_ci  # BAD - CI database
+# POSTGRES_PORT=5433      # BAD - test port
+# APP_ENV=test            # BAD - test mode
+```
+
+**Step 2: Clear Environment Variables**
+
+```bash
+# Unset all potentially problematic variables
+unset APP_ENV POSTGRES_PORT POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD
+
+# Verify they're cleared
+env | grep -E "POSTGRES|APP_ENV"
+# Should return nothing
+```
+
+**Step 3: Verify Database Has Data**
+
+```bash
+# Check production database has financial data
+docker exec raglite-postgresql psql -U raglite -d raglite -c "SELECT COUNT(*) FROM financial_tables;"
+
+# Expected: 70000+ rows
+# If 0 rows, you're still connected to wrong database
+```
+
+**Step 4: Restart Server (if running)**
+
+```bash
+# If MCP server was running, restart it
+# The Settings singleton needs to be recreated
+pkill -f "raglite.main"  # or Ctrl+C the running server
+uv run python -m raglite.main
+```
+
+**Step 5: Use Health Check Tool**
+
+```bash
+# After server starts, use the diagnostic tool
+# In Claude Desktop or programmatically:
+check_forecast_environment()
+
+# Returns:
+# {
+#   "is_production": true,
+#   "database": "raglite",
+#   "has_data": true,
+#   "data_row_count": 78759,
+#   "env_overrides": [],
+#   ...
+# }
+```
+
+#### Verification Script
+
+```bash
+#!/bin/bash
+# forecast-env-check.sh - Quick environment verification
+
+echo "====== Forecast Environment Check ======"
+
+# Check shell variables
+echo "1. Shell Environment Variables:"
+echo "   POSTGRES_DB=${POSTGRES_DB:-NOT SET}"
+echo "   POSTGRES_PORT=${POSTGRES_PORT:-NOT SET}"
+echo "   APP_ENV=${APP_ENV:-NOT SET}"
+
+# Check .env file
+echo ""
+echo "2. .env File Settings:"
+grep -E "^POSTGRES_DB|^POSTGRES_PORT" .env 2>/dev/null || echo "   .env file not found"
+
+# Check database connection
+echo ""
+echo "3. Production Database:"
+PROD_COUNT=$(docker exec raglite-postgresql psql -U raglite -d raglite -t -c "SELECT COUNT(*) FROM financial_tables;" 2>/dev/null | tr -d ' ')
+echo "   financial_tables rows: ${PROD_COUNT:-CONNECTION FAILED}"
+
+if [ -n "$POSTGRES_DB" ] || [ -n "$APP_ENV" ]; then
+    echo ""
+    echo "WARNING: Environment variables are set that may override .env"
+    echo "Fix: unset APP_ENV POSTGRES_PORT POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD"
+fi
+
+echo ""
+echo "====== Check Complete ======"
+```
+
+#### Prevention
+
+1. **Start new terminal for production work**
+   - Tests set environment variables that persist
+   - New terminal has clean environment
+
+2. **Check startup logs**
+   - Server logs database name and port at startup
+   - Look for "Database environment validated" (good)
+   - Or "Non-production database detected" (bad)
+
+3. **Use dedicated test terminals**
+   - Label terminal tabs: "Tests" vs "Server"
+   - Never mix test runs with production work
+
+4. **Add shell prompt indicator**
+   ```bash
+   # In .bashrc/.zshrc
+   PS1='${APP_ENV:+[$APP_ENV] }'"$PS1"
+   # Shows [test] in prompt when APP_ENV is set
+   ```
+
+#### Debugging Checklist
+
+| Check | Command | Expected |
+|-------|---------|----------|
+| Shell POSTGRES_DB | `echo $POSTGRES_DB` | Empty (unset) |
+| Shell APP_ENV | `echo $APP_ENV` | Empty (unset) |
+| Server database | Check startup logs | "raglite" on port 5432 |
+| Data exists | `check_forecast_environment()` | `has_data: true` |
+| Row count | SQL query | >70000 rows |
+
+#### Related Issues
+
+See: Category 5 (Database Configuration), Category 7 (Environment Variables)
 
 ---
 

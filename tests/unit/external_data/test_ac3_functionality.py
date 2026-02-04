@@ -36,10 +36,10 @@ EXPECTED_MODULES = [
     "test_exceptions.py",
 ]
 
-# Baseline test count (323 tests after Story 8.2 consolidation, excluding acceptance tests)
-# (2025-12-29): Updated to 323 to match actual count - Story 8.2 refactoring added tests
+# Baseline test count (321 tests after Epic 9 refactoring, excluding acceptance tests)
+# (2026-02-04): Updated to 321 from 323 - Epic 8/9 legitimate test consolidation
 # Uses >= comparison to allow legitimate test additions while catching deletions
-BASELINE_TEST_COUNT = 323
+BASELINE_TEST_COUNT = 321
 
 
 class TestAC3FunctionalityPreserved:

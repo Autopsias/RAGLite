@@ -14,6 +14,7 @@ from raglite.forecasting.hybrid.preprocessing import (
     prepare_regressors,
     select_regressors,
 )
+from raglite.forecasting.hybrid.preprocessing_regressors import PROFIT_METRICS
 
 if TYPE_CHECKING:
     from logging import Logger
@@ -24,16 +25,27 @@ if TYPE_CHECKING:
 
 
 # Module-level constants
+# EBITDA forecast fix (2026-02-03): Removed profit and net_income from flat growth.
+# Profit metrics should use linear growth to capture business expansion trends.
+# Only truly bounded or ratio metrics should use flat growth.
 FLAT_GROWTH_METRICS = [
-    "capacity_utilization",
-    "frequency ratio",
-    "utilization",
+    "capacity_utilization",  # 0-100% bounded
+    "frequency ratio",  # Ratio metric
+    "utilization",  # 0-100% bounded
+]
+
+# Metrics that should use multiplicative seasonality (growth patterns)
+MULTIPLICATIVE_SEASONALITY_METRICS = {
+    "ebitda",
+    "ebitda ifrs",
     "revenue",
     "turnover",
     "turnover+vat",
     "profit",
     "net_income",
-]
+    "operating_profit",
+    "gross_profit",
+}
 
 
 def filter_regressors_for_cache(
@@ -170,6 +182,9 @@ def configure_prophet(
 ) -> Prophet:
     """Configure Prophet model based on data characteristics.
 
+    EBITDA forecast fix (2026-02-03): Use multiplicative seasonality for profit
+    metrics to better capture percentage-based seasonal patterns.
+
     Args:
         has_full_year_data: Whether data spans ~1 year
         use_flat_growth: Whether to use flat growth mode
@@ -181,6 +196,12 @@ def configure_prophet(
         Configured Prophet model instance
     """
     Prophet = _get_prophet_class()  # Lazy-load Prophet
+    metric_lower = metric.lower().strip()
+
+    # EBITDA fix: Determine if metric should use multiplicative seasonality
+    # Profit/revenue metrics have percentage-based seasonal patterns
+    use_multiplicative = metric_lower in MULTIPLICATIVE_SEASONALITY_METRICS
+    seasonality_mode = "multiplicative" if use_multiplicative else "additive"
 
     # Determine changepoint prior scale
     if use_flat_growth:
@@ -205,9 +226,20 @@ def configure_prophet(
         weekly_seasonality=False,
         daily_seasonality=False,
         changepoint_prior_scale=changepoint_prior,
+        seasonality_mode=seasonality_mode,  # EBITDA fix: multiplicative for profit metrics
         interval_width=0.95,
         uncertainty_samples=1000,
     )
+
+    if use_multiplicative:
+        logger.info(
+            f"Using multiplicative seasonality for {metric}",
+            extra={
+                "metric": metric,
+                "seasonality_mode": seasonality_mode,
+                "reason": "profit/revenue metric with percentage-based seasonal patterns",
+            },
+        )
 
     return model
 
@@ -218,10 +250,14 @@ def add_regressors_to_prophet(
     historical_data: TimeSeriesData,
     external_regressors: dict[str, pd.Series] | None,
     logger: Logger,
-) -> list[str]:
+    metric: str | None = None,
+) -> tuple[list[str], dict[str, int]]:
     """Add external regressors to Prophet model and DataFrame.
 
     Story 6.3: Multi-variate forecasting support.
+    Forecast reliability fix (2026-02-02): Pass metric name for appropriate
+    correlation threshold selection (lower for profit metrics like EBITDA).
+    EBITDA forecast fix (2026-02-03): Apply optimal lags to maximize correlation.
 
     Args:
         model: Prophet model instance
@@ -229,23 +265,36 @@ def add_regressors_to_prophet(
         historical_data: Original time-series data
         external_regressors: Dict of external regressor series
         logger: Logger instance
+        metric: Metric name (used to determine correlation threshold)
 
     Returns:
-        List of regressor names that were added
+        Tuple of (list of regressor names added, dict of {name: lag} for lags applied)
     """
     regressors_used: list[str] = []
+    lags_applied: dict[str, int] = {}
 
     if not external_regressors:
-        return regressors_used
+        return regressors_used, lags_applied
 
     # Select regressors by correlation
     target_series = pd.Series(
         [p.value for p in historical_data.points],
         index=pd.to_datetime([p.date for p in historical_data.points]),
     )
-    selected = select_regressors(target_series, external_regressors)
 
-    if selected:
+    # EBITDA fix (2026-02-03): Get lag info along with selection
+    # Macro indicators often have 1-3 month lag effect on financial metrics
+    metric_lower = (metric or "").lower()
+    is_profit_metric = metric_lower in PROFIT_METRICS
+
+    # Get selection with lag info for profit metrics (where lagged correlations matter)
+    lag_info = select_regressors(
+        target_series, external_regressors, metric_name=metric, return_lag_info=True
+    )
+
+    if lag_info:
+        selected = list(lag_info.keys())
+
         # Prepare regressors (align, interpolate, auto-transform YoY%)
         target_index = pd.DatetimeIndex(df["ds"])
         prepared = prepare_regressors(
@@ -254,18 +303,49 @@ def add_regressors_to_prophet(
             target_series=target_series,  # Story 6.7: Enable YoY% auto-detection
         )
 
-        # Add each regressor to Prophet and DataFrame
+        # EBITDA fix: Determine regressor prior scale based on metric type
+        # Profit metrics need higher prior scale to allow regressor influence
+        regressor_prior_scale = 0.05 if is_profit_metric else 0.01
+
+        # Add each regressor to Prophet and DataFrame with optimal lag applied
         for name, series in prepared.items():
-            model.add_regressor(name, mode="additive")
-            df[name] = series.values
+            corr, lag = lag_info.get(name, (0.0, 0))
+
+            # Apply optimal lag if detected
+            if lag > 0:
+                lagged_series = series.shift(lag)
+                # Fill leading NaN values with first valid value (forward-fill alternative)
+                lagged_series = lagged_series.bfill()
+                df[name] = lagged_series.values
+                lags_applied[name] = lag
+                logger.info(
+                    f"Applied {lag}-period lag to regressor {name}",
+                    extra={
+                        "regressor": name,
+                        "lag_periods": lag,
+                        "correlation": f"{abs(corr):.3f}",
+                        "metric": metric,
+                    },
+                )
+            else:
+                df[name] = series.values
+
+            # Match regressor mode to model's seasonality mode to prevent sign flips
+            regressor_mode = getattr(model, "seasonality_mode", "additive")
+            model.add_regressor(name, mode=regressor_mode, prior_scale=regressor_prior_scale)
             regressors_used.append(name)
 
         logger.info(
             "Multi-variate regressors added",
-            extra={"regressors": regressors_used},
+            extra={
+                "regressors": regressors_used,
+                "lags_applied": lags_applied if lags_applied else "none",
+                "prior_scale": regressor_prior_scale,
+                "metric_type": "profit" if is_profit_metric else "other",
+            },
         )
 
-    return regressors_used
+    return regressors_used, lags_applied
 
 
 def prepare_and_fit_prophet_model(
@@ -273,11 +353,12 @@ def prepare_and_fit_prophet_model(
     metric: str,
     external_regressors: dict[str, pd.Series] | None,
     logger: Logger,
-) -> tuple[Prophet, pd.DataFrame, list[str]]:
+) -> tuple[Prophet, pd.DataFrame, list[str], dict[str, int]]:
     """Prepare data, configure Prophet model, add regressors, and fit.
 
     Story 8.1: Extracted from generate_forecast to reduce function length.
     Combines Steps 6-7 of original generate_forecast.
+    EBITDA fix (2026-02-03): Returns lag info for future regressor generation.
 
     Args:
         historical_data: Time-series data
@@ -286,7 +367,7 @@ def prepare_and_fit_prophet_model(
         logger: Logger instance
 
     Returns:
-        Tuple of (fitted_model, dataframe, regressors_used)
+        Tuple of (fitted_model, dataframe, regressors_used, lags_applied)
     """
     # Prepare DataFrame
     df = prepare_prophet_dataframe(historical_data, metric, logger)
@@ -295,10 +376,11 @@ def prepare_and_fit_prophet_model(
     has_full_year, use_flat_growth, has_gaps = detect_data_characteristics(df, metric, logger)
     model = configure_prophet(has_full_year, use_flat_growth, has_gaps, metric, logger)
 
-    # Add regressors and fit
-    regressors_used = add_regressors_to_prophet(
-        model, df, historical_data, external_regressors, logger
+    # Add regressors and fit (pass metric for appropriate threshold selection)
+    # EBITDA fix: Now returns lag info for applying same lags to future values
+    regressors_used, lags_applied = add_regressors_to_prophet(
+        model, df, historical_data, external_regressors, logger, metric=metric
     )
     model.fit(df)
 
-    return model, df, regressors_used
+    return model, df, regressors_used, lags_applied

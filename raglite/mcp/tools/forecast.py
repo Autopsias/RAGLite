@@ -276,7 +276,9 @@ async def _execute_forecast_internal(
     Returns:
         ForecastQueryResponse with forecast results
     """
-    historical_data = await extract_historical_data(metric, logger, entity=request.entity)
+    historical_data = await extract_historical_data(
+        metric, logger, entity=request.entity, entity_level=request.entity_level
+    )
     logger.info(
         "Time-series extraction complete",
         extra={"metric": metric, "data_points": len(historical_data.points)},

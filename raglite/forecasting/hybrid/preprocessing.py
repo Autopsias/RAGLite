@@ -53,6 +53,7 @@ MAX_INTERPOLATION_GAP = 3  # Maximum periods to interpolate
 # Variable Cost, Electricity Cost, Thermal Cost are always positive values
 POSITIVE_ONLY_METRICS = {
     "ebitda",
+    "ebitda ifrs",
     "revenue",
     "capacity_utilization",
     "sales_volume",
