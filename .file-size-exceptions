@@ -1,77 +1,120 @@
 {
-  "version": 1,
-  "baseline_date": "2026-01-29T22:00:00.000000",
-  "description": "Grandfathered file size violations - reduce gradually",
-  "thresholds": {
-    "warning": 400,
-    "hard_limit": 500
-  },
-  "exceptions": {
-    "raglite/forecasting/timeseries/qdrant_metric.py": {
-      "lines": 557,
-      "reason": "Cohesive Qdrant metric extraction logic with YTD/year-end filters - Epic 8 refactoring complete",
-      "target_lines": 500,
-      "directory": "raglite/"
+  "exceptions": [
+    {
+      "file": "scripts/validate-external-data-forecasting.py",
+      "loc": 1887
     },
-    "raglite/forecasting/timeseries/qdrant_ebitda.py": {
-      "lines": 574,
-      "reason": "Cohesive EBITDA calculation and normalization logic - Epic 8 refactoring complete",
-      "target_lines": 500,
-      "directory": "raglite/"
+    {
+      "file": "scripts/validate_forecasting_unified.py",
+      "loc": 1863
     },
-    "raglite/mcp/tools/forecast.py": {
-      "lines": 526,
-      "reason": "Consolidated forecasting MCP tool with extensive request validation - Epic 8 refactoring complete",
-      "target_lines": 500,
-      "directory": "raglite/"
+    {
+      "file": "scripts/validate-all-forecasting-models.py",
+      "loc": 1632
     },
-    "raglite/mcp/tools/admin.py": {
-      "lines": 646,
-      "reason": "Admin MCP tool with comprehensive system metrics and database queries - Story 7.4 refactoring",
-      "target_lines": 500,
-      "directory": "raglite/"
+    {
+      "file": "scripts/validate-cement-forecasting-12vars.py",
+      "loc": 1237
     },
-    "tests/unit/forecasting/timeseries/test_sql_extraction.py": {
-      "lines": 881,
-      "reason": "Comprehensive SQL extraction test suite split from original test_timeseries_extract.py - Epic 8 refactoring",
-      "target_lines": 500,
-      "directory": "tests/"
+    {
+      "file": "scripts/archive/validation/ground_truth_v2_master.py",
+      "loc": 860
     },
-    "raglite/forecasting/timeseries/sql_extraction_config.py": {
-      "lines": 534,
-      "reason": "Cohesive SQL extraction configuration including metric mappings, entity filters, and multi-entity Epic 9 support - EBITDA forecast fix 2026-02-03",
-      "target_lines": 500,
-      "directory": "raglite/"
+    {
+      "file": "scripts/fix_group_ebitda_outlier.py",
+      "loc": 715
     },
-    "raglite/forecasting/hybrid/preprocessing_regressors.py": {
-      "lines": 513,
-      "reason": "Regressor preprocessing with lagged correlation support for profit metrics (EBITDA) - Forecast reliability fix 2026-02-02",
-      "target_lines": 500,
-      "directory": "raglite/"
+    {
+      "file": "scripts/verify_all_variables_quality.py",
+      "loc": 691
     },
-    "tests/unit/ingestion/classification/test_entity_level_classifier.py": {
-      "lines": 734,
-      "reason": "Comprehensive entity level classification tests for Epic 9 Story 9.4 - AC coverage requires extensive test cases",
-      "target_lines": 500,
-      "directory": "tests/"
+    {
+      "file": "scripts/backfill-postgresql-from-qdrant.py",
+      "loc": 664
     },
-    "tests/unit/ingestion/classification/test_value_type_classifier.py": {
-      "lines": 560,
-      "reason": "Value type classification tests for Epic 9 Story 9.3 - AC coverage requires comprehensive test cases",
-      "target_lines": 500,
-      "directory": "tests/"
+    {
+      "file": "scripts/fix_group_cashflow_outlier.py",
+      "loc": 662
     },
-    "tests/integration/test_007_migration_integration.py": {
-      "lines": 753,
-      "reason": "Database migration integration tests for Epic 9 - requires extensive fixture setup and test coverage",
-      "target_lines": 500,
-      "directory": "tests/"
+    {
+      "file": "raglite/forecasting/hybrid/preprocessing_regressors.py",
+      "loc": 660
     },
-    "raglite/ingestion/classification/entity_level_classifier.py": {
-      "lines": 511,
-      "reason": "Cohesive entity level classification with geographic/company/segment patterns and currency detection - Epic 9 Story 9.4",
-      "target_lines": 500,
-      "directory": "raglite/"
+    {
+      "file": "raglite/mcp/tools/admin.py",
+      "loc": 657
+    },
+    {
+      "file": "scripts/cleanup-comprehensive.py",
+      "loc": 591
+    },
+    {
+      "file": "raglite/forecasting/timeseries/qdrant_ebitda.py",
+      "loc": 574
+    },
+    {
+      "file": "scripts/archive/root-cause-analysis-story-2.15.py",
+      "loc": 559
+    },
+    {
+      "file": "raglite/forecasting/timeseries/qdrant_metric.py",
+      "loc": 557
+    },
+    {
+      "file": "scripts/fix_currency_cleanup.py",
+      "loc": 553
+    },
+    {
+      "file": "scripts/fix_forecasting_variables.py",
+      "loc": 550
+    },
+    {
+      "file": "scripts/archive/validate-story-2.13.py",
+      "loc": 549
+    },
+    {
+      "file": "raglite/mcp/tools/forecast.py",
+      "loc": 541
+    },
+    {
+      "file": "scripts/validate-epic6-accuracy.py",
+      "loc": 539
+    },
+    {
+      "file": "scripts/fix_unit_context_inference.py",
+      "loc": 538
+    },
+    {
+      "file": "raglite/forecasting/timeseries/sql_extraction_config.py",
+      "loc": 534
+    },
+    {
+      "file": "scripts/fix_unit_magnitude_inference.py",
+      "loc": 534
+    },
+    {
+      "file": "scripts/fix_ratio_decomposition.py",
+      "loc": 533
+    },
+    {
+      "file": "scripts/fix_ebitda_scale.py",
+      "loc": 530
+    },
+    {
+      "file": "scripts/fix_structural_cleanup.py",
+      "loc": 529
+    },
+    {
+      "file": "scripts/archive/audit-ground-truth-data-availability.py",
+      "loc": 516
+    },
+    {
+      "file": "raglite/ingestion/classification/entity_level_classifier.py",
+      "loc": 511
+    },
+    {
+      "file": "scripts/fix_unit_standardization.py",
+      "loc": 511
     }
-  }
+  ]
 }

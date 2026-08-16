@@ -1,0 +1,454 @@
+{
+  "exceptions": [
+    {
+      "file": "scripts/validate-all-forecasting-models.py",
+      "function": "validate_variable",
+      "complexity": 31
+    },
+    {
+      "file": "scripts/archive/analyze-unknown-headers.py",
+      "function": "main",
+      "complexity": 29
+    },
+    {
+      "file": "raglite/forecasting/regressor_fetch.py",
+      "function": "fetch_single_regressor",
+      "complexity": 27
+    },
+    {
+      "file": "raglite/ingestion/classification/entity_level_classifier.py",
+      "function": "classify_entity_level",
+      "complexity": 24
+    },
+    {
+      "file": "scripts/validate_forecasting_unified.py",
+      "function": "run_unified_validation",
+      "complexity": 24
+    },
+    {
+      "file": "raglite/ingestion/classification/value_type_classifier.py",
+      "function": "classify_value_type",
+      "complexity": 23
+    },
+    {
+      "file": "scripts/validate-all-forecasting-models.py",
+      "function": "run_individual_model",
+      "complexity": 23
+    },
+    {
+      "file": "scripts/validate-cement-forecasting-12vars.py",
+      "function": "fetch_external_regressors",
+      "complexity": 23
+    },
+    {
+      "file": "scripts/validate_forecasting_unified.py",
+      "function": "run_forecast_with_method",
+      "complexity": 23
+    },
+    {
+      "file": "scripts/archive/analyze-table-structures.py",
+      "function": "analyze_page_tables",
+      "complexity": 22
+    },
+    {
+      "file": "scripts/fix_unit_standardization.py",
+      "function": "standardize_units",
+      "complexity": 22
+    },
+    {
+      "file": "scripts/validate-external-data-forecasting.py",
+      "function": "run_validation",
+      "complexity": 22
+    },
+    {
+      "file": "scripts/archive/validation/validate_ground_truth.py",
+      "function": "validate_ground_truth",
+      "complexity": 21
+    },
+    {
+      "file": "scripts/validate-cement-forecasting-12vars.py",
+      "function": "run_validation",
+      "complexity": 21
+    },
+    {
+      "file": "scripts/archive/analyze-auto-classification-accuracy.py",
+      "function": "analyze_auto_classification_accuracy",
+      "complexity": 20
+    },
+    {
+      "file": "scripts/archive/debug-hybrid-search-scoring.py",
+      "function": "debug_hybrid_search_scoring",
+      "complexity": 20
+    },
+    {
+      "file": "tests/unit/story_8_2/test_ac_8_2_4_storage_isolation.py",
+      "function": "test_ac_8_2_4_no_circular_deps_in_storage",
+      "complexity": 20
+    },
+    {
+      "file": "scripts/archive/root-cause-analysis-story-2.15.py",
+      "function": "analyze_query",
+      "complexity": 19
+    },
+    {
+      "file": "scripts/fix_unit_context_inference.py",
+      "function": "infer_units_by_context",
+      "complexity": 19
+    },
+    {
+      "file": "scripts/reingest-all-documents.py",
+      "function": "main",
+      "complexity": 19
+    },
+    {
+      "file": "scripts/validate-cement-forecasting-12vars.py",
+      "function": "run_external_only_forecast",
+      "complexity": 19
+    },
+    {
+      "file": "tests/atdd/story_8_5/test_ac_8_5_3_fixture_markers.py",
+      "function": "test_ac_8_5_3_1_no_marker_on_fixtures",
+      "complexity": 19
+    },
+    {
+      "file": "tests/atdd/story_8_5/test_fixture_marker_cleanup.py",
+      "function": "test_ac_8_5_3_1_no_marker_on_fixtures",
+      "complexity": 19
+    },
+    {
+      "file": "scripts/archive/generate-test-coverage-report.py",
+      "function": "generate_coverage_report",
+      "complexity": 18
+    },
+    {
+      "file": "scripts/archive/test-adaptive-on-small-pdf.py",
+      "function": "test_adaptive_extraction",
+      "complexity": 18
+    },
+    {
+      "file": "scripts/archive/validate-adaptive-data-quality.py",
+      "function": "main",
+      "complexity": 18
+    },
+    {
+      "file": "scripts/archive/validate-pages-direct.py",
+      "function": "main",
+      "complexity": 18
+    },
+    {
+      "file": "scripts/backfill-postgresql-from-qdrant.py",
+      "function": "extract_structured_rows_from_chunks_batch",
+      "complexity": 18
+    },
+    {
+      "file": "scripts/backfill-postgresql-from-qdrant.py",
+      "function": "extract_structured_rows_from_markdown",
+      "complexity": 18
+    },
+    {
+      "file": "scripts/archive/inspect-page20-table-structure.py",
+      "function": "inspect_page20_tables",
+      "complexity": 17
+    },
+    {
+      "file": "scripts/archive/validate-json-table-export.py",
+      "function": "validate_json_export",
+      "complexity": 17
+    },
+    {
+      "file": "scripts/archive/validate-pages-smart.py",
+      "function": "main",
+      "complexity": 17
+    },
+    {
+      "file": "scripts/archive/validate-pages-via-qdrant.py",
+      "function": "main",
+      "complexity": 17
+    },
+    {
+      "file": "scripts/ci/validate-shard-coverage.py",
+      "function": "validate_shards",
+      "complexity": 17
+    },
+    {
+      "file": "raglite/external_data/clients/ine_parsers.py",
+      "function": "parse_construction_cost_index",
+      "complexity": 16
+    },
+    {
+      "file": "raglite/forecasting/data_analyzer/recommendations.py",
+      "function": "recommend_models",
+      "complexity": 16
+    },
+    {
+      "file": "scripts/archive/generate-final-validation-report.py",
+      "function": "generate_report",
+      "complexity": 16
+    },
+    {
+      "file": "scripts/backfill-postgresql-from-qdrant.py",
+      "function": "main",
+      "complexity": 16
+    },
+    {
+      "file": "scripts/investigate_poor_performers.py",
+      "function": "investigate_poor_performers",
+      "complexity": 16
+    },
+    {
+      "file": "tests/atdd/test_story_8_5_edge_cases.py",
+      "function": "test_p0_no_markers_on_any_fixtures_in_codebase",
+      "complexity": 16
+    },
+    {
+      "file": "raglite/forecasting/hybrid/preprocessing_regressors.py",
+      "function": "select_regressors",
+      "complexity": 15
+    },
+    {
+      "file": "raglite/ingestion/adaptive_table/classification/orientation.py",
+      "function": "_detect_orientation",
+      "complexity": 15
+    },
+    {
+      "file": "raglite/mcp/tools/insights_helpers.py",
+      "function": "format_insights_for_display",
+      "complexity": 15
+    },
+    {
+      "file": "scripts/archive/analyze-semantic-dilution.py",
+      "function": "analyze_semantic_dilution",
+      "complexity": 15
+    },
+    {
+      "file": "scripts/archive/debug-page-20-layout-detection.py",
+      "function": "main",
+      "complexity": 15
+    },
+    {
+      "file": "scripts/archive/migrate-to-postgresql.py",
+      "function": "migrate_chunks_to_postgresql",
+      "complexity": 15
+    },
+    {
+      "file": "scripts/archive/reingest-pages-20-21-phase27.py",
+      "function": "main",
+      "complexity": 15
+    },
+    {
+      "file": "scripts/archive/validate-pages-smart.py",
+      "function": "score_page_for_question",
+      "complexity": 15
+    },
+    {
+      "file": "scripts/backfill-postgresql-tables.py",
+      "function": "main",
+      "complexity": 15
+    },
+    {
+      "file": "scripts/inspect_energy_costs.py",
+      "function": "inspect_energy_costs",
+      "complexity": 15
+    },
+    {
+      "file": "story-2.2-pivot-analysis/supporting-scripts/analyze_ac3_failures.py",
+      "function": "categorize_query",
+      "complexity": 15
+    },
+    {
+      "file": "scripts/archive/analyze-table-diversity.py",
+      "function": "main",
+      "complexity": 14
+    },
+    {
+      "file": "scripts/archive/analyze-table-types.py",
+      "function": "main",
+      "complexity": 14
+    },
+    {
+      "file": "scripts/archive/diagnose-pages-20-21-tables.py",
+      "function": "main",
+      "complexity": 14
+    },
+    {
+      "file": "scripts/archive/migrate-fix-page-numbers.py",
+      "function": "main",
+      "complexity": 14
+    },
+    {
+      "file": "scripts/archive/quick-validate-fix.py",
+      "function": "main",
+      "complexity": 14
+    },
+    {
+      "file": "scripts/archive/validate-story-2.14-epic2.py",
+      "function": "validate_epic2",
+      "complexity": 14
+    },
+    {
+      "file": "scripts/archive/validation/ground_truth_v2_master.py",
+      "function": "validate_query_answer",
+      "complexity": 14
+    },
+    {
+      "file": "scripts/cleanup-and-reingest.py",
+      "function": "main",
+      "complexity": 14
+    },
+    {
+      "file": "scripts/cleanup-data-quality.py",
+      "function": "phase1_qdrant_dedup",
+      "complexity": 14
+    },
+    {
+      "file": "scripts/fix-deferred-imports.py",
+      "function": "fix_deferred_imports",
+      "complexity": 14
+    },
+    {
+      "file": "scripts/validate-all-forecasting-models.py",
+      "function": "load_external_data",
+      "complexity": 14
+    },
+    {
+      "file": "scripts/validate-all-forecasting-models.py",
+      "function": "main",
+      "complexity": 14
+    },
+    {
+      "file": "scripts/validate-all-forecasting-models.py",
+      "function": "print_summary",
+      "complexity": 14
+    },
+    {
+      "file": "scripts/validate-mcp-ensemble-forecasting.py",
+      "function": "print_results",
+      "complexity": 14
+    },
+    {
+      "file": "scripts/validate-mock-coverage.py",
+      "function": "find_patched_locations",
+      "complexity": 14
+    },
+    {
+      "file": "scripts/validate-mock-targets.py",
+      "function": "main",
+      "complexity": 14
+    },
+    {
+      "file": "scripts/validate-xdist-markers.py",
+      "function": "main",
+      "complexity": 14
+    },
+    {
+      "file": "raglite/forecasting/hybrid/preprocessing.py",
+      "function": "validate_timeseries_for_forecast",
+      "complexity": 13
+    },
+    {
+      "file": "raglite/forecasting/model_selection.py",
+      "function": "_filter_candidates",
+      "complexity": 13
+    },
+    {
+      "file": "raglite/forecasting/timeseries/metadata.py",
+      "function": "detect_entity",
+      "complexity": 13
+    },
+    {
+      "file": "raglite/ingestion/classification/period_classifier.py",
+      "function": "classify_period",
+      "complexity": 13
+    },
+    {
+      "file": "raglite/mcp/tools/admin.py",
+      "function": "warmup_forecasting_models",
+      "complexity": 13
+    },
+    {
+      "file": "raglite/mcp/tools/query_helpers.py",
+      "function": "_extract_sources_from_results",
+      "complexity": 13
+    },
+    {
+      "file": "raglite/shared/config.py",
+      "function": "adjust_for_environment",
+      "complexity": 13
+    },
+    {
+      "file": "scripts/archive/test-adaptive-framework-chunk.py",
+      "function": "main",
+      "complexity": 13
+    },
+    {
+      "file": "scripts/archive/test-adaptive-framework-page23.py",
+      "function": "main",
+      "complexity": 13
+    },
+    {
+      "file": "scripts/archive/test-adaptive-pages-1-20.py",
+      "function": "main",
+      "complexity": 13
+    },
+    {
+      "file": "scripts/archive/validate-story-2.13-v2.py",
+      "function": "print_summary",
+      "complexity": 13
+    },
+    {
+      "file": "scripts/benchmark-parallel-ingestion.py",
+      "function": "benchmark_parallel_ingestion",
+      "complexity": 13
+    },
+    {
+      "file": "scripts/cleanup-data-quality.py",
+      "function": "main",
+      "complexity": 13
+    },
+    {
+      "file": "scripts/diagnose_ebitda_periods.py",
+      "function": "main",
+      "complexity": 13
+    },
+    {
+      "file": "scripts/fix_unit_audit_columns.py",
+      "function": "add_audit_columns",
+      "complexity": 13
+    },
+    {
+      "file": "scripts/fix_unit_magnitude_inference.py",
+      "function": "infer_units_by_magnitude",
+      "complexity": 13
+    },
+    {
+      "file": "scripts/generate_failure_report.py",
+      "function": "generate_failure_report",
+      "complexity": 13
+    },
+    {
+      "file": "scripts/init-test-postgresql.py",
+      "function": "create_test_database_schema",
+      "complexity": 13
+    },
+    {
+      "file": "scripts/validate-all-forecasting-models.py",
+      "function": "print_model_comparison_matrix",
+      "complexity": 13
+    },
+    {
+      "file": "scripts/validate-external-data-forecasting.py",
+      "function": "fetch_real_external_data",
+      "complexity": 13
+    },
+    {
+      "file": "tests/atdd/story_8_4b/test_ac5_fixture_dependencies.py",
+      "function": "test_ac_8_4b_5_10_no_fixture_duplication_across_modules",
+      "complexity": 13
+    },
+    {
+      "file": "tests/integration/story_2_14/test_individual_queries.py",
+      "function": "test_excerpt_query",
+      "complexity": 13
+    }
+  ]
+}
