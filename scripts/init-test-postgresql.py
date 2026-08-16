@@ -188,6 +188,7 @@ def create_test_database_schema() -> None:
 
                     -- Structured columns for querying
                     entity VARCHAR(255),           -- e.g., "Portugal Cement", "Spain Ready-Mix"
+                    entity_normalized VARCHAR(100), -- Canonical entity name from entity_mappings
                     metric VARCHAR(255),            -- e.g., "variable costs", "thermal energy"
                     period VARCHAR(100),            -- e.g., "Aug-25 YTD", "Q2 2025"
                     fiscal_year INT,                -- e.g., 2025
@@ -305,6 +306,15 @@ def create_test_database_schema() -> None:
             """
             )
             logger.info("✓ idx_document_page created (document_id, page_number)")
+
+            # Index 10: Entity normalized filtering (matches migration 005)
+            cursor.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_entity_normalized
+                ON financial_tables(entity_normalized);
+            """
+            )
+            logger.info("✓ idx_entity_normalized created (entity_normalized)")
 
             # Install pg_trgm extension for fuzzy matching (Story 2.14)
             logger.info("Installing pg_trgm extension for fuzzy matching...")

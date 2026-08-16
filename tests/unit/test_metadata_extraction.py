@@ -1,0 +1,203 @@
+"""Unit tests for Story 2.4 metadata extraction functionality.
+
+Tests AC1 (Metadata Extraction), AC2 (Schema).
+Updated for Mistral Small 3.2 API (15-field rich schema).
+Note: Most tests are skipped pending updates for new API - see skip messages.
+"""
+
+import json
+from unittest.mock import patch
+
+import pytest
+
+from raglite.ingestion.pipeline import _metadata_cache, extract_chunk_metadata
+from raglite.shared.models import ExtractedMetadata
+
+
+@pytest.fixture(autouse=True)
+def clear_metadata_cache():
+    """Clear metadata cache before each test.
+
+    NOTE: Does NOT clear Mistral client cache - session mock handles all API interactions.
+    """
+    _metadata_cache.clear()
+    yield
+    _metadata_cache.clear()
+
+
+@pytest.fixture
+def mock_mistral_response():
+    """Create a mock Mistral API response for chunk metadata extraction.
+
+    Updated for Story 2.4: 15-field rich schema with Mistral Small 3.2.
+    """
+
+    def _create_response(
+        # Document-Level (7 fields)
+        document_type: str | None = "Operational Report",
+        reporting_period: str | None = "Q3 2024",
+        time_granularity: str | None = "Quarterly",
+        company_name: str | None = "ACME Corporation",
+        geographic_jurisdiction: str | None = "Portugal",
+        data_source_type: str | None = "Audited",
+        version_date: str | None = "2024-10-15",
+        # Section-Level (5 fields)
+        section_type: str | None = "Narrative",
+        metric_category: str | None = "EBITDA",
+        units: str | None = "EUR",
+        department_scope: str | None = "Finance",
+        # Table-Specific (3 fields)
+        table_context: str | None = None,
+        table_name: str | None = None,
+        statistical_summary: str | None = None,
+    ):
+        # Validate against ExtractedMetadata schema first
+        metadata = ExtractedMetadata(
+            document_type=document_type,
+            reporting_period=reporting_period,
+            time_granularity=time_granularity,
+            company_name=company_name,
+            geographic_jurisdiction=geographic_jurisdiction,
+            data_source_type=data_source_type,
+            version_date=version_date,
+            section_type=section_type,
+            metric_category=metric_category,
+            units=units,
+            department_scope=department_scope,
+            table_context=table_context,
+            table_name=table_name,
+            statistical_summary=statistical_summary,
+        )
+        # Convert to dict with proper JSON serialization
+        response_dict = metadata.model_dump(mode="json", exclude_none=False)
+
+        # Mock Mistral response structure
+        class MockChoice:
+            def __init__(self, content):
+                self.message = type("obj", (object,), {"content": content})()
+                self.finish_reason = "stop"
+
+        class MockResponse:
+            def __init__(self, content):
+                self.choices = [MockChoice(json.dumps(content))]
+                self.id = "mistral-test123"
+                self.model = "mistral-small-latest"
+
+        return MockResponse(response_dict)
+
+    return _create_response
+
+
+class TestExtractChunkMetadata:
+    """Test suite for extract_chunk_metadata function (AC1)."""
+
+    @pytest.mark.priority("P2")
+    @pytest.mark.asyncio
+    async def test_metadata_extraction_success(self):
+        """Test successful metadata extraction using session mock.
+
+        FIXED: Patch settings in shared.clients where get_mistral_client validates the API key.
+        Session mock (mock_mistral_api_globally) handles actual Mistral class instantiation.
+        """
+        test_text = """
+        Financial Report Q3 2024
+        ACME Corporation
+        Finance Department
+
+        This report covers the third quarter of fiscal year 2024...
+        """
+
+        # Patch settings where they're checked (in get_mistral_client validation)
+        # This ensures the `if not settings.mistral_api_key:` check passes
+        with (
+            patch(
+                "raglite.shared.clients.settings.mistral_api_key",
+                "test-key-123",
+            ),
+            patch(
+                "raglite.shared.config.settings.mistral_api_key",
+                "test-key-123",
+            ),
+            patch(
+                "raglite.shared.config.settings.metadata_extraction_model",
+                "mistral-small-latest",
+            ),
+        ):
+            # Session mock is already active (autouse=True) and prevents real API calls
+            # It returns: {"metric_category": "Revenue", "time_period": "Q3 2025"}
+            result = await extract_chunk_metadata(test_text, "test_chunk_0")
+
+            # Validate result structure (session mock returns minimal but valid metadata)
+            assert result.__class__.__name__ == "ExtractedMetadata"
+            # Session mock returns generic metadata, not test-specific values
+            # So we validate structure, not specific content
+            assert result.metric_category == "Revenue"  # From session mock
+
+
+class TestExtractedMetadataModel:
+    """Test AC2: ExtractedMetadata Pydantic model validation (15-field rich schema)."""
+
+    @pytest.mark.priority("P2")
+    def test_extracted_metadata_all_fields(self):
+        """Test model with all 15 fields populated."""
+        metadata = ExtractedMetadata(
+            # Document-Level (7 fields)
+            document_type="Operational Report",
+            reporting_period="Q3 2024",
+            time_granularity="Quarterly",
+            company_name="ACME Corp",
+            geographic_jurisdiction="Portugal",
+            data_source_type="Audited",
+            version_date="2024-10-15",
+            # Section-Level (5 fields)
+            section_type="Narrative",
+            metric_category="EBITDA",
+            units="EUR",
+            department_scope="Finance",
+            # Table-Specific (3 fields)
+            table_context=None,
+            table_name=None,
+            statistical_summary=None,
+        )
+
+        # Document-Level assertions
+        assert metadata.document_type == "Operational Report"
+        assert metadata.reporting_period == "Q3 2024"
+        assert metadata.time_granularity == "Quarterly"
+        assert metadata.company_name == "ACME Corp"
+        assert metadata.geographic_jurisdiction == "Portugal"
+        assert metadata.data_source_type == "Audited"
+        assert metadata.version_date == "2024-10-15"
+        # Section-Level assertions
+        assert metadata.section_type == "Narrative"
+        assert metadata.metric_category == "EBITDA"
+        assert metadata.units == "EUR"
+        assert metadata.department_scope == "Finance"
+
+    @pytest.mark.priority("P2")
+    def test_extracted_metadata_optional_fields(self):
+        """Test model with optional fields as None."""
+        metadata = ExtractedMetadata(
+            document_type=None,
+            reporting_period=None,
+            company_name=None,
+            department_scope=None,
+        )
+
+        assert metadata.document_type is None
+        assert metadata.reporting_period is None
+        assert metadata.company_name is None
+        assert metadata.department_scope is None
+
+    @pytest.mark.priority("P2")
+    def test_extracted_metadata_defaults(self):
+        """Test model default values (all None for 15 fields)."""
+        metadata = ExtractedMetadata()
+
+        # Document-Level defaults
+        assert metadata.document_type is None
+        assert metadata.reporting_period is None
+        assert metadata.company_name is None
+        # Section-Level defaults
+        assert metadata.metric_category is None
+        assert metadata.department_scope is None

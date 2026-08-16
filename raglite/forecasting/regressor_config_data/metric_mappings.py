@@ -61,16 +61,23 @@ METRIC_REGRESSORS: dict[str, list[str]] = {
     # NOTE: euribor_3m removed per Story 7b-7 AC5 - less relevant to cement EBITDA
     # Epic 7 Enhancement: Added sales_volume and capacity_utilization per McKinsey research
     # Multi-Geography Enhancement: Added gdp_weighted_composite to capture all Secil markets
+    # EBITDA forecast fix (2026-02-03): Prioritized construction market indicators per user insight
+    # Cement industry EBITDA is highly correlated with construction activity and building licenses
     "ebitda": [
-        # Demand-side (construction activity -> revenue) - Portugal
-        "construction_output",
-        "building_permits",
-        "construction_confidence",
+        # PRIMARY: Construction market indicators (highest correlation for cement industry)
+        # Building permits = leading indicator (6-12 month lag before construction)
+        # Construction output = coincident indicator of market activity
+        # Construction confidence = leading sentiment indicator
+        "building_permits",  # Priority #1: Leading indicator for cement demand
+        "construction_output",  # Priority #2: Coincident construction activity
+        "construction_confidence",  # Priority #3: Leading sentiment indicator
+        # SECONDARY: Housing market (demand-side)
         "housing_transactions",  # Story 7b-7: Leading indicator (6-12 month lag)
+        "dwelling_completions",  # Lagging indicator confirming construction activity
+        # TERTIARY: Volume and GDP for context
         "sales_volume",  # Epic 7: Direct demand indicator for Portugal operations
-        # Multi-geography GDP (captures PT 72% + TN 10% + AO 8% + BR 7% + LB 3%)
         "gdp_weighted_composite",  # World Bank: weighted GDP for all Secil markets
-        # Cost-side (energy costs -> margins)
+        # QUATERNARY: Cost-side (energy costs -> margins)
         "ttf_gas",
         "diesel",
         "capacity_utilization",  # Epic 7: Efficiency factor affecting margins

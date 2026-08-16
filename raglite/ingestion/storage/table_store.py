@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 from psycopg2.extras import execute_values
 
-from raglite.shared.clients import get_postgresql_connection
+from raglite.shared.clients import get_postgresql_connection, reset_postgresql_connection
 from raglite.shared.logging import get_logger
 from raglite.shared.safety import SafetyGuard
 
@@ -86,6 +86,10 @@ def _prepare_table_records(valid_rows: list[dict[str, Any]]) -> tuple[list[tuple
             row.get("row_index"),
             row.get("column_name"),
             row.get("chunk_text"),
+            # Story 9.6: Classification fields (AC1, AC2)
+            row.get("period_type"),
+            row.get("value_type"),
+            row.get("entity_level"),
         )
         records.append(record)
 
@@ -107,7 +111,7 @@ def _insert_records_in_batches(cursor: Any, records: list[tuple], batch_size: in
         batch_records = records[i : i + batch_size]
 
         logger.info(
-            f"Uploading PostgreSQL batch {batch_num}/{total_batches}",
+            "Uploading PostgreSQL batch",
             extra={
                 "batch_num": batch_num,
                 "batch_size": len(batch_records),
@@ -121,7 +125,8 @@ def _insert_records_in_batches(cursor: Any, records: list[tuple], batch_size: in
             INSERT INTO financial_tables (
                 document_id, page_number, table_index, table_caption,
                 entity, metric, period, fiscal_year, value, unit,
-                row_index, column_name, chunk_text
+                row_index, column_name, chunk_text,
+                period_type, value_type, entity_level
             ) VALUES %s
             """,
             batch_records,
@@ -150,12 +155,52 @@ def _cleanup_database_resources(cursor: Any, conn: Any, operation: str) -> None:
         pass  # Cleanup handler: ignore rollback errors
 
 
+def _count_classification_coverage(valid_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Count rows with and without classification fields.
+
+    Story 9.6 AC5: Classification coverage metrics
+
+    Args:
+        valid_rows: List of validated table row dicts
+
+    Returns:
+        Dict with classification coverage metrics:
+        - rows_with_classification: count of rows with all 3 fields populated
+        - rows_without_classification: count of rows with NULL classification
+        - classification_coverage_pct: percentage with classification (0-100)
+    """
+    if not valid_rows:
+        return {
+            "rows_with_classification": 0,
+            "rows_without_classification": 0,
+            "classification_coverage_pct": 0.0,
+        }
+
+    rows_with_classification = sum(
+        1
+        for row in valid_rows
+        if row.get("period_type") not in (None, "")
+        and row.get("value_type") not in (None, "")
+        and row.get("entity_level") not in (None, "")
+    )
+    rows_without_classification = len(valid_rows) - rows_with_classification
+
+    coverage_pct = round(100 * rows_with_classification / len(valid_rows), 1) if valid_rows else 0.0
+
+    return {
+        "rows_with_classification": rows_with_classification,
+        "rows_without_classification": rows_without_classification,
+        "classification_coverage_pct": coverage_pct,
+    }
+
+
 def _log_storage_success(
     records_count: int,
     skipped_count: int,
     skipped_no_document_id: int,
     valid_rows_count: int,
     start_time: float,
+    classification_metrics: dict[str, Any] | None = None,
 ) -> None:
     """Log successful PostgreSQL storage operation.
 
@@ -165,21 +210,25 @@ def _log_storage_success(
         skipped_no_document_id: Number of rows skipped (missing document_id)
         valid_rows_count: Total valid rows processed
         start_time: Operation start time
+        classification_metrics: Optional classification coverage metrics (Story 9.6 AC5)
     """
     duration_ms = int((time.time() - start_time) * 1000)
 
-    logger.info(
-        "PostgreSQL table storage complete",
-        extra={
-            "records_stored": records_count,
-            "records_skipped": skipped_count,
-            "records_skipped_no_document_id": skipped_no_document_id,
-            "duration_ms": duration_ms,
-            "records_per_second": (
-                round(valid_rows_count / (duration_ms / 1000), 2) if duration_ms > 0 else 0
-            ),
-        },
-    )
+    log_extra = {
+        "records_stored": records_count,
+        "records_skipped": skipped_count,
+        "records_skipped_no_document_id": skipped_no_document_id,
+        "duration_ms": duration_ms,
+        "records_per_second": (
+            round(valid_rows_count / (duration_ms / 1000), 2) if duration_ms > 0 else 0
+        ),
+    }
+
+    # Story 9.6 AC5: Include classification metrics if provided
+    if classification_metrics:
+        log_extra.update(classification_metrics)
+
+    logger.info("PostgreSQL table storage complete", extra=log_extra)
 
 
 def _validate_and_filter_rows(
@@ -251,6 +300,7 @@ def _execute_database_storage(valid_rows: list[dict[str, Any]], batch_size: int)
 
     except Exception:
         _cleanup_database_resources(cursor, conn, "store_tables")
+        reset_postgresql_connection()
         raise
 
 
@@ -298,9 +348,17 @@ async def store_tables_in_postgresql(
         # Execute database storage
         records_count, skipped_no_document_id = _execute_database_storage(valid_rows, batch_size)
 
+        # Story 9.6 AC5: Calculate classification coverage metrics
+        classification_metrics = _count_classification_coverage(valid_rows)
+
         # Log success metrics
         _log_storage_success(
-            records_count, skipped_count, skipped_no_document_id, len(valid_rows), start_time
+            records_count,
+            skipped_count,
+            skipped_no_document_id,
+            len(valid_rows),
+            start_time,
+            classification_metrics,
         )
 
         # Return actual records stored (may be less than valid_rows if some had no document_id)

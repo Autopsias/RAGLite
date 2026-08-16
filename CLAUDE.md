@@ -309,3 +309,26 @@ These rules prevent recurring test failures. Follow them for ALL test-related ch
 - **Docling:** https://github.com/DS4SD/docling
 - **Qdrant:** https://qdrant.tech/documentation/
 - **Claude API:** https://docs.anthropic.com/
+
+## Committing — the quality ratchet
+
+The pre-commit hooks include three ratchet checkers (file size, function
+length, complexity). They judge ONLY the files you staged, and they block only
+what your commit makes worse than every commit parent. Rules:
+
+- **Never `git commit --no-verify`.** It skips EVERY hook, including the
+  security gates. No ratchet complaint justifies dropping those.
+- If a ratchet hook still blocks you wrongly, skip that hook alone and say why
+  in the commit body: `SKIP=file-size-ratchet git commit ...` (comma-separate
+  for several). CI (`quality-ratchet.yml`) re-runs all three checkers
+  whole-project on every push, so a skip is visible, never final.
+- **Merging a long-lived branch:** when the merge warns about inherited debt,
+  re-record the baselines IN the merge commit — run
+  `python3 tools/check_file_sizes.py --generate-baseline` (and the
+  function-length and complexity siblings), review that the diff only admits
+  debt the branch already carried, `git add` the three baseline files, and
+  complete the merge. Never regenerate a baseline to absorb debt authored in
+  the commit itself.
+- The checkers in `tools/` are vendored copies; the source of truth is
+  `~/.claude/scripts/quality/`. Never edit them here — re-sync with
+  `python3 ~/.claude/scripts/quality/vendor_quality.py .`.

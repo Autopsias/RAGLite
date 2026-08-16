@@ -1,10 +1,868 @@
 {
-  "version": 1,
-  "baseline_date": "2026-01-26T19:17:18.336770",
-  "description": "Grandfathered function length violations - refactor gradually",
-  "thresholds": {
-    "warning": 50,
-    "hard_limit": 100
-  },
-  "exceptions": {}
+  "exceptions": {
+    "scripts/init-test-postgresql.py:create_test_database_schema": {
+      "file": "scripts/init-test-postgresql.py",
+      "lineno": 34,
+      "name": "create_test_database_schema",
+      "lines": 405
+    },
+    "scripts/validate_forecasting_unified.py:run_unified_validation": {
+      "file": "scripts/validate_forecasting_unified.py",
+      "lineno": 1191,
+      "name": "run_unified_validation",
+      "lines": 367
+    },
+    "scripts/fix_unit_magnitude_inference.py:infer_units_by_magnitude": {
+      "file": "scripts/fix_unit_magnitude_inference.py",
+      "lineno": 137,
+      "name": "infer_units_by_magnitude",
+      "lines": 358
+    },
+    "scripts/fix_unit_context_inference.py:infer_units_by_context": {
+      "file": "scripts/fix_unit_context_inference.py",
+      "lineno": 142,
+      "name": "infer_units_by_context",
+      "lines": 357
+    },
+    "scripts/validate_forecasting_unified.py:run_forecast_with_method": {
+      "file": "scripts/validate_forecasting_unified.py",
+      "lineno": 797,
+      "name": "run_forecast_with_method",
+      "lines": 331
+    },
+    "scripts/archive/analyze-unknown-headers.py:main": {
+      "file": "scripts/archive/analyze-unknown-headers.py",
+      "lineno": 24,
+      "name": "main",
+      "lines": 325
+    },
+    "scripts/archive/migrations/init-test-postgresql.py:create_test_database_schema": {
+      "file": "scripts/archive/migrations/init-test-postgresql.py",
+      "lineno": 34,
+      "name": "create_test_database_schema",
+      "lines": 291
+    },
+    "scripts/verify_unit_quality.py:verify_unit_quality": {
+      "file": "scripts/verify_unit_quality.py",
+      "lineno": 38,
+      "name": "verify_unit_quality",
+      "lines": 266
+    },
+    "scripts/fix_unit_standardization.py:standardize_units": {
+      "file": "scripts/fix_unit_standardization.py",
+      "lineno": 213,
+      "name": "standardize_units",
+      "lines": 259
+    },
+    "scripts/archive/migrations/init-postgresql.py:create_database_schema": {
+      "file": "scripts/archive/migrations/init-postgresql.py",
+      "lineno": 27,
+      "name": "create_database_schema",
+      "lines": 242
+    },
+    "scripts/archive/analyze-semantic-dilution.py:analyze_semantic_dilution": {
+      "file": "scripts/archive/analyze-semantic-dilution.py",
+      "lineno": 33,
+      "name": "analyze_semantic_dilution",
+      "lines": 227
+    },
+    "scripts/archive/migrate-to-postgresql.py:migrate_chunks_to_postgresql": {
+      "file": "scripts/archive/migrate-to-postgresql.py",
+      "lineno": 40,
+      "name": "migrate_chunks_to_postgresql",
+      "lines": 221
+    },
+    "raglite/ingestion/classification/value_type_classifier.py:classify_value_type": {
+      "file": "raglite/ingestion/classification/value_type_classifier.py",
+      "lineno": 37,
+      "name": "classify_value_type",
+      "lines": 210
+    },
+    "raglite/ingestion/classification/entity_level_classifier.py:classify_entity_level": {
+      "file": "raglite/ingestion/classification/entity_level_classifier.py",
+      "lineno": 184,
+      "name": "classify_entity_level",
+      "lines": 208
+    },
+    "scripts/validate-external-data-forecasting.py:run_validation": {
+      "file": "scripts/validate-external-data-forecasting.py",
+      "lineno": 1552,
+      "name": "run_validation",
+      "lines": 206
+    },
+    "scripts/archive/generate-test-coverage-report.py:generate_coverage_report": {
+      "file": "scripts/archive/generate-test-coverage-report.py",
+      "lineno": 70,
+      "name": "generate_coverage_report",
+      "lines": 206
+    },
+    "scripts/reingest-all-documents.py:main": {
+      "file": "scripts/reingest-all-documents.py",
+      "lineno": 195,
+      "name": "main",
+      "lines": 205
+    },
+    "scripts/archive/validate-full-document-regions.py:main": {
+      "file": "scripts/archive/validate-full-document-regions.py",
+      "lineno": 88,
+      "name": "main",
+      "lines": 204
+    },
+    "scripts/archive/analyze-auto-classification-accuracy.py:analyze_auto_classification_accuracy": {
+      "file": "scripts/archive/analyze-auto-classification-accuracy.py",
+      "lineno": 27,
+      "name": "analyze_auto_classification_accuracy",
+      "lines": 203
+    },
+    "scripts/archive/analyze-table-diversity.py:main": {
+      "file": "scripts/archive/analyze-table-diversity.py",
+      "lineno": 177,
+      "name": "main",
+      "lines": 202
+    },
+    "migrations/001_apply_schema.py:apply_migration": {
+      "file": "migrations/001_apply_schema.py",
+      "lineno": 24,
+      "name": "apply_migration",
+      "lines": 197
+    },
+    "scripts/archive/migrations/reingest-with-table-aware-chunking.py:reingest_with_table_aware_chunking": {
+      "file": "scripts/archive/migrations/reingest-with-table-aware-chunking.py",
+      "lineno": 28,
+      "name": "reingest_with_table_aware_chunking",
+      "lines": 194
+    },
+    "scripts/archive/generate-final-validation-report.py:generate_report": {
+      "file": "scripts/archive/generate-final-validation-report.py",
+      "lineno": 190,
+      "name": "generate_report",
+      "lines": 193
+    },
+    "scripts/fix_unit_audit_columns.py:add_audit_columns": {
+      "file": "scripts/fix_unit_audit_columns.py",
+      "lineno": 41,
+      "name": "add_audit_columns",
+      "lines": 192
+    },
+    "scripts/archive/validate-story-2.14-epic2.py:validate_epic2": {
+      "file": "scripts/archive/validate-story-2.14-epic2.py",
+      "lineno": 39,
+      "name": "validate_epic2",
+      "lines": 192
+    },
+    "scripts/archive/epic-2/run-phase2a-final-validation.py:run_phase2a_final_validation": {
+      "file": "scripts/archive/epic-2/run-phase2a-final-validation.py",
+      "lineno": 34,
+      "name": "run_phase2a_final_validation",
+      "lines": 190
+    },
+    "scripts/archive/root-cause-analysis-story-2.15.py:analyze_query": {
+      "file": "scripts/archive/root-cause-analysis-story-2.15.py",
+      "lineno": 68,
+      "name": "analyze_query",
+      "lines": 187
+    },
+    "scripts/archive/validate-json-table-export.py:validate_json_export": {
+      "file": "scripts/archive/validate-json-table-export.py",
+      "lineno": 23,
+      "name": "validate_json_export",
+      "lines": 186
+    },
+    "scripts/archive/test-unit-extraction-fix.py:test_unit_extraction_fix": {
+      "file": "scripts/archive/test-unit-extraction-fix.py",
+      "lineno": 22,
+      "name": "test_unit_extraction_fix",
+      "lines": 183
+    },
+    "scripts/archive/validate-epic-2-final.py:validate_epic_2_final": {
+      "file": "scripts/archive/validate-epic-2-final.py",
+      "lineno": 118,
+      "name": "validate_epic_2_final",
+      "lines": 183
+    },
+    "scripts/validate-cement-forecasting-12vars.py:run_validation": {
+      "file": "scripts/validate-cement-forecasting-12vars.py",
+      "lineno": 900,
+      "name": "run_validation",
+      "lines": 181
+    },
+    "scripts/archive/validate-ac5-metadata-quality.py:validate_metadata_quality": {
+      "file": "scripts/archive/validate-ac5-metadata-quality.py",
+      "lineno": 20,
+      "name": "validate_metadata_quality",
+      "lines": 180
+    },
+    "scripts/archive/quick-validate-fix.py:main": {
+      "file": "scripts/archive/quick-validate-fix.py",
+      "lineno": 20,
+      "name": "main",
+      "lines": 179
+    },
+    "raglite/forecasting/hybrid/preprocessing_regressors.py:select_regressors": {
+      "file": "raglite/forecasting/hybrid/preprocessing_regressors.py",
+      "lineno": 174,
+      "name": "select_regressors",
+      "lines": 175
+    },
+    "scripts/archive/reingest-test-pages-improved.py:main": {
+      "file": "scripts/archive/reingest-test-pages-improved.py",
+      "lineno": 22,
+      "name": "main",
+      "lines": 173
+    },
+    "scripts/investigate_poor_performers.py:investigate_poor_performers": {
+      "file": "scripts/investigate_poor_performers.py",
+      "lineno": 21,
+      "name": "investigate_poor_performers",
+      "lines": 172
+    },
+    "scripts/validate-cement-forecasting-12vars.py:fetch_external_regressors": {
+      "file": "scripts/validate-cement-forecasting-12vars.py",
+      "lineno": 582,
+      "name": "fetch_external_regressors",
+      "lines": 172
+    },
+    "scripts/archive/debug-page-20-layout-detection.py:main": {
+      "file": "scripts/archive/debug-page-20-layout-detection.py",
+      "lineno": 19,
+      "name": "main",
+      "lines": 172
+    },
+    "scripts/archive/verify-ground-truth-pages.py:verify_ground_truth_pages": {
+      "file": "scripts/archive/verify-ground-truth-pages.py",
+      "lineno": 21,
+      "name": "verify_ground_truth_pages",
+      "lines": 172
+    },
+    "scripts/validate-all-forecasting-models.py:validate_variable": {
+      "file": "scripts/validate-all-forecasting-models.py",
+      "lineno": 1007,
+      "name": "validate_variable",
+      "lines": 167
+    },
+    "scripts/archive/validate-pages-direct.py:main": {
+      "file": "scripts/archive/validate-pages-direct.py",
+      "lineno": 170,
+      "name": "main",
+      "lines": 167
+    },
+    "scripts/diagnose_ebitda_periods.py:main": {
+      "file": "scripts/diagnose_ebitda_periods.py",
+      "lineno": 40,
+      "name": "main",
+      "lines": 165
+    },
+    "scripts/validate-all-forecasting-models.py:main": {
+      "file": "scripts/validate-all-forecasting-models.py",
+      "lineno": 1465,
+      "name": "main",
+      "lines": 164
+    },
+    "scripts/archive/diagnose-phase2a.py:main": {
+      "file": "scripts/archive/diagnose-phase2a.py",
+      "lineno": 10,
+      "name": "main",
+      "lines": 164
+    },
+    "scripts/archive/migrate-fix-page-numbers.py:main": {
+      "file": "scripts/archive/migrate-fix-page-numbers.py",
+      "lineno": 29,
+      "name": "main",
+      "lines": 163
+    },
+    "raglite/ingestion/classification/period_classifier.py:classify_period": {
+      "file": "raglite/ingestion/classification/period_classifier.py",
+      "lineno": 196,
+      "name": "classify_period",
+      "lines": 161
+    },
+    "scripts/archive/debug-hybrid-search-scoring.py:debug_hybrid_search_scoring": {
+      "file": "scripts/archive/debug-hybrid-search-scoring.py",
+      "lineno": 25,
+      "name": "debug_hybrid_search_scoring",
+      "lines": 160
+    },
+    "scripts/archive/validate-pages-smart.py:main": {
+      "file": "scripts/archive/validate-pages-smart.py",
+      "lineno": 214,
+      "name": "main",
+      "lines": 158
+    },
+    "scripts/archive/test-phase-2.7.5-context-inference.py:main": {
+      "file": "scripts/archive/test-phase-2.7.5-context-inference.py",
+      "lineno": 30,
+      "name": "main",
+      "lines": 157
+    },
+    "scripts/archive/validate-pages-via-qdrant.py:main": {
+      "file": "scripts/archive/validate-pages-via-qdrant.py",
+      "lineno": 104,
+      "name": "main",
+      "lines": 157
+    },
+    "migrations/migration_007_add_classification_columns.py:apply_migration": {
+      "file": "migrations/migration_007_add_classification_columns.py",
+      "lineno": 36,
+      "name": "apply_migration",
+      "lines": 156
+    },
+    "scripts/archive/validate-routing-improvements.py:validate_routing_improvements": {
+      "file": "scripts/archive/validate-routing-improvements.py",
+      "lineno": 36,
+      "name": "validate_routing_improvements",
+      "lines": 156
+    },
+    "scripts/archive/analyze-and-normalize-entities.py:main": {
+      "file": "scripts/archive/analyze-and-normalize-entities.py",
+      "lineno": 163,
+      "name": "main",
+      "lines": 155
+    },
+    "scripts/archive/test-adaptive-framework-page23.py:main": {
+      "file": "scripts/archive/test-adaptive-framework-page23.py",
+      "lineno": 41,
+      "name": "main",
+      "lines": 155
+    },
+    "scripts/archive/root-cause-analysis-story-2.15.py:generate_rca_report": {
+      "file": "scripts/archive/root-cause-analysis-story-2.15.py",
+      "lineno": 364,
+      "name": "generate_rca_report",
+      "lines": 153
+    },
+    "scripts/archive/fix-tsvector-trigger.py:fix_tsvector_trigger": {
+      "file": "scripts/archive/fix-tsvector-trigger.py",
+      "lineno": 27,
+      "name": "fix_tsvector_trigger",
+      "lines": 152
+    },
+    "scripts/validate-all-forecasting-models.py:run_individual_model": {
+      "file": "scripts/validate-all-forecasting-models.py",
+      "lineno": 632,
+      "name": "run_individual_model",
+      "lines": 151
+    },
+    "scripts/verify-postgres-data-quality.py:verify_data_quality": {
+      "file": "scripts/verify-postgres-data-quality.py",
+      "lineno": 15,
+      "name": "verify_data_quality",
+      "lines": 151
+    },
+    "scripts/backfill-postgresql-from-qdrant.py:main": {
+      "file": "scripts/backfill-postgresql-from-qdrant.py",
+      "lineno": 511,
+      "name": "main",
+      "lines": 150
+    },
+    "scripts/archive/test-statistical-framework-page23.py:main": {
+      "file": "scripts/archive/test-statistical-framework-page23.py",
+      "lineno": 21,
+      "name": "main",
+      "lines": 150
+    },
+    "scripts/archive/test-adaptive-framework-chunk.py:main": {
+      "file": "scripts/archive/test-adaptive-framework-chunk.py",
+      "lineno": 41,
+      "name": "main",
+      "lines": 145
+    },
+    "scripts/benchmark-parallel-ingestion.py:benchmark_parallel_ingestion": {
+      "file": "scripts/benchmark-parallel-ingestion.py",
+      "lineno": 41,
+      "name": "benchmark_parallel_ingestion",
+      "lines": 142
+    },
+    "scripts/archive/analyze-table-structures.py:analyze_page_tables": {
+      "file": "scripts/archive/analyze-table-structures.py",
+      "lineno": 131,
+      "name": "analyze_page_tables",
+      "lines": 142
+    },
+    "scripts/forecast-ebitda-comprehensive.py:investigate_ebitda_data_quality": {
+      "file": "scripts/forecast-ebitda-comprehensive.py",
+      "lineno": 47,
+      "name": "investigate_ebitda_data_quality",
+      "lines": 141
+    },
+    "scripts/archive/test-adaptive-on-small-pdf.py:test_adaptive_extraction": {
+      "file": "scripts/archive/test-adaptive-on-small-pdf.py",
+      "lineno": 26,
+      "name": "test_adaptive_extraction",
+      "lines": 141
+    },
+    "scripts/archive/test-table-cells-api.py:test_table_cells_api": {
+      "file": "scripts/archive/test-table-cells-api.py",
+      "lineno": 23,
+      "name": "test_table_cells_api",
+      "lines": 141
+    },
+    "scripts/validate-mcp-ensemble-forecasting.py:test_ensemble_forecast": {
+      "file": "scripts/validate-mcp-ensemble-forecasting.py",
+      "lineno": 67,
+      "name": "test_ensemble_forecast",
+      "lines": 140
+    },
+    "scripts/backfill-postgresql-from-qdrant.py:extract_structured_rows_from_chunks_batch": {
+      "file": "scripts/backfill-postgresql-from-qdrant.py",
+      "lineno": 283,
+      "name": "extract_structured_rows_from_chunks_batch",
+      "lines": 139
+    },
+    "raglite/forecasting/regressor_fetch.py:fetch_single_regressor": {
+      "file": "raglite/forecasting/regressor_fetch.py",
+      "lineno": 136,
+      "name": "fetch_single_regressor",
+      "lines": 138
+    },
+    "scripts/archive/audit-ground-truth-data-availability.py:check_data_availability": {
+      "file": "scripts/archive/audit-ground-truth-data-availability.py",
+      "lineno": 139,
+      "name": "check_data_availability",
+      "lines": 138
+    },
+    "raglite/forecasting/timeseries/sql_extraction_execution.py:execute_sql_with_fallback": {
+      "file": "raglite/forecasting/timeseries/sql_extraction_execution.py",
+      "lineno": 234,
+      "name": "execute_sql_with_fallback",
+      "lines": 137
+    },
+    "scripts/backfill-postgresql-from-qdrant.py:extract_structured_rows_from_markdown": {
+      "file": "scripts/backfill-postgresql-from-qdrant.py",
+      "lineno": 144,
+      "name": "extract_structured_rows_from_markdown",
+      "lines": 137
+    },
+    "scripts/validate-cement-forecasting-12vars.py:run_external_only_forecast": {
+      "file": "scripts/validate-cement-forecasting-12vars.py",
+      "lineno": 756,
+      "name": "run_external_only_forecast",
+      "lines": 137
+    },
+    "scripts/archive/diagnose-pages-20-21-tables.py:main": {
+      "file": "scripts/archive/diagnose-pages-20-21-tables.py",
+      "lineno": 17,
+      "name": "main",
+      "lines": 137
+    },
+    "scripts/archive/tune-bm25-fusion-weights.py:tune_bm25_fusion_weights": {
+      "file": "scripts/archive/tune-bm25-fusion-weights.py",
+      "lineno": 28,
+      "name": "tune_bm25_fusion_weights",
+      "lines": 137
+    },
+    "scripts/archive/verify-variable-cost-data.py:main": {
+      "file": "scripts/archive/verify-variable-cost-data.py",
+      "lineno": 12,
+      "name": "main",
+      "lines": 137
+    },
+    "scripts/test-entity-validation.py:test_validation": {
+      "file": "scripts/test-entity-validation.py",
+      "lineno": 21,
+      "name": "test_validation",
+      "lines": 136
+    },
+    "scripts/debug_variable_cost.py:main": {
+      "file": "scripts/debug_variable_cost.py",
+      "lineno": 21,
+      "name": "main",
+      "lines": 135
+    },
+    "scripts/validate-external-data-forecasting.py:fetch_real_external_data": {
+      "file": "scripts/validate-external-data-forecasting.py",
+      "lineno": 1300,
+      "name": "fetch_real_external_data",
+      "lines": 135
+    },
+    "scripts/archive/validation/validate_ground_truth.py:validate_ground_truth": {
+      "file": "scripts/archive/validation/validate_ground_truth.py",
+      "lineno": 32,
+      "name": "validate_ground_truth",
+      "lines": 135
+    },
+    "spike/ingest_pdf.py:ingest_pdf": {
+      "file": "spike/ingest_pdf.py",
+      "lineno": 12,
+      "name": "ingest_pdf",
+      "lines": 135
+    },
+    "scripts/archive/test-adaptive-pages-1-20.py:main": {
+      "file": "scripts/archive/test-adaptive-pages-1-20.py",
+      "lineno": 64,
+      "name": "main",
+      "lines": 134
+    },
+    "scripts/fix_group_ebitda_outlier.py:find_impossible_ytd_progression": {
+      "file": "scripts/fix_group_ebitda_outlier.py",
+      "lineno": 453,
+      "name": "find_impossible_ytd_progression",
+      "lines": 132
+    },
+    "scripts/archive/ingest-test-data.py:main": {
+      "file": "scripts/archive/ingest-test-data.py",
+      "lineno": 33,
+      "name": "main",
+      "lines": 132
+    },
+    "scripts/archive/test-metadata-search.py:main": {
+      "file": "scripts/archive/test-metadata-search.py",
+      "lineno": 17,
+      "name": "main",
+      "lines": 132
+    },
+    "scripts/backfill-postgresql-tables.py:main": {
+      "file": "scripts/backfill-postgresql-tables.py",
+      "lineno": 166,
+      "name": "main",
+      "lines": 131
+    },
+    "scripts/generate_failure_report.py:generate_failure_report": {
+      "file": "scripts/generate_failure_report.py",
+      "lineno": 94,
+      "name": "generate_failure_report",
+      "lines": 131
+    },
+    "scripts/archive/inspect-page20-table-structure.py:inspect_page20_tables": {
+      "file": "scripts/archive/inspect-page20-table-structure.py",
+      "lineno": 18,
+      "name": "inspect_page20_tables",
+      "lines": 131
+    },
+    "scripts/debug_energy_costs.py:debug_energy_cost": {
+      "file": "scripts/debug_energy_costs.py",
+      "lineno": 20,
+      "name": "debug_energy_cost",
+      "lines": 129
+    },
+    "scripts/archive/segment-pdf-for-review.py:generate_index_file": {
+      "file": "scripts/archive/segment-pdf-for-review.py",
+      "lineno": 67,
+      "name": "generate_index_file",
+      "lines": 128
+    },
+    "scripts/archive/analyze-table-types.py:main": {
+      "file": "scripts/archive/analyze-table-types.py",
+      "lineno": 141,
+      "name": "main",
+      "lines": 127
+    },
+    "scripts/validate_forecasting_unified.py:main": {
+      "file": "scripts/validate_forecasting_unified.py",
+      "lineno": 1732,
+      "name": "main",
+      "lines": 126
+    },
+    "scripts/archive/validate-adaptive-data-quality.py:main": {
+      "file": "scripts/archive/validate-adaptive-data-quality.py",
+      "lineno": 52,
+      "name": "main",
+      "lines": 126
+    },
+    "raglite/forecasting/timeseries/sql_extraction_normalization_utils/_normalization.py:normalize_ebitda_pre_ytd": {
+      "file": "raglite/forecasting/timeseries/sql_extraction_normalization_utils/_normalization.py",
+      "lineno": 86,
+      "name": "normalize_ebitda_pre_ytd",
+      "lines": 125
+    },
+    "scripts/validate-mcp-multivariate-forecasting.py:test_mcp_forecast": {
+      "file": "scripts/validate-mcp-multivariate-forecasting.py",
+      "lineno": 62,
+      "name": "test_mcp_forecast",
+      "lines": 125
+    },
+    "scripts/archive/reingest-pages-20-21-phase27.py:main": {
+      "file": "scripts/archive/reingest-pages-20-21-phase27.py",
+      "lineno": 27,
+      "name": "main",
+      "lines": 125
+    },
+    "scripts/prepare-reingestion.py:main": {
+      "file": "scripts/prepare-reingestion.py",
+      "lineno": 158,
+      "name": "main",
+      "lines": 124
+    },
+    "scripts/archive/test-dataframe-export.py:test_dataframe_export": {
+      "file": "scripts/archive/test-dataframe-export.py",
+      "lineno": 19,
+      "name": "test_dataframe_export",
+      "lines": 124
+    },
+    "scripts/validate-classification-accuracy.py:main": {
+      "file": "scripts/validate-classification-accuracy.py",
+      "lineno": 215,
+      "name": "main",
+      "lines": 122
+    },
+    "scripts/archive/test-statistical-framework-chunk.py:main": {
+      "file": "scripts/archive/test-statistical-framework-chunk.py",
+      "lineno": 21,
+      "name": "main",
+      "lines": 122
+    },
+    "raglite/forecasting/timeseries/sql_extraction_execution.py:build_entity_filter_clause": {
+      "file": "raglite/forecasting/timeseries/sql_extraction_execution.py",
+      "lineno": 111,
+      "name": "build_entity_filter_clause",
+      "lines": 121
+    },
+    "scripts/archive/analyze-chunk-content.py:analyze_chunks": {
+      "file": "scripts/archive/analyze-chunk-content.py",
+      "lineno": 8,
+      "name": "analyze_chunks",
+      "lines": 121
+    },
+    "scripts/archive/backup-restore/import-postgres-data.py:import_postgres_data": {
+      "file": "scripts/archive/backup-restore/import-postgres-data.py",
+      "lineno": 32,
+      "name": "import_postgres_data",
+      "lines": 121
+    },
+    "scripts/show-available-ebitda-data.py:show_ebitda_data": {
+      "file": "scripts/show-available-ebitda-data.py",
+      "lineno": 12,
+      "name": "show_ebitda_data",
+      "lines": 120
+    },
+    "scripts/archive/inspect_database_for_epic_3.py:inspect_database": {
+      "file": "scripts/archive/inspect_database_for_epic_3.py",
+      "lineno": 23,
+      "name": "inspect_database",
+      "lines": 119
+    },
+    "scripts/archive/populate-entity-normalized.py:main": {
+      "file": "scripts/archive/populate-entity-normalized.py",
+      "lineno": 21,
+      "name": "main",
+      "lines": 119
+    },
+    "raglite/forecasting/ensemble.py:generate_ensemble_forecast": {
+      "file": "raglite/forecasting/ensemble.py",
+      "lineno": 231,
+      "name": "generate_ensemble_forecast",
+      "lines": 118
+    },
+    "scripts/init-ci-qdrant.py:main": {
+      "file": "scripts/init-ci-qdrant.py",
+      "lineno": 80,
+      "name": "main",
+      "lines": 118
+    },
+    "scripts/archive/test-mistral-api.py:test_mistral_api": {
+      "file": "scripts/archive/test-mistral-api.py",
+      "lineno": 14,
+      "name": "test_mistral_api",
+      "lines": 118
+    },
+    "scripts/validate-epic6-accuracy.py:generate_markdown_report": {
+      "file": "scripts/validate-epic6-accuracy.py",
+      "lineno": 299,
+      "name": "generate_markdown_report",
+      "lines": 117
+    },
+    "scripts/inspect_energy_costs.py:inspect_energy_costs": {
+      "file": "scripts/inspect_energy_costs.py",
+      "lineno": 20,
+      "name": "inspect_energy_costs",
+      "lines": 116
+    },
+    "scripts/archive/validate-table-extraction.py:validate_extraction": {
+      "file": "scripts/archive/validate-table-extraction.py",
+      "lineno": 21,
+      "name": "validate_extraction",
+      "lines": 116
+    },
+    "raglite/mcp/tools/admin.py:warmup_forecasting_models": {
+      "file": "raglite/mcp/tools/admin.py",
+      "lineno": 544,
+      "name": "warmup_forecasting_models",
+      "lines": 114
+    },
+    "scripts/classify-sample-data.py:classify_sample": {
+      "file": "scripts/classify-sample-data.py",
+      "lineno": 38,
+      "name": "classify_sample",
+      "lines": 114
+    },
+    "scripts/fix_ebitda_scale_v2.py:normalize_units_to_meur": {
+      "file": "scripts/fix_ebitda_scale_v2.py",
+      "lineno": 187,
+      "name": "normalize_units_to_meur",
+      "lines": 113
+    },
+    "raglite/forecasting/hybrid/forecast_helpers_prophet.py:add_regressors_to_prophet": {
+      "file": "raglite/forecasting/hybrid/forecast_helpers_prophet.py",
+      "lineno": 247,
+      "name": "add_regressors_to_prophet",
+      "lines": 112
+    },
+    "scripts/forecast-ebitda-rag-based.py:forecast_ebitda_rag_based": {
+      "file": "scripts/forecast-ebitda-rag-based.py",
+      "lineno": 190,
+      "name": "forecast_ebitda_rag_based",
+      "lines": 112
+    },
+    "raglite/forecasting/hybrid/model_generators_deep.py:_generate_tft_forecast": {
+      "file": "raglite/forecasting/hybrid/model_generators_deep.py",
+      "lineno": 50,
+      "name": "_generate_tft_forecast",
+      "lines": 111
+    },
+    "scripts/check_file_sizes.py:main": {
+      "file": "scripts/check_file_sizes.py",
+      "lineno": 205,
+      "name": "main",
+      "lines": 111
+    },
+    "scripts/fix_ebitda_scale_v2.py:analyze_current_state": {
+      "file": "scripts/fix_ebitda_scale_v2.py",
+      "lineno": 74,
+      "name": "analyze_current_state",
+      "lines": 111
+    },
+    "story-2.2-pivot-analysis/supporting-scripts/sample_chunks.py:main": {
+      "file": "story-2.2-pivot-analysis/supporting-scripts/sample_chunks.py",
+      "lineno": 9,
+      "name": "main",
+      "lines": 110
+    },
+    "scripts/archive/analyze-table-types.py:analyze_table_structure": {
+      "file": "scripts/archive/analyze-table-types.py",
+      "lineno": 29,
+      "name": "analyze_table_structure",
+      "lines": 110
+    },
+    "scripts/archive/migrations/reingest-full-pdf-adaptive.py:main": {
+      "file": "scripts/archive/migrations/reingest-full-pdf-adaptive.py",
+      "lineno": 45,
+      "name": "main",
+      "lines": 110
+    },
+    "scripts/export-qdrant-snapshot.py:export_qdrant_data": {
+      "file": "scripts/export-qdrant-snapshot.py",
+      "lineno": 29,
+      "name": "export_qdrant_data",
+      "lines": 109
+    },
+    "scripts/archive/backup-restore/export-qdrant-snapshot.py:export_qdrant_snapshot": {
+      "file": "scripts/archive/backup-restore/export-qdrant-snapshot.py",
+      "lineno": 30,
+      "name": "export_qdrant_snapshot",
+      "lines": 109
+    },
+    "scripts/import-qdrant-snapshot.py:import_qdrant_data": {
+      "file": "scripts/import-qdrant-snapshot.py",
+      "lineno": 98,
+      "name": "import_qdrant_data",
+      "lines": 108
+    },
+    "scripts/rebuild_bm25_index.py:main": {
+      "file": "scripts/rebuild_bm25_index.py",
+      "lineno": 21,
+      "name": "main",
+      "lines": 108
+    },
+    "scripts/validate-epic6-accuracy.py:main": {
+      "file": "scripts/validate-epic6-accuracy.py",
+      "lineno": 418,
+      "name": "main",
+      "lines": 108
+    },
+    "scripts/archive/validate-story-2.13-v2.py:run_validation": {
+      "file": "scripts/archive/validate-story-2.13-v2.py",
+      "lineno": 41,
+      "name": "run_validation",
+      "lines": 108
+    },
+    "scripts/archive/add-test-ids-batch.py:process_file": {
+      "file": "scripts/archive/add-test-ids-batch.py",
+      "lineno": 218,
+      "name": "process_file",
+      "lines": 107
+    },
+    "scripts/archive/test-new-table-extraction.py:test_new_extraction": {
+      "file": "scripts/archive/test-new-table-extraction.py",
+      "lineno": 20,
+      "name": "test_new_extraction",
+      "lines": 107
+    },
+    "scripts/init-production.py:initialize_postgresql_production": {
+      "file": "scripts/init-production.py",
+      "lineno": 145,
+      "name": "initialize_postgresql_production",
+      "lines": 106
+    },
+    "raglite/ingestion/quality_pipeline_phases.py:run": {
+      "file": "raglite/ingestion/quality_pipeline_phases.py",
+      "lineno": 181,
+      "name": "run",
+      "lines": 105
+    },
+    "scripts/validate-mcp-ensemble-forecasting.py:print_results": {
+      "file": "scripts/validate-mcp-ensemble-forecasting.py",
+      "lineno": 258,
+      "name": "print_results",
+      "lines": 105
+    },
+    "scripts/archive/test-sql-generation.py:test_sql_generation_single": {
+      "file": "scripts/archive/test-sql-generation.py",
+      "lineno": 180,
+      "name": "test_sql_generation_single",
+      "lines": 105
+    },
+    "scripts/archive/validate-story-2.13-v2.py:get_rag_answer": {
+      "file": "scripts/archive/validate-story-2.13-v2.py",
+      "lineno": 151,
+      "name": "get_rag_answer",
+      "lines": 105
+    },
+    "scripts/archive/validate-story-2.13.py:main": {
+      "file": "scripts/archive/validate-story-2.13.py",
+      "lineno": 441,
+      "name": "main",
+      "lines": 105
+    },
+    "raglite/forecasting/timeseries/period_classification.py:classify_period": {
+      "file": "raglite/forecasting/timeseries/period_classification.py",
+      "lineno": 88,
+      "name": "classify_period",
+      "lines": 104
+    },
+    "raglite/mcp/tools/health.py:check_forecast_readiness": {
+      "file": "raglite/mcp/tools/health.py",
+      "lineno": 156,
+      "name": "check_forecast_readiness",
+      "lines": 103
+    },
+    "raglite/forecasting/timeseries/qdrant_ebitda.py:_aggregate_ebitda_by_period": {
+      "file": "raglite/forecasting/timeseries/qdrant_ebitda.py",
+      "lineno": 94,
+      "name": "_aggregate_ebitda_by_period",
+      "lines": 102
+    },
+    "scripts/show-ebitda-ifrs-data.py:show_ebitda_ifrs": {
+      "file": "scripts/show-ebitda-ifrs-data.py",
+      "lineno": 12,
+      "name": "show_ebitda_ifrs",
+      "lines": 102
+    },
+    "scripts/archive/validation/ground_truth_v2_master.py:validate_query_answer": {
+      "file": "scripts/archive/validation/ground_truth_v2_master.py",
+      "lineno": 729,
+      "name": "validate_query_answer",
+      "lines": 102
+    },
+    "raglite/ingestion/classification/integration.py:generate_classification_summary": {
+      "file": "raglite/ingestion/classification/integration.py",
+      "lineno": 199,
+      "name": "generate_classification_summary",
+      "lines": 101
+    },
+    "scripts/validate-epic6-accuracy.py:run_forecast_and_evaluate": {
+      "file": "scripts/validate-epic6-accuracy.py",
+      "lineno": 134,
+      "name": "run_forecast_and_evaluate",
+      "lines": 101
+    }
+  }
 }

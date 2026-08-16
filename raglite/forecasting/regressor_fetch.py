@@ -24,6 +24,11 @@ from datetime import date, timedelta
 
 import pandas as pd
 
+from raglite.forecasting.internal_regressor_fetch import (
+    INTERNAL_REGRESSOR_MAPPINGS,
+    fetch_internal_metric_as_regressor,
+    fetch_internal_regressors_for_metric,
+)
 from raglite.forecasting.regressor_config import get_default_regressors
 from raglite.forecasting.regressors.ecb_fetchers import (
     fetch_euribor_3m,
@@ -386,3 +391,14 @@ async def fetch_regressors_with_date_range(
         end_date=end_date,
         regressor_names=regressor_names,
     )
+
+
+__all__ = [
+    "interpolate_quarterly_series_to_monthly",
+    "fetch_single_regressor",
+    "fetch_regressors_for_metric",
+    "fetch_regressors_with_date_range",
+    "fetch_internal_metric_as_regressor",
+    "fetch_internal_regressors_for_metric",
+    "INTERNAL_REGRESSOR_MAPPINGS",
+]

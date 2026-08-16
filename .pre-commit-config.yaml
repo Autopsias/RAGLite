@@ -46,7 +46,12 @@ repos:
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
+        # tools/check_*.py + ratchetlib.py are vendored byte-identical from
+        # ~/.claude/scripts/quality; local reformatting would break the
+        # vendor_quality.py --check drift gate.
+        exclude: ^tools/(check_.*|ratchetlib)\.py$
       - id: ruff-format
+        exclude: ^tools/(check_.*|ratchetlib)\.py$
 
   # MyPy - Type checking for raglite/ production code (enabled Phase 1)
   # NOTE: additional_dependencies must include all packages used in raglite/ for proper type checking
@@ -122,14 +127,9 @@ repos:
         stages: [pre-commit]
         files: ^tests/.*\.py$
 
-      # File size limits - prevent large file proliferation
-      - id: check-file-sizes
-        name: check-python-file-sizes
-        entry: python scripts/check_file_sizes.py
-        language: python
-        pass_filenames: false
-        stages: [pre-commit]
-        always_run: true
+      # File size limits moved to the file-size-ratchet hook below (vendored
+      # tools/check_file_sizes.py --staged); scripts/check_file_sizes.py was a
+      # diverging local copy and is no longer wired.
 
       # Pytest fixture validation - catch missing fixtures before commit
       # Root cause fix: Story 8 strategic analysis identified 78 tests failing
@@ -208,3 +208,38 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
         files: ^(raglite/.*\.py|tests/fixtures/mock_clients\.py)$
+  - repo: https://github.com/semgrep/pre-commit
+    rev: 'v1.168.0'
+    hooks:
+      - id: semgrep
+        args: ['--config', 'p/python', '--config', 'p/secrets', '--error', '--skip-unknown-extensions']
+
+  # Quality ratchet (vendored copies in tools/ -- source of truth is gearbox
+  # scripts/quality/, re-sync: python3 ~/.claude/scripts/quality/vendor_quality.py .).
+  # --staged: judges ONLY staged files, and blocks only what this commit makes
+  # worse than every commit parent (HEAD + MERGE_HEAD); inherited debt warns
+  # with a re-record instruction. CI (.github/workflows/quality-ratchet.yml)
+  # re-runs all three whole-project, so a local SKIP is visible, never final.
+  # Sanctioned bypass: SKIP=<hook-id> git commit ...  NEVER --no-verify.
+  - repo: local
+    hooks:
+      - id: file-size-ratchet
+        name: no staged file grows past the size limit (baseline only shrinks)
+        entry: python3 tools/check_file_sizes.py --staged
+        language: system
+        pass_filenames: false
+        files: '\.py$'
+
+      - id: function-length-ratchet
+        name: no staged function grows past the length limit
+        entry: python3 tools/check_function_lengths.py --staged
+        language: system
+        pass_filenames: false
+        files: '\.py$'
+
+      - id: complexity-ratchet
+        name: no staged function grows past complexity 12
+        entry: python3 tools/check_complexity.py --staged
+        language: system
+        pass_filenames: false
+        files: '\.py$'

@@ -5,14 +5,14 @@ and strategic recommendations.
 """
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 # Story 4.5: Anomaly detection models
-class AnomalySeverity(str, Enum):
+class AnomalySeverity(StrEnum):
     """Severity levels for detected anomalies.
 
     Story 4.5 AC3: Anomaly severity scoring based on Z-score thresholds.
@@ -84,7 +84,7 @@ class AnomalyDetectionResult(BaseModel):
 
 
 # Story 4.6: Trend analysis and pattern recognition models
-class TrendDirection(str, Enum):
+class TrendDirection(StrEnum):
     """Direction of detected trend.
 
     Story 4.6 AC3: Trend direction characterization.
@@ -178,7 +178,7 @@ class TrendAnalysisResult(BaseModel):
 
 
 # Story 4.7: Proactive insight generation models
-class InsightCategory(str, Enum):
+class InsightCategory(StrEnum):
     """Category of proactive insight.
 
     Story 4.7 AC2: Insight categorization.
@@ -265,7 +265,7 @@ class InsightGenerationResult(BaseModel):
 
 
 # Story 4.8: Strategic recommendation engine models
-class RecommendationCategory(str, Enum):
+class RecommendationCategory(StrEnum):
     """Category of strategic recommendation.
 
     Story 4.8 AC1: Recommendation categorization based on insight type.

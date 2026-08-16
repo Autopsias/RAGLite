@@ -281,6 +281,41 @@ def _shutdown_scheduler_sync() -> None:
         logger.warning(f"Error during scheduler shutdown: {e}")
 
 
+def _validate_database_environment() -> None:
+    """Validate database environment at startup and warn if non-production.
+
+    Forecast reliability fix (2026-02-02): Shell environment variables can
+    override .env settings, causing forecasts to query empty CI database.
+    This warning helps users detect the issue immediately at startup.
+    """
+    from raglite.shared.config import detect_env_overrides, validate_forecast_environment
+
+    env_status = validate_forecast_environment()
+
+    if not env_status["is_production"]:
+        overrides = detect_env_overrides()
+        logger.warning(
+            "Non-production database detected - forecasts may return no data!",
+            extra={
+                "database": env_status["database"],
+                "port": env_status["port"],
+                "expected_database": env_status["expected_database"],
+                "expected_port": env_status["expected_port"],
+                "env_overrides": list(overrides.keys()) if overrides else [],
+                "fix_command": env_status["fix_command"],
+            },
+        )
+    else:
+        logger.info(
+            "Database environment validated",
+            extra={
+                "database": env_status["database"],
+                "port": env_status["port"],
+                "status": "production",
+            },
+        )
+
+
 def main() -> None:
     """Main entry point for RAGLite MCP server."""
     import atexit
@@ -295,6 +330,9 @@ def main() -> None:
             "preload_tft_model": settings.preload_tft_model,
         },
     )
+
+    # Validate database environment (warn if non-production)
+    _validate_database_environment()
 
     # Preload forecasting models and warm database connections at startup
     # This avoids first-request latency that causes MCP timeouts

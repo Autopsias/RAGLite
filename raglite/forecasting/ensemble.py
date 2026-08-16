@@ -75,12 +75,27 @@ def _calculate_weighted_average(
 
 # Import helper functions from hybrid module (will be moved to proper modules in future refactoring)
 def select_regressors(
-    target_series: pd.Series, external_regressors: dict[str, pd.Series]
-) -> list[str]:
-    """Wrapper for select_regressors - imports from hybrid module."""
+    target_series: pd.Series,
+    external_regressors: dict[str, pd.Series],
+    metric_name: str | None = None,
+    return_lag_info: bool = False,
+) -> list[str] | dict[str, tuple[float, int]]:
+    """Wrapper for select_regressors - imports from hybrid module.
+
+    Args:
+        target_series: Target time-series
+        external_regressors: Dict of candidate regressors
+        metric_name: Metric name for threshold selection
+        return_lag_info: If True, return dict with (correlation, lag) tuples
+
+    Returns:
+        List of regressor names OR dict of {name: (correlation, lag)} if return_lag_info=True
+    """
     from raglite.forecasting.hybrid import select_regressors as select_impl
 
-    return select_impl(target_series, external_regressors)
+    return select_impl(
+        target_series, external_regressors, metric_name=metric_name, return_lag_info=return_lag_info
+    )
 
 
 def prepare_regressors(
@@ -262,8 +277,10 @@ async def generate_ensemble_forecast(
         extra={"metric": metric, "models": models, "weights": weights},
     )
 
-    # Step 2: Prepare data
-    X, y, selected, prepared = prepare_ensemble_data(historical_data, external_regressors, logger)
+    # Step 2: Prepare data (pass metric for appropriate threshold selection)
+    X, y, selected, prepared = prepare_ensemble_data(
+        historical_data, external_regressors, logger, metric=metric
+    )
 
     # Build DataFrame for forecast point generation
     df = _build_historical_dataframe(historical_data)

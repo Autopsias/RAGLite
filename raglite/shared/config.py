@@ -325,3 +325,62 @@ def _log_settings_state(prefix: str = "Settings state") -> None:
             "github_actions": os.getenv("GITHUB_ACTIONS") == "true",
         },
     )
+
+
+def detect_env_overrides() -> dict[str, str]:
+    """Detect when shell environment variables override .env settings.
+
+    Common debugging issue (2026-02-02): Shell variables like POSTGRES_DB=raglite_ci
+    from previous test runs persist and override .env file settings, causing
+    forecasts to query empty CI database instead of production.
+
+    Returns:
+        Dictionary of environment variable names that are set in shell
+        (these override .env file values)
+    """
+    env_vars = [
+        "POSTGRES_DB",
+        "POSTGRES_PORT",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+        "APP_ENV",
+        "QDRANT_PORT",
+        "QDRANT_HOST",
+    ]
+    overrides = {}
+    for var in env_vars:
+        shell_value = os.environ.get(var)
+        if shell_value:
+            overrides[var] = shell_value
+    return overrides
+
+
+def validate_forecast_environment() -> dict:
+    """Validate that forecast environment is correctly configured.
+
+    Use this to diagnose "wrong database" issues before running forecasts.
+
+    Returns:
+        Dict with database config, expected values, validation status,
+        and any detected shell overrides
+    """
+    s = get_settings()
+    overrides = detect_env_overrides()
+
+    # Expected production values
+    is_production = s.postgres_db == "raglite" and s.postgres_port == 5432
+
+    return {
+        "database": s.postgres_db,
+        "port": s.postgres_port,
+        "expected_database": "raglite",
+        "expected_port": 5432,
+        "is_production": is_production,
+        "status": "ok" if is_production else "warning",
+        "env_overrides": overrides,
+        "fix_command": (
+            "unset APP_ENV POSTGRES_PORT POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD"
+            if overrides
+            else None
+        ),
+    }

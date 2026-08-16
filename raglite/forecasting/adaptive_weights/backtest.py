@@ -80,8 +80,8 @@ def calculate_backtest_weights(
         return {}
     train_df, test_df = split_result
 
-    # Build feature matrix
-    feature_data = _build_feature_matrix(train_df, test_df, external_regressors)
+    # Build feature matrix (pass metric for appropriate threshold selection)
+    feature_data = _build_feature_matrix(train_df, test_df, external_regressors, metric=metric)
     if feature_data is None:
         return {}
     X_train, X_test, y_train, y_test = feature_data
@@ -155,13 +155,18 @@ def _build_feature_matrix(
     train_df: pd.DataFrame,
     test_df: pd.DataFrame,
     external_regressors: dict[str, pd.Series] | None,
+    metric: str | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, np.ndarray] | None:
     """Build feature matrix for sklearn models from external regressors.
+
+    Forecast reliability fix (2026-02-02): Added metric parameter for appropriate
+    correlation threshold selection (lower for profit metrics like EBITDA).
 
     Args:
         train_df: Training DataFrame with 'ds' and 'y' columns
         test_df: Test DataFrame with 'ds' and 'y' columns
         external_regressors: Optional external regressor series
+        metric: Metric name (used to determine correlation threshold)
 
     Returns:
         Tuple of (X_train, X_test, y_train, y_test) or None if no features
@@ -173,7 +178,8 @@ def _build_feature_matrix(
     if external_regressors:
         from raglite.forecasting.hybrid import prepare_regressors, select_regressors
 
-        selected = select_regressors(target_series, external_regressors)
+        # Forecast reliability fix: Pass metric name for appropriate threshold
+        selected = select_regressors(target_series, external_regressors, metric_name=metric)
         if selected:
             # Prepare regressors for both train and test
             train_idx = pd.DatetimeIndex(train_df["ds"])
