@@ -60,6 +60,7 @@ dependencies = [
     "pmdarima>=2.0,<3.0",      # Story 7.1: Auto-ARIMA model selection
     # TODO Epic 3: AWS Strands agentic framework - uncomment when implementing Story 3.1
     # "strands>=1.15.0,<2.0.0",  # Agentic orchestration (Story 3.1+)
+    "arize-phoenix-otel>=0.17.1",
 ]
 
 [project.urls]
@@ -178,6 +179,12 @@ ignore = [
     "B008",  # Do not perform function calls in argument defaults
     "C901",  # Too complex (will address in Phase 4 refactoring)
 ]
+
+[tool.ruff.lint.isort]
+# Explicitly specify first-party package for consistent CI behavior
+# Without this, ruff may not recognize 'raglite' as first-party in CI
+# where the package isn't installed
+known-first-party = ["raglite"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # Unused imports in __init__.py are OK

@@ -256,3 +256,127 @@ async def check_forecast_readiness() -> str:
     )
 
     return result.model_dump_json(indent=2)
+
+
+class ForecastEnvironmentResult(BaseModel):
+    """Result from forecast environment check."""
+
+    is_production: bool = Field(description="Whether connected to production database")
+    database: str = Field(description="Current database name")
+    port: int = Field(description="Current database port")
+    expected_database: str = Field(default="raglite", description="Expected production database")
+    expected_port: int = Field(default=5432, description="Expected production port")
+    has_data: bool = Field(default=False, description="Whether database has financial data")
+    data_row_count: int = Field(default=0, description="Number of rows in financial_tables")
+    env_overrides: list[str] = Field(
+        default_factory=list, description="Environment variables overriding .env"
+    )
+    fix_command: str | None = Field(
+        default=None, description="Command to fix environment if misconfigured"
+    )
+    recommendations: list[str] = Field(default_factory=list, description="Actions to fix issues")
+
+
+def _get_database_row_count() -> int:
+    """Get row count from financial_tables."""
+    try:
+        from sqlalchemy import text
+
+        from raglite.shared.database import get_session
+
+        session = get_session()
+        result = session.execute(text("SELECT COUNT(*) FROM financial_tables"))
+        count = result.scalar() or 0
+        session.close()
+        return count
+    except Exception:
+        return 0
+
+
+@mcp.tool()
+async def check_forecast_environment() -> str:
+    """Check if forecast environment is correctly configured.
+
+    Use this tool to diagnose "wrong database" issues where forecasts
+    return no data due to shell environment variables overriding .env settings.
+
+    **Common scenario:**
+    After running tests, shell environment may have POSTGRES_DB=raglite_ci set.
+    This causes forecasts to query the empty CI database instead of production.
+
+    **What this tool checks:**
+    - Current database name and port
+    - Whether environment variables are overriding .env
+    - Whether the database actually contains financial data
+    - Provides fix command if misconfigured
+
+    **When to use:**
+    - Forecasts returning "insufficient data" errors unexpectedly
+    - After running tests in the same terminal
+    - Server startup shows non-production database warning
+
+    Returns:
+        JSON string with ForecastEnvironmentResult containing configuration status
+    """
+    from raglite.shared.config import (
+        detect_env_overrides,
+        get_settings,
+        validate_forecast_environment,
+    )
+
+    logger.info("Checking forecast environment configuration")
+
+    current_settings = get_settings()
+    env_status = validate_forecast_environment()
+    overrides = detect_env_overrides()
+    row_count = _get_database_row_count()
+
+    recommendations: list[str] = []
+
+    # Check for non-production database
+    if not env_status["is_production"]:
+        recommendations.append(
+            f"Connected to '{current_settings.postgres_db}' instead of 'raglite'. "
+            "Forecasts will return no data."
+        )
+        if env_status["fix_command"]:
+            recommendations.append(f"Fix: Run '{env_status['fix_command']}' and restart server.")
+
+    # Check for empty database
+    if row_count == 0:
+        recommendations.append(
+            f"Database '{current_settings.postgres_db}' has no financial data. "
+            "Re-ingest documents or check database configuration."
+        )
+
+    # Check for environment overrides
+    if overrides:
+        recommendations.append(
+            f"Shell environment variables are overriding .env: {list(overrides.keys())}. "
+            "These persist from previous test runs."
+        )
+
+    result = ForecastEnvironmentResult(
+        is_production=env_status["is_production"],
+        database=current_settings.postgres_db,
+        port=current_settings.postgres_port,
+        expected_database="raglite",
+        expected_port=5432,
+        has_data=row_count > 0,
+        data_row_count=row_count,
+        env_overrides=list(overrides.keys()),
+        fix_command=env_status.get("fix_command"),
+        recommendations=recommendations,
+    )
+
+    logger.info(
+        "Forecast environment check complete",
+        extra={
+            "is_production": result.is_production,
+            "database": result.database,
+            "has_data": result.has_data,
+            "env_overrides": result.env_overrides,
+        },
+    )
+
+    return result.model_dump_json(indent=2)

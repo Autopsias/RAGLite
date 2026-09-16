@@ -1,11 +1,140 @@
 """SQL extraction configuration and lookup functions.
 
 Part of Story 8.1 refactoring to split sql_extraction.py.
+Epic 9 multi-entity support: Added MetricEntityConfig for flexible entity configuration.
 """
+
+from dataclasses import dataclass, field
 
 from raglite.shared.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+# ============================================================================
+# METRIC ENTITY CONFIGURATION - Epic 9 Multi-Entity Support
+# ============================================================================
+
+
+@dataclass
+class MetricEntityConfig:
+    """Configuration for a metric's entity relationships.
+
+    Epic 9 multi-entity support: Replaces the 1:1 dictionary mapping in
+    get_entity_filters() with flexible configuration supporting multiple
+    entities per metric.
+
+    Attributes:
+        metric: Metric name (e.g., "EBITDA IFRS", "Variable Cost")
+        default_entity: Default entity if user doesn't specify (e.g., "GROUP", "Portugal")
+        supported_entities: All valid entities for this metric
+        prefer_ytd: Whether to prefer YTD data (for cumulative metrics like EBITDA)
+        default_entity_level: Semantic filter level (consolidated, geographic, segment)
+                             None means allow all levels
+    """
+
+    metric: str
+    default_entity: str | None = None
+    supported_entities: list[str] = field(default_factory=list)
+    prefer_ytd: bool = False
+    default_entity_level: str | None = None  # None = allow all levels
+
+
+# Multi-entity configurations for supported metrics
+# Epic 9: Enables forecasting for all entities per metric instead of 1:1 hardcoding
+METRIC_CONFIGS: dict[str, MetricEntityConfig] = {
+    "EBITDA IFRS": MetricEntityConfig(
+        metric="EBITDA IFRS",
+        default_entity="GROUP",
+        supported_entities=["GROUP", "Portugal", "Angola", "Brazil", "Tunisia", "Lebanon"],
+        prefer_ytd=True,
+        default_entity_level=None,  # Allow all levels by default
+    ),
+    "Variable Cost": MetricEntityConfig(
+        metric="Variable Cost",
+        default_entity="Portugal",
+        supported_entities=["Portugal", "Angola", "Brazil", "Tunisia", "Lebanon"],
+        prefer_ytd=False,
+        default_entity_level="geographic",  # Operational metrics are geographic
+    ),
+    "Electrical Energy": MetricEntityConfig(
+        metric="Electrical Energy",
+        default_entity="Portugal",
+        supported_entities=["Portugal", "Angola", "Brazil", "Tunisia", "Lebanon"],
+        prefer_ytd=False,
+        default_entity_level="geographic",
+    ),
+    "Thermal Energy": MetricEntityConfig(
+        metric="Thermal Energy",
+        default_entity="Portugal",
+        supported_entities=["Portugal", "Angola", "Brazil", "Tunisia", "Lebanon"],
+        prefer_ytd=False,
+        default_entity_level="geographic",
+    ),
+    "Sales Volumes": MetricEntityConfig(
+        metric="Sales Volumes",
+        default_entity="Portugal",
+        supported_entities=["Portugal", "Angola", "Brazil", "Tunisia", "Lebanon"],
+        prefer_ytd=False,
+        default_entity_level="geographic",
+    ),
+    "turnover": MetricEntityConfig(
+        metric="turnover",
+        default_entity=None,  # No default - allow all entities
+        supported_entities=["GROUP", "Portugal", "Angola", "Brazil", "Tunisia", "Lebanon"],
+        prefer_ytd=False,
+        default_entity_level=None,
+    ),
+}
+
+
+def get_metric_entity_config(metric: str) -> MetricEntityConfig | None:
+    """Get multi-entity configuration for a metric.
+
+    Args:
+        metric: Metric name (case-insensitive)
+
+    Returns:
+        MetricEntityConfig if defined, None otherwise
+    """
+    # Try exact match first
+    if metric in METRIC_CONFIGS:
+        return METRIC_CONFIGS[metric]
+
+    # Try case-insensitive match
+    metric_lower = metric.lower()
+    for config_metric, config in METRIC_CONFIGS.items():
+        if config_metric.lower() == metric_lower:
+            return config
+
+    return None
+
+
+def is_entity_supported_for_metric(metric: str, entity: str) -> bool:
+    """Check if an entity is supported for a given metric.
+
+    Args:
+        metric: Metric name
+        entity: Entity name to check
+
+    Returns:
+        True if entity is in the metric's supported_entities list,
+        or True if no config exists (default: allow all)
+    """
+    config = get_metric_entity_config(metric)
+    if config is None:
+        return True  # No config = allow all entities
+
+    if not config.supported_entities:
+        return True  # Empty list = allow all entities
+
+    # Case-insensitive entity comparison
+    entity_upper = entity.upper()
+    for supported in config.supported_entities:
+        if supported.upper() == entity_upper:
+            return True
+
+    return False
 
 
 # Unit scaling factors to normalize to EUR millions (M EUR).
@@ -36,6 +165,12 @@ UNIT_SCALING_FACTORS: dict[str | None, float] = {
     "EUR/MWh": 1.0,
     "€/ton": 1.0,
     "€/MWh": 1.0,
+    # Fix 2026-02-02: LCU (Local Currency Unit) = EUR for Portugal
+    # Thermal Energy data has mixed EUR/ton and LCU/ton units
+    "LCU/ton": 1.0,
+    "lcu/ton": 1.0,
+    "LCU/MWh": 1.0,
+    "lcu/MWh": 1.0,
     # Regional currencies in thousands → scale to M EUR (approximate)
     # Note: These need FX rates for accurate conversion, using 0.001 as proxy
     "1000 BRL": 0.001,  # ~0.0002 actual (BRL/EUR ~5.5)
@@ -201,13 +336,19 @@ def get_entity_filters() -> dict[str, tuple[str | None, bool]]:
     The unit normalization (Phase 2) handles the kEUR scaling instead.
     """
     return {
-        # EBITDA IFRS: Use Portugal entity filter + YTD-to-monthly conversion
-        # Fix 2026-01-30: Changed GROUP to portugal to match validation script and database reality.
-        # Investigation found: Portugal has 479 EBITDA records vs GROUP's 181.
-        # Entity mismatch between config (GROUP) and validation script (Portugal) caused
-        # discovery phase to fail finding data, resulting in N/A validation results.
+        # EBITDA IFRS: Use GROUP entity filter + YTD-to-monthly conversion
+        # Fix 2026-02-03: Changed portugal back to GROUP based on validation report evidence:
+        # - GROUP EBITDA: MAPE 9.63%, FQS 85.1 (Excellent quality)
+        # - Portugal EBITDA: MAPE 102.90%, FQS 62.5 (Moderate quality)
+        # GROUP data is cleaner despite fewer rows (181 vs 479) because Portugal data
+        # contains unit mixing (M EUR + 1000 BRL/AOA) and entity contamination.
         # prefer_ytd=True converts YTD to monthly: Jan=€11M, Feb=€10.6M (delta), etc.
-        "EBITDA IFRS": ("portugal", True),
+        # Fix 2026-02-03: Added lowercase variants for case-insensitive lookup.
+        # MCP tool normalizes metrics to lowercase, so we need both uppercase (DB) and
+        # lowercase (MCP) keys to ensure correct entity filtering.
+        "EBITDA IFRS": ("GROUP", True),
+        "ebitda ifrs": ("GROUP", True),
+        "ebitda": ("GROUP", True),
         # Turnover/Revenue: No entity filter - uses unit-based normalization instead
         # Entity values are "Currency (1000 EUR)" not "GROUP"
         "turnover": (None, False),
@@ -239,6 +380,7 @@ def get_max_aggregation_metrics() -> set[str]:
 
     Story 6.26: MAX prevents duplicate document summing for consolidated metrics.
     Phase 2 data quality: Added turnover to prevent duplicate summing.
+    Fix 2026-02-02: Added Cash Flow metrics to handle table duplication.
     """
     return {
         "EBITDA IFRS",
@@ -252,6 +394,12 @@ def get_max_aggregation_metrics() -> set[str]:
         "Sales Volumes",
         "sales volumes",
         "Volume IM - kton",
+        # Fix 2026-02-02: Cash Flow has duplicates from different tables in same doc
+        # table_index=1 (page 49) vs table_index=7 (page 60) - MAX picks consistent value
+        "Cash Flow from Operating Activities",
+        "Cash Flow",
+        "Net Cash Flow",
+        "cash flow",
     }
 
 
@@ -259,10 +407,13 @@ def get_avg_aggregation_metrics() -> set[str]:
     """Get metrics that use AVG aggregation.
 
     Story 7.0: AVG normalizes row count variance for electrical energy.
+    Fix 2026-02-02: Added Thermal Energy - daily->monthly aggregation needs AVG.
     """
     return {
         "Electrical Energy",
         "electrical energy",
+        "Thermal Energy",
+        "thermal energy",
     }
 
 

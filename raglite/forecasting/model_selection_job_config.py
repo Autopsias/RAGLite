@@ -24,7 +24,9 @@ VARIABLE_CONFIG: dict[str, dict] = {
     "sales_volume": {
         "type": "internal",
         "aliases": ["Sales Volumes", "sales volumes", "Volume IM - kton"],
-        "aggregation": "sum",
+        # Fix 2026-02-02: Changed from "sum" to "max" - matches sql_extraction_config.py
+        # SUM was double-counting when multiple document sources had same period data
+        "aggregation": "max",
     },
     "thermal_cost": {
         "type": "internal",

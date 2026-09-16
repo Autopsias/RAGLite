@@ -18,14 +18,14 @@ from __future__ import annotations
 import logging
 import os
 import sys
-from enum import Enum
+from enum import StrEnum
 
 from raglite.shared.config import settings
 
 logger = logging.getLogger(__name__)
 
 
-class OperationType(str, Enum):
+class OperationType(StrEnum):
     """Classify database operations by safety level.
 
     Used by SafetyGuard.check_operation() to determine if an operation

@@ -49,6 +49,7 @@ MIN_CV_DATA_POINTS = 12  # Minimum points for cross-validation
 # Variable Cost, Electricity Cost, Thermal Cost are always positive values
 POSITIVE_ONLY_METRICS = {
     "ebitda",
+    "ebitda ifrs",
     "revenue",
     "capacity_utilization",
     "sales_volume",
@@ -445,7 +446,8 @@ async def run_prophet_forecasting_pipeline(
         logger.warning(f"Validation issues for {metric}: {validation_issues[:3]}")
 
     # Steps 6-7: Prepare data, configure model, add regressors, and fit
-    model, df, regressors_used = prepare_and_fit_prophet_model(
+    # EBITDA fix (2026-02-03): Now returns lags_applied for future regressor generation
+    model, df, regressors_used, lags_applied = prepare_and_fit_prophet_model(
         historical_data, metric, external_regressors, logger
     )
 

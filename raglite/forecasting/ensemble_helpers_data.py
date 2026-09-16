@@ -18,8 +18,13 @@ def prepare_ensemble_data(
     historical_data: TimeSeriesData,
     external_regressors: dict[str, pd.Series] | None,
     logger: Logger,
+    metric: str | None = None,
 ) -> tuple[pd.DataFrame, pd.Series, list[str], dict[str, pd.Series]]:
-    """Prepare data for ensemble forecasting. Returns (X, y, selected, prepared)."""
+    """Prepare data for ensemble forecasting. Returns (X, y, selected, prepared).
+
+    Forecast reliability fix (2026-02-02): Added metric parameter for appropriate
+    correlation threshold selection (lower for profit metrics like EBITDA).
+    """
     from raglite.forecasting.ensemble import prepare_regressors, select_regressors
 
     # Validate minimum data requirement
@@ -43,7 +48,12 @@ def prepare_ensemble_data(
     prepared: dict[str, pd.Series] = {}
 
     if external_regressors:
-        selected = select_regressors(target_series, external_regressors)
+        # Forecast reliability fix: Pass metric name for appropriate threshold
+        # Note: return_lag_info defaults to False, so this returns list[str]
+        result = select_regressors(target_series, external_regressors, metric_name=metric)
+        # Type narrowing: result is list[str] when return_lag_info=False (default)
+        if isinstance(result, list):
+            selected = result
         if selected:
             prepared = prepare_regressors(
                 {k: v for k, v in external_regressors.items() if k in selected},

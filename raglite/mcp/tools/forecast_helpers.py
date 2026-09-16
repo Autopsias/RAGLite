@@ -161,20 +161,97 @@ def calculate_periods_for_target_year(
     return periods_ahead
 
 
+class DatabaseConfigurationError(Exception):
+    """Raised when database configuration is invalid or database has no data.
+
+    Forecast reliability fix (2026-02-02): Detects "wrong database" issues
+    where shell environment variables override .env settings, causing
+    forecasts to query empty CI database instead of production.
+    """
+
+    pass
+
+
+def _validate_database_has_data(logger: Logger) -> None:
+    """Validate that the connected database contains financial data.
+
+    Forecast reliability fix (2026-02-02): Shell environment variables
+    can override .env settings, causing forecasts to query wrong database.
+
+    Raises:
+        DatabaseConfigurationError: If database has no data
+    """
+    from raglite.shared.config import get_settings, validate_forecast_environment
+
+    settings = get_settings()
+
+    # Check if database has data using a quick count query
+    try:
+        from sqlalchemy import text
+
+        from raglite.shared.database import get_session
+
+        session = get_session()
+        result = session.execute(text("SELECT COUNT(*) FROM financial_tables"))
+        row_count = result.scalar()
+        session.close()
+
+        if row_count == 0:
+            env_status = validate_forecast_environment()
+            error_msg = (
+                f"Database '{settings.postgres_db}' has no financial data (0 rows). "
+                f"This usually happens when shell environment variables override .env settings. "
+            )
+            if env_status["fix_command"]:
+                error_msg += f"Fix: Run '{env_status['fix_command']}' and restart the server."
+
+            logger.error(
+                "Empty database detected - wrong database configuration",
+                extra={
+                    "database": settings.postgres_db,
+                    "port": settings.postgres_port,
+                    "row_count": row_count,
+                    "env_overrides": env_status.get("env_overrides", {}),
+                    "fix_command": env_status.get("fix_command"),
+                },
+            )
+            raise DatabaseConfigurationError(error_msg)
+
+        logger.debug(
+            "Database data validation passed",
+            extra={
+                "database": settings.postgres_db,
+                "row_count": row_count,
+            },
+        )
+    except DatabaseConfigurationError:
+        raise
+    except Exception as e:
+        # Don't fail forecast if validation check itself fails
+        logger.warning(
+            "Database data validation skipped due to error",
+            extra={"error": str(e), "error_type": type(e).__name__},
+        )
+
+
 async def extract_historical_data(
     metric: str,
     logger: Logger,
     entity: str | None = None,
+    entity_level: str | None = None,
 ) -> TimeSeriesData:
     """Extract historical time-series data.
 
     Story 5.0.1: SQL-first with fallback to hybrid search.
     Multi-geography fix (2026-01-30): Added entity parameter for geography selection.
+    Epic 9 multi-entity support: Added entity_level parameter for semantic filtering.
+    Forecast reliability fix (2026-02-02): Added database configuration validation.
 
     Args:
         metric: Metric name
         logger: Logger instance
         entity: Optional entity/geography filter (GROUP, Portugal, Brazil, etc.)
+        entity_level: Optional entity level filter (consolidated, geographic, segment, company_only)
 
     Returns:
         TimeSeriesData with historical points
@@ -182,19 +259,28 @@ async def extract_historical_data(
     Raises:
         MetricValidationError: If metric validation fails
         ExtractionError: If extraction fails
+        DatabaseConfigurationError: If database has no data (wrong database)
     """
+    # Forecast reliability fix: Validate database has data before extraction
+    _validate_database_has_data(logger)
+
     logger.info(
         "Extracting time-series data",
-        extra={"metric": metric, "entity": entity},
+        extra={"metric": metric, "entity": entity, "entity_level": entity_level},
     )
 
     try:
         logger.info(
             "Attempting type-routed extraction",
-            extra={"metric": metric, "entity": entity, "method": "type_routed"},
+            extra={
+                "metric": metric,
+                "entity": entity,
+                "entity_level": entity_level,
+                "method": "type_routed",
+            },
         )
         historical_data = await extract_historical_data_by_type(
-            metric=metric, min_points=6, entity=entity
+            metric=metric, min_points=6, entity=entity, entity_level=entity_level
         )
         if historical_data is None:
             raise ExtractionError(f"Type-routed extraction returned None for {metric}")
@@ -203,6 +289,7 @@ async def extract_historical_data(
             extra={
                 "metric": metric,
                 "entity": entity,
+                "entity_level": entity_level,
                 "data_points": len(historical_data.points),
                 "method": "type_routed",
             },
@@ -216,6 +303,7 @@ async def extract_historical_data(
             extra={
                 "metric": metric,
                 "entity": entity,
+                "entity_level": entity_level,
                 "reason": str(e),
                 "fallback_method": "hybrid_search",
             },
@@ -239,8 +327,13 @@ async def fetch_external_regressors(
     periods_ahead: int,
     regressor_names: list[str] | None,
     logger: Logger,
+    entity: str | None = None,
 ) -> tuple[dict[str, pd.Series] | None, list[str]]:
-    """Fetch external regressors for the metric.
+    """Fetch external and internal regressors for the metric.
+
+    EBITDA forecast fix (2026-02-03): Added internal metric fetching.
+    For profit metrics, internal metrics like revenue have high correlation
+    and can improve forecast accuracy.
 
     Args:
         metric: Metric name
@@ -248,12 +341,18 @@ async def fetch_external_regressors(
         periods_ahead: Number of periods to forecast
         regressor_names: Optional specific regressor names to fetch
         logger: Logger instance
+        entity: Optional entity filter for internal regressors
 
     Returns:
         Tuple of (external_regressors dict, regressors_used list)
     """
+    all_regressors: dict[str, pd.Series] = {}
+
     try:
-        from raglite.forecasting.regressor_fetch import fetch_regressors_for_metric
+        from raglite.forecasting.regressor_fetch import (
+            fetch_internal_regressors_for_metric,
+            fetch_regressors_for_metric,
+        )
 
         if historical_data.points:
             historical_dates = [
@@ -261,25 +360,48 @@ async def fetch_external_regressors(
             ]
             start_date = min(historical_dates) - timedelta(days=365)
             end_date = max(historical_dates) + timedelta(days=30 * periods_ahead)
+
+            # Fetch external regressors (APIs)
             external_regressors = await fetch_regressors_for_metric(
                 metric=metric,
                 start_date=start_date,
                 end_date=end_date,
                 regressor_names=regressor_names,
             )
-            regressors_used = list(external_regressors.keys())
+            all_regressors.update(external_regressors)
+
+            # EBITDA forecast fix: Fetch internal regressors for profit metrics
+            # Revenue, turnover have high correlation with EBITDA
+            internal_regressors = await fetch_internal_regressors_for_metric(
+                metric=metric,
+                entity=entity,
+            )
+            if internal_regressors:
+                all_regressors.update(internal_regressors)
+                logger.info(
+                    "Internal regressors added",
+                    extra={
+                        "metric": metric,
+                        "internal_regressors": list(internal_regressors.keys()),
+                        "count": len(internal_regressors),
+                    },
+                )
+
+            regressors_used = list(all_regressors.keys())
             logger.info(
-                "External regressors fetched",
+                "All regressors fetched",
                 extra={
                     "metric": metric,
+                    "external_count": len(external_regressors),
+                    "internal_count": len(internal_regressors) if internal_regressors else 0,
+                    "total_count": len(regressors_used),
                     "regressors": regressors_used,
-                    "count": len(regressors_used),
                 },
             )
-            return external_regressors, regressors_used
+            return all_regressors, regressors_used
     except Exception as e:
         logger.warning(
-            "External regressor fetch failed, falling back to univariate",
+            "Regressor fetch failed, falling back to univariate",
             extra={"metric": metric, "error": str(e)},
         )
 

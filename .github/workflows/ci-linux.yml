@@ -91,15 +91,18 @@ jobs:
 
       - name: Install linting dependencies
         run: |
-          uv pip install ruff black --system --quiet
+          # Pin ruff version to match local development (0.13.x)
+          # CI was getting 0.15.0 which has different I001 import sorting rules
+          uv pip install "ruff>=0.13.0,<0.14.0" black --system --quiet
 
       - name: Lint Check (ruff)
         run: |
-          ruff check raglite/ tests/ --output-format=github
+          echo "Ruff version: $(ruff --version)"
+          ruff check raglite/ tests/ --config pyproject.toml --output-format=github
 
       - name: Format Check (black)
         run: |
-          ruff format raglite/ tests/ --check
+          ruff format raglite/ tests/ --config pyproject.toml --check
 
       - name: File Size Check
         run: |

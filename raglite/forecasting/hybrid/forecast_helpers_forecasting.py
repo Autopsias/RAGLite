@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 # Variable Cost, Electricity Cost, Thermal Cost are always positive values
 POSITIVE_ONLY_METRICS = {
     "ebitda",
+    "ebitda ifrs",
     "revenue",
     "capacity_utilization",
     "sales_volume",
@@ -152,6 +153,7 @@ def generate_quarterly_from_monthly(
     regressors_used: list[str],
     external_regressors: dict[str, pd.Series] | None,
     future_regressor_strategy: str,
+    metric: str,
     logger: Logger,
 ) -> list[ForecastPoint]:
     """Generate quarterly forecasts by aggregating monthly predictions.
@@ -224,6 +226,25 @@ def generate_quarterly_from_monthly(
             },
         )
 
+    # Clamp negative values for positive-only metrics
+    if metric.lower() in POSITIVE_ONLY_METRICS:
+        clamped_count = 0
+        for i, point in enumerate(forecast_points):
+            if point.value < 0:
+                clamped_count += 1
+                forecast_points[i] = ForecastPoint(
+                    date=point.date,
+                    value=0.0,
+                    lower=max(0.0, point.lower),
+                    upper=point.upper,
+                    label=point.label,
+                )
+        if clamped_count > 0:
+            logger.warning(
+                f"Clamped {clamped_count} negative quarterly forecast values to 0",
+                extra={"metric": metric, "clamped_count": clamped_count},
+            )
+
     return forecast_points
 
 
@@ -234,6 +255,7 @@ def generate_quarterly_direct(
     regressors_used: list[str],
     external_regressors: dict[str, pd.Series] | None,
     future_regressor_strategy: str,
+    metric: str,
     logger: Logger,
 ) -> list[ForecastPoint]:
     """Generate quarterly forecasts directly (non-monthly input data).
@@ -284,6 +306,25 @@ def generate_quarterly_direct(
                 label=label,
             )
         )
+
+    # Clamp negative values for positive-only metrics
+    if metric.lower() in POSITIVE_ONLY_METRICS:
+        clamped_count = 0
+        for i, point in enumerate(forecast_points):
+            if point.value < 0:
+                clamped_count += 1
+                forecast_points[i] = ForecastPoint(
+                    date=point.date,
+                    value=0.0,
+                    lower=max(0.0, point.lower),
+                    upper=point.upper,
+                    label=point.label,
+                )
+        if clamped_count > 0:
+            logger.warning(
+                f"Clamped {clamped_count} negative quarterly forecast values to 0",
+                extra={"metric": metric, "clamped_count": clamped_count},
+            )
 
     return forecast_points
 
@@ -339,6 +380,7 @@ def generate_forecast_points_by_frequency(
             regressors_used,
             external_regressors,
             future_regressor_strategy,
+            metric,
             logger,
         )
     else:
@@ -349,5 +391,6 @@ def generate_forecast_points_by_frequency(
             regressors_used,
             external_regressors,
             future_regressor_strategy,
+            metric,
             logger,
         )

@@ -62,7 +62,8 @@ async def generate_forecast_with_cache(
 
     model_type = cached_selection.best_model
     mase_str = f"{cached_selection.best_mase:.2f}" if cached_selection.best_mase else "N/A"
-    model_selection_reason = f"Cached selection: {model_type} (MASE={mase_str})"
+    mape_str = f"{cached_selection.best_mape:.1f}%" if cached_selection.best_mape else "N/A"
+    model_selection_reason = f"Cached selection: {model_type} (MASE={mase_str}, MAPE={mape_str})"
 
     # Route to selected model
     if model_type == "ensemble":

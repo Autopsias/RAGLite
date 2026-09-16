@@ -1,0 +1,56 @@
+# Claude Code Ignore File
+# Prevents indexing of large directories to avoid heap memory crashes
+# See: https://github.com/anthropics/claude-code/issues/2159
+
+# Virtual environments (CRITICAL - ci-venv has 42,894 files / 1.3GB)
+ci-venv/
+.venv/
+venv/
+env/
+ENV/
+
+# Package manager caches
+.uv-cache/
+.cache/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+.eggs/
+wheels/
+
+# Large data directories (database storage)
+qdrant_storage/
+postgresql_data/
+postgresql_data_test/
+qdrant_storage_test/
+backups/
+
+# Model caches
+models/
+data/models/
+
+# CI cache exports
+.qdrant-export/
+.postgres-export/
+
+# Node modules (if any)
+node_modules/
+
+# IDE directories
+.vscode/
+.idea/
+
+# BMAD Method (not part of RAGLite core)
+BMAD-METHOD/
+
+# Test artifacts
+htmlcov/
+test-results/
+lightning_logs/
+catboost_info/

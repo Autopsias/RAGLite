@@ -1,0 +1,326 @@
+[
+  {
+    "entity": "GROUP",
+    "table_title": null,
+    "expected_entity_level": "consolidated",
+    "notes": "Standard consolidated keyword"
+  },
+  {
+    "entity": "Consolidated",
+    "table_title": null,
+    "expected_entity_level": "consolidated",
+    "notes": "Standard consolidated keyword"
+  },
+  {
+    "entity": "Total Group",
+    "table_title": null,
+    "expected_entity_level": "consolidated",
+    "notes": "Combined consolidated keywords"
+  },
+  {
+    "entity": "Group Total",
+    "table_title": null,
+    "expected_entity_level": "consolidated",
+    "notes": "Reversed consolidated keywords"
+  },
+  {
+    "entity": "CONSOLIDATED",
+    "table_title": null,
+    "expected_entity_level": "consolidated",
+    "notes": "Uppercase variation"
+  },
+  {
+    "entity": "GROUP EBITDA",
+    "table_title": null,
+    "expected_entity_level": "consolidated",
+    "notes": "Group with metric"
+  },
+  {
+    "entity": "Holding",
+    "table_title": null,
+    "expected_entity_level": "consolidated",
+    "notes": "Holding company indicator"
+  },
+  {
+    "entity": "Corporate",
+    "table_title": null,
+    "expected_entity_level": "consolidated",
+    "notes": "Corporate level indicator"
+  },
+  {
+    "entity": "group",
+    "table_title": null,
+    "expected_entity_level": "consolidated",
+    "notes": "Lowercase variation"
+  },
+  {
+    "entity": "Total Consolidated",
+    "table_title": null,
+    "expected_entity_level": "consolidated",
+    "notes": "Combined keywords"
+  },
+  {
+    "entity": "SECIL SA",
+    "table_title": null,
+    "expected_entity_level": "company_only",
+    "notes": "Company with SA suffix"
+  },
+  {
+    "entity": "SECIL Portugal SA",
+    "table_title": null,
+    "expected_entity_level": "company_only",
+    "notes": "Company with country and suffix"
+  },
+  {
+    "entity": "Company Ltd",
+    "table_title": null,
+    "expected_entity_level": "company_only",
+    "notes": "Company with Ltd suffix"
+  },
+  {
+    "entity": "Empresa Lda",
+    "table_title": null,
+    "expected_entity_level": "company_only",
+    "notes": "Portuguese company suffix"
+  },
+  {
+    "entity": "Corporation Inc",
+    "table_title": null,
+    "expected_entity_level": "company_only",
+    "notes": "Inc suffix"
+  },
+  {
+    "entity": "MyCompany Corp",
+    "table_title": null,
+    "expected_entity_level": "company_only",
+    "notes": "Corp suffix"
+  },
+  {
+    "entity": "SECIL",
+    "table_title": null,
+    "expected_entity_level": "company_only",
+    "notes": "Known company name"
+  },
+  {
+    "entity": "Empresa ABC S.A.",
+    "table_title": null,
+    "expected_entity_level": "company_only",
+    "notes": "S.A. suffix with periods"
+  },
+  {
+    "entity": "Company LTDA",
+    "table_title": null,
+    "expected_entity_level": "company_only",
+    "notes": "LTDA suffix"
+  },
+  {
+    "entity": "XYZ Company",
+    "table_title": null,
+    "expected_entity_level": "company_only",
+    "notes": "Company keyword"
+  },
+  {
+    "entity": "Cement Division",
+    "table_title": null,
+    "expected_entity_level": "segment",
+    "notes": "Division keyword"
+  },
+  {
+    "entity": "Ready-Mix Segment",
+    "table_title": null,
+    "expected_entity_level": "segment",
+    "notes": "Segment keyword"
+  },
+  {
+    "entity": "Concrete Unit",
+    "table_title": null,
+    "expected_entity_level": "segment",
+    "notes": "Unit keyword"
+  },
+  {
+    "entity": "Aggregates Sector",
+    "table_title": null,
+    "expected_entity_level": "segment",
+    "notes": "Sector keyword"
+  },
+  {
+    "entity": "Cement Operations",
+    "table_title": null,
+    "expected_entity_level": "segment",
+    "notes": "Operations keyword with business type"
+  },
+  {
+    "entity": "Construction Segment",
+    "table_title": null,
+    "expected_entity_level": "segment",
+    "notes": "Segment keyword"
+  },
+  {
+    "entity": "Building Materials Division",
+    "table_title": null,
+    "expected_entity_level": "segment",
+    "notes": "Division keyword"
+  },
+  {
+    "entity": "Ready Mix Business",
+    "table_title": null,
+    "expected_entity_level": "segment",
+    "notes": "Business keyword with type"
+  },
+  {
+    "entity": "Cement",
+    "table_title": null,
+    "expected_entity_level": "segment",
+    "notes": "Business type keyword"
+  },
+  {
+    "entity": "Concrete",
+    "table_title": null,
+    "expected_entity_level": "segment",
+    "notes": "Business type keyword"
+  },
+  {
+    "entity": "Portugal",
+    "table_title": null,
+    "expected_entity_level": "geographic",
+    "notes": "Country name"
+  },
+  {
+    "entity": "Spain",
+    "table_title": null,
+    "expected_entity_level": "geographic",
+    "notes": "Country name"
+  },
+  {
+    "entity": "Tunisia",
+    "table_title": null,
+    "expected_entity_level": "geographic",
+    "notes": "Country name"
+  },
+  {
+    "entity": "Brazil",
+    "table_title": null,
+    "expected_entity_level": "geographic",
+    "notes": "Country name"
+  },
+  {
+    "entity": "Lebanon",
+    "table_title": null,
+    "expected_entity_level": "geographic",
+    "notes": "Country name"
+  },
+  {
+    "entity": "Angola",
+    "table_title": null,
+    "expected_entity_level": "geographic",
+    "notes": "Country name"
+  },
+  {
+    "entity": "Iberia",
+    "table_title": null,
+    "expected_entity_level": "geographic",
+    "notes": "Region name"
+  },
+  {
+    "entity": "Europe",
+    "table_title": null,
+    "expected_entity_level": "geographic",
+    "notes": "Region name"
+  },
+  {
+    "entity": "MENA",
+    "table_title": null,
+    "expected_entity_level": "geographic",
+    "notes": "Region acronym"
+  },
+  {
+    "entity": "LATAM",
+    "table_title": null,
+    "expected_entity_level": "geographic",
+    "notes": "Region acronym"
+  },
+  {
+    "entity": "Americas",
+    "table_title": null,
+    "expected_entity_level": "geographic",
+    "notes": "Region name"
+  },
+  {
+    "entity": "Pais: Portugal",
+    "table_title": null,
+    "expected_entity_level": "geographic",
+    "notes": "Portuguese geographic keyword"
+  },
+  {
+    "entity": "",
+    "table_title": null,
+    "expected_entity_level": "unknown",
+    "notes": "Empty string"
+  },
+  {
+    "entity": "   ",
+    "table_title": null,
+    "expected_entity_level": "unknown",
+    "notes": "Whitespace only"
+  },
+  {
+    "entity": "N/A",
+    "table_title": null,
+    "expected_entity_level": "unknown",
+    "notes": "N/A marker"
+  },
+  {
+    "entity": "None",
+    "table_title": null,
+    "expected_entity_level": "unknown",
+    "notes": "None marker"
+  },
+  {
+    "entity": "null",
+    "table_title": null,
+    "expected_entity_level": "unknown",
+    "notes": "null marker"
+  },
+  {
+    "entity": "12345",
+    "table_title": null,
+    "expected_entity_level": "unknown",
+    "notes": "Numeric only - ambiguous"
+  },
+  {
+    "entity": "-",
+    "table_title": null,
+    "expected_entity_level": "unknown",
+    "notes": "Dash marker"
+  },
+  {
+    "entity": "--",
+    "table_title": null,
+    "expected_entity_level": "unknown",
+    "notes": "Double dash marker"
+  },
+  {
+    "entity": "Revenue",
+    "table_title": "GROUP Financial Statements",
+    "expected_entity_level": "consolidated",
+    "notes": "Generic entity with consolidated table title"
+  },
+  {
+    "entity": "Revenue",
+    "table_title": "Portugal Operations",
+    "expected_entity_level": "geographic",
+    "notes": "Generic entity with geographic table title"
+  },
+  {
+    "entity": "Revenue",
+    "table_title": "Cement Division Results",
+    "expected_entity_level": "segment",
+    "notes": "Generic entity with segment table title"
+  },
+  {
+    "entity": "SECIL Portugal SA",
+    "table_title": "GROUP Financial Statements",
+    "expected_entity_level": "company_only",
+    "notes": "Entity pattern overrides table title"
+  }
+]

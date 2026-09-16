@@ -63,6 +63,7 @@ async def extract_historical_data_by_type(
     metric: str,
     min_points: int = 6,
     entity: str | None = None,
+    entity_level: str | None = None,
 ) -> TimeSeriesData | None:
     """Route extraction based on variable type (internal/external_db/external_api).
 
@@ -70,11 +71,13 @@ async def extract_historical_data_by_type(
     to ensure MCP forecasts can access the same data sources as model selection.
 
     Multi-geography fix (2026-01-30): Added entity parameter for geography selection.
+    Epic 9 multi-entity support: Added entity_level for semantic entity filtering.
 
     Args:
         metric: Metric name to extract
         min_points: Minimum data points required
         entity: Optional entity/geography filter (GROUP, Portugal, Brazil, etc.)
+        entity_level: Optional entity level filter (consolidated, geographic, segment, company_only)
 
     Returns:
         TimeSeriesData if extraction succeeds, None otherwise
@@ -88,10 +91,15 @@ async def extract_historical_data_by_type(
         # Unknown metric - try SQL first (existing behavior)
         logger.info(
             "Unknown metric, using SQL extraction",
-            extra={"metric": metric, "entity": entity, "var_type": "unknown"},
+            extra={
+                "metric": metric,
+                "entity": entity,
+                "entity_level": entity_level,
+                "var_type": "unknown",
+            },
         )
         return await extract_timeseries_from_sql(
-            metric=metric, min_points=min_points, entity=entity
+            metric=metric, min_points=min_points, entity=entity, entity_level=entity_level
         )
 
     var_type = config.get("type", "internal")
@@ -102,6 +110,7 @@ async def extract_historical_data_by_type(
         extra={
             "metric": metric,
             "entity": entity,
+            "entity_level": entity_level,
             "var_type": var_type,
             "metric_name": metric_name,
         },
@@ -110,7 +119,7 @@ async def extract_historical_data_by_type(
     if var_type == "internal":
         # Internal SECIL metrics from PostgreSQL financial_tables
         return await extract_timeseries_from_sql(
-            metric=metric_name, min_points=min_points, entity=entity
+            metric=metric_name, min_points=min_points, entity=entity, entity_level=entity_level
         )
 
     elif var_type == "external_db":
@@ -133,8 +142,13 @@ async def extract_historical_data_by_type(
         # Unknown type - fallback to SQL
         logger.warning(
             "Unknown variable type, falling back to SQL",
-            extra={"metric": metric, "entity": entity, "var_type": var_type},
+            extra={
+                "metric": metric,
+                "entity": entity,
+                "entity_level": entity_level,
+                "var_type": var_type,
+            },
         )
         return await extract_timeseries_from_sql(
-            metric=metric, min_points=min_points, entity=entity
+            metric=metric, min_points=min_points, entity=entity, entity_level=entity_level
         )

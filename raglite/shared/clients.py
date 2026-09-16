@@ -194,7 +194,11 @@ def get_claude_client() -> Anthropic:
 
     client = Anthropic(api_key=settings.anthropic_api_key)
     logger.info("Claude API client initialized")
-    return client
+    # Report what each call costs. Wrapping HERE, not at the call sites, is what
+    # makes a call site added later report too. See shared.tracing.TracedClient.
+    from raglite.shared.tracing import TracedClient
+
+    return TracedClient(client, "anthropic")
 
 
 def get_embedding_model() -> Any:
@@ -411,4 +415,7 @@ def get_mistral_client() -> Mistral:
 
         logger.info("Mistral AI client initialized")
 
-    return _mistral_client
+    # Report what each call costs -- see get_claude_client above.
+    from raglite.shared.tracing import TracedClient
+
+    return TracedClient(_mistral_client, "mistral")

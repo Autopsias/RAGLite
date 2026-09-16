@@ -1,0 +1,352 @@
+[
+  {
+    "period": "Dec-21",
+    "header": null,
+    "expected_value_type": "actual",
+    "category": "actual",
+    "description": "Standard monthly period without modifiers"
+  },
+  {
+    "period": "YTD Dec-21",
+    "header": null,
+    "expected_value_type": "actual",
+    "category": "actual",
+    "description": "YTD period without modifiers"
+  },
+  {
+    "period": "Jan-25",
+    "header": null,
+    "expected_value_type": "actual",
+    "category": "actual",
+    "description": "Monthly actual value"
+  },
+  {
+    "period": "Actual Mar-24",
+    "header": null,
+    "expected_value_type": "actual",
+    "category": "actual",
+    "description": "Actual keyword in period"
+  },
+  {
+    "period": "Real Sep-23",
+    "header": null,
+    "expected_value_type": "actual",
+    "category": "actual",
+    "description": "Portuguese 'Real' keyword in period"
+  },
+  {
+    "period": "Jun-22",
+    "header": null,
+    "expected_value_type": "actual",
+    "category": "actual",
+    "description": "No modifier defaults to actual"
+  },
+  {
+    "period": "Apr-25",
+    "header": null,
+    "expected_value_type": "actual",
+    "category": "actual",
+    "description": "Plain period defaults to actual"
+  },
+  {
+    "period": "Nov-24",
+    "header": null,
+    "expected_value_type": "actual",
+    "category": "actual",
+    "description": "Plain period is actual"
+  },
+  {
+    "period": "B Dec-21",
+    "header": null,
+    "expected_value_type": "budget",
+    "category": "budget",
+    "description": "Budget prefix 'B ' indicator"
+  },
+  {
+    "period": "B Jun-24",
+    "header": null,
+    "expected_value_type": "budget",
+    "category": "budget",
+    "description": "Budget prefix"
+  },
+  {
+    "period": "Budget Dec-21",
+    "header": null,
+    "expected_value_type": "budget",
+    "category": "budget",
+    "description": "Budget keyword in period"
+  },
+  {
+    "period": "Orcamento Mar-25",
+    "header": null,
+    "expected_value_type": "budget",
+    "category": "budget",
+    "description": "Portuguese 'Orcamento' keyword in period"
+  },
+  {
+    "period": "Sep-24 Budget",
+    "header": null,
+    "expected_value_type": "budget",
+    "category": "budget",
+    "description": "Budget keyword after period"
+  },
+  {
+    "period": "Plano Jan-23",
+    "header": null,
+    "expected_value_type": "budget",
+    "category": "budget",
+    "description": "Portuguese 'Plano' keyword in period"
+  },
+  {
+    "period": "B Apr-22",
+    "header": null,
+    "expected_value_type": "budget",
+    "category": "budget",
+    "description": "Budget prefix with space"
+  },
+  {
+    "period": "Budget YTD Dec-21",
+    "header": null,
+    "expected_value_type": "budget",
+    "category": "budget",
+    "description": "Budget with YTD period"
+  },
+  {
+    "period": "Aug-24 B",
+    "header": null,
+    "expected_value_type": "budget",
+    "category": "budget",
+    "description": "Trailing B indicator"
+  },
+  {
+    "period": "Orcamento Anual May-25",
+    "header": null,
+    "expected_value_type": "budget",
+    "category": "budget",
+    "description": "Portuguese budget with additional text"
+  },
+  {
+    "period": "F Dec-21",
+    "header": null,
+    "expected_value_type": "forecast",
+    "category": "forecast",
+    "description": "Forecast prefix 'F ' indicator"
+  },
+  {
+    "period": "F Jun-24",
+    "header": null,
+    "expected_value_type": "forecast",
+    "category": "forecast",
+    "description": "Forecast prefix"
+  },
+  {
+    "period": "Forecast Dec-21",
+    "header": null,
+    "expected_value_type": "forecast",
+    "category": "forecast",
+    "description": "Forecast keyword in period"
+  },
+  {
+    "period": "Previsao Mar-25",
+    "header": null,
+    "expected_value_type": "forecast",
+    "category": "forecast",
+    "description": "Portuguese 'Previsao' keyword in period"
+  },
+  {
+    "period": "Forecast YTD Sep-24",
+    "header": null,
+    "expected_value_type": "forecast",
+    "category": "forecast",
+    "description": "Forecast with YTD period"
+  },
+  {
+    "period": "Projected Jan-23",
+    "header": null,
+    "expected_value_type": "forecast",
+    "category": "forecast",
+    "description": "Projected keyword in period"
+  },
+  {
+    "period": "F Apr-22",
+    "header": null,
+    "expected_value_type": "forecast",
+    "category": "forecast",
+    "description": "Forecast prefix with space"
+  },
+  {
+    "period": "YTD Forecast Dec-21",
+    "header": null,
+    "expected_value_type": "forecast",
+    "category": "forecast",
+    "description": "YTD with forecast keyword"
+  },
+  {
+    "period": "Forecast Monthly Aug-24",
+    "header": null,
+    "expected_value_type": "forecast",
+    "category": "forecast",
+    "description": "Forecast Monthly keyword"
+  },
+  {
+    "period": "Previsao Anual May-25",
+    "header": null,
+    "expected_value_type": "forecast",
+    "category": "forecast",
+    "description": "Portuguese forecast with additional text"
+  },
+  {
+    "period": "Var Dec-21",
+    "header": null,
+    "expected_value_type": "variance",
+    "category": "variance",
+    "description": "Variance prefix 'Var' indicator"
+  },
+  {
+    "period": "%Var Jun-24",
+    "header": null,
+    "expected_value_type": "variance",
+    "category": "variance",
+    "description": "Percentage variance prefix"
+  },
+  {
+    "period": "Delta Mar-25",
+    "header": null,
+    "expected_value_type": "variance",
+    "category": "variance",
+    "description": "Delta prefix for variance"
+  },
+  {
+    "period": "Variance Dec-21",
+    "header": null,
+    "expected_value_type": "variance",
+    "category": "variance",
+    "description": "Variance keyword in period"
+  },
+  {
+    "period": "Variacao Mar-25",
+    "header": null,
+    "expected_value_type": "variance",
+    "category": "variance",
+    "description": "Portuguese 'Variacao' keyword in period"
+  },
+  {
+    "period": "Var vs Budget Sep-24",
+    "header": null,
+    "expected_value_type": "variance",
+    "category": "variance",
+    "description": "Variance comparison in period"
+  },
+  {
+    "period": "Diff Jan-23",
+    "header": null,
+    "expected_value_type": "variance",
+    "category": "variance",
+    "description": "Diff keyword in period"
+  },
+  {
+    "period": "var Apr-22",
+    "header": null,
+    "expected_value_type": "variance",
+    "category": "variance",
+    "description": "Lowercase variance prefix"
+  },
+  {
+    "period": "YTD Variance Dec-21",
+    "header": null,
+    "expected_value_type": "variance",
+    "category": "variance",
+    "description": "YTD with variance keyword"
+  },
+  {
+    "period": "% Var Aug-24",
+    "header": null,
+    "expected_value_type": "variance",
+    "category": "variance",
+    "description": "Percentage variance keyword"
+  },
+  {
+    "period": "",
+    "header": null,
+    "expected_value_type": "unknown",
+    "category": "unknown",
+    "description": "Empty string"
+  },
+  {
+    "period": "N/A",
+    "header": null,
+    "expected_value_type": "unknown",
+    "category": "unknown",
+    "description": "N/A marker"
+  },
+  {
+    "period": "invalid",
+    "header": null,
+    "expected_value_type": "unknown",
+    "category": "unknown",
+    "description": "Invalid format"
+  },
+  {
+    "period": "2021",
+    "header": null,
+    "expected_value_type": "unknown",
+    "category": "unknown",
+    "description": "Year only without month"
+  },
+  {
+    "period": "None",
+    "header": null,
+    "expected_value_type": "unknown",
+    "category": "unknown",
+    "description": "None string literal"
+  },
+  {
+    "period": "B Dec-21",
+    "header": "Forecast",
+    "expected_value_type": "budget",
+    "category": "edge_case",
+    "description": "Period prefix overrides conflicting header (Budget prefix wins)"
+  },
+  {
+    "period": "F Jun-24",
+    "header": "Actual",
+    "expected_value_type": "forecast",
+    "category": "edge_case",
+    "description": "Forecast prefix overrides actual header"
+  },
+  {
+    "period": "  Dec-21  ",
+    "header": null,
+    "expected_value_type": "actual",
+    "category": "edge_case",
+    "description": "Period with extra whitespace"
+  },
+  {
+    "period": "dec-21",
+    "header": null,
+    "expected_value_type": "actual",
+    "category": "edge_case",
+    "description": "Lowercase month abbreviation"
+  },
+  {
+    "period": "DEC-21",
+    "header": null,
+    "expected_value_type": "actual",
+    "category": "edge_case",
+    "description": "Uppercase month abbreviation"
+  },
+  {
+    "period": "b dec-21",
+    "header": null,
+    "expected_value_type": "budget",
+    "category": "edge_case",
+    "description": "Lowercase budget prefix"
+  },
+  {
+    "period": "f jun-24",
+    "header": null,
+    "expected_value_type": "forecast",
+    "category": "edge_case",
+    "description": "Lowercase forecast prefix"
+  }
+]

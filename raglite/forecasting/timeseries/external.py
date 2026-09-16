@@ -17,11 +17,15 @@ logger = get_logger(__name__)
 
 # External source mappings for timeseries data
 # Maps metric names to their external data source configurations
+# Fix 2026-02-02: Updated to match actual source_name and metric_name in external_data_points
 EXTERNAL_SOURCE_MAPPINGS: dict[str, tuple[str, str]] = {
-    "ttf_gas_price": ("external_data_points", "ttf_gas"),
-    "petcoke_price": ("external_data_points", "petcoke"),
-    "api2_coal_price": ("external_data_points", "api2_coal"),
-    "co2_eua_price": ("external_data_points", "co2_eua"),
+    # TTF Gas: 2046 rows as "settlement_price" from source "ICE_TTF_Gas"
+    "ttf_gas_price": ("ICE_TTF_Gas", "settlement_price"),
+    # API2 Coal: 1260 rows as "settlement_price" from source "ICE_API2_Coal"
+    "petcoke_price": ("ICE_API2_Coal", "settlement_price"),  # Use API2 as petcoke proxy
+    "api2_coal_price": ("ICE_API2_Coal", "settlement_price"),
+    # CO2 EUA: 250 rows as "co2_eua_price" from source "CO2_EUA"
+    "co2_eua_price": ("CO2_EUA", "co2_eua_price"),
 }
 
 

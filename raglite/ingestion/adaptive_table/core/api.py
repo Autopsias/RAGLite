@@ -177,6 +177,11 @@ async def extract_table_data_adaptive(
         result,
     )
 
+    # Story 9.5: Apply classification to all rows (before unit inference)
+    from raglite.ingestion.classification.integration import classify_rows_batch
+
+    rows = classify_rows_batch(rows)
+
     # Phase 2.7.5: Apply async context-aware unit inference for rows with null units
     # Milestone 1: Uses concurrent processing for 10x speedup (62 min → 6 min)
     # Story 5.0.6 AC3: Pass unit_cache for cross-document reuse

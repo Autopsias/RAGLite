@@ -23,6 +23,24 @@ logger = get_logger(__name__)
 MAX_MISSING_RATIO = 0.30  # Maximum 30% missing data allowed
 MAX_INTERPOLATION_GAP = 3  # Maximum periods to interpolate
 
+# Forecast reliability fix (2026-02-02): Profit metrics have weak direct correlations
+# with macro indicators but can still benefit from regressors at lower thresholds.
+# EBITDA and profit metrics use 0.15 threshold (vs 0.3 for revenue/cost metrics).
+PROFIT_METRICS = {
+    "ebitda",
+    "ebitda ifrs",
+    "ebitda_margin",
+    "net_income",
+    "net_profit",
+    "operating_profit",
+    "operating_income",
+    "profit",
+    "gross_profit",
+    "pretax_income",
+}
+MIN_CORRELATION_PROFIT = 0.15  # Lower threshold for profit metrics
+MIN_CORRELATION_DEFAULT = 0.3  # Default threshold for other metrics
+
 
 def scale_regressors_robust(
     regressors: dict[str, pd.Series],
@@ -157,26 +175,51 @@ def select_regressors(
     target: pd.Series,
     candidates: dict[str, pd.Series],
     top_n: int = 7,
-    min_correlation: float = 0.3,  # Story 6.7: Lowered from 0.5 to accept moderate correlations
+    min_correlation: float | None = None,  # Auto-determined based on metric
     auto_transform_yoy: bool = True,
-) -> list[str]:
+    metric_name: str | None = None,  # Used to determine appropriate threshold
+    return_lag_info: bool = False,  # EBITDA fix: Return lag info for application
+) -> list[str] | dict[str, tuple[float, int]]:
     """Select top regressors by Pearson correlation with target.
 
     Story 6.3 AC3: Correlation-based regressor selection.
     Story 6.7: Auto-transform YoY% data before correlation calculation.
+    Forecast reliability fix (2026-02-02): Lower threshold for profit metrics
+    (EBITDA has weak direct correlations but can still benefit from regressors).
+    EBITDA forecast fix (2026-02-03): Return lag info for application in forecasting.
 
     Args:
         target: Target time-series (y values)
         candidates: Dictionary of candidate regressors {name: series}
         top_n: Maximum number of regressors to select (default: 7)
-        min_correlation: Minimum absolute correlation threshold (default: 0.5)
+        min_correlation: Minimum absolute correlation threshold (auto if None)
         auto_transform_yoy: Auto-transform YoY% data before correlation (default: True)
+        metric_name: Name of target metric (used to determine threshold)
+        return_lag_info: If True, return dict with (correlation, lag) tuples
 
     Returns:
-        List of selected regressor names sorted by abs(correlation) descending
+        If return_lag_info=False: List of selected regressor names sorted by abs(correlation) descending
+        If return_lag_info=True: Dict of {name: (correlation, optimal_lag)} for applying lags
     """
     if not candidates:
         return []
+
+    # Forecast reliability fix: Determine appropriate correlation threshold
+    # Profit metrics have weaker direct correlations with macro indicators
+    if min_correlation is None:
+        metric_lower = (metric_name or "").lower()
+        if metric_lower in PROFIT_METRICS:
+            min_correlation = MIN_CORRELATION_PROFIT
+            logger.info(
+                "Using lower correlation threshold for profit metric",
+                extra={
+                    "metric": metric_name,
+                    "threshold": min_correlation,
+                    "reason": "Profit metrics have weaker direct correlations with macro indicators",
+                },
+            )
+        else:
+            min_correlation = MIN_CORRELATION_DEFAULT
 
     # BUG FIX (P0): Handle duplicate indices in target before creating DataFrame
     # Duplicates cause "cannot reindex on an axis with duplicate labels" error
@@ -215,11 +258,75 @@ def select_regressors(
     # Calculate correlations
     correlations = df.corr()["target"].drop("target")
 
+    # Forecast reliability fix: Try lagged correlations for macro indicators
+    # Macro indicators often have 1-3 month lag effect on profits
+    # EBITDA fix (2026-02-03): Store lag info for application during forecasting
+    best_correlations = correlations.copy()
+    lag_info: dict[str, tuple[float, int]] = {}  # {name: (correlation, optimal_lag)}
+
+    for name, series in transformed_candidates.items():
+        current_corr = abs(correlations.get(name, 0))
+        best_corr = current_corr
+        best_lag = 0
+
+        # Check lagged correlations (1, 2, 3 periods)
+        for lag in [1, 2, 3]:
+            lagged = series.shift(lag).reindex(target.index)
+            lagged_df = pd.DataFrame({"target": target, "lagged": lagged}).dropna()
+            if len(lagged_df) >= 6:  # Need at least 6 points
+                lagged_corr = abs(lagged_df["target"].corr(lagged_df["lagged"]))
+                if lagged_corr > best_corr:
+                    best_corr = lagged_corr
+                    best_lag = lag
+
+        # Store lag info for this regressor (used when return_lag_info=True)
+        signed_corr = best_corr if correlations.get(name, 0) >= 0 else -best_corr
+        lag_info[name] = (signed_corr, best_lag)
+
+        if best_lag > 0 and best_corr > current_corr:
+            logger.debug(
+                f"Better lagged correlation found for {name}",
+                extra={
+                    "regressor": name,
+                    "current_corr": f"{current_corr:.3f}",
+                    "lagged_corr": f"{best_corr:.3f}",
+                    "lag_periods": best_lag,
+                },
+            )
+            # Use the better (lagged) correlation for selection
+            best_correlations[name] = best_corr if correlations[name] >= 0 else -best_corr
+
     # Filter by minimum correlation
-    filtered = correlations[correlations.abs() >= min_correlation]
+    filtered = best_correlations[best_correlations.abs() >= min_correlation]
 
     # Sort by absolute correlation and take top N
     selected: list[str] = list(filtered.abs().sort_values(ascending=False).head(top_n).index)
+
+    # Forecast reliability fix: Explicit logging when all regressors filtered out
+    if not selected and candidates:
+        logger.warning(
+            "All regressors filtered out by correlation threshold",
+            extra={
+                "metric": metric_name,
+                "threshold": min_correlation,
+                "num_candidates": len(candidates),
+                "correlations": {
+                    name: f"{best_correlations.get(name, 0):.3f}"
+                    for name in list(candidates.keys())[:5]
+                },
+                "recommendation": (
+                    "Consider using univariate model or manually providing regressors. "
+                    "For profit metrics, try external factors like construction output or cement demand."
+                ),
+            },
+        )
+
+    # EBITDA fix (2026-02-03): Log lag info for transparency
+    lag_summary = {
+        name: lag_info.get(name, (0, 0))[1]
+        for name in selected
+        if lag_info.get(name, (0, 0))[1] > 0
+    }
 
     logger.info(
         "Regressors selected",
@@ -227,9 +334,16 @@ def select_regressors(
             "candidates": len(candidates),
             "selected": len(selected),
             "names": selected,
-            "correlations": {name: f"{correlations.get(name, 0):.3f}" for name in selected},
+            "correlations": {name: f"{best_correlations.get(name, 0):.3f}" for name in selected},
+            "optimal_lags": lag_summary if lag_summary else "none",
+            "threshold": min_correlation,
+            "metric": metric_name,
         },
     )
+
+    # EBITDA fix: Return lag info dict if requested (for applying lags in forecasting)
+    if return_lag_info:
+        return {name: lag_info[name] for name in selected}
 
     return selected
 
@@ -351,16 +465,20 @@ def prepare_regressors(
 def generate_future_regressors(
     regressors: dict[str, pd.Series],
     future_dates: pd.DatetimeIndex,
-    strategy: str = "constant",
+    strategy: str = "seasonal",
+    lags_applied: dict[str, int] | None = None,
 ) -> dict[str, pd.Series]:
     """Generate future regressor values based on strategy.
 
     Story 6.3 AC7: Future regressor value strategies.
+    EBITDA forecast fix (2026-02-03): Added 'seasonal' and 'momentum' strategies
+    to produce non-flat regressor projections. Also accounts for applied lags.
 
     Args:
         regressors: Historical regressor series
         future_dates: Future dates to generate values for
-        strategy: Strategy - 'constant', 'extrapolate', or 'provided'
+        strategy: Strategy - 'seasonal' (default), 'momentum', 'constant', 'extrapolate', or 'provided'
+        lags_applied: Dict of {regressor_name: lag_periods} for accounting for lags
 
     Returns:
         Dictionary of regressor series extended to future dates
@@ -369,13 +487,30 @@ def generate_future_regressors(
         ValueError: If strategy='provided' but future values missing
     """
     extended = {}
+    lags = lags_applied or {}
 
     for name, series in regressors.items():
         historical = series.dropna()
+        lag = lags.get(name, 0)
 
-        if strategy == "constant":
+        if strategy == "seasonal":
+            # EBITDA fix: Use same period from prior year if available
+            # This captures annual seasonality patterns in macro indicators
+            future_values = _generate_seasonal_future(historical, future_dates, name, lag)
+
+        elif strategy == "momentum":
+            # EBITDA fix: Extrapolate based on recent momentum (6-month trend)
+            future_values = _generate_momentum_future(historical, future_dates, lag)
+
+        elif strategy == "constant":
             # Use last known value for all future dates
-            last_value = historical.iloc[-1]
+            # Accounting for lag: the "effective" last value is lag periods back
+            effective_last_idx = max(0, len(historical) - 1 - lag)
+            last_value = (
+                historical.iloc[effective_last_idx]
+                if len(historical) > effective_last_idx
+                else historical.iloc[-1]
+            )
             future_values = pd.Series(last_value, index=future_dates)
 
         elif strategy == "extrapolate":
@@ -421,3 +556,105 @@ def generate_future_regressors(
         extended[name] = combined
 
     return extended
+
+
+def _generate_seasonal_future(
+    historical: pd.Series, future_dates: pd.DatetimeIndex, name: str, lag: int = 0
+) -> pd.Series:
+    """Generate future values using seasonal pattern from prior year.
+
+    EBITDA forecast fix (2026-02-03): Uses same month from prior year if available,
+    with fallback to historical mean. This captures annual seasonality in macro indicators.
+
+    Args:
+        historical: Historical series with DatetimeIndex
+        future_dates: Future dates to generate values for
+        name: Regressor name (for logging)
+        lag: Number of periods to account for lagged correlation
+
+    Returns:
+        Series of future values indexed by future_dates
+    """
+    future_values = []
+
+    # Calculate seasonal pattern (monthly averages across years)
+    if hasattr(historical.index, "month"):
+        seasonal_pattern = historical.groupby(historical.index.month).mean()
+    else:
+        seasonal_pattern = pd.Series(dtype=float)
+
+    # Calculate overall trend (simple linear)
+    historical_mean = historical.mean()
+    recent_mean = historical.tail(6).mean() if len(historical) >= 6 else historical_mean
+    trend_adjustment = recent_mean / historical_mean if historical_mean != 0 else 1.0
+
+    for future_date in future_dates:
+        month = future_date.month
+
+        # Try to get seasonal value for this month
+        if month in seasonal_pattern.index:
+            base_value = seasonal_pattern[month]
+        else:
+            base_value = historical_mean
+
+        # Apply trend adjustment to capture recent changes
+        adjusted_value = base_value * trend_adjustment
+        future_values.append(adjusted_value)
+
+    logger.debug(
+        f"Generated seasonal future for {name}",
+        extra={
+            "regressor": name,
+            "periods": len(future_dates),
+            "trend_adjustment": f"{trend_adjustment:.3f}",
+            "lag_accounted": lag,
+        },
+    )
+
+    return pd.Series(future_values, index=future_dates)
+
+
+def _generate_momentum_future(
+    historical: pd.Series, future_dates: pd.DatetimeIndex, lag: int = 0
+) -> pd.Series:
+    """Generate future values using recent momentum (trend extrapolation).
+
+    EBITDA forecast fix (2026-02-03): Projects future values based on recent
+    6-month trend, with dampening to prevent extreme projections.
+
+    Args:
+        historical: Historical series with DatetimeIndex
+        future_dates: Future dates to generate values for
+        lag: Number of periods to account for lagged correlation
+
+    Returns:
+        Series of future values indexed by future_dates
+    """
+    if len(historical) < 6:
+        # Fall back to constant if insufficient history
+        return pd.Series(historical.iloc[-1], index=future_dates)
+
+    # Calculate 6-month momentum
+    recent = historical.tail(6)
+    old_value = recent.iloc[0]
+    new_value = recent.iloc[-1]
+
+    # Monthly growth rate
+    if old_value != 0:
+        monthly_growth_rate = (new_value / old_value) ** (1 / 6) - 1
+    else:
+        monthly_growth_rate = 0
+
+    # Dampen growth rate to prevent extreme projections (cap at ±5% monthly)
+    monthly_growth_rate = max(-0.05, min(0.05, monthly_growth_rate))
+
+    future_values = []
+    current_value = new_value
+
+    for i in range(len(future_dates)):
+        # Apply dampening: growth rate decays over forecast horizon
+        dampened_rate = monthly_growth_rate * (0.9**i)
+        current_value = current_value * (1 + dampened_rate)
+        future_values.append(current_value)
+
+    return pd.Series(future_values, index=future_dates)

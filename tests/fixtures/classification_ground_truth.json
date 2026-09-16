@@ -1,0 +1,636 @@
+{
+  "version": "2.0",
+  "created": "2026-02-01",
+  "updated": "2026-02-01",
+  "description": "Ground truth verified through human judgment on raw database text - NOT copied from classifier output",
+  "verification_method": "Database spot-check with human judgment applied to raw period/entity strings",
+  "verification_notes": [
+    "Period patterns verified: 'B ' prefix = budget, 'YTD' = year-to-date, MMM-YY = monthly_actual",
+    "Entity levels verified: 'Group' suffix = consolidated, 'Total X' = segment totals, country names = geographic",
+    "Total Cement confirmed as segment (not consolidated) - it sums cement subsidiaries within a segment, not the whole company"
+  ],
+  "entries": [
+    {
+      "document": "2024-01 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 1,
+      "period": "Jan-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-01 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 2,
+      "period": "YTD Jan-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "ytd_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-01 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 3,
+      "period": "B Jan-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "budget",
+      "expected_value_type": "budget",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 1,
+      "period": "Feb-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 2,
+      "period": "YTD Feb-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "ytd_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-03 Performance Review CONSO_v3.pdf",
+      "table_index": 0,
+      "row_index": 1,
+      "period": "Mar-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-03 Performance Review CONSO_v3.pdf",
+      "table_index": 0,
+      "row_index": 2,
+      "period": "YTD Mar-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "ytd_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-04 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 1,
+      "period": "Apr-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-05 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 1,
+      "period": "May-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-06 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 1,
+      "period": "Jun-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-07 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 1,
+      "period": "Jul-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-08 Performance Review CONSO_V1.pdf",
+      "table_index": 0,
+      "row_index": 1,
+      "period": "Aug-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-09 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 1,
+      "period": "Sep-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-10 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 1,
+      "period": "Oct-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-11 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 1,
+      "period": "Nov-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-12 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 1,
+      "period": "Dec-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 10,
+      "period": "Feb-24",
+      "entity": "Angola Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only",
+      "verification_note": "Feb-24 Angola Cement exists in 2024-02 document"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 10,
+      "period": "Feb-24",
+      "entity": "Angola Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-03 Performance Review CONSO_v3.pdf",
+      "table_index": 0,
+      "row_index": 10,
+      "period": "Mar-24",
+      "entity": "Angola Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-01 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 20,
+      "period": "Jan-24",
+      "entity": "Brazil Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 20,
+      "period": "Feb-24",
+      "entity": "Brazil Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-01 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 30,
+      "period": "Jan-24",
+      "entity": "Lebanon Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 30,
+      "period": "Feb-24",
+      "entity": "Lebanon Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-03 Performance Review CONSO_v3.pdf",
+      "table_index": 0,
+      "row_index": 30,
+      "period": "Mar-24",
+      "entity": "Lebanon Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 5,
+      "period": "B Feb-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "budget",
+      "expected_value_type": "budget",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 6,
+      "period": "YTD B Feb-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "ytd_budget",
+      "expected_value_type": "budget",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-03 Performance Review CONSO_v3.pdf",
+      "table_index": 0,
+      "row_index": 5,
+      "period": "B Mar-24",
+      "entity": "Portugal Cement",
+      "expected_period_type": "budget",
+      "expected_value_type": "budget",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 35,
+      "period": "YTD Feb-24",
+      "entity": "Angola Cement",
+      "expected_period_type": "ytd_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-03 Performance Review CONSO_v3.pdf",
+      "table_index": 0,
+      "row_index": 35,
+      "period": "YTD Mar-24",
+      "entity": "Angola Cement",
+      "expected_period_type": "ytd_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 40,
+      "period": "YTD Feb-24",
+      "entity": "Brazil Cement",
+      "expected_period_type": "ytd_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-03 Performance Review CONSO_v3.pdf",
+      "table_index": 0,
+      "row_index": 40,
+      "period": "YTD Mar-24",
+      "entity": "Brazil Cement",
+      "expected_period_type": "ytd_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 45,
+      "period": "YTD Feb-24",
+      "entity": "Lebanon Cement",
+      "expected_period_type": "ytd_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-03 Performance Review CONSO_v3.pdf",
+      "table_index": 0,
+      "row_index": 45,
+      "period": "YTD Mar-24",
+      "entity": "Lebanon Cement",
+      "expected_period_type": "ytd_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-12 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 50,
+      "period": "Dec-24",
+      "entity": "Total Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "segment"
+    },
+    {
+      "document": "2024-01 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 15,
+      "period": "B Jan-24",
+      "entity": "Angola Cement",
+      "expected_period_type": "budget",
+      "expected_value_type": "budget",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-01 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 25,
+      "period": "B Jan-24",
+      "entity": "Brazil Cement",
+      "expected_period_type": "budget",
+      "expected_value_type": "budget",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 15,
+      "period": "B Feb-24",
+      "entity": "Lebanon Cement",
+      "expected_period_type": "budget",
+      "expected_value_type": "budget",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-03 Performance Review CONSO_v3.pdf",
+      "table_index": 0,
+      "row_index": 15,
+      "period": "B Mar-24",
+      "entity": "Lebanon Cement",
+      "expected_period_type": "budget",
+      "expected_value_type": "budget",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-01 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 12,
+      "period": "YTD Jan-24",
+      "entity": "Angola Cement",
+      "expected_period_type": "ytd_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 32,
+      "period": "YTD B Feb-24",
+      "entity": "Lebanon Cement",
+      "expected_period_type": "ytd_budget",
+      "expected_value_type": "budget",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-01 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 3,
+      "period": "Jan-23",
+      "entity": "Portugal Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 3,
+      "period": "Feb-23",
+      "entity": "Portugal Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-03 Performance Review CONSO_v3.pdf",
+      "table_index": 0,
+      "row_index": 3,
+      "period": "Mar-23",
+      "entity": "Portugal Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-01 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 11,
+      "period": "Jan-23",
+      "entity": "Angola Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 11,
+      "period": "Feb-23",
+      "entity": "Angola Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-01 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 21,
+      "period": "Jan-23",
+      "entity": "Brazil Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 31,
+      "period": "Feb-23",
+      "entity": "Lebanon Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-03 Performance Review CONSO_v3.pdf",
+      "table_index": 0,
+      "row_index": 31,
+      "period": "Mar-23",
+      "entity": "Lebanon Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-03 Performance Review CONSO_v3.pdf",
+      "table_index": 0,
+      "row_index": 21,
+      "period": "Mar-23",
+      "entity": "Brazil Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2024-02 Performance Review CONSO_v1.pdf",
+      "table_index": 0,
+      "row_index": 36,
+      "period": "YTD Feb-23",
+      "entity": "Portugal Cement",
+      "expected_period_type": "ytd_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "company_only"
+    },
+    {
+      "document": "2017-12 Performance Review - Dezembro 2017.pdf",
+      "table_index": 0,
+      "row_index": 100,
+      "period": "Dec-17",
+      "entity": "SECIL Group",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "consolidated",
+      "verification_note": "SECIL Group is the parent company - consolidated total"
+    },
+    {
+      "document": "2017-12 Performance Review - Dezembro 2017.pdf",
+      "table_index": 0,
+      "row_index": 101,
+      "period": "B Dec-17",
+      "entity": "SECIL Group",
+      "expected_period_type": "budget",
+      "expected_value_type": "budget",
+      "expected_entity_level": "consolidated",
+      "verification_note": "B prefix = budget, SECIL Group = consolidated"
+    },
+    {
+      "document": "2017-12 Performance Review - Dezembro 2017.pdf",
+      "table_index": 0,
+      "row_index": 102,
+      "period": "YTD Dec-17",
+      "entity": "SECIL Group",
+      "expected_period_type": "ytd_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "consolidated",
+      "verification_note": "YTD prefix = year-to-date actual"
+    },
+    {
+      "document": "2017-12 Performance Review - Dezembro 2017.pdf",
+      "table_index": 0,
+      "row_index": 103,
+      "period": "YTD B Dec-17",
+      "entity": "SECIL Group",
+      "expected_period_type": "ytd_budget",
+      "expected_value_type": "budget",
+      "expected_entity_level": "consolidated",
+      "verification_note": "YTD B = year-to-date budget"
+    },
+    {
+      "document": "2017-12 Performance Review - Dezembro 2017.pdf",
+      "table_index": 0,
+      "row_index": 110,
+      "period": "Dec-17",
+      "entity": "Total Cement",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "segment",
+      "verification_note": "Total Cement is segment total (sum of cement subsidiaries)"
+    },
+    {
+      "document": "2017-12 Performance Review - Dezembro 2017.pdf",
+      "table_index": 0,
+      "row_index": 111,
+      "period": "B Dec-17",
+      "entity": "Total Cement",
+      "expected_period_type": "budget",
+      "expected_value_type": "budget",
+      "expected_entity_level": "segment",
+      "verification_note": "Budget for segment total"
+    },
+    {
+      "document": "2017-12 Performance Review - Dezembro 2017.pdf",
+      "table_index": 0,
+      "row_index": 112,
+      "period": "Dec-17",
+      "entity": "Angola",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "geographic",
+      "verification_note": "Angola is a country - geographic region"
+    },
+    {
+      "document": "2024-01 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 113,
+      "period": "Jan-24",
+      "entity": "Angola",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "geographic",
+      "verification_note": "Country name = geographic entity level"
+    },
+    {
+      "document": "2024-01 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 114,
+      "period": "Jan-24",
+      "entity": "Tunisia",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "geographic",
+      "verification_note": "Tunisia is a country = geographic"
+    },
+    {
+      "document": "2024-01 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 115,
+      "period": "Jan-24",
+      "entity": "Lebanon",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "geographic",
+      "verification_note": "Lebanon is a country = geographic"
+    },
+    {
+      "document": "2024-01 Performance Review CONSO_v2.pdf",
+      "table_index": 0,
+      "row_index": 116,
+      "period": "Jan-24",
+      "entity": "Brazil",
+      "expected_period_type": "monthly_actual",
+      "expected_value_type": "actual",
+      "expected_entity_level": "geographic",
+      "verification_note": "Brazil is a country = geographic"
+    }
+  ]
+}

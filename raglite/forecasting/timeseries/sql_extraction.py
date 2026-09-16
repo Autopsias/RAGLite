@@ -54,6 +54,7 @@ async def extract_timeseries_from_sql(
     min_points: int = 6,
     aggregation: str = "sum",
     entity: str | None = None,
+    entity_level: str | None = None,
 ) -> TimeSeriesData:
     """Extract time-series data from PostgreSQL financial_tables.
 
@@ -62,6 +63,9 @@ async def extract_timeseries_from_sql(
         min_points: Minimum number of data points required (default: 6)
         aggregation: "sum" (default) or "max" - aggregation method for multiple values per period
         entity: Optional entity filter (e.g., "portugal", "tunisia", "brazil")
+        entity_level: Optional entity level filter (Epic 9 multi-entity support):
+                     'consolidated' for GROUP-level, 'geographic' for regions,
+                     'segment' for business segments, 'company_only' for individual companies
 
     Returns:
         TimeSeriesData with metric_name, chronologically sorted points, interval
@@ -69,7 +73,9 @@ async def extract_timeseries_from_sql(
     Raises:
         ExtractionError: If insufficient data (<min_points) or SQL query fails
     """
-    metric_search, aggregation, ENTITY_FILTERS = configure_extraction(metric, aggregation, entity)
+    metric_search, aggregation, ENTITY_FILTERS, entity_level = configure_extraction(
+        metric, aggregation, entity, entity_level
+    )
 
     logger.info(
         "Extracting time-series from SQL",
@@ -77,9 +83,11 @@ async def extract_timeseries_from_sql(
     )
 
     try:
-        entity_filter, prefer_ytd = build_entity_filter_clause(metric_search, ENTITY_FILTERS)
+        entity_filter, entity_level_filter, prefer_ytd = build_entity_filter_clause(
+            metric_search, ENTITY_FILTERS, entity_level
+        )
         rows = await execute_sql_with_fallback(
-            metric, metric_search, entity_filter, prefer_ytd, aggregation
+            metric, metric_search, entity_filter, entity_level_filter, prefer_ytd, aggregation
         )
 
         if not rows:

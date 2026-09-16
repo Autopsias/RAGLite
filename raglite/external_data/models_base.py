@@ -6,10 +6,10 @@ Epic 8: Technical Debt Reduction - Split from monolithic models.py
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
-class DataFrequency(str, Enum):
+class DataFrequency(StrEnum):
     """Frequency of data updates."""
 
     DAILY = "daily"
@@ -19,7 +19,7 @@ class DataFrequency(str, Enum):
     ANNUAL = "annual"
 
 
-class DataSource(str, Enum):
+class DataSource(StrEnum):
     """External data source identifiers."""
 
     INE = "INE"

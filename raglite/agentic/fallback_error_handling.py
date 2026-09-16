@@ -4,10 +4,10 @@ This module handles error classification, user-friendly error messages,
 and alternative query suggestions (Story 3.7 AC2, AC4).
 """
 
-from enum import Enum
+from enum import StrEnum
 
 
-class ErrorType(str, Enum):
+class ErrorType(StrEnum):
     """Classification of workflow failure types (AC2)."""
 
     TIMEOUT = "timeout"  # Agent or workflow exceeded time limit
@@ -16,7 +16,7 @@ class ErrorType(str, Enum):
     UNEXPECTED = "unexpected"  # Unknown/unexpected error
 
 
-class FallbackTier(str, Enum):
+class FallbackTier(StrEnum):
     """Quality tier of fallback response (AC8)."""
 
     FULL_WORKFLOW = "full"  # All agents succeeded
