@@ -47,9 +47,12 @@ async def _get_claude_reasoning(
             context=context,
         )
 
-        # Call Claude Haiku (5x faster than Sonnet, 10x cheaper)
+        # Call Claude Haiku. This was claude-3-5-haiku-20241022, which Anthropic
+        # retired on 2026-02-19 -- every call here had been failing since. The
+        # replacement is the vendor's own named successor, and Phoenix already
+        # prices it at $1/$5 per million, so the cost keeps reporting.
         message = client.messages.create(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             max_tokens=200,
             messages=[{"role": "user", "content": prompt}],
         )
