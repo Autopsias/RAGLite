@@ -93,7 +93,11 @@ def test_get_claude_client_success(
 
     client = get_claude_client()
 
-    assert client == mock_client
+    # get_claude_client now returns the SDK client WRAPPED, so that every call
+    # through it reports its cost to the fleet Phoenix (shared.tracing.
+    # TracedClient). The wrapper delegates everything, so the contract to assert
+    # is delegation and construction -- not object identity.
+    assert client.beta is mock_client.beta
     mock_anthropic_class.assert_called_once_with(api_key="valid-api-key-abc123")
 
 

@@ -320,6 +320,11 @@ def main() -> None:
     """Main entry point for RAGLite MCP server."""
     import atexit
 
+    # Report LLM cost to the fleet Phoenix. Never fatal: see shared.tracing.setup.
+    from raglite.shared.tracing import setup as setup_tracing
+
+    setup_tracing()
+
     logger.info(
         "Starting RAGLite MCP Server",
         extra={
